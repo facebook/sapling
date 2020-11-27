@@ -34,16 +34,28 @@ impl<T> TracingBlobstore<T> {
 
 #[async_trait]
 impl<T: Blobstore> Blobstore for TracingBlobstore<T> {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
-        self.gets.lock().expect("poisoned lock").push(key.clone());
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        self.gets
+            .lock()
+            .expect("poisoned lock")
+            .push(key.to_owned());
         self.inner.get(ctx, key).await
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         self.inner.put(ctx, key, value).await
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         self.inner.is_present(ctx, key).await
     }
 }

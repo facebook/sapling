@@ -178,7 +178,7 @@ fn get_parents(
                 cloned!(ctx, repo);
                 let parents = parent_hg_cs_ids.into_iter().map(|cs_id| {
                     cloned!(ctx, repo);
-                    async move { cs_id.load(ctx, repo.blobstore()).await }
+                    async move { cs_id.load(&ctx, repo.blobstore()).await }
                         .boxed()
                         .compat()
                         .from_err()
@@ -198,7 +198,7 @@ fn get_file_changes(
     let paths_added_fut = {
         cloned!(ctx);
         let blobstore = repo.get_blobstore();
-        async move { cs_id.load(ctx, &blobstore).await }
+        async move { cs_id.load(&ctx, &blobstore).await }
     }
     .boxed()
     .compat()

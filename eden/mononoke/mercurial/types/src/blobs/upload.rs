@@ -146,7 +146,7 @@ impl UploadHgTreeEntry {
         // Upload the blob.
         let upload = async move {
             blobstore
-                .put(ctx, blobstore_key, envelope_blob.into())
+                .put(&ctx, blobstore_key, envelope_blob.into())
                 .await
         }
         .boxed()
@@ -224,7 +224,7 @@ impl UploadHgFileContents {
                     cloned!(ctx, blobstore);
                     let file_node_id_ptr =
                         FileNodeIdPointer::new(&cbmeta.id, &cbmeta.copy_from, &p1, &p2);
-                    async move { lookup_filenode_id(ctx, &blobstore, file_node_id_ptr).await }
+                    async move { lookup_filenode_id(&ctx, &blobstore, file_node_id_ptr).await }
                 };
 
                 let metadata_fut = Self::compute_metadata(
@@ -284,7 +284,7 @@ impl UploadHgFileContents {
                 let ((id, size), upload_fut) = filestore::store_bytes(
                     &*blobstore,
                     filestore_config,
-                    ctx.clone(),
+                    &ctx,
                     file_bytes.into_bytes(),
                 );
 
@@ -325,7 +325,7 @@ impl UploadHgFileContents {
         let compute_fut = compute_fut.and_then({
             cloned!(ctx, blobstore);
             move |(filenode_id, metadata, size)| {
-                async move { store_filenode_id(ctx, &blobstore, key, &filenode_id).await }
+                async move { store_filenode_id(&ctx, &blobstore, key, &filenode_id).await }
                     .map_ok(move |()| (filenode_id, metadata, size))
                     .boxed()
                     .compat()
@@ -346,7 +346,7 @@ impl UploadHgFileContents {
         async move {
             let bytes = async {
                 Result::<_>::Ok(
-                    filestore::peek(&blobstore, ctx, &FetchKey::Canonical(content_id), META_SZ)
+                    filestore::peek(&blobstore, &ctx, &FetchKey::Canonical(content_id), META_SZ)
                         .await?
                         .ok_or(ErrorKind::ContentBlobMissing(content_id))?,
                 )
@@ -465,7 +465,7 @@ impl UploadHgFileEntry {
 
                 async move {
                     blobstore
-                        .put(ctx, blobstore_key, envelope_blob.into())
+                        .put(&ctx, blobstore_key, envelope_blob.into())
                         .await
                 }
                 .boxed()

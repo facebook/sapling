@@ -187,7 +187,7 @@ fn single_verify(
                 println!("CHANGESET: hg_csid:{:?} csid:{:?}", hg_csid, csid);
                 cloned!(ctx);
                 let blobstore = repo.get_blobstore();
-                async move { hg_csid.load(ctx, &blobstore).await }
+                async move { hg_csid.load(&ctx, &blobstore).await }
                     .boxed()
                     .compat()
                     .from_err()

@@ -390,7 +390,7 @@ mod tests {
 
         let pushed_cs_id =
             push_merge_commit(&ctx, &repo, merged_cs_id, &dest_bookmark, &repo_config).await?;
-        let pushed_cs = pushed_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+        let pushed_cs = pushed_cs_id.load(&ctx, repo.blobstore()).await?;
 
         assert_eq!(
             Globalrev::new(START_COMMIT_GLOBALREV),
@@ -722,7 +722,7 @@ mod tests {
             rewrite_file_paths(&ctx, &large_repo, &combined_mover, &cs_ids).await?;
 
         let large_repo_cs_a = &shifted_bcs_ids[0]
-            .load(ctx.clone(), &large_repo.get_blobstore())
+            .load(&ctx, &large_repo.get_blobstore())
             .await?;
         let large_repo_cs_a_mpaths = get_file_changes_mpaths(&large_repo_cs_a);
         assert_eq!(
@@ -731,7 +731,7 @@ mod tests {
         );
 
         let large_repo_cs_b = &shifted_bcs_ids[1]
-            .load(ctx.clone(), &large_repo.get_blobstore())
+            .load(&ctx, &large_repo.get_blobstore())
             .await?;
         let large_repo_cs_b_mpaths = get_file_changes_mpaths(&large_repo_cs_b);
         assert_eq!(vec![mp("random_dir/B")], large_repo_cs_b_mpaths);
@@ -746,13 +746,13 @@ mod tests {
         .await?;
 
         let small_repo_cs_a = &synced_bcs_ids[0]
-            .load(ctx.clone(), &small_repo.get_blobstore())
+            .load(&ctx, &small_repo.get_blobstore())
             .await?;
         let small_repo_cs_a_mpaths = get_file_changes_mpaths(&small_repo_cs_a);
         assert_eq!(vec![mp("dest_path_prefix/A")], small_repo_cs_a_mpaths);
 
         let small_repo_cs_b = &synced_bcs_ids[1]
-            .load(ctx.clone(), &small_repo.get_blobstore())
+            .load(&ctx, &small_repo.get_blobstore())
             .await?;
         let small_repo_cs_b_mpaths = get_file_changes_mpaths(&small_repo_cs_b);
         assert_eq!(vec![mp("dest_path_prefix/B")], small_repo_cs_b_mpaths);

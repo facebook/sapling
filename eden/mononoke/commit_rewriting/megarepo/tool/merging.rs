@@ -30,7 +30,7 @@ fn get_all_files_in_working_copy(
 ) -> impl Future<Item = Vec<MPath>, Error = Error> {
     {
         cloned!(ctx, repo);
-        async move { hg_cs_id.load(ctx.clone(), repo.blobstore()).await }
+        async move { hg_cs_id.load(&ctx, repo.blobstore()).await }
     }
     .boxed()
     .compat()

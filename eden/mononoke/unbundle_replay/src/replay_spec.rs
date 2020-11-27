@@ -73,7 +73,7 @@ impl<'a> BundleHandle<'a> {
             }
             Self::Blob(ref id) => {
                 info!(ctx.logger(), "Fetching raw bundle: {}", id);
-                let bytes = id.load(ctx.clone(), repo.blobstore()).await?;
+                let bytes = id.load(ctx, repo.blobstore()).await?;
                 Ok(bytes.into_bytes())
             }
         }

@@ -34,7 +34,7 @@ fn check_hash<T: std::fmt::Debug + PartialEq + Copy>(
 
 pub async fn finalize<B: Blobstore>(
     blobstore: &B,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     req: Option<&StoreRequest>,
     outcome: Prepared,
 ) -> Result<ContentMetadata, Error> {
@@ -72,10 +72,9 @@ pub async fn finalize<B: Blobstore>(
     }
 
     let alias = ContentAlias::from_content_id(content_id);
-    let put_sha1 = AliasBlob(Alias::Sha1(sha1), alias.clone()).store(ctx.clone(), blobstore);
-    let put_sha256 = AliasBlob(Alias::Sha256(sha256), alias.clone()).store(ctx.clone(), blobstore);
-    let put_git_sha1 =
-        AliasBlob(Alias::GitSha1(git_sha1.sha1()), alias).store(ctx.clone(), blobstore);
+    let put_sha1 = AliasBlob(Alias::Sha1(sha1), alias.clone()).store(ctx, blobstore);
+    let put_sha256 = AliasBlob(Alias::Sha256(sha256), alias.clone()).store(ctx, blobstore);
+    let put_git_sha1 = AliasBlob(Alias::GitSha1(git_sha1.sha1()), alias).store(ctx, blobstore);
 
     // Since we don't have atomicity for multiple puts, we need to make sure they're ordered
     // correctly:
@@ -97,7 +96,7 @@ pub async fn finalize<B: Blobstore>(
 
     future::try_join3(put_sha1, put_sha256, put_git_sha1).await?;
 
-    blob.store(ctx.clone(), blobstore).await?;
+    blob.store(ctx, blobstore).await?;
 
     let metadata = ContentMetadata {
         total_size,

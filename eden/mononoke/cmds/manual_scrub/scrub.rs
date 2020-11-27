@@ -26,7 +26,7 @@ async fn scrub_key<B: Blobstore + Clone + 'static>(
 ) -> Result<()> {
     let handle = {
         cloned!(ctx, key, blobstore);
-        tokio::task::spawn(async move { blobstore.get(ctx, key).await })
+        tokio::task::spawn(async move { blobstore.get(&ctx, &key).await })
     };
     let res = handle.await?;
     match res {

@@ -9,6 +9,7 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
+use auto_impl::auto_impl;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use futures::stream::{self, StreamExt, TryStreamExt};
@@ -179,6 +180,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
 /// normally a persistent store. This is used to avoid regenerating the same derived data over
 /// and over again.
 #[async_trait]
+#[auto_impl(Arc)]
 pub trait BonsaiDerivedMapping: Send + Sync + Clone {
     type Value: BonsaiDerived;
 
@@ -191,23 +193,6 @@ pub trait BonsaiDerivedMapping: Send + Sync + Clone {
 
     /// Saves mapping between bonsai changeset and derived data id
     async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error>;
-}
-
-#[async_trait]
-impl<Mapping: BonsaiDerivedMapping> BonsaiDerivedMapping for Arc<Mapping> {
-    type Value = Mapping::Value;
-
-    async fn get(
-        &self,
-        ctx: CoreContext,
-        csids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        (**self).get(ctx, csids).await
-    }
-
-    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
-        (**self).put(ctx, csid, id).await
-    }
 }
 
 /// This mapping can be used when we want to ignore values before it was put

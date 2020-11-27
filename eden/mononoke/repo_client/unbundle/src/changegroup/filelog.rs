@@ -12,12 +12,8 @@ use anyhow::{bail, Context, Error, Result};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Compat, FutureFailureErrorExt};
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
-    stream::{Stream, TryStreamExt},
-};
+use failure_ext::Compat;
+use futures::{compat::Future01CompatExt, FutureExt, Stream, TryFutureExt, TryStreamExt};
 use futures_01_ext::{BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{future::Shared, Future, IntoFuture};
 use quickcheck::{Arbitrary, Gen};
@@ -116,12 +112,15 @@ pub fn convert_to_revlog_filelog(
 
             delta_cache
                 .decode(ctx.clone(), node.clone(), base.into_option(), delta)
+                .compat()
                 .and_then({
                     cloned!(ctx, node, path, repo);
                     move |data| {
+                        cloned!(ctx, node, path, repo);
                         let flags = flags.unwrap_or(RevFlags::REVIDX_DEFAULT_FLAGS);
-                        get_filelog_data(ctx.clone(), repo, data, flags).map(move |file_log_data| {
-                            Filelog {
+                        async move {
+                            let file_log_data = get_filelog_data(&ctx, &repo, data, flags).await?;
+                            Ok(Filelog {
                                 node_key: HgNodeKey {
                                     path: RepoPath::FilePath(path),
                                     hash: node,
@@ -131,61 +130,50 @@ pub fn convert_to_revlog_filelog(
                                 linknode,
                                 data: file_log_data,
                                 flags,
-                            }
-                        })
+                            })
+                        }
                     }
                 })
-                .with_context(move || {
-                    format!(
-                        "While decoding delta cache for file id {}, path {}",
-                        node, path
-                    )
+                .map(move |res| {
+                    res.with_context(move || {
+                        format!(
+                            "While decoding delta cache for file id {}, path {}",
+                            node, path
+                        )
+                    })
                 })
-                .from_err()
-                .compat()
         })
         .try_buffer_unordered(100)
 }
 
-fn generate_lfs_meta_data(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn generate_lfs_meta_data(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     data: Bytes,
-) -> impl Future<Item = ContentBlobMeta, Error = Error> {
+) -> Result<ContentBlobMeta, Error> {
     // TODO(anastasiyaz): check size
-    File::data_only(data)
-        .get_lfs_content()
-        .into_future()
-        .and_then(move |lfs_content| {
-            let key = FetchKey::from(lfs_content.oid());
-            (
-                async move { key.load(ctx, repo.blobstore()).await }
-                    .boxed()
-                    .compat()
-                    .from_err(),
-                Ok(lfs_content.copy_from()),
-                Ok(lfs_content.size()),
-            )
-        })
-        .map(move |(content_id, copy_from, size)| ContentBlobMeta {
-            id: content_id,
-            copy_from,
-            size,
-        })
+    let lfs_content = File::data_only(data).get_lfs_content()?;
+    let content_id = FetchKey::from(lfs_content.oid())
+        .load(ctx, repo.blobstore())
+        .await?;
+    Ok(ContentBlobMeta {
+        id: content_id,
+        copy_from: lfs_content.copy_from(),
+        size: lfs_content.size(),
+    })
 }
 
-fn get_filelog_data(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn get_filelog_data(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     data: Bytes,
     flags: RevFlags,
-) -> impl Future<Item = FilelogData, Error = Error> {
+) -> Result<FilelogData, Error> {
     if flags.contains(RevFlags::REVIDX_EXTSTORED) {
-        generate_lfs_meta_data(ctx, repo, data)
-            .map(|cbmeta| FilelogData::LfsMetaData(cbmeta))
-            .left_future()
+        let cbmeta = generate_lfs_meta_data(ctx, repo, data).await?;
+        Ok(FilelogData::LfsMetaData(cbmeta))
     } else {
-        Ok(FilelogData::RawBytes(data)).into_future().right_future()
+        Ok(FilelogData::RawBytes(data))
     }
 }
 

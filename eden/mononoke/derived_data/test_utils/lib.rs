@@ -28,7 +28,7 @@ pub async fn bonsai_changeset_from_hg(
         .compat()
         .await?
         .ok_or_else(|| anyhow!("Failed to find bonsai changeset id for {}", hg_cs_id))?;
-    let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
     Ok((bcs_id, bcs))
 }
 
@@ -46,7 +46,7 @@ where
         match entry {
             Entry::Leaf(_) => Ok((vec![(path, entry.clone())], vec![])),
             Entry::Tree(tree) => {
-                let mf = tree.load(ctx.clone(), repo.blobstore()).await?;
+                let mf = tree.load(ctx, repo.blobstore()).await?;
                 let recurse = mf
                     .list()
                     .map(|(basename, new_entry)| {

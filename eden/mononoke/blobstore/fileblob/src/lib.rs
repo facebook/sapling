@@ -63,7 +63,7 @@ impl Fileblob {
         Self::open(base, put_behaviour)
     }
 
-    fn path(&self, key: &String) -> PathBuf {
+    fn path(&self, key: &str) -> PathBuf {
         let key = percent_encode(key.as_bytes(), PATH);
         self.base.join(format!("{}-{}", PREFIX, key))
     }
@@ -78,9 +78,9 @@ async fn ctime(file: &File) -> Option<i64> {
 
 #[async_trait]
 impl BlobstorePutOps for Fileblob {
-    async fn put_explicit(
-        &self,
-        _ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -120,9 +120,9 @@ impl BlobstorePutOps for Fileblob {
         Ok(status)
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
@@ -132,8 +132,12 @@ impl BlobstorePutOps for Fileblob {
 
 #[async_trait]
 impl Blobstore for Fileblob {
-    async fn get(&self, _ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
-        let p = self.path(&key);
+    async fn get<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        let p = self.path(key);
 
         let ret = match File::open(&p).await {
             Err(ref r) if r.kind() == io::ErrorKind::NotFound => None,
@@ -151,8 +155,8 @@ impl Blobstore for Fileblob {
         Ok(ret)
     }
 
-    async fn is_present(&self, _ctx: CoreContext, key: String) -> Result<bool> {
-        let p = self.path(&key);
+    async fn is_present<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+        let p = self.path(key);
 
         let ret = match File::open(&p).await {
             Err(ref e) if e.kind() == io::ErrorKind::NotFound => false,
@@ -162,7 +166,12 @@ impl Blobstore for Fileblob {
         Ok(ret)
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
@@ -172,9 +181,14 @@ impl Blobstore for Fileblob {
 impl BlobstoreWithLink for Fileblob {
     // This uses hardlink semantics as the production blobstores also have hardlink like semantics
     // (i.e. you can't discover a canonical link source when loading by the target)
-    async fn link(&self, _ctx: CoreContext, existing_key: String, link_key: String) -> Result<()> {
+    async fn link<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        existing_key: &'a str,
+        link_key: String,
+    ) -> Result<()> {
         // from std::fs::hard_link: The dst path will be a link pointing to the src path
-        let src_path = self.path(&existing_key);
+        let src_path = self.path(existing_key);
         let dst_path = self.path(&link_key);
         Ok(hard_link(src_path, dst_path).await?)
     }
@@ -182,13 +196,13 @@ impl BlobstoreWithLink for Fileblob {
 
 #[async_trait]
 impl BlobstoreKeySource for Fileblob {
-    async fn enumerate(
-        &self,
-        _ctx: CoreContext,
-        range: BlobstoreKeyParam,
+    async fn enumerate<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        range: &'a BlobstoreKeyParam,
     ) -> Result<BlobstoreEnumerationData> {
         match range {
-            BlobstoreKeyParam::Start(range) => {
+            BlobstoreKeyParam::Start(ref range) => {
                 let mut enum_data = BlobstoreEnumerationData {
                     keys: HashSet::new(),
                     next_token: None,

@@ -13,6 +13,7 @@ use super::failing_blobstore::{FailingBlobstore, FailingBlobstoreError};
 use anyhow::{Error, Result};
 use assert_matches::assert_matches;
 use blobstore::{Blobstore, PutBehaviour};
+use borrowed::borrowed;
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -61,16 +62,17 @@ async fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         DEFAULT_CONFIG,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
-    let res = filestore::get_metadata(&blob, ctx, &FetchKey::Canonical(content_id)).await;
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await;
 
     println!("res = {:#?}", res);
 
@@ -95,17 +97,18 @@ async fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         DEFAULT_CONFIG,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
 
-    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id)).await;
+    let res = filestore::fetch_concat_opt(blob, ctx, &FetchKey::Canonical(content_id)).await;
 
     println!("res = {:#?}", res);
 
@@ -120,18 +123,19 @@ async fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         DEFAULT_CONFIG,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
 
     let res = filestore::fetch_concat_opt(
-        &blob,
+        blob,
         ctx,
         &FetchKey::Aliased(Alias::Sha1(*HELLO_WORLD_SHA1)),
     )
@@ -149,18 +153,19 @@ async fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         DEFAULT_CONFIG,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
 
     let res = filestore::fetch_concat_opt(
-        &blob,
+        blob,
         ctx,
         &FetchKey::Aliased(Alias::GitSha1(HELLO_WORLD_GIT_SHA1.sha1())),
     )
@@ -178,18 +183,19 @@ async fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         DEFAULT_CONFIG,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
 
     let res = filestore::fetch_concat_opt(
-        &blob,
+        blob,
         ctx,
         &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
     )
@@ -213,17 +219,18 @@ async fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
     };
 
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         config,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
 
-    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id)).await;
+    let res = filestore::fetch_concat_opt(blob, ctx, &FetchKey::Canonical(content_id)).await;
 
     println!("res = {:#?}", res);
 
@@ -251,28 +258,29 @@ async fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
 
     let part_data = &b"foo"[..];
     let part_key = request(part_data);
+    borrowed!(ctx, blob, full_key, part_key);
 
     // Store in 3-byte chunks
     filestore::store(
-        &blob,
+        blob,
         large,
-        ctx.clone(),
-        &full_key,
+        ctx,
+        full_key,
         stream::once(future::ready(Ok(Bytes::from(full_data)))),
     )
     .await?;
 
     // Now, go and split up one chunk into 1-byte parts.
     filestore::store(
-        &blob,
+        blob,
         small,
-        ctx.clone(),
-        &part_key,
+        ctx,
+        part_key,
         stream::once(future::ready(Ok(Bytes::from(part_data)))),
     )
     .await?;
 
-    assert_fetches_as(ctx, &blob, full_id, vec!["foo", "bar"]).await?;
+    assert_fetches_as(ctx, blob, full_id, vec!["foo", "bar"]).await?;
     Ok(())
 }
 
@@ -280,6 +288,7 @@ async fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
 async fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob);
 
     // Missing content shouldn't throw an error
 
@@ -287,7 +296,7 @@ async fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
     let content_id = canonical(data);
 
     // Verify that we can still read the full thing.
-    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id)).await;
+    let res = filestore::fetch_concat_opt(blob, ctx, &FetchKey::Canonical(content_id)).await;
 
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
@@ -306,15 +315,16 @@ async fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
     let data = &b"foobar"[..];
     let req = request(data);
     let content_id = canonical(data);
+    borrowed!(ctx, blob, req);
 
     let part = &b"foo"[..];
     let part_id = chunk(part);
 
     filestore::store(
-        &blob,
+        blob,
         config,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(data)))),
     )
     .await?;
@@ -345,12 +355,13 @@ async fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
 
     let data = &b"foobar"[..];
     let req = StoreRequest::new(123);
+    borrowed!(ctx, blob, req);
 
     let res = filestore::store(
-        &blob,
+        blob,
         config,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(data)))),
     )
     .await;
@@ -373,11 +384,13 @@ async fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
 
     // Bad Content Id should fail
     let req = StoreRequest::with_canonical(HELLO_WORLD_LENGTH, ONES_CTID);
+    borrowed!(ctx, blob, req);
+
     let res = filestore::store(
-        &blob,
+        blob,
         config,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
@@ -390,9 +403,9 @@ async fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
     // Correct content Id should succeed
     let req = StoreRequest::with_canonical(HELLO_WORLD_LENGTH, canonical(HELLO_WORLD));
     let res = filestore::store(
-        &blob,
+        blob,
         config,
-        ctx.clone(),
+        ctx,
         &req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
@@ -414,11 +427,12 @@ async fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
 
     // Bad Content Id should fail
     let req = StoreRequest::with_sha1(HELLO_WORLD_LENGTH, hash::Sha1::from_byte_array([0x00; 20]));
+    borrowed!(ctx, blob, req);
     let res = filestore::store(
-        &blob,
+        blob,
         config,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
@@ -431,9 +445,9 @@ async fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
     // Correct content Id should succeed
     let req = StoreRequest::with_sha1(HELLO_WORLD_LENGTH, *HELLO_WORLD_SHA1);
     let res = filestore::store(
-        &blob,
+        blob,
         config,
-        ctx.clone(),
+        ctx,
         &req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
@@ -458,11 +472,13 @@ async fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
         HELLO_WORLD_LENGTH,
         hash::RichGitSha1::from_byte_array([0x00; 20], "blob", HELLO_WORLD_LENGTH),
     );
+    borrowed!(ctx, blob, req);
+
     let res = filestore::store(
-        &blob,
+        blob,
         config,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
@@ -475,9 +491,9 @@ async fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
     // Correct content Id should succeed
     let req = StoreRequest::with_git_sha1(HELLO_WORLD_LENGTH, *HELLO_WORLD_GIT_SHA1);
     let res = filestore::store(
-        &blob,
+        blob,
         config,
-        ctx.clone(),
+        ctx,
         &req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
@@ -502,11 +518,13 @@ async fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
         HELLO_WORLD_LENGTH,
         hash::Sha256::from_byte_array([0x00; 32]),
     );
+    borrowed!(ctx, blob, req);
+
     let res = filestore::store(
-        &blob,
+        blob,
         config,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
@@ -519,9 +537,9 @@ async fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
     // Correct content Id should succeed
     let req = StoreRequest::with_sha256(HELLO_WORLD_LENGTH, *HELLO_WORLD_SHA256);
     let res = filestore::store(
-        &blob,
+        blob,
         config,
-        ctx.clone(),
+        ctx,
         &req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
@@ -539,12 +557,13 @@ async fn filestore_get_range(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         DEFAULT_CONFIG,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
@@ -588,20 +607,21 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     let full_data = &b"foobarbazquxxyz"[..];
     let full_key = request(full_data);
     let full_id = canonical(full_data);
+    borrowed!(ctx, blob, full_key);
 
     // Store in 3-byte chunks
     filestore::store(
-        &blob,
+        blob,
         small,
-        ctx.clone(),
-        &full_key,
+        ctx,
+        full_key,
         stream::once(future::ready(Ok(Bytes::from(full_data)))),
     )
     .await?;
 
     let res = async {
         let stream =
-            filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(full_id), 4, 6)
+            filestore::fetch_range_with_size(blob, ctx, &FetchKey::Canonical(full_id), 4, 6)
                 .await?
                 .ok_or_else(|| Error::msg("Object does not exist"))?
                 .0;
@@ -641,12 +661,13 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         DEFAULT_CONFIG,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
@@ -660,7 +681,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     );
 
     // Getting the metadata should cause it to get recomputed
-    let res = filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).await;
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await;
     println!("res = {:#?}", res);
     assert_eq!(res?, expected);
 
@@ -673,7 +694,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     );
 
     // Query the metadata again. It should succeed because it's saved.
-    let res = filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).await;
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await;
     println!("res = {:#?}", res);
     assert_eq!(res?, expected);
 
@@ -687,7 +708,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
 
     // And then, query it again. This should now return None, because the metadata isn't there,
     // and we can't recreate it.
-    let res = filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).await;
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await;
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
@@ -700,16 +721,17 @@ async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob);
 
     // No matter the Fetchkey, querying the metadata should return None.
 
-    let res = filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).await;
+    let res = filestore::get_metadata(blob, ctx, &FetchKey::Canonical(content_id)).await;
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
     let res = filestore::get_metadata(
-        &blob,
-        ctx.clone(),
+        blob,
+        ctx,
         &FetchKey::Aliased(Alias::Sha1(*HELLO_WORLD_SHA1)),
     )
     .await;
@@ -717,8 +739,8 @@ async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
     assert_eq!(res?, None);
 
     let res = filestore::get_metadata(
-        &blob,
-        ctx.clone(),
+        blob,
+        ctx,
         &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
     )
     .await;
@@ -726,8 +748,8 @@ async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
     assert_eq!(res?, None);
 
     let res = filestore::get_metadata(
-        &blob,
-        ctx.clone(),
+        blob,
+        ctx,
         &FetchKey::Aliased(Alias::GitSha1(HELLO_WORLD_GIT_SHA1.sha1())),
     )
     .await;
@@ -744,17 +766,18 @@ async fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         DEFAULT_CONFIG,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
 
-    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 3).await;
+    let res = filestore::peek(blob, ctx, &FetchKey::Canonical(content_id), 3).await;
     println!("res = {:#?}", res);
 
     let expected: &[u8] = b"hel";
@@ -775,17 +798,18 @@ async fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         small,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
 
-    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 3).await;
+    let res = filestore::peek(blob, ctx, &FetchKey::Canonical(content_id), 3).await;
     println!("res = {:#?}", res);
 
     let expected: &[u8] = b"hel";
@@ -801,17 +825,18 @@ async fn filestore_test_short_peek(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         DEFAULT_CONFIG,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
 
-    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 128).await;
+    let res = filestore::peek(blob, ctx, &FetchKey::Canonical(content_id), 128).await;
     println!("res = {:#?}", res);
 
     assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
@@ -828,17 +853,18 @@ async fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         DEFAULT_CONFIG,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(bytes.clone()))),
     )
     .await?;
 
-    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 128).await;
+    let res = filestore::peek(blob, ctx, &FetchKey::Canonical(content_id), 128).await;
     println!("res = {:#?}", res);
 
     assert_eq!(res?, Some(bytes.clone()));
@@ -851,13 +877,14 @@ async fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
     let blob: memblob::Memblob = memblob::Memblob::default();
 
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob);
     let ((content_id, _size), fut) =
-        filestore::store_bytes(&blob, DEFAULT_CONFIG, ctx.clone(), Bytes::from(HELLO_WORLD));
+        filestore::store_bytes(blob, DEFAULT_CONFIG, ctx, Bytes::from(HELLO_WORLD));
     assert_eq!(content_id, canonical(HELLO_WORLD));
 
     fut.await?;
 
-    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id)).await;
+    let res = filestore::fetch_concat_opt(blob, ctx, &FetchKey::Canonical(content_id)).await;
 
     println!("res = {:#?}", res);
 
@@ -869,6 +896,9 @@ async fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
 async fn filestore_store_error(fb: FacebookInit) -> Result<()> {
     let blob = memblob::Memblob::default();
     let blob = FailingBlobstore::new(blob, 1.0, 0.0); // Blobstore you can't write to.
+    let ctx = CoreContext::test_mock(fb);
+    let req = request(HELLO_WORLD);
+    borrowed!(ctx, blob, req);
 
     let config = FilestoreConfig {
         chunk_size: Some(1),
@@ -876,10 +906,10 @@ async fn filestore_store_error(fb: FacebookInit) -> Result<()> {
     };
 
     let res = filestore::store(
-        &blob,
+        blob,
         config,
-        CoreContext::test_mock(fb),
-        &request(HELLO_WORLD),
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await;
@@ -909,23 +939,24 @@ async fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
     let full_data = &b"foobar"[..];
     let full_key = request(full_data);
     let full_id = canonical(full_data);
+    borrowed!(ctx, blob, full_key);
 
     // Store in 3-byte chunks
     filestore::store(
-        &blob,
+        blob,
         large,
-        ctx.clone(),
-        &full_key,
+        ctx,
+        full_key,
         stream::once(future::ready(Ok(Bytes::from(full_data)))),
     )
     .await?;
 
-    assert_fetches_as(ctx.clone(), &blob, full_id, vec!["foo", "bar"]).await?;
+    assert_fetches_as(ctx, blob, full_id, vec!["foo", "bar"]).await?;
 
     // Rechunk the file into 1 byte sections
-    filestore::rechunk::force_rechunk(&blob, small, ctx.clone(), full_id).await?;
+    filestore::rechunk::force_rechunk(blob, small, ctx, full_id).await?;
 
-    assert_fetches_as(ctx, &blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
+    assert_fetches_as(ctx, blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
 }
 
 #[fbinit::compat_test]
@@ -945,29 +976,24 @@ async fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
     let full_data = &b"foobar"[..];
     let full_key = request(full_data);
     let full_id = canonical(full_data);
+    borrowed!(ctx, blob, full_key);
 
     // Store in 1 byte chunks
     filestore::store(
-        &blob,
+        blob,
         small,
-        ctx.clone(),
-        &full_key,
+        ctx,
+        full_key,
         stream::once(future::ready(Ok(Bytes::from(full_data)))),
     )
     .await?;
 
-    assert_fetches_as(
-        ctx.clone(),
-        &blob,
-        full_id,
-        vec!["f", "o", "o", "b", "a", "r"],
-    )
-    .await?;
+    assert_fetches_as(ctx, blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await?;
 
     // Rechunk the file into 3 byte sections
-    filestore::rechunk::force_rechunk(&blob, large, ctx.clone(), full_id).await?;
+    filestore::rechunk::force_rechunk(blob, large, ctx, full_id).await?;
 
-    assert_fetches_as(ctx, &blob, full_id, vec!["foo", "bar"]).await
+    assert_fetches_as(ctx, blob, full_id, vec!["foo", "bar"]).await
 }
 
 #[fbinit::compat_test]
@@ -988,21 +1014,22 @@ async fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
     let full_data = &b"foobar"[..];
     let full_key = request(full_data);
     let full_id = canonical(full_data);
+    borrowed!(ctx, blob, full_key);
 
     // Don't chunk
     filestore::store(
-        &blob,
+        blob,
         large,
-        ctx.clone(),
-        &full_key,
+        ctx,
+        full_key,
         stream::once(future::ready(Ok(Bytes::from(full_data)))),
     )
     .await?;
 
     // Rechunk the file into 1 byte sections
-    filestore::rechunk::force_rechunk(&blob, small, ctx.clone(), full_id).await?;
+    filestore::rechunk::force_rechunk(blob, small, ctx, full_id).await?;
 
-    assert_fetches_as(ctx, &blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
+    assert_fetches_as(ctx, blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
 }
 
 #[fbinit::compat_test]
@@ -1014,12 +1041,13 @@ async fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> 
         concurrency: 5,
     };
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob);
 
     let full_data = &b"foobar"[..];
     let full_id = canonical(full_data);
 
     // Attempt to rechunk the file into 1 byte sections
-    let res = filestore::rechunk::force_rechunk(&blob, conf, ctx.clone(), full_id).await;
+    let res = filestore::rechunk::force_rechunk(blob, conf, ctx, full_id).await;
 
     println!("res = {:#?}", res);
     assert_matches!(
@@ -1042,12 +1070,13 @@ async fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
     };
 
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
     filestore::store(
-        &blob,
+        blob,
         config,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
@@ -1091,29 +1120,30 @@ async fn filestore_test_rechunk_if_needed_tiny_unchunked_file(fb: FacebookInit) 
     let full_data = &b"foobar"[..];
     let full_key = request(full_data);
     let full_id = canonical(full_data);
+    borrowed!(ctx, blob, full_key);
 
     // Don't chunk
     filestore::store(
-        &blob,
+        blob,
         large1,
-        ctx.clone(),
-        &full_key,
+        ctx,
+        full_key,
         stream::once(future::ready(Ok(Bytes::from(full_data)))),
     )
     .await?;
 
-    assert_fetches_as(ctx.clone(), &blob, full_id, vec!["foobar"]).await?;
+    assert_fetches_as(ctx, blob, full_id, vec!["foobar"]).await?;
 
     // We expect that rechunk is not needed
     filestore::rechunk::rechunk(
         &FailingBlobstore::new(blob.clone(), 1.0, 0.0),
         large2,
-        ctx.clone(),
+        ctx,
         full_id,
     )
     .await?;
 
-    assert_fetches_as(ctx, &blob, full_id, vec!["foobar"]).await
+    assert_fetches_as(ctx, blob, full_id, vec!["foobar"]).await
 }
 
 #[fbinit::compat_test]
@@ -1133,24 +1163,25 @@ async fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit)
     let full_data = &b"foobar"[..];
     let full_key = request(full_data);
     let full_id = canonical(full_data);
+    borrowed!(ctx, blob, full_key);
 
     // Don't chunk
     filestore::store(
-        &blob,
+        blob,
         large,
-        ctx.clone(),
-        &full_key,
+        ctx,
+        full_key,
         stream::once(future::ready(Ok(Bytes::from(full_data)))),
     )
     .await?;
 
-    assert_fetches_as(ctx.clone(), &blob, full_id, vec!["foobar"]).await?;
+    assert_fetches_as(ctx, blob, full_id, vec!["foobar"]).await?;
 
     // We expect the rechunk is needed
-    let (_, rechunked) = filestore::rechunk::rechunk(&blob, small, ctx.clone(), full_id).await?;
+    let (_, rechunked) = filestore::rechunk::rechunk(blob, small, ctx, full_id).await?;
     assert!(rechunked);
 
-    assert_fetches_as(ctx, &blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
+    assert_fetches_as(ctx, blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
 }
 
 #[fbinit::compat_test]
@@ -1170,24 +1201,25 @@ async fn filestore_test_rechunk_if_needed_large_chunks(fb: FacebookInit) -> Resu
     let full_data = &b"foobar"[..];
     let full_key = request(full_data);
     let full_id = canonical(full_data);
+    borrowed!(ctx, blob, full_key);
 
     // Chunk with larger chunks
     filestore::store(
-        &blob,
+        blob,
         large,
-        ctx.clone(),
-        &full_key,
+        ctx,
+        full_key,
         stream::once(future::ready(Ok(Bytes::from(full_data)))),
     )
     .await?;
 
-    assert_fetches_as(ctx.clone(), &blob, full_id, vec!["fooba", "r"]).await?;
+    assert_fetches_as(ctx, blob, full_id, vec!["fooba", "r"]).await?;
 
     // We expect the rechunk is needed
-    let (_, rechunked) = filestore::rechunk::rechunk(&blob, small, ctx.clone(), full_id).await?;
+    let (_, rechunked) = filestore::rechunk::rechunk(blob, small, ctx, full_id).await?;
     assert!(rechunked);
 
-    assert_fetches_as(ctx, &blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
+    assert_fetches_as(ctx, blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
 }
 
 #[fbinit::compat_test]
@@ -1203,50 +1235,47 @@ async fn filestore_test_rechunk_if_needed_tiny_chunks(fb: FacebookInit) -> Resul
     let full_data = &b"foobar"[..];
     let full_key = request(full_data);
     let full_id = canonical(full_data);
+    borrowed!(ctx, blob, full_key);
 
     // Chunk
     filestore::store(
-        &blob,
+        blob,
         large,
-        ctx.clone(),
-        &full_key,
+        ctx,
+        full_key,
         stream::once(future::ready(Ok(Bytes::from(full_data)))),
     )
     .await?;
-    assert_fetches_as(ctx.clone(), &blob, full_id, vec!["foob", "ar"]).await?;
+    assert_fetches_as(ctx, blob, full_id, vec!["foob", "ar"]).await?;
 
     // We expect the rechunk is not needed
     let (_, rechunked) = filestore::rechunk::rechunk(
         &FailingBlobstore::new(blob.clone(), 1.0, 0.0),
         large,
-        ctx.clone(),
+        ctx,
         full_id,
     )
     .await?;
     assert!(!rechunked);
-    assert_fetches_as(ctx, &blob, full_id, vec!["foob", "ar"]).await
+    assert_fetches_as(ctx, blob, full_id, vec!["foob", "ar"]).await
 }
 
-async fn assert_fetches_as<B: Blobstore>(
-    ctx: CoreContext,
+async fn assert_fetches_as<B: Blobstore, S: Into<Bytes>>(
+    ctx: &CoreContext,
     blobstore: &B,
     content_id: ContentId,
-    expected: Vec<&'static str>,
+    expected: Vec<S>,
 ) -> Result<()> {
-    let res = filestore::fetch(blobstore, ctx, &FetchKey::Canonical(content_id))
-        .map_ok(|maybe_stream| async move {
-            let res: Option<Vec<Bytes>> = match maybe_stream {
-                Some(stream) => Some(stream.try_collect().await?),
-                None => None,
-            };
+    let expected = expected.into_iter().map(|s| s.into()).collect();
+    let key = FetchKey::Canonical(content_id);
+    let maybe_stream = filestore::fetch(blobstore, ctx, &key).await?;
+    let res = match maybe_stream {
+        Some(stream) => Some(stream.try_collect::<Vec<_>>().await?),
+        None => None,
+    };
 
-            Result::<_, Error>::Ok(res)
-        })
-        .try_flatten()
-        .await;
     println!("res = {:#?}", res);
-    let expected = expected.into_iter().map(Bytes::from).collect();
-    assert_eq!(res?, Some(expected));
+    assert_eq!(res, Some(expected));
     Ok(())
 }
 
@@ -1258,21 +1287,22 @@ async fn filestore_exists(fb: FacebookInit) -> Result<()> {
 
     let blob = memblob::Memblob::default();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, req);
 
-    assert!(!filestore::exists(&blob, ctx.clone(), &content_id.into()).await?);
-    assert!(!filestore::exists(&blob, ctx.clone(), &alias.into()).await?);
+    assert!(!filestore::exists(blob, ctx, &content_id.into()).await?);
+    assert!(!filestore::exists(blob, ctx, &alias.into()).await?);
 
     filestore::store(
-        &blob,
+        blob,
         DEFAULT_CONFIG,
-        ctx.clone(),
-        &req,
+        ctx,
+        req,
         stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
     )
     .await?;
 
-    assert!(filestore::exists(&blob, ctx.clone(), &content_id.into()).await?);
-    assert!(filestore::exists(&blob, ctx.clone(), &alias.into()).await?);
+    assert!(filestore::exists(blob, ctx, &content_id.into()).await?);
+    assert!(filestore::exists(blob, ctx, &alias.into()).await?);
 
     Ok(())
 }

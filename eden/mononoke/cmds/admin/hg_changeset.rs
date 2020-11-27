@@ -154,13 +154,13 @@ fn hg_changeset_diff(
     (
         {
             cloned!(ctx, repo);
-            async move { left_id.load(ctx, repo.blobstore()).await }
+            async move { left_id.load(&ctx, repo.blobstore()).await }
                 .boxed()
                 .compat()
         },
         {
             cloned!(ctx, repo);
-            async move { right_id.load(ctx, repo.blobstore()).await }
+            async move { right_id.load(&ctx, repo.blobstore()).await }
                 .boxed()
                 .compat()
         },

@@ -145,7 +145,7 @@ pub async fn subcommand_blame<'a>(
                 .map_ok(|(path, file_unode_id)| {
                     let id = BlameId::from(file_unode_id);
                     cloned!(ctx, repo);
-                    async move { id.load(ctx, repo.blobstore()).await }
+                    async move { id.load(&ctx, repo.blobstore()).await }
                         .map_ok(move |blame_maybe_rejected| (path, blame_maybe_rejected))
                         .map_err(Error::from)
                 })
@@ -204,14 +204,17 @@ fn subcommand_show_blame(
     path: MPath,
     line_number: bool,
 ) -> impl Future<Item = (), Error = Error> {
-    fetch_blame(ctx.clone(), repo.clone(), csid, path)
-        .boxed()
-        .compat()
-        .from_err()
-        .and_then(move |(content, blame)| {
-            blame_hg_annotate(ctx, repo, content, blame, line_number)
-                .map(|annotate| println!("{}", annotate))
-        })
+    {
+        cloned!(ctx, repo);
+        async move { fetch_blame(&ctx, &repo, csid, path).await }
+    }
+    .boxed()
+    .compat()
+    .from_err()
+    .and_then(move |(content, blame)| {
+        blame_hg_annotate(ctx, repo, content, blame, line_number)
+            .map(|annotate| println!("{}", annotate))
+    })
 }
 
 fn find_leaf(
@@ -262,7 +265,7 @@ fn subcommand_show_diffs(
             cloned!(ctx, blobstore);
             move |file_unode_id| {
                 cloned!(ctx, blobstore);
-                async move { file_unode_id.load(ctx, &blobstore).await }
+                async move { file_unode_id.load(&ctx, &blobstore).await }
                     .boxed()
                     .compat()
                     .from_err()
@@ -350,7 +353,7 @@ fn subcommand_compute_blame(
                             cloned!(ctx, repo, blobstore);
                             {
                                 cloned!(ctx, blobstore);
-                                async move { file_unode_id.load(ctx, &blobstore).await }
+                                async move { file_unode_id.load(&ctx, &blobstore).await }
                             }
                             .boxed()
                             .compat()
@@ -359,7 +362,7 @@ fn subcommand_compute_blame(
                                 let csid = *file_unode.linknode();
                                 {
                                     cloned!(ctx, blobstore);
-                                    async move { csid.load(ctx, &blobstore).await }
+                                    async move { csid.load(&ctx, &blobstore).await }
                                 }
                                 .boxed()
                                 .compat()

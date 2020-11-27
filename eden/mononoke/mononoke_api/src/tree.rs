@@ -55,7 +55,7 @@ impl TreeContext {
         let fsnode = {
             cloned!(repo);
             async move {
-                id.load(repo.ctx().clone(), repo.blob_repo().blobstore())
+                id.load(repo.ctx(), repo.blob_repo().blobstore())
                     .await
                     .map_err(Error::from)
                     .map_err(MononokeError::from)
@@ -73,10 +73,7 @@ impl TreeContext {
     ) -> Result<Option<Self>, MononokeError> {
         // Try to load the fsnode immediately to see if it exists. Unlike
         // `new`, if the fsnode is missing, we simply return `Ok(None)`.
-        match id
-            .load(repo.ctx().clone(), repo.blob_repo().blobstore())
-            .await
-        {
+        match id.load(repo.ctx(), repo.blob_repo().blobstore()).await {
             Ok(fsnode) => {
                 let fsnode = async move { Ok(fsnode) };
                 let fsnode = fsnode.boxed().shared();

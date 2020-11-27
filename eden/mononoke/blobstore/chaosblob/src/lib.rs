@@ -81,28 +81,37 @@ impl<T> ChaosBlobstore<T> {
 #[async_trait]
 impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
     #[inline]
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
-        let get = self.blobstore.get(ctx, key.clone());
+        let get = self.blobstore.get(ctx, key);
         if should_error {
-            Err(ErrorKind::InjectedChaosGet(key).into())
+            Err(ErrorKind::InjectedChaosGet(key.to_owned()).into())
         } else {
             get.await
         }
     }
 
     #[inline]
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         self.put_impl(ctx, key, value, None).await?;
         Ok(())
     }
 
     #[inline]
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
-        let is_present = self.blobstore.is_present(ctx, key.clone());
+        let is_present = self.blobstore.is_present(ctx, key);
         if should_error {
-            Err(ErrorKind::InjectedChaosIsPresent(key).into())
+            Err(ErrorKind::InjectedChaosIsPresent(key.to_owned()).into())
         } else {
             is_present.await
         }
@@ -110,9 +119,9 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
 }
 
 impl<T: BlobstorePutOps> ChaosBlobstore<T> {
-    async fn put_impl(
-        &self,
-        ctx: CoreContext,
+    async fn put_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
@@ -138,9 +147,9 @@ impl<T: BlobstorePutOps> ChaosBlobstore<T> {
 
 #[async_trait]
 impl<T: BlobstorePutOps> BlobstorePutOps for ChaosBlobstore<T> {
-    async fn put_explicit(
-        &self,
-        ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -148,9 +157,9 @@ impl<T: BlobstorePutOps> BlobstorePutOps for ChaosBlobstore<T> {
         self.put_impl(ctx, key, value, Some(put_behaviour)).await
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
@@ -161,6 +170,7 @@ impl<T: BlobstorePutOps> BlobstorePutOps for ChaosBlobstore<T> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use borrowed::borrowed;
     use fbinit::FacebookInit;
 
     use memblob::Memblob;
@@ -168,62 +178,65 @@ mod test {
     #[fbinit::compat_test]
     async fn test_error_on_write(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let base = Memblob::default();
         let wrapper =
             ChaosBlobstore::new(base.clone(), ChaosOptions::new(None, NonZeroU32::new(1)));
-        let key = "foobar".to_string();
+        let key = "foobar";
 
         let r = wrapper
             .put(
-                ctx.clone(),
-                key.clone(),
+                ctx,
+                key.to_owned(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
             .await;
         assert!(!r.is_ok());
-        let base_present = base.is_present(ctx, key.clone()).await.unwrap();
+        let base_present = base.is_present(ctx, key).await.unwrap();
         assert!(!base_present);
     }
 
     #[fbinit::compat_test]
     async fn test_error_on_write_with_status(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let base = Memblob::default();
         let wrapper =
             ChaosBlobstore::new(base.clone(), ChaosOptions::new(None, NonZeroU32::new(1)));
-        let key = "foobar".to_string();
+        let key = "foobar";
 
         let r = wrapper
             .put_with_status(
-                ctx.clone(),
-                key.clone(),
+                ctx,
+                key.to_owned(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
             .await;
         assert!(!r.is_ok());
-        let base_present = base.is_present(ctx, key.clone()).await.unwrap();
+        let base_present = base.is_present(ctx, key).await.unwrap();
         assert!(!base_present);
     }
 
     #[fbinit::compat_test]
     async fn test_error_on_read(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let base = Memblob::default();
         let wrapper =
             ChaosBlobstore::new(base.clone(), ChaosOptions::new(NonZeroU32::new(1), None));
-        let key = "foobar".to_string();
+        let key = "foobar";
 
         let r = wrapper
             .put(
-                ctx.clone(),
-                key.clone(),
+                ctx,
+                key.to_owned(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
             .await;
         assert!(r.is_ok());
-        let base_present = base.is_present(ctx.clone(), key.clone()).await.unwrap();
+        let base_present = base.is_present(ctx, key).await.unwrap();
         assert!(base_present);
-        let r = wrapper.get(ctx.clone(), key.clone()).await;
+        let r = wrapper.get(ctx, key).await;
         assert!(!r.is_ok());
     }
 }

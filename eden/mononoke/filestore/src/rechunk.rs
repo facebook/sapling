@@ -28,11 +28,11 @@ pub enum ErrorKind {
 pub async fn force_rechunk<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     config: FilestoreConfig,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     content_id: ContentId,
 ) -> Result<ContentMetadata, Error> {
     let file_contents: FileContents = content_id
-        .load(ctx.clone(), blobstore)
+        .load(ctx, blobstore)
         .map_err(move |err| {
             match err {
                 LoadableError::Error(err) => err,
@@ -53,12 +53,12 @@ pub async fn force_rechunk<B: Blobstore + Clone + 'static>(
 pub async fn rechunk<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     filestore_config: FilestoreConfig,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     content_id: ContentId,
 ) -> Result<(ContentMetadata, bool), Error> {
     let fetch_key = FetchKey::Canonical(content_id.clone());
     let chunk_size = filestore_config.chunk_size;
-    let metadata = get_metadata(blobstore, ctx.clone(), &fetch_key).await?;
+    let metadata = get_metadata(blobstore, ctx, &fetch_key).await?;
     let content_metadata: ContentMetadata = match metadata {
         Some(content_metadata) => content_metadata,
         None => return Err(ErrorKind::ContentNotFound(content_id).into()),
@@ -70,7 +70,7 @@ pub async fn rechunk<B: Blobstore + Clone + 'static>(
                 blobstore,
                 chunk_size,
                 filestore_config.concurrency,
-                ctx.clone(),
+                ctx,
                 content_metadata,
             )
             .await;
@@ -129,13 +129,13 @@ async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     expected_chunk_size: u64,
     concurrency: usize,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     content_metadata: ContentMetadata,
 ) -> Result<(ContentMetadata, bool), Error> {
     let content_id = content_metadata.content_id.clone();
 
     let file_contents: FileContents = content_id
-        .load(ctx.clone(), blobstore)
+        .load(ctx, blobstore)
         .map_err(move |err| {
             match err {
                 LoadableError::Error(err) => err,
@@ -146,12 +146,9 @@ async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone + 'static>(
 
     let should_rechunk = match file_contents {
         FileContents::Bytes(_) => true,
-        FileContents::Chunked(ref chunked_file_contents) => uses_larger_chunks(
-            &ctx,
-            chunked_file_contents,
-            expected_chunk_size,
-            &content_id,
-        ),
+        FileContents::Chunked(ref chunked_file_contents) => {
+            uses_larger_chunks(ctx, chunked_file_contents, expected_chunk_size, &content_id)
+        }
     };
 
     if should_rechunk {
@@ -176,13 +173,12 @@ async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone + 'static>(
 async fn do_rechunk_file_contents<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     filestore_config: FilestoreConfig,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     file_contents: FileContents,
     content_id: ContentId,
 ) -> Result<ContentMetadata, Error> {
     let req = StoreRequest::with_canonical(file_contents.size(), content_id);
-    let file_stream =
-        fetch::stream_file_bytes(blobstore, ctx.clone(), file_contents, fetch::Range::All);
+    let file_stream = fetch::stream_file_bytes(blobstore, ctx, file_contents, fetch::Range::All);
 
     store(blobstore, filestore_config, ctx, &req, file_stream).await
 }

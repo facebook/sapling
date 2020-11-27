@@ -112,8 +112,7 @@ pub async fn prefetch_content_metadata(
         .into_iter()
         .map({
             move |content_id| async move {
-                match get_metadata(blobstore, ctx.clone(), &FetchKey::Canonical(content_id)).await?
-                {
+                match get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id)).await? {
                     Some(metadata) => Ok(Some((content_id, metadata))),
                     None => Ok(None),
                 }
@@ -148,7 +147,7 @@ async fn collect_fsnode_subentries(
         .map({
             move |fsnode_id| async move {
                 fsnode_id
-                    .load(ctx.clone(), blobstore)
+                    .load(ctx, blobstore)
                     .await
                     .context(FsnodeDerivationError::MissingParent(fsnode_id))
             }
@@ -192,15 +191,14 @@ async fn collect_fsnode_subentries(
                         } else {
                             // Some other directory is being used. Fetch its
                             // summary from the blobstore.
-                            let fsnode =
-                                fsnode_id.load(ctx.clone(), blobstore).await.with_context({
-                                    || {
-                                        FsnodeDerivationError::MissingSubentry(
-                                            String::from_utf8_lossy(elem.as_ref()).to_string(),
-                                            fsnode_id,
-                                        )
-                                    }
-                                })?;
+                            let fsnode = fsnode_id.load(ctx, blobstore).await.with_context({
+                                || {
+                                    FsnodeDerivationError::MissingSubentry(
+                                        String::from_utf8_lossy(elem.as_ref()).to_string(),
+                                        fsnode_id,
+                                    )
+                                }
+                            })?;
 
                             let entry = FsnodeEntry::Directory(FsnodeDirectory::new(
                                 fsnode_id,
@@ -311,7 +309,7 @@ async fn create_fsnode(
     let fsnode_id = *blob.id();
     let key = fsnode_id.blobstore_key();
     cloned!(ctx);
-    let f = async move { blobstore.put(ctx, key, blob.into()).await };
+    let f = async move { blobstore.put(&ctx, key, blob.into()).await };
 
     match sender {
         Some(sender) => sender
@@ -423,7 +421,7 @@ mod test {
 
             // Make sure it's saved in the blobstore.
             let root_fsnode = runtime
-                .block_on_std(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
+                .block_on_std(root_fsnode_id.load(&ctx, repo.blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
@@ -479,7 +477,7 @@ mod test {
 
             // Make sure it's saved in the blobstore
             let root_fsnode = runtime
-                .block_on_std(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
+                .block_on_std(root_fsnode_id.load(&ctx, repo.blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
@@ -567,7 +565,7 @@ mod test {
 
             // Make sure it's saved in the blobstore.
             let root_fsnode = runtime
-                .block_on_std(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
+                .block_on_std(root_fsnode_id.load(&ctx, repo.blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.
@@ -643,7 +641,7 @@ mod test {
                 _ => panic!("dir1/subdir1 fsnode should be a tree"),
             };
             let deep_fsnode = runtime
-                .block_on_std(deep_fsnode_id.load(ctx.clone(), repo.blobstore()))
+                .block_on_std(deep_fsnode_id.load(&ctx, repo.blobstore()))
                 .unwrap();
             let deep_fsnode_entries: Vec<_> = deep_fsnode.list().collect();
             assert_eq!(
@@ -752,7 +750,7 @@ mod test {
 
             // Make sure it's saved in the blobstore
             let root_fsnode = runtime
-                .block_on_std(root_fsnode_id.load(ctx.clone(), repo.blobstore()))
+                .block_on_std(root_fsnode_id.load(&ctx, repo.blobstore()))
                 .unwrap();
 
             // Make sure the fsnodes describe the full manifest.

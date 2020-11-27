@@ -54,7 +54,7 @@ async fn get_working_copy_paths(
         .compat()
         .await?;
 
-    let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
     info!(ctx.logger(), "Getting working copy contents");
     let mut paths: Vec<_> = hg_cs
         .manifestid()

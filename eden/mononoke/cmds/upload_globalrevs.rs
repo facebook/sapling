@@ -55,7 +55,7 @@ pub fn upload<P: AsRef<Path>>(
                     cloned!(ctx, repo);
                     move |entry| {
                         cloned!(ctx, repo);
-                        async move { entry.cs_id.load(ctx.clone(), repo.blobstore()).await }
+                        async move { entry.cs_id.load(&ctx, repo.blobstore()).await }
                             .boxed()
                             .compat()
                             .from_err()

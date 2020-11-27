@@ -37,9 +37,7 @@ pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static>(
     mapping_version: CommitSyncConfigVersion,
 ) -> Result<Option<ChangesetId>, Error> {
     let source_repo = commit_syncer.get_source_repo();
-    let source_cs = source_cs_id
-        .load(ctx.clone(), source_repo.blobstore())
-        .await?;
+    let source_cs = source_cs_id.load(ctx, source_repo.blobstore()).await?;
     let source_parents: Vec<_> = source_cs.parents().collect();
     if source_parents.len() != target_repo_parents.len() {
         return Err(anyhow!(

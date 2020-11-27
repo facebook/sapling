@@ -19,6 +19,7 @@ manifest = { path = "../../manifest" }
 mononoke_types = { path = "../../mononoke_types" }
 mononoke_types-thrift = { path = "../../mononoke_types/if" }
 unodes = { path = "../unodes" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -49,4 +50,3 @@ fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 pretty_assertions = "0.6"
 rand = { version = "0.7", features = ["small_rng"] }
 rand_xorshift = "0.2"
-tokio-compat = "0.1"

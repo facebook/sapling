@@ -566,7 +566,7 @@ async fn do_main(
 
             let head = res?.head;
 
-            let cs = head.load(ctx.clone(), repo.blobstore()).await?;
+            let cs = head.load(&ctx, repo.blobstore()).await?;
 
             let age = Timestamp::from(*cs.author_date()).since_seconds();
 

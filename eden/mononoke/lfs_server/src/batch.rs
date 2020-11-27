@@ -150,7 +150,7 @@ async fn resolve_internal_object(
 ) -> Result<Option<ContentId>, Error> {
     let blobstore = ctx.repo.blobstore();
 
-    let content_id = Alias::Sha256(oid).load(ctx.ctx.clone(), blobstore).await;
+    let content_id = Alias::Sha256(oid).load(&ctx.ctx, blobstore).await;
 
     let content_id = match content_id {
         Ok(content_id) => content_id,
@@ -164,7 +164,7 @@ async fn resolve_internal_object(
     // does matter for now to handle the (very much edge-y) case of the content existing in the
     // upstream, its alias existing locally, but not its content (T57777060).
     let exists = blobstore
-        .get(ctx.ctx.clone(), content_id.blobstore_key())
+        .get(&ctx.ctx, &content_id.blobstore_key())
         .map_ok(|b| b.is_some())
         .or_else(|e| async move {
             // If a load error was caused by redaction, then check for existence instead, which
@@ -175,7 +175,7 @@ async fn resolve_internal_object(
             // fallback to this slow path when redaction gets in the way (uncommon).
             if has_redaction_root_cause(&e) {
                 Ok(blobstore
-                    .is_present(ctx.ctx.clone(), content_id.blobstore_key())
+                    .is_present(&ctx.ctx, &content_id.blobstore_key())
                     .await?)
             } else {
                 Err(e)
@@ -802,7 +802,7 @@ mod test {
         let meta = filestore::store(
             ctx.repo.blobstore(),
             ctx.repo.filestore_config(),
-            ctx.ctx.clone(),
+            &ctx.ctx,
             &StoreRequest::new(6),
             stream::once(async move { Ok(Bytes::from("foobar")) }),
         )
@@ -824,7 +824,7 @@ mod test {
         let meta = filestore::store(
             stub.blobstore(),
             stub.filestore_config(),
-            CoreContext::test_mock(fb),
+            &CoreContext::test_mock(fb),
             &StoreRequest::new(6),
             stream::once(async move { Ok(Bytes::from("foobar")) }),
         )

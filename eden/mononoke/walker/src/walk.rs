@@ -226,7 +226,7 @@ async fn blame_step<V: VisitOne>(
     checker: &Checker<V>,
     blame_id: BlameId,
 ) -> Result<StepOutput, Error> {
-    let blame = blame_id.load(ctx.clone(), repo.blobstore()).await?;
+    let blame = blame_id.load(ctx, repo.blobstore()).await?;
     let mut edges = vec![];
 
     if let BlameMaybeRejected::Blame(blame) = blame {
@@ -316,7 +316,7 @@ async fn bonsai_changeset_step<V: VisitOne>(
     bcs_id: &ChangesetId,
 ) -> Result<StepOutput, Error> {
     // Get the data, and add direct file data for this bonsai changeset
-    let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
 
     // Build edges, from mostly queue expansion to least
     let mut edges = vec![];
@@ -395,7 +395,7 @@ fn file_content_step<V: VisitOne>(
 }
 
 async fn file_content_metadata_step<V: VisitOne>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
     id: ContentId,
@@ -522,7 +522,7 @@ async fn hg_to_bonsai_mapping_step<V: VisitOne>(
 }
 
 async fn hg_changeset_step<V: VisitOne>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
     id: HgChangesetId,
@@ -546,7 +546,7 @@ async fn hg_changeset_step<V: VisitOne>(
 }
 
 async fn hg_file_envelope_step<V: VisitOne>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
     hg_file_node_id: HgFileNodeId,
@@ -634,7 +634,7 @@ async fn hg_file_node_step<V: VisitOne>(
 }
 
 async fn hg_manifest_step<V: VisitOne>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
     path: WrappedPath,
@@ -682,7 +682,7 @@ async fn hg_manifest_step<V: VisitOne>(
 }
 
 async fn alias_content_mapping_step<V: VisitOne>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
     alias: Alias,
@@ -768,7 +768,7 @@ async fn fsnode_step<V: VisitOne>(
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, Error> {
     let fsnode = fsnode_id
-        .load(ctx.clone(), &repo.get_blobstore())
+        .load(ctx, &repo.get_blobstore())
         .map_err(Error::from)
         .await?;
 
@@ -870,7 +870,7 @@ async fn unode_file_step<V: VisitOne>(
     path: WrappedPath,
     key: UnodeKey<FileUnodeId>,
 ) -> Result<StepOutput, Error> {
-    let unode_file = key.inner.load(ctx.clone(), &repo.get_blobstore()).await?;
+    let unode_file = key.inner.load(ctx, repo.blobstore()).await?;
     let linked_cs_id = *unode_file.linknode();
     let mut edges = vec![];
 
@@ -920,7 +920,7 @@ async fn unode_manifest_step<V: VisitOne>(
     path: WrappedPath,
     key: UnodeKey<ManifestUnodeId>,
 ) -> Result<StepOutput, Error> {
-    let unode_manifest = key.inner.load(ctx.clone(), &repo.get_blobstore()).await?;
+    let unode_manifest = key.inner.load(ctx, repo.blobstore()).await?;
     let linked_cs_id = *unode_manifest.linknode();
 
     let mut edges = vec![];
@@ -1007,7 +1007,7 @@ async fn deleted_manifest_step<V: VisitOne>(
     id: &DeletedManifestId,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, Error> {
-    let deleted_manifest = id.load(ctx.clone(), &repo.get_blobstore()).await?;
+    let deleted_manifest = id.load(ctx, repo.blobstore()).await?;
     let linked_cs_id = *deleted_manifest.linknode();
 
     let mut edges = vec![];
@@ -1080,7 +1080,7 @@ async fn skeleton_manifest_step<V: VisitOne>(
     manifest_id: &SkeletonManifestId,
     path: Option<&WrappedPath>,
 ) -> Result<StepOutput, Error> {
-    let manifest = manifest_id.load(ctx.clone(), &repo.get_blobstore()).await?;
+    let manifest = manifest_id.load(ctx, repo.blobstore()).await?;
     let mut edges = vec![];
 
     for (child_path, entry) in manifest.list() {
@@ -1427,12 +1427,10 @@ where
         Node::HgBonsaiMapping(hg_csid) => {
             hg_to_bonsai_mapping_step(ctx.clone(), &repo, &checker, hg_csid).await
         }
-        Node::HgChangeset(hg_csid) => {
-            hg_changeset_step(ctx.clone(), &repo, &checker, hg_csid).await
-        }
+        Node::HgChangeset(hg_csid) => hg_changeset_step(&ctx, &repo, &checker, hg_csid).await,
         Node::HgFileEnvelope(hg_file_node_id) => {
             hg_file_envelope_step(
-                ctx.clone(),
+                &ctx,
                 &repo,
                 &checker,
                 hg_file_node_id,
@@ -1444,18 +1442,17 @@ where
             hg_file_node_step(ctx.clone(), &repo, &checker, path, id).await
         }
         Node::HgManifest(PathKey { id, path }) => {
-            hg_manifest_step(ctx.clone(), &repo, &checker, path, id).await
+            hg_manifest_step(&ctx, &repo, &checker, path, id).await
         }
         // Content
         Node::FileContent(content_id) => {
             file_content_step(ctx.clone(), &repo, &checker, content_id)
         }
         Node::FileContentMetadata(content_id) => {
-            file_content_metadata_step(ctx.clone(), &repo, &checker, content_id, enable_derive)
-                .await
+            file_content_metadata_step(&ctx, &repo, &checker, content_id, enable_derive).await
         }
         Node::AliasContentMapping(AliasKey(alias)) => {
-            alias_content_mapping_step(ctx.clone(), &repo, &checker, alias).await
+            alias_content_mapping_step(&ctx, &repo, &checker, alias).await
         }
         // Derived
         Node::Blame(blame_id) => blame_step(&ctx, &repo, &checker, blame_id).await,

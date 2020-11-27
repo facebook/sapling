@@ -256,7 +256,7 @@ async fn get_resume_state(
     let resume_state = match &config.state_key {
         Some(state_key) => {
             blobstore
-                .get(config.ctx.clone(), state_key.clone())
+                .get(&config.ctx, &state_key)
                 .compat()
                 .map(|data| {
                     data.and_then(|data| {
@@ -306,14 +306,13 @@ async fn put_resume_state(
     match &config.state_key {
         Some(state_key) if state.count % PRESERVE_STATE_RATIO == INIT_COUNT_VALUE => {
             let started_at = config.started_at;
-            let ctx = config.ctx.clone();
             cloned!(state_key, blobstore);
             serde_json::to_vec(&StateSerde::from(&state))
                 .map(|state_json| BlobstoreBytes::from_bytes(state_json))
                 .map_err(Error::from)
                 .into_future()
                 .and_then(move |state_data| {
-                    async move { blobstore.put(ctx, state_key, state_data).await }
+                    async move { blobstore.put(&config.ctx, state_key, state_data).await }
                         .boxed()
                         .compat()
                 })
@@ -345,7 +344,7 @@ async fn populate_healer_queue(
     let mut token = state.current_range.clone();
     loop {
         let entries = blobstore
-            .enumerate(config.ctx.clone(), (*state.current_range).clone())
+            .enumerate(&config.ctx, &state.current_range)
             .await?;
         state = state.with_current_many(token, entries.keys.len());
         if !config.dry_run {

@@ -246,7 +246,7 @@ async fn build_skiplist_index<'a, S: ToString>(
 
     debug!(logger, "storing {} bytes", bytes.len());
     blobstore
-        .put(ctx.clone(), key, BlobstoreBytes::from_bytes(bytes))
+        .put(&ctx, key, BlobstoreBytes::from_bytes(bytes))
         .await
 }
 
@@ -284,7 +284,7 @@ fn read_skiplist_index<S: ToString>(
 ) -> BoxFuture<Option<SkiplistIndex>, Error> {
     let blobstore = repo.get_blobstore();
     let key = key.to_string();
-    async move { blobstore.get(ctx, key).await }
+    async move { blobstore.get(&ctx, &key).await }
         .boxed()
         .compat()
         .and_then(move |maybebytes| {

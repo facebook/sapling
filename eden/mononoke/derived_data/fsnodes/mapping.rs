@@ -136,11 +136,7 @@ impl RootFsnodeMapping {
         ctx: &CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<RootFsnodeId>> {
-        match self
-            .blobstore
-            .get(ctx.clone(), self.format_key(cs_id))
-            .await?
-        {
+        match self.blobstore.get(ctx, &self.format_key(cs_id)).await? {
             Some(blob) => Ok(Some(blob.try_into()?)),
             None => Ok(None),
         }
@@ -173,7 +169,7 @@ impl BonsaiDerivedMapping for RootFsnodeMapping {
 
     async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
         self.blobstore
-            .put(ctx, self.format_key(csid), id.into())
+            .put(&ctx, self.format_key(csid), id.into())
             .await
     }
 }
@@ -217,10 +213,7 @@ mod test {
         repo: &BlobRepo,
         hg_cs_id: HgChangesetId,
     ) -> Result<HgManifestId> {
-        Ok(hg_cs_id
-            .load(ctx.clone(), repo.blobstore())
-            .await?
-            .manifestid())
+        Ok(hg_cs_id.load(ctx, repo.blobstore()).await?.manifestid())
     }
 
     async fn verify_fsnode(

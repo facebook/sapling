@@ -111,7 +111,7 @@ async fn get_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
                     .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
                     .compat()
                     .await?;
-                let hg_blob_changeset = cs_id.load(ctx, repo.blobstore()).await?;
+                let hg_blob_changeset = cs_id.load(&ctx, repo.blobstore()).await?;
                 Ok(hg_blob_changeset.manifestid())
             }
         }
@@ -895,9 +895,7 @@ where
             parent_mapping_selection_hint
         );
 
-        let cs = source_cs_id
-            .load(ctx.clone(), source_repo.blobstore())
-            .await?;
+        let cs = source_cs_id.load(ctx, source_repo.blobstore()).await?;
         let parents: Vec<_> = cs.parents().collect();
 
         if parents.is_empty() {
@@ -972,9 +970,7 @@ where
     ) -> Result<Option<ChangesetId>, Error> {
         let (source_repo, target_repo) = self.get_source_target();
         let mover = self.get_mover_by_version(sync_config_version)?;
-        let source_cs = source_cs_id
-            .load(ctx.clone(), source_repo.blobstore())
-            .await?;
+        let source_cs = source_cs_id.load(ctx, source_repo.blobstore()).await?;
 
         let source_cs = source_cs.clone().into_mut();
         let remapped_parents = match maybe_parents {
@@ -1676,7 +1672,7 @@ pub async fn upload_commits<'a>(
         .map({
             |content_id| {
                 copy_content(
-                    ctx.clone(),
+                    ctx,
                     &source_blobstore,
                     &target_blobstore,
                     target_filestore_config.clone(),

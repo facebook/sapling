@@ -457,7 +457,7 @@ async fn new_commit<T: AsRef<str>>(
         ctx.clone(),
         repo.clone(),
         parents,
-        store_files(ctx.clone(), contents, repo.clone()).await,
+        store_files(&ctx, contents, &repo).await,
     )
     .await
 }
@@ -558,9 +558,7 @@ async fn verify_mapping_and_all_wc(
         }
         let csc = commit_syncer.clone();
         let outcome = csc.get_commit_sync_outcome(&ctx, source_cs_id).await?;
-        let source_bcs = source_cs_id
-            .load(ctx.clone(), source_repo.blobstore())
-            .await?;
+        let source_bcs = source_cs_id.load(&ctx, source_repo.blobstore()).await?;
         let outcome = outcome.expect(&format!(
             "commit has not been synced {} {:?}",
             source_cs_id, source_bcs
@@ -580,7 +578,7 @@ async fn verify_mapping_and_all_wc(
 
         // Empty commits should always be synced, except for merges
         let bcs = source_cs_id
-            .load(ctx.clone(), csc.get_source_repo().blobstore())
+            .load(&ctx, csc.get_source_repo().blobstore())
             .await?;
         if bcs.file_changes().collect::<Vec<_>>().is_empty() && !bcs.is_merge() {
             match outcome {
@@ -737,7 +735,7 @@ async fn list_content(
     hg_cs_id: HgChangesetId,
     repo: &BlobRepo,
 ) -> Result<HashMap<String, String>, Error> {
-    let cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
 
     let entries = cs
         .manifestid()
@@ -749,11 +747,10 @@ async fn list_content(
     for (path, entry) in entries {
         match entry {
             Entry::Leaf((_, filenode_id)) => {
-                let blobstore = repo.get_blobstore();
-                let ctx = ctx.clone();
-                let envelope = filenode_id.load(ctx.clone(), &blobstore).await?;
+                let blobstore = repo.blobstore();
+                let envelope = filenode_id.load(ctx, blobstore).await?;
                 let content =
-                    filestore::fetch_concat(&blobstore, ctx, envelope.content_id()).await?;
+                    filestore::fetch_concat(blobstore, ctx, envelope.content_id()).await?;
                 let s = String::from_utf8_lossy(content.as_ref()).into_owned();
                 actual.insert(format!("{}", path.unwrap()), s);
             }
@@ -931,7 +928,7 @@ async fn init_repos(
         ctx.clone(),
         target_repo.clone(),
         vec![],
-        store_files(ctx.clone(), empty.clone(), source_repo.clone()).await,
+        store_files(&ctx, empty.clone(), &source_repo).await,
     )
     .await;
 
@@ -961,9 +958,7 @@ async fn init_repos(
         .compat()
         .await?
         .unwrap();
-    let first_bcs = initial_bcs_id
-        .load(ctx.clone(), source_repo.blobstore())
-        .await?;
+    let first_bcs = initial_bcs_id.load(&ctx, source_repo.blobstore()).await?;
     upload_commits(&ctx, vec![first_bcs.clone()], &source_repo, &target_repo).await?;
     let first_bcs_mut = first_bcs.into_mut();
     let maybe_rewritten = {
@@ -1013,7 +1008,7 @@ async fn init_repos(
         ctx.clone(),
         source_repo.clone(),
         vec![master_val],
-        store_files(ctx.clone(), empty, source_repo.clone()).await,
+        store_files(&ctx, empty, &source_repo).await,
     )
     .await;
 
@@ -1022,9 +1017,9 @@ async fn init_repos(
         source_repo.clone(),
         vec![empty_bcs_id],
         store_files(
-            ctx.clone(),
+            &ctx,
             btreemap! {"randomfile" => Some("some content")},
-            source_repo.clone(),
+            &source_repo,
         )
         .await,
     )
@@ -1035,9 +1030,9 @@ async fn init_repos(
         source_repo.clone(),
         vec![first_bcs_id],
         store_files(
-            ctx.clone(),
+            &ctx,
             btreemap! {"randomfile" => Some("some other content")},
-            source_repo.clone(),
+            &source_repo,
         )
         .await,
     )
@@ -1068,23 +1063,23 @@ async fn init_repos(
 
     let p2 = {
         let (path_rename, rename_file_change) = store_rename(
-            ctx.clone(),
+            &ctx,
             (
                 MPath::new(to_remove_new_repo_file.clone())?,
                 first_new_repo_commit,
             ),
             &move_dest_new_repo_file,
             "moved content",
-            source_repo.clone(),
+            &source_repo,
         )
         .await;
 
         let mut stored_files = store_files(
-            ctx.clone(),
+            &ctx,
             btreemap! {
                 second_new_repo_file.as_ref() => Some("new repo second content"),
             },
-            source_repo.clone(),
+            &source_repo,
         )
         .await;
         stored_files.insert(path_rename, rename_file_change);
@@ -1273,9 +1268,9 @@ async fn init_merged_repos(
             small_repo.clone(),
             vec![],
             store_files(
-                ctx.clone(),
+                &ctx,
                 btreemap! { filename.as_str() => Some("some content")},
-                small_repo.clone(),
+                &small_repo,
             )
             .await,
         )
@@ -1303,11 +1298,11 @@ async fn init_merged_repos(
 
         let renamed_filename = format!("smallrepo{}/{}", small_repo.get_repoid().id(), filename);
         let (renamed_path, rename) = store_rename(
-            ctx.clone(),
+            &ctx,
             (MPath::new(&filename).unwrap(), small_repo_cs_id),
             renamed_filename.as_str(),
             "some content",
-            large_repo.clone(),
+            &large_repo,
         )
         .await;
 
@@ -1341,7 +1336,7 @@ async fn init_merged_repos(
         ctx.clone(),
         large_repo.clone(),
         vec![merge_cs_id],
-        store_files(ctx.clone(), empty.clone(), large_repo.clone()).await,
+        store_files(&ctx, empty.clone(), &large_repo).await,
     )
     .await;
     println!("large repo empty commit: {}", first_after_merge_commit);
@@ -1351,7 +1346,7 @@ async fn init_merged_repos(
             ctx.clone(),
             small_repo.clone(),
             vec![*latest_small_repo_cs_id],
-            store_files(ctx.clone(), empty.clone(), small_repo.clone()).await,
+            store_files(&ctx, empty.clone(), &small_repo).await,
         )
         .await;
 
@@ -1382,9 +1377,9 @@ async fn init_merged_repos(
                 large_repo.clone(),
                 vec![first_after_merge_commit],
                 store_files(
-                    ctx.clone(),
+                    &ctx,
                     btreemap! { filename.as_str() => Some("new content")},
-                    large_repo.clone(),
+                    &large_repo,
                 )
                 .await,
             )
@@ -1435,12 +1430,12 @@ async fn init_merged_repos(
             large_repo.clone(),
             vec![first_after_merge_commit],
             store_files(
-                ctx.clone(),
+                &ctx,
                 btreemap! {
                     filename1 => Some("new content1"),
                     filename2 => Some("new content2"),
                 },
-                large_repo.clone(),
+                &large_repo,
             )
             .await,
         )
@@ -1458,11 +1453,11 @@ async fn init_merged_repos(
             large_repo.clone(),
             vec![small_repos[0].1],
             store_files(
-                ctx.clone(),
+                &ctx,
                 btreemap! {
                     filename => Some("preserved content"),
                 },
-                large_repo.clone(),
+                &large_repo,
             )
             .await,
         )

@@ -86,7 +86,7 @@ impl ManifestContent {
 }
 
 pub async fn fetch_raw_manifest_bytes<B: Blobstore>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     blobstore: &B,
     manifest_id: HgManifestId,
 ) -> Result<HgBlob> {
@@ -96,7 +96,7 @@ pub async fn fetch_raw_manifest_bytes<B: Blobstore>(
 }
 
 pub async fn fetch_manifest_envelope<B: Blobstore>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     blobstore: &B,
     manifest_id: HgManifestId,
 ) -> Result<HgManifestEnvelope> {
@@ -107,13 +107,13 @@ pub async fn fetch_manifest_envelope<B: Blobstore>(
 
 /// Like `fetch_manifest_envelope`, but returns None if the manifest wasn't found.
 pub async fn fetch_manifest_envelope_opt<B: Blobstore>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     blobstore: &B,
     node_id: HgManifestId,
 ) -> Result<Option<HgManifestEnvelope>> {
     let blobstore_key = node_id.blobstore_key();
     let bytes = blobstore
-        .get(ctx, blobstore_key.clone())
+        .get(ctx, &blobstore_key)
         .await
         .context("While fetching manifest envelope blob")?;
     (|| {
@@ -146,7 +146,7 @@ pub struct HgBlobManifest {
 
 impl HgBlobManifest {
     pub async fn load<B: Blobstore>(
-        ctx: CoreContext,
+        ctx: &CoreContext,
         blobstore: &B,
         manifestid: HgManifestId,
     ) -> Result<Option<Self>> {
@@ -223,7 +223,7 @@ impl Loadable for HgManifestId {
 
     async fn load<'a, B: Blobstore>(
         &'a self,
-        ctx: CoreContext,
+        ctx: &'a CoreContext,
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         let id = *self;

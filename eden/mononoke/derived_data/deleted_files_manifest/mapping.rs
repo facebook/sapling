@@ -96,15 +96,12 @@ impl RootDeletedManifestMapping {
         format!("derived_root_deleted_manifest.{}", cs_id)
     }
 
-    async fn fetch_deleted_manifest(
-        &self,
-        ctx: CoreContext,
+    async fn fetch_deleted_manifest<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<(ChangesetId, RootDeletedManifestId)>, Error> {
-        let maybe_bytes = self
-            .blobstore
-            .get(ctx.clone(), self.format_key(cs_id))
-            .await?;
+        let maybe_bytes = self.blobstore.get(ctx, &self.format_key(cs_id)).await?;
         match maybe_bytes {
             Some(bytes) => Ok(Some((cs_id, bytes.try_into()?))),
             None => Ok(None),
@@ -123,7 +120,7 @@ impl BonsaiDerivedMapping for RootDeletedManifestMapping {
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         csids
             .into_iter()
-            .map(|cs_id| self.fetch_deleted_manifest(ctx.clone(), cs_id))
+            .map(|cs_id| self.fetch_deleted_manifest(&ctx, cs_id))
             .collect::<FuturesUnordered<_>>()
             .try_filter_map(|maybe_metadata| async move { Ok(maybe_metadata) })
             .try_collect()
@@ -132,7 +129,7 @@ impl BonsaiDerivedMapping for RootDeletedManifestMapping {
 
     async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
         self.blobstore
-            .put(ctx, self.format_key(csid), id.into())
+            .put(&ctx, self.format_key(csid), id.into())
             .await
     }
 }

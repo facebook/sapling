@@ -270,13 +270,12 @@ macro_rules! impl_typed_hash_loadable_storable {
 
             async fn load<'a, B: Blobstore>(
                 &'a self,
-                ctx: CoreContext,
+                ctx: &'a CoreContext,
                 blobstore: &'a B,
             ) -> Result<Self::Value, LoadableError> {
                 let id = *self;
                 let blobstore_key = id.blobstore_key();
-                let get = blobstore
-                    .get(ctx, blobstore_key.clone());
+                let get = blobstore.get(ctx, &blobstore_key);
 
                 let bytes = get.await?.ok_or(LoadableError::Missing(blobstore_key))?;
                 let blob: Blob<$typed> = Blob::new(id, bytes.into_raw_bytes());
@@ -289,10 +288,10 @@ macro_rules! impl_typed_hash_loadable_storable {
         {
             type Key = $typed;
 
-            async fn store<B: Blobstore>(
+            async fn store<'a, B: Blobstore>(
                 self,
-                ctx: CoreContext,
-                blobstore: &B,
+                ctx: &'a CoreContext,
+                blobstore: &'a B,
             ) -> Result<Self::Key> {
                 let id = *self.id();
                 let bytes = self.into();

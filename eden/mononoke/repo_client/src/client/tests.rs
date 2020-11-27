@@ -224,13 +224,13 @@ async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), 
 
     // Commit that has only dir2 directory
     let root_mf_id = HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2")?
-        .load(ctx.clone(), &repo.get_blobstore())
+        .load(&ctx, &repo.get_blobstore())
         .compat()
         .await?
         .manifestid();
 
     let fetched_mfs = fetch_mfs(
-        ctx.clone(),
+        &ctx,
         &repo,
         root_mf_id,
         HgManifestId::new(NULL_HASH),
@@ -251,19 +251,18 @@ async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), 
     // Now commit that added a few files and directories
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
-        .load(ctx.clone(), &repo.get_blobstore())
+        .load(&ctx, &repo.get_blobstore())
         .compat()
         .await?
         .manifestid();
 
     let base_root_mf_id = HgChangesetId::from_str("2f866e7e549760934e31bf0420a873f65100ad63")?
-        .load(ctx.clone(), &repo.get_blobstore())
+        .load(&ctx, &repo.get_blobstore())
         .compat()
         .await?
         .manifestid();
 
-    let fetched_mfs =
-        fetch_mfs(ctx.clone(), &repo, root_mf_id, base_root_mf_id, None, 65536).await?;
+    let fetched_mfs = fetch_mfs(&ctx, &repo, root_mf_id, base_root_mf_id, None, 65536).await?;
 
     let mut res = fetched_mfs
         .into_iter()
@@ -294,13 +293,13 @@ async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Resul
     let repo = many_files_dirs::getrepo(fb).await;
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
-        .load(ctx.clone(), &repo.get_blobstore())
+        .load(&ctx, &repo.get_blobstore())
         .compat()
         .await?
         .manifestid();
 
     let base_mf_id = HgManifestId::new(NULL_HASH);
-    let fetched_mfs = fetch_mfs(ctx.clone(), &repo, root_mf_id, base_mf_id, None, 65536).await?;
+    let fetched_mfs = fetch_mfs(&ctx, &repo, root_mf_id, base_mf_id, None, 65536).await?;
 
     let paths = fetched_mfs
         .into_iter()
@@ -318,8 +317,7 @@ async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Resul
 
     for depth in 0..max_depth + 1 {
         println!("depth: {}", depth);
-        let fetched_mfs =
-            fetch_mfs(ctx.clone(), &repo, root_mf_id, base_mf_id, None, depth).await?;
+        let fetched_mfs = fetch_mfs(&ctx, &repo, root_mf_id, base_mf_id, None, depth).await?;
         let mut actual = fetched_mfs
             .into_iter()
             .map(|(_, path)| path)
@@ -356,18 +354,17 @@ async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> R
     let repo = many_files_dirs::getrepo(fb).await;
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
-        .load(ctx.clone(), &repo.get_blobstore())
+        .load(&ctx, &repo.get_blobstore())
         .compat()
         .await?
         .manifestid();
 
     let base_mf_id = HgManifestId::new(NULL_HASH);
-    let fetched_mfs = fetch_mfs(ctx.clone(), &repo, root_mf_id, base_mf_id, None, 65536).await?;
+    let fetched_mfs = fetch_mfs(&ctx, &repo, root_mf_id, base_mf_id, None, 65536).await?;
 
     for (hash, path) in &fetched_mfs {
         println!("base path: {:?}", path);
-        let mut actual =
-            fetch_mfs(ctx.clone(), &repo, *hash, base_mf_id, path.clone(), 65536).await?;
+        let mut actual = fetch_mfs(&ctx, &repo, *hash, base_mf_id, path.clone(), 65536).await?;
         actual.sort();
 
         let mut expected: Vec<_> = fetched_mfs
@@ -402,10 +399,7 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
         .compat()
         .await?;
 
-    let hg_cs = hg_cs_id
-        .load(ctx.clone(), &repo.get_blobstore())
-        .compat()
-        .await?;
+    let hg_cs = hg_cs_id.load(&ctx, &repo.get_blobstore()).compat().await?;
 
     let path = MPath::new("largefile")?;
     let maybe_entry = hg_cs
@@ -533,7 +527,7 @@ async fn run_and_check_if_lfs(
 }
 
 async fn fetch_mfs(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     root_mf_id: HgManifestId,
     base_root_mf_id: HgManifestId,
@@ -554,7 +548,7 @@ async fn fetch_mfs(
 
     // Make sure that Manifest ids are present in the repo
     for (hash, _) in &fetched_mfs {
-        hash.load(ctx.clone(), repo.blobstore()).compat().await?;
+        hash.load(ctx, repo.blobstore()).compat().await?;
     }
     Ok(fetched_mfs)
 }

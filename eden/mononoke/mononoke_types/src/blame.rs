@@ -66,11 +66,11 @@ impl Loadable for BlameId {
 
     async fn load<'a, B: Blobstore>(
         &'a self,
-        ctx: CoreContext,
+        ctx: &'a CoreContext,
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         let blobstore_key = self.blobstore_key();
-        let fetch = blobstore.get(ctx, blobstore_key.clone());
+        let fetch = blobstore.get(ctx, &blobstore_key);
 
         let bytes = fetch.await?.ok_or(LoadableError::Missing(blobstore_key))?;
         let blame_t = compact_protocol::deserialize(bytes.as_raw_bytes().as_ref())?;
@@ -83,9 +83,9 @@ impl Loadable for BlameId {
 ///
 /// NOTE: `Blame` is not a `Storable` object and can only be assoicated with
 ///       some file unode id.
-pub async fn store_blame<B: Blobstore>(
-    ctx: CoreContext,
-    blobstore: &B,
+pub async fn store_blame<'a, B: Blobstore>(
+    ctx: &'a CoreContext,
+    blobstore: &'a B,
     file_unode_id: FileUnodeId,
     blame: BlameMaybeRejected,
 ) -> Result<BlameId> {

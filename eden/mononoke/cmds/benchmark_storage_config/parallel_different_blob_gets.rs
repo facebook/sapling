@@ -42,7 +42,7 @@ pub fn benchmark(
                             let key = format!("benchmark.{:x}", thread_rng().next_u64());
                             runtime.block_on_std(async {
                                 blobstore
-                                    .put(ctx.clone(), key.clone(), block)
+                                    .put(&ctx, key.clone(), block)
                                     .await
                                     .expect("Put failed")
                             });
@@ -54,7 +54,11 @@ pub fn benchmark(
                         async move {
                             let futs: FuturesUnordered<_> = keys
                                 .into_iter()
-                                .map(|key| blobstore.get(ctx.clone(), key))
+                                .map(|key| {
+                                    let ctx = &ctx;
+                                    let blobstore = &blobstore;
+                                    async move { blobstore.get(ctx, &key).await }
+                                })
                                 .collect();
                             futs.try_for_each(|_| async move { Ok(()) })
                                 .await

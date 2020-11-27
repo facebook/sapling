@@ -190,7 +190,7 @@ async fn run_hooks_for_changeset(
     exclude_merges: bool,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<Option<HookExecutionInstance>, Error> {
-    let cs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let cs = cs_id.load(ctx, repo.blobstore()).await?;
 
     if exclude_merges && cs.is_merge() {
         info!(ctx.logger(), "Skipped merge commit {}", cs_id);

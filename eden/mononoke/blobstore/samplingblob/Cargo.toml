@@ -16,5 +16,6 @@ async-trait = "0.1.29"
 
 [dev-dependencies]
 memblob = { path = "../memblob" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio = { version = "=0.2.13", features = ["full"] }

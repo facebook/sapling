@@ -46,19 +46,17 @@ pub enum BlameError {
 ///
 /// Blame will be derived if it is not available yet.
 pub async fn fetch_blame(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     csid: ChangesetId,
     path: MPath,
 ) -> Result<(Bytes, Blame), BlameError> {
-    let (blame_id, blame) = match fetch_blame_if_derived(ctx.clone(), repo.clone(), csid, path)
-        .await?
-    {
+    let (blame_id, blame) = match fetch_blame_if_derived(ctx, repo, csid, path).await? {
         Ok((blame_id, blame)) => (blame_id, blame),
         Err(blame_id) => {
-            BlameRoot::derive(&ctx, &repo, csid).await?;
+            BlameRoot::derive(ctx, repo, csid).await?;
             match blame_id
-                .load(ctx.clone(), repo.blobstore())
+                .load(ctx, repo.blobstore())
                 .await
                 .map_err(Error::from)?
             {
@@ -67,7 +65,7 @@ pub async fn fetch_blame(
             }
         }
     };
-    let content = derived::fetch_file_full_content(&ctx, &repo, blame_id.into())
+    let content = derived::fetch_file_full_content(ctx, repo, blame_id.into())
         .await
         .map_err(BlameError::Error)?
         .map_err(BlameError::Rejected)?;
@@ -75,8 +73,8 @@ pub async fn fetch_blame(
 }
 
 async fn fetch_blame_if_derived(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     csid: ChangesetId,
     path: MPath,
 ) -> Result<Result<(BlameId, Blame), BlameId>, BlameError> {

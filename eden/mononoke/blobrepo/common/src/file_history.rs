@@ -330,7 +330,7 @@ fn get_filenode_from_envelope(
     node: HgFileNodeId,
     linknode: HgChangesetId,
 ) -> impl Future<Item = FilenodeInfo, Error = Error> {
-    async move { node.load(ctx, &blobstore).await }
+    async move { node.load(&ctx, &blobstore).await }
         .boxed()
         .compat()
         .with_context({

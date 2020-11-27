@@ -9,11 +9,7 @@ use crate::{ErrorKind, FastlogParent};
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreBytes};
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt,
-    future::{try_join_all, FutureExt, TryFutureExt},
-};
-use futures_old::Future;
+use futures::future::try_join_all;
 use manifest::Entry;
 use maplit::hashset;
 use mononoke_types::{
@@ -41,26 +37,23 @@ pub(crate) async fn create_new_batch(
         match parent_batches.get(0) {
             Some(parent_batch) => {
                 parent_batch
-                    .prepend_child_with_single_parent(ctx.clone(), blobstore, linknode)
+                    .prepend_child_with_single_parent(ctx, blobstore, linknode)
                     .await
             }
             None => {
                 let mut d = VecDeque::new();
                 d.push_back((linknode, vec![]));
-                FastlogBatch::new_from_raw_list(ctx.clone(), &*blobstore, d).await
+                FastlogBatch::new_from_raw_list(ctx, &*blobstore, d).await
             }
         }
     } else {
-        let parents_flattened = try_join_all(parent_batches.into_iter().map({
-            move |batch| async move {
-                fetch_flattened(&batch, ctx.clone(), blobstore.clone())
-                    .compat()
-                    .await
-            }
-        }))
-        .await?;
+        let parents_flattened =
+            try_join_all(parent_batches.into_iter().map({
+                move |batch| async move { fetch_flattened(&batch, ctx, blobstore).await }
+            }))
+            .await?;
         let raw_list = convert_to_raw_list(create_merged_list(linknode, parents_flattened));
-        FastlogBatch::new_from_raw_list(ctx.clone(), &*blobstore, raw_list).await
+        FastlogBatch::new_from_raw_list(ctx, &*blobstore, raw_list).await
     }
 }
 
@@ -160,14 +153,14 @@ fn convert_to_raw_list(
     res
 }
 
-pub(crate) async fn fetch_fastlog_batch_by_unode_id(
+pub(crate) async fn fetch_fastlog_batch_by_unode_id<B: Blobstore>(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &B,
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
 ) -> Result<Option<FastlogBatch>, Error> {
     let fastlog_batch_key = generate_fastlog_batch_key(unode_entry);
 
-    let maybe_bytes = blobstore.get(ctx.clone(), fastlog_batch_key).await?;
+    let maybe_bytes = blobstore.get(ctx, &fastlog_batch_key).await?;
 
     match maybe_bytes {
         Some(serialized) => FastlogBatch::from_bytes(serialized.as_raw_bytes()).map(Some),
@@ -175,9 +168,9 @@ pub(crate) async fn fetch_fastlog_batch_by_unode_id(
     }
 }
 
-pub(crate) async fn save_fastlog_batch_by_unode_id(
+pub(crate) async fn save_fastlog_batch_by_unode_id<B: Blobstore>(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &B,
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
     batch: FastlogBatch,
 ) -> Result<(), Error> {
@@ -186,7 +179,7 @@ pub(crate) async fn save_fastlog_batch_by_unode_id(
 
     blobstore
         .put(
-            ctx.clone(),
+            ctx,
             fastlog_batch_key,
             BlobstoreBytes::from_bytes(serialized),
         )
@@ -201,15 +194,13 @@ fn generate_fastlog_batch_key(unode_entry: Entry<ManifestUnodeId, FileUnodeId>) 
     format!("fastlogbatch.{}", key_part)
 }
 
-pub(crate) fn fetch_flattened<'a>(
-    batch: &'a FastlogBatch,
-    ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
-) -> impl Future<Item = Vec<(ChangesetId, Vec<FastlogParent>)>, Error = Error> + 'a {
-    async move { batch.fetch_raw_list(ctx, &blobstore).await }
-        .boxed()
-        .compat()
-        .map(flatten_raw_list)
+pub(crate) async fn fetch_flattened<B: Blobstore>(
+    batch: &FastlogBatch,
+    ctx: &CoreContext,
+    blobstore: &B,
+) -> Result<Vec<(ChangesetId, Vec<FastlogParent>)>, Error> {
+    let raw_list = batch.fetch_raw_list(ctx, blobstore).await?;
+    Ok(flatten_raw_list(raw_list))
 }
 
 fn flatten_raw_list(
@@ -241,77 +232,58 @@ fn flatten_raw_list(
 #[cfg(test)]
 mod test {
     use super::*;
+    use borrowed::borrowed;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use mononoke_types_mocks::changesetid::{ONES_CSID, THREES_CSID, TWOS_CSID};
-    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
-    fn fetch_flattened_simple(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new().unwrap();
+    async fn fetch_flattened_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = rt.block_on_std(linear::getrepo(fb));
+        let repo = linear::getrepo(fb).await;
+        let blobstore = repo.blobstore();
+        borrowed!(ctx, repo);
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));
-        let blobstore = Arc::new(repo.get_blobstore());
-        let batch = rt.block_on(
-            FastlogBatch::new_from_raw_list(ctx.clone(), &blobstore.clone(), d)
-                .boxed()
-                .compat(),
-        )?;
+        let batch = FastlogBatch::new_from_raw_list(ctx, blobstore, d).await?;
 
         assert_eq!(
             vec![(ONES_CSID, vec![])],
-            rt.block_on(fetch_flattened(&batch, ctx, blobstore))
-                .unwrap()
+            fetch_flattened(&batch, ctx, blobstore).await.unwrap()
         );
         Ok(())
     }
 
     #[fbinit::test]
-    fn fetch_flattened_prepend(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new().unwrap();
+    async fn fetch_flattened_prepend(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = rt.block_on_std(linear::getrepo(fb));
+        let repo = linear::getrepo(fb).await;
+        let blobstore = repo.blobstore();
+        borrowed!(ctx, repo);
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));
-        let blobstore = Arc::new(repo.get_blobstore());
-        let batch = rt.block_on(
-            FastlogBatch::new_from_raw_list(ctx.clone(), &blobstore.clone(), d)
-                .boxed()
-                .compat(),
-        )?;
+        let batch = FastlogBatch::new_from_raw_list(ctx, blobstore, d).await?;
 
         assert_eq!(
             vec![(ONES_CSID, vec![])],
-            rt.block_on(fetch_flattened(&batch, ctx.clone(), blobstore.clone()))
-                .unwrap()
+            fetch_flattened(&batch, ctx, blobstore).await.unwrap()
         );
 
-        let prepended = rt
-            .block_on(
-                batch
-                    .prepend_child_with_single_parent(ctx.clone(), &blobstore.clone(), TWOS_CSID)
-                    .boxed()
-                    .compat(),
-            )
+        let prepended = batch
+            .prepend_child_with_single_parent(ctx, blobstore, TWOS_CSID)
+            .await
             .unwrap();
         assert_eq!(
             vec![
                 (TWOS_CSID, vec![FastlogParent::Known(ONES_CSID)]),
                 (ONES_CSID, vec![])
             ],
-            rt.block_on(fetch_flattened(&prepended, ctx.clone(), blobstore.clone()))
-                .unwrap()
+            fetch_flattened(&prepended, ctx, blobstore).await.unwrap()
         );
 
-        let prepended = rt
-            .block_on(
-                prepended
-                    .prepend_child_with_single_parent(ctx.clone(), &blobstore.clone(), THREES_CSID)
-                    .boxed()
-                    .compat(),
-            )
+        let prepended = prepended
+            .prepend_child_with_single_parent(ctx, &blobstore, THREES_CSID)
+            .await
             .unwrap();
         assert_eq!(
             vec![
@@ -319,8 +291,7 @@ mod test {
                 (TWOS_CSID, vec![FastlogParent::Known(ONES_CSID)]),
                 (ONES_CSID, vec![])
             ],
-            rt.block_on(fetch_flattened(&prepended, ctx, blobstore))
-                .unwrap()
+            fetch_flattened(&prepended, ctx, blobstore).await.unwrap()
         );
 
         Ok(())

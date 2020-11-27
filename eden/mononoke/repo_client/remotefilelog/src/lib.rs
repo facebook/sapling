@@ -244,7 +244,7 @@ fn prepare_blob(
 ) -> impl Future<Item = RemotefilelogBlob, Error = Error> {
     {
         cloned!(ctx, repo);
-        async move { node.load(ctx, repo.blobstore()).await }
+        async move { node.load(&ctx, repo.blobstore()).await }
     }
     .boxed()
     .compat()
@@ -268,7 +268,7 @@ fn prepare_blob(
                 let content_fut = {
                     let blobstore = repo.get_blobstore();
                     let content_id = envelope.content_id();
-                    async move { filestore::fetch_concat(&blobstore, ctx, content_id).await }
+                    async move { filestore::fetch_concat(&blobstore, &ctx, content_id).await }
                 }
                 .map_ok(FileBytes)
                 .boxed()
@@ -323,7 +323,7 @@ fn prepare_blob(
                     {
                         cloned!(ctx, key);
                         let blobstore = repo.get_blobstore();
-                        async move { filestore::get_metadata(&blobstore, ctx, &key).await }
+                        async move { filestore::get_metadata(&blobstore, &ctx, &key).await }
                     }
                     .boxed()
                     .compat()
@@ -352,6 +352,7 @@ mod test {
     use assert_matches::assert_matches;
     use blobrepo_hg::BlobRepoHg;
     use blobrepo_override::DangerousOverride;
+    use borrowed::borrowed;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
     use futures::compat::Future01CompatExt;
@@ -367,8 +368,9 @@ mod test {
         let filename = "f1";
 
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
 
-        let bcs = CreateCommitContext::new_root(&ctx, &repo)
+        let bcs = CreateCommitContext::new_root(ctx, repo)
             .add_file(filename, content)
             .commit()
             .await?;
@@ -377,10 +379,10 @@ mod test {
             .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
             .compat()
             .await?
-            .load(ctx.clone(), repo.blobstore())
+            .load(ctx, repo.blobstore())
             .await?
             .manifestid()
-            .load(ctx.clone(), repo.blobstore())
+            .load(ctx, repo.blobstore())
             .await?;
 
         let entry = hg_manifest

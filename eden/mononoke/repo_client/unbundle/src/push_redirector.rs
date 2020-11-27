@@ -912,7 +912,7 @@ impl PushRedirector {
                     cloned!(ctx, target_repo);
                     async move {
                         let target_bcs = target_repo_bcs_id
-                            .load(ctx, target_repo.blobstore())
+                            .load(&ctx, target_repo.blobstore())
                             .await?;
 
                         Ok((*small_bcs_id, target_bcs))

@@ -28,17 +28,17 @@ use crate::BlobRepo;
 
 /// Creates bonsai changeset from already created HgBlobChangeset.
 pub async fn create_bonsai_changeset_object(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     cs: HgBlobChangeset,
     parent_manifests: Vec<HgManifestId>,
     bonsai_parents: Vec<ChangesetId>,
-    repo: BlobRepo,
+    repo: &BlobRepo,
 ) -> Result<BonsaiChangeset, Error> {
     let file_changes = find_file_changes(
         ctx,
         cs.clone(),
         parent_manifests,
-        repo.clone(),
+        repo,
         bonsai_parents.clone(),
     )
     .await?;
@@ -69,8 +69,8 @@ pub async fn create_bonsai_changeset_object(
 }
 
 pub async fn save_bonsai_changeset_object(
-    ctx: CoreContext,
-    blobstore: RepoBlobstore,
+    ctx: &CoreContext,
+    blobstore: &RepoBlobstore,
     bonsai_cs: BonsaiChangeset,
 ) -> Result<(), Error> {
     let bonsai_blob = bonsai_cs.into_blob();
@@ -96,30 +96,30 @@ fn find_bonsai_diff(
 
 // Finds files that were changed in the commit and returns it in the format suitable for BonsaiChangeset
 async fn find_file_changes(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     cs: HgBlobChangeset,
     parent_manifests: Vec<HgManifestId>,
-    repo: BlobRepo,
+    repo: &BlobRepo,
     bonsai_parents: Vec<ChangesetId>,
 ) -> Result<BTreeMap<MPath, Option<FileChange>>, Error> {
-    find_bonsai_diff(&ctx, &repo, cs, parent_manifests.iter().cloned().collect())
+    find_bonsai_diff(ctx, repo, cs, parent_manifests.iter().cloned().collect())
         .context("While finding bonsai diff")?
         .map_ok(|diff| {
-            cloned!(ctx, repo, parent_manifests, bonsai_parents);
+            cloned!(parent_manifests, bonsai_parents);
             async move {
                 match diff {
                     BonsaiDiffFileChange::Changed(path, ty, entry_id) => {
                         let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
                         let envelope = file_node_id
-                            .load(ctx.clone(), repo.blobstore())
+                            .load(ctx, repo.blobstore())
                             .await
                             .context("While fetching bonsai file changes")?;
                         let size = envelope.content_size();
                         let content_id = envelope.content_id();
 
                         let copyinfo = get_copy_info(
-                            ctx,
-                            repo,
+                            ctx.clone(),
+                            repo.clone(),
                             bonsai_parents,
                             path.clone(),
                             envelope,

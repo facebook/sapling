@@ -67,7 +67,7 @@ fn get_all_file_moves<'a>(
         .map_ok({
             move |(old_path, maybe_new_path, file_type, filenode_id)| {
                 async move {
-                    let file_envelope = filenode_id.load(ctx.clone(), repo.blobstore()).await?;
+                    let file_envelope = filenode_id.load(ctx, repo.blobstore()).await?;
 
                     // Note: it is always safe to unwrap here, since
                     // `HgFileEnvelope::get_size()` always returns `Some()`
@@ -128,7 +128,7 @@ pub async fn perform_stack_move<'a>(
     parent_bcs_id: ChangesetId,
     path_converter: Mover,
     max_num_of_moves_in_commit: NonZeroU64,
-    resulting_changeset_args: impl ChangesetArgsFactory,
+    resulting_changeset_args: impl ChangesetArgsFactory + 'a,
 ) -> Result<Vec<HgChangesetId>, Error> {
     perform_stack_move_impl(
         ctx,
@@ -154,19 +154,19 @@ async fn perform_stack_move_impl<'a, Chunker>(
     mut parent_bcs_id: ChangesetId,
     path_converter: Mover,
     chunker: Chunker,
-    resulting_changeset_args: impl ChangesetArgsFactory,
+    resulting_changeset_args: impl ChangesetArgsFactory + 'a,
 ) -> Result<Vec<HgChangesetId>, Error>
 where
-    Chunker: Fn(Vec<FileMove>) -> Vec<Vec<FileMove>>,
+    Chunker: Fn(Vec<FileMove>) -> Vec<Vec<FileMove>> + 'a,
 {
     let parent_hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), parent_bcs_id)
         .compat()
         .await?;
 
-    let parent_hg_cs = parent_hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let parent_hg_cs = parent_hg_cs_id.load(ctx, repo.blobstore()).await?;
 
-    let mut file_changes = get_all_file_moves(&ctx, &repo, parent_hg_cs, &path_converter)
+    let mut file_changes = get_all_file_moves(ctx, repo, parent_hg_cs, &path_converter)
         .try_fold(vec![], {
             move |mut collected, file_move| {
                 collected.push(file_move);
@@ -198,8 +198,8 @@ where
         }
 
         let hg_cs_id = create_save_and_generate_hg_changeset(
-            &ctx,
-            &repo,
+            ctx,
+            repo,
             vec![parent_bcs_id],
             file_changes,
             resulting_changeset_args(StackPosition(idx)),
@@ -309,7 +309,7 @@ mod test {
             .await
             .unwrap()
             .unwrap();
-        bcs_id.load(ctx.clone(), repo.blobstore()).await.unwrap()
+        bcs_id.load(&ctx, repo.blobstore()).await.unwrap()
     }
 
     #[fbinit::test]
@@ -404,7 +404,7 @@ mod test {
         repo: BlobRepo,
         hg_cs_id: HgChangesetId,
     ) -> BTreeMap<MPath, (FileType, ContentId)> {
-        let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await.unwrap();
+        let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await.unwrap();
         hg_cs
             .manifestid()
             .list_leaf_entries(ctx.clone(), repo.get_blobstore())
@@ -412,7 +412,7 @@ mod test {
                 cloned!(ctx, repo);
                 move |(path, (file_type, filenode_id))| {
                     cloned!(ctx, repo);
-                    async move { filenode_id.load(ctx, repo.blobstore()).await }
+                    async move { filenode_id.load(&ctx, repo.blobstore()).await }
                         .map(move |env| Ok((path, (file_type, env?.content_id()))))
                 }
             })
@@ -487,7 +487,7 @@ mod test {
         assert_eq!(stack.len(), 6);
 
         let last_hg_cs_id = stack.last().unwrap();
-        let last_hg_cs = last_hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+        let last_hg_cs = last_hg_cs_id.load(&ctx, repo.blobstore()).await?;
 
         let leaf_entries = last_hg_cs
             .manifestid()

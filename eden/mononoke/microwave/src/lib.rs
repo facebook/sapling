@@ -117,11 +117,7 @@ impl Snapshot {
             }
             SnapshotLocation::Blobstore => {
                 repo.blobstore()
-                    .put(
-                        ctx.clone(),
-                        snapshot_name(),
-                        BlobstoreBytes::from_bytes(serialized),
-                    )
+                    .put(ctx, snapshot_name(), BlobstoreBytes::from_bytes(serialized))
                     .await?;
             }
         };
@@ -153,8 +149,8 @@ async fn load_snapshot(
         }
         SnapshotLocation::Blobstore => {
             let bytes = repo
-                .get_blobstore()
-                .get(ctx.clone(), snapshot_name())
+                .blobstore()
+                .get(ctx, &snapshot_name())
                 .await?
                 .ok_or(Error::msg("Snapshot is missing"))?
                 .into_raw_bytes();

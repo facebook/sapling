@@ -28,11 +28,11 @@ impl Loadable for HgFileNodeId {
 
     async fn load<'a, B: Blobstore>(
         &'a self,
-        ctx: CoreContext,
+        ctx: &'a CoreContext,
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         let blobstore_key = self.blobstore_key();
-        let bytes = blobstore.get(ctx, blobstore_key.clone()).await?;
+        let bytes = blobstore.get(ctx, &blobstore_key).await?;
         let blobstore_bytes = match bytes {
             Some(bytes) => bytes,
             None => return Err(LoadableError::Missing(blobstore_key)),

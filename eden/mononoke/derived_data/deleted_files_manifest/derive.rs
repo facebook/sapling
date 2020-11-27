@@ -97,7 +97,7 @@ pub(crate) async fn derive_deleted_files_manifest(
                     cloned!(ctx, repo);
                     async move {
                         let (mf_change, next_states) =
-                            do_derive_unfold(ctx.clone(), repo.clone(), changes, parents).await?;
+                            do_derive_unfold(&ctx, &repo, changes, parents).await?;
                         Ok(((path_element, mf_change), next_states))
                     }
                 }
@@ -283,8 +283,8 @@ struct DeletedManifestUnfoldNode {
 }
 
 async fn do_derive_unfold(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     changes: PathTree<Option<PathChange>>,
     parents: Vec<DeletedManifestId>,
 ) -> Result<(DeletedManifestChange, Vec<DeletedManifestUnfoldNode>), Error> {
@@ -296,7 +296,7 @@ async fn do_derive_unfold(
     let parent_manifests = future::try_join_all(
         parents
             .iter()
-            .map(|mf_id| mf_id.load(ctx.clone(), repo.blobstore())),
+            .map(|mf_id| mf_id.load(ctx, repo.blobstore())),
     )
     .await?;
 
@@ -406,7 +406,7 @@ async fn create_manifest(
     let mut created = created.lock().await;
     if created.insert(key.clone()) {
         let blob = manifest.into_blob();
-        let f = async move { blobstore.put(ctx, key, blob.into()).await }.boxed();
+        let f = async move { blobstore.put(&ctx, key, blob.into()).await }.boxed();
 
         sender
             .unbounded_send(f)
@@ -973,7 +973,7 @@ mod tests {
             .collect::<Vec<_>>();
         let parent_mf_ids = parent_ids.into_iter().map(|(_, mf)| mf).collect::<Vec<_>>();
 
-        let files = store_files(ctx.clone(), file_changes, repo.clone()).await;
+        let files = store_files(&ctx, file_changes, &repo).await;
 
         let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, parent_bcs_ids).await;
 
@@ -999,7 +999,7 @@ mod tests {
 
         let dfm_id = f.await.unwrap();
         // Make sure it's saved in the blobstore
-        dfm_id.load(ctx.clone(), repo.blobstore()).await.unwrap();
+        dfm_id.load(&ctx, repo.blobstore()).await.unwrap();
 
         let mut deleted_nodes = iterate_all_entries(ctx.clone(), repo.clone(), dfm_id.clone())
             .map_ok(|(path, st, ..)| (path, st))
@@ -1059,7 +1059,7 @@ mod tests {
             let s = bounded_traversal_stream(256, Some((None, manifest_id)), move |(path, manifest_id)| {
                 cloned!(ctx, blobstore);
                 async move {
-                    let manifest = manifest_id.load(ctx, &blobstore).await?;
+                    let manifest = manifest_id.load(&ctx, &blobstore).await?;
                     let entry = (
                         path.clone(),
                         Status::from(manifest.linknode().clone()),

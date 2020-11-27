@@ -77,7 +77,7 @@ impl RepoWriteContext {
             cloned!(ctx);
             async move {
                 cs_id
-                    .load(ctx, blobstore)
+                    .load(&ctx, blobstore)
                     .map_err(MononokeError::from)
                     .await
             }

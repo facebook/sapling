@@ -41,12 +41,12 @@ impl TreeMapping {
         format!("git.derived_root.{}", cs_id)
     }
 
-    async fn fetch_root(
-        &self,
-        ctx: CoreContext,
+    async fn fetch_root<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<(ChangesetId, TreeHandle)>, Error> {
-        let bytes = self.blobstore.get(ctx, self.root_key(cs_id)).await?;
+        let bytes = self.blobstore.get(ctx, &self.root_key(cs_id)).await?;
         match bytes {
             Some(bytes) => bytes.try_into().map(|handle| Some((cs_id, handle))),
             None => Ok(None),
@@ -65,7 +65,7 @@ impl BonsaiDerivedMapping for TreeMapping {
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         csids
             .into_iter()
-            .map(|cs_id| self.fetch_root(ctx.clone(), cs_id))
+            .map(|cs_id| self.fetch_root(&ctx, cs_id))
             .collect::<FuturesUnordered<_>>()
             .try_filter_map(|maybe_handle| async move { Ok(maybe_handle) })
             .try_collect()
@@ -79,7 +79,7 @@ impl BonsaiDerivedMapping for TreeMapping {
         root: Self::Value,
     ) -> Result<(), Error> {
         self.blobstore
-            .put(ctx, self.root_key(csid), root.into())
+            .put(&ctx, self.root_key(csid), root.into())
             .await
     }
 }
@@ -129,7 +129,7 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
 
                 cloned!(ctx, blobstore);
                 async move {
-                    let handle = tree.store(ctx.clone(), &blobstore).await?;
+                    let handle = tree.store(&ctx, &blobstore).await?;
                     Ok(((), handle))
                 }
             }
@@ -154,7 +154,7 @@ async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
         Some(handle) => Ok(handle),
         None => {
             let tree: Tree = TreeBuilder::default().into();
-            tree.store(ctx, &blobstore).await
+            tree.store(&ctx, &blobstore).await
         }
     }
 }
@@ -175,7 +175,7 @@ pub async fn get_file_changes<B: Blobstore + Clone>(
                         let t = file_change.file_type();
                         let k = FetchKey::Canonical(file_change.content_id());
 
-                        let r = filestore::get_metadata(&blobstore, ctx.clone(), &k).await?;
+                        let r = filestore::get_metadata(&blobstore, &ctx, &k).await?;
                         let m = r.ok_or(ErrorKind::ContentMissing(k))?;
                         Ok((mpath, Some(BlobHandle::new(m, t))))
                     }
@@ -232,7 +232,7 @@ mod test {
         for (mpath, blob_handle) in leaves.into_iter() {
             let blob = filestore::fetch_concat(
                 &repo.get_blobstore(),
-                ctx.clone(),
+                &ctx,
                 FetchKey::Aliased(Alias::GitSha1(blob_handle.oid().sha1())),
             )
             .await?;

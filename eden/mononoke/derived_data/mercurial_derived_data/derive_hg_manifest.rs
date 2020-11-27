@@ -209,7 +209,7 @@ async fn resolve_conflict(
     // so, we'll load the envelopes.
     let envelopes = parents
         .iter()
-        .map(|p| p.untraced().1.load(ctx.clone(), &blobstore));
+        .map(|p| p.untraced().1.load(&ctx, &blobstore));
 
     let envelopes = try_join_all(envelopes).await?;
 

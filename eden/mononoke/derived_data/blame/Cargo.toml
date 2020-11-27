@@ -18,7 +18,6 @@ filestore = { path = "../../filestore" }
 manifest = { path = "../../manifest" }
 mononoke_types = { path = "../../mononoke_types" }
 unodes = { path = "../unodes" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
@@ -35,5 +34,6 @@ blobrepo_override = { path = "../../blobrepo/override" }
 metaconfig_types = { path = "../../metaconfig/types" }
 tests_utils = { path = "../../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"

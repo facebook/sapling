@@ -145,7 +145,7 @@ impl MultiplexedBlobstoreBase {
     pub async fn scrub_get(
         &self,
         ctx: &CoreContext,
-        key: &String,
+        key: &str,
     ) -> Result<Option<BlobstoreGetData>, ErrorKind> {
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
@@ -249,9 +249,9 @@ pub async fn inner_put(
         let ret = timeout(
             REQUEST_TIMEOUT,
             if let Some(put_behaviour) = put_behaviour {
-                blobstore.put_explicit(ctx, key.clone(), value, put_behaviour)
+                blobstore.put_explicit(&ctx, key.clone(), value, put_behaviour)
             } else {
-                blobstore.put_with_status(ctx, key.clone(), value)
+                blobstore.put_with_status(&ctx, key.clone(), value)
             },
         )
         .timed()
@@ -264,7 +264,7 @@ pub async fn inner_put(
         &pc,
         stats,
         result.as_ref(),
-        key,
+        &key,
         ctx.metadata().session_id().to_string(),
         OperationType::Put,
         size,
@@ -274,19 +274,17 @@ pub async fn inner_put(
     (blobstore_id, result)
 }
 
-// Workaround for Blobstore returning a static lifetime future
-async fn blobstore_get(
-    ctx: CoreContext,
+async fn blobstore_get<'a>(
+    ctx: &'a CoreContext,
     blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
     write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
-    key: String,
+    key: &'a str,
     scuba: ScubaSampleBuilder,
 ) -> Result<Option<BlobstoreGetData>, Error> {
     let is_logged = scuba.sampling().is_logged();
     let blobstores_count = blobstores.len() + write_mostly_blobstores.len();
 
     let (stats, result) = {
-        let ctx = &ctx;
         async move {
             let mut errors = HashMap::new();
             ctx.perf_counters()
@@ -295,7 +293,7 @@ async fn blobstore_get(
             let main_requests: FuturesUnordered<_> = multiplexed_get(
                 ctx.clone(),
                 blobstores.as_ref(),
-                &key,
+                key.to_owned(),
                 OperationType::Get,
                 scuba.clone(),
             )
@@ -303,7 +301,7 @@ async fn blobstore_get(
             let write_mostly_requests: FuturesUnordered<_> = multiplexed_get(
                 ctx.clone(),
                 write_mostly_blobstores.as_ref(),
-                &key,
+                key.to_owned(),
                 OperationType::Get,
                 scuba,
             )
@@ -392,7 +390,11 @@ async fn select_next<F1: Future, F2: Future>(
 
 #[async_trait]
 impl Blobstore for MultiplexedBlobstoreBase {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         let mut scuba = self.scuba.clone();
         let blobstores = self.blobstores.clone();
         let write_mostly_blobstores = self.write_mostly_blobstores.clone();
@@ -401,27 +403,23 @@ impl Blobstore for MultiplexedBlobstoreBase {
         blobstore_get(ctx, blobstores, write_mostly_blobstores, key, scuba).await
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         let blobstores_count = self.blobstores.len() + self.write_mostly_blobstores.len();
 
         let main_requests: FuturesUnordered<_> = self
             .blobstores
             .iter()
             .cloned()
-            .map(|(blobstore_id, blobstore)| {
-                let ctx = ctx.clone();
-                let key = key.clone();
-                async move { (blobstore_id, blobstore.is_present(ctx, key).await) }
+            .map(|(blobstore_id, blobstore)| async move {
+                (blobstore_id, blobstore.is_present(ctx, key).await)
             })
             .collect();
         let write_mostly_requests: FuturesUnordered<_> = self
             .write_mostly_blobstores
             .iter()
             .cloned()
-            .map(|(blobstore_id, blobstore)| {
-                let ctx = ctx.clone();
-                let key = key.clone();
-                async move { (blobstore_id, blobstore.is_present(ctx, key).await) }
+            .map(|(blobstore_id, blobstore)| async move {
+                (blobstore_id, blobstore.is_present(ctx, key).await)
             })
             .collect();
 
@@ -464,7 +462,12 @@ impl Blobstore for MultiplexedBlobstoreBase {
         Ok(result?)
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
@@ -473,9 +476,9 @@ impl Blobstore for MultiplexedBlobstoreBase {
 impl MultiplexedBlobstoreBase {
     // If put_behaviour is None, we we call inner BlobstorePutOps::put_with_status()
     // If put_behaviour is Some, we we call inner BlobstorePutOps::put_explicit()
-    async fn put_impl(
-        &self,
-        ctx: CoreContext,
+    async fn put_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
@@ -609,9 +612,9 @@ impl MultiplexedBlobstoreBase {
 
 #[async_trait]
 impl BlobstorePutOps for MultiplexedBlobstoreBase {
-    async fn put_explicit(
-        &self,
-        ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -619,9 +622,9 @@ impl BlobstorePutOps for MultiplexedBlobstoreBase {
         self.put_impl(ctx, key, value, Some(put_behaviour)).await
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
@@ -642,18 +645,18 @@ impl fmt::Debug for MultiplexedBlobstoreBase {
     }
 }
 
-async fn multiplexed_get_one(
-    ctx: impl Borrow<CoreContext>,
+async fn multiplexed_get_one<'a>(
+    ctx: &'a CoreContext,
     blobstore: Arc<dyn BlobstorePutOps>,
     blobstore_id: BlobstoreId,
-    key: String,
+    key: &'a str,
     operation: OperationType,
     mut scuba: ScubaSampleBuilder,
 ) -> (BlobstoreId, Result<Option<BlobstoreGetData>, Error>) {
     let (pc, (stats, timeout_or_res)) = {
-        let mut ctx = ctx.borrow().clone();
+        let mut ctx = ctx.clone();
         let pc = ctx.fork_perf_counters();
-        let ret = timeout(REQUEST_TIMEOUT, blobstore.get(ctx, key.clone()))
+        let ret = timeout(REQUEST_TIMEOUT, blobstore.get(&ctx, key))
             .timed()
             .await;
         (pc, ret)
@@ -675,20 +678,24 @@ async fn multiplexed_get_one(
 fn multiplexed_get<'fut: 'iter, 'iter>(
     ctx: impl Borrow<CoreContext> + Clone + 'fut,
     blobstores: &'iter [(BlobstoreId, Arc<dyn BlobstorePutOps>)],
-    key: &'iter String,
+    key: impl Borrow<str> + Clone + 'fut,
     operation: OperationType,
     scuba: ScubaSampleBuilder,
 ) -> impl Iterator<
     Item = impl Future<Output = (BlobstoreId, Result<Option<BlobstoreGetData>, Error>)> + 'fut,
 > + 'iter {
     blobstores.iter().map(move |(blobstore_id, blobstore)| {
-        multiplexed_get_one(
-            ctx.clone(),
-            blobstore.clone(),
-            *blobstore_id,
-            key.clone(),
-            operation,
-            scuba.clone(),
-        )
+        cloned!(ctx, blobstore, blobstore_id, key, scuba);
+        async move {
+            multiplexed_get_one(
+                ctx.borrow(),
+                blobstore,
+                blobstore_id,
+                key.borrow(),
+                operation,
+                scuba,
+            )
+            .await
+        }
     })
 }

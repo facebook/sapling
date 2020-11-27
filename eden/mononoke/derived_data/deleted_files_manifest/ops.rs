@@ -14,6 +14,7 @@ use futures::{
     FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
 use maplit::hashset;
+use std::borrow::Borrow;
 use std::collections::{HashSet, VecDeque};
 use std::iter::FromIterator;
 
@@ -115,13 +116,13 @@ async fn resolve_path_state_unfold(
     if let Some(cs_id) = queue.pop_front() {
         let root_dfm_id = RootDeletedManifestId::derive(&ctx, &repo, cs_id.clone()).await?;
         let dfm_id = root_dfm_id.deleted_manifest_id();
-        let entry = find_entry(ctx.clone(), repo.get_blobstore(), *dfm_id, path.clone()).await?;
+        let entry = find_entry(&ctx, repo.blobstore(), *dfm_id, path.clone()).await?;
 
         if let Some(mf_id) = entry {
             // we need to get the linknode, so let's load the deleted manifest
             // if the linknodes is None it means that file should exist
             // but it doesn't, let's throw an error
-            let mf = mf_id.load(ctx.clone(), repo.blobstore()).await?;
+            let mf = mf_id.load(&ctx, repo.blobstore()).await?;
             let linknode = mf.linknode().ok_or_else(|| {
                 let message = format!(
                     "there is no unode for the path '{}' and changeset {:?}, but it exists as a live entry in deleted manifest",
@@ -217,12 +218,12 @@ async fn derive_unode_entry(
 /// List all Deleted Files Manifest paths recursively that were deleted and match specified paths
 /// and/or prefixes.
 ///
-pub fn find_entries<I, P>(
-    ctx: CoreContext,
-    blobstore: impl Blobstore + Clone + 'static,
+pub fn find_entries<'a, I, P>(
+    ctx: impl Borrow<CoreContext> + Send + Sync + 'a,
+    blobstore: impl Blobstore + 'a,
     manifest_id: DeletedManifestId,
     paths_or_prefixes: I,
-) -> impl Stream<Item = Result<(Option<MPath>, DeletedManifestId), Error>>
+) -> impl Stream<Item = Result<(Option<MPath>, DeletedManifestId), Error>> + 'a
 where
     I: IntoIterator<Item = P>,
     PathOrPrefix: From<P>,
@@ -245,14 +246,15 @@ where
     }));
 
     async_stream::stream! {
+        let ctx = ctx.borrow();
+        let blobstore = &blobstore;
         let s: BoxStream<'_, Result<(Option<MPath>, DeletedManifestId), Error>> = bounded_traversal_stream(
             256,
             // starting point
             Some((None, Selector::Selector(path_tree), manifest_id)),
             move |(path, selector, manifest_id)| {
-                cloned!(ctx, blobstore);
                 async move {
-                    let mf = manifest_id.load(ctx, &blobstore).await?;
+                    let mf = manifest_id.load(ctx, blobstore).await?;
                     let return_entry = if mf.is_deleted() {
                         vec![(path.clone(), manifest_id)]
                     } else {
@@ -331,9 +333,9 @@ where
 
 /// Return Deleted Manifest entry for the given path
 ///
-pub async fn find_entry(
-    ctx: CoreContext,
-    blobstore: impl Blobstore + Clone + 'static,
+pub async fn find_entry<'a>(
+    ctx: impl Borrow<CoreContext> + Send + Sync + 'a,
+    blobstore: impl Blobstore + 'a,
     manifest_id: DeletedManifestId,
     path: Option<MPath>,
 ) -> Result<Option<DeletedManifestId>, Error> {
@@ -347,16 +349,17 @@ pub async fn find_entry(
 
 /// List all Deleted files manifest entries recursively, that represent deleted paths.
 ///
-pub fn list_all_entries(
-    ctx: CoreContext,
-    blobstore: impl Blobstore + Clone,
+pub fn list_all_entries<'a>(
+    ctx: impl Borrow<CoreContext> + Send + Sync + 'a,
+    blobstore: impl Blobstore + 'a,
     manifest_id: DeletedManifestId,
 ) -> impl Stream<Item = Result<(Option<MPath>, DeletedManifestId), Error>> {
     async_stream::stream! {
+        let ctx = ctx.borrow();
+        let blobstore = &blobstore;
         let s = bounded_traversal_stream(256, Some((None, manifest_id)), move |(path, manifest_id)| {
-            cloned!(ctx, blobstore);
             async move {
-                let manifest = manifest_id.load(ctx.clone(), &blobstore).await?;
+                let manifest = manifest_id.load(ctx, blobstore).await?;
                 let entry = if manifest.is_deleted() {
                     vec![(path.clone(), manifest_id)]
                 } else {
@@ -416,7 +419,7 @@ mod tests {
                 "dir-2/f-4" => Some("6\n"),
                 "dir-2/f-5" => Some("7\n"),
             };
-            let files = store_files(ctx.clone(), file_changes, repo.clone()).await;
+            let files = store_files(&ctx, file_changes, &repo).await;
             let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, vec![]).await;
 
             let bcs_id = bcs.get_changeset_id();
@@ -434,7 +437,7 @@ mod tests {
                 "dir-2/sub/f-3" => None,
                 "dir-2/f-4" => None,
             };
-            let files = store_files(ctx.clone(), file_changes, repo.clone()).await;
+            let files = store_files(&ctx, file_changes, &repo).await;
             let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, vec![bcs_id_1]).await;
 
             let _bcs_id = bcs.get_changeset_id();
@@ -443,8 +446,8 @@ mod tests {
             {
                 // check that it will yield only two deleted paths
                 let mut entries = find_entries(
-                    ctx.clone(),
-                    repo.get_blobstore(),
+                    &ctx,
+                    repo.blobstore(),
                     mf_id.clone(),
                     vec![
                         PathOrPrefix::Path(Some(path("file.txt"))),
@@ -465,8 +468,8 @@ mod tests {
             {
                 // check that it will yield recursively all deleted paths including dirs
                 let mut entries = find_entries(
-                    ctx.clone(),
-                    repo.get_blobstore(),
+                    &ctx,
+                    repo.blobstore(),
                     mf_id.clone(),
                     vec![PathOrPrefix::Prefix(Some(path("dir-2")))],
                 )
@@ -487,8 +490,8 @@ mod tests {
             {
                 // check that it will yield recursively even having a path patterns
                 let mut entries = find_entries(
-                    ctx.clone(),
-                    repo.get_blobstore(),
+                    &ctx,
+                    repo.blobstore(),
                     mf_id.clone(),
                     vec![
                         PathOrPrefix::Prefix(Some(path("dir/sub"))),
@@ -525,7 +528,7 @@ mod tests {
                 "dir/sub/f-3" => Some("3\n"),
                 "dir/f-2" => Some("4\n"),
             };
-            let files = store_files(ctx.clone(), file_changes, repo.clone()).await;
+            let files = store_files(&ctx, file_changes, &repo).await;
             let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, vec![]).await;
 
             let bcs_id = bcs.get_changeset_id();
@@ -539,7 +542,7 @@ mod tests {
                 "dir/sub/f-1" => None,
                 "dir/sub/f-3" => None,
             };
-            let files = store_files(ctx.clone(), file_changes, repo.clone()).await;
+            let files = store_files(&ctx, file_changes, &repo).await;
             let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, vec![bcs_id_1]).await;
 
             let _bcs_id = bcs.get_changeset_id();

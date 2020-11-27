@@ -77,7 +77,7 @@ impl FastReplayDispatcher {
             .ok_or_else(|| Error::msg("Cannot load remote_args without a remote_args_blobstore"))?;
 
         let e = Error::msg(format!("Key not found: {}", &key));
-        let bytes = blobstore.get(ctx, key).await?.ok_or(e)?;
+        let bytes = blobstore.get(&ctx, &key).await?.ok_or(e)?;
         Ok(String::from_utf8(bytes.into_raw_bytes().to_vec())?)
     }
 }

@@ -52,7 +52,7 @@ impl Loadable for FetchKey {
     /// operation).
     async fn load<'a, B: Blobstore>(
         &'a self,
-        ctx: CoreContext,
+        ctx: &'a CoreContext,
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         match self {
@@ -87,11 +87,11 @@ impl Loadable for Alias {
 
     async fn load<'a, B: Blobstore>(
         &'a self,
-        ctx: CoreContext,
+        ctx: &'a CoreContext,
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         let key = self.blobstore_key();
-        let get = blobstore.get(ctx, key.clone());
+        let get = blobstore.get(ctx, &key);
         let maybe_alias = get.await?;
         let blob = maybe_alias.ok_or_else(|| LoadableError::Missing(key.clone()))?;
 
@@ -108,7 +108,11 @@ pub struct AliasBlob(pub Alias, pub ContentAlias);
 impl Storable for AliasBlob {
     type Key = ();
 
-    async fn store<B: Blobstore>(self, ctx: CoreContext, blobstore: &B) -> Result<Self::Key> {
+    async fn store<'a, B: Blobstore>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Key> {
         blobstore
             .put(ctx, self.0.blobstore_key(), self.1.into_blob())
             .await

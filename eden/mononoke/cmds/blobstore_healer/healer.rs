@@ -81,7 +81,7 @@ impl Healer {
                 .sync_queue
                 .iter(
                     ctx,
-                    self.blobstore_key_like.as_ref(),
+                    self.blobstore_key_like.as_deref(),
                     self.multiplex_id,
                     healing_deadline.clone(),
                     fetch_size,
@@ -372,7 +372,7 @@ fn heal_blob<'out>(
                 let blobstore = blobstores
                     .get(&bid)
                     .expect("stores_to_heal contains unknown blobstore?");
-                let result = blobstore.put(ctx.clone(), key.clone(), blob.clone()).await;
+                let result = blobstore.put(ctx, key.clone(), blob.clone()).await;
                 (bid, result.is_ok())
             }))
             .await
@@ -464,7 +464,7 @@ async fn fetch_blob(
         let blobstore = blobstores
             .get(bid)
             .expect("blobstores_to_fetch contains only existing blobstores");
-        let result = blobstore.get(ctx.clone(), key.to_string()).await;
+        let result = blobstore.get(ctx, key).await;
         (bid, result)
     }))
     .await;

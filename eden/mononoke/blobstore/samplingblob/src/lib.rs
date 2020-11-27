@@ -18,8 +18,8 @@ use std::sync::Arc;
 pub trait SamplingHandler: std::fmt::Debug + Send + Sync {
     fn sample_get(
         &self,
-        ctx: CoreContext,
-        key: String,
+        ctx: &CoreContext,
+        key: &str,
         value: Option<&BlobstoreBytes>,
     ) -> Result<()>;
 
@@ -27,7 +27,7 @@ pub trait SamplingHandler: std::fmt::Debug + Send + Sync {
         Ok(())
     }
 
-    fn sample_is_present(&self, _ctx: CoreContext, _key: String, _value: bool) -> Result<()> {
+    fn sample_is_present(&self, _ctx: &CoreContext, _key: &str, _value: bool) -> Result<()> {
         Ok(())
     }
 }
@@ -47,18 +47,27 @@ impl<T> SamplingBlobstore<T> {
 }
 
 #[async_trait]
-impl<T: Blobstore + Clone> Blobstore for SamplingBlobstore<T> {
+impl<T: Blobstore> Blobstore for SamplingBlobstore<T> {
     #[inline]
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         cloned!(self.handler);
-        let get = self.inner.get(ctx.clone(), key.clone());
+        let get = self.inner.get(ctx, key);
         let opt_blob = get.await?;
         handler.sample_get(ctx, key, opt_blob.as_ref().map(|blob| blob.as_bytes()))?;
         Ok(opt_blob)
     }
 
     #[inline]
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         let sample_res = self.handler.sample_put(&ctx, &key, &value);
         let put = self.inner.put(ctx, key, value);
         put.await?;
@@ -66,8 +75,8 @@ impl<T: Blobstore + Clone> Blobstore for SamplingBlobstore<T> {
     }
 
     #[inline]
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
-        let is_present = self.inner.is_present(ctx.clone(), key.clone());
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+        let is_present = self.inner.is_present(ctx, key);
         cloned!(self.handler);
         let is_present = is_present.await?;
         handler.sample_is_present(ctx, key, is_present)?;
@@ -79,6 +88,7 @@ impl<T: Blobstore + Clone> Blobstore for SamplingBlobstore<T> {
 mod test {
     use super::*;
 
+    use borrowed::borrowed;
     use fbinit::FacebookInit;
     use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -104,23 +114,24 @@ mod test {
     impl SamplingHandler for TestSamplingHandler {
         fn sample_get(
             &self,
-            ctx: CoreContext,
-            _key: String,
+            ctx: &CoreContext,
+            _key: &str,
             _value: Option<&BlobstoreBytes>,
         ) -> Result<()> {
-            self.check_sample(&ctx)
+            self.check_sample(ctx)
         }
         fn sample_put(&self, ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) -> Result<()> {
             self.check_sample(ctx)
         }
-        fn sample_is_present(&self, ctx: CoreContext, _key: String, _value: bool) -> Result<()> {
-            self.check_sample(&ctx)
+        fn sample_is_present(&self, ctx: &CoreContext, _key: &str, _value: bool) -> Result<()> {
+            self.check_sample(ctx)
         }
     }
 
     #[fbinit::test]
     async fn test_sample_called(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let base = Memblob::default();
         let sample_this = SamplingKey::new();
         let handler = Arc::new(TestSamplingHandler {
@@ -129,12 +140,12 @@ mod test {
         });
         let wrapper =
             SamplingBlobstore::new(base.clone(), handler.clone() as Arc<dyn SamplingHandler>);
-        let key = "foobar".to_string();
+        let key = "foobar";
 
         let r = wrapper
             .put(
-                ctx.clone(),
-                key.clone(),
+                ctx,
+                key.to_owned(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
             .await;
@@ -142,11 +153,12 @@ mod test {
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(!was_sampled);
         let ctx = ctx.clone_and_sample(sample_this);
-        let base_present = base.is_present(ctx.clone(), key.clone()).await.unwrap();
+        borrowed!(ctx);
+        let base_present = base.is_present(ctx, key).await.unwrap();
         assert!(base_present);
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(!was_sampled);
-        let wrapper_present = wrapper.is_present(ctx, key.clone()).await.unwrap();
+        let wrapper_present = wrapper.is_present(ctx, key).await.unwrap();
         assert!(wrapper_present);
         let was_sampled = handler.sampled.load(Ordering::Relaxed);
         assert!(was_sampled);

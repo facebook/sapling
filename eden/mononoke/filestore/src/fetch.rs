@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use std::cmp::{max, min};
-use std::convert::TryInto;
+use std::{
+    borrow::Borrow,
+    cmp::{max, min},
+    convert::TryInto,
+};
 
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError};
@@ -39,7 +42,7 @@ pub enum Range {
 
 pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,
-    ctx: CoreContext,
+    ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
     file_contents: FileContents,
     range: Range,
 ) -> impl Stream<Item = Result<Bytes, Error>> + 'a {
@@ -133,7 +136,7 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
                 cloned!(ctx, blobstore);
                 async move {
                     let bytes = chunk_id
-                        .load(ctx, &blobstore)
+                        .load(ctx.borrow(), &blobstore)
                         .await
                         .map_err(move |err| {
                             match err {
@@ -161,13 +164,13 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
 
 pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,
-    ctx: CoreContext,
+    ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
     content_id: ContentId,
     range: Range,
 ) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + 'a, u64)>, Error> {
     let maybe_file_contents = {
         cloned!(ctx, blobstore);
-        async move { content_id.load(ctx, &blobstore).await }.await
+        async move { content_id.load(ctx.borrow(), &blobstore).await }.await
     }
     .map(Some)
     .or_else(|err| match err {

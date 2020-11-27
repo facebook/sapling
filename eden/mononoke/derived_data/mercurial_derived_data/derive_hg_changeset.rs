@@ -70,7 +70,7 @@ fn store_file_change(
             cloned!(change, path);
             {
                 cloned!(ctx, store);
-                async move { parent.load(ctx, &store).await }
+                async move { parent.load(&ctx, &store).await }
             }
             .boxed()
             .compat()
@@ -327,7 +327,7 @@ pub(crate) async fn derive_from_parents(
         try_join_all(
             parents
                 .into_iter()
-                .map(|id| async move { id.0.load(ctx.clone(), repo.blobstore()).await }),
+                .map(|id| async move { id.0.load(ctx, repo.blobstore()).await }),
         )
         .await?
     };
@@ -398,7 +398,7 @@ fn generate_hg_changeset(
                 let cs = try_boxfuture!(HgBlobChangeset::new(content));
                 let cs_id = cs.get_changeset_id();
 
-                async move { cs.save(ctx.clone(), repo.get_blobstore()).await }
+                async move { cs.save(&ctx, repo.blobstore()).await }
                     .boxed()
                     .compat()
                     .map(move |_| cs_id)

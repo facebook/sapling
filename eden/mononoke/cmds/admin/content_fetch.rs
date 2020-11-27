@@ -53,21 +53,14 @@ pub async fn subcommand_content_fetch<'a>(
             println!("Binary file");
         }
         Entry::Leaf((FileType::Symlink, id)) | Entry::Leaf((FileType::Regular, id)) => {
-            let envelope = id
-                .load(ctx.clone(), repo.blobstore())
-                .await
-                .map_err(Error::from)?;
+            let envelope = id.load(&ctx, repo.blobstore()).await.map_err(Error::from)?;
             let bytes =
-                filestore::fetch_concat(&repo.get_blobstore(), ctx.clone(), envelope.content_id())
-                    .await?;
+                filestore::fetch_concat(&repo.get_blobstore(), &ctx, envelope.content_id()).await?;
             let content = String::from_utf8(bytes.to_vec()).expect("non-utf8 file content");
             println!("{}", content);
         }
         Entry::Tree(id) => {
-            let manifest = id
-                .load(ctx.clone(), repo.blobstore())
-                .await
-                .map_err(Error::from)?;
+            let manifest = id.load(&ctx, repo.blobstore()).await.map_err(Error::from)?;
 
             let entries: Vec<_> = manifest.list().collect();
             let mut longest_len = 0;
@@ -112,7 +105,7 @@ async fn fetch_entry(
         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
         .compat()
         .await?;
-    let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
 
     let ret = hg_cs
         .manifestid()

@@ -162,13 +162,13 @@ impl Default for ScrubSample {
 impl SamplingHandler for WalkSampleMapping<Node, ScrubSample> {
     fn sample_get(
         &self,
-        ctx: CoreContext,
-        key: String,
+        ctx: &CoreContext,
+        key: &str,
         value: Option<&BlobstoreBytes>,
     ) -> Result<(), Error> {
         ctx.sampling_key().map(|sampling_key| {
             self.inflight().get_mut(sampling_key).map(|mut guard| {
-                value.map(|value| guard.data.insert(key.clone(), value.len() as u64))
+                value.map(|value| guard.data.insert(key.to_owned(), value.len() as u64))
             })
         });
         Ok(())

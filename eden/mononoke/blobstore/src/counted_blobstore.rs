@@ -64,7 +64,11 @@ impl<T> CountedBlobstore<T> {
 
 #[async_trait]
 impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         let stats = self.stats.clone();
         stats.get.add_value(1);
         let get = self.blobstore.get(ctx, key);
@@ -76,7 +80,12 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         res
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         let stats = self.stats.clone();
         stats.put.add_value(1);
         let put = self.blobstore.put(ctx, key, value);
@@ -88,7 +97,7 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         res
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         let stats = self.stats.clone();
         stats.is_present.add_value(1);
         let is_present = self.blobstore.is_present(ctx, key);
@@ -102,9 +111,9 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
 }
 
 impl<T: BlobstorePutOps> CountedBlobstore<T> {
-    async fn put_impl(
-        &self,
-        ctx: CoreContext,
+    async fn put_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
@@ -135,9 +144,9 @@ impl<T: BlobstorePutOps> CountedBlobstore<T> {
 
 #[async_trait]
 impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
-    async fn put_explicit(
-        &self,
-        ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -145,9 +154,9 @@ impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
         self.put_impl(ctx, key, value, Some(put_behaviour)).await
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
@@ -157,7 +166,12 @@ impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
 
 #[async_trait]
 impl<T: BlobstoreWithLink> BlobstoreWithLink for CountedBlobstore<T> {
-    async fn link(&self, ctx: CoreContext, existing_key: String, link_key: String) -> Result<()> {
+    async fn link<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        existing_key: &'a str,
+        link_key: String,
+    ) -> Result<()> {
         let stats = self.stats.clone();
         stats.link.add_value(1);
         let res = self.blobstore.link(ctx, existing_key, link_key);

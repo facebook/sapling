@@ -64,7 +64,7 @@ pub async fn backfill<P: AsRef<Path>>(
             cloned!(ctx, repo);
             move |id| {
                 cloned!(ctx, repo);
-                async move { id.load(ctx, repo.blobstore()).await }.map_err(anyhow::Error::from)
+                async move { id.load(&ctx, repo.blobstore()).await }.map_err(anyhow::Error::from)
             }
         })
         .try_buffer_unordered(chunk_size)

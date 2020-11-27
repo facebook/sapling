@@ -98,7 +98,7 @@ async fn collect_skeleton_subentries(
         .map({
             move |skeleton_id| async move {
                 skeleton_id
-                    .load(ctx.clone(), blobstore)
+                    .load(ctx, blobstore)
                     .await
                     .context(SkeletonManifestDerivationError::MissingParent(skeleton_id))
             }
@@ -141,10 +141,8 @@ async fn collect_skeleton_subentries(
                         } else {
                             // Some other directory is being used. Fetch its
                             // summary from the blobstore.
-                            let skeleton_manifest = skeleton_id
-                                .load(ctx.clone(), blobstore)
-                                .await
-                                .with_context({
+                            let skeleton_manifest =
+                                skeleton_id.load(ctx, blobstore).await.with_context({
                                     || {
                                         SkeletonManifestDerivationError::MissingSubentry(
                                             String::from_utf8_lossy(elem.as_ref()).to_string(),
@@ -177,9 +175,8 @@ async fn create_skeleton_manifest(
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<SkeletonManifestId, (), Option<SkeletonManifestSummary>>,
 ) -> Result<(Option<SkeletonManifestSummary>, SkeletonManifestId)> {
-    cloned!(ctx, blobstore);
     let entries =
-        collect_skeleton_subentries(&ctx, &blobstore, tree_info.parents, tree_info.subentries)
+        collect_skeleton_subentries(ctx, blobstore, tree_info.parents, tree_info.subentries)
             .await?;
 
     // Build a summary of the entries and store it as the new skeleton
@@ -248,7 +245,10 @@ async fn create_skeleton_manifest(
     let blob = skeleton_manifest.into_blob();
     let skeleton_manifest_id = *blob.id();
     let key = skeleton_manifest_id.blobstore_key();
-    let f = async move { blobstore.put(ctx, key, blob.into()).await };
+    let f = {
+        cloned!(ctx, blobstore);
+        async move { blobstore.put(&ctx, key, blob.into()).await }
+    };
 
     match sender {
         Some(sender) => sender
@@ -358,10 +358,10 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let (repo, changesets) = init_repo(&ctx).await?;
 
-        let a_bcs = changesets["A"].load(ctx.clone(), repo.blobstore()).await?;
+        let a_bcs = changesets["A"].load(&ctx, repo.blobstore()).await?;
         let a_skeleton_id =
             derive_skeleton_manifest(&ctx, &repo, vec![], get_file_changes(&a_bcs)).await?;
-        let a_skeleton = a_skeleton_id.load(ctx.clone(), repo.blobstore()).await?;
+        let a_skeleton = a_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
             a_skeleton.lookup(&MPathElement::new(b"A".to_vec())?),
             Some(&SkeletonManifestEntry::File)
@@ -378,11 +378,11 @@ mod test {
         );
 
         // Changeset B introduces some subdirectories
-        let b_bcs = changesets["B"].load(ctx.clone(), repo.blobstore()).await?;
+        let b_bcs = changesets["B"].load(&ctx, repo.blobstore()).await?;
         let b_skeleton_id =
             derive_skeleton_manifest(&ctx, &repo, vec![a_skeleton_id], get_file_changes(&b_bcs))
                 .await?;
-        let b_skeleton = b_skeleton_id.load(ctx.clone(), repo.blobstore()).await?;
+        let b_skeleton = b_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
             b_skeleton.summary(),
             &SkeletonManifestSummary {
@@ -415,11 +415,11 @@ mod test {
         );
 
         // Changeset C introduces some case conflicts
-        let c_bcs = changesets["C"].load(ctx.clone(), repo.blobstore()).await?;
+        let c_bcs = changesets["C"].load(&ctx, repo.blobstore()).await?;
         let c_skeleton_id =
             derive_skeleton_manifest(&ctx, &repo, vec![b_skeleton_id], get_file_changes(&c_bcs))
                 .await?;
-        let c_skeleton = c_skeleton_id.load(ctx.clone(), repo.blobstore()).await?;
+        let c_skeleton = c_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
             c_skeleton.summary(),
             &SkeletonManifestSummary {
@@ -445,14 +445,14 @@ mod test {
 
         let c_sk_dir1 = skeleton_dir(&c_skeleton, b"dir1")?
             .id()
-            .load(ctx.clone(), repo.blobstore())
+            .load(&ctx, repo.blobstore())
             .await?;
         assert_eq!(c_sk_dir1.summary().child_case_conflicts, false);
         assert_eq!(c_sk_dir1.summary().descendant_case_conflicts, true);
 
         let c_sk_subdir1 = skeleton_dir(&c_sk_dir1, b"subdir1")?
             .id()
-            .load(ctx.clone(), repo.blobstore())
+            .load(&ctx, repo.blobstore())
             .await?;
         assert_eq!(c_sk_subdir1.summary().child_case_conflicts, true);
         assert_eq!(c_sk_subdir1.summary().descendant_case_conflicts, true);
@@ -474,11 +474,11 @@ mod test {
         assert_eq!(c_sk_dir2.summary().descendant_case_conflicts, false);
 
         // Changeset D removes some of the conflicts
-        let d_bcs = changesets["D"].load(ctx.clone(), repo.blobstore()).await?;
+        let d_bcs = changesets["D"].load(&ctx, repo.blobstore()).await?;
         let d_skeleton_id =
             derive_skeleton_manifest(&ctx, &repo, vec![c_skeleton_id], get_file_changes(&d_bcs))
                 .await?;
-        let d_skeleton = d_skeleton_id.load(ctx.clone(), repo.blobstore()).await?;
+        let d_skeleton = d_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(d_skeleton.summary().child_case_conflicts, false);
         assert_eq!(d_skeleton.summary().descendant_case_conflicts, true);
         assert_eq!(
@@ -493,24 +493,24 @@ mod test {
 
         let d_sk_dir1 = skeleton_dir(&d_skeleton, b"dir1")?
             .id()
-            .load(ctx.clone(), repo.blobstore())
+            .load(&ctx, repo.blobstore())
             .await?;
         assert_eq!(d_sk_dir1.summary().child_case_conflicts, false);
         assert_eq!(d_sk_dir1.summary().descendant_case_conflicts, true);
 
         let d_sk_subdir1 = skeleton_dir(&d_sk_dir1, b"subdir1")?
             .id()
-            .load(ctx.clone(), repo.blobstore())
+            .load(&ctx, repo.blobstore())
             .await?;
         assert_eq!(d_sk_subdir1.summary().child_case_conflicts, false);
         assert_eq!(d_sk_subdir1.summary().descendant_case_conflicts, true);
 
         // Changeset E removes them all
-        let e_bcs = changesets["E"].load(ctx.clone(), repo.blobstore()).await?;
+        let e_bcs = changesets["E"].load(&ctx, repo.blobstore()).await?;
         let e_skeleton_id =
             derive_skeleton_manifest(&ctx, &repo, vec![d_skeleton_id], get_file_changes(&e_bcs))
                 .await?;
-        let e_skeleton = e_skeleton_id.load(ctx.clone(), repo.blobstore()).await?;
+        let e_skeleton = e_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
             e_skeleton.summary(),
             &SkeletonManifestSummary {
@@ -525,11 +525,11 @@ mod test {
         );
 
         // Changeset F adds a non-UTF-8 filename
-        let f_bcs = changesets["F"].load(ctx.clone(), repo.blobstore()).await?;
+        let f_bcs = changesets["F"].load(&ctx, repo.blobstore()).await?;
         let f_skeleton_id =
             derive_skeleton_manifest(&ctx, &repo, vec![e_skeleton_id], get_file_changes(&f_bcs))
                 .await?;
-        let f_skeleton = f_skeleton_id.load(ctx.clone(), repo.blobstore()).await?;
+        let f_skeleton = f_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
             f_skeleton.summary(),
             &SkeletonManifestSummary {
@@ -558,11 +558,11 @@ mod test {
         );
 
         // Changeset G adds some files that are not valid on Windows
-        let g_bcs = changesets["G"].load(ctx.clone(), repo.blobstore()).await?;
+        let g_bcs = changesets["G"].load(&ctx, repo.blobstore()).await?;
         let g_skeleton_id =
             derive_skeleton_manifest(&ctx, &repo, vec![f_skeleton_id], get_file_changes(&g_bcs))
                 .await?;
-        let g_skeleton = g_skeleton_id.load(ctx.clone(), repo.blobstore()).await?;
+        let g_skeleton = g_skeleton_id.load(&ctx, repo.blobstore()).await?;
         assert_eq!(
             g_skeleton.summary(),
             &SkeletonManifestSummary {
@@ -591,7 +591,7 @@ mod test {
         );
         let g_sk_nonwin = skeleton_dir(&g_skeleton, b"nonwin")?
             .id()
-            .load(ctx.clone(), repo.blobstore())
+            .load(&ctx, repo.blobstore())
             .await?;
         for dir in ["dir1", "dir2", "dir3", "dir4", "dir5", "dir6"].iter() {
             assert_eq!(

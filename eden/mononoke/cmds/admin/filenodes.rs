@@ -188,7 +188,7 @@ fn handle_filenodes_at_revision(
 
                             let envelope = if log_envelope {
                                 cloned!(ctx, blobrepo);
-                                async move { filenode_id.load(ctx, blobrepo.blobstore()).await }
+                                async move { filenode_id.load(&ctx, blobrepo.blobstore()).await }
                                     .boxed()
                                     .compat()
                                     .from_err()
@@ -261,7 +261,7 @@ pub async fn subcommand_filenodes<'a>(
                         let envelope = if log_envelope {
                             let filenode = filenode.filenode.clone();
                             let blobstore = repo.get_blobstore();
-                            async move { filenode.load(ctx, &blobstore).await }
+                            async move { filenode.load(&ctx, &blobstore).await }
                                 .boxed()
                                 .compat()
                                 .from_err()

@@ -310,9 +310,7 @@ where
         .await
     };
 
-    let bcs_fut = bcs_id
-        .load(ctx.clone(), repo.blobstore())
-        .map_err(Error::from);
+    let bcs_fut = bcs_id.load(ctx, repo.blobstore()).map_err(Error::from);
     let (parents, bcs) = try_join(parents, bcs_fut).await?;
 
     let mut lease_start = Instant::now();

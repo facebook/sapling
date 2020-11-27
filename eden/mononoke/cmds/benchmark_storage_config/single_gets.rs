@@ -34,14 +34,14 @@ pub fn benchmark(
             let key = format!("benchmark.{:x}", thread_rng().next_u64());
             runtime.block_on_std(async {
                 blobstore
-                    .put(ctx.clone(), key.clone(), block)
+                    .put(&ctx, key.clone(), block)
                     .await
                     .expect("Put failed")
             });
             let test = |ctx, blobstore: Arc<dyn Blobstore>| {
-                let key = &key;
+                let key = key.clone();
                 async move {
-                    blobstore.get(ctx, key.clone()).await.expect("Get failed");
+                    blobstore.get(&ctx, &key).await.expect("Get failed");
                 }
             };
             b.iter(|| {

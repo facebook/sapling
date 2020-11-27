@@ -170,7 +170,7 @@ impl AffectedChangesets {
                 })
                 .map(|res| async move {
                     match res {
-                        Ok(bcs_id) => Ok(bcs_id.load(ctx.clone(), repo.blobstore()).await?),
+                        Ok(bcs_id) => Ok(bcs_id.load(ctx, repo.blobstore()).await?),
                         Err(e) => Err(e),
                     }
                 })
@@ -318,7 +318,7 @@ impl AffectedChangesets {
                 .try_for_each_concurrent(100, |(bcs_id, sk_mf_id)| async move {
                     let sk_mf = sk_mf_id
                         .into_skeleton_manifest_id()
-                        .load(ctx.clone(), repo.blobstore())
+                        .load(ctx, repo.blobstore())
                         .await
                         .map_err(Error::from)?;
                     if let Some((path1, path2)) =

@@ -104,7 +104,7 @@ impl FsnodeCleaner {
                 // Note - it's important to use repo.get_blobstore() and not
                 // use mem_writes blobstore. This is repo.get_blobstore()
                 // add a few wrapper blobstores (e.g. the one that adds repo prefix)
-                async move { repo.blobstore().put(ctx.clone(), key, value).await }
+                async move { repo.blobstore().put(ctx, key, value).await }
             })
             .map(Result::<_, Error>::Ok)
             .try_for_each_concurrent(100, |f| async move { f.await })
@@ -175,7 +175,7 @@ async fn find_entries_to_preserve(
                     .fsnode_id()
                     .list_tree_entries(ctx.clone(), repo.get_blobstore())
                     .map_ok(move |(_, mf_id)| async move {
-                        let mf = mf_id.load(ctx.clone(), &repo.get_blobstore()).await?;
+                        let mf = mf_id.load(ctx, &repo.get_blobstore()).await?;
                         Ok((mf_id.blobstore_key(), mf.into_blob().into()))
                     })
                     .try_buffer_unordered(100),

@@ -13,6 +13,7 @@
 use std::sync::Arc;
 
 use anyhow::Error;
+use borrowed::borrowed;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use strum::IntoEnumIterator;
@@ -25,19 +26,20 @@ use memblob::Memblob;
 use mononoke_types::BlobstoreBytes;
 use sqlblob::{get_test_config_store, Sqlblob};
 
-async fn overwrite<'a, B: Blobstore + BlobstorePutOps>(
+async fn overwrite<B: Blobstore + BlobstorePutOps>(
     fb: FacebookInit,
     blobstore: B,
     has_ctime: bool,
     put_behaviour: PutBehaviour,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
 
     let key = "some_key".to_string() + &put_behaviour.to_string();
     let value = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"appleveldatav1"));
 
     let put_status1 = blobstore
-        .put_with_status(ctx.clone(), key.clone(), value.clone())
+        .put_with_status(ctx, key.clone(), value.clone())
         .await?;
     let expected_status1 = match put_behaviour {
         PutBehaviour::Overwrite => OverwriteStatus::NotChecked,
@@ -50,17 +52,17 @@ async fn overwrite<'a, B: Blobstore + BlobstorePutOps>(
         put_behaviour
     );
 
-    let roundtrip1 = blobstore.get(ctx.clone(), key.clone()).await?.unwrap();
+    let roundtrip1 = blobstore.get(ctx, &key).await?.unwrap();
 
     let ctime1 = roundtrip1.as_meta().ctime();
 
     let value2 = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"appleveldatav2"));
 
     let put_status2 = blobstore
-        .put_with_status(ctx.clone(), key.clone(), value2.clone())
+        .put_with_status(ctx, key.clone(), value2.clone())
         .await?;
 
-    let roundtrip2 = blobstore.get(ctx.clone(), key.clone()).await?.unwrap();
+    let roundtrip2 = blobstore.get(ctx, &key).await?.unwrap();
     let ctime2 = roundtrip2.as_meta().ctime();
     if put_behaviour.should_overwrite() {
         assert_eq!(ctime2.is_some(), has_ctime);
@@ -94,53 +96,51 @@ async fn overwrite<'a, B: Blobstore + BlobstorePutOps>(
     Ok(())
 }
 
-async fn roundtrip_and_link<'a, B: BlobstoreWithLink>(
+async fn roundtrip_and_link<B: BlobstoreWithLink>(
     fb: FacebookInit,
     blobstore: B,
     has_ctime: bool,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
 
-    let key = "randomkey".to_string();
+    let key = "randomkey";
     let value = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"appleveldata"));
 
     // Roundtrip
-    blobstore
-        .put(ctx.clone(), key.clone(), value.clone())
-        .await?;
+    blobstore.put(ctx, key.to_owned(), value.clone()).await?;
 
-    let roundtrip = blobstore.get(ctx.clone(), key.clone()).await?.unwrap();
+    let roundtrip = blobstore.get(ctx, key).await?.unwrap();
 
     let orig_ctime = roundtrip.as_meta().ctime();
 
     assert_eq!(orig_ctime.is_some(), has_ctime);
     assert_eq!(value, roundtrip.into_bytes());
 
-    let newkey = "newkey".to_string();
+    let newkey = "newkey";
 
     // And now the link
-    blobstore
-        .link(ctx.clone(), key.clone(), newkey.clone())
-        .await?;
+    blobstore.link(ctx, key, newkey.to_owned()).await?;
 
-    let newvalue = blobstore.get(ctx.clone(), newkey.clone()).await?.unwrap();
+    let newvalue = blobstore.get(ctx, newkey).await?.unwrap();
 
     let new_ctime = newvalue.as_meta().ctime();
     assert_eq!(new_ctime.is_some(), has_ctime);
     assert_eq!(orig_ctime, new_ctime);
     assert_eq!(value, newvalue.into_bytes());
 
-    let newkey_is_present = blobstore.is_present(ctx.clone(), newkey.clone()).await?;
+    let newkey_is_present = blobstore.is_present(ctx, newkey).await?;
 
     assert!(newkey_is_present);
 
     Ok(())
 }
 
-async fn missing<'a, B: Blobstore>(fb: FacebookInit, blobstore: B) -> Result<(), Error> {
+async fn missing<B: Blobstore>(fb: FacebookInit, blobstore: B) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
 
-    let key = "missing".to_string();
+    let key = "missing";
     let out = blobstore.get(ctx, key).await?;
 
     assert!(out.is_none());
@@ -261,6 +261,7 @@ async fn cache_blob_tests(fb: FacebookInit, expect_zstd: bool) -> Result<(), Err
     let suffix = if expect_zstd { "_maybe_zstd" } else { "_raw" };
 
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
     create_cache(fb)?;
     let blob_pool = Arc::new(cachelib::get_or_create_pool(
         &["blob_pool", suffix].concat(),
@@ -275,10 +276,10 @@ async fn cache_blob_tests(fb: FacebookInit, expect_zstd: bool) -> Result<(), Err
     let cache_blob =
         cacheblob::new_cachelib_blobstore(inner.clone(), blob_pool.clone(), presence_pool, options);
 
-    let small_key = "small_key".to_string();
+    let small_key = "small_key";
     let value = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"smalldata"));
     cache_blob
-        .put(ctx.clone(), small_key.clone(), value.clone())
+        .put(ctx, small_key.to_owned(), value.clone())
         .await?;
 
     // Peek into cachelib to check its as expected
@@ -293,13 +294,13 @@ async fn cache_blob_tests(fb: FacebookInit, expect_zstd: bool) -> Result<(), Err
 
     assert_eq!(
         cache_blob
-            .get(ctx.clone(), small_key)
+            .get(ctx, small_key)
             .await?
             .map(|bytes| bytes.into_bytes()),
         Some(value)
     );
 
-    let large_key = "large_key".to_string();
+    let large_key = "large_key";
     let size = 5 * 1024 * 1024;
     let mut large_value = Vec::with_capacity(size);
     for _ in 0..size {
@@ -308,12 +309,12 @@ async fn cache_blob_tests(fb: FacebookInit, expect_zstd: bool) -> Result<(), Err
     let large_value = BlobstoreBytes::from_bytes(large_value);
 
     cache_blob
-        .put(ctx.clone(), large_key.clone(), large_value.clone())
+        .put(ctx, large_key.to_owned(), large_value.clone())
         .await?;
 
     // Peek into cachelib to check its as expected
     let cachelib_len = blob_pool
-        .get(large_key.clone())
+        .get(large_key)
         .map(|bytes| bytes.map(|b| b.len()))?;
 
     if expect_zstd {
@@ -330,7 +331,7 @@ async fn cache_blob_tests(fb: FacebookInit, expect_zstd: bool) -> Result<(), Err
     }
 
     // Check that inner blob is same size after put
-    let inner_blob = inner.get(ctx.clone(), large_key.clone()).await?;
+    let inner_blob = inner.get(ctx, large_key).await?;
     assert_eq!(
         inner_blob.map(|b| b.as_bytes().len()),
         Some(large_value.len())

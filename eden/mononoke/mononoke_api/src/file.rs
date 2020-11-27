@@ -66,7 +66,7 @@ impl FileContext {
         let metadata = {
             cloned!(repo, fetch_key);
             async move {
-                get_metadata(repo.blob_repo().blobstore(), repo.ctx().clone(), &fetch_key)
+                get_metadata(repo.blob_repo().blobstore(), repo.ctx(), &fetch_key)
                     .await
                     .map_err(MononokeError::from)
                     .and_then(|metadata| {
@@ -89,7 +89,7 @@ impl FileContext {
         fetch_key: FetchKey,
     ) -> Result<Option<Self>, MononokeError> {
         // Try to get the file metadata immediately to see if it exists.
-        let file = get_metadata(repo.blob_repo().blobstore(), repo.ctx().clone(), &fetch_key)
+        let file = get_metadata(repo.blob_repo().blobstore(), repo.ctx(), &fetch_key)
             .await?
             .map(|metadata| {
                 let metadata = async move { Ok(metadata) };
@@ -131,7 +131,7 @@ impl FileContext {
     pub async fn content_concat(&self) -> Result<Bytes, MononokeError> {
         let bytes = filestore::fetch_concat_opt(
             self.repo().blob_repo().blobstore(),
-            self.ctx().clone(),
+            self.ctx(),
             &self.fetch_key,
         )
         .await;
@@ -155,7 +155,7 @@ impl FileContext {
     ) -> Result<Bytes, MononokeError> {
         let ret = filestore::fetch_range_with_size(
             self.repo().blob_repo().blobstore(),
-            self.ctx().clone(),
+            self.ctx(),
             &self.fetch_key,
             start,
             size,

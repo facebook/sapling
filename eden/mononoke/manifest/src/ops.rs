@@ -7,6 +7,7 @@
 
 use crate::{Entry, Manifest, PathTree, StoreLoadable};
 use anyhow::Error;
+use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
@@ -111,6 +112,7 @@ where
         let init = Some((self.clone(), selector, None, false));
         (async_stream::stream! {
             let store = &store;
+            borrowed!(ctx, store);
             let s = bounded_traversal::bounded_traversal_stream(
                 256,
                 init,
@@ -120,7 +122,6 @@ where
                         value: select,
                     } = selector;
 
-                    cloned!(ctx);
                     async move {
                         let manifest = manifest_id.load(ctx, &store).await?;
 
@@ -314,16 +315,15 @@ where
             move |input| {
                 cloned!(ctx, output_filter, recurse_pruner, store);
                 async move {
+                    borrowed!(ctx);
                     let mut output = OutputHolder::new(output_filter);
                     let mut recurse = RecurseHolder::new(recurse_pruner);
 
                     match input {
                         Diff::Changed(path, left, right) => {
-                            let (left_mf, right_mf) = future::try_join(
-                                left.load(ctx.clone(), &store),
-                                right.load(ctx.clone(), &store),
-                            )
-                            .await?;
+                            let (left_mf, right_mf) =
+                                future::try_join(left.load(ctx, &store), right.load(ctx, &store))
+                                    .await?;
 
                             for (name, left) in left_mf.list() {
                                 let path = Some(MPath::join_opt_element(path.as_ref(), &name));

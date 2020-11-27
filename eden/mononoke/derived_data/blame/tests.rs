@@ -8,6 +8,7 @@
 use crate::{fetch_blame, BlameError};
 use anyhow::{anyhow, Error};
 use blobrepo_override::DangerousOverride;
+use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -141,34 +142,28 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
     async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
+        borrowed!(ctx, repo);
 
         let c0 = create_commit(
             ctx.clone(),
             repo.clone(),
             vec![],
             store_files(
-                ctx.clone(),
+                ctx,
                 btreemap! {
                     "f0" => Some(F0[0]),
                     "f1" => Some(F1[0]),
                     "_f2" => Some(F2[0]),
                 },
-                repo.clone(),
+                repo,
             )
             .await,
         )
         .await;
 
-        let mut c1_changes =
-            store_files(ctx.clone(), btreemap! {"f0" => Some(F0[1])}, repo.clone()).await;
-        let (f2_path, f2_change) = store_rename(
-            ctx.clone(),
-            (MPath::new("_f2")?, c0),
-            "f2",
-            F2[1],
-            repo.clone(),
-        )
-        .await;
+        let mut c1_changes = store_files(ctx, btreemap! {"f0" => Some(F0[1])}, repo).await;
+        let (f2_path, f2_change) =
+            store_rename(ctx, (MPath::new("_f2")?, c0), "f2", F2[1], repo).await;
         c1_changes.insert(f2_path, f2_change);
         let c1 = create_commit(ctx.clone(), repo.clone(), vec![c0], c1_changes).await;
 
@@ -176,7 +171,7 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
             ctx.clone(),
             repo.clone(),
             vec![c1],
-            store_files(ctx.clone(), btreemap! {"f0" => Some(F0[2])}, repo.clone()).await,
+            store_files(ctx, btreemap! {"f0" => Some(F0[2])}, repo).await,
         )
         .await;
 
@@ -185,13 +180,13 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
             repo.clone(),
             vec![c0],
             store_files(
-                ctx.clone(),
+                ctx,
                 btreemap! {
                     "f0" => Some(F0[3]),
                     "f1" => Some(F1[1]),
                     "f2" => Some(F2[2]),
                 },
-                repo.clone(),
+                repo,
             )
             .await,
         )
@@ -202,13 +197,13 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
             repo.clone(),
             vec![c2, c3],
             store_files(
-                ctx.clone(),
+                ctx,
                 btreemap! {
                     "f0" => Some(F0[4]),
                     "f1" => Some(F1[1]), // did not change after c3
                     "f2" => Some(F2[3]),
                 },
-                repo.clone(),
+                repo,
             )
             .await,
         )
@@ -222,16 +217,13 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
             c4 => "c4",
         };
 
-        let (content, blame) =
-            fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f0")?).await?;
+        let (content, blame) = fetch_blame(ctx, repo, c4, MPath::new("f0")?).await?;
         assert_eq!(annotate(content, blame, &names)?, F0_AT_C4);
 
-        let (content, blame) =
-            fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f1")?).await?;
+        let (content, blame) = fetch_blame(ctx, repo, c4, MPath::new("f1")?).await?;
         assert_eq!(annotate(content, blame, &names)?, F1_AT_C4);
 
-        let (content, blame) =
-            fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f2")?).await?;
+        let (content, blame) = fetch_blame(ctx, repo, c4, MPath::new("f2")?).await?;
         assert_eq!(annotate(content, blame, &names)?, F2_AT_C4);
 
         Ok(())
@@ -242,6 +234,7 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
 async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo = blobrepo_factory::new_memblob_empty(None)?;
+    borrowed!(ctx, repo);
     let file1 = "file1";
     let content = "content";
     let c1 = CreateCommitContext::new_root(&ctx, &repo)
@@ -251,7 +244,7 @@ async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Err
 
     // Default file size is 10Mb, so blame should be computed
     // without problems.
-    fetch_blame(ctx.clone(), repo.clone(), c1, MPath::new(file1)?).await?;
+    fetch_blame(ctx, repo, c1, MPath::new(file1)?).await?;
 
     let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
         derived_data_config.override_blame_filesize_limit = Some(4);
@@ -259,13 +252,13 @@ async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Err
     });
 
     let file2 = "file2";
-    let c2 = CreateCommitContext::new_root(&ctx, &repo)
+    let c2 = CreateCommitContext::new_root(ctx, &repo)
         .add_file(file2, content)
         .commit()
         .await?;
 
     // We decreased the limit, so derivation should fail now
-    let res = fetch_blame(ctx.clone(), repo.clone(), c2, MPath::new(file2)?).await;
+    let res = fetch_blame(ctx, &repo, c2, MPath::new(file2)?).await;
 
     match res {
         Err(BlameError::Rejected(_)) => {}

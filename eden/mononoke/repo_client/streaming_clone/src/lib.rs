@@ -88,7 +88,7 @@ fn fetch_blob(
     lazy(move || {
         {
             cloned!(key);
-            async move { blobstore.get(ctx, key).await }
+            async move { blobstore.get(&ctx, &key).await }
         }
         .boxed()
         .compat()

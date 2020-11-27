@@ -32,15 +32,15 @@ define_stats! {
 /// This is primarily used by the admin command to manually check memcache.
 #[async_trait]
 pub trait CacheBlobstoreExt: Blobstore {
-    async fn get_no_cache_fill(
-        &self,
-        ctx: CoreContext,
-        key: String,
+    async fn get_no_cache_fill<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
     ) -> Result<Option<BlobstoreGetData>>;
-    async fn get_cache_only(
-        &self,
-        ctx: CoreContext,
-        key: String,
+    async fn get_cache_only<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
     ) -> Result<Option<BlobstoreGetData>>;
 }
 
@@ -145,15 +145,15 @@ where
         }
     }
 
-    fn take_put_lease(&self, key: String) -> BoxFuture<'_, bool> {
+    fn take_put_lease<'a>(&'a self, key: &'a str) -> BoxFuture<'a, bool> {
         async move {
-            if self.lease.try_add_put_lease(&key).await.map_err(|_| ()) == Ok(true) {
+            if self.lease.try_add_put_lease(key).await.map_err(|_| ()) == Ok(true) {
                 return true;
             }
-            if self.cache.check_present(&key).await {
+            if self.cache.check_present(key).await {
                 return false;
             }
-            self.lease.wait_for_other_leases(&key).await;
+            self.lease.wait_for_other_leases(key).await;
             self.take_put_lease(key).await
         }
         .boxed()
@@ -167,8 +167,12 @@ where
     L: LeaseOps + Clone + 'static,
     T: Blobstore + Clone,
 {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
-        let blob = self.cache.get(&key).await;
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        let blob = self.cache.get(key).await;
         if blob.is_some() {
             if let Some(counter) = C::HIT_COUNTER {
                 ctx.perf_counters().increment_counter(counter);
@@ -180,8 +184,9 @@ where
                 ctx.perf_counters().increment_counter(counter);
             }
             STATS::get_miss.add_value(1, (C::CACHE_NAME,));
-            let blob = self.blobstore.get(ctx, key.clone()).await?;
+            let blob = self.blobstore.get(ctx, key).await?;
             if let Some(ref blob) = blob {
+                let key = key.to_owned();
                 cloned!(self.cache, blob);
                 tokio::spawn(async move { cache.put(&key, blob).await });
             }
@@ -189,8 +194,13 @@ where
         }
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
-        let can_put = self.take_put_lease(key.clone()).await;
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
+        let can_put = self.take_put_lease(&key).await;
         if can_put {
             self.blobstore.put(ctx, key.clone(), value.clone()).await?;
 
@@ -208,8 +218,8 @@ where
         Ok(())
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
-        let present = self.cache.check_present(&key).await;
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+        let present = self.cache.check_present(key).await;
         if present {
             STATS::presence_hit.add_value(1, (C::CACHE_NAME,));
             Ok(true)
@@ -227,12 +237,12 @@ where
     L: LeaseOps + Clone + 'static,
     T: Blobstore + Clone,
 {
-    async fn get_no_cache_fill(
-        &self,
-        ctx: CoreContext,
-        key: String,
+    async fn get_no_cache_fill<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        let blob = self.cache.get(&key).await;
+        let blob = self.cache.get(key).await;
         if blob.is_some() {
             Ok(blob)
         } else {
@@ -240,12 +250,12 @@ where
         }
     }
 
-    async fn get_cache_only(
-        &self,
-        _ctx: CoreContext,
-        key: String,
+    async fn get_cache_only<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        self.cache.get(&key).map(Ok).await
+        self.cache.get(key).map(Ok).await
     }
 }
 
@@ -267,19 +277,19 @@ where
 #[async_trait]
 impl<T: CacheBlobstoreExt> CacheBlobstoreExt for CountedBlobstore<T> {
     #[inline]
-    async fn get_no_cache_fill(
-        &self,
-        ctx: CoreContext,
-        key: String,
+    async fn get_no_cache_fill<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
         self.as_inner().get_no_cache_fill(ctx, key).await
     }
 
     #[inline]
-    async fn get_cache_only(
-        &self,
-        ctx: CoreContext,
-        key: String,
+    async fn get_cache_only<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
         self.as_inner().get_cache_only(ctx, key).await
     }
@@ -288,45 +298,47 @@ impl<T: CacheBlobstoreExt> CacheBlobstoreExt for CountedBlobstore<T> {
 #[async_trait]
 impl<T: CacheBlobstoreExt> CacheBlobstoreExt for PrefixBlobstore<T> {
     #[inline]
-    async fn get_no_cache_fill(
-        &self,
-        ctx: CoreContext,
-        key: String,
+    async fn get_no_cache_fill<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
         self.as_inner()
-            .get_no_cache_fill(ctx, self.prepend(key))
+            .get_no_cache_fill(ctx, &self.prepend(key))
             .await
     }
 
     #[inline]
-    async fn get_cache_only(
-        &self,
-        ctx: CoreContext,
-        key: String,
+    async fn get_cache_only<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        self.as_inner().get_cache_only(ctx, self.prepend(key)).await
+        self.as_inner()
+            .get_cache_only(ctx, &self.prepend(key))
+            .await
     }
 }
 
 #[async_trait]
 impl<T: CacheBlobstoreExt> CacheBlobstoreExt for RedactedBlobstore<T> {
     #[inline]
-    async fn get_no_cache_fill(
-        &self,
-        ctx: CoreContext,
-        key: String,
+    async fn get_no_cache_fill<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        let blobstore = self.access_blobstore(&ctx, &key, GET_OPERATION)?;
+        let blobstore = self.access_blobstore(ctx, key, GET_OPERATION)?;
         blobstore.get_no_cache_fill(ctx, key).await
     }
 
     #[inline]
-    async fn get_cache_only(
-        &self,
-        ctx: CoreContext,
-        key: String,
+    async fn get_cache_only<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        let blobstore = self.access_blobstore(&ctx, &key, GET_OPERATION)?;
+        let blobstore = self.access_blobstore(ctx, key, GET_OPERATION)?;
         blobstore.get_cache_only(ctx, key).await
     }
 }

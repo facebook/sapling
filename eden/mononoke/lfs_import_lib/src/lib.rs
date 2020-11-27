@@ -56,7 +56,7 @@ async fn do_lfs_upload(
 ) -> Result<ContentMetadata, Error> {
     let metadata = filestore::get_metadata(
         blobrepo.blobstore(),
-        ctx.clone(),
+        ctx,
         &FetchKey::Aliased(Alias::Sha256(lfs.oid())),
     )
     .await?;
@@ -77,7 +77,7 @@ async fn do_lfs_upload(
     let upload = filestore::store(
         blobrepo.blobstore(),
         blobrepo.filestore_config(),
-        ctx.clone(),
+        ctx,
         &req,
         stream,
     );

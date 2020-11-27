@@ -92,7 +92,7 @@ impl ChangesetHandle {
             .and_then({
                 cloned!(ctx, repo);
                 move |csid| {
-                    async move { csid.load(ctx, repo.blobstore()).await }
+                    async move { csid.load(&ctx, repo.blobstore()).await }
                         .boxed()
                         .compat()
                         .from_err()
@@ -110,7 +110,7 @@ impl ChangesetHandle {
 
         let completion_future = bonsai_cs
             .join(
-                async move { hg_cs.load(ctx, repo.blobstore()).await }
+                async move { hg_cs.load(&ctx, repo.blobstore()).await }
                     .boxed()
                     .compat()
                     .from_err(),
@@ -173,10 +173,10 @@ impl UploadEntries {
         self.scuba_logger.clone()
     }
 
-    async fn find_parents<E: HgBlobEnvelope>(
-        &self,
-        ctx: CoreContext,
-        entry: impl Loadable<Value = E>,
+    async fn find_parents<'a, E: HgBlobEnvelope>(
+        &'a self,
+        ctx: &'a CoreContext,
+        entry: impl Loadable<Value = E> + 'a,
         path: RepoPath,
     ) -> Result<()> {
         let entry = entry.load(ctx, &self.blobstore).await?;
@@ -196,14 +196,18 @@ impl UploadEntries {
     /// `process_one_entry` and can be called after it.
     /// It is safe to call this multiple times, but not recommended - every manifest passed to
     /// this function is assumed required for this commit, even if it is not the root.
-    pub async fn process_root_manifest(&self, ctx: CoreContext, entry: HgManifestId) -> Result<()> {
+    pub async fn process_root_manifest<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        entry: HgManifestId,
+    ) -> Result<()> {
         self.process_one_entry(ctx, Entry::Tree(entry), RepoPath::root())
             .await
     }
 
-    pub async fn process_one_entry(
-        &self,
-        ctx: CoreContext,
+    pub async fn process_one_entry<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         entry: Entry<HgManifestId, HgFileNodeId>,
         path: RepoPath,
     ) -> Result<()> {
@@ -255,7 +259,7 @@ impl UploadEntries {
         };
 
         async move {
-            if blobstore.is_present(ctx, key.clone()).await? {
+            if blobstore.is_present(&ctx, &key).await? {
                 Ok(())
             } else {
                 Err(BlobstoreError::NotFound(key).into())
@@ -396,7 +400,7 @@ pub fn process_entries(
                 None => old_future::ok(None).boxify(),
                 Some((mfid, path)) => {
                     if path == RepoPath::RootPath {
-                        async move { entry_processor.process_root_manifest(ctx, mfid).await }
+                        async move { entry_processor.process_root_manifest(&ctx, mfid).await }
                             .boxed()
                             .compat()
                             .map(move |_| Some(mfid))
@@ -415,7 +419,7 @@ pub fn process_entries(
             cloned!(ctx, entry_processor);
             move |(entry, path)| {
                 cloned!(ctx, entry_processor);
-                async move { entry_processor.process_one_entry(ctx, entry, path).await }
+                async move { entry_processor.process_one_entry(&ctx, entry, path).await }
                     .boxed()
                     .compat()
             }
@@ -660,7 +664,7 @@ pub async fn check_case_conflicts(
         256,
         Some((parent_root_mf, path_tree, None)),
         |(mf_id, path_tree, path)| async move {
-            let mf = mf_id.load(ctx.clone(), repo.blobstore()).await?;
+            let mf = mf_id.load(ctx, repo.blobstore()).await?;
             let mut output = vec![];
             let mut recurse = vec![];
 

@@ -208,9 +208,9 @@ impl RevlogChangeset {
         )
     }
 
-    pub async fn load<B: Blobstore>(
-        ctx: CoreContext,
-        blobstore: &B,
+    pub async fn load<'a, B: Blobstore>(
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
         changesetid: HgChangesetId,
     ) -> Result<Option<RevlogChangeset>> {
         if changesetid == HgChangesetId::new(NULL_HASH) {
@@ -220,7 +220,7 @@ impl RevlogChangeset {
             let key = changesetid.blobstore_key();
 
             async {
-                let got = blobstore.get(ctx, key.clone()).await?;
+                let got = blobstore.get(ctx, &key).await?;
                 match got {
                     None => Ok(None),
                     Some(bytes) => {

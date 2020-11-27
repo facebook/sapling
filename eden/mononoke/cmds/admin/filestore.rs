@@ -105,7 +105,7 @@ pub async fn execute_command<'a>(
     match sub_matches.subcommand() {
         (COMMAND_METADATA, Some(matches)) => {
             let key = extract_fetch_key(matches)?;
-            async move { filestore::get_metadata(blobrepo.blobstore(), ctx, &key).await }
+            async move { filestore::get_metadata(blobrepo.blobstore(), &ctx, &key).await }
                 .boxed()
                 .compat()
                 .inspect({
@@ -127,7 +127,7 @@ pub async fn execute_command<'a>(
             let metadata = filestore::store(
                 blobrepo.blobstore(),
                 blobrepo.filestore_config(),
-                ctx,
+                &ctx,
                 &StoreRequest::new(len),
                 data.map_err(Error::from),
             )
@@ -156,7 +156,7 @@ pub async fn execute_command<'a>(
             let key = extract_fetch_key(matches)?;
             let blobstore = blobrepo.get_blobstore();
 
-            let metadata = filestore::get_metadata(&blobstore, ctx.clone(), &key).await?;
+            let metadata = filestore::get_metadata(&blobstore, &ctx, &key).await?;
             let metadata = match metadata {
                 Some(metadata) => metadata,
                 None => return Err(Error::msg("Content not found!").into()),
@@ -198,12 +198,12 @@ pub async fn execute_command<'a>(
         (COMMAND_IS_CHUNKED, Some(matches)) => {
             let fetch_key = extract_fetch_key(matches)?;
             let maybe_metadata =
-                filestore::get_metadata(&blobrepo.get_blobstore(), ctx.clone(), &fetch_key).await?;
+                filestore::get_metadata(&blobrepo.get_blobstore(), &ctx, &fetch_key).await?;
             match maybe_metadata {
                 Some(metadata) => {
                     let file_contents = metadata
                         .content_id
-                        .load(ctx, &blobrepo.get_blobstore())
+                        .load(&ctx, &blobrepo.get_blobstore())
                         .map_err(Error::from)
                         .await?;
                     match file_contents {

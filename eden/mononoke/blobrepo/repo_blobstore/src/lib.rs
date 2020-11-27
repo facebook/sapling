@@ -54,13 +54,22 @@ impl<B> Blobstore for AbstractRepoBlobstore<B>
 where
     B: Blobstore,
 {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         self.0.get(ctx, key).await
     }
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         self.0.put(ctx, key, value).await
     }
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         self.0.is_present(ctx, key).await
     }
 }

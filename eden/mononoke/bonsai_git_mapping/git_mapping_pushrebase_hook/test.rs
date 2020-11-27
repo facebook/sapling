@@ -7,6 +7,7 @@
 
 use anyhow::Error;
 use blobstore::Loadable;
+use borrowed::borrowed;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use maplit::hashset;
@@ -31,15 +32,16 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         SqliteConnection::open_in_memory()?,
         repo_id.clone(),
     )?;
+    borrowed!(ctx, repo);
     let mapping = repo.bonsai_git_mapping().clone();
 
-    let root = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
+    let root = CreateCommitContext::new_root(ctx, repo).commit().await?;
 
-    let cs1 = CreateCommitContext::new(&ctx, &repo, vec![root])
+    let cs1 = CreateCommitContext::new(ctx, repo, vec![root])
         .commit()
         .await?;
 
-    let cs2 = CreateCommitContext::new(&ctx, &repo, vec![root])
+    let cs2 = CreateCommitContext::new(ctx, repo, vec![root])
         .add_extra("hg-git-rename-source".to_owned(), b"git".to_vec())
         .add_extra(
             "convert_revision".to_owned(),
@@ -47,18 +49,18 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         )
         .commit()
         .await?
-        .load(ctx.clone(), repo.blobstore())
+        .load(ctx, repo.blobstore())
         .await?;
 
-    let book = bookmark(&ctx, &repo, "master").set_to(cs1).await?;
+    let book = bookmark(ctx, repo, "master").set_to(cs1).await?;
 
     let hooks = [GitMappingPushrebaseHook::new(
         repo.bonsai_git_mapping().clone(),
     )];
 
     let rebased = do_pushrebase_bonsai(
-        &ctx,
-        &repo,
+        ctx,
+        repo,
         &Default::default(),
         &book,
         &hashset![cs2.clone()],
@@ -73,10 +75,10 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .find(|e| e.id_old == cs2.get_changeset_id())
         .ok_or(Error::msg("missing cs2"))?
         .id_new
-        .load(ctx.clone(), repo.blobstore())
+        .load(ctx, repo.blobstore())
         .await?;
 
-    let cs3 = CreateCommitContext::new(&ctx, &repo, vec![root])
+    let cs3 = CreateCommitContext::new(ctx, repo, vec![root])
         .add_extra("hg-git-rename-source".to_owned(), b"git".to_vec())
         .add_extra(
             "convert_revision".to_owned(),
@@ -84,10 +86,10 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         )
         .commit()
         .await?
-        .load(ctx.clone(), repo.blobstore())
+        .load(ctx, repo.blobstore())
         .await?;
 
-    let cs4 = CreateCommitContext::new(&ctx, &repo, vec![cs3.get_changeset_id()])
+    let cs4 = CreateCommitContext::new(ctx, repo, vec![cs3.get_changeset_id()])
         .add_extra("hg-git-rename-source".to_owned(), b"git".to_vec())
         .add_extra(
             "convert_revision".to_owned(),
@@ -95,12 +97,12 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         )
         .commit()
         .await?
-        .load(ctx.clone(), repo.blobstore())
+        .load(ctx, repo.blobstore())
         .await?;
 
     let rebased = do_pushrebase_bonsai(
-        &ctx,
-        &repo,
+        ctx,
+        repo,
         &Default::default(),
         &book,
         &hashset![cs3.clone(), cs4.clone()],
@@ -115,7 +117,7 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .find(|e| e.id_old == cs3.get_changeset_id())
         .ok_or(Error::msg("missing cs3"))?
         .id_new
-        .load(ctx.clone(), repo.blobstore())
+        .load(ctx, repo.blobstore())
         .await?;
 
     let cs4_rebased = rebased
@@ -123,25 +125,25 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
         .find(|e| e.id_old == cs4.get_changeset_id())
         .ok_or(Error::msg("missing cs4"))?
         .id_new
-        .load(ctx.clone(), repo.blobstore())
+        .load(ctx, repo.blobstore())
         .await?;
 
     assert_eq!(
         Some(TWOS_GIT_SHA1),
         mapping
-            .get_git_sha1_from_bonsai(&ctx, cs2_rebased.get_changeset_id())
+            .get_git_sha1_from_bonsai(ctx, cs2_rebased.get_changeset_id())
             .await?,
     );
     assert_eq!(
         Some(THREES_GIT_SHA1),
         mapping
-            .get_git_sha1_from_bonsai(&ctx, cs3_rebased.get_changeset_id())
+            .get_git_sha1_from_bonsai(ctx, cs3_rebased.get_changeset_id())
             .await?,
     );
     assert_eq!(
         Some(FOURS_GIT_SHA1),
         mapping
-            .get_git_sha1_from_bonsai(&ctx, cs4_rebased.get_changeset_id())
+            .get_git_sha1_from_bonsai(ctx, cs4_rebased.get_changeset_id())
             .await?,
     );
 

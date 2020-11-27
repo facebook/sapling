@@ -106,7 +106,7 @@ impl CreateChange {
                 let meta = filestore::store(
                     repo.blobstore(),
                     repo.filestore_config(),
-                    ctx,
+                    &ctx,
                     &StoreRequest::new(bytes.len() as u64),
                     stream::once(async move { Ok(bytes) }),
                 )
@@ -123,18 +123,15 @@ impl CreateChange {
                 )))
             }
             CreateChange::ExistingContent(file_id, file_type, copy_info) => {
-                let meta = filestore::get_metadata(
-                    &repo.get_blobstore(),
-                    ctx,
-                    &FetchKey::Canonical(file_id),
-                )
-                .await?
-                .ok_or_else(|| {
-                    MononokeError::InvalidRequest(format!(
-                        "File id '{}' is not available in this repo",
-                        file_id
-                    ))
-                })?;
+                let meta =
+                    filestore::get_metadata(repo.blobstore(), &ctx, &FetchKey::Canonical(file_id))
+                        .await?
+                        .ok_or_else(|| {
+                            MononokeError::InvalidRequest(format!(
+                                "File id '{}' is not available in this repo",
+                                file_id
+                            ))
+                        })?;
                 let copy_info = match copy_info {
                     Some(copy_info) => Some(copy_info.resolve(parents).await?),
                     None => None,

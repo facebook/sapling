@@ -528,7 +528,7 @@ where
     let store = &store;
     let manifests = future::try_join_all(parent_subtrees.iter().map(move |tree_id| {
         cloned!(ctx);
-        async move { tree_id.load(ctx, store).await }
+        async move { tree_id.load(&ctx, store).await }
     }))
     .await?;
 

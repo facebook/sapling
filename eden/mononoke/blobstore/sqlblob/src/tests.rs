@@ -7,6 +7,7 @@
 
 use super::*;
 use blobstore::DEFAULT_PUT_BEHAVIOUR;
+use borrowed::borrowed;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
@@ -18,6 +19,7 @@ const UPDATE_WAIT_TIME: Duration = Duration::from_millis(3);
 async fn read_write(fb: FacebookInit) {
     let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
     // Generate unique keys.
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key = format!("manifoldblob_test_{}", suffix);
@@ -31,20 +33,18 @@ async fn read_write(fb: FacebookInit) {
     let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
     assert!(
-        !bs.is_present(ctx.clone(), key.clone()).await.unwrap(),
+        !bs.is_present(ctx, &key).await.unwrap(),
         "Blob should not exist yet"
     );
 
     // Write a fresh blob
-    bs.put(ctx.clone(), key.clone(), blobstore_bytes)
-        .await
-        .unwrap();
+    bs.put(ctx, key.clone(), blobstore_bytes).await.unwrap();
     // Read back and verify
-    let bytes_out = bs.get(ctx.clone(), key.clone()).await.unwrap();
+    let bytes_out = bs.get(ctx, &key).await.unwrap();
     assert_eq!(&bytes_in.to_vec(), bytes_out.unwrap().as_raw_bytes());
 
     assert!(
-        bs.is_present(ctx.clone(), key.clone()).await.unwrap(),
+        bs.is_present(ctx, &key).await.unwrap(),
         "Blob should exist now"
     );
 }
@@ -53,6 +53,7 @@ async fn read_write(fb: FacebookInit) {
 async fn double_put(fb: FacebookInit) {
     let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
     // Generate unique keys.
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key = format!("manifoldblob_test_{}", suffix);
@@ -66,21 +67,21 @@ async fn double_put(fb: FacebookInit) {
     let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
     assert!(
-        !bs.is_present(ctx.clone(), key.clone()).await.unwrap(),
+        !bs.is_present(ctx, &key).await.unwrap(),
         "Blob should not exist yet"
     );
 
     // Write a fresh blob
-    bs.put(ctx.clone(), key.clone(), blobstore_bytes.clone())
+    bs.put(ctx, key.clone(), blobstore_bytes.clone())
         .await
         .unwrap();
     // Write it again
-    bs.put(ctx.clone(), key.clone(), blobstore_bytes.clone())
+    bs.put(ctx, key.clone(), blobstore_bytes.clone())
         .await
         .unwrap();
 
     assert!(
-        bs.is_present(ctx.clone(), key.clone()).await.unwrap(),
+        bs.is_present(ctx, &key).await.unwrap(),
         "Blob should exist now"
     );
 }
@@ -89,6 +90,7 @@ async fn double_put(fb: FacebookInit) {
 async fn overwrite(fb: FacebookInit) -> Result<()> {
     let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
     // Generate unique keys.
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key = format!("manifoldblob_test_{}", suffix);
@@ -105,16 +107,12 @@ async fn overwrite(fb: FacebookInit) -> Result<()> {
     let blobstore_bytes_2 = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_2));
 
     // Write a fresh blob
-    bs.put(ctx.clone(), key.clone(), blobstore_bytes_1.clone())
-        .await?;
+    bs.put(ctx, key.clone(), blobstore_bytes_1.clone()).await?;
     // Overwrite it
-    bs.put(ctx.clone(), key.clone(), blobstore_bytes_2.clone())
-        .await?;
+    bs.put(ctx, key.clone(), blobstore_bytes_2.clone()).await?;
 
     assert_eq!(
-        bs.get(ctx.clone(), key.clone())
-            .await?
-            .map(|get| get.into_bytes()),
+        bs.get(ctx, &key).await?.map(|get| get.into_bytes()),
         Some(blobstore_bytes_2),
     );
     Ok(())
@@ -124,6 +122,7 @@ async fn overwrite(fb: FacebookInit) -> Result<()> {
 async fn dedup(fb: FacebookInit) {
     let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
     // Generate unique keys.
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key1 = format!("manifoldblob_test_{}", suffix);
@@ -139,21 +138,21 @@ async fn dedup(fb: FacebookInit) {
     let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
     assert!(
-        !bs.is_present(ctx.clone(), key1.clone()).await.unwrap(),
+        !bs.is_present(ctx, &key1).await.unwrap(),
         "Blob should not exist yet"
     );
 
     assert!(
-        !bs.is_present(ctx.clone(), key2.clone()).await.unwrap(),
+        !bs.is_present(ctx, &key2).await.unwrap(),
         "Blob should not exist yet"
     );
 
     // Write a fresh blob
-    bs.put(ctx.clone(), key1.clone(), blobstore_bytes.clone())
+    bs.put(ctx, key1.clone(), blobstore_bytes.clone())
         .await
         .unwrap();
     // Write it again under a different key
-    bs.put(ctx.clone(), key2.clone(), blobstore_bytes.clone())
+    bs.put(ctx, key2.clone(), blobstore_bytes.clone())
         .await
         .unwrap();
 
@@ -181,6 +180,7 @@ async fn dedup(fb: FacebookInit) {
 async fn link(fb: FacebookInit) {
     let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
     // Generate unique keys.
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key1 = format!("manifoldblob_test_{}", suffix);
@@ -196,27 +196,25 @@ async fn link(fb: FacebookInit) {
     let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
     assert!(
-        !bs.is_present(ctx.clone(), key1.clone()).await.unwrap(),
+        !bs.is_present(ctx, &key1).await.unwrap(),
         "Blob should not exist yet"
     );
 
     assert!(
-        !bs.is_present(ctx.clone(), key2.clone()).await.unwrap(),
+        !bs.is_present(ctx, &key2).await.unwrap(),
         "Blob should not exist yet"
     );
 
     // Write a fresh blob
-    bs.put(ctx.clone(), key1.clone(), blobstore_bytes.clone())
+    bs.put(ctx, key1.clone(), blobstore_bytes.clone())
         .await
         .unwrap();
     // Link to a different key
-    bs.link(ctx.clone(), key1.clone(), key2.clone())
-        .await
-        .unwrap();
+    bs.link(ctx, &key1, key2.clone()).await.unwrap();
 
     // Check that reads from the two keys match
-    let bytes1 = bs.get(ctx.clone(), key1.clone()).await.unwrap();
-    let bytes2 = bs.get(ctx.clone(), key2.clone()).await.unwrap();
+    let bytes1 = bs.get(ctx, &key1).await.unwrap();
+    let bytes2 = bs.get(ctx, &key2).await.unwrap();
     assert_eq!(
         bytes1.unwrap().as_raw_bytes(),
         bytes2.unwrap().as_raw_bytes()
@@ -246,6 +244,7 @@ async fn link(fb: FacebookInit) {
 async fn generations(fb: FacebookInit) -> Result<()> {
     let (test_source, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
     // Generate unique keys.
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key1 = format!("manifoldblob_test_{}", suffix);
@@ -263,8 +262,7 @@ async fn generations(fb: FacebookInit) -> Result<()> {
     let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
     // Write a fresh blob
-    bs.put(ctx.clone(), key1.clone(), blobstore_bytes.clone())
-        .await?;
+    bs.put(ctx, key1.clone(), blobstore_bytes.clone()).await?;
 
     // Inspect, and determine that the generation number is missing
     let generations = bs.as_inner().get_chunk_generations(&key1).await?;
@@ -278,8 +276,7 @@ async fn generations(fb: FacebookInit) -> Result<()> {
     // Update via another key, confirm both have put generation
     set_test_generations(test_source.as_ref(), 5, 4, 2, INITIAL_VERSION + 1);
     tokio::time::delay_for(UPDATE_WAIT_TIME).await;
-    bs.put(ctx.clone(), key2.clone(), blobstore_bytes.clone())
-        .await?;
+    bs.put(ctx, key2.clone(), blobstore_bytes.clone()).await?;
     let generations = bs.as_inner().get_chunk_generations(&key1).await?;
     assert_eq!(generations, vec![Some(5)], "key1 generation not updated");
     let generations = bs.as_inner().get_chunk_generations(&key2).await?;

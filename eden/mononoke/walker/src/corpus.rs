@@ -289,8 +289,8 @@ impl From<Option<&CorpusSample>> for ScrubStats {
 impl SamplingHandler for CorpusSamplingHandler<CorpusSample> {
     fn sample_get(
         &self,
-        ctx: CoreContext,
-        key: String,
+        ctx: &CoreContext,
+        key: &str,
         value: Option<&BlobstoreBytes>,
     ) -> Result<(), Error> {
         let output_dir = match &self.output_dir {
@@ -314,7 +314,9 @@ impl SamplingHandler for CorpusSamplingHandler<CorpusSample> {
             if let Some(value) = value {
                 f.write_all(value.as_bytes())?;
             }
-            guard.data.insert(key, value.map_or(0, |v| v.len()) as u64);
+            guard
+                .data
+                .insert(key.to_owned(), value.map_or(0, |v| v.len()) as u64);
         }
 
         Ok(())

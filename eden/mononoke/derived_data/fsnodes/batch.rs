@@ -109,7 +109,7 @@ async fn split_batch_in_linear_stacks(
     batch: Vec<ChangesetId>,
 ) -> Result<Vec<LinearStack>, Error> {
     let bonsais = stream::iter(batch.into_iter().map(|bcs_id| async move {
-        let bcs = bcs_id.load(ctx.clone(), &repo.get_blobstore()).await?;
+        let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
         Result::<_, Error>::Ok((bcs_id, bcs))
     }))
     .buffered(100)
@@ -501,7 +501,7 @@ mod test {
                         Some((content_id, file_type)) => {
                             let content = filestore::fetch_concat(
                                 &repo.get_blobstore(),
-                                ctx.clone(),
+                                ctx,
                                 filestore::FetchKey::Canonical(content_id),
                             )
                             .await?;

@@ -29,10 +29,10 @@ pub enum RebuildBackmappingError {
 /// be missing but the content exists.
 pub async fn get_metadata<B: Blobstore>(
     blobstore: &B,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     content_id: ContentId,
 ) -> Result<Option<ContentMetadata>, Error> {
-    let maybe_metadata = get_metadata_readonly(blobstore, ctx.clone(), content_id).await?;
+    let maybe_metadata = get_metadata_readonly(blobstore, ctx, content_id).await?;
 
     // We found the metadata. Return it.
     if let Some(metadata) = maybe_metadata {
@@ -62,11 +62,11 @@ pub async fn get_metadata<B: Blobstore>(
 /// and returns Some(metadata) if it already exists. Does not recompute it on the fly.
 pub async fn get_metadata_readonly<B: Blobstore>(
     blobstore: &B,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     content_id: ContentId,
 ) -> Result<Option<ContentMetadata>, Error> {
     ContentMetadataId::from(content_id)
-        .load(ctx.clone(), blobstore)
+        .load(ctx, blobstore)
         .await
         .map(Some)
         .or_else(|err| match err {
@@ -82,13 +82,13 @@ pub async fn get_metadata_readonly<B: Blobstore>(
 /// the metadata, and return it.
 async fn rebuild_metadata<B: Blobstore>(
     blobstore: &B,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     content_id: ContentId,
 ) -> Result<ContentMetadata, RebuildBackmappingError> {
     use RebuildBackmappingError::*;
 
     let file_contents = content_id
-        .load(ctx.clone(), blobstore)
+        .load(ctx, blobstore)
         .await
         .map_err(|err| match err {
             LoadableError::Error(err) => InternalError(content_id, err),
@@ -98,8 +98,7 @@ async fn rebuild_metadata<B: Blobstore>(
     // NOTE: We implicitly trust data from the Filestore here. We do not validate
     // the size, nor the ContentId.
     let total_size = file_contents.size();
-    let content_stream =
-        fetch::stream_file_bytes(blobstore, ctx.clone(), file_contents, fetch::Range::All);
+    let content_stream = fetch::stream_file_bytes(blobstore, ctx, file_contents, fetch::Range::All);
 
     let redeemable = alias_stream(ExpectedSize::new(total_size), content_stream)
         .await

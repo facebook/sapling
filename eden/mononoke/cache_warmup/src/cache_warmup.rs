@@ -87,9 +87,7 @@ async fn blobstore_and_filenodes_warmup(
 
     // Ensure filenodes are derived for this, and load the changeset.
     let (cs, ()) = future::try_join(
-        hg_cs_id
-            .load(ctx.clone(), repo.blobstore())
-            .map_err(Error::from),
+        hg_cs_id.load(ctx, repo.blobstore()).map_err(Error::from),
         FilenodesOnlyPublic::derive(ctx, repo, bcs_id)
             .map_err(Error::from)
             .map_ok(|_| ()),

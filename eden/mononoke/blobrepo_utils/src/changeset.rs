@@ -203,7 +203,7 @@ where
 
         let visit_fut = {
             cloned!(ctx, changeset_id, shared);
-            async move { changeset_id.load(ctx, shared.repo.blobstore()).await }
+            async move { changeset_id.load(&ctx, shared.repo.blobstore()).await }
         }
         .boxed()
         .compat()

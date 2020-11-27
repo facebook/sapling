@@ -344,11 +344,15 @@ fn report_deduplicated_put(ctx: &CoreContext, key: &str) {
 
 #[async_trait]
 impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
-        cloned!(self.inner);
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        cloned!(self.inner, ctx);
 
         STATS::gets.add_value(1);
-        let cache_key = CacheKey::from_key(&key);
+        let cache_key = CacheKey::from_key(key);
 
         // First, check the cache, and acquire a permit for this key if necessary.
 
@@ -366,6 +370,7 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
             None => true,
         };
 
+        let key = key.to_owned();
         let fut = async move {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::CachelibMisses);
@@ -409,7 +414,7 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
             scopeguard::defer! { drop(permit) };
 
             // Now, actually go the underlying blobstore.
-            let res = inner.blobstore.get(ctx.clone(), key.clone()).await?;
+            let res = inner.blobstore.get(&ctx, &key).await?;
 
             // And finally, attempt to cache what we got back.
             if let Some(ref data) = res {
@@ -422,8 +427,13 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
         tokio::spawn(fut).await?
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
-        cloned!(self.inner);
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
+        cloned!(self.inner, ctx);
 
         STATS::puts.add_value(1);
         let cache_key = CacheKey::from_key(&key);
@@ -455,10 +465,7 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
 
             scopeguard::defer! { drop(permit) };
 
-            let res = inner
-                .blobstore
-                .put(ctx.clone(), key.clone(), value.clone())
-                .await?;
+            let res = inner.blobstore.put(&ctx, key, value.clone()).await?;
 
             let value = BlobstoreGetData::new(BlobstoreMetadata::new(None), value);
             let _ = inner.set_in_cache(&cache_key, presence, value);
@@ -469,19 +476,19 @@ impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
         tokio::spawn(fut).await?
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         cloned!(self.inner);
 
-        let cache_key = CacheKey::from_key(&key);
+        let cache_key = CacheKey::from_key(key);
         let presence = PresenceData::Get;
 
         if let Ok(Some(KnownToExist)) = inner.check_presence(&cache_key, presence) {
             return Ok(true);
         }
 
-        Ticket::new(&ctx, AccessReason::Read).finish().await?;
+        Ticket::new(ctx, AccessReason::Read).finish().await?;
 
-        let exists = inner.blobstore.is_present(ctx, key.clone()).await?;
+        let exists = inner.blobstore.is_present(ctx, key).await?;
 
         if exists {
             let _ = inner.set_is_present(&cache_key, presence);
@@ -536,6 +543,7 @@ mod test {
 
     mod sharding {
         use super::*;
+        use borrowed::borrowed;
         use std::collections::HashMap;
         use std::sync::Mutex;
         use std::time::Duration;
@@ -600,9 +608,9 @@ mod test {
 
         #[async_trait]
         impl Blobstore for TestBlobstore {
-            async fn put(
-                &self,
-                _ctx: CoreContext,
+            async fn put<'a>(
+                &'a self,
+                _ctx: &'a CoreContext,
                 key: String,
                 value: BlobstoreBytes,
             ) -> Result<()> {
@@ -613,14 +621,14 @@ mod test {
                 Ok(())
             }
 
-            async fn get(
-                &self,
-                _ctx: CoreContext,
-                key: String,
+            async fn get<'a>(
+                &'a self,
+                _ctx: &'a CoreContext,
+                key: &'a str,
             ) -> Result<Option<BlobstoreGetData>> {
                 let handle = {
                     let mut data = self.data.lock().unwrap();
-                    let blob = data.entry(key).or_default();
+                    let blob = data.entry(key.to_owned()).or_default();
                     blob.gets += 1;
                     blob.data.as_ref().map(BlobData::handle)
                 };
@@ -644,6 +652,7 @@ mod test {
         #[fbinit::test]
         async fn test_dedupe_reads(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
+            borrowed!(ctx);
             let blobstore = make_blobstore(
                 fb,
                 TestBlobstore::new(),
@@ -652,39 +661,31 @@ mod test {
                 allow_all_filter,
             )?;
 
-            let key = "foo".to_string();
+            let key = "foo";
 
-            futures::future::try_join_all(
-                (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
-            )
-            .await?;
+            futures::future::try_join_all((0..10usize).map(|_| blobstore.get(ctx, key))).await?;
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let mut blob = data.entry(key.clone()).or_default();
+                let mut blob = data.entry(key.to_owned()).or_default();
                 assert_eq!(blob.gets, 10);
                 blob.data = Some(BlobData::Bytes(BlobstoreBytes::from_bytes("foo")));
             }
 
-            futures::future::try_join_all(
-                (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
-            )
-            .await?;
+            futures::future::try_join_all((0..10usize).map(|_| blobstore.get(ctx, key))).await?;
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let blob = data.entry(key.clone()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 assert_eq!(blob.gets, 11);
             }
 
-            futures::future::try_join_all(
-                (0..10usize).map(|_| blobstore.is_present(ctx.clone(), key.clone())),
-            )
-            .await?;
+            futures::future::try_join_all((0..10usize).map(|_| blobstore.is_present(ctx, key)))
+                .await?;
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let blob = data.entry(key.clone()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 assert_eq!(blob.gets, 11);
             }
 
@@ -694,6 +695,7 @@ mod test {
         #[fbinit::test]
         async fn test_cache_read(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
+            borrowed!(ctx);
             let blobstore = make_blobstore(
                 fb,
                 TestBlobstore::new(),
@@ -702,21 +704,21 @@ mod test {
                 allow_all_filter,
             )?;
 
-            let key = "foo".to_string();
+            let key = "foo";
             let val = BlobstoreBytes::from_bytes("foo");
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let mut blob = data.entry(key.clone()).or_default();
+                let mut blob = data.entry(key.to_owned()).or_default();
                 blob.data = Some(BlobData::Bytes(val.clone()));
             }
 
-            let v1 = blobstore.get(ctx.clone(), key.clone()).await?;
-            let v2 = blobstore.get(ctx.clone(), key.clone()).await?;
+            let v1 = blobstore.get(ctx, key).await?;
+            let v2 = blobstore.get(ctx, key).await?;
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let blob = data.entry(key.clone()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 assert_eq!(blob.gets, 1);
             }
 
@@ -729,6 +731,7 @@ mod test {
         #[fbinit::test]
         async fn test_read_after_write(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
+            borrowed!(ctx);
             let blobstore = make_blobstore(
                 fb,
                 TestBlobstore::new(),
@@ -737,15 +740,15 @@ mod test {
                 allow_all_filter,
             )?;
 
-            let key = "foo".to_string();
+            let key = "foo";
             let val = BlobstoreBytes::from_bytes("foo");
 
-            blobstore.put(ctx.clone(), key.clone(), val.clone()).await?;
-            let v1 = blobstore.get(ctx.clone(), key.clone()).await?;
+            blobstore.put(ctx, key.to_owned(), val.clone()).await?;
+            let v1 = blobstore.get(ctx, key).await?;
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let blob = data.entry(key.clone()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 assert_eq!(blob.gets, 0);
             }
 
@@ -757,6 +760,7 @@ mod test {
         #[fbinit::test]
         async fn test_do_not_serialize_not_storable(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
+            borrowed!(ctx);
             let blobstore = make_blobstore(
                 fb,
                 TestBlobstore::new(),
@@ -765,7 +769,7 @@ mod test {
                 reject_all_filter,
             )?;
 
-            let key = "foo".to_string();
+            let key = "foo";
             let val = BlobstoreBytes::from_bytes("foo");
 
             let (sender, _) = broadcast::channel(1);
@@ -773,14 +777,14 @@ mod test {
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let mut blob = data.entry(key.clone()).or_default();
+                let mut blob = data.entry(key.to_owned()).or_default();
                 blob.data = Some(BlobData::Channel(sender.clone()));
             }
 
             // Spawn a bunch of reads
             let futs = tokio::spawn(futures::future::try_join_all((0..10usize).map(|_| {
-                cloned!(blobstore, ctx, key);
-                async move { blobstore.get(ctx, key).await }
+                cloned!(blobstore, ctx);
+                async move { blobstore.get(&ctx, key).await }
             })));
 
             tokio::time::timeout(Duration::from_millis(TIMEOUT_MS), async {
@@ -822,8 +826,8 @@ mod test {
                 // (whereas the other ones would have acquired it, and been released by the firs task
                 // afterwards).
                 let futs = tokio::spawn(futures::future::try_join_all((0..10usize).map(|_| {
-                    cloned!(blobstore, ctx, key);
-                    async move { blobstore.get(ctx, key).await }
+                    cloned!(blobstore, ctx);
+                    async move { blobstore.get(&ctx, key).await }
                 })));
 
                 // Finally, wait for those requests to arrive.
@@ -862,6 +866,7 @@ mod test {
         #[fbinit::test]
         async fn test_dedupe_writes(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
+            borrowed!(ctx);
             let blobstore = make_blobstore(
                 fb,
                 TestBlobstore::new(),
@@ -870,30 +875,27 @@ mod test {
                 allow_all_filter,
             )?;
 
-            let key = "foo".to_string();
+            let key = "foo";
             let val = BlobstoreBytes::from_bytes("foo");
 
             futures::future::try_join_all(
-                (0..10usize).map(|_| blobstore.put(ctx.clone(), key.clone(), val.clone())),
+                (0..10usize).map(|_| blobstore.put(ctx, key.to_owned(), val.clone())),
             )
             .await?;
 
             let handle = {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let blob = data.entry(key.clone()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 assert_eq!(blob.puts, 1);
                 blob.data.as_ref().unwrap().handle()
             };
             assert_eq!(handle.bytes().await?, val);
 
-            futures::future::try_join_all(
-                (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
-            )
-            .await?;
+            futures::future::try_join_all((0..10usize).map(|_| blobstore.get(ctx, key))).await?;
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let blob = data.entry(key.clone()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 assert_eq!(blob.gets, 0);
             }
 
@@ -903,6 +905,7 @@ mod test {
         #[fbinit::test]
         async fn test_dedupe_writes_different_data(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
+            borrowed!(ctx);
             let blobstore = make_blobstore(
                 fb,
                 TestBlobstore::new(),
@@ -911,7 +914,7 @@ mod test {
                 allow_all_filter,
             )?;
 
-            let key = "foo".to_string();
+            let key = "foo";
             let val0 = BlobstoreBytes::from_bytes("foo");
             let val1 = BlobstoreBytes::from_bytes("foo");
             let val2 = BlobstoreBytes::from_bytes("bar");
@@ -920,46 +923,40 @@ mod test {
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let mut blob = data.entry(key.clone()).or_default();
+                let mut blob = data.entry(key.to_owned()).or_default();
                 blob.data = Some(BlobData::Bytes(val0.clone()));
             }
 
-            blobstore.get(ctx.clone(), key.clone()).await?;
+            blobstore.get(ctx, key).await?;
 
             // Now, check that a put still goes through.
 
-            blobstore
-                .put(ctx.clone(), key.clone(), val1.clone())
-                .await?;
+            blobstore.put(ctx, key.to_owned(), val1.clone()).await?;
 
             let handle1 = {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let blob = data.entry(key.clone()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 assert_eq!(blob.puts, 1);
                 blob.data.as_ref().unwrap().handle()
             };
             assert_eq!(handle1.bytes().await?, val1);
 
             // Put it again. This time, we don't expect a put to make it through to the blobstore.
-            blobstore
-                .put(ctx.clone(), key.clone(), val1.clone())
-                .await?;
+            blobstore.put(ctx, key.to_owned(), val1.clone()).await?;
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let blob = data.entry(key.clone()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 assert_eq!(blob.puts, 1);
             };
 
             // Now, check that a put for different data also goes through.
 
-            blobstore
-                .put(ctx.clone(), key.clone(), val2.clone())
-                .await?;
+            blobstore.put(ctx, key.to_owned(), val2.clone()).await?;
 
             let handle2 = {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let blob = data.entry(key.clone()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 assert_eq!(blob.puts, 2);
                 blob.data.as_ref().unwrap().handle()
             };
@@ -979,19 +976,17 @@ mod test {
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let mut blob = data.entry(key.clone()).or_default();
+                let mut blob = data.entry(key.to_owned()).or_default();
                 blob.data = Some(BlobData::Bytes(val0.clone()));
             };
 
-            blobstore.get(ctx.clone(), key.clone()).await?;
+            blobstore.get(ctx, key).await?;
 
-            blobstore
-                .put(ctx.clone(), key.clone(), val2.clone())
-                .await?;
+            blobstore.put(ctx, key.to_owned(), val2.clone()).await?;
 
             {
                 let mut data = blobstore.inner.blobstore.data.lock().unwrap();
-                let blob = data.entry(key.clone()).or_default();
+                let blob = data.entry(key.to_owned()).or_default();
                 assert_eq!(blob.gets, 1);
                 assert_eq!(blob.puts, 0);
             };
@@ -1003,6 +998,7 @@ mod test {
     mod ratelimiting {
         use super::*;
         use async_limiter::AsyncLimiter;
+        use borrowed::borrowed;
         use context::SessionContainer;
         use fbinit::FacebookInit;
         use nonzero_ext::nonzero;
@@ -1023,10 +1019,10 @@ mod test {
 
         #[async_trait]
         impl Blobstore for DummyBlob {
-            async fn get(
-                &self,
-                _ctx: CoreContext,
-                _key: String,
+            async fn get<'a>(
+                &'a self,
+                _ctx: &'a CoreContext,
+                _key: &'a str,
             ) -> Result<Option<BlobstoreGetData>> {
                 Ok(Some(BlobstoreGetData::new(
                     BlobstoreMetadata::new(None),
@@ -1034,16 +1030,20 @@ mod test {
                 )))
             }
 
-            async fn put(
-                &self,
-                _ctx: CoreContext,
+            async fn put<'a>(
+                &'a self,
+                _ctx: &'a CoreContext,
                 _key: String,
                 _value: BlobstoreBytes,
             ) -> Result<()> {
                 Ok(())
             }
 
-            async fn is_present(&self, _ctx: CoreContext, _key: String) -> Result<bool> {
+            async fn is_present<'a>(
+                &'a self,
+                _ctx: &'a CoreContext,
+                _key: &'a str,
+            ) -> Result<bool> {
                 Ok(true)
             }
         }
@@ -1077,18 +1077,22 @@ mod test {
                 allow_all_filter,
             )?;
 
+            borrowed!(ctx, blobstore);
+
             // get
-            let (stats, _) = futures::future::try_join_all(
-                (0..10u64).map(|i| blobstore.get(ctx.clone(), format!("get{}", i))),
-            )
+            let (stats, _) = futures::future::try_join_all((0..10u64).map(|i| {
+                let key = format!("get{}", i);
+                async move { blobstore.get(ctx, &key).await }
+            }))
             .try_timed()
             .await?;
             assert!(stats.completion_time.as_millis_unchecked() > 50);
 
             // is_present
-            let (stats, _) = futures::future::try_join_all(
-                (0..10u64).map(|i| blobstore.is_present(ctx.clone(), format!("present{}", i))),
-            )
+            let (stats, _) = futures::future::try_join_all((0..10u64).map(|i| {
+                let key = format!("present{}", i);
+                async move { blobstore.is_present(ctx, &key).await }
+            }))
             .try_timed()
             .await?;
             assert!(stats.completion_time.as_millis_unchecked() > 50);
@@ -1096,7 +1100,7 @@ mod test {
             // put
             let bytes = BlobstoreBytes::from_bytes("test foobar");
             let (stats, _) = futures::future::try_join_all(
-                (0..10u64).map(|i| blobstore.put(ctx.clone(), format!("put{}", i), bytes.clone())),
+                (0..10u64).map(|i| blobstore.put(ctx, format!("put{}", i), bytes.clone())),
             )
             .try_timed()
             .await?;
@@ -1120,6 +1124,7 @@ mod test {
             builder.blobstore_write_limiter(l2);
             let session = builder.build();
             let ctx = &session.new_context(logger(), ScubaSampleBuilder::with_discard());
+            borrowed!(ctx);
 
             let blobstore = &make_blobstore(
                 fb,
@@ -1133,7 +1138,10 @@ mod test {
             let (stats, _) = futures::future::try_join_all(
                 (0..10u64)
                     .map(|i| {
-                        (0..10u64).map(move |_| blobstore.get(ctx.clone(), format!("get{}", i)))
+                        (0..10u64).map(move |_| {
+                            let key = format!("get{}", i);
+                            async move { blobstore.get(ctx, &key).await }
+                        })
                     })
                     .flatten(),
             )
@@ -1146,9 +1154,8 @@ mod test {
             let (stats, _) = futures::future::try_join_all(
                 (0..10u64)
                     .map(|i| {
-                        (0..10u64).map(move |_| {
-                            blobstore.put(ctx.clone(), format!("put{}", i), bytes.clone())
-                        })
+                        (0..10u64)
+                            .map(move |_| blobstore.put(ctx, format!("put{}", i), bytes.clone()))
                     })
                     .flatten(),
             )

@@ -849,7 +849,7 @@ impl<'r> Bundle2Resolver<'r> {
                 let blob =
                     RawBundle2::new_bytes(Bytes::copy_from_slice(&full_content.lock().unwrap()))
                         .into_blob();
-                let id = blob.store(self.ctx.clone(), self.repo.blobstore()).await?;
+                let id = blob.store(&self.ctx, self.repo.blobstore()).await?;
                 debug!(self.ctx.logger(), "Saved a raw bundle2 content: {:?}", id);
                 self.ctx
                     .scuba()

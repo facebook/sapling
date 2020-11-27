@@ -59,8 +59,8 @@ impl MemState {
         }
     }
 
-    fn link(&mut self, existing_key: String, link_key: String) -> Result<()> {
-        if let Some(existing_id) = self.links.get(&existing_key) {
+    fn link(&mut self, existing_key: &str, link_key: String) -> Result<()> {
+        if let Some(existing_id) = self.links.get(existing_key) {
             let existing_id = *existing_id;
             self.links.insert(link_key, existing_id);
             return Ok(());
@@ -117,9 +117,9 @@ impl Default for Memblob {
 
 #[async_trait]
 impl BlobstorePutOps for Memblob {
-    async fn put_explicit(
-        &self,
-        _ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -130,9 +130,9 @@ impl BlobstorePutOps for Memblob {
         Ok(inner.put(key, value, put_behaviour))
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
@@ -142,14 +142,23 @@ impl BlobstorePutOps for Memblob {
 
 #[async_trait]
 impl Blobstore for Memblob {
-    async fn get(&self, _ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         let state = self.state.clone();
 
         let inner = state.lock().expect("lock poison");
         Ok(inner.get(&key).map(|bytes| bytes.clone().into()))
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
@@ -157,7 +166,12 @@ impl Blobstore for Memblob {
 
 #[async_trait]
 impl BlobstoreWithLink for Memblob {
-    async fn link(&self, _ctx: CoreContext, existing_key: String, link_key: String) -> Result<()> {
+    async fn link<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        existing_key: &'a str,
+        link_key: String,
+    ) -> Result<()> {
         let state = self.state.clone();
 
         let mut inner = state.lock().expect("lock poison");

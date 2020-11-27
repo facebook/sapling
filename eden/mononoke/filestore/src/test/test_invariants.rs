@@ -7,6 +7,7 @@
 
 use anyhow::{format_err, Error, Result};
 use blobstore::Blobstore;
+use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -31,7 +32,7 @@ use super::request;
 /// Fetching through any alias should return the same outcome.
 async fn check_consistency<B: Blobstore>(
     blobstore: &B,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     bytes: &Bytes,
 ) -> Result<bool, Error> {
     let content_id = hash_bytes(ContentIdIncrementalHasher::new(), &bytes);
@@ -45,10 +46,10 @@ async fn check_consistency<B: Blobstore>(
     let git_sha1 = FetchKey::Aliased(Alias::GitSha1(git_sha1.sha1()));
 
     let futs = vec![
-        filestore::fetch(blobstore, ctx.clone(), &content_id),
-        filestore::fetch(blobstore, ctx.clone(), &sha1),
-        filestore::fetch(blobstore, ctx.clone(), &sha256),
-        filestore::fetch(blobstore, ctx.clone(), &git_sha1),
+        filestore::fetch(blobstore, ctx, &content_id),
+        filestore::fetch(blobstore, ctx, &sha1),
+        filestore::fetch(blobstore, ctx, &sha256),
+        filestore::fetch(blobstore, ctx, &git_sha1),
     ];
 
     let futs: Vec<_> = futs
@@ -69,12 +70,12 @@ async fn check_consistency<B: Blobstore>(
 
 async fn check_metadata<B: Blobstore>(
     blobstore: &B,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     bytes: &Bytes,
 ) -> Result<bool, Error> {
     let content_id = hash_bytes(ContentIdIncrementalHasher::new(), &bytes);
 
-    filestore::get_metadata(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
+    filestore::get_metadata(blobstore, ctx, &FetchKey::Canonical(content_id))
         .await
         .map(|r| r.is_some())
 }
@@ -95,6 +96,7 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
         concurrency: 5,
     };
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx, blob, memblob: &Arc<_>);
 
     for _ in 0..1000 {
         let bytes = Bytes::from(Vec::arbitrary(&mut gen));
@@ -102,20 +104,20 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
 
         // Try to store with a broken blobstore. It doesn't matter if we succeed or not.
         let res = rt.block_on_std(filestore::store(
-            &blob,
+            blob,
             config,
-            ctx.clone(),
+            ctx,
             &req,
             stream::once(future::ready(Ok(bytes.clone()))),
         ));
         println!("store: {:?}", res);
 
         // Try to read with a functional blobstore. All results should be consistent.
-        let content_ok = rt.block_on_std(check_consistency(&memblob, ctx.clone(), &bytes))?;
+        let content_ok = rt.block_on_std(check_consistency(memblob, ctx, &bytes))?;
         println!("content_ok: {:?}", content_ok);
 
         // If we can read the content metadata, then we should also be able to read a metadata.
-        let metadata_ok = rt.block_on_std(check_metadata(&memblob, ctx.clone(), &bytes))?;
+        let metadata_ok = rt.block_on_std(check_metadata(memblob, ctx, &bytes))?;
         println!("metadata_ok: {:?}", metadata_ok);
         assert_eq!(content_ok, metadata_ok)
     }
@@ -130,6 +132,7 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
 
         let memblob = Arc::new(memblob::Memblob::default());
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx, memblob: &Arc<_>);
 
         for _ in 0..100usize {
             let bytes = Bytes::from(Vec::arbitrary(&mut gen));
@@ -150,36 +153,26 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
             };
 
             let ((id1, len1), fut1) =
-                filestore::store_bytes(&memblob, no_chunking, ctx.clone(), bytes.clone());
+                filestore::store_bytes(memblob, no_chunking, ctx, bytes.clone());
             fut1.await?;
 
-            assert_eq!(
-                bytes,
-                filestore::fetch_concat(&memblob, ctx.clone(), id1).await?
-            );
+            assert_eq!(bytes, filestore::fetch_concat(memblob, ctx, id1).await?);
 
-            let ((id2, len2), fut2) =
-                filestore::store_bytes(&memblob, chunked, ctx.clone(), bytes.clone());
+            let ((id2, len2), fut2) = filestore::store_bytes(memblob, chunked, ctx, bytes.clone());
             fut2.await?;
 
-            assert_eq!(
-                bytes,
-                filestore::fetch_concat(&memblob, ctx.clone(), id2).await?
-            );
+            assert_eq!(bytes, filestore::fetch_concat(memblob, ctx, id2).await?);
 
             let ((id3, len3), fut3) =
-                filestore::store_bytes(&memblob, too_small_to_chunk, ctx.clone(), bytes.clone());
+                filestore::store_bytes(memblob, too_small_to_chunk, ctx, bytes.clone());
             fut3.await?;
 
-            assert_eq!(
-                bytes,
-                filestore::fetch_concat(&memblob, ctx.clone(), id3).await?
-            );
+            assert_eq!(bytes, filestore::fetch_concat(memblob, ctx, id3).await?);
 
             let meta = filestore::store(
-                &memblob,
+                memblob,
                 no_chunking,
-                ctx.clone(),
+                ctx,
                 &request(&bytes),
                 stream::once(future::ready(Ok(bytes.clone()))),
             )

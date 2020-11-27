@@ -6,19 +6,17 @@
  */
 
 use std::collections::HashMap;
-use std::iter::FromIterator;
 use std::sync::Arc;
 
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
+use borrowed::borrowed;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use fbthrift::compact_protocol;
-use futures::compat::Future01CompatExt;
-use futures::future::TryFutureExt;
-use futures_old::{stream::FuturesUnordered, Future, Stream};
+use futures::{future, stream::FuturesUnordered, TryStreamExt};
 use mononoke_types::{BlobstoreBytes, BonsaiChangeset, ChangesetId};
 
 use crate::ChangesetInfo;
@@ -67,22 +65,24 @@ impl BonsaiDerivedMapping for ChangesetInfoMapping {
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        let futs = csids.into_iter().map(|csid| {
-            self.blobstore
-                .get(ctx.clone(), self.format_key(&csid))
-                .compat()
-                .map(move |value| {
-                    value.map(|bytes| {
-                        let info = ChangesetInfo::from_bytes(bytes.as_raw_bytes())?;
-                        Ok((csid, info))
-                    })
-                })
-        });
-        FuturesUnordered::from_iter(futs)
-            .filter_map(|maybe_info| maybe_info)
-            .collect()
-            .and_then(move |infos| infos.into_iter().collect::<Result<HashMap<_, _>, Error>>())
-            .compat()
+        borrowed!(ctx);
+        csids
+            .into_iter()
+            .map(|csid| {
+                let key = self.format_key(&csid);
+                async move {
+                    let maybe_bytes = self.blobstore.get(ctx, &key).await?;
+                    maybe_bytes
+                        .map(|bytes| {
+                            let info = ChangesetInfo::from_bytes(bytes.as_raw_bytes())?;
+                            Ok((csid, info))
+                        })
+                        .transpose()
+                }
+            })
+            .collect::<FuturesUnordered<_>>()
+            .try_filter_map(future::ok)
+            .try_collect()
             .await
     }
 
@@ -96,7 +96,7 @@ impl BonsaiDerivedMapping for ChangesetInfoMapping {
             let data = compact_protocol::serialize(&info.into_thrift());
             BlobstoreBytes::from_bytes(data)
         };
-        self.blobstore.put(ctx, self.format_key(&csid), data).await
+        self.blobstore.put(&ctx, self.format_key(&csid), data).await
     }
 }
 
@@ -126,7 +126,7 @@ mod test {
             .unwrap()
             .unwrap();
         let bcs = runtime
-            .block_on_std(bcs_id.load(ctx.clone(), repo.blobstore()))
+            .block_on_std(bcs_id.load(&ctx, repo.blobstore()))
             .unwrap();
 
         // Make sure that the changeset info was saved in the blobstore

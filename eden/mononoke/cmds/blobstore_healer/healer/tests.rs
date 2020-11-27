@@ -48,7 +48,12 @@ impl PutFailingMemblob {
 
 #[async_trait]
 impl Blobstore for PutFailingMemblob {
-    async fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         let mut inner = self.hash.lock().expect("lock poison");
         let inner_flag = self.fail_puts.lock().expect("lock poison");
         let res = if *inner_flag {
@@ -60,9 +65,13 @@ impl Blobstore for PutFailingMemblob {
         res
     }
 
-    async fn get(&self, _ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         let inner = self.hash.lock().expect("lock poison");
-        let bytes = inner.get(&key).map(|bytes| bytes.clone().into());
+        let bytes = inner.get(key).map(|bytes| bytes.clone().into());
         Ok(bytes)
     }
 }
@@ -121,9 +130,7 @@ fn make_value(value: &str) -> BlobstoreBytes {
 
 async fn put_value(ctx: &CoreContext, store: Option<&Arc<dyn Blobstore>>, key: &str, value: &str) {
     if let Some(store) = store {
-        let _ = store
-            .put(ctx.clone(), key.to_string(), make_value(value))
-            .await;
+        let _ = store.put(ctx, key.to_string(), make_value(value)).await;
     }
 }
 
@@ -648,7 +655,7 @@ async fn healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<()> {
         underlying_stores
             .get(&bids[1])
             .unwrap()
-            .get(ctx, "specialk".to_string())
+            .get(&ctx, "specialk")
             .await?,
         Some(BlobstoreGetData::from_bytes(Bytes::from("specialv"))),
     );

@@ -22,6 +22,7 @@ use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, P
 use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
 };
+use borrowed::borrowed;
 use bytes::Bytes;
 use cloned::cloned;
 use context::{CoreContext, SessionClass};
@@ -96,15 +97,24 @@ impl<T> Tickable<T> {
 
 #[async_trait]
 impl Blobstore for Tickable<BlobstoreBytes> {
-    async fn get(&self, _ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         let storage = self.storage.clone();
         let on_tick = self.on_tick();
 
         on_tick.await?;
-        Ok(storage.with(|s| s.get(&key).cloned().map(Into::into)))
+        Ok(storage.with(|s| s.get(key).cloned().map(Into::into)))
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
@@ -112,9 +122,9 @@ impl Blobstore for Tickable<BlobstoreBytes> {
 
 #[async_trait]
 impl BlobstorePutOps for Tickable<BlobstoreBytes> {
-    async fn put_explicit(
-        &self,
-        _ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         _put_behaviour: PutBehaviour,
@@ -129,9 +139,9 @@ impl BlobstorePutOps for Tickable<BlobstoreBytes> {
         Ok(OverwriteStatus::NotChecked)
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
@@ -226,6 +236,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
     let scrub_handler = Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>;
 
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
     let bs = ScrubBlobstore::new(
         MultiplexId::new(1),
         vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
@@ -238,7 +249,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
         ScrubAction::ReportOnly,
     );
 
-    let mut fut = bs.get(ctx.clone(), "key".to_string());
+    let mut fut = bs.get(ctx, "key");
     assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
     // No entry for "key" - blobstores return None...
@@ -254,7 +265,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
         id: None,
         operation_key: OperationKey::gen(),
     };
-    queue.add(&ctx, entry).await?;
+    queue.add(ctx, entry).await?;
 
     fut.await?;
 
@@ -279,29 +290,30 @@ async fn base(fb: FacebookInit) {
         nonzero!(1u64),
     );
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
 
     // succeed as soon as first blobstore succeeded
     {
         let v0 = make_value("v0");
-        let k0 = String::from("k0");
+        let k0 = "k0";
 
         let mut put_fut = bs
-            .put(ctx.clone(), k0.clone(), v0.clone())
+            .put(ctx, k0.to_owned(), v0.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs0.tick(None);
         put_fut.await.unwrap();
-        assert_eq!(bs0.storage.with(|s| s.get(&k0).cloned()), Some(v0.clone()));
+        assert_eq!(bs0.storage.with(|s| s.get(k0).cloned()), Some(v0.clone()));
         assert!(bs1.storage.with(|s| s.is_empty()));
         bs1.tick(Some("bs1 failed"));
         assert!(
             log.log
-                .with(|log| log == &vec![(BlobstoreId::new(0), k0.clone())])
+                .with(|log| log == &vec![(BlobstoreId::new(0), k0.to_owned())])
         );
 
         // should succeed as it is stored in bs1
-        let mut get_fut = bs.get(ctx.clone(), k0).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k0).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(None);
         bs1.tick(None);
@@ -314,10 +326,10 @@ async fn base(fb: FacebookInit) {
     // wait for second if first one failed
     {
         let v1 = make_value("v1");
-        let k1 = String::from("k1");
+        let k1 = "k1";
 
         let mut put_fut = bs
-            .put(ctx.clone(), k1.clone(), v1.clone())
+            .put(ctx, k1.to_owned(), v1.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
@@ -325,31 +337,31 @@ async fn base(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs1.tick(None);
         put_fut.await.unwrap();
-        assert!(bs0.storage.with(|s| s.get(&k1).is_none()));
-        assert_eq!(bs1.storage.with(|s| s.get(&k1).cloned()), Some(v1.clone()));
+        assert!(bs0.storage.with(|s| s.get(k1).is_none()));
+        assert_eq!(bs1.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
         assert!(
             log.log
-                .with(|log| log == &vec![(BlobstoreId::new(1), k1.clone())])
+                .with(|log| log == &vec![(BlobstoreId::new(1), k1.to_owned())])
         );
 
-        let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k1).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(None);
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs1.tick(None);
         assert_eq!(get_fut.await.unwrap(), Some(v1.into()));
-        assert!(bs0.storage.with(|s| s.get(&k1).is_none()));
+        assert!(bs0.storage.with(|s| s.get(k1).is_none()));
 
         log.clear();
     }
 
     // both fail => whole put fail
     {
-        let k2 = String::from("k2");
         let v2 = make_value("v2");
+        let k2 = "k2";
 
         let mut put_fut = bs
-            .put(ctx.clone(), k2.clone(), v2.clone())
+            .put(ctx, k2.to_owned(), v2.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
@@ -361,8 +373,8 @@ async fn base(fb: FacebookInit) {
 
     // get: Error + None -> Error
     {
-        let k3 = String::from("k3");
-        let mut get_fut = bs.get(ctx.clone(), k3).map_err(|_| ()).boxed();
+        let k3 = "k3";
+        let mut get_fut = bs.get(ctx, k3).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(Some("case 4: bs0 failed"));
@@ -374,8 +386,8 @@ async fn base(fb: FacebookInit) {
 
     // get: None + None -> None
     {
-        let k3 = String::from("k3");
-        let mut get_fut = bs.get(ctx.clone(), k3).map_err(|_| ()).boxed();
+        let k3 = "k3";
+        let mut get_fut = bs.get(ctx, k3).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(None);
@@ -387,29 +399,30 @@ async fn base(fb: FacebookInit) {
 
     // both put succeed
     {
-        let k4 = String::from("k4");
         let v4 = make_value("v4");
+        let k4 = "k4";
         log.clear();
 
         let mut put_fut = bs
-            .put(ctx.clone(), k4.clone(), v4.clone())
+            .put(ctx, k4.to_owned(), v4.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         bs0.tick(None);
         put_fut.await.unwrap();
-        assert_eq!(bs0.storage.with(|s| s.get(&k4).cloned()), Some(v4.clone()));
+        assert_eq!(bs0.storage.with(|s| s.get(k4).cloned()), Some(v4.clone()));
         bs1.tick(None);
         while log.log.with(|log| log.len() != 2) {
             tokio::task::yield_now().await;
         }
-        assert_eq!(bs1.storage.with(|s| s.get(&k4).cloned()), Some(v4.clone()));
+        assert_eq!(bs1.storage.with(|s| s.get(k4).cloned()), Some(v4.clone()));
     }
 }
 
 #[fbinit::test]
 async fn multiplexed(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
 
     let bid0 = BlobstoreId::new(0);
@@ -428,9 +441,9 @@ async fn multiplexed(fb: FacebookInit) {
 
     // non-existing key when one blobstore failing
     {
-        let k0 = String::from("k0");
+        let k0 = "k0";
 
-        let mut get_fut = bs.get(ctx.clone(), k0.clone()).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k0).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(None);
@@ -442,11 +455,11 @@ async fn multiplexed(fb: FacebookInit) {
 
     // only replica containing key failed
     {
-        let k1 = String::from("k1");
         let v1 = make_value("v1");
+        let k1 = "k1";
 
         let mut put_fut = bs
-            .put(ctx.clone(), k1.clone(), v1.clone())
+            .put(ctx, k1.to_owned(), v1.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
@@ -455,7 +468,7 @@ async fn multiplexed(fb: FacebookInit) {
         put_fut.await.expect("case 2 put_fut failed");
 
         match queue
-            .get(&ctx, &k1)
+            .get(ctx, k1)
             .await
             .expect("case 2 get failed")
             .as_slice()
@@ -464,7 +477,7 @@ async fn multiplexed(fb: FacebookInit) {
             _ => panic!("only one entry expected"),
         }
 
-        let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k1).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("case 2: bs0 failed"));
         bs1.tick(None);
@@ -473,9 +486,9 @@ async fn multiplexed(fb: FacebookInit) {
 
     // both replicas fail
     {
-        let k2 = String::from("k2");
+        let k2 = "k2";
 
-        let mut get_fut = bs.get(ctx.clone(), k2.clone()).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k2).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("case 3: bs0 failed"));
         bs1.tick(Some("case 3: bs1 failed"));
@@ -486,6 +499,7 @@ async fn multiplexed(fb: FacebookInit) {
 #[fbinit::test]
 async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
 
     let bid0 = BlobstoreId::new(0);
@@ -511,16 +525,16 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<()> {
 
     // two replicas succeed, one fails the operation keys are equal and non-null
     {
-        let k3 = String::from("k3");
         let v3 = make_value("v3");
+        let k3 = "k3";
 
-        bs.put(ctx.clone(), k3.clone(), v3.clone())
+        bs.put(ctx, k3.to_owned(), v3.clone())
             .map_err(|_| ())
             .await
             .expect("test multiplexed_operation_keys, put failed");
 
         match queue
-            .get(&ctx, &k3)
+            .get(ctx, k3)
             .await
             .expect("test multiplexed_operation_keys, get failed")
             .as_slice()
@@ -538,6 +552,7 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn scrubbed(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
     let scrub_handler = Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>;
     let bid0 = BlobstoreId::new(0);
@@ -558,9 +573,9 @@ async fn scrubbed(fb: FacebookInit) {
 
     // non-existing key when one blobstore failing
     {
-        let k0 = String::from("k0");
+        let k0 = "k0";
 
-        let mut get_fut = bs.get(ctx.clone(), k0.clone()).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k0).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(None);
@@ -572,11 +587,11 @@ async fn scrubbed(fb: FacebookInit) {
 
     // only replica containing key failed
     {
-        let k1 = String::from("k1");
         let v1 = make_value("v1");
+        let k1 = "k1";
 
         let mut put_fut = bs
-            .put(ctx.clone(), k1.clone(), v1.clone())
+            .put(ctx, k1.to_owned(), v1.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
@@ -585,12 +600,12 @@ async fn scrubbed(fb: FacebookInit) {
         bs1.tick(Some("bs1 failed"));
         put_fut.await.unwrap();
 
-        match queue.get(&ctx, &k1).await.unwrap().as_slice() {
+        match queue.get(ctx, k1).await.unwrap().as_slice() {
             [entry] => assert_eq!(entry.blobstore_id, bid0, "Queue bad"),
             _ => panic!("only one entry expected"),
         }
 
-        let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k1).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(Some("bs0 failed"));
@@ -602,9 +617,9 @@ async fn scrubbed(fb: FacebookInit) {
 
     // both replicas fail
     {
-        let k2 = String::from("k2");
+        let k2 = "k2";
 
-        let mut get_fut = bs.get(ctx.clone(), k2.clone()).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k2).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("bs0 failed"));
         bs1.tick(Some("bs1 failed"));
@@ -628,9 +643,9 @@ async fn scrubbed(fb: FacebookInit) {
 
     // Non-existing key in both blobstores, new blobstore failing
     {
-        let k0 = String::from("k0");
+        let k0 = "k0";
 
-        let mut get_fut = bs.get(ctx.clone(), k0.clone()).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k0).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
 
         bs0.tick(None);
@@ -642,9 +657,9 @@ async fn scrubbed(fb: FacebookInit) {
 
     // only replica containing key replaced after failure - DATA LOST
     {
-        let k1 = String::from("k1");
+        let k1 = "k1";
 
-        let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k1).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         bs0.tick(Some("bs0 failed"));
         bs1.tick(None);
@@ -653,10 +668,10 @@ async fn scrubbed(fb: FacebookInit) {
 
     // One working replica after failure.
     {
-        let k1 = String::from("k1");
         let v1 = make_value("v1");
+        let k1 = "k1";
 
-        match queue.get(&ctx, &k1).await.unwrap().as_slice() {
+        match queue.get(ctx, k1).await.unwrap().as_slice() {
             [entry] => {
                 assert_eq!(entry.blobstore_id, bid0, "Queue bad");
                 queue
@@ -668,10 +683,10 @@ async fn scrubbed(fb: FacebookInit) {
         }
 
         // bs1 empty at this point
-        assert_eq!(bs0.storage.with(|s| s.get(&k1).cloned()), Some(v1.clone()));
+        assert_eq!(bs0.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
         assert!(bs1.storage.with(|s| s.is_empty()));
 
-        let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k1).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         // tick the gets
         bs0.tick(None);
@@ -684,8 +699,8 @@ async fn scrubbed(fb: FacebookInit) {
         // Succeeds
         assert_eq!(get_fut.await.unwrap(), Some(v1.clone().into()));
         // Now both populated.
-        assert_eq!(bs0.storage.with(|s| s.get(&k1).cloned()), Some(v1.clone()));
-        assert_eq!(bs1.storage.with(|s| s.get(&k1).cloned()), Some(v1.clone()));
+        assert_eq!(bs0.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
+        assert_eq!(bs1.storage.with(|s| s.get(k1).cloned()), Some(v1.clone()));
     }
 }
 
@@ -709,6 +724,7 @@ async fn queue_waits(fb: FacebookInit) {
         nonzero!(1u64),
     );
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
 
     let clear = {
         cloned!(bs0, bs1, bs2, log);
@@ -720,15 +736,12 @@ async fn queue_waits(fb: FacebookInit) {
         }
     };
 
-    let k = String::from("k");
     let v = make_value("v");
+    let k = "k";
 
     // Put succeeds once all blobstores have succeded, even if the queue hasn't.
     {
-        let mut fut = bs
-            .put(ctx.clone(), k.clone(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut fut = bs.put(ctx, k.to_owned(), v.clone()).map_err(|_| ()).boxed();
 
         assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
 
@@ -743,10 +756,7 @@ async fn queue_waits(fb: FacebookInit) {
 
     // Put succeeds after 1 write + a write to the queue
     {
-        let mut fut = bs
-            .put(ctx.clone(), k.clone(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut fut = bs.put(ctx, k.to_owned(), v.clone()).map_err(|_| ()).boxed();
 
         assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
 
@@ -761,10 +771,7 @@ async fn queue_waits(fb: FacebookInit) {
 
     // Put succeeds despite errors, if the queue succeeds
     {
-        let mut fut = bs
-            .put(ctx.clone(), k.clone(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut fut = bs.put(ctx, k.to_owned(), v.clone()).map_err(|_| ()).boxed();
 
         assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
 
@@ -781,7 +788,7 @@ async fn queue_waits(fb: FacebookInit) {
 
     // Put succeeds if any blobstore succeeds and writes to the queue
     {
-        let mut fut = bs.put(ctx, k, v).map_err(|_| ()).boxed();
+        let mut fut = bs.put(ctx, k.to_owned(), v).map_err(|_| ()).boxed();
 
         assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
 
@@ -799,10 +806,10 @@ async fn queue_waits(fb: FacebookInit) {
 
 #[fbinit::test]
 async fn write_mostly_get(fb: FacebookInit) {
-    let both_key = "both".to_string();
+    let both_key = "both";
     let value = make_value("value");
-    let write_mostly_key = "write_mostly".to_string();
-    let main_only_key = "main_only".to_string();
+    let write_mostly_key = "write_mostly";
+    let main_only_key = "main_only";
     let main_bs = Arc::new(Tickable::new());
     let write_mostly_bs = Arc::new(Tickable::new());
 
@@ -818,18 +825,19 @@ async fn write_mostly_get(fb: FacebookInit) {
     );
 
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
 
     // Put one blob into both blobstores
-    main_bs.add_content(both_key.clone(), value.clone());
-    main_bs.add_content(main_only_key.clone(), value.clone());
-    write_mostly_bs.add_content(both_key.clone(), value.clone());
+    main_bs.add_content(both_key.to_owned(), value.clone());
+    main_bs.add_content(main_only_key.to_owned(), value.clone());
+    write_mostly_bs.add_content(both_key.to_owned(), value.clone());
     // Put a blob only into the write mostly blobstore
-    write_mostly_bs.add_content(write_mostly_key.clone(), value.clone());
+    write_mostly_bs.add_content(write_mostly_key.to_owned(), value.clone());
 
     // Fetch the blob that's in both blobstores, see that the write mostly blobstore isn't being
     // read from by ticking it
     {
-        let mut fut = bs.get(ctx.clone(), both_key.clone());
+        let mut fut = bs.get(ctx, both_key);
         assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
         // Ticking the write_mostly store does nothing.
@@ -846,7 +854,7 @@ async fn write_mostly_get(fb: FacebookInit) {
 
     // Fetch the blob that's only in the write mostly blobstore, see it fetch correctly
     {
-        let mut fut = bs.get(ctx.clone(), write_mostly_key);
+        let mut fut = bs.get(ctx, write_mostly_key);
         assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
         // Ticking the main store does nothing, as it lacks the blob
@@ -864,7 +872,7 @@ async fn write_mostly_get(fb: FacebookInit) {
     // Fetch the blob that's in both blobstores, see that the write mostly blobstore
     // is used when the main blobstore fails
     {
-        let mut fut = bs.get(ctx.clone(), both_key);
+        let mut fut = bs.get(ctx, both_key);
         assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
         // Ticking the write_mostly store does nothing.
@@ -886,7 +894,7 @@ async fn write_mostly_get(fb: FacebookInit) {
     // Fetch the blob that's in main blobstores, see that the write mostly blobstore
     // None value is not used when the main blobstore fails
     {
-        let mut fut = bs.get(ctx.clone(), main_only_key);
+        let mut fut = bs.get(ctx, main_only_key);
         assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
         // Ticking the write_mostly store does nothing.
@@ -927,32 +935,33 @@ async fn write_mostly_put(fb: FacebookInit) {
     );
 
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
 
     // succeed as soon as main succeeds. Fail write_mostly to confirm that we can still read.
     {
         let v0 = make_value("v0");
-        let k0 = String::from("k0");
+        let k0 = "k0";
 
         let mut put_fut = bs
-            .put(ctx.clone(), k0.clone(), v0.clone())
+            .put(ctx, k0.to_owned(), v0.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         main_bs.tick(None);
         put_fut.await.unwrap();
         assert_eq!(
-            main_bs.storage.with(|s| s.get(&k0).cloned()),
+            main_bs.storage.with(|s| s.get(k0).cloned()),
             Some(v0.clone())
         );
         assert!(write_mostly_bs.storage.with(|s| s.is_empty()));
         write_mostly_bs.tick(Some("write_mostly_bs failed"));
         assert!(
             log.log
-                .with(|log| log == &vec![(BlobstoreId::new(0), k0.clone())])
+                .with(|log| log == &vec![(BlobstoreId::new(0), k0.to_owned())])
         );
 
         // should succeed as it is stored in main_bs
-        let mut get_fut = bs.get(ctx.clone(), k0).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k0).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         main_bs.tick(None);
         write_mostly_bs.tick(None);
@@ -967,28 +976,28 @@ async fn write_mostly_put(fb: FacebookInit) {
     // succeed as soon as write_mostly succeeds. Fail main to confirm we can still read
     {
         let v0 = make_value("v0");
-        let k0 = String::from("k0");
+        let k0 = "k0";
 
         let mut put_fut = bs
-            .put(ctx.clone(), k0.clone(), v0.clone())
+            .put(ctx, k0.to_owned(), v0.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         write_mostly_bs.tick(None);
         put_fut.await.unwrap();
         assert_eq!(
-            write_mostly_bs.storage.with(|s| s.get(&k0).cloned()),
+            write_mostly_bs.storage.with(|s| s.get(k0).cloned()),
             Some(v0.clone())
         );
         assert!(main_bs.storage.with(|s| s.is_empty()));
         main_bs.tick(Some("main_bs failed"));
         assert!(
             log.log
-                .with(|log| log == &vec![(BlobstoreId::new(1), k0.clone())])
+                .with(|log| log == &vec![(BlobstoreId::new(1), k0.to_owned())])
         );
 
         // should succeed as it is stored in write_mostly_bs, but main won't read
-        let mut get_fut = bs.get(ctx.clone(), k0).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k0).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         main_bs.tick(None);
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
@@ -1004,10 +1013,10 @@ async fn write_mostly_put(fb: FacebookInit) {
     // succeed if write_mostly succeeds and main fails
     {
         let v1 = make_value("v1");
-        let k1 = String::from("k1");
+        let k1 = "k1";
 
         let mut put_fut = bs
-            .put(ctx.clone(), k1.clone(), v1.clone())
+            .put(ctx, k1.to_owned(), v1.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
@@ -1015,23 +1024,23 @@ async fn write_mostly_put(fb: FacebookInit) {
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         write_mostly_bs.tick(None);
         put_fut.await.unwrap();
-        assert!(main_bs.storage.with(|s| s.get(&k1).is_none()));
+        assert!(main_bs.storage.with(|s| s.get(k1).is_none()));
         assert_eq!(
-            write_mostly_bs.storage.with(|s| s.get(&k1).cloned()),
+            write_mostly_bs.storage.with(|s| s.get(k1).cloned()),
             Some(v1.clone())
         );
         assert!(
             log.log
-                .with(|log| log == &vec![(BlobstoreId::new(1), k1.clone())])
+                .with(|log| log == &vec![(BlobstoreId::new(1), k1.to_owned())])
         );
 
-        let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
+        let mut get_fut = bs.get(ctx, k1).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         main_bs.tick(None);
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
         write_mostly_bs.tick(None);
         assert_eq!(get_fut.await.unwrap(), Some(v1.into()));
-        assert!(main_bs.storage.with(|s| s.get(&k1).is_none()));
+        assert!(main_bs.storage.with(|s| s.get(k1).is_none()));
 
         main_bs.storage.with(|s| s.clear());
         write_mostly_bs.storage.with(|s| s.clear());
@@ -1040,11 +1049,11 @@ async fn write_mostly_put(fb: FacebookInit) {
 
     // both fail => whole put fail
     {
-        let k2 = String::from("k2");
         let v2 = make_value("v2");
+        let k2 = "k2";
 
         let mut put_fut = bs
-            .put(ctx.clone(), k2.clone(), v2.clone())
+            .put(ctx, k2.to_owned(), v2.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
@@ -1056,21 +1065,21 @@ async fn write_mostly_put(fb: FacebookInit) {
 
     // both put succeed
     {
-        let k4 = String::from("k4");
         let v4 = make_value("v4");
+        let k4 = "k4";
         main_bs.storage.with(|s| s.clear());
         write_mostly_bs.storage.with(|s| s.clear());
         log.clear();
 
         let mut put_fut = bs
-            .put(ctx.clone(), k4.clone(), v4.clone())
+            .put(ctx, k4.to_owned(), v4.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
         main_bs.tick(None);
         put_fut.await.unwrap();
         assert_eq!(
-            main_bs.storage.with(|s| s.get(&k4).cloned()),
+            main_bs.storage.with(|s| s.get(k4).cloned()),
             Some(v4.clone())
         );
         write_mostly_bs.tick(None);
@@ -1078,7 +1087,7 @@ async fn write_mostly_put(fb: FacebookInit) {
             tokio::task::yield_now().await;
         }
         assert_eq!(
-            write_mostly_bs.storage.with(|s| s.get(&k4).cloned()),
+            write_mostly_bs.storage.with(|s| s.get(k4).cloned()),
             Some(v4.clone())
         );
     }
@@ -1105,13 +1114,14 @@ async fn needed_writes(fb: FacebookInit) {
     );
 
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
 
     // Puts do not succeed until we have two successful writes and two handlers done
     {
-        let k0 = String::from("k0");
         let v0 = make_value("v0");
+        let k0 = "k0";
         let mut put_fut = bs
-            .put(ctx.clone(), k0.clone(), v0.clone())
+            .put(ctx, k0.to_owned(), v0.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
@@ -1123,7 +1133,7 @@ async fn needed_writes(fb: FacebookInit) {
             assert_eq!(l.len(), 1, "No handler run for put to blobstore");
             assert_eq!(
                 l[0],
-                (BlobstoreId::new(0), k0.clone()),
+                (BlobstoreId::new(0), k0.to_owned()),
                 "Handler put wrong entries"
             )
         });
@@ -1138,32 +1148,32 @@ async fn needed_writes(fb: FacebookInit) {
             assert_eq!(
                 l,
                 &vec![
-                    (BlobstoreId::new(0), k0.clone()),
-                    (BlobstoreId::new(2), k0.clone()),
+                    (BlobstoreId::new(0), k0.to_owned()),
+                    (BlobstoreId::new(2), k0.to_owned()),
                 ],
                 "Handler put wrong entries"
             )
         });
 
         assert_eq!(
-            main_bs0.storage.with(|s| s.get(&k0).cloned()),
+            main_bs0.storage.with(|s| s.get(k0).cloned()),
             Some(v0.clone())
         );
         assert_eq!(
-            main_bs2.storage.with(|s| s.get(&k0).cloned()),
+            main_bs2.storage.with(|s| s.get(k0).cloned()),
             Some(v0.clone())
         );
-        assert_eq!(write_mostly_bs.storage.with(|s| s.get(&k0).cloned()), None);
+        assert_eq!(write_mostly_bs.storage.with(|s| s.get(k0).cloned()), None);
         write_mostly_bs.tick(Some("Error"));
         log.clear();
     }
 
     // A write-mostly counts as a success.
     {
-        let k1 = String::from("k1");
         let v1 = make_value("v1");
+        let k1 = "k1";
         let mut put_fut = bs
-            .put(ctx.clone(), k1.clone(), v1.clone())
+            .put(ctx, k1.to_owned(), v1.clone())
             .map_err(|_| ())
             .boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut put_fut)).await, Poll::Pending);
@@ -1175,7 +1185,7 @@ async fn needed_writes(fb: FacebookInit) {
             assert_eq!(l.len(), 1, "No handler run for put to blobstore");
             assert_eq!(
                 l[0],
-                (BlobstoreId::new(0), k1.clone()),
+                (BlobstoreId::new(0), k1.to_owned()),
                 "Handler put wrong entries"
             )
         });
@@ -1190,22 +1200,22 @@ async fn needed_writes(fb: FacebookInit) {
             assert_eq!(
                 l,
                 &vec![
-                    (BlobstoreId::new(0), k1.clone()),
-                    (BlobstoreId::new(1), k1.clone()),
+                    (BlobstoreId::new(0), k1.to_owned()),
+                    (BlobstoreId::new(1), k1.to_owned()),
                 ],
                 "Handler put wrong entries"
             )
         });
 
         assert_eq!(
-            main_bs0.storage.with(|s| s.get(&k1).cloned()),
+            main_bs0.storage.with(|s| s.get(k1).cloned()),
             Some(v1.clone())
         );
         assert_eq!(
-            write_mostly_bs.storage.with(|s| s.get(&k1).cloned()),
+            write_mostly_bs.storage.with(|s| s.get(k1).cloned()),
             Some(v1.clone())
         );
-        assert_eq!(main_bs2.storage.with(|s| s.get(&k1).cloned()), None);
+        assert_eq!(main_bs2.storage.with(|s| s.get(k1).cloned()), None);
         main_bs2.tick(Some("Error"));
         log.clear();
     }
@@ -1232,12 +1242,13 @@ async fn needed_writes_bad_config(fb: FacebookInit) {
     );
 
     let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
 
     {
-        let k0 = String::from("k0");
         let v0 = make_value("v0");
+        let k0 = "k0";
         let put_fut = bs
-            .put(ctx.clone(), k0.clone(), v0.clone())
+            .put(ctx, k0.to_owned(), v0.clone())
             .map_err(|_| ())
             .boxed();
 
@@ -1273,6 +1284,7 @@ async fn no_handlers(fb: FacebookInit) {
         nonzero!(1u64),
     );
     let ctx = CoreContext::test_mock_class(fb, SessionClass::Background);
+    borrowed!(ctx);
 
     let clear = {
         cloned!(bs0, bs1, bs2, log);
@@ -1289,10 +1301,7 @@ async fn no_handlers(fb: FacebookInit) {
 
     // Put succeeds once all blobstores have succeded. The handlers won't run
     {
-        let mut fut = bs
-            .put(ctx.clone(), k.clone(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut fut = bs.put(ctx, k.to_owned(), v.clone()).map_err(|_| ()).boxed();
 
         assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
 
@@ -1308,10 +1317,7 @@ async fn no_handlers(fb: FacebookInit) {
 
     // Put is still in progress after one write, because no handlers have run
     {
-        let mut fut = bs
-            .put(ctx.clone(), k.clone(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut fut = bs.put(ctx, k.to_owned(), v.clone()).map_err(|_| ()).boxed();
 
         assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
 
@@ -1335,10 +1341,7 @@ async fn no_handlers(fb: FacebookInit) {
 
     // Put succeeds despite errors, if the queue succeeds
     {
-        let mut fut = bs
-            .put(ctx.clone(), k.clone(), v.clone())
-            .map_err(|_| ())
-            .boxed();
+        let mut fut = bs.put(ctx, k.to_owned(), v.clone()).map_err(|_| ()).boxed();
 
         assert_eq!(PollOnce::new(Pin::new(&mut fut)).await, Poll::Pending);
 

@@ -31,9 +31,9 @@ impl<T> TextOnlyFileContentFetcher<T> {
 
 #[async_trait]
 impl<T: FileContentFetcher + 'static> FileContentFetcher for TextOnlyFileContentFetcher<T> {
-    async fn get_file_size<'a, 'b: 'a>(
+    async fn get_file_size<'a>(
         &'a self,
-        ctx: &'b CoreContext,
+        ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<u64, ErrorKind> {
         self.inner.get_file_size(ctx, id).await
@@ -41,9 +41,9 @@ impl<T: FileContentFetcher + 'static> FileContentFetcher for TextOnlyFileContent
 
     /// Override the inner store's get_file_text by filtering out files that are to large or
     /// contain null bytes (those are assumed to be binary).
-    async fn get_file_text<'a, 'b: 'a>(
+    async fn get_file_text<'a>(
         &'a self,
-        ctx: &'b CoreContext,
+        ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<Option<Bytes>, ErrorKind> {
         // Don't fetch content if we know the object is too large

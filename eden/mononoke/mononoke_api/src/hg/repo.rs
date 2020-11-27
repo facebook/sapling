@@ -161,7 +161,7 @@ impl HgRepoContext {
         &self,
         hg_cs_id: HgChangesetId,
     ) -> Result<Option<Bytes>, MononokeError> {
-        let ctx = self.ctx().clone();
+        let ctx = self.ctx();
         let blobstore = self.blob_repo().blobstore();
         let revlog_cs = RevlogChangeset::load(ctx, blobstore, hg_cs_id)
             .await
@@ -304,7 +304,7 @@ mod tests {
             .get_hg_from_bonsai_changeset(ctx.clone(), csid)
             .compat()
             .await?;
-        let hg_cs = hg_cs_id.load(ctx, &blob_repo.get_blobstore()).await?;
+        let hg_cs = hg_cs_id.load(&ctx, &blob_repo.get_blobstore()).await?;
         Ok(hg_cs.manifestid())
     }
 }

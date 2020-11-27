@@ -282,7 +282,7 @@ async fn verify_bonsai_changeset_with_origin(
                 .await?;
             match origin_bonsai_id {
                 Some(id) if id != bcs.get_changeset_id() => {
-                    id.load(ctx, origin_repo.blobstore())
+                    id.load(&ctx, origin_repo.blobstore())
                         .map_err(|e| anyhow!(e))
                         .await
                 }
@@ -370,11 +370,11 @@ impl UploadChangesets {
                 cloned!(origin_repo);
                 async move {
                     let bonsai_cs = create_bonsai_changeset_object(
-                        ctx.clone(),
+                        &ctx,
                         hg_cs.clone(),
                         parent_manifest_hashes,
                         bonsai_parents,
-                        repo,
+                        &repo,
                     )
                     .await?;
                     verify_bonsai_changeset_with_origin(ctx, bonsai_cs, hg_cs, origin_repo).await

@@ -1054,7 +1054,7 @@ impl HgCommands for RepoClient {
                     Some(
                         {
                             cloned!(self.n, self.ctx, self.repo);
-                            async move { n.load(ctx, repo.blobrepo().blobstore()).await }
+                            async move { n.load(&ctx, repo.blobrepo().blobstore()).await }
                         }
                         .boxed()
                         .compat()
@@ -1184,7 +1184,7 @@ impl HgCommands for RepoClient {
                 .into_iter()
                 .map(|hg_csid| {
                     cloned!(ctx, repo);
-                    async move { hg_csid.load(ctx, repo.blobstore()).await }
+                    async move { hg_csid.load(&ctx, repo.blobstore()).await }
                         .boxed()
                         .compat()
                         .from_err()
@@ -2032,7 +2032,7 @@ impl HgCommands for RepoClient {
                         {
                             cloned!(ctx, blobrepo, hg_cs_id);
                             async move {
-                                RevlogChangeset::load(ctx, blobrepo.blobstore(), hg_cs_id).await
+                                RevlogChangeset::load(&ctx, blobrepo.blobstore(), hg_cs_id).await
                             }
                         }
                         .boxed()
@@ -2240,7 +2240,7 @@ pub fn fetch_treepack_part_input(
 
     let envelope_fut = {
         cloned!(ctx, repo);
-        async move { fetch_manifest_envelope(ctx, repo.blobstore(), hg_mf_id).await }
+        async move { fetch_manifest_envelope(&ctx, repo.blobstore(), hg_mf_id).await }
     }
     .boxed()
     .compat();

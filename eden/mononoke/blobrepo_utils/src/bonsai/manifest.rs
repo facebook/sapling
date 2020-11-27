@@ -211,7 +211,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
             .map(|p| {
                 let id = HgChangesetId::new(p);
                 cloned!(ctx, repo);
-                async move { id.load(ctx, repo.blobstore()).await }
+                async move { id.load(&ctx, repo.blobstore()).await }
                     .boxed()
                     .compat()
                     .from_err()
@@ -227,7 +227,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                 let root_mf_fut = {
                     cloned!(ctx, repo);
                     let mf_id = changeset.manifestid();
-                    async move { HgBlobManifest::load(ctx, repo.blobstore(), mf_id).await }
+                    async move { HgBlobManifest::load(&ctx, repo.blobstore(), mf_id).await }
                 };
 
                 try_join(

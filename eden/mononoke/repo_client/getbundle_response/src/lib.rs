@@ -456,7 +456,7 @@ async fn create_hg_changeset_part(
                 async move {
                     match res {
                         Ok((hg_cs_id, _bcs_id)) => {
-                            let cs = hg_cs_id.load(ctx.clone(), blobrepo.blobstore()).await?;
+                            let cs = hg_cs_id.load(&ctx, blobrepo.blobstore()).await?;
                             Ok((hg_cs_id, cs))
                         }
                         Err(e) => Err(e),
@@ -783,10 +783,10 @@ pub struct PreparedFilenodeEntry {
 }
 
 impl PreparedFilenodeEntry {
-    async fn into_filenode(
+    async fn into_filenode<'a>(
         self,
-        ctx: CoreContext,
-        repo: BlobRepo,
+        ctx: &'a CoreContext,
+        repo: &'a BlobRepo,
     ) -> Result<(HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>), Error> {
         let Self {
             filenode,
@@ -798,8 +798,8 @@ impl PreparedFilenodeEntry {
         } = self;
 
         async fn fetch_and_wrap(
-            ctx: CoreContext,
-            repo: BlobRepo,
+            ctx: &CoreContext,
+            repo: &BlobRepo,
             content_id: ContentId,
         ) -> Result<FileBytes, Error> {
             let content = filestore::fetch_concat(repo.blobstore(), ctx, content_id).await?;
@@ -860,7 +860,7 @@ fn prepare_filenode_entries_stream<'a>(
     stream::iter(filenodes.into_iter())
         .map({
             move |(path, filenode, linknode)| async move {
-                let envelope = filenode.load(ctx.clone(), repo.blobstore()).await?;
+                let envelope = filenode.load(ctx, repo.blobstore()).await?;
 
                 let file_size = envelope.content_size();
 
@@ -871,8 +871,7 @@ fn prepare_filenode_entries_stream<'a>(
                     }
                     _ => {
                         let key = FetchKey::from(envelope.content_id());
-                        let meta =
-                            filestore::get_metadata(repo.blobstore(), ctx.clone(), &key).await?;
+                        let meta = filestore::get_metadata(repo.blobstore(), ctx, &key).await?;
                         let meta =
                             meta.ok_or_else(|| Error::from(ErrorKind::MissingContent(key)))?;
                         let oid = meta.sha256;
@@ -951,7 +950,7 @@ pub fn create_manifest_entries_stream(
             move |(fullpath, mf_id, linknode)| {
                 cloned!(ctx, blobstore);
                 async move {
-                    fetch_manifest_envelope(ctx, &blobstore.boxed(), mf_id)
+                    fetch_manifest_envelope(&ctx, &blobstore.boxed(), mf_id)
                         .map_ok(move |mf_envelope| {
                             let (p1, p2) = mf_envelope.parents();
                             parts::TreepackPartInput {
@@ -974,8 +973,8 @@ pub fn create_manifest_entries_stream(
 }
 
 async fn diff_with_parents(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     hg_cs_id: HgChangesetId,
 ) -> Result<
     (
@@ -984,23 +983,18 @@ async fn diff_with_parents(
     ),
     Error,
 > {
-    let (mf_id, parent_mf_ids) = try_join!(fetch_manifest(ctx.clone(), &repo, &hg_cs_id), async {
+    let (mf_id, parent_mf_ids) = try_join!(fetch_manifest(ctx, repo, &hg_cs_id), async {
         let parents = repo
             .get_changeset_parents(ctx.clone(), hg_cs_id)
             .compat()
             .await?;
 
-        future::try_join_all(
-            parents
-                .iter()
-                .map(|p| fetch_manifest(ctx.clone(), &repo, p)),
-        )
-        .await
+        future::try_join_all(parents.iter().map(|p| fetch_manifest(ctx, repo, p))).await
     })?;
 
     let blobstore = Arc::new(repo.get_blobstore());
     let new_entries: Vec<(Option<MPath>, Entry<_, _>, _)> =
-        find_intersection_of_diffs_and_parents(ctx, blobstore, mf_id, parent_mf_ids)
+        find_intersection_of_diffs_and_parents(ctx.clone(), blobstore, mf_id, parent_mf_ids)
             .try_collect()
             .await?;
 
@@ -1055,10 +1049,12 @@ fn create_filenodes_weighted(
                 .into_iter()
                 .map({
                     |entry| {
-                        entry
-                            .into_filenode(ctx.clone(), repo.clone())
-                            .boxed()
-                            .compat()
+                        {
+                            cloned!(ctx, repo);
+                            async move { entry.into_filenode(&ctx, &repo).await }
+                        }
+                        .boxed()
+                        .compat()
                     }
                 })
                 .collect();
@@ -1098,8 +1094,7 @@ pub async fn get_manifests_and_filenodes(
     let entries: Vec<_> = stream::iter(commits)
         .then({
             |hg_cs_id| async move {
-                let (manifests, filenodes) =
-                    diff_with_parents(ctx.clone(), repo.clone(), hg_cs_id).await?;
+                let (manifests, filenodes) = diff_with_parents(ctx, repo, hg_cs_id).await?;
 
                 let filenodes: Vec<(MPath, Vec<PreparedFilenodeEntry>)> =
                     prepare_filenode_entries_stream(&ctx, &repo, filenodes, &lfs_params)
@@ -1127,7 +1122,7 @@ pub async fn get_manifests_and_filenodes(
 }
 
 async fn fetch_manifest(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     hg_cs_id: &HgChangesetId,
 ) -> Result<HgManifestId, Error> {

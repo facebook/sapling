@@ -90,21 +90,30 @@ impl<T: Clone + fmt::Debug + Send + Sync> ThrottledBlob<T> {
 // All delegate to throttled_access, which ensures even eager methods are throttled
 #[async_trait]
 impl<T: Blobstore + Clone> Blobstore for ThrottledBlob<T> {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         self.throttled_access(&self.read_limiter, move |blobstore| {
             async move { blobstore.get(ctx, key).await }.boxed()
         })
         .await
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         self.throttled_access(&self.write_limiter, move |blobstore| {
             async move { blobstore.put(ctx, key, value).await }.boxed()
         })
         .await
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         self.throttled_access(&self.read_limiter, move |blobstore| {
             async move { blobstore.is_present(ctx, key).await }.boxed()
         })
@@ -115,9 +124,9 @@ impl<T: Blobstore + Clone> Blobstore for ThrottledBlob<T> {
 // All delegate to throttled_access, which ensures even eager methods are throttled
 #[async_trait]
 impl<T: BlobstorePutOps + Clone> BlobstorePutOps for ThrottledBlob<T> {
-    async fn put_explicit(
-        &self,
-        ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -128,9 +137,9 @@ impl<T: BlobstorePutOps + Clone> BlobstorePutOps for ThrottledBlob<T> {
         .await
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {

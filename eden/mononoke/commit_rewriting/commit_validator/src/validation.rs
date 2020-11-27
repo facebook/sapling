@@ -296,11 +296,11 @@ impl ValidationHelper {
 
                 let (p1_content_id, new_content_id) = try_join!(
                     async {
-                        let e = p1_filenode_id.load(ctx.clone(), repo.blobstore()).await?;
+                        let e = p1_filenode_id.load(ctx, repo.blobstore()).await?;
                         Result::<_, Error>::Ok(e.content_id())
                     },
                     async {
-                        let e = new_filenode_id.load(ctx.clone(), repo.blobstore()).await?;
+                        let e = new_filenode_id.load(ctx, repo.blobstore()).await?;
                         Result::<_, Error>::Ok(e.content_id())
                     }
                 )?;
@@ -355,7 +355,7 @@ impl ValidationHelper {
             }
         };
 
-        let p1_root_mf_id = fetch_root_mf_id(ctx.clone(), repo, p1).await?;
+        let p1_root_mf_id = fetch_root_mf_id(ctx, repo, p1).await?;
 
         // Note: this loop will only ever be entered during the cases when
         // two repos have non-empty symmetric difference of their `FullManifestDiff`s
@@ -535,7 +535,7 @@ impl ValidationHelpers {
         repo: &BlobRepo,
         cs_id: &ChangesetId,
     ) -> Result<FullManifestDiff, Error> {
-        let cs_root_mf_id_fut = fetch_root_mf_id(ctx.clone(), repo, cs_id.clone());
+        let cs_root_mf_id_fut = fetch_root_mf_id(&ctx, repo, cs_id.clone());
         let maybe_p1 = repo
             .get_changeset_parents_by_bonsai(ctx.clone(), cs_id.clone())
             .compat()
@@ -550,12 +550,16 @@ impl ValidationHelpers {
                     ctx.logger(),
                     "{} is a root cs. Grabbing its entire manifest", cs_id
                 );
-                return Self::get_root_full_manifest_diff(ctx, repo, cs_root_mf_id_fut.await?)
-                    .await;
+                return Self::get_root_full_manifest_diff(
+                    ctx.clone(),
+                    repo,
+                    cs_root_mf_id_fut.await?,
+                )
+                .await;
             }
         };
 
-        let p1_root_mf_id_fut = fetch_root_mf_id(ctx.clone(), repo, p1);
+        let p1_root_mf_id_fut = fetch_root_mf_id(&ctx, repo, p1);
         let (cs_root_mf_id, p1_root_mf_id): (HgManifestId, HgManifestId) =
             try_join!(cs_root_mf_id_fut, p1_root_mf_id_fut)?;
 

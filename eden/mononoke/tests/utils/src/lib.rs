@@ -56,13 +56,13 @@ pub async fn list_working_copy(
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .compat()
         .await?;
-    let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
 
     let mf_id = hg_cs.manifestid();
     mf_id
         .list_leaf_entries(ctx.clone(), repo.blobstore().boxed())
         .map_ok(|(path, (_file_type, filenode_id))| async move {
-            let filenode = filenode_id.load(ctx.clone(), repo.blobstore()).await?;
+            let filenode = filenode_id.load(ctx, repo.blobstore()).await?;
             let content_id = filenode.content_id();
             let maybe_content = filestore::fetch(
                 repo.blobstore(),
@@ -306,7 +306,7 @@ impl CreateFileContext {
                 let meta = filestore::store(
                     repo.blobstore(),
                     repo.filestore_config(),
-                    ctx.clone(),
+                    ctx,
                     &StoreRequest::new(content.len().try_into().unwrap()),
                     stream::once(async move { Ok(content) }),
                 )
@@ -473,9 +473,9 @@ impl From<BookmarkName> for BookmarkIdentifier {
 }
 
 pub async fn store_files<T: AsRef<str>>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     files: BTreeMap<&str, Option<T>>,
-    repo: BlobRepo,
+    repo: &BlobRepo,
 ) -> BTreeMap<MPath, Option<FileChange>> {
     let mut res = btreemap! {};
 
@@ -488,7 +488,7 @@ pub async fn store_files<T: AsRef<str>>(
                 let content = FileContents::new_bytes(Bytes::copy_from_slice(content.as_bytes()));
                 let content_id = content
                     .into_blob()
-                    .store(ctx.clone(), repo.blobstore())
+                    .store(ctx, repo.blobstore())
                     .await
                     .unwrap();
 
@@ -504,11 +504,11 @@ pub async fn store_files<T: AsRef<str>>(
 }
 
 pub async fn store_rename(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     copy_src: (MPath, ChangesetId),
     path: &str,
     content: &str,
-    repo: BlobRepo,
+    repo: &BlobRepo,
 ) -> (MPath, Option<FileChange>) {
     let path = MPath::new(path).unwrap();
     let size = content.len();

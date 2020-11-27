@@ -85,7 +85,7 @@ impl StoreLoadable<GitPool> for GitTree {
 
     async fn load<'a>(
         &'a self,
-        _ctx: CoreContext,
+        _ctx: &'a CoreContext,
         pool: &'a GitPool,
     ) -> Result<Self::Value, LoadableError> {
         load_git_tree(self.0, pool)

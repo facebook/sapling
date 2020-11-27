@@ -142,7 +142,7 @@ async fn put_and_mark_repaired(
     order: &AtomicUsize,
     id: BlobstoreId,
     store: &dyn BlobstorePutOps,
-    key: &String,
+    key: &str,
     value: &BlobstoreGetData,
     scrub_handler: &dyn ScrubHandler,
 ) -> Result<()> {
@@ -152,14 +152,14 @@ async fn put_and_mark_repaired(
         order,
         id,
         store,
-        key.clone(),
+        key.to_owned(),
         value.as_bytes().clone(),
         // We are repairing, overwrite is right thing to do as
         // bad keys may be is_present, but not retrievable.
         Some(PutBehaviour::Overwrite),
     )
     .await;
-    scrub_handler.on_repair(&ctx, id, &key, res.is_ok(), value.as_meta());
+    scrub_handler.on_repair(&ctx, id, key, res.is_ok(), value.as_meta());
     res.map(|_status| ())
 }
 
@@ -167,20 +167,20 @@ async fn put_and_mark_repaired(
 async fn blobstore_get(
     inner_blobstore: &MultiplexedBlobstoreBase,
     ctx: &CoreContext,
-    key: String,
+    key: &str,
     queue: &dyn BlobstoreSyncQueue,
     scrub_stores: &HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>,
     scrub_handler: &dyn ScrubHandler,
     scrub_action: ScrubAction,
     scuba: ScubaSampleBuilder,
 ) -> Result<Option<BlobstoreGetData>> {
-    match inner_blobstore.scrub_get(ctx, &key).await {
+    match inner_blobstore.scrub_get(ctx, key).await {
         Ok(value) => return Ok(value),
         Err(error) => match error {
             ErrorKind::SomeFailedOthersNone(_) => {
                 // MultiplexedBlobstore returns Ok(None) here if queue is empty for the key
                 // and Error otherwise. Scrub does likewise.
-                let entries = queue.get(ctx, &key).await?;
+                let entries = queue.get(ctx, key).await?;
                 if entries.is_empty() {
                     // No pending write for the key, it really is None
                     Ok(None)
@@ -203,7 +203,7 @@ async fn blobstore_get(
                 }
 
                 let entries = if do_peek_queue {
-                    queue.get(ctx, &key).await?
+                    queue.get(ctx, key).await?
                 } else {
                     vec![]
                 };
@@ -222,7 +222,7 @@ async fn blobstore_get(
                 }
                 if scrub_action == ScrubAction::ReportOnly {
                     for id in needs_repair.keys() {
-                        scrub_handler.on_repair(&ctx, *id, &key, false, value.as_meta());
+                        scrub_handler.on_repair(&ctx, *id, key, false, value.as_meta());
                     }
                 } else {
                     // inner_put to the stores that need it.
@@ -236,7 +236,7 @@ async fn blobstore_get(
                                 &order,
                                 id,
                                 store,
-                                &key,
+                                key,
                                 &value,
                                 scrub_handler,
                             )
@@ -254,9 +254,12 @@ async fn blobstore_get(
 
 #[async_trait]
 impl Blobstore for ScrubBlobstore {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         cloned!(
-            ctx,
             self.scrub_stores,
             self.scrub_handler,
             self.scuba,
@@ -267,7 +270,7 @@ impl Blobstore for ScrubBlobstore {
 
         blobstore_get(
             inner_blobstore.as_ref(),
-            &ctx,
+            ctx,
             key,
             queue.as_ref(),
             scrub_stores.as_ref(),
@@ -278,11 +281,16 @@ impl Blobstore for ScrubBlobstore {
         .await
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         self.inner.is_present(ctx, key).await
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
@@ -290,9 +298,9 @@ impl Blobstore for ScrubBlobstore {
 
 #[async_trait]
 impl BlobstorePutOps for ScrubBlobstore {
-    async fn put_explicit(
-        &self,
-        ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -302,9 +310,9 @@ impl BlobstorePutOps for ScrubBlobstore {
             .await
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {

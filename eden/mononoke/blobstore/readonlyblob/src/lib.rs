@@ -28,26 +28,35 @@ impl<T> ReadOnlyBlobstore<T> {
 #[async_trait]
 impl<T: Blobstore> Blobstore for ReadOnlyBlobstore<T> {
     #[inline]
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         self.blobstore.get(ctx, key).await
     }
 
     #[inline]
-    async fn put(&self, _ctx: CoreContext, key: String, _value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: String,
+        _value: BlobstoreBytes,
+    ) -> Result<()> {
         Err(ErrorKind::ReadOnlyPut(key).into())
     }
 
     #[inline]
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         self.blobstore.is_present(ctx, key).await
     }
 }
 
 #[async_trait]
 impl<T: BlobstorePutOps> BlobstorePutOps for ReadOnlyBlobstore<T> {
-    async fn put_explicit(
-        &self,
-        _ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
         key: String,
         _value: BlobstoreBytes,
         _put_behaviour: PutBehaviour,
@@ -55,9 +64,9 @@ impl<T: BlobstorePutOps> BlobstorePutOps for ReadOnlyBlobstore<T> {
         Err(ErrorKind::ReadOnlyPut(key).into())
     }
 
-    async fn put_with_status(
-        &self,
-        _ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
         key: String,
         _value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
@@ -68,6 +77,7 @@ impl<T: BlobstorePutOps> BlobstorePutOps for ReadOnlyBlobstore<T> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use borrowed::borrowed;
     use fbinit::FacebookInit;
 
     use memblob::Memblob;
@@ -75,38 +85,40 @@ mod test {
     #[fbinit::test]
     async fn test_error_on_write(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let base = Memblob::default();
         let wrapper = ReadOnlyBlobstore::new(base.clone());
-        let key = "foobar".to_string();
+        let key = "foobar";
 
         let r = wrapper
             .put(
-                ctx.clone(),
-                key.clone(),
+                ctx,
+                key.to_owned(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
             .await;
         assert!(!r.is_ok());
-        let base_present = base.is_present(ctx, key.clone()).await.unwrap();
+        let base_present = base.is_present(ctx, key).await.unwrap();
         assert!(!base_present);
     }
 
     #[fbinit::test]
     async fn test_error_on_put_with_status(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let base = Memblob::default();
         let wrapper = ReadOnlyBlobstore::new(base.clone());
-        let key = "foobar".to_string();
+        let key = "foobar";
 
         let r = wrapper
             .put_with_status(
-                ctx.clone(),
-                key.clone(),
+                ctx,
+                key.to_owned(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
             .await;
         assert!(!r.is_ok());
-        let base_present = base.is_present(ctx, key.clone()).await.unwrap();
+        let base_present = base.is_present(ctx, key).await.unwrap();
         assert!(!base_present);
     }
 }

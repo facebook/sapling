@@ -232,7 +232,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
             continue;
         }
 
-        let bcs = cs_id.load(ctx.clone(), source_repo.blobstore()).await?;
+        let bcs = cs_id.load(ctx, source_repo.blobstore()).await?;
 
         let mut parents = bcs.parents();
         let maybe_p1 = parents.next();
@@ -274,7 +274,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
                 "syncing {} via pushrebase for {}", cs_id, bookmark
             );
             let (stats, result) = pushrebase_commit(
-                ctx.clone(),
+                ctx,
                 &commit_syncer,
                 &bookmark,
                 cs_id,
@@ -309,7 +309,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
 ) -> Result<Vec<ChangesetId>, Error> {
     info!(ctx.logger(), "syncing {}", cs_id);
     let bcs = cs_id
-        .load(ctx.clone(), commit_syncer.get_source_repo().blobstore())
+        .load(ctx, commit_syncer.get_source_repo().blobstore())
         .await?;
 
     let (stats, result) = if bcs.is_merge() {
@@ -452,20 +452,20 @@ async fn find_remapped_cs_id<M: SyncedCommitMapping + Clone + 'static>(
 }
 
 async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M>,
     bookmark: &BookmarkName,
     cs_id: ChangesetId,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
 ) -> Result<Option<ChangesetId>, Error> {
     let source_repo = commit_syncer.get_source_repo();
-    let bcs = cs_id.load(ctx.clone(), source_repo.blobstore()).await?;
+    let bcs = cs_id.load(ctx, source_repo.blobstore()).await?;
     // TODO: do not require clone here
     let target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
         Target(Arc::new((*target_skiplist_index.0).clone()));
     commit_syncer
         .unsafe_sync_commit_pushrebase(
-            &ctx,
+            ctx,
             bcs,
             bookmark.clone(),
             target_lca_hint,
@@ -541,7 +541,7 @@ async fn check_if_independent_branch_and_return(
         move |cs| {
             {
                 cloned!(ctx, repo);
-                async move { cs.load(ctx, repo.blobstore()).await }
+                async move { cs.load(&ctx, repo.blobstore()).await }
             }
             .boxed()
             .compat()

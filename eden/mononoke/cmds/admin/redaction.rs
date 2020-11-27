@@ -133,7 +133,7 @@ async fn find_files_with_given_content_id_blobstore_keys<'a>(
     let mut s = manifest_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .map_ok(|(full_path, (_, filenode_id))| async move {
-            let env = filenode_id.load(ctx.clone(), repo.blobstore()).await?;
+            let env = filenode_id.load(ctx, repo.blobstore()).await?;
             Result::<_, Error>::Ok((env.content_id(), full_path))
         })
         .try_buffer_unordered(100);
@@ -270,7 +270,7 @@ fn content_ids_for_paths(
                     cloned!(blobrepo);
                     move |hg_node_id| {
                         cloned!(ctx, blobrepo);
-                        async move { hg_node_id.load(ctx, blobrepo.blobstore()).await }
+                        async move { hg_node_id.load(&ctx, blobrepo.blobstore()).await }
                             .boxed()
                             .compat()
                             .from_err()
@@ -347,7 +347,7 @@ async fn redaction_list<'a>(
         .join(
             {
                 cloned!(ctx, blobrepo);
-                async move { cs_id.load(ctx, blobrepo.blobstore()).await }
+                async move { cs_id.load(&ctx, blobrepo.blobstore()).await }
             }
             .boxed()
             .compat()
@@ -443,7 +443,7 @@ async fn check_if_content_is_reachable_from_bookmark(
         .await?;
 
     let hg_cs = hg_cs_id
-        .load(ctx.clone(), blobrepo.blobstore())
+        .load(ctx, blobrepo.blobstore())
         .map_err(Error::from)
         .await?;
 

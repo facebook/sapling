@@ -71,13 +71,9 @@ pub async fn subcommand_create_bonsai<'a>(
     let blobrepo = args::open_repo(fb, &logger, &matches).await?;
     for (_, change) in bcs.file_changes() {
         if let Some(change) = change {
-            if filestore::get_metadata(
-                &blobrepo.get_blobstore(),
-                ctx.clone(),
-                &change.content_id().into(),
-            )
-            .await?
-            .is_none()
+            if filestore::get_metadata(&blobrepo.get_blobstore(), &ctx, &change.content_id().into())
+                .await?
+                .is_none()
             {
                 return Err(SubcommandError::Error(format_err!(
                     "filenode {} is not found in the filestore",

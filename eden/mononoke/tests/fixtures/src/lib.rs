@@ -26,9 +26,9 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 
 pub async fn store_files(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     files: BTreeMap<&str, Option<&str>>,
-    repo: BlobRepo,
+    repo: &BlobRepo,
 ) -> BTreeMap<MPath, Option<FileChange>> {
     let mut res = btreemap! {};
 
@@ -41,7 +41,7 @@ pub async fn store_files(
                 let metadata = filestore::store(
                     repo.blobstore(),
                     repo.filestore_config(),
-                    ctx.clone(),
+                    ctx,
                     &StoreRequest::new(size),
                     stream::once(async { Ok(content) }),
                 )
@@ -66,7 +66,7 @@ async fn create_bonsai_changeset_from_test_data(
     commit_metadata: BTreeMap<&str, &str>,
 ) {
     let ctx = CoreContext::test_mock(fb);
-    let file_changes = store_files(ctx.clone(), files, blobrepo.clone()).await;
+    let file_changes = store_files(&ctx, files, &blobrepo).await;
     let date: Vec<_> = commit_metadata
         .get("author_date")
         .unwrap()

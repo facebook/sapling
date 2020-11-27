@@ -35,7 +35,7 @@ pub fn benchmark(
                 let block = block.clone();
                 async move {
                     let key = format!("benchmark.{:x}", thread_rng().next_u64());
-                    blobstore.put(ctx, key, block).await.expect("Put failed");
+                    blobstore.put(&ctx, key, block).await.expect("Put failed");
                 }
             };
             b.iter(|| {

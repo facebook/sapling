@@ -305,7 +305,7 @@ async fn get_from_sources<T: Blobstore + Clone>(
                 blobstore,
                 RedactedBlobstoreConfig::new(redacted_blobs, scuba_redaction_builder),
             );
-            get_cache(ctx.clone(), &blobstore, key.clone(), mode)
+            get_cache(&ctx, &blobstore, &key, mode)
                 .await
                 .map(|opt_blob| opt_blob.map(Into::into))
         }
@@ -318,7 +318,7 @@ async fn get_from_sources<T: Blobstore + Clone>(
                 blobstore,
                 RedactedBlobstoreConfig::new(redacted_blobs, scuba_redaction_builder),
             );
-            blobstore.get(ctx, key).await
+            blobstore.get(&ctx, &key).await
         }
     }
 }
@@ -361,9 +361,9 @@ fn detect_decode(key: &str, logger: &Logger) -> Option<&'static str> {
 }
 
 async fn get_cache<B: CacheBlobstoreExt>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     blobstore: &B,
-    key: String,
+    key: &str,
     mode: String,
 ) -> Result<Option<BlobstoreGetData>, Error> {
     if mode == "cache-only" {

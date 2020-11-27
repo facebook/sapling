@@ -84,7 +84,7 @@ impl ChangesetContext {
         let bonsai_changeset = {
             cloned!(repo);
             async move {
-                id.load(repo.ctx().clone(), repo.blob_repo().blobstore())
+                id.load(repo.ctx(), repo.blob_repo().blobstore())
                     .await
                     .map_err(MononokeError::from)
             }
@@ -714,7 +714,7 @@ impl ChangesetContext {
                     ChangesetInfo::derive(self.ctx(), self.repo().blob_repo(), changeset_id).await?
                 } else {
                     let bonsai = changeset_id
-                        .load(self.ctx().clone(), self.repo().blob_repo().blobstore())
+                        .load(self.ctx(), self.repo().blob_repo().blobstore())
                         .await?;
                     ChangesetInfo::new(changeset_id, bonsai)
                 };

@@ -474,7 +474,11 @@ impl fmt::Debug for Sqlblob {
 
 #[async_trait]
 impl Blobstore for Sqlblob {
-    async fn get(&self, _ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         let chunked = self.data_store.get(&key).await?;
         if let Some(chunked) = chunked {
             let fetch_chunks: FuturesOrdered<_> = (0..chunked.count)
@@ -494,11 +498,16 @@ impl Blobstore for Sqlblob {
         }
     }
 
-    async fn is_present(&self, _ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         self.data_store.is_present(&key).await
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
@@ -506,9 +515,9 @@ impl Blobstore for Sqlblob {
 
 #[async_trait]
 impl BlobstorePutOps for Sqlblob {
-    async fn put_explicit(
-        &self,
-        ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -564,7 +573,7 @@ impl BlobstorePutOps for Sqlblob {
         match put_behaviour {
             PutBehaviour::Overwrite => put_fut.await,
             PutBehaviour::IfAbsent | PutBehaviour::OverwriteAndLog => {
-                if self.is_present(ctx, key.clone()).await? {
+                if self.is_present(ctx, &key).await? {
                     if put_behaviour.should_overwrite() {
                         put_fut.await?;
                         Ok(OverwriteStatus::Overwrote)
@@ -581,9 +590,9 @@ impl BlobstorePutOps for Sqlblob {
         }
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
@@ -593,9 +602,14 @@ impl BlobstorePutOps for Sqlblob {
 
 #[async_trait]
 impl BlobstoreWithLink for Sqlblob {
-    async fn link(&self, _ctx: CoreContext, existing_key: String, link_key: String) -> Result<()> {
+    async fn link<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        existing_key: &'a str,
+        link_key: String,
+    ) -> Result<()> {
         let existing_data =
-            self.data_store.get(&existing_key).await?.ok_or_else(|| {
+            self.data_store.get(existing_key).await?.ok_or_else(|| {
                 format_err!("Key {} does not exist in the blobstore", existing_key)
             })?;
         self.data_store

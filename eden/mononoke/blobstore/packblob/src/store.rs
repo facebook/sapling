@@ -62,16 +62,19 @@ pub const ENVELOPE_SUFFIX: &str = ".pack";
 
 #[async_trait]
 impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         let inner_get_data = {
-            let mut inner_key = key.clone();
-            inner_key.push_str(ENVELOPE_SUFFIX);
-            self.inner.get(ctx, inner_key)
+            let inner_key = &[key, ENVELOPE_SUFFIX].concat();
+            self.inner
+                .get(ctx, &inner_key)
+                .await
+                .with_context(|| format!("While getting inner data for {:?}", key))?
         };
-        let inner_get_data = match inner_get_data
-            .await
-            .with_context(|| format!("While getting inner data for {:?}", key))?
-        {
+        let inner_get_data = match inner_get_data {
             Some(inner_get_data) => inner_get_data,
             None => return Ok(None),
         };
@@ -82,7 +85,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
         let get_data = match envelope.0.storage {
             StorageFormat::Single(single) => pack::decode_independent(meta, single)
                 .with_context(|| format!("While decoding independent {:?}", key))?,
-            StorageFormat::Packed(packed) => pack::decode_pack(meta, packed, key.clone())
+            StorageFormat::Packed(packed) => pack::decode_pack(meta, packed, key)
                 .with_context(|| format!("While decoding pack for {:?}", key))?,
             StorageFormat::UnknownField(e) => {
                 return Err(format_err!("StorageFormat::UnknownField {:?}", e));
@@ -92,21 +95,27 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
         Ok(Some(get_data))
     }
 
-    async fn is_present(&self, ctx: CoreContext, mut key: String) -> Result<bool> {
-        key.push_str(ENVELOPE_SUFFIX);
-        self.inner.is_present(ctx, key).await
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+        self.inner
+            .is_present(ctx, &[key, ENVELOPE_SUFFIX].concat())
+            .await
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
 }
 
 impl<T: BlobstorePutOps> PackBlob<T> {
-    async fn put_impl(
-        &self,
-        ctx: CoreContext,
+    async fn put_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         mut key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
@@ -138,9 +147,9 @@ impl<T: BlobstorePutOps> PackBlob<T> {
 
 #[async_trait]
 impl<B: BlobstorePutOps> BlobstorePutOps for PackBlob<B> {
-    async fn put_explicit(
-        &self,
-        ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -148,9 +157,9 @@ impl<B: BlobstorePutOps> BlobstorePutOps for PackBlob<B> {
         self.put_impl(ctx, key, value, Some(put_behaviour)).await
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
@@ -165,9 +174,9 @@ impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
     //
     // On ref counted stores the packer will need to call unlink on the returned key
     // if its desirable for old packs to be removed.
-    pub async fn put_packed(
-        &self,
-        ctx: CoreContext,
+    pub async fn put_packed<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         entries: Vec<PackedEntry>,
         prefix: String,
     ) -> Result<String> {
@@ -185,15 +194,13 @@ impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
         });
 
         // pass through the put after wrapping
-        self.inner
-            .put(ctx.clone(), pack_key.clone(), pack.into())
-            .await?;
+        self.inner.put(ctx, pack_key.clone(), pack.into()).await?;
 
         // add the links
         let links = FuturesUnordered::new();
         for mut key in link_keys {
             key.push_str(ENVELOPE_SUFFIX);
-            links.push(self.inner.link(ctx.clone(), pack_key.clone(), key));
+            links.push(self.inner.link(ctx, &pack_key, key));
         }
         links.try_collect().await?;
 
@@ -204,6 +211,7 @@ impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use borrowed::borrowed;
     use bytes::Bytes;
     use fbinit::FacebookInit;
     use memblob::Memblob;
@@ -215,10 +223,11 @@ mod tests {
     #[fbinit::compat_test]
     async fn simple_roundtrip_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let inner_blobstore = Arc::new(Memblob::default());
         let packblob = PackBlob::new(inner_blobstore.clone(), PackOptions::default());
 
-        let outer_key = "repo0000.randomkey".to_string();
+        let outer_key = "repo0000.randomkey";
         let value = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"appleveldata"));
         let _ = roundtrip(ctx, inner_blobstore.clone(), &packblob, outer_key, value).await?;
         Ok(())
@@ -227,18 +236,18 @@ mod tests {
     #[fbinit::compat_test]
     async fn compressible_roundtrip_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let innerblob = Arc::new(Memblob::default());
         let packblob = PackBlob::new(innerblob.clone(), PackOptions::new(Some(0)));
 
         let bytes_in = Bytes::from(vec![7u8; 65535]);
         let value = BlobstoreBytes::from_bytes(bytes_in.clone());
 
-        let outer_key = "repo0000.compressible".to_string();
-        let inner_key =
-            roundtrip(ctx.clone(), innerblob.clone(), &packblob, outer_key, value).await?;
+        let outer_key = "repo0000.compressible";
+        let inner_key = roundtrip(ctx, innerblob.clone(), &packblob, outer_key, value).await?;
 
         // check inner value is smaller
-        let inner_value = innerblob.get(ctx.clone(), inner_key).await?;
+        let inner_value = innerblob.get(ctx, &inner_key).await?;
         assert!(inner_value.unwrap().into_bytes().len() < bytes_in.len());
         Ok(())
     }
@@ -246,6 +255,7 @@ mod tests {
     #[fbinit::compat_test]
     async fn incompressible_roundtrip_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let innerblob = Arc::new(Memblob::default());
         let packblob = PackBlob::new(innerblob.clone(), PackOptions::new(Some(0)));
 
@@ -254,56 +264,49 @@ mod tests {
         rng.fill_bytes(&mut bytes_in);
         let bytes_in = Bytes::from(bytes_in);
 
-        let outer_key = "repo0000.incompressible".to_string();
+        let outer_key = "repo0000.incompressible";
         let value = BlobstoreBytes::from_bytes(bytes_in.clone());
-        let inner_key =
-            roundtrip(ctx.clone(), innerblob.clone(), &packblob, outer_key, value).await?;
+        let inner_key = roundtrip(ctx, innerblob.clone(), &packblob, outer_key, value).await?;
 
         // check inner value is larger (due to being raw plus thrift encoding)
-        let inner_value = innerblob.get(ctx.clone(), inner_key).await?;
+        let inner_value = innerblob.get(ctx, &inner_key).await?;
         assert!(inner_value.unwrap().into_bytes().len() > bytes_in.len());
         Ok(())
     }
 
     async fn roundtrip(
-        ctx: CoreContext,
+        ctx: &CoreContext,
         inner_blobstore: Arc<Memblob>,
         packblob: &PackBlob<Arc<Memblob>>,
-        outer_key: String,
+        outer_key: &str,
         value: BlobstoreBytes,
     ) -> Result<String> {
         // Put, this will apply the thrift envelope and save to the inner store
         packblob
-            .put(ctx.clone(), outer_key.clone(), value.clone())
+            .put(ctx, outer_key.to_owned(), value.clone())
             .await?;
 
         // Get, should remove the thrift envelope as it is loaded
-        let fetched_value = packblob.get(ctx.clone(), outer_key.clone()).await?.unwrap();
+        let fetched_value = packblob.get(ctx, outer_key).await?.unwrap();
 
         // Make sure the thrift wrapper is not still there!
         assert_eq!(value, fetched_value.into_bytes());
 
         // Make sure that inner blobstore stores has packed value (i.e. not equal to what was written)
-        let mut inner_key = outer_key.clone();
-        inner_key.push_str(ENVELOPE_SUFFIX);
-        let fetched_value = inner_blobstore
-            .get(ctx.clone(), inner_key.clone())
-            .await?
-            .unwrap();
+        let inner_key = &[outer_key, ENVELOPE_SUFFIX].concat();
+        let fetched_value = inner_blobstore.get(ctx, inner_key).await?.unwrap();
 
         assert_ne!(value, fetched_value.into_bytes());
 
         // Check is_present matches
-        let is_present = inner_blobstore
-            .is_present(ctx.clone(), inner_key.clone())
-            .await?;
+        let is_present = inner_blobstore.is_present(ctx, inner_key).await?;
         assert!(is_present);
 
         // Check the key without suffix is not there
-        let is_not_present = !inner_blobstore.is_present(ctx.clone(), outer_key).await?;
+        let is_not_present = !inner_blobstore.is_present(ctx, outer_key).await?;
         assert!(is_not_present);
 
-        Ok(inner_key)
+        Ok(inner_key.to_owned())
     }
 
     #[fbinit::compat_test]
@@ -325,26 +328,25 @@ mod tests {
         }
 
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let inner_blobstore = Memblob::default();
         let packblob = PackBlob::new(inner_blobstore.clone(), PackOptions::default());
 
         // put_packed, this will apply the thrift envelope and save to the inner store
         let inner_key = packblob
             .put_packed(
-                ctx.clone(),
+                ctx,
                 input_entries.clone(),
                 "repo0000.packed_app_data.".to_string(),
             )
             .await?;
 
         // Check the inner key is present (as we haven't unlinked it yet)
-        let is_present = inner_blobstore.is_present(ctx.clone(), inner_key).await?;
+        let is_present = inner_blobstore.is_present(ctx, &inner_key).await?;
         assert!(is_present);
 
         // Get, should remove the thrift envelope as it is loaded
-        let fetched_value = packblob
-            .get(ctx.clone(), input_entries[1].key.clone())
-            .await?;
+        let fetched_value = packblob.get(ctx, &input_entries[1].key).await?;
 
         assert!(fetched_value.is_some());
 

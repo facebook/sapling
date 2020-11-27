@@ -12,6 +12,7 @@ use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
+use borrowed::borrowed;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
@@ -202,12 +203,12 @@ pub async fn generate_all_filenodes(
         .compat();
 
     let (root_mf, parents, linknode) = try_join!(root_mf, parents, linknode)?;
-    let blobstore = repo.get_blobstore().boxed();
+    let blobstore = repo.get_blobstore();
     (async_stream::stream! {
-        let blobstore = &blobstore;
+        borrowed!(ctx, blobstore);
         let s = find_intersection_of_diffs_and_parents(
             ctx.clone(),
-            repo.get_blobstore(),
+            blobstore.clone(),
             root_mf,
             parents.clone(),
         )
@@ -230,14 +231,14 @@ pub async fn generate_all_filenodes(
         })
         .map_ok(move |(path, entry)| {
             match entry {
-                Entry::Tree(hg_mf_id) => fetch_manifest_envelope(ctx.clone(), blobstore, hg_mf_id)
+                Entry::Tree(hg_mf_id) => fetch_manifest_envelope(ctx, blobstore, hg_mf_id)
                     .boxed()
                     .compat()
                     .map(move |envelope| create_manifest_filenode(path, envelope, linknode))
                     .left_future()
                     .compat(),
                 Entry::Leaf((_, hg_filenode_id)) => async move {
-                    hg_filenode_id.load(ctx.clone(), blobstore).await
+                    hg_filenode_id.load(ctx, blobstore).await
                 }
                     .boxed()
                     .compat()
@@ -460,7 +461,7 @@ async fn fetch_root_manifest_id(
         .compat()
         .await?;
 
-    let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
 
     Ok(hg_cs.manifestid())
 }

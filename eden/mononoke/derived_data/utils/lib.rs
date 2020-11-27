@@ -254,7 +254,7 @@ where
             }
 
             // flush blobstore
-            memblobstore.persist(ctx.clone()).await?;
+            memblobstore.persist(&ctx).await?;
             // flush mapping
             let futs = FuturesUnordered::new();
             {
@@ -290,8 +290,8 @@ where
         let mut underived_ancestors = vec![];
         for cs_id in csids {
             underived_ancestors.push(M::Value::find_all_underived_ancestors(
-                &ctx,
-                &repo,
+                ctx,
+                repo,
                 vec![*cs_id],
             ));
         }
@@ -309,7 +309,7 @@ where
                 // Let's use it as a proxy for the oldest underived commit
                 .map(|all_underived| all_underived.get(0).cloned())
                 .flatten()
-                .map(|cs_id| async move { cs_id.load(ctx.clone(), repo.blobstore()).await }),
+                .map(|cs_id| async move { cs_id.load(ctx, repo.blobstore()).await }),
         )
         .map(Ok)
         .try_buffer_unordered(100)

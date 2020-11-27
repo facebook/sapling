@@ -95,7 +95,7 @@ impl AliasVerification {
             info!(self.logger, "Commit processed {:?}", cs_cnt);
         }
 
-        let bcs = bcs_id.load(ctx.clone(), self.blobrepo.blobstore()).await?;
+        let bcs = bcs_id.load(&ctx, self.blobrepo.blobstore()).await?;
         let file_changes: Vec<_> = bcs
             .file_changes()
             .map(|(_, file_change)| file_change.cloned())
@@ -139,12 +139,9 @@ impl AliasVerification {
             Mode::Generate => {
                 let blobstore = self.blobrepo.get_blobstore();
 
-                let maybe_meta = filestore::get_metadata(
-                    &blobstore,
-                    ctx.clone(),
-                    &FetchKey::Canonical(content_id),
-                )
-                .await?;
+                let maybe_meta =
+                    filestore::get_metadata(&blobstore, &ctx, &FetchKey::Canonical(content_id))
+                        .await?;
 
                 let meta = maybe_meta.ok_or(format_err!("Missing content {:?}", content_id))?;
 
@@ -153,7 +150,7 @@ impl AliasVerification {
                         Alias::Sha256(meta.sha256),
                         ContentAlias::from_content_id(content_id),
                     )
-                    .store(ctx.clone(), &blobstore)
+                    .store(&ctx, &blobstore)
                     .await
                 } else {
                     Err(format_err!(
@@ -174,7 +171,7 @@ impl AliasVerification {
         content_id: ContentId,
     ) -> Result<(), Error> {
         let result = FetchKey::from(alias.clone())
-            .load(ctx.clone(), self.blobrepo.blobstore())
+            .load(ctx, self.blobrepo.blobstore())
             .await;
 
         match result {
@@ -197,7 +194,7 @@ impl AliasVerification {
     ) -> Result<(), Error> {
         let repo = self.blobrepo.clone();
 
-        let alias = filestore::fetch_concat(repo.blobstore(), ctx.clone(), content_id)
+        let alias = filestore::fetch_concat(repo.blobstore(), ctx, content_id)
             .map_ok(FileBytes)
             .map_ok(|content| get_sha256(&content.into_bytes()))
             .await?;

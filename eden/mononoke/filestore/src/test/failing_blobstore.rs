@@ -36,7 +36,11 @@ impl<B> FailingBlobstore<B> {
 
 #[async_trait]
 impl<B: Blobstore> Blobstore for FailingBlobstore<B> {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         if thread_rng().gen_bool(self.read_success_probability) {
             self.inner.get(ctx, key).await
         } else {
@@ -44,7 +48,12 @@ impl<B: Blobstore> Blobstore for FailingBlobstore<B> {
         }
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         if thread_rng().gen_bool(self.write_success_probability) {
             self.inner.put(ctx, key, value).await
         } else {
@@ -52,7 +61,7 @@ impl<B: Blobstore> Blobstore for FailingBlobstore<B> {
         }
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         if thread_rng().gen_bool(self.read_success_probability) {
             self.inner.is_present(ctx, key).await
         } else {

@@ -327,7 +327,7 @@ async fn push_merge_commit(
     info!(ctx.logger(), "Generated hg changeset {}", merge_hg_cs_id);
     info!(ctx.logger(), "Now running pushrebase...");
 
-    let merge_cs = merge_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let merge_cs = merge_cs_id.load(&ctx, repo.blobstore()).await?;
     let pushrebase_res = do_pushrebase_bonsai(
         &ctx,
         &repo,
@@ -591,9 +591,7 @@ mod test {
             .await?;
             assert_eq!(merged.len(), 1);
             let pushrebased_cs_id = merged.values().next().unwrap();
-            let bcs_id = pushrebased_cs_id
-                .load(ctx.clone(), repo.blobstore())
-                .await?;
+            let bcs_id = pushrebased_cs_id.load(&ctx, repo.blobstore()).await?;
             assert_eq!(bcs_id.message(), format!("{}", i));
             result.extend(merged)
         }
@@ -706,7 +704,7 @@ mod test {
                 .get_hg_from_bonsai_changeset(ctx.clone(), *merge_cs_id)
                 .compat()
                 .await?;
-            let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+            let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await?;
             assert!(hg_cs.files().is_empty());
         }
         Ok(())

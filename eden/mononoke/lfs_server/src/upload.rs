@@ -157,7 +157,7 @@ where
     let res = filestore::store(
         ctx.repo.blobstore(),
         ctx.repo.filestore_config(),
-        ctx.ctx.clone(),
+        &ctx.ctx,
         &StoreRequest::with_sha256(size, oid),
         data,
     )

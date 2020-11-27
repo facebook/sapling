@@ -132,7 +132,7 @@ pub fn get_root_manifest_id(
                 cloned!(ctx, repo);
                 move |cs_id| {
                     cloned!(ctx, repo);
-                    async move { cs_id.load(ctx, repo.blobstore()).await }
+                    async move { cs_id.load(&ctx, repo.blobstore()).await }
                         .boxed()
                         .compat()
                         .from_err()

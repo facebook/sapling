@@ -30,7 +30,7 @@ use mononoke_types::{FileChange, MPath};
 /// care. Primary consumer of this function is pushrebase, and pushrebase code
 /// contains detailed explanation of why this function is necessary.
 pub async fn convert_diff_result_into_file_change_for_diamond_merge(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     diff_result: BonsaiDiffFileChange<HgFileNodeId>,
 ) -> Result<(MPath, Option<FileChange>)> {

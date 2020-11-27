@@ -475,7 +475,7 @@ async fn maybe_validate_commit(
     }
 
     let bcs = bcs_id
-        .load(ctx.clone(), repo.blobstore())
+        .load(ctx, repo.blobstore())
         .map_err(Error::from)
         .await?;
     if !bcs.is_merge() {
@@ -690,7 +690,7 @@ async fn id_to_manifestid(
         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
         .compat()
         .await?;
-    let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
     Ok(hg_cs.manifestid())
 }
 
@@ -711,9 +711,7 @@ async fn fetch_bonsai_range_ancestor_not_included(
 
     let nodes = stream
         .try_filter(|cs_id| future::ready(cs_id != &ancestor))
-        .map(|res| async move {
-            Result::<_, Error>::Ok(res?.load(ctx.clone(), repo.blobstore()).await?)
-        })
+        .map(|res| async move { Result::<_, Error>::Ok(res?.load(ctx, repo.blobstore()).await?) })
         .buffered(100)
         .try_collect::<Vec<_>>()
         .await?;
@@ -739,7 +737,7 @@ async fn find_changed_files(
         .map(|res| async move {
             match res {
                 Ok(bcs_id) => {
-                    let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).await?;
+                    let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
                     Ok((bcs_id, bcs))
                 }
                 Err(e) => Err(e),
@@ -1116,7 +1114,7 @@ async fn generate_additional_bonsai_file_changes(
         return Ok(vec![]);
     }
 
-    let bonsai_diff = find_bonsai_diff(&ctx, &repo, *root, *onto)
+    let bonsai_diff = find_bonsai_diff(ctx, &repo, *root, *onto)
         .await?
         .try_collect::<Vec<_>>()
         .await?;
@@ -1181,9 +1179,7 @@ async fn generate_additional_bonsai_file_changes(
         }
 
         new_file_changes.push(convert_diff_result_into_file_change_for_diamond_merge(
-            ctx.clone(),
-            &repo,
-            res,
+            ctx, &repo, res,
         ));
     }
 
@@ -1323,7 +1319,7 @@ mod tests {
                     ))?;
 
                 let bcs = bcs_id
-                    .load(ctx.clone(), repo.blobstore())
+                    .load(ctx, repo.blobstore())
                     .await
                     .context("While intitial bonsai changesets fetching")?;
 
@@ -1578,7 +1574,7 @@ mod tests {
                 .dangerous_override(|_| bookmarks)
                 .dangerous_override(|_| bookmark_update_log);
 
-            let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).await?;
+            let bcs = bcs_id.load(&ctx, repo.blobstore()).await?;
 
             let mut book = master_bookmark();
 
@@ -2207,15 +2203,9 @@ mod tests {
             };
             let bcs_rewrite_date = do_pushrebase(&ctx, &repo, &config, &book, &hgcss, None).await?;
 
-            let bcs = bcs.load(ctx.clone(), repo.blobstore()).await?;
-            let bcs_keep_date = bcs_keep_date
-                .head
-                .load(ctx.clone(), repo.blobstore())
-                .await?;
-            let bcs_rewrite_date = bcs_rewrite_date
-                .head
-                .load(ctx.clone(), repo.blobstore())
-                .await?;
+            let bcs = bcs.load(&ctx, repo.blobstore()).await?;
+            let bcs_keep_date = bcs_keep_date.head.load(&ctx, repo.blobstore()).await?;
+            let bcs_rewrite_date = bcs_rewrite_date.head.load(&ctx, repo.blobstore()).await?;
 
             assert_eq!(bcs.author_date(), bcs_keep_date.author_date());
             assert!(bcs.author_date() < bcs_rewrite_date.author_date());
@@ -2323,7 +2313,7 @@ mod tests {
             let path_1 = MPath::new("1")?;
 
             let root_hg = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-            let root_cs = root_hg.load(ctx.clone(), repo.blobstore()).await?;
+            let root_cs = root_hg.load(&ctx, repo.blobstore()).await?;
 
             let root_1_id = root_cs
                 .manifestid()
@@ -2338,7 +2328,7 @@ mod tests {
                 .compat()
                 .await?
                 .ok_or(Error::msg("Root missing"))?;
-            let root_bcs = root.load(ctx.clone(), repo.blobstore()).await?;
+            let root_bcs = root.load(&ctx, repo.blobstore()).await?;
             let file_1 = root_bcs
                 .file_changes()
                 .find(|(path, _)| path == &&path_1)
@@ -2376,7 +2366,7 @@ mod tests {
 
             let result =
                 do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, None).await?;
-            let result_bcs = result.head.load(ctx.clone(), repo.blobstore()).await?;
+            let result_bcs = result.head.load(&ctx, repo.blobstore()).await?;
             let file_1_result = result_bcs
                 .file_changes()
                 .find(|(path, _)| path == &&path_1)
@@ -2389,7 +2379,7 @@ mod tests {
                 .get_hg_from_bonsai_changeset(ctx.clone(), result.head)
                 .compat()
                 .await?;
-            let result_cs = result_hg.load(ctx.clone(), repo.blobstore()).await?;
+            let result_cs = result_hg.load(&ctx, repo.blobstore()).await?;
             let result_1_id = result_cs
                 .manifestid()
                 .find_entry(ctx.clone(), repo.get_blobstore(), Some(path_1.clone()))
@@ -2518,7 +2508,7 @@ mod tests {
                     .commit()
                     .await?;
 
-                let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).await?;
+                let bcs = bcs_id.load(&ctx, repo.blobstore()).await?;
 
                 let fut = async move {
                     do_pushrebase_bonsai(
@@ -2626,7 +2616,7 @@ mod tests {
                     .commit()
                     .await?;
 
-                let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).await?;
+                let bcs = bcs_id.load(&ctx, repo.blobstore()).await?;
 
                 let fut = async move {
                     do_pushrebase_bonsai(
@@ -2768,10 +2758,7 @@ mod tests {
             )
             .await?;
 
-            let bcs_rewrite_date = bcs_rewrite_date
-                .head
-                .load(ctx.clone(), repo.blobstore())
-                .await?;
+            let bcs_rewrite_date = bcs_rewrite_date.head.load(&ctx, repo.blobstore()).await?;
 
             assert_eq!(
                 bcs_rewrite_date.author_date().tz_offset_secs(),
@@ -3328,7 +3315,7 @@ mod tests {
         .map_err(|err| format_err!("{:?}", err))
         .await?;
 
-        let bcs = result.head.load(ctx.clone(), repo.blobstore()).await?;
+        let bcs = result.head.load(&ctx, repo.blobstore()).await?;
         assert_eq!(bcs.file_changes().collect::<Vec<_>>(), vec![]);
 
         let master_hg = repo
@@ -3442,7 +3429,7 @@ mod tests {
         let hook: Box<dyn PushrebaseHook> = Box::new(InvalidPushrebaseHook {});
         let hooks = vec![hook];
 
-        let bcs_merge = bcs_id_merge.load(ctx.clone(), repo.blobstore()).await?;
+        let bcs_merge = bcs_id_merge.load(&ctx, repo.blobstore()).await?;
 
         let book = master_bookmark();
         let res = do_pushrebase_bonsai(
@@ -3539,7 +3526,7 @@ mod tests {
         repo: &BlobRepo,
         expected: BTreeMap<String, String>,
     ) -> Result<(), Error> {
-        let cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+        let cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
 
         let entries = cs
             .manifestid()
@@ -3552,8 +3539,8 @@ mod tests {
             match entry {
                 Entry::Leaf((_, filenode_id)) => {
                     let store = repo.blobstore();
-                    let content_id = filenode_id.load(ctx.clone(), store).await?.content_id();
-                    let content = filestore::fetch_concat(store, ctx.clone(), content_id).await?;
+                    let content_id = filenode_id.load(ctx, store).await?.content_id();
+                    let content = filestore::fetch_concat(store, ctx, content_id).await?;
 
                     let s = String::from_utf8_lossy(content.as_ref()).into_owned();
                     actual.insert(format!("{}", path.unwrap()), s);

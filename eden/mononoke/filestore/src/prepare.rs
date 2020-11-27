@@ -92,7 +92,7 @@ where
                             // TODO: Convert this along with other store calls to impl Storable for
                             // MononokeId.
                             blobstore
-                                .put(ctx, blob.id().blobstore_key(), blob.into())
+                                .put(&ctx, blob.id().blobstore_key(), blob.into())
                                 .await?;
 
                             Result::<_, Error>::Ok(pointer)

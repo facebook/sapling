@@ -19,25 +19,25 @@ pub struct BlobRepoFileContentFetcher {
 
 #[async_trait]
 impl FileContentFetcher for BlobRepoFileContentFetcher {
-    async fn get_file_size<'a, 'b: 'a>(
+    async fn get_file_size<'a>(
         &'a self,
-        ctx: &'b CoreContext,
+        ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<u64, ErrorKind> {
-        let store = self.repo.get_blobstore();
-        Ok(filestore::get_metadata(&store, ctx.clone(), &id.into())
+        let store = self.repo.blobstore();
+        Ok(filestore::get_metadata(store, ctx, &id.into())
             .await?
             .ok_or(ErrorKind::ContentIdNotFound(id))?
             .total_size)
     }
 
-    async fn get_file_text<'a, 'b: 'a>(
+    async fn get_file_text<'a>(
         &'a self,
-        ctx: &'b CoreContext,
+        ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<Option<Bytes>, ErrorKind> {
-        let store = self.repo.get_blobstore();
-        filestore::fetch_concat_opt(&store, ctx.clone(), &id.into())
+        let store = self.repo.blobstore();
+        filestore::fetch_concat_opt(store, ctx, &id.into())
             .await?
             .ok_or(ErrorKind::ContentIdNotFound(id))
             .map(Option::Some)

@@ -41,34 +41,43 @@ impl<T> PrefixBlobstore<T> {
     }
 
     #[inline]
-    pub fn prepend(&self, key: String) -> String {
-        [&self.prefix, key.as_str()].concat()
+    pub fn prepend(&self, key: impl AsRef<str>) -> String {
+        [&self.prefix, key.as_ref()].concat()
     }
 }
 
 #[async_trait]
 impl<T: Blobstore> Blobstore for PrefixBlobstore<T> {
     #[inline]
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
-        self.blobstore.get(ctx, self.prepend(key)).await
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        self.blobstore.get(ctx, &self.prepend(key)).await
     }
 
     #[inline]
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         self.blobstore.put(ctx, self.prepend(key), value).await
     }
 
     #[inline]
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
-        self.blobstore.is_present(ctx, self.prepend(key)).await
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+        self.blobstore.is_present(ctx, &self.prepend(key)).await
     }
 }
 
 #[async_trait]
 impl<T: BlobstorePutOps> BlobstorePutOps for PrefixBlobstore<T> {
-    async fn put_explicit(
-        &self,
-        ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -78,9 +87,9 @@ impl<T: BlobstorePutOps> BlobstorePutOps for PrefixBlobstore<T> {
             .await
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
@@ -94,6 +103,7 @@ impl<T: BlobstorePutOps> BlobstorePutOps for PrefixBlobstore<T> {
 mod test {
     use super::*;
 
+    use borrowed::borrowed;
     use bytes::Bytes;
     use fbinit::FacebookInit;
 
@@ -102,6 +112,7 @@ mod test {
     #[fbinit::compat_test]
     async fn test_prefix(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let base = Memblob::default();
         let prefixed = PrefixBlobstore::new(base.clone(), "prefix123-");
         let unprefixed_key = "foobar".to_string();
@@ -109,7 +120,7 @@ mod test {
 
         prefixed
             .put(
-                ctx.clone(),
+                ctx,
                 unprefixed_key.clone(),
                 BlobstoreBytes::from_bytes("test foobar"),
             )
@@ -119,7 +130,7 @@ mod test {
         // Test that both the prefixed and the unprefixed stores can access the key.
         assert_eq!(
             prefixed
-                .get(ctx.clone(), unprefixed_key.clone())
+                .get(ctx, &unprefixed_key)
                 .await
                 .expect("get should succeed")
                 .expect("value should be present")
@@ -127,7 +138,7 @@ mod test {
             Bytes::from("test foobar"),
         );
         assert_eq!(
-            base.get(ctx.clone(), prefixed_key.clone())
+            base.get(ctx, &prefixed_key)
                 .await
                 .expect("get should succeed")
                 .expect("value should be present")
@@ -138,12 +149,12 @@ mod test {
         // Test that is_present works for both the prefixed and unprefixed stores.
         assert!(
             prefixed
-                .is_present(ctx.clone(), unprefixed_key.clone())
+                .is_present(ctx, &unprefixed_key)
                 .await
                 .expect("is_present should succeed")
         );
         assert!(
-            base.is_present(ctx.clone(), prefixed_key.clone())
+            base.is_present(ctx, &prefixed_key)
                 .await
                 .expect("is_present should succeed")
         );

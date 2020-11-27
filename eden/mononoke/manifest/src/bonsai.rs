@@ -130,7 +130,7 @@ type WorkEntry<ManifestId, FileId> = HashMap<
 
 /// Identify further work to be performed for this Bonsai diff.
 async fn recurse_trees<ManifestId, FileId, Store>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     store: &Store,
     path: Option<&MPath>,
     node: Option<ManifestId>,
@@ -149,16 +149,17 @@ where
 
     let node = async {
         let r = match node {
-            Some(node) => Some(node.load(ctx.clone(), &store).await?),
+            Some(node) => Some(node.load(ctx, &store).await?),
             None => None,
         };
         Ok(r)
     };
 
-    let parents = try_join_all(parents.into_iter().map(|id| {
-        cloned!(ctx);
-        async move { id.load(ctx, &store).await }
-    }));
+    let parents = try_join_all(
+        parents
+            .into_iter()
+            .map(|id| async move { id.load(ctx, &store).await }),
+    );
 
     let (node, parents) = try_join!(node, parents)?;
 
@@ -221,7 +222,7 @@ where
 }
 
 async fn bonsai_diff_unfold<ManifestId, FileId, Store>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     store: &Store,
     path: MPath,
     node: Option<BonsaiEntry<ManifestId, FileId>>,
@@ -323,12 +324,12 @@ where
     // require those).
     {
         cloned!(ctx, store);
-        async move { recurse_trees(ctx, &store, None, Some(node), parents).await }
+        async move { recurse_trees(&ctx, &store, None, Some(node), parents).await }
     }
     .map_ok(|seed| {
         bounded_traversal::bounded_traversal_stream(256, seed, move |(path, (node, parents))| {
             cloned!(ctx, store);
-            async move { bonsai_diff_unfold(ctx, &store, path, node, parents).await }
+            async move { bonsai_diff_unfold(&ctx, &store, path, node, parents).await }
         })
     })
     .try_flatten_stream()
@@ -342,6 +343,7 @@ mod test {
         ctx, dir, element, file, path, ManifestStore, TestFileId, TestManifestIdStr,
         TestManifestStr,
     };
+    use borrowed::borrowed;
     use fbinit::{self, FacebookInit};
 
     impl<ManifestId, FileId> CompositeEntry<ManifestId, FileId>
@@ -395,31 +397,33 @@ mod test {
 
         let node = Some(file(FileType::Regular, "1"));
         let mut parents = CompositeEntry::empty();
+        let ctx = ctx(fb);
+        borrowed!(ctx);
 
         // Start with no parent. The file should be added.
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, changed(root.clone(), FileType::Regular, "1"));
         assert_eq!(work, hashmap! {});
 
         // Add the same file in a parent
         parents.insert(file(FileType::Regular, "1"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(work, hashmap! {});
 
         // Add the file again in a different parent
         parents.insert(file(FileType::Regular, "1"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(work, hashmap! {});
 
         // Add a different file
         parents.insert(file(FileType::Regular, "2"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, reused(root.clone(), FileType::Regular, "1"));
         assert_eq!(work, hashmap! {});
 
@@ -433,11 +437,13 @@ mod test {
 
         let node = Some(file(FileType::Regular, "1"));
         let mut parents = CompositeEntry::empty();
+        let ctx = ctx(fb);
+        borrowed!(ctx);
 
         // Add a parent with a different mode. We can reuse it.
         parents.insert(file(FileType::Executable, "1"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, reused(root.clone(), FileType::Regular, "1"));
         assert_eq!(work, hashmap! {});
 
@@ -451,25 +457,27 @@ mod test {
 
         let node = Some(file(FileType::Regular, "1"));
         let mut parents = CompositeEntry::empty();
+        let ctx = ctx(fb);
+        borrowed!(ctx);
 
         // Add a conflicting directory. We need to delete it.
         parents.insert(dir("1"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, changed(root.clone(), FileType::Regular, "1"));
         assert_eq!(work, hashmap! {});
 
         // Add another parent with the same file. We can reuse it but we still need to emit it.
         parents.insert(file(FileType::Regular, "1"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, reused(root.clone(), FileType::Regular, "1"));
         assert_eq!(work, hashmap! {});
 
         // Add a different file. Same as above.
         parents.insert(file(FileType::Regular, "2"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, reused(root.clone(), FileType::Regular, "1"));
         assert_eq!(work, hashmap! {});
 
@@ -492,10 +500,12 @@ mod test {
 
         let node = Some(dir("1"));
         let mut parents = CompositeEntry::empty();
+        let ctx = ctx(fb);
+        borrowed!(ctx);
 
         // No parents. We need to recurse in this directory.
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(
             work,
@@ -507,7 +517,7 @@ mod test {
         // Identical parent. We are done.
         parents.insert(dir("1"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(work, hashmap! {});
 
@@ -515,7 +525,7 @@ mod test {
         // contents listed in both parent manifests.
         parents.insert(dir("2"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(
             work,
@@ -546,11 +556,13 @@ mod test {
 
         let node = Some(dir("1"));
         let mut parents = CompositeEntry::empty();
+        let ctx = ctx(fb);
+        borrowed!(ctx);
 
         // Parent has a file. Delete it.
         parents.insert(file(FileType::Regular, "1"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), node, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), node, parents.clone()).await?;
         assert_eq!(change, deleted(root));
         assert_eq!(work, hashmap! {});
 
@@ -563,11 +575,13 @@ mod test {
         let root = path("a");
 
         let mut parents = CompositeEntry::empty();
+        let ctx = ctx(fb);
+        borrowed!(ctx);
 
         // Parent has a file, delete it.
         parents.insert(file(FileType::Regular, "1"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), None, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), None, parents.clone()).await?;
         assert_eq!(change, deleted(root));
         assert_eq!(work, hashmap! {});
 
@@ -588,11 +602,13 @@ mod test {
         });
 
         let mut parents = CompositeEntry::empty();
+        let ctx = ctx(fb);
+        borrowed!(ctx);
 
         // Parent has a directory, recurse into it.
         parents.insert(dir("1"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), None, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), None, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(
             work,
@@ -607,7 +623,7 @@ mod test {
         // Multiple parents have multiple directories. Recurse into all of them.
         parents.insert(dir("2"));
         let (change, work) =
-            bonsai_diff_unfold(ctx(fb), &store, root.clone(), None, parents.clone()).await?;
+            bonsai_diff_unfold(ctx, &store, root.clone(), None, parents.clone()).await?;
         assert_eq!(change, None);
         assert_eq!(
             work,

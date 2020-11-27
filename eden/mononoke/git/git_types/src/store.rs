@@ -56,10 +56,10 @@ macro_rules! impl_loadable_storable {
         impl Storable for $ty {
             type Key = $handle;
 
-            async fn store<B: Blobstore>(
+            async fn store<'a, B: Blobstore>(
                 self,
-                ctx: CoreContext,
-                blobstore: &B,
+                ctx: &'a CoreContext,
+                blobstore: &'a B,
             ) -> Result<Self::Key, Error> {
                 let handle = *self.handle();
                 let key = handle.blobstore_key();
@@ -74,12 +74,11 @@ macro_rules! impl_loadable_storable {
 
             async fn load<'a, B: Blobstore>(
                 &'a self,
-                ctx: CoreContext,
+                ctx: &'a CoreContext,
                 blobstore: &'a B,
             ) -> Result<Self::Value, LoadableError> {
                 let id = *self;
-                let get = blobstore.get(ctx, id.blobstore_key());
-                let bytes = get.await?;
+                let bytes = blobstore.get(ctx, &id.blobstore_key()).await?;
                 match bytes {
                     Some(bytes) => bytes.try_into().map_err(LoadableError::Error),
                     None => Err(LoadableError::Missing(id.blobstore_key())),

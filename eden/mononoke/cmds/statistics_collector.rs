@@ -147,7 +147,7 @@ pub async fn get_manifest_from_changeset(
     repo: &BlobRepo,
     hg_cs_id: &HgChangesetId,
 ) -> Result<HgManifestId, Error> {
-    let changeset = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let changeset = hg_cs_id.load(ctx, repo.blobstore()).await?;
     Ok(changeset.manifestid())
 }
 
@@ -156,7 +156,7 @@ pub async fn get_changeset_timestamp_from_changeset(
     repo: &BlobRepo,
     hg_cs_id: &HgChangesetId,
 ) -> Result<i64, Error> {
-    let changeset = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let changeset = hg_cs_id.load(ctx, repo.blobstore()).await?;
     Ok(changeset.time().timestamp_secs())
 }
 
@@ -168,7 +168,7 @@ pub async fn get_statistics_from_entry(
 ) -> Result<RepoStatistics, Error> {
     match entry {
         Entry::Leaf((file_type, filenode_id)) => {
-            let envelope = filenode_id.load(ctx.clone(), repo.blobstore()).await?;
+            let envelope = filenode_id.load(ctx, repo.blobstore()).await?;
             let size = envelope.content_size();
             let content_id = envelope.content_id();
             let lines = if FileType::Regular == file_type && size < BIG_FILE_THRESHOLD {
@@ -561,6 +561,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use borrowed::borrowed;
     use bytes::Bytes;
     use fixtures::linear;
     use futures::{
@@ -629,6 +630,7 @@ mod tests {
 
             let ctx = CoreContext::test_mock(fb);
             let blobstore = repo.get_blobstore();
+            borrowed!(ctx, blobstore, repo);
 
             // Commit consists two files (name => content):
             //     "1" => "1\n"
@@ -648,12 +650,12 @@ mod tests {
                 repo.clone(),
                 parents,
                 store_files(
-                    ctx.clone(),
+                    ctx,
                     btreemap! {
                         "dir1/dir2/file1" => Some("first line\nsecond line\n"),
                         "dir1/dir3/file2" => Some("first line\n"),
                     },
-                    repo.clone(),
+                    repo,
                 )
                 .await,
             )
@@ -665,7 +667,7 @@ mod tests {
                 .await
                 .unwrap();
 
-            let stats = get_statistics_from_changeset(&ctx, &repo, &blobstore, &hg_cs_id)
+            let stats = get_statistics_from_changeset(ctx, repo, blobstore, &hg_cs_id)
                 .await
                 .unwrap();
 
@@ -682,6 +684,7 @@ mod tests {
 
             let ctx = CoreContext::test_mock(fb);
             let blobstore = repo.get_blobstore();
+            borrowed!(ctx, blobstore, repo);
 
             // Commit consists two files (name => content):
             //     "1" => "1\n"
@@ -701,12 +704,12 @@ mod tests {
                 repo.clone(),
                 parents,
                 store_files(
-                    ctx.clone(),
+                    ctx,
                     btreemap! {
                         "dir1/dir2/file1" => Some("first line\nsecond line\n"),
                         "dir1/dir3/file2" => Some("first line\n"),
                     },
-                    repo.clone(),
+                    repo,
                 )
                 .await,
             )
@@ -718,7 +721,7 @@ mod tests {
                 .await
                 .unwrap();
 
-            let manifest = get_manifest_from_changeset(&ctx, &repo, &hg_cs_id)
+            let manifest = get_manifest_from_changeset(ctx, repo, &hg_cs_id)
                 .await
                 .unwrap();
 
@@ -732,7 +735,7 @@ mod tests {
                 .await
                 .unwrap();
 
-            let stats = get_statistics_from_entry(&ctx, &repo, tree_entries.pop().unwrap())
+            let stats = get_statistics_from_entry(ctx, repo, tree_entries.pop().unwrap())
                 .await
                 .unwrap();
 
@@ -750,6 +753,7 @@ mod tests {
 
             let ctx = CoreContext::test_mock(fb);
             let blobstore = repo.get_blobstore();
+            borrowed!(ctx, blobstore, repo);
 
             /*
             Commit consists two files (name => content):
@@ -766,19 +770,19 @@ mod tests {
             let cur_hg_cs_id =
                 HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap();
 
-            let stats = get_statistics_from_changeset(&ctx, &repo, &blobstore, &prev_hg_cs_id)
+            let stats = get_statistics_from_changeset(ctx, repo, blobstore, &prev_hg_cs_id)
                 .await
                 .unwrap();
 
             let (prev_manifest, cur_manifest) = try_join!(
-                get_manifest_from_changeset(&ctx, &repo, &prev_hg_cs_id),
-                get_manifest_from_changeset(&ctx, &repo, &cur_hg_cs_id),
+                get_manifest_from_changeset(ctx, repo, &prev_hg_cs_id),
+                get_manifest_from_changeset(ctx, repo, &cur_hg_cs_id),
             )
             .unwrap();
 
             let new_stats = update_statistics(
-                &ctx,
-                &repo,
+                ctx,
+                repo,
                 stats,
                 prev_manifest
                     .diff(ctx.clone(), blobstore.clone(), cur_manifest.clone())

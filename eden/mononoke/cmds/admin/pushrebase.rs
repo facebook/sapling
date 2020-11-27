@@ -74,7 +74,7 @@ pub async fn subcommand_pushrebase<'a>(
     let pushrebase_hooks = get_pushrebase_hooks(&repo, &repo_config.pushrebase);
 
     let bcs = cs_id
-        .load(ctx.clone(), &repo.get_blobstore())
+        .load(&ctx, &repo.get_blobstore())
         .map_err(Error::from)
         .await?;
     let pushrebase_res = do_pushrebase_bonsai(

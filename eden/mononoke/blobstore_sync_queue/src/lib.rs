@@ -142,7 +142,7 @@ pub trait BlobstoreSyncQueue: Send + Sync {
     async fn iter<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        key_like: Option<&'a String>,
+        key_like: Option<&'a str>,
         multiplex_id: MultiplexId,
         older_than: DateTime,
         limit: usize,
@@ -157,7 +157,7 @@ pub trait BlobstoreSyncQueue: Send + Sync {
     async fn get<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        key: &'a String,
+        key: &'a str,
     ) -> Result<Vec<BlobstoreSyncQueueEntry>, Error>;
 }
 
@@ -365,7 +365,7 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
     async fn iter<'a>(
         &'a self,
         _ctx: &'a CoreContext,
-        key_like: Option<&'a String>,
+        key_like: Option<&'a str>,
         multiplex_id: MultiplexId,
         older_than: DateTime,
         limit: usize,
@@ -375,7 +375,7 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
             Some(sql_like) => {
                 GetRangeOfEntriesLike::query(
                     &self.read_master_connection,
-                    sql_like,
+                    &sql_like.to_owned(),
                     &multiplex_id,
                     &older_than.into(),
                     &limit,
@@ -438,12 +438,12 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
     async fn get<'a>(
         &'a self,
         _ctx: &'a CoreContext,
-        key: &'a String,
+        key: &'a str,
     ) -> Result<Vec<BlobstoreSyncQueueEntry>, Error> {
-        let rows = GetByKey::query(&self.read_master_connection, key)
+        let rows = GetByKey::query(&self.read_master_connection, &key.to_owned())
             .compat()
             .await
-            .with_context(|| ErrorKind::BlobKeyError(key.clone()))?;
+            .with_context(|| ErrorKind::BlobKeyError(key.to_owned()))?;
         Ok(rows
             .into_iter()
             .map(

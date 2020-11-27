@@ -138,7 +138,7 @@ where
 
     async fn load<'a, B: Blobstore>(
         &'a self,
-        ctx: CoreContext,
+        ctx: &'a CoreContext,
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         Ok(match self {
@@ -156,7 +156,11 @@ where
 {
     type Key = Entry<T::Key, L::Key>;
 
-    async fn store<B: Blobstore>(self, ctx: CoreContext, blobstore: &B) -> Result<Self::Key> {
+    async fn store<'a, B: Blobstore>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Key> {
         Ok(match self {
             Entry::Tree(tree) => Entry::Tree(tree.store(ctx, blobstore).await?),
             Entry::Leaf(leaf) => Entry::Leaf(leaf.store(ctx, blobstore).await?),
@@ -366,7 +370,7 @@ impl<I: Clone + 'static + Send + Sync, M: Loadable + Send + Sync> Loadable for T
 
     async fn load<'a, B: Blobstore>(
         &'a self,
-        ctx: CoreContext,
+        ctx: &'a CoreContext,
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         let id = self.0.clone();

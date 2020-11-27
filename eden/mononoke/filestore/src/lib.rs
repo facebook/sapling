@@ -16,7 +16,7 @@ use futures::{
     future::{Future, TryFutureExt},
     stream::{self, Stream, TryStreamExt},
 };
-use std::convert::TryInto;
+use std::{borrow::Borrow, convert::TryInto};
 
 use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
@@ -152,11 +152,11 @@ impl StoreRequest {
 /// not.
 pub async fn get_metadata<B: Blobstore>(
     blobstore: &B,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     key: &FetchKey,
 ) -> Result<Option<ContentMetadata>, Error> {
     let maybe_id = key
-        .load(ctx.clone(), blobstore)
+        .load(ctx, blobstore)
         .await
         .map(Some)
         .or_else(|err| match err {
@@ -175,11 +175,11 @@ pub async fn get_metadata<B: Blobstore>(
 /// when metadata found. It will not recompute metadata on the fly
 pub async fn get_metadata_readonly<B: Blobstore>(
     blobstore: &B,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     key: &FetchKey,
 ) -> Result<Option<Option<ContentMetadata>>, Error> {
     let maybe_id = key
-        .load(ctx.clone(), blobstore)
+        .load(ctx, blobstore)
         .await
         .map(Some)
         .or_else(|err| match err {
@@ -199,11 +199,11 @@ pub async fn get_metadata_readonly<B: Blobstore>(
 /// either exists or doesn't; an error means the existence could not be determined.
 pub async fn exists<B: Blobstore>(
     blobstore: &B,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     key: &FetchKey,
 ) -> Result<bool, Error> {
     let maybe_id = key
-        .load(ctx.clone(), blobstore)
+        .load(ctx, blobstore)
         .await
         .map(Some)
         .or_else(|err| match err {
@@ -212,7 +212,7 @@ pub async fn exists<B: Blobstore>(
         })?;
 
     match maybe_id {
-        Some(id) => blobstore.is_present(ctx, id.blobstore_key()).await,
+        Some(id) => blobstore.is_present(ctx, &id.blobstore_key()).await,
         None => Ok(false),
     }
 }
@@ -224,11 +224,11 @@ pub async fn exists<B: Blobstore>(
 /// (not just the final chunks - any of them). Chunks are guaranteed to have non-zero size.
 pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,
-    ctx: CoreContext,
+    ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
     key: &FetchKey,
 ) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + 'a, u64)>, Error> {
     let content_id =
-        key.load(ctx.clone(), &blobstore)
+        key.load(ctx.borrow(), &blobstore)
             .await
             .map(Some)
             .or_else(|err| match err {
@@ -251,13 +251,13 @@ pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
 /// the file that overlaps with the requested range, if any.
 pub async fn fetch_range_with_size<'a, B: Blobstore>(
     blobstore: &'a B,
-    ctx: CoreContext,
+    ctx: &'a CoreContext,
     key: &FetchKey,
     start: u64,
     size: u64,
 ) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + 'a, u64)>, Error> {
     let content_id = key
-        .load(ctx.clone(), blobstore)
+        .load(ctx, blobstore)
         .await
         .map(Some)
         .or_else(|err| match err {
@@ -285,7 +285,7 @@ pub async fn fetch_range_with_size<'a, B: Blobstore>(
 /// This function has the same functionality as fetch_with_size, but doesn't return the file size.
 pub async fn fetch<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,
-    ctx: CoreContext,
+    ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
     key: &FetchKey,
 ) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + 'a>, Error> {
     let res = fetch_with_size(blobstore, ctx, key).await?;
@@ -296,7 +296,7 @@ pub async fn fetch<'a, B: Blobstore + Clone + 'a>(
 /// add new callsites. This is only for compatibility with existin callsites.
 pub async fn fetch_concat_opt<B: Blobstore>(
     blobstore: &B,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     key: &FetchKey,
 ) -> Result<Option<Bytes>, Error> {
     let res = fetch_with_size(blobstore, ctx, key).await?;
@@ -325,7 +325,7 @@ pub async fn fetch_concat_opt<B: Blobstore>(
 /// Similar to `fetch_concat_opt`, but requires the blob to be present, or errors out.
 pub async fn fetch_concat<B: Blobstore>(
     blobstore: &B,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     key: impl Into<FetchKey>,
 ) -> Result<Bytes, Error> {
     let key: FetchKey = key.into();
@@ -339,7 +339,7 @@ pub async fn fetch_concat<B: Blobstore>(
 /// data associated with the key was not found.
 pub fn fetch_stream<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,
-    ctx: CoreContext,
+    ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
     key: impl Into<FetchKey>,
 ) -> impl Stream<Item = Result<Bytes, Error>> + 'a {
     let key: FetchKey = key.into();
@@ -356,7 +356,7 @@ pub fn fetch_stream<'a, B: Blobstore + Clone + 'a>(
 /// This function has the same functionality as fetch_range_with_size, but doesn't return the file size.
 pub async fn fetch_range<'a, B: Blobstore>(
     blobstore: &'a B,
-    ctx: CoreContext,
+    ctx: &'a CoreContext,
     key: &FetchKey,
     start: u64,
     size: u64,
@@ -370,7 +370,7 @@ pub async fn fetch_range<'a, B: Blobstore>(
 /// Bytes as requested unless the file is shorter than that.
 pub async fn peek<B: Blobstore>(
     blobstore: &B,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     key: &FetchKey,
     size: usize,
 ) -> Result<Option<Bytes>, Error> {
@@ -391,7 +391,7 @@ pub async fn peek<B: Blobstore>(
 pub async fn store<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     config: FilestoreConfig,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     req: &StoreRequest,
     data: impl Stream<Item = Result<Bytes, Error>> + Send,
 ) -> Result<ContentMetadata, Error> {
@@ -422,7 +422,7 @@ pub async fn store<B: Blobstore + Clone + 'static>(
 pub fn store_bytes<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     config: FilestoreConfig,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     bytes: Bytes,
 ) -> (
     (ContentId, u64),
@@ -434,12 +434,12 @@ pub fn store_bytes<B: Blobstore + Clone + 'static>(
     let content_id = FileContents::content_id_for_bytes(&bytes);
     let size: u64 = bytes.len().try_into().unwrap();
 
-    cloned!(blobstore);
+    cloned!(ctx, blobstore);
     let upload = async move {
         store(
             &blobstore,
             config,
-            ctx,
+            &ctx,
             &StoreRequest::with_canonical(size, content_id),
             stream::once(async move { Ok(bytes) }),
         )

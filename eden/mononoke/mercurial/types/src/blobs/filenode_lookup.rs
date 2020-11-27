@@ -78,7 +78,7 @@ impl FileNodeIdPointer {
 }
 
 pub fn store_filenode_id<'a, B: Blobstore>(
-    ctx: CoreContext,
+    ctx: &'a CoreContext,
     blobstore: &'a B,
     key: FileNodeIdPointer,
     filenode_id: &HgFileNodeId,
@@ -88,12 +88,12 @@ pub fn store_filenode_id<'a, B: Blobstore>(
 }
 
 pub async fn lookup_filenode_id<B: Blobstore>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     blobstore: &B,
     key: FileNodeIdPointer,
 ) -> Result<Option<HgFileNodeId>> {
     Ok(blobstore
-        .get(ctx, key.0)
+        .get(ctx, &key.0)
         .await?
         .and_then(|blob| HgFileNodeId::from_bytes(blob.as_raw_bytes()).ok()))
 }

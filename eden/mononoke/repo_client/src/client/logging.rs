@@ -246,7 +246,7 @@ fn do_wireproto_logging<'a>(
                         cloned!(ctx, blobstore, key);
                         async move {
                             blobstore
-                                .put(ctx, key, BlobstoreBytes::from_bytes(args))
+                                .put(&ctx, key, BlobstoreBytes::from_bytes(args))
                                 .await
                         }
                     }

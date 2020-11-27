@@ -48,7 +48,7 @@ pub fn benchmark(
                                 .into_iter()
                                 .map(|block| {
                                     let key = format!("benchmark.{:x}", thread_rng().next_u64());
-                                    blobstore.put(ctx.clone(), key, block)
+                                    blobstore.put(&ctx, key, block)
                                 })
                                 .collect();
 

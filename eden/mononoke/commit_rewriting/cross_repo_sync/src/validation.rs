@@ -75,7 +75,7 @@ pub async fn verify_working_copy_inner<'a>(
     reverse_mover: &Mover,
 ) -> Result<(), Error> {
     let moved_source_repo_entries = get_maybe_moved_filenode_ids(
-        ctx.clone(),
+        ctx,
         &source_repo,
         *source_hash,
         if *source_hash != *target_hash {
@@ -86,7 +86,7 @@ pub async fn verify_working_copy_inner<'a>(
         },
     );
     let target_repo_entries = get_maybe_moved_filenode_ids(
-        ctx.clone(),
+        ctx,
         &target_repo,
         *target_hash,
         Some(GetMaybeMovedFilenodesPolicy::CheckThatRewritesIntoSomeButDontMove(reverse_mover)),
@@ -200,13 +200,13 @@ enum GetMaybeMovedFilenodesPolicy<'a> {
 /// Get all the file filenode ids for a given commit,
 /// potentially applying a `Mover` to all file paths
 async fn get_maybe_moved_filenode_ids<'a>(
-    ctx: CoreContext,
+    ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     hash: ChangesetId,
     maybe_mover_policy: Option<GetMaybeMovedFilenodesPolicy<'a>>,
 ) -> Result<PathToFileNodeIdMapping, Error> {
-    let root_mf_id = fetch_root_mf_id(ctx.clone(), repo, hash).await?;
-    let repo_entries = list_all_filenode_ids(ctx, repo, root_mf_id)
+    let root_mf_id = fetch_root_mf_id(ctx, repo, hash).await?;
+    let repo_entries = list_all_filenode_ids(ctx.clone(), repo, root_mf_id)
         .compat()
         .await?;
     match maybe_mover_policy {
@@ -471,14 +471,14 @@ pub async fn verify_filenodes_have_same_contents<
                 let f1 = async move {
                     source_filenode_id
                         .0
-                        .load(ctx.clone(), source_repo.0.blobstore())
+                        .load(ctx, source_repo.0.blobstore())
                         .await
                 }
                 .map_ok(|e| Source(e.content_id()));
                 let f2 = async move {
                     target_filenode_id
                         .0
-                        .load(ctx.clone(), target_repo.0.blobstore())
+                        .load(ctx, target_repo.0.blobstore())
                         .await
                 }
                 .map_ok(|e| Target(e.content_id()));
@@ -623,7 +623,7 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
 }
 
 pub async fn fetch_root_mf_id(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: ChangesetId,
 ) -> Result<HgManifestId, Error> {

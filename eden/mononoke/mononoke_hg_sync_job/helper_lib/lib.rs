@@ -58,7 +58,7 @@ pub async fn save_bundle_to_file<B: Blobstore>(
     file: PathBuf,
     create: bool,
 ) -> Result<(), Error> {
-    let bytes = bundle2_id.load(ctx.clone(), blobstore).await?;
+    let bytes = bundle2_id.load(ctx, blobstore).await?;
     save_bytes_to_file(bytes.into_bytes(), file, create).await?;
 
     Ok(())

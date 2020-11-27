@@ -9,7 +9,6 @@ use anyhow::Error;
 use blame::{fetch_file_full_content, BlameRoot};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
@@ -40,22 +39,14 @@ pub(crate) async fn warmup(
     // Warmup bonsai changesets unconditionally because
     // most likely all derived data needs it. And they are cheap to warm up anyway
 
-    let bcs_warmup = {
-        cloned!(ctx, chunk, repo);
-        async move {
-            stream::iter(chunk)
-                .map(move |cs_id| {
-                    Ok({
-                        cloned!(ctx, repo);
-                        async move { cs_id.load(ctx, repo.blobstore()).await }
-                    })
-                })
-                .try_for_each_concurrent(100, |x| async {
-                    x.await?;
-                    Result::<_, Error>::Ok(())
-                })
-                .await
-        }
+    let bcs_warmup = async move {
+        stream::iter(chunk)
+            .map(move |cs_id| Ok(async move { cs_id.load(ctx, repo.blobstore()).await }))
+            .try_for_each_concurrent(100, |x| async {
+                x.await?;
+                Result::<_, Error>::Ok(())
+            })
+            .await
     };
 
     let content_warmup = async {
@@ -104,7 +95,7 @@ async fn content_metadata_warmup(
     stream::iter(chunk)
         .map({
             |cs_id| async move {
-                let bcs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
+                let bcs = cs_id.load(ctx, repo.blobstore()).await?;
 
                 let mut content_ids = HashSet::new();
                 for (_, maybe_file_change) in bcs.file_changes() {
@@ -131,7 +122,7 @@ async fn unode_warmup(
     let futs = FuturesUnordered::new();
     for cs_id in chunk {
         let f = async move {
-            let bcs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
+            let bcs = cs_id.load(ctx, repo.blobstore()).await?;
 
             let root_mf_id = RootUnodeManifestId::derive(&ctx, &repo, bcs.get_changeset_id())
                 .map_err(Error::from);
@@ -160,40 +151,41 @@ async fn prefetch_content(
     repo: &BlobRepo,
     csid: &ChangesetId,
 ) -> Result<(), Error> {
-    async fn prefetch_content_unode<'a>(
+    async fn prefetch_content_unode(
         ctx: CoreContext,
         repo: BlobRepo,
         rename: Option<FileUnodeId>,
         file_unode_id: FileUnodeId,
     ) -> Result<(), Error> {
         let ctx = &ctx;
+        let repo = &repo;
         let blobstore = repo.blobstore();
-        let file_unode = file_unode_id.load(ctx.clone(), blobstore).await?;
+        let file_unode = file_unode_id.load(ctx, blobstore).await?;
         let parents_content: Vec<_> = file_unode
             .parents()
             .iter()
             .cloned()
             .chain(rename)
-            .map(|file_unode_id| fetch_file_full_content(&ctx, &repo, file_unode_id))
+            .map(|file_unode_id| fetch_file_full_content(ctx, repo, file_unode_id))
             .collect();
 
         // the assignment is needed to avoid unused_must_use warnings
         let _ = future::try_join(
-            fetch_file_full_content(ctx, &repo, file_unode_id),
+            fetch_file_full_content(ctx, repo, file_unode_id),
             future::try_join_all(parents_content),
         )
         .await?;
         Ok(())
     }
 
-    let bonsai = csid.load(ctx.clone(), repo.blobstore()).await?;
+    let bonsai = csid.load(ctx, repo.blobstore()).await?;
 
-    let root_manifest_fut = RootUnodeManifestId::derive(&ctx, &repo, csid.clone())
+    let root_manifest_fut = RootUnodeManifestId::derive(ctx, &repo, csid.clone())
         .map_ok(|mf| mf.manifest_unode_id().clone())
         .map_err(Error::from);
     let parents_manifest_futs = bonsai.parents().collect::<Vec<_>>().into_iter().map({
         move |csid| {
-            RootUnodeManifestId::derive(&ctx, &repo, csid)
+            RootUnodeManifestId::derive(ctx, &repo, csid)
                 .map_ok(|mf| mf.manifest_unode_id().clone())
                 .map_err(Error::from)
         }

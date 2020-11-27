@@ -277,12 +277,12 @@ async fn list_hg_manifest(
         .compat()
         .await?;
 
-    let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
     let mfid = hg_cs.manifestid();
 
     mfid.list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .map_ok(|(path, (ty, filenode_id))| async move {
-            let filenode = filenode_id.load(ctx.clone(), repo.blobstore()).await?;
+            let filenode = filenode_id.load(ctx, repo.blobstore()).await?;
             let content_id = filenode.content_id();
             let val = (ty, content_id, ManifestType::Hg);
             Ok((path, val))
@@ -322,7 +322,7 @@ async fn list_unodes(
     unode_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .map_ok(|(path, unode_id)| async move {
-            let unode = unode_id.load(ctx.clone(), repo.blobstore()).await?;
+            let unode = unode_id.load(ctx, repo.blobstore()).await?;
             let val = (
                 *unode.file_type(),
                 *unode.content_id(),

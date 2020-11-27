@@ -31,11 +31,20 @@ impl<'a, B: Blobstore> DummyBlobstore<B> {
 
 #[async_trait]
 impl<B: Blobstore> Blobstore for DummyBlobstore<B> {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         self.inner.get(ctx, key).await
     }
 
-    async fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         info!(
             self.logger,
             "I would have written blob {} of size {}",
@@ -45,7 +54,7 @@ impl<B: Blobstore> Blobstore for DummyBlobstore<B> {
         Ok(())
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         self.inner.is_present(ctx, key).await
     }
 }
@@ -76,7 +85,7 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
     async fn iter<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        key_like: Option<&'a String>,
+        key_like: Option<&'a str>,
         multiplex_id: MultiplexId,
         older_than: DateTime,
         limit: usize,
@@ -99,7 +108,7 @@ impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueue for DummyBlobstoreSyncQueue<Q> {
     async fn get<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        key: &'a String,
+        key: &'a str,
     ) -> Result<Vec<BlobstoreSyncQueueEntry>> {
         self.inner.get(ctx, key).await
     }

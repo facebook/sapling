@@ -86,10 +86,10 @@ impl SkeletonManifest {
         &self.summary
     }
 
-    pub async fn first_case_conflict(
-        &self,
-        ctx: &CoreContext,
-        blobstore: &(impl Blobstore + Clone),
+    pub async fn first_case_conflict<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
     ) -> Result<Option<(MPath, MPath)>> {
         let mut sk_mf = Cow::Borrowed(self);
         let mut path: Option<MPath> = None;
@@ -114,7 +114,7 @@ impl SkeletonManifest {
                             || subdir.summary.descendant_case_conflicts
                         {
                             path = Some(MPath::join_opt_element(path.as_ref(), name));
-                            sk_mf = Cow::Owned(subdir.id.load(ctx.clone(), blobstore).await?);
+                            sk_mf = Cow::Owned(subdir.id.load(ctx, blobstore).await?);
                             continue 'outer;
                         }
                     }

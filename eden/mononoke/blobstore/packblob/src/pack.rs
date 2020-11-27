@@ -50,11 +50,11 @@ fn decode_zstd_from_dict(
 pub fn decode_pack(
     pack_meta: BlobstoreMetadata,
     packed: PackedFormat,
-    key: String,
+    key: &str,
 ) -> Result<BlobstoreGetData, Error> {
     // Strip repo prefix, if any
-    let key = match REPO_PREFIX_REGEX.find(&key) {
-        Some(m) => String::from_utf8(key[m.end()..].as_bytes().to_vec())?,
+    let key = match REPO_PREFIX_REGEX.find(key) {
+        Some(m) => &key[m.end()..],
         None => key,
     };
 
@@ -85,13 +85,10 @@ pub fn decode_pack(
         if entry.key == key {
             match entry.data {
                 PackedValue::Single(_v) => {
-                    return Err(format_err!(
-                        "Unexpected PackedValue::Single on key {}",
-                        &key
-                    ));
+                    return Err(format_err!("Unexpected PackedValue::Single on key {}", key));
                 }
                 PackedValue::ZstdFromDict(v) => {
-                    return Ok(decode_zstd_from_dict(pack_meta, &key, v, possible_dicts)?);
+                    return Ok(decode_zstd_from_dict(pack_meta, key, v, possible_dicts)?);
                 }
                 PackedValue::UnknownField(e) => {
                     return Err(format_err!("PackedValue::UnknownField {:?}", e));
@@ -247,7 +244,7 @@ mod tests {
 
         // Test reads roundtrip back to the raw form
         for i in 0..20 {
-            let value = decode_pack(BlobstoreMetadata::new(None), packed.clone(), i.to_string())?;
+            let value = decode_pack(BlobstoreMetadata::new(None), packed.clone(), &i.to_string())?;
             assert_eq!(value.as_bytes().as_bytes().to_vec(), raw_data[i]);
         }
 
@@ -279,15 +276,11 @@ mod tests {
         );
 
         // See if we can get the data back
-        let value1 = decode_pack(
-            BlobstoreMetadata::new(None),
-            packed.clone(),
-            "1".to_string(),
-        )?;
+        let value1 = decode_pack(BlobstoreMetadata::new(None), packed.clone(), "1")?;
         assert_eq!(value1.as_bytes().len(), 1024);
 
         // See if we get error for unknown key
-        let missing = decode_pack(BlobstoreMetadata::new(None), packed, "missing".to_string());
+        let missing = decode_pack(BlobstoreMetadata::new(None), packed, "missing");
         assert!(missing.is_err());
 
         Ok(())

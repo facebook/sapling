@@ -858,12 +858,7 @@ fn test_file_hooks_with_blob_store(fb: FacebookInit) {
                 ctx.clone(),
                 repo.clone(),
                 vec![],
-                store_files(
-                    ctx.clone(),
-                    btreemap! {"toremove" => Some("content")},
-                    repo.clone(),
-                )
-                .await,
+                store_files(&ctx, btreemap! {"toremove" => Some("content")}, &repo).await,
             )
             .await;
             let bcs_id = create_commit(
@@ -871,13 +866,13 @@ fn test_file_hooks_with_blob_store(fb: FacebookInit) {
                 repo.clone(),
                 vec![parent],
                 store_files(
-                    ctx.clone(),
+                    &ctx,
                     btreemap! {
                         "toremove" => None,
                         "newfile" => Some("newcontent"),
                         "dir/somefile" => Some("good"),
                     },
-                    repo.clone(),
+                    &repo,
                 )
                 .await,
             )
@@ -912,7 +907,7 @@ fn test_file_hooks_with_blob_store(fb: FacebookInit) {
         };
 
         let bcs = bcs_id
-            .load(ctx.clone(), &repo.get_blobstore())
+            .load(&ctx, repo.blobstore())
             .await
             .expect("Can't load commit");
         run_file_hooks_for_cs(

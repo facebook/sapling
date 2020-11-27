@@ -10,6 +10,7 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
+use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
@@ -111,15 +112,12 @@ impl RootUnodeManifestMapping {
         }
     }
 
-    async fn fetch_unode(
-        &self,
-        ctx: CoreContext,
+    async fn fetch_unode<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         cs_id: ChangesetId,
     ) -> Result<Option<(ChangesetId, RootUnodeManifestId)>, Error> {
-        let bytes = self
-            .blobstore
-            .get(ctx.clone(), self.format_key(cs_id))
-            .await?;
+        let bytes = self.blobstore.get(ctx, &self.format_key(cs_id)).await?;
         match bytes {
             Some(bytes) => Ok(Some((cs_id, bytes.try_into()?))),
             None => Ok(None),
@@ -136,9 +134,10 @@ impl BonsaiDerivedMapping for RootUnodeManifestMapping {
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
+        borrowed!(ctx);
         csids
             .into_iter()
-            .map(|cs_id| self.fetch_unode(ctx.clone(), cs_id))
+            .map(|cs_id| async move { self.fetch_unode(ctx, cs_id).await })
             .collect::<FuturesUnordered<_>>()
             .try_filter_map(|x| async move { Ok(x) })
             .try_collect()
@@ -147,7 +146,7 @@ impl BonsaiDerivedMapping for RootUnodeManifestMapping {
 
     async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
         self.blobstore
-            .put(ctx, self.format_key(csid), id.into())
+            .put(&ctx, self.format_key(csid), id.into())
             .await
     }
 }
@@ -172,7 +171,6 @@ mod test {
     use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
-    use cloned::cloned;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::{
@@ -186,27 +184,26 @@ mod test {
     use revset::AncestorsNodeStream;
 
     async fn fetch_manifest_by_cs_id(
-        ctx: CoreContext,
-        repo: BlobRepo,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
         hg_cs_id: HgChangesetId,
     ) -> Result<HgManifestId, Error> {
         Ok(hg_cs_id.load(ctx, repo.blobstore()).await?.manifestid())
     }
 
     async fn verify_unode(
-        ctx: CoreContext,
-        repo: BlobRepo,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
     ) -> Result<(), Error> {
         let unode_entries = {
-            cloned!(ctx, repo);
             async move {
-                let mf_unode_id = RootUnodeManifestId::derive(&ctx, &repo, bcs_id)
+                let mf_unode_id = RootUnodeManifestId::derive(ctx, repo, bcs_id)
                     .await?
                     .manifest_unode_id()
                     .clone();
-                let mut paths = iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(mf_unode_id))
+                let mut paths = iterate_all_manifest_entries(ctx, repo, Entry::Tree(mf_unode_id))
                     .map_ok(|(path, _)| path)
                     .try_collect::<Vec<_>>()
                     .await?;
@@ -216,8 +213,8 @@ mod test {
         };
 
         let filenode_entries = async move {
-            let root_mf_id = fetch_manifest_by_cs_id(ctx.clone(), repo.clone(), hg_cs_id).await?;
-            let mut paths = iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(root_mf_id))
+            let root_mf_id = fetch_manifest_by_cs_id(ctx, repo, hg_cs_id).await?;
+            let mut paths = iterate_all_manifest_entries(ctx, repo, Entry::Tree(root_mf_id))
                 .map_ok(|(path, _)| path)
                 .try_collect::<Vec<_>>()
                 .await?;
@@ -256,11 +253,10 @@ mod test {
     {
         let ctx = CoreContext::test_mock(fb);
         let repo = repo.await;
+        borrowed!(ctx, repo);
 
         all_commits(ctx.clone(), repo.clone())
-            .and_then(move |(bcs_id, hg_cs_id)| {
-                verify_unode(ctx.clone(), repo.clone(), bcs_id, hg_cs_id)
-            })
+            .and_then(move |(bcs_id, hg_cs_id)| verify_unode(&ctx, &repo, bcs_id, hg_cs_id))
             .try_collect::<Vec<_>>()
             .await
             .unwrap();

@@ -270,7 +270,7 @@ impl ChangesetPathContext {
             MononokeError::InvalidRequest(format!("Blame is not available for directory: `/`"))
         })?;
 
-        fetch_blame(ctx, repo, csid, mpath.clone())
+        fetch_blame(&ctx, &repo, csid, mpath.clone())
             .map_err(|error| match error {
                 BlameError::NoSuchPath(_)
                 | BlameError::IsDirectory(_)
@@ -337,7 +337,7 @@ impl ChangesetPathContext {
                         let info = if cs_info_enabled {
                             ChangesetInfo::derive(ctx, repo, cs_id).await
                         } else {
-                            let bonsai = cs_id.load(ctx.clone(), repo.blobstore()).await?;
+                            let bonsai = cs_id.load(&ctx, repo.blobstore()).await?;
                             Ok(ChangesetInfo::new(cs_id, bonsai))
                         }?;
                         let timestamp = info.author_date().as_chrono().timestamp();

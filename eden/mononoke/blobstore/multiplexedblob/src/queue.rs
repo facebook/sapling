@@ -91,8 +91,12 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
 
 #[async_trait]
 impl Blobstore for MultiplexedBlobstore {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
-        let result = self.blobstore.get(ctx.clone(), key.clone()).await;
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        let result = self.blobstore.get(ctx, key).await;
         match result {
             Ok(value) => Ok(value),
             Err(error) => {
@@ -104,7 +108,7 @@ impl Blobstore for MultiplexedBlobstore {
                 // check synchronization queue. If it does not contain entries with this key
                 // it means it is true-none otherwise, only replica containing key has
                 // failed and we need to return error.
-                let entries = self.queue.get(&ctx, &key).await?;
+                let entries = self.queue.get(ctx, key).await?;
                 if entries.is_empty() {
                     Ok(None)
                 } else {
@@ -114,12 +118,17 @@ impl Blobstore for MultiplexedBlobstore {
         }
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         self.blobstore.put(ctx, key, value).await
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
-        let result = self.blobstore.is_present(ctx.clone(), key.clone()).await;
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
+        let result = self.blobstore.is_present(ctx, key).await;
         match result {
             Ok(value) => Ok(value),
             Err(error) => {
@@ -139,9 +148,9 @@ impl Blobstore for MultiplexedBlobstore {
 
 #[async_trait]
 impl BlobstorePutOps for MultiplexedBlobstore {
-    async fn put_explicit(
-        &self,
-        ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -151,9 +160,9 @@ impl BlobstorePutOps for MultiplexedBlobstore {
             .await
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {

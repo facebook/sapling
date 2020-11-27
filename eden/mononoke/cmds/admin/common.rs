@@ -35,7 +35,7 @@ pub fn fetch_bonsai_changeset(
     helpers::csid_resolve(ctx.clone(), repo.clone(), rev.to_string()).and_then({
         cloned!(ctx, repo);
         move |csid| {
-            async move { csid.load(ctx, repo.blobstore()).await }
+            async move { csid.load(&ctx, repo.blobstore()).await }
                 .boxed()
                 .compat()
                 .from_err()
@@ -108,7 +108,7 @@ pub fn get_file_nodes(
 ) -> impl Future<Item = Vec<HgFileNodeId>, Error = Error> {
     {
         cloned!(ctx, repo);
-        async move { cs_id.load(ctx, repo.blobstore()).await }
+        async move { cs_id.load(&ctx, repo.blobstore()).await }
     }
     .boxed()
     .compat()

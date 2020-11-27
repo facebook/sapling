@@ -24,6 +24,7 @@ zstd = "=0.5.3+zstd.1.4.5"
 
 [dev-dependencies]
 memblob = { path = "../memblob" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 rand = { version = "0.7", features = ["small_rng"] }
 rand_xorshift = "0.2"

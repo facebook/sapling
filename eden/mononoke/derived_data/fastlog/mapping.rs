@@ -9,19 +9,18 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreBytes, Loadable};
+use borrowed::borrowed;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::compat::Future01CompatExt;
-use futures::future::{self, TryFutureExt};
-use futures::stream::TryStreamExt;
-use futures_ext::StreamExt;
-use futures_old::{stream::FuturesUnordered, Future, Stream};
+use futures::{
+    future,
+    stream::{FuturesUnordered, TryStreamExt},
+};
 use manifest::{find_intersection_of_diffs, Entry};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, ManifestUnodeId};
 use std::collections::HashMap;
-use std::iter::FromIterator;
 use std::sync::Arc;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
@@ -112,12 +111,12 @@ pub async fn fetch_parent_root_unodes(
     .await
 }
 
-async fn fetch_unode_parents(
+async fn fetch_unode_parents<B: Blobstore>(
     ctx: &CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &B,
     unode_entry_id: Entry<ManifestUnodeId, FileUnodeId>,
 ) -> Result<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
-    let unode_entry = unode_entry_id.load(ctx.clone(), blobstore).await?;
+    let unode_entry = unode_entry_id.load(ctx, blobstore).await?;
 
     let res = match unode_entry {
         Entry::Tree(tree) => tree
@@ -160,16 +159,16 @@ impl BonsaiDerivedMapping for RootFastlogMapping {
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        let gets = csids.into_iter().map(|cs_id| {
-            self.blobstore
-                .get(ctx.clone(), self.format_key(&cs_id))
-                .compat()
-                .map(move |maybe_val| maybe_val.map(|_| (cs_id.clone(), RootFastlog(cs_id))))
-        });
-        FuturesUnordered::from_iter(gets)
-            .filter_map(|x| x) // Remove None
-            .collect_to()
-            .compat()
+        borrowed!(ctx);
+        csids
+            .into_iter()
+            .map(|cs_id| async move {
+                let maybe_val = self.blobstore.get(ctx, &self.format_key(&cs_id)).await?;
+                Ok(maybe_val.map(|_| (cs_id.clone(), RootFastlog(cs_id))))
+            })
+            .collect::<FuturesUnordered<_>>()
+            .try_filter_map(future::ok) // Remove None
+            .try_collect()
             .await
     }
 
@@ -181,7 +180,7 @@ impl BonsaiDerivedMapping for RootFastlogMapping {
     ) -> Result<(), Error> {
         self.blobstore
             .put(
-                ctx,
+                &ctx,
                 self.format_key(&csid),
                 // Value doesn't matter here, so just put empty Value
                 BlobstoreBytes::from_bytes(Bytes::new()),
@@ -205,8 +204,10 @@ mod tests {
         create_bonsai_changeset_with_files, linear, merge_even, merge_uneven, store_files,
         unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::{FutureExt, StreamExt};
-    use futures_ext::{BoxFuture, FutureExt as _};
+    use futures::{
+        compat::{Future01CompatExt, Stream01CompatExt},
+        Stream, TryFutureExt,
+    };
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;
@@ -220,118 +221,90 @@ mod tests {
     use revset::AncestorsNodeStream;
     use std::collections::{BTreeMap, HashSet, VecDeque};
     use std::str::FromStr;
-    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
-    fn test_derive_single_empty_commit_no_parents(fb: FacebookInit) {
-        let mut rt = Runtime::new().unwrap();
-        let repo = rt.block_on_std(linear::getrepo(fb));
+    async fn test_derive_single_empty_commit_no_parents(fb: FacebookInit) {
+        let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
         let bcs = create_bonsai_changeset(vec![]);
         let bcs_id = bcs.get_changeset_id();
-        rt.block_on(save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone()))
+        save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
+            .compat()
+            .await
             .unwrap();
 
-        let root_unode_mf_id =
-            derive_fastlog_batch_and_unode(&mut rt, ctx.clone(), bcs_id.clone(), repo.clone());
+        let root_unode_mf_id = derive_fastlog_batch_and_unode(&ctx, bcs_id.clone(), &repo).await;
 
-        let list = fetch_list(
-            &mut rt,
-            ctx.clone(),
-            repo.clone(),
-            Entry::Tree(root_unode_mf_id),
-        );
+        let list = fetch_list(&ctx, &repo, Entry::Tree(root_unode_mf_id)).await;
         assert_eq!(list, vec![(bcs_id, vec![])]);
     }
 
     #[fbinit::test]
-    fn test_derive_single_commit_no_parents(fb: FacebookInit) {
-        let mut rt = Runtime::new().unwrap();
-        let repo = rt.block_on_std(linear::getrepo(fb));
+    async fn test_derive_single_commit_no_parents(fb: FacebookInit) {
+        let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         // This is the initial diff with no parents
         // See tests/fixtures/src/lib.rs
         let hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-        let bcs_id = rt
-            .block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))
+        let bcs_id = repo
+            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .compat()
+            .await
             .unwrap()
             .unwrap();
 
-        let root_unode_mf_id =
-            derive_fastlog_batch_and_unode(&mut rt, ctx.clone(), bcs_id.clone(), repo.clone());
-        let list = fetch_list(
-            &mut rt,
-            ctx.clone(),
-            repo.clone(),
-            Entry::Tree(root_unode_mf_id.clone()),
-        );
+        let root_unode_mf_id = derive_fastlog_batch_and_unode(&ctx, bcs_id.clone(), &repo).await;
+        let list = fetch_list(&ctx, &repo, Entry::Tree(root_unode_mf_id.clone())).await;
         assert_eq!(list, vec![(bcs_id, vec![])]);
 
         let blobstore = Arc::new(repo.get_blobstore());
         let path_1 = MPath::new(&"1").unwrap();
         let path_files = MPath::new(&"files").unwrap();
-        let entries = rt
-            .block_on(
-                root_unode_mf_id
-                    .find_entries(ctx.clone(), blobstore.clone(), vec![path_1, path_files])
-                    .compat()
-                    .collect(),
-            )
+        let entries: Vec<_> = root_unode_mf_id
+            .find_entries(ctx.clone(), blobstore.clone(), vec![path_1, path_files])
+            .try_collect()
+            .await
             .unwrap();
 
-        let list = fetch_list(
-            &mut rt,
-            ctx.clone(),
-            repo.clone(),
-            entries.get(0).unwrap().1.clone(),
-        );
+        let list = fetch_list(&ctx, &repo, entries.get(0).unwrap().1.clone()).await;
         assert_eq!(list, vec![(bcs_id, vec![])]);
 
-        let list = fetch_list(
-            &mut rt,
-            ctx.clone(),
-            repo.clone(),
-            entries.get(1).unwrap().1.clone(),
-        );
+        let list = fetch_list(&ctx, &repo, entries.get(1).unwrap().1.clone()).await;
         assert_eq!(list, vec![(bcs_id, vec![])]);
     }
 
     #[fbinit::test]
-    fn test_derive_linear(fb: FacebookInit) {
-        let mut rt = Runtime::new().unwrap();
-        let repo = rt.block_on_std(linear::getrepo(fb));
+    async fn test_derive_linear(fb: FacebookInit) {
+        let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb").unwrap();
-        let bcs_id = rt
-            .block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))
+        let bcs_id = repo
+            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .compat()
+            .await
             .unwrap()
             .unwrap();
 
-        let root_unode_mf_id =
-            derive_fastlog_batch_and_unode(&mut rt, ctx.clone(), bcs_id.clone(), repo.clone());
+        let root_unode_mf_id = derive_fastlog_batch_and_unode(&ctx, bcs_id.clone(), &repo).await;
 
         let blobstore = Arc::new(repo.get_blobstore());
-        let entries = rt
-            .block_on(
-                root_unode_mf_id
-                    .list_all_entries(ctx.clone(), blobstore)
-                    .compat()
-                    .map(|(_, entry)| entry)
-                    .collect(),
-            )
+        let entries: Vec<_> = root_unode_mf_id
+            .list_all_entries(ctx.clone(), blobstore)
+            .map_ok(|(_, entry)| entry)
+            .try_collect()
+            .await
             .unwrap();
 
         for entry in entries {
-            verify_list(&mut rt, ctx.clone(), repo.clone(), entry);
+            verify_list(&ctx, &repo, entry).await;
         }
     }
 
     #[fbinit::test]
-    fn test_derive_overflow(fb: FacebookInit) {
-        let mut rt = Runtime::new().unwrap();
-        let repo = rt.block_on_std(linear::getrepo(fb));
+    async fn test_derive_overflow(fb: FacebookInit) {
+        let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut bonsais = vec![];
@@ -339,11 +312,12 @@ mod tests {
         for i in 1..max_entries_in_fastlog_batch() {
             let filename = String::from("1");
             let content = format!("{}", i);
-            let stored_files = rt.block_on_std(store_files(
-                ctx.clone(),
+            let stored_files = store_files(
+                &ctx,
                 btreemap! { filename.as_str() => Some(content.as_str()) },
-                repo.clone(),
-            ));
+                &repo,
+            )
+            .await;
 
             let bcs = create_bonsai_changeset_with_files(parents, stored_files);
             let bcs_id = bcs.get_changeset_id();
@@ -352,45 +326,41 @@ mod tests {
         }
 
         let latest = parents.get(0).unwrap();
-        rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
+        save_bonsai_changesets(bonsais, ctx.clone(), repo.clone())
+            .compat()
+            .await
             .unwrap();
 
-        verify_all_entries_for_commit(&mut rt, ctx, repo, *latest);
+        verify_all_entries_for_commit(&ctx, &repo, *latest).await;
     }
 
     #[fbinit::test]
-    fn test_random_repo(fb: FacebookInit) {
-        let mut rt = Runtime::new().unwrap();
-        let repo = rt.block_on_std(linear::getrepo(fb));
+    async fn test_random_repo(fb: FacebookInit) {
+        let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
         let gen_settings = GenSettings::default();
         let mut changes_count = vec![];
         changes_count.resize(200, 10);
-        let latest = rt
-            .block_on(
-                GenManifest::new()
-                    .gen_stack(
-                        ctx.clone(),
-                        repo.clone(),
-                        &mut rng,
-                        &gen_settings,
-                        None,
-                        changes_count,
-                    )
-                    .boxed()
-                    .compat(),
+        let latest = GenManifest::new()
+            .gen_stack(
+                ctx.clone(),
+                repo.clone(),
+                &mut rng,
+                &gen_settings,
+                None,
+                changes_count,
             )
+            .await
             .unwrap();
 
-        verify_all_entries_for_commit(&mut rt, ctx, repo, latest);
+        verify_all_entries_for_commit(&ctx, &repo, latest).await;
     }
 
     #[fbinit::test]
-    fn test_derive_empty_commits(fb: FacebookInit) {
-        let mut rt = Runtime::new().unwrap();
-        let repo = rt.block_on_std(linear::getrepo(fb));
+    async fn test_derive_empty_commits(fb: FacebookInit) {
+        let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut bonsais = vec![];
@@ -403,51 +373,41 @@ mod tests {
         }
 
         let latest = parents.get(0).unwrap();
-        rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
+        save_bonsai_changesets(bonsais, ctx.clone(), repo.clone())
+            .compat()
+            .await
             .unwrap();
 
-        verify_all_entries_for_commit(&mut rt, ctx, repo, *latest);
+        verify_all_entries_for_commit(&ctx, &repo, *latest).await;
     }
 
     #[fbinit::test]
-    fn test_find_intersection_of_diffs_unodes_linear(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new().unwrap();
-        let repo = rt.block_on_std(linear::getrepo(fb));
+    async fn test_find_intersection_of_diffs_unodes_linear(fb: FacebookInit) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         // This commit creates file "1" and "files"
         // See eden/mononoke/tests/fixtures
-        let parent_root_unode = derive_unode(
-            &mut rt,
-            ctx.clone(),
-            repo.clone(),
-            "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536",
-        )?;
+        let parent_root_unode =
+            derive_unode(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
 
         // This commit creates file "2" and modifies "files"
         // See eden/mononoke/tests/fixtures
-        let child_root_unode = derive_unode(
-            &mut rt,
-            ctx.clone(),
-            repo.clone(),
-            "3e0e761030db6e479a7fb58b12881883f9f8c63f",
-        )?;
+        let child_root_unode =
+            derive_unode(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
 
-        let mut entries = rt.block_on(
-            find_intersection_of_diffs(
-                ctx,
-                Arc::new(repo.get_blobstore()),
-                child_root_unode,
-                vec![parent_root_unode],
-            )
-            .boxed()
-            .compat()
-            .map(|(path, _)| match path {
-                Some(path) => String::from_utf8(path.to_vec()).unwrap(),
-                None => String::new(),
-            })
-            .collect(),
-        )?;
+        let mut entries: Vec<_> = find_intersection_of_diffs(
+            ctx,
+            Arc::new(repo.get_blobstore()),
+            child_root_unode,
+            vec![parent_root_unode],
+        )
+        .map_ok(|(path, _)| match path {
+            Some(path) => String::from_utf8(path.to_vec()).unwrap(),
+            None => String::new(),
+        })
+        .try_collect()
+        .await?;
         entries.sort();
 
         assert_eq!(
@@ -458,15 +418,14 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn test_find_intersection_of_diffs_merge(fb: FacebookInit) -> Result<(), Error> {
-        fn test_single_find_unodes_merge(
+    async fn test_find_intersection_of_diffs_merge(fb: FacebookInit) -> Result<(), Error> {
+        async fn test_single_find_unodes_merge(
             fb: FacebookInit,
             parent_files: Vec<BTreeMap<&str, Option<&str>>>,
             merge_files: BTreeMap<&str, Option<&str>>,
             expected: Vec<String>,
         ) -> Result<(), Error> {
-            let mut rt = Runtime::new().unwrap();
-            let repo = rt.block_on_std(linear::getrepo(fb));
+            let repo = linear::getrepo(fb).await;
             let ctx = CoreContext::test_mock(fb);
 
             let mut bonsais = vec![];
@@ -474,50 +433,46 @@ mod tests {
 
             for (i, p) in parent_files.into_iter().enumerate() {
                 println!("parent {}, {:?} ", i, p);
-                let stored_files = rt.block_on_std(store_files(ctx.clone(), p, repo.clone()));
+                let stored_files = store_files(&ctx, p, &repo).await;
                 let bcs = create_bonsai_changeset_with_files(vec![], stored_files);
                 parents.push(bcs.get_changeset_id());
                 bonsais.push(bcs);
             }
 
             println!("merge {:?} ", merge_files);
-            let merge_stored_files =
-                rt.block_on_std(store_files(ctx.clone(), merge_files, repo.clone()));
+            let merge_stored_files = store_files(&ctx, merge_files, &repo).await;
             let bcs = create_bonsai_changeset_with_files(parents.clone(), merge_stored_files);
             let merge_bcs_id = bcs.get_changeset_id();
 
             bonsais.push(bcs);
-            rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
+            save_bonsai_changesets(bonsais, ctx.clone(), repo.clone())
+                .compat()
+                .await
                 .unwrap();
 
             let mut parent_unodes = vec![];
 
             for p in parents {
-                let parent_unode = RootUnodeManifestId::derive(&ctx, &repo, p);
-                let parent_unode = rt.block_on_std(parent_unode)?;
+                let parent_unode = RootUnodeManifestId::derive(&ctx, &repo, p).await?;
                 let parent_unode = parent_unode.manifest_unode_id().clone();
                 parent_unodes.push(parent_unode);
             }
 
-            let merge_unode = RootUnodeManifestId::derive(&ctx, &repo, merge_bcs_id);
-            let merge_unode = rt.block_on_std(merge_unode)?;
+            let merge_unode = RootUnodeManifestId::derive(&ctx, &repo, merge_bcs_id).await?;
             let merge_unode = merge_unode.manifest_unode_id().clone();
 
-            let mut entries = rt.block_on(
-                find_intersection_of_diffs(
-                    ctx,
-                    Arc::new(repo.get_blobstore()),
-                    merge_unode,
-                    parent_unodes,
-                )
-                .boxed()
-                .compat()
-                .map(|(path, _)| match path {
-                    Some(path) => String::from_utf8(path.to_vec()).unwrap(),
-                    None => String::new(),
-                })
-                .collect(),
-            )?;
+            let mut entries: Vec<_> = find_intersection_of_diffs(
+                ctx,
+                Arc::new(repo.get_blobstore()),
+                merge_unode,
+                parent_unodes,
+            )
+            .map_ok(|(path, _)| match path {
+                Some(path) => String::from_utf8(path.to_vec()).unwrap(),
+                None => String::new(),
+            })
+            .try_collect()
+            .await?;
             entries.sort();
 
             assert_eq!(entries, expected);
@@ -536,7 +491,8 @@ mod tests {
             ],
             btreemap! {},
             vec![String::new()],
-        )?;
+        )
+        .await?;
 
         test_single_find_unodes_merge(
             fb,
@@ -553,7 +509,8 @@ mod tests {
             ],
             btreemap! {},
             vec![String::new()],
-        )?;
+        )
+        .await?;
 
         test_single_find_unodes_merge(
             fb,
@@ -569,7 +526,8 @@ mod tests {
                 "inmerge" => Some("1"),
             },
             vec![String::new(), String::from("inmerge")],
-        )?;
+        )
+        .await?;
 
         test_single_find_unodes_merge(
             fb,
@@ -585,48 +543,48 @@ mod tests {
                 "file" => Some("mergecontent"),
             },
             vec![String::new(), String::from("file")],
-        )?;
+        )
+        .await?;
         Ok(())
     }
 
     #[fbinit::test]
-    fn test_derive_merges(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new().unwrap();
+    async fn test_derive_merges(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
         {
-            let repo = rt.block_on_std(merge_uneven::getrepo(fb));
-            let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
+            let repo = merge_uneven::getrepo(fb).await;
+            let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
-                verify_all_entries_for_commit(&mut rt, ctx.clone(), repo.clone(), bcs_id);
+                verify_all_entries_for_commit(&ctx, &repo, bcs_id).await;
             }
         }
 
         {
-            let repo = rt.block_on_std(merge_even::getrepo(fb));
-            let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
+            let repo = merge_even::getrepo(fb).await;
+            let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
-                verify_all_entries_for_commit(&mut rt, ctx.clone(), repo.clone(), bcs_id);
+                verify_all_entries_for_commit(&ctx, &repo, bcs_id).await;
             }
         }
 
         {
-            let repo = rt.block_on_std(unshared_merge_even::getrepo(fb));
-            let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
+            let repo = unshared_merge_even::getrepo(fb).await;
+            let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
-                verify_all_entries_for_commit(&mut rt, ctx.clone(), repo.clone(), bcs_id);
+                verify_all_entries_for_commit(&ctx, &repo, bcs_id).await;
             }
         }
 
         {
-            let repo = rt.block_on_std(unshared_merge_uneven::getrepo(fb));
-            let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
+            let repo = unshared_merge_uneven::getrepo(fb).await;
+            let all_commits: Vec<_> = all_commits(ctx.clone(), repo.clone()).try_collect().await?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
-                verify_all_entries_for_commit(&mut rt, ctx.clone(), repo.clone(), bcs_id);
+                verify_all_entries_for_commit(&ctx, &repo, bcs_id).await;
             }
         }
 
@@ -634,9 +592,8 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn test_bfs_order(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new().unwrap();
-        let repo = rt.block_on_std(linear::getrepo(fb));
+    async fn test_bfs_order(fb: FacebookInit) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         //            E
@@ -666,29 +623,17 @@ mod tests {
         println!("g = {}", g.get_changeset_id());
         bonsais.push(g.clone());
 
-        let stored_files = rt.block_on_std(store_files(
-            ctx.clone(),
-            btreemap! { "file" => Some("f") },
-            repo.clone(),
-        ));
+        let stored_files = store_files(&ctx, btreemap! { "file" => Some("f") }, &repo).await;
         let f = create_bonsai_changeset_with_files(vec![g.get_changeset_id()], stored_files);
         println!("f = {}", f.get_changeset_id());
         bonsais.push(f.clone());
 
-        let stored_files = rt.block_on_std(store_files(
-            ctx.clone(),
-            btreemap! { "file" => Some("d") },
-            repo.clone(),
-        ));
+        let stored_files = store_files(&ctx, btreemap! { "file" => Some("d") }, &repo).await;
         let d = create_bonsai_changeset_with_files(vec![f.get_changeset_id()], stored_files);
         println!("d = {}", d.get_changeset_id());
         bonsais.push(d.clone());
 
-        let stored_files = rt.block_on_std(store_files(
-            ctx.clone(),
-            btreemap! { "file" => Some("e") },
-            repo.clone(),
-        ));
+        let stored_files = store_files(&ctx, btreemap! { "file" => Some("e") }, &repo).await;
         let e = create_bonsai_changeset_with_files(
             vec![d.get_changeset_id(), c.get_changeset_id()],
             stored_files,
@@ -696,104 +641,102 @@ mod tests {
         println!("e = {}", e.get_changeset_id());
         bonsais.push(e.clone());
 
-        rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))?;
+        save_bonsai_changesets(bonsais, ctx.clone(), repo.clone())
+            .compat()
+            .await?;
 
-        verify_all_entries_for_commit(&mut rt, ctx, repo, e.get_changeset_id());
+        verify_all_entries_for_commit(&ctx, &repo, e.get_changeset_id()).await;
         Ok(())
     }
 
     fn all_commits(
         ctx: CoreContext,
         repo: BlobRepo,
-    ) -> impl Stream<Item = (ChangesetId, HgChangesetId), Error = Error> {
+    ) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> {
         let master_book = BookmarkName::new("master").unwrap();
         repo.get_bonsai_bookmark(ctx.clone(), &master_book)
-            .map(move |maybe_bcs_id| {
+            .compat()
+            .map_ok(move |maybe_bcs_id| {
                 let bcs_id = maybe_bcs_id.unwrap();
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
+                    .compat()
                     .and_then(move |new_bcs_id| {
                         repo.get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
-                            .map(move |hg_cs_id| (new_bcs_id, hg_cs_id))
+                            .compat()
+                            .map_ok(move |hg_cs_id| (new_bcs_id, hg_cs_id))
                     })
             })
-            .flatten_stream()
+            .try_flatten_stream()
     }
 
-    fn verify_all_entries_for_commit(
-        rt: &mut Runtime,
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn verify_all_entries_for_commit(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
         bcs_id: ChangesetId,
     ) {
-        let root_unode_mf_id =
-            derive_fastlog_batch_and_unode(rt, ctx.clone(), bcs_id.clone(), repo.clone());
+        let root_unode_mf_id = derive_fastlog_batch_and_unode(ctx, bcs_id.clone(), repo).await;
 
         let blobstore = Arc::new(repo.get_blobstore());
-        let entries = rt
-            .block_on(
-                root_unode_mf_id
-                    .list_all_entries(ctx.clone(), blobstore.clone())
-                    .compat()
-                    .collect(),
-            )
+        let entries: Vec<_> = root_unode_mf_id
+            .list_all_entries(ctx.clone(), blobstore.clone())
+            .try_collect()
+            .await
             .unwrap();
 
         for (path, entry) in entries {
             println!("verifying: path: {:?} unode: {:?}", path, entry);
-            verify_list(rt, ctx.clone(), repo.clone(), entry);
+            verify_list(ctx, repo, entry).await;
         }
     }
 
-    fn derive_unode(
-        rt: &mut Runtime,
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn derive_unode(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
         hg_cs: &str,
     ) -> Result<ManifestUnodeId, Error> {
         let hg_cs_id = HgChangesetId::from_str(hg_cs)?;
-        let bcs_id = rt.block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))?;
+        let bcs_id = repo
+            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .compat()
+            .await?;
         let bcs_id = bcs_id.unwrap();
-        let root_unode = RootUnodeManifestId::derive(&ctx, &repo, bcs_id);
-        let root_unode = rt.block_on_std(root_unode)?;
+        let root_unode = RootUnodeManifestId::derive(&ctx, &repo, bcs_id).await?;
         Ok(root_unode.manifest_unode_id().clone())
     }
 
-    fn derive_fastlog_batch_and_unode(
-        rt: &mut Runtime,
-        ctx: CoreContext,
+    async fn derive_fastlog_batch_and_unode(
+        ctx: &CoreContext,
         bcs_id: ChangesetId,
-        repo: BlobRepo,
+        repo: &BlobRepo,
     ) -> ManifestUnodeId {
-        rt.block_on_std(RootFastlog::derive(&ctx, &repo, bcs_id))
-            .unwrap();
+        RootFastlog::derive(&ctx, &repo, bcs_id).await.unwrap();
 
-        let root_unode = RootUnodeManifestId::derive(&ctx, &repo, bcs_id);
-        let root_unode = rt.block_on_std(root_unode).unwrap();
+        let root_unode = RootUnodeManifestId::derive(&ctx, &repo, bcs_id)
+            .await
+            .unwrap();
         root_unode.manifest_unode_id().clone()
     }
 
-    fn verify_list(
-        rt: &mut Runtime,
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn verify_list(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
         entry: Entry<ManifestUnodeId, FileUnodeId>,
     ) {
-        let list = fetch_list(rt, ctx.clone(), repo.clone(), entry);
+        let list = fetch_list(ctx, repo, entry).await;
         let actual_bonsais: Vec<_> = list.into_iter().map(|(bcs_id, _)| bcs_id).collect();
 
-        let expected_bonsais = find_unode_history(ctx.fb, rt, repo, entry);
+        let expected_bonsais = find_unode_history(ctx.fb, repo, entry).await;
         assert_eq!(actual_bonsais, expected_bonsais);
     }
 
-    fn fetch_list(
-        rt: &mut Runtime,
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn fetch_list(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
         entry: Entry<ManifestUnodeId, FileUnodeId>,
     ) -> Vec<(ChangesetId, Vec<FastlogParent>)> {
-        let blobstore: Arc<dyn Blobstore> = Arc::new(repo.get_blobstore());
-        let batch = rt
-            .block_on_std(fetch_fastlog_batch_by_unode_id(&ctx, &blobstore, entry))
+        let blobstore = repo.blobstore();
+        let batch = fetch_fastlog_batch_by_unode_id(ctx, blobstore, entry)
+            .await
             .unwrap()
             .expect("batch hasn't been generated yet");
 
@@ -805,14 +748,12 @@ mod tests {
         );
         assert!(batch.latest().len() <= MAX_LATEST_LEN);
         assert!(batch.previous_batches().len() <= MAX_BATCHES);
-        rt.block_on(fetch_flattened(&batch, ctx, blobstore))
-            .unwrap()
+        fetch_flattened(&batch, ctx, blobstore).await.unwrap()
     }
 
-    fn find_unode_history(
+    async fn find_unode_history(
         fb: FacebookInit,
-        runtime: &mut Runtime,
-        repo: BlobRepo,
+        repo: &BlobRepo,
         start: Entry<ManifestUnodeId, FileUnodeId>,
     ) -> Vec<ChangesetId> {
         let ctx = CoreContext::test_mock(fb);
@@ -830,94 +771,76 @@ mod tests {
                     break;
                 }
             };
-            let linknode = runtime
-                .block_on(unode_entry.get_linknode(ctx.clone(), repo.clone()))
-                .unwrap();
+            let linknode = unode_entry.get_linknode(&ctx, &repo).await.unwrap();
             history.push(linknode);
             if history.len() >= max_entries_in_fastlog_batch() {
                 break;
             }
-            let parents = runtime
-                .block_on(unode_entry.get_parents(ctx.clone(), repo.clone()))
-                .unwrap();
+            let parents = unode_entry.get_parents(&ctx, &repo).await.unwrap();
             q.extend(parents.into_iter().filter(|x| visited.insert(x.clone())));
         }
 
         history
     }
 
+    #[async_trait]
     trait UnodeHistory {
-        fn get_parents(
-            &self,
-            ctx: CoreContext,
-            repo: BlobRepo,
-        ) -> BoxFuture<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error>;
+        async fn get_parents<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            repo: &'a BlobRepo,
+        ) -> Result<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error>;
 
-        fn get_linknode(&self, ctx: CoreContext, repo: BlobRepo) -> BoxFuture<ChangesetId, Error>;
+        async fn get_linknode<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            repo: &'a BlobRepo,
+        ) -> Result<ChangesetId, Error>;
     }
 
+    #[async_trait]
     impl UnodeHistory for Entry<ManifestUnodeId, FileUnodeId> {
-        fn get_parents(
-            &self,
-            ctx: CoreContext,
-            repo: BlobRepo,
-        ) -> BoxFuture<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
+        async fn get_parents<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            repo: &'a BlobRepo,
+        ) -> Result<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
             match self {
                 Entry::Leaf(file_unode_id) => {
-                    cloned!(file_unode_id);
-                    async move { file_unode_id.load(ctx, repo.blobstore()).await }
-                        .boxed()
-                        .compat()
-                        .from_err()
-                        .map(|unode_mf| {
-                            unode_mf
-                                .parents()
-                                .iter()
-                                .cloned()
-                                .map(Entry::Leaf)
-                                .collect()
-                        })
-                        .boxify()
+                    let unode_mf = file_unode_id.load(ctx, repo.blobstore()).await?;
+                    Ok(unode_mf
+                        .parents()
+                        .iter()
+                        .cloned()
+                        .map(Entry::Leaf)
+                        .collect())
                 }
                 Entry::Tree(mf_unode_id) => {
-                    cloned!(mf_unode_id);
-                    async move { mf_unode_id.load(ctx, repo.blobstore()).await }
-                        .boxed()
-                        .compat()
-                        .from_err()
-                        .map(|unode_mf| {
-                            unode_mf
-                                .parents()
-                                .iter()
-                                .cloned()
-                                .map(Entry::Tree)
-                                .collect()
-                        })
-                        .boxify()
+                    let unode_mf = mf_unode_id.load(ctx, repo.blobstore()).await?;
+                    Ok(unode_mf
+                        .parents()
+                        .iter()
+                        .cloned()
+                        .map(Entry::Tree)
+                        .collect())
                 }
             }
         }
 
-        fn get_linknode(&self, ctx: CoreContext, repo: BlobRepo) -> BoxFuture<ChangesetId, Error> {
+        async fn get_linknode<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            repo: &'a BlobRepo,
+        ) -> Result<ChangesetId, Error> {
             match self {
                 Entry::Leaf(file_unode_id) => {
-                    cloned!(file_unode_id);
-                    async move { file_unode_id.load(ctx, repo.blobstore()).await }
+                    let unode_file = file_unode_id.load(ctx, repo.blobstore()).await?;
+                    Ok(unode_file.linknode().clone())
                 }
-                .boxed()
-                .compat()
-                .from_err()
-                .map(|unode_file| unode_file.linknode().clone())
-                .boxify(),
                 Entry::Tree(mf_unode_id) => {
-                    cloned!(mf_unode_id);
-                    async move { mf_unode_id.load(ctx, repo.blobstore()).await }
+                    let unode_mf = mf_unode_id.load(ctx, repo.blobstore()).await?;
+                    Ok(unode_mf.linknode().clone())
                 }
-                .boxed()
-                .compat()
-                .from_err()
-                .map(|unode_mf| unode_mf.linknode().clone())
-                .boxify(),
             }
         }
     }

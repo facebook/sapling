@@ -9,7 +9,6 @@ use anyhow::{format_err, Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreBytes, Loadable};
-use borrowed::borrowed;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -74,7 +73,10 @@ impl BonsaiDerived for BlameRoot {
                 async move {
                     let (path, file) = v?;
                     Result::<_>::Ok(
-                        tokio::spawn(create_blame(ctx, repo, renames, csid, path, file)).await??,
+                        tokio::spawn(async move {
+                            create_blame(&ctx, &repo, renames, csid, path, file).await
+                        })
+                        .await??,
                     )
                 }
             })
@@ -115,7 +117,7 @@ impl BonsaiDerivedMapping for BlameRootMapping {
             .map(move |csid| {
                 cloned!(ctx);
                 async move {
-                    let val = self.blobstore.get(ctx, self.format_key(&csid)).await?;
+                    let val = self.blobstore.get(&ctx, &self.format_key(&csid)).await?;
                     Ok(val.map(|_| (csid.clone(), BlameRoot(csid))))
                 }
             })
@@ -133,7 +135,7 @@ impl BonsaiDerivedMapping for BlameRootMapping {
     ) -> Result<(), Error> {
         self.blobstore
             .put(
-                ctx,
+                &ctx,
                 self.format_key(&csid),
                 BlobstoreBytes::from_bytes(Bytes::new()),
             )
@@ -142,16 +144,16 @@ impl BonsaiDerivedMapping for BlameRootMapping {
 }
 
 async fn create_blame(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     renames: Arc<HashMap<MPath, FileUnodeId>>,
     csid: ChangesetId,
     path: MPath,
     file_unode_id: FileUnodeId,
 ) -> Result<BlameId, Error> {
-    let blobstore = repo.blobstore().clone();
+    let blobstore = repo.blobstore();
 
-    let file_unode = file_unode_id.load(ctx.clone(), &blobstore).await?;
+    let file_unode = file_unode_id.load(ctx, blobstore).await?;
 
     let parents_content_and_blame: Vec<_> = file_unode
         .parents()
@@ -159,16 +161,15 @@ async fn create_blame(
         .cloned()
         .chain(renames.get(&path).cloned())
         .map(|file_unode_id| {
-            future::try_join(fetch_file_full_content(&ctx, &repo, file_unode_id), {
-                cloned!(ctx);
-                borrowed!(blobstore);
-                async move { BlameId::from(file_unode_id).load(ctx, blobstore).await }.err_into()
-            })
+            future::try_join(
+                fetch_file_full_content(ctx, repo, file_unode_id),
+                async move { BlameId::from(file_unode_id).load(ctx, blobstore).await }.err_into(),
+            )
         })
         .collect();
 
     let (content, parents_content) = future::try_join(
-        fetch_file_full_content(&ctx, &repo, file_unode_id),
+        fetch_file_full_content(ctx, repo, file_unode_id),
         future::try_join_all(parents_content_and_blame),
     )
     .await?;
@@ -186,7 +187,7 @@ async fn create_blame(
         }
     };
 
-    async move { store_blame(ctx, &blobstore, file_unode_id, blame_maybe_rejected).await }.await
+    store_blame(ctx, &blobstore, file_unode_id, blame_maybe_rejected).await
 }
 
 pub async fn fetch_file_full_content(
@@ -196,7 +197,7 @@ pub async fn fetch_file_full_content(
 ) -> Result<Result<Bytes, BlameRejected>, Error> {
     let blobstore = repo.blobstore();
     let file_unode = file_unode_id
-        .load(ctx.clone(), blobstore)
+        .load(ctx, blobstore)
         .map_err(|error| FetchError::Error(error.into()))
         .await?;
 

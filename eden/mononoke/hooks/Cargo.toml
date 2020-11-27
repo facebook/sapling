@@ -56,4 +56,5 @@ fixtures = { path = "../tests/fixtures" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 tests_utils = { path = "../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio-compat = "0.1"

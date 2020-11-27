@@ -276,16 +276,25 @@ impl From<BlobstoreBytesSerialisable> for BlobstoreBytes {
 #[auto_impl(&, Arc, Box)]
 pub trait Blobstore: fmt::Debug + Send + Sync {
     /// Fetch the value associated with `key`, or None if no value is present
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>>;
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>>;
     /// Associate `value` with `key` for future gets; if `put` is called with different `value`s
     /// for the same key, the implementation may return any `value` it's been given in response
     /// to a `get` for that `key`.
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()>;
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()>;
     /// Check that `get` will return a value for a given `key`, and not None. The provided
     /// implentation just calls `get`, and discards the return value; this can be overridden to
     /// avoid transferring data. In the absence of concurrent `put` calls, this must return
     /// `false` if `get` would return `None`, and `true` if `get` would return `Some(_)`.
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         Ok(self.get(ctx, key).await?.is_some())
     }
 }
@@ -355,9 +364,9 @@ pub enum OverwriteStatus {
 pub trait BlobstorePutOps: Blobstore {
     /// Adds ability to specify the put behaviour explicitly so that even if per process default was
     /// IfAbsent  once could chose to OverwriteAndLog.  Expected to be used only in admin tools
-    async fn put_explicit(
-        &self,
-        ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -365,9 +374,9 @@ pub trait BlobstorePutOps: Blobstore {
 
     /// Similar to `Blobstore::put`, but returns the OverwriteStatus as feedback rather than unit.
     /// Its here rather so we don't reveal the OverwriteStatus to regular put users.
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus>;
@@ -379,17 +388,22 @@ pub trait BlobstorePutOps: Blobstore {
 #[auto_impl(Arc, Box)]
 pub trait BlobstoreWithLink: Blobstore {
     // TODO(ahornby) return OverwriteStatus for logging
-    async fn link(&self, ctx: CoreContext, existing_key: String, link_key: String) -> Result<()>;
+    async fn link<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        existing_key: &'a str,
+        link_key: String,
+    ) -> Result<()>;
 }
 
 /// BlobstoreKeySource Interface
 /// Abstract for use with populate_healer
 #[async_trait]
 pub trait BlobstoreKeySource: Blobstore {
-    async fn enumerate(
-        &self,
-        ctx: CoreContext,
-        range: BlobstoreKeyParam,
+    async fn enumerate<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        range: &'a BlobstoreKeyParam,
     ) -> Result<BlobstoreEnumerationData>;
 }
 
@@ -470,7 +484,7 @@ pub trait Loadable {
 
     async fn load<'a, B: Blobstore>(
         &'a self,
-        ctx: CoreContext,
+        ctx: &'a CoreContext,
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError>;
 }
@@ -479,7 +493,11 @@ pub trait Loadable {
 pub trait Storable: Sized {
     type Key: 'static;
 
-    async fn store<B: Blobstore>(self, ctx: CoreContext, blobstore: &B) -> Result<Self::Key>;
+    async fn store<'a, B: Blobstore>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<Self::Key>;
 }
 
 /// StoreLoadable represents an object that be loaded asynchronously through a given store of type
@@ -492,7 +510,7 @@ pub trait StoreLoadable<S> {
 
     async fn load<'a>(
         &'a self,
-        ctx: CoreContext,
+        ctx: &'a CoreContext,
         store: &'a S,
     ) -> Result<Self::Value, LoadableError>;
 }
@@ -504,7 +522,7 @@ impl<L: Loadable + Sync, S: Blobstore> StoreLoadable<S> for L {
 
     async fn load<'a>(
         &'a self,
-        ctx: CoreContext,
+        ctx: &'a CoreContext,
         store: &'a S,
     ) -> Result<Self::Value, LoadableError> {
         self.load(ctx, store).await

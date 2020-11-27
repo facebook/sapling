@@ -187,30 +187,48 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
 
 #[async_trait]
 impl<T: Blobstore> Blobstore for RedactedBlobstoreInner<T> {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
-        let blobstore = self.access_blobstore(&ctx, &key, config::GET_OPERATION)?;
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        let blobstore = self.access_blobstore(ctx, key, config::GET_OPERATION)?;
         blobstore.get(ctx, key).await
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
-        let blobstore = self.access_blobstore(&ctx, &key, config::PUT_OPERATION)?;
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
+        let blobstore = self.access_blobstore(ctx, &key, config::PUT_OPERATION)?;
         blobstore.put(ctx, key, value).await
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         self.blobstore.is_present(ctx, key).await
     }
 }
 
 #[async_trait]
 impl<B: Blobstore> Blobstore for RedactedBlobstore<B> {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         self.inner.get(ctx, key).await
     }
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         self.inner.put(ctx, key, value).await
     }
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         self.inner.is_present(ctx, key).await
     }
 }
@@ -226,6 +244,7 @@ pub fn has_redaction_root_cause(e: &Error) -> bool {
 mod test {
     use super::*;
     use assert_matches::assert_matches;
+    use borrowed::borrowed;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use maplit::hashmap;
@@ -234,16 +253,17 @@ mod test {
 
     #[fbinit::compat_test]
     async fn test_redacted_key(fb: FacebookInit) {
-        let unredacted_key = "foo".to_string();
-        let redacted_key = "bar".to_string();
-        let redacted_task = "bar task".to_string();
+        let unredacted_key = "foo";
+        let redacted_key = "bar";
+        let redacted_task = "bar task";
 
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
 
         let inner = Memblob::default();
         let redacted_pairs = hashmap! {
-            redacted_key.clone() => RedactedMetadata {
-                task: redacted_task.clone(),
+            redacted_key.to_owned() => RedactedMetadata {
+                task: redacted_task.to_owned(),
                 log_only: false,
             },
         };
@@ -256,8 +276,8 @@ mod test {
         //Test put with redacted key
         let res = blob
             .put(
-                ctx.clone(),
-                redacted_key.clone(),
+                ctx,
+                redacted_key.to_owned(),
                 BlobstoreBytes::from_bytes("test bar"),
             )
             .await;
@@ -270,15 +290,15 @@ mod test {
         //Test key added to the blob
         let res = blob
             .put(
-                ctx.clone(),
-                unredacted_key.clone(),
+                ctx,
+                unredacted_key.to_owned(),
                 BlobstoreBytes::from_bytes("test foo"),
             )
             .await;
         assert!(res.is_ok(), "the key should be added successfully");
 
         // Test accessing a key which is redacted
-        let res = blob.get(ctx.clone(), redacted_key.clone()).await;
+        let res = blob.get(ctx, redacted_key).await;
 
         assert_matches!(
             res.expect_err("the key should be redacted").downcast::<ErrorKind>(),
@@ -286,21 +306,22 @@ mod test {
         );
 
         // Test accessing a key which exists and is accesible
-        let res = blob.get(ctx.clone(), unredacted_key.clone()).await;
+        let res = blob.get(ctx, unredacted_key).await;
         assert!(res.is_ok(), "the key should be found and available");
     }
 
     #[fbinit::compat_test]
     async fn test_log_only_redacted_key(fb: FacebookInit) -> Result<()> {
-        let redacted_log_only_key = "bar".to_string();
-        let redacted_task = "bar task".to_string();
+        let redacted_log_only_key = "bar";
+        let redacted_task = "bar task";
 
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
 
         let inner = Memblob::default();
         let redacted_pairs = hashmap! {
-            redacted_log_only_key.clone() => RedactedMetadata {
-                task: redacted_task.clone(),
+            redacted_log_only_key.to_owned() => RedactedMetadata {
+                task: redacted_task.to_owned(),
                 log_only: true,
             },
         };
@@ -312,10 +333,10 @@ mod test {
 
         // Since this is a log-only mode it should succeed
         let val = BlobstoreBytes::from_bytes("test bar");
-        blob.put(ctx.clone(), redacted_log_only_key.clone(), val.clone())
+        blob.put(ctx, redacted_log_only_key.to_owned(), val.clone())
             .await?;
 
-        let actual = blob.get(ctx.clone(), redacted_log_only_key.clone()).await?;
+        let actual = blob.get(ctx, redacted_log_only_key).await?;
         assert_eq!(Some(val), actual.map(|val| val.into_bytes()));
 
         Ok(())

@@ -144,7 +144,7 @@ async fn create_unode_manifest(
 
     let key = mf_unode_id.blobstore_key();
     let blob = mf_unode.into_blob();
-    let f = async move { blobstore.put(ctx, key, blob.into()).await };
+    let f = async move { blobstore.put(&ctx, key, blob.into()).await };
 
     match sender {
         Some(sender) => sender
@@ -188,7 +188,7 @@ async fn create_unode_file(
             let f = async move {
                 blobstore
                     .put(
-                        ctx,
+                        &ctx,
                         file_unode_id.blobstore_key(),
                         file_unode.into_blob().into(),
                     )
@@ -253,8 +253,7 @@ async fn create_unode_file(
             .into());
         }
         let parent_unodes = try_join_all(parents.clone().into_iter().map(|id| {
-            cloned!(ctx);
-            borrowed!(blobstore);
+            borrowed!(ctx, blobstore);
             async move { id.load(ctx, blobstore).await }
         }))
         .await?;
@@ -325,7 +324,7 @@ async fn reuse_manifest_parent(
     let parents = new_future::try_join_all(
         parents
             .iter()
-            .map(|id| id.load(ctx.clone(), blobstore).map_err(Error::from)),
+            .map(|id| id.load(ctx, blobstore).map_err(Error::from)),
     )
     .await?;
 
@@ -346,7 +345,7 @@ async fn reuse_file_parent(
     let parents = new_future::try_join_all(
         parents
             .iter()
-            .map(|id| id.load(ctx.clone(), blobstore).map_err(Error::from)),
+            .map(|id| id.load(ctx, blobstore).map_err(Error::from)),
     )
     .await?;
 
@@ -378,6 +377,7 @@ mod tests {
     use super::*;
     use crate::mapping::{get_file_changes, RootUnodeManifestId};
     use anyhow::Result;
+    use async_trait::async_trait;
     use blobrepo::save_bonsai_changesets;
     use blobrepo::BlobRepo;
     use blobrepo_factory::new_memblob_empty;
@@ -436,7 +436,7 @@ mod tests {
             let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
             runtime
-                .block_on_std(unode_id.load(ctx.clone(), repo.blobstore()))
+                .block_on_std(unode_id.load(&ctx, repo.blobstore()))
                 .unwrap();
             let all_unodes: Vec<_> = runtime
                 .block_on_std(
@@ -474,11 +474,8 @@ mod tests {
 
             let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
-            let root_unode: Result<_> = runtime.block_on_std(
-                unode_id
-                    .load(ctx.clone(), repo.blobstore())
-                    .map_err(Error::from),
-            );
+            let root_unode: Result<_> =
+                runtime.block_on_std(unode_id.load(&ctx, repo.blobstore()).map_err(Error::from));
             let root_unode = root_unode.unwrap();
             assert_eq!(root_unode.parents(), &vec![parent_unode_id]);
 
@@ -540,7 +537,7 @@ mod tests {
             let unode_id = runtime.block_on(f).unwrap();
 
             let unode_mf: Result<_> =
-                runtime.block_on_std(unode_id.load(ctx, repo.blobstore()).map_err(Error::from));
+                runtime.block_on_std(unode_id.load(&ctx, repo.blobstore()).map_err(Error::from));
             let unode_mf = unode_mf.unwrap();
 
             // Unodes should be unique even if content is the same. Check it
@@ -687,7 +684,7 @@ mod tests {
         assert_ne!(p1_unodes, merge_unodes);
 
         for ((_, p1), (_, merge)) in p1_unodes.iter().zip(merge_unodes.iter()) {
-            let merge_unode = merge.load(ctx.clone(), &repo.get_blobstore()).await?;
+            let merge_unode = merge.load(&ctx, repo.blobstore()).await?;
 
             match (p1, merge_unode) {
                 (Entry::Leaf(p1), Entry::Leaf(ref merge_unode)) => {
@@ -955,7 +952,7 @@ mod tests {
                     let content =
                         FileContents::Bytes(Bytes::copy_from_slice(content.as_bytes())).into_blob();
                     let content_id = runtime
-                        .block_on_std(content.store(ctx.clone(), repo.blobstore()))
+                        .block_on_std(content.store(&ctx, repo.blobstore()))
                         .unwrap();
 
                     let file_change = FileChange::new(content_id, file_type, size as u64, None);
@@ -969,69 +966,65 @@ mod tests {
         res
     }
 
+    #[async_trait]
     trait UnodeHistory {
-        fn get_parents(
-            &self,
-            ctx: CoreContext,
-            repo: BlobRepo,
-        ) -> BoxFuture<'_, Result<Vec<UnodeEntry>, Error>>;
+        async fn get_parents<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            repo: &'a BlobRepo,
+        ) -> Result<Vec<UnodeEntry>, Error>;
 
-        fn get_linknode(
-            &self,
-            ctx: CoreContext,
-            repo: BlobRepo,
-        ) -> BoxFuture<'_, Result<ChangesetId, Error>>;
+        async fn get_linknode<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            repo: &'a BlobRepo,
+        ) -> Result<ChangesetId, Error>;
     }
 
+    #[async_trait]
     impl UnodeHistory for UnodeEntry {
-        fn get_parents(
-            &self,
-            ctx: CoreContext,
-            repo: BlobRepo,
-        ) -> BoxFuture<'_, Result<Vec<UnodeEntry>, Error>> {
-            async move {
-                match self {
-                    UnodeEntry::File(file_unode_id) => {
-                        let unode_mf = file_unode_id.load(ctx, repo.blobstore()).await?;
-                        Ok(unode_mf
-                            .parents()
-                            .into_iter()
-                            .cloned()
-                            .map(UnodeEntry::File)
-                            .collect())
-                    }
-                    UnodeEntry::Directory(mf_unode_id) => {
-                        let unode_mf = mf_unode_id.load(ctx, repo.blobstore()).await?;
-                        Ok(unode_mf
-                            .parents()
-                            .into_iter()
-                            .cloned()
-                            .map(UnodeEntry::Directory)
-                            .collect())
-                    }
+        async fn get_parents<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            repo: &'a BlobRepo,
+        ) -> Result<Vec<UnodeEntry>, Error> {
+            match self {
+                UnodeEntry::File(file_unode_id) => {
+                    let unode_mf = file_unode_id.load(ctx, repo.blobstore()).await?;
+                    Ok(unode_mf
+                        .parents()
+                        .iter()
+                        .cloned()
+                        .map(UnodeEntry::File)
+                        .collect())
+                }
+                UnodeEntry::Directory(mf_unode_id) => {
+                    let unode_mf = mf_unode_id.load(ctx, repo.blobstore()).await?;
+                    Ok(unode_mf
+                        .parents()
+                        .iter()
+                        .cloned()
+                        .map(UnodeEntry::Directory)
+                        .collect())
                 }
             }
-            .boxed()
         }
 
-        fn get_linknode(
-            &self,
-            ctx: CoreContext,
-            repo: BlobRepo,
-        ) -> BoxFuture<'_, Result<ChangesetId, Error>> {
-            async move {
-                match self {
-                    UnodeEntry::File(file_unode_id) => {
-                        let unode_file = file_unode_id.load(ctx, repo.blobstore()).await?;
-                        Ok(unode_file.linknode().clone())
-                    }
-                    UnodeEntry::Directory(mf_unode_id) => {
-                        let unode_mf = mf_unode_id.load(ctx, repo.blobstore()).await?;
-                        Ok(unode_mf.linknode().clone())
-                    }
+        async fn get_linknode<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            repo: &'a BlobRepo,
+        ) -> Result<ChangesetId, Error> {
+            match self {
+                UnodeEntry::File(file_unode_id) => {
+                    let unode_file = file_unode_id.load(ctx, repo.blobstore()).await?;
+                    Ok(unode_file.linknode().clone())
+                }
+                UnodeEntry::Directory(mf_unode_id) => {
+                    let unode_mf = mf_unode_id.load(ctx, repo.blobstore()).await?;
+                    Ok(unode_mf.linknode().clone())
                 }
             }
-            .boxed()
         }
     }
 
@@ -1057,11 +1050,11 @@ mod tests {
                 }
             };
             let linknode = runtime
-                .block_on(unode_entry.get_linknode(ctx.clone(), repo.clone()).compat())
+                .block_on(unode_entry.get_linknode(&ctx, &repo).compat())
                 .unwrap();
             history.push(linknode);
             let parents = runtime
-                .block_on(unode_entry.get_parents(ctx.clone(), repo.clone()).compat())
+                .block_on(unode_entry.get_parents(&ctx, &repo).compat())
                 .unwrap();
             q.extend(parents.into_iter().filter(|x| visited.insert(x.clone())));
         }
@@ -1104,7 +1097,7 @@ mod tests {
             history.push(linknode);
 
             let mf_fut = HgBlobManifest::load(
-                ctx.clone(),
+                &ctx,
                 repo.blobstore(),
                 HgManifestId::new(filenode_id.into_nodehash()),
             );
@@ -1139,7 +1132,7 @@ mod tests {
             .block_on(repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id))
             .unwrap();
         let hg_cs = runtime
-            .block_on_std(hg_cs_id.load(ctx, repo.blobstore()))
+            .block_on_std(hg_cs_id.load(&ctx, repo.blobstore()))
             .unwrap();
 
         HgFileNodeId::new(hg_cs.manifestid().into_nodehash())

@@ -118,13 +118,19 @@ impl CreateChangeset {
                     bonsai_parents: Vec<ChangesetId>,
                     repo: BlobRepo,
                 | {
-                    create_bonsai_changeset_object(
-                        ctx,
-                        hg_cs,
-                        parent_manifest_hashes,
-                        bonsai_parents,
-                        repo,
-                    )
+                    {
+                        cloned!(ctx, repo);
+                        async move {
+                            create_bonsai_changeset_object(
+                                &ctx,
+                                hg_cs,
+                                parent_manifest_hashes,
+                                bonsai_parents,
+                                &repo,
+                            )
+                            .await
+                        }
+                    }
                     .boxed()
                     .compat()
                     .boxify()
@@ -242,17 +248,23 @@ impl CreateChangeset {
                                                 .expect("signal_parent_ready cannot be taken yet")
                                                 .send(Ok((bcs_id, cs_id, manifest_id)));
 
-                                            let bonsai_cs_fut = save_bonsai_changeset_object(
-                                                ctx.clone(),
-                                                blobstore.clone(),
-                                                bonsai_cs.clone(),
-                                            )
+                                            let bonsai_cs_fut = {
+                                                cloned!(ctx, blobstore, bonsai_cs);
+                                                async move {
+                                                    save_bonsai_changeset_object(
+                                                        &ctx,
+                                                        &blobstore,
+                                                        bonsai_cs.clone(),
+                                                    )
+                                                    .await
+                                                }
+                                            }
                                             .boxed()
                                             .compat();
 
                                             {
                                                 cloned!(ctx, blobcs);
-                                                async move { blobcs.save(ctx, blobstore).await }
+                                                async move { blobcs.save(&ctx, &blobstore).await }
                                             }
                                             .boxed()
                                             .compat()

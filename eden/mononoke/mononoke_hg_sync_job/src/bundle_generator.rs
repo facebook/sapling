@@ -212,7 +212,7 @@ fn create_bundle_impl(
             cloned!(ctx, repo);
             move |hg_cs_id| {
                 cloned!(ctx, repo);
-                async move { hg_cs_id.load(ctx, repo.blobstore()).await }
+                async move { hg_cs_id.load(&ctx, repo.blobstore()).await }
                     .boxed()
                     .compat()
                     .from_err()
@@ -325,7 +325,7 @@ async fn fetch_timestamps(
         stream::iter(hg_cs_ids.into_iter().map(Result::<_, Error>::Ok))
             .map(move |res| async move {
                 let hg_cs_id = res?;
-                async move { hg_cs_id.load(ctx.clone(), repo.blobstore()).await }
+                async move { hg_cs_id.load(ctx, repo.blobstore()).await }
                     .err_into()
                     .map_ok(move |hg_blob_cs| (hg_cs_id, hg_blob_cs.time().clone().into()))
                     .await

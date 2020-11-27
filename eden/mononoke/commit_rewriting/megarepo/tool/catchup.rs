@@ -79,7 +79,7 @@ pub async fn create_deletion_head_commits<'a>(
 
         info!(ctx.logger(), "derived {}, pushrebasing...", hg_cs_id);
 
-        let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).await?;
+        let bcs = bcs_id.load(&ctx, repo.blobstore()).await?;
         let pushrebase_res = do_pushrebase_bonsai(
             &ctx,
             &repo,

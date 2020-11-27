@@ -19,17 +19,11 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use changesets::ChangesetInsert;
+use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use filestore::{self, FilestoreConfig, StoreRequest};
-use futures::{
-    compat::Future01CompatExt,
-    future::{self, FutureExt as _, TryFutureExt},
-    stream::{self, StreamExt as _, TryStreamExt},
-};
-use futures_ext::{FutureExt, StreamExt};
-use futures_old::Future;
-use futures_old::{future::IntoFuture, stream::Stream};
+use futures::{compat::Future01CompatExt, future, stream, Stream, StreamExt, TryStreamExt};
 use git2::{Oid, Repository, Sort};
 use git_types::TreeHandle;
 use linked_hash_map::LinkedHashMap;
@@ -44,14 +38,13 @@ use slog::info;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
 use std::path::Path;
-use std::sync::Arc;
 use tokio::task;
 
 const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
 
-async fn do_upload(
-    ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+async fn do_upload<B: Blobstore + Clone + 'static>(
+    ctx: &CoreContext,
+    blobstore: &B,
     pool: GitPool,
     oid: Oid,
 ) -> Result<ContentMetadata, Error> {
@@ -69,7 +62,7 @@ async fn do_upload(
     let req = StoreRequest::with_git_sha1(size, git_sha1);
 
     let meta = filestore::store(
-        &blobstore,
+        blobstore,
         FilestoreConfig::default(),
         ctx,
         &req,
@@ -83,39 +76,35 @@ async fn do_upload(
 // TODO: Try to produce copy-info?
 // TODO: Translate LFS pointers?
 // TODO: Don't re-upload things we already have
-fn find_file_changes<S>(
-    ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+async fn find_file_changes<S, B: Blobstore + Clone + 'static>(
+    ctx: &CoreContext,
+    blobstore: &B,
     pool: GitPool,
     changes: S,
-) -> impl Future<Item = BTreeMap<MPath, Option<FileChange>>, Error = Error>
+) -> Result<BTreeMap<MPath, Option<FileChange>>, Error>
 where
-    S: Stream<Item = BonsaiDiffFileChange<GitLeaf>, Error = Error>,
+    S: Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>>,
 {
     changes
-        .map(move |change| {
-            match change {
-                BonsaiDiffFileChange::Changed(path, ty, GitLeaf(oid))
-                | BonsaiDiffFileChange::ChangedReusedId(path, ty, GitLeaf(oid)) => {
-                    do_upload(ctx.clone(), blobstore.clone(), pool.clone(), oid)
-                        .boxed()
-                        .compat()
-                        .map(move |meta| {
-                            (
-                                path,
-                                Some(FileChange::new(meta.content_id, ty, meta.total_size, None)),
-                            )
-                        })
-                        .left_future()
-                }
-                BonsaiDiffFileChange::Deleted(path) => {
-                    Ok((path, None)).into_future().right_future()
+        .map_ok(move |change| {
+            cloned!(pool);
+            async move {
+                match change {
+                    BonsaiDiffFileChange::Changed(path, ty, GitLeaf(oid))
+                    | BonsaiDiffFileChange::ChangedReusedId(path, ty, GitLeaf(oid)) => {
+                        let meta = do_upload(ctx, blobstore, pool, oid).await?;
+                        Ok((
+                            path,
+                            Some(FileChange::new(meta.content_id, ty, meta.total_size, None)),
+                        ))
+                    }
+                    BonsaiDiffFileChange::Deleted(path) => Ok((path, None)),
                 }
             }
         })
-        .buffer_unordered(100)
-        .collect_to()
-        .from_err()
+        .try_buffer_unordered(100)
+        .try_collect()
+        .await
 }
 
 pub async fn gitimport(
@@ -157,17 +146,18 @@ pub async fn gitimport(
                 .await
                 .with_context(|| format!("While extracting {}", oid))?;
 
-            let file_changes = task::spawn(
-                find_file_changes(
-                    ctx.clone(),
-                    repo.get_blobstore().boxed(),
-                    pool.clone(),
-                    bonsai_diff(ctx.clone(), pool.clone(), tree, parent_trees)
-                        .boxed()
-                        .compat(),
-                )
-                .compat(),
-            )
+            let file_changes = task::spawn({
+                cloned!(ctx, repo, pool);
+                async move {
+                    find_file_changes(
+                        &ctx,
+                        repo.blobstore(),
+                        pool.clone(),
+                        bonsai_diff(ctx.clone(), pool, tree, parent_trees),
+                    )
+                    .await
+                }
+            })
             .await??;
 
             Ok((metadata, file_changes))
@@ -225,7 +215,7 @@ pub async fn gitimport(
                     let bcs_id = *blob.id();
 
                     repo.blobstore()
-                        .put(ctx.clone(), bcs_id.blobstore_key(), blob.into())
+                        .put(ctx, bcs_id.blobstore_key(), blob.into())
                         .await?;
 
                     repo.get_changesets_object()
@@ -299,7 +289,7 @@ pub async fn gitimport(
                         repo.get_hg_from_bonsai_changeset(ctx.clone(), p)
                             .compat()
                             .await?
-                            .load(ctx.clone(), repo.blobstore())
+                            .load(ctx, repo.blobstore())
                             .await?
                             .manifestid()
                     };

@@ -164,9 +164,9 @@ impl HgBlobChangeset {
         self.changesetid
     }
 
-    pub async fn load<B: Blobstore>(
-        ctx: CoreContext,
-        blobstore: &B,
+    pub async fn load<'a, B: Blobstore>(
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
         changesetid: HgChangesetId,
     ) -> Result<Option<Self>> {
         let got = RevlogChangeset::load(ctx, blobstore, changesetid).await?;
@@ -175,7 +175,11 @@ impl HgBlobChangeset {
         }))
     }
 
-    pub async fn save(&self, ctx: CoreContext, blobstore: impl Blobstore) -> Result<()> {
+    pub async fn save<'a, B: Blobstore>(
+        &'a self,
+        ctx: &'a CoreContext,
+        blobstore: &'a B,
+    ) -> Result<()> {
         let key = self.changesetid.blobstore_key();
 
         let contents = {
@@ -192,7 +196,7 @@ impl HgBlobChangeset {
         };
         let envelope = envelope.freeze();
         let blob = envelope.into_blob();
-        async move { blobstore.put(ctx, key, blob.into()).await }.await
+        blobstore.put(ctx, key, blob.into()).await
     }
 
     #[inline]
@@ -255,7 +259,7 @@ impl Loadable for HgChangesetId {
 
     async fn load<'a, B: Blobstore>(
         &'a self,
-        ctx: CoreContext,
+        ctx: &'a CoreContext,
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         let csid = *self;

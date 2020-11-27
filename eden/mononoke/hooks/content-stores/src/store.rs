@@ -14,15 +14,15 @@ use mononoke_types::ContentId;
 
 #[async_trait]
 pub trait FileContentFetcher: Send + Sync {
-    async fn get_file_size<'a, 'b: 'a>(
+    async fn get_file_size<'a>(
         &'a self,
-        ctx: &'b CoreContext,
+        ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<u64, ErrorKind>;
 
-    async fn get_file_text<'a, 'b: 'a>(
+    async fn get_file_text<'a>(
         &'a self,
-        ctx: &'b CoreContext,
+        ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<Option<Bytes>, ErrorKind>;
 }

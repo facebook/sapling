@@ -161,7 +161,7 @@ async fn rewrite_file_paths(
 
     let len = gitimport_bcs_ids.len();
     let gitimport_changesets = stream::iter(gitimport_bcs_ids.iter().map(|bcs_id| async move {
-        let bcs = bcs_id.load(ctx.clone(), &repo.get_blobstore()).await?;
+        let bcs = bcs_id.load(ctx, &repo.get_blobstore()).await?;
         Result::<_, Error>::Ok(bcs)
     }))
     .buffered(len)
@@ -595,7 +595,7 @@ async fn push_merge_commit(
 ) -> Result<ChangesetId, Error> {
     info!(ctx.logger(), "Running pushrebase");
 
-    let merged_cs = merged_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let merged_cs = merged_cs_id.load(ctx, repo.blobstore()).await?;
     let pushrebase_flags = repo_config.pushrebase.flags;
     let pushrebase_hooks = get_pushrebase_hooks(&repo, &repo_config.pushrebase);
 
@@ -627,7 +627,7 @@ async fn get_leaf_entries(
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .compat()
         .await?;
-    let hg_cs = hg_cs_id.load(ctx.clone(), &repo.get_blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, &repo.get_blobstore()).await?;
     hg_cs
         .manifestid()
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())

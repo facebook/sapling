@@ -206,9 +206,7 @@ async fn create_rewritten_merge_commit(
     small_root: ChangesetId,
     onto_value: ChangesetId,
 ) -> Result<BonsaiChangeset, Error> {
-    let merge_bcs = small_merge_cs_id
-        .load(ctx.clone(), small_repo.blobstore())
-        .await?;
+    let merge_bcs = small_merge_cs_id.load(&ctx, small_repo.blobstore()).await?;
 
     let parents = merge_bcs.parents().collect();
     let (p1, p2) = validate_parents(parents)?;
@@ -276,11 +274,8 @@ async fn generate_additional_file_changes(
             }
         }
 
-        let fc = convert_diff_result_into_file_change_for_diamond_merge(
-            ctx.clone(),
-            &large_repo,
-            diff_res,
-        );
+        let fc =
+            convert_diff_result_into_file_change_for_diamond_merge(&ctx, &large_repo, diff_res);
         additional_file_changes.push(fc);
     }
 
@@ -358,7 +353,7 @@ async fn find_new_branch_oldest_first(
         cloned!(ctx, small_repo);
         move |cs| {
             cloned!(ctx, small_repo);
-            async move { cs.load(ctx, small_repo.blobstore()).await }
+            async move { cs.load(&ctx, small_repo.blobstore()).await }
                 .boxed()
                 .compat()
                 .from_err()
@@ -434,7 +429,7 @@ fn id_to_manifestid(
             cloned!(ctx, repo);
             move |cs_id| {
                 cloned!(ctx, repo);
-                async move { cs_id.load(ctx, repo.blobstore()).await }
+                async move { cs_id.load(&ctx, repo.blobstore()).await }
                     .boxed()
                     .compat()
                     .from_err()

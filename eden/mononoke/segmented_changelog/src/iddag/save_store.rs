@@ -29,14 +29,14 @@ impl IdDagSaveStore {
         Self { repo_id, blobstore }
     }
 
-    pub async fn find(
-        &self,
-        ctx: &CoreContext,
+    pub async fn find<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         iddag_version: IdDagVersion,
     ) -> Result<Option<InProcessIdDag>> {
         let bytes_opt = self
             .blobstore
-            .get(ctx.clone(), self.key(iddag_version))
+            .get(ctx, &self.key(iddag_version))
             .await
             .with_context(|| {
                 format!(
@@ -52,9 +52,9 @@ impl IdDagSaveStore {
         Ok(Some(dag))
     }
 
-    pub async fn load(
-        &self,
-        ctx: &CoreContext,
+    pub async fn load<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         iddag_version: IdDagVersion,
     ) -> Result<InProcessIdDag> {
         self.find(ctx, iddag_version).await?.ok_or_else(|| {
@@ -66,12 +66,16 @@ impl IdDagSaveStore {
         })
     }
 
-    pub async fn save(&self, ctx: &CoreContext, iddag: &InProcessIdDag) -> Result<IdDagVersion> {
+    pub async fn save<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        iddag: &InProcessIdDag,
+    ) -> Result<IdDagVersion> {
         let buffer = mincode::serialize(iddag)?;
         let iddag_version = IdDagVersion::from_serialized_bytes(&buffer);
         self.blobstore
             .put(
-                ctx.clone(),
+                ctx,
                 self.key(iddag_version),
                 BlobstoreBytes::from_bytes(buffer),
             )
@@ -81,7 +85,11 @@ impl IdDagSaveStore {
         Ok(iddag_version)
     }
 
-    pub async fn save_from_dag(&self, ctx: &CoreContext, dag: &Dag) -> Result<IdDagVersion> {
+    pub async fn save_from_dag<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        dag: &Dag,
+    ) -> Result<IdDagVersion> {
         self.save(ctx, &dag.iddag).await
     }
 

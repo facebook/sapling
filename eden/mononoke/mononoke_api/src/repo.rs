@@ -512,7 +512,7 @@ impl Repo {
                 let compare_bcs_id = maybe_child.unwrap_or(service_bcs_id);
 
                 let compare_timestamp = compare_bcs_id
-                    .load(ctx.clone(), repo.blobstore())
+                    .load(&ctx, repo.blobstore())
                     .await?
                     .author_date()
                     .timestamp_secs();

@@ -38,7 +38,12 @@ impl<B> LogBlob<B> {
 
 #[async_trait]
 impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
-    async fn get(&self, mut ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        let mut ctx = ctx.clone();
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
 
@@ -47,7 +52,7 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
 
         let pc = ctx.fork_perf_counters();
 
-        let get = self.inner.get(ctx.clone(), key.clone());
+        let get = self.inner.get(&ctx, key);
         let session_id = ctx.metadata().session_id().to_string();
         let (stats, result) = get.timed().await;
         record_get_stats(
@@ -63,26 +68,32 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
         result
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPresenceChecks);
         self.inner.is_present(ctx, key).await
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
         Ok(())
     }
 }
 
 impl<B: BlobstorePutOps> LogBlob<B> {
-    async fn put_impl(
-        &self,
-        mut ctx: CoreContext,
+    async fn put_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
     ) -> Result<OverwriteStatus> {
+        let mut ctx = ctx.clone();
         let mut scuba = self.scuba.clone();
         let size = value.len();
 
@@ -93,9 +104,9 @@ impl<B: BlobstorePutOps> LogBlob<B> {
 
         let put = if let Some(put_behaviour) = put_behaviour {
             self.inner
-                .put_explicit(ctx.clone(), key.clone(), value, put_behaviour)
+                .put_explicit(&ctx, key.clone(), value, put_behaviour)
         } else {
-            self.inner.put_with_status(ctx.clone(), key.clone(), value)
+            self.inner.put_with_status(&ctx, key.clone(), value)
         };
         let (stats, result) = put.timed().await;
         record_put_stats(
@@ -103,7 +114,7 @@ impl<B: BlobstorePutOps> LogBlob<B> {
             &pc,
             stats,
             result.as_ref(),
-            key,
+            &key,
             ctx.metadata().session_id().to_string(),
             OperationType::Put,
             size,
@@ -116,9 +127,9 @@ impl<B: BlobstorePutOps> LogBlob<B> {
 
 #[async_trait]
 impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
-    async fn put_explicit(
-        &self,
-        ctx: CoreContext,
+    async fn put_explicit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -126,9 +137,9 @@ impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
         self.put_impl(ctx, key, value, Some(put_behaviour)).await
     }
 
-    async fn put_with_status(
-        &self,
-        ctx: CoreContext,
+    async fn put_with_status<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {

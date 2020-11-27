@@ -939,7 +939,12 @@ mod tests {
 
     #[async_trait]
     impl Blobstore for FailingBlobstore {
-        async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        async fn put<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: String,
+            value: BlobstoreBytes,
+        ) -> Result<()> {
             if key.find(&self.bad_key_substring).is_some() {
                 tokio::time::delay_for(Duration::from_millis(250)).await;
                 Err(format_err!("failed"))
@@ -948,7 +953,11 @@ mod tests {
             }
         }
 
-        async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+        async fn get<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: &'a str,
+        ) -> Result<Option<BlobstoreGetData>> {
             self.inner.get(ctx, key).await
         }
     }
@@ -974,12 +983,21 @@ mod tests {
 
     #[async_trait]
     impl Blobstore for CountingBlobstore {
-        async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        async fn put<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: String,
+            value: BlobstoreBytes,
+        ) -> Result<()> {
             self.count.fetch_add(1, Ordering::Relaxed);
             self.inner.put(ctx, key, value).await
         }
 
-        async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+        async fn get<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: &'a str,
+        ) -> Result<Option<BlobstoreGetData>> {
             self.inner.get(ctx, key).await
         }
     }

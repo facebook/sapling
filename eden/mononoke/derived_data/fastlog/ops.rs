@@ -8,7 +8,7 @@
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, Loadable, LoadableError};
+use blobstore::{Loadable, LoadableError};
 use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{resolve_path_state, PathState};
@@ -25,7 +25,6 @@ use manifest::{Entry, ManifestOps};
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::Arc;
 use thiserror::Error;
 use time_ext::DurationExt;
 use unodes::RootUnodeManifestId;
@@ -286,16 +285,12 @@ async fn fetch_linknodes_and_update_graph(
     history_graph: &mut CommitGraph,
 ) -> Result<Vec<ChangesetId>, FastlogError> {
     let linknodes = unode_entries.into_iter().map({
-        cloned!(ctx, repo);
-        move |entry| {
-            cloned!(ctx, repo);
-            async move {
-                let unode = entry.load(ctx.clone(), &repo.get_blobstore()).await?;
-                Ok::<_, FastlogError>(match unode {
-                    Entry::Tree(mf_unode) => mf_unode.linknode().clone(),
-                    Entry::Leaf(file_unode) => file_unode.linknode().clone(),
-                })
-            }
+        move |entry| async move {
+            let unode = entry.load(ctx, repo.blobstore()).await?;
+            Ok::<_, FastlogError>(match unode {
+                Entry::Tree(mf_unode) => mf_unode.linknode().clone(),
+                Entry::Leaf(file_unode) => file_unode.linknode().clone(),
+            })
         }
     });
     let linknodes = future::try_join_all(linknodes).await?;
@@ -311,12 +306,10 @@ async fn prefetch_history(
     repo: &BlobRepo,
     unode_entry: UnodeEntry,
 ) -> Result<Option<Vec<(ChangesetId, Vec<FastlogParent>)>>, Error> {
-    let blobstore: Arc<dyn Blobstore> = Arc::new(repo.get_blobstore());
-    let maybe_fastlog_batch = fetch_fastlog_batch_by_unode_id(ctx, &blobstore, unode_entry).await?;
+    let maybe_fastlog_batch =
+        fetch_fastlog_batch_by_unode_id(ctx, repo.blobstore(), unode_entry).await?;
     if let Some(fastlog_batch) = maybe_fastlog_batch {
-        let res = fetch_flattened(&fastlog_batch, ctx.clone(), blobstore)
-            .compat()
-            .await?;
+        let res = fetch_flattened(&fastlog_batch, ctx, repo.blobstore()).await?;
         Ok(Some(res))
     } else {
         Ok(None)
@@ -598,7 +591,7 @@ mod test {
     use futures::future::TryFutureExt;
     use tests_utils::CreateCommitContext;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_list_linear_history(fb: FacebookInit) -> Result<(), Error> {
         // generate couple of hundreds linear file changes and list history
         let repo = new_memblob_empty(None).unwrap();
@@ -642,7 +635,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_list_history_with_merges(fb: FacebookInit) -> Result<(), Error> {
         // test generates commit graph with merges and compares result of list_file_history with
         // the result of BFS sorting on the graph
@@ -714,7 +707,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_list_history_many_diamonds(fb: FacebookInit) -> Result<(), Error> {
         // test generates commit graph with 50 diamonds
         //
@@ -777,7 +770,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_list_history_visitor(fb: FacebookInit) -> Result<(), Error> {
         // Test history termination on one of the history branches.
         // The main branch (top) and branch A have commits that change only single file.
@@ -882,7 +875,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
         let repo = new_memblob_empty(None).unwrap();
         let ctx = CoreContext::test_mock(fb);
@@ -955,7 +948,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_list_history_merged_deleted(fb: FacebookInit) -> Result<(), Error> {
         //
         //     L
@@ -1094,7 +1087,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_list_history_across_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
         let repo = new_memblob_empty(None).unwrap();
         let ctx = CoreContext::test_mock(fb);
@@ -1147,7 +1140,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_list_history_across_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
         let repo = new_memblob_empty(None).unwrap();
         let ctx = CoreContext::test_mock(fb);

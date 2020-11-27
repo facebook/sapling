@@ -149,6 +149,7 @@ mod test {
     use anyhow::Error;
     use blobrepo_factory::new_memblob_empty;
     use blobstore::Loadable;
+    use borrowed::borrowed;
     use fbinit::FacebookInit;
     use hooks_content_stores::BlobRepoFileContentFetcher;
     use maplit::hashmap;
@@ -159,23 +160,24 @@ mod test {
     async fn test_limitcommitsize(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
+        borrowed!(ctx, repo);
 
-        let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        let cs_id = CreateCommitContext::new_root(ctx, repo)
             .add_file("dir/a", "a")
             .add_file("dir/b", "b")
             .commit()
             .await?;
 
-        let bcs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
+        let bcs = cs_id.load(ctx, repo.blobstore()).await?;
 
-        let content_fetcher = BlobRepoFileContentFetcher::new(repo);
+        let content_fetcher = BlobRepoFileContentFetcher::new(repo.clone());
         let hook = build_hook(hashmap! {
             "commitsizelimit".to_string() => 2,
             "changed_files_limit".to_string() => 2,
         })?;
         let hook_execution = hook
             .run(
-                &ctx,
+                ctx,
                 &BookmarkName::new("book")?,
                 &bcs,
                 &content_fetcher,
@@ -191,7 +193,7 @@ mod test {
         })?;
         let hook_execution = hook
             .run(
-                &ctx,
+                ctx,
                 &BookmarkName::new("book")?,
                 &bcs,
                 &content_fetcher,
@@ -211,7 +213,7 @@ mod test {
         })?;
         let hook_execution = hook
             .run(
-                &ctx,
+                ctx,
                 &BookmarkName::new("book")?,
                 &bcs,
                 &content_fetcher,
@@ -231,29 +233,30 @@ mod test {
     async fn test_limitcommitsize_removed_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
+        borrowed!(ctx, repo);
 
-        let parent_cs_id = CreateCommitContext::new_root(&ctx, &repo)
+        let parent_cs_id = CreateCommitContext::new_root(ctx, repo)
             .add_file("dir/a", "a")
             .add_file("dir/b", "b")
             .commit()
             .await?;
 
-        let cs_id = CreateCommitContext::new(&ctx, &repo, vec![parent_cs_id])
+        let cs_id = CreateCommitContext::new(ctx, repo, vec![parent_cs_id])
             .delete_file("dir/a")
             .delete_file("dir/b")
             .commit()
             .await?;
 
-        let bcs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
+        let bcs = cs_id.load(ctx, repo.blobstore()).await?;
 
-        let content_fetcher = BlobRepoFileContentFetcher::new(repo);
+        let content_fetcher = BlobRepoFileContentFetcher::new(repo.clone());
         let hook = build_hook(hashmap! {
             "commitsizelimit".to_string() => 100,
             "changed_files_limit".to_string() => 2,
         })?;
         let hook_execution = hook
             .run(
-                &ctx,
+                ctx,
                 &BookmarkName::new("book")?,
                 &bcs,
                 &content_fetcher,
@@ -268,7 +271,7 @@ mod test {
         })?;
         let hook_execution = hook
             .run(
-                &ctx,
+                ctx,
                 &BookmarkName::new("book")?,
                 &bcs,
                 &content_fetcher,

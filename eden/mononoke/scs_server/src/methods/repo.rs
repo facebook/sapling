@@ -591,16 +591,15 @@ impl SourceControlServiceImpl {
                     let t = match entry {
                         Entry::Leaf((file_type, child_id)) => {
                             let hg_file_envelope = child_id
-                                .load(ctx.clone(), blobstore)
+                                .load(ctx, blobstore)
                                 .await
                                 .map_err(errors::internal_error)?;
                             let fetch_key =
                                 filestore::FetchKey::Canonical(hg_file_envelope.content_id());
-                            let metadata =
-                                filestore::get_metadata(blobstore, ctx.clone(), &fetch_key)
-                                    .await
-                                    .map_err(errors::internal_error)?
-                                    .ok_or_else(|| errors::internal_error("no metadata found"))?;
+                            let metadata = filestore::get_metadata(blobstore, ctx, &fetch_key)
+                                .await
+                                .map_err(errors::internal_error)?
+                                .ok_or_else(|| errors::internal_error("no metadata found"))?;
 
                             thrift::HgManifestEntry {
                                 name,

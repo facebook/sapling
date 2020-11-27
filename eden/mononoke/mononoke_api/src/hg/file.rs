@@ -49,7 +49,7 @@ impl HgFileContext {
     ) -> Result<Self, MononokeError> {
         // Fetch and store Mononoke's internal representation of the metadata of this
         // file. The actual file contents are not fetched here.
-        let ctx = repo.ctx().clone();
+        let ctx = repo.ctx();
         let blobstore = repo.blob_repo().blobstore();
         let envelope = filenode_id.load(ctx, blobstore).await?;
         Ok(Self { repo, envelope })
@@ -59,7 +59,7 @@ impl HgFileContext {
         repo: HgRepoContext,
         filenode_id: HgFileNodeId,
     ) -> Result<Option<Self>, MononokeError> {
-        let ctx = repo.ctx().clone();
+        let ctx = repo.ctx();
         let blobstore = repo.blob_repo().blobstore();
         match filenode_id.load(ctx, blobstore).await {
             Ok(envelope) => Ok(Some(Self { repo, envelope })),
@@ -107,7 +107,7 @@ impl HgFileContext {
         let content_id = self.envelope.content_id();
         let fetch_key = filestore::FetchKey::Canonical(content_id);
         let blobstore = self.repo.blob_repo().blobstore();
-        let metadata = filestore::get_metadata(blobstore, self.repo.ctx().clone(), &fetch_key)
+        let metadata = filestore::get_metadata(blobstore, self.repo.ctx(), &fetch_key)
             .await?
             .ok_or_else(|| {
                 MononokeError::NotAvailable(format!(

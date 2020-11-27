@@ -45,9 +45,9 @@ pub struct InMemoryFileContentFetcher {
 
 #[async_trait]
 impl FileContentFetcher for InMemoryFileContentFetcher {
-    async fn get_file_size<'a, 'b: 'a>(
+    async fn get_file_size<'a>(
         &'a self,
-        _ctx: &'b CoreContext,
+        _ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<u64, ErrorKind> {
         self.id_to_text
@@ -59,9 +59,9 @@ impl FileContentFetcher for InMemoryFileContentFetcher {
             })
     }
 
-    async fn get_file_text<'a, 'b: 'a>(
+    async fn get_file_text<'a>(
         &'a self,
-        _ctx: &'b CoreContext,
+        _ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<Option<Bytes>, ErrorKind> {
         self.id_to_text

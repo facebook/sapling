@@ -39,17 +39,26 @@ impl<B> DelayedBlobstore<B> {
 
 #[async_trait]
 impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
         delay(self.get_dist).await;
         self.inner.get(ctx, key).await
     }
 
-    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         delay(self.put_dist).await;
         self.inner.put(ctx, key, value).await
     }
 
-    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+    async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
         delay(self.get_dist).await;
         self.inner.is_present(ctx, key).await
     }

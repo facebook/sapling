@@ -39,10 +39,10 @@ impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
     /// Write all in-memory entries to underlying blobstore.
     ///
     /// NOTE: In case of error all pending changes will be lost.
-    pub async fn persist(&self, ctx: CoreContext) -> Result<()> {
+    pub async fn persist<'a>(&'a self, ctx: &'a CoreContext) -> Result<()> {
         let items = self.cache.with(|cache| mem::replace(cache, HashMap::new()));
         stream::iter(items)
-            .map(|(key, value)| self.inner.put(ctx.clone(), key, value))
+            .map(|(key, value)| self.inner.put(ctx, key, value))
             .buffered(4096)
             .try_for_each(|_| future::ready(Ok(())))
             .await
@@ -59,13 +59,22 @@ impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
 
 #[async_trait]
 impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
-    async fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+    async fn put<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> Result<()> {
         self.cache.with(|cache| cache.insert(key, value));
         Ok(())
     }
 
-    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
-        match self.cache.with(|cache| cache.get(&key).cloned()) {
+    async fn get<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        key: &'a str,
+    ) -> Result<Option<BlobstoreGetData>> {
+        match self.cache.with(|cache| cache.get(key).cloned()) {
             Some(value) => Ok(Some(value.into())),
             None => Ok(self.inner.get(ctx, key).await?.map(Into::into)),
         }
@@ -75,6 +84,7 @@ impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use borrowed::borrowed;
     use bytes::Bytes;
     use fbinit::FacebookInit;
     use memblob::Memblob;
@@ -82,12 +92,13 @@ mod test {
     #[fbinit::test]
     async fn basic_read(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let inner = Memblob::default();
-        let foo_key = "foo".to_string();
+        let foo_key = "foo";
         inner
             .put(
-                ctx.clone(),
-                foo_key.clone(),
+                ctx,
+                foo_key.to_owned(),
                 BlobstoreBytes::from_bytes("foobar"),
             )
             .await
@@ -96,14 +107,14 @@ mod test {
 
         assert!(
             outer
-                .is_present(ctx.clone(), foo_key.clone())
+                .is_present(ctx, foo_key)
                 .await
                 .expect("is_present to inner should work")
         );
 
         assert_eq!(
             outer
-                .get(ctx, foo_key.clone())
+                .get(ctx, foo_key)
                 .await
                 .expect("get to inner should work")
                 .expect("value should be present")
@@ -115,14 +126,15 @@ mod test {
     #[fbinit::test]
     async fn redirect_writes(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
         let inner = Memblob::default();
-        let foo_key = "foo".to_string();
+        let foo_key = "foo";
 
         let outer = MemWritesBlobstore::new(inner.clone());
         outer
             .put(
-                ctx.clone(),
-                foo_key.clone(),
+                ctx,
+                foo_key.to_owned(),
                 BlobstoreBytes::from_bytes("foobar"),
             )
             .await
@@ -130,7 +142,7 @@ mod test {
 
         assert!(
             !inner
-                .is_present(ctx.clone(), foo_key.clone())
+                .is_present(ctx, foo_key)
                 .await
                 .expect("is_present on inner should work"),
             "foo should not be present in inner",
@@ -138,7 +150,7 @@ mod test {
 
         assert!(
             outer
-                .is_present(ctx.clone(), foo_key.clone())
+                .is_present(ctx, foo_key)
                 .await
                 .expect("is_present on outer should work"),
             "foo should be present in outer",
@@ -146,7 +158,7 @@ mod test {
 
         assert_eq!(
             outer
-                .get(ctx, foo_key.clone())
+                .get(ctx, foo_key)
                 .await
                 .expect("get to outer should work")
                 .expect("value should be present")
@@ -158,18 +170,19 @@ mod test {
     #[fbinit::test]
     async fn test_persist(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
+        borrowed!(ctx);
 
         let inner = Memblob::default();
         let outer = MemWritesBlobstore::new(inner.clone());
 
-        let key = "key".to_string();
+        let key = "key";
         let value = BlobstoreBytes::from_bytes("value");
 
-        outer.put(ctx.clone(), key.clone(), value.clone()).await?;
+        outer.put(ctx, key.to_owned(), value.clone()).await?;
 
-        assert!(inner.get(ctx.clone(), key.clone()).await?.is_none());
+        assert!(inner.get(ctx, key).await?.is_none());
 
-        outer.persist(ctx.clone()).await?;
+        outer.persist(ctx).await?;
 
         assert_eq!(inner.get(ctx, key).await?, Some(value.into()));
 

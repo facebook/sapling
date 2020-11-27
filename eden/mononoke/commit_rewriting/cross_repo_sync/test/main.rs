@@ -113,7 +113,7 @@ async fn create_initial_commit_with_contents<'a>(
                     let contents = FileContents::new_bytes(contents.into());
                     let content_id = contents
                         .into_blob()
-                        .store(ctx.clone(), repo.blobstore())
+                        .store(&ctx, repo.blobstore())
                         .await
                         .unwrap();
                     Some(FileChange::new(content_id, FileType::Regular, 3, None))
@@ -197,7 +197,7 @@ where
 {
     let bookmark_name = BookmarkName::new("master").unwrap();
     let source_bcs = source_bcs_id
-        .load(ctx.clone(), config.get_source_repo().blobstore())
+        .load(&ctx, config.get_source_repo().blobstore())
         .await
         .unwrap();
 
@@ -436,7 +436,7 @@ async fn create_commit_from_parent_and_changes<'a>(
                 let file_contents = FileContents::new_bytes(content.as_bytes());
                 let content_id = file_contents
                     .into_blob()
-                    .store(ctx.clone(), repo.blobstore())
+                    .store(ctx, repo.blobstore())
                     .await
                     .unwrap();
                 let file_change =
@@ -481,7 +481,7 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     let content = FileContents::new_bytes(Bytes::from(b"456" as &[u8]));
     let content_id = content
         .into_blob()
-        .store(ctx.clone(), repo.blobstore())
+        .store(&ctx, repo.blobstore())
         .await
         .unwrap();
     let file_change = FileChange::new(content_id, FileType::Regular, 3, None);
@@ -652,7 +652,7 @@ async fn megarepo_copy_file(
     let content = FileContents::new_bytes(Bytes::from(b"99\n" as &[u8]));
     let content_id = content
         .into_blob()
-        .store(ctx.clone(), repo.blobstore())
+        .store(&ctx, repo.blobstore())
         .await
         .unwrap();
     let file_change = FileChange::new(
@@ -753,7 +753,7 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     // Fetch commit from linear by its new ID, and confirm that it has the correct copyinfo
     let linear_bcs = linear_copyinfo_bcs_id
         .unwrap()
-        .load(ctx.clone(), linear.blobstore())
+        .load(&ctx, linear.blobstore())
         .await?;
 
     let file_changes: Vec<_> = linear_bcs.file_changes().collect();
@@ -1011,7 +1011,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
             .expect("Unexpectedly rewritten into nothingness");
 
     let megarepo_implicit_delete_bcs = megarepo_implicit_delete_bcs_id
-        .load(ctx.clone(), megarepo.blobstore())
+        .load(&ctx, megarepo.blobstore())
         .await?;
     let file_changes: BTreeMap<MPath, _> = megarepo_implicit_delete_bcs
         .file_changes()
@@ -1043,7 +1043,7 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId 
     let content = FileContents::new_bytes(Bytes::from(b"999" as &[u8]));
     let content_id = content
         .into_blob()
-        .store(ctx.clone(), repo.blobstore())
+        .store(&ctx, repo.blobstore())
         .await
         .unwrap();
     let file_change = FileChange::new(content_id, FileType::Regular, 3, None);
@@ -1263,7 +1263,7 @@ async fn get_multiple_master_mapping_setup(
     move_bookmark(&ctx, &small_repo, "master", small_repo_master_cs_id).await;
 
     let small_cs = small_repo_master_cs_id
-        .load(ctx.clone(), small_repo.blobstore())
+        .load(&ctx, small_repo.blobstore())
         .await?;
     small_to_large_syncer
         .unsafe_sync_commit_pushrebase(
@@ -1385,7 +1385,7 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
         btreemap! {"foo" => Some("bar")},
     )
     .await;
-    let to_sync = to_sync_id.load(ctx.clone(), small_repo.blobstore()).await?;
+    let to_sync = to_sync_id.load(&ctx, small_repo.blobstore()).await?;
 
     let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
         Target(Arc::new(SkiplistIndex::new()));
@@ -1432,7 +1432,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
         btreemap! {"foo" => Some("bar")},
     )
     .await;
-    let to_sync = to_sync_id.load(ctx.clone(), small_repo.blobstore()).await?;
+    let to_sync = to_sync_id.load(&ctx, small_repo.blobstore()).await?;
 
     let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
         Target(Arc::new(SkiplistIndex::new()));
@@ -2097,7 +2097,7 @@ async fn assert_working_copy(
         .compat()
         .await?;
 
-    let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
     let mf_id = hg_cs.manifestid();
     let mut actual_paths = mf_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())

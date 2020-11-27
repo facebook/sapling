@@ -81,7 +81,7 @@ async fn new_mapping_entries(
                         cloned!(ctx, repo);
                         async move {
                             cs_id
-                                .load(ctx, &repo.get_blobstore())
+                                .load(&ctx, &repo.get_blobstore())
                                 .map_err(Error::from)
                                 .await
                         }
@@ -221,6 +221,7 @@ mod tests {
     use anyhow::Result;
     use bonsai_git_mapping::{CONVERT_REVISION_EXTRA, HGGIT_SOURCE_EXTRA};
     use bookmarks::{BookmarkName, BookmarkUpdateReason};
+    use borrowed::borrowed;
     use fbinit::FacebookInit;
     use maplit::{hashmap, hashset};
     use mononoke_types::hash::GitSha1;
@@ -282,10 +283,11 @@ mod tests {
         let (repo, _connection) =
             blobrepo_factory::new_memblob_with_sqlite_connection_with_id(connection, REPO_ZERO)?;
         let bookmark = BookmarkName::new("main")?;
+        borrowed!(ctx, repo);
 
         let dag = create_from_dag_with_changes(
-            &ctx,
-            &repo,
+            ctx,
+            repo,
             r##"
                 Z-A-B-C-D
                      \
@@ -312,10 +314,10 @@ mod tests {
         let f = *dag.get("F").unwrap();
         let y = *dag.get("Y").unwrap();
         let z = *dag.get("Z").unwrap();
-        let a_bcs = a.load(ctx.clone(), repo.blobstore()).await?;
-        let b_bcs = b.load(ctx.clone(), repo.blobstore()).await?;
-        let f_bcs = f.load(ctx.clone(), repo.blobstore()).await?;
-        let y_bcs = y.load(ctx.clone(), repo.blobstore()).await?;
+        let a_bcs = a.load(ctx, repo.blobstore()).await?;
+        let b_bcs = b.load(ctx, repo.blobstore()).await?;
+        let f_bcs = f.load(ctx, repo.blobstore()).await?;
+        let y_bcs = y.load(ctx, repo.blobstore()).await?;
 
         let mut txn = repo.update_bookmark_transaction(ctx.clone());
         txn.create(&bookmark, z, BookmarkUpdateReason::TestMove, None)?;
@@ -324,8 +326,8 @@ mod tests {
 
         // Initial create with two changesets.
         let entries = new_mapping_entries(
-            &ctx,
-            &repo,
+            ctx,
+            repo,
             b,
             &hashmap! {
                 a => a_bcs,
@@ -341,10 +343,10 @@ mod tests {
         assert_eq!(entries.from_new_changesets, 2);
         assert_eq!(entries.from_ancestors_no_mapping, 0);
 
-        apply_entries(&ctx, &repo, &bookmark, z, b, entries).await?;
+        apply_entries(ctx, repo, &bookmark, z, b, entries).await?;
 
         // Addition using existing changesets.
-        let entries = new_mapping_entries(&ctx, &repo, d, &hashmap! {}).await?;
+        let entries = new_mapping_entries(ctx, repo, d, &hashmap! {}).await?;
         assert_eq!(
             mapping_entries(&entries.new_mapping_entries),
             hashset! { (c, THREES_GIT_SHA1), (d, FOURS_GIT_SHA1) },
@@ -352,18 +354,18 @@ mod tests {
         assert_eq!(entries.from_new_changesets, 0);
         assert_eq!(entries.from_ancestors_no_mapping, 2);
 
-        apply_entries(&ctx, &repo, &bookmark, b, d, entries).await?;
+        apply_entries(ctx, repo, &bookmark, b, d, entries).await?;
 
         // Move to commits with no mapping.
-        let entries = new_mapping_entries(&ctx, &repo, y, &hashmap! {y => y_bcs}).await?;
+        let entries = new_mapping_entries(ctx, repo, y, &hashmap! {y => y_bcs}).await?;
         assert_eq!(mapping_entries(&entries.new_mapping_entries), hashset! {});
         assert_eq!(entries.from_new_changesets, 0);
         assert_eq!(entries.from_ancestors_no_mapping, 0);
 
-        apply_entries(&ctx, &repo, &bookmark, d, y, entries).await?;
+        apply_entries(ctx, repo, &bookmark, d, y, entries).await?;
 
         // Move to descendants of commit with no mapping.
-        let entries = new_mapping_entries(&ctx, &repo, f, &hashmap! {f => f_bcs}).await?;
+        let entries = new_mapping_entries(ctx, repo, f, &hashmap! {f => f_bcs}).await?;
         assert_eq!(
             mapping_entries(&entries.new_mapping_entries),
             hashset! {
@@ -373,7 +375,7 @@ mod tests {
         assert_eq!(entries.from_new_changesets, 1);
         assert_eq!(entries.from_ancestors_no_mapping, 1);
 
-        apply_entries(&ctx, &repo, &bookmark, y, f, entries).await?;
+        apply_entries(ctx, repo, &bookmark, y, f, entries).await?;
 
         Ok(())
     }
