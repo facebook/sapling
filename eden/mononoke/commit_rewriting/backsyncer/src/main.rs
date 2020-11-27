@@ -26,7 +26,7 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
     try_join,
 };
-use futures_old::{stream::Stream as Stream_old, Future};
+use futures_old::Future;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
@@ -181,11 +181,9 @@ where
     let source_repo = commit_syncer.get_source_repo();
     let next_entry = source_repo
         .read_next_bookmark_log_entries(ctx.clone(), counter as u64, 1, Freshness::MostRecent)
-        .collect()
-        .compat();
-    let remaining_entries = source_repo
-        .count_further_bookmark_log_entries(ctx.clone(), counter as u64, None)
-        .compat();
+        .try_collect::<Vec<_>>();
+    let remaining_entries =
+        source_repo.count_further_bookmark_log_entries(ctx.clone(), counter as u64, None);
 
     let (next_entry, remaining_entries) = try_join!(next_entry, remaining_entries)?;
     let delay_secs = next_entry

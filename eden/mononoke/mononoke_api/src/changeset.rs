@@ -296,7 +296,6 @@ impl ChangesetContext {
         self.repo()
             .blob_repo()
             .get_generation_number(self.ctx().clone(), self.id)
-            .compat()
             .await?
             .ok_or_else(|| {
                 MononokeError::NotAvailable(format!("Generation number missing for {:?}", &self.id))

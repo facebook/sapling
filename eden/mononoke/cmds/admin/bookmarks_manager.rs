@@ -11,7 +11,7 @@ use bookmarks::Freshness;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, TryFutureExt, TryStreamExt};
+use futures::{compat::Future01CompatExt, StreamExt, TryFutureExt, TryStreamExt};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::{future, Future, IntoFuture, Stream};
 use mercurial_types::HgChangesetId;
@@ -188,6 +188,8 @@ fn list_hg_bookmark_log_entries(
     Error = Error,
 > {
     repo.list_bookmark_log_entries(ctx.clone(), name, max_rec, None, Freshness::MostRecent)
+        .boxed()
+        .compat()
         .map({
             cloned!(ctx, repo);
             move |(cs_id, rs, ts)| match cs_id {
@@ -250,6 +252,8 @@ fn handle_log<'a>(
                 None,
                 Freshness::MostRecent,
             )
+            .boxed()
+            .compat()
             .map(move |rows| {
                 let (cs_id, reason, timestamp) = rows;
                 let cs_id_str = match cs_id {

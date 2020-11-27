@@ -24,7 +24,7 @@ use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::{
     channel::oneshot,
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{self, select, BoxFuture, FutureExt as NewFutureExt},
     stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
 };
@@ -330,7 +330,6 @@ pub async fn find_all_underived_and_latest_derived(
                 Some(prev_limit),
                 Freshness::MaybeStale,
             )
-            .compat()
             .try_collect::<Vec<_>>()
             .await?;
 
@@ -1273,9 +1272,8 @@ mod tests {
         assert_eq!(false, (warmer.is_warm)(&ctx, &repo, &master_cs_id).await?);
         let gen_num = repo
             .get_generation_number(ctx.clone(), master_cs_id)
-            .compat();
-        let maybe_gen_num = gen_num.await?;
-        let gen_num = maybe_gen_num.ok_or(anyhow!("gen num for {} not found", master_cs_id))?;
+            .await?
+            .ok_or_else(|| anyhow!("gen num for {} not found", master_cs_id))?;
         mutable_counters
             .set_counter(
                 ctx.clone(),

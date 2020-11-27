@@ -560,7 +560,6 @@ async fn find_closest_root(
         async move {
             let gen_num = repo
                 .get_generation_number(ctx.clone(), *root)
-                .compat()
                 .await?
                 .ok_or(PushrebaseError::from(
                     PushrebaseInternalError::RootNotFound(*root),

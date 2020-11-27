@@ -877,7 +877,6 @@ async fn log_commits_to_scribe(
             async move {
                 let get_generation = async {
                     repo.get_generation_number(ctx.clone(), changeset_id)
-                        .compat()
                         .await?
                         .ok_or_else(|| Error::msg("No generation number found"))
                 };

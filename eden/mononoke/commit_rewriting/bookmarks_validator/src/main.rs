@@ -18,8 +18,7 @@ use cross_repo_sync::{
     CommitSyncOutcome, CommitSyncer, Syncers,
 };
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future};
-use futures_old::Stream;
+use futures::{future, TryStreamExt};
 use live_commit_sync_config::CONFIGERATOR_PUSHREDIRECT_ENABLE;
 use mononoke_types::ChangesetId;
 use pushredirect_enable::types::MononokePushRedirectEnable;
@@ -219,7 +218,7 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
 
     let large_repo = small_to_large.get_large_repo();
     // Log entries are sorted newest to oldest
-    let log_entries = large_repo
+    let log_entries: Vec<_> = large_repo
         .list_bookmark_log_entries(
             ctx.clone(),
             large_bookmark.clone(),
@@ -227,8 +226,7 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
             None,
             Freshness::MostRecent,
         )
-        .collect()
-        .compat()
+        .try_collect()
         .await?;
 
     if let Some((_, _, latest_timestamp)) = log_entries.get(0) {

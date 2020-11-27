@@ -23,11 +23,7 @@ use cross_repo_sync::{
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use fixtures::linear;
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
-    TryStreamExt,
-};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
 use futures_ext::spawn_future;
 use futures_old::{future, stream::Stream as OldStream};
 use manifest::{Entry, ManifestOps};
@@ -96,10 +92,9 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
         let source_repo = commit_syncer.get_source_repo();
         let target_repo = commit_syncer.get_target_repo();
 
-        let next_log_entries = source_repo
+        let next_log_entries: Vec<_> = source_repo
             .read_next_bookmark_log_entries(ctx.clone(), 0, 1000, Freshness::MostRecent)
-            .collect()
-            .compat()
+            .try_collect()
             .await?;
 
         // Sync entries starting from counter 0. sync_entries() function should skip
@@ -475,11 +470,10 @@ async fn backsync_and_verify_master_wc(
     let target_repo = commit_syncer.get_target_repo();
 
     let ctx = CoreContext::test_mock(fb);
-    let next_log_entries = commit_syncer
+    let next_log_entries: Vec<_> = commit_syncer
         .get_source_repo()
         .read_next_bookmark_log_entries(ctx.clone(), 0, 1000, Freshness::MaybeStale)
-        .collect()
-        .compat()
+        .try_collect()
         .await?;
 
     let latest_log_id = next_log_entries.len() as i64;

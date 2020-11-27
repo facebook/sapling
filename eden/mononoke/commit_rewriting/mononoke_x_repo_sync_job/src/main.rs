@@ -235,7 +235,6 @@ async fn tail<
     let remaining_entries = commit_syncer
         .get_source_repo()
         .count_further_bookmark_log_entries(ctx.clone(), start_id as u64, None)
-        .compat()
         .await?;
 
     if log_entries.is_empty() {

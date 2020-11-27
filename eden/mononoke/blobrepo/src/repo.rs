@@ -290,11 +290,10 @@ impl BlobRepo {
         max_rec: u32,
         offset: Option<u32>,
         freshness: Freshness,
-    ) -> impl OldStream<Item = (Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error = Error>
+    ) -> impl Stream<Item = Result<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error>>
     {
         self.attribute_expected::<dyn BookmarkUpdateLog>()
             .list_bookmark_log_entries(ctx.clone(), name, max_rec, offset, freshness)
-            .compat()
     }
 
     pub fn read_next_bookmark_log_entries(
@@ -303,21 +302,20 @@ impl BlobRepo {
         id: u64,
         limit: u64,
         freshness: Freshness,
-    ) -> impl OldStream<Item = BookmarkUpdateLogEntry, Error = Error> {
+    ) -> impl Stream<Item = Result<BookmarkUpdateLogEntry, Error>> {
         self.attribute_expected::<dyn BookmarkUpdateLog>()
             .read_next_bookmark_log_entries(ctx, id, limit, freshness)
-            .compat()
     }
 
-    pub fn count_further_bookmark_log_entries(
+    pub async fn count_further_bookmark_log_entries(
         &self,
         ctx: CoreContext,
         id: u64,
         exclude_reason: Option<BookmarkUpdateReason>,
-    ) -> impl OldFuture<Item = u64, Error = Error> {
+    ) -> Result<u64, Error> {
         self.attribute_expected::<dyn BookmarkUpdateLog>()
             .count_further_bookmark_log_entries(ctx, id, exclude_reason)
-            .compat()
+            .await
     }
 
     pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction> {
@@ -328,16 +326,19 @@ impl BlobRepo {
 
     // Returns the generation number of a changeset
     // note: it returns Option because changeset might not exist
-    pub fn get_generation_number(
+    pub async fn get_generation_number(
         &self,
         ctx: CoreContext,
         cs: ChangesetId,
-    ) -> impl OldFuture<Item = Option<Generation>, Error = Error> {
+    ) -> Result<Option<Generation>, Error> {
         STATS::get_generation_number.add_value(1);
-        self.inner
+        let result = self
+            .inner
             .changesets
             .get(ctx, self.get_repoid(), cs)
-            .map(|res| res.map(|res| Generation::new(res.gen)))
+            .compat()
+            .await?;
+        Ok(result.map(|res| Generation::new(res.gen)))
     }
 
     pub fn get_changeset_fetcher(&self) -> Arc<dyn ChangesetFetcher> {

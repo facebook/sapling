@@ -79,9 +79,9 @@ async fn fetch_generation_number(
     repo: &BlobRepo,
     cs_id: ChangesetId,
 ) -> Result<Generation, Error> {
-    let gen_num = repo.get_generation_number(ctx.clone(), cs_id).compat();
-    let maybe_gen_num = gen_num.await?;
-    maybe_gen_num.ok_or(anyhow!("gen num for {} not found", cs_id))
+    repo.get_generation_number(ctx.clone(), cs_id)
+        .await?
+        .ok_or_else(|| anyhow!("gen num for {} not found", cs_id))
 }
 
 async fn check_if_present_in_hg(

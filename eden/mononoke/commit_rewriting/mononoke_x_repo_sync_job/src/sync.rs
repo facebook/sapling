@@ -487,8 +487,8 @@ async fn validate_if_new_repo_merge(
     p1: ChangesetId,
     p2: ChangesetId,
 ) -> Result<Vec<ChangesetId>, Error> {
-    let p1gen = repo.get_generation_number(ctx.clone(), p1).compat();
-    let p2gen = repo.get_generation_number(ctx.clone(), p2).compat();
+    let p1gen = repo.get_generation_number(ctx.clone(), p1);
+    let p2gen = repo.get_generation_number(ctx.clone(), p2);
     let (p1gen, p2gen) = try_join!(p1gen, p2gen)?;
     // FIXME: this code has an assumption that parent with a smaller generation number is a
     // parent that introduces a new repo. This is usually the case, however it might not be true
@@ -644,7 +644,6 @@ mod test {
     use cross_repo_sync_test_utils::init_small_large_repo;
     use fbinit::FacebookInit;
     use futures::TryStreamExt;
-    use futures_old::stream::Stream;
     use maplit::hashset;
     use mutable_counters::MutableCounters;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
@@ -1015,15 +1014,14 @@ mod test {
 
         println!("start from: {}", start_from);
         let read_all = 65536;
-        let log_entries = smallrepo
+        let log_entries: Vec<_> = smallrepo
             .read_next_bookmark_log_entries(
                 ctx.clone(),
                 start_from as u64,
                 read_all,
                 Freshness::MostRecent,
             )
-            .collect()
-            .compat()
+            .try_collect()
             .await?;
 
         println!(

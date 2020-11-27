@@ -444,9 +444,7 @@ async fn maybe_update_highest_imported_generation_number(
             blobimport_lib::HIGHEST_IMPORTED_GEN_NUM,
         )
         .compat();
-    let new_gen_num = blobrepo
-        .get_generation_number(ctx.clone(), latest_imported_cs_id)
-        .compat();
+    let new_gen_num = blobrepo.get_generation_number(ctx.clone(), latest_imported_cs_id);
     let (maybe_highest_imported_gen_num, new_gen_num) =
         try_join(maybe_highest_imported_gen_num, new_gen_num).await?;
 

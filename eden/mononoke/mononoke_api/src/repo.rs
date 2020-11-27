@@ -580,7 +580,6 @@ impl Repo {
         let maybe_gen_num = self
             .blob_repo
             .get_generation_number(ctx.clone(), *cs_id)
-            .compat()
             .await?;
         maybe_gen_num.ok_or(format_err!("gen num for {} not found", cs_id))
     }

@@ -35,8 +35,10 @@ impl ChangesetFetcher for TestChangesetFetcher {
         ctx: CoreContext,
         cs_id: ChangesetId,
     ) -> BoxFuture<Generation, Error> {
-        self.repo
-            .get_generation_number(ctx, cs_id)
+        let repo = self.repo.clone();
+        async move { repo.get_generation_number(ctx, cs_id).await }
+            .boxed()
+            .compat()
             .and_then(move |genopt| genopt.ok_or_else(|| format_err!("{} not found", cs_id)))
             .boxify()
     }

@@ -38,12 +38,8 @@ use cross_repo_sync::{
     find_toposorted_unsynced_ancestors, CandidateSelectionHint, CommitSyncContext,
     CommitSyncOutcome, CommitSyncer,
 };
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
-};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
 use futures_old::future::Future;
-use futures_old::stream::Stream as OldStream;
 use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
@@ -104,7 +100,7 @@ where
             u64::max_value()
         }
     };
-    let next_entries = commit_syncer
+    let next_entries: Vec<_> = commit_syncer
         .get_source_repo()
         .read_next_bookmark_log_entries(
             ctx.clone(),
@@ -112,8 +108,7 @@ where
             log_entries_limit,
             Freshness::MostRecent,
         )
-        .collect()
-        .compat()
+        .try_collect()
         .await?;
 
     if next_entries.is_empty() {

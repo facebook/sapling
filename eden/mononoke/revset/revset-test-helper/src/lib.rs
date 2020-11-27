@@ -72,7 +72,6 @@ pub async fn assert_changesets_sequence<I>(
         let expected_generation = repo
             .clone()
             .get_generation_number(ctx.clone(), expected)
-            .compat()
             .await
             .expect("Unexpected error");
 
@@ -91,7 +90,6 @@ pub async fn assert_changesets_sequence<I>(
             let node_generation = repo
                 .clone()
                 .get_generation_number(ctx.clone(), expected)
-                .compat()
                 .await
                 .expect("Unexpected error");
 
