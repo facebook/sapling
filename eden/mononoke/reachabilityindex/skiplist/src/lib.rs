@@ -1821,8 +1821,7 @@ mod test {
                         {
                             let heads = repo
                                 .get_bonsai_heads_maybe_stale(ctx.clone())
-                                .collect()
-                                .compat()
+                                .try_collect::<Vec<_>>()
                                 .await
                                 .unwrap();
                             for head in heads {

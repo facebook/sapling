@@ -20,7 +20,7 @@ use changesets::{ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FilestoreConfig;
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
+use futures::{FutureExt, Stream, TryFutureExt, TryStreamExt};
 use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as _};
 use futures_old::{
     future::{loop_fn, ok, Future as OldFuture, Loop},
@@ -141,7 +141,7 @@ impl BlobRepo {
     pub fn get_bonsai_heads_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl OldStream<Item = ChangesetId, Error = Error> {
+    ) -> impl Stream<Item = Result<ChangesetId, Error>> {
         STATS::get_bonsai_heads_maybe_stale.add_value(1);
         self.attribute_expected::<dyn Bookmarks>()
             .list(
@@ -153,7 +153,6 @@ impl BlobRepo {
                 std::u64::MAX,
             )
             .map_ok(|(_, cs_id)| cs_id)
-            .compat()
     }
 
     /// List all publishing Bonsai bookmarks.
@@ -370,8 +369,7 @@ impl BlobRepo {
         let this = self.clone();
         Arc::new(move |ctx: &CoreContext| {
             this.get_bonsai_heads_maybe_stale(ctx.clone())
-                .collect()
-                .compat()
+                .try_collect()
                 .boxed()
         })
     }

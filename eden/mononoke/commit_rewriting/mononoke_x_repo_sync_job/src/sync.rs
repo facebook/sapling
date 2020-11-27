@@ -255,7 +255,6 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
         }
     }
 
-
     for cs_id in unsynced_ancestors {
         let maybe_new_cs_id = if no_pushrebase.contains(&cs_id) {
             sync_commit_without_pushrebase(
@@ -654,6 +653,7 @@ mod test {
     use cross_repo_sync::validation;
     use cross_repo_sync_test_utils::init_small_large_repo;
     use fbinit::FacebookInit;
+    use futures::TryStreamExt;
     use futures_old::stream::Stream;
     use maplit::hashset;
     use mutable_counters::MutableCounters;
@@ -1068,10 +1068,9 @@ mod test {
             validation::find_bookmark_diff(ctx.clone(), commit_syncer).await?,
             vec![],
         );
-        let heads = smallrepo
+        let heads: Vec<_> = smallrepo
             .get_bonsai_heads_maybe_stale(ctx.clone())
-            .collect()
-            .compat()
+            .try_collect()
             .await?;
         for head in heads {
             println!("verifying working copy for {}", head);

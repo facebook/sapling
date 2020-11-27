@@ -252,6 +252,7 @@ impl BlobRepoHg for BlobRepo {
     fn get_heads_maybe_stale(&self, ctx: CoreContext) -> BoxStream<HgChangesetId, Error> {
         STATS::get_heads_maybe_stale.add_value(1);
         self.get_bonsai_heads_maybe_stale(ctx.clone())
+            .compat()
             .and_then({
                 let repo = self.clone();
                 move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)

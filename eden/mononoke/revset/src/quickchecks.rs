@@ -32,7 +32,7 @@ mod test {
     use cloned::cloned;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use futures::{compat::Stream01CompatExt, stream::StreamExt as _};
+    use futures::{compat::Stream01CompatExt, stream::StreamExt as _, TryStreamExt};
     use futures_ext::{BoxFuture, BoxStream, StreamExt};
     use futures_old::{future::ok, Stream};
     use mononoke_types::ChangesetId;
@@ -61,6 +61,7 @@ mod test {
         let changeset_fetcher = repo.get_changeset_fetcher();
         let mut all_changesets_stream = repo
             .get_bonsai_heads_maybe_stale(ctx.clone())
+            .compat() // conversion is needed as AncestorsNodeStream is an OldStream
             .map({
                 cloned!(ctx);
                 move |head| AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, head)
@@ -519,7 +520,6 @@ mod test {
             async move {
                 let heads = repo
                     .get_bonsai_heads_maybe_stale(ctx.clone())
-                    .compat()
                     .try_collect::<Vec<_>>()
                     .await?;
                 try_join_all(heads.into_iter().map(|head| {

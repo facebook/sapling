@@ -534,10 +534,9 @@ async fn verify_mapping_and_all_wc(
 
     verify_bookmarks(ctx.clone(), commit_syncer.clone()).await?;
 
-    let heads = source_repo
+    let heads: Vec<_> = source_repo
         .get_bonsai_heads_maybe_stale(ctx.clone())
-        .collect()
-        .compat()
+        .try_collect()
         .await?;
 
     println!("checking all source commits");

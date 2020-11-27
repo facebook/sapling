@@ -11,7 +11,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{try_join, FutureExt, TryFutureExt},
     stream, StreamExt, TryStreamExt,
 };
@@ -203,7 +203,6 @@ async fn build_skiplist_index<'a, S: ToString>(
 
     let heads = repo
         .get_bonsai_heads_maybe_stale(ctx.clone())
-        .compat()
         .try_collect::<Vec<_>>();
 
     let (heads, (cs_fetcher, skiplist_index)) = try_join(heads, cs_fetcher_skiplist_func).await?;
