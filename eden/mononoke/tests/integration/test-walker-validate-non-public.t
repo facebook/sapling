@@ -96,16 +96,16 @@ Check we dont walk filenodes on a non-public commit.  Because filenodes is the o
   * Type:Walked,Checks,Children HgChangeset:1,* HgFileEnvelope:1,* HgFileNode:1,* HgManifest:1,* (glob)
 
 validate, expect failures on phase info, and linknode as we now point to a non-public commit
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore validate --scuba-log-file scuba.json -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
+  $ mononoke_walker --readonly-storage --cachelib-only-blobstore validate --scuba-log-file scuba.json -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog | sort
+  Final count: * (glob)
+  Nodes,Pass,Fail:56,6,2; EdgesChecked:14; CheckType:Pass,Fail Total:6,2 ChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:3,1
+  Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
+  Validation failed: *bonsai_phase_is_public* (glob)
+  Validation failed: *hg_link_node_populated* (glob)
+  Walked* (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
-  Validation failed: *hg_link_node_populated* (glob)
-  Validation failed: *bonsai_phase_is_public* (glob)
-  Final count: * (glob)
-  Walked* (glob)
-  Nodes,Pass,Fail:56,6,2; EdgesChecked:14; CheckType:Pass,Fail Total:6,2 ChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:3,1
+  Walking roots * (glob)
 
 Check scuba data
   $ wc -l < scuba.json
