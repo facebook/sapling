@@ -740,9 +740,12 @@ async fn bonsai_to_fsnode_mapping_step<V: VisitOne>(
 
     if let Some(root_fsnode_id) = root_fsnode_id {
         let mut edges = vec![];
-        checker.add_edge(&mut edges, EdgeType::FsnodeMappingToRootFsnode, || {
-            Node::Fsnode(PathKey::new(*root_fsnode_id.fsnode_id(), WrappedPath::Root))
-        });
+        checker.add_edge_with_path(
+            &mut edges,
+            EdgeType::FsnodeMappingToRootFsnode,
+            || Node::Fsnode(*root_fsnode_id.fsnode_id()),
+            || Some(WrappedPath::Root),
+        );
         Ok(StepOutput(
             checker.step_data(NodeType::FsnodeMapping, || {
                 NodeData::FsnodeMapping(Some(*root_fsnode_id.fsnode_id()))
@@ -761,8 +764,8 @@ async fn fsnode_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
-    path: WrappedPath,
     fsnode_id: &FsnodeId,
+    path: Option<&WrappedPath>,
 ) -> Result<StepOutput, Error> {
     let fsnode = fsnode_id
         .load(ctx.clone(), &repo.get_blobstore())
@@ -776,11 +779,16 @@ async fn fsnode_step<V: VisitOne>(
         match fsnode_entry {
             FsnodeEntry::Directory(dir) => {
                 let fsnode_id = dir.id();
-                let mpath_opt =
-                    WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
-                checker.add_edge(&mut dir_edges, EdgeType::FsnodeToChildFsnode, || {
-                    Node::Fsnode(PathKey::new(*fsnode_id, mpath_opt))
-                });
+                checker.add_edge_with_path(
+                    &mut dir_edges,
+                    EdgeType::FsnodeToChildFsnode,
+                    || Node::Fsnode(*fsnode_id),
+                    || {
+                        path.map(|p| {
+                            WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                        })
+                    },
+                );
             }
             FsnodeEntry::File(file) => {
                 checker.add_edge_with_path(
@@ -788,9 +796,9 @@ async fn fsnode_step<V: VisitOne>(
                     EdgeType::FsnodeToFileContent,
                     || Node::FileContent(*file.content_id()),
                     || {
-                        let p =
-                            WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
-                        Some(p)
+                        path.map(|p| {
+                            WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                        })
                     },
                 );
             }
@@ -1463,7 +1471,7 @@ where
         Node::DeletedManifestMapping(bcs_id) => {
             deleted_manifest_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
-        Node::Fsnode(PathKey { id, path }) => fsnode_step(&ctx, &repo, &checker, path, &id).await,
+        Node::Fsnode(id) => fsnode_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await,
         Node::FsnodeMapping(bcs_id) => {
             bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }

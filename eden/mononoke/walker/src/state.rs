@@ -155,7 +155,6 @@ pub struct WalkState {
     hg_filenode_ids: InternMap<HgFileNodeId, InternedId<HgFileNodeId>>,
     mpath_hashs: InternMap<Option<MPathHash>, InternedId<Option<MPathHash>>>,
     deleted_manifest_ids: InternMap<DeletedManifestId, InternedId<DeletedManifestId>>,
-    fsnode_ids: InternMap<FsnodeId, InternedId<FsnodeId>>,
     hg_manifest_ids: InternMap<HgManifestId, InternedId<HgManifestId>>,
     unode_file_ids: InternMap<FileUnodeId, InternedId<FileUnodeId>>,
     unode_manifest_ids: InternMap<ManifestUnodeId, InternedId<ManifestUnodeId>>,
@@ -177,7 +176,7 @@ pub struct WalkState {
     visited_deleted_manifest:
         StateMap<(InternedId<Option<MPathHash>>, InternedId<DeletedManifestId>)>,
     visited_deleted_manifest_mapping: StateMap<InternedId<ChangesetId>>,
-    visited_fsnode: StateMap<(InternedId<Option<MPathHash>>, InternedId<FsnodeId>)>,
+    visited_fsnode: StateMap<FsnodeId>,
     visited_fsnode_mapping: StateMap<InternedId<ChangesetId>>,
     visited_skeleton_manifest: StateMap<SkeletonManifestId>,
     visited_skeleton_manifest_mapping: StateMap<InternedId<ChangesetId>>,
@@ -211,7 +210,6 @@ impl WalkState {
             hg_filenode_ids: InternMap::with_hasher(fac.clone()),
             mpath_hashs: InternMap::with_hasher(fac.clone()),
             deleted_manifest_ids: InternMap::with_hasher(fac.clone()),
-            fsnode_ids: InternMap::with_hasher(fac.clone()),
             hg_manifest_ids: InternMap::with_hasher(fac.clone()),
             unode_file_ids: InternMap::with_hasher(fac.clone()),
             unode_manifest_ids: InternMap::with_hasher(fac.clone()),
@@ -455,10 +453,7 @@ impl VisitOne for WalkState {
                     true
                 }
             }
-            Node::Fsnode(k) => self.record_with_path(
-                &self.visited_fsnode,
-                (&k.path, &self.fsnode_ids.interned(&k.id)),
-            ),
+            Node::Fsnode(id) => self.record(&self.visited_fsnode, &id),
             Node::FsnodeMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_fsnode_mapping.contains_key(&id) // Does not insert, see record_resolved_visit

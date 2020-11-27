@@ -12,7 +12,7 @@ use filestore::Alias;
 use mercurial_types::{HgFileNodeId, HgManifestId};
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
-    DeletedManifestId, FileUnodeId, FsnodeId, MPath, ManifestUnodeId,
+    DeletedManifestId, FileUnodeId, MPath, ManifestUnodeId,
 };
 use std::{iter::FromIterator, str::FromStr};
 use strum::IntoEnumIterator;
@@ -70,16 +70,6 @@ impl FromStr for PathKey<HgFileNodeId> {
         let parts: Vec<_> = s.split(NODE_SEP).collect();
         let path = check_and_build_path(NodeType::HgFileNode, &parts)?;
         let id = HgFileNodeId::from_str(parts[0])?;
-        Ok(Self { id, path })
-    }
-}
-
-impl FromStr for PathKey<FsnodeId> {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<_> = s.split(NODE_SEP).collect();
-        let path = check_and_build_path(NodeType::Fsnode, &parts)?;
-        let id = FsnodeId::from_str(parts[0])?;
         Ok(Self { id, path })
     }
 }
@@ -295,12 +285,6 @@ mod tests {
                     .get_type()
                 );
             }
-            NodeType::FsnodeMapping => {
-                assert_eq!(
-                    node_type,
-                    &parse_node(&format!("FsnodeMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
-                );
-            }
             NodeType::UnodeMapping => {
                 assert_eq!(
                     node_type,
@@ -316,11 +300,13 @@ mod tests {
             NodeType::Fsnode => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!(
-                        "Fsnode{}{}{}{}",
-                        NODE_SEP, SAMPLE_BLAKE2, NODE_SEP, SAMPLE_PATH
-                    ))?
-                    .get_type()
+                    &parse_node(&format!("Fsnode{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                );
+            }
+            NodeType::FsnodeMapping => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!("FsnodeMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
                 );
             }
             NodeType::SkeletonManifest => {
