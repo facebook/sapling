@@ -310,16 +310,10 @@ mod tests {
     use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext};
     use cross_repo_sync_test_utils::init_small_large_repo;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
-    use tokio_compat::runtime::Runtime;
 
-    #[fbinit::test]
-    fn simple_check_large_bookmark_history(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_simple_check_large_bookmark_history(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        runtime.block_on_std(test_simple_check_large_bookmark_history(ctx))
-    }
-
-    async fn test_simple_check_large_bookmark_history(ctx: CoreContext) -> Result<(), Error> {
         let (syncers, _) = init_small_large_repo(&ctx).await?;
         let small_to_large = &syncers.small_to_large;
         let small_repo = small_to_large.get_small_repo();
@@ -385,14 +379,9 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn another_repo_check_large_bookmark_history(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_another_repo_check_large_bookmark_history(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        runtime.block_on_std(test_another_repo_check_large_bookmark_history(ctx))
-    }
-
-    async fn test_another_repo_check_large_bookmark_history(ctx: CoreContext) -> Result<(), Error> {
         let (syncers, _) = init_small_large_repo(&ctx).await?;
         let small_to_large = &syncers.small_to_large;
 
@@ -457,16 +446,11 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn recently_created_check_large_bookmark_history(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
-        let ctx = CoreContext::test_mock(fb);
-        runtime.block_on_std(test_recently_created_check_large_bookmark_history(ctx))
-    }
-
+    #[fbinit::compat_test]
     async fn test_recently_created_check_large_bookmark_history(
-        ctx: CoreContext,
+        fb: FacebookInit,
     ) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
         let (syncers, _) = init_small_large_repo(&ctx).await?;
         let small_to_large = &syncers.small_to_large;
         let large_repo = small_to_large.get_large_repo();
@@ -512,16 +496,11 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn deleted_added_back_check_large_bookmark_history(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
-        let ctx = CoreContext::test_mock(fb);
-        runtime.block_on_std(test_deleted_added_back_created_check_large_bookmark_history(ctx))
-    }
-
+    #[fbinit::compat_test]
     async fn test_deleted_added_back_created_check_large_bookmark_history(
-        ctx: CoreContext,
+        fb: FacebookInit,
     ) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
         let (syncers, _) = init_small_large_repo(&ctx).await?;
         let small_to_large = &syncers.small_to_large;
         let large_repo = small_to_large.get_large_repo();
