@@ -32,19 +32,19 @@ use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct FilelogDeltaed {
+pub(crate) struct FilelogDeltaed {
     pub path: MPath,
     pub chunk: CgDeltaChunk,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum FilelogData {
+pub(crate) enum FilelogData {
     RawBytes(Bytes),
     LfsMetaData(ContentBlobMeta),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Filelog {
+pub(crate) struct Filelog {
     pub node_key: HgNodeKey,
     pub p1: Option<HgNodeHash>,
     pub p2: Option<HgNodeHash>,
@@ -92,7 +92,7 @@ impl UploadableHgBlob for Filelog {
     }
 }
 
-pub fn convert_to_revlog_filelog(
+pub(crate) fn convert_to_revlog_filelog(
     ctx: CoreContext,
     repo: BlobRepo,
     deltaed: impl Stream<Item = Result<FilelogDeltaed>> + Send + 'static,

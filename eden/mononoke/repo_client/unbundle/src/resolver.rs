@@ -68,7 +68,7 @@ mod UNBUNDLE_STATS {
         total_unbundles: dynamic_timeseries("{}.total_unbundles", (reponame: String); Rate, Sum),
     }
 
-    pub use self::STATS::*;
+    pub(crate) use self::STATS::*;
 }
 
 pub type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
@@ -739,7 +739,7 @@ async fn resolve_bookmark_only_pushrebase<'r>(
 /// by a single unbundle wireproto command. This can
 /// be either an exactly one infinitepush, or multiple
 /// plain pushes
-pub enum AllBookmarkPushes<T: Copy> {
+enum AllBookmarkPushes<T: Copy> {
     PlainPushes(Vec<PlainBookmarkPush<T>>),
     Inifinitepush(InfiniteBookmarkPush<T>),
 }
@@ -794,7 +794,7 @@ enum Pushkey {
 
 /// Holds repo and logger for convienience access from it's methods
 #[derive(Clone)]
-pub struct Bundle2Resolver<'r> {
+struct Bundle2Resolver<'r> {
     ctx: &'r CoreContext,
     repo: &'r BlobRepo,
     infinitepush_writes_allowed: bool,

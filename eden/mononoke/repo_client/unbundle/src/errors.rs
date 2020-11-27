@@ -9,7 +9,7 @@ use mercurial_types::HgChangesetId;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub(crate) enum ErrorKind {
     #[error("Error while uploading data for changesets, hashes: {0:?}")]
     WhileUploadingData(Vec<HgChangesetId>),
     #[error("Repo is marked as read-only: {0}")]

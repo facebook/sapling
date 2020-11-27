@@ -14,7 +14,7 @@ use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::{delta, HgBlob, HgBlobNode, HgChangesetId, NULL_HASH};
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct ChangesetDeltaed {
+pub(crate) struct ChangesetDeltaed {
     pub chunk: CgDeltaChunk,
 }
 

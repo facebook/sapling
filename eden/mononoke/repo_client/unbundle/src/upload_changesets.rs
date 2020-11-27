@@ -45,7 +45,7 @@ type HgBlobStream = OldBoxStream<(Entry<HgManifestId, HgFileNodeId>, RepoPath), 
 /// In order to generate the DAG of dependencies between Root Manifest and other Manifests and
 /// Filelogs we need to walk that DAG.
 /// This represents the manifests and file nodes introduced by a particular changeset.
-pub struct NewBlobs {
+pub(crate) struct NewBlobs {
     // root_manifest can be None f.e. when commit removes all the content of the repo
     root_manifest: OldBoxFuture<Option<(HgManifestId, RepoPath)>, Error>,
     // sub_entries has both submanifest and filenode entries.
@@ -73,7 +73,7 @@ impl AddAssign for WalkHelperCounters {
 }
 
 impl NewBlobs {
-    pub fn new(
+    pub(crate) fn new(
         manifest_root_id: HgManifestId,
         manifests: &Manifests,
         filelogs: &Filelogs,
@@ -281,7 +281,7 @@ fn get_parent(
     ok(res)
 }
 
-pub async fn upload_changeset(
+pub(crate) async fn upload_changeset(
     ctx: CoreContext,
     repo: BlobRepo,
     scuba_logger: ScubaSampleBuilder,

@@ -23,7 +23,7 @@ mod stats;
 mod upload_blobs;
 mod upload_changesets;
 
-pub use hook_running::{make_hook_rejection_remapper, run_hooks};
+pub use hook_running::run_hooks;
 pub use hooks::CrossRepoPushSource;
 pub use processing::{get_pushrebase_hooks, run_post_resolve_action};
 pub use push_redirector::{PushRedirector, PushRedirectorArgs};

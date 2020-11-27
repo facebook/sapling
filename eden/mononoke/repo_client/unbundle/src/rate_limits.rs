@@ -28,7 +28,7 @@ const TIME_WINDOW_MIN: u32 = 10;
 const TIME_WINDOW_MAX: u32 = 3600;
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
-pub enum RateLimitedPushKind {
+pub(crate) enum RateLimitedPushKind {
     Public,
     InfinitePush,
 }
@@ -80,7 +80,10 @@ fn get_file_changes_rate_limit(
     maybe_rate_limit_with_category
 }
 
-pub async fn enforce_file_changes_rate_limits<'a, RC: Iterator<Item = &'a RevlogChangeset>>(
+pub(crate) async fn enforce_file_changes_rate_limits<
+    'a,
+    RC: Iterator<Item = &'a RevlogChangeset>,
+>(
     ctx: &CoreContext,
     repo_id: RepositoryId,
     push_kind: RateLimitedPushKind,
@@ -137,7 +140,7 @@ pub async fn enforce_file_changes_rate_limits<'a, RC: Iterator<Item = &'a Revlog
     })
 }
 
-pub fn enforce_commit_rate_limits<'a>(
+pub(crate) fn enforce_commit_rate_limits<'a>(
     ctx: CoreContext,
     action: &'a PostResolveAction,
 ) -> impl Future<Item = (), Error = BundleResolverError> + 'static {

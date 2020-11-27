@@ -24,20 +24,20 @@ use mononoke_types::RepoPath;
 use wirepack::TreemanifestEntry;
 
 /// Represents data that is Mercurial-encoded and can be uploaded to the blobstore.
-pub trait UploadableHgBlob {
+pub(crate) trait UploadableHgBlob {
     type Value: Send + 'static;
 
     fn upload(self, ctx: CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)>;
 }
 
 #[derive(PartialEq, Eq)]
-pub enum UploadBlobsType {
+pub(crate) enum UploadBlobsType {
     IgnoreDuplicates,
     EnsureNoDuplicates,
 }
 use self::UploadBlobsType::*;
 
-pub fn upload_hg_blobs<S, B>(
+pub(crate) fn upload_hg_blobs<S, B>(
     ctx: CoreContext,
     repo: BlobRepo,
     blobs: S,

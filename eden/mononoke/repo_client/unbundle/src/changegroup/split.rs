@@ -20,7 +20,7 @@ use mercurial_bundles::changegroup::{Part, Section};
 use crate::changegroup::changeset::ChangesetDeltaed;
 use crate::changegroup::filelog::FilelogDeltaed;
 
-pub fn split_changegroup(
+pub(crate) fn split_changegroup(
     cg2s: impl Stream<Item = Result<Part>> + Send + 'static,
 ) -> (
     impl Stream<Item = Result<ChangesetDeltaed>>,

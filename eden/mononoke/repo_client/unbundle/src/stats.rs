@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-pub use stats::prelude::*;
+pub(crate) use stats::prelude::*;
 
 define_stats! {
     prefix = "mononoke.bundle2_resolver";
