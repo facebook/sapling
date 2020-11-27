@@ -1004,8 +1004,8 @@ async fn deleted_manifest_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
-    path: WrappedPath,
     id: &DeletedManifestId,
+    path: Option<&WrappedPath>,
 ) -> Result<StepOutput, Error> {
     let deleted_manifest = id.load(ctx.clone(), &repo.get_blobstore()).await?;
     let linked_cs_id = *deleted_manifest.linknode();
@@ -1019,11 +1019,15 @@ async fn deleted_manifest_step<V: VisitOne>(
     }
 
     for (child_path, deleted_manifest_id) in deleted_manifest.list() {
-        let mpath_opt = WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child_path)));
-        checker.add_edge(
+        checker.add_edge_with_path(
             &mut edges,
             EdgeType::DeletedManifestToDeletedManifestChild,
-            || Node::DeletedManifest(PathKey::new(*deleted_manifest_id, mpath_opt)),
+            || Node::DeletedManifest(*deleted_manifest_id),
+            || {
+                path.map(|p| {
+                    WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child_path)))
+                })
+            },
         );
     }
 
@@ -1047,15 +1051,11 @@ async fn deleted_manifest_mapping_step<V: VisitOne>(
 
     if let Some(root_manifest_id) = root_manifest_id {
         let mut edges = vec![];
-        checker.add_edge(
+        checker.add_edge_with_path(
             &mut edges,
             EdgeType::DeletedManifestMappingToRootDeletedManifest,
-            || {
-                Node::DeletedManifest(PathKey::new(
-                    *root_manifest_id.deleted_manifest_id(),
-                    WrappedPath::Root,
-                ))
-            },
+            || Node::DeletedManifest(*root_manifest_id.deleted_manifest_id()),
+            || Some(WrappedPath::Root),
         );
         Ok(StepOutput(
             checker.step_data(NodeType::DeletedManifestMapping, || {
@@ -1465,8 +1465,8 @@ where
         Node::ChangesetInfoMapping(bcs_id) => {
             bonsai_changeset_info_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
-        Node::DeletedManifest(PathKey { id, path }) => {
-            deleted_manifest_step(&ctx, &repo, &checker, path, &id).await
+        Node::DeletedManifest(id) => {
+            deleted_manifest_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await
         }
         Node::DeletedManifestMapping(bcs_id) => {
             deleted_manifest_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await

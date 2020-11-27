@@ -12,7 +12,7 @@ use filestore::Alias;
 use mercurial_types::{HgFileNodeId, HgManifestId};
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
-    DeletedManifestId, FileUnodeId, MPath, ManifestUnodeId,
+    FileUnodeId, MPath, ManifestUnodeId,
 };
 use std::{iter::FromIterator, str::FromStr};
 use strum::IntoEnumIterator;
@@ -41,16 +41,6 @@ impl FromStr for UnitKey {
         } else {
             Err(format_err!("Expected empty string for UnitKey"))
         }
-    }
-}
-
-impl FromStr for PathKey<DeletedManifestId> {
-    type Err = Error;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<_> = s.split(NODE_SEP).collect();
-        let path = check_and_build_path(NodeType::DeletedManifest, &parts)?;
-        let id = DeletedManifestId::from_str(parts[0])?;
-        Ok(Self { id, path })
     }
 }
 
@@ -268,11 +258,8 @@ mod tests {
             NodeType::DeletedManifest => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!(
-                        "DeletedManifest{}{}{}{}",
-                        NODE_SEP, SAMPLE_BLAKE2, NODE_SEP, SAMPLE_PATH
-                    ))?
-                    .get_type()
+                    &parse_node(&format!("DeletedManifest{}{}", NODE_SEP, SAMPLE_BLAKE2))?
+                        .get_type()
                 );
             }
             NodeType::DeletedManifestMapping => {
