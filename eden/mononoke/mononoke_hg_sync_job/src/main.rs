@@ -805,7 +805,6 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                 let (stats, res) = async {
                     let prepared_log_entry = bundle_preparer
                         .prepare_single_bundle(ctx.clone(), log_entry.clone(), overlay.clone())
-                        .compat()
                         .await?;
                     let combined_entry = combine_entries(&ctx, &[prepared_log_entry]).await?;
 
@@ -916,7 +915,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                         log_entry.to_changeset_id.clone(),
                     );
                     let f = async move {
-                        let f = tokio::spawn(f.compat());
+                        let f = tokio::spawn(f);
                         let res = f.map_err(Error::from).await;
                         let res = match res {
                             Ok(Ok(res)) => Ok(res),

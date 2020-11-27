@@ -15,9 +15,8 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, FutureExt as _, TryFutureExt},
+    future::{try_join, BoxFuture, FutureExt},
 };
-use futures_ext::{BoxFuture, FutureExt};
 use getbundle_response::SessionLfsParams;
 use itertools::Itertools;
 use mercurial_bundle_replay_data::BundleReplayData;
@@ -111,7 +110,7 @@ impl BundlePreparer {
         ctx: CoreContext,
         log_entry: BookmarkUpdateLogEntry,
         overlay: crate::BookmarkOverlay,
-    ) -> BoxFuture<PreparedBookmarkUpdateLogEntry, Error> {
+    ) -> BoxFuture<'static, Result<PreparedBookmarkUpdateLogEntry, Error>> {
         cloned!(self.repo, self.ty);
 
         let base_retry_delay_ms = self.base_retry_delay_ms;
@@ -141,8 +140,6 @@ impl BundlePreparer {
             Ok(p)
         }
         .boxed()
-        .compat()
-        .boxify()
     }
 
     async fn try_prepare_single_bundle(
