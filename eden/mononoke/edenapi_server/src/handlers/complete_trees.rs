@@ -12,7 +12,7 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{
-    wire::{ToApi, ToWire, WireCompleteTreeRequest},
+    wire::{ToWire, WireCompleteTreeRequest},
     CompleteTreeRequest, EdenApiServerError, TreeEntry,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
@@ -26,7 +26,7 @@ use types::Key;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, parse_cbor_request, to_hg_path, to_mononoke_path};
+use crate::utils::{cbor_stream, get_repo, parse_wire_request, to_hg_path, to_mononoke_path};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -44,13 +44,7 @@ pub async fn complete_trees(state: &mut State) -> Result<impl TryIntoResponse, H
     let sctx = ServerContext::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
-    let request: WireCompleteTreeRequest = parse_cbor_request(state).await?;
-    let request: CompleteTreeRequest = match request.to_api() {
-        Ok(r) => r,
-        Err(e) => {
-            return Err(HttpError::e400(e));
-        }
-    };
+    let request = parse_wire_request::<WireCompleteTreeRequest>(state).await?;
 
     Ok(cbor_stream(
         rctx,

@@ -53,7 +53,7 @@ pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse,
 
     let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo).await?;
 
-    let request: CommitLocationToHashRequest = parse_cbor_request(state).await?;
+    let request: CommitLocationToHashRequest = parse_cbor_request(state).await?; // TODO: Should this use parse_wire_request?
     let hgid_list = request
         .locations
         .into_iter()

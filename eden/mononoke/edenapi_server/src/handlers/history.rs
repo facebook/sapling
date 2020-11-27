@@ -17,7 +17,9 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use cloned::cloned;
-use edenapi_types::{HistoryRequest, HistoryResponseChunk, ToWire, WireHistoryEntry};
+use edenapi_types::{
+    wire::WireHistoryRequest, HistoryRequest, HistoryResponseChunk, ToWire, WireHistoryEntry,
+};
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api::hg::HgRepoContext;
@@ -26,7 +28,7 @@ use types::Key;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, parse_cbor_request, to_mpath};
+use crate::utils::{cbor_stream, get_repo, parse_wire_request, to_mpath};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -49,7 +51,7 @@ pub async fn history(state: &mut State) -> Result<impl TryIntoResponse, HttpErro
     let sctx = ServerContext::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
-    let request = parse_cbor_request(state).await?;
+    let request = parse_wire_request::<WireHistoryRequest>(state).await?;
 
     Ok(cbor_stream(
         rctx,

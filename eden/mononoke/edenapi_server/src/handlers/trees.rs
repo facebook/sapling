@@ -12,7 +12,7 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{
-    wire::{ToApi, ToWire, WireTreeRequest},
+    wire::{ToWire, WireTreeRequest},
     EdenApiServerError, FileMetadata, TreeChildEntry, TreeEntry, TreeRequest,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
@@ -24,7 +24,7 @@ use types::{Key, RepoPathBuf};
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, parse_cbor_request};
+use crate::utils::{cbor_stream, get_repo, parse_wire_request};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -47,13 +47,7 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let sctx = ServerContext::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
-    let request: WireTreeRequest = parse_cbor_request(state).await?;
-    let request: TreeRequest = match request.to_api() {
-        Ok(r) => r,
-        Err(e) => {
-            return Err(HttpError::e400(e));
-        }
-    };
+    let request = parse_wire_request::<WireTreeRequest>(state).await?;
 
     Ok(cbor_stream(
         rctx,

@@ -12,7 +12,7 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{
-    wire::{ToApi, ToWire, WireFileRequest},
+    wire::{ToWire, WireFileRequest},
     FileEntry, FileRequest,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
@@ -23,7 +23,7 @@ use types::Key;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, parse_cbor_request};
+use crate::utils::{cbor_stream, get_repo, parse_wire_request};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -45,13 +45,7 @@ pub async fn files(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let sctx = ServerContext::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
-    let request: WireFileRequest = parse_cbor_request(state).await?;
-    let request: FileRequest = match request.to_api() {
-        Ok(r) => r,
-        Err(e) => {
-            return Err(HttpError::e400(e));
-        }
-    };
+    let request = parse_wire_request::<WireFileRequest>(state).await?;
 
     Ok(cbor_stream(
         rctx,

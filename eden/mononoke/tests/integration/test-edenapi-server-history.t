@@ -48,19 +48,19 @@ Create and send file data request.
   > }
   > EOF
   Reading from stdin
-  Generated request: HistoryRequest {
+  Generated request: WireHistoryRequest {
       keys: [
-          Key {
-              path: RepoPathBuf(
+          WireKey {
+              path: WireRepoPathBuf(
                   "test.txt",
               ),
-              hgid: HgId("596c909aab726d7f8b3766795239cd20ede8e125"),
+              hgid: WireHgId("596c909aab726d7f8b3766795239cd20ede8e125"),
           },
-          Key {
-              path: RepoPathBuf(
+          WireKey {
+              path: WireRepoPathBuf(
                   "copy.txt",
               ),
-              hgid: HgId("672343a6daad357b926cd84a5a44a011ad029e5f"),
+              hgid: WireHgId("672343a6daad357b926cd84a5a44a011ad029e5f"),
           },
       ],
       length: None,

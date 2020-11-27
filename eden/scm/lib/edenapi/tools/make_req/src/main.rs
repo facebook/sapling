@@ -52,7 +52,7 @@ fn main() -> Result<()> {
     match Command::from_args() {
         Command::File(args) => make_req::<FileRequest>(args),
         Command::Tree(args) => make_req::<TreeRequest>(args),
-        Command::History(args) => make_req_wire::<HistoryRequest>(args),
+        Command::History(args) => make_req::<HistoryRequest>(args),
         Command::CompleteTree(args) => make_req::<CompleteTreeRequest>(args),
         Command::CommitRevlogData(args) => make_req_wire::<CommitRevlogDataRequest>(args),
         Command::CommitLocationToHash(args) => make_req_wire::<CommitLocationToHashRequest>(args),

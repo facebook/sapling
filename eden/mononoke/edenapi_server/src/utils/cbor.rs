@@ -9,6 +9,7 @@
 
 use anyhow::{Context, Error};
 use bytes::Bytes;
+use edenapi_types::ToApi;
 use futures::prelude::*;
 use gotham::state::State;
 use mime::Mime;
@@ -59,4 +60,14 @@ pub async fn parse_cbor_request<R: DeserializeOwned>(state: &mut State) -> Resul
     serde_cbor::from_slice(&body)
         .context(ErrorKind::DeserializationFailed)
         .map_err(HttpError::e400)
+}
+
+pub async fn parse_wire_request<R: DeserializeOwned + ToApi>(
+    state: &mut State,
+) -> Result<<R as ToApi>::Api, HttpError>
+where
+    <R as ToApi>::Error: Send + Sync + 'static + std::error::Error,
+{
+    let cbor = parse_cbor_request::<R>(state).await?;
+    cbor.to_api().map_err(HttpError::e400)
 }
