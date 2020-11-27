@@ -20,12 +20,12 @@ use changesets::{ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FilestoreConfig;
-use futures::compat::Future01CompatExt;
-use futures::future::{FutureExt as NewFutureExt, TryFutureExt};
-use futures::stream::TryStreamExt;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::{loop_fn, ok, Future, Loop};
-use futures_old::stream::{self, FuturesUnordered, Stream};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
+use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as _};
+use futures_old::{
+    future::{loop_fn, ok, Future as OldFuture, Loop},
+    stream::{self, FuturesUnordered, Stream as OldStream},
+};
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, ChangesetId, Generation, Globalrev, MononokeId, RepositoryId,
@@ -141,7 +141,7 @@ impl BlobRepo {
     pub fn get_bonsai_heads_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl Stream<Item = ChangesetId, Error = Error> {
+    ) -> impl OldStream<Item = ChangesetId, Error = Error> {
         STATS::get_bonsai_heads_maybe_stale.add_value(1);
         self.attribute_expected::<dyn Bookmarks>()
             .list(
@@ -160,7 +160,7 @@ impl BlobRepo {
     pub fn get_bonsai_publishing_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl Stream<Item = (Bookmark, ChangesetId), Error = Error> {
+    ) -> impl OldStream<Item = (Bookmark, ChangesetId), Error = Error> {
         STATS::get_bonsai_publishing_bookmarks_maybe_stale.add_value(1);
         self.attribute_expected::<dyn Bookmarks>()
             .list(
@@ -180,7 +180,7 @@ impl BlobRepo {
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         max: u64,
-    ) -> impl Stream<Item = (Bookmark, ChangesetId), Error = Error> {
+    ) -> impl OldStream<Item = (Bookmark, ChangesetId), Error = Error> {
         STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
         self.attribute_expected::<dyn Bookmarks>()
             .list(
@@ -198,7 +198,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         changesetid: ChangesetId,
-    ) -> BoxFuture<bool, Error> {
+    ) -> OldBoxFuture<bool, Error> {
         STATS::changeset_exists_by_bonsai.add_value(1);
         self.inner
             .changesets
@@ -211,7 +211,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         changesetid: ChangesetId,
-    ) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
+    ) -> impl OldFuture<Item = Vec<ChangesetId>, Error = Error> {
         STATS::get_changeset_parents_by_bonsai.add_value(1);
         self.inner
             .changesets
@@ -227,7 +227,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         name: &BookmarkName,
-    ) -> BoxFuture<Option<ChangesetId>, Error> {
+    ) -> OldBoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
         self.attribute_expected::<dyn Bookmarks>()
             .get(ctx, name)
@@ -246,7 +246,7 @@ impl BlobRepo {
     pub fn get_bonsai_from_globalrev(
         &self,
         globalrev: Globalrev,
-    ) -> BoxFuture<Option<ChangesetId>, Error> {
+    ) -> OldBoxFuture<Option<ChangesetId>, Error> {
         self.inner
             .bonsai_globalrev_mapping
             .get_bonsai_from_globalrev(self.get_repoid(), globalrev)
@@ -255,7 +255,7 @@ impl BlobRepo {
     pub fn get_globalrev_from_bonsai(
         &self,
         bcs: ChangesetId,
-    ) -> BoxFuture<Option<Globalrev>, Error> {
+    ) -> OldBoxFuture<Option<Globalrev>, Error> {
         self.inner
             .bonsai_globalrev_mapping
             .get_globalrev_from_bonsai(self.get_repoid(), bcs)
@@ -264,7 +264,7 @@ impl BlobRepo {
     pub fn get_bonsai_globalrev_mapping(
         &self,
         bonsai_or_globalrev_ids: impl Into<BonsaisOrGlobalrevs>,
-    ) -> BoxFuture<Vec<(ChangesetId, Globalrev)>, Error> {
+    ) -> OldBoxFuture<Vec<(ChangesetId, Globalrev)>, Error> {
         self.inner
             .bonsai_globalrev_mapping
             .get(self.get_repoid(), bonsai_or_globalrev_ids.into())
@@ -284,7 +284,7 @@ impl BlobRepo {
         max_rec: u32,
         offset: Option<u32>,
         freshness: Freshness,
-    ) -> impl Stream<Item = (Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error = Error>
+    ) -> impl OldStream<Item = (Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error = Error>
     {
         self.attribute_expected::<dyn BookmarkUpdateLog>()
             .list_bookmark_log_entries(ctx.clone(), name, max_rec, offset, freshness)
@@ -297,7 +297,7 @@ impl BlobRepo {
         id: u64,
         limit: u64,
         freshness: Freshness,
-    ) -> impl Stream<Item = BookmarkUpdateLogEntry, Error = Error> {
+    ) -> impl OldStream<Item = BookmarkUpdateLogEntry, Error = Error> {
         self.attribute_expected::<dyn BookmarkUpdateLog>()
             .read_next_bookmark_log_entries(ctx, id, limit, freshness)
             .compat()
@@ -308,7 +308,7 @@ impl BlobRepo {
         ctx: CoreContext,
         id: u64,
         exclude_reason: Option<BookmarkUpdateReason>,
-    ) -> impl Future<Item = u64, Error = Error> {
+    ) -> impl OldFuture<Item = u64, Error = Error> {
         self.attribute_expected::<dyn BookmarkUpdateLog>()
             .count_further_bookmark_log_entries(ctx, id, exclude_reason)
             .compat()
@@ -326,7 +326,7 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         cs: ChangesetId,
-    ) -> impl Future<Item = Option<Generation>, Error = Error> {
+    ) -> impl OldFuture<Item = Option<Generation>, Error = Error> {
         STATS::get_generation_number.add_value(1);
         self.inner
             .changesets
@@ -416,7 +416,7 @@ pub fn save_bonsai_changesets(
     bonsai_changesets: Vec<BonsaiChangeset>,
     ctx: CoreContext,
     repo: BlobRepo,
-) -> impl Future<Item = (), Error = Error> {
+) -> impl OldFuture<Item = (), Error = Error> {
     let complete_changesets = repo.get_changesets_object();
     let blobstore = repo.get_blobstore();
     let repoid = repo.get_repoid();
@@ -502,7 +502,7 @@ pub fn save_bonsai_changeset_object(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
     bonsai_cs: BonsaiChangeset,
-) -> impl Future<Item = (), Error = Error> {
+) -> impl OldFuture<Item = (), Error = Error> {
     let bonsai_blob = bonsai_cs.into_blob();
     let bcs_id = bonsai_blob.id().clone();
     let blobstore_key = bcs_id.blobstore_key();
