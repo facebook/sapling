@@ -754,7 +754,6 @@ impl ChangesetContext {
                             .repo()
                             .blob_repo()
                             .get_changeset_parents_by_bonsai(self.ctx().clone(), changeset_id)
-                            .compat()
                             .await?;
                         if parents.len() > 1 {
                             if let Some(ancestor) = descendants_of.as_ref() {

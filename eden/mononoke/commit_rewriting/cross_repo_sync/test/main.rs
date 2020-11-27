@@ -409,7 +409,6 @@ async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(
         megarepo
             .get_changeset_parents_by_bonsai(ctx.clone(), megarepo_second_bcs_id.unwrap())
-            .compat()
             .await?,
         vec![megarepo_base_bcs_id]
     );

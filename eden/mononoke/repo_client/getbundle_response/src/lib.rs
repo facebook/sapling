@@ -738,7 +738,6 @@ async fn traverse_draft_commits(
         let parents: Vec<_> = stream::iter(traverse)
             .map(move |csid| async move {
                 repo.get_changeset_parents_by_bonsai(ctx.clone(), csid)
-                    .compat()
                     .await
             })
             .buffered(100)

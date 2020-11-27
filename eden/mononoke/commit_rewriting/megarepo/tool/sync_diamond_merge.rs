@@ -102,7 +102,6 @@ pub async fn do_sync_diamond_merge(
 
     let parents = small_repo
         .get_changeset_parents_by_bonsai(ctx.clone(), small_merge_cs_id)
-        .compat()
         .await?;
 
     let (p1, p2) = validate_parents(parents)?;

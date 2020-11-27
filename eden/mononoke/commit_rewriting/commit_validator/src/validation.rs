@@ -341,7 +341,6 @@ impl ValidationHelper {
     ) -> Result<Vec<MPath>, Error> {
         let maybe_p1 = repo
             .get_changeset_parents_by_bonsai(ctx.clone(), cs_id.clone())
-            .compat()
             .await?
             .first()
             .cloned();
@@ -538,7 +537,6 @@ impl ValidationHelpers {
         let cs_root_mf_id_fut = fetch_root_mf_id(&ctx, repo, cs_id.clone());
         let maybe_p1 = repo
             .get_changeset_parents_by_bonsai(ctx.clone(), cs_id.clone())
-            .compat()
             .await?
             .first()
             .cloned();
@@ -904,7 +902,6 @@ async fn validate_topological_order<'a>(
     let small_parents = small_repo
         .0
         .get_changeset_parents_by_bonsai(ctx.clone(), small_cs_id.0.clone())
-        .compat()
         .await?;
 
     let remapped_small_parents: Vec<(ChangesetId, ChangesetId)> =

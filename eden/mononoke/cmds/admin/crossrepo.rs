@@ -550,7 +550,6 @@ async fn subcommand_map(
     if mappings.is_empty() {
         let exists = target_repo
             .changeset_exists_by_bonsai(ctx, source_hash.clone())
-            .compat()
             .await?;
 
         if exists {

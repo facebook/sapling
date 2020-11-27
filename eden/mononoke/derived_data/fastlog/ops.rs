@@ -14,7 +14,6 @@ use context::CoreContext;
 use deleted_files_manifest::{resolve_path_state, PathState};
 use derived_data::{BonsaiDerived, DeriveError};
 use futures::{
-    compat::Future01CompatExt,
     future,
     stream::{self, Stream as NewStream},
 };
@@ -456,7 +455,6 @@ async fn find_where_file_was_deleted(
 ) -> Result<Vec<(ChangesetId, UnodeEntry)>, Error> {
     let parents = repo
         .get_changeset_parents_by_bonsai(ctx.clone(), commit_no_more_history)
-        .compat()
         .await?;
 
     let resolved_path_states = future::try_join_all(

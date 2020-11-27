@@ -7,7 +7,6 @@
 
 use anyhow::Error;
 use bounded_traversal::bounded_traversal_stream;
-use futures::compat::Future01CompatExt;
 use futures::{
     future, pin_mut,
     stream::{self, BoxStream},
@@ -136,7 +135,6 @@ async fn resolve_path_state_unfold(
             // parents for the deleted path
             let parents = repo
                 .get_changeset_parents_by_bonsai(ctx.clone(), linknode.clone())
-                .compat()
                 .await?;
 
             // checking parent unodes
@@ -394,6 +392,7 @@ mod tests {
     use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
     use fixtures::store_files;
+    use futures::compat::Future01CompatExt;
     use manifest::PathOrPrefix;
     use maplit::btreemap;
     use mononoke_types::{

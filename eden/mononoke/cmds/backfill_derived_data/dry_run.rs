@@ -14,10 +14,7 @@ use cacheblob::MemWritesBlobstore;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use futures::{
-    compat::Future01CompatExt,
-    stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
-};
+use futures::stream::{self, FuturesUnordered, StreamExt, TryStreamExt};
 use manifest::ManifestOps;
 use mononoke_types::{blob::BlobstoreValue, ChangesetId, FsnodeId, MononokeId};
 use slog::{debug, info};
@@ -130,7 +127,6 @@ impl Cleaner for FsnodeCleaner {
             let parents = self
                 .repo
                 .get_changeset_parents_by_bonsai(self.ctx.clone(), cs_id)
-                .compat()
                 .await?;
             self.alive.insert(cs_id);
             for p in parents {

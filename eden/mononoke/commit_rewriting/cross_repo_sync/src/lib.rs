@@ -420,7 +420,6 @@ where
             None => {
                 let parents = source_repo
                     .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
-                    .compat()
                     .await?;
 
                 commits_to_backsync.insert(cs_id, parents.clone());
@@ -841,7 +840,6 @@ where
         );
         res
     }
-
 
     /// Just like unsafe_sync_commit, but sets an expected version i.e.
     /// for commits that have at least a single parent it checks that these commits
@@ -1303,7 +1301,6 @@ where
             }
         }
     }
-
 
     /// Get `CommitSyncConfigVersion` to use while remapping a
     /// merge commit (`source_cs_id`)

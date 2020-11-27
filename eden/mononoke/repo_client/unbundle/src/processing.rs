@@ -883,7 +883,6 @@ async fn log_commits_to_scribe(
                 };
                 let get_parents = async {
                     repo.get_changeset_parents_by_bonsai(ctx.clone(), changeset_id)
-                        .compat()
                         .await
                 };
 

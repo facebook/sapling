@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use fbinit::FacebookInit;
-use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::compat::Stream01CompatExt;
 use futures::future::try_join_all;
 use futures::StreamExt;
 
@@ -45,7 +45,6 @@ async fn validate_build_idmap(
         let cs_id = cs_id?;
         let parents = blobrepo
             .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
-            .compat()
             .await?;
         for parent in parents {
             let parent_vertex = dag.idmap.get_vertex(&ctx, parent).await?;

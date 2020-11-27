@@ -634,7 +634,6 @@ async fn find_closest_ancestor_root(
 
         let parents = repo
             .get_changeset_parents_by_bonsai(ctx.clone(), id)
-            .compat()
             .await?;
 
         queue.extend(parents.into_iter().filter(|p| queued.insert(*p)));

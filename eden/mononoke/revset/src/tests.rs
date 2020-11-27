@@ -10,7 +10,8 @@ use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures::{FutureExt, TryFutureExt};
+use futures_ext::{BoxFuture, FutureExt as _, StreamExt};
 use futures_old::Future;
 use mononoke_types::{ChangesetId, Generation};
 use revset_test_helper::{single_changeset_id, string_to_bonsai};
@@ -45,8 +46,10 @@ impl ChangesetFetcher for TestChangesetFetcher {
         ctx: CoreContext,
         cs_id: ChangesetId,
     ) -> BoxFuture<Vec<ChangesetId>, Error> {
-        self.repo
-            .get_changeset_parents_by_bonsai(ctx, cs_id)
+        let repo = self.repo.clone();
+        async move { Ok(repo.get_changeset_parents_by_bonsai(ctx, cs_id).await?) }
+            .boxed()
+            .compat()
             .boxify()
     }
 

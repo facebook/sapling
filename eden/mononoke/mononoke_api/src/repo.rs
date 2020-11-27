@@ -557,7 +557,6 @@ impl Repo {
             let parents = self
                 .blob_repo
                 .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
-                .compat()
                 .await?;
 
             if parents.contains(&ancestor) {
@@ -749,7 +748,6 @@ impl RepoContext {
                 let exists = self
                     .blob_repo()
                     .changeset_exists_by_bonsai(self.ctx.clone(), cs_id)
-                    .compat()
                     .await?;
                 match exists {
                     true => Some(cs_id),

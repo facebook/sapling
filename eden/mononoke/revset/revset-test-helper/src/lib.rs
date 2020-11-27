@@ -12,7 +12,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    stream::StreamExt,
+    FutureExt, StreamExt, TryFutureExt,
 };
 use futures_ext::BoxStream;
 use futures_old::future::Future;
@@ -30,7 +30,10 @@ pub fn single_changeset_id(
     cs_id: ChangesetId,
     repo: &BlobRepo,
 ) -> impl Stream<Item = ChangesetId, Error = Error> {
-    repo.changeset_exists_by_bonsai(ctx, cs_id)
+    let repo = repo.clone();
+    async move { Ok(repo.changeset_exists_by_bonsai(ctx, cs_id).await?) }
+        .boxed()
+        .compat()
         .map(move |exists| if exists { Some(cs_id) } else { None })
         .into_stream()
         .filter_map(|maybenode| maybenode)

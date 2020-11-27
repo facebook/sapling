@@ -20,7 +20,9 @@ use changesets::{ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FilestoreConfig;
-use futures::{future::BoxFuture, FutureExt, Stream, TryFutureExt, TryStreamExt};
+use futures::{
+    compat::Future01CompatExt, future::BoxFuture, FutureExt, Stream, TryFutureExt, TryStreamExt,
+};
 use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as _};
 use futures_old::{
     future::{loop_fn, ok, Future as OldFuture, Loop},
@@ -189,33 +191,37 @@ impl BlobRepo {
         )
     }
 
-    pub fn changeset_exists_by_bonsai(
+    pub async fn changeset_exists_by_bonsai(
         &self,
         ctx: CoreContext,
         changesetid: ChangesetId,
-    ) -> OldBoxFuture<bool, Error> {
+    ) -> Result<bool, Error> {
         STATS::changeset_exists_by_bonsai.add_value(1);
-        self.inner
+        let changeset = self
+            .inner
             .changesets
             .get(ctx, self.get_repoid(), changesetid)
-            .map(|res| res.is_some())
-            .boxify()
+            .compat()
+            .await?;
+        Ok(changeset.is_some())
     }
 
-    pub fn get_changeset_parents_by_bonsai(
+    pub async fn get_changeset_parents_by_bonsai(
         &self,
         ctx: CoreContext,
         changesetid: ChangesetId,
-    ) -> impl OldFuture<Item = Vec<ChangesetId>, Error = Error> {
+    ) -> Result<Vec<ChangesetId>, Error> {
         STATS::get_changeset_parents_by_bonsai.add_value(1);
-        self.inner
+        let changeset = self
+            .inner
             .changesets
             .get(ctx, self.get_repoid(), changesetid)
-            .and_then(move |maybe_bonsai| {
-                maybe_bonsai
-                    .ok_or_else(|| format_err!("Commit {} does not exist in the repo", changesetid))
-            })
-            .map(|bonsai| bonsai.parents)
+            .compat()
+            .await?;
+        let parents = changeset
+            .ok_or_else(|| format_err!("Commit {} does not exist in the repo", changesetid))?
+            .parents;
+        Ok(parents)
     }
 
     pub fn get_bonsai_bookmark(
@@ -424,14 +430,20 @@ pub fn save_bonsai_changesets(
     let parents_to_check = stream::futures_unordered(parents_to_check.into_iter().map({
         cloned!(ctx, repo);
         move |p| {
-            repo.changeset_exists_by_bonsai(ctx.clone(), p)
-                .and_then(move |exists| {
-                    if exists {
-                        Ok(())
-                    } else {
-                        Err(format_err!("Commit {} does not exist in the repo", p))
-                    }
-                })
+            cloned!(ctx, repo);
+            async move {
+                let exists = repo.changeset_exists_by_bonsai(ctx, p).await?;
+                Ok(exists)
+            }
+            .boxed()
+            .compat()
+            .and_then(move |exists| {
+                if exists {
+                    Ok(())
+                } else {
+                    Err(format_err!("Commit {} does not exist in the repo", p))
+                }
+            })
         }
     }))
     .collect();

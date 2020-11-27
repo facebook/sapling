@@ -185,7 +185,6 @@ pub async fn generate_all_filenodes(
 ) -> Result<Vec<PreparedFilenode>, Error> {
     let parents = repo
         .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
-        .compat()
         .await?;
 
     let root_mf = fetch_root_manifest_id(&ctx, &cs_id, &repo);

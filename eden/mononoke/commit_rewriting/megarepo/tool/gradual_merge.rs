@@ -280,7 +280,6 @@ async fn find_unmerged_commits(
 
         let parents = repo
             .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
-            .compat()
             .await?;
         for p in parents {
             if visited.insert(p) {
