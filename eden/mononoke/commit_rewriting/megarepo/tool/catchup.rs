@@ -55,7 +55,6 @@ pub async fn create_deletion_head_commits<'a>(
         let files = chunk.into_iter().map(|path| (path, None)).collect();
         let maybe_head_bookmark_val = repo
             .get_bonsai_bookmark(ctx.clone(), &head_bookmark)
-            .compat()
             .await?;
         let head_bookmark_val =
             maybe_head_bookmark_val.ok_or(anyhow!("{} not found", head_bookmark))?;
@@ -173,10 +172,7 @@ async fn find_files_that_need_to_be_deleted(
     commit_to_merge: ChangesetId,
     path_regex: Regex,
 ) -> Result<Vec<MPath>, Error> {
-    let maybe_head_bookmark_val = repo
-        .get_bonsai_bookmark(ctx.clone(), head_bookmark)
-        .compat()
-        .await?;
+    let maybe_head_bookmark_val = repo.get_bonsai_bookmark(ctx.clone(), head_bookmark).await?;
 
     let head_bookmark_val =
         maybe_head_bookmark_val.ok_or(anyhow!("{} not found", head_bookmark))?;
@@ -281,7 +277,6 @@ mod test {
         let commit_to_merge = CreateCommitContext::new(&ctx, &repo, vec![root_commit])
             .commit()
             .await?;
-
 
         let book = BookmarkName::new("book")?;
         let mut paths = find_files_that_need_to_be_deleted(

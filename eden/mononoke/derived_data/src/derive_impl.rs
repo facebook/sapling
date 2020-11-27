@@ -678,7 +678,6 @@ mod test {
         let master_book = BookmarkName::new("master").unwrap();
         let bcs_id = repo
             .get_bonsai_bookmark(ctx.clone(), &master_book)
-            .compat()
             .await
             .unwrap()
             .unwrap();

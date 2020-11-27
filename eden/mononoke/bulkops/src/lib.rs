@@ -139,7 +139,6 @@ mod tests {
         let master = BookmarkName::new("master")?;
         let master = blobrepo
             .get_bonsai_bookmark(ctx.clone(), &master)
-            .compat()
             .await?
             .unwrap();
         mark_reachable_as_public(&ctx, sql_phases, &[master], false).await?;

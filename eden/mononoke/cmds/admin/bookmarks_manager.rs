@@ -316,6 +316,7 @@ fn handle_set<'a>(
             cloned!(ctx, repo, bookmark);
             move |new_bcs| {
                 repo.get_bonsai_bookmark(ctx.clone(), &bookmark)
+                    .compat()
                     .map(move |maybe_old_bcs_id| (maybe_old_bcs_id, new_bcs))
             }
         })
@@ -364,6 +365,7 @@ fn handle_delete<'a>(
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
 
     repo.get_bonsai_bookmark(ctx.clone(), &bookmark)
+        .compat()
         .and_then({
             move |maybe_bcs_id| {
                 info!(

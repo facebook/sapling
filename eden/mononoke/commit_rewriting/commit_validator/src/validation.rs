@@ -631,7 +631,6 @@ impl ValidationHelpers {
             .large_repo
             .0
             .get_bonsai_bookmark(ctx, &self.large_repo_master_bookmark)
-            .compat()
             .await?;
         maybe_cs_id.ok_or(format_err!("No master in the large repo"))
     }
@@ -1056,7 +1055,6 @@ async fn validate_full_manifest_diffs_equivalence<'a>(
             large_repo_full_manifest_diff,
             &large_to_small_mover,
         )?;
-
 
     // Let's remove all `FilenodeDiff` structs, which are strictly equivalent
     // Note that `in_small_but_not_in_large` and `in_large_but_not_in_small`

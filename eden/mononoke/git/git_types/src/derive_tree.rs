@@ -194,7 +194,6 @@ mod test {
     use anyhow::format_err;
     use fbinit::FacebookInit;
     use filestore::Alias;
-    use futures_util::compat::Future01CompatExt;
     use futures_util::stream::TryStreamExt;
     use git2::{Oid, Repository};
     use manifest::ManifestOps;
@@ -213,7 +212,6 @@ mod test {
 
         let bcs_id = repo
             .get_bonsai_bookmark(ctx.clone(), &("master".try_into()?))
-            .compat()
             .await?
             .ok_or(format_err!("no master"))?;
 

@@ -20,7 +20,7 @@ use changesets::{ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FilestoreConfig;
-use futures::{FutureExt, Stream, TryFutureExt, TryStreamExt};
+use futures::{future::BoxFuture, FutureExt, Stream, TryFutureExt, TryStreamExt};
 use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as _};
 use futures_old::{
     future::{loop_fn, ok, Future as OldFuture, Loop},
@@ -222,12 +222,9 @@ impl BlobRepo {
         &self,
         ctx: CoreContext,
         name: &BookmarkName,
-    ) -> OldBoxFuture<Option<ChangesetId>, Error> {
+    ) -> BoxFuture<'static, Result<Option<ChangesetId>, Error>> {
         STATS::get_bookmark.add_value(1);
-        self.attribute_expected::<dyn Bookmarks>()
-            .get(ctx, name)
-            .compat()
-            .boxify()
+        self.attribute_expected::<dyn Bookmarks>().get(ctx, name)
     }
 
     pub fn bonsai_git_mapping(&self) -> &Arc<dyn BonsaiGitMapping> {

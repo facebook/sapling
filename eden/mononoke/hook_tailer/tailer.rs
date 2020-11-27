@@ -14,7 +14,7 @@ use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Stream01CompatExt,
     future::{self, TryFutureExt},
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
@@ -109,7 +109,6 @@ impl Tailer {
             let bm_rev = self
                 .repo
                 .get_bonsai_bookmark(self.ctx.clone(), &self.bookmark)
-                .compat()
                 .await?
                 .ok_or_else(|| ErrorKind::NoSuchBookmark(self.bookmark.clone()))?;
 

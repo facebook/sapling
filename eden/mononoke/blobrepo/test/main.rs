@@ -1170,7 +1170,6 @@ async fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
     let book = bookmarks::BookmarkName::new("master").unwrap();
     let bcs_id = repo
         .get_bonsai_bookmark(ctx.clone(), &book)
-        .compat()
         .await
         .unwrap()
         .unwrap();

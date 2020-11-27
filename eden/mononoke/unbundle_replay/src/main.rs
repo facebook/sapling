@@ -527,7 +527,6 @@ async fn do_main(
 
             let current_cs_id = repo
                 .get_bonsai_bookmark(ctx.clone(), &onto_bookmark)
-                .compat()
                 .await?;
 
             if current_cs_id != onto_rev {

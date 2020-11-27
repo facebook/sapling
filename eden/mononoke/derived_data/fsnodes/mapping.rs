@@ -236,7 +236,6 @@ mod test {
             .map_ok(|(path, _)| path)
             .try_collect::<Vec<_>>();
 
-
         let (mut fsnode_entries, mut filenode_entries) =
             try_join!(fsnode_entries, filenode_entries)?;
         fsnode_entries.sort();
@@ -252,7 +251,6 @@ mod test {
         let master_book = BookmarkName::new("master").unwrap();
         let bcs_id = repo
             .get_bonsai_bookmark(ctx.clone(), &master_book)
-            .compat()
             .await?
             .unwrap();
 

@@ -947,10 +947,7 @@ mod test {
         let large_repo = linear::getrepo_with_id(fb, RepositoryId::new(1)).await;
 
         let master = BookmarkName::new("master")?;
-        let maybe_master_val = small_repo
-            .get_bonsai_bookmark(ctx.clone(), &master)
-            .compat()
-            .await?;
+        let maybe_master_val = small_repo.get_bonsai_bookmark(ctx.clone(), &master).await?;
 
         let master_val = maybe_master_val.ok_or(Error::msg("master not found"))?;
         let changesets =

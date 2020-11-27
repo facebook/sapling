@@ -190,7 +190,6 @@ async fn do_cache_warmup(
     let bcs_id = match target {
         CacheWarmupTarget::Bookmark(bookmark) => repo
             .get_bonsai_bookmark(ctx.clone(), &bookmark)
-            .compat()
             .await?
             .ok_or_else(|| errors::ErrorKind::BookmarkNotFound(bookmark))?,
         CacheWarmupTarget::Changeset(bcs_id) => bcs_id,

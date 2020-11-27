@@ -235,6 +235,7 @@ mod test {
     ) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> {
         let master_book = BookmarkName::new("master").unwrap();
         repo.get_bonsai_bookmark(ctx.clone(), &master_book)
+            .compat()
             .map(move |maybe_bcs_id| {
                 let bcs_id = maybe_bcs_id.unwrap();
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())

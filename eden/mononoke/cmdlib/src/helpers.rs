@@ -94,7 +94,7 @@ pub fn csid_resolve(
         .into_future()
         .and_then({
             cloned!(repo, ctx);
-            move |name| repo.get_bonsai_bookmark(ctx, &name)
+            move |name| repo.get_bonsai_bookmark(ctx, &name).compat()
         })
         .and_then(|csid| csid.ok_or(Error::msg("invalid bookmark")))
         .or_else({

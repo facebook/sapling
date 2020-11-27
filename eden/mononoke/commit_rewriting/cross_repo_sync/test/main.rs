@@ -82,7 +82,6 @@ async fn move_bookmark(ctx: &CoreContext, repo: &BlobRepo, bookmark: &str, cs_id
 async fn get_bookmark(ctx: &CoreContext, repo: &BlobRepo, bookmark: &str) -> ChangesetId {
     let bookmark = BookmarkName::new(bookmark).unwrap();
     repo.get_bonsai_bookmark(ctx.clone(), &bookmark)
-        .compat()
         .await
         .unwrap()
         .unwrap()
@@ -156,7 +155,6 @@ async fn create_empty_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
     let p1 = repo
         .get_bonsai_bookmark(ctx.clone(), &bookmark)
-        .compat()
         .await
         .unwrap()
         .unwrap();
@@ -473,7 +471,6 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
     let p1 = repo
         .get_bonsai_bookmark(ctx.clone(), &bookmark)
-        .compat()
         .await
         .unwrap()
         .unwrap();
@@ -644,7 +641,6 @@ async fn megarepo_copy_file(
     let bookmark = BookmarkName::new("master").unwrap();
     let p1 = repo
         .get_bonsai_bookmark(ctx.clone(), &bookmark)
-        .compat()
         .await
         .unwrap()
         .unwrap();
@@ -728,7 +724,6 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
         let bookmark = BookmarkName::new("master").unwrap();
         linear
             .get_bonsai_bookmark(ctx.clone(), &bookmark)
-            .compat()
             .await?
             .unwrap()
     };
@@ -1035,7 +1030,6 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId 
     let bookmark = BookmarkName::new("master").unwrap();
     let p1 = repo
         .get_bonsai_bookmark(ctx.clone(), &bookmark)
-        .compat()
         .await
         .unwrap()
         .unwrap();
@@ -1344,7 +1338,6 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
         .expect_err("sync should have failed");
     assert!(format!("{:?}", e).contains("Too many rewritten candidates for"));
 
-
     // Can sync with a bookmark-based hint
     let book = Target(BookmarkName::new("master").unwrap());
     let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
@@ -1541,7 +1534,6 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
         vec!["dir/file", "file", "tools/1.txt"],
     )
     .await?;
-
 
     let outcome = large_to_small_syncer
         .get_commit_sync_outcome(&ctx, old_mapping_cs_id)

@@ -211,7 +211,6 @@ mod test {
             .map_ok(|(path, _)| path)
             .try_collect::<Vec<_>>();
 
-
         let (mut skeleton_manifest_entries, mut filenode_entries) =
             try_join!(skeleton_manifest_entries, filenode_entries)?;
         skeleton_manifest_entries.sort();
@@ -227,7 +226,6 @@ mod test {
         let master_book = BookmarkName::new("master").unwrap();
         let bcs_id = repo
             .get_bonsai_bookmark(ctx.clone(), &master_book)
-            .compat()
             .await?
             .unwrap();
 

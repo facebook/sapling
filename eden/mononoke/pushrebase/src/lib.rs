@@ -868,10 +868,7 @@ async fn get_bookmark_value(
     repo: &BlobRepo,
     bookmark_name: &BookmarkName,
 ) -> Result<Option<ChangesetId>, PushrebaseError> {
-    let maybe_cs_id = repo
-        .get_bonsai_bookmark(ctx.clone(), bookmark_name)
-        .compat()
-        .await?;
+    let maybe_cs_id = repo.get_bonsai_bookmark(ctx.clone(), bookmark_name).await?;
 
     Ok(maybe_cs_id)
 }

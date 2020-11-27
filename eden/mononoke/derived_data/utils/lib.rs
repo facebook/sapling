@@ -904,7 +904,6 @@ mod tests {
         let thin_out = ThinOut::new_keep_all();
         let master = repo
             .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master").unwrap())
-            .compat()
             .await?
             .unwrap();
         let blame_deriver = derived_data_utils(repo.clone(), "blame")?;

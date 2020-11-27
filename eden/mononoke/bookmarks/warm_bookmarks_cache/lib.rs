@@ -280,7 +280,7 @@ async fn move_bookmark_back_in_history_until_derived(
             Ok(maybe_cs_id_and_ts.map(|(cs_id, _)| cs_id))
         }
         LatestDerivedBookmarkEntry::NotFound => {
-            let cur_bookmark_value = repo.get_bonsai_bookmark(ctx.clone(), book).compat().await?;
+            let cur_bookmark_value = repo.get_bonsai_bookmark(ctx.clone(), book).await?;
             warn!(
                 ctx.logger(),
                 "cannot find previous derived version of {}, returning current version {:?}",
@@ -1110,7 +1110,6 @@ mod tests {
             &ctx,
             &repo,
             repo.get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master")?)
-                .compat()
                 .await?
                 .unwrap(),
         )

@@ -459,10 +459,7 @@ impl Repo {
         let repo = &self.blob_repo;
 
         let maybe_bcs_id_from_service = self.warm_bookmarks_cache.get(bookmark);
-        let maybe_bcs_id_from_blobrepo = repo
-            .get_bonsai_bookmark(ctx.clone(), &bookmark)
-            .compat()
-            .await?;
+        let maybe_bcs_id_from_blobrepo = repo.get_bonsai_bookmark(ctx.clone(), &bookmark).await?;
 
         if maybe_bcs_id_from_blobrepo.is_none() {
             self.report_bookmark_missing_from_repo(ctx, bookmark);
@@ -800,7 +797,6 @@ impl RepoContext {
             cs_id = self
                 .blob_repo()
                 .get_bonsai_bookmark(self.ctx.clone(), &bookmark)
-                .compat()
                 .await?
         }
 
@@ -1187,7 +1183,6 @@ impl RepoContext {
             }
         }
     }
-
 
     /// Get the equivalent changeset from another repo - it will sync it if needed
     pub async fn xrepo_commit_lookup(

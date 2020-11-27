@@ -2766,6 +2766,7 @@ mod test {
     async fn test_is_ancestor(ctx: CoreContext, repo: Arc<BlobRepo>, sli: SkiplistIndex) {
         let f = repo
             .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master").unwrap())
+            .compat()
             .and_then({
                 cloned!(ctx, repo);
                 move |maybe_cs_id| {

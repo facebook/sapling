@@ -62,7 +62,6 @@ where
     let maybe_bookmark_val = commit_syncer
         .get_target_repo()
         .get_bonsai_bookmark(ctx.clone(), &bookmark_name)
-        .compat()
         .await?;
 
     let source_repo = commit_syncer.get_source_repo();
