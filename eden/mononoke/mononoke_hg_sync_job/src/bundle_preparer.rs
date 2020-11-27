@@ -6,7 +6,11 @@
  */
 
 use crate::bundle_generator::{BookmarkChange, FilenodeVerifier};
-use crate::errors::ErrorKind::{ReplayDataMissing, UnexpectedBookmarkMove};
+use crate::errors::{
+    ErrorKind::{BookmarkMismatchInBundleCombining, ReplayDataMissing, UnexpectedBookmarkMove},
+    PipelineError,
+};
+use crate::{bind_sync_err, CombinedBookmarkUpdateLogEntry};
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -15,7 +19,8 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, BoxFuture, FutureExt},
+    future::{self, try_join, try_join_all, BoxFuture, FutureExt, TryFutureExt},
+    Future,
 };
 use getbundle_response::SessionLfsParams;
 use itertools::Itertools;
@@ -48,6 +53,18 @@ pub struct BundlePreparer {
     base_retry_delay_ms: u64,
     retry_num: usize,
     ty: BundleType,
+}
+
+#[derive(Clone)]
+enum PrepareType {
+    Generate {
+        lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+        lfs_params: SessionLfsParams,
+        filenode_verifier: FilenodeVerifier,
+    },
+    UseExisting {
+        bundle_replay_data: RawBundleReplayData,
+    },
 }
 
 #[derive(Clone)]
@@ -105,164 +122,251 @@ impl BundlePreparer {
         })
     }
 
-    pub fn prepare_single_bundle(
+    pub fn prepare_bundles(
+        &self,
+        ctx: &CoreContext,
+        entries: Vec<BookmarkUpdateLogEntry>,
+        overlay: &mut crate::BookmarkOverlay,
+    ) -> impl Future<Output = Result<Vec<CombinedBookmarkUpdateLogEntry>, PipelineError>> {
+        use BookmarkUpdateReason::*;
+
+        for log_entry in &entries {
+            match log_entry.reason {
+                Pushrebase | Backsyncer | ManualMove | ApiRequest | XRepoSync | Push => {}
+                Blobimport | TestMove => {
+                    let err: Error = UnexpectedBookmarkMove(format!("{}", log_entry.reason)).into();
+                    let err = bind_sync_err(&[log_entry.clone()], err);
+
+                    return future::ready(Err(err)).boxed();
+                }
+            };
+        }
+
+        let mut futs = vec![];
+
+        match &self.ty {
+            BundleType::GenerateNew {
+                lca_hint,
+                lfs_params,
+                filenode_verifier,
+                bookmark_regex_force_lfs,
+            } => {
+                for log_entry in entries {
+                    let prepare_type = PrepareType::Generate {
+                        lca_hint: lca_hint.clone(),
+                        lfs_params: get_session_lfs_params(
+                            &ctx,
+                            &log_entry.bookmark_name,
+                            lfs_params.clone(),
+                            &bookmark_regex_force_lfs,
+                        ),
+                        filenode_verifier: filenode_verifier.clone(),
+                    };
+
+                    let bookmark_name = log_entry.bookmark_name.clone();
+                    let from_cs_id = log_entry.from_changeset_id;
+                    let to_cs_id = log_entry.to_changeset_id;
+                    let entries = vec![log_entry];
+                    let f = self.prepare_single_bundle(
+                        ctx.clone(),
+                        entries.clone(),
+                        overlay,
+                        prepare_type,
+                        bookmark_name,
+                        from_cs_id,
+                        to_cs_id,
+                    );
+                    futs.push((f, entries));
+                }
+            }
+            BundleType::UseExisting => {
+                for log_entry in entries {
+                    let prepare_type = match &log_entry.bundle_replay_data {
+                        Some(bundle_replay_data) => PrepareType::UseExisting {
+                            bundle_replay_data: bundle_replay_data.clone(),
+                        },
+                        None => {
+                            let err: Error = ReplayDataMissing { id: log_entry.id }.into();
+                            return future::ready(Err(bind_sync_err(&[log_entry], err))).boxed();
+                        }
+                    };
+
+                    let bookmark_name = log_entry.bookmark_name.clone();
+                    let from_cs_id = log_entry.from_changeset_id;
+                    let to_cs_id = log_entry.to_changeset_id;
+                    let entries = vec![log_entry];
+                    let f = self.prepare_single_bundle(
+                        ctx.clone(),
+                        entries.clone(),
+                        overlay,
+                        prepare_type.clone(),
+                        bookmark_name,
+                        from_cs_id,
+                        to_cs_id,
+                    );
+                    futs.push((f, entries));
+                }
+            }
+        }
+
+        let futs = futs
+            .into_iter()
+            .map(|(f, entries)| async move {
+                let f = tokio::spawn(f);
+                let res = f.map_err(Error::from).await;
+                let res = match res {
+                    Ok(Ok(res)) => Ok(res),
+                    Ok(Err(err)) => Err(err),
+                    Err(err) => Err(err),
+                };
+                res.map_err(|err| bind_sync_err(&entries, err))
+            })
+            .collect::<Vec<_>>();
+        async move { try_join_all(futs).await }.boxed()
+    }
+
+    // Prepares a bundle that might be a result of combining a few BookmarkUpdateLogEntry.
+    // Note that these entries should all move the same bookmark.
+    fn prepare_single_bundle(
         &self,
         ctx: CoreContext,
-        log_entry: BookmarkUpdateLogEntry,
-        overlay: crate::BookmarkOverlay,
-    ) -> BoxFuture<'static, Result<PreparedBookmarkUpdateLogEntry, Error>> {
-        cloned!(self.repo, self.ty);
+        entries: Vec<BookmarkUpdateLogEntry>,
+        overlay: &mut crate::BookmarkOverlay,
+        prepare_type: PrepareType,
+        bookmark_name: BookmarkName,
+        from_cs_id: Option<ChangesetId>,
+        to_cs_id: Option<ChangesetId>,
+    ) -> BoxFuture<'static, Result<CombinedBookmarkUpdateLogEntry, Error>> {
+        cloned!(self.repo);
+
+        let book_values = overlay.get_bookmark_values();
+        overlay.update(bookmark_name.clone(), to_cs_id.clone());
 
         let base_retry_delay_ms = self.base_retry_delay_ms;
         let retry_num = self.retry_num;
         async move {
-            let entry_id = log_entry.id;
-            let book_values = &overlay.get_bookmark_values();
-            let (p, _attempts) = retry(
+            let entry_ids = entries
+                .iter()
+                .map(|log_entry| log_entry.id)
+                .collect::<Vec<_>>();
+            info!(ctx.logger(), "preparing log entry ids #{:?} ...", entry_ids);
+            // Check that all entries modify bookmark_name
+            for entry in &entries {
+                if entry.bookmark_name != bookmark_name {
+                    return Err(BookmarkMismatchInBundleCombining {
+                        ids: entry_ids,
+                        entry_id: entry.id,
+                        entry_bookmark_name: entry.bookmark_name.clone(),
+                        bundle_bookmark_name: bookmark_name,
+                    }
+                    .into());
+                }
+            }
+
+            let bookmark_change = BookmarkChange::new(from_cs_id, to_cs_id)?;
+            let bundle_timestamps = retry(
                 &ctx.logger(),
                 {
                     |_| {
-                        Self::try_prepare_single_bundle(
+                        Self::try_prepare_bundle_timestamps_file(
                             &ctx,
                             &repo,
-                            log_entry.clone(),
-                            &ty,
-                            book_values,
+                            prepare_type.clone(),
+                            &book_values,
+                            &bookmark_change,
+                            &bookmark_name,
                         )
                     }
                 },
                 base_retry_delay_ms,
                 retry_num,
             )
-            .await?;
+            .map_ok(|(res, _)| res);
 
-            info!(ctx.logger(), "successful prepare of entry #{}", entry_id);
-            Ok(p)
+            let cs_id = async {
+                match to_cs_id {
+                    Some(to_changeset_id) => {
+                        let hg_cs_id = repo
+                            .get_hg_from_bonsai_changeset(ctx.clone(), to_changeset_id)
+                            .compat()
+                            .await?;
+                        Ok(Some((to_changeset_id, hg_cs_id)))
+                    }
+                    None => Ok(None),
+                }
+            };
+
+            let ((bundle_file, timestamps_file), cs_id) =
+                try_join(bundle_timestamps, cs_id).await?;
+
+            info!(
+                ctx.logger(),
+                "successful prepare of entries #{:?}", entry_ids
+            );
+
+            Ok(CombinedBookmarkUpdateLogEntry {
+                components: entries,
+                bundle_file: Arc::new(bundle_file),
+                timestamps_file: Arc::new(timestamps_file),
+                cs_id,
+                bookmark: bookmark_name,
+            })
         }
         .boxed()
     }
 
-    async fn try_prepare_single_bundle(
-        ctx: &CoreContext,
-        repo: &BlobRepo,
-        log_entry: BookmarkUpdateLogEntry,
-        bundle_type: &BundleType,
-        hg_server_heads: &[ChangesetId],
-    ) -> Result<PreparedBookmarkUpdateLogEntry, Error> {
-        use BookmarkUpdateReason::*;
-
-        info!(ctx.logger(), "preparing log entry #{} ...", log_entry.id);
-
-        enum PrepareType<'a> {
-            Generate {
-                lca_hint: &'a Arc<dyn LeastCommonAncestorsHint>,
-                lfs_params: SessionLfsParams,
-                filenode_verifier: &'a FilenodeVerifier,
-            },
-            UseExisting {
-                bundle_replay_data: &'a RawBundleReplayData,
-            },
-        }
-
+    async fn try_prepare_bundle_timestamps_file<'a>(
+        ctx: &'a CoreContext,
+        repo: &'a BlobRepo,
+        prepare_type: PrepareType,
+        hg_server_heads: &'a [ChangesetId],
+        bookmark_change: &'a BookmarkChange,
+        bookmark_name: &'a BookmarkName,
+    ) -> Result<(NamedTempFile, NamedTempFile), Error> {
         let blobstore = repo.get_blobstore();
-        match log_entry.reason {
-            Pushrebase | Backsyncer | ManualMove | ApiRequest | XRepoSync | Push => {}
-            Blobimport | TestMove => {
-                return Err(UnexpectedBookmarkMove(format!("{}", log_entry.reason)).into());
-            }
-        }
 
-        let prepare_type = match bundle_type {
-            BundleType::GenerateNew {
+        match prepare_type {
+            PrepareType::Generate {
                 lca_hint,
                 lfs_params,
                 filenode_verifier,
-                bookmark_regex_force_lfs,
-            } => PrepareType::Generate {
-                lca_hint,
-                lfs_params: get_session_lfs_params(
-                    &ctx,
-                    &log_entry.bookmark_name,
-                    lfs_params.clone(),
-                    &bookmark_regex_force_lfs,
-                ),
-                filenode_verifier,
-            },
-            BundleType::UseExisting => match &log_entry.bundle_replay_data {
-                Some(bundle_replay_data) => PrepareType::UseExisting { bundle_replay_data },
-                None => {
-                    return Err(ReplayDataMissing { id: log_entry.id }.into());
-                }
-            },
-        };
-
-        let bundle_and_timestamps_files = async {
-            match prepare_type {
-                PrepareType::Generate {
-                    lca_hint,
+            } => {
+                let (bytes, timestamps) = crate::bundle_generator::create_bundle(
+                    ctx.clone(),
+                    repo.clone(),
+                    lca_hint.clone(),
+                    bookmark_name.clone(),
+                    bookmark_change.clone(),
+                    hg_server_heads.to_vec(),
                     lfs_params,
-                    filenode_verifier,
-                } => {
-                    let (bytes, timestamps) = crate::bundle_generator::create_bundle(
-                        ctx.clone(),
-                        repo.clone(),
-                        lca_hint.clone(),
-                        log_entry.bookmark_name.clone(),
-                        BookmarkChange::new(&log_entry)?,
-                        hg_server_heads.to_vec(),
-                        lfs_params,
-                        filenode_verifier.clone(),
-                    )
-                    .compat()
-                    .await?;
+                    filenode_verifier.clone(),
+                )
+                .compat()
+                .await?;
 
-                    try_join(
-                        save_bytes_to_temp_file(&bytes),
-                        save_timestamps_to_file(&timestamps),
-                    )
-                    .await
-                }
-                PrepareType::UseExisting { bundle_replay_data } => {
-                    match BundleReplayData::try_from(bundle_replay_data) {
-                        Ok(bundle_replay_data) => {
-                            try_join(
-                                save_bundle_to_temp_file(
-                                    &ctx,
-                                    &blobstore,
-                                    bundle_replay_data.bundle2_id,
-                                ),
-                                save_timestamps_to_file(&bundle_replay_data.timestamps),
-                            )
-                            .await
-                        }
-                        Err(e) => Err(e),
+                try_join(
+                    save_bytes_to_temp_file(&bytes),
+                    save_timestamps_to_file(&timestamps),
+                )
+                .await
+            }
+            PrepareType::UseExisting { bundle_replay_data } => {
+                match BundleReplayData::try_from(bundle_replay_data) {
+                    Ok(bundle_replay_data) => {
+                        try_join(
+                            save_bundle_to_temp_file(
+                                &ctx,
+                                &blobstore,
+                                bundle_replay_data.bundle2_id,
+                            ),
+                            save_timestamps_to_file(&bundle_replay_data.timestamps),
+                        )
+                        .await
                     }
+                    Err(e) => Err(e),
                 }
             }
-        };
-
-        let cs_id = async {
-            match log_entry.to_changeset_id {
-                Some(to_changeset_id) => {
-                    let hg_cs_id = repo
-                        .get_hg_from_bonsai_changeset(ctx.clone(), to_changeset_id)
-                        .compat()
-                        .await?;
-                    Ok(Some((to_changeset_id, hg_cs_id)))
-                }
-                None => Ok(None),
-            }
-        };
-
-        let ((bundle_file, timestamps_file), cs_id) =
-            try_join(bundle_and_timestamps_files, cs_id).await?;
-
-        Ok(PreparedBookmarkUpdateLogEntry {
-            log_entry: log_entry.clone(),
-            bundle_file: Arc::new(bundle_file),
-            timestamps_file: Arc::new(timestamps_file),
-            cs_id,
-        })
+        }
     }
 }
 

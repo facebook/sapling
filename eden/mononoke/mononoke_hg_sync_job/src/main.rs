@@ -19,7 +19,7 @@ use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshness};
 use borrowed::borrowed;
 use bundle_generator::FilenodeVerifier;
-use bundle_preparer::{BundlePreparer, PreparedBookmarkUpdateLogEntry};
+use bundle_preparer::BundlePreparer;
 use clap::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers::block_execute};
@@ -28,7 +28,7 @@ use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{self, try_join, try_join3, try_join_all, BoxFuture, FutureExt as _, TryFutureExt},
+    future::{self, try_join, try_join3, BoxFuture, FutureExt as _, TryFutureExt},
     pin_mut,
     stream::{self, StreamExt, TryStreamExt},
     Stream,
@@ -39,9 +39,7 @@ use lfs_verifier::LfsVerifier;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::HgsqlName;
 use metaconfig_types::RepoReadOnly;
-use mononoke_hg_sync_job_helper_lib::{
-    merge_bundles, merge_timestamp_files, retry, RetryAttemptsCount,
-};
+use mononoke_hg_sync_job_helper_lib::{retry, RetryAttemptsCount};
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use regex::Regex;
@@ -52,7 +50,7 @@ use sql_construct::{facebook::FbSqlConstruct, SqlConstruct};
 use sql_ext::facebook::{myrouter_ready, MysqlConnectionType, MysqlOptions};
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 use tempfile::NamedTempFile;
@@ -353,55 +351,12 @@ fn build_outcome_handler<'a>(
 }
 
 #[derive(Clone)]
-struct CombinedBookmarkUpdateLogEntry {
+pub struct CombinedBookmarkUpdateLogEntry {
     components: Vec<BookmarkUpdateLogEntry>,
     bundle_file: Arc<NamedTempFile>,
     timestamps_file: Arc<NamedTempFile>,
     cs_id: Option<(ChangesetId, HgChangesetId)>,
     bookmark: BookmarkName,
-}
-
-async fn combine_entries(
-    ctx: &CoreContext,
-    entries: &[PreparedBookmarkUpdateLogEntry],
-) -> Result<CombinedBookmarkUpdateLogEntry, Error> {
-    let bundle_file_paths: Vec<PathBuf> = entries
-        .iter()
-        .map(|prepared_entry| prepared_entry.bundle_file.path().to_path_buf())
-        .collect();
-    let timestamp_file_paths: Vec<PathBuf> = entries
-        .iter()
-        .map(|prepared_entry| prepared_entry.timestamps_file.path().to_path_buf())
-        .collect();
-    let components: Vec<_> = entries
-        .iter()
-        .map(|prepared_entry| prepared_entry.log_entry.clone())
-        .collect();
-    let last_entry = match entries.iter().last() {
-        None => {
-            return Err(Error::msg(
-                "cannot create a combined entry from an empty list",
-            ));
-        }
-        Some(entry) => entry.clone(),
-    };
-
-    let (combined_bundle_file, combined_timestamps_file) = try_join(
-        merge_bundles(ctx, &bundle_file_paths),
-        merge_timestamp_files(ctx, &timestamp_file_paths),
-    )
-    .await?;
-
-    let PreparedBookmarkUpdateLogEntry {
-        cs_id, log_entry, ..
-    } = last_entry;
-    Ok(CombinedBookmarkUpdateLogEntry {
-        components,
-        bundle_file: Arc::new(combined_bundle_file),
-        timestamps_file: Arc::new(combined_timestamps_file),
-        cs_id,
-        bookmark: log_entry.bookmark_name,
-    })
 }
 
 /// Sends a downloaded bundle to hg
@@ -789,7 +744,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             let start_id = args::get_usize_opt(&sub_m, "start-id")
                 .ok_or_else(|| Error::msg("--start-id must be specified"))?;
 
-            let (maybe_log_entry, (bundle_preparer, overlay, globalrev_syncer)) = try_join(
+            let (maybe_log_entry, (bundle_preparer, mut overlay, globalrev_syncer)) = try_join(
                 bookmarks
                     .read_next_bookmark_log_entries(
                         ctx.clone(),
@@ -803,11 +758,11 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             .await?;
             if let Some(log_entry) = maybe_log_entry {
                 let (stats, res) = async {
-                    let prepared_log_entry = bundle_preparer
-                        .prepare_single_bundle(ctx.clone(), log_entry.clone(), overlay.clone())
+                    let mut combined_entries = bundle_preparer
+                        .prepare_bundles(&ctx, vec![log_entry.clone()], &mut overlay)
                         .await?;
-                    let combined_entry = combine_entries(&ctx, &[prepared_log_entry]).await?;
 
+                    let combined_entry = combined_entries.remove(0);
                     sync_single_combined_entry(
                         &ctx,
                         &combined_entry,
@@ -903,45 +858,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             })
             .map_err(|cause| AnonymousError { cause })
             .map_ok(move |entries: Vec<BookmarkUpdateLogEntry>| {
-                let mut futs = vec![];
-                for log_entry in entries {
-                    let f = bundle_preparer.prepare_single_bundle(
-                        ctx.clone(),
-                        log_entry.clone(),
-                        overlay.clone(),
-                    );
-                    overlay.update(
-                        log_entry.bookmark_name.clone(),
-                        log_entry.to_changeset_id.clone(),
-                    );
-                    let f = async move {
-                        let f = tokio::spawn(f);
-                        let res = f.map_err(Error::from).await;
-                        let res = match res {
-                            Ok(Ok(res)) => Ok(res),
-                            Ok(Err(err)) => Err(err),
-                            Err(err) => Err(err),
-                        };
-                        res.map_err(|err| bind_sync_err(&[log_entry], err))
-                    };
-                    futs.push(f);
-                }
-
-                async move {
-                    let prepared_log_entries = try_join_all(futs).await?;
-
-                    let res = combine_entries(&ctx, &prepared_log_entries).await;
-                    match res {
-                        Ok(res) => Ok(res),
-                        Err(err) => Err(bind_sync_err(
-                            &prepared_log_entries
-                                .into_iter()
-                                .map(|prepared_entry| prepared_entry.log_entry)
-                                .collect::<Vec<_>>(),
-                            err,
-                        )),
-                    }
-                }
+                bundle_preparer.prepare_bundles(&ctx, entries, &mut overlay)
             })
             .map(|res| async move {
                 match res {
@@ -949,7 +866,9 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                     Err(err) => Err(err),
                 }
             })
-            .buffered(bundle_buffer_size);
+            .buffered(bundle_buffer_size)
+            .map_ok(|vec| stream::iter(vec.into_iter().map(Ok)))
+            .try_flatten();
 
             let outcome_handler = build_outcome_handler(&ctx, &lock_via);
             pin_mut!(s);

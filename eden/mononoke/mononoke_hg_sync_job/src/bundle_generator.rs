@@ -10,7 +10,7 @@ use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateLogEntry};
+use bookmarks::BookmarkName;
 use borrowed::borrowed;
 use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
@@ -90,6 +90,7 @@ pub fn create_bundle(
         .boxify()
 }
 
+#[derive(Clone)]
 pub enum BookmarkChange {
     Created(ChangesetId),
     Deleted(ChangesetId),
@@ -97,8 +98,11 @@ pub enum BookmarkChange {
 }
 
 impl BookmarkChange {
-    pub fn new(entry: &BookmarkUpdateLogEntry) -> Result<Self, Error> {
-        match (entry.from_changeset_id, entry.to_changeset_id) {
+    pub fn new(
+        from_cs_id: Option<ChangesetId>,
+        to_cs_id: Option<ChangesetId>,
+    ) -> Result<Self, Error> {
+        match (from_cs_id, to_cs_id) {
             (Some(ref from), None) => Ok(BookmarkChange::Deleted(*from)),
             (None, Some(ref to)) => Ok(BookmarkChange::Created(*to)),
             (Some(ref from), Some(ref to)) => Ok(BookmarkChange::Moved {

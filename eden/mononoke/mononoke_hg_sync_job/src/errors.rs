@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use bookmarks::BookmarkUpdateLogEntry;
+use bookmarks::{BookmarkName, BookmarkUpdateLogEntry};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -20,6 +20,16 @@ pub enum ErrorKind {
         ids: Vec<i64>,
         #[source]
         cause: Error,
+    },
+    #[error(
+        "Programming error: cannot prepare a bundle for entry ids #{ids:?}: \
+        entry {entry_id} modifies bookmark {entry_bookmark_name}, while bundle moves {bundle_bookmark_name}"
+    )]
+    BookmarkMismatchInBundleCombining {
+        ids: Vec<i64>,
+        entry_id: i64,
+        entry_bookmark_name: BookmarkName,
+        bundle_bookmark_name: BookmarkName,
     },
 }
 

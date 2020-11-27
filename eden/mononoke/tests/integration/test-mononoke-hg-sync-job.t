@@ -83,7 +83,7 @@ Try to sync blobimport bookmark move, which should fail
   $ sqlite3 "$TESTTMP/hgrepos/repo_lock" "select count(*) from repo_lock"
   1
   $ mononoke_hg_sync_with_failure_handler repo-hg 0 2>&1 | grep 'unexpected bookmark move'
-      unexpected bookmark move: blobimport
+  * unexpected bookmark move: blobimport (glob)
   $ sqlite3 "$TESTTMP/hgrepos/repo_lock" "select count(*) from repo_lock"
   1
 
