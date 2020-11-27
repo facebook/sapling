@@ -23,7 +23,7 @@ use filestore::FilestoreConfig;
 use futures::{
     compat::Future01CompatExt, future::BoxFuture, FutureExt, Stream, TryFutureExt, TryStreamExt,
 };
-use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as _};
+use futures_ext::FutureExt as _;
 use futures_old::{
     future::{loop_fn, ok, Future as OldFuture, Loop},
     stream::{self, FuturesUnordered, Stream as OldStream},
@@ -241,38 +241,46 @@ impl BlobRepo {
         &self.inner.bonsai_globalrev_mapping
     }
 
-    pub fn get_bonsai_from_globalrev(
+    pub async fn get_bonsai_from_globalrev(
         &self,
         globalrev: Globalrev,
-    ) -> OldBoxFuture<Option<ChangesetId>, Error> {
-        self.inner
+    ) -> Result<Option<ChangesetId>, Error> {
+        let maybe_changesetid = self
+            .inner
             .bonsai_globalrev_mapping
             .get_bonsai_from_globalrev(self.get_repoid(), globalrev)
+            .compat()
+            .await?;
+        Ok(maybe_changesetid)
     }
 
-    pub fn get_globalrev_from_bonsai(
+    pub async fn get_globalrev_from_bonsai(
         &self,
         bcs: ChangesetId,
-    ) -> OldBoxFuture<Option<Globalrev>, Error> {
-        self.inner
+    ) -> Result<Option<Globalrev>, Error> {
+        let maybe_globalrev = self
+            .inner
             .bonsai_globalrev_mapping
             .get_globalrev_from_bonsai(self.get_repoid(), bcs)
+            .compat()
+            .await?;
+        Ok(maybe_globalrev)
     }
 
-    pub fn get_bonsai_globalrev_mapping(
+    pub async fn get_bonsai_globalrev_mapping(
         &self,
         bonsai_or_globalrev_ids: impl Into<BonsaisOrGlobalrevs>,
-    ) -> OldBoxFuture<Vec<(ChangesetId, Globalrev)>, Error> {
-        self.inner
+    ) -> Result<Vec<(ChangesetId, Globalrev)>, Error> {
+        let entries = self
+            .inner
             .bonsai_globalrev_mapping
             .get(self.get_repoid(), bonsai_or_globalrev_ids.into())
-            .map(|result| {
-                result
-                    .into_iter()
-                    .map(|entry| (entry.bcs_id, entry.globalrev))
-                    .collect()
-            })
-            .boxify()
+            .compat()
+            .await?;
+        Ok(entries
+            .into_iter()
+            .map(|entry| (entry.bcs_id, entry.globalrev))
+            .collect())
     }
 
     pub fn list_bookmark_log_entries(

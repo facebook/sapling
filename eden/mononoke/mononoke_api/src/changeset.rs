@@ -165,7 +165,6 @@ impl ChangesetContext {
             .repo()
             .blob_repo()
             .get_globalrev_from_bonsai(self.id)
-            .compat()
             .await?;
         Ok(mapping.into_iter().next())
     }

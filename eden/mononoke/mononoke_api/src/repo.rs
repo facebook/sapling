@@ -761,10 +761,7 @@ impl RepoContext {
                     .await?
             }
             ChangesetSpecifier::Globalrev(rev) => {
-                self.blob_repo()
-                    .get_bonsai_from_globalrev(rev)
-                    .compat()
-                    .await?
+                self.blob_repo().get_bonsai_from_globalrev(rev).await?
             }
             ChangesetSpecifier::GitSha1(git_sha1) => {
                 self.blob_repo()
@@ -909,7 +906,6 @@ impl RepoContext {
         let mapping = self
             .blob_repo()
             .get_bonsai_globalrev_mapping(changesets)
-            .compat()
             .await?
             .into_iter()
             .collect();

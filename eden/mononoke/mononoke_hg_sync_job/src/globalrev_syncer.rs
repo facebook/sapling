@@ -90,7 +90,6 @@ impl SqlGlobalrevSyncer {
         let rev = self
             .repo
             .get_globalrev_from_bonsai(bcs_id)
-            .compat()
             .await?
             .ok_or_else(|| format_err!("Globalrev is missing for bcs_id = {}", bcs_id))?
             .id()
