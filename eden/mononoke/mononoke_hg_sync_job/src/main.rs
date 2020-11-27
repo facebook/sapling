@@ -703,12 +703,10 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                     filenode_verifier,
                     bookmark_regex_force_lfs,
                 )
-                .compat()
                 .map_ok(Arc::new)
                 .await
             } else {
                 BundlePreparer::new_use_existing(repo.clone(), base_retry_delay_ms, retry_num)
-                    .compat()
                     .map_ok(Arc::new)
                     .await
             }

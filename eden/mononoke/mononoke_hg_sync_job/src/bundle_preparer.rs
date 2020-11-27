@@ -18,7 +18,6 @@ use futures::{
     future::{try_join, FutureExt as _, TryFutureExt},
 };
 use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future::ok, Future};
 use getbundle_response::SessionLfsParams;
 use itertools::Itertools;
 use mercurial_bundle_replay_data::BundleReplayData;
@@ -66,12 +65,12 @@ enum BundleType {
 }
 
 impl BundlePreparer {
-    pub fn new_use_existing(
+    pub async fn new_use_existing(
         repo: BlobRepo,
         base_retry_delay_ms: u64,
         retry_num: usize,
-    ) -> impl Future<Item = BundlePreparer, Error = Error> {
-        ok(BundlePreparer {
+    ) -> Result<BundlePreparer, Error> {
+        Ok(BundlePreparer {
             repo,
             base_retry_delay_ms,
             retry_num,
@@ -79,7 +78,7 @@ impl BundlePreparer {
         })
     }
 
-    pub fn new_generate_bundles(
+    pub async fn new_generate_bundles(
         ctx: CoreContext,
         repo: BlobRepo,
         base_retry_delay_ms: u64,
@@ -88,25 +87,23 @@ impl BundlePreparer {
         lfs_params: LfsParams,
         filenode_verifier: FilenodeVerifier,
         bookmark_regex_force_lfs: Option<Regex>,
-    ) -> impl Future<Item = BundlePreparer, Error = Error> {
+    ) -> Result<BundlePreparer, Error> {
         let blobstore = repo.get_blobstore().boxed();
-        async move { fetch_skiplist_index(&ctx, &maybe_skiplist_blobstore_key, &blobstore).await }
-            .boxed()
-            .compat()
-            .map(move |skiplist| {
-                let lca_hint: Arc<dyn LeastCommonAncestorsHint> = skiplist;
-                BundlePreparer {
-                    repo,
-                    base_retry_delay_ms,
-                    retry_num,
-                    ty: BundleType::GenerateNew {
-                        lca_hint,
-                        lfs_params,
-                        filenode_verifier,
-                        bookmark_regex_force_lfs,
-                    },
-                }
-            })
+        let skiplist =
+            fetch_skiplist_index(&ctx, &maybe_skiplist_blobstore_key, &blobstore).await?;
+
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> = skiplist;
+        Ok(BundlePreparer {
+            repo,
+            base_retry_delay_ms,
+            retry_num,
+            ty: BundleType::GenerateNew {
+                lca_hint,
+                lfs_params,
+                filenode_verifier,
+                bookmark_regex_force_lfs,
+            },
+        })
     }
 
     pub fn prepare_single_bundle(
