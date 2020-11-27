@@ -27,7 +27,7 @@ use futures::{
     Stream,
 };
 use futures_ext::StreamExt as OldStreamExt;
-use futures_old::{Future as OldFuture, Stream as OldStream};
+use futures_old::Future as OldFuture;
 use slog::{debug, error, info};
 
 use blobrepo::BlobRepo;
@@ -173,9 +173,8 @@ impl<'a> Blobimport<'a> {
         // PublishingOrPullDefaultPublishing here, which is the non-scratch set in Mononoke.
         let mononoke_bookmarks_fut = blobrepo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-            .map(|(bookmark, changeset_id)| (bookmark.into_name(), changeset_id))
-            .collect()
-            .compat();
+            .map_ok(|(bookmark, changeset_id)| (bookmark.into_name(), changeset_id))
+            .try_collect::<Vec<_>>();
 
         let (stale_bookmarks, mononoke_bookmarks) =
             future::try_join(stale_bookmarks_fut, mononoke_bookmarks_fut).await?;

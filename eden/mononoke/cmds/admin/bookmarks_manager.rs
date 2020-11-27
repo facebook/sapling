@@ -11,8 +11,7 @@ use bookmarks::Freshness;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
-use futures::future::TryFutureExt;
+use futures::{compat::Future01CompatExt, TryFutureExt, TryStreamExt};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::{future, Future, IntoFuture, Stream};
 use mercurial_types::HgChangesetId;
@@ -284,6 +283,7 @@ fn handle_list<'a>(
     match args.value_of("kind") {
         Some("publishing") => {
             repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+                .compat()
                 .map({
                     cloned!(repo, ctx);
                     move |(bookmark, bonsai_cs_id)| {

@@ -241,19 +241,17 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
 
     let target_bookmarks = target_repo
         .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-        .map(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
-        .collect_to::<HashMap<_, _>>()
-        .compat()
+        .map_ok(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
+        .try_collect::<HashMap<_, _>>()
         .await?;
 
     // 'renamed_source_bookmarks' - take all the source bookmarks, rename the bookmarks, remap
     // the commits.
     let (renamed_source_bookmarks, no_sync_outcome) = {
-        let source_bookmarks = source_repo
+        let source_bookmarks: Vec<_> = source_repo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-            .map(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
-            .collect()
-            .compat()
+            .map_ok(|(bookmark, cs_id)| (bookmark.name().clone(), cs_id))
+            .try_collect()
             .await?;
 
         // Renames bookmarks and also maps large cs ids to small cs ids

@@ -207,7 +207,6 @@ async fn init_bookmarks(
 ) -> Result<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>, Error> {
     let all_bookmarks = repo
         .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-        .compat()
         .try_collect::<HashMap<_, _>>()
         .await?;
 
@@ -395,7 +394,6 @@ fn spawn_bookmarks_coordinator(
 
                 let res = repo
                     .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-                    .compat()
                     .map_ok(|(book, cs_id)| {
                         let kind = *book.kind();
                         (book.into_name(), (cs_id, kind))
@@ -856,7 +854,6 @@ mod tests {
 
         let bookmarks = repo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-            .compat()
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
                 (book.into_name(), (cs_id, kind))
@@ -909,7 +906,6 @@ mod tests {
 
         let bookmarks = repo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-            .compat()
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
                 (book.into_name(), (cs_id, kind))
@@ -999,7 +995,6 @@ mod tests {
 
         let bookmarks = repo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-            .compat()
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
                 (book.into_name(), (cs_id, kind))
@@ -1154,7 +1149,6 @@ mod tests {
 
         let bookmarks = repo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-            .compat()
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
                 (book.into_name(), (cs_id, kind))
@@ -1209,7 +1203,6 @@ mod tests {
 
         let bookmarks = repo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-            .compat()
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
                 (book.into_name(), (cs_id, kind))
@@ -1299,7 +1292,6 @@ mod tests {
 
         let bookmarks = repo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-            .compat()
             .map_ok(|(book, cs_id)| {
                 let kind = *book.kind();
                 (book.into_name(), (cs_id, kind))

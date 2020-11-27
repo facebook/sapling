@@ -159,18 +159,16 @@ impl BlobRepo {
     pub fn get_bonsai_publishing_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> impl OldStream<Item = (Bookmark, ChangesetId), Error = Error> {
+    ) -> impl Stream<Item = Result<(Bookmark, ChangesetId), Error>> {
         STATS::get_bonsai_publishing_bookmarks_maybe_stale.add_value(1);
-        self.attribute_expected::<dyn Bookmarks>()
-            .list(
-                ctx,
-                Freshness::MaybeStale,
-                &BookmarkPrefix::empty(),
-                BookmarkKind::ALL_PUBLISHING,
-                &BookmarkPagination::FromStart,
-                std::u64::MAX,
-            )
-            .compat()
+        self.attribute_expected::<dyn Bookmarks>().list(
+            ctx,
+            Freshness::MaybeStale,
+            &BookmarkPrefix::empty(),
+            BookmarkKind::ALL_PUBLISHING,
+            &BookmarkPagination::FromStart,
+            std::u64::MAX,
+        )
     }
 
     /// Get bookmarks by prefix, they will be read from replica, so they might be stale.
@@ -179,18 +177,16 @@ impl BlobRepo {
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         max: u64,
-    ) -> impl OldStream<Item = (Bookmark, ChangesetId), Error = Error> {
+    ) -> impl Stream<Item = Result<(Bookmark, ChangesetId), Error>> {
         STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
-        self.attribute_expected::<dyn Bookmarks>()
-            .list(
-                ctx,
-                Freshness::MaybeStale,
-                prefix,
-                BookmarkKind::ALL,
-                &BookmarkPagination::FromStart,
-                max,
-            )
-            .compat()
+        self.attribute_expected::<dyn Bookmarks>().list(
+            ctx,
+            Freshness::MaybeStale,
+            prefix,
+            BookmarkKind::ALL,
+            &BookmarkPagination::FromStart,
+            max,
+        )
     }
 
     pub fn changeset_exists_by_bonsai(

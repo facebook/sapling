@@ -9,7 +9,7 @@ use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::TryFutureExt;
+use futures::{TryFutureExt, TryStreamExt};
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
 use futures_old::{future as future01, Future as Future01, Stream as Stream01};
 
@@ -29,6 +29,7 @@ fn delete_all_publishing_bookmarks(rt: &mut Runtime, ctx: CoreContext, repo: Blo
     let bookmarks = rt
         .block_on(
             repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+                .compat()
                 .collect(),
         )
         .unwrap();
