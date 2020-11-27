@@ -17,6 +17,7 @@
 use anyhow::{bail, format_err, Error, Result};
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshness};
+use borrowed::borrowed;
 use bundle_generator::FilenodeVerifier;
 use bundle_preparer::{BundlePreparer, PreparedBookmarkUpdateLogEntry};
 use clap::{Arg, ArgMatches, SubCommand};
@@ -26,17 +27,11 @@ use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::{try_join, try_join3, BoxFuture, FutureExt as _, TryFutureExt},
+    compat::Future01CompatExt,
+    future::{self, try_join, try_join3, try_join_all, BoxFuture, FutureExt as _, TryFutureExt},
+    pin_mut,
     stream::{self, StreamExt, TryStreamExt},
     Stream,
-};
-use futures_ext::{spawn_future, FutureExt, StreamExt as OldStreamExt};
-use futures_old::{
-    future::{join_all, ok},
-    stream as old_stream,
-    stream::Stream as OldStream,
-    Future,
 };
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
 use http::Uri;
@@ -660,9 +655,8 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
         .value_of(HGSQL_GLOBALREVS_DB_ADDR)
         .map(|a| a.to_string());
 
+    let repo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
     let repo_parts = {
-        let repo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
-        cloned!(ctx, hg_repo_path);
         let fb = ctx.fb;
         let maybe_skiplist_blobstore_key = repo_config.skiplist_index_blobstore_key.clone();
         let hgsql_globalrevs_name = repo_config.hgsql_globalrevs_name.clone();
@@ -675,47 +669,48 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             None => FilenodeVerifier::NoopVerifier,
         };
 
-        let overlay = list_hg_server_bookmarks(hg_repo_path)
-            .and_then({
-                cloned!(ctx, repo);
-                move |bookmarks| {
-                    old_stream::iter_ok(bookmarks.into_iter())
-                        .map(move |(book, hg_cs_id)| {
-                            repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-                                .map(move |maybe_bcs_id| maybe_bcs_id.map(|bcs_id| (book, bcs_id)))
-                        })
-                        .buffered(100)
-                        .filter_map(|x| x)
-                        .collect_to::<HashMap<_, _>>()
-                }
-            })
-            .map(Arc::new)
-            .map(BookmarkOverlay::new)
-            .compat();
+        borrowed!(ctx, repo);
+        // FIXME: this cloned! will go away once HgRepo is asyncified
+        cloned!(hg_repo_path);
+        let overlay = async move {
+            let bookmarks = list_hg_server_bookmarks(hg_repo_path).compat().await?;
 
-        let preparer = {
-            cloned!(repo);
-            async move {
-                if generate_bundles {
-                    BundlePreparer::new_generate_bundles(
-                        ctx,
-                        repo,
-                        base_retry_delay_ms,
-                        retry_num,
-                        maybe_skiplist_blobstore_key,
-                        lfs_params,
-                        filenode_verifier,
-                        bookmark_regex_force_lfs,
-                    )
-                    .map(Arc::new)
-                    .compat()
-                    .await
-                } else {
-                    BundlePreparer::new_use_existing(repo, base_retry_delay_ms, retry_num)
-                        .map(Arc::new)
+            let bookmarks = stream::iter(bookmarks.into_iter())
+                .map(move |(book, hg_cs_id)| async move {
+                    let maybe_bcs_id = repo
+                        .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
                         .compat()
-                        .await
-                }
+                        .await?;
+                    Result::<_, Error>::Ok(maybe_bcs_id.map(|bcs_id| (book, bcs_id)))
+                })
+                .buffered(100)
+                .try_filter_map(|x| future::ready(Ok(x)))
+                .try_collect::<HashMap<_, _>>()
+                .await?;
+
+            Ok(BookmarkOverlay::new(Arc::new(bookmarks)))
+        };
+
+        let preparer = async move {
+            if generate_bundles {
+                BundlePreparer::new_generate_bundles(
+                    ctx.clone(),
+                    repo.clone(),
+                    base_retry_delay_ms,
+                    retry_num,
+                    maybe_skiplist_blobstore_key,
+                    lfs_params,
+                    filenode_verifier,
+                    bookmark_regex_force_lfs,
+                )
+                .compat()
+                .map_ok(Arc::new)
+                .await
+            } else {
+                BundlePreparer::new_use_existing(repo.clone(), base_retry_delay_ms, retry_num)
+                    .compat()
+                    .map_ok(Arc::new)
+                    .await
             }
         };
 
@@ -730,7 +725,8 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
 
             GlobalrevSyncer::new(
                 fb,
-                repo,
+                // FIXME: this clone should go away once GlobalrevSyncer is asyncified
+                repo.clone(),
                 hgsql_use_sqlite,
                 hgsql_db_addr.as_ref().map(|a| a.as_ref()),
                 mysql_options,
@@ -863,30 +859,27 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             // This ensures that we exit ASAP in the two following cases:
             // - There is no work whatsoever. The first check exits early.
             // - There is a lot of buffered work. The 2nd check exits early without doing it all.
-            let can_continue = Arc::new({
-                cloned!(ctx);
-                move || match exit_path {
-                    Some(ref exit_path) if exit_path.exists() => {
-                        info!(ctx.logger(), "path {:?} exists: exiting ...", exit_path);
-                        false
-                    }
-                    _ => true,
+            borrowed!(ctx);
+            let can_continue = move || match exit_path {
+                Some(ref exit_path) if exit_path.exists() => {
+                    info!(ctx.logger(), "path {:?} exists: exiting ...", exit_path);
+                    false
                 }
-            });
+                _ => true,
+            };
 
             let counter = mutable_counters
                 .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
+                .compat()
                 .and_then(move |maybe_counter| {
-                    maybe_counter.or_else(move || start_id).ok_or_else(|| {
+                    future::ready(maybe_counter.or_else(move || start_id).ok_or_else(|| {
                         format_err!(
                             "{} counter not found. Pass `--start-id` flag to set the counter",
                             LATEST_REPLAYED_REQUEST_KEY
                         )
-                    })
-                })
-                .compat();
+                    }))
+                });
 
-            cloned!(ctx);
             let (start_id, (bundle_preparer, mut overlay, globalrev_syncer)) =
                 try_join(counter, repo_parts).await?;
 
@@ -900,73 +893,70 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                 combine_bundles,
                 &unlock_via,
             )
-            .boxed()
-            .compat()
-            .take_while({
-                cloned!(can_continue);
-                move |_| ok(can_continue())
+            .try_take_while({
+                borrowed!(can_continue);
+                move |_| future::ready(Ok(can_continue()))
             })
-            .filter_map(|entry_vec| {
+            .try_filter_map(|entry_vec| {
                 if entry_vec.is_empty() {
-                    None
+                    future::ready(Ok(None))
                 } else {
-                    Some(entry_vec)
+                    future::ready(Ok(Some(entry_vec)))
                 }
             })
             .map_err(|cause| AnonymousError { cause })
-            .map({
-                cloned!(ctx, bundle_preparer);
-                move |entries: Vec<BookmarkUpdateLogEntry>| {
-                    cloned!(ctx, bundle_preparer);
-                    let mut futs = vec![];
-                    for log_entry in entries {
-                        let f = bundle_preparer.prepare_single_bundle(
-                            ctx.clone(),
-                            log_entry.clone(),
-                            overlay.clone(),
-                        );
-                        let f = spawn_future(f)
-                            .map_err({
-                                cloned!(log_entry);
-                                move |err| bind_sync_err(&[log_entry], err)
-                            })
-                            // boxify is used here because of the
-                            // type_length_limit limitation, which gets exceeded
-                            // if we use heap-allocated types
-                            .boxify();
-                        overlay.update(
-                            log_entry.bookmark_name.clone(),
-                            log_entry.to_changeset_id.clone(),
-                        );
-                        futs.push(f);
-                    }
+            .map_ok(move |entries: Vec<BookmarkUpdateLogEntry>| {
+                let mut futs = vec![];
+                for log_entry in entries {
+                    let f = bundle_preparer.prepare_single_bundle(
+                        ctx.clone(),
+                        log_entry.clone(),
+                        overlay.clone(),
+                    );
+                    overlay.update(
+                        log_entry.bookmark_name.clone(),
+                        log_entry.to_changeset_id.clone(),
+                    );
+                    let f = async move {
+                        let f = tokio::spawn(f.compat());
+                        let res = f.map_err(Error::from).await;
+                        let res = match res {
+                            Ok(Ok(res)) => Ok(res),
+                            Ok(Err(err)) => Err(err),
+                            Err(err) => Err(err),
+                        };
+                        res.map_err(|err| bind_sync_err(&[log_entry], err))
+                    };
+                    futs.push(f);
+                }
 
-                    join_all(futs).and_then({
-                        cloned!(ctx);
-                        |prepared_log_entries| {
-                            async move {
-                                let res = combine_entries(&ctx, &prepared_log_entries).await;
-                                match res {
-                                    Ok(res) => Ok(res),
-                                    Err(err) => Err(bind_sync_err(
-                                        &prepared_log_entries
-                                            .into_iter()
-                                            .map(|prepared_entry| prepared_entry.log_entry)
-                                            .collect::<Vec<_>>(),
-                                        err,
-                                    )),
-                                }
-                            }
-                            .boxed()
-                            .compat()
-                        }
-                    })
+                async move {
+                    let prepared_log_entries = try_join_all(futs).await?;
+
+                    let res = combine_entries(&ctx, &prepared_log_entries).await;
+                    match res {
+                        Ok(res) => Ok(res),
+                        Err(err) => Err(bind_sync_err(
+                            &prepared_log_entries
+                                .into_iter()
+                                .map(|prepared_entry| prepared_entry.log_entry)
+                                .collect::<Vec<_>>(),
+                            err,
+                        )),
+                    }
+                }
+            })
+            .map(|res| async move {
+                match res {
+                    Ok(f) => f.await,
+                    Err(err) => Err(err),
                 }
             })
             .buffered(bundle_buffer_size);
 
             let outcome_handler = build_outcome_handler(&ctx, &lock_via);
-            let mut s = s.compat();
+            pin_mut!(s);
+
             while let Some(res) = s.next().await {
                 if !can_continue() {
                     break;
