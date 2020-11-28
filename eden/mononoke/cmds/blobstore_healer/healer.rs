@@ -18,7 +18,7 @@ use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use rand::{thread_rng, Rng};
 use scuba_ext::ScubaSampleBuilderExt;
-use slog::{info, warn};
+use slog::{debug, info, warn};
 use std::{
     collections::{HashMap, HashSet},
     future::Future,
@@ -218,7 +218,9 @@ impl Healer {
 
         info!(
             ctx.logger(),
-            "Found {} blobs to be healed... Doing it", last_batch_size
+            "Found {} blobs to be healed... Doing it with concurrency {}",
+            last_batch_size,
+            heal_concurrency
         );
 
         let heal_res: Vec<_> = stream::iter(healing_futures)
@@ -350,15 +352,29 @@ fn heal_blob<'out>(
 
     let heal_future = async move {
         let fetch_data = fetch_blob(ctx, &blobstores, &key, &seen_blobstores).await?;
-        if !fetch_data.missing_sources.is_empty() {
+
+        let FetchData {
+            blob,
+            good_sources,
+            missing_sources,
+        } = fetch_data;
+
+        debug!(
+            ctx.logger(),
+            "Fetched blob size for {} is: {}",
+            key,
+            blob.len()
+        );
+
+        if !missing_sources.is_empty() {
             warn!(
                 ctx.logger(),
                 "Source Blobstores {:?} of {:?} returned None even though they \
                  should contain data",
-                fetch_data.missing_sources,
+                missing_sources,
                 seen_blobstores
             );
-            for bid in fetch_data.missing_sources.clone() {
+            for bid in missing_sources.clone() {
                 stores_to_heal.insert(bid);
             }
         }
@@ -366,16 +382,16 @@ fn heal_blob<'out>(
         // If any puts fail make sure we put a good source blobstore_id for that blob
         // back on the queue
         let heal_results = {
-            let blob = &fetch_data.blob;
             let key = &key;
-            join_all(stores_to_heal.into_iter().map(|bid| async move {
+            let mut results = vec![];
+            for bid in stores_to_heal {
                 let blobstore = blobstores
                     .get(&bid)
                     .expect("stores_to_heal contains unknown blobstore?");
                 let result = blobstore.put(ctx, key.clone(), blob.clone()).await;
-                (bid, result.is_ok())
-            }))
-            .await
+                results.push((bid, result.is_ok()));
+            }
+            results
         };
         let (mut healed_stores, mut unhealed_stores): (HashSet<_>, Vec<_>) =
             heal_results.into_iter().partition_map(|(id, put_ok)| {
@@ -393,7 +409,7 @@ fn heal_blob<'out>(
             //
             // This also ensures we requeue at least one good source store in the case
             // where all heal puts fail
-            for b in fetch_data.good_sources {
+            for b in good_sources {
                 healed_stores.insert(b);
             }
 
