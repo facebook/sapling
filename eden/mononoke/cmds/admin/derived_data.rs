@@ -25,7 +25,7 @@ use manifest::ManifestOps;
 use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::{ChangesetId, ContentId, FileType, MPath};
 use skeleton_manifest::RootSkeletonManifestId;
-use slog::Logger;
+use slog::{info, Logger};
 use std::{
     collections::{HashMap, HashSet},
     fmt,
@@ -211,20 +211,30 @@ async fn verify_manifests(
     }
     let mut combined: HashMap<MPath, FileContentValue> = HashMap::new();
     let contents = try_join_all(futs).await?;
-    for map in contents {
+    info!(ctx.logger(), "Combining {} manifests", contents.len());
+    for (mf_type, map) in contents {
         for (path, new_val) in map {
             combined
                 .entry(path)
                 .or_insert_with(FileContentValue::new)
                 .update(new_val.clone());
         }
+        info!(ctx.logger(), "Completed {} manifest", mf_type);
     }
 
+    info!(ctx.logger(), "Checking {} paths", combined.len());
+    let mut invalid_count = 0u64;
     for (path, val) in combined {
         if !val.is_valid(&manifests) {
             println!("Invalid!\nPath: {}", path);
             println!("{}\n", val);
+            invalid_count += 1;
         }
+    }
+    if invalid_count == 0 {
+        info!(ctx.logger(), "Check complete");
+    } else {
+        info!(ctx.logger(), "Found {} invalid paths", invalid_count);
     }
 
     Ok(())
@@ -362,7 +372,7 @@ async fn list_hg_manifest(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: ChangesetId,
-) -> Result<HashMap<MPath, ManifestData>, Error> {
+) -> Result<(ManifestType, HashMap<MPath, ManifestData>), Error> {
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .compat()
@@ -371,7 +381,8 @@ async fn list_hg_manifest(
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
     let mfid = hg_cs.manifestid();
 
-    mfid.list_leaf_entries(ctx.clone(), repo.get_blobstore())
+    let map: HashMap<_, _> = mfid
+        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .map_ok(|(path, (ty, filenode_id))| async move {
             let filenode = filenode_id.load(ctx, repo.blobstore()).await?;
             let content_id = filenode.content_id();
@@ -380,7 +391,9 @@ async fn list_hg_manifest(
         })
         .try_buffer_unordered(100)
         .try_collect()
-        .await
+        .await?;
+    info!(ctx.logger(), "Loaded hg manifests for {} paths", map.len());
+    Ok((ManifestType::Hg, map))
 }
 
 async fn list_skeleton_manifest(
@@ -388,16 +401,22 @@ async fn list_skeleton_manifest(
     repo: &BlobRepo,
     cs_id: ChangesetId,
     fetch_derived: bool,
-) -> Result<HashMap<MPath, ManifestData>, Error> {
+) -> Result<(ManifestType, HashMap<MPath, ManifestData>), Error> {
     let root_skeleton_id =
         derive_or_fetch::<RootSkeletonManifestId>(ctx, repo, cs_id, fetch_derived).await?;
 
     let skeleton_id = root_skeleton_id.skeleton_manifest_id();
-    skeleton_id
+    let map: HashMap<_, _> = skeleton_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .map_ok(|(path, ())| (path, ManifestData::Skeleton))
         .try_collect()
-        .await
+        .await?;
+    info!(
+        ctx.logger(),
+        "Loaded skeleton manifests for {} paths",
+        map.len()
+    );
+    Ok((ManifestType::Skeleton, map))
 }
 
 async fn list_fsnodes(
@@ -405,11 +424,11 @@ async fn list_fsnodes(
     repo: &BlobRepo,
     cs_id: ChangesetId,
     fetch_derived: bool,
-) -> Result<HashMap<MPath, ManifestData>, Error> {
+) -> Result<(ManifestType, HashMap<MPath, ManifestData>), Error> {
     let root_fsnode_id = derive_or_fetch::<RootFsnodeId>(ctx, repo, cs_id, fetch_derived).await?;
 
     let fsnode_id = root_fsnode_id.fsnode_id();
-    fsnode_id
+    let map: HashMap<_, _> = fsnode_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .map_ok(|(path, fsnode)| {
             let (content_id, ty): (ContentId, FileType) = fsnode.into();
@@ -417,7 +436,9 @@ async fn list_fsnodes(
             (path, val)
         })
         .try_collect()
-        .await
+        .await?;
+    info!(ctx.logger(), "Loaded fsnodes for {} paths", map.len());
+    Ok((ManifestType::Fsnodes, map))
 }
 
 async fn list_unodes(
@@ -425,12 +446,12 @@ async fn list_unodes(
     repo: &BlobRepo,
     cs_id: ChangesetId,
     fetch_derived: bool,
-) -> Result<HashMap<MPath, ManifestData>, Error> {
+) -> Result<(ManifestType, HashMap<MPath, ManifestData>), Error> {
     let root_unode_id =
         derive_or_fetch::<RootUnodeManifestId>(ctx, repo, cs_id, fetch_derived).await?;
 
     let unode_id = root_unode_id.manifest_unode_id();
-    unode_id
+    let map: HashMap<_, _> = unode_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .map_ok(|(path, unode_id)| async move {
             let unode = unode_id.load(ctx, repo.blobstore()).await?;
@@ -439,5 +460,7 @@ async fn list_unodes(
         })
         .try_buffer_unordered(100)
         .try_collect()
-        .await
+        .await?;
+    info!(ctx.logger(), "Loaded unodes for {} paths", map.len());
+    Ok((ManifestType::Unodes, map))
 }
