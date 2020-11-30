@@ -35,6 +35,7 @@ use metaconfig_types::CommonConfig;
 use openssl::ssl::SslAcceptor;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use scribe_ext::Scribe;
+use sha1::{Digest, Sha1};
 use slog::{debug, error, info, warn, Logger};
 use tokio::io::{
     AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader,
@@ -53,6 +54,17 @@ use sshrelay::{
 use crate::errors::ErrorKind;
 use crate::repo_handlers::RepoHandler;
 use crate::request_handler::{create_conn_logger, request_handler};
+
+#[cfg(fbcode_build)]
+const HEADER_ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
+#[cfg(fbcode_build)]
+const HEADER_CLIENT_IP: &str = "tfb-orig-client-ip";
+
+const HEADER_CLIENT_DEBUG: &str = "x-client-debug";
+const HEADER_WEBSOCKET_KEY: &str = "sec-websocket-key";
+
+// See https://tools.ietf.org/html/rfc6455#section-1.3
+const WEBSOCKET_MAGIC_KEY: &str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 const CHUNK_SIZE: usize = 10000;
 const CONFIGERATOR_LIMITS_CONFIG: &str = "scm/mononoke/loadshedding/limits";
@@ -234,7 +246,7 @@ async fn server_mux(
         // <number>:\x00
         //
         // For example:
-        // 6:\x00hello
+        // 7:\x00hello\n,
         b"GET" => true,
         _ => false,
     };
@@ -246,14 +258,24 @@ async fn server_mux(
         let mut limited_reader = buf_rx.take(8192);
         match process_http_headers(&mut limited_reader).await {
             Ok(HttpParse::IoStream(reponame, headers)) => {
-                tx.write_all(b"HTTP/1.1 101 Mononoke Peer Upgrade\r\nConnection: Upgrade\r\nUpgrade: mercurial/v1\r\n\r\n")
+                let websocket_key = calculate_websocket_accept(&headers);
+                let maybe_http_metadata =
+                    match try_convert_headers_to_metadata(is_trusted, &headers).await {
+                        Ok(value) => value,
+                        Err(e) => {
+                            tx.write_all(b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
+                            return Err(e);
+                        }
+                    };
+
+                tx.write_all(format!("HTTP/1.1 101 Mononoke Peer Upgrade\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: {}\r\n\r\n", websocket_key).as_bytes())
                 .await?;
                 let conn = FramedConn::setup(limited_reader.into_inner(), tx);
                 let channels = ChannelConn::setup(conn);
                 (
                     reponame,
-                    None,
-                    headers.contains_key("x-client-debug"),
+                    maybe_http_metadata,
+                    headers.contains_key(HEADER_CLIENT_DEBUG),
                     channels,
                 )
             }
@@ -261,8 +283,9 @@ async fn server_mux(
                 tx.write_all(b"HTTP/1.1 404 Not Found\r\n\r\n").await?;
                 return Ok(MuxOutcome::Close);
             }
-            Ok(HttpParse::Noop) => {
-                tx.write_all(b"HTTP/1.1 200 OK\r\n\r\n").await?;
+            Ok(HttpParse::HealthCheck) => {
+                tx.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nI_AM_ALIVE")
+                    .await?;
                 return Ok(MuxOutcome::Close);
             }
             Err(e) => {
@@ -329,6 +352,26 @@ async fn server_mux(
         reponame,
         channels.join_handle,
     ))
+}
+
+// See https://tools.ietf.org/html/rfc6455#section-1.3
+fn calculate_websocket_accept(headers: &HashMap<String, String>) -> String {
+    let mut sha1 = Sha1::new();
+
+    // This is OK to fall back to empty, because we only need to give
+    // this header, if it's asked for. In case of hg<->mononoke with
+    // no Proxygen in between, this header will be missing and the result
+    // ignored.
+    sha1.input(
+        headers
+            .get(HEADER_WEBSOCKET_KEY)
+            .map(|s| s.to_owned())
+            .unwrap_or_default()
+            .as_bytes(),
+    );
+    sha1.input(WEBSOCKET_MAGIC_KEY.as_bytes());
+    let hash: [u8; 20] = sha1.result().into();
+    base64::encode(&hash)
 }
 
 struct FramedConn<R, W> {
@@ -413,7 +456,7 @@ impl ChannelConn {
 enum HttpParse {
     IoStream(String, HashMap<String, String>),
     NotFound,
-    Noop,
+    HealthCheck,
 }
 
 async fn process_http_headers<R>(limited_reader: &mut R) -> Result<HttpParse>
@@ -442,10 +485,10 @@ where
         } else if !line_buf.is_empty() {
             let (key, value) = line_buf
                 .splitn(2, ':')
-                .map(|s| s.trim().to_ascii_lowercase())
+                .map(|s| s.trim())
                 .collect_tuple()
                 .ok_or_else(|| anyhow!("invalid header tuple: {}", line_buf))?;
-            headers.insert(key, value);
+            headers.insert(key.to_ascii_lowercase(), value.to_string());
         } else {
             // HTTP headers are closed by an empty line, so break once we have all our headers
             break;
@@ -453,7 +496,7 @@ where
     }
 
     if let Some(first_line) = first_line {
-        if headers.contains_key("connection") {
+        if headers.get("upgrade").map(|s| s.to_ascii_lowercase()) == Some("websocket".to_string()) {
             let reponame = first_line
                 .split_ascii_whitespace()
                 .nth(1)
@@ -466,9 +509,10 @@ where
             let method = tokens.next().map(|s| s.to_ascii_uppercase());
             let path = tokens.next();
 
-            if method.as_deref() == Some("GET") && path.as_deref() == Some("/") {
-                // This is a health check, make sure we return healthy
-                return Ok(HttpParse::Noop);
+            if method.as_deref() == Some("GET")
+                && (path.as_deref() == Some("/") || path.as_deref() == Some("/health_check"))
+            {
+                return Ok(HttpParse::HealthCheck);
             } else {
                 return Ok(HttpParse::NotFound);
             }
@@ -476,6 +520,54 @@ where
     }
 
     Err(anyhow!("invalid http request"))
+}
+
+#[cfg(fbcode_build)]
+async fn try_convert_headers_to_metadata(
+    is_trusted: bool,
+    headers: &HashMap<String, String>,
+) -> Result<Option<Metadata>> {
+    use percent_encoding::percent_decode;
+
+    if !is_trusted {
+        return Ok(None);
+    }
+
+    if let (Some(encoded_identities), Some(client_address)) = (
+        headers.get(HEADER_ENCODED_CLIENT_IDENTITY),
+        headers.get(HEADER_CLIENT_IP),
+    ) {
+        let json_identities = percent_decode(encoded_identities.as_bytes()).decode_utf8()?;
+        let identities = MononokeIdentity::try_from_json_encoded(&json_identities)?;
+        let ip_addr = client_address.parse::<IpAddr>()?;
+
+        // In the case of HTTP proxied/trusted requests we only have the
+        // guarantee that we can trust the forwarded credentials. Beyond
+        // this point we can't trust anything else, ACL checks have not
+        // been performed, so set 'is_trusted' to 'false' here to enforce
+        // further checks.
+        Ok(Some(
+            Metadata::new(
+                Some(&generate_session_id().to_string()),
+                false,
+                identities,
+                Priority::Default,
+                headers.contains_key(HEADER_CLIENT_DEBUG),
+                Some(ip_addr),
+            )
+            .await,
+        ))
+    } else {
+        Ok(None)
+    }
+}
+
+#[cfg(not(fbcode_build))]
+async fn try_convert_headers_to_metadata(
+    _is_trusted: bool,
+    _headers: &HashMap<String, String>,
+) -> Result<Option<Metadata>> {
+    Ok(None)
 }
 
 async fn try_convert_preamble_to_metadata(

@@ -378,11 +378,11 @@ function wait_for_mononoke {
   SSLCURL="sslcurl -f https://localhost:$MONONOKE_SOCKET"
 
   for _ in $(seq 1 $attempts); do
-    $SSLCURL -s 2>&1 && break
+    $SSLCURL -s > /dev/null 2>&1 && break
     sleep 0.1
   done
 
-  if ! $SSLCURL -s 2>&1; then
+  if ! $SSLCURL -s > /dev/null 2>&1 ; then
     echo "Mononoke did not start" >&2
 
     echo ""

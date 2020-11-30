@@ -231,7 +231,7 @@ class mononokepeer(stdiopeer.stdiopeer):
                 encodeutf8("Host: {}".format(self._host)),
                 b"User-Agent: mercurial/mononoke-peer",
                 b"Connection: Upgrade",
-                b"Upgrade: mercurial/v1",
+                b"Upgrade: websocket",
             ]
 
             if os.getenv("CLIENT_DEBUG"):
