@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
+use crate::graph::{EdgeType, Node, NodeData, NodeType, UnodeFlags, WrappedPath};
 use crate::walk::{expand_checked_nodes, EmptyRoute, OutgoingEdge, VisitOne, WalkVisitor};
 
 use ahash::RandomState;
@@ -140,7 +140,7 @@ type StateMap<T> = DashMap<T, (), RandomState>;
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct UnodeInterned<T> {
     id: InternedId<T>,
-    walk_blame: bool,
+    flags: UnodeFlags,
 }
 
 pub struct WalkState {
@@ -469,7 +469,7 @@ impl VisitOne for WalkState {
                     &k.path,
                     &UnodeInterned {
                         id: self.unode_file_ids.interned(&k.id.inner),
-                        walk_blame: k.id.walk_blame,
+                        flags: k.id.flags,
                     },
                 ),
             ),
@@ -479,7 +479,7 @@ impl VisitOne for WalkState {
                     &k.path,
                     &UnodeInterned {
                         id: self.unode_manifest_ids.interned(&k.id.inner),
-                        walk_blame: k.id.walk_blame,
+                        flags: k.id.flags,
                     },
                 ),
             ),

@@ -6,7 +6,8 @@
  */
 
 use crate::graph::{
-    AliasKey, EdgeType, FileContentData, Node, NodeData, NodeType, PathKey, UnodeKey, WrappedPath,
+    AliasKey, EdgeType, FileContentData, Node, NodeData, NodeType, PathKey, UnodeFlags, UnodeKey,
+    WrappedPath,
 };
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
 
@@ -837,6 +838,11 @@ async fn bonsai_to_unode_mapping_step<V: VisitOne>(
         }
     }
 
+    let mut flags = UnodeFlags::default();
+    if walk_blame {
+        flags |= UnodeFlags::BLAME;
+    }
+
     if let Some(root_unode_id) = root_unode_id {
         let mut edges = vec![];
 
@@ -844,7 +850,7 @@ async fn bonsai_to_unode_mapping_step<V: VisitOne>(
             Node::UnodeManifest(PathKey::new(
                 UnodeKey {
                     inner: *root_unode_id.manifest_unode_id(),
-                    walk_blame,
+                    flags,
                 },
                 WrappedPath::Root,
             ))
@@ -875,10 +881,12 @@ async fn unode_file_step<V: VisitOne>(
     let mut edges = vec![];
 
     // Check if we stepped from unode for non-public commit to unode for public, so can enable blame if required
-    let walk_blame =
-        checker.with_blame && (key.walk_blame || checker.is_public(ctx, &linked_cs_id).await?);
+    let walk_blame = checker.with_blame
+        && (key.flags.contains(UnodeFlags::BLAME) || checker.is_public(ctx, &linked_cs_id).await?);
 
+    let mut flags = UnodeFlags::default();
     if walk_blame {
+        flags |= UnodeFlags::BLAME;
         checker.add_edge(&mut edges, EdgeType::UnodeFileToBlame, || {
             Node::Blame(BlameId::from(key.inner))
         });
@@ -890,13 +898,7 @@ async fn unode_file_step<V: VisitOne>(
 
     for p in unode_file.parents() {
         checker.add_edge(&mut edges, EdgeType::UnodeFileToUnodeFileParent, || {
-            Node::UnodeFile(PathKey::new(
-                UnodeKey {
-                    inner: *p,
-                    walk_blame,
-                },
-                path.clone(),
-            ))
+            Node::UnodeFile(PathKey::new(UnodeKey { inner: *p, flags }, path.clone()))
         });
     }
 
@@ -930,60 +932,40 @@ async fn unode_manifest_step<V: VisitOne>(
     });
 
     // Check if we stepped from unode for non-public commit to unode for public, so can enable blame if required
-    let walk_blame =
-        checker.with_blame && (key.walk_blame || checker.is_public(ctx, &linked_cs_id).await?);
+    let mut flags = UnodeFlags::default();
+    if checker.with_blame
+        && (key.flags.contains(UnodeFlags::BLAME) || checker.is_public(ctx, &linked_cs_id).await?)
+    {
+        flags |= UnodeFlags::BLAME;
+    }
 
     for p in unode_manifest.parents() {
         checker.add_edge(
             &mut edges,
             EdgeType::UnodeManifestToUnodeManifestParent,
-            || {
-                Node::UnodeManifest(PathKey::new(
-                    UnodeKey {
-                        inner: *p,
-                        walk_blame,
-                    },
-                    path.clone(),
-                ))
-            },
+            || Node::UnodeManifest(PathKey::new(UnodeKey { inner: *p, flags }, path.clone())),
         );
     }
 
     let mut file_edges = vec![];
     for (child, subentry) in unode_manifest.subentries() {
         match subentry {
-            UnodeEntry::Directory(manifest_unode_id) => {
+            UnodeEntry::Directory(id) => {
                 let mpath_opt =
                     WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
                 checker.add_edge(
                     &mut edges,
                     EdgeType::UnodeManifestToUnodeManifestChild,
-                    || {
-                        Node::UnodeManifest(PathKey::new(
-                            UnodeKey {
-                                inner: *manifest_unode_id,
-                                walk_blame,
-                            },
-                            mpath_opt,
-                        ))
-                    },
+                    || Node::UnodeManifest(PathKey::new(UnodeKey { inner: *id, flags }, mpath_opt)),
                 );
             }
-            UnodeEntry::File(file_unode_id) => {
+            UnodeEntry::File(id) => {
                 let mpath_opt =
                     WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
                 checker.add_edge(
                     &mut file_edges,
                     EdgeType::UnodeManifestToUnodeFileChild,
-                    || {
-                        Node::UnodeFile(PathKey::new(
-                            UnodeKey {
-                                inner: *file_unode_id,
-                                walk_blame,
-                            },
-                            mpath_opt,
-                        ))
-                    },
+                    || Node::UnodeFile(PathKey::new(UnodeKey { inner: *id, flags }, mpath_opt)),
                 );
             }
         }

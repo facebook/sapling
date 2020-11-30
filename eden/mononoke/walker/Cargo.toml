@@ -51,6 +51,7 @@ anyhow = "1.0"
 array-init = "0.1"
 async-trait = "0.1.29"
 auto_impl = "0.4"
+bitflags = "1.2"
 bytes = { version = "0.5", features = ["serde"] }
 clap = "2.33"
 dashmap = "3.11.10"

@@ -7,6 +7,7 @@
 
 use ahash::RandomState;
 use anyhow::Error;
+use bitflags::bitflags;
 use blame::BlameRoot;
 use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
@@ -184,12 +185,22 @@ impl<T: fmt::Debug + Clone + PartialEq + Eq + Hash> PathKey<T> {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AliasKey(pub Alias);
 
+bitflags! {
+    /// Some derived data needs unodes as precondition, flags represent what is available in a compact way
+    #[derive(Default)]
+    pub struct UnodeFlags: u8 {
+        const NONE = 0b00000000;
+        const BLAME = 0b00000001;
+        const FASTLOG = 0b00000010;
+    }
+}
+
 /// Not all unodes should attempt to traverse to blame
 /// e.g. a unode for non-public commit is not expected to have it
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UnodeKey<T> {
     pub inner: T,
-    pub walk_blame: bool,
+    pub flags: UnodeFlags,
 }
 
 impl<T: MononokeId> UnodeKey<T> {
