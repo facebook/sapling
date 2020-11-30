@@ -79,7 +79,7 @@ impl FsnodeCleaner {
             {
                 for key in cache.keys() {
                     // That seems to be the best way of detecting if it's fsnode key or not...
-                    if key.contains(&FsnodeId::blobstore_key_prefix()) {
+                    if key.contains(FsnodeId::blobstore_key_prefix()) {
                         to_delete.push(key.clone());
                     }
                 }

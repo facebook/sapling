@@ -47,7 +47,7 @@ pub trait MononokeId: Copy + Sync + Send + 'static {
     fn blobstore_key(&self) -> String;
 
     /// Return a prefix before hash used in blobstore
-    fn blobstore_key_prefix() -> String;
+    fn blobstore_key_prefix() -> &'static str;
 
     /// Return a stable hash fingerprint that can be used for sampling
     fn sampling_fingerprint(&self) -> u64;
@@ -352,8 +352,8 @@ macro_rules! impl_typed_hash {
             }
 
             #[inline]
-            fn blobstore_key_prefix() -> String {
-                concat!($key, ".blake2.").to_string()
+            fn blobstore_key_prefix() -> &'static str {
+                concat!($key, ".blake2.")
             }
 
             #[inline]
@@ -487,8 +487,8 @@ impl MononokeId for ContentMetadataId {
     }
 
     #[inline]
-    fn blobstore_key_prefix() -> String {
-        Self::PREFIX.to_string()
+    fn blobstore_key_prefix() -> &'static str {
+        Self::PREFIX
     }
 
     #[inline]
