@@ -301,6 +301,12 @@ mod tests {
                     .get_type()
                 );
             }
+            NodeType::FastlogBatch => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!("FastlogBatch{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                );
+            }
             NodeType::FastlogDir => {
                 assert_eq!(
                     node_type,

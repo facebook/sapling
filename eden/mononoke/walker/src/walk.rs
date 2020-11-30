@@ -41,8 +41,8 @@ use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, RepoPath};
 use mononoke_types::{
     blame::BlameMaybeRejected, fsnode::FsnodeEntry, skeleton_manifest::SkeletonManifestEntry,
-    unode::UnodeEntry, BlameId, ChangesetId, ContentId, DeletedManifestId, FileUnodeId, FsnodeId,
-    MPath, ManifestUnodeId, SkeletonManifestId,
+    unode::UnodeEntry, BlameId, ChangesetId, ContentId, DeletedManifestId, FastlogBatchId,
+    FileUnodeId, FsnodeId, MPath, ManifestUnodeId, SkeletonManifestId,
 };
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::ScubaSampleBuilder;
@@ -249,12 +249,40 @@ async fn blame_step<V: VisitOne>(
     }
 }
 
+async fn fastlog_batch_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    id: &FastlogBatchId,
+    path: Option<&WrappedPath>,
+) -> Result<StepOutput, Error> {
+    let log = id.load(ctx, repo.blobstore()).await?;
+    let mut edges = vec![];
+    for (cs_id, _offsets) in log.latest() {
+        checker.add_edge(&mut edges, EdgeType::FastlogBatchToChangeset, || {
+            Node::Changeset(*cs_id)
+        });
+    }
+    for id in log.previous_batches() {
+        checker.add_edge_with_path(
+            &mut edges,
+            EdgeType::FastlogBatchToPreviousBatch,
+            || Node::FastlogBatch(*id),
+            || path.cloned(),
+        );
+    }
+    Ok(StepOutput(
+        checker.step_data(NodeType::FastlogBatch, || NodeData::FastlogBatch(Some(log))),
+        edges,
+    ))
+}
+
 async fn fastlog_dir_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
     id: &FastlogKey<ManifestUnodeId>,
-    _path: Option<&WrappedPath>,
+    path: Option<&WrappedPath>,
 ) -> Result<StepOutput, Error> {
     let log =
         fetch_fastlog_batch_by_unode_id(ctx, repo.blobstore(), &UnodeManifestEntry::Tree(id.inner))
@@ -266,7 +294,16 @@ async fn fastlog_dir_step<V: VisitOne>(
                 Node::Changeset(*cs_id)
             });
         }
+        for id in log.previous_batches() {
+            checker.add_edge_with_path(
+                &mut edges,
+                EdgeType::FastlogDirToPreviousBatch,
+                || Node::FastlogBatch(*id),
+                || path.cloned(),
+            );
+        }
     }
+
     Ok(StepOutput(
         checker.step_data(NodeType::FastlogDir, || NodeData::FastlogDir(log)),
         edges,
@@ -278,7 +315,7 @@ async fn fastlog_file_step<V: VisitOne>(
     repo: &BlobRepo,
     checker: &Checker<V>,
     id: &FastlogKey<FileUnodeId>,
-    _path: Option<&WrappedPath>,
+    path: Option<&WrappedPath>,
 ) -> Result<StepOutput, Error> {
     let log =
         fetch_fastlog_batch_by_unode_id(ctx, repo.blobstore(), &UnodeManifestEntry::Leaf(id.inner))
@@ -289,6 +326,14 @@ async fn fastlog_file_step<V: VisitOne>(
             checker.add_edge(&mut edges, EdgeType::FastlogFileToChangeset, || {
                 Node::Changeset(*cs_id)
             });
+        }
+        for id in log.previous_batches() {
+            checker.add_edge_with_path(
+                &mut edges,
+                EdgeType::FastlogFileToPreviousBatch,
+                || Node::FastlogBatch(*id),
+                || path.cloned(),
+            );
         }
     }
     Ok(StepOutput(
@@ -1559,6 +1604,9 @@ where
         }
         Node::DeletedManifestMapping(bcs_id) => {
             deleted_manifest_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
+        }
+        Node::FastlogBatch(id) => {
+            fastlog_batch_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await
         }
         Node::FastlogDir(id) => {
             fastlog_dir_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await

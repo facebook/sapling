@@ -17,8 +17,8 @@ use dashmap::{mapref::one::Ref, DashMap};
 use futures::future::TryFutureExt;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{
-    ChangesetId, ContentId, DeletedManifestId, FileUnodeId, FsnodeId, MPathHash, ManifestUnodeId,
-    SkeletonManifestId,
+    ChangesetId, ContentId, DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId, MPathHash,
+    ManifestUnodeId, SkeletonManifestId,
 };
 use phases::{Phase, Phases};
 use std::{
@@ -174,6 +174,7 @@ pub struct WalkState {
     visited_changeset_info_mapping: StateMap<InternedId<ChangesetId>>,
     visited_deleted_manifest: StateMap<DeletedManifestId>,
     visited_deleted_manifest_mapping: StateMap<InternedId<ChangesetId>>,
+    visited_fastlog_batch: StateMap<FastlogBatchId>,
     visited_fastlog_dir: StateMap<InternedId<ManifestUnodeId>>,
     visited_fastlog_file: StateMap<InternedId<FileUnodeId>>,
     visited_fsnode: StateMap<FsnodeId>,
@@ -226,6 +227,7 @@ impl WalkState {
             visited_changeset_info_mapping: StateMap::with_hasher(fac.clone()),
             visited_deleted_manifest: StateMap::with_hasher(fac.clone()),
             visited_deleted_manifest_mapping: StateMap::with_hasher(fac.clone()),
+            visited_fastlog_batch: StateMap::with_hasher(fac.clone()),
             visited_fastlog_dir: StateMap::with_hasher(fac.clone()),
             visited_fastlog_file: StateMap::with_hasher(fac.clone()),
             visited_fsnode: StateMap::with_hasher(fac.clone()),
@@ -448,6 +450,7 @@ impl VisitOne for WalkState {
                     true
                 }
             }
+            Node::FastlogBatch(k) => self.record(&self.visited_fastlog_batch, &k),
             Node::FastlogDir(k) => self.record(
                 &self.visited_fastlog_dir,
                 &self.unode_manifest_ids.interned(&k.inner),
