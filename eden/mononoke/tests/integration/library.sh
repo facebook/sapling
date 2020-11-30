@@ -1837,7 +1837,6 @@ function commitcloud_fill_one() {
 function commitcloud_reverse_fill_one() {
   "$MONONOKE_COMMITCLOUD_FILLONE" \
     mononoke-to-hg \
-    --reponame "$REPONAME" \
     --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
     --skip-record-pushed-commits \
     --debug "$@"
@@ -1849,7 +1848,6 @@ function commitcloud_reversefiller_iteration() {
   "$MONONOKE_COMMITCLOUD_REVERSEFILLER" \
     --num-workers 1 \
     --identity "testfiller" \
-    --reponame "$REPONAME" \
     --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
     --with-sqlite-db="$sqlitedb" \
     --skip-record-pushed-commits \
