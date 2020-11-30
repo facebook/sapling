@@ -245,6 +245,12 @@ mod tests {
                     &parse_node(&format!("Blame{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
                 );
             }
+            NodeType::ChangesetInfo => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!("ChangesetInfo{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                );
+            }
             NodeType::ChangesetInfoMapping => {
                 assert_eq!(
                     node_type,
@@ -270,18 +276,6 @@ mod tests {
                         NODE_SEP, SAMPLE_BLAKE2
                     ))?
                     .get_type()
-                );
-            }
-            NodeType::UnodeMapping => {
-                assert_eq!(
-                    node_type,
-                    &parse_node(&format!("UnodeMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
-                );
-            }
-            NodeType::ChangesetInfo => {
-                assert_eq!(
-                    node_type,
-                    &parse_node(&format!("ChangesetInfo{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
                 );
             }
             NodeType::Fsnode => {
@@ -331,6 +325,12 @@ mod tests {
                         NODE_SEP, SAMPLE_BLAKE2, NODE_SEP, true, NODE_SEP, SAMPLE_PATH
                     ))?
                     .get_type()
+                );
+            }
+            NodeType::UnodeMapping => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!("UnodeMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
                 );
             }
         };
