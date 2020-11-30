@@ -65,7 +65,8 @@ start SCS server
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 1,
       "origin_line": 2,
-      "path": "b"
+      "path": "b",
+      "title": "B"
     },
     {
       "author": "test",
@@ -77,7 +78,8 @@ start SCS server
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 2,
       "origin_line": 2,
-      "path": "b"
+      "path": "b",
+      "title": "C"
     },
     {
       "author": "test",
@@ -89,7 +91,8 @@ start SCS server
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 3,
       "origin_line": 3,
-      "path": "b"
+      "path": "b",
+      "title": "B"
     },
     {
       "author": "test",
@@ -101,7 +104,8 @@ start SCS server
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 4,
       "origin_line": 4,
-      "path": "b"
+      "path": "b",
+      "title": "B"
     },
     {
       "author": "test",
@@ -113,6 +117,7 @@ start SCS server
       "datetime": "1970-01-01T00:00:00+00:00",
       "line": 5,
       "origin_line": 5,
-      "path": "b"
+      "path": "b",
+      "title": "B"
     }
   ]

@@ -9,6 +9,7 @@ use context::CoreContext;
 use dedupmap::DedupMap;
 use futures::stream::TryStreamExt;
 use futures::{future, try_join};
+use maplit::btreeset;
 use mononoke_api::MononokePath;
 use mononoke_api::{ChangesetPathHistoryOptions, ChangesetSpecifier, MononokeError, PathEntry};
 use source_control as thrift;
@@ -22,6 +23,8 @@ use crate::from_request::{check_range_and_convert, validate_timestamp};
 use crate::history::collect_history;
 use crate::into_response::IntoResponse;
 use crate::source_control_impl::SourceControlServiceImpl;
+
+const BLAME_TITLE_MAX_LENGTH: usize = 128;
 
 impl SourceControlServiceImpl {
     /// Returns information about the file or directory at a path in a commit.
@@ -165,11 +168,21 @@ impl SourceControlServiceImpl {
         let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path(&commit_path.path)?;
 
+        let options = params.format_options.unwrap_or_else(|| {
+            btreeset! { thrift::BlameFormatOption::INCLUDE_CONTENTS }
+        });
+        let option_include_contents =
+            options.contains(&thrift::BlameFormatOption::INCLUDE_CONTENTS);
+        let option_include_title = options.contains(&thrift::BlameFormatOption::INCLUDE_TITLE);
+        let option_include_message = options.contains(&thrift::BlameFormatOption::INCLUDE_MESSAGE);
+
         let mut commit_ids = Vec::new();
         let mut commit_id_indexes = HashMap::new();
         let mut paths = DedupMap::new();
         let mut authors = DedupMap::new();
         let mut dates = DedupMap::new();
+        let mut titles = DedupMap::new();
+        let mut messages = DedupMap::new();
 
         // Map all the changeset IDs into the requested identity schemes.  Keep a mapping of
         // which bonsai changeset ID corresponds to which mapped commit ID index, so we can look
@@ -203,9 +216,18 @@ impl SourceControlServiceImpl {
                     .ok_or_else(|| {
                         MononokeError::InvalidRequest(format!("failed to resolve commit: {}", csid))
                     })?;
-                let date = changeset.author_date().await?;
-                let author = changeset.author().await?;
-                Ok::<_, MononokeError>((csid, (author, date)))
+                let (date, author, message) = try_join!(
+                    changeset.author_date(),
+                    changeset.author(),
+                    changeset.message(),
+                )?;
+                let title: String = message
+                    .chars()
+                    .take(BLAME_TITLE_MAX_LENGTH)
+                    .take_while(|ch| *ch != '\n')
+                    .collect();
+
+                Ok::<_, MononokeError>((csid, (author, date, message, title)))
             }
         }))
         .await?
@@ -222,24 +244,38 @@ impl SourceControlServiceImpl {
                     let commit_id_index = commit_id_indexes.get(&csid).ok_or_else(|| {
                         errors::commit_not_found(format!("failed to resolve commit: {}", csid))
                     })?;
-                    let (author, date) = info.get(&csid).ok_or_else(|| {
+                    let (author, date, message, title) = info.get(&csid).ok_or_else(|| {
                         errors::commit_not_found(format!("failed to resolve commit: {}", csid))
                     })?;
-                    Ok(thrift::BlameCompactLine {
+                    let mut blame_line = thrift::BlameCompactLine {
                         line: (line + 1) as i32,
-                        contents: String::from_utf8_lossy(contents).into_owned(),
+                        contents: None,
                         commit_id_index: *commit_id_index as i32,
                         path_index: paths.insert(&path.to_string()) as i32,
                         author_index: authors.insert(author) as i32,
                         date_index: dates.insert(Cow::Borrowed(date)) as i32,
                         origin_line: (origin_line + 1) as i32,
-                    })
+                        title_index: None,
+                        message_index: None,
+                    };
+                    if option_include_contents {
+                        blame_line.contents = Some(String::from_utf8_lossy(contents).into_owned());
+                    }
+                    if option_include_title {
+                        blame_line.title_index = Some(titles.insert(title) as i32);
+                    }
+                    if option_include_message {
+                        blame_line.message_index = Some(messages.insert(message) as i32);
+                    }
+                    Ok(blame_line)
                 },
             )
             .collect::<Result<Vec<_>, _>>()?;
 
         let paths = paths.into_items();
         let authors = authors.into_items();
+        let titles = Some(titles.into_items()).filter(|titles| !titles.is_empty());
+        let messages = Some(messages.into_items()).filter(|messages| !messages.is_empty());
         let dates = dates
             .into_items()
             .into_iter()
@@ -254,6 +290,8 @@ impl SourceControlServiceImpl {
             paths,
             authors,
             dates,
+            titles,
+            messages,
         };
 
         Ok(thrift::CommitPathBlameResponse {
