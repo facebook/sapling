@@ -561,10 +561,9 @@ mod test {
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
     use futures::{
-        compat::Future01CompatExt,
-        future::{BoxFuture, TryFutureExt},
+        compat::{Future01CompatExt, Stream01CompatExt},
+        future::BoxFuture,
     };
-    use futures_old::{Future as _, Stream as _};
     use lazy_static::lazy_static;
     use lock_ext::LockExt;
     use maplit::hashmap;
@@ -694,17 +693,21 @@ mod test {
 
         let changeset_fetcher = repo.get_changeset_fetcher();
         AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
+            .compat()
             .and_then(move |new_bcs_id| {
-                let parents = changeset_fetcher.get_parents(ctx.clone(), new_bcs_id.clone());
-                let mapping = mapping.get(ctx.clone(), vec![new_bcs_id]).boxed().compat();
-
-                parents.join(mapping).map(move |(parents, mapping)| {
+                cloned!(ctx, changeset_fetcher);
+                async move {
+                    let parents = changeset_fetcher
+                        .get_parents(ctx.clone(), new_bcs_id.clone())
+                        .compat();
+                    let mapping = mapping.get(ctx, vec![new_bcs_id]);
+                    let (parents, mapping) = try_join(parents, mapping).await?;
                     let gen_num = mapping.get(&new_bcs_id).unwrap();
                     assert_eq!(parents, gen_num.2);
-                })
+                    Ok(())
+                }
             })
-            .collect()
-            .compat()
+            .try_collect::<Vec<_>>()
             .await
             .unwrap();
     }
@@ -834,8 +837,8 @@ mod test {
 
             let cs_ids =
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
-                    .collect()
                     .compat()
+                    .try_collect::<Vec<_>>()
                     .await?;
             // Reverse them to derive parents before children
             let cs_ids = cs_ids.clone().into_iter().rev().collect::<Vec<_>>();

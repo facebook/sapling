@@ -17,7 +17,6 @@ mononoke_types = { path = "../mononoke_types" }
 scuba_ext = { path = "../common/scuba_ext" }
 topo_sort = { path = "../common/topo_sort" }
 tunables = { path = "../tunables" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -27,7 +26,6 @@ anyhow = "1.0"
 async-trait = "0.1.29"
 auto_impl = "0.4"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
 rand = { version = "0.7", features = ["small_rng"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
