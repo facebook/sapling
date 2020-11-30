@@ -308,15 +308,11 @@ impl AffectedChangesets {
             .await
             .context("Failed to load additional affected changesets")?;
 
-            let sk_mf_ids = RootSkeletonManifestId::batch_derive(
-                ctx,
-                repo,
-                self.iter().map(BonsaiChangeset::get_changeset_id),
-            )
-            .await?;
-            stream::iter(sk_mf_ids.into_iter().map(Ok))
-                .try_for_each_concurrent(100, |(bcs_id, sk_mf_id)| async move {
-                    let sk_mf = sk_mf_id
+            stream::iter(self.iter().map(BonsaiChangeset::get_changeset_id).map(Ok))
+                .try_for_each_concurrent(100, |bcs_id| async move {
+                    let sk_mf = RootSkeletonManifestId::derive(ctx, repo, bcs_id)
+                        .await
+                        .map_err(Error::from)?
                         .into_skeleton_manifest_id()
                         .load(ctx, repo.blobstore())
                         .await
