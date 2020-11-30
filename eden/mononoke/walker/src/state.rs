@@ -179,10 +179,7 @@ pub struct WalkState {
     visited_skeleton_manifest: StateMap<SkeletonManifestId>,
     visited_skeleton_manifest_mapping: StateMap<InternedId<ChangesetId>>,
     visited_unode_file: StateMap<UnodeInterned<FileUnodeId>>,
-    visited_unode_manifest: StateMap<(
-        InternedId<Option<MPathHash>>,
-        UnodeInterned<ManifestUnodeId>,
-    )>,
+    visited_unode_manifest: StateMap<UnodeInterned<ManifestUnodeId>>,
     visited_unode_mapping: StateMap<InternedId<ChangesetId>>,
     // Count
     visit_count: [AtomicUsize; NodeType::COUNT],
@@ -470,15 +467,12 @@ impl VisitOne for WalkState {
                     flags: k.flags,
                 },
             ),
-            Node::UnodeManifest(k) => self.record_with_path(
+            Node::UnodeManifest(k) => self.record(
                 &self.visited_unode_manifest,
-                (
-                    &k.path,
-                    &UnodeInterned {
-                        id: self.unode_manifest_ids.interned(&k.id.inner),
-                        flags: k.id.flags,
-                    },
-                ),
+                &UnodeInterned {
+                    id: self.unode_manifest_ids.interned(&k.inner),
+                    flags: k.flags,
+                },
             ),
             Node::UnodeMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {

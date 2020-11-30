@@ -845,19 +845,21 @@ async fn bonsai_to_unode_mapping_step<V: VisitOne>(
 
     if let Some(root_unode_id) = root_unode_id {
         let mut edges = vec![];
-
-        checker.add_edge(&mut edges, EdgeType::UnodeMappingToRootUnodeManifest, || {
-            Node::UnodeManifest(PathKey::new(
-                UnodeKey {
-                    inner: *root_unode_id.manifest_unode_id(),
+        let manifest_id = *root_unode_id.manifest_unode_id();
+        checker.add_edge_with_path(
+            &mut edges,
+            EdgeType::UnodeMappingToRootUnodeManifest,
+            || {
+                Node::UnodeManifest(UnodeKey {
+                    inner: manifest_id,
                     flags,
-                },
-                WrappedPath::Root,
-            ))
-        });
+                })
+            },
+            || Some(WrappedPath::Root),
+        );
         Ok(StepOutput(
             checker.step_data(NodeType::UnodeMapping, || {
-                NodeData::UnodeMapping(Some(*root_unode_id.manifest_unode_id()))
+                NodeData::UnodeMapping(Some(manifest_id))
             }),
             edges,
         ))
@@ -922,8 +924,8 @@ async fn unode_manifest_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
-    path: WrappedPath,
-    key: UnodeKey<ManifestUnodeId>,
+    key: &UnodeKey<ManifestUnodeId>,
+    path: Option<&WrappedPath>,
 ) -> Result<StepOutput, Error> {
     let unode_manifest = key.inner.load(ctx, repo.blobstore()).await?;
     let linked_cs_id = *unode_manifest.linknode();
@@ -943,10 +945,11 @@ async fn unode_manifest_step<V: VisitOne>(
     }
 
     for p in unode_manifest.parents() {
-        checker.add_edge(
+        checker.add_edge_with_path(
             &mut edges,
             EdgeType::UnodeManifestToUnodeManifestParent,
-            || Node::UnodeManifest(PathKey::new(UnodeKey { inner: *p, flags }, path.clone())),
+            || Node::UnodeManifest(UnodeKey { inner: *p, flags }),
+            || path.cloned(),
         );
     }
 
@@ -954,12 +957,15 @@ async fn unode_manifest_step<V: VisitOne>(
     for (child, subentry) in unode_manifest.subentries() {
         match subentry {
             UnodeEntry::Directory(id) => {
-                let mpath_opt =
-                    WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
-                checker.add_edge(
+                checker.add_edge_with_path(
                     &mut edges,
                     EdgeType::UnodeManifestToUnodeManifestChild,
-                    || Node::UnodeManifest(PathKey::new(UnodeKey { inner: *id, flags }, mpath_opt)),
+                    || Node::UnodeManifest(UnodeKey { inner: *id, flags }),
+                    || {
+                        path.map(|p| {
+                            WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                        })
+                    },
                 );
             }
             UnodeEntry::File(id) => {
@@ -968,10 +974,9 @@ async fn unode_manifest_step<V: VisitOne>(
                     EdgeType::UnodeManifestToUnodeFileChild,
                     || Node::UnodeFile(UnodeKey { inner: *id, flags }),
                     || {
-                        Some(WrappedPath::from(MPath::join_element_opt(
-                            path.as_ref(),
-                            Some(child),
-                        )))
+                        path.map(|p| {
+                            WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child)))
+                        })
                     },
                 );
             }
@@ -1470,8 +1475,8 @@ where
         Node::UnodeFile(id) => {
             unode_file_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await
         }
-        Node::UnodeManifest(PathKey { id, path }) => {
-            unode_manifest_step(&ctx, &repo, &checker, path, id).await
+        Node::UnodeManifest(id) => {
+            unode_manifest_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await
         }
         Node::UnodeMapping(bcs_id) => {
             bonsai_to_unode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await

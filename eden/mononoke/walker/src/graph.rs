@@ -353,7 +353,7 @@ create_graph!(
     ),
     (
         UnodeManifest,
-        PathKey<UnodeKey<ManifestUnodeId>>,
+        UnodeKey<ManifestUnodeId>,
         [UnodeFileChild(UnodeFile), UnodeManifestChild(UnodeManifest), UnodeManifestParent(UnodeManifest), LinkedChangeset(Changeset)]
     ),
     (UnodeMapping, ChangesetId, [RootUnodeManifest(UnodeManifest)]),
@@ -592,7 +592,7 @@ impl Node {
             Node::SkeletonManifest(k) => k.blobstore_key(),
             Node::SkeletonManifestMapping(k) => k.blobstore_key(),
             Node::UnodeFile(k) => k.blobstore_key(),
-            Node::UnodeManifest(PathKey { id, path: _ }) => id.blobstore_key(),
+            Node::UnodeManifest(k) => k.blobstore_key(),
             Node::UnodeMapping(k) => k.blobstore_key(),
         }
     }
@@ -627,7 +627,7 @@ impl Node {
             Node::SkeletonManifest(_) => None,
             Node::SkeletonManifestMapping(_) => None,
             Node::UnodeFile(_) => None,
-            Node::UnodeManifest(PathKey { id: _, path }) => Some(&path),
+            Node::UnodeManifest(_) => None,
             Node::UnodeMapping(_) => None,
         }
     }
@@ -663,7 +663,7 @@ impl Node {
             Node::SkeletonManifest(k) => Some(k.sampling_fingerprint()),
             Node::SkeletonManifestMapping(k) => Some(k.sampling_fingerprint()),
             Node::UnodeFile(k) => Some(k.sampling_fingerprint()),
-            Node::UnodeManifest(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
+            Node::UnodeManifest(k) => Some(k.sampling_fingerprint()),
             Node::UnodeMapping(k) => Some(k.sampling_fingerprint()),
         }
     }
@@ -679,7 +679,7 @@ mod tests {
     #[test]
     fn test_node_size() {
         // Node size is important as we have lots of them, add a test to check for accidental changes
-        assert_eq!(64, size_of::<Node>());
+        assert_eq!(48, size_of::<Node>());
     }
 
     #[test]

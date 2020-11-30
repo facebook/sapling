@@ -74,15 +74,13 @@ impl FromStr for UnodeFlags {
     }
 }
 
-impl FromStr for PathKey<UnodeKey<ManifestUnodeId>> {
+impl FromStr for UnodeKey<ManifestUnodeId> {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<_> = s.split(NODE_SEP).collect();
         let inner = ManifestUnodeId::from_str(parts[0])?;
         let flags = UnodeFlags::from_str(parts[1])?;
-        let path = check_and_build_path(NodeType::UnodeManifest, &parts[1..])?;
-        let id = UnodeKey { inner, flags };
-        Ok(Self { id, path })
+        Ok(UnodeKey { inner, flags })
     }
 }
 
@@ -329,8 +327,8 @@ mod tests {
                 assert_eq!(
                     node_type,
                     &parse_node(&format!(
-                        "UnodeManifest{}{}{}{:b}{}{}",
-                        NODE_SEP, SAMPLE_BLAKE2, NODE_SEP, 0b00000011, NODE_SEP, SAMPLE_PATH
+                        "UnodeManifest{}{}{}{:b}",
+                        NODE_SEP, SAMPLE_BLAKE2, NODE_SEP, 0b00000011
                     ))?
                     .get_type()
                 );
