@@ -27,7 +27,7 @@ pub(crate) async fn create_new_batch(
 ) -> Result<FastlogBatch, Error> {
     let parent_batches = try_join_all(unode_parents.clone().into_iter().map({
         move |entry| async move {
-            let maybe_batch = fetch_fastlog_batch_by_unode_id(ctx, blobstore, entry).await?;
+            let maybe_batch = fetch_fastlog_batch_by_unode_id(ctx, blobstore, &entry).await?;
             maybe_batch.ok_or(Error::from(ErrorKind::NotFound(entry)))
         }
     }))
@@ -153,12 +153,12 @@ fn convert_to_raw_list(
     res
 }
 
-pub(crate) async fn fetch_fastlog_batch_by_unode_id<B: Blobstore>(
+pub async fn fetch_fastlog_batch_by_unode_id<B: Blobstore>(
     ctx: &CoreContext,
     blobstore: &B,
-    unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
+    unode_entry: &Entry<ManifestUnodeId, FileUnodeId>,
 ) -> Result<Option<FastlogBatch>, Error> {
-    let fastlog_batch_key = generate_fastlog_batch_key(unode_entry);
+    let fastlog_batch_key = unode_entry_to_fastlog_batch_key(unode_entry);
 
     let maybe_bytes = blobstore.get(ctx, &fastlog_batch_key).await?;
 
@@ -174,7 +174,7 @@ pub(crate) async fn save_fastlog_batch_by_unode_id<B: Blobstore>(
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
     batch: FastlogBatch,
 ) -> Result<(), Error> {
-    let fastlog_batch_key = generate_fastlog_batch_key(unode_entry);
+    let fastlog_batch_key = unode_entry_to_fastlog_batch_key(&unode_entry);
     let serialized = batch.into_bytes();
 
     blobstore
@@ -186,7 +186,9 @@ pub(crate) async fn save_fastlog_batch_by_unode_id<B: Blobstore>(
         .await
 }
 
-fn generate_fastlog_batch_key(unode_entry: Entry<ManifestUnodeId, FileUnodeId>) -> String {
+pub fn unode_entry_to_fastlog_batch_key(
+    unode_entry: &Entry<ManifestUnodeId, FileUnodeId>,
+) -> String {
     let key_part = match unode_entry {
         Entry::Leaf(file_unode_id) => format!("fileunode.{}", file_unode_id),
         Entry::Tree(mf_unode_id) => format!("manifestunode.{}", mf_unode_id),

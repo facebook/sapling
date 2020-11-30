@@ -29,6 +29,7 @@ mod thrift {
     pub use mononoke_types_thrift::*;
 }
 
+pub use fastlog_impl::{fetch_fastlog_batch_by_unode_id, unode_entry_to_fastlog_batch_key};
 pub use mapping::{
     fetch_parent_root_unodes, ErrorKind, FastlogParent, RootFastlog, RootFastlogMapping,
 };

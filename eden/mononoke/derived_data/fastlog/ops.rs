@@ -303,7 +303,7 @@ async fn fetch_linknodes_and_update_graph(
 async fn prefetch_history(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    unode_entry: UnodeEntry,
+    unode_entry: &UnodeEntry,
 ) -> Result<Option<Vec<(ChangesetId, Vec<FastlogParent>)>>, Error> {
     let maybe_fastlog_batch =
         fetch_fastlog_batch_by_unode_id(ctx, repo.blobstore(), unode_entry).await?;
@@ -566,7 +566,7 @@ async fn prefetch_fastlog_by_changeset(
         .ok_or_else(|| format_err!("Unode entry is not found {:?} {:?}", changeset_id, path))?;
 
     // optimistically try to fetch history for a unode
-    let fastlog_batch_opt = prefetch_history(ctx, repo, entry.clone()).await?;
+    let fastlog_batch_opt = prefetch_history(ctx, repo, &entry).await?;
     if let Some(batch) = fastlog_batch_opt {
         return Ok(batch);
     }
@@ -574,7 +574,7 @@ async fn prefetch_fastlog_by_changeset(
     // if there is no history, let's try to derive batched fastlog data
     // and fetch history again
     RootFastlog::derive(ctx, repo, changeset_id.clone()).await?;
-    let fastlog_batch_opt = prefetch_history(ctx, repo, entry).await?;
+    let fastlog_batch_opt = prefetch_history(ctx, repo, &entry).await?;
     fastlog_batch_opt
         .ok_or_else(|| format_err!("Fastlog data is not found {:?} {:?}", changeset_id, path))
 }

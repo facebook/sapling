@@ -734,7 +734,7 @@ mod tests {
         entry: Entry<ManifestUnodeId, FileUnodeId>,
     ) -> Vec<(ChangesetId, Vec<FastlogParent>)> {
         let blobstore = repo.blobstore();
-        let batch = fetch_fastlog_batch_by_unode_id(ctx, blobstore, entry)
+        let batch = fetch_fastlog_batch_by_unode_id(&ctx, blobstore, &entry)
             .await
             .unwrap()
             .expect("batch hasn't been generated yet");
