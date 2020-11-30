@@ -7,14 +7,12 @@
 
 #![deny(warnings)]
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use bookmarks::{BookmarkUpdateLog, Freshness};
-use bytes_old::{Bytes as BytesOld, BytesMut as BytesMutOld};
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, future::try_join_all, stream::TryStreamExt, Future};
-use mercurial_bundles::stream_start;
+use futures::{compat::Future01CompatExt, stream::TryStreamExt, Future};
 use mononoke_types::RawBundle2Id;
 use mutable_counters::MutableCounters;
 use slog::{info, Logger};
@@ -24,11 +22,10 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tempfile::NamedTempFile;
 use tokio::{
-    fs::{read as async_read_all, File as AsyncFile, OpenOptions},
+    fs::{File as AsyncFile, OpenOptions},
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     time::{self, delay_for, timeout},
 };
-use tokio_io::codec::Decoder;
 
 pub const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
 
@@ -151,99 +148,6 @@ pub async fn wait_till_more_lines(
     }
 }
 
-pub async fn merge_timestamp_files(
-    _ctx: &CoreContext,
-    timestamp_files: &[PathBuf],
-) -> Result<NamedTempFile, Error> {
-    //TODO(ikostia): implement an async version of this
-    let maybe_current_contents: Result<Vec<Vec<u8>>> = timestamp_files
-        .iter()
-        .map(|path| {
-            let mut file = std::fs::File::open(path)
-                .map_err(|e| format_err!("Error opening timestamps file {:?}: {}", path, e))?;
-            let mut file_bytes = vec![];
-            let read_result = file
-                .read_to_end(&mut file_bytes)
-                .map_err(|e| format_err!("Failed reading timestamps file {:?}: {}", path, e));
-            // let's safeguard ourselves from the missing last newline
-            if !file_bytes.is_empty() && file_bytes[file_bytes.len() - 1] != b'\n' {
-                file_bytes.push(b'\n');
-            }
-            read_result.map(|_sz| file_bytes)
-        })
-        .collect();
-
-    match maybe_current_contents {
-        Err(e) => Err(e),
-        Ok(current_contents) => {
-            let merged_contents: Vec<u8> = current_contents.into_iter().flatten().collect();
-            write_to_named_temp_file(merged_contents).await
-        }
-    }
-}
-
-pub async fn merge_bundles(
-    _ctx: &CoreContext,
-    bundles: &[PathBuf],
-) -> Result<NamedTempFile, Error> {
-    let bundle_contents = try_join_all(bundles.iter().map(|path| async_read_all(path))).await?;
-    let merged = merge_bundle_contents(bundle_contents)?;
-    write_to_named_temp_file(merged).await
-}
-
-fn merge_bundle_contents(bundle_contents: Vec<Vec<u8>>) -> Result<BytesOld> {
-    if bundle_contents.is_empty() {
-        bail!("no bundles provided");
-    }
-
-    if bundle_contents.len() == 1 {
-        return Ok(BytesOld::from(bundle_contents.get(0).cloned().unwrap()));
-    }
-
-    let len = bundle_contents.len();
-    let mut merged_content = BytesMutOld::new();
-    for (i, content) in bundle_contents.into_iter().enumerate() {
-        let content = BytesMutOld::from(content);
-        if i == 0 {
-            merged_content.extend_from_slice(&strip_suffix(content)?);
-        } else if i == len - 1 {
-            merged_content.extend_from_slice(&strip_prefix(content)?);
-        } else {
-            merged_content.extend_from_slice(&strip_suffix(strip_prefix(content)?)?);
-        }
-    }
-
-    Ok(merged_content.freeze())
-}
-
-fn strip_prefix(bytes: BytesMutOld) -> Result<BytesMutOld> {
-    let mut bytes = bytes;
-    let mut start_decoder = stream_start::StartDecoder {};
-    // StartDecoder strips header and stream parameters
-    let stream_params = start_decoder
-        .decode(&mut bytes)?
-        .ok_or(Error::msg("bundle header not found"))?;
-
-    let compression = stream_params.m_stream_params.get("compression");
-    if !(compression.is_none() || compression == Some(&"UN".to_string())) {
-        bail!("cannot concatenate compressed bundles");
-    }
-
-    Ok(bytes)
-}
-
-fn strip_suffix(bytes: BytesMutOld) -> Result<BytesMutOld> {
-    let mut bytes = bytes;
-    if bytes.len() < 4 {
-        bail!("bundle is too small!");
-    }
-    let last_bytes = bytes.split_off(bytes.len() - 4);
-    if last_bytes != &"\0\0\0\0" {
-        bail!("unexpected bundle suffix");
-    }
-    Ok(bytes)
-}
-
 pub fn read_file_contents<F: Seek + Read>(f: &mut F) -> Result<String> {
     // NOTE: Normally (for our use case at this time), we don't advance our position in this file,
     // but let's be conservative and seek to the start anyway.
@@ -354,94 +258,4 @@ where
     }
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use futures::{TryFutureExt, TryStreamExt};
-    use futures_ext::FutureExt;
-    use futures_old::Future as FutureOld;
-    use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
-    use mercurial_bundles::Bundle2Item;
-
-    use futures_old::{future, Stream};
-    use slog::{o, Discard};
-    use std::io::Cursor;
-
-    #[test]
-    fn test_simple_merge_bundle() {
-        let res = b"HG20\x00\x00\x00\x0eCompression\x3dUN\x00\x00\x00\x12\x0bPHASE-HEADS\x00\x00\x00\x00\x00\x00\x00\x00\x00H\x00\x00\x00\x00bbbbbbbbbbbbbbbbbbbb\x00\x00\x00\x00cccccccccccccccccccc\x00\x00\x00\x01aaaaaaaaaaaaaaaaaaaa\x00\x00\x00\x00\x00\x00\x00\x00";
-        let merged_bundle = merge_bundle_contents(vec![res.to_vec(), res.to_vec()]);
-        assert!(merged_bundle.is_ok());
-        let merged_bundle = merged_bundle.unwrap();
-
-        let cursor = Cursor::new(merged_bundle);
-        let logger = Logger::root(Discard, o!());
-        Bundle2Stream::new(logger, cursor)
-            .collect()
-            .wait()
-            .expect("failed to create bundle2stream");
-
-        let merged_bundle = merge_bundle_contents(vec![]);
-        assert!(merged_bundle.is_err());
-    }
-
-    #[test]
-    fn test_fail_if_compressed() {
-        let res = b"HG20\x00\x00\x00\x0eCompression\x3dBZ\x00\x00\x00\x12\x0bPHASE-HEADS\x00\x00\x00\x00\x00\x00\x00\x00\x00H\x00\x00\x00\x00bbbbbbbbbbbbbbbbbbbb\x00\x00\x00\x00cccccccccccccccccccc\x00\x00\x00\x01aaaaaaaaaaaaaaaaaaaa\x00\x00\x00\x00\x00\x00\x00\x00";
-        let merged_bundle = merge_bundle_contents(vec![res.to_vec(), res.to_vec()]);
-        assert!(merged_bundle.is_err());
-    }
-
-    #[test]
-    fn test_fail_if_wrong_suffix() {
-        let res = b"HG20\x00\x00\x00\x0eCompression\x3dUN\x00\x00\x00\x12\x0bPHASE-HEADS\x00\x00\x00\x00\x00\x00\x00\x00\x00H\x00\x00\x00\x00bbbbbbbbbbbbbbbbbbbb\x00\x00\x00\x00cccccccccccccccccccc\x00\x00\x00\x01aaaaaaaaaaaaaaaaaaaa\x00\x00\x00\x00\x00\x00\x00\x01";
-        let merged_bundle = merge_bundle_contents(vec![res.to_vec(), res.to_vec()]);
-        assert!(merged_bundle.is_err());
-    }
-
-    fn parse_bundle_stream(s: Bundle2Stream<Cursor<BytesOld>>) -> usize {
-        let f = s
-            .filter_map(|stream_event| match stream_event {
-                StreamEvent::Next(i) => Some(i),
-                StreamEvent::Done(_) => None,
-            })
-            .and_then(|bundle2item| match bundle2item {
-                Bundle2Item::Start(_) => future::ok(()).boxify(),
-                Bundle2Item::Replycaps(_, fut) => fut.compat().map(|_| ()).boxify(),
-                Bundle2Item::B2xCommonHeads(_, stream) => {
-                    stream.compat().collect().map(|_| ()).boxify()
-                }
-                Bundle2Item::B2xRebasePack(_, stream) => {
-                    stream.compat().collect().map(|_| ()).boxify()
-                }
-                Bundle2Item::B2xRebase(_, stream) => stream.compat().collect().map(|_| ()).boxify(),
-                _ => panic!("unexpected bundle2 item"),
-            })
-            .collect();
-
-        let items = f.wait();
-        assert!(items.is_ok());
-        items.unwrap().len()
-    }
-
-    #[test]
-    fn test_real_bundle() {
-        let bundle: &[u8] = &include_bytes!("pushrebase_replay.bundle")[..];
-        let merged_bundle = merge_bundle_contents(vec![bundle.to_vec(), bundle.to_vec()]);
-        assert!(merged_bundle.is_ok());
-        let merged_bundle = merged_bundle.unwrap();
-        let logger = Logger::root(Discard, o!());
-
-        let cursor = Cursor::new(merged_bundle);
-        let bundle_stream = Bundle2Stream::new(logger.clone(), cursor);
-        assert_eq!(parse_bundle_stream(bundle_stream), 9);
-
-        let merged_bundle =
-            merge_bundle_contents(vec![bundle.to_vec(), bundle.to_vec(), bundle.to_vec()]);
-        let cursor = Cursor::new(merged_bundle.unwrap());
-        let bundle_stream = Bundle2Stream::new(logger.clone(), cursor);
-        assert_eq!(parse_bundle_stream(bundle_stream), 13);
-    }
 }
