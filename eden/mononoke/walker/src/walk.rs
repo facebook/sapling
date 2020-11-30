@@ -873,8 +873,8 @@ async fn unode_file_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
-    path: WrappedPath,
-    key: UnodeKey<FileUnodeId>,
+    key: &UnodeKey<FileUnodeId>,
+    path: Option<&WrappedPath>,
 ) -> Result<StepOutput, Error> {
     let unode_file = key.inner.load(ctx, repo.blobstore()).await?;
     let linked_cs_id = *unode_file.linknode();
@@ -897,16 +897,19 @@ async fn unode_file_step<V: VisitOne>(
     });
 
     for p in unode_file.parents() {
-        checker.add_edge(&mut edges, EdgeType::UnodeFileToUnodeFileParent, || {
-            Node::UnodeFile(PathKey::new(UnodeKey { inner: *p, flags }, path.clone()))
-        });
+        checker.add_edge_with_path(
+            &mut edges,
+            EdgeType::UnodeFileToUnodeFileParent,
+            || Node::UnodeFile(UnodeKey { inner: *p, flags }),
+            || path.cloned(),
+        );
     }
 
     checker.add_edge_with_path(
         &mut edges,
         EdgeType::UnodeFileToFileContent,
         || Node::FileContent(*unode_file.content_id()),
-        || Some(path),
+        || path.cloned(),
     );
 
     Ok(StepOutput(
@@ -960,12 +963,16 @@ async fn unode_manifest_step<V: VisitOne>(
                 );
             }
             UnodeEntry::File(id) => {
-                let mpath_opt =
-                    WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
-                checker.add_edge(
+                checker.add_edge_with_path(
                     &mut file_edges,
                     EdgeType::UnodeManifestToUnodeFileChild,
-                    || Node::UnodeFile(PathKey::new(UnodeKey { inner: *id, flags }, mpath_opt)),
+                    || Node::UnodeFile(UnodeKey { inner: *id, flags }),
+                    || {
+                        Some(WrappedPath::from(MPath::join_element_opt(
+                            path.as_ref(),
+                            Some(child),
+                        )))
+                    },
                 );
             }
         }
@@ -1460,8 +1467,8 @@ where
         Node::SkeletonManifestMapping(bcs_id) => {
             skeleton_manifest_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
-        Node::UnodeFile(PathKey { id, path }) => {
-            unode_file_step(&ctx, &repo, &checker, path, id).await
+        Node::UnodeFile(id) => {
+            unode_file_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await
         }
         Node::UnodeManifest(PathKey { id, path }) => {
             unode_manifest_step(&ctx, &repo, &checker, path, id).await

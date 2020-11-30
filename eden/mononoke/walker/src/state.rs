@@ -178,7 +178,7 @@ pub struct WalkState {
     visited_fsnode_mapping: StateMap<InternedId<ChangesetId>>,
     visited_skeleton_manifest: StateMap<SkeletonManifestId>,
     visited_skeleton_manifest_mapping: StateMap<InternedId<ChangesetId>>,
-    visited_unode_file: StateMap<(InternedId<Option<MPathHash>>, UnodeInterned<FileUnodeId>)>,
+    visited_unode_file: StateMap<UnodeInterned<FileUnodeId>>,
     visited_unode_manifest: StateMap<(
         InternedId<Option<MPathHash>>,
         UnodeInterned<ManifestUnodeId>,
@@ -463,15 +463,12 @@ impl VisitOne for WalkState {
                     true
                 }
             }
-            Node::UnodeFile(k) => self.record_with_path(
+            Node::UnodeFile(k) => self.record(
                 &self.visited_unode_file,
-                (
-                    &k.path,
-                    &UnodeInterned {
-                        id: self.unode_file_ids.interned(&k.id.inner),
-                        flags: k.id.flags,
-                    },
-                ),
+                &UnodeInterned {
+                    id: self.unode_file_ids.interned(&k.inner),
+                    flags: k.flags,
+                },
             ),
             Node::UnodeManifest(k) => self.record_with_path(
                 &self.visited_unode_manifest,

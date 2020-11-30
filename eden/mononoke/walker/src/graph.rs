@@ -348,7 +348,7 @@ create_graph!(
     (SkeletonManifestMapping, ChangesetId, [RootSkeletonManifest(SkeletonManifest)]),
     (
         UnodeFile,
-        PathKey<UnodeKey<FileUnodeId>>,
+        UnodeKey<FileUnodeId>,
         [Blame, FileContent, LinkedChangeset(Changeset), UnodeFileParent(UnodeFile)]
     ),
     (
@@ -591,7 +591,7 @@ impl Node {
             Node::FsnodeMapping(k) => k.blobstore_key(),
             Node::SkeletonManifest(k) => k.blobstore_key(),
             Node::SkeletonManifestMapping(k) => k.blobstore_key(),
-            Node::UnodeFile(PathKey { id, path: _ }) => id.blobstore_key(),
+            Node::UnodeFile(k) => k.blobstore_key(),
             Node::UnodeManifest(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::UnodeMapping(k) => k.blobstore_key(),
         }
@@ -626,7 +626,7 @@ impl Node {
             Node::FsnodeMapping(_) => None,
             Node::SkeletonManifest(_) => None,
             Node::SkeletonManifestMapping(_) => None,
-            Node::UnodeFile(PathKey { id: _, path }) => Some(&path),
+            Node::UnodeFile(_) => None,
             Node::UnodeManifest(PathKey { id: _, path }) => Some(&path),
             Node::UnodeMapping(_) => None,
         }
@@ -662,7 +662,7 @@ impl Node {
             Node::FsnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::SkeletonManifest(k) => Some(k.sampling_fingerprint()),
             Node::SkeletonManifestMapping(k) => Some(k.sampling_fingerprint()),
-            Node::UnodeFile(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
+            Node::UnodeFile(k) => Some(k.sampling_fingerprint()),
             Node::UnodeManifest(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::UnodeMapping(k) => Some(k.sampling_fingerprint()),
         }
