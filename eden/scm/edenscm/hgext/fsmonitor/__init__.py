@@ -272,7 +272,7 @@ def _watchmantofsencoding(path):
     return encoded
 
 
-def _finddirs(fs):
+def _finddirs(ui, fs):
     """Query watchman for all directories in the working copy"""
     state = fs._fsmonitorstate
     fs._watchmanclient.settimeout(state.timeout + 0.1)
@@ -289,7 +289,19 @@ def _finddirs(fs):
             "empty_on_fresh_instance": state.walk_on_invalidate,
         },
     )
-    return result["files"]
+    return list(filter(lambda x: _isutf8(ui, x), result["files"]))
+
+
+def _isutf8(ui, name):
+    if not util.isvalidutf8(name):
+        # We don't support non-utf8 file names, so just ignore it.
+        # Passing it along to the rest of Mercurial can cause issues
+        # since the Python-to-Rust boundary doesn't support
+        # surrogate escaped strings.
+        name = pycompat.decodeutf8(pycompat.encodeutf8(name, errors="replace"))
+        ui.warn(_("skipping invalid utf-8 filename: '%s'\n") % name)
+        return False
+    return True
 
 
 def wrappurge(orig, dirstate, match, findfiles, finddirs, includeignored):
@@ -303,7 +315,7 @@ def wrappurge(orig, dirstate, match, findfiles, finddirs, includeignored):
     usefastdirs = True
     if finddirs:
         try:
-            fastdirs = _finddirs(dirstate._fs)
+            fastdirs = _finddirs(ui, dirstate._fs)
         except Exception:
             ui.debug("fsmonitor: fallback to core purge, " "query dirs failed")
             usefastdirs = False
@@ -453,6 +465,9 @@ def _walk(self, match, event, span):
         span.record(newclock=result["clock"], isfresh=result["is_fresh_instance"])
         state.setlastclock(result["clock"])
         state.setlastisfresh(result["is_fresh_instance"])
+
+        files = list(filter(lambda x: _isutf8(self._ui, x["name"]), result["files"]))
+
         if result["is_fresh_instance"]:
             if not self._ui.plain() and self._ui.configbool(
                 "fsmonitor", "warn-fresh-instance"
@@ -487,12 +502,10 @@ def _walk(self, match, event, span):
             # Ignore any prior noteable files from the state info
             notefiles = []
         else:
-            count = len(result["files"])
+            count = len(files)
             state.setwatchmanchangedfilecount(count)
-            event["new_files"] = blackbox.shortlist(
-                (e["name"] for e in result["files"]), count
-            )
-            span.record(newfileslen=len(result["files"]))
+            event["new_files"] = blackbox.shortlist((e["name"] for e in files), count)
+            span.record(newfileslen=len(files))
         # XXX: Legacy scuba logging. Remove this once the source of truth
         # is moved to the Rust Event.
         if event["is_fresh"]:
@@ -517,12 +530,8 @@ def _walk(self, match, event, span):
     # for name case changes.
     ignorelist = []
     ignorelistappend = ignorelist.append
-    for entry in result["files"]:
+    for entry in files:
         fname = entry["name"]
-
-        if not util.isvalidutf8(fname):
-            self.ui.warn(_("skipping invalid utf-8 filename: '%s'\n") % fname)
-            continue
 
         if _fixencoding:
             fname = _watchmantofsencoding(fname)
