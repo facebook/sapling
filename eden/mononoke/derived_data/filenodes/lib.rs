@@ -20,8 +20,6 @@ use futures::{
     compat::Future01CompatExt, future::try_join_all, pin_mut, stream, FutureExt, StreamExt,
     TryFutureExt, TryStreamExt,
 };
-use futures_ext::FutureExt as OldFutureExt;
-use futures_old::Future;
 use futures_util::try_join;
 use itertools::{Either, Itertools};
 use manifest::{find_intersection_of_diffs_and_parents, Entry};
@@ -231,20 +229,13 @@ pub async fn generate_all_filenodes(
         .map_ok(move |(path, entry)| {
             match entry {
                 Entry::Tree(hg_mf_id) => fetch_manifest_envelope(ctx, blobstore, hg_mf_id)
-                    .boxed()
-                    .compat()
-                    .map(move |envelope| create_manifest_filenode(path, envelope, linknode))
-                    .left_future()
-                    .compat(),
+                    .map_ok(move |envelope| create_manifest_filenode(path, envelope, linknode))
+                    .left_future(),
                 Entry::Leaf((_, hg_filenode_id)) => async move {
-                    hg_filenode_id.load(ctx, blobstore).await
+                    let envelope = hg_filenode_id.load(ctx, blobstore).await?;
+                    create_file_filenode(path, envelope, linknode)
                 }
-                    .boxed()
-                    .compat()
-                    .from_err()
-                    .and_then(move |envelope| create_file_filenode(path, envelope, linknode))
-                    .right_future()
-                    .compat(),
+                    .right_future(),
             }
         })
         .try_buffer_unordered(100);
@@ -379,13 +370,13 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
             Some(root_filenode) => {
                 filenodes
                     .add_filenodes(ctx.clone(), vec![root_filenode.into()], repo_id)
-                    .map(|res| match res {
+                    .compat()
+                    .map_ok(|res| match res {
                         // If filenodes are disabled then just return success
                         // but use explicit match here in case we add more variants
                         // to FilenodeResult enum
                         FilenodeResult::Present(()) | FilenodeResult::Disabled => {}
                     })
-                    .compat()
                     .await
             }
             None => Ok(()),
