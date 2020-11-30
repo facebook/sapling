@@ -19,7 +19,6 @@ use bytes::Bytes;
 use chrono::Utc;
 use context::CoreContext;
 use futures::{
-    compat::Future01CompatExt,
     future::try_join,
     stream::{FuturesUnordered, TryStreamExt},
 };

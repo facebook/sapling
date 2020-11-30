@@ -14,7 +14,6 @@ use chrono::{DateTime, FixedOffset};
 use context::CoreContext;
 use filestore::{FetchKey, StoreRequest};
 use futures::{
-    compat::Future01CompatExt,
     future::try_join3,
     stream::{self, FuturesOrdered, FuturesUnordered, Stream, TryStreamExt},
 };
@@ -449,7 +448,6 @@ impl RepoWriteContext {
             self.ctx().clone(),
             self.blob_repo().clone(),
         )
-        .compat()
         .await?;
         Ok(ChangesetContext::new(self.repo.clone(), new_changeset_id))
     }

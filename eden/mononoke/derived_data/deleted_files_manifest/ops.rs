@@ -392,7 +392,6 @@ mod tests {
     use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
     use fixtures::store_files;
-    use futures::compat::Future01CompatExt;
     use manifest::PathOrPrefix;
     use maplit::btreemap;
     use mononoke_types::{
@@ -603,7 +602,6 @@ mod tests {
         .unwrap();
 
         save_bonsai_changesets(vec![bcs.clone()], CoreContext::test_mock(fb), repo.clone())
-            .compat()
             .await
             .unwrap();
         bcs

@@ -927,7 +927,7 @@ mod tests {
         .unwrap();
 
         runtime
-            .block_on(save_bonsai_changesets(
+            .block_on_std(save_bonsai_changesets(
                 vec![bcs.clone()],
                 CoreContext::test_mock(fb),
                 repo.clone(),

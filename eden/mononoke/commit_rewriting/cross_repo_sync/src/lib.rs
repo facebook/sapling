@@ -1679,9 +1679,7 @@ pub async fn upload_commits<'a>(
         })
         .collect();
     uploader.try_for_each_concurrent(100, identity).await?;
-    save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo.clone())
-        .compat()
-        .await?;
+    save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo.clone()).await?;
     Ok(())
 }
 

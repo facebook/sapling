@@ -464,7 +464,7 @@ mod tests {
     use derived_data_test_utils::bonsai_changeset_from_hg;
     use fbinit::FacebookInit;
     use fixtures::{many_files_dirs, store_files};
-    use futures::{compat::Future01CompatExt, pin_mut, stream::iter, Stream, TryStreamExt};
+    use futures::{pin_mut, stream::iter, Stream, TryStreamExt};
     use maplit::btreemap;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, MPath};
     use tests_utils::CreateCommitContext;
@@ -1031,7 +1031,6 @@ mod tests {
         .unwrap();
 
         save_bonsai_changesets(vec![bcs.clone()], CoreContext::test_mock(fb), repo.clone())
-            .compat()
             .await
             .unwrap();
         bcs

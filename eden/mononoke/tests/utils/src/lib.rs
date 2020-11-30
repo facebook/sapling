@@ -279,9 +279,7 @@ impl<'a> CreateCommitContext<'a> {
         let bcs = bcs.freeze()?;
 
         let bcs_id = bcs.get_changeset_id();
-        save_bonsai_changesets(vec![bcs], self.ctx.clone(), self.repo.clone())
-            .compat()
-            .await?;
+        save_bonsai_changesets(vec![bcs], self.ctx.clone(), self.repo.clone()).await?;
         Ok(bcs_id)
     }
 }
@@ -591,7 +589,6 @@ pub async fn create_commit(
 
     let bcs_id = bcs.get_changeset_id();
     save_bonsai_changesets(vec![bcs], ctx, repo.clone())
-        .compat()
         .await
         .unwrap();
     bcs_id
@@ -619,7 +616,6 @@ pub async fn create_commit_with_date(
 
     let bcs_id = bcs.get_changeset_id();
     save_bonsai_changesets(vec![bcs], ctx, repo.clone())
-        .compat()
         .await
         .unwrap();
     bcs_id

@@ -261,7 +261,6 @@ impl Limits {
             args::get_and_parse_opt::<NonZeroU64>(sub_m, ARG_TOTAL_SIZE_LIMIT);
         let maybe_lfs_threshold = args::get_and_parse_opt::<NonZeroU64>(sub_m, ARG_LFS_THRESHOLD);
 
-
         Self {
             file_num_limit: maybe_file_num_limit,
             total_size_limit: maybe_total_size_limit,
@@ -422,9 +421,7 @@ async fn create_changesets(
         parent = cs_id;
     }
 
-    save_bonsai_changesets(changesets, ctx.clone(), repo.clone())
-        .compat()
-        .await?;
+    save_bonsai_changesets(changesets, ctx.clone(), repo.clone()).await?;
 
     Ok(cs_ids)
 }

@@ -67,7 +67,6 @@ pub async fn subcommand_create_bonsai<'a>(
         Err(e) => return Err(SubcommandError::Error(anyhow!(e))),
     };
 
-
     let blobrepo = args::open_repo(fb, &logger, &matches).await?;
     for (_, change) in bcs.file_changes() {
         if let Some(change) = change {
@@ -84,7 +83,6 @@ pub async fn subcommand_create_bonsai<'a>(
     }
     let bcs_id = bcs.get_changeset_id();
     save_bonsai_changesets(vec![bcs], ctx.clone(), blobrepo.clone())
-        .compat()
         .map_err(|e| SubcommandError::Error(anyhow!(e)))
         .await?;
     let hg_cs = blobrepo

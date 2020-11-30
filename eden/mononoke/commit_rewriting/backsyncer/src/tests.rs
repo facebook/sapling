@@ -972,7 +972,6 @@ async fn init_repos(
 
             let rewritten = rewritten.freeze()?;
             save_bonsai_changesets(vec![rewritten.clone()], ctx.clone(), target_repo.clone())
-                .compat()
                 .await?;
             rewritten.get_changeset_id()
         }

@@ -74,9 +74,7 @@ async fn save_and_maybe_mark_public(
     mark_public: bool,
 ) -> Result<ChangesetId, Error> {
     let bcs_id = bcs.get_changeset_id();
-    save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
-        .compat()
-        .await?;
+    save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone()).await?;
 
     if mark_public {
         repo.get_phases()

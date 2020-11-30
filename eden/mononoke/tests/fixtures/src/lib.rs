@@ -109,7 +109,6 @@ async fn create_bonsai_changeset_from_test_data(
 
     let bcs_id = bcs.get_changeset_id();
     save_bonsai_changesets(vec![bcs], ctx.clone(), blobrepo.clone())
-        .compat()
         .await
         .unwrap();
 
@@ -1576,7 +1575,6 @@ pub async fn save_diamond_commits(
         ctx.clone(),
         repo.clone(),
     )
-    .compat()
     .await
     .map(move |()| fourth_bcs_id)
 }

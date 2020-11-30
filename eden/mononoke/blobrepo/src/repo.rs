@@ -21,12 +21,10 @@ use cloned::cloned;
 use context::CoreContext;
 use filestore::FilestoreConfig;
 use futures::{
-    compat::Future01CompatExt, future::BoxFuture, FutureExt, Stream, TryFutureExt, TryStreamExt,
-};
-use futures_ext::FutureExt as _;
-use futures_old::{
-    future::{loop_fn, ok, Future as OldFuture, Loop},
-    stream::{self, FuturesUnordered, Stream as OldStream},
+    compat::Future01CompatExt,
+    future::{try_join, BoxFuture},
+    stream::FuturesUnordered,
+    FutureExt, Stream, TryStreamExt,
 };
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{
@@ -418,11 +416,11 @@ impl BlobRepo {
 /// This function uploads bonsai changests object to blobstore in parallel, and then does
 /// sequential writes to changesets table. Parents of the changesets should already by saved
 /// in the repository.
-pub fn save_bonsai_changesets(
+pub async fn save_bonsai_changesets(
     bonsai_changesets: Vec<BonsaiChangeset>,
     ctx: CoreContext,
     repo: BlobRepo,
-) -> impl OldFuture<Item = (), Error = Error> {
+) -> Result<(), Error> {
     let complete_changesets = repo.get_changesets_object();
     let blobstore = repo.get_blobstore();
     let repoid = repo.get_repoid();
@@ -436,42 +434,29 @@ pub fn save_bonsai_changesets(
         parents_to_check.remove(&bcs.get_changeset_id());
     }
 
-    let parents_to_check = stream::futures_unordered(parents_to_check.into_iter().map({
-        cloned!(ctx, repo);
-        move |p| {
-            cloned!(ctx, repo);
-            async move {
-                let exists = repo.changeset_exists_by_bonsai(ctx, p).await?;
-                Ok(exists)
-            }
-            .boxed()
-            .compat()
-            .and_then(move |exists| {
-                if exists {
-                    Ok(())
-                } else {
-                    Err(format_err!("Commit {} does not exist in the repo", p))
+    let parents_to_check = parents_to_check
+        .into_iter()
+        .map({
+            |p| {
+                cloned!(ctx, repo);
+                async move {
+                    let exists = repo.changeset_exists_by_bonsai(ctx, p).await?;
+                    if exists {
+                        Ok(())
+                    } else {
+                        Err(format_err!("Commit {} does not exist in the repo", p))
+                    }
                 }
-            })
-        }
-    }))
-    .collect();
+            }
+        })
+        .collect::<FuturesUnordered<_>>()
+        .try_collect::<Vec<_>>();
 
     let bonsai_changesets: HashMap<_, _> = bonsai_changesets
         .into_iter()
         .map(|bcs| (bcs.get_changeset_id(), bcs))
         .collect();
 
-    // Order of inserting bonsai changesets objects doesn't matter, so we can join them
-    let mut bonsai_object_futs = FuturesUnordered::new();
-    for bcs in bonsai_changesets.values() {
-        bonsai_object_futs.push(save_bonsai_changeset_object(
-            ctx.clone(),
-            blobstore.clone(),
-            bcs.clone(),
-        ));
-    }
-    let bonsai_objects = bonsai_object_futs.collect();
     // Order of inserting entries in changeset table matters though, so we first need to
     // topologically sort commits.
     let mut bcs_parents = HashMap::new();
@@ -491,36 +476,41 @@ pub fn save_bonsai_changesets(
                 parents: bcs.parents().into_iter().collect(),
             };
 
-            bonsai_complete_futs.push(complete_changesets.add(ctx.clone(), completion_record));
+            cloned!(ctx, complete_changesets);
+            bonsai_complete_futs.push(async move {
+                complete_changesets
+                    .add(ctx, completion_record)
+                    .compat()
+                    .await
+            });
         }
     }
 
-    bonsai_objects
-        .join(parents_to_check)
-        .and_then(move |_| {
-            loop_fn(bonsai_complete_futs.into_iter(), move |mut futs| {
-                match futs.next() {
-                    Some(fut) => fut
-                        .and_then(move |_| ok(Loop::Continue(futs)))
-                        .left_future(),
-                    None => ok(Loop::Break(())).right_future(),
+    // Order of inserting bonsai changesets objects doesn't matter, so we can join them
+    let bonsai_objects = bonsai_changesets
+        .into_iter()
+        .map({
+            |(_, bcs)| {
+                cloned!(ctx, blobstore);
+                async move {
+                    let bonsai_blob = bcs.into_blob();
+                    let bcs_id = bonsai_blob.id().clone();
+                    let blobstore_key = bcs_id.blobstore_key();
+                    blobstore
+                        .put(&ctx, blobstore_key, bonsai_blob.into())
+                        .await?;
+                    Ok(())
                 }
-            })
+            }
         })
-        .and_then(|_| ok(()))
-}
+        .collect::<FuturesUnordered<_>>()
+        .try_collect::<Vec<_>>();
 
-pub fn save_bonsai_changeset_object(
-    ctx: CoreContext,
-    blobstore: RepoBlobstore,
-    bonsai_cs: BonsaiChangeset,
-) -> impl OldFuture<Item = (), Error = Error> {
-    let bonsai_blob = bonsai_cs.into_blob();
-    let bcs_id = bonsai_blob.id().clone();
-    let blobstore_key = bcs_id.blobstore_key();
+    try_join(bonsai_objects, parents_to_check).await?;
 
-    async move { blobstore.put(&ctx, blobstore_key, bonsai_blob.into()).await }
-        .boxed()
-        .compat()
-        .map(|_| ())
+    for bonsai_complete in bonsai_complete_futs {
+        bonsai_complete.await?;
+    }
+
+    Ok(())
 }

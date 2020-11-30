@@ -643,23 +643,24 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
 
     let get_entries = {
         cloned!(ctx, repo);
-        move |ms_hash: HgManifestId| -> BoxFuture<HashMap<String, Entry<HgManifestId, (FileType, HgFileNodeId)>>, Error> {
-                    cloned!(ctx, repo);
-                    async move {
-                        ms_hash.load(&ctx, repo.blobstore()).await
-                    }
-                    .boxed()
-                    .compat()
-                    .from_err()
-                    .map(|ms| {
-                        Manifest::list(&ms)
-                            .map(|(name, entry)| {
-                                (String::from_utf8(Vec::from(name.as_ref())).unwrap(), entry)
-                            })
-                            .collect::<HashMap<_, _>>()
-                    })
-                    .boxify()
-            }
+        move |ms_hash: HgManifestId| -> BoxFuture<
+            HashMap<String, Entry<HgManifestId, (FileType, HgFileNodeId)>>,
+            Error,
+        > {
+            cloned!(ctx, repo);
+            async move { ms_hash.load(&ctx, repo.blobstore()).await }
+                .boxed()
+                .compat()
+                .from_err()
+                .map(|ms| {
+                    Manifest::list(&ms)
+                        .map(|(name, entry)| {
+                            (String::from_utf8(Vec::from(name.as_ref())).unwrap(), entry)
+                        })
+                        .collect::<HashMap<_, _>>()
+                })
+                .boxify()
+        }
     };
 
     // #CONTENT
@@ -1040,7 +1041,6 @@ async fn test_hg_commit_generation_simple(fb: FacebookInit) {
     let bcs_id = bcs.get_changeset_id();
     let ctx = CoreContext::test_mock(fb);
     blobrepo::save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
-        .compat()
         .await
         .unwrap();
     let hg_cs_id = repo
@@ -1084,7 +1084,6 @@ async fn test_hg_commit_generation_stack(fb: FacebookInit) {
     let top_of_stack = changesets.last().unwrap().clone().get_changeset_id();
     let ctx = CoreContext::test_mock(fb);
     blobrepo::save_bonsai_changesets(changesets, ctx.clone(), repo.clone())
-        .compat()
         .await
         .unwrap();
 
@@ -1112,7 +1111,6 @@ async fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
     let second_bcs = create_bonsai_changeset(vec![first_bcs_id]);
     let second_bcs_id = second_bcs.get_changeset_id();
     blobrepo::save_bonsai_changesets(vec![first_bcs, second_bcs], ctx.clone(), repo.clone())
-        .compat()
         .await
         .unwrap();
 
@@ -1215,7 +1213,6 @@ async fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
         ctx.clone(),
         repo.clone(),
     )
-    .compat()
     .await
     .unwrap();
 

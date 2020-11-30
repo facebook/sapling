@@ -10,7 +10,7 @@ use anyhow::{Error, Result};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Storable;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, future, stream, TryStreamExt};
+use futures::{future, stream, TryStreamExt};
 use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath, MPathElement,
@@ -145,9 +145,7 @@ impl GenManifest {
                 None => Err(Error::msg("empty changes iterator")),
                 Some(csid) => {
                     store_changes.try_for_each(|_| future::ok(())).await?;
-                    save_bonsai_changesets(changesets, ctx, repo)
-                        .compat()
-                        .await?;
+                    save_bonsai_changesets(changesets, ctx, repo).await?;
                     Ok(csid)
                 }
             }
