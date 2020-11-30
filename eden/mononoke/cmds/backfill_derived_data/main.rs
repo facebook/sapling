@@ -457,6 +457,10 @@ async fn subcommand_backfill_all(
     tail_batch_iteration(ctx, repo, derivers.as_ref()).await
 }
 
+fn truncate_duration(duration: Duration) -> Duration {
+    Duration::from_secs(duration.as_secs())
+}
+
 async fn subcommand_backfill(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -475,6 +479,7 @@ async fn subcommand_backfill(
 
     let total_count = changesets.len();
     let mut generated_count = 0usize;
+    let mut skipped_count = 0usize;
     let mut total_duration = Duration::from_secs(0);
 
     if regenerate {
@@ -482,6 +487,12 @@ async fn subcommand_backfill(
     }
 
     for chunk in changesets.chunks(CHUNK_SIZE) {
+        info!(
+            ctx.logger(),
+            "starting batch of {} from {}",
+            chunk.len(),
+            chunk.first().unwrap()
+        );
         let (stats, chunk_size) = async {
             let chunk = derived_utils
                 .pending(ctx.clone(), repo.clone(), chunk.to_vec())
@@ -489,6 +500,7 @@ async fn subcommand_backfill(
             let chunk_size = chunk.len();
 
             warmup::warmup(ctx, repo, derived_data_type.as_ref(), &chunk).await?;
+            info!(ctx.logger(), "warmup of {} changesets complete", chunk_size);
 
             derived_utils
                 .backfill_batch_dangerous(ctx.clone(), repo.clone(), chunk)
@@ -503,17 +515,29 @@ async fn subcommand_backfill(
         let elapsed = stats.completion_time;
         total_duration += elapsed;
 
-        if generated_count != 0 {
-            let generated = generated_count as f32;
-            let total = total_count as f32;
+        if chunk_size < chunk.len() {
             info!(
                 ctx.logger(),
-                "{}/{} estimate:{:.2?} speed:{:.2}/s mean_speed:{:.2}/s",
+                "skipped {} changesets as they were already generated",
+                chunk.len() - chunk_size,
+            );
+            skipped_count += chunk.len() - chunk_size;
+        }
+        if generated_count != 0 {
+            let generated = generated_count as f32;
+            let total = (total_count - skipped_count) as f32;
+            let estimate = total_duration.mul_f32((total - generated) / generated);
+
+            info!(
+                ctx.logger(),
+                "{}/{} ({} in {}) estimate:{} speed:{:.2}/s overall_speed:{:.2}/s",
                 generated,
-                total_count,
-                elapsed.mul_f32((total - generated) / generated),
-                chunk_size as f32 / stats.completion_time.as_secs() as f32,
-                generated / elapsed.as_secs() as f32,
+                total_count - skipped_count,
+                chunk_size,
+                humantime::format_duration(truncate_duration(elapsed)),
+                humantime::format_duration(truncate_duration(estimate)),
+                chunk_size as f32 / elapsed.as_secs() as f32,
+                generated / total_duration.as_secs() as f32,
             );
         }
         if let Some(ref mut cleaner) = cleaner {

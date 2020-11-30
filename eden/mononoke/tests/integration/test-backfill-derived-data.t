@@ -29,7 +29,9 @@ backfill derived data
   * using repo "repo" repoid RepositoryId(0) (glob)
   * reading all changesets for: RepositoryId(0) (glob)
   * starting deriving data for 1 changesets (glob)
-  * 1/1 estimate:* speed:* mean_speed:* (glob)
+  * starting batch of 1 from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec (glob)
+  * warmup of 1 changesets complete (glob)
+  * 1/1 * (glob)
   $ hg log -r 0 -T '{node}'
   426bada5c67598ca65036d57d9e4b64b0c1ce7a0 (no-eol)
   $ mononoke_admin --log-level ERROR derived-data exists "$DERIVED_DATA_TYPE" 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
@@ -38,7 +40,9 @@ backfill derived data
   * using repo "repo" repoid RepositoryId(0) (glob)
   * reading all changesets for: RepositoryId(0) (glob)
   * starting deriving data for 2 changesets (glob)
-  * 2/2 estimate:0.00ns speed:* mean_speed:* (glob)
+  * starting batch of 2 from 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66 (glob)
+  * warmup of 2 changesets complete (glob)
+  * 2/2 * (glob)
 
   $ mononoke_admin --log-level ERROR derived-data exists "$DERIVED_DATA_TYPE" master_bookmark
   Derived: c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
