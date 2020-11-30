@@ -390,8 +390,7 @@ mod tests {
     use derived_data_test_utils::{bonsai_changeset_from_hg, iterate_all_manifest_entries};
     use fbinit::FacebookInit;
     use fixtures::linear;
-    use futures::TryStreamExt;
-    use futures_old::Future;
+    use futures::{compat::Future01CompatExt, TryStreamExt};
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::{blobs::HgBlobManifest, HgFileNodeId, HgManifestId};
@@ -402,47 +401,34 @@ mod tests {
     };
     use std::collections::{HashSet, VecDeque};
     use tests_utils::{resolve_cs_id, CreateCommitContext};
-    use tokio_compat::runtime::Runtime;
 
-    #[fbinit::test]
-    fn linear_test(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new().unwrap();
-        let repo = runtime.block_on_std(linear::getrepo(fb));
+    #[fbinit::compat_test]
+    async fn linear_test(fb: FacebookInit) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         // Derive filenodes because they are going to be used in this test
-        runtime.block_on_std(async {
-            let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-            FilenodesOnlyPublic::derive(&ctx, &repo, master_cs_id).await?;
-            let res: Result<(), Error> = Ok(());
-            res
-        })?;
+        let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+        FilenodesOnlyPublic::derive(&ctx, &repo, master_cs_id).await?;
+
         let parent_unode_id = {
             let parent_hg_cs = "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536";
-            let (bcs_id, bcs) = runtime
-                .block_on_std(bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs))
-                .unwrap();
-
-            let f = derive_unode_manifest(
+            let (bcs_id, bcs) = bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs).await?;
+            let unode_id = derive_unode_manifest(
                 ctx.clone(),
                 repo.clone(),
                 bcs_id,
                 vec![],
                 get_file_changes(&bcs),
             )
-            .boxed()
-            .compat();
+            .await?;
 
-            let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
-            runtime
-                .block_on_std(unode_id.load(&ctx, repo.blobstore()))
-                .unwrap();
-            let all_unodes: Vec<_> = runtime
-                .block_on_std(
-                    iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(unode_id)).try_collect(),
-                )
-                .unwrap();
+            unode_id.load(&ctx, repo.blobstore()).await?;
+            let all_unodes: Vec<_> =
+                iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(unode_id))
+                    .try_collect()
+                    .await?;
             let mut paths: Vec<_> = all_unodes.into_iter().map(|(path, _)| path).collect();
             paths.sort();
             assert_eq!(
@@ -458,43 +444,31 @@ mod tests {
 
         {
             let child_hg_cs = "3e0e761030db6e479a7fb58b12881883f9f8c63f";
-            let (bcs_id, bcs) = runtime
-                .block_on_std(bonsai_changeset_from_hg(&ctx, &repo, child_hg_cs))
-                .unwrap();
+            let (bcs_id, bcs) = bonsai_changeset_from_hg(&ctx, &repo, child_hg_cs).await?;
 
-            let f = derive_unode_manifest(
+            let unode_id = derive_unode_manifest(
                 ctx.clone(),
                 repo.clone(),
                 bcs_id,
                 vec![parent_unode_id.clone()],
                 get_file_changes(&bcs),
             )
-            .boxed()
-            .compat();
+            .await?;
 
-            let unode_id = runtime.block_on(f).unwrap();
             // Make sure it's saved in the blobstore
-            let root_unode: Result<_> =
-                runtime.block_on_std(unode_id.load(&ctx, repo.blobstore()).map_err(Error::from));
-            let root_unode = root_unode.unwrap();
+            let root_unode = unode_id.load(&ctx, repo.blobstore()).await?;
             assert_eq!(root_unode.parents(), &vec![parent_unode_id]);
 
-            let root_filenode_id = fetch_root_filenode_id(fb, &mut runtime, repo.clone(), bcs_id);
+            let root_filenode_id = fetch_root_filenode_id(fb, repo.clone(), bcs_id).await?;
             assert_eq!(
-                find_unode_history(
-                    fb,
-                    &mut runtime,
-                    repo.clone(),
-                    UnodeEntry::Directory(unode_id)
-                ),
-                find_filenode_history(fb, &mut runtime, repo.clone(), root_filenode_id),
+                find_unode_history(fb, repo.clone(), UnodeEntry::Directory(unode_id)).await?,
+                find_filenode_history(fb, repo.clone(), root_filenode_id).await?,
             );
 
-            let all_unodes: Vec<_> = runtime
-                .block_on_std(
-                    iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(unode_id)).try_collect(),
-                )
-                .unwrap();
+            let all_unodes: Vec<_> =
+                iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(unode_id))
+                    .try_collect()
+                    .await?;
             let mut paths: Vec<_> = all_unodes.into_iter().map(|(path, _)| path).collect();
             paths.sort();
             assert_eq!(
@@ -510,89 +484,78 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_same_content_different_paths(fb: FacebookInit) {
-        let mut runtime = Runtime::new().unwrap();
-        let repo = runtime.block_on_std(linear::getrepo(fb));
+    #[fbinit::compat_test]
+    async fn test_same_content_different_paths(fb: FacebookInit) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
-        fn check_unode_uniqeness(
+        async fn check_unode_uniqeness(
             ctx: CoreContext,
             repo: BlobRepo,
-            runtime: &mut Runtime,
             file_changes: BTreeMap<MPath, Option<FileChange>>,
-        ) {
-            let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), runtime, file_changes);
+        ) -> Result<(), Error> {
+            let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), file_changes).await?;
             let bcs_id = bcs.get_changeset_id();
 
-            let f = derive_unode_manifest(
+            let unode_id = derive_unode_manifest(
                 ctx.clone(),
                 repo.clone(),
                 bcs_id,
                 vec![],
                 get_file_changes(&bcs),
             )
-            .boxed()
-            .compat();
-            let unode_id = runtime.block_on(f).unwrap();
-
-            let unode_mf: Result<_> =
-                runtime.block_on_std(unode_id.load(&ctx, repo.blobstore()).map_err(Error::from));
-            let unode_mf = unode_mf.unwrap();
+            .await?;
+            let unode_mf = unode_id.load(&ctx, repo.blobstore()).await?;
 
             // Unodes should be unique even if content is the same. Check it
             let vals: Vec<_> = unode_mf.list().collect();
             assert_eq!(vals.len(), 2);
             assert_ne!(vals.get(0), vals.get(1));
+            Ok(())
         }
 
         let file_changes = store_files(
             ctx.clone(),
-            &mut runtime,
             btreemap! {"file1" => Some(("content", FileType::Regular)), "file2" => Some(("content", FileType::Regular))},
             repo.clone(),
-        );
-        check_unode_uniqeness(ctx.clone(), repo.clone(), &mut runtime, file_changes);
+        ).await?;
+        check_unode_uniqeness(ctx.clone(), repo.clone(), file_changes).await?;
 
         let file_changes = store_files(
             ctx.clone(),
-            &mut runtime,
             btreemap! {"dir1/file" => Some(("content", FileType::Regular)), "dir2/file" => Some(("content", FileType::Regular))},
             repo.clone(),
-        );
-        check_unode_uniqeness(ctx.clone(), repo.clone(), &mut runtime, file_changes);
+        ).await?;
+        check_unode_uniqeness(ctx.clone(), repo.clone(), file_changes).await?;
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_same_content_no_change(fb: FacebookInit) {
-        let mut runtime = Runtime::new().unwrap();
-        let repo = runtime.block_on_std(linear::getrepo(fb));
+    #[fbinit::compat_test]
+    async fn test_same_content_no_change(fb: FacebookInit) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
-        assert!(
-            build_diamond_graph(
-                ctx.clone(),
-                &mut runtime,
-                repo.clone(),
-                btreemap! {"A" => Some(("A", FileType::Regular))},
-                btreemap! {"A" => Some(("B", FileType::Regular))},
-                btreemap! {"A" => Some(("B", FileType::Regular))},
-                btreemap! {},
-            )
-            .is_ok()
-        );
+        build_diamond_graph(
+            ctx.clone(),
+            repo.clone(),
+            btreemap! {"A" => Some(("A", FileType::Regular))},
+            btreemap! {"A" => Some(("B", FileType::Regular))},
+            btreemap! {"A" => Some(("B", FileType::Regular))},
+            btreemap! {},
+        )
+        .await?;
 
         // Content is different - fail!
         assert!(
             build_diamond_graph(
                 ctx.clone(),
-                &mut runtime,
                 repo.clone(),
                 btreemap! {"A" => Some(("A", FileType::Regular))},
                 btreemap! {"A" => Some(("B", FileType::Regular))},
                 btreemap! {"A" => Some(("C", FileType::Regular))},
                 btreemap! {},
             )
+            .await
             .is_err()
         );
 
@@ -600,15 +563,17 @@ mod tests {
         assert!(
             build_diamond_graph(
                 ctx,
-                &mut runtime,
                 repo,
                 btreemap! {"A" => Some(("A", FileType::Regular))},
                 btreemap! {"A" => Some(("B", FileType::Regular))},
                 btreemap! {"A" => Some(("B", FileType::Executable))},
                 btreemap! {},
             )
+            .await
             .is_err()
         );
+
+        Ok(())
     }
 
     async fn diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
@@ -702,217 +667,195 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
-        runtime.block_on_std(diamond_merge_unodes_v2(fb))
+    #[fbinit::compat_test]
+    async fn test_diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
+        diamond_merge_unodes_v2(fb).await
     }
 
-    #[fbinit::test]
-    fn test_parent_order(fb: FacebookInit) {
+    #[fbinit::compat_test]
+    async fn test_parent_order(fb: FacebookInit) -> Result<(), Error> {
         let repo = new_memblob_empty(None).unwrap();
-        let mut runtime = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let p1_root_unode_id = create_changeset_and_derive_unode(
             ctx.clone(),
             repo.clone(),
-            &mut runtime,
             btreemap! {"A" => Some(("A", FileType::Regular))},
-        );
+        )
+        .await?;
 
         let p2_root_unode_id = create_changeset_and_derive_unode(
             ctx.clone(),
             repo.clone(),
-            &mut runtime,
             btreemap! {"A" => Some(("B", FileType::Regular))},
-        );
+        )
+        .await?;
 
         let file_changes = store_files(
             ctx.clone(),
-            &mut runtime,
             btreemap! { "A" => Some(("C", FileType::Regular)) },
             repo.clone(),
-        );
-        let bcs = create_bonsai_changeset(fb, repo.clone(), &mut runtime, file_changes);
+        )
+        .await?;
+        let bcs = create_bonsai_changeset(fb, repo.clone(), file_changes).await?;
         let bcs_id = bcs.get_changeset_id();
 
-        let f = derive_unode_manifest(
+        let root_unode = derive_unode_manifest(
             ctx.clone(),
             repo.clone(),
             bcs_id,
             vec![p1_root_unode_id, p2_root_unode_id],
             get_file_changes(&bcs),
         )
-        .boxed()
-        .compat();
-        let root_unode = runtime.block_on(f).unwrap();
+        .await?;
 
         // Make sure hash is the same if nothing was changed
-        let f = derive_unode_manifest(
+        let same_root_unode = derive_unode_manifest(
             ctx.clone(),
             repo.clone(),
             bcs_id,
             vec![p1_root_unode_id, p2_root_unode_id],
             get_file_changes(&bcs),
         )
-        .boxed()
-        .compat();
-        let same_root_unode = runtime.block_on(f).unwrap();
+        .await?;
         assert_eq!(root_unode, same_root_unode);
 
         // Now change parent order, make sure hashes are different
-        let f = derive_unode_manifest(
+        let reverse_root_unode = derive_unode_manifest(
             ctx.clone(),
             repo.clone(),
             bcs_id,
             vec![p2_root_unode_id, p1_root_unode_id],
             get_file_changes(&bcs),
         )
-        .boxed()
-        .compat();
-        let reverse_root_unode = runtime.block_on(f).unwrap();
+        .await?;
 
         assert_ne!(root_unode, reverse_root_unode);
+
+        Ok(())
     }
 
-    fn create_changeset_and_derive_unode(
+    async fn create_changeset_and_derive_unode(
         ctx: CoreContext,
         repo: BlobRepo,
-        mut runtime: &mut Runtime,
         file_changes: BTreeMap<&str, Option<(&str, FileType)>>,
-    ) -> ManifestUnodeId {
-        let file_changes = store_files(ctx.clone(), &mut runtime, file_changes, repo.clone());
-        let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), &mut runtime, file_changes);
+    ) -> Result<ManifestUnodeId, Error> {
+        let file_changes = store_files(ctx.clone(), file_changes, repo.clone()).await?;
+        let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), file_changes).await?;
 
         let bcs_id = bcs.get_changeset_id();
-        let f = derive_unode_manifest(
+        derive_unode_manifest(
             ctx.clone(),
             repo.clone(),
             bcs_id,
             vec![],
             get_file_changes(&bcs),
         )
-        .boxed()
-        .compat();
-        runtime.block_on(f).unwrap()
+        .await
     }
 
-    fn build_diamond_graph(
+    async fn build_diamond_graph(
         ctx: CoreContext,
-        mut runtime: &mut Runtime,
         repo: BlobRepo,
         changes_first: BTreeMap<&str, Option<(&str, FileType)>>,
         changes_merge_p1: BTreeMap<&str, Option<(&str, FileType)>>,
         changes_merge_p2: BTreeMap<&str, Option<(&str, FileType)>>,
         changes_merge: BTreeMap<&str, Option<(&str, FileType)>>,
     ) -> Result<ManifestUnodeId> {
-        let file_changes = store_files(ctx.clone(), &mut runtime, changes_first, repo.clone());
+        let file_changes = store_files(ctx.clone(), changes_first, repo.clone()).await?;
 
-        let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), &mut runtime, file_changes);
+        let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), file_changes).await?;
         let first_bcs_id = bcs.get_changeset_id();
 
-        let f = derive_unode_manifest(
+        let first_unode_id = derive_unode_manifest(
             ctx.clone(),
             repo.clone(),
             first_bcs_id,
             vec![],
             get_file_changes(&bcs),
         )
-        .boxed()
-        .compat();
-        let first_unode_id = runtime.block_on(f).unwrap();
+        .await?;
 
         let (merge_p1, merge_p1_unode_id) = {
-            let file_changes =
-                store_files(ctx.clone(), &mut runtime, changes_merge_p1, repo.clone());
+            let file_changes = store_files(ctx.clone(), changes_merge_p1, repo.clone()).await?;
             let merge_p1 = create_bonsai_changeset_with_params(
                 ctx.fb,
                 repo.clone(),
-                &mut runtime,
                 file_changes.clone(),
                 "merge_p1",
                 vec![first_bcs_id.clone()],
-            );
+            )
+            .await?;
             let merge_p1_id = merge_p1.get_changeset_id();
-            let f = derive_unode_manifest(
+            let merge_p1_unode_id = derive_unode_manifest(
                 ctx.clone(),
                 repo.clone(),
                 merge_p1_id,
                 vec![first_unode_id.clone()],
                 get_file_changes(&merge_p1),
             )
-            .boxed()
-            .compat();
-            let merge_p1_unode_id = runtime.block_on(f).unwrap();
+            .await?;
             (merge_p1, merge_p1_unode_id)
         };
 
         let (merge_p2, merge_p2_unode_id) = {
-            let file_changes =
-                store_files(ctx.clone(), &mut runtime, changes_merge_p2, repo.clone());
+            let file_changes = store_files(ctx.clone(), changes_merge_p2, repo.clone()).await?;
 
             let merge_p2 = create_bonsai_changeset_with_params(
                 ctx.fb,
                 repo.clone(),
-                &mut runtime,
                 file_changes,
                 "merge_p2",
                 vec![first_bcs_id.clone()],
-            );
+            )
+            .await?;
             let merge_p2_id = merge_p2.get_changeset_id();
-            let f = derive_unode_manifest(
+            let merge_p2_unode_id = derive_unode_manifest(
                 ctx.clone(),
                 repo.clone(),
                 merge_p2_id,
                 vec![first_unode_id.clone()],
                 get_file_changes(&merge_p2),
             )
-            .boxed()
-            .compat();
-            let merge_p2_unode_id = runtime.block_on(f).unwrap();
+            .await?;
             (merge_p2, merge_p2_unode_id)
         };
 
-        let file_changes = store_files(ctx.clone(), &mut runtime, changes_merge, repo.clone());
+        let file_changes = store_files(ctx.clone(), changes_merge, repo.clone()).await?;
         let merge = create_bonsai_changeset_with_params(
             ctx.fb,
             repo.clone(),
-            &mut runtime,
             file_changes,
             "merge",
             vec![merge_p1.get_changeset_id(), merge_p2.get_changeset_id()],
-        );
+        )
+        .await?;
         let merge_id = merge.get_changeset_id();
-        let f = derive_unode_manifest(
+        derive_unode_manifest(
             ctx.clone(),
             repo.clone(),
             merge_id,
             vec![merge_p1_unode_id, merge_p2_unode_id],
             get_file_changes(&merge),
         )
-        .boxed()
-        .compat();
-        runtime.block_on(f)
+        .await
     }
 
-    fn create_bonsai_changeset(
+    async fn create_bonsai_changeset(
         fb: FacebookInit,
         repo: BlobRepo,
-        runtime: &mut Runtime,
         file_changes: BTreeMap<MPath, Option<FileChange>>,
-    ) -> BonsaiChangeset {
-        create_bonsai_changeset_with_params(fb, repo, runtime, file_changes, "message", vec![])
+    ) -> Result<BonsaiChangeset, Error> {
+        create_bonsai_changeset_with_params(fb, repo, file_changes, "message", vec![]).await
     }
 
-    fn create_bonsai_changeset_with_params(
+    async fn create_bonsai_changeset_with_params(
         fb: FacebookInit,
         repo: BlobRepo,
-        runtime: &mut Runtime,
         file_changes: BTreeMap<MPath, Option<FileChange>>,
         message: &str,
         parents: Vec<ChangesetId>,
-    ) -> BonsaiChangeset {
+    ) -> Result<BonsaiChangeset, Error> {
         let bcs = BonsaiChangesetMut {
             parents,
             author: "author".to_string(),
@@ -926,22 +869,15 @@ mod tests {
         .freeze()
         .unwrap();
 
-        runtime
-            .block_on_std(save_bonsai_changesets(
-                vec![bcs.clone()],
-                CoreContext::test_mock(fb),
-                repo.clone(),
-            ))
-            .unwrap();
-        bcs
+        save_bonsai_changesets(vec![bcs.clone()], CoreContext::test_mock(fb), repo.clone()).await?;
+        Ok(bcs)
     }
 
-    fn store_files(
+    async fn store_files(
         ctx: CoreContext,
-        runtime: &mut Runtime,
         files: BTreeMap<&str, Option<(&str, FileType)>>,
         repo: BlobRepo,
-    ) -> BTreeMap<MPath, Option<FileChange>> {
+    ) -> Result<BTreeMap<MPath, Option<FileChange>>, Error> {
         let mut res = btreemap! {};
 
         for (path, content) in files {
@@ -951,10 +887,7 @@ mod tests {
                     let size = content.len();
                     let content =
                         FileContents::Bytes(Bytes::copy_from_slice(content.as_bytes())).into_blob();
-                    let content_id = runtime
-                        .block_on_std(content.store(&ctx, repo.blobstore()))
-                        .unwrap();
-
+                    let content_id = content.store(&ctx, repo.blobstore()).await?;
                     let file_change = FileChange::new(content_id, file_type, size as u64, None);
                     res.insert(path, Some(file_change));
                 }
@@ -963,7 +896,7 @@ mod tests {
                 }
             }
         }
-        res
+        Ok(res)
     }
 
     #[async_trait]
@@ -1028,12 +961,11 @@ mod tests {
         }
     }
 
-    fn find_unode_history(
+    async fn find_unode_history(
         fb: FacebookInit,
-        runtime: &mut Runtime,
         repo: BlobRepo,
         start: UnodeEntry,
-    ) -> Vec<ChangesetId> {
+    ) -> Result<Vec<ChangesetId>, Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut q = VecDeque::new();
         q.push_back(start.clone());
@@ -1049,25 +981,20 @@ mod tests {
                     break;
                 }
             };
-            let linknode = runtime
-                .block_on(unode_entry.get_linknode(&ctx, &repo).compat())
-                .unwrap();
+            let linknode = unode_entry.get_linknode(&ctx, &repo).await?;
             history.push(linknode);
-            let parents = runtime
-                .block_on(unode_entry.get_parents(&ctx, &repo).compat())
-                .unwrap();
+            let parents = unode_entry.get_parents(&ctx, &repo).await?;
             q.extend(parents.into_iter().filter(|x| visited.insert(x.clone())));
         }
 
-        history
+        Ok(history)
     }
 
-    fn find_filenode_history(
+    async fn find_filenode_history(
         fb: FacebookInit,
-        runtime: &mut Runtime,
         repo: BlobRepo,
         start: HgFileNodeId,
-    ) -> Vec<ChangesetId> {
+    ) -> Result<Vec<ChangesetId>, Error> {
         let ctx = CoreContext::test_mock(fb);
 
         let mut q = VecDeque::new();
@@ -1085,24 +1012,26 @@ mod tests {
                 }
             };
 
-            let hg_linknode_fut = repo
+            let hg_linknode = repo
                 .get_filenode(ctx.clone(), &RepoPath::RootPath, filenode_id)
-                .map(|filenode_res| filenode_res.map(|filenode| filenode.linknode));
-            let hg_linknode = runtime.block_on(hg_linknode_fut).unwrap();
-            let hg_linknode = hg_linknode.do_not_handle_disabled_filenodes().unwrap();
-            let linknode = runtime
-                .block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_linknode))
-                .unwrap()
+                .compat()
+                .await?
+                .map(|filenode| filenode.linknode)
+                .do_not_handle_disabled_filenodes()?;
+            let linknode = repo
+                .get_bonsai_from_hg(ctx.clone(), hg_linknode)
+                .compat()
+                .await?
                 .unwrap();
             history.push(linknode);
 
-            let mf_fut = HgBlobManifest::load(
+            let mf = HgBlobManifest::load(
                 &ctx,
                 repo.blobstore(),
                 HgManifestId::new(filenode_id.into_nodehash()),
-            );
-
-            let mf = runtime.block_on(mf_fut.boxed().compat()).unwrap().unwrap();
+            )
+            .await?
+            .unwrap();
 
             q.extend(
                 mf.p1()
@@ -1118,23 +1047,20 @@ mod tests {
             );
         }
 
-        history
+        Ok(history)
     }
 
-    fn fetch_root_filenode_id(
+    async fn fetch_root_filenode_id(
         fb: FacebookInit,
-        runtime: &mut Runtime,
         repo: BlobRepo,
         bcs_id: ChangesetId,
-    ) -> HgFileNodeId {
+    ) -> Result<HgFileNodeId, Error> {
         let ctx = CoreContext::test_mock(fb);
-        let hg_cs_id = runtime
-            .block_on(repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id))
-            .unwrap();
-        let hg_cs = runtime
-            .block_on_std(hg_cs_id.load(&ctx, repo.blobstore()))
-            .unwrap();
-
-        HgFileNodeId::new(hg_cs.manifestid().into_nodehash())
+        let hg_cs_id = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+            .compat()
+            .await?;
+        let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await?;
+        Ok(HgFileNodeId::new(hg_cs.manifestid().into_nodehash()))
     }
 }

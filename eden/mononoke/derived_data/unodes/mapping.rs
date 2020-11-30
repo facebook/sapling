@@ -177,8 +177,10 @@ mod test {
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::{compat::Stream01CompatExt, future, Future, Stream, TryStreamExt};
-    use futures_old::{Future as _, Stream as _};
+    use futures::{
+        compat::{Future01CompatExt, Stream01CompatExt},
+        future, Future, Stream, TryStreamExt,
+    };
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use revset::AncestorsNodeStream;
@@ -235,17 +237,17 @@ mod test {
     ) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> {
         let master_book = BookmarkName::new("master").unwrap();
         repo.get_bonsai_bookmark(ctx.clone(), &master_book)
-            .compat()
-            .map(move |maybe_bcs_id| {
+            .map_ok(move |maybe_bcs_id| {
                 let bcs_id = maybe_bcs_id.unwrap();
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
+                    .compat()
                     .and_then(move |new_bcs_id| {
                         repo.get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
-                            .map(move |hg_cs_id| (new_bcs_id, hg_cs_id))
+                            .compat()
+                            .map_ok(move |hg_cs_id| (new_bcs_id, hg_cs_id))
                     })
             })
-            .flatten_stream()
-            .compat()
+            .try_flatten_stream()
     }
 
     async fn verify_repo<F>(fb: FacebookInit, repo: F)
