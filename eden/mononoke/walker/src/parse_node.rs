@@ -6,7 +6,8 @@
  */
 
 use crate::graph::{
-    AliasKey, AliasType, Node, NodeType, PathKey, UnitKey, UnodeFlags, UnodeKey, WrappedPath,
+    AliasKey, AliasType, FastlogKey, Node, NodeType, PathKey, UnitKey, UnodeFlags, UnodeKey,
+    WrappedPath,
 };
 
 use anyhow::{format_err, Error};
@@ -63,6 +64,14 @@ impl FromStr for PathKey<HgFileNodeId> {
         let path = check_and_build_path(NodeType::HgFileNode, &parts)?;
         let id = HgFileNodeId::from_str(parts[0])?;
         Ok(Self { id, path })
+    }
+}
+
+impl FromStr for FastlogKey<FileUnodeId> {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let inner = FileUnodeId::from_str(s)?;
+        Ok(FastlogKey { inner })
     }
 }
 
@@ -282,6 +291,12 @@ mod tests {
                         NODE_SEP, SAMPLE_BLAKE2
                     ))?
                     .get_type()
+                );
+            }
+            NodeType::FastlogFile => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!("FastlogFile{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
                 );
             }
             NodeType::Fsnode => {

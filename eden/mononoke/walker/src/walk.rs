@@ -6,8 +6,8 @@
  */
 
 use crate::graph::{
-    AliasKey, EdgeType, FileContentData, Node, NodeData, NodeType, PathKey, UnodeFlags, UnodeKey,
-    WrappedPath,
+    AliasKey, EdgeType, FastlogKey, FileContentData, Node, NodeData, NodeType, PathKey, UnodeFlags,
+    UnodeKey, UnodeManifestEntry, WrappedPath,
 };
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
 
@@ -26,6 +26,7 @@ use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
+use fastlog::{fetch_fastlog_batch_by_unode_id, RootFastlog};
 use filestore::{self, Alias};
 use fsnodes::RootFsnodeId;
 use futures::{
@@ -246,6 +247,30 @@ async fn blame_step<V: VisitOne>(
             edges,
         ))
     }
+}
+
+async fn fastlog_file_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    id: &FastlogKey<FileUnodeId>,
+    _path: Option<&WrappedPath>,
+) -> Result<StepOutput, Error> {
+    let log =
+        fetch_fastlog_batch_by_unode_id(ctx, repo.blobstore(), &UnodeManifestEntry::Leaf(id.inner))
+            .await?;
+    let mut edges = vec![];
+    if let Some(log) = &log {
+        for (cs_id, _offsets) in log.latest() {
+            checker.add_edge(&mut edges, EdgeType::FastlogFileToChangeset, || {
+                Node::Changeset(*cs_id)
+            });
+        }
+    }
+    Ok(StepOutput(
+        checker.step_data(NodeType::FastlogFile, || NodeData::FastlogFile(log)),
+        edges,
+    ))
 }
 
 async fn bonsai_changeset_info_mapping_step<V: VisitOne>(
@@ -838,9 +863,25 @@ async fn bonsai_to_unode_mapping_step<V: VisitOne>(
         }
     }
 
+    let mut walk_fastlog = checker.with_fastlog && root_unode_id.is_some();
+
+    // If we need fastlog, need to make sure its derived also
+    if walk_fastlog && !is_derived::<RootFastlog>(ctx, repo, bcs_id, enable_derive).await? {
+        walk_fastlog = false;
+        // Check if we should still walk the Unode even without fastlog
+        if checker.is_public(ctx, &bcs_id).await? {
+            // Do not proceed with step into unodes as public commit should have fastlog being derived
+            // Private commits do not usually have fastlog, so they are ok to continue.
+            root_unode_id = None;
+        }
+    }
+
     let mut flags = UnodeFlags::default();
     if walk_blame {
         flags |= UnodeFlags::BLAME;
+    }
+    if walk_fastlog {
+        flags |= UnodeFlags::FASTLOG;
     }
 
     if let Some(root_unode_id) = root_unode_id {
@@ -886,12 +927,26 @@ async fn unode_file_step<V: VisitOne>(
     let walk_blame = checker.with_blame
         && (key.flags.contains(UnodeFlags::BLAME) || checker.is_public(ctx, &linked_cs_id).await?);
 
+    let walk_fastlog = checker.with_fastlog
+        && (key.flags.contains(UnodeFlags::FASTLOG)
+            || checker.is_public(ctx, &linked_cs_id).await?);
+
     let mut flags = UnodeFlags::default();
     if walk_blame {
         flags |= UnodeFlags::BLAME;
         checker.add_edge(&mut edges, EdgeType::UnodeFileToBlame, || {
             Node::Blame(BlameId::from(key.inner))
         });
+    }
+    if walk_fastlog {
+        flags |= UnodeFlags::FASTLOG;
+        let path = &path;
+        checker.add_edge_with_path(
+            &mut edges,
+            EdgeType::UnodeFileToFastlogFile,
+            || Node::FastlogFile(FastlogKey::new(key.inner)),
+            || path.cloned(),
+        );
     }
 
     checker.add_edge(&mut edges, EdgeType::UnodeFileToLinkedChangeset, || {
@@ -942,6 +997,14 @@ async fn unode_manifest_step<V: VisitOne>(
         && (key.flags.contains(UnodeFlags::BLAME) || checker.is_public(ctx, &linked_cs_id).await?)
     {
         flags |= UnodeFlags::BLAME;
+    }
+
+    // Check if we stepped from unode for non-public commit to unode for public, so can enable fastlog if required
+    if checker.with_fastlog
+        && (key.flags.contains(UnodeFlags::FASTLOG)
+            || checker.is_public(ctx, &linked_cs_id).await?)
+    {
+        flags |= UnodeFlags::FASTLOG;
     }
 
     for p in unode_manifest.parents() {
@@ -1171,6 +1234,7 @@ struct Checker<V: VisitOne> {
     visitor: V,
     phases_store: Arc<dyn Phases>,
     with_blame: bool,
+    with_fastlog: bool,
 }
 
 impl<V: VisitOne> Checker<V> {
@@ -1320,6 +1384,9 @@ where
                 with_blame: include_edge_types
                     .iter()
                     .any(|e| e.outgoing_type() == NodeType::Blame),
+                with_fastlog: include_edge_types
+                    .iter()
+                    .any(|e| e.outgoing_type() == NodeType::FastlogFile),
                 include_edge_types,
                 always_emit_edge_types,
                 keep_edge_paths,
@@ -1461,6 +1528,9 @@ where
         }
         Node::DeletedManifestMapping(bcs_id) => {
             deleted_manifest_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
+        }
+        Node::FastlogFile(id) => {
+            fastlog_file_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await
         }
         Node::Fsnode(id) => fsnode_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await,
         Node::FsnodeMapping(bcs_id) => {

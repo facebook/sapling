@@ -21,6 +21,7 @@ context = { path = "../server/context" }
 deleted_files_manifest = { path = "../derived_data/deleted_files_manifest" }
 derived_data = { path = "../derived_data" }
 derived_data_filenodes = { path = "../derived_data/filenodes" }
+fastlog = { path = "../derived_data/fastlog" }
 filenodes = { path = "../filenodes" }
 filestore = { path = "../filestore" }
 fsnodes = { path = "../derived_data/fsnodes" }

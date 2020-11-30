@@ -14,12 +14,14 @@ use changeset_info::ChangesetInfo;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
+use fastlog::{unode_entry_to_fastlog_batch_key, RootFastlog};
 use filenodes::FilenodeInfo;
 use filestore::Alias;
 use fsnodes::RootFsnodeId;
 use futures::stream::BoxStream;
 use hash_memo::EagerHashMemoizer;
 use internment::ArcIntern;
+use manifest::Entry;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{
     blobs::{HgBlobChangeset, HgBlobManifest},
@@ -28,6 +30,7 @@ use mercurial_types::{
 use mononoke_types::{
     blame::Blame,
     deleted_files_manifest::DeletedManifest,
+    fastlog_batch::FastlogBatch,
     fsnode::Fsnode,
     skeleton_manifest::SkeletonManifest,
     unode::{FileUnode, ManifestUnode},
@@ -195,7 +198,7 @@ bitflags! {
     }
 }
 
-/// Not all unodes should attempt to traverse to blame
+/// Not all unodes should attempt to traverse blame or fastlog
 /// e.g. a unode for non-public commit is not expected to have it
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UnodeKey<T> {
@@ -210,6 +213,30 @@ impl<T: MononokeId> UnodeKey<T> {
 
     fn sampling_fingerprint(&self) -> u64 {
         self.inner.sampling_fingerprint()
+    }
+}
+
+pub type UnodeManifestEntry = Entry<ManifestUnodeId, FileUnodeId>;
+
+/// newtype so we can implement blobstore_key()
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FastlogKey<T> {
+    pub inner: T,
+}
+
+impl<T: MononokeId> FastlogKey<T> {
+    fn sampling_fingerprint(&self) -> u64 {
+        self.inner.sampling_fingerprint()
+    }
+
+    pub fn new(inner: T) -> Self {
+        Self { inner }
+    }
+}
+
+impl FastlogKey<FileUnodeId> {
+    fn blobstore_key(&self) -> String {
+        unode_entry_to_fastlog_batch_key(&UnodeManifestEntry::Leaf(self.inner))
     }
 }
 
@@ -243,6 +270,7 @@ create_graph!(
             ChangesetInfoMapping,
             DeletedManifest,
             DeletedManifestMapping,
+            FastlogFile,
             Fsnode,
             FsnodeMapping,
             SkeletonManifest,
@@ -339,6 +367,11 @@ create_graph!(
         FsnodeId,
         [ChildFsnode(Fsnode), FileContent]
     ),
+    (
+        FastlogFile,
+        FastlogKey<FileUnodeId>,
+        [Changeset]
+    ),
     (FsnodeMapping, ChangesetId, [RootFsnode(Fsnode)]),
     (
         SkeletonManifest,
@@ -349,7 +382,7 @@ create_graph!(
     (
         UnodeFile,
         UnodeKey<FileUnodeId>,
-        [Blame, FileContent, LinkedChangeset(Changeset), UnodeFileParent(UnodeFile)]
+        [Blame, FastlogFile, FileContent, LinkedChangeset(Changeset), UnodeFileParent(UnodeFile)]
     ),
     (
         UnodeManifest,
@@ -394,6 +427,7 @@ impl NodeType {
             NodeType::ChangesetInfoMapping => Some(ChangesetInfo::NAME),
             NodeType::DeletedManifest => Some(RootDeletedManifestId::NAME),
             NodeType::DeletedManifestMapping => Some(RootDeletedManifestId::NAME),
+            NodeType::FastlogFile => Some(RootFastlog::NAME),
             NodeType::Fsnode => Some(RootFsnodeId::NAME),
             NodeType::FsnodeMapping => Some(RootFsnodeId::NAME),
             NodeType::SkeletonManifest => Some(RootSkeletonManifestId::NAME),
@@ -552,6 +586,7 @@ pub enum NodeData {
     ChangesetInfoMapping(Option<ChangesetId>),
     DeletedManifest(Option<DeletedManifest>),
     DeletedManifestMapping(Option<DeletedManifestId>),
+    FastlogFile(Option<FastlogBatch>),
     Fsnode(Fsnode),
     FsnodeMapping(Option<FsnodeId>),
     SkeletonManifest(Option<SkeletonManifest>),
@@ -587,6 +622,7 @@ impl Node {
             Node::ChangesetInfoMapping(k) => k.blobstore_key(),
             Node::DeletedManifest(k) => k.blobstore_key(),
             Node::DeletedManifestMapping(k) => k.blobstore_key(),
+            Node::FastlogFile(k) => k.blobstore_key(),
             Node::Fsnode(k) => k.blobstore_key(),
             Node::FsnodeMapping(k) => k.blobstore_key(),
             Node::SkeletonManifest(k) => k.blobstore_key(),
@@ -622,6 +658,7 @@ impl Node {
             Node::ChangesetInfoMapping(_) => None,
             Node::DeletedManifest(_) => None,
             Node::DeletedManifestMapping(_) => None,
+            Node::FastlogFile(_) => None,
             Node::Fsnode(_) => None,
             Node::FsnodeMapping(_) => None,
             Node::SkeletonManifest(_) => None,
@@ -658,6 +695,7 @@ impl Node {
             Node::ChangesetInfoMapping(k) => Some(k.sampling_fingerprint()),
             Node::DeletedManifest(k) => Some(k.sampling_fingerprint()),
             Node::DeletedManifestMapping(k) => Some(k.sampling_fingerprint()),
+            Node::FastlogFile(k) => Some(k.sampling_fingerprint()),
             Node::Fsnode(k) => Some(k.sampling_fingerprint()),
             Node::FsnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::SkeletonManifest(k) => Some(k.sampling_fingerprint()),
@@ -753,7 +791,7 @@ mod tests {
         // list, otherwise it won't get scrubbed and thus you would be unaware of different representation
         // in different stores
         let grandfathered: HashSet<&'static str> =
-            HashSet::from_iter(vec!["fastlog", "git_trees"].into_iter());
+            HashSet::from_iter(vec!["git_trees"].into_iter());
         let mut missing = HashSet::new();
         for t in &a {
             if s.contains(t.as_str()) {
