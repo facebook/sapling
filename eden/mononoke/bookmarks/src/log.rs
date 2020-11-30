@@ -18,7 +18,7 @@ use sql::mysql_async::prelude::{ConvIr, FromValue};
 use sql::mysql_async::{FromValueError, Value};
 
 /// Entry that describes an update to a bookmark
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BookmarkUpdateLogEntry {
     /// Number that sets a total order on single bookmark updates. It can be used to fetch
     /// new log entries

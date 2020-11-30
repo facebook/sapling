@@ -423,6 +423,7 @@ fn log_processed_entry_to_scuba(
     attempts: RetryAttemptsCount,
     duration: Duration,
     queue_size: QueueSize,
+    combined_from: Option<i64>,
 ) {
     let entry = log_entry.id;
     let book = format!("{}", log_entry.bookmark_name);
@@ -435,6 +436,10 @@ fn log_processed_entry_to_scuba(
         .add("reason", reason)
         .add("attempts", attempts.0)
         .add("duration", duration.as_millis() as i64);
+
+    if let Some(combined_from) = combined_from {
+        scuba_sample.add("combined_from", combined_from);
+    }
 
     match error {
         Some(error) => {
@@ -459,6 +464,14 @@ fn log_processed_entries_to_scuba(
 ) {
     let n: f64 = entries.len() as f64;
     let individual_duration = duration.div_f64(n);
+
+    let combined_from = if entries.len() == 1 {
+        // Set combined_from to None if we synced a single entry
+        // This will make it easier to find entries that were batched
+        None
+    } else {
+        entries.get(0).map(|entry| entry.id)
+    };
     entries.iter().for_each(|entry| {
         log_processed_entry_to_scuba(
             entry,
@@ -467,6 +480,7 @@ fn log_processed_entries_to_scuba(
             attempts,
             individual_duration,
             queue_size,
+            combined_from,
         )
     });
 }
@@ -758,8 +772,11 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             .await?;
             if let Some(log_entry) = maybe_log_entry {
                 let (stats, res) = async {
+                    let batches = bundle_preparer
+                        .prepare_batches(&ctx, vec![log_entry.clone()])
+                        .await?;
                     let mut combined_entries = bundle_preparer
-                        .prepare_bundles(&ctx, vec![log_entry.clone()], &mut overlay)
+                        .prepare_bundles(&ctx, batches, &mut overlay)
                         .await?;
 
                     let combined_entry = combined_entries.remove(0);
@@ -794,9 +811,6 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             let bundle_buffer_size =
                 args::get_usize_opt(&sub_m, "bundle-prefetch").unwrap_or(0) + 1;
             let combine_bundles = args::get_u64_opt(&sub_m, "combine-bundles").unwrap_or(1);
-            if combine_bundles != 1 {
-                panic!("For now, we don't allow combining bundles. See T43929272 for details");
-            }
             let loop_forever = sub_m.is_present("loop-forever");
             let mutable_counters =
                 args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches).await?;
@@ -835,6 +849,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             let (start_id, (bundle_preparer, mut overlay, globalrev_syncer)) =
                 try_join(counter, repo_parts).await?;
 
+            borrowed!(bundle_preparer: &BundlePreparer);
             let s = loop_over_log_entries(
                 &ctx,
                 &bookmarks,
@@ -856,15 +871,16 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                     future::ready(Ok(Some(entry_vec)))
                 }
             })
-            .map_err(|cause| AnonymousError { cause })
-            .map_ok(move |entries: Vec<BookmarkUpdateLogEntry>| {
-                bundle_preparer.prepare_bundles(&ctx, entries, &mut overlay)
+            .map(move |res_entries| async move {
+                let entries = res_entries?;
+                bundle_preparer.prepare_batches(&ctx, entries).await
             })
+            .buffered(bundle_buffer_size)
+            .map_err(|cause| AnonymousError { cause })
+            .map_ok(move |batches| bundle_preparer.prepare_bundles(&ctx, batches, &mut overlay))
             .map(|res| async move {
-                match res {
-                    Ok(f) => f.await,
-                    Err(err) => Err(err),
-                }
+                let f = res?;
+                f.await
             })
             .buffered(bundle_buffer_size)
             .map_ok(|vec| stream::iter(vec.into_iter().map(Ok)))
