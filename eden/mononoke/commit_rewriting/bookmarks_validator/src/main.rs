@@ -185,6 +185,7 @@ async fn validate<M: SyncedCommitMapping + Clone + 'static>(
             &ctx,
             &syncers,
             &large_bookmark,
+            &large_cs_id,
             &small_cs_id,
             max_log_records,
             max_delay_secs,
@@ -208,6 +209,7 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     syncers: &Syncers<M>,
     large_bookmark: &BookmarkName,
+    maybe_large_cs_id: &Option<ChangesetId>,
     maybe_small_cs_id: &Option<ChangesetId>,
     max_log_records: u32,
     max_delay_secs: u32,
@@ -228,6 +230,19 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
         )
         .try_collect()
         .await?;
+
+    // check_large_bookmark_history is called after current value of large bookmark (i.e.
+    // maybe_large_cs_id) was fetched. That means that log_entries might contain newer bookmark
+    // update log entries, so let's remove all the bookmark update log entries that are newer than
+    // maybe_large_cs_id.
+    let log_entries = log_entries
+        .into_iter()
+        .skip_while(|(book_val, _, _)| book_val != maybe_large_cs_id)
+        .collect::<Vec<_>>();
+    if log_entries.is_empty() {
+        // We can't find the value of large bookmark in bookmark update log.
+        return Ok(false);
+    }
 
     if let Some((_, _, latest_timestamp)) = log_entries.get(0) {
         // Remap large repo commits into small repo commits
@@ -307,6 +322,7 @@ mod tests {
 
     use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext};
     use cross_repo_sync_test_utils::init_small_large_repo;
+    use mononoke_types::DateTime;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 
     #[fbinit::compat_test]
@@ -314,14 +330,17 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _) = init_small_large_repo(&ctx).await?;
         let small_to_large = &syncers.small_to_large;
+        let large_repo = small_to_large.get_large_repo();
         let small_repo = small_to_large.get_small_repo();
         let small_master = resolve_cs_id(&ctx, small_repo, "master").await?;
         // Arbitrary large number
         let max_delay_secs = 10000000;
+        let large_master = resolve_cs_id(&ctx, large_repo, "master").await?;
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
             &BookmarkName::new("master")?,
+            &Some(large_master),
             &Some(small_master),
             100,
             max_delay_secs,
@@ -334,10 +353,12 @@ mod tests {
         bookmark(&ctx, &large_repo, "master")
             .set_to("premove")
             .await?;
+        let large_master = resolve_cs_id(&ctx, large_repo, "master").await?;
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
             &BookmarkName::new("master")?,
+            &Some(large_master),
             &Some(small_master),
             100,
             max_delay_secs,
@@ -350,6 +371,7 @@ mod tests {
             &ctx,
             &syncers,
             &BookmarkName::new("master")?,
+            &Some(large_master),
             &Some(small_master),
             1,
             max_delay_secs,
@@ -367,6 +389,7 @@ mod tests {
             &ctx,
             &syncers,
             &BookmarkName::new("master")?,
+            &Some(large_master),
             &Some(cs_id),
             100,
             max_delay_secs,
@@ -410,10 +433,12 @@ mod tests {
         // Since all commits were from another repo, large repo's master still remaps
         // to small repo master, so it's in history
         let max_delay_secs = 10000000;
+        let large_master = resolve_cs_id(&ctx, large_repo, "master").await?;
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
             &BookmarkName::new("master")?,
+            &Some(large_master),
             &Some(small_master),
             1,
             max_delay_secs,
@@ -431,10 +456,12 @@ mod tests {
                 .await?;
             bookmark(&ctx, &large_repo, "master").set_to(cs_id).await?;
         }
+        let large_master = resolve_cs_id(&ctx, large_repo, "master").await?;
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
             &BookmarkName::new("master")?,
+            &Some(large_master),
             &Some(small_master),
             1,
             max_delay_secs,
@@ -468,10 +495,12 @@ mod tests {
 
         // Bookmark was recently created - it's ok if it's not present in small repo
         let max_delay_secs = 10000000;
+        let large_master = resolve_cs_id(&ctx, large_repo, "master").await?;
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
             &BookmarkName::new("newbook")?,
+            &Some(large_master),
             &None,
             5,
             max_delay_secs,
@@ -484,6 +513,7 @@ mod tests {
             &ctx,
             &syncers,
             &BookmarkName::new("master")?,
+            &Some(large_master),
             &None,
             5,
             max_delay_secs,
@@ -510,16 +540,69 @@ mod tests {
 
         // Recently deleted - should be in history
         let max_delay_secs = 10000000;
+        let large_master = resolve_cs_id(&ctx, large_repo, "master").await?;
         let in_history = check_large_bookmark_history(
             &ctx,
             &syncers,
             &BookmarkName::new("master")?,
+            &Some(large_master),
             &None,
             2,
             max_delay_secs,
         )
         .await?;
         assert!(in_history);
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_check_large_bookmark_history_after_bookmark_moved(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let (syncers, _) = init_small_large_repo(&ctx).await?;
+        let small_to_large = &syncers.small_to_large;
+        let small_repo = small_to_large.get_small_repo();
+        let large_repo = small_to_large.get_large_repo();
+
+        let small_master = resolve_cs_id(&ctx, small_repo, "master").await?;
+
+        // Wait a little bit
+        tokio::time::delay_for(Duration::from_secs(2)).await;
+
+        // Move a bookmark in the large repo
+        let old_large_master = resolve_cs_id(&ctx, large_repo, "master").await?;
+        let new_master = CreateCommitContext::new(&ctx, &large_repo, vec![old_large_master])
+            .add_file("prefix/somefile", "somecontent")
+            .set_author_date(DateTime::now())
+            .commit()
+            .await?;
+        bookmark(&ctx, &large_repo, "master")
+            .set_to(new_master)
+            .await?;
+        syncers
+            .large_to_small
+            .sync_commit(
+                &ctx,
+                new_master,
+                CandidateSelectionHint::Only,
+                CommitSyncContext::Tests,
+            )
+            .await?;
+
+        let max_delay_secs = 1;
+        let in_history = check_large_bookmark_history(
+            &ctx,
+            &syncers,
+            &BookmarkName::new("master")?,
+            &Some(old_large_master),
+            &Some(small_master),
+            100,
+            max_delay_secs,
+        )
+        .await?;
+        assert!(in_history);
+
         Ok(())
     }
 }
