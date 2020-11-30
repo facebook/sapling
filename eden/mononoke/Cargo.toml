@@ -145,6 +145,7 @@ redactedblobstore = { path = "blobstore/redactedblobstore" }
 revset = { path = "revset" }
 scuba_ext = { path = "common/scuba_ext" }
 segmented_changelog = { path = "segmented_changelog" }
+skeleton_manifest = { path = "derived_data/skeleton_manifest" }
 skiplist = { path = "reachabilityindex/skiplist" }
 sql_construct = { path = "common/sql_construct" }
 sql_ext = { path = "common/rust/sql_ext" }

@@ -55,6 +55,7 @@ mod skiplist_subcommand;
 mod subcommand_blame;
 mod subcommand_deleted_manifest;
 mod subcommand_fsnodes;
+mod subcommand_skeleton_manifests;
 mod subcommand_unodes;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
@@ -86,6 +87,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(derived_data::build_subcommand())
         .subcommand(rsync::build_subcommand())
         .subcommand(pushrebase::build_subcommand())
+        .subcommand(subcommand_skeleton_manifests::build_subcommand())
 }
 
 #[fbinit::main]
@@ -173,6 +175,12 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (pushrebase::PUSHREBASE, Some(sub_m)) => {
                 pushrebase::subcommand_pushrebase(fb, logger, &matches, sub_m).await
+            }
+            (subcommand_skeleton_manifests::SKELETON_MANIFESTS, Some(sub_m)) => {
+                subcommand_skeleton_manifests::subcommand_skeleton_manifests(
+                    fb, logger, &matches, sub_m,
+                )
+                .await
             }
             _ => Err(SubcommandError::InvalidArgs),
         }

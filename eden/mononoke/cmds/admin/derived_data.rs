@@ -24,6 +24,7 @@ use futures::{
 use manifest::ManifestOps;
 use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::{ChangesetId, ContentId, FileType, MPath};
+use skeleton_manifest::RootSkeletonManifestId;
 use slog::Logger;
 use std::{
     collections::{HashMap, HashSet},
@@ -39,11 +40,13 @@ const SUBCOMMAND_VERIFY_MANIFESTS: &str = "verify-manifests";
 
 const ARG_HASH_OR_BOOKMARK: &str = "hash-or-bookmark";
 const ARG_TYPE: &str = "type";
+const ARG_IF_DERIVED: &str = "if-derived";
 
 const MANIFEST_DERIVED_DATA_TYPES: &'static [&'static str] = &[
     RootFsnodeId::NAME,
     MappedHgChangesetId::NAME,
     RootUnodeManifestId::NAME,
+    RootSkeletonManifestId::NAME,
 ];
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
@@ -83,6 +86,11 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .help("(hg|bonsai) commit hash or bookmark")
                         .takes_value(true)
                         .required(true),
+                )
+                .arg(
+                    Arg::with_name(ARG_IF_DERIVED)
+                        .help("only verify the manifests if they are already derived")
+                        .long(ARG_IF_DERIVED),
                 ),
         )
 }
@@ -127,7 +135,16 @@ pub async fn subcommand_derived_data<'a>(
                         .collect::<Vec<_>>()
                 });
 
-            verify_manifests(ctx, repo, derived_data_types, hash_or_bookmark).await
+            let fetch_derived = arg_matches.is_present(ARG_IF_DERIVED);
+
+            verify_manifests(
+                ctx,
+                repo,
+                derived_data_types,
+                hash_or_bookmark,
+                fetch_derived,
+            )
+            .await
         }
         _ => Err(SubcommandError::InvalidArgs),
     }
@@ -168,6 +185,7 @@ async fn verify_manifests(
     repo: BlobRepo,
     derived_data_types: Vec<String>,
     hash_or_bookmark: String,
+    fetch_derived: bool,
 ) -> Result<(), SubcommandError> {
     let cs_id = csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
         .compat()
@@ -177,13 +195,16 @@ async fn verify_manifests(
     for ty in derived_data_types {
         if ty == RootFsnodeId::NAME {
             manifests.insert(ManifestType::Fsnodes);
-            futs.push(list_fsnodes(&ctx, &repo, cs_id).boxed());
+            futs.push(list_fsnodes(&ctx, &repo, cs_id, fetch_derived).boxed());
         } else if ty == RootUnodeManifestId::NAME {
             manifests.insert(ManifestType::Unodes);
-            futs.push(list_unodes(&ctx, &repo, cs_id).boxed());
+            futs.push(list_unodes(&ctx, &repo, cs_id, fetch_derived).boxed());
         } else if ty == MappedHgChangesetId::NAME {
             manifests.insert(ManifestType::Hg);
             futs.push(list_hg_manifest(&ctx, &repo, cs_id).boxed());
+        } else if ty == RootSkeletonManifestId::NAME {
+            manifests.insert(ManifestType::Skeleton);
+            futs.push(list_skeleton_manifest(&ctx, &repo, cs_id, fetch_derived).boxed());
         } else {
             return Err(anyhow!("unknown derived data manifest type").into());
         }
@@ -211,13 +232,16 @@ async fn verify_manifests(
 
 #[derive(Clone, Default)]
 struct FileContentValue {
-    values: Vec<(FileType, ContentId, ManifestType)>,
+    values: Vec<ManifestData>,
 }
 
 impl fmt::Display for FileContentValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for value in &self.values {
-            write!(f, "{}: {}, {})", value.2, value.0, value.1)?;
+        for (i, value) in self.values.iter().enumerate() {
+            if i > 0 {
+                write!(f, " ")?;
+            }
+            write!(f, "({})", value)?;
         }
         Ok(())
     }
@@ -228,7 +252,7 @@ impl FileContentValue {
         Self { values: vec![] }
     }
 
-    pub fn update(&mut self, val: (FileType, ContentId, ManifestType)) {
+    pub fn update(&mut self, val: ManifestData) {
         self.values.push(val);
     }
 
@@ -237,14 +261,23 @@ impl FileContentValue {
             return false;
         }
 
-        let manifest_types: HashSet<_> = self.values.iter().map(|item| &item.2).cloned().collect();
+        let manifest_types: HashSet<_> = self
+            .values
+            .iter()
+            .map(ManifestData::manifest_type)
+            .collect();
         if &manifest_types != expected_manifests {
             return false;
         }
-        let first = &self.values[0];
-        self.values
+        let contents: HashSet<_> = self
+            .values
             .iter()
-            .all(|item| first.0 == item.0 && first.1 == item.1)
+            .map(ManifestData::content)
+            .flatten()
+            .collect();
+        // Skeleton manifests have no content, so 0 is valid for them.
+        // Otherwise, we should have exactly one.
+        contents.len() <= 1
     }
 }
 
@@ -253,6 +286,15 @@ enum ManifestType {
     Fsnodes,
     Hg,
     Unodes,
+    Skeleton,
+}
+
+#[derive(Clone, Hash, Eq, PartialEq)]
+enum ManifestData {
+    Fsnodes(FileType, ContentId),
+    Hg(FileType, ContentId),
+    Unodes(FileType, ContentId),
+    Skeleton,
 }
 
 impl fmt::Display for ManifestType {
@@ -263,7 +305,56 @@ impl fmt::Display for ManifestType {
             Fsnodes => write!(f, "Fsnodes"),
             Hg => write!(f, "Hg"),
             Unodes => write!(f, "Unodes"),
+            Skeleton => write!(f, "Skeleton"),
         }
+    }
+}
+
+impl ManifestData {
+    fn manifest_type(&self) -> ManifestType {
+        use ManifestData::*;
+
+        match self {
+            Fsnodes(..) => ManifestType::Fsnodes,
+            Hg(..) => ManifestType::Hg,
+            Unodes(..) => ManifestType::Unodes,
+            Skeleton => ManifestType::Skeleton,
+        }
+    }
+
+    fn content(&self) -> Option<(FileType, ContentId)> {
+        use ManifestData::*;
+
+        match self {
+            Fsnodes(ty, id) | Hg(ty, id) | Unodes(ty, id) => Some((*ty, *id)),
+            Skeleton => None,
+        }
+    }
+}
+
+impl fmt::Display for ManifestData {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use ManifestData::*;
+        match &self {
+            Fsnodes(ty, id) | Hg(ty, id) | Unodes(ty, id) => {
+                write!(f, "{}: {}, {}", self.manifest_type(), ty, id)
+            }
+            Skeleton => write!(f, "{}: present", self.manifest_type()),
+        }
+    }
+}
+
+pub(crate) async fn derive_or_fetch<T: BonsaiDerived>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    csid: ChangesetId,
+    fetch_derived: bool,
+) -> Result<T, Error> {
+    if fetch_derived {
+        let value = T::fetch_derived(ctx, repo, &csid).await?;
+        value.ok_or_else(|| anyhow!("{} are not derived for {}", T::NAME, csid))
+    } else {
+        Ok(T::derive(ctx, repo, csid).await?)
     }
 }
 
@@ -271,7 +362,7 @@ async fn list_hg_manifest(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: ChangesetId,
-) -> Result<HashMap<MPath, (FileType, ContentId, ManifestType)>, Error> {
+) -> Result<HashMap<MPath, ManifestData>, Error> {
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .compat()
@@ -284,10 +375,27 @@ async fn list_hg_manifest(
         .map_ok(|(path, (ty, filenode_id))| async move {
             let filenode = filenode_id.load(ctx, repo.blobstore()).await?;
             let content_id = filenode.content_id();
-            let val = (ty, content_id, ManifestType::Hg);
+            let val = ManifestData::Hg(ty, content_id);
             Ok((path, val))
         })
         .try_buffer_unordered(100)
+        .try_collect()
+        .await
+}
+
+async fn list_skeleton_manifest(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+    fetch_derived: bool,
+) -> Result<HashMap<MPath, ManifestData>, Error> {
+    let root_skeleton_id =
+        derive_or_fetch::<RootSkeletonManifestId>(ctx, repo, cs_id, fetch_derived).await?;
+
+    let skeleton_id = root_skeleton_id.skeleton_manifest_id();
+    skeleton_id
+        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .map_ok(|(path, ())| (path, ManifestData::Skeleton))
         .try_collect()
         .await
 }
@@ -296,15 +404,16 @@ async fn list_fsnodes(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: ChangesetId,
-) -> Result<HashMap<MPath, (FileType, ContentId, ManifestType)>, Error> {
-    let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id).await?;
+    fetch_derived: bool,
+) -> Result<HashMap<MPath, ManifestData>, Error> {
+    let root_fsnode_id = derive_or_fetch::<RootFsnodeId>(ctx, repo, cs_id, fetch_derived).await?;
 
     let fsnode_id = root_fsnode_id.fsnode_id();
     fsnode_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .map_ok(|(path, fsnode)| {
             let (content_id, ty): (ContentId, FileType) = fsnode.into();
-            let val = (ty, content_id, ManifestType::Fsnodes);
+            let val = ManifestData::Fsnodes(ty, content_id);
             (path, val)
         })
         .try_collect()
@@ -315,19 +424,17 @@ async fn list_unodes(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: ChangesetId,
-) -> Result<HashMap<MPath, (FileType, ContentId, ManifestType)>, Error> {
-    let root_unode_id = RootUnodeManifestId::derive(ctx, repo, cs_id).await?;
+    fetch_derived: bool,
+) -> Result<HashMap<MPath, ManifestData>, Error> {
+    let root_unode_id =
+        derive_or_fetch::<RootUnodeManifestId>(ctx, repo, cs_id, fetch_derived).await?;
 
     let unode_id = root_unode_id.manifest_unode_id();
     unode_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .map_ok(|(path, unode_id)| async move {
             let unode = unode_id.load(ctx, repo.blobstore()).await?;
-            let val = (
-                *unode.file_type(),
-                *unode.content_id(),
-                ManifestType::Unodes,
-            );
+            let val = ManifestData::Unodes(*unode.file_type(), *unode.content_id());
             Ok((path, val))
         })
         .try_buffer_unordered(100)
