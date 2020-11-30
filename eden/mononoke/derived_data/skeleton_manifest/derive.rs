@@ -82,7 +82,7 @@ pub(crate) async fn derive_skeleton_manifest(
 async fn collect_skeleton_subentries(
     ctx: &CoreContext,
     blobstore: &RepoBlobstore,
-    parents: Vec<SkeletonManifestId>,
+    parents: &[SkeletonManifestId],
     subentries: BTreeMap<
         MPathElement,
         (
@@ -94,13 +94,13 @@ async fn collect_skeleton_subentries(
     // Load the parent skeleton manifests and collect their entries into a cache
     let mut dir_cache = HashMap::new();
     let mut parent_skeletons = parents
-        .into_iter()
+        .iter()
         .map({
             move |skeleton_id| async move {
                 skeleton_id
                     .load(ctx, blobstore)
                     .await
-                    .context(SkeletonManifestDerivationError::MissingParent(skeleton_id))
+                    .context(SkeletonManifestDerivationError::MissingParent(*skeleton_id))
             }
         })
         .collect::<FuturesUnordered<_>>();
@@ -176,7 +176,7 @@ async fn create_skeleton_manifest(
     tree_info: TreeInfo<SkeletonManifestId, (), Option<SkeletonManifestSummary>>,
 ) -> Result<(Option<SkeletonManifestSummary>, SkeletonManifestId)> {
     let entries =
-        collect_skeleton_subentries(ctx, blobstore, tree_info.parents, tree_info.subentries)
+        collect_skeleton_subentries(ctx, blobstore, &tree_info.parents, tree_info.subentries)
             .await?;
 
     // Build a summary of the entries and store it as the new skeleton
@@ -244,18 +244,23 @@ async fn create_skeleton_manifest(
     let skeleton_manifest = SkeletonManifest::new(entries, summary.clone());
     let blob = skeleton_manifest.into_blob();
     let skeleton_manifest_id = *blob.id();
-    let key = skeleton_manifest_id.blobstore_key();
-    let f = {
-        cloned!(ctx, blobstore);
-        async move { blobstore.put(&ctx, key, blob.into()).await }
-    };
 
-    match sender {
-        Some(sender) => sender
-            .unbounded_send(f.boxed())
-            .map_err(|err| format_err!("failed to send skeleton manifest future {}", err))?,
-        None => f.await?,
-    };
+    // Skeleton manifests are frequently unchanged.  If any of our parents
+    // have the same ID, there is no need to store this blob.
+    if !tree_info.parents.contains(&skeleton_manifest_id) {
+        let key = skeleton_manifest_id.blobstore_key();
+        let f = {
+            cloned!(ctx, blobstore);
+            async move { blobstore.put(&ctx, key, blob.into()).await }
+        };
+
+        match sender {
+            Some(sender) => sender
+                .unbounded_send(f.boxed())
+                .map_err(|err| format_err!("failed to send skeleton manifest future {}", err))?,
+            None => f.await?,
+        };
+    }
     Ok((Some(summary), skeleton_manifest_id))
 }
 
