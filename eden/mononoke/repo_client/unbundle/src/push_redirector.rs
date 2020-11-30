@@ -38,7 +38,6 @@ use futures::{
     future::{try_join_all, FutureExt},
     try_join,
 };
-use futures_01_ext::{try_boxfuture, FutureExt as OldFutureExt};
 use hooks::{CrossRepoPushSource, HookRejection};
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::CommitSyncConfig;
@@ -384,13 +383,16 @@ impl PushRedirector {
                 hg_replay_data.override_convertor(Arc::new({
                     cloned!(large_to_small);
                     move |large_cs_id| {
-                        let small_cs_id =
-                            try_boxfuture!(large_to_small.get(&large_cs_id).ok_or_else(
-                                || format_err!("{} doesn't remap in small repo", large_cs_id)
-                            ));
-                        source_repo
-                            .get_hg_from_bonsai_changeset(ctx.clone(), *small_cs_id)
-                            .boxify()
+                        let small_cs_id = large_to_small.get(&large_cs_id).ok_or_else(|| {
+                            format_err!("{} doesn't remap in small repo", large_cs_id)
+                        });
+                        match small_cs_id {
+                            Err(err) => async move { Err(err) }.boxed(),
+                            Ok(id) => source_repo
+                                .get_hg_from_bonsai_changeset(ctx.clone(), *id)
+                                .compat()
+                                .boxed(),
+                        }
                     }
                 }));
                 hg_replay_data

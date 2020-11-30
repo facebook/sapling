@@ -100,14 +100,14 @@ pub struct SessionLfsParams {
 }
 
 pub async fn create_getbundle_response(
-    ctx: CoreContext,
-    blobrepo: BlobRepo,
-    reponame: String,
+    ctx: &CoreContext,
+    blobrepo: &BlobRepo,
+    reponame: &str,
     common: Vec<HgChangesetId>,
-    heads: Vec<HgChangesetId>,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    heads: &[HgChangesetId],
+    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     return_phases: PhasesPart,
-    lfs_params: SessionLfsParams,
+    lfs_params: &SessionLfsParams,
     drafts_in_bundles_policy: DraftsInBundlesPolicy,
 ) -> Result<Vec<PartEncodeBuilder>, Error> {
     let return_phases = return_phases == PhasesPart::Yes;
@@ -119,12 +119,12 @@ pub async fn create_getbundle_response(
     let phases = blobrepo.get_phases();
     let (draft_commits, commits_to_send) = try_join!(
         find_new_draft_commits_and_derive_filenodes_for_public_roots(
-            &ctx, &blobrepo, &common, &heads, &phases
+            ctx, blobrepo, &common, heads, &phases
         ),
-        find_commits_to_send(&ctx, &blobrepo, &common, &heads, &lca_hint),
+        find_commits_to_send(ctx, blobrepo, &common, heads, &lca_hint),
     )?;
 
-    report_draft_commits(&ctx, &draft_commits);
+    report_draft_commits(ctx, &draft_commits);
 
     let mut parts = vec![];
     if heads_len != 0 {
@@ -134,25 +134,21 @@ pub async fn create_getbundle_response(
             drafts_in_bundles_policy == DraftsInBundlesPolicy::WithTreesAndFiles;
         let (maybe_manifests, maybe_filenodes): (Option<_>, Option<_>) =
             if should_include_trees_and_files {
-                let (manifests, filenodes) = get_manifests_and_filenodes(
-                    &ctx,
-                    &blobrepo,
-                    draft_commits.clone(),
-                    &lfs_params,
-                )
-                .await?;
-                report_manifests_and_filenodes(&ctx, reponame, manifests.len(), filenodes.iter());
+                let (manifests, filenodes) =
+                    get_manifests_and_filenodes(ctx, blobrepo, draft_commits.clone(), lfs_params)
+                        .await?;
+                report_manifests_and_filenodes(ctx, reponame, manifests.len(), filenodes.iter());
                 (Some(manifests), Some(filenodes))
             } else {
                 (None, None)
             };
 
         let cg_part = create_hg_changeset_part(
-            &ctx,
-            &blobrepo,
+            ctx,
+            blobrepo,
             commits_to_send.clone(),
             maybe_filenodes,
-            &lfs_params,
+            lfs_params,
         )
         .await?;
         parts.push(cg_part);
@@ -184,7 +180,7 @@ pub async fn create_getbundle_response(
 
     // Phases part has to be after the changegroup part.
     if return_phases {
-        let phase_heads = find_phase_heads(&ctx, &blobrepo, &heads, &phases).await?;
+        let phase_heads = find_phase_heads(ctx, blobrepo, heads, &phases).await?;
         parts.push(parts::phases_part(
             ctx.clone(),
             old_stream::iter_ok(phase_heads),
@@ -211,7 +207,7 @@ fn report_manifests_and_filenodes<
     FIter: IntoIterator<Item = (&'a MPath, &'a Vec<PreparedFilenodeEntry>)>,
 >(
     ctx: &CoreContext,
-    reponame: String,
+    reponame: &str,
     num_manifests: usize,
     filenodes: FIter,
 ) {
@@ -232,7 +228,7 @@ fn report_manifests_and_filenodes<
     );
     ctx.perf_counters()
         .add_to_counter(PerfCounterType::GetbundleNumManifests, num_manifests as i64);
-    STATS::manifests_returned.add_value(num_manifests as i64, (reponame.clone(),));
+    STATS::manifests_returned.add_value(num_manifests as i64, (reponame.to_owned(),));
 
     debug!(
         ctx.logger(),
@@ -246,15 +242,15 @@ fn report_manifests_and_filenodes<
         PerfCounterType::GetbundleFilenodesTotalWeight,
         total_filenodes_weight,
     );
-    STATS::filenodes_returned.add_value(num_filenodes, (reponame.clone(),));
-    STATS::filenodes_weight.add_value(total_filenodes_weight, (reponame,));
+    STATS::filenodes_returned.add_value(num_filenodes, (reponame.to_owned(),));
+    STATS::filenodes_weight.add_value(total_filenodes_weight, (reponame.to_owned(),));
 }
 
 async fn find_commits_to_send(
     ctx: &CoreContext,
     blobrepo: &BlobRepo,
     common: &HashSet<HgChangesetId>,
-    heads: &Vec<HgChangesetId>,
+    heads: &[HgChangesetId],
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
 ) -> Result<Vec<ChangesetId>, Error> {
     let common_heads: HashSet<_> = HashSet::from_iter(common.iter());

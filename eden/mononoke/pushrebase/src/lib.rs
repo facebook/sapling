@@ -60,11 +60,9 @@ use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, try_join, try_join_all, FutureExt, TryFutureExt},
-    stream::{self, StreamExt, TryStream, TryStreamExt},
+    future::{self, try_join, try_join_all, BoxFuture},
+    stream, FutureExt, StreamExt, TryFutureExt, TryStream, TryStreamExt,
 };
-use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt};
-use futures_old::Future as _;
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
 use mercurial_bundle_replay_data::BundleReplayData;
@@ -145,7 +143,7 @@ pub enum PushrebaseError {
 }
 
 type CsIdConvertor =
-    Arc<dyn Fn(ChangesetId) -> BoxFuture<HgChangesetId, Error> + Send + Sync + 'static>;
+    Arc<dyn Fn(ChangesetId) -> BoxFuture<'static, Result<HgChangesetId>> + Send + Sync + 'static>;
 /// Struct that contains data for hg sync replay
 #[derive(Clone)]
 pub struct HgReplayData {
@@ -162,13 +160,12 @@ impl HgReplayData {
         bundle2_id: RawBundle2Id,
         repo: BlobRepo,
     ) -> Self {
-        let cs_id_convertor: Arc<
-            dyn Fn(ChangesetId) -> BoxFuture<HgChangesetId, Error> + Send + Sync + 'static,
-        > = Arc::new({
+        let cs_id_convertor: CsIdConvertor = Arc::new({
             cloned!(ctx, repo);
             move |cs_id| {
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                    .boxify()
+                    .compat()
+                    .boxed()
             }
         });
 
@@ -190,7 +187,7 @@ impl HgReplayData {
         if let Some(rebased_changesets) = rebased_changesets {
             let timestamps = rebased_changesets.iter().map({
                 |(cs_id, (_, timestamp))| async move {
-                    let hg_cs_id = (self.cs_id_convertor)(*cs_id).compat().await?;
+                    let hg_cs_id = (self.cs_id_convertor)(*cs_id).await?;
                     Ok::<_, Error>((hg_cs_id, *timestamp))
                 }
             });
@@ -921,23 +918,20 @@ async fn create_rebased_changesets(
     }
 
     save_bonsai_changesets(rebased, ctx.clone(), repo.clone())
-        .map(move |_| {
-            (
-                remapping
-                    .get(&head)
-                    .map(|(cs, _)| cs)
-                    .cloned()
-                    .unwrap_or(head),
-                // `root` wasn't rebased, so let's remove it
-                remapping
-                    .into_iter()
-                    .filter(|(id_old, _)| *id_old != root)
-                    .collect(),
-            )
-        })
-        .from_err()
         .compat()
-        .await
+        .await?;
+    Ok((
+        remapping
+            .get(&head)
+            .map(|(cs, _)| cs)
+            .cloned()
+            .unwrap_or(head),
+        // `root` wasn't rebased, so let's remove it
+        remapping
+            .into_iter()
+            .filter(|(id_old, _)| *id_old != root)
+            .collect(),
+    ))
 }
 
 async fn rebase_changeset(

@@ -6,17 +6,18 @@
  */
 
 use crate::CommonHeads;
-use anyhow::Error;
+use anyhow::{Context, Result};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::BookmarkName;
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
-use failure_ext::FutureFailureErrorExt;
-use futures_01_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
-use futures_old::{Future, Stream};
-use futures_stats::Timed;
-use futures_util::{FutureExt, TryFutureExt};
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::try_join,
+    TryStreamExt,
+};
+use futures_stats::TimedTryFutureExt;
 use getbundle_response::{
     create_getbundle_response, DraftsInBundlesPolicy, PhasesPart, SessionLfsParams,
 };
@@ -72,60 +73,56 @@ impl UnbundleResponse {
         bundle
     }
 
-    fn generate_push_or_infinitepush_response(
+    async fn generate_push_or_infinitepush_response(
         changegroup_id: Option<PartId>,
         bookmark_ids: Vec<PartId>,
-    ) -> BoxFuture<Bytes, Error> {
+    ) -> Result<Bytes> {
         let mut bundle = Self::get_bundle_builder();
         if let Some(changegroup_id) = changegroup_id {
-            bundle.add_part(try_boxfuture!(parts::replychangegroup_part(
+            bundle.add_part(parts::replychangegroup_part(
                 parts::ChangegroupApplyResult::Success { heads_num_diff: 0 },
                 changegroup_id,
-            )));
+            )?);
         }
         for part_id in bookmark_ids {
-            bundle.add_part(try_boxfuture!(parts::replypushkey_part(true, part_id)));
+            bundle.add_part(parts::replypushkey_part(true, part_id)?);
         }
-        bundle
-            .build()
-            .map(|cursor| Bytes::from(cursor.into_inner()))
-            .boxify()
+        let cursor = bundle.build().compat().await?;
+        Ok(Bytes::from(cursor.into_inner()))
     }
 
-    fn generate_push_response_bytes(
-        _ctx: CoreContext,
+    async fn generate_push_response_bytes(
+        _ctx: &CoreContext,
         data: UnbundlePushResponse,
-    ) -> BoxFuture<Bytes, Error> {
+    ) -> Result<Bytes> {
         let UnbundlePushResponse {
             changegroup_id,
             bookmark_ids,
         } = data;
         Self::generate_push_or_infinitepush_response(changegroup_id, bookmark_ids)
+            .await
             .context("While preparing push response")
-            .from_err()
-            .boxify()
     }
 
-    fn generate_inifinitepush_response_bytes(
-        _ctx: CoreContext,
+    async fn generate_inifinitepush_response_bytes(
+        _ctx: &CoreContext,
         data: UnbundleInfinitePushResponse,
-    ) -> BoxFuture<Bytes, Error> {
+    ) -> Result<Bytes> {
         let UnbundleInfinitePushResponse { changegroup_id } = data;
         Self::generate_push_or_infinitepush_response(changegroup_id, vec![])
+            .await
             .context("While preparing infinitepush response")
-            .from_err()
-            .boxify()
     }
 
-    fn generate_pushrebase_response_bytes(
-        ctx: CoreContext,
+    async fn generate_pushrebase_response_bytes(
+        ctx: &CoreContext,
         data: UnbundlePushRebaseResponse,
-        repo: BlobRepo,
-        reponame: String,
+        repo: &BlobRepo,
+        reponame: &str,
         pushrebase_params: PushrebaseParams,
-        lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-        lfs_params: SessionLfsParams,
-    ) -> BoxFuture<Bytes, Error> {
+        lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
+        lfs_params: &SessionLfsParams,
+    ) -> Result<Bytes> {
         let UnbundlePushRebaseResponse {
             commonheads,
             pushrebased_rev,
@@ -138,138 +135,131 @@ impl UnbundleResponse {
         // should be the same, however they might be different if bookmark
         // suddenly moved before current pushrebase finished.
         let common = commonheads.heads;
-        let maybe_onto_head = repo.get_bookmark(ctx.clone(), &onto);
+        let maybe_onto_head = repo.get_bookmark(ctx.clone(), &onto).compat();
 
-        let pushrebased_hg_rev = repo.get_hg_from_bonsai_changeset(ctx.clone(), pushrebased_rev);
+        let pushrebased_hg_rev = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), pushrebased_rev)
+            .compat();
 
         let bookmark_reply_part = match bookmark_push_part_id {
-            Some(part_id) => Some(try_boxfuture!(parts::replypushkey_part(true, part_id))),
+            Some(part_id) => Some(parts::replypushkey_part(true, part_id)?),
             None => None,
         };
 
         let obsmarkers_part = match pushrebase_params.emit_obsmarkers {
-            true => try_boxfuture!(
-                obsolete::pushrebased_changesets_to_obsmarkers_part(
-                    ctx.clone(),
-                    &repo,
-                    pushrebased_changesets,
-                )
-                .transpose()
-            ),
+            true => obsolete::pushrebased_changesets_to_obsmarkers_part(
+                ctx.clone(),
+                &repo,
+                pushrebased_changesets,
+            )
+            .transpose()?,
             false => None,
         };
 
         let mut scuba_logger = ctx.scuba().clone();
-        maybe_onto_head
-            .join(pushrebased_hg_rev)
-            .and_then(move |(maybe_onto_head, pushrebased_hg_rev)| {
-                let mut heads = vec![];
-                if let Some(onto_head) = maybe_onto_head {
-                    heads.push(onto_head);
-                }
-                heads.push(pushrebased_hg_rev);
-                async move {
-                    create_getbundle_response(
-                        ctx,
-                        repo,
-                        reponame,
-                        common,
-                        heads,
-                        lca_hint,
-                        PhasesPart::Yes,
-                        lfs_params,
-                        // Note: pushrebase response can only ever respond
-                        // with public commits atm, so the value we are passing
-                        // here is inconsequential.
-                        DraftsInBundlesPolicy::CommitsOnly,
-                    )
-                    .await
-                }
-                .boxed()
-                .compat()
-            })
-            .and_then(move |mut cg_part_builder| {
-                cg_part_builder.extend(bookmark_reply_part.into_iter());
-                cg_part_builder.extend(obsmarkers_part.into_iter());
-                let compression = None;
-                create_bundle_stream(cg_part_builder, compression)
-                    .collect()
-                    .map(|chunks| {
-                        let mut total_capacity = 0;
-                        for c in chunks.iter() {
-                            total_capacity += c.len();
-                        }
+        let (stats, response_bytes) = async move {
+            let (maybe_onto_head, pushrebased_hg_rev) =
+                try_join(maybe_onto_head, pushrebased_hg_rev).await?;
 
-                        // TODO(stash): make push and pushrebase response streamable - T34090105
-                        let mut res = BytesMut::with_capacity(total_capacity);
-                        for c in chunks {
-                            res.extend_from_slice(&c);
-                        }
-                        res.freeze()
-                    })
-            })
-            .timed({
-                move |stats, result| {
-                    if result.is_ok() {
-                        scuba_logger
-                            .add_future_stats(&stats)
-                            .log_with_msg("Pushrebase: prepared the response", None);
-                    }
-                    Ok(())
-                }
-            })
-            .context("While preparing pushrebase response")
-            .from_err()
-            .boxify()
+            let mut heads = vec![];
+            if let Some(onto_head) = maybe_onto_head {
+                heads.push(onto_head);
+            }
+            heads.push(pushrebased_hg_rev);
+            let mut cg_part_builder = create_getbundle_response(
+                ctx,
+                repo,
+                reponame,
+                common,
+                &heads,
+                lca_hint,
+                PhasesPart::Yes,
+                lfs_params,
+                // Note: pushrebase response can only ever respond
+                // with public commits atm, so the value we are passing
+                // here is inconsequential.
+                DraftsInBundlesPolicy::CommitsOnly,
+            )
+            .await?;
+
+            cg_part_builder.extend(bookmark_reply_part.into_iter());
+            cg_part_builder.extend(obsmarkers_part.into_iter());
+            let compression = None;
+            let chunks = create_bundle_stream(cg_part_builder, compression)
+                .compat()
+                .try_collect::<Vec<_>>()
+                .await?;
+
+            let mut total_capacity = 0;
+            for c in chunks.iter() {
+                total_capacity += c.len();
+            }
+
+            // TODO(stash): make push and pushrebase response streamable - T34090105
+            let mut res = BytesMut::with_capacity(total_capacity);
+            for c in chunks {
+                res.extend_from_slice(&c);
+            }
+            Result::<_>::Ok(res.freeze())
+        }
+        .try_timed()
+        .await
+        .context("While preparing pushrebase response")?;
+
+        scuba_logger
+            .add_future_stats(&stats)
+            .log_with_msg("Pushrebase: prepared the response", None);
+        Ok(response_bytes)
     }
 
-    fn generate_bookmark_only_pushrebase_response_bytes(
-        _ctx: CoreContext,
+    async fn generate_bookmark_only_pushrebase_response_bytes(
+        _ctx: &CoreContext,
         data: UnbundleBookmarkOnlyPushRebaseResponse,
-    ) -> BoxFuture<Bytes, Error> {
+    ) -> Result<Bytes> {
         let UnbundleBookmarkOnlyPushRebaseResponse {
             bookmark_push_part_id,
         } = data;
 
         let mut bundle = Self::get_bundle_builder();
-        bundle.add_part(try_boxfuture!(parts::replypushkey_part(
-            true,
-            bookmark_push_part_id
-        )));
-        bundle
+        bundle.add_part(parts::replypushkey_part(true, bookmark_push_part_id)?);
+        let cursor = bundle
             .build()
-            .map(|cursor| Bytes::from(cursor.into_inner()))
-            .context("While preparing bookmark-only pushrebase response")
-            .from_err()
-            .boxify()
+            .compat()
+            .await
+            .context("While preparing bookmark-only pushrebase response")?;
+
+        Ok(Bytes::from(cursor.into_inner()))
     }
 
     /// Produce bundle2 response parts for the completed `unbundle` processing
-    pub fn generate_bytes(
+    pub async fn generate_bytes(
         self,
-        ctx: CoreContext,
-        repo: BlobRepo,
-        reponame: String,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        reponame: &str,
         pushrebase_params: PushrebaseParams,
-        lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-        lfs_params: SessionLfsParams,
-    ) -> BoxFuture<Bytes, Error> {
+        lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
+        lfs_params: &SessionLfsParams,
+    ) -> Result<Bytes> {
         match self {
-            UnbundleResponse::Push(data) => Self::generate_push_response_bytes(ctx, data),
+            UnbundleResponse::Push(data) => Self::generate_push_response_bytes(ctx, data).await,
             UnbundleResponse::InfinitePush(data) => {
-                Self::generate_inifinitepush_response_bytes(ctx, data)
+                Self::generate_inifinitepush_response_bytes(ctx, data).await
             }
-            UnbundleResponse::PushRebase(data) => Self::generate_pushrebase_response_bytes(
-                ctx,
-                data,
-                repo,
-                reponame,
-                pushrebase_params,
-                lca_hint,
-                lfs_params,
-            ),
+            UnbundleResponse::PushRebase(data) => {
+                Self::generate_pushrebase_response_bytes(
+                    ctx,
+                    data,
+                    repo,
+                    reponame,
+                    pushrebase_params,
+                    lca_hint,
+                    lfs_params,
+                )
+                .await
+            }
             UnbundleResponse::BookmarkOnlyPushRebase(data) => {
-                Self::generate_bookmark_only_pushrebase_response_bytes(ctx, data)
+                Self::generate_bookmark_only_pushrebase_response_bytes(ctx, data).await
             }
         }
     }

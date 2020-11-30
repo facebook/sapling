@@ -6,12 +6,12 @@
  */
 
 use crate::{BundleResolverError, PostResolveAction, PostResolvePush, PostResolvePushRebase};
-use anyhow::{format_err, Result};
-use cloned::cloned;
+use anyhow::{anyhow, Result};
 use context::CoreContext;
-use futures::future::{FutureExt as NewFutureExt, TryFutureExt};
-use futures_01_ext::{BoxFuture, FutureExt};
-use futures_old::{future::join_all, Future, IntoFuture};
+use futures::{
+    future::{try_join_all, BoxFuture},
+    FutureExt,
+};
 use limits::types::{RateLimit, RateLimitStatus};
 use maplit::hashmap;
 use mercurial_revlog::changeset::RevlogChangeset;
@@ -22,7 +22,7 @@ use slog::debug;
 use std::collections::HashMap;
 use std::time::Duration;
 use time_window_counter::{BoxGlobalTimeWindowCounter, GlobalTimeWindowCounterBuilder};
-use tokio_old::util::FutureExt as TokioFutureExt;
+use tokio::time::timeout;
 
 const TIME_WINDOW_MIN: u32 = 10;
 const TIME_WINDOW_MAX: u32 = 3600;
@@ -101,7 +101,7 @@ pub(crate) async fn enforce_file_changes_rate_limits<
         // NOTE: Thrift enums aren't real enums once in Rust. We have to account for other values
         // here.
         _ => {
-            let e = format_err!("Invalid file count rate limit status: {:?}", limit.status);
+            let e = anyhow!("Invalid file count rate limit status: {:?}", limit.status);
             return Err(BundleResolverError::Error(e));
         }
     };
@@ -110,7 +110,7 @@ pub(crate) async fn enforce_file_changes_rate_limits<
     let max_value = limit.max_value as f64;
     let interval = limit.interval as u32;
     let key = format!("{}_{}", limit.prefix, repo_id);
-    let timeout = Duration::from_secs(limit.timeout as u64);
+    let timeout_dur = Duration::from_secs(limit.timeout as u64);
 
     let counter = GlobalTimeWindowCounterBuilder::build(
         ctx.fb,
@@ -120,19 +120,22 @@ pub(crate) async fn enforce_file_changes_rate_limits<
         TIME_WINDOW_MAX,
     );
     let total_file_number: usize = revlog_changesets.map(|rc| rc.files().len()).sum();
-    counter_check_and_bump(
-        ctx,
-        counter,
-        max_value,
-        interval,
-        timeout,
-        total_file_number as f64,
-        enforced,
-        "File Changes Rate Limit",        /* rate_limit_name */
-        "file_changes_rate_limit_status", /* scuba_status_name */
-        hashmap! { "push_kind" => format!("{}", push_kind) },
-    )
-    .await
+    {
+        let push_kind = format!("{}", push_kind);
+        counter_check_and_bump(
+            ctx,
+            counter,
+            max_value,
+            interval,
+            timeout_dur,
+            total_file_number as f64,
+            enforced,
+            "File Changes Rate Limit",        /* rate_limit_name */
+            "file_changes_rate_limit_status", /* scuba_status_name */
+            hashmap! { "push_kind" => push_kind.as_str() },
+        )
+        .await
+    }
     .map_err(|value| BundleResolverError::RateLimitExceeded {
         limit,
         entity: format!("{:?}", push_kind),
@@ -140,11 +143,11 @@ pub(crate) async fn enforce_file_changes_rate_limits<
     })
 }
 
-pub(crate) fn enforce_commit_rate_limits<'a>(
-    ctx: CoreContext,
-    action: &'a PostResolveAction,
-) -> impl Future<Item = (), Error = BundleResolverError> + 'static {
-    let commits: Option<&'a _> = match action {
+pub(crate) async fn enforce_commit_rate_limits(
+    ctx: &CoreContext,
+    action: &PostResolveAction,
+) -> Result<(), BundleResolverError> {
+    let commits: Option<&_> = match action {
         PostResolveAction::Push(PostResolvePush {
             ref uploaded_bonsais,
             ..
@@ -160,34 +163,32 @@ pub(crate) fn enforce_commit_rate_limits<'a>(
     };
 
     match commits {
-        Some(ref commits) => {
-            enforce_commit_rate_limits_on_commits(ctx, commits.iter()).left_future()
-        }
-        None => Ok(()).into_future().right_future(),
+        Some(ref commits) => enforce_commit_rate_limits_on_commits(ctx, commits.iter()).await,
+        None => Ok(()),
     }
 }
 
-fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a BonsaiChangeset>>(
-    ctx: CoreContext,
+async fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a BonsaiChangeset>>(
+    ctx: &CoreContext,
     bonsais: I,
-) -> BoxFuture<(), BundleResolverError> {
+) -> Result<(), BundleResolverError> {
     let load_limiter = match ctx.session().load_limiter() {
         Some(load_limiter) => load_limiter,
-        None => return Ok(()).into_future().boxify(),
+        None => return Ok(()),
     };
 
     let category = load_limiter.category();
-    let limit = load_limiter.rate_limits().commits_per_author.clone();
+    let limit = &load_limiter.rate_limits().commits_per_author;
 
     let enforced = match limit.status {
-        RateLimitStatus::Disabled => return Ok(()).into_future().boxify(),
+        RateLimitStatus::Disabled => return Ok(()),
         RateLimitStatus::Tracked => false,
         RateLimitStatus::Enforced => true,
         // NOTE: Thrift enums aren't real enums once in Rust. We have to account for other values
         // here.
         _ => {
-            let e = format_err!("Invalid limit status: {:?}", limit.status);
-            return Err(BundleResolverError::Error(e)).into_future().boxify();
+            let e = anyhow!("Invalid limit status: {:?}", limit.status);
+            return Err(BundleResolverError::Error(e));
         }
     };
 
@@ -196,29 +197,28 @@ fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a BonsaiChange
         *groups.entry(bonsai.author()).or_insert(0) += 1;
     }
 
-    let counters = build_counters(&ctx, &category, &limit, groups);
-    let checks = dispatch_counter_checks_and_bumps(ctx.clone(), &limit, counters, enforced);
+    let counters = build_counters(ctx, category, limit, groups);
+    let checks = dispatch_counter_checks_and_bumps(ctx, limit, counters, enforced);
 
-    join_all(checks)
-        .map(|_| ())
-        .timeout(Duration::from_secs(limit.timeout as u64))
-        .or_else(move |err| {
-            match err.into_inner() {
-                Some((author, count)) => Err(BundleResolverError::RateLimitExceeded {
-                    limit,
-                    entity: author,
-                    value: count as f64,
-                }),
-                // into_inner() being None means we had a timeout. We fail open in this case.
-                None => {
-                    ctx.scuba()
-                        .clone()
-                        .log_with_msg("Rate Limit: Timed out", None);
-                    Ok(())
-                }
-            }
-        })
-        .boxify()
+    match timeout(
+        Duration::from_secs(limit.timeout as u64),
+        try_join_all(checks),
+    )
+    .await
+    {
+        Ok(Ok(_)) => Ok(()),
+        Ok(Err((author, count))) => Err(BundleResolverError::RateLimitExceeded {
+            limit: limit.clone(),
+            entity: author,
+            value: count as f64,
+        }),
+        Err(_) => {
+            ctx.scuba()
+                .clone()
+                .log_with_msg("Rate Limit: Timed out", None);
+            Ok(())
+        }
+    }
 }
 
 fn build_counters(
@@ -248,41 +248,35 @@ fn build_counters(
         .collect()
 }
 
-fn dispatch_counter_checks_and_bumps(
-    ctx: CoreContext,
-    limit: &RateLimit,
+fn dispatch_counter_checks_and_bumps<'a>(
+    ctx: &'a CoreContext,
+    limit: &'a RateLimit,
     counters: Vec<(BoxGlobalTimeWindowCounter, String, u64)>,
     enforced: bool,
-) -> Vec<BoxFuture<(), (String, f64)>> {
+) -> impl Iterator<Item = BoxFuture<'a, Result<(), (String, f64)>>> + 'a {
     let max_value = limit.max_value as f64;
     let interval = limit.interval as u32;
-    let timeout = Duration::from_secs(limit.timeout as u64);
+    let timeout_dur = Duration::from_secs(limit.timeout as u64);
 
-    counters
-        .into_iter()
-        .map(move |(counter, author, bump)| {
-            cloned!(ctx, author);
-            async move {
-                counter_check_and_bump(
-                    &ctx,
-                    counter,
-                    max_value,
-                    interval,
-                    timeout,
-                    bump as f64,
-                    enforced,
-                    "Commits Per Author Rate Limit",
-                    "commits_per_author_rate_limit_status",
-                    hashmap! {"author" => author.clone() },
-                )
-                .await
-                .map_err(|count| (author, count))
-            }
-            .boxed()
-            .compat()
-            .boxify()
-        })
-        .collect()
+    counters.into_iter().map(move |(counter, author, bump)| {
+        async move {
+            counter_check_and_bump(
+                ctx,
+                counter,
+                max_value,
+                interval,
+                timeout_dur,
+                bump as f64,
+                enforced,
+                "Commits Per Author Rate Limit",
+                "commits_per_author_rate_limit_status",
+                hashmap! {"author" => author.as_str() },
+            )
+            .await
+            .map_err(|count| (author, count))
+        }
+        .boxed()
+    })
 }
 
 /// Check if a counter would exceed maximum value if bumped
@@ -294,19 +288,19 @@ async fn counter_check_and_bump<'a>(
     counter: BoxGlobalTimeWindowCounter,
     max_value: f64,
     interval: u32,
-    timeout: Duration,
+    timeout_dur: Duration,
     bump: f64,
     enforced: bool,
     rate_limit_name: &'a str,
     scuba_status_name: &'a str,
-    scuba_extras: HashMap<&'a str, String>,
+    scuba_extras: HashMap<&'a str, &'a str>,
 ) -> Result<(), f64> {
     let mut scuba = ctx.scuba().clone();
     for (key, val) in scuba_extras {
-        scuba.add(key, val.clone());
+        scuba.add(key, val);
     }
 
-    match tokio::time::timeout(timeout, counter.get(interval)).await {
+    match timeout(timeout_dur, counter.get(interval)).await {
         Ok(Ok(count)) => {
             // NOTE: We only bump after we've allowed a response. This is reasonable for
             // this kind of limit.

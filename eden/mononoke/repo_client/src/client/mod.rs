@@ -564,18 +564,18 @@ impl RepoClient {
 
         async move {
             create_getbundle_response(
-                ctx.clone(),
-                blobrepo.clone(),
-                reponame,
+                &ctx,
+                &blobrepo,
+                &reponame,
                 common,
-                heads,
-                lca_hint,
+                &heads,
+                &lca_hint,
                 if use_phases {
                     PhasesPart::Yes
                 } else {
                     PhasesPart::No
                 },
-                lfs_params,
+                &lfs_params,
                 drafts_in_bundles_policy,
             )
             .await
@@ -1682,15 +1682,13 @@ impl HgCommands for RepoClient {
 
                                     let response = response?
                                         .generate_bytes(
-                                            ctx.clone(),
-                                            blobrepo.clone(),
-                                            reponame,
+                                            &ctx,
+                                            &blobrepo,
+                                            &reponame,
                                             pushrebase_params,
-                                            lca_hint,
-                                            lfs_params,
+                                            &lca_hint,
+                                            &lfs_params,
                                         )
-                                        .map_err(Error::from)
-                                        .compat()
                                         .await?;
 
                                     Ok(response)

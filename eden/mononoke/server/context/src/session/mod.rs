@@ -89,7 +89,7 @@ impl SessionContainer {
         &self.inner.metadata
     }
 
-    pub fn load_limiter(&self) -> Option<&dyn LoadLimiter> {
+    pub fn load_limiter(&self) -> Option<&(dyn LoadLimiter + Send + Sync)> {
         match self.inner.load_limiter {
             Some(ref load_limiter) => Some(&**load_limiter),
             None => None,

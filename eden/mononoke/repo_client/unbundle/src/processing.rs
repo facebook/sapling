@@ -71,9 +71,7 @@ pub async fn run_post_resolve_action(
     action: PostResolveAction,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundleResponse, BundleResolverError> {
-    enforce_commit_rate_limits(ctx.clone(), &action)
-        .compat()
-        .await?;
+    enforce_commit_rate_limits(ctx, &action).await?;
 
     // FIXME: it's used not only in pushrebase, so it worth moving
     // populate_git_mapping outside of PushrebaseParams.
