@@ -838,7 +838,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                 .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
                 .compat()
                 .and_then(move |maybe_counter| {
-                    future::ready(maybe_counter.or_else(move || start_id).ok_or_else(|| {
+                    future::ready(maybe_counter.or(start_id).ok_or_else(|| {
                         format_err!(
                             "{} counter not found. Pass `--start-id` flag to set the counter",
                             LATEST_REPLAYED_REQUEST_KEY
