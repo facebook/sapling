@@ -118,6 +118,7 @@ fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Optio
         NodeType::ChangesetInfoMapping => None,
         NodeType::DeletedManifest => path,
         NodeType::DeletedManifestMapping => None,
+        NodeType::FastlogDir => path,
         NodeType::FastlogFile => path,
         NodeType::Fsnode => path,
         NodeType::FsnodeMapping => None,

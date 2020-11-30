@@ -174,6 +174,7 @@ pub struct WalkState {
     visited_changeset_info_mapping: StateMap<InternedId<ChangesetId>>,
     visited_deleted_manifest: StateMap<DeletedManifestId>,
     visited_deleted_manifest_mapping: StateMap<InternedId<ChangesetId>>,
+    visited_fastlog_dir: StateMap<InternedId<ManifestUnodeId>>,
     visited_fastlog_file: StateMap<InternedId<FileUnodeId>>,
     visited_fsnode: StateMap<FsnodeId>,
     visited_fsnode_mapping: StateMap<InternedId<ChangesetId>>,
@@ -225,6 +226,7 @@ impl WalkState {
             visited_changeset_info_mapping: StateMap::with_hasher(fac.clone()),
             visited_deleted_manifest: StateMap::with_hasher(fac.clone()),
             visited_deleted_manifest_mapping: StateMap::with_hasher(fac.clone()),
+            visited_fastlog_dir: StateMap::with_hasher(fac.clone()),
             visited_fastlog_file: StateMap::with_hasher(fac.clone()),
             visited_fsnode: StateMap::with_hasher(fac.clone()),
             visited_fsnode_mapping: StateMap::with_hasher(fac.clone()),
@@ -446,6 +448,10 @@ impl VisitOne for WalkState {
                     true
                 }
             }
+            Node::FastlogDir(k) => self.record(
+                &self.visited_fastlog_dir,
+                &self.unode_manifest_ids.interned(&k.inner),
+            ),
             Node::FastlogFile(k) => self.record(
                 &self.visited_fastlog_file,
                 &self.unode_file_ids.interned(&k.inner),

@@ -249,6 +249,30 @@ async fn blame_step<V: VisitOne>(
     }
 }
 
+async fn fastlog_dir_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    id: &FastlogKey<ManifestUnodeId>,
+    _path: Option<&WrappedPath>,
+) -> Result<StepOutput, Error> {
+    let log =
+        fetch_fastlog_batch_by_unode_id(ctx, repo.blobstore(), &UnodeManifestEntry::Tree(id.inner))
+            .await?;
+    let mut edges = vec![];
+    if let Some(log) = &log {
+        for (cs_id, _offsets) in log.latest() {
+            checker.add_edge(&mut edges, EdgeType::FastlogDirToChangeset, || {
+                Node::Changeset(*cs_id)
+            });
+        }
+    }
+    Ok(StepOutput(
+        checker.step_data(NodeType::FastlogDir, || NodeData::FastlogDir(log)),
+        edges,
+    ))
+}
+
 async fn fastlog_file_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -1005,6 +1029,13 @@ async fn unode_manifest_step<V: VisitOne>(
             || checker.is_public(ctx, &linked_cs_id).await?)
     {
         flags |= UnodeFlags::FASTLOG;
+        let path = &path;
+        checker.add_edge_with_path(
+            &mut edges,
+            EdgeType::UnodeManifestToFastlogDir,
+            || Node::FastlogDir(FastlogKey::new(key.inner)),
+            || path.cloned(),
+        );
     }
 
     for p in unode_manifest.parents() {
@@ -1386,7 +1417,7 @@ where
                     .any(|e| e.outgoing_type() == NodeType::Blame),
                 with_fastlog: include_edge_types
                     .iter()
-                    .any(|e| e.outgoing_type() == NodeType::FastlogFile),
+                    .any(|e| e.outgoing_type().derived_data_name() == Some(RootFastlog::NAME)),
                 include_edge_types,
                 always_emit_edge_types,
                 keep_edge_paths,
@@ -1528,6 +1559,9 @@ where
         }
         Node::DeletedManifestMapping(bcs_id) => {
             deleted_manifest_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
+        }
+        Node::FastlogDir(id) => {
+            fastlog_dir_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await
         }
         Node::FastlogFile(id) => {
             fastlog_file_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await

@@ -172,6 +172,7 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         NodeType::ChangesetInfoMapping => false,
         NodeType::DeletedManifest => false,
         NodeType::DeletedManifestMapping => false,
+        NodeType::FastlogDir => false,
         NodeType::FastlogFile => false,
         NodeType::Fsnode => false,
         NodeType::FsnodeMapping => false,

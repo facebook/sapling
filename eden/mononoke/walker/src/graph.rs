@@ -240,6 +240,12 @@ impl FastlogKey<FileUnodeId> {
     }
 }
 
+impl FastlogKey<ManifestUnodeId> {
+    fn blobstore_key(&self) -> String {
+        unode_entry_to_fastlog_batch_key(&UnodeManifestEntry::Tree(self.inner))
+    }
+}
+
 create_graph!(
     NodeType,
     Node,
@@ -270,6 +276,7 @@ create_graph!(
             ChangesetInfoMapping,
             DeletedManifest,
             DeletedManifestMapping,
+            FastlogDir,
             FastlogFile,
             Fsnode,
             FsnodeMapping,
@@ -368,6 +375,11 @@ create_graph!(
         [ChildFsnode(Fsnode), FileContent]
     ),
     (
+        FastlogDir,
+        FastlogKey<ManifestUnodeId>,
+        [Changeset]
+    ),
+    (
         FastlogFile,
         FastlogKey<FileUnodeId>,
         [Changeset]
@@ -387,7 +399,7 @@ create_graph!(
     (
         UnodeManifest,
         UnodeKey<ManifestUnodeId>,
-        [UnodeFileChild(UnodeFile), UnodeManifestChild(UnodeManifest), UnodeManifestParent(UnodeManifest), LinkedChangeset(Changeset)]
+        [FastlogDir, UnodeFileChild(UnodeFile), UnodeManifestChild(UnodeManifest), UnodeManifestParent(UnodeManifest), LinkedChangeset(Changeset)]
     ),
     (UnodeMapping, ChangesetId, [RootUnodeManifest(UnodeManifest)]),
 );
@@ -427,6 +439,7 @@ impl NodeType {
             NodeType::ChangesetInfoMapping => Some(ChangesetInfo::NAME),
             NodeType::DeletedManifest => Some(RootDeletedManifestId::NAME),
             NodeType::DeletedManifestMapping => Some(RootDeletedManifestId::NAME),
+            NodeType::FastlogDir => Some(RootFastlog::NAME),
             NodeType::FastlogFile => Some(RootFastlog::NAME),
             NodeType::Fsnode => Some(RootFsnodeId::NAME),
             NodeType::FsnodeMapping => Some(RootFsnodeId::NAME),
@@ -586,6 +599,7 @@ pub enum NodeData {
     ChangesetInfoMapping(Option<ChangesetId>),
     DeletedManifest(Option<DeletedManifest>),
     DeletedManifestMapping(Option<DeletedManifestId>),
+    FastlogDir(Option<FastlogBatch>),
     FastlogFile(Option<FastlogBatch>),
     Fsnode(Fsnode),
     FsnodeMapping(Option<FsnodeId>),
@@ -622,6 +636,7 @@ impl Node {
             Node::ChangesetInfoMapping(k) => k.blobstore_key(),
             Node::DeletedManifest(k) => k.blobstore_key(),
             Node::DeletedManifestMapping(k) => k.blobstore_key(),
+            Node::FastlogDir(k) => k.blobstore_key(),
             Node::FastlogFile(k) => k.blobstore_key(),
             Node::Fsnode(k) => k.blobstore_key(),
             Node::FsnodeMapping(k) => k.blobstore_key(),
@@ -658,6 +673,7 @@ impl Node {
             Node::ChangesetInfoMapping(_) => None,
             Node::DeletedManifest(_) => None,
             Node::DeletedManifestMapping(_) => None,
+            Node::FastlogDir(_) => None,
             Node::FastlogFile(_) => None,
             Node::Fsnode(_) => None,
             Node::FsnodeMapping(_) => None,
@@ -695,6 +711,7 @@ impl Node {
             Node::ChangesetInfoMapping(k) => Some(k.sampling_fingerprint()),
             Node::DeletedManifest(k) => Some(k.sampling_fingerprint()),
             Node::DeletedManifestMapping(k) => Some(k.sampling_fingerprint()),
+            Node::FastlogDir(k) => Some(k.sampling_fingerprint()),
             Node::FastlogFile(k) => Some(k.sampling_fingerprint()),
             Node::Fsnode(k) => Some(k.sampling_fingerprint()),
             Node::FsnodeMapping(k) => Some(k.sampling_fingerprint()),

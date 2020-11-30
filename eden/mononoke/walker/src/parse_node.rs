@@ -67,6 +67,14 @@ impl FromStr for PathKey<HgFileNodeId> {
     }
 }
 
+impl FromStr for FastlogKey<ManifestUnodeId> {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let inner = ManifestUnodeId::from_str(s)?;
+        Ok(FastlogKey { inner })
+    }
+}
+
 impl FromStr for FastlogKey<FileUnodeId> {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -291,6 +299,12 @@ mod tests {
                         NODE_SEP, SAMPLE_BLAKE2
                     ))?
                     .get_type()
+                );
+            }
+            NodeType::FastlogDir => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!("FastlogDir{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
                 );
             }
             NodeType::FastlogFile => {

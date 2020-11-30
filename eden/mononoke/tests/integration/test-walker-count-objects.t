@@ -176,17 +176,17 @@ count-objects, deep walk across skeleton manifest
 count-objects, shallow walk across fastlog
   $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I shallow -i bonsai -i derived_unodes -i derived_fastlog -X ChangesetToFileContent -X UnodeFileToFileContent 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [BookmarkToChangeset, ChangesetToUnodeMapping, UnodeFileToFastlogFile, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeMappingToRootUnodeManifest]
-  Walking node types [Bookmark, Changeset, FastlogFile, UnodeFile, UnodeManifest, UnodeMapping]
-  Final count: (10, 10)
+  Walking edge types [BookmarkToChangeset, ChangesetToUnodeMapping, UnodeFileToFastlogFile, UnodeManifestToFastlogDir, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeMappingToRootUnodeManifest]
+  Walking node types [Bookmark, Changeset, FastlogDir, FastlogFile, UnodeFile, UnodeManifest, UnodeMapping]
+  Final count: (11, 11)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:1,* FastlogFile:3,* UnodeFile:3,* UnodeManifest:1,* UnodeMapping:1,* (glob)
+  * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:1,* FastlogDir:1,* FastlogFile:3,* UnodeFile:3,* UnodeManifest:1,* UnodeMapping:1,* (glob)
 
 count-objects, deep walk across fastlog
   $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I deep -i bonsai -i derived_unodes -i derived_fastlog -X ChangesetToBonsaiParent -X UnodeFileToLinkedChangeset -X UnodeManifestToLinkedChangeset 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [BookmarkToChangeset, ChangesetToUnodeMapping, FastlogFileToChangeset, UnodeFileToFastlogFile, UnodeFileToUnodeFileParent, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent, UnodeMappingToRootUnodeManifest]
-  Walking node types [Bookmark, Changeset, FastlogFile, UnodeFile, UnodeManifest, UnodeMapping]
-  Final count: (16, 16)
+  Walking edge types [BookmarkToChangeset, ChangesetToUnodeMapping, FastlogDirToChangeset, FastlogFileToChangeset, UnodeFileToFastlogFile, UnodeFileToUnodeFileParent, UnodeManifestToFastlogDir, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent, UnodeMappingToRootUnodeManifest]
+  Walking node types [Bookmark, Changeset, FastlogDir, FastlogFile, UnodeFile, UnodeManifest, UnodeMapping]
+  Final count: (19, 19)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:3,* FastlogFile:3,* UnodeFile:3,* UnodeManifest:3,* UnodeMapping:3,* (glob)
+  * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:3,* FastlogDir:3,* FastlogFile:3,* UnodeFile:3,* UnodeManifest:3,* UnodeMapping:3,* (glob)
