@@ -21,6 +21,7 @@ commands! {
     mod fsync;
     mod http;
     mod python;
+    mod segmentclone;
     mod store;
 }
 

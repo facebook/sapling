@@ -1060,6 +1060,8 @@ Test list of internal help commands
    debugrevspec  parse and apply a revision specification
    debugrunshell
                  run a shell command
+   debugsegmentclone
+                 clone a repository using segmented changelog
    debugsendunbundle
                  Send unbundle wireproto command to a given server
    debugsetparents

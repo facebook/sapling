@@ -158,6 +158,7 @@ Show debug commands if there are no other candidates
   debugrevlog
   debugrevspec
   debugrunshell
+  debugsegmentclone
   debugsendunbundle
   debugsetparents
   debugshell
@@ -192,6 +193,7 @@ Do not show the alias of a debug command if there are other candidates
 Show the alias of a debug command if there are no other candidates
   $ hg debugcomplete rawc
   
+
 
 Show the global options
   $ hg debugcomplete --options | LC_ALL=C sort
@@ -444,6 +446,7 @@ Show all commands + options
   debugrevlog: changelog, manifest, dir, dump
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
   debugrunshell: cmd
+  debugsegmentclone: 
   debugsendunbundle: 
   debugsetparents: 
   debugshell: command
