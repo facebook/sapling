@@ -106,6 +106,7 @@ const SCUBA_TABLE_ARG: &str = "scuba-table";
 const SCUBA_LOG_FILE_ARG: &str = "scuba-log-file";
 
 const DEFAULT_VALUE_ARG: &str = "default";
+const DERIVED_VALUE_ARG: &str = "derived";
 const SHALLOW_VALUE_ARG: &str = "shallow";
 const DEEP_VALUE_ARG: &str = "deep";
 const MARKER_VALUE_ARG: &str = "marker";
@@ -124,7 +125,7 @@ static DERIVED_DATA_INCLUDE_NODE_TYPES: Lazy<HashMap<String, Vec<NodeType>>> = L
 });
 
 static NODE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
-    let mut v = vec![BONSAI_VALUE_ARG, DEFAULT_VALUE_ARG];
+    let mut v = vec![BONSAI_VALUE_ARG, DEFAULT_VALUE_ARG, DERIVED_VALUE_ARG];
     v.extend(
         DERIVED_DATA_INCLUDE_NODE_TYPES
             .keys()
@@ -674,6 +675,9 @@ fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
     Ok(match arg {
         DEFAULT_VALUE_ARG => HashSet::from_iter(DEFAULT_INCLUDE_NODE_TYPES.iter().cloned()),
         BONSAI_VALUE_ARG => HashSet::from_iter(BONSAI_INCLUDE_NODE_TYPES.iter().cloned()),
+        DERIVED_VALUE_ARG => {
+            HashSet::from_iter(DERIVED_DATA_INCLUDE_NODE_TYPES.values().flatten().cloned())
+        }
         _ => {
             if let Some(v) = DERIVED_DATA_INCLUDE_NODE_TYPES.get(arg) {
                 HashSet::from_iter(v.iter().cloned())
