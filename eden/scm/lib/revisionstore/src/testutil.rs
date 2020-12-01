@@ -333,6 +333,14 @@ impl EdenApi for FakeEdenApi {
     ) -> Result<CloneData<HgId>, EdenApiError> {
         unimplemented!()
     }
+
+    async fn full_idmap_clone_data(
+        &self,
+        _repo: String,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<CloneData<HgId>, EdenApiError> {
+        unimplemented!()
+    }
 }
 
 pub fn make_config(dir: impl AsRef<Path>) -> ConfigSet {

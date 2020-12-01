@@ -66,4 +66,10 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         progress: Option<ProgressCallback>,
     ) -> Result<CloneData<HgId>, EdenApiError>;
+
+    async fn full_idmap_clone_data(
+        &self,
+        repo: String,
+        progress: Option<ProgressCallback>,
+    ) -> Result<CloneData<HgId>, EdenApiError>;
 }

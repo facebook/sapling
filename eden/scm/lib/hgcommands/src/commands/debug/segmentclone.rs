@@ -47,7 +47,7 @@ pub fn run(opts: StatusOpts, _io: &mut IO, config: ConfigSet) -> Result<u8> {
     // TODO: add progress bar
     let progress_callback = None;
     let clone_data = edenapi_client
-        .clone_data_blocking(reponame.clone(), progress_callback)
+        .full_idmap_clone_data_blocking(reponame.clone(), progress_callback)
         .context("error cloning segmented changelog")?;
 
     let namedag_path = IndexedLogNameDagPath(destination.join(".hg/store/segments/v1"));

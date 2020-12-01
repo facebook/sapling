@@ -83,6 +83,14 @@ pub trait EdenApiBlocking: EdenApi {
     ) -> Result<CloneData<HgId>, EdenApiError> {
         block_on_future(self.clone_data(repo, progress))
     }
+
+    fn full_idmap_clone_data_blocking(
+        &self,
+        repo: String,
+        progress: Option<ProgressCallback>,
+    ) -> Result<CloneData<HgId>, EdenApiError> {
+        block_on_future(self.full_idmap_clone_data(repo, progress))
+    }
 }
 
 impl<T: EdenApi + ?Sized> EdenApiBlocking for T {}

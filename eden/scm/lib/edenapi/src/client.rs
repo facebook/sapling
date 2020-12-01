@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::iter::FromIterator;
 
 use anyhow::format_err;
@@ -12,16 +13,20 @@ use async_trait::async_trait;
 use futures::prelude::*;
 use itertools::Itertools;
 use percent_encoding::{utf8_percent_encode, AsciiSet, NON_ALPHANUMERIC};
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde_cbor::Deserializer;
 use url::Url;
 
 use edenapi_types::{
-    wire::{WireCloneData, WireFileEntry, WireHistoryResponseChunk, WireTreeEntry},
+    wire::{
+        WireCloneData, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
+        WireToApiConversionError, WireTreeEntry,
+    },
     CloneData, CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError,
     FileEntry, FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire, TreeEntry, TreeRequest,
 };
 use hg_http::http_client;
-use http_client::{HttpClient, Request};
+use http_client::{HttpClient, HttpClientError, Request};
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::api::{EdenApi, ProgressCallback};
@@ -41,6 +46,7 @@ mod paths {
     pub const COMPLETE_TREES: &str = "trees/complete";
     pub const COMMIT_REVLOG_DATA: &str = "commit/revlog_data";
     pub const CLONE_DATA: &str = "clone";
+    pub const FULL_IDMAP_CLONE_DATA: &str = "full_idmap_clone";
 }
 
 pub struct Client {
@@ -405,6 +411,49 @@ impl EdenApi for Client {
         let clone_data = fetch.entries.next().await.ok_or_else(|| {
             EdenApiError::Other(format_err!("clone data missing from reponse body"))
         })??;
+        Ok(clone_data)
+    }
+
+    async fn full_idmap_clone_data(
+        &self,
+        repo: String,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<CloneData<HgId>, EdenApiError> {
+        let msg = format!(
+            "Requesting full idmap clone data for the '{}' repository",
+            repo
+        );
+        tracing::info!("{}", &msg);
+        if self.config.debug {
+            eprintln!("{}", &msg);
+        }
+
+        let url = self.url(paths::FULL_IDMAP_CLONE_DATA, Some(&repo))?;
+        let req = self.configure(Request::post(url))?;
+        let async_response = req.send_async().await?;
+        let response_bytes = async_response
+            .body
+            .try_fold(Vec::new(), |mut acc, v| {
+                acc.extend(v);
+                future::ok(acc)
+            })
+            .await?;
+
+        let mut deserializer = Deserializer::from_slice(&response_bytes);
+        let wire_clone_data =
+            WireCloneData::deserialize(&mut deserializer).map_err(HttpClientError::from)?;
+
+        let mut clone_data = wire_clone_data.to_api()?;
+
+        let idmap = deserializer
+            .into_iter::<WireIdMapEntry>()
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(HttpClientError::from)?
+            .into_iter()
+            .map(|e| Ok((e.dag_id.to_api()?, e.hg_id.to_api()?)))
+            .collect::<Result<HashMap<_, _>, WireToApiConversionError>>()?;
+
+        clone_data.idmap = idmap;
         Ok(clone_data)
     }
 }
