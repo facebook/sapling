@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use std::sync::atomic::{AtomicI64, Ordering};
 
 macro_rules! define_perf_counters {
@@ -159,7 +159,7 @@ impl PerfCounters {
         self.get_counter_atomic(counter).load(Ordering::Relaxed)
     }
 
-    pub fn insert_nonzero_perf_counters(&self, builder: &mut ScubaSampleBuilder) {
+    pub fn insert_nonzero_perf_counters(&self, builder: &mut MononokeScubaSampleBuilder) {
         for key in PERF_COUNTERS.iter() {
             let value = self.get_counter(*key);
             if value != 0 {
@@ -168,7 +168,7 @@ impl PerfCounters {
         }
     }
 
-    pub fn insert_perf_counters(&self, builder: &mut ScubaSampleBuilder) {
+    pub fn insert_perf_counters(&self, builder: &mut MononokeScubaSampleBuilder) {
         // NOTE: we log 0 mainly so that we can distinguish
         // nulls i.e. "not logged" and 0 as in "zero calls to blobstore".
         // Logging 0 allows counting avg, p50 etc statistic.

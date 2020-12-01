@@ -37,7 +37,7 @@ use futures::{future::TryFutureExt, stream::TryStreamExt};
 use itertools::Itertools;
 use mononoke_types::{ChangesetId, MPath};
 use phases::{Phase, Phases};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use stats::prelude::*;
 use std::{
@@ -415,7 +415,7 @@ fn parse_check_types(sub_m: &ArgMatches<'_>) -> Result<HashSet<CheckType>, Error
 struct ValidateProgressState {
     logger: Logger,
     fb: FacebookInit,
-    scuba_builder: ScubaSampleBuilder,
+    scuba_builder: MononokeScubaSampleBuilder,
     repo_stats_key: String,
     types_sorted_by_name: Vec<CheckType>,
     stats_by_type: HashMap<CheckType, CheckStats>,
@@ -432,7 +432,7 @@ impl ValidateProgressState {
     fn new(
         logger: Logger,
         fb: FacebookInit,
-        scuba_builder: ScubaSampleBuilder,
+        scuba_builder: MononokeScubaSampleBuilder,
         repo_stats_key: String,
         included_types: HashSet<CheckType>,
         sample_rate: u64,
@@ -510,7 +510,7 @@ impl ValidateProgressState {
 
 fn scuba_log_node(
     n: &Node,
-    scuba: &mut ScubaSampleBuilder,
+    scuba: &mut MononokeScubaSampleBuilder,
     type_key: &'static str,
     key_key: &'static str,
     path_key: &'static str,
@@ -527,7 +527,7 @@ pub fn add_node_to_scuba(
     source_node: Option<&Node>,
     via_node: Option<&Node>,
     n: &Node,
-    scuba: &mut ScubaSampleBuilder,
+    scuba: &mut MononokeScubaSampleBuilder,
 ) {
     scuba_log_node(n, scuba, NODE_TYPE, NODE_KEY, NODE_PATH);
     if let Some(src_node) = source_node {
@@ -539,7 +539,7 @@ pub fn add_node_to_scuba(
 }
 
 impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
-    fn set_sample_builder(&mut self, s: ScubaSampleBuilder) {
+    fn set_sample_builder(&mut self, s: MononokeScubaSampleBuilder) {
         self.scuba_builder = s;
     }
 

@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use mononoke_types::{BlobstoreBytes, Timestamp};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use std::collections::HashMap;
 mod errors;
@@ -36,7 +36,7 @@ pub mod config {
 #[derive(Debug, Clone)]
 pub struct RedactedBlobstoreConfigInner {
     redacted: Option<HashMap<String, RedactedMetadata>>,
-    scuba_builder: ScubaSampleBuilder,
+    scuba_builder: MononokeScubaSampleBuilder,
 }
 
 #[derive(Debug, Clone)]
@@ -55,7 +55,7 @@ impl Deref for RedactedBlobstoreConfig {
 impl RedactedBlobstoreConfig {
     pub fn new(
         redacted: Option<HashMap<String, RedactedMetadata>>,
-        scuba_builder: ScubaSampleBuilder,
+        scuba_builder: MononokeScubaSampleBuilder,
     ) -> Self {
         Self {
             inner: Arc::new(RedactedBlobstoreConfigInner {
@@ -270,7 +270,10 @@ mod test {
 
         let blob = RedactedBlobstore::new(
             PrefixBlobstore::new(inner, "prefix"),
-            RedactedBlobstoreConfig::new(Some(redacted_pairs), ScubaSampleBuilder::with_discard()),
+            RedactedBlobstoreConfig::new(
+                Some(redacted_pairs),
+                MononokeScubaSampleBuilder::with_discard(),
+            ),
         );
 
         //Test put with redacted key
@@ -328,7 +331,10 @@ mod test {
 
         let blob = RedactedBlobstore::new(
             PrefixBlobstore::new(inner, "prefix"),
-            RedactedBlobstoreConfig::new(Some(redacted_pairs), ScubaSampleBuilder::with_discard()),
+            RedactedBlobstoreConfig::new(
+                Some(redacted_pairs),
+                MononokeScubaSampleBuilder::with_discard(),
+            ),
         );
 
         // Since this is a log-only mode it should succeed

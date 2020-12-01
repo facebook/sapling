@@ -13,7 +13,7 @@ use bytes::Bytes;
 use fbinit::FacebookInit;
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt, StreamExt};
 use futures_old::{future::Future as OldFuture, stream::futures_unordered};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 use ::manifest::Entry;
 use blobrepo::BlobRepo;
@@ -158,7 +158,7 @@ pub fn create_changeset_no_parents(
     create_changeset.create(
         CoreContext::test_mock(fb),
         repo,
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
     )
 }
 
@@ -189,7 +189,7 @@ pub fn create_changeset_one_parent(
     create_changeset.create(
         CoreContext::test_mock(fb),
         repo,
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
     )
 }
 

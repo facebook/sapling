@@ -14,7 +14,6 @@ use context::CoreContext;
 use futures_stats::TimedFutureExt;
 use hooks::{CrossRepoPushSource, HookManager, HookOutcome};
 use mononoke_types::BonsaiChangeset;
-use scuba_ext::ScubaSampleBuilderExt;
 use tunables::tunables;
 
 use crate::BookmarkMovementError;

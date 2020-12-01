@@ -7,7 +7,7 @@
 
 use cross_repo_sync::types::{Large, Small};
 use mononoke_types::{ChangesetId, RepositoryId};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use std::time::Duration;
 
 use crate::tail::QueueSize;
@@ -25,7 +25,7 @@ const ERROR: &'static str = "error";
 const SUCCESS: &'static str = "success";
 
 pub fn add_common_commit_syncing_fields(
-    scuba_sample: &mut ScubaSampleBuilder,
+    scuba_sample: &mut MononokeScubaSampleBuilder,
     large_repo_id: Large<RepositoryId>,
     small_repo_id: Small<RepositoryId>,
 ) {
@@ -35,7 +35,7 @@ pub fn add_common_commit_syncing_fields(
 }
 
 pub fn log_validation_result_to_scuba(
-    mut scuba_sample: ScubaSampleBuilder,
+    mut scuba_sample: MononokeScubaSampleBuilder,
     entry_id: i64,
     large_cs_id: &Large<ChangesetId>,
     small_cs_id: &Small<ChangesetId>,
@@ -71,7 +71,7 @@ pub fn log_validation_result_to_scuba(
 }
 
 pub fn log_noop_iteration_to_scuba(
-    mut scuba_sample: ScubaSampleBuilder,
+    mut scuba_sample: MononokeScubaSampleBuilder,
     large_repo_id: RepositoryId,
 ) {
     scuba_sample

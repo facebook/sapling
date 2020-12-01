@@ -16,7 +16,6 @@ use futures::{
 };
 use mononoke_types::{ChangesetId, Generation};
 use reachabilityindex::LeastCommonAncestorsHint;
-use scuba_ext::ScubaSampleBuilderExt;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     iter::FromIterator,

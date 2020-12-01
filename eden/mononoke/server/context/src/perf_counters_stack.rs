@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use std::iter;
 use std::sync::Arc;
 
@@ -78,7 +78,7 @@ impl PerfCountersStack {
         self.inner.top.get_counter(counter)
     }
 
-    pub fn insert_perf_counters(&self, builder: &mut ScubaSampleBuilder) {
+    pub fn insert_perf_counters(&self, builder: &mut MononokeScubaSampleBuilder) {
         self.inner.top.insert_perf_counters(builder)
     }
 }

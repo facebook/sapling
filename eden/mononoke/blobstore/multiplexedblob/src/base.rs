@@ -20,7 +20,7 @@ use futures_stats::TimedFutureExt;
 use itertools::{Either, Itertools};
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::BlobstoreBytes;
-use scuba::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use std::{
     borrow::Borrow,
     collections::{hash_map::RandomState, HashMap, HashSet},
@@ -100,7 +100,7 @@ pub struct MultiplexedBlobstoreBase {
     /// Note that if this is bigger than the number of blobstores, we will always fail writes
     minimum_successful_writes: NonZeroUsize,
     handler: Arc<dyn MultiplexedBlobstorePutHandler>,
-    scuba: ScubaSampleBuilder,
+    scuba: MononokeScubaSampleBuilder,
     scuba_sample_rate: NonZeroU64,
 }
 
@@ -126,7 +126,7 @@ impl MultiplexedBlobstoreBase {
         write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         minimum_successful_writes: NonZeroUsize,
         handler: Arc<dyn MultiplexedBlobstorePutHandler>,
-        mut scuba: ScubaSampleBuilder,
+        mut scuba: MononokeScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
     ) -> Self {
         scuba.add_common_server_data();
@@ -234,7 +234,7 @@ fn remap_timeout_result<O>(
 
 pub async fn inner_put(
     ctx: &CoreContext,
-    mut scuba: ScubaSampleBuilder,
+    mut scuba: MononokeScubaSampleBuilder,
     write_order: &AtomicUsize,
     blobstore_id: BlobstoreId,
     blobstore: &dyn BlobstorePutOps,
@@ -279,7 +279,7 @@ async fn blobstore_get<'a>(
     blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
     write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
     key: &'a str,
-    scuba: ScubaSampleBuilder,
+    scuba: MononokeScubaSampleBuilder,
 ) -> Result<Option<BlobstoreGetData>, Error> {
     let is_logged = scuba.sampling().is_logged();
     let blobstores_count = blobstores.len() + write_mostly_blobstores.len();
@@ -651,7 +651,7 @@ async fn multiplexed_get_one<'a>(
     blobstore_id: BlobstoreId,
     key: &'a str,
     operation: OperationType,
-    mut scuba: ScubaSampleBuilder,
+    mut scuba: MononokeScubaSampleBuilder,
 ) -> (BlobstoreId, Result<Option<BlobstoreGetData>, Error>) {
     let (pc, (stats, timeout_or_res)) = {
         let mut ctx = ctx.clone();
@@ -680,7 +680,7 @@ fn multiplexed_get<'fut: 'iter, 'iter>(
     blobstores: &'iter [(BlobstoreId, Arc<dyn BlobstorePutOps>)],
     key: impl Borrow<str> + Clone + 'fut,
     operation: OperationType,
-    scuba: ScubaSampleBuilder,
+    scuba: MononokeScubaSampleBuilder,
 ) -> impl Iterator<
     Item = impl Future<Output = (BlobstoreId, Result<Option<BlobstoreGetData>, Error>)> + 'fut,
 > + 'iter {

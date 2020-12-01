@@ -44,7 +44,7 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{error, info};
 use sql_construct::{facebook::FbSqlConstruct, SqlConstruct};
 use sql_ext::facebook::{myrouter_ready, MysqlConnectionType, MysqlOptions};
@@ -134,7 +134,7 @@ fn drop_outcome_stats(o: OutcomeWithStats) -> Outcome {
 
 fn build_reporting_handler<'a, B>(
     ctx: &'a CoreContext,
-    scuba_sample: &'a ScubaSampleBuilder,
+    scuba_sample: &'a MononokeScubaSampleBuilder,
     retry_num: usize,
     bookmarks: &'a B,
 ) -> impl Fn(OutcomeWithStats) -> BoxFuture<'a, Result<PipelineState<RetryAttemptsCount>, PipelineError>>
@@ -418,7 +418,7 @@ async fn sync_single_combined_entry(
 /// Logs to Scuba information about a single bundle sync event
 fn log_processed_entry_to_scuba(
     log_entry: &BookmarkUpdateLogEntry,
-    mut scuba_sample: ScubaSampleBuilder,
+    mut scuba_sample: MononokeScubaSampleBuilder,
     error: Option<String>,
     attempts: RetryAttemptsCount,
     duration: Duration,
@@ -456,7 +456,7 @@ fn log_processed_entry_to_scuba(
 
 fn log_processed_entries_to_scuba(
     entries: &[BookmarkUpdateLogEntry],
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: MononokeScubaSampleBuilder,
     error: Option<String>,
     attempts: RetryAttemptsCount,
     duration: Duration,
@@ -498,7 +498,7 @@ fn loop_over_log_entries<'a, B>(
     repo_id: RepositoryId,
     start_id: i64,
     loop_forever: bool,
-    scuba_sample: &'a ScubaSampleBuilder,
+    scuba_sample: &'a MononokeScubaSampleBuilder,
     fetch_up_to_bundles: u64,
     repo_read_write_fetcher: &'a RepoReadWriteFetcher,
 ) -> impl Stream<Item = Result<Vec<BookmarkUpdateLogEntry>, Error>> + 'a
@@ -591,9 +591,9 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
 
     let log_to_scuba = matches.is_present("log-to-scuba");
     let mut scuba_sample = if log_to_scuba {
-        ScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
+        MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
     } else {
-        ScubaSampleBuilder::with_discard()
+        MononokeScubaSampleBuilder::with_discard()
     };
     scuba_sample.add_common_server_data();
 

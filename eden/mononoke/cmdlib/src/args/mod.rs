@@ -29,7 +29,7 @@ use futures::compat::Future01CompatExt;
 use once_cell::sync::OnceCell;
 use panichandler::{self, Fate};
 use scribe_ext::Scribe;
-use scuba::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_term::TermDecorator;
 
@@ -971,11 +971,11 @@ fn add_scuba_logging_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 pub fn get_scuba_sample_builder<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
-) -> Result<ScubaSampleBuilder> {
+) -> Result<MononokeScubaSampleBuilder> {
     let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of("scuba-dataset") {
-        ScubaSampleBuilder::new(fb, scuba_dataset)
+        MononokeScubaSampleBuilder::new(fb, scuba_dataset)
     } else {
-        ScubaSampleBuilder::with_discard()
+        MononokeScubaSampleBuilder::with_discard()
     };
     if let Some(scuba_log_file) = matches.value_of("scuba-log-file") {
         scuba_logger = scuba_logger.with_log_file(scuba_log_file)?;

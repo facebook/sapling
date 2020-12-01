@@ -28,7 +28,7 @@ use prefixblob::PrefixBlobstore;
 use redactedblobstore::{
     RedactedBlobstore, RedactedBlobstoreConfig, RedactedMetadata, SqlRedactedContentStore,
 };
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use sql_ext::facebook::MysqlOptions;
 use std::collections::HashMap;
@@ -190,7 +190,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
     let common_config = args::load_common_config(config_store, &matches)?;
     let censored_scuba_params = common_config.censored_scuba_params;
     let mut scuba_redaction_builder =
-        ScubaSampleBuilder::with_opt_table(fb, censored_scuba_params.table);
+        MononokeScubaSampleBuilder::with_opt_table(fb, censored_scuba_params.table);
 
     if let Some(scuba_log_file) = censored_scuba_params.local_path {
         scuba_redaction_builder = scuba_redaction_builder
@@ -289,7 +289,7 @@ async fn get_from_sources<T: Blobstore + Clone>(
     key: String,
     ctx: CoreContext,
     redacted_blobs: Option<HashMap<String, RedactedMetadata>>,
-    scuba_redaction_builder: ScubaSampleBuilder,
+    scuba_redaction_builder: MononokeScubaSampleBuilder,
     repo_id: RepositoryId,
 ) -> Result<Option<BlobstoreGetData>, Error> {
     let empty_prefix = "".to_string();

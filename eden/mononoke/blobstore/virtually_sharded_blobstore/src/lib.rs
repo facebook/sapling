@@ -17,7 +17,6 @@ use cachelib::VolatileLruCachePool;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use mononoke_types::BlobstoreBytes;
-use scuba_ext::ScubaSampleBuilderExt;
 use stats::prelude::*;
 use std::convert::AsRef;
 use std::convert::TryInto;
@@ -1003,7 +1002,7 @@ mod test {
         use fbinit::FacebookInit;
         use nonzero_ext::nonzero;
         use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
-        use scuba_ext::ScubaSampleBuilder;
+        use scuba_ext::MononokeScubaSampleBuilder;
         use slog::{o, Drain, Level, Logger};
         use slog_glog_fmt::default_drain;
         use std::time::Duration;
@@ -1067,7 +1066,7 @@ mod test {
             builder.blobstore_read_limiter(l1);
             builder.blobstore_write_limiter(l2);
             let session = builder.build();
-            let ctx = session.new_context(logger(), ScubaSampleBuilder::with_discard());
+            let ctx = session.new_context(logger(), MononokeScubaSampleBuilder::with_discard());
 
             let blobstore = make_blobstore(
                 fb,
@@ -1123,7 +1122,7 @@ mod test {
             builder.blobstore_read_limiter(l1);
             builder.blobstore_write_limiter(l2);
             let session = builder.build();
-            let ctx = &session.new_context(logger(), ScubaSampleBuilder::with_discard());
+            let ctx = &session.new_context(logger(), MononokeScubaSampleBuilder::with_discard());
             borrowed!(ctx);
 
             let blobstore = &make_blobstore(

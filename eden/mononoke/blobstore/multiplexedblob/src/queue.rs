@@ -13,7 +13,7 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, Operatio
 use context::CoreContext;
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
-use scuba::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use std::fmt;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
@@ -31,7 +31,7 @@ impl MultiplexedBlobstore {
         write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         minimum_successful_writes: NonZeroUsize,
         queue: Arc<dyn BlobstoreSyncQueue>,
-        scuba: ScubaSampleBuilder,
+        scuba: MononokeScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
     ) -> Self {
         let put_handler = Arc::new(QueueBlobstorePutHandler {

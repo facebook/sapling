@@ -26,7 +26,7 @@ use futures_old::{
     sync::oneshot,
     Future, IntoFuture,
 };
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use tokio::executor::DefaultExecutor;
 use tracing::{trace_args, EventId, Traced};
 
@@ -516,7 +516,7 @@ impl UploadChangesets {
                 let cshandle = create_changeset.create(
                     ctx.clone(),
                     &blobrepo,
-                    ScubaSampleBuilder::with_discard(),
+                    MononokeScubaSampleBuilder::with_discard(),
                 );
                 parent_changeset_handles.insert(csid, cshandle.clone());
 

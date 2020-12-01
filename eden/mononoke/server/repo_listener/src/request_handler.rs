@@ -31,7 +31,6 @@ use maplit::{hashmap, hashset};
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 use repo_client::RepoClient;
 use scribe_ext::Scribe;
-use scuba_ext::ScubaSampleBuilderExt;
 use slog::{self, error, o, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;

@@ -28,7 +28,7 @@ use futures::future;
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use mutable_counters::MutableCounters;
 use mutable_counters::SqlMutableCounters;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 mod cli;
 mod reporting;
@@ -85,7 +85,7 @@ async fn run_in_tailing_mode<T: MutableCounters>(
     blobrepo: BlobRepo,
     validation_helpers: ValidationHelpers,
     start_id: u64,
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: MononokeScubaSampleBuilder,
     mutable_counters: &T,
 ) -> Result<(), Error> {
     let counter_name = format_counter();

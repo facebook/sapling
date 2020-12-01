@@ -6,7 +6,7 @@
  */
 
 use fbinit::FacebookInit;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use std::sync::{
     atomic::{AtomicU32, Ordering},
@@ -41,14 +41,14 @@ impl SamplingKey {
 #[derive(Debug, Clone)]
 pub struct LoggingContainer {
     logger: Logger,
-    scuba: Arc<ScubaSampleBuilder>,
+    scuba: Arc<MononokeScubaSampleBuilder>,
     perf_counters: PerfCountersStack,
     sampling_key: Option<SamplingKey>,
     scribe: Scribe,
 }
 
 impl LoggingContainer {
-    pub fn new(fb: FacebookInit, logger: Logger, scuba: ScubaSampleBuilder) -> Self {
+    pub fn new(fb: FacebookInit, logger: Logger, scuba: MononokeScubaSampleBuilder) -> Self {
         Self {
             logger,
             scuba: Arc::new(scuba),
@@ -83,7 +83,7 @@ impl LoggingContainer {
         &self.logger
     }
 
-    pub fn scuba(&self) -> &ScubaSampleBuilder {
+    pub fn scuba(&self) -> &MononokeScubaSampleBuilder {
         &self.scuba
     }
 

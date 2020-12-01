@@ -16,7 +16,7 @@ use futures::{
     future::FutureExt,
     stream::{Stream, StreamExt, TryStreamExt},
 };
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, Logger};
 use stats::prelude::*;
 use std::{
@@ -38,7 +38,7 @@ define_stats! {
 pub trait ProgressRecorderUnprotected<SS> {
     fn record_step(&mut self, n: &Node, ss: Option<&SS>);
 
-    fn set_sample_builder(&mut self, s: ScubaSampleBuilder);
+    fn set_sample_builder(&mut self, s: MononokeScubaSampleBuilder);
 }
 
 pub trait ProgressReporterUnprotected {
@@ -313,7 +313,7 @@ where
         self.work_stats.record_step(n, opt);
     }
 
-    fn set_sample_builder(&mut self, _s: ScubaSampleBuilder) {
+    fn set_sample_builder(&mut self, _s: MononokeScubaSampleBuilder) {
         // NOOP
     }
 }
@@ -332,7 +332,7 @@ impl ProgressReporterUnprotected for ProgressStateCountByType<StepStats, Progres
 
 pub trait ProgressRecorder<SS> {
     fn record_step(&self, n: &Node, ss: Option<&SS>);
-    fn set_sample_builder(&self, s: ScubaSampleBuilder);
+    fn set_sample_builder(&self, s: MononokeScubaSampleBuilder);
 }
 
 pub trait ProgressReporter {
@@ -361,7 +361,7 @@ where
         self.inner.lock().unwrap().record_step(n, ss)
     }
 
-    fn set_sample_builder(&self, s: ScubaSampleBuilder) {
+    fn set_sample_builder(&self, s: MononokeScubaSampleBuilder) {
         self.inner.lock().unwrap().set_sample_builder(s)
     }
 }

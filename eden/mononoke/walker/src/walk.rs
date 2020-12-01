@@ -45,7 +45,7 @@ use mononoke_types::{
     FileUnodeId, FsnodeId, MPath, ManifestUnodeId, SkeletonManifestId,
 };
 use phases::{HeadsFetcher, Phase, Phases};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::warn;
 use std::{
@@ -1412,7 +1412,7 @@ pub fn walk_exact<V, VOut, Route>(
     include_edge_types: HashSet<EdgeType>,
     always_emit_edge_types: HashSet<EdgeType>,
     required_node_data_types: HashSet<NodeType>,
-    scuba: ScubaSampleBuilder,
+    scuba: MononokeScubaSampleBuilder,
     keep_edge_paths: bool,
 ) -> BoxStream<'static, Result<VOut, Error>>
 where
@@ -1523,7 +1523,7 @@ async fn walk_one<V, VOut, Route>(
     visitor: V,
     error_as_data_node_types: HashSet<NodeType>,
     error_as_data_edge_types: HashSet<EdgeType>,
-    mut scuba: ScubaSampleBuilder,
+    mut scuba: MononokeScubaSampleBuilder,
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
     checker: Arc<Checker<V>>,
 ) -> Result<(VOut, Vec<(Option<Route>, OutgoingEdge)>), Error>

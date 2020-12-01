@@ -30,7 +30,6 @@ use metaconfig_types::CacheWarmupParams;
 use microwave::{self, SnapshotLocation};
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
-use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, info, warn};
 use tokio::task;
 

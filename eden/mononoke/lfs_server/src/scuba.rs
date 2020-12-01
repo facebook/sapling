@@ -8,7 +8,7 @@
 use gotham::state::State;
 
 use gotham_ext::middleware::ScubaHandler;
-use scuba::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::middleware::RequestContext;
 use crate::util::read_header_value;
@@ -86,7 +86,7 @@ impl ScubaHandler for LfsScubaHandler {
         }
     }
 
-    fn add_stats(self, scuba: &mut ScubaSampleBuilder) {
+    fn add_stats(self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add_opt(LfsScubaKey::ClientAttempt, self.client_attempt);
 
         if let Some(ctx) = self.ctx {

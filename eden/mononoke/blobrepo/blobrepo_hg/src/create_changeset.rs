@@ -27,7 +27,7 @@ use mercurial_types::{
     HgFileNodeId, HgManifestId, HgNodeHash, RepoPath,
 };
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, MPath};
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
 use std::{
     convert::From,
@@ -75,7 +75,7 @@ impl CreateChangeset {
         self,
         ctx: CoreContext,
         repo: &BlobRepo,
-        mut scuba_logger: ScubaSampleBuilder,
+        mut scuba_logger: MononokeScubaSampleBuilder,
     ) -> ChangesetHandle {
         STATS::create_changeset.add_value(1);
         // This is used for logging, so that we can tie up all our pieces without knowing about

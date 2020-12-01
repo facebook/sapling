@@ -24,7 +24,7 @@ use hooks_content_stores::blobrepo_text_only_fetcher;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info};
 use std::collections::HashSet;
 use std::iter::IntoIterator;
@@ -70,7 +70,7 @@ impl Tailer {
             ctx.fb,
             content_fetcher,
             config.hook_manager_params.clone().unwrap_or_default(),
-            ScubaSampleBuilder::with_discard(),
+            MononokeScubaSampleBuilder::with_discard(),
             repo.name().clone(),
         )
         .await?;

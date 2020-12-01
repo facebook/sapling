@@ -24,7 +24,6 @@ phases = { path = "../../phases" }
 reachabilityindex = { path = "../../reachabilityindex" }
 repo_blobstore = { path = "../../blobrepo/repo_blobstore" }
 revset = { path = "../../revset" }
-scuba_ext = { path = "../../common/scuba_ext" }
 tunables = { path = "../../tunables" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

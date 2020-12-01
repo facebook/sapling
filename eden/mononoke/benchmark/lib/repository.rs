@@ -39,7 +39,7 @@ use phases::SqlPhasesFactory;
 use rand::Rng;
 use rand_distr::Distribution;
 use repo_blobstore::RepoBlobstoreArgs;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::DisabledSegmentedChangelog;
 use sql_construct::SqlConstruct;
 use std::{sync::Arc, time::Duration};
@@ -146,8 +146,12 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
 
     let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
 
-    let blobstore =
-        RepoBlobstoreArgs::new(blobstore, None, repoid, ScubaSampleBuilder::with_discard());
+    let blobstore = RepoBlobstoreArgs::new(
+        blobstore,
+        None,
+        repoid,
+        MononokeScubaSampleBuilder::with_discard(),
+    );
     Ok(blobrepo_factory::blobrepo_new(
         bookmarks.clone(),
         bookmarks,

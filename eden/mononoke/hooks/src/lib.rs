@@ -38,7 +38,7 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
 use permission_checker::{ArcMembershipChecker, MembershipCheckerBuilder};
 use regex::Regex;
 use scuba::builder::ServerData;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use std::collections::HashMap;
 use std::fmt;
@@ -56,9 +56,9 @@ pub struct HookManager {
     content_fetcher: Box<dyn FileContentFetcher>,
     reviewers_membership: ArcMembershipChecker,
     admin_membership: ArcMembershipChecker,
-    scuba: ScubaSampleBuilder,
+    scuba: MononokeScubaSampleBuilder,
     all_hooks_bypassed: bool,
-    scuba_bypassed_commits: ScubaSampleBuilder,
+    scuba_bypassed_commits: MononokeScubaSampleBuilder,
 }
 
 impl HookManager {
@@ -66,7 +66,7 @@ impl HookManager {
         fb: FacebookInit,
         content_fetcher: Box<dyn FileContentFetcher>,
         hook_manager_params: HookManagerParams,
-        mut scuba: ScubaSampleBuilder,
+        mut scuba: MononokeScubaSampleBuilder,
         repo_name: String,
     ) -> Result<HookManager> {
         let hooks = HashMap::new();
@@ -91,8 +91,8 @@ impl HookManager {
             )?
         };
 
-        let scuba_bypassed_commits: ScubaSampleBuilder =
-            scuba_ext::ScubaSampleBuilderExt::with_opt_table(
+        let scuba_bypassed_commits: MononokeScubaSampleBuilder =
+            scuba_ext::MononokeScubaSampleBuilder::with_opt_table(
                 fb,
                 hook_manager_params.bypassed_commits_scuba_table,
             );
@@ -189,7 +189,7 @@ impl HookManager {
         self.all_hooks_bypassed
     }
 
-    pub fn scuba_bypassed_commits(&self) -> &ScubaSampleBuilder {
+    pub fn scuba_bypassed_commits(&self) -> &MononokeScubaSampleBuilder {
         &self.scuba_bypassed_commits
     }
 
@@ -313,7 +313,7 @@ impl<'a> HookInstance<'a> {
         bookmark: &BookmarkName,
         content_fetcher: &dyn FileContentFetcher,
         hook_name: &str,
-        mut scuba: ScubaSampleBuilder,
+        mut scuba: MononokeScubaSampleBuilder,
         cs: &BonsaiChangeset,
         cs_id: ChangesetId,
         cross_repo_push_source: CrossRepoPushSource,
@@ -407,7 +407,7 @@ impl Hook {
         content_fetcher: &'a dyn FileContentFetcher,
         hook_name: &'cs str,
         cs: &'cs BonsaiChangeset,
-        scuba: ScubaSampleBuilder,
+        scuba: MononokeScubaSampleBuilder,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> impl Iterator<Item = impl Future<Output = Result<HookOutcome, Error>> + 'cs> + 'cs {
         let mut futures = Vec::new();

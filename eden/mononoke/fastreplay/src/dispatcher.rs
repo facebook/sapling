@@ -11,7 +11,7 @@ use context::{LoggingContainer, SessionContainer};
 use fbinit::FacebookInit;
 use metaconfig_types::RepoClientKnobs;
 use repo_client::{MononokeRepo, RepoClient, WireprotoLogging};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sshrelay::Metadata;
 use std::sync::Arc;
@@ -46,7 +46,11 @@ impl FastReplayDispatcher {
         })
     }
 
-    pub fn client(&self, scuba: ScubaSampleBuilder, client_hostname: Option<String>) -> RepoClient {
+    pub fn client(
+        &self,
+        scuba: MononokeScubaSampleBuilder,
+        client_hostname: Option<String>,
+    ) -> RepoClient {
         let metadata = Metadata::default().set_client_hostname(client_hostname);
 
         let logging = LoggingContainer::new(self.fb, self.logger.clone(), scuba);
@@ -69,7 +73,10 @@ impl FastReplayDispatcher {
 
     pub async fn load_remote_args(&self, key: String) -> Result<String, Error> {
         let session = SessionContainer::new_with_defaults(self.fb);
-        let ctx = session.new_context(self.logger.clone(), ScubaSampleBuilder::with_discard());
+        let ctx = session.new_context(
+            self.logger.clone(),
+            MononokeScubaSampleBuilder::with_discard(),
+        );
 
         let blobstore = self
             .remote_args_blobstore

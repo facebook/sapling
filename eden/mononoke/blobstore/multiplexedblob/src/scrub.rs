@@ -23,7 +23,7 @@ use futures::stream::{FuturesUnordered, TryStreamExt};
 use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use once_cell::sync::OnceCell;
-use scuba::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn};
 use std::collections::HashMap;
 use std::fmt;
@@ -85,7 +85,7 @@ pub struct ScrubBlobstore {
     inner: MultiplexedBlobstore,
     scrub_handler: Arc<dyn ScrubHandler>,
     scrub_action: ScrubAction,
-    scuba: ScubaSampleBuilder,
+    scuba: MononokeScubaSampleBuilder,
     scrub_stores: Arc<HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>>,
     queue: Arc<dyn BlobstoreSyncQueue>,
 }
@@ -97,7 +97,7 @@ impl ScrubBlobstore {
         write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         minimum_successful_writes: NonZeroUsize,
         queue: Arc<dyn BlobstoreSyncQueue>,
-        scuba: ScubaSampleBuilder,
+        scuba: MononokeScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
         scrub_handler: Arc<dyn ScrubHandler>,
         scrub_action: ScrubAction,
@@ -138,7 +138,7 @@ impl fmt::Debug for ScrubBlobstore {
 // Would be a closure, but async closures are unstable
 async fn put_and_mark_repaired(
     ctx: &CoreContext,
-    scuba: &ScubaSampleBuilder,
+    scuba: &MononokeScubaSampleBuilder,
     order: &AtomicUsize,
     id: BlobstoreId,
     store: &dyn BlobstorePutOps,
@@ -172,7 +172,7 @@ async fn blobstore_get(
     scrub_stores: &HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>,
     scrub_handler: &dyn ScrubHandler,
     scrub_action: ScrubAction,
-    scuba: ScubaSampleBuilder,
+    scuba: MononokeScubaSampleBuilder,
 ) -> Result<Option<BlobstoreGetData>> {
     match inner_blobstore.scrub_get(ctx, key).await {
         Ok(value) => return Ok(value),

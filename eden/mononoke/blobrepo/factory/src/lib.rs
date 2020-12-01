@@ -48,7 +48,7 @@ use phases::SqlPhasesFactory;
 use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::{RedactedMetadata, SqlRedactedContentStore};
 use repo_blobstore::RepoBlobstoreArgs;
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::{
     DisabledSegmentedChangelog, SegmentedChangelog, SegmentedChangelogBuilder,
 };
@@ -342,7 +342,7 @@ impl TestRepoBuilder {
             blobstore,
             redacted,
             repo_id,
-            ScubaSampleBuilder::with_discard(),
+            MononokeScubaSampleBuilder::with_discard(),
         );
 
         let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
@@ -456,7 +456,7 @@ pub fn new_memblob_with_connection_with_id(
         Arc::new(Memblob::default()),
         None,
         repo_id,
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
     );
 
     let sql_connections = SqlConnections::new_single(con.clone());
@@ -901,8 +901,8 @@ pub fn blobrepo_new(
 fn get_censored_scuba_builder(
     fb: FacebookInit,
     censored_scuba_params: CensoredScubaParams,
-) -> Result<ScubaSampleBuilder, Error> {
-    let mut builder = ScubaSampleBuilder::with_opt_table(fb, censored_scuba_params.table);
+) -> Result<MononokeScubaSampleBuilder, Error> {
+    let mut builder = MononokeScubaSampleBuilder::with_opt_table(fb, censored_scuba_params.table);
 
     if let Some(scuba_log_file) = censored_scuba_params.local_path {
         builder = builder.with_log_file(scuba_log_file)?;

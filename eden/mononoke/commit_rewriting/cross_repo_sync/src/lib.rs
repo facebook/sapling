@@ -35,7 +35,7 @@ use mononoke_types::{
 use movers::Mover;
 use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
 use reachabilityindex::LeastCommonAncestorsHint;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info};
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::fmt;
@@ -507,7 +507,7 @@ pub struct CommitSyncer<M> {
     pub mapping: M,
     pub repos: CommitSyncRepos,
     pub commit_sync_data_provider: CommitSyncDataProvider,
-    pub scuba_sample: ScubaSampleBuilder,
+    pub scuba_sample: MononokeScubaSampleBuilder,
 }
 
 impl<M> fmt::Debug for CommitSyncer<M>

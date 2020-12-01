@@ -35,7 +35,7 @@ use movers::{get_movers, Mover};
 use reachabilityindex::LeastCommonAncestorsHint;
 use ref_cast::RefCast;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, error, info};
 use stats::prelude::*;
 use std::cmp::min;
@@ -161,14 +161,14 @@ type FullManifestDiff = HashSet<FilenodeDiff>;
 struct ValidationHelper {
     large_repo: Large<BlobRepo>,
     small_repo: Small<BlobRepo>,
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: MononokeScubaSampleBuilder,
 }
 
 impl ValidationHelper {
     fn new(
         large_repo: Large<BlobRepo>,
         small_repo: Small<BlobRepo>,
-        scuba_sample: ScubaSampleBuilder,
+        scuba_sample: MononokeScubaSampleBuilder,
     ) -> Self {
         Self {
             large_repo,
@@ -446,7 +446,10 @@ pub struct ValidationHelpers {
 impl ValidationHelpers {
     pub fn new(
         large_repo: BlobRepo,
-        helpers: HashMap<RepositoryId, (Large<BlobRepo>, Small<BlobRepo>, ScubaSampleBuilder)>,
+        helpers: HashMap<
+            RepositoryId,
+            (Large<BlobRepo>, Small<BlobRepo>, MononokeScubaSampleBuilder),
+        >,
         large_repo_lca_hint: Arc<dyn LeastCommonAncestorsHint>,
         large_repo_master_bookmark: BookmarkName,
         mapping: SqlSyncedCommitMapping,

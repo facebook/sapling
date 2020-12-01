@@ -31,7 +31,7 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use mutable_counters::MutableCounters;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info};
 use stats::prelude::*;
 use std::fs::File;
@@ -261,7 +261,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let session_container = SessionContainer::new_with_defaults(fb);
     let commit_syncer = {
-        let scuba_sample = ScubaSampleBuilder::with_discard();
+        let scuba_sample = MononokeScubaSampleBuilder::with_discard();
         let ctx = session_container.new_context(logger.clone(), scuba_sample);
         runtime.block_on_std(create_commit_syncer_from_matches(&ctx, &matches))?
     };
@@ -279,7 +279,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     match matches.subcommand() {
         (ARG_MODE_BACKSYNC_ALL, _) => {
-            let scuba_sample = ScubaSampleBuilder::with_discard();
+            let scuba_sample = MononokeScubaSampleBuilder::with_discard();
             let ctx = session_container.new_context(logger.clone(), scuba_sample);
             let db_config = target_repo_config.storage_config.metadata;
             let target_repo_dbs = runtime.block_on_std(
@@ -301,8 +301,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }
         (ARG_MODE_BACKSYNC_FOREVER, _) => {
             let db_config = target_repo_config.storage_config.metadata;
-            let ctx =
-                session_container.new_context(logger.clone(), ScubaSampleBuilder::with_discard());
+            let ctx = session_container
+                .new_context(logger.clone(), MononokeScubaSampleBuilder::with_discard());
             let target_repo_dbs = runtime.block_on_std(
                 open_backsyncer_dbs(
                     ctx,
@@ -314,7 +314,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .boxed(),
             )?;
 
-            let mut scuba_sample = ScubaSampleBuilder::new(fb, SCUBA_TABLE);
+            let mut scuba_sample = MononokeScubaSampleBuilder::new(fb, SCUBA_TABLE);
             scuba_sample.add("source_repo", source_repo_id.id());
             scuba_sample.add("source_repo_name", source_repo_name.clone());
             scuba_sample.add("target_repo", target_repo_id.id());
@@ -343,7 +343,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             runtime.block_on_std(f)?;
         }
         (ARG_MODE_BACKSYNC_COMMITS, Some(sub_m)) => {
-            let ctx = session_container.new_context(logger, ScubaSampleBuilder::with_discard());
+            let ctx =
+                session_container.new_context(logger, MononokeScubaSampleBuilder::with_discard());
             let inputfile = sub_m
                 .value_of(ARG_INPUT_FILE)
                 .expect("input file is not set");

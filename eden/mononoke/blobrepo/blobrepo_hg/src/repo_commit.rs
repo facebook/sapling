@@ -23,7 +23,7 @@ use futures_old::stream::Stream as OldStream;
 use futures_old::sync::oneshot;
 use futures_old::IntoFuture;
 use futures_stats::Timed;
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::mem;
@@ -152,13 +152,13 @@ struct UploadEntriesState {
 
 #[derive(Clone)]
 pub struct UploadEntries {
-    scuba_logger: ScubaSampleBuilder,
+    scuba_logger: MononokeScubaSampleBuilder,
     inner: Arc<Mutex<UploadEntriesState>>,
     blobstore: RepoBlobstore,
 }
 
 impl UploadEntries {
-    pub fn new(blobstore: RepoBlobstore, scuba_logger: ScubaSampleBuilder) -> Self {
+    pub fn new(blobstore: RepoBlobstore, scuba_logger: MononokeScubaSampleBuilder) -> Self {
         Self {
             scuba_logger,
             inner: Arc::new(Mutex::new(UploadEntriesState {
@@ -169,7 +169,7 @@ impl UploadEntries {
         }
     }
 
-    fn scuba_logger(&self) -> ScubaSampleBuilder {
+    fn scuba_logger(&self) -> MononokeScubaSampleBuilder {
         self.scuba_logger.clone()
     }
 
@@ -491,7 +491,7 @@ pub fn extract_parents_complete(
 }
 
 pub fn handle_parents(
-    mut scuba_logger: ScubaSampleBuilder,
+    mut scuba_logger: MononokeScubaSampleBuilder,
     p1: Option<ChangesetHandle>,
     p2: Option<ChangesetHandle>,
 ) -> OldBoxFuture<(HgParents, Vec<HgManifestId>, Vec<ChangesetId>), Error> {

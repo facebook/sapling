@@ -45,7 +45,6 @@ use mercurial_types::{blobs::ContentBlobMeta, HgChangesetId, HgFileNodeId, HgNod
 use metaconfig_types::{PushrebaseFlags, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase::HgReplayData;
-use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, trace};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;

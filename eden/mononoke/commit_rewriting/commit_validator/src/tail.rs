@@ -15,7 +15,7 @@ use futures::{
     TryStreamExt,
 };
 use mononoke_types::RepositoryId;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use std::iter::Iterator;
 use std::sync::Arc;
@@ -90,7 +90,7 @@ pub(crate) fn tail_entries(
     start_id: u64,
     repo_id: RepositoryId,
     bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: MononokeScubaSampleBuilder,
 ) -> impl stream::Stream<Item = Result<(BookmarkUpdateLogEntry, QueueSize), Error>> {
     unfold_forever((0, start_id), move |(iteration, current_id)| {
         cloned!(ctx, bookmark_update_log, scuba_sample);

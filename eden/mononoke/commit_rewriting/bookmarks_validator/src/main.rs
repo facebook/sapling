@@ -22,7 +22,7 @@ use futures::{future, TryStreamExt};
 use live_commit_sync_config::CONFIGERATOR_PUSHREDIRECT_ENABLE;
 use mononoke_types::ChangesetId;
 use pushredirect_enable::types::MononokePushRedirectEnable;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{error, info, Logger};
 use stats::prelude::*;
 use std::{sync::Arc, time::Duration};
@@ -69,7 +69,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
 fn create_core_context(fb: FacebookInit, logger: Logger) -> CoreContext {
     let session_container = SessionContainer::new_with_defaults(fb);
-    let scuba_sample = ScubaSampleBuilder::with_discard();
+    let scuba_sample = MononokeScubaSampleBuilder::with_discard();
     session_container.new_context(logger, scuba_sample)
 }
 

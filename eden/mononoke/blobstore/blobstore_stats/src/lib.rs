@@ -10,7 +10,7 @@ use std::time::Duration;
 
 use anyhow::Error;
 use futures_stats::FutureStats;
-use scuba::{ScubaSampleBuilder, ScubaValue};
+use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
 use blobstore::{BlobstoreGetData, OverwriteStatus};
@@ -49,7 +49,7 @@ impl From<OperationType> for ScubaValue {
 }
 
 fn add_common_values(
-    scuba: &mut ScubaSampleBuilder,
+    scuba: &mut MononokeScubaSampleBuilder,
     pc: &PerfCounters,
     key: &str,
     session: String,
@@ -74,7 +74,7 @@ fn add_common_values(
 }
 
 pub fn record_get_stats(
-    scuba: &mut ScubaSampleBuilder,
+    scuba: &mut MononokeScubaSampleBuilder,
     pc: &PerfCounters,
     stats: FutureStats,
     result: Result<&Option<BlobstoreGetData>, &Error>,
@@ -106,7 +106,7 @@ pub fn record_get_stats(
 }
 
 pub fn record_put_stats(
-    scuba: &mut ScubaSampleBuilder,
+    scuba: &mut MononokeScubaSampleBuilder,
     pc: &PerfCounters,
     stats: FutureStats,
     result: Result<&OverwriteStatus, &Error>,

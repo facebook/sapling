@@ -15,7 +15,7 @@ use hyper::{
     Method, StatusCode, Uri,
 };
 use hyper::{Body, Response};
-use scuba::{ScubaSampleBuilder, ScubaValue};
+use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
 use crate::{
@@ -107,7 +107,7 @@ impl Into<String> for HttpScubaKey {
 pub trait ScubaHandler: Send + 'static {
     fn from_state(state: &State) -> Self;
 
-    fn add_stats(self, scuba: &mut ScubaSampleBuilder);
+    fn add_stats(self, scuba: &mut MononokeScubaSampleBuilder);
 }
 
 #[derive(Clone)]
@@ -118,17 +118,17 @@ impl ScubaHandler for DefaultScubaHandler {
         DefaultScubaHandler
     }
 
-    fn add_stats(self, _scuba: &mut ScubaSampleBuilder) {}
+    fn add_stats(self, _scuba: &mut MononokeScubaSampleBuilder) {}
 }
 
 #[derive(Clone)]
 pub struct ScubaMiddleware<H> {
-    scuba: ScubaSampleBuilder,
+    scuba: MononokeScubaSampleBuilder,
     _phantom: PhantomHandler<H>,
 }
 
 impl<H> ScubaMiddleware<H> {
-    pub fn new(scuba: ScubaSampleBuilder) -> Self {
+    pub fn new(scuba: MononokeScubaSampleBuilder) -> Self {
         Self {
             scuba,
             _phantom: PhantomHandler(PhantomData),
@@ -157,7 +157,7 @@ impl<H> RefUnwindSafe for PhantomHandler<H> {}
 unsafe impl<H> Sync for PhantomHandler<H> {}
 
 fn add_header<'a, Header, Converter, Value>(
-    scuba: &mut ScubaSampleBuilder,
+    scuba: &mut MononokeScubaSampleBuilder,
     headers: &'a HeaderMap,
     scuba_key: HttpScubaKey,
     header: Header,
@@ -290,7 +290,7 @@ fn log_stats<H: ScubaHandler>(
 }
 
 #[derive(StateData)]
-pub struct ScubaMiddlewareState(ScubaSampleBuilder);
+pub struct ScubaMiddlewareState(MononokeScubaSampleBuilder);
 
 impl ScubaMiddlewareState {
     pub fn add<K, V>(&mut self, key: K, value: V) -> &mut Self

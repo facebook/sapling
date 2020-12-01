@@ -10,8 +10,8 @@ include = ["src/*.rs"]
 blobstore = { path = ".." }
 context = { path = "../../server/context" }
 metaconfig_types = { path = "../../metaconfig/types" }
+scuba_ext = { path = "../../common/scuba_ext" }
 tunables = { path = "../../tunables" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"

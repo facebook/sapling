@@ -34,7 +34,7 @@ use hooks_content_stores::blobrepo_text_only_fetcher;
 use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
 use metaconfig_types::{CensoredScubaParams, RepoConfig, RepoReadOnly};
 use mononoke_types::{BonsaiChangeset, ChangesetId, Timestamp};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -427,7 +427,7 @@ async fn do_main(
             ctx.fb,
             blobrepo_text_only_fetcher(repo.clone(), repo_config.hook_max_file_size),
             repo_config.hook_manager_params.clone().unwrap_or_default(),
-            ScubaSampleBuilder::with_discard(),
+            MononokeScubaSampleBuilder::with_discard(),
             repo.name().clone(),
         )
         .await?;

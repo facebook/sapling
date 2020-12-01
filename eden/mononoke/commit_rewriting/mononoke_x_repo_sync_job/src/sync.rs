@@ -31,7 +31,7 @@ use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use reachabilityindex::{LeastCommonAncestorsHint, ReachabilityIndex};
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
 use slog::{info, warn};
 use std::{
@@ -59,7 +59,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
-    mut scuba_sample: ScubaSampleBuilder,
+    mut scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<Vec<ChangesetId>, Error> {
     info!(ctx.logger(), "processing log entry #{}", entry.id);
     let bookmark = commit_syncer.get_bookmark_renamer(ctx)?(&entry.bookmark_name)
@@ -112,7 +112,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<Vec<ChangesetId>, Error> {
     let (unsynced_ancestors, unsynced_ancestors_versions) =
         find_toposorted_unsynced_ancestors(&ctx, &commit_syncer, to_cs_id.clone()).await?;
@@ -216,7 +216,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     bookmark: &BookmarkName,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: MononokeScubaSampleBuilder,
     unsynced_ancestors: Vec<ChangesetId>,
     version: &CommitSyncConfigVersion,
 ) -> Result<Vec<ChangesetId>, Error> {
@@ -301,7 +301,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: MononokeScubaSampleBuilder,
     cs_id: ChangesetId,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
     version: &CommitSyncConfigVersion,
@@ -385,7 +385,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
 async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M>,
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: MononokeScubaSampleBuilder,
     bookmark: &BookmarkName,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
 ) -> Result<(), Error> {
@@ -1042,7 +1042,7 @@ mod test {
                 &source_skiplist_index.clone(),
                 &target_skiplist_index.clone(),
                 &common_pushrebase_bookmarks,
-                ScubaSampleBuilder::with_discard(),
+                MononokeScubaSampleBuilder::with_discard(),
             )
             .await?;
 

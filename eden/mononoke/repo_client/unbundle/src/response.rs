@@ -26,7 +26,6 @@ use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
 use obsolete;
 use reachabilityindex::LeastCommonAncestorsHint;
-use scuba_ext::ScubaSampleBuilderExt;
 use std::io::Cursor;
 use std::sync::Arc;
 

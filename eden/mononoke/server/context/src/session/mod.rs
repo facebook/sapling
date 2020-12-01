@@ -10,7 +10,7 @@ use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
 use load_limiter::{BoxLoadLimiter, LoadCost, LoadLimiter, Metric};
 use scribe_ext::Scribe;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sshrelay::Metadata;
 use std::sync::Arc;
@@ -59,7 +59,7 @@ impl SessionContainer {
         Self::builder(fb).build()
     }
 
-    pub fn new_context(&self, logger: Logger, scuba: ScubaSampleBuilder) -> CoreContext {
+    pub fn new_context(&self, logger: Logger, scuba: MononokeScubaSampleBuilder) -> CoreContext {
         let logging = LoggingContainer::new(self.fb, logger, scuba);
 
         CoreContext::new_with_containers(self.fb, logging, self.clone())
@@ -68,7 +68,7 @@ impl SessionContainer {
     pub fn new_context_with_scribe(
         &self,
         logger: Logger,
-        scuba: ScubaSampleBuilder,
+        scuba: MononokeScubaSampleBuilder,
         scribe: Scribe,
     ) -> CoreContext {
         let mut logging = LoggingContainer::new(self.fb, logger, scuba);

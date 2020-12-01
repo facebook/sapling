@@ -43,7 +43,6 @@ use futures_old::future::Future;
 use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
-use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, warn};
 use sql::Transaction;
 use sql_construct::SqlConstruct;

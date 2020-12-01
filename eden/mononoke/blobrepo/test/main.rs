@@ -45,7 +45,7 @@ use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 use mononoke_types::{
     blob::BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange, FileContents,
 };
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     sync::Arc,
@@ -439,7 +439,10 @@ async fn upload_entries_finalize_success(fb: FacebookInit) {
     let (fnid, _) = file_future.compat().await.unwrap();
     let (root_mfid, _) = root_manifest_future.compat().await.unwrap();
 
-    let entries = UploadEntries::new(repo.get_blobstore(), ScubaSampleBuilder::with_discard());
+    let entries = UploadEntries::new(
+        repo.get_blobstore(),
+        MononokeScubaSampleBuilder::with_discard(),
+    );
 
     (entries.process_root_manifest(&ctx, root_mfid))
         .await
@@ -460,7 +463,10 @@ async fn upload_entries_finalize_fail(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let repo = get_empty_repo();
 
-    let entries = UploadEntries::new(repo.get_blobstore(), ScubaSampleBuilder::with_discard());
+    let entries = UploadEntries::new(
+        repo.get_blobstore(),
+        MononokeScubaSampleBuilder::with_discard(),
+    );
 
     let dirhash = string_to_nodehash("c2d60b35a8e7e034042a9467783bbdac88a0d219");
     let (_, root_manifest_future) = upload_manifest_no_parents(

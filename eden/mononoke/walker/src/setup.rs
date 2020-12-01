@@ -32,7 +32,7 @@ use lazy_static::lazy_static;
 use metaconfig_types::{Redaction, ScrubAction};
 use once_cell::sync::OnceCell;
 use samplingblob::SamplingHandler;
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use std::{
     collections::{HashMap, HashSet},
@@ -46,7 +46,7 @@ use strum_macros::{AsRefStr, EnumString, EnumVariantNames};
 
 pub struct RepoWalkDatasources {
     pub blobrepo: BlobRepo,
-    pub scuba_builder: ScubaSampleBuilder,
+    pub scuba_builder: MononokeScubaSampleBuilder,
 }
 
 #[derive(Clone)]
@@ -922,7 +922,7 @@ pub fn setup_common<'a>(
 
         let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
         let repo_name = args::get_repo_name(config_store, &matches)?;
-        let mut scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_table.clone());
+        let mut scuba_builder = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table.clone());
         scuba_builder.add_common_server_data();
         scuba_builder.add(WALK_TYPE, walk_stats_key);
         scuba_builder.add(REPO, repo_name.clone());

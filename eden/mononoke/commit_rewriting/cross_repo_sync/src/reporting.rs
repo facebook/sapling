@@ -8,7 +8,7 @@
 use anyhow::Error;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use std::fmt;
 use std::time::Duration;
 use tunables::tunables;
@@ -60,7 +60,7 @@ impl fmt::Display for CommitSyncContext {
 
 pub fn log_rewrite(
     ctx: &CoreContext,
-    mut sample: ScubaSampleBuilder,
+    mut sample: MononokeScubaSampleBuilder,
     source_cs_id: ChangesetId,
     sync_fn: &str,
     commit_sync_context: CommitSyncContext,
@@ -100,8 +100,8 @@ pub fn get_scuba_sample(
     ctx: &CoreContext,
     source_repo: impl AsRef<str>,
     target_repo: impl AsRef<str>,
-) -> ScubaSampleBuilder {
-    let mut scuba_sample = ScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE);
+) -> MononokeScubaSampleBuilder {
+    let mut scuba_sample = MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE);
     scuba_sample
         .add_common_server_data()
         .add(SOURCE_REPO, format!("{}", source_repo.as_ref()))

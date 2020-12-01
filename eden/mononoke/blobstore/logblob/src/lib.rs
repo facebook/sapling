@@ -11,7 +11,7 @@ use std::num::NonZeroU64;
 use anyhow::Result;
 use async_trait::async_trait;
 use futures_stats::TimedFutureExt;
-use scuba::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
@@ -21,12 +21,16 @@ use mononoke_types::BlobstoreBytes;
 #[derive(Debug)]
 pub struct LogBlob<B> {
     inner: B,
-    scuba: ScubaSampleBuilder,
+    scuba: MononokeScubaSampleBuilder,
     scuba_sample_rate: NonZeroU64,
 }
 
 impl<B> LogBlob<B> {
-    pub fn new(inner: B, mut scuba: ScubaSampleBuilder, scuba_sample_rate: NonZeroU64) -> Self {
+    pub fn new(
+        inner: B,
+        mut scuba: MononokeScubaSampleBuilder,
+        scuba_sample_rate: NonZeroU64,
+    ) -> Self {
         scuba.add_common_server_data();
         Self {
             inner,

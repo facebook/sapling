@@ -29,7 +29,7 @@ use mercurial_types::{
     blobs::{ChangesetMetadata, ContentBlobMeta},
     HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
 };
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use std::collections::HashMap;
 use std::ops::AddAssign;
 use wirepack::TreemanifestEntry;
@@ -284,7 +284,7 @@ fn get_parent(
 pub(crate) async fn upload_changeset(
     ctx: CoreContext,
     repo: BlobRepo,
-    scuba_logger: ScubaSampleBuilder,
+    scuba_logger: MononokeScubaSampleBuilder,
     node: HgChangesetId,
     revlog_cs: &RevlogChangeset,
     mut uploaded_changesets: UploadedChangesets,

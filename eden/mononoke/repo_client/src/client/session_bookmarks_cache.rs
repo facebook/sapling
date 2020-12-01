@@ -14,7 +14,6 @@ use context::CoreContext;
 use futures_ext::{FutureExt, StreamExt};
 use futures_old::{future as future_old, Future, Stream};
 use mercurial_types::HgChangesetId;
-use scuba_ext::ScubaSampleBuilderExt;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;

@@ -40,7 +40,6 @@ repo_client = { path = "../repo_client" }
 repo_read_write_status = { path = "../repo_client/repo_read_write_status" }
 revisionstore_types = { path = "../../scm/lib/revisionstore/types" }
 revset = { path = "../revset" }
-scuba_ext = { path = "../common/scuba_ext" }
 segmented_changelog = { path = "../segmented_changelog" }
 skiplist = { path = "../reachabilityindex/skiplist" }
 sql_construct = { path = "../common/sql_construct" }

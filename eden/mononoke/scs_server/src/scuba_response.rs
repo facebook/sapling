@@ -5,14 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
 
 /// A trait for logging a thrift `Response` struct to scuba.
 pub(crate) trait AddScubaResponse: Send + Sync {
-    fn add_scuba_response(&self, _scuba: &mut ScubaSampleBuilder) {}
+    fn add_scuba_response(&self, _scuba: &mut MononokeScubaSampleBuilder) {}
 }
 
 impl AddScubaResponse for bool {}
@@ -20,7 +20,7 @@ impl AddScubaResponse for bool {}
 impl AddScubaResponse for Vec<thrift::Repo> {}
 
 impl AddScubaResponse for thrift::RepoCreateCommitResponse {
-    fn add_scuba_response(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_response(&self, scuba: &mut MononokeScubaSampleBuilder) {
         if let Some(id) = self.ids.get(&thrift::CommitIdentityScheme::BONSAI) {
             scuba.add("commit", id.to_string());
         }

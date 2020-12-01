@@ -38,7 +38,7 @@ use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use nonzero_ext::nonzero;
 use readonlyblob::ReadOnlyBlobstore;
-use scuba::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
 
 pub struct Tickable<T> {
@@ -243,7 +243,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
         vec![],
         nonzero!(1usize),
         queue.clone(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
         scrub_handler.clone(),
         ScrubAction::ReportOnly,
@@ -286,7 +286,7 @@ async fn base(fb: FacebookInit) {
         vec![],
         nonzero!(1usize),
         log.clone(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
     let ctx = CoreContext::test_mock(fb);
@@ -435,7 +435,7 @@ async fn multiplexed(fb: FacebookInit) {
         vec![],
         nonzero!(1usize),
         queue.clone(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
 
@@ -519,7 +519,7 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<()> {
         vec![],
         nonzero!(1usize),
         queue.clone(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
 
@@ -565,7 +565,7 @@ async fn scrubbed(fb: FacebookInit) {
         vec![],
         nonzero!(1usize),
         queue.clone(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
         scrub_handler.clone(),
         ScrubAction::ReportOnly,
@@ -635,7 +635,7 @@ async fn scrubbed(fb: FacebookInit) {
         vec![],
         nonzero!(1usize),
         queue.clone(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
         scrub_handler,
         ScrubAction::Repair,
@@ -720,7 +720,7 @@ async fn queue_waits(fb: FacebookInit) {
         vec![],
         nonzero!(1usize),
         log.clone(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
     let ctx = CoreContext::test_mock(fb);
@@ -820,7 +820,7 @@ async fn write_mostly_get(fb: FacebookInit) {
         vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
         nonzero!(1usize),
         log.clone(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
 
@@ -930,7 +930,7 @@ async fn write_mostly_put(fb: FacebookInit) {
         vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
         nonzero!(1usize),
         log.clone(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
 
@@ -1109,7 +1109,7 @@ async fn needed_writes(fb: FacebookInit) {
         vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
         nonzero!(2usize),
         log.clone(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
 
@@ -1237,7 +1237,7 @@ async fn needed_writes_bad_config(fb: FacebookInit) {
         vec![(BlobstoreId::new(1), write_mostly_bs.clone())],
         nonzero!(5usize),
         log.clone(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
 
@@ -1280,7 +1280,7 @@ async fn no_handlers(fb: FacebookInit) {
         vec![],
         nonzero!(1usize),
         log.clone(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
     );
     let ctx = CoreContext::test_mock_class(fb, SessionClass::Background);

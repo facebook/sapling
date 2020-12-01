@@ -54,7 +54,6 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use revset::AncestorsNodeStream;
-use scuba_ext::ScubaSampleBuilderExt;
 use segmented_changelog::{CloneData, SegmentedChangelog};
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};

@@ -25,7 +25,7 @@ use mononoke_types::hash::{Sha1, Sha256};
 use once_cell::sync::Lazy;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt, ScubaValue};
+use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
 use slog::Logger;
 use source_control as thrift;
 use source_control::server::SourceControlService;
@@ -68,7 +68,7 @@ pub(crate) struct SourceControlServiceImpl {
     pub(crate) fb: FacebookInit,
     pub(crate) mononoke: Arc<Mononoke>,
     pub(crate) logger: Logger,
-    pub(crate) scuba_builder: ScubaSampleBuilder,
+    pub(crate) scuba_builder: MononokeScubaSampleBuilder,
     pub(crate) service_identity: Identity,
 }
 
@@ -79,7 +79,7 @@ impl SourceControlServiceImpl {
         fb: FacebookInit,
         mononoke: Arc<Mononoke>,
         logger: Logger,
-        scuba_builder: ScubaSampleBuilder,
+        scuba_builder: MononokeScubaSampleBuilder,
     ) -> Self {
         Self {
             fb,
@@ -125,7 +125,7 @@ impl SourceControlServiceImpl {
         specifier: Option<&dyn SpecifierExt>,
         params: &dyn AddScubaParams,
         identities: &MononokeIdentitySet,
-    ) -> Result<ScubaSampleBuilder, errors::ServiceError> {
+    ) -> Result<MononokeScubaSampleBuilder, errors::ServiceError> {
         let mut scuba = self.scuba_builder.clone().with_seq("seq");
         scuba.add_common_server_data();
         scuba.add("type", "thrift");

@@ -24,7 +24,6 @@ use metaconfig_types::{BookmarkAttrs, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use scuba_ext::ScubaSampleBuilderExt;
 use skeleton_manifest::RootSkeletonManifestId;
 use tunables::tunables;
 

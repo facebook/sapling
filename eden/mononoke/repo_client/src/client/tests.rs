@@ -20,7 +20,7 @@ use metaconfig_types::{HookManagerParams, InfinitepushParams, LfsParams, Pushreb
 use mononoke_repo::MononokeRepo;
 use mutable_counters::SqlMutableCounters;
 use repo_read_write_status::RepoReadWriteFetcher;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
 use tests_utils::CreateCommitContext;
@@ -478,7 +478,7 @@ async fn run_and_check_if_lfs(
                 all_hooks_bypassed: true,
                 bypassed_commits_scuba_table: None,
             },
-            ScubaSampleBuilder::with_discard(),
+            MononokeScubaSampleBuilder::with_discard(),
             repo.name().clone(),
         )),
         None,
@@ -495,7 +495,10 @@ async fn run_and_check_if_lfs(
     )
     .await?;
 
-    let logging = LoggingContainer::new(ctx.logger().clone(), ScubaSampleBuilder::with_discard());
+    let logging = LoggingContainer::new(
+        ctx.logger().clone(),
+        MononokeScubaSampleBuilder::with_discard(),
+    );
 
     let noop_wireproto =
         WireprotoLogging::new(ctx.fb, mononoke_repo.reponame().clone(), None, None, None)?;

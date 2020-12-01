@@ -15,7 +15,7 @@ use mononoke_types::ChangesetId;
 use std::sync::Arc;
 
 use metaconfig_types::RepoConfig;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 
 use crate::cli::{ARG_COMMIT, ARG_LOG_TO_SCUBA, ARG_SLEEP_SECS};
@@ -49,12 +49,15 @@ pub fn get_starting_commit<'a>(
         .and_then(move |str_value| helpers::csid_resolve(ctx, blobrepo, str_value))
 }
 
-pub fn get_scuba_sample<'a>(ctx: CoreContext, matches: &ArgMatches<'a>) -> ScubaSampleBuilder {
+pub fn get_scuba_sample<'a>(
+    ctx: CoreContext,
+    matches: &ArgMatches<'a>,
+) -> MononokeScubaSampleBuilder {
     let log_to_scuba = matches.is_present(ARG_LOG_TO_SCUBA);
     let mut scuba_sample = if log_to_scuba {
-        ScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
+        MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
     } else {
-        ScubaSampleBuilder::with_discard()
+        MononokeScubaSampleBuilder::with_discard()
     };
     scuba_sample.add_common_server_data();
     scuba_sample

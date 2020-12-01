@@ -7,7 +7,7 @@
 
 use std::collections::BTreeSet;
 
-use scuba_ext::{ScubaSampleBuilder, ScubaValue};
+use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
 use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
@@ -20,11 +20,11 @@ use crate::commit_id::CommitIdExt;
 /// the column is for a parameter.  The default implementation does
 /// nothing.
 pub(crate) trait AddScubaParams: Send + Sync {
-    fn add_scuba_params(&self, _scuba: &mut ScubaSampleBuilder) {}
+    fn add_scuba_params(&self, _scuba: &mut MononokeScubaSampleBuilder) {}
 }
 
 impl AddScubaParams for BTreeSet<thrift::CommitIdentityScheme> {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add(
             "identity_schemes",
             self.iter().map(ToString::to_string).collect::<ScubaValue>(),
@@ -35,7 +35,7 @@ impl AddScubaParams for BTreeSet<thrift::CommitIdentityScheme> {
 impl AddScubaParams for thrift::ListReposParams {}
 
 impl AddScubaParams for thrift::RepoCreateCommitParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add(
             "param_parents",
             self.parents
@@ -65,14 +65,14 @@ impl AddScubaParams for thrift::RepoCreateCommitParams {
 }
 
 impl AddScubaParams for thrift::RepoCreateBookmarkParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("bookmark_name", self.bookmark.as_str());
         scuba.add("commit", self.target.to_string());
     }
 }
 
 impl AddScubaParams for thrift::RepoMoveBookmarkParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("bookmark_name", self.bookmark.as_str());
         scuba.add("commit", self.target.to_string());
         if let Some(old_target) = &self.old_target {
@@ -86,7 +86,7 @@ impl AddScubaParams for thrift::RepoMoveBookmarkParams {
 }
 
 impl AddScubaParams for thrift::RepoDeleteBookmarkParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("bookmark_name", self.bookmark.as_str());
         if let Some(old_target) = &self.old_target {
             scuba.add("param_old_target", old_target.to_string());
@@ -95,7 +95,7 @@ impl AddScubaParams for thrift::RepoDeleteBookmarkParams {
 }
 
 impl AddScubaParams for thrift::RepoLandStackParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("bookmark_name", self.bookmark.as_str());
         scuba.add("commit", self.head.to_string());
         scuba.add("param_base", self.base.to_string());
@@ -113,7 +113,7 @@ impl AddScubaParams for thrift::RepoLandStackParams {
 }
 
 impl AddScubaParams for thrift::RepoListBookmarksParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_include_scratch", self.include_scratch as i32);
         scuba.add("param_bookmark_prefix", self.bookmark_prefix.as_str());
         scuba.add("param_limit", self.limit);
@@ -125,14 +125,14 @@ impl AddScubaParams for thrift::RepoListBookmarksParams {
 }
 
 impl AddScubaParams for thrift::RepoResolveBookmarkParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("bookmark_name", self.bookmark_name.as_str());
         self.identity_schemes.add_scuba_params(scuba);
     }
 }
 
 impl AddScubaParams for thrift::RepoResolveCommitPrefixParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_prefix", self.prefix.as_str());
         scuba.add("param_prefix_scheme", self.prefix_scheme.to_string());
         self.identity_schemes.add_scuba_params(scuba);
@@ -142,7 +142,7 @@ impl AddScubaParams for thrift::RepoResolveCommitPrefixParams {
 impl AddScubaParams for thrift::RepoStackInfoParams {}
 
 impl AddScubaParams for thrift::CommitCompareParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         if let Some(other_commit_id) = self.other_commit_id.as_ref() {
             scuba.add("other_commit", other_commit_id.to_string());
         }
@@ -155,7 +155,7 @@ impl AddScubaParams for thrift::CommitCompareParams {
 }
 
 impl AddScubaParams for thrift::CommitFileDiffsParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("other_commit", self.other_commit_id.to_string());
         scuba.add("param_format", self.format.to_string());
         scuba.add("param_context", self.context);
@@ -163,7 +163,7 @@ impl AddScubaParams for thrift::CommitFileDiffsParams {
 }
 
 impl AddScubaParams for thrift::CommitFindFilesParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_limit", self.limit);
         if let Some(basenames) = &self.basenames {
             scuba.add("param_basenames", basenames.iter().collect::<ScubaValue>());
@@ -175,31 +175,31 @@ impl AddScubaParams for thrift::CommitFindFilesParams {
 }
 
 impl AddScubaParams for thrift::CommitInfoParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         self.identity_schemes.add_scuba_params(scuba);
     }
 }
 
 impl AddScubaParams for thrift::CommitIsAncestorOfParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("other_commit", self.other_commit_id.to_string());
     }
 }
 
 impl AddScubaParams for thrift::CommitCommonBaseWithParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("other_commit", self.other_commit_id.to_string());
     }
 }
 
 impl AddScubaParams for thrift::CommitLookupParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         self.identity_schemes.add_scuba_params(scuba);
     }
 }
 
 impl AddScubaParams for thrift::CommitHistoryParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_format", self.format.to_string());
         scuba.add("param_skip", self.skip);
         scuba.add("param_limit", self.limit);
@@ -214,7 +214,7 @@ impl AddScubaParams for thrift::CommitHistoryParams {
 }
 
 impl AddScubaParams for thrift::CommitListDescendantBookmarksParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_include_scratch", self.include_scratch as i32);
         scuba.add("param_bookmark_prefix", self.bookmark_prefix.as_str());
         scuba.add("param_limit", self.limit);
@@ -226,21 +226,21 @@ impl AddScubaParams for thrift::CommitListDescendantBookmarksParams {
 }
 
 impl AddScubaParams for thrift::CommitLookupXRepoParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("other_repo", self.other_repo.name.as_str());
         self.identity_schemes.add_scuba_params(scuba);
     }
 }
 
 impl AddScubaParams for thrift::CommitPathBlameParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_format", self.format.to_string());
         self.identity_schemes.add_scuba_params(scuba);
     }
 }
 
 impl AddScubaParams for thrift::CommitPathHistoryParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_format", self.format.to_string());
         scuba.add("param_skip", self.skip);
         scuba.add("param_limit", self.limit);
@@ -261,13 +261,13 @@ impl AddScubaParams for thrift::CommitPathHistoryParams {
 impl AddScubaParams for thrift::CommitPathInfoParams {}
 
 impl AddScubaParams for thrift::CommitMultiplePathInfoParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_paths", self.paths.iter().collect::<ScubaValue>());
     }
 }
 
 impl AddScubaParams for thrift::FileContentChunkParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_offset", self.offset);
         scuba.add("param_size", self.size);
     }
@@ -278,7 +278,7 @@ impl AddScubaParams for thrift::FileExistsParams {}
 impl AddScubaParams for thrift::FileInfoParams {}
 
 impl AddScubaParams for thrift::FileDiffParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add(
             "other_file",
             faster_hex::hex_string(&self.other_file_id).expect("hex_string should never fail"),
@@ -289,14 +289,14 @@ impl AddScubaParams for thrift::FileDiffParams {
 }
 
 impl AddScubaParams for thrift::TreeListParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add("param_offset", self.offset);
         scuba.add("param_limit", self.limit);
     }
 }
 
 impl AddScubaParams for thrift::RepoListHgManifestParams {
-    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+    fn add_scuba_params(&self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add(
             "hg_manifest_id",
             faster_hex::hex_string(&self.hg_manifest_id).expect("hex_string should never fail"),

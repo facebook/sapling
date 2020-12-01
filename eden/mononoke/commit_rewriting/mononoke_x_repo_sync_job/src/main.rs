@@ -46,7 +46,7 @@ use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use regex::Regex;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
 use slog::{debug, error, info, warn};
 use std::{collections::HashSet, sync::Arc, time::Duration};
@@ -76,7 +76,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     bcs: ChangesetId,
     commit_syncer: CommitSyncer<M>,
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: MononokeScubaSampleBuilder,
     source_skiplist_index: Source<Arc<SkiplistIndex>>,
     target_skiplist_index: Target<Arc<SkiplistIndex>>,
     maybe_bookmark: Option<BookmarkName>,
@@ -130,7 +130,7 @@ async fn run_in_tailing_mode<
     source_skiplist_index: Source<Arc<SkiplistIndex>>,
     target_skiplist_index: Target<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: HashSet<BookmarkName>,
-    base_scuba_sample: ScubaSampleBuilder,
+    base_scuba_sample: MononokeScubaSampleBuilder,
     backpressure_params: BackpressureParams,
     derived_data_types: Vec<String>,
     tailing_args: TailingArgs<M>,
@@ -139,7 +139,7 @@ async fn run_in_tailing_mode<
 ) -> Result<(), Error> {
     match tailing_args {
         TailingArgs::CatchUpOnce(commit_syncer) => {
-            let scuba_sample = ScubaSampleBuilder::with_discard();
+            let scuba_sample = MononokeScubaSampleBuilder::with_discard();
             tail(
                 &ctx,
                 &commit_syncer,
@@ -207,7 +207,7 @@ async fn tail<
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M>,
     mutable_counters: &C,
-    mut scuba_sample: ScubaSampleBuilder,
+    mut scuba_sample: MononokeScubaSampleBuilder,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
@@ -316,7 +316,7 @@ async fn maybe_apply_backpressure<C>(
     mutable_counters: &C,
     backpressure_params: &BackpressureParams,
     target_repo: &BlobRepo,
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: MononokeScubaSampleBuilder,
     sleep_secs: u64,
 ) -> Result<(), Error>
 where

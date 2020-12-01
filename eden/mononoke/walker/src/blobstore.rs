@@ -21,7 +21,7 @@ use multiplexedblob::{LoggingScrubHandler, ScrubHandler};
 use prefixblob::PrefixBlobstore;
 use samplingblob::{SamplingBlobstore, SamplingHandler};
 use scuba::value::{NullScubaValue, ScubaValue};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
@@ -36,7 +36,7 @@ define_stats! {
 pub const BLOBSTORE_ID: &'static str = "blobstore_id";
 
 pub struct StatsScrubHandler {
-    scuba: ScubaSampleBuilder,
+    scuba: MononokeScubaSampleBuilder,
     subcommand_stats_key: &'static str,
     repo_stats_key: String,
     inner: LoggingScrubHandler,
@@ -45,7 +45,7 @@ pub struct StatsScrubHandler {
 impl StatsScrubHandler {
     pub fn new(
         quiet: bool,
-        scuba: ScubaSampleBuilder,
+        scuba: MononokeScubaSampleBuilder,
         subcommand_stats_key: &'static str,
         repo_stats_key: String,
     ) -> Self {
@@ -149,7 +149,7 @@ pub async fn open_blobstore(
     readonly_storage: ReadOnlyStorage,
     scrub_action: Option<ScrubAction>,
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
-    scuba_builder: ScubaSampleBuilder,
+    scuba_builder: MononokeScubaSampleBuilder,
     walk_stats_key: &'static str,
     repo_stats_key: String,
     blobstore_options: BlobstoreOptions,

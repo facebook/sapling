@@ -13,7 +13,7 @@ use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use gotham_ext::middleware::{ClientIdentity, Middleware};
 use hyper::{body::Body, Response};
-use scuba::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{o, Logger};
 
 #[derive(Copy, Clone)]
@@ -85,7 +85,7 @@ impl Middleware for RequestContextMiddleware {
 
         let logger = self.logger.new(o!("request_id" => request_id.to_string()));
         let session = SessionContainer::new_with_defaults(self.fb);
-        let ctx = session.new_context(logger, ScubaSampleBuilder::with_discard());
+        let ctx = session.new_context(logger, MononokeScubaSampleBuilder::with_discard());
 
         let should_log = ClientIdentity::try_borrow_from(&state)
             .map(|client_identity| !client_identity.is_proxygen_test_identity())

@@ -19,7 +19,7 @@ use cloned::cloned;
 use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
 use gotham_ext::middleware::{ClientIdentity, Middleware};
-use scuba::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use sshrelay::Metadata;
 
 const ERROR_CHANNEL_CAPACITY: usize = 1000;
@@ -81,7 +81,7 @@ impl Middleware for RequestContextMiddleware {
 
         let request_id = request_id(&state);
         let logger = self.logger.new(o!("request_id" => request_id.to_string()));
-        let ctx = session.new_context(logger.clone(), ScubaSampleBuilder::with_discard());
+        let ctx = session.new_context(logger.clone(), MononokeScubaSampleBuilder::with_discard());
 
         state.put(RequestContext::new(ctx, logger).await);
 

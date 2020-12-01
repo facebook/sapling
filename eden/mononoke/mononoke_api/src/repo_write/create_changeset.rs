@@ -22,7 +22,6 @@ use manifest::PathTree;
 use mononoke_types::{
     BonsaiChangesetMut, ChangesetId, DateTime as MononokeDateTime, FileChange, MPath,
 };
-use scuba_ext::ScubaSampleBuilderExt;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;

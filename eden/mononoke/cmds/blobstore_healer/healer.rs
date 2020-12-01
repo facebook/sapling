@@ -17,7 +17,6 @@ use itertools::{Either, Itertools};
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use rand::{thread_rng, Rng};
-use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, info, warn};
 use std::{
     collections::{HashMap, HashSet},

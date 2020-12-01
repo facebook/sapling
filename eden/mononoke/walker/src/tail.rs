@@ -14,7 +14,7 @@ use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{future::Future, stream::BoxStream};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use std::{collections::HashSet, iter::FromIterator};
 use tokio::time::{Duration, Instant};
@@ -22,7 +22,7 @@ use tokio::time::{Duration, Instant};
 #[derive(Clone)]
 pub struct RepoWalkRun {
     pub ctx: CoreContext,
-    pub scuba_builder: ScubaSampleBuilder,
+    pub scuba_builder: MononokeScubaSampleBuilder,
 }
 
 pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, V, VOut, Route>(

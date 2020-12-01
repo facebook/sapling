@@ -32,7 +32,6 @@ use mercurial_types::{
 };
 use mononoke_types::DateTime;
 use phases::Phase;
-use scuba_ext::ScubaSampleBuilderExt;
 use std::fmt;
 use std::io::Write;
 

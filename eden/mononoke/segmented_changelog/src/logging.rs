@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use scuba::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 use context::CoreContext;
 use mononoke_types::RepositoryId;
@@ -19,7 +19,7 @@ pub fn log_new_idmap_version(
     repo_id: RepositoryId,
     idmap_version: IdMapVersion,
 ) {
-    ScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
+    MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
         .add_common_server_data()
         .add("type", "idmap")
         .add("repo_id", repo_id.id())
@@ -32,7 +32,7 @@ pub fn log_new_iddag_version(
     repo_id: RepositoryId,
     iddag_version: IdDagVersion,
 ) {
-    ScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
+    MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
         .add_common_server_data()
         .add("type", "iddag")
         .add("repo_id", repo_id.id())
@@ -41,7 +41,7 @@ pub fn log_new_iddag_version(
 }
 
 pub fn log_new_bundle(ctx: &CoreContext, repo_id: RepositoryId, bundle: DagBundle) {
-    ScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
+    MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
         .add_common_server_data()
         .add("type", "bundle")
         .add("repo_id", repo_id.id())

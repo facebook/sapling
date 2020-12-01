@@ -8,7 +8,7 @@
 use gotham::state::State;
 
 use gotham_ext::middleware::{ClientIdentity, ScubaHandler};
-use scuba::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 
 use crate::handlers::HandlerInfo;
 use crate::middleware::RequestContext;
@@ -55,7 +55,7 @@ impl ScubaHandler for EdenApiScubaHandler {
         }
     }
 
-    fn add_stats(self, scuba: &mut ScubaSampleBuilder) {
+    fn add_stats(self, scuba: &mut MononokeScubaSampleBuilder) {
         scuba.add_opt(EdenApiScubaKey::User, self.client_username);
 
         if let Some(info) = self.handler_info {

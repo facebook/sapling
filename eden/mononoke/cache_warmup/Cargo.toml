@@ -24,7 +24,6 @@ metaconfig_types = { path = "../metaconfig/types" }
 microwave = { path = "../microwave" }
 mononoke_types = { path = "../mononoke_types" }
 revset = { path = "../revset" }
-scuba_ext = { path = "../common/scuba_ext" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"

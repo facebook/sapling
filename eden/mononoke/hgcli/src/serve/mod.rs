@@ -32,7 +32,7 @@ use openssl::{
     x509::{X509StoreContextRef, X509VerifyResult},
 };
 use permission_checker::MononokeIdentity;
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use scuba_ext::MononokeScubaSampleBuilder;
 use secure_utils::{build_identity, read_x509};
 use session_id::generate_session_id;
 use slog::{debug, error, o, Drain, Logger};
@@ -87,7 +87,7 @@ pub async fn cmd(
             let client_debug = sub.is_present("client-debug");
 
             let mut scuba_logger =
-                ScubaSampleBuilder::with_opt_table(fb, scuba_table.map(|v| v.to_owned()));
+                MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table.map(|v| v.to_owned()));
             scuba_logger.add_common_server_data();
 
             let client_logger = {
@@ -169,7 +169,7 @@ struct StdioRelay<'a> {
     expected_server_identity: ExpectedServerIdentity,
     insecure: bool,
     is_remote_proxy: bool,
-    scuba_logger: ScubaSampleBuilder,
+    scuba_logger: MononokeScubaSampleBuilder,
     mock_username: Option<&'a str>,
     show_session_output: bool,
     priority: Priority,

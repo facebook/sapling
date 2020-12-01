@@ -25,7 +25,7 @@ use futures_ext::{BoxStream, StreamExt as OldStreamExt};
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, RepositoryId};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, Logger};
 use stats::prelude::*;
 use std::collections::HashMap;
@@ -262,7 +262,7 @@ pub async fn update_statistics<'a>(
 
 pub fn log_statistics(
     ctx: &CoreContext,
-    mut scuba_logger: ScubaSampleBuilder,
+    mut scuba_logger: MononokeScubaSampleBuilder,
     cs_timestamp: i64,
     repo_name: &String,
     hg_cs_id: &HgChangesetId,
@@ -419,7 +419,7 @@ async fn run_statistics<'a>(
     fb: FacebookInit,
     ctx: CoreContext,
     logger: &Logger,
-    scuba_logger: ScubaSampleBuilder,
+    scuba_logger: MononokeScubaSampleBuilder,
     matches: ArgMatches<'a>,
     repo_name: String,
     bookmark: BookmarkName,
@@ -535,9 +535,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let bookmark = BookmarkName::new(bookmark.clone())?;
     let repo_name = args::get_repo_name(config_store, &matches)?;
     let scuba_logger = if matches.is_present("log-to-scuba") {
-        ScubaSampleBuilder::new(fb, SCUBA_DATASET_NAME)
+        MononokeScubaSampleBuilder::new(fb, SCUBA_DATASET_NAME)
     } else {
-        ScubaSampleBuilder::with_discard()
+        MononokeScubaSampleBuilder::with_discard()
     };
 
     block_execute(

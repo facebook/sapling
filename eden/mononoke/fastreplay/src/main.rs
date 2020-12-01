@@ -34,8 +34,7 @@ use nonzero_ext::nonzero;
 use rand::{thread_rng, Rng};
 use repo_client::MononokeRepoBuilder;
 use scopeguard::defer;
-use scuba_ext::ScubaSampleBuilder;
-use scuba_ext::ScubaSampleBuilderExt;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o, warn, Logger};
 use stats::prelude::*;
 use std::collections::{BTreeSet, HashMap};
@@ -99,7 +98,7 @@ async fn dispatch(
     aliases: &HashMap<String, String>,
     skipped_repos: &BTreeSet<String>,
     req: &str,
-    mut scuba: ScubaSampleBuilder,
+    mut scuba: MononokeScubaSampleBuilder,
 ) -> Result<DispatchOutcome, Error> {
     let req = serde_json::from_str::<RequestLine>(&req)?;
 
@@ -202,7 +201,7 @@ async fn build_noop_hook_manager(fb: FacebookInit) -> Result<HookManager, Error>
             all_hooks_bypassed: true,
             bypassed_commits_scuba_table: None,
         },
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         "fastreplay_none_repo".to_string(),
     )
     .await
@@ -224,7 +223,7 @@ async fn bootstrap_repositories<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
     logger: &Logger,
-    scuba: &ScubaSampleBuilder,
+    scuba: &MononokeScubaSampleBuilder,
 ) -> Result<HashMap<String, FastReplayDispatcher>, Error> {
     let config_store = args::init_config_store(fb, logger, matches)?;
     let config = args::load_repo_configs(config_store, &matches)?;
@@ -402,7 +401,7 @@ async fn fastreplay<R: AsyncRead + Unpin>(
     opts: &ReplayOpts,
     reader: R,
     logger: &Logger,
-    scuba: &ScubaSampleBuilder,
+    scuba: &MononokeScubaSampleBuilder,
     repos: &Arc<HashMap<String, FastReplayDispatcher>>,
     count: &Arc<AtomicU64>,
 ) -> Result<(), Error> {

@@ -24,7 +24,6 @@ use futures::future::{try_join, FutureExt, TryFutureExt};
 use futures::stream::{FuturesOrdered, StreamExt};
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
-use scuba_ext::ScubaSampleBuilderExt;
 
 use crate::BookmarkMovementError;
 

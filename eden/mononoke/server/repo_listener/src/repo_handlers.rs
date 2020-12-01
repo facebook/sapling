@@ -34,7 +34,7 @@ use metaconfig_types::{
 use mononoke_types::RepositoryId;
 use mutable_counters::SqlMutableCounters;
 use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirectorArgs, WireprotoLogging};
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o, Logger};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
@@ -53,7 +53,7 @@ use crate::errors::ErrorKind;
 #[derive(Clone)]
 struct IncompleteRepoHandler {
     logger: Logger,
-    scuba: ScubaSampleBuilder,
+    scuba: MononokeScubaSampleBuilder,
     wireproto_logging: Arc<WireprotoLogging>,
     repo: MononokeRepo,
     preserve_raw_bundle2: bool,
@@ -138,7 +138,7 @@ impl IncompleteRepoHandler {
 #[derive(Clone)]
 pub struct RepoHandler {
     pub logger: Logger,
-    pub scuba: ScubaSampleBuilder,
+    pub scuba: MononokeScubaSampleBuilder,
     pub wireproto_logging: Arc<WireprotoLogging>,
     pub repo: MononokeRepo,
     pub preserve_raw_bundle2: bool,
@@ -229,7 +229,7 @@ pub fn repo_handlers(
                     }
                 });
 
-                let mut scuba_logger = ScubaSampleBuilder::with_opt_table(fb, scuba_table);
+                let mut scuba_logger = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table);
                 scuba_logger.add_common_server_data();
                 if let Some(scuba_local_path) = scuba_local_path {
                     scuba_logger = scuba_logger.with_log_file(scuba_local_path)?;

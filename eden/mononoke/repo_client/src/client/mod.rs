@@ -67,7 +67,6 @@ use remotefilelog::{
     GetpackBlobInfo,
 };
 use revisionstore_types::Metadata;
-use scuba_ext::ScubaSampleBuilderExt;
 use serde_json::{self, json};
 use slog::{debug, error, info, o};
 use stats::prelude::*;

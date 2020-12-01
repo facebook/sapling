@@ -50,7 +50,6 @@ use phases::{Phase, Phases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
-use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, info, o};
 use stats::prelude::*;
 use std::{

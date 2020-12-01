@@ -33,7 +33,6 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::RepoReadWriteFetcher;
 use reverse_filler_queue::ReverseFillerQueue;
 use scribe_commit_queue::{self, LogToScribe};
-use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, warn};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};

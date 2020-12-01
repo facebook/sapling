@@ -10,7 +10,7 @@ use context::CoreContext;
 use cross_repo_sync::CommitSyncer;
 use futures_stats::FutureStats;
 use mononoke_types::ChangesetId;
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{error, info, Logger};
 use synced_commit_mapping::SyncedCommitMapping;
 
@@ -28,7 +28,7 @@ const SUCCESS: &'static str = "success";
 /// Populate the `scuba_sample` with fields, common for
 /// this tailer run
 pub fn add_common_fields<M: SyncedCommitMapping + Clone + 'static>(
-    scuba_sample: &mut ScubaSampleBuilder,
+    scuba_sample: &mut MononokeScubaSampleBuilder,
     commit_syncer: &CommitSyncer<M>,
 ) {
     scuba_sample
@@ -38,7 +38,7 @@ pub fn add_common_fields<M: SyncedCommitMapping + Clone + 'static>(
 
 /// Log the fact of successful syncing of the single changeset to Scuba
 fn log_success_to_scuba(
-    mut scuba_sample: ScubaSampleBuilder,
+    mut scuba_sample: MononokeScubaSampleBuilder,
     source_cs_id: ChangesetId,
     maybe_synced_cs_id: Option<ChangesetId>,
     stats: FutureStats,
@@ -57,7 +57,7 @@ fn log_success_to_scuba(
 
 /// Log the fact of failed syncing of the single changeset to Scuba
 fn log_error_to_scuba(
-    mut scuba_sample: ScubaSampleBuilder,
+    mut scuba_sample: MononokeScubaSampleBuilder,
     source_cs_id: ChangesetId,
     stats: FutureStats,
     error_string: String,
@@ -110,7 +110,7 @@ fn log_error_to_logger(
 /// Log the fact of syncing of a single changeset both to Scuba and to slog
 fn log_sync_single_changeset_result(
     ctx: CoreContext,
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: MononokeScubaSampleBuilder,
     bcs_id: ChangesetId,
     res: &Result<Option<ChangesetId>, Error>,
     stats: FutureStats,
@@ -130,7 +130,7 @@ fn log_sync_single_changeset_result(
 
 pub fn log_pushrebase_sync_single_changeset_result(
     ctx: CoreContext,
-    mut scuba_sample: ScubaSampleBuilder,
+    mut scuba_sample: MononokeScubaSampleBuilder,
     bcs_id: ChangesetId,
     res: &Result<Option<ChangesetId>, Error>,
     stats: FutureStats,
@@ -141,7 +141,7 @@ pub fn log_pushrebase_sync_single_changeset_result(
 
 pub fn log_non_pushrebase_sync_single_changeset_result(
     ctx: CoreContext,
-    mut scuba_sample: ScubaSampleBuilder,
+    mut scuba_sample: MononokeScubaSampleBuilder,
     bcs_id: ChangesetId,
     res: &Result<Option<ChangesetId>, Error>,
     stats: FutureStats,
@@ -151,7 +151,7 @@ pub fn log_non_pushrebase_sync_single_changeset_result(
 }
 
 pub fn log_bookmark_deletion_result(
-    mut scuba_sample: ScubaSampleBuilder,
+    mut scuba_sample: MononokeScubaSampleBuilder,
     res: &Result<(), Error>,
     stats: FutureStats,
 ) {
@@ -168,7 +168,11 @@ pub fn log_bookmark_deletion_result(
     scuba_sample.log();
 }
 
-pub fn log_backpressure(ctx: &CoreContext, entries: u64, mut scuba_sample: ScubaSampleBuilder) {
+pub fn log_backpressure(
+    ctx: &CoreContext,
+    entries: u64,
+    mut scuba_sample: MononokeScubaSampleBuilder,
+) {
     let msg = format!("{} entries in backsyncer queue, waiting...", entries);
 
     info!(ctx.logger(), "{}", msg);
@@ -178,7 +182,7 @@ pub fn log_backpressure(ctx: &CoreContext, entries: u64, mut scuba_sample: Scuba
 pub fn log_bookmark_update_result(
     ctx: &CoreContext,
     entry_id: i64,
-    mut scuba_sample: ScubaSampleBuilder,
+    mut scuba_sample: MononokeScubaSampleBuilder,
     res: &Result<Vec<ChangesetId>, Error>,
     stats: FutureStats,
 ) {
@@ -206,7 +210,7 @@ pub fn log_bookmark_update_result(
 
 /// Log a Scuba sample, which will allow us to check that the tailer
 /// is not dead, even when no commits are being synced
-pub fn log_noop_iteration(mut scuba_sample: ScubaSampleBuilder) {
+pub fn log_noop_iteration(mut scuba_sample: MononokeScubaSampleBuilder) {
     scuba_sample.add(SUCCESS, 1);
     scuba_sample.log();
 }

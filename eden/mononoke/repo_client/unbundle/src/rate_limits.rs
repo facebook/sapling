@@ -16,7 +16,6 @@ use limits::types::{RateLimit, RateLimitStatus};
 use maplit::hashmap;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mononoke_types::{BonsaiChangeset, RepositoryId};
-use scuba_ext::ScubaSampleBuilderExt;
 use sha2::{Digest, Sha256};
 use slog::debug;
 use std::collections::HashMap;

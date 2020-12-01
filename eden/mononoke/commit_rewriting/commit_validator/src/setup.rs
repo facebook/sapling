@@ -23,7 +23,7 @@ use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
 use reachabilityindex::LeastCommonAncestorsHint;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::fetch_skiplist_index;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
@@ -42,7 +42,7 @@ pub async fn get_validation_helpers(
     matches: ArgMatches<'static>,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<ValidationHelpers, Error> {
     let repo_id = large_repo.get_repoid();
 

@@ -18,9 +18,7 @@ use futures_stats::{FutureStats, StreamStats};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 #[cfg(fbcode_build)]
 use scribe::ScribeClient;
-use scuba_ext::{
-    ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt, ScubaValue,
-};
+use scuba_ext::{MononokeScubaSampleBuilder, ScribeClientImplementation, ScubaValue};
 use stats::prelude::*;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -41,7 +39,7 @@ pub struct WireprotoLogging {
     reponame: String,
     scribe_args: Option<(ScribeClientImplementation, String)>,
     blobstore_and_threshold: Option<(Arc<dyn Blobstore>, u64)>,
-    scuba_builder: ScubaSampleBuilder,
+    scuba_builder: MononokeScubaSampleBuilder,
 }
 
 impl WireprotoLogging {
@@ -56,7 +54,7 @@ impl WireprotoLogging {
 
         // We use a Scuba sample builder to produce samples to log. We also use that to allow
         // logging to a file: we never log to an actual Scuba category here.
-        let mut scuba_builder = ScubaSampleBuilder::with_discard();
+        let mut scuba_builder = MononokeScubaSampleBuilder::with_discard();
         scuba_builder.add_common_server_data();
         if let Some(log_file) = log_file {
             scuba_builder = scuba_builder.with_log_file(log_file)?;
@@ -85,7 +83,10 @@ impl<'a> CommandStats<'a> {
         }
     }
 
-    fn insert_stats<'b>(&self, scuba: &'b mut ScubaSampleBuilder) -> &'b mut ScubaSampleBuilder {
+    fn insert_stats<'b>(
+        &self,
+        scuba: &'b mut MononokeScubaSampleBuilder,
+    ) -> &'b mut MononokeScubaSampleBuilder {
         match self {
             Self::Future(ref stats) => scuba.add_future_stats(stats),
             Self::Stream(ref stats) => scuba.add_stream_stats(stats),
@@ -214,7 +215,7 @@ fn do_wireproto_logging<'a>(
         .map(|a| a.to_string())
         .unwrap_or_else(|| "".to_string());
 
-    // Use a ScubaSampleBuilder to build a sample to send in Scribe. Reach into the other Scuba
+    // Use a MononokeScubaSampleBuilder to build a sample to send in Scribe. Reach into the other Scuba
     // sample to grab a few datapoints from there as well.
     let mut builder = wireproto.scuba_builder.clone();
     builder

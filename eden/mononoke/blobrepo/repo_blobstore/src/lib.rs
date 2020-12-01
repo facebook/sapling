@@ -12,7 +12,7 @@ use context::CoreContext;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, RedactedMetadata};
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -86,7 +86,7 @@ impl RepoBlobstoreArgs {
         blobstore: T,
         redacted_blobs: Option<HashMap<String, RedactedMetadata>>,
         repoid: RepositoryId,
-        scuba_builder: ScubaSampleBuilder,
+        scuba_builder: MononokeScubaSampleBuilder,
     ) -> Self {
         let redacted_blobstore_config = RedactedBlobstoreConfig::new(redacted_blobs, scuba_builder);
         Self::build(blobstore, repoid, redacted_blobstore_config)

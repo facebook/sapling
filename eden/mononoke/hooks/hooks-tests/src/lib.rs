@@ -28,7 +28,7 @@ use metaconfig_types::{BookmarkParams, HookConfig, HookParams, RepoConfig};
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileType, MPath};
 use mononoke_types_mocks::contentid::{ONES_CTID, THREES_CTID, TWOS_CTID};
 use regex::Regex;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use tests_utils::{create_commit, store_files};
@@ -1114,7 +1114,7 @@ async fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager 
         ctx.fb,
         Box::new(content_fetcher),
         Default::default(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         "zoo".to_string(),
     )
     .await
@@ -1141,7 +1141,7 @@ async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
         ctx.fb,
         Box::new(content_fetcher),
         Default::default(),
-        ScubaSampleBuilder::with_discard(),
+        MononokeScubaSampleBuilder::with_discard(),
         "zoo".to_string(),
     )
     .await

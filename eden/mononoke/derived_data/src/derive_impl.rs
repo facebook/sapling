@@ -20,7 +20,7 @@ use futures::{
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::ChangesetId;
-use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use slog::warn;
 use stats::prelude::*;
@@ -453,23 +453,23 @@ fn init_derived_data_scuba<Derived: BonsaiDerived>(
     name: &str,
     derived_data_config: &DerivedDataConfig,
     bcs_id: &ChangesetId,
-) -> ScubaSampleBuilder {
+) -> MononokeScubaSampleBuilder {
     match &derived_data_config.scuba_table {
         Some(scuba_table) => {
-            let mut builder = ScubaSampleBuilder::new(ctx.fb, scuba_table);
+            let mut builder = MononokeScubaSampleBuilder::new(ctx.fb, scuba_table);
             builder.add_common_server_data();
             builder.add("derived_data", Derived::NAME);
             builder.add("reponame", name);
             builder.add("changeset", format!("{}", bcs_id));
             builder
         }
-        None => ScubaSampleBuilder::with_discard(),
+        None => MononokeScubaSampleBuilder::with_discard(),
     }
 }
 
 fn log_derivation_start<Derived>(
     ctx: &CoreContext,
-    derived_data_scuba: &mut ScubaSampleBuilder,
+    derived_data_scuba: &mut MononokeScubaSampleBuilder,
     bcs_id: &ChangesetId,
 ) where
     Derived: BonsaiDerived,
@@ -484,7 +484,7 @@ fn log_derivation_start<Derived>(
 
 fn log_derivation_end<Derived>(
     ctx: &CoreContext,
-    derived_data_scuba: &mut ScubaSampleBuilder,
+    derived_data_scuba: &mut MononokeScubaSampleBuilder,
     bcs_id: &ChangesetId,
     stats: &FutureStats,
     success: bool,

@@ -77,7 +77,7 @@ mod test {
     use mononoke_types::{typed_hash, BlobstoreBytes, ContentMetadata, RepositoryId};
     use redactedblobstore::RedactedBlobstore;
     use repo_blobstore::RepoBlobstoreArgs;
-    use scuba_ext::ScubaSampleBuilder;
+    use scuba_ext::MononokeScubaSampleBuilder;
     use std::collections::HashMap;
     use std::sync::Arc;
 
@@ -101,7 +101,7 @@ mod test {
             inner1,
             None,
             RepositoryId::new(1),
-            ScubaSampleBuilder::with_discard(),
+            MononokeScubaSampleBuilder::with_discard(),
         )
         .into_blobrepo_parts()
         .0;
@@ -110,7 +110,7 @@ mod test {
             inner2,
             None,
             RepositoryId::new(2),
-            ScubaSampleBuilder::with_discard(),
+            MononokeScubaSampleBuilder::with_discard(),
         )
         .into_blobrepo_parts()
         .0;
@@ -151,7 +151,7 @@ mod test {
             inner1,
             None,
             RepositoryId::new(1),
-            ScubaSampleBuilder::with_discard(),
+            MononokeScubaSampleBuilder::with_discard(),
         )
         .into_blobrepo_parts()
         .0;
@@ -160,7 +160,7 @@ mod test {
             inner2,
             None,
             RepositoryId::new(2),
-            ScubaSampleBuilder::with_discard(),
+            MononokeScubaSampleBuilder::with_discard(),
         )
         .into_blobrepo_parts()
         .0;

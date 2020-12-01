@@ -24,7 +24,6 @@ use metaconfig_types::{
 use mononoke_types::BonsaiChangeset;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::RepoReadWriteFetcher;
-use scuba_ext::ScubaSampleBuilderExt;
 
 use crate::affected_changesets::{AdditionalChangesets, AffectedChangesets};
 use crate::repo_lock::{check_repo_lock, RepoLockPushrebaseHook};

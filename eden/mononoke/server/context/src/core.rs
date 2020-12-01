@@ -7,7 +7,7 @@
 
 use fbinit::FacebookInit;
 use scribe_ext::Scribe;
-use scuba_ext::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{o, Drain, Level, Logger};
 use slog_glog_fmt::default_drain;
 use sshrelay::Metadata;
@@ -29,7 +29,7 @@ pub struct CoreContext {
 impl CoreContext {
     pub fn new_with_logger(fb: FacebookInit, logger: Logger) -> Self {
         let session = SessionContainer::new_with_defaults(fb);
-        session.new_context(logger, ScubaSampleBuilder::with_discard())
+        session.new_context(logger, MononokeScubaSampleBuilder::with_discard())
     }
 
     // Context for bulk processing like scrubbing or bulk backfilling
@@ -37,7 +37,7 @@ impl CoreContext {
         let session = SessionContainer::builder(fb)
             .session_class(SessionClass::Background)
             .build();
-        session.new_context(logger, ScubaSampleBuilder::with_discard())
+        session.new_context(logger, MononokeScubaSampleBuilder::with_discard())
     }
 
     pub fn test_mock(fb: FacebookInit) -> Self {
@@ -57,7 +57,7 @@ impl CoreContext {
     pub fn test_mock_session(session: SessionContainer) -> Self {
         let drain = default_drain().filter_level(Level::Debug).ignore_res();
         let logger = Logger::root(drain, o![]);
-        session.new_context(logger, ScubaSampleBuilder::with_discard())
+        session.new_context(logger, MononokeScubaSampleBuilder::with_discard())
     }
 
     /// Create a new CoreContext, with a reset LoggingContainer. This is useful to reset perf
@@ -77,7 +77,7 @@ impl CoreContext {
 
     pub fn with_mutated_scuba(
         &self,
-        sample: impl FnOnce(ScubaSampleBuilder) -> ScubaSampleBuilder,
+        sample: impl FnOnce(MononokeScubaSampleBuilder) -> MononokeScubaSampleBuilder,
     ) -> Self {
         self.session
             .new_context(self.logger().clone(), sample(self.scuba().clone()))
@@ -103,7 +103,7 @@ impl CoreContext {
         self.logging.sampling_key()
     }
 
-    pub fn scuba(&self) -> &ScubaSampleBuilder {
+    pub fn scuba(&self) -> &MononokeScubaSampleBuilder {
         &self.logging.scuba()
     }
 

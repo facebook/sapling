@@ -27,7 +27,7 @@ use metaconfig_types::{
 use multiplexedblob::{LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler};
 use packblob::{PackBlob, PackOptions};
 use readonlyblob::ReadOnlyBlobstore;
-use scuba::ScubaSampleBuilder;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::{MysqlConnectionType, MysqlOptions};
@@ -321,9 +321,10 @@ pub fn make_blobstore_put_ops<'a>(
                 scuba_table,
                 scuba_sample_rate,
             } => {
-                let scuba = scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
-                    ScubaSampleBuilder::new(fb, table)
-                });
+                let scuba = scuba_table
+                    .map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
+                        MononokeScubaSampleBuilder::new(fb, &table)
+                    });
 
                 let store = make_blobstore_put_ops(
                     fb,
@@ -541,8 +542,8 @@ pub async fn make_blobstore_multiplexed<'a>(
             write_mostly_components,
             minimum_successful_writes,
             Arc::new(queue),
-            scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
-                ScubaSampleBuilder::new(fb, table)
+            scuba_table.map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
+                MononokeScubaSampleBuilder::new(fb, &table)
             }),
             scuba_sample_rate,
             scrub_handler,
@@ -554,8 +555,8 @@ pub async fn make_blobstore_multiplexed<'a>(
             write_mostly_components,
             minimum_successful_writes,
             Arc::new(queue),
-            scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
-                ScubaSampleBuilder::new(fb, table)
+            scuba_table.map_or(MononokeScubaSampleBuilder::with_discard(), |table| {
+                MononokeScubaSampleBuilder::new(fb, &table)
             }),
             scuba_sample_rate,
         )) as Arc<dyn BlobstorePutOps>,
