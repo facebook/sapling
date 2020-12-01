@@ -35,6 +35,7 @@ pub use anyhow::Result;
 pub use clidispatch::io::IO;
 pub use clidispatch::repo::Repo;
 pub use cliparser::define_flags;
+pub use configparser::config::ConfigSet;
 
 use clidispatch::command::CommandTable;
 

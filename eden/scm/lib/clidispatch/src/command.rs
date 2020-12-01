@@ -8,12 +8,13 @@
 use crate::{io::IO, repo::Repo};
 use anyhow::Result;
 use cliparser::parser::{Flag, ParseOutput, StructFlags};
+use configparser::config::ConfigSet;
 use std::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
 
 pub enum CommandFunc {
-    NoRepo(Box<dyn Fn(ParseOutput, &mut IO) -> Result<u8>>),
+    NoRepo(Box<dyn Fn(ParseOutput, &mut IO, ConfigSet) -> Result<u8>>),
     OptionalRepo(Box<dyn Fn(ParseOutput, &mut IO, Option<Repo>) -> Result<u8>>),
     Repo(Box<dyn Fn(ParseOutput, &mut IO, Repo) -> Result<u8>>),
 }
@@ -106,11 +107,13 @@ pub trait Register<FN, T> {
 impl<S, FN> Register<FN, (S,)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(S, &mut IO) -> Result<u8> + 'static,
+    FN: Fn(S, &mut IO, ConfigSet) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         self.insert_aliases(name);
-        let func = move |opts: ParseOutput, io: &mut IO| f(opts.try_into()?, io);
+        let func = move |opts: ParseOutput, io: &mut IO, config: ConfigSet| {
+            f(opts.try_into()?, io, config)
+        };
         let func = CommandFunc::NoRepo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);

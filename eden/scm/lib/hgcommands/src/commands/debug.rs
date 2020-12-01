@@ -6,6 +6,7 @@
  */
 
 pub use super::define_flags;
+pub use super::ConfigSet;
 pub use super::NoOpts;
 pub use super::Repo;
 pub use super::Result;

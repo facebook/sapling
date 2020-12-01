@@ -261,6 +261,6 @@ pub fn dispatch(command_table: &CommandTable, args: &[String], io: &mut IO) -> R
             OptionalRepo::Some(repo) => f(parsed, io, Some(repo)),
             OptionalRepo::None(_config) => f(parsed, io, None),
         },
-        CommandFunc::NoRepo(f) => f(parsed, io),
+        CommandFunc::NoRepo(f) => f(parsed, io, optional_repo.take_config()),
     }
 }

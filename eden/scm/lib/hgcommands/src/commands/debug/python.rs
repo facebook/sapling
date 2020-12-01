@@ -6,6 +6,7 @@
  */
 
 use super::define_flags;
+use super::ConfigSet;
 use super::Result;
 use super::IO;
 
@@ -16,7 +17,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugPythonOpts, io: &mut IO) -> Result<u8> {
+pub fn run(opts: DebugPythonOpts, io: &mut IO, _config: ConfigSet) -> Result<u8> {
     let mut args = opts.args;
     args.insert(0, "hgpython".to_string());
     let mut interp = crate::HgPython::new(&args);

@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use super::ConfigSet;
 use super::DebugArgsOpts;
 use super::Result;
 use super::IO;
 use std::path::Path;
 
-pub fn run(opts: DebugArgsOpts, io: &mut IO) -> Result<u8> {
+pub fn run(opts: DebugArgsOpts, io: &mut IO, _config: ConfigSet) -> Result<u8> {
     for path in opts.args {
         let _ = io.write(format!("{}\n", path));
         let path = Path::new(&path);
