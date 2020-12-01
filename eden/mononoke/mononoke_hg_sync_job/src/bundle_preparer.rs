@@ -34,7 +34,7 @@ use mononoke_types::{datetime::Timestamp, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use skiplist::fetch_skiplist_index;
-use slog::info;
+use slog::{info, warn};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -77,6 +77,7 @@ enum BundleType {
         lfs_params: LfsParams,
         filenode_verifier: FilenodeVerifier,
         bookmark_regex_force_lfs: Option<Regex>,
+        use_hg_server_bookmark_value_if_mismatch: bool,
     },
 }
 
@@ -103,6 +104,7 @@ impl BundlePreparer {
         lfs_params: LfsParams,
         filenode_verifier: FilenodeVerifier,
         bookmark_regex_force_lfs: Option<Regex>,
+        use_hg_server_bookmark_value_if_mismatch: bool,
     ) -> Result<BundlePreparer, Error> {
         let blobstore = repo.get_blobstore().boxed();
         let skiplist =
@@ -118,6 +120,7 @@ impl BundlePreparer {
                 lfs_params,
                 filenode_verifier,
                 bookmark_regex_force_lfs,
+                use_hg_server_bookmark_value_if_mismatch,
             },
         })
     }
@@ -165,6 +168,7 @@ impl BundlePreparer {
                 lfs_params,
                 filenode_verifier,
                 bookmark_regex_force_lfs,
+                use_hg_server_bookmark_value_if_mismatch,
             } => {
                 for batch in batches {
                     let prepare_type = PrepareType::Generate {
@@ -179,7 +183,13 @@ impl BundlePreparer {
                     };
 
                     let entries = batch.entries.clone();
-                    let f = self.prepare_single_bundle(ctx.clone(), batch, overlay, prepare_type);
+                    let f = self.prepare_single_bundle(
+                        ctx.clone(),
+                        batch,
+                        overlay,
+                        prepare_type,
+                        *use_hg_server_bookmark_value_if_mismatch,
+                    );
                     futs.push((f, entries));
                 }
             }
@@ -200,8 +210,15 @@ impl BundlePreparer {
 
                         let batch = BookmarkLogEntryBatch::new(log_entry);
                         let entries = batch.entries.clone();
-                        let f =
-                            self.prepare_single_bundle(ctx.clone(), batch, overlay, prepare_type);
+                        let f = self.prepare_single_bundle(
+                            ctx.clone(),
+                            batch,
+                            overlay,
+                            prepare_type,
+                            // use-hg-server-bookmark-value-if-mismatch is never enabled
+                            // in UseExisting mode
+                            false, /* use-hg-server-bookmark-value-if-mismatch */
+                        );
                         futs.push((f, entries));
                     }
                 }
@@ -229,11 +246,34 @@ impl BundlePreparer {
     fn prepare_single_bundle(
         &self,
         ctx: CoreContext,
-        batch: BookmarkLogEntryBatch,
+        mut batch: BookmarkLogEntryBatch,
         overlay: &mut crate::BookmarkOverlay,
         prepare_type: PrepareType,
+        use_hg_server_bookmark_value_if_mismatch: bool,
     ) -> BoxFuture<'static, Result<CombinedBookmarkUpdateLogEntry, Error>> {
         cloned!(self.repo);
+
+        if use_hg_server_bookmark_value_if_mismatch {
+            if !overlay.is_in_overlay(&batch.bookmark_name) {
+                // If it's not in overlay then it came from hg server.
+                // In that case compare if the value from hg server match
+                // whatever we have in the bookmark log entry batch.
+                let overlay_bookmark_value = overlay.get_value(&batch.bookmark_name);
+                if overlay_bookmark_value != batch.from_cs_id {
+                    warn!(
+                        ctx.logger(),
+                        "{} is expected to point to {:?}, but it actually points to {:?} on hg server. \
+                        Forcing {} to point to {:?}",
+                        batch.bookmark_name,
+                        batch.from_cs_id,
+                        overlay_bookmark_value,
+                        batch.bookmark_name,
+                        overlay_bookmark_value,
+                    );
+                    batch.from_cs_id = overlay_bookmark_value;
+                }
+            }
+        }
 
         let book_values = overlay.get_bookmark_values();
         overlay.update(batch.bookmark_name.clone(), batch.to_cs_id.clone());
