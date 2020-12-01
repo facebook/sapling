@@ -28,9 +28,8 @@ use futures::{
     future::{self, Future},
 };
 use itertools::{process_results, Itertools};
-use lazy_static::lazy_static;
 use metaconfig_types::{Redaction, ScrubAction};
-use once_cell::sync::OnceCell;
+use once_cell::sync::Lazy;
 use samplingblob::SamplingHandler;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn, Logger};
@@ -114,6 +113,40 @@ const HG_VALUE_ARG: &str = "hg";
 const BONSAI_VALUE_ARG: &str = "bonsai";
 const CONTENT_META_VALUE_ARG: &str = "contentmeta";
 
+static DERIVED_DATA_INCLUDE_NODE_TYPES: Lazy<HashMap<String, Vec<NodeType>>> = Lazy::new(|| {
+    let mut m: HashMap<String, Vec<NodeType>> = HashMap::new();
+    for t in NodeType::iter() {
+        if let Some(n) = t.derived_data_name() {
+            m.entry(format!("derived_{}", n)).or_default().push(t);
+        }
+    }
+    m
+});
+
+static NODE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
+    let mut v = vec![BONSAI_VALUE_ARG, DEFAULT_VALUE_ARG];
+    v.extend(
+        DERIVED_DATA_INCLUDE_NODE_TYPES
+            .keys()
+            .map(|e| e.as_ref() as &'static str),
+    );
+    v.extend(NodeType::VARIANTS.iter());
+    v
+});
+
+static EDGE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
+    let mut v = vec![
+        DEEP_VALUE_ARG,
+        SHALLOW_VALUE_ARG,
+        BONSAI_VALUE_ARG,
+        HG_VALUE_ARG,
+        CONTENT_META_VALUE_ARG,
+        MARKER_VALUE_ARG,
+    ];
+    v.extend(EdgeType::VARIANTS.iter());
+    v
+});
+
 // Toplevel args - healer and populate healer have this one at top level
 // so keeping it there for consistency
 const STORAGE_ID_ARG: &str = "storage-id";
@@ -137,8 +170,6 @@ pub const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
 ];
 
 const BONSAI_INCLUDE_NODE_TYPES: &[NodeType] = &[NodeType::Bookmark, NodeType::Changeset];
-
-static DERIVED_DATA_INCLUDE_NODE_TYPES: OnceCell<HashMap<String, Vec<NodeType>>> = OnceCell::new();
 
 // Goes as far into history as it can
 const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
@@ -297,32 +328,19 @@ pub enum OutputFormat {
 // Things like phases and obs markers will go here
 const MARKER_EDGE_TYPES: &[EdgeType] = &[EdgeType::ChangesetToPhaseMapping];
 
-lazy_static! {
-    static ref INCLUDE_CHECK_TYPE_HELP: String = format!(
-        "Check types to include, defaults to: {:?}",
-        Vec::from_iter(CheckType::iter()),
-    );
+static INCLUDE_NODE_TYPE_HELP: Lazy<String> = Lazy::new(|| {
+    format!(
+        "Graph node types we want to step to in the walk. Defaults to core Mononoke and Hg types: {:?}. See --{} for all possible values.",
+        DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_NODE_TYPE_ARG
+    )
+});
 
-    static ref INCLUDE_NODE_TYPE_HELP: String = format!(
-        "Graph node types we want to step to in the walk. Defaults to core Mononoke and Hg types: {:?}",
-        DEFAULT_INCLUDE_NODE_TYPES
-    );
-
-    static ref EXCLUDE_NODE_TYPE_HELP: String = format!(
-        "Graph node types to exclude from walk. They are removed from the include node types. Specific any of: {:?}",
-        Vec::from_iter(NodeType::iter()),
-    );
-
-    static ref INCLUDE_EDGE_TYPE_HELP: String = format!(
-        "Graph edge types to include in the walk. Can pass pre-configured sets via deep, shallow, hg, bonsai, as well as individual types. Defaults to deep: {:?}",
-        DEEP_INCLUDE_EDGE_TYPES
-    );
-
-    static ref EXCLUDE_EDGE_TYPE_HELP: String = format!(
-        "Graph edge types to exclude from walk. Can pass pre-configured sets via deep, shallow, hg, bonsai, as well as individual types. Defaults to deep.  All individual types: {:?}",
-        Vec::from_iter(EdgeType::iter()),
-    );
-}
+static INCLUDE_EDGE_TYPE_HELP: Lazy<String> = Lazy::new(|| {
+    format!(
+        "Graph edge types to include in the walk. Defaults to deep: {:?}. See --{} for all possible values.",
+        DEEP_INCLUDE_EDGE_TYPES, EXCLUDE_EDGE_TYPE_ARG
+    )
+});
 
 fn add_sampling_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
@@ -458,7 +476,8 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
             .multiple(true)
             .number_of_values(1)
             .required(false)
-            .help(&INCLUDE_CHECK_TYPE_HELP),
+            .possible_values(CheckType::VARIANTS)
+            .help("Check types to include, defaults to all possible values"),
     );
 
     app_template.build()
@@ -545,7 +564,8 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .required(false)
-                .help(&EXCLUDE_NODE_TYPE_HELP),
+                .possible_values(&NODE_TYPE_POSSIBLE_VALUES)
+                .help("Graph node types to exclude from walk. They are removed from the include node types."),
         )
         .arg(
             Arg::with_name(INCLUDE_NODE_TYPE_ARG)
@@ -555,6 +575,9 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .required(false)
+                .default_value(DEFAULT_VALUE_ARG)
+                .possible_values(&NODE_TYPE_POSSIBLE_VALUES)
+                .hide_possible_values(true)
                 .help(&INCLUDE_NODE_TYPE_HELP),
         )
         .arg(
@@ -565,7 +588,8 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .required(false)
-                .help(&EXCLUDE_EDGE_TYPE_HELP),
+                .possible_values(&EDGE_TYPE_POSSIBLE_VALUES)
+                .help("Graph edge types to exclude from walk. Can pass pre-configured sets via deep, shallow, hg, bonsai, etc as well as individual types."),
         )
         .arg(
             Arg::with_name(INCLUDE_EDGE_TYPE_ARG)
@@ -575,6 +599,9 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .required(false)
+                .default_value(DEEP_VALUE_ARG)
+                .possible_values(&EDGE_TYPE_POSSIBLE_VALUES)
+                .hide_possible_values(true)
                 .help(&INCLUDE_EDGE_TYPE_HELP),
         )
         .arg(
@@ -644,23 +671,11 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
 
 // parse the pre-defined groups we have for default etc
 fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
-    let by_derived_name = DERIVED_DATA_INCLUDE_NODE_TYPES.get_or_init(|| {
-        let mut m = HashMap::new();
-        for t in NodeType::iter() {
-            if let Some(n) = t.derived_data_name() {
-                m.entry(format!("derived_{}", n))
-                    .or_insert_with(|| vec![])
-                    .push(t);
-            }
-        }
-        m
-    });
-
     Ok(match arg {
         DEFAULT_VALUE_ARG => HashSet::from_iter(DEFAULT_INCLUDE_NODE_TYPES.iter().cloned()),
         BONSAI_VALUE_ARG => HashSet::from_iter(BONSAI_INCLUDE_NODE_TYPES.iter().cloned()),
         _ => {
-            if let Some(v) = by_derived_name.get(arg) {
+            if let Some(v) = DERIVED_DATA_INCLUDE_NODE_TYPES.get(arg) {
                 HashSet::from_iter(v.iter().cloned())
             } else {
                 NodeType::from_str(arg)
