@@ -29,7 +29,12 @@
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 
+// TODO(T80017182) enable these tests in TSAN mode.
+#if !FOLLY_SANITIZE_THREAD
+
+namespace {
 const auto kTestTimeout = 10s;
+}
 
 struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_hg_backing_store_test"};
@@ -170,3 +175,5 @@ TEST_F(HgBackingStoreTest, skipMetadataPrefetch) {
       .get(kTestTimeout);
   EXPECT_TRUE(metadataImporter->getTreeMetadataCalled);
 }
+
+#endif

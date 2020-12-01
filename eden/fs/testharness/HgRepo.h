@@ -149,5 +149,17 @@ class HgRepo {
   SpawnedProcess::Environment hgEnv_;
   AbsolutePath path_;
 };
+
+/**
+ * Skips the executing test unless it's okay to invoke hg in this test.
+ *
+ * Ideally, this function wouldn't exist, but traditionally hg has not run
+ * correctly in every build environment. Currently, hg is incompatible with TSAN
+ * due to known tokio false positives
+ * (https://github.com/tokio-rs/tokio/issues/2087) and undefined symbol:
+ * __tsan_func_entry in libomnibus.so.
+ */
+bool testEnvironmentSupportsHg();
+
 } // namespace eden
 } // namespace facebook

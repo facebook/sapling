@@ -12,6 +12,7 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
+#include <folly/Portability.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
 #include <sys/stat.h>
@@ -205,6 +206,15 @@ void HgRepo::symlink(StringPiece contents, RelativePathPiece path) {
   auto rc = ::symlink(contents.str().c_str(), fullPath.value().c_str());
   checkUnixError(rc, "error creating symlink at ", path);
 }
+
+bool testEnvironmentSupportsHg() {
+  // In opt builds, we don't want to optimize away references to HgImporter.cpp,
+  // since it defines the hgPath gflag. Mask the kIsSanitizeThread constant from
+  // the optimizer.
+  static volatile bool kIsSanitizeThread = folly::kIsSanitizeThread;
+  return !kIsSanitizeThread;
+}
+
 } // namespace eden
 } // namespace facebook
 

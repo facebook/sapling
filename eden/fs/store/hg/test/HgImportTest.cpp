@@ -25,6 +25,20 @@ using namespace facebook::eden;
 using folly::StringPiece;
 using folly::test::TemporaryDirectory;
 
+TEST(HgImporter, ensure_HgImporter_is_linked_even_in_tsan) {
+  if (testEnvironmentSupportsHg()) {
+    TemporaryDirectory testDir{"eden_hg_import_test"};
+    AbsolutePath testPath{testDir.path().string()};
+    HgRepo repo{testPath + "repo"_pc};
+    repo.hgInit();
+    repo.enableTreeManifest(testPath + "cache"_pc);
+    HgImporter importer(repo.path(), std::make_shared<EdenStats>());
+  }
+}
+
+// TODO(T80017182) enable these tests in TSAN mode.
+#if !FOLLY_SANITIZE_THREAD
+
 namespace {
 
 class HgImportTest : public ::testing::Test {
@@ -86,4 +100,6 @@ TEST_F(HgImportTest, importerHelperExitsCleanly) {
   auto status = importer.debugStopHelperProcess();
   EXPECT_EQ(status.str(), "exited with status 0");
 }
+#endif
+
 #endif

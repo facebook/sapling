@@ -18,10 +18,15 @@
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/testharness/HgRepo.h"
 
+// TODO(T80017182) enable these tests in TSAN mode.
+#if !FOLLY_SANITIZE_THREAD
+
 using namespace facebook::eden;
 using namespace std::chrono_literals;
 
+namespace {
 const auto kTestTimeout = 10s;
+}
 
 struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_queued_hg_backing_store_test"};
@@ -118,3 +123,5 @@ TEST_F(HgQueuedBackingStoreTest, getBlob) {
     }
   }
 }
+
+#endif
