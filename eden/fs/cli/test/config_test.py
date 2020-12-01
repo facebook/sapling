@@ -39,7 +39,7 @@ ignoreFile = "/home/${USER}/.gitignore"
 default-revision = "master"
 
 [rage]
-reporter = 'arc paste --title "eden rage from $(hostname)" --conduit-uri=https://phabricator.intern.facebook.com/api/'
+reporter = 'pastry --title "eden rage from $(hostname)"'
 """
     return cfg_file
 
@@ -97,7 +97,7 @@ class TomlConfigTest(EdenTestCaseBase):
     def assert_core_config(self, cfg: EdenInstance) -> None:
         self.assertEqual(
             cfg.get_config_value("rage.reporter", default=""),
-            'arc paste --title "eden rage from $(hostname)" --conduit-uri=https://phabricator.intern.facebook.com/api/',
+            'pastry --title "eden rage from $(hostname)"',
         )
         self.assertEqual(
             cfg.get_config_value("core.ignoreFile", default=""),
@@ -143,7 +143,7 @@ class TomlConfigTest(EdenTestCaseBase):
 
         self.assertEqual(
             cfg.get_config_value("rage.reporter", default=""),
-            'arc paste --title "eden rage from $(hostname)" --conduit-uri=https://phabricator.intern.facebook.com/api/',
+            'pastry --title "eden rage from $(hostname)"',
         )
         self.assertEqual(
             cfg.get_config_value("core.ignoreFile", default=""),
