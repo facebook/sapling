@@ -1100,54 +1100,6 @@ EdenServiceHandler::semifuture_getFileInformation(
           }));
 }
 
-void EdenServiceHandler::glob(
-    vector<string>& out,
-    unique_ptr<string> mountPoint,
-    unique_ptr<vector<string>> globs) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*globs));
-  auto edenMount = server_->getMount(*mountPoint);
-  auto rootInode = edenMount->getRootInode();
-
-  // TODO: Track and report object fetches required for this glob.
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "EdenServiceHandler::glob");
-
-  try {
-    // Compile the list of globs into a tree
-    GlobNode globRoot(/*includeDotfiles=*/true);
-    for (auto& globString : *globs) {
-      try {
-        globRoot.parse(globString);
-      } catch (const std::domain_error& exc) {
-        throw newEdenError(
-            EdenErrorType::ARGUMENT_ERROR,
-            "Invalid glob (",
-            exc.what(),
-            "): ",
-            globString);
-      }
-    }
-
-    auto commitHash = edenMount->getParentCommits().parent1();
-
-    // and evaluate it against the root
-    auto matches = globRoot
-                       .evaluate(
-                           edenMount->getObjectStore(),
-                           *context,
-                           RelativePathPiece(),
-                           rootInode,
-                           /*fileBlobsToPrefetch=*/nullptr,
-                           commitHash)
-                       .get();
-    for (auto& fileName : matches) {
-      out.emplace_back(fileName.name.stringPiece().toString());
-    }
-  } catch (const std::system_error& exc) {
-    throw newEdenError(exc);
-  }
-}
-
 folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     std::unique_ptr<GlobParams> params) {
   auto helper = INSTRUMENT_THRIFT_CALL(

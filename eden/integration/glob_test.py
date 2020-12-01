@@ -129,7 +129,9 @@ class GlobTest(testcase.EdenRepoTest):
 
     def test_malformed_query(self) -> None:
         with self.assertRaises(EdenError) as ctx:
-            self.client.glob(self.mount_path_bytes, ["adir["])
+            self.client.globFiles(
+                GlobParams(mountPoint=self.mount_path_bytes, globs=["adir["])
+            )
         self.assertIn("unterminated bracket sequence", str(ctx.exception))
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
@@ -245,12 +247,4 @@ class GlobTest(testcase.EdenRepoTest):
         if expected_commits:
             self.assertCountEqual(
                 expected_commits, self.client.globFiles(params).originHashes, msg=msg
-            )
-
-        # Also verify behavior of legacy Thrift API.
-        if include_dotfiles:
-            self.assertCountEqual(
-                expected_matches,
-                self.client.glob(self.mount_path_bytes, globs),
-                msg=msg,
             )

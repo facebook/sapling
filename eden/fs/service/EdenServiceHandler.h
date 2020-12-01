@@ -109,11 +109,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::vector<std::string>> paths) override;
 
-  void glob(
-      std::vector<std::string>& out,
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::vector<std::string>> globs) override;
-
   folly::Future<std::unique_ptr<Glob>> future_globFiles(
       std::unique_ptr<GlobParams> params) override;
 
