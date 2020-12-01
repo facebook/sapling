@@ -704,7 +704,6 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             make_bonsai_changeset(None, None, vec![]),
             vec![ms1, ms2],
         ))
-        .compat()
         .await;
         assert!(
             ms_hash
@@ -722,7 +721,6 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             make_bonsai_changeset(None, None, vec![("base", None)]),
             vec![ms1, ms2],
         ))
-        .compat()
         .await
         .expect("merge should have succeeded");
         let entries = (get_entries(ms_hash)).compat().await.unwrap();
@@ -761,7 +759,6 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             .unwrap();
         let bcs = make_bonsai_changeset(None, None, vec![("base", None), ("new", Some(fc))]);
         let ms_hash = (get_manifest_from_bonsai(&repo, ctx.clone(), bcs, vec![ms1, ms2]))
-            .compat()
             .await
             .expect("adding new file should not produce coflict");
         let entries = (get_entries(ms_hash)).compat().await.unwrap();

@@ -16,8 +16,6 @@ use futures::{
     compat::Future01CompatExt,
     future::{BoxFuture, FutureExt, TryFutureExt},
 };
-use futures_ext::FutureExt as _;
-use futures_old::{future, Future, IntoFuture};
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, Traced, TreeInfo};
 use mercurial_types::{
     blobs::{
@@ -33,19 +31,19 @@ use std::{io::Write, sync::Arc};
 struct ParentIndex(usize);
 
 /// Derive mercurial manifest from parent manifests and bonsai file changes.
-pub fn derive_hg_manifest(
+pub async fn derive_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     parents: impl IntoIterator<Item = HgManifestId>,
     changes: impl IntoIterator<Item = (MPath, Option<(FileType, HgFileNodeId)>)> + 'static,
-) -> impl Future<Item = HgManifestId, Error = Error> {
+) -> Result<HgManifestId, Error> {
     let parents: Vec<_> = parents
         .into_iter()
         .enumerate()
         .map(|(i, m)| Traced::assign(ParentIndex(i), m))
         .collect();
 
-    derive_manifest_with_io_sender(
+    let tree_id = derive_manifest_with_io_sender(
         ctx.clone(),
         blobstore.clone(),
         parents.clone(),
@@ -53,39 +51,34 @@ pub fn derive_hg_manifest(
         {
             cloned!(ctx, blobstore);
             move |tree_info, sender| {
-                create_hg_manifest(ctx.clone(), blobstore.clone(), Some(sender), tree_info).compat()
+                create_hg_manifest(ctx.clone(), blobstore.clone(), Some(sender), tree_info)
             }
         },
         {
             cloned!(ctx, blobstore);
-            move |leaf_info, _sender| {
-                create_hg_file(ctx.clone(), blobstore.clone(), leaf_info).compat()
-            }
+            move |leaf_info, _sender| create_hg_file(ctx.clone(), blobstore.clone(), leaf_info)
         },
     )
-    .boxed()
-    .compat()
-    .and_then(move |tree_id| {
-        match tree_id {
-            Some(traced_tree_id) => future::ok(traced_tree_id.into_untraced()).left_future(),
-            None => {
-                // All files have been deleted, generate empty **root** manifest
-                let tree_info = TreeInfo {
-                    path: None,
-                    parents,
-                    subentries: Default::default(),
-                };
-                create_hg_manifest(ctx, blobstore, None, tree_info)
-                    .map(|(_, traced_tree_id)| traced_tree_id.into_untraced())
-                    .right_future()
-            }
+    .await?;
+
+    match tree_id {
+        Some(traced_tree_id) => Ok(traced_tree_id.into_untraced()),
+        None => {
+            // All files have been deleted, generate empty **root** manifest
+            let tree_info = TreeInfo {
+                path: None,
+                parents,
+                subentries: Default::default(),
+            };
+            let (_, traced_tree_id) = create_hg_manifest(ctx, blobstore, None, tree_info).await?;
+            Ok(traced_tree_id.into_untraced())
         }
-    })
+    }
 }
 
 /// This function is used as callback from `derive_manifest` to generate and store manifest
 /// object from `TreeInfo`.
-fn create_hg_manifest(
+async fn create_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
@@ -94,7 +87,7 @@ fn create_hg_manifest(
         Traced<ParentIndex, (FileType, HgFileNodeId)>,
         (),
     >,
-) -> impl Future<Item = ((), Traced<ParentIndex, HgManifestId>), Error = Error> {
+) -> Result<((), Traced<ParentIndex, HgManifestId>), Error> {
     let TreeInfo {
         subentries,
         path,
@@ -139,31 +132,28 @@ fn create_hg_manifest(
     .upload(ctx, blobstore);
 
     let (mfid, upload_fut) = match uploader {
-        Ok((mfid, fut)) => (mfid, fut.map(|_| ())),
-        Err(e) => return Err(e).into_future().left_future(),
+        Ok((mfid, fut)) => (mfid, fut.compat().map_ok(|_| ())),
+        Err(e) => return Err(e),
     };
 
-    let blobstore_fut = match sender {
-        Some(sender) => sender
-            .unbounded_send(upload_fut.compat().boxed())
-            .map_err(|err| format_err!("failed to send hg manifest future {}", err))
-            .into_future()
-            .left_future(),
-        None => upload_fut.right_future(),
-    };
-
-    blobstore_fut
-        .map(move |()| ((), Traced::generate(mfid)))
-        .right_future()
+    match sender {
+        Some(sender) => {
+            sender
+                .unbounded_send(upload_fut.boxed())
+                .map_err(|err| format_err!("failed to send hg manifest future {}", err))?;
+        }
+        None => upload_fut.await?,
+    }
+    Ok(((), Traced::generate(mfid)))
 }
 
 /// This function is used as callback from `derive_manifest` to generate and store file entry
 /// object from `LeafInfo`.
-fn create_hg_file(
+async fn create_hg_file(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     leaf_info: LeafInfo<Traced<ParentIndex, (FileType, HgFileNodeId)>, (FileType, HgFileNodeId)>,
-) -> impl Future<Item = ((), Traced<ParentIndex, (FileType, HgFileNodeId)>), Error = Error> {
+) -> Result<((), Traced<ParentIndex, (FileType, HgFileNodeId)>), Error> {
     let LeafInfo {
         leaf,
         path,
@@ -171,21 +161,16 @@ fn create_hg_file(
     } = leaf_info;
 
     // TODO: move `Blobrepo::store_file_changes` logic in here
-    if let Some(leaf) = leaf {
-        return future::ok(((), Traced::generate(leaf))).left_future();
+    match leaf {
+        Some(leaf) => Ok(((), Traced::generate(leaf))),
+        None => {
+            // Leaf was not provided, try to resolve same-content different parents leaf. Since filenode
+            // hashes include ancestry, this can be necessary if two identical files were created through
+            // different paths in history.
+            let (file_type, filenode) = resolve_conflict(ctx, blobstore, path, &parents).await?;
+            Ok(((), Traced::generate((file_type, filenode))))
+        }
     }
-
-    // Leaf was not provided, try to resolve same-content different parents leaf. Since filenode
-    // hashes include ancestry, this can be necessary if two identical files were created through
-    // different paths in history.
-    async move {
-        let (file_type, filenode) = resolve_conflict(ctx, blobstore, path, &parents).await?;
-
-        Ok(((), Traced::generate((file_type, filenode))))
-    }
-    .boxed()
-    .compat()
-    .right_future()
 }
 
 async fn resolve_conflict(

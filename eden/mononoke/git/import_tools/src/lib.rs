@@ -299,9 +299,7 @@ pub async fn gitimport(
             .await?;
 
             let manifest =
-                get_manifest_from_bonsai(&repo, ctx.clone(), bcs.clone(), parent_manifests)
-                    .compat()
-                    .await?;
+                get_manifest_from_bonsai(repo, ctx.clone(), bcs.clone(), parent_manifests).await?;
 
             hg_manifests.insert(*bcs_id, manifest);
 

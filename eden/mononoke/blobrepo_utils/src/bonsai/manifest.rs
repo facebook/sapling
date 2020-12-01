@@ -356,6 +356,8 @@ fn apply_diff(
         .map(|result| (result.path().clone(), make_entry(&result)))
         .collect();
     derive_hg_manifest(ctx, repo.get_blobstore().boxed(), manifestids, changes)
+        .boxed()
+        .compat()
         .map(|manifest_id| manifest_id.into_nodehash())
 }
 

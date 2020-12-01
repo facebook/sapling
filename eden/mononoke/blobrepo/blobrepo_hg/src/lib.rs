@@ -33,9 +33,8 @@ use bookmarks::{
 use cloned::cloned;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes};
-use futures::future::TryFutureExt;
-use futures::stream::TryStreamExt;
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures::{FutureExt, TryFutureExt, TryStreamExt};
+use futures_ext::{BoxFuture, BoxStream, FutureExt as _, StreamExt};
 use futures_old::{
     future,
     stream::{self, futures_unordered},
@@ -453,7 +452,10 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         bcs_id: ChangesetId,
     ) -> BoxFuture<HgChangesetId, Error> {
-        mercurial_derived_data::get_hg_from_bonsai_changeset(self, ctx, bcs_id).boxify()
+        mercurial_derived_data::get_hg_from_bonsai_changeset(self.clone(), ctx, bcs_id)
+            .boxed()
+            .compat()
+            .boxify()
     }
 }
 

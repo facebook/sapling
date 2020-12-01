@@ -372,7 +372,7 @@ fn subcommmand_hg_manifest_verify(
                         let start = Instant::now();
 
                         get_manifest_from_bonsai(&repo, ctx.clone(), bonsai.clone(), parents)
-                            .map(move |result| {
+                            .map_ok(move |result| {
                                 if result != expected {
                                     println!(
                                         "\x1b[KBAD hg_cisd:{} result:{} expected:{}\x1b[m",
@@ -395,7 +395,6 @@ fn subcommmand_hg_manifest_verify(
                                 );
                                 std::io::stdout().flush().expect("flush on stdout failed");
                             })
-                            .compat()
                             .await
                     }
                     Err(e) => Err(e),
