@@ -7,6 +7,7 @@
 
 //! DAG and Id operations (mostly traits)
 
+use crate::clone::CloneData;
 use crate::default_impl;
 use crate::id::Group;
 use crate::id::Id;
@@ -167,6 +168,12 @@ pub trait DagAddHeads {
     fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
     where
         F: Fn(VertexName) -> Result<Vec<VertexName>>;
+}
+
+/// Import a generated `CloneData` object into the DAG.
+pub trait DagImportCloneData {
+    /// Updates the DAG using a `CloneData` object.
+    fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()>;
 }
 
 /// Persistent the DAG on disk.

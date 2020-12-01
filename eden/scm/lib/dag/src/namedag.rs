@@ -9,6 +9,7 @@
 //!
 //! Combination of IdMap and IdDag.
 
+use crate::clone::CloneData;
 use crate::delegate;
 use crate::errors::bug;
 use crate::errors::programming;
@@ -24,6 +25,7 @@ use crate::nameset::hints::Hints;
 use crate::nameset::NameSet;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
+use crate::ops::DagImportCloneData;
 use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
@@ -223,6 +225,21 @@ where
 
         self.invalidate_snapshot();
 
+        Ok(())
+    }
+}
+
+impl<IS, M, P, S> DagImportCloneData for AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore,
+    M: IdMapAssignHead,
+{
+    fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
+        for (id, name) in clone_data.idmap {
+            self.map.insert(id, name.as_ref())?;
+        }
+        self.dag
+            .build_segments_volatile_from_prepared_flat_segments(&clone_data.flat_segments)?;
         Ok(())
     }
 }
