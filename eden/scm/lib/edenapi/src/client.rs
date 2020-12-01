@@ -400,7 +400,7 @@ impl EdenApi for Client {
         }
 
         let url = self.url(paths::CLONE_DATA, Some(&repo))?;
-        let req = self.configure(Request::get(url))?;
+        let req = self.configure(Request::post(url))?;
         let mut fetch = self.fetch::<WireCloneData>(vec![req], progress).await?;
         let clone_data = fetch.entries.next().await.ok_or_else(|| {
             EdenApiError::Other(format_err!("clone data missing from reponse body"))
