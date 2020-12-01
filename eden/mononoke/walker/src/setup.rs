@@ -375,7 +375,7 @@ fn add_sampling_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
-    let app_template = args::MononokeApp::new(app_name).with_fb303_args();
+    let app_template = args::MononokeAppBuilder::new(app_name).with_fb303_args();
 
     let scrub_objects =
         setup_subcommand_args(SubCommand::with_name(SCRUB).about("scrub, checks data is present by reading it and counting it. Combine with --enable-scrub-blobstore to check across a multiplex"));

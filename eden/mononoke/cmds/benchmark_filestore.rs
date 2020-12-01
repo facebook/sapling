@@ -331,7 +331,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .conflicts_with(ARG_MYROUTER_PORT),
         );
 
-    let app = args::MononokeApp::new(NAME)
+    let app = args::MononokeAppBuilder::new(NAME)
         .with_all_repos()
         .build()
         .arg(

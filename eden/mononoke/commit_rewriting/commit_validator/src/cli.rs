@@ -15,7 +15,7 @@ pub const ARG_TAIL: &'static str = "tail";
 pub const ARG_START_ID: &'static str = "start-id";
 
 pub fn create_app<'a, 'b>() -> App<'a, 'b> {
-    let app = args::MononokeApp::new("Mononoke cross-repo sync validator job")
+    let app = args::MononokeAppBuilder::new("Mononoke cross-repo sync validator job")
         .with_scuba_logging_args()
         .with_fb303_args()
         .build();

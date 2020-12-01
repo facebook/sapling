@@ -218,7 +218,7 @@ fn log_delay(
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app_name = "backsyncer cmd-line tool";
-    let app = args::MononokeApp::new(app_name)
+    let app = args::MononokeAppBuilder::new(app_name)
         .with_fb303_args()
         .with_source_and_target_repos()
         .build();

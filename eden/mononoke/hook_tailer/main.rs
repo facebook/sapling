@@ -246,7 +246,7 @@ impl HookExecutionSummary {
 }
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    let app = cmdlib::args::MononokeApp::new("run hooks against repo")
+    let app = cmdlib::args::MononokeAppBuilder::new("run hooks against repo")
         .with_advanced_args_hidden()
         .with_disabled_hooks_args()
         .build()

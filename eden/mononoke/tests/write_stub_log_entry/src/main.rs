@@ -33,7 +33,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .arg(Arg::with_name(FROM_ID).required(true))
         .arg(Arg::with_name(TO_ID).required(true));
 
-    args::MononokeApp::new("Insert stub log entries - use to test e.g. the admin tool")
+    args::MononokeAppBuilder::new("Insert stub log entries - use to test e.g. the admin tool")
         .with_advanced_args_hidden()
         .build()
         .arg(

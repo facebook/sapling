@@ -119,7 +119,7 @@ fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Res
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let matches = args::MononokeApp::new("mononoke benchmark")
+    let matches = args::MononokeAppBuilder::new("mononoke benchmark")
         .without_arg_types(vec![
             ArgType::Config,
             ArgType::Test,

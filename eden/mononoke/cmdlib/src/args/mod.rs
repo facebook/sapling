@@ -128,7 +128,7 @@ pub enum ArgType {
     Fb303,
 }
 
-// Arguments that are enabled by default for MononokeApp
+// Arguments that are enabled by default for MononokeAppBuilder
 const DEFAULT_ARG_TYPES: &[ArgType] = &[
     ArgType::Blobstore,
     ArgType::Cachelib,
@@ -141,7 +141,7 @@ const DEFAULT_ARG_TYPES: &[ArgType] = &[
     ArgType::Tunables,
 ];
 
-pub struct MononokeApp {
+pub struct MononokeAppBuilder {
     /// The app name.
     name: String,
 
@@ -169,7 +169,7 @@ pub fn glog_drain() -> impl Drain<Ok = (), Err = Never> {
     ::std::sync::Mutex::new(drain).ignore_res()
 }
 
-impl MononokeApp {
+impl MononokeAppBuilder {
     /// Start building a new Mononoke app.  This adds the standard Mononoke args.  Use the `build`
     /// method to get a `clap::App` that you can then customize further.
     pub fn new(name: impl Into<String>) -> Self {

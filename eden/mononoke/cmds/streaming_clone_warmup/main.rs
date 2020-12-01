@@ -39,7 +39,7 @@ const PERIOD_ARG: &str = "warmup-period";
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeApp::new("Utility to keep streaming clone data warm")
+    let app = args::MononokeAppBuilder::new("Utility to keep streaming clone data warm")
         .with_advanced_args_hidden()
         .with_fb303_args()
         .build()

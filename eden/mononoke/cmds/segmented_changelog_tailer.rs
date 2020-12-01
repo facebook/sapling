@@ -31,7 +31,7 @@ const TRACK_BOOKMARK_ARG: &str = "track-bookmark";
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeApp::new("Updates segmented changelog assets.")
+    let app = args::MononokeAppBuilder::new("Updates segmented changelog assets.")
         .with_advanced_args_hidden()
         .with_fb303_args()
         .build()

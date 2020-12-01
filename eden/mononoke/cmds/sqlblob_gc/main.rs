@@ -26,7 +26,7 @@ const ARG_SHARD_COUNT: &str = "shard-count";
 const ARG_INNER_ID: &str = "inner-blobstore-id";
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    args::MononokeApp::new("SQLblob GC")
+    args::MononokeAppBuilder::new("SQLblob GC")
         .with_advanced_args_hidden()
         .with_all_repos()
         .build()

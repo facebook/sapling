@@ -56,7 +56,7 @@ pub(crate) fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bo
         .iter()
         .map(|(flag, help)| {
             // XXX figure out a way to get default values in here -- note that .default_value
-            // takes a &'a str, so we may need to have MononokeApp own it or similar.
+            // takes a &'a str, so we may need to have MononokeAppBuilder own it or similar.
             Arg::with_name(flag)
                 .long(flag)
                 .value_name("SIZE")

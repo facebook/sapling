@@ -88,7 +88,7 @@ async fn regenerate_all_manifests(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let matches = args::MononokeApp::new(
+    let matches = args::MononokeAppBuilder::new(
         "Tool to regenerate filenodes").with_advanced_args_hidden().build()
         .args_from_usage(
             r#"

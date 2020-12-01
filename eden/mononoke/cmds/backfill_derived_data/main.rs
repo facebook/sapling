@@ -107,7 +107,7 @@ async fn open_repo_maybe_unredacted(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let app = args::MononokeApp::new("Utility to work with bonsai derived data")
+    let app = args::MononokeAppBuilder::new("Utility to work with bonsai derived data")
         .with_advanced_args_hidden()
         .with_fb303_args()
         .build()

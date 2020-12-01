@@ -335,7 +335,7 @@ mod test {
     }
 
     fn exec_matches<'a>() -> ArgMatches<'a> {
-        let app = args::MononokeApp::new("test_app").build();
+        let app = args::MononokeAppBuilder::new("test_app").build();
         let arg_vec = vec!["test_prog", "--mononoke-config-path", "/tmp/testpath"];
         args::add_fb303_args(app).get_matches_from(arg_vec)
     }

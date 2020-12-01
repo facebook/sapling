@@ -47,7 +47,7 @@ const ARG_FIND_ALREADY_IMPORTED_REV_ONLY: &str = "find-already-imported-rev-only
 const BACKUP_FROM_REPO_ID: &str = "backup-from-repo-id";
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    args::MononokeApp::new("revlog to blob importer")
+    args::MononokeAppBuilder::new("revlog to blob importer")
         .with_repo_required()
         .with_source_repos()
         .build()

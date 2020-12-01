@@ -91,7 +91,7 @@ const CACHE_OBJECT_SIZE: usize = 256 * 1024;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeApp::new("Mononoke LFS Server")
+    let app = args::MononokeAppBuilder::new("Mononoke LFS Server")
         .with_advanced_args_hidden()
         .with_all_repos()
         .with_shutdown_timeout_args()

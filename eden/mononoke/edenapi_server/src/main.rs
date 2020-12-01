@@ -248,7 +248,7 @@ async fn start(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let app = args::MononokeApp::new("EdenAPI Server")
+    let app = args::MononokeAppBuilder::new("EdenAPI Server")
         .with_advanced_args_hidden()
         .with_fb303_args()
         .with_all_repos()

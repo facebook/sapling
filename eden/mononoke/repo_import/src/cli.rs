@@ -31,7 +31,7 @@ pub const SAVED_RECOVERY_FILE_PATH: &str = "saved-recovery-file-path";
 pub const CHECK_ADDITIONAL_SETUP_STEPS: &str = "check-additional-setup-steps";
 
 pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    args::MononokeApp::new("Import Repository")
+    args::MononokeAppBuilder::new("Import Repository")
         .with_advanced_args_hidden()
         .build()
         .about("Automating repository imports")

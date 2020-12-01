@@ -20,7 +20,7 @@ use slog::{error, info};
 use openssl as _; // suppress unused crate warning - only used outside fbcode
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    let app = args::MononokeApp::new("mononoke server")
+    let app = args::MononokeAppBuilder::new("mononoke server")
         .with_shutdown_timeout_args()
         .with_all_repos()
         .with_disabled_hooks_args()

@@ -28,7 +28,7 @@ const HEAD_ARG: &str = "head";
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeApp::new("Builds a new version of segmented changelog.")
+    let app = args::MononokeAppBuilder::new("Builds a new version of segmented changelog.")
         .with_advanced_args_hidden()
         .with_fb303_args()
         .build()

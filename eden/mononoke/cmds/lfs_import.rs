@@ -27,7 +27,7 @@ const DEFAULT_CONCURRENCY: usize = 16;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let app = args::MononokeApp::new(NAME)
+    let app = args::MononokeAppBuilder::new(NAME)
         .with_advanced_args_hidden()
         .build()
         .about("Import LFS blobs")

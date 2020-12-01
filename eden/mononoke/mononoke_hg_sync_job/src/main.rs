@@ -992,7 +992,7 @@ fn get_repo_sqldb_address<'a>(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let app = args::MononokeApp::new("Mononoke -> hg sync job")
+    let app = args::MononokeAppBuilder::new("Mononoke -> hg sync job")
         .with_advanced_args_hidden()
         .with_fb303_args()
         .build()

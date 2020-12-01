@@ -216,7 +216,7 @@ async fn schedule_healing(
 }
 
 fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
-    args::MononokeApp::new(app_name)
+    args::MononokeAppBuilder::new(app_name)
         .with_scuba_logging_args()
         .with_fb303_args()
         .build()

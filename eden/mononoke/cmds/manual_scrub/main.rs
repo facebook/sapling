@@ -56,7 +56,7 @@ async fn handle_errors(mut file: File, mut recv: mpsc::Receiver<(String, Error)>
 
 #[fbinit::main]
 fn main(fb: fbinit::FacebookInit) -> Result<()> {
-    let app = args::MononokeApp::new("manual scrub")
+    let app = args::MononokeAppBuilder::new("manual scrub")
         .with_advanced_args_hidden()
         .with_all_repos()
         .build()

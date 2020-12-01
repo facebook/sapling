@@ -39,7 +39,7 @@ define_stats! {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app_name = "Tool to validate that small and large repo bookmarks are in sync";
-    let app = args::MononokeApp::new(app_name)
+    let app = args::MononokeAppBuilder::new(app_name)
         .with_source_and_target_repos()
         .with_fb303_args()
         .build();

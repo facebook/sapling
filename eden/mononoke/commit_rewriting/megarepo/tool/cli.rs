@@ -558,7 +558,7 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(true),
         );
 
-    args::MononokeApp::new("megarepo preparation tool")
+    args::MononokeAppBuilder::new("megarepo preparation tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
         .build()

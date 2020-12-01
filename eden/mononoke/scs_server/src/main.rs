@@ -55,7 +55,7 @@ const SERVICE_NAME: &str = "mononoke_scs_server";
 fn main(fb: FacebookInit) -> Result<(), Error> {
     panichandler::set_panichandler(Fate::Abort);
 
-    let matches = args::MononokeApp::new("Mononoke Source Control Service Server")
+    let matches = args::MononokeAppBuilder::new("Mononoke Source Control Service Server")
         .with_advanced_args_hidden()
         .with_all_repos()
         .with_shutdown_timeout_args()

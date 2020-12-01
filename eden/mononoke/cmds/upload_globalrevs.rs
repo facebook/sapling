@@ -28,7 +28,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    args::MononokeApp::new("Tool to upload globalrevs from commits saved in file")
+    args::MononokeAppBuilder::new("Tool to upload globalrevs from commits saved in file")
         .build()
         .arg(Arg::from_usage(
             "<IN_FILENAME>  'file with bonsai changesets'",

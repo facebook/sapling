@@ -47,7 +47,7 @@ const ARG_GIT_TO: &str = "git-to";
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeApp::new("Mononoke Git Importer")
+    let app = args::MononokeAppBuilder::new("Mononoke Git Importer")
         .with_advanced_args_hidden()
         .build()
         .arg(

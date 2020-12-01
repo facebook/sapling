@@ -36,7 +36,7 @@ const ARG_FILTER_BENCHMARKS: &str = "filter";
 
 #[fbinit::main]
 fn main(fb: fbinit::FacebookInit) {
-    let app = args::MononokeApp::new("benchmark_storage_config")
+    let app = args::MononokeAppBuilder::new("benchmark_storage_config")
         .with_advanced_args_hidden()
         .with_all_repos()
         .build()

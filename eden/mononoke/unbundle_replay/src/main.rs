@@ -626,7 +626,7 @@ async fn do_main(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = args::MononokeApp::new("Mononoke Local Replay")
+    let app = args::MononokeAppBuilder::new("Mononoke Local Replay")
         .with_advanced_args_hidden()
         .with_fb303_args()
         .with_scuba_logging_args()

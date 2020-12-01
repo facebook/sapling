@@ -59,7 +59,7 @@ mod subcommand_skeleton_manifests;
 mod subcommand_unodes;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    args::MononokeApp::new("Mononoke admin command line tool")
+    args::MononokeAppBuilder::new("Mononoke admin command line tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
         .with_special_put_behaviour(PutBehaviour::Overwrite)
