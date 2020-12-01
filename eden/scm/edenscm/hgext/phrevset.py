@@ -166,10 +166,10 @@ def search(repo, diffid):
         repo.ui.warn(_("falling back to search commits locally\n"))
         repo.ui.debug("[diffrev] Starting log walk\n")
         node = localgetdiff(repo, diffid)
-        repo.ui.debug("[diffrev] Parallel log walk completed with %s\n" % hex(node))
         if node is None:
             # walked the entire repo and couldn't find the diff
             raise error.Abort("Could not find diff D%s in changelog" % diffid)
+        repo.ui.debug("[diffrev] Parallel log walk completed with %s\n" % hex(node))
         return (node, None)
 
 
