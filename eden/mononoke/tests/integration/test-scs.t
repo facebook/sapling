@@ -64,6 +64,9 @@ try talking to the server before it is up
 start SCS server
   $ start_and_wait_for_scs_server --scuba-log-file "$TESTTMP/scuba.json"
 
+ignore the scuba logs logged while starting the server
+  $ SCUBA_PREAMBLE=$(( $(wc -l < "$TESTTMP/scuba.json") + 1 ))
+
 make some simple requests that we can use to check scuba logging
 
 repos
@@ -81,7 +84,7 @@ diff paths only
   A c
 
 check the scuba methods and perf counters logs 
-  $ summarize_scuba_json "Request.*" < "$TESTTMP/scuba.json" \
+  $ tail -n +$SCUBA_PREAMBLE "$TESTTMP/scuba.json" | summarize_scuba_json "Request.*" \
   >     .normal.log_tag .normal.msg .normal.method \
   >     .normal.commit .normal.other_commit .normal.path \
   >     .normal.bookmark_name .normvector.identity_schemes \

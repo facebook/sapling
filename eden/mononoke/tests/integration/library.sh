@@ -1070,14 +1070,12 @@ function start_and_wait_for_scs_server {
   timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
   attempts="$((timeout * 10))"
 
-  CHECK_SSL="/usr/local/fbcode/platform007/bin/openssl s_client -connect localhost:$SCS_PORT"
-
   for _ in $(seq 1 $attempts); do
-    $CHECK_SSL 2>&1  </dev/null | grep -q 'DONE' && break
+    scsc repos >/dev/null 2>&1 && break
     sleep 0.1
   done
 
-  if ! $CHECK_SSL 2>&1 </dev/null | grep -q 'DONE'; then
+  if ! scsc repos >/dev/null 2>&1 ; then
     echo "SCS server did not start" >&2
     cat "$TESTTMP/scs_server.out"
     exit 1
