@@ -343,7 +343,7 @@ def _lookupname(repo, name):
     if name.startswith("D") and name[1:].isdigit():
         diffid = name[1:]
         node = diffidtonode(repo, diffid)
-        if node in repo:
+        if node is not None and node in repo:
             return [node]
     return []
 
