@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::batch::split_batch_in_linear_stacks;
@@ -55,12 +56,22 @@ pub async fn derive_fsnode_in_batch(
     let linear_stacks = split_batch_in_linear_stacks(ctx, repo, batch).await?;
     let mut res = HashMap::new();
     for linear_stack in linear_stacks {
+        // Fetch the parent fsnodes, either from a previous iteration of this
+        // loop (which will have stored the mapping in `res`), or from the
+        // main mapping, where they should already be derived.
         let parent_fsnodes = linear_stack
             .parents
             .into_iter()
-            .map(|p| RootFsnodeId::derive(ctx, repo, p))
+            .map(|p| {
+                borrowed!(res);
+                async move {
+                    match res.get(&p) {
+                        Some(fsnode_id) => Ok::<_, Error>(*fsnode_id),
+                        None => Ok(RootFsnodeId::derive(ctx, repo, p).await?.into_fsnode_id()),
+                    }
+                }
+            })
             .collect::<FuturesOrdered<_>>()
-            .map_ok(|root_fsnode_id| root_fsnode_id.into_fsnode_id())
             .try_collect::<Vec<_>>()
             .await?;
 
@@ -85,7 +96,6 @@ pub async fn derive_fsnode_in_batch(
             .try_collect::<Vec<_>>()
             .await?;
 
-        // TODO(stash): update mapping here since fsnodes were already derived
         res.extend(new_fsnodes);
     }
 
