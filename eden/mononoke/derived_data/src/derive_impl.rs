@@ -45,7 +45,7 @@ define_stats! {
 const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub enum Mode {
+pub enum DeriveMode {
     /// This mode should almost always be preferred
     OnlyIfEnabled,
     /// This mode should rarely be used, perhaps only for backfilling type of derived data
@@ -53,7 +53,7 @@ pub enum Mode {
     Unsafe,
 }
 
-impl Mode {
+impl DeriveMode {
     /// Check that derivation is suitable for a particular derived data type
     /// in this mode.
     ///
@@ -62,7 +62,7 @@ impl Mode {
         self,
         repo: &BlobRepo,
     ) -> Result<(), DeriveError> {
-        if self == Mode::OnlyIfEnabled {
+        if self == DeriveMode::OnlyIfEnabled {
             if !repo
                 .get_derived_data_config()
                 .derived_data_types
@@ -113,7 +113,7 @@ pub async fn derive_impl<
     repo: &BlobRepo,
     derived_mapping: &Mapping,
     start_csid: ChangesetId,
-    mode: Mode,
+    mode: DeriveMode,
 ) -> Result<Derived, DeriveError> {
     let derivation = async {
         let all_csids =
@@ -199,7 +199,7 @@ pub(crate) async fn find_topo_sorted_underived<
     derived_mapping: &Mapping,
     start_csids: Changesets,
     limit: Option<u64>,
-    mode: Mode,
+    mode: DeriveMode,
 ) -> Result<Vec<ChangesetId>, Error> {
     mode.check_if_derive_allowed::<Derived>(repo)?;
 
@@ -862,7 +862,7 @@ mod test {
             let cs_ids = cs_ids.clone().into_iter().rev().collect::<Vec<_>>();
             let mapping = TestGenNum::mapping(&ctx, &repo);
             let derived_batch =
-                TestGenNum::batch_derive(&ctx, &repo, cs_ids, &mapping, Mode::Unsafe).await?;
+                TestGenNum::batch_derive(&ctx, &repo, cs_ids, &mapping, DeriveMode::Unsafe).await?;
             derived_batch
                 .get(&master_cs_id)
                 .unwrap_or_else(|| panic!("{} has not been derived", master_cs_id))

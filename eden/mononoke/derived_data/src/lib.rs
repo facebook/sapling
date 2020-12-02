@@ -23,7 +23,7 @@ use thiserror::Error;
 pub mod batch;
 pub mod derive_impl;
 
-pub use crate::derive_impl::Mode;
+pub use crate::derive_impl::DeriveMode;
 
 #[derive(Debug, Error)]
 pub enum DeriveError {
@@ -79,7 +79,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
             repo,
             &mapping,
             csid,
-            Mode::OnlyIfEnabled,
+            DeriveMode::OnlyIfEnabled,
         )
         .await
     }
@@ -110,7 +110,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
             &mapping,
             Some(*csid),
             Some(limit),
-            Mode::OnlyIfEnabled,
+            DeriveMode::OnlyIfEnabled,
         )
         .await?;
         Ok(underived.len() as u64)
@@ -132,7 +132,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
             &mapping,
             csids,
             None,
-            Mode::OnlyIfEnabled,
+            DeriveMode::OnlyIfEnabled,
         )
         .await?;
         Ok(underived)
@@ -154,7 +154,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
         mapping: &BatchMapping,
-        mode: Mode,
+        mode: DeriveMode,
     ) -> Result<HashMap<ChangesetId, Self>, Error>
     where
         BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,

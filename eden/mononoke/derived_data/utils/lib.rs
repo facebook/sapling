@@ -19,7 +19,7 @@ use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{
-    derive_impl::derive_impl, BonsaiDerived, BonsaiDerivedMapping, DeriveError, Mode as DeriveMode,
+    derive_impl::derive_impl, BonsaiDerived, BonsaiDerivedMapping, DeriveError, DeriveMode,
     RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};

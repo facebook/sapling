@@ -15,7 +15,7 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping, Mode};
+use derived_data::{BonsaiDerived, BonsaiDerivedMapping, DeriveMode};
 use futures::stream::{self, FuturesUnordered, StreamExt, TryStreamExt};
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, SkeletonManifestId,
@@ -94,7 +94,7 @@ impl BonsaiDerived for RootSkeletonManifestId {
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
         mapping: &BatchMapping,
-        mode: Mode,
+        mode: DeriveMode,
     ) -> Result<HashMap<ChangesetId, Self>, Error>
     where
         BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
