@@ -240,18 +240,12 @@ where
         let memblobstore = memblobstore.expect("memblobstore should have been updated");
 
         async move {
-            for csid in csids {
-                // create new context so each derivation would have its own trace
-                let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
-                derive_impl::<M::Value, _>(
-                    &ctx,
-                    &repo,
-                    &in_memory_mapping,
-                    csid,
-                    DeriveMode::Unsafe,
-                )
+            // create new context so each derivation batch would have its own trace
+            let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
+
+            // derive the batch of derived data
+            M::Value::batch_derive(&ctx, &repo, csids, &in_memory_mapping, DeriveMode::Unsafe)
                 .await?;
-            }
 
             // flush blobstore
             memblobstore.persist(&ctx).await?;

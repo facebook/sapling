@@ -12,7 +12,6 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use futures::stream::{self, StreamExt, TryStreamExt};
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use std::{
@@ -24,14 +23,7 @@ use thiserror::Error;
 pub mod batch;
 pub mod derive_impl;
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub enum Mode {
-    /// This mode should almost always be preferred
-    OnlyIfEnabled,
-    /// This mode should rarely be used, perhaps only for backfilling type of derived data
-    /// which is not enabled in this repo yet
-    Unsafe,
-}
+pub use crate::derive_impl::Mode;
 
 #[derive(Debug, Error)]
 pub enum DeriveError {
@@ -155,25 +147,29 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         Ok(count == 0)
     }
 
-    /// This method might be overridden by BonsaiDerived implementors if there's a more efficienta
+    /// This method might be overridden by BonsaiDerived implementors if there's a more efficient
     /// way to derive a batch of commits
-    async fn batch_derive<'a, Iter>(
+    async fn batch_derive<BatchMapping>(
         ctx: &CoreContext,
         repo: &BlobRepo,
-        csids: Iter,
+        csids: Vec<ChangesetId>,
+        mapping: &BatchMapping,
+        mode: Mode,
     ) -> Result<HashMap<ChangesetId, Self>, Error>
     where
-        Iter: IntoIterator<Item = ChangesetId> + Send,
-        Iter::IntoIter: Send,
+        BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
     {
-        let iter = csids.into_iter();
-        stream::iter(iter.map(|cs_id| async move {
-            let derived = Self::derive(ctx, repo, cs_id).await?;
-            Ok((cs_id, derived))
-        }))
-        .buffered(100)
-        .try_collect::<HashMap<_, _>>()
-        .await
+        let mut res = HashMap::new();
+        // The default implementation must derive sequentially with no
+        // parallelism or concurrency, as dependencies between changesets may
+        // cause O(n^2) derivations.
+        for csid in csids {
+            let derived =
+                derive_impl::derive_impl::<Self, BatchMapping>(ctx, repo, mapping, csid, mode)
+                    .await?;
+            res.insert(csid, derived);
+        }
+        Ok(res)
     }
 }
 

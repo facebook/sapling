@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::{BonsaiDerived, BonsaiDerivedMapping, DeriveError, Mode};
+use crate::{BonsaiDerived, BonsaiDerivedMapping, DeriveError};
 use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -43,6 +43,42 @@ define_stats! {
 }
 
 const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum Mode {
+    /// This mode should almost always be preferred
+    OnlyIfEnabled,
+    /// This mode should rarely be used, perhaps only for backfilling type of derived data
+    /// which is not enabled in this repo yet
+    Unsafe,
+}
+
+impl Mode {
+    /// Check that derivation is suitable for a particular derived data type
+    /// in this mode.
+    ///
+    /// Returns `DeriveError` if derivation should not proceed.
+    pub fn check_if_derive_allowed<Derived: BonsaiDerived>(
+        self,
+        repo: &BlobRepo,
+    ) -> Result<(), DeriveError> {
+        if self == Mode::OnlyIfEnabled {
+            if !repo
+                .get_derived_data_config()
+                .derived_data_types
+                .contains(Derived::NAME)
+            {
+                STATS::derived_data_disabled.add_value(1, (repo.get_repoid().id(), Derived::NAME));
+                return Err(DeriveError::Disabled(
+                    Derived::NAME,
+                    repo.get_repoid(),
+                    repo.name().clone(),
+                ));
+            }
+        }
+        Ok(())
+    }
+}
 
 /// Actual implementation of `BonsaiDerived::derive`, which recursively generates derivations.
 /// If the data was already generated (i.e. the data is already in `derived_mapping`) then
@@ -153,22 +189,6 @@ fn should_log_slow_derivation(duration: Duration) -> bool {
     duration > Duration::from_secs(threshold)
 }
 
-fn fail_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) -> Result<(), DeriveError> {
-    if !repo
-        .get_derived_data_config()
-        .derived_data_types
-        .contains(Derived::NAME)
-    {
-        STATS::derived_data_disabled.add_value(1, (repo.get_repoid().id(), Derived::NAME));
-        return Err(DeriveError::Disabled(
-            Derived::NAME,
-            repo.get_repoid(),
-            repo.name().clone(),
-        ));
-    }
-    Ok(())
-}
-
 pub(crate) async fn find_topo_sorted_underived<
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
@@ -181,9 +201,7 @@ pub(crate) async fn find_topo_sorted_underived<
     limit: Option<u64>,
     mode: Mode,
 ) -> Result<Vec<ChangesetId>, Error> {
-    if mode == Mode::OnlyIfEnabled {
-        fail_if_disabled::<Derived>(repo)?;
-    }
+    mode.check_if_derive_allowed::<Derived>(repo)?;
 
     let changeset_fetcher = repo.get_changeset_fetcher();
     // This is necessary to avoid visiting the same commit a lot of times in mergy repos
@@ -842,7 +860,9 @@ mod test {
                     .await?;
             // Reverse them to derive parents before children
             let cs_ids = cs_ids.clone().into_iter().rev().collect::<Vec<_>>();
-            let derived_batch = TestGenNum::batch_derive(&ctx, &repo, cs_ids).await?;
+            let mapping = TestGenNum::mapping(&ctx, &repo);
+            let derived_batch =
+                TestGenNum::batch_derive(&ctx, &repo, cs_ids, &mapping, Mode::Unsafe).await?;
             derived_batch
                 .get(&master_cs_id)
                 .unwrap_or_else(|| panic!("{} has not been derived", master_cs_id))

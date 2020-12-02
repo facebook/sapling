@@ -15,7 +15,7 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use derived_data::{BonsaiDerived, BonsaiDerivedMapping, Mode};
 use futures::stream::{self, FuturesUnordered, StreamExt, TryStreamExt};
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, FsnodeId, MPath,
@@ -87,29 +87,26 @@ impl BonsaiDerived for RootFsnodeId {
         Ok(RootFsnodeId(fsnode_id))
     }
 
-    async fn batch_derive<'a, Iter>(
+    async fn batch_derive<BatchMapping>(
         ctx: &CoreContext,
         repo: &BlobRepo,
-        csids: Iter,
+        csids: Vec<ChangesetId>,
+        mapping: &BatchMapping,
+        mode: Mode,
     ) -> Result<HashMap<ChangesetId, Self>, Error>
     where
-        Iter: IntoIterator<Item = ChangesetId> + Send,
-        Iter::IntoIter: Send,
+        BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
     {
-        let csids = csids.into_iter().collect::<Vec<_>>();
+        mode.check_if_derive_allowed::<Self>(repo)?;
+
         let derived = derive_fsnode_in_batch(ctx, repo, csids.clone()).await?;
 
-        let mapping = Self::mapping(ctx, repo);
-
-        stream::iter(derived.into_iter().map(|(cs_id, derived)| {
-            let mapping = mapping.clone();
-            async move {
-                let derived = RootFsnodeId(derived);
-                mapping
-                    .put(ctx.clone(), cs_id.clone(), derived.clone())
-                    .await?;
-                Ok((cs_id, derived))
-            }
+        stream::iter(derived.into_iter().map(|(cs_id, derived)| async move {
+            let derived = RootFsnodeId(derived);
+            mapping
+                .put(ctx.clone(), cs_id.clone(), derived.clone())
+                .await?;
+            Ok((cs_id, derived))
         }))
         .buffered(100)
         .try_collect::<HashMap<_, _>>()
