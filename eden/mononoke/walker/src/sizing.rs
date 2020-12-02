@@ -26,7 +26,7 @@ use async_compression::{metered::MeteredWrite, Compressor, CompressorType};
 use bytes::Bytes;
 use clap::ArgMatches;
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::args::{self, CachelibSettings};
 use context::CoreContext;
 use derive_more::{Add, Div, Mul, Sub};
 use fbinit::FacebookInit;
@@ -274,6 +274,7 @@ pub async fn compression_benefit<'a>(
     logger: Logger,
     matches: &'a ArgMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
+    cachelib_defaults: CachelibSettings,
 ) -> Result<(), Error> {
     let sizing_sampler = Arc::new(WalkSampleMapping::<Node, SizingSample>::new());
     let config_store = args::init_config_store(fb, &logger, matches)?;
@@ -285,6 +286,7 @@ pub async fn compression_benefit<'a>(
         Some(sizing_sampler.clone()),
         matches,
         sub_m,
+        cachelib_defaults,
     )
     .await?;
 

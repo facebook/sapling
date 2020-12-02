@@ -21,7 +21,7 @@ use blobrepo_factory::open_blobrepo_given_datasources;
 use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
-use cmdlib::args;
+use cmdlib::args::{self, CachelibSettings};
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
@@ -393,8 +393,13 @@ fn add_sampling_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
-    let app_template = args::MononokeAppBuilder::new(app_name).with_fb303_args();
+pub fn setup_toplevel_app<'a, 'b>(
+    app_name: &str,
+    cachelib_defaults: CachelibSettings,
+) -> App<'a, 'b> {
+    let app_template = args::MononokeAppBuilder::new(app_name)
+        .with_fb303_args()
+        .with_cachelib_settings(cachelib_defaults);
 
     let scrub_objects =
         setup_subcommand_args(SubCommand::with_name(SCRUB).about("scrub, checks data is present by reading it and counting it. Combine with --enable-scrub-blobstore to check across a multiplex"));
@@ -790,6 +795,7 @@ pub fn setup_common<'a>(
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
     matches: &'a ArgMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
+    cachelib_defaults: CachelibSettings,
 ) -> impl Future<Output = Result<(RepoWalkDatasources, RepoWalkParams), Error>> + 'a {
     async move {
         let config_store = args::init_config_store(fb, logger, matches)?;
@@ -810,7 +816,7 @@ pub fn setup_common<'a>(
             Redaction::Disabled
         };
 
-        let caching = cmdlib::args::init_cachelib(fb, &matches);
+        let caching = args::parse_and_init_cachelib(fb, &matches, cachelib_defaults);
 
         let include_edge_types = parse_edge_types(
             sub_m,

@@ -25,7 +25,7 @@ use crate::tail::{walk_exact_tail, RepoWalkRun};
 use anyhow::Error;
 use clap::ArgMatches;
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::args::{self, CachelibSettings};
 use context::{CoreContext, SamplingKey};
 use fbinit::FacebookInit;
 use filetime::{self, FileTime};
@@ -332,6 +332,7 @@ pub async fn corpus<'a>(
     logger: Logger,
     matches: &'a ArgMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
+    cachelib_defaults: CachelibSettings,
 ) -> Result<(), Error> {
     let config_store = args::init_config_store(fb, &logger, matches)?;
     let output_dir = sub_m.value_of(OUTPUT_DIR_ARG).map(|s| s.to_string());
@@ -346,6 +347,7 @@ pub async fn corpus<'a>(
         Some(corpus_sampler.clone()),
         matches,
         sub_m,
+        cachelib_defaults,
     )
     .await?;
 

@@ -12,7 +12,10 @@ use anyhow::Error;
 use fbinit::FacebookInit;
 use futures::future::{self, FutureExt};
 
-use cmdlib::{args, helpers::block_execute};
+use cmdlib::{
+    args::{self, CachelibSettings},
+    helpers::block_execute,
+};
 
 mod blobstore;
 mod corpus;
@@ -35,20 +38,27 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     newfilenodes::disable_sql_timeouts();
 
     let app_name = "walker";
-    let matches = setup::setup_toplevel_app(app_name).get_matches();
+    let cachelib_defaults = CachelibSettings {
+        cache_size: 2 * 1024 * 1024 * 1024,
+        ..Default::default()
+    };
+    let matches = setup::setup_toplevel_app(app_name, cachelib_defaults.clone()).get_matches();
     let logger = args::init_logging(fb, &matches);
     args::init_config_store(fb, &logger, &matches)?;
 
     let future = match matches.subcommand() {
         (setup::COMPRESSION_BENEFIT, Some(sub_m)) => {
-            sizing::compression_benefit(fb, logger.clone(), &matches, sub_m).boxed()
+            sizing::compression_benefit(fb, logger.clone(), &matches, sub_m, cachelib_defaults)
+                .boxed()
         }
-        (setup::CORPUS, Some(sub_m)) => corpus::corpus(fb, logger.clone(), &matches, sub_m).boxed(),
+        (setup::CORPUS, Some(sub_m)) => {
+            corpus::corpus(fb, logger.clone(), &matches, sub_m, cachelib_defaults).boxed()
+        }
         (setup::SCRUB, Some(sub_m)) => {
-            scrub::scrub_objects(fb, logger.clone(), &matches, sub_m).boxed()
+            scrub::scrub_objects(fb, logger.clone(), &matches, sub_m, cachelib_defaults).boxed()
         }
         (setup::VALIDATE, Some(sub_m)) => {
-            validate::validate(fb, logger.clone(), &matches, sub_m).boxed()
+            validate::validate(fb, logger.clone(), &matches, sub_m, cachelib_defaults).boxed()
         }
         _ => {
             future::err::<_, Error>(Error::msg("Invalid Arguments, pass --help for usage.")).boxed()

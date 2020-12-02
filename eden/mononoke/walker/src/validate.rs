@@ -29,7 +29,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use clap::ArgMatches;
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::args::{self, CachelibSettings};
 use context::CoreContext;
 use derive_more::AddAssign;
 use fbinit::FacebookInit;
@@ -628,10 +628,19 @@ pub async fn validate<'a>(
     logger: Logger,
     matches: &'a ArgMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
+    cachelib_defaults: CachelibSettings,
 ) -> Result<(), Error> {
     let config_store = args::init_config_store(fb, &logger, matches)?;
-    let (datasources, walk_params) =
-        setup_common(VALIDATE, fb, &logger, None, matches, sub_m).await?;
+    let (datasources, walk_params) = setup_common(
+        VALIDATE,
+        fb,
+        &logger,
+        None,
+        matches,
+        sub_m,
+        cachelib_defaults,
+    )
+    .await?;
     let repo_stats_key = args::get_repo_name(config_store, &matches)?;
     let mut include_check_types = parse_check_types(sub_m)?;
     include_check_types.retain(|t| walk_params.include_node_types.contains(&t.node_type()));
