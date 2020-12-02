@@ -117,7 +117,7 @@ fn main(fb: FacebookInit) -> ExitCode {
                 subcommand_content_fetch(fb, logger, &matches, sub_m).await
             }
             (bookmarks_manager::BOOKMARKS, Some(sub_m)) => {
-                args::init_cachelib(fb, &matches, None);
+                args::init_cachelib(fb, &matches);
                 let ctx = CoreContext::new_with_logger(fb, logger.clone());
                 let repo = args::open_repo(fb, &logger, &matches).await?;
                 bookmarks_manager::handle_command(ctx, repo, sub_m, logger.clone()).await

@@ -229,7 +229,7 @@ async fn bootstrap_repositories<'a>(
     let config = args::load_repo_configs(config_store, &matches)?;
 
     let mysql_options = cmdlib::args::parse_mysql_options(&matches);
-    let caching = cmdlib::args::init_cachelib(fb, &matches, None);
+    let caching = cmdlib::args::init_cachelib(fb, &matches);
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let blobstore_options = cmdlib::args::parse_blobstore_options(&matches);
 

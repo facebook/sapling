@@ -127,7 +127,7 @@ async fn run_hook_tailer<'a>(
 
     let disabled_hooks = cmdlib::args::parse_disabled_hooks_no_repo_prefix(&matches, &logger);
 
-    let caching = cmdlib::args::init_cachelib(fb, &matches, None);
+    let caching = cmdlib::args::init_cachelib(fb, &matches);
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let builder = BlobrepoBuilder::new(
         fb,

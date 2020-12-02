@@ -72,7 +72,7 @@ pub async fn subcommand_hg_changeset<'a>(
                 .ok_or(format_err!("RIGHT_CS argument expected"))
                 .and_then(HgChangesetId::from_str);
 
-            args::init_cachelib(fb, &matches, None);
+            args::init_cachelib(fb, &matches);
             let repo = args::open_repo(fb, &logger, &matches).await?;
             (left_cs, right_cs)
                 .into_future()
@@ -98,7 +98,7 @@ pub async fn subcommand_hg_changeset<'a>(
                 .ok_or(format_err!("STOP_CS argument expected"))
                 .and_then(HgChangesetId::from_str);
 
-            args::init_cachelib(fb, &matches, None);
+            args::init_cachelib(fb, &matches);
             let repo = args::open_repo(fb, &logger, &matches).await?;
             (start_cs, stop_cs)
                 .into_future()

@@ -104,7 +104,7 @@ pub async fn subcommand_phases<'a>(
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let repo = args::open_repo(fb, &logger, &matches).await?;
-    args::init_cachelib(fb, &matches, None);
+    args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_m.subcommand() {

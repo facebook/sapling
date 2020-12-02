@@ -145,7 +145,7 @@ pub async fn subcommand_rsync<'a>(
     matches: &'a ArgMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    args::init_cachelib(fb, &matches, None);
+    args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::open_repo(fb, &logger, &matches).await?;
 

@@ -217,7 +217,7 @@ async fn run(
 fn context_and_matches<'a>(fb: FacebookInit, app: App<'a, '_>) -> (CoreContext, ArgMatches<'a>) {
     let matches = app.get_matches();
     let logger = args::init_logging(fb, &matches);
-    args::init_cachelib(fb, &matches, None);
+    args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger);
     (ctx, matches)
 }

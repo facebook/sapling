@@ -105,7 +105,7 @@ pub async fn subcommand_skiplist<'a>(
             let rebuild = sub_m.is_present("rebuild");
             let skiplist_ty = SkiplistType::new(sub_m.is_present(ARG_SPARSE));
 
-            args::init_cachelib(fb, &matches, None);
+            args::init_cachelib(fb, &matches);
             let config_store = args::init_config_store(fb, &logger, matches)?;
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
             let sql_changesets = args::open_sql::<SqlChangesets>(fb, config_store, &matches);
@@ -129,7 +129,7 @@ pub async fn subcommand_skiplist<'a>(
                 .expect("blobstore key is not specified")
                 .to_string();
 
-            args::init_cachelib(fb, &matches, None);
+            args::init_cachelib(fb, &matches);
             let ctx = CoreContext::test_mock(fb);
             let repo = args::open_repo(fb, &logger, &matches).await?;
             let maybe_index = read_skiplist_index(ctx.clone(), repo, key, logger.clone())

@@ -9,7 +9,7 @@ mod cache;
 #[cfg(fbcode_build)]
 mod facebook;
 
-pub use self::cache::init_cachelib;
+pub use self::cache::{init_cachelib, parse_and_init_cachelib, CachelibSettings};
 
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
@@ -1369,7 +1369,9 @@ pub fn init_mononoke<'a>(
     let logger = init_logging(fb, matches);
 
     debug!(logger, "Initialising cachelib...");
-    let caching = init_cachelib(fb, matches, expected_item_size_bytes);
+    let mut settings = CachelibSettings::default();
+    settings.expected_item_size_bytes = expected_item_size_bytes;
+    let caching = parse_and_init_cachelib(fb, matches, settings);
     debug!(logger, "Initialising runtime...");
     let runtime = init_runtime(matches)?;
     init_tunables(fb, matches, logger.clone())?;

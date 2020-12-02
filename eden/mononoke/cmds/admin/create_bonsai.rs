@@ -55,7 +55,7 @@ pub async fn subcommand_create_bonsai<'a>(
         .read_to_string(&mut content)
         .map_err(|e| SubcommandError::Error(anyhow!(e)))?;
 
-    args::init_cachelib(fb, &matches, None);
+    args::init_cachelib(fb, &matches);
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 

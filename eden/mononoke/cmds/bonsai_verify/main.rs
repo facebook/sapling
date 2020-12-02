@@ -116,7 +116,7 @@ fn subcommand_round_trip(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> Result<()> {
-    args::init_cachelib(ctx.fb, &matches, None);
+    args::init_cachelib(ctx.fb, &matches);
     let mut runtime = args::init_runtime(&matches)?;
     let repo = runtime.block_on_std(args::open_repo(ctx.fb, &logger, &matches))?;
 
@@ -297,7 +297,7 @@ fn subcommmand_hg_manifest_verify(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> Result<()> {
-    args::init_cachelib(ctx.fb, &matches, None);
+    args::init_cachelib(ctx.fb, &matches);
 
     let total = &AtomicUsize::new(0);
     let total_millis = &AtomicU64::new(0);

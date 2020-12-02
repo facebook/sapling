@@ -140,16 +140,21 @@ pub(crate) fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
     }
 }
 
-pub fn init_cachelib<'a>(
+/// Usual entry point where binary is happy with CachelibSettings::default()
+pub fn init_cachelib<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Caching {
+    parse_and_init_cachelib(fb, matches, CachelibSettings::default())
+}
+
+/// Provide a way for binaries to specify if they have different default cachelib settings
+pub fn parse_and_init_cachelib<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
-    expected_item_size_bytes: Option<usize>,
+    mut settings: CachelibSettings,
 ) -> Caching {
     let caching = parse_caching(matches);
 
     match caching {
         Caching::Enabled(..) | Caching::CachelibOnlyBlobstore(..) => {
-            let mut settings = CachelibSettings::default();
             if let Some(cache_size) = matches.value_of(CACHE_SIZE_GB) {
                 settings.cache_size =
                     (cache_size.parse::<f64>().unwrap() * (1024 * 1024 * 1024) as f64) as usize;
@@ -191,17 +196,12 @@ pub fn init_cachelib<'a>(
 
             #[cfg(not(fbcode_build))]
             {
-                let _ = (fb, expected_item_size_bytes);
+                let _ = fb;
                 unimplemented!("Initialization of cachelib works only for fbcode builds")
             }
             #[cfg(fbcode_build)]
             {
-                super::facebook::init_cachelib_from_settings(
-                    fb,
-                    settings,
-                    expected_item_size_bytes,
-                )
-                .unwrap();
+                super::facebook::init_cachelib_from_settings(fb, settings).unwrap();
             }
         }
         Caching::Disabled => {
@@ -212,7 +212,7 @@ pub fn init_cachelib<'a>(
     caching
 }
 
-pub(crate) struct CachelibSettings {
+pub struct CachelibSettings {
     pub cache_size: usize,
     pub max_process_size_gib: Option<u32>,
     pub min_process_size_gib: Option<u32>,
@@ -225,6 +225,7 @@ pub(crate) struct CachelibSettings {
     pub idmapping_cache_size: Option<usize>,
     pub blob_cache_size: Option<usize>,
     pub phases_cache_size: Option<usize>,
+    pub expected_item_size_bytes: Option<usize>,
 }
 
 impl Default for CachelibSettings {
@@ -242,6 +243,7 @@ impl Default for CachelibSettings {
             idmapping_cache_size: None,
             blob_cache_size: None,
             phases_cache_size: None,
+            expected_item_size_bytes: None,
         }
     }
 }

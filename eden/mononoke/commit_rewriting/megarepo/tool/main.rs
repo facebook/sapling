@@ -877,7 +877,7 @@ fn get_and_verify_repo_config<'a>(
 fn main(fb: FacebookInit) -> Result<()> {
     let app = setup_app();
     let matches = app.get_matches();
-    args::init_cachelib(fb, &matches, None);
+    args::init_cachelib(fb, &matches);
     let logger = args::init_logging(fb, &matches);
     let config_store = args::init_config_store(fb, &logger, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());

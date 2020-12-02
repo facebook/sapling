@@ -557,17 +557,17 @@ pub async fn subcommand_process_hg_sync<'a>(
             remains(sub_m, &ctx, repo_id, &mutable_counters, &bookmarks).await?
         }
         (HG_SYNC_SHOW, Some(sub_m)) => {
-            args::init_cachelib(fb, &matches, None);
+            args::init_cachelib(fb, &matches);
             let repo = args::open_repo(fb, ctx.logger(), &matches).await?;
             show(sub_m, &ctx, &repo, &mutable_counters, &bookmarks).await?
         }
         (HG_SYNC_FETCH_BUNDLE, Some(sub_m)) => {
-            args::init_cachelib(fb, &matches, None);
+            args::init_cachelib(fb, &matches);
             let repo = args::open_repo(fb, ctx.logger(), &matches).await?;
             fetch_bundle(sub_m, &ctx, &repo, &bookmarks).await?
         }
         (HG_SYNC_INSPECT, Some(sub_m)) => {
-            args::init_cachelib(fb, &matches, None);
+            args::init_cachelib(fb, &matches);
             let repo = args::open_repo(fb, ctx.logger(), &matches).await?;
             inspect(sub_m, &ctx, &repo, &bookmarks).await?
         }

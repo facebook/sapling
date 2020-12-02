@@ -336,7 +336,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    args::init_cachelib(fb, &matches, None);
+    args::init_cachelib(fb, &matches);
     let config_store = args::init_config_store(fb, &logger, &matches)?;
 
     let mode = match matches.value_of("mode").expect("no default on mode") {

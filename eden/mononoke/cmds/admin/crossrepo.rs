@@ -67,7 +67,7 @@ pub async fn subcommand_crossrepo<'a>(
     let config_store = args::init_config_store(fb, &logger, &matches)?;
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, &config_store)?;
 
-    args::init_cachelib(fb, &matches, None);
+    args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     match sub_m.subcommand() {
         (MAP_SUBCOMMAND, Some(sub_sub_m)) => {
