@@ -462,6 +462,8 @@ def _setuplog(ui):
     def _logrevs(orig, repo, opts):
         revs = orig(repo, opts)
         if opts.get("sparse"):
+            _checksparse(repo)
+
             sparsematch = repo.sparsematch()
 
             def ctxmatch(rev):
