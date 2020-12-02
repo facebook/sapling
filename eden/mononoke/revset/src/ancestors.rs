@@ -15,10 +15,13 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use cloned::cloned;
+use futures::{FutureExt, TryFutureExt};
 use futures_ext::StreamExt;
-use futures_old::future::Future;
-use futures_old::stream::{iter_ok, Stream};
-use futures_old::{Async, Poll};
+use futures_old::{
+    future::Future,
+    stream::{iter_ok, Stream},
+    Async, Poll,
+};
 use maplit::hashset;
 
 use crate::UniqueHeap;
@@ -53,8 +56,10 @@ fn make_pending(
             .map({
                 cloned!(ctx, changeset_fetcher);
                 move |hash| {
-                    changeset_fetcher
-                        .get_parents(ctx.clone(), hash)
+                    cloned!(ctx, changeset_fetcher);
+                    async move { changeset_fetcher.get_parents(ctx, hash).await }
+                        .boxed()
+                        .compat()
                         .map(|parents| parents.into_iter())
                         .map_err(|err| err.context(ErrorKind::ParentsFetchFailed))
                 }
@@ -63,10 +68,16 @@ fn make_pending(
             .map(|parents| iter_ok::<_, Error>(parents.into_iter()))
             .flatten()
             .and_then(move |node_cs| {
-                changeset_fetcher
-                    .get_generation_number(ctx.clone(), node_cs)
-                    .map(move |gen_id| (node_cs, gen_id))
-                    .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
+                cloned!(ctx, changeset_fetcher);
+                async move {
+                    changeset_fetcher
+                        .get_generation_number(ctx.clone(), node_cs)
+                        .await
+                }
+                .boxed()
+                .compat()
+                .map(move |gen_id| (node_cs, gen_id))
+                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
             }),
     )
 }

@@ -6,6 +6,7 @@
  */
 
 use anyhow::{anyhow, Error};
+use async_trait::async_trait;
 use bulkops::fetch_all_public_changesets;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
@@ -312,26 +313,27 @@ struct InMemoryChangesetFetcher {
     inner: Arc<dyn ChangesetFetcher>,
 }
 
+#[async_trait]
 impl ChangesetFetcher for InMemoryChangesetFetcher {
-    fn get_generation_number(
+    async fn get_generation_number(
         &self,
         ctx: CoreContext,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Generation, Error> {
+    ) -> Result<Generation, Error> {
         match self.fetched_changesets.get(&cs_id) {
-            Some(cs_entry) => ok(Generation::new(cs_entry.gen)).boxify(),
-            None => self.inner.get_generation_number(ctx, cs_id),
+            Some(cs_entry) => Ok(Generation::new(cs_entry.gen)),
+            None => self.inner.get_generation_number(ctx, cs_id).await,
         }
     }
 
-    fn get_parents(
+    async fn get_parents(
         &self,
         ctx: CoreContext,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Vec<ChangesetId>, Error> {
+    ) -> Result<Vec<ChangesetId>, Error> {
         match self.fetched_changesets.get(&cs_id) {
-            Some(cs_entry) => ok(cs_entry.parents.clone()).boxify(),
-            None => self.inner.get_parents(ctx, cs_id),
+            Some(cs_entry) => Ok(cs_entry.parents.clone()),
+            None => self.inner.get_parents(ctx, cs_id).await,
         }
     }
 }

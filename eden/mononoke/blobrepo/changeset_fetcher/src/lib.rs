@@ -6,51 +6,33 @@
  */
 
 use anyhow::{format_err, Error};
+use async_trait::async_trait;
+use auto_impl::auto_impl;
 use changesets::Changesets;
 use context::CoreContext;
-use futures::Future;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::compat::Future01CompatExt;
 use mononoke_types::{ChangesetId, Generation, RepositoryId};
-
-use std::any::Any;
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{any::Any, collections::HashMap, sync::Arc};
 
 /// Trait that knows how to fetch DAG info about commits. Primary user is revsets
 /// Concrete implementation may add more efficient caching logic to make request faster
+#[async_trait]
+#[auto_impl(&, Arc, Box)]
 pub trait ChangesetFetcher: Send + Sync + 'static {
-    fn get_generation_number(
+    async fn get_generation_number(
         &self,
         ctx: CoreContext,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Generation, Error>;
+    ) -> Result<Generation, Error>;
 
-    fn get_parents(
+    async fn get_parents(
         &self,
         ctx: CoreContext,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Vec<ChangesetId>, Error>;
+    ) -> Result<Vec<ChangesetId>, Error>;
 
     fn get_stats(&self) -> HashMap<String, Box<dyn Any>> {
         HashMap::new()
-    }
-}
-
-impl ChangesetFetcher for Arc<dyn ChangesetFetcher> {
-    fn get_generation_number(
-        &self,
-        ctx: CoreContext,
-        cs_id: ChangesetId,
-    ) -> BoxFuture<Generation, Error> {
-        (**self).get_generation_number(ctx, cs_id)
-    }
-
-    fn get_parents(
-        &self,
-        ctx: CoreContext,
-        cs_id: ChangesetId,
-    ) -> BoxFuture<Vec<ChangesetId>, Error> {
-        (**self).get_parents(ctx, cs_id)
     }
 }
 
@@ -69,28 +51,33 @@ impl SimpleChangesetFetcher {
     }
 }
 
+#[async_trait]
 impl ChangesetFetcher for SimpleChangesetFetcher {
-    fn get_generation_number(
+    async fn get_generation_number(
         &self,
         ctx: CoreContext,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Generation, Error> {
-        self.changesets
+    ) -> Result<Generation, Error> {
+        let maybe_cs = self
+            .changesets
             .get(ctx, self.repo_id.clone(), cs_id.clone())
-            .and_then(move |maybe_cs| maybe_cs.ok_or_else(|| format_err!("{} not found", cs_id)))
-            .map(|cs| Generation::new(cs.gen))
-            .boxify()
+            .compat()
+            .await?;
+        let cs = maybe_cs.ok_or_else(|| format_err!("{} not found", cs_id))?;
+        Ok(Generation::new(cs.gen))
     }
 
-    fn get_parents(
+    async fn get_parents(
         &self,
         ctx: CoreContext,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Vec<ChangesetId>, Error> {
-        self.changesets
+    ) -> Result<Vec<ChangesetId>, Error> {
+        let maybe_cs = self
+            .changesets
             .get(ctx, self.repo_id.clone(), cs_id.clone())
-            .and_then(move |maybe_cs| maybe_cs.ok_or_else(|| format_err!("{} not found", cs_id)))
-            .map(|cs| cs.parents)
-            .boxify()
+            .compat()
+            .await?;
+        let cs = maybe_cs.ok_or_else(|| format_err!("{} not found", cs_id))?;
+        Ok(cs.parents)
     }
 }

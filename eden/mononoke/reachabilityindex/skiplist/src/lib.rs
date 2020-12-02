@@ -18,7 +18,6 @@ use chashmap::CHashMap;
 use context::{CoreContext, PerfCounterType};
 use futures::future::try_join_all;
 use futures::stream::{futures_unordered::FuturesUnordered, TryStreamExt};
-use futures_util::compat::Future01CompatExt;
 use futures_util::try_join;
 use maplit::{hashmap, hashset};
 use slog::{info, Logger};
@@ -560,12 +559,8 @@ impl ReachabilityIndex for SkiplistIndex {
         anc_hash: ChangesetId,
     ) -> Result<bool, Error> {
         let (anc_gen, desc_gen) = try_join!(
-            changeset_fetcher
-                .get_generation_number(ctx.clone(), anc_hash)
-                .compat(),
-            changeset_fetcher
-                .get_generation_number(ctx.clone(), desc_hash)
-                .compat(),
+            changeset_fetcher.get_generation_number(ctx.clone(), anc_hash),
+            changeset_fetcher.get_generation_number(ctx.clone(), desc_hash),
         )?;
         ctx.perf_counters()
             .set_counter(PerfCounterType::SkiplistAncestorGen, anc_gen.value() as i64);
@@ -1058,6 +1053,7 @@ mod test {
         Arc,
     };
 
+    use async_trait::async_trait;
     use blobrepo::BlobRepo;
     use bookmarks::BookmarkName;
     use chashmap::CHashMap;
@@ -1711,23 +1707,24 @@ mod test {
         }
     }
 
+    #[async_trait]
     impl ChangesetFetcher for CountingChangesetFetcher {
-        fn get_generation_number(
+        async fn get_generation_number(
             &self,
             ctx: CoreContext,
             cs_id: ChangesetId,
-        ) -> BoxFuture<Generation, Error> {
+        ) -> Result<Generation, Error> {
             self.get_gen_number_count.fetch_add(1, Ordering::Relaxed);
-            self.cs_fetcher.get_generation_number(ctx, cs_id)
+            self.cs_fetcher.get_generation_number(ctx, cs_id).await
         }
 
-        fn get_parents(
+        async fn get_parents(
             &self,
             ctx: CoreContext,
             cs_id: ChangesetId,
-        ) -> BoxFuture<Vec<ChangesetId>, Error> {
+        ) -> Result<Vec<ChangesetId>, Error> {
             self.get_parents_count.fetch_add(1, Ordering::Relaxed);
-            self.cs_fetcher.get_parents(ctx, cs_id)
+            self.cs_fetcher.get_parents(ctx, cs_id).await
         }
     }
 

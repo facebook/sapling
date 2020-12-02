@@ -26,7 +26,6 @@ use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
 use futures::{
-    compat::Future01CompatExt,
     future::{self, ready, try_join_all, BoxFuture, FutureExt},
     stream::{self, futures_unordered::FuturesUnordered},
     Future, Stream, StreamExt, TryFutureExt, TryStreamExt,
@@ -835,10 +834,7 @@ pub fn find_underived_many(
                     // all derived data has already been derived
                     Ok::<_, Error>((None, Vec::new()))
                 } else {
-                    let parents = changeset_fetcher
-                        .get_parents(ctx.clone(), csid)
-                        .compat()
-                        .await?;
+                    let parents = changeset_fetcher.get_parents(ctx.clone(), csid).await?;
                     let dependencies: Vec<_> = parents
                         .iter()
                         .copied()

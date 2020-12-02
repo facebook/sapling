@@ -18,10 +18,7 @@ use anyhow::{Error, Result};
 use ascii::AsciiString;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt,
-    future::{try_join, BoxFuture, FutureExt},
-};
+use futures::future::{try_join, BoxFuture, FutureExt};
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::mysql;
 use sql::mysql_async::{
@@ -303,10 +300,8 @@ pub async fn mark_reachable_as_public(
         }
 
         let (generation, parents) = try_join(
-            changeset_fetcher
-                .get_generation_number(ctx.clone(), cs)
-                .compat(),
-            changeset_fetcher.get_parents(ctx.clone(), cs).compat(),
+            changeset_fetcher.get_generation_number(ctx.clone(), cs),
+            changeset_fetcher.get_parents(ctx.clone(), cs),
         )
         .await?;
 

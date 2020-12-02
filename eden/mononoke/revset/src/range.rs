@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use cloned::cloned;
+use futures::{FutureExt, TryFutureExt};
 use futures_ext::{BoxStream, StreamExt};
 use futures_old::future::Future;
 use futures_old::stream::{self, iter_ok, Stream};
@@ -54,25 +55,38 @@ fn make_pending(
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     child: HashGen,
 ) -> BoxStream<ParentChild, Error> {
-    changeset_fetcher
-        .get_parents(ctx.clone(), child.hash)
-        .map(move |parents| (child, parents))
-        .map_err(|err| err.context(ErrorKind::ParentsFetchFailed))
-        .map(|(child, parents)| iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter())))
-        .flatten_stream()
-        .and_then(move |(child, parent_hash)| {
-            changeset_fetcher
-                .get_generation_number(ctx.clone(), parent_hash.clone())
-                .map(move |gen_id| ParentChild {
-                    child,
-                    parent: HashGen {
-                        hash: parent_hash,
-                        generation: gen_id,
-                    },
-                })
-                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
+    {
+        cloned!(ctx, changeset_fetcher);
+        let child_hash = child.hash;
+        async move { changeset_fetcher.get_parents(ctx, child_hash).await }
+    }
+    .boxed()
+    .compat()
+    .map(move |parents| (child, parents))
+    .map_err(|err| err.context(ErrorKind::ParentsFetchFailed))
+    .map(|(child, parents)| iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter())))
+    .flatten_stream()
+    .and_then(move |(child, parent_hash)| {
+        {
+            cloned!(ctx, changeset_fetcher, parent_hash);
+            async move {
+                changeset_fetcher
+                    .get_generation_number(ctx, parent_hash)
+                    .await
+            }
+        }
+        .boxed()
+        .compat()
+        .map(move |gen_id| ParentChild {
+            child,
+            parent: HashGen {
+                hash: parent_hash,
+                generation: gen_id,
+            },
         })
-        .boxify()
+        .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
+    })
+    .boxify()
 }
 
 impl RangeNodeStream {
@@ -85,32 +99,43 @@ impl RangeNodeStream {
         end_node: ChangesetId,
     ) -> Self {
         let start_generation = Box::new(
-            changeset_fetcher
-                .clone()
-                .get_generation_number(ctx.clone(), start_node)
-                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
-                .map(stream::repeat)
-                .flatten_stream(),
+            {
+                cloned!(ctx, changeset_fetcher);
+                async move {
+                    changeset_fetcher
+                        .get_generation_number(ctx, start_node)
+                        .await
+                }
+            }
+            .boxed()
+            .compat()
+            .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
+            .map(stream::repeat)
+            .flatten_stream(),
         );
 
         let pending_nodes = {
             cloned!(ctx, changeset_fetcher);
-            changeset_fetcher
-                .get_generation_number(ctx.clone(), end_node)
-                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
-                .map(move |generation| {
-                    make_pending(
-                        ctx.clone(),
-                        changeset_fetcher,
-                        HashGen {
-                            hash: end_node,
-                            generation,
-                        },
-                    )
-                })
-                .flatten_stream()
-                .boxify()
-        };
+            async move { changeset_fetcher.get_generation_number(ctx, end_node).await }
+        }
+        .boxed()
+        .compat()
+        .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
+        .map({
+            cloned!(ctx, changeset_fetcher);
+            move |generation| {
+                make_pending(
+                    ctx,
+                    changeset_fetcher,
+                    HashGen {
+                        hash: end_node,
+                        generation,
+                    },
+                )
+            }
+        })
+        .flatten_stream()
+        .boxify();
 
         RangeNodeStream {
             ctx,

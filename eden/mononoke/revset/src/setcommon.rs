@@ -6,10 +6,11 @@
  */
 
 use changeset_fetcher::ChangesetFetcher;
+use cloned::cloned;
 use context::CoreContext;
+use futures::{FutureExt, TryFutureExt};
 use futures_ext::{BoxStream, StreamExt};
-use futures_old::future::Future;
-use futures_old::stream::Stream;
+use futures_old::{future::Future, stream::Stream};
 use mononoke_types::{ChangesetId, Generation};
 use std::sync::Arc;
 
@@ -29,10 +30,16 @@ pub fn add_generations_by_bonsai(
 ) -> BonsaiInputStream {
     stream
         .map(move |changesetid| {
-            changeset_fetcher
-                .get_generation_number(ctx.clone(), changesetid)
-                .map(move |gen_id| (changesetid, gen_id))
-                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed).into())
+            cloned!(ctx, changeset_fetcher);
+            async move {
+                changeset_fetcher
+                    .get_generation_number(ctx, changesetid)
+                    .await
+            }
+            .boxed()
+            .compat()
+            .map(move |gen_id| (changesetid, gen_id))
+            .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
         })
         .buffered(100)
         .boxify()

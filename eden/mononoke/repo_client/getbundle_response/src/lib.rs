@@ -519,7 +519,6 @@ async fn hg_to_bonsai_stream(
                 let cs_fetcher = repo.get_changeset_fetcher();
                 let gen_num = cs_fetcher
                     .get_generation_number(ctx.clone(), bcs_id)
-                    .compat()
                     .await?;
                 Ok((bcs_id, gen_num))
             }

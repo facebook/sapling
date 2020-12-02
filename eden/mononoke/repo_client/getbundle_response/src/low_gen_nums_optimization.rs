@@ -10,7 +10,6 @@ use anyhow::{anyhow, Error, Result};
 use blobrepo::ChangesetFetcher;
 use context::{CoreContext, PerfCounterType};
 use futures::{
-    compat::Future01CompatExt,
     future::{try_join_all, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
@@ -126,14 +125,10 @@ pub(crate) async fn compute_partial_getbundle(
         partial.push(cs_id);
         new_heads.remove(&cs_id);
 
-        let parents = changeset_fetcher
-            .get_parents(ctx.clone(), cs_id)
-            .compat()
-            .await?;
+        let parents = changeset_fetcher.get_parents(ctx.clone(), cs_id).await?;
         let parents = try_join_all(parents.into_iter().map(|p| {
             changeset_fetcher
                 .get_generation_number(ctx.clone(), p)
-                .compat()
                 .map_ok(move |gen_num| (p, gen_num))
         }))
         .await?;
@@ -247,7 +242,6 @@ pub(crate) async fn low_gen_num_optimization(
             move |bcs_id| async move {
                 let gen_num = changeset_fetcher
                     .get_generation_number(ctx.clone(), bcs_id)
-                    .compat()
                     .await?;
                 Result::<_, Error>::Ok((bcs_id, gen_num))
             }
@@ -404,7 +398,6 @@ mod test {
         .await?;
         assert!(maybe_res.is_none());
 
-
         // Now it's enabled, make sure we got the response
         let tunables = MononokeTunables::default();
         tunables.update_bools(&hashmap! {"getbundle_use_low_gen_optimization".to_string() => true});
@@ -433,7 +426,6 @@ mod test {
             .boxed(),
         )
         .await?;
-
 
         // Now let's check that if low gen optimization overfetches a lot of commits then it
         // returns None
@@ -469,7 +461,6 @@ mod test {
             .boxed(),
         )
         .await?;
-
 
         Ok(())
     }
@@ -549,7 +540,6 @@ mod test {
         assert_eq!(res.new_heads, params.heads);
         assert_eq!(res.new_excludes, params.excludes);
 
-
         // Now let's enable the optimization, but set very low traversal limit
         let (res, params) = test_compute_partial_bundle(
             &ctx,
@@ -568,7 +558,6 @@ mod test {
         assert_eq!(res.new_heads[0].0, commit_map["I"]);
         assert_eq!(res.new_excludes, params.excludes);
 
-
         // Simplest case - it should traverse a single changeset id and return it
         let (res, params) = test_compute_partial_bundle(
             &ctx,
@@ -586,8 +575,6 @@ mod test {
         assert!(res.new_heads.is_empty());
         assert_eq!(res.new_excludes, params.excludes);
 
-
-
         // Let it traverse the whole repo
         let (res, params) = test_compute_partial_bundle(
             &ctx,
@@ -604,7 +591,6 @@ mod test {
         assert_eq!(res.partial.len(), 13);
         assert!(res.new_heads.is_empty());
         assert_eq!(res.new_excludes, params.excludes);
-
 
         // Now let's enable the optimization and make it traverse up until a merge commit
         let (res, params) = test_compute_partial_bundle(
@@ -635,7 +621,6 @@ mod test {
             commit_map.get("M").cloned()
         );
         assert_eq!(res.new_excludes, params.excludes);
-
 
         // Now let's add a few more heads that are ancestors of each other.
         // It shouldn't change the result
@@ -668,7 +653,6 @@ mod test {
         );
         assert_eq!(res.new_excludes, params.excludes);
 
-
         // Set higher gen num limit
         let (res, params) = test_compute_partial_bundle(
             &ctx,
@@ -697,7 +681,6 @@ mod test {
             commit_map.get("F").cloned()
         );
         assert_eq!(res.new_excludes, params.excludes);
-
 
         // Set very high gen num limit
         let (res, params) = test_compute_partial_bundle(

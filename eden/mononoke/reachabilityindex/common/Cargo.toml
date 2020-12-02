@@ -13,4 +13,3 @@ mononoke_types = { path = "../../mononoke_types" }
 reachabilityindex = { path = ".." }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-util = "0.3"

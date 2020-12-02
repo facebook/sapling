@@ -208,7 +208,6 @@ mod test {
     use super::*;
     use fbinit::FacebookInit;
     use fixtures::linear;
-    use futures::compat::Future01CompatExt;
     use std::collections::VecDeque;
     use tests_utils::{drawdag::create_from_dag, resolve_cs_id};
 
@@ -223,7 +222,6 @@ mod test {
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         let master_gen_num = cs_fetcher
             .get_generation_number(ctx.clone(), master_cs_id)
-            .compat()
             .await?;
 
         let max_skip = NonZeroU64::new(2).unwrap();
@@ -296,10 +294,7 @@ mod test {
         let cs_fetcher = repo.get_changeset_fetcher();
         let mut index = HashMap::new();
 
-        let f_gen_num = cs_fetcher
-            .get_generation_number(ctx.clone(), f)
-            .compat()
-            .await?;
+        let f_gen_num = cs_fetcher.get_generation_number(ctx.clone(), f).await?;
 
         let max_skip = NonZeroU64::new(2).unwrap();
         index_changeset(&ctx, (f, f_gen_num), &mut index, max_skip, &cs_fetcher).await?;
@@ -335,10 +330,7 @@ mod test {
         let cs_fetcher = repo.get_changeset_fetcher();
         let mut index = HashMap::new();
 
-        let g_gen_num = cs_fetcher
-            .get_generation_number(ctx.clone(), g)
-            .compat()
-            .await?;
+        let g_gen_num = cs_fetcher.get_generation_number(ctx.clone(), g).await?;
 
         let max_skip = NonZeroU64::new(4).unwrap();
         index_changeset(&ctx, (g, g_gen_num), &mut index, max_skip, &cs_fetcher).await?;
@@ -379,10 +371,7 @@ mod test {
         let cs_fetcher = repo.get_changeset_fetcher();
         let mut index = HashMap::new();
 
-        let d_gen_num = cs_fetcher
-            .get_generation_number(ctx.clone(), d)
-            .compat()
-            .await?;
+        let d_gen_num = cs_fetcher.get_generation_number(ctx.clone(), d).await?;
 
         let max_skip = NonZeroU64::new(4).unwrap();
         index_changeset(&ctx, (d, d_gen_num), &mut index, max_skip, &cs_fetcher).await?;
@@ -426,10 +415,7 @@ mod test {
         let cs_fetcher = repo.get_changeset_fetcher();
         let mut index = HashMap::new();
 
-        let g_gen_num = cs_fetcher
-            .get_generation_number(ctx.clone(), g)
-            .compat()
-            .await?;
+        let g_gen_num = cs_fetcher.get_generation_number(ctx.clone(), g).await?;
 
         let max_skip = NonZeroU64::new(5).unwrap();
         index_changeset(&ctx, (g, g_gen_num), &mut index, max_skip, &cs_fetcher).await?;
@@ -439,10 +425,7 @@ mod test {
 
         for i in &["H", "I", "J", "K", "L"] {
             let i = *dag.get(*i).unwrap();
-            let i_gen_num = cs_fetcher
-                .get_generation_number(ctx.clone(), i)
-                .compat()
-                .await?;
+            let i_gen_num = cs_fetcher.get_generation_number(ctx.clone(), i).await?;
 
             index_changeset(&ctx, (i, i_gen_num), &mut index, max_skip, &cs_fetcher).await?;
             validate_index(i, &index, max_skip).await?;
@@ -587,10 +570,7 @@ mod test {
         let cs_fetcher = repo.get_changeset_fetcher();
         let mut index = HashMap::new();
 
-        let d_gen_num = cs_fetcher
-            .get_generation_number(ctx.clone(), d)
-            .compat()
-            .await?;
+        let d_gen_num = cs_fetcher.get_generation_number(ctx.clone(), d).await?;
 
         let max_skip = NonZeroU64::new(2).unwrap();
         index_changeset(&ctx, (d, d_gen_num), &mut index, max_skip, &cs_fetcher).await?;
@@ -599,10 +579,7 @@ mod test {
         assert!(index.contains_key(&c));
         assert!(index.contains_key(&d));
 
-        let e_gen_num = cs_fetcher
-            .get_generation_number(ctx.clone(), e)
-            .compat()
-            .await?;
+        let e_gen_num = cs_fetcher.get_generation_number(ctx.clone(), e).await?;
         index_changeset(&ctx, (e, e_gen_num), &mut index, max_skip, &cs_fetcher).await?;
         assert_eq!(index.len(), 3);
         validate_index(e, &index, max_skip).await?;

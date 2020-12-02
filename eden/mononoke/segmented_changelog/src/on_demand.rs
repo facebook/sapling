@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
-use futures::compat::Future01CompatExt;
 use futures::stream::{FuturesOrdered, StreamExt};
 use futures::try_join;
 use slog::{debug, warn};
@@ -176,7 +175,7 @@ async fn get_parents_and_vertex(
     cs_id: ChangesetId,
 ) -> Result<(ChangesetId, Vec<ChangesetId>, Option<Vertex>)> {
     let (parents, vertex) = try_join!(
-        changeset_fetcher.get_parents(ctx.clone(), cs_id).compat(),
+        changeset_fetcher.get_parents(ctx.clone(), cs_id),
         idmap.find_vertex(ctx, cs_id)
     )?;
     Ok((cs_id, parents, vertex))

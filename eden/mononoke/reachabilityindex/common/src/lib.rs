@@ -14,7 +14,6 @@ use anyhow::Error;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::stream::{iter, StreamExt, TryStreamExt};
-use futures_util::compat::Future01CompatExt;
 
 use changeset_fetcher::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation};
@@ -26,8 +25,7 @@ pub async fn fetch_parents_and_generations(
     cs_fetcher: &Arc<dyn ChangesetFetcher>,
     cs_id: ChangesetId,
 ) -> Result<Vec<(ChangesetId, Generation)>, Error> {
-    let parents = cs_fetcher.get_parents(ctx.clone(), cs_id).compat().await?;
-
+    let parents = cs_fetcher.get_parents(ctx.clone(), cs_id).await?;
     fetch_generations(ctx, cs_fetcher, parents).await
 }
 
@@ -57,7 +55,6 @@ pub async fn fetch_generation(
 ) -> Result<Generation, Error> {
     changeset_fetcher
         .get_generation_number(ctx.clone(), node)
-        .compat()
         .await
 }
 
@@ -70,7 +67,6 @@ pub async fn check_if_node_exists(
 ) -> Result<(), Error> {
     changeset_fetcher
         .get_generation_number(ctx.clone(), node)
-        .compat()
         .await
         .map(|_| ())
         .map_err(|err| ErrorKind::NodeNotFound(format!("{}", err)).into())
@@ -95,10 +91,7 @@ pub async fn get_parents(
     changeset_fetcher: &Arc<dyn ChangesetFetcher>,
     node: ChangesetId,
 ) -> Result<Vec<ChangesetId>, Error> {
-    changeset_fetcher
-        .get_parents(ctx.clone(), node)
-        .compat()
-        .await
+    changeset_fetcher.get_parents(ctx.clone(), node).await
 }
 
 // Take ownership of two sets, the current 'layer' of the bfs, and all nodes seen until then.

@@ -13,7 +13,6 @@ use std::sync::Arc;
 use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use futures_util::compat::Future01CompatExt;
 use maplit::{hashmap, hashset};
 
 use changeset_fetcher::ChangesetFetcher;
@@ -88,7 +87,6 @@ impl NodeFrontier {
     ) -> Result<Self, Error> {
         let gen = changeset_fetcher
             .get_generation_number(ctx.clone(), node)
-            .compat()
             .await?;
         Ok(Self::new(hashmap! {gen => hashset!{node}}))
     }

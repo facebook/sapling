@@ -7,12 +7,11 @@
 
 use crate::BonsaiNodeStream;
 use anyhow::{format_err, Error};
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use futures::{FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as _, StreamExt};
-use futures_old::Future;
+use futures_ext::StreamExt;
 use mononoke_types::{ChangesetId, Generation};
 use revset_test_helper::{single_changeset_id, string_to_bonsai};
 use std::any::Any;
@@ -29,36 +28,31 @@ impl TestChangesetFetcher {
     }
 }
 
+#[async_trait]
 impl ChangesetFetcher for TestChangesetFetcher {
-    fn get_generation_number(
+    async fn get_generation_number(
         &self,
         ctx: CoreContext,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Generation, Error> {
-        let repo = self.repo.clone();
-        async move { repo.get_generation_number(ctx, cs_id).await }
-            .boxed()
-            .compat()
-            .and_then(move |genopt| genopt.ok_or_else(|| format_err!("{} not found", cs_id)))
-            .boxify()
+    ) -> Result<Generation, Error> {
+        let genopt = self.repo.get_generation_number(ctx, cs_id).await?;
+        let gen = genopt.ok_or_else(|| format_err!("{} not found", cs_id))?;
+        Ok(gen)
     }
 
-    fn get_parents(
+    async fn get_parents(
         &self,
         ctx: CoreContext,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Vec<ChangesetId>, Error> {
-        let repo = self.repo.clone();
-        async move { Ok(repo.get_changeset_parents_by_bonsai(ctx, cs_id).await?) }
-            .boxed()
-            .compat()
-            .boxify()
+    ) -> Result<Vec<ChangesetId>, Error> {
+        self.repo.get_changeset_parents_by_bonsai(ctx, cs_id).await
     }
 
     fn get_stats(&self) -> HashMap<String, Box<dyn Any>> {
         HashMap::new()
     }
 }
+
 pub async fn get_single_bonsai_streams(
     ctx: CoreContext,
     repo: &Arc<BlobRepo>,

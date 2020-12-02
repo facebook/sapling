@@ -225,10 +225,8 @@ pub(crate) async fn find_topo_sorted_underived<
                     match derive_node {
                         DeriveNode::Derived(_) => Ok((None, vec![])),
                         DeriveNode::Bonsai(bcs_id) => {
-                            let parents = changeset_fetcher
-                                .get_parents(ctx.clone(), bcs_id)
-                                .compat()
-                                .await?;
+                            let parents =
+                                changeset_fetcher.get_parents(ctx.clone(), bcs_id).await?;
 
                             let parents_to_visit: Vec<_> = {
                                 let mut visited = visited.lock().unwrap();
@@ -315,10 +313,7 @@ where
     let event_id = EventId::new();
     let changeset_fetcher = repo.get_changeset_fetcher();
     let parents = async {
-        let parents = changeset_fetcher
-            .get_parents(ctx.clone(), bcs_id)
-            .compat()
-            .await?;
+        let parents = changeset_fetcher.get_parents(ctx.clone(), bcs_id).await?;
 
         try_join_all(
             parents
@@ -701,7 +696,6 @@ mod test {
         let expected = repo
             .get_changeset_fetcher()
             .get_generation_number(ctx.clone(), bcs_id.clone())
-            .compat()
             .await
             .unwrap();
 
@@ -715,9 +709,7 @@ mod test {
             .and_then(move |new_bcs_id| {
                 cloned!(ctx, changeset_fetcher);
                 async move {
-                    let parents = changeset_fetcher
-                        .get_parents(ctx.clone(), new_bcs_id.clone())
-                        .compat();
+                    let parents = changeset_fetcher.get_parents(ctx.clone(), new_bcs_id.clone());
                     let mapping = mapping.get(ctx, vec![new_bcs_id]);
                     let (parents, mapping) = try_join(parents, mapping).await?;
                     let gen_num = mapping.get(&new_bcs_id).unwrap();

@@ -15,6 +15,5 @@ uniqueheap = { path = "../common/uniqueheap" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 auto_impl = "0.4"
-futures-util = "0.3"
 maplit = "1.0"
 thiserror = "1.0"

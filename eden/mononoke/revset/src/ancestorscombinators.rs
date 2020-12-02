@@ -130,8 +130,9 @@ fn make_pending(
         .and_then({
             cloned!(ctx);
             move |hash| {
-                new_repo_changesets
-                    .get_parents(ctx, hash)
+                async move { new_repo_changesets.get_parents(ctx, hash).await }
+                    .boxed()
+                    .compat()
                     .map(|parents| parents.into_iter())
                     .map_err(|err| err.context(ErrorKind::ParentsFetchFailed).into())
             }
@@ -139,8 +140,10 @@ fn make_pending(
         .map(|parents| iter_ok::<_, Error>(parents))
         .flatten_stream()
         .and_then(move |node_hash| {
-            new_repo_gennums
-                .get_generation_number(ctx.clone(), node_hash)
+            cloned!(ctx, new_repo_gennums);
+            async move { new_repo_gennums.get_generation_number(ctx, node_hash).await }
+                .boxed()
+                .compat()
                 .map(move |gen_id| (node_hash, gen_id))
                 .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
         })

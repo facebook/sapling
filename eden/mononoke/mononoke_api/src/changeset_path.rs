@@ -23,7 +23,6 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fastlog::{list_file_history, FastlogError, HistoryAcrossDeletions, Visitor};
 use filestore::FetchKey;
-use futures::compat::Future01CompatExt;
 use futures::future::{try_join_all, FutureExt, Shared, TryFutureExt};
 use futures::stream::{Stream, TryStreamExt};
 use futures::try_join;
@@ -297,7 +296,6 @@ impl ChangesetPathContext {
                 descendants_of,
                 repo.get_changeset_fetcher()
                     .get_generation_number(ctx.clone(), descendants_of)
-                    .compat()
                     .await?,
             )),
             None => None,
@@ -308,7 +306,6 @@ impl ChangesetPathContext {
                 exclude_changeset_and_ancestors,
                 repo.get_changeset_fetcher()
                     .get_generation_number(ctx.clone(), exclude_changeset_and_ancestors)
-                    .compat()
                     .await?,
             )),
             None => None,
@@ -355,7 +352,6 @@ impl ChangesetPathContext {
                             let changeset_fetcher = repo.get_changeset_fetcher();
                             let cs_gen = changeset_fetcher
                                 .get_generation_number(ctx.clone(), cs_id)
-                                .compat()
                                 .await?;
                             if cs_gen < descendants_of_gen {
                                 return Ok(None);
@@ -414,7 +410,6 @@ impl ChangesetPathContext {
                         Some(
                             changeset_fetcher
                                 .get_generation_number(ctx.clone(), descendant_cs_id)
-                                .compat()
                                 .await?,
                         )
                     } else {
@@ -425,7 +420,6 @@ impl ChangesetPathContext {
                         async move {
                             let cs_gen = changeset_fetcher
                                 .get_generation_number(ctx.clone(), cs_id)
-                                .compat()
                                 .await?;
 
                             // If the cs_gen is below the cutoff point
