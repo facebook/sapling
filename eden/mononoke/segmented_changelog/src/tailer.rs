@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{format_err, Context, Result};
+use futures_stats::TimedFutureExt;
 use slog::{debug, error, info};
 
 use dag::{Group, Id as Vertex, InProcessIdDag};
@@ -24,8 +25,19 @@ use crate::manager::SegmentedChangelogManager;
 use crate::on_demand::build_incremental;
 
 define_stats! {
-    prefix = "mononoke.segmented_changelog.tailer";
-    build_incremental: timeseries(Sum),
+    prefix = "mononoke.segmented_changelog.update";
+    count: timeseries(Sum),
+    failure: timeseries(Sum),
+    success: timeseries(Sum),
+    duration_ms:
+        histogram(1000, 0, 60_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    count_per_repo: dynamic_timeseries("{}.count", (repo_id: i32); Sum),
+    failure_per_repo: dynamic_timeseries("{}.failure", (repo_id: i32); Sum),
+    success_per_repo: dynamic_timeseries("{}.success", (repo_id: i32); Sum),
+    duration_ms_per_repo: dynamic_histogram(
+        "{}.duration_ms", (repo_id: i32);
+        1000, 0, 60_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99
+    ),
 }
 
 pub struct SegmentedChangelogTailer {
@@ -54,14 +66,33 @@ impl SegmentedChangelogTailer {
     }
 
     pub async fn run(&self, ctx: &CoreContext, delay: Duration) {
+        STATS::success.add_value(0);
+        STATS::success_per_repo.add_value(0, (self.repo_id.id(),));
+
         loop {
-            if let Err(err) = self.once(&ctx).await {
+            STATS::count.add_value(1);
+            STATS::count_per_repo.add_value(1, (self.repo_id.id(),));
+
+            let (stats, update_result) = self.once(&ctx).timed().await;
+
+            STATS::duration_ms.add_value(stats.completion_time.as_millis() as i64);
+            STATS::duration_ms_per_repo.add_value(
+                stats.completion_time.as_millis() as i64,
+                (self.repo_id.id(),),
+            );
+
+            if let Err(err) = update_result {
+                STATS::failure.add_value(1);
+                STATS::failure_per_repo.add_value(1, (self.repo_id.id(),));
                 error!(
                     ctx.logger(),
-                    "repo {}: failed to incrementally update segmented changelog: {}",
+                    "repo {}: failed to incrementally update segmented changelog: {:?}",
                     self.repo_id,
                     err
                 );
+            } else {
+                STATS::success.add_value(1);
+                STATS::success_per_repo.add_value(1, (self.repo_id.id(),));
             }
             debug!(
                 ctx.logger(),
