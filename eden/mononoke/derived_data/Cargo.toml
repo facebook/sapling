@@ -26,15 +26,18 @@ anyhow = "1.0"
 async-trait = "0.1.29"
 auto_impl = "0.4"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
+itertools = "0.8"
 rand = { version = "0.7", features = ["small_rng"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
+blobrepo_factory = { path = "../blobrepo/factory" }
 blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 blobrepo_override = { path = "../blobrepo/override" }
 bookmarks = { path = "../bookmarks" }
+filestore = { path = "../filestore" }
 fixtures = { path = "../tests/fixtures" }
 mercurial_types = { path = "../mercurial/types" }
 revset = { path = "../revset" }
@@ -43,3 +46,4 @@ cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lazy_static = "1.0"
 maplit = "1.0"
+tokio-compat = "0.1"

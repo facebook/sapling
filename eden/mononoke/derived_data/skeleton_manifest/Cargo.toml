@@ -25,6 +25,7 @@ async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 thiserror = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
@@ -37,5 +38,4 @@ revset = { path = "../../revset" }
 tests_utils = { path = "../../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 pretty_assertions = "0.6"
-tokio = { version = "=0.2.13", features = ["full"] }
 tokio-compat = "0.1"

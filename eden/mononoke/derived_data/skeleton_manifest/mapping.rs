@@ -16,12 +16,13 @@ use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::stream::{FuturesUnordered, TryStreamExt};
+use futures::stream::{self, FuturesUnordered, StreamExt, TryStreamExt};
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, SkeletonManifestId,
 };
 use repo_blobstore::RepoBlobstore;
 
+use crate::batch::derive_skeleton_manifests_in_batch;
 use crate::derive::derive_skeleton_manifest;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -86,6 +87,35 @@ impl BonsaiDerived for RootSkeletonManifestId {
         )
         .await?;
         Ok(RootSkeletonManifestId(skeleton_manifest_id))
+    }
+
+    async fn batch_derive<'a, Iter>(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csids: Iter,
+    ) -> Result<HashMap<ChangesetId, Self>, Error>
+    where
+        Iter: IntoIterator<Item = ChangesetId> + Send,
+        Iter::IntoIter: Send,
+    {
+        let csids = csids.into_iter().collect::<Vec<_>>();
+        let derived = derive_skeleton_manifests_in_batch(ctx, repo, csids.clone()).await?;
+
+        let mapping = Self::mapping(ctx, repo);
+
+        stream::iter(derived.into_iter().map(|(cs_id, derived)| {
+            let mapping = mapping.clone();
+            async move {
+                let derived = RootSkeletonManifestId(derived);
+                mapping
+                    .put(ctx.clone(), cs_id.clone(), derived.clone())
+                    .await?;
+                Ok((cs_id, derived))
+            }
+        }))
+        .buffered(100)
+        .try_collect::<HashMap<_, _>>()
+        .await
     }
 }
 

@@ -21,6 +21,7 @@ use std::{
 };
 use thiserror::Error;
 
+pub mod batch;
 pub mod derive_impl;
 
 #[derive(Copy, Clone, PartialEq, Eq)]

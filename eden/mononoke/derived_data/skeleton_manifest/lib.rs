@@ -10,6 +10,7 @@
 use mononoke_types::SkeletonManifestId;
 use thiserror::Error;
 
+mod batch;
 mod derive;
 mod mapping;
 
