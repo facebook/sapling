@@ -28,7 +28,7 @@ use std::{
 
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use cmdlib::args;
+use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
@@ -100,8 +100,8 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 pub async fn subcommand_phases<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
-    sub_m: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'a>,
+    sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), SubcommandError> {
     let repo = args::open_repo(fb, &logger, &matches).await?;
     args::init_cachelib(fb, &matches);

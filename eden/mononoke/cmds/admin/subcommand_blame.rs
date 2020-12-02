@@ -15,7 +15,10 @@ use blobstore::Loadable;
 use bytes::Bytes;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, helpers};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
@@ -101,27 +104,27 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 pub async fn subcommand_blame<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    toplevel_matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    args::init_cachelib(fb, &matches);
+    args::init_cachelib(fb, toplevel_matches);
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_matches.subcommand() {
         (COMMAND_DERIVE, Some(matches)) => {
-            let repo = args::open_repo(fb, &logger, &matches).await?;
+            let repo = args::open_repo(fb, &logger, toplevel_matches).await?;
             let line_number = matches.is_present(ARG_LINE);
             with_changeset_and_path(ctx, repo, matches, move |ctx, repo, csid, path| {
                 subcommand_show_blame(ctx, repo, csid, path, line_number)
             })
         }
         (COMMAND_DIFF, Some(matches)) => {
-            let repo = args::open_repo(fb, &logger, &matches).await?;
+            let repo = args::open_repo(fb, &logger, toplevel_matches).await?;
             with_changeset_and_path(ctx, repo, matches, subcommand_show_diffs)
         }
         (COMMAND_COMPUTE, Some(matches)) => {
-            let repo = args::open_repo(fb, &logger, &matches).await?;
+            let repo = args::open_repo(fb, &logger, toplevel_matches).await?;
             let line_number = matches.is_present(ARG_LINE);
             with_changeset_and_path(ctx, repo, matches, move |ctx, repo, csid, path| {
                 subcommand_compute_blame(ctx, repo, csid, path, line_number)
@@ -130,7 +133,7 @@ pub async fn subcommand_blame<'a>(
         (COMMAND_FIND_REJECTED, Some(matches)) => {
             let print_errors = matches.is_present(ARG_PRINT_ERRORS);
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
-            let repo = args::open_repo(fb, &logger, &matches).await?;
+            let repo = args::open_repo(fb, &logger, toplevel_matches).await?;
             let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                 .compat()
                 .await?;

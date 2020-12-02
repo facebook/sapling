@@ -7,8 +7,8 @@
 
 use crate::{ImportStage, RecoveryFields};
 use anyhow::Error;
-use clap::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::args;
+use clap::{Arg, ArgMatches, SubCommand};
+use cmdlib::args::{self, MononokeClapApp};
 use mononoke_types::DateTime;
 use std::num::NonZeroUsize;
 
@@ -30,7 +30,7 @@ pub const RECOVER_PROCESS: &str = "recover-process";
 pub const SAVED_RECOVERY_FILE_PATH: &str = "saved-recovery-file-path";
 pub const CHECK_ADDITIONAL_SETUP_STEPS: &str = "check-additional-setup-steps";
 
-pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
+pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Import Repository")
         .with_advanced_args_hidden()
         .build()

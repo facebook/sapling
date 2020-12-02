@@ -20,9 +20,12 @@ use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshne
 use borrowed::borrowed;
 use bundle_generator::FilenodeVerifier;
 use bundle_preparer::BundlePreparer;
-use clap::{Arg, ArgMatches, SubCommand};
+use clap::{Arg, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, helpers::block_execute};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers::block_execute,
+};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
@@ -593,7 +596,7 @@ impl BookmarkOverlay {
     }
 }
 
-async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error> {
+async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(), Error> {
     let hg_repo_path = match matches.value_of("hg-repo-ssh-path") {
         Some(hg_repo_path) => hg_repo_path.to_string(),
         None => {
@@ -610,15 +613,15 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
     };
     scuba_sample.add_common_server_data();
 
-    let mysql_options = args::parse_mysql_options(&matches);
-    let readonly_storage = args::parse_readonly_storage(&matches);
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
+    let mysql_options = args::parse_mysql_options(matches);
+    let readonly_storage = args::parse_readonly_storage(matches);
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
 
-    let repo_id = args::get_repo_id(config_store, &matches).expect("need repo id");
-    let (repo_name, repo_config) = args::get_config(config_store, &matches)?;
+    let repo_id = args::get_repo_id(config_store, matches).expect("need repo id");
+    let (repo_name, repo_config) = args::get_config(config_store, matches)?;
 
-    let base_retry_delay_ms = args::get_u64_opt(&matches, "base-retry-delay-ms").unwrap_or(1000);
-    let retry_num = args::get_usize(&matches, "retry-num", DEFAULT_RETRY_NUM);
+    let base_retry_delay_ms = args::get_u64_opt(matches, "base-retry-delay-ms").unwrap_or(1000);
+    let retry_num = args::get_usize(matches, "retry-num", DEFAULT_RETRY_NUM);
 
     let generate_bundles = matches.is_present(GENERATE_BUNDLES);
     let bookmark_regex_force_lfs = matches
@@ -722,9 +725,9 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
         try_join3(preparer, overlay, globalrev_syncer)
     };
 
-    let batch_size = args::get_usize(&matches, "batch-size", DEFAULT_BATCH_SIZE);
+    let batch_size = args::get_usize(matches, "batch-size", DEFAULT_BATCH_SIZE);
     let single_bundle_timeout_ms = args::get_u64(
-        &matches,
+        matches,
         "single-bundle-timeout-ms",
         DEFAULT_SINGLE_BUNDLE_TIMEOUT_MS,
     );
@@ -971,7 +974,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
 
 fn get_repo_sqldb_address<'a>(
     ctx: &CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     repo_name: &HgsqlName,
 ) -> Result<Option<String>, Error> {
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
@@ -1184,8 +1187,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    // TODO: Don't take ownership of matches here
-    let fut = run(ctx, matches.clone());
+    let fut = run(ctx, &matches);
 
     block_execute(
         fut,

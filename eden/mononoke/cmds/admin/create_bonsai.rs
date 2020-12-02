@@ -10,7 +10,7 @@ use std::io::Read;
 
 use anyhow::{anyhow, format_err, Error};
 use clap::{App, ArgMatches, SubCommand};
-use cmdlib::args;
+use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, TryFutureExt};
@@ -39,7 +39,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 pub async fn subcommand_create_bonsai<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     if !sub_m.is_present("dangerous") {

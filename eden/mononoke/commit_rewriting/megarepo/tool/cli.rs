@@ -8,7 +8,7 @@
 use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::args;
+use cmdlib::args::{self, MononokeClapApp};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::future::{err, ok};
 use megarepolib::common::{ChangesetArgs, ChangesetArgsFactory, StackPosition};
@@ -212,7 +212,7 @@ fn add_light_resulting_commit_args<'a, 'b>(subcommand: App<'a, 'b>) -> App<'a, '
         )
 }
 
-pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
+pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     let move_subcommand = SubCommand::with_name(MOVE)
         .about("create a move commit, using a provided spec")
         .arg(

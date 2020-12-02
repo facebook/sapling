@@ -17,9 +17,12 @@ use bulkops::fetch_all_public_changesets;
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, InProcessLease, LeaseOps};
 use changesets::{deserialize_cs_entries, serialize_cs_entries, ChangesetEntry, SqlChangesets};
-use clap::{Arg, ArgMatches, SubCommand};
+use clap::{Arg, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, helpers};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_utils::{
@@ -95,7 +98,7 @@ const UNREDACTED_TYPES: &[&str] = &[
 async fn open_repo_maybe_unredacted(
     fb: FacebookInit,
     logger: &Logger,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
     data_type: &str,
 ) -> Result<BlobRepo> {
     if UNREDACTED_TYPES.contains(&data_type) {
@@ -259,7 +262,7 @@ async fn run_subcmd<'a>(
     fb: FacebookInit,
     ctx: CoreContext,
     logger: &Logger,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<()> {
     match matches.subcommand() {
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {

@@ -12,8 +12,11 @@ use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cacheblob::new_memcache_blobstore;
 use cached_config::ConfigStore;
-use clap::{Arg, ArgMatches};
-use cmdlib::{args, helpers};
+use clap::Arg;
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
@@ -75,7 +78,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     )
 }
 
-async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Error> {
+async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(), Error> {
     let period_secs: u64 = matches
         .value_of(PERIOD_ARG)
         .ok_or_else(|| anyhow!("--{} argument is required", PERIOD_ARG))?

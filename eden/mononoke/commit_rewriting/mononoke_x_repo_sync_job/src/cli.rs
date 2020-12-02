@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use clap::{App, Arg, SubCommand};
-use cmdlib::args;
+use clap::{Arg, SubCommand};
+use cmdlib::args::{self, MononokeClapApp};
 
 pub const ARG_ONCE: &str = "once";
 pub const ARG_COMMIT: &str = "commit";
@@ -20,7 +20,7 @@ pub const ARG_DERIVED_DATA_TYPES: &str = "derived-data-types";
 pub const ARG_SLEEP_SECS: &str = "sleep-secs";
 pub const ARG_BOOKMARK_REGEX: &str = "bookmark-regex";
 
-pub fn create_app<'a, 'b>() -> App<'a, 'b> {
+pub fn create_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     let app = args::MononokeAppBuilder::new("Mononoke cross-repo sync job")
         .with_fb303_args()
         .with_source_and_target_repos()

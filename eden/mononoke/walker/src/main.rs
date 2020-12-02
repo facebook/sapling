@@ -46,19 +46,17 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let logger = args::init_logging(fb, &matches);
     args::init_config_store(fb, &logger, &matches)?;
 
-    let future = match matches.subcommand() {
+    let sub_matches = &matches.subcommand();
+    let future = match sub_matches {
         (setup::COMPRESSION_BENEFIT, Some(sub_m)) => {
-            sizing::compression_benefit(fb, logger.clone(), &matches, sub_m, cachelib_defaults)
-                .boxed()
+            sizing::compression_benefit(fb, logger.clone(), &matches, sub_m).boxed()
         }
-        (setup::CORPUS, Some(sub_m)) => {
-            corpus::corpus(fb, logger.clone(), &matches, sub_m, cachelib_defaults).boxed()
-        }
+        (setup::CORPUS, Some(sub_m)) => corpus::corpus(fb, logger.clone(), &matches, sub_m).boxed(),
         (setup::SCRUB, Some(sub_m)) => {
-            scrub::scrub_objects(fb, logger.clone(), &matches, sub_m, cachelib_defaults).boxed()
+            scrub::scrub_objects(fb, logger.clone(), &matches, sub_m).boxed()
         }
         (setup::VALIDATE, Some(sub_m)) => {
-            validate::validate(fb, logger.clone(), &matches, sub_m, cachelib_defaults).boxed()
+            validate::validate(fb, logger.clone(), &matches, sub_m).boxed()
         }
         _ => {
             future::err::<_, Error>(Error::msg("Invalid Arguments, pass --help for usage.")).boxed()

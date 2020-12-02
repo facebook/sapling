@@ -13,7 +13,10 @@ use bookmarks::BookmarkName;
 use borrowed::borrowed;
 use cached_config::ConfigStore;
 use clap::ArgMatches;
-use cmdlib::{args, helpers};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use cmdlib_x_repo::create_commit_syncer_from_matches;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncer;
@@ -80,19 +83,19 @@ use megarepolib::{common::StackPosition, perform_move, perform_stack_move};
 
 async fn run_move<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
     repo_config: RepoConfig,
 ) -> Result<(), Error> {
     let origin_repo =
-        RepositoryId::new(args::get_i32_opt(&sub_m, ORIGIN_REPO).expect("Origin repo is missing"));
-    let resulting_changeset_args = cs_args_from_matches(&sub_m);
+        RepositoryId::new(args::get_i32_opt(sub_m, ORIGIN_REPO).expect("Origin repo is missing"));
+    let resulting_changeset_args = cs_args_from_matches(sub_m);
     let commit_sync_config = repo_config.commit_sync_config.as_ref().unwrap();
     let mover = get_small_to_large_mover(commit_sync_config, origin_repo).unwrap();
     let move_parent = sub_m.value_of(CHANGESET).unwrap().to_owned();
 
-    let max_num_of_moves_in_commit =
-        args::get_and_parse_opt::<NonZeroU64>(sub_m, MAX_NUM_OF_MOVES_IN_COMMIT);
+    let max_num_of_moves_in_commit: Option<NonZeroU64> =
+        args::get_and_parse_opt(sub_m, MAX_NUM_OF_MOVES_IN_COMMIT);
 
     let (repo, resulting_changeset_args) = try_join(
         args::open_repo(ctx.fb, &ctx.logger().clone(), &matches),
@@ -137,7 +140,7 @@ async fn run_move<'a>(
 
 async fn run_merge<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let first_parent = sub_m.value_of(FIRST_PARENT).unwrap().to_owned();
@@ -169,7 +172,7 @@ async fn run_merge<'a>(
 
 async fn run_sync_diamond_merge<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
@@ -215,7 +218,7 @@ async fn run_sync_diamond_merge<'a>(
 
 async fn run_pre_merge_delete<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
@@ -287,7 +290,7 @@ async fn run_pre_merge_delete<'a>(
 
 async fn run_bonsai_merge<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
@@ -320,7 +323,7 @@ async fn run_bonsai_merge<'a>(
 
 async fn run_gradual_merge<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
@@ -374,7 +377,7 @@ async fn run_gradual_merge<'a>(
 
 async fn run_gradual_merge_progress<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
@@ -420,7 +423,7 @@ async fn run_gradual_merge_progress<'a>(
 
 async fn run_manual_commit_sync<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
@@ -465,7 +468,7 @@ async fn run_manual_commit_sync<'a>(
 
 async fn run_check_push_redirection_prereqs<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let commit_syncer = create_commit_syncer_from_matches(&ctx, &matches).await?;
@@ -537,7 +540,7 @@ async fn run_check_push_redirection_prereqs<'a>(
 
 async fn run_catchup_delete_head<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
@@ -585,7 +588,7 @@ async fn run_catchup_delete_head<'a>(
 
 async fn run_mover<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
@@ -601,7 +604,7 @@ async fn run_mover<'a>(
 
 async fn run_catchup_validate<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
@@ -630,7 +633,7 @@ async fn run_catchup_validate<'a>(
 
 async fn run_mark_not_synced<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
@@ -698,7 +701,7 @@ async fn run_mark_not_synced<'a>(
 
 async fn run_backfill_noop_mapping<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
@@ -775,7 +778,7 @@ async fn run_backfill_noop_mapping<'a>(
 
 async fn process_stream_and_wait_for_replication<'a>(
     ctx: &CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
     mut s: impl Stream<Item = Result<u64>> + std::marker::Unpin,
 ) -> Result<(), Error> {
@@ -852,7 +855,7 @@ fn get_version(matches: &ArgMatches<'_>) -> Result<CommitSyncConfigVersion> {
 
 fn get_and_verify_repo_config<'a>(
     config_store: &ConfigStore,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
 ) -> Result<RepoConfig> {
     args::get_config(config_store, &matches).and_then(|(repo_name, repo_config)| {
         let repo_id = repo_config.repoid;

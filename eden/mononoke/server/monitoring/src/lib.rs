@@ -14,17 +14,16 @@
 use std::thread::{self, JoinHandle};
 
 use anyhow::{Error, Result};
-use clap::ArgMatches;
 use fbinit::FacebookInit;
 use slog::{info, Logger};
 
-use cmdlib::monitoring::ReadyFlagService;
+use cmdlib::{args::MononokeMatches, monitoring::ReadyFlagService};
 
 // TODO: Stop using this one-off for Mononoke server, and instead use the one from cmdlib.
 pub fn start_thrift_service<'a>(
     fb: FacebookInit,
     logger: &Logger,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     service: ReadyFlagService,
 ) -> Option<Result<JoinHandle<!>>> {
     matches.value_of("thrift_port").map(|port| {

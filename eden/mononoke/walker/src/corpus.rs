@@ -25,7 +25,7 @@ use crate::tail::{walk_exact_tail, RepoWalkRun};
 use anyhow::Error;
 use clap::ArgMatches;
 use cloned::cloned;
-use cmdlib::args::{self, CachelibSettings};
+use cmdlib::args::{self, MononokeMatches};
 use context::{CoreContext, SamplingKey};
 use fbinit::FacebookInit;
 use filetime::{self, FileTime};
@@ -330,11 +330,10 @@ impl SamplingHandler for CorpusSamplingHandler<CorpusSample> {
 pub async fn corpus<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
-    cachelib_defaults: CachelibSettings,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(fb, &logger, matches)?;
+    let config_store = args::init_config_store(fb, &logger, &matches)?;
     let output_dir = sub_m.value_of(OUTPUT_DIR_ARG).map(|s| s.to_string());
     let corpus_sampler = Arc::new(CorpusSamplingHandler::<CorpusSample>::new(
         output_dir.clone(),
@@ -347,7 +346,6 @@ pub async fn corpus<'a>(
         Some(corpus_sampler.clone()),
         matches,
         sub_m,
-        cachelib_defaults,
     )
     .await?;
 

@@ -12,9 +12,9 @@ use ascii::AsciiString;
 use blobimport_lib;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
-use clap::{App, Arg, ArgMatches};
+use clap::Arg;
 use cmdlib::{
-    args,
+    args::{self, MononokeClapApp, MononokeMatches},
     helpers::{block_execute, upload_and_show_trace},
 };
 use context::CoreContext;
@@ -46,7 +46,7 @@ const ARG_EXCLUDE_DERIVED_DATA_TYPE: &str = "exclude-derived-data-type";
 const ARG_FIND_ALREADY_IMPORTED_REV_ONLY: &str = "find-already-imported-rev-only";
 const BACKUP_FROM_REPO_ID: &str = "backup-from-repo-id";
 
-fn setup_app<'a, 'b>() -> App<'a, 'b> {
+fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("revlog to blob importer")
         .with_repo_required()
         .with_source_repos()
@@ -214,7 +214,7 @@ async fn run_blobimport<'a>(
     fb: FacebookInit,
     ctx: &CoreContext,
     logger: &Logger,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<()> {
     let config_store = args::init_config_store(fb, logger, matches)?;
 
@@ -231,13 +231,13 @@ async fn run_blobimport<'a>(
     let skip = if !matches.is_present("skip") {
         None
     } else {
-        Some(args::get_usize(&matches, "skip", 0))
+        Some(args::get_usize(matches, "skip", 0))
     };
 
     let commits_limit = if !matches.is_present("commits-limit") {
         None
     } else {
-        Some(args::get_usize(&matches, "commits-limit", 0))
+        Some(args::get_usize(matches, "commits-limit", 0))
     };
 
     let manifold_key = matches
@@ -276,9 +276,9 @@ async fn run_blobimport<'a>(
 
     let lfs_helper = matches.value_of("lfs-helper").map(|l| l.to_string());
 
-    let concurrent_changesets = args::get_usize(&matches, "concurrent-changesets", 100);
-    let concurrent_blobs = args::get_usize(&matches, "concurrent-blobs", 100);
-    let concurrent_lfs_imports = args::get_usize(&matches, "concurrent-lfs-imports", 10);
+    let concurrent_changesets = args::get_usize(matches, "concurrent-changesets", 100);
+    let concurrent_blobs = args::get_usize(matches, "concurrent-blobs", 100);
+    let concurrent_lfs_imports = args::get_usize(matches, "concurrent-lfs-imports", 10);
 
     let fixed_parent_order = if let Some(path) = matches.value_of("fix-parent-order") {
         parse_fixed_parent_order(&logger, path)
@@ -312,28 +312,28 @@ async fn run_blobimport<'a>(
 
     let has_globalrev = matches.is_present("has-globalrev");
 
-    let (_repo_name, repo_config) = args::get_config(config_store, &matches)?;
+    let (_repo_name, repo_config) = args::get_config(config_store, matches)?;
     let populate_git_mapping = repo_config.pushrebase.populate_git_mapping.clone();
 
-    let small_repo_id = args::get_source_repo_id_opt(config_store, &matches)?;
+    let small_repo_id = args::get_source_repo_id_opt(config_store, matches)?;
 
     let (blobrepo, globalrevs_store, synced_commit_mapping, mutable_counters) = try_join4(
         async {
             if matches.is_present("no-create") {
-                args::open_repo_unredacted(fb, &ctx.logger(), &matches).await
+                args::open_repo_unredacted(fb, &ctx.logger(), matches).await
             } else {
-                args::create_repo_unredacted(fb, &ctx.logger(), &matches).await
+                args::create_repo_unredacted(fb, &ctx.logger(), matches).await
             }
         },
-        args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, config_store, &matches),
-        args::open_sql::<SqlSyncedCommitMapping>(fb, config_store, &matches),
-        args::open_sql::<SqlMutableCounters>(fb, config_store, &matches),
+        args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, config_store, matches),
+        args::open_sql::<SqlSyncedCommitMapping>(fb, config_store, matches),
+        args::open_sql::<SqlMutableCounters>(fb, config_store, matches),
     )
     .await?;
 
     let origin_repo = if matches.is_present(BACKUP_FROM_REPO_ID) {
-        let repo_id = args::get_repo_id_from_value(config_store, &matches, BACKUP_FROM_REPO_ID)?;
-        Some(args::open_repo_with_repo_id(fb, &logger, repo_id, &matches).await?)
+        let repo_id = args::get_repo_id_from_value(config_store, matches, BACKUP_FROM_REPO_ID)?;
+        Some(args::open_repo_with_repo_id(fb, &logger, repo_id, matches).await?)
     } else {
         None
     };

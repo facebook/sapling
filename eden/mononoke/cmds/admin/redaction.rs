@@ -12,7 +12,10 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap::{App, Arg, ArgGroup, ArgMatches, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, helpers};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
@@ -158,7 +161,7 @@ async fn find_files_with_given_content_id_blobstore_keys<'a>(
 pub async fn subcommand_redaction<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     match sub_m.subcommand() {
@@ -215,7 +218,7 @@ fn task_and_paths_parser(sub_m: &ArgMatches<'_>) -> Result<(String, Vec<MPath>),
 async fn get_ctx_blobrepo_redacted_blobs_cs_id<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<
     (
@@ -287,7 +290,7 @@ fn content_ids_for_paths(
 async fn redaction_add<'a, 'b>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'b>,
+    matches: &'a MononokeMatches<'b>,
     sub_m: &'a ArgMatches<'b>,
 ) -> Result<(), SubcommandError> {
     let (task, paths) = task_and_paths_parser(sub_m)?;
@@ -332,7 +335,7 @@ async fn redaction_add<'a, 'b>(
 async fn redaction_list<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let (ctx, blobrepo, redacted_blobs, cs_id) =
@@ -404,7 +407,7 @@ async fn redaction_list<'a>(
 async fn redaction_remove<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let paths = paths_parser(sub_m)?;

@@ -12,7 +12,10 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::{args, helpers};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, stream::StreamExt};
@@ -68,7 +71,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 pub async fn subcommand_skeleton_manifests<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     args::init_cachelib(fb, &matches);

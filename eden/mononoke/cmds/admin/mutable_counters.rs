@@ -9,7 +9,7 @@ use crate::error::SubcommandError;
 use anyhow::{format_err, Context, Error};
 
 use clap::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::args;
+use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
@@ -65,7 +65,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 pub async fn subcommand_mutable_counters<'a>(
     fb: FacebookInit,
     sub_m: &'a ArgMatches<'_>,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     logger: Logger,
 ) -> Result<(), SubcommandError> {
     let config_store = args::init_config_store(fb, &logger, matches)?;

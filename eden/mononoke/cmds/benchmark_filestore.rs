@@ -12,8 +12,8 @@ use blobstore::{Blobstore, PutBehaviour, DEFAULT_PUT_BEHAVIOUR};
 use bytes::{Bytes, BytesMut};
 use cacheblob::new_memcache_blobstore_no_lease;
 use cached_config::ConfigStore;
-use clap::{Arg, ArgMatches, SubCommand};
-use cmdlib::args;
+use clap::{Arg, SubCommand};
+use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
@@ -100,7 +100,7 @@ async fn read<B: Blobstore>(
 
 async fn run_benchmark_filestore<'a>(
     ctx: &'a CoreContext,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
     blob: Arc<dyn Blobstore>,
 ) -> Result<(), Error> {
     let input = matches.value_of("input").unwrap().to_string();
@@ -174,7 +174,7 @@ async fn run_benchmark_filestore<'a>(
 
 async fn get_blob<'a>(
     fb: FacebookInit,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
     config_store: &ConfigStore,
     put_behaviour: PutBehaviour,
 ) -> Result<Arc<dyn Blobstore>, Error> {

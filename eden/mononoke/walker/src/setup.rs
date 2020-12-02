@@ -21,7 +21,7 @@ use blobrepo_factory::open_blobrepo_given_datasources;
 use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
-use cmdlib::args::{self, CachelibSettings};
+use cmdlib::args::{self, CachelibSettings, MononokeClapApp, MononokeMatches};
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
@@ -34,6 +34,7 @@ use samplingblob::SamplingHandler;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use std::{
+    borrow::Borrow,
     collections::{HashMap, HashSet},
     iter::FromIterator,
     str::FromStr,
@@ -396,7 +397,7 @@ fn add_sampling_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 pub fn setup_toplevel_app<'a, 'b>(
     app_name: &str,
     cachelib_defaults: CachelibSettings,
-) -> App<'a, 'b> {
+) -> MononokeClapApp<'a, 'b> {
     let app_template = args::MononokeAppBuilder::new(app_name)
         .with_fb303_args()
         .with_cachelib_settings(cachelib_defaults);
@@ -705,12 +706,13 @@ fn parse_node_values(
     }
 }
 
-pub fn parse_node_types(
-    sub_m: &ArgMatches<'_>,
+pub fn parse_node_types<'a>(
+    sub_m: &impl Borrow<ArgMatches<'a>>,
     include_arg_name: &str,
     exclude_arg_name: &str,
     default: &[NodeType],
 ) -> Result<HashSet<NodeType>, Error> {
+    let sub_m = sub_m.borrow();
     let mut include_node_types = parse_node_values(sub_m.values_of(include_arg_name), default)?;
     let exclude_node_types = parse_node_values(sub_m.values_of(exclude_arg_name), &[])?;
     include_node_types.retain(|x| !exclude_node_types.contains(x));
@@ -742,12 +744,13 @@ fn parse_edge_values(
     }
 }
 
-fn parse_edge_types(
-    sub_m: &ArgMatches<'_>,
+fn parse_edge_types<'a>(
+    sub_m: &impl Borrow<ArgMatches<'a>>,
     include_arg_name: &str,
     exclude_arg_name: &str,
     default: &[EdgeType],
 ) -> Result<HashSet<EdgeType>, Error> {
+    let sub_m = sub_m.borrow();
     let mut include_edge_types = parse_edge_values(sub_m.values_of(include_arg_name), default)?;
     let exclude_edge_types = parse_edge_values(sub_m.values_of(exclude_arg_name), &[])?;
     include_edge_types.retain(|x| !exclude_edge_types.contains(x));
@@ -793,9 +796,8 @@ pub fn setup_common<'a>(
     fb: FacebookInit,
     logger: &'a Logger,
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
-    cachelib_defaults: CachelibSettings,
 ) -> impl Future<Output = Result<(RepoWalkDatasources, RepoWalkParams), Error>> + 'a {
     async move {
         let config_store = args::init_config_store(fb, logger, matches)?;
@@ -816,7 +818,7 @@ pub fn setup_common<'a>(
             Redaction::Disabled
         };
 
-        let caching = args::parse_and_init_cachelib(fb, &matches, cachelib_defaults);
+        let caching = matches.parse_and_init_cachelib(fb);
 
         let include_edge_types = parse_edge_types(
             sub_m,

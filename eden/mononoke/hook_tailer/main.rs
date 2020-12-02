@@ -13,8 +13,11 @@ use anyhow::{bail, format_err, Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_factory::BlobrepoBuilder;
 use bookmarks::BookmarkName;
-use clap::{App, Arg, ArgMatches};
-use cmdlib::helpers::{block_execute, csid_resolve};
+use clap::Arg;
+use cmdlib::{
+    args::{MononokeClapApp, MononokeMatches},
+    helpers::{block_execute, csid_resolve},
+};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
@@ -36,7 +39,7 @@ use tokio::{
 use tailer::{HookExecutionInstance, Tailer};
 
 async fn get_changesets<'a>(
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
     inline_arg: &str,
     file_arg: &str,
     ctx: &CoreContext,
@@ -90,16 +93,16 @@ async fn run_hook_tailer<'a>(
     ctx: &CoreContext,
     config: &metaconfig_types::RepoConfig,
     repo_name: &str,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
     logger: &Logger,
 ) -> Result<(), Error> {
     let config_store = cmdlib::args::init_config_store(fb, logger, matches)?;
     let bookmark_name = matches.value_of("bookmark").unwrap();
     let bookmark = BookmarkName::new(bookmark_name)?;
     let common_config = cmdlib::args::load_common_config(config_store, &matches)?;
-    let limit = cmdlib::args::get_usize(&matches, "limit", 1000);
-    let concurrency = cmdlib::args::get_usize(&matches, "concurrency", 20);
-    let log_interval = cmdlib::args::get_usize(&matches, "log_interval", 500);
+    let limit = cmdlib::args::get_usize(matches, "limit", 1000);
+    let concurrency = cmdlib::args::get_usize(matches, "concurrency", 20);
+    let log_interval = cmdlib::args::get_usize(matches, "log_interval", 500);
     let exclude_merges = matches.is_present("exclude_merges");
     let stats_file = matches.value_of("stats_file");
     let cross_repo_push_source = match matches.value_of("push_source") {
@@ -127,17 +130,17 @@ async fn run_hook_tailer<'a>(
 
     let disabled_hooks = cmdlib::args::parse_disabled_hooks_no_repo_prefix(&matches, &logger);
 
-    let caching = cmdlib::args::init_cachelib(fb, &matches);
-    let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
+    let caching = cmdlib::args::init_cachelib(fb, matches);
+    let readonly_storage = cmdlib::args::parse_readonly_storage(matches);
     let builder = BlobrepoBuilder::new(
         fb,
         repo_name.into(),
         &config,
-        cmdlib::args::parse_mysql_options(&matches),
+        cmdlib::args::parse_mysql_options(matches),
         caching,
         common_config.censored_scuba_params,
         readonly_storage,
-        cmdlib::args::parse_blobstore_options(&matches),
+        cmdlib::args::parse_blobstore_options(matches),
         &logger,
         config_store,
     );
@@ -245,7 +248,7 @@ impl HookExecutionSummary {
     }
 }
 
-fn setup_app<'a, 'b>() -> App<'a, 'b> {
+fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     let app = cmdlib::args::MononokeAppBuilder::new("run hooks against repo")
         .with_advanced_args_hidden()
         .with_disabled_hooks_args()

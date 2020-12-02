@@ -11,8 +11,10 @@
 
 use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
-use clap::ArgMatches;
-use cmdlib::{args, helpers::open_sql_with_config_and_mysql_options};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers::open_sql_with_config_and_mysql_options,
+};
 use context::CoreContext;
 use cross_repo_sync::{
     create_commit_syncers,
@@ -28,7 +30,7 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 /// Instantiate the `Syncers` struct by parsing `matches`
 pub async fn create_commit_syncers_from_matches(
     ctx: &CoreContext,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
 ) -> Result<Syncers<SqlSyncedCommitMapping>, Error> {
     let (source_repo, target_repo, mapping, live_commit_sync_config) =
         get_things_from_matches(ctx, matches).await?;
@@ -64,7 +66,7 @@ pub async fn create_commit_syncers_from_matches(
 /// Instantiate the source-target `CommitSyncer` struct by parsing `matches`
 pub async fn create_commit_syncer_from_matches(
     ctx: &CoreContext,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
     create_commit_syncer_from_matches_impl(ctx, matches, false /* reverse */).await
 }
@@ -72,7 +74,7 @@ pub async fn create_commit_syncer_from_matches(
 /// Instantiate the target-source `CommitSyncer` struct by parsing `matches`
 pub async fn create_reverse_commit_syncer_from_matches(
     ctx: &CoreContext,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
     create_commit_syncer_from_matches_impl(ctx, matches, true /* reverse */).await
 }
@@ -81,7 +83,7 @@ pub async fn create_reverse_commit_syncer_from_matches(
 /// Naming is hard.
 async fn get_things_from_matches(
     ctx: &CoreContext,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
 ) -> Result<
     (
         Source<BlobRepo>,
@@ -143,7 +145,7 @@ fn flip_direction<T>(source_item: Source<T>, target_item: Target<T>) -> (Source<
 
 async fn create_commit_syncer_from_matches_impl(
     ctx: &CoreContext,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
     reverse: bool,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
     let (source_repo, target_repo, mapping, live_commit_sync_config) =

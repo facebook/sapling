@@ -18,7 +18,7 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use cached_config::ConfigStore;
-use cmdlib::args;
+use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use git_types::Tree as GitTree;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
@@ -159,8 +159,8 @@ async fn get_blobstore(
 pub async fn subcommand_blobstore_fetch<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
-    sub_m: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'a>,
+    sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), SubcommandError> {
     let config_store = args::init_config_store(fb, &logger, matches)?;
     let repo_id = args::get_repo_id(config_store, &matches)?;

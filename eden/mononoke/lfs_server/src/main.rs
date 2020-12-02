@@ -226,8 +226,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches();
 
 
-    let (caching, logger, mut runtime) =
-        args::init_mononoke_with_cache_settings(fb, &matches, cachelib_settings)?;
+    let (caching, logger, mut runtime) = matches.init_mononoke(fb)?;
 
     let config_store = args::init_config_store(fb, &logger, &matches)?;
 

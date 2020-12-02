@@ -8,8 +8,7 @@
 use anyhow::Error;
 use bookmarks::BookmarkName;
 use cached_config::ConfigStore;
-use clap::ArgMatches;
-use cmdlib::args;
+use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
@@ -86,10 +85,10 @@ queries! {
 }
 
 impl HgRecordingClient {
-    pub async fn new(
+    pub async fn new<'a>(
         fb: FacebookInit,
         config_store: &ConfigStore,
-        matches: &ArgMatches<'_>,
+        matches: &'a MononokeMatches<'a>,
     ) -> Result<HgRecordingClient, Error> {
         let sql = args::open_sql::<HgRecordingConnection>(fb, config_store, matches).await?;
         let repo_id = args::get_repo_id(config_store, matches)?;

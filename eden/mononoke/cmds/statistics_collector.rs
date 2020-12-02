@@ -14,8 +14,11 @@ use blobstore::{Blobstore, Loadable};
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
-use clap::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::{args, helpers::block_execute};
+use clap::{Arg, SubCommand};
+use cmdlib::{
+    args::{self, MononokeClapApp, MononokeMatches},
+    helpers::block_execute,
+};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
@@ -49,7 +52,7 @@ const SCUBA_DATASET_NAME: &str = "mononoke_repository_statistics";
 // Tool doesn't count number of lines from files with size greater than 10MB
 const BIG_FILE_THRESHOLD: u64 = 10000000;
 
-fn setup_app<'a, 'b>() -> App<'a, 'b> {
+fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Tool to calculate repo statistic")
         .with_fb303_args()
         .build()
@@ -420,7 +423,7 @@ async fn run_statistics<'a>(
     ctx: CoreContext,
     logger: &Logger,
     scuba_logger: MononokeScubaSampleBuilder,
-    matches: ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
     repo_name: String,
     bookmark: BookmarkName,
 ) -> Result<(), Error> {
@@ -546,7 +549,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             ctx,
             &logger,
             scuba_logger,
-            matches.clone(),
+            &matches,
             repo_name,
             bookmark,
         ),

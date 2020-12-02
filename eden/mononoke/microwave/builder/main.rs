@@ -18,9 +18,12 @@ use blobrepo_factory::{BlobrepoBuilder, PutBehaviour};
 use blobrepo_override::DangerousOverride;
 use bookmarks::BookmarkName;
 use cache_warmup::{CacheWarmupRequest, CacheWarmupTarget};
-use clap::{Arg, ArgMatches, SubCommand};
+use clap::{Arg, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, monitoring::AliveService};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    monitoring::AliveService,
+};
 use context::{CoreContext, SessionContainer};
 use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
@@ -73,7 +76,7 @@ async fn cache_warmup_target(
 
 async fn do_main<'a>(
     fb: FacebookInit,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     logger: &Logger,
 ) -> Result<(), Error> {
     let mut scuba = args::get_scuba_sample_builder(fb, &matches)?;

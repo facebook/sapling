@@ -15,7 +15,7 @@ use std::sync::{
 };
 
 use anyhow::{anyhow, Context, Result};
-use clap::{Arg, ArgMatches};
+use clap::Arg;
 use cloned::cloned;
 use futures::{
     channel::oneshot,
@@ -28,7 +28,7 @@ use tokio::net::TcpListener;
 
 use blobrepo_factory::Caching;
 use cmdlib::{
-    args,
+    args::{self, MononokeMatches},
     helpers::serve_forever_async,
     monitoring::{start_fb303_server, AliveService},
 };
@@ -73,7 +73,7 @@ const DEFAULT_HOST: &str = "::";
 const DEFAULT_PORT: &str = "8000";
 
 /// Get the IP address and port the server should listen on.
-fn parse_server_addr(matches: &ArgMatches) -> Result<SocketAddr> {
+fn parse_server_addr(matches: &MononokeMatches) -> Result<SocketAddr> {
     let host = matches
         .value_of(ARG_LISTEN_HOST)
         .unwrap_or(DEFAULT_HOST)
@@ -88,7 +88,7 @@ fn parse_server_addr(matches: &ArgMatches) -> Result<SocketAddr> {
 }
 
 /// Read the command line arguments related to TLS credentials.
-fn parse_tls_options(matches: &ArgMatches) -> Option<SslConfig> {
+fn parse_tls_options(matches: &MononokeMatches) -> Option<SslConfig> {
     let cert = matches.value_of(ARG_TLS_CERTIFICATE);
     let key = matches.value_of(ARG_TLS_PRIVATE_KEY);
     let ca = matches.value_of(ARG_TLS_CA);
@@ -102,7 +102,7 @@ fn parse_tls_options(matches: &ArgMatches) -> Option<SslConfig> {
 }
 
 /// Parse AclChecker identities passed in as arguments.
-fn parse_identities(matches: &ArgMatches) -> Result<MononokeIdentitySet> {
+fn parse_identities(matches: &MononokeMatches) -> Result<MononokeIdentitySet> {
     match matches.values_of(ARG_TRUSTED_PROXY_IDENTITY) {
         Some(values) => values.map(MononokeIdentity::from_str).collect(),
         None => Ok(MononokeIdentitySet::new()),
@@ -114,7 +114,7 @@ async fn start(
     fb: FacebookInit,
     caching: Caching,
     logger: Logger,
-    matches: ArgMatches<'_>,
+    matches: MononokeMatches<'_>,
 ) -> Result<()> {
     debug!(logger, "Reading args");
     let config_store = args::init_config_store(fb, &logger, &matches)?;

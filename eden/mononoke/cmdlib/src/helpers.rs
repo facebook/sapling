@@ -8,7 +8,6 @@
 use std::{fs, future::Future, io, path::Path, str::FromStr, time::Duration};
 
 use anyhow::{bail, format_err, Context, Error, Result};
-use clap::ArgMatches;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{
@@ -24,7 +23,7 @@ use tokio::{
     time,
 };
 
-use crate::args;
+use crate::args::{self, MononokeMatches};
 use crate::monitoring;
 use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
@@ -286,7 +285,7 @@ pub fn block_execute<F, Out, S: Fb303Service + Sync + Send + 'static>(
     fb: FacebookInit,
     app_name: &str,
     logger: &Logger,
-    matches: &ArgMatches,
+    matches: &MononokeMatches,
     service: S,
 ) -> Result<Out, Error>
 where
@@ -334,10 +333,10 @@ mod test {
         slog_glog_fmt::facebook_logger().unwrap()
     }
 
-    fn exec_matches<'a>() -> ArgMatches<'a> {
+    fn exec_matches<'a>() -> MononokeMatches<'a> {
         let app = args::MononokeAppBuilder::new("test_app").build();
         let arg_vec = vec!["test_prog", "--mononoke-config-path", "/tmp/testpath"];
-        args::add_fb303_args(app).get_matches_from(arg_vec)
+        app.get_matches_from(arg_vec)
     }
 
     #[fbinit::test]

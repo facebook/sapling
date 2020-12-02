@@ -9,7 +9,6 @@
 #![feature(never_type)]
 
 use anyhow::Result;
-use clap::App;
 use cloned::cloned;
 use cmdlib::{args, monitoring::ReadyFlagService};
 use fbinit::FacebookInit;
@@ -19,7 +18,7 @@ use slog::{error, info};
 #[cfg(fbcode_build)]
 use openssl as _; // suppress unused crate warning - only used outside fbcode
 
-fn setup_app<'a, 'b>() -> App<'a, 'b> {
+fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
     let app = args::MononokeAppBuilder::new("mononoke server")
         .with_shutdown_timeout_args()
         .with_all_repos()

@@ -13,7 +13,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use cloned::cloned;
-use cmdlib::helpers;
+use cmdlib::{args::MononokeMatches, helpers};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
@@ -218,7 +218,7 @@ fn handle_filenodes_at_revision(
 pub async fn subcommand_filenodes<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());

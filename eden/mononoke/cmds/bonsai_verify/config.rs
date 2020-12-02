@@ -6,7 +6,7 @@
  */
 
 use anyhow::{Context, Result};
-use clap::ArgMatches;
+use cmdlib::args::MononokeMatches;
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
 use serde_derive::Deserialize;
@@ -67,7 +67,7 @@ struct ConfigSerde {
     broken_merges_before: Option<value::Datetime>,
 }
 
-pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<Config> {
+pub fn get_config<'a>(matches: &MononokeMatches<'a>) -> Result<Config> {
     let config_file = matches.value_of("config");
     let config_file = match config_file {
         Some(config_file) => config_file,

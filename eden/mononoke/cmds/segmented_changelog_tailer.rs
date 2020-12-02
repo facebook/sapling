@@ -11,14 +11,17 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{format_err, Context, Error};
-use clap::{Arg, ArgMatches};
+use clap::Arg;
 use futures::compat::Future01CompatExt;
 use futures::future::join_all;
 use slog::{error, info};
 
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
 use bookmarks::BookmarkName;
-use cmdlib::{args, helpers};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::MetadataDatabaseConfig;
@@ -83,7 +86,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     )
 }
 
-async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Error> {
+async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(), Error> {
     let reponames: Vec<_> = matches
         .values_of(REPO_ARG)
         .ok_or_else(|| format_err!("--{} argument is required", REPO_ARG))?
@@ -177,7 +180,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Er
                 "repo {}: SegmentedChangelogTailer is done", repo_id,
             );
         } else {
-            let delay = Duration::from_secs(args::get_u64(&matches, DELAY_ARG, 300));
+            let delay = Duration::from_secs(args::get_u64(matches, DELAY_ARG, 300));
             // spread out repo operations
             let offset_delay = delay / repo_count;
             let ctx = ctx.clone();

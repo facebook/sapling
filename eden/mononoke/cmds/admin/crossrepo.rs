@@ -11,7 +11,10 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bookmark_renaming::get_small_to_large_renamer;
 use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
 use clap::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::{args, helpers};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use context::CoreContext;
 use cross_repo_sync::{
     types::{Large, Small},
@@ -61,7 +64,7 @@ const ARG_WITH_CONTENTS: &str = "with-contents";
 pub async fn subcommand_crossrepo<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     let config_store = args::init_config_store(fb, &logger, &matches)?;
@@ -140,7 +143,7 @@ pub async fn subcommand_crossrepo<'a>(
 
 async fn run_config_sub_subcommand<'a>(
     ctx: CoreContext,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     config_subcommand_matches: &'a ArgMatches<'a>,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(), SubcommandError> {
@@ -174,7 +177,7 @@ async fn run_config_sub_subcommand<'a>(
 async fn run_pushredirection_subcommand<'a>(
     fb: FacebookInit,
     ctx: CoreContext,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     config_subcommand_matches: &'a ArgMatches<'a>,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(), SubcommandError> {
@@ -184,6 +187,7 @@ async fn run_pushredirection_subcommand<'a>(
         get_source_target_repos_and_mapping(fb, ctx.logger().clone(), matches).await?;
 
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = Arc::new(live_commit_sync_config);
+
     match config_subcommand_matches.subcommand() {
         (PREPARE_ROLLOUT_SUBCOMMAND, Some(_sub_m)) => {
             let commit_syncer = get_large_to_small_commit_syncer(
@@ -429,7 +433,7 @@ async fn move_bookmark(
 async fn get_source_target_repos_and_mapping<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
 ) -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
     let config_store = args::init_config_store(fb, &logger, matches)?;
 

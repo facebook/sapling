@@ -25,7 +25,7 @@ use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::{ChangesetEntry, SqlChangesets};
-use cmdlib::args;
+use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use mononoke_types::{BlobstoreBytes, ChangesetId, Generation};
 use skiplist::{deserialize_skiplist_index, sparse, SkiplistIndex, SkiplistNodeType};
@@ -93,7 +93,7 @@ impl SkiplistType {
 pub async fn subcommand_skiplist<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     match sub_m.subcommand() {

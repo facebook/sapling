@@ -25,14 +25,14 @@ use tokio::process::Command;
 use crate::hg_recording::HgRecordingEntry;
 use crate::hooks::Target;
 
-pub struct ExternalHandle<'a> {
-    bundle_helper: &'a str,
+pub struct ExternalHandle {
+    bundle_helper: String,
     handle: String,
 }
 
-impl<'a> ExternalHandle<'a> {
+impl ExternalHandle {
     async fn load(&self) -> Result<Bytes, Error> {
-        let output = Command::new(self.bundle_helper)
+        let output = Command::new(&self.bundle_helper)
             .arg(&self.handle)
             .output()
             .await?;
@@ -50,18 +50,16 @@ impl<'a> ExternalHandle<'a> {
     }
 }
 
-pub enum BundleHandle<'a> {
-    External(ExternalHandle<'a>),
+pub enum BundleHandle {
+    External(ExternalHandle),
     Blob(RawBundle2Id),
 }
 
-impl BundleHandle<'static> {
+impl BundleHandle {
     pub fn blob(id: RawBundle2Id) -> Self {
         Self::Blob(id)
     }
-}
 
-impl<'a> BundleHandle<'a> {
     pub async fn load(&self, ctx: &CoreContext, repo: &BlobRepo) -> Result<Bytes, Error> {
         match self {
             Self::External(ref external) => {
@@ -94,12 +92,12 @@ pub struct PushrebaseSpec {
     pub recorded_duration: Option<Duration>,
 }
 
-pub struct ReplaySpec<'a> {
-    pub bundle: BundleHandle<'a>,
+pub struct ReplaySpec {
+    pub bundle: BundleHandle,
     pub pushrebase_spec: PushrebaseSpec,
 }
 
-impl ReplaySpec<'static> {
+impl ReplaySpec {
     pub fn from_bookmark_update_log_entry(entry: BookmarkUpdateLogEntry) -> Result<Self, Error> {
         let replay_data: BundleReplayData = entry
             .bundle_replay_data
@@ -125,11 +123,11 @@ impl ReplaySpec<'static> {
     }
 }
 
-impl<'a> ReplaySpec<'a> {
-    pub fn from_hg_recording_entry<'b>(
-        bundle_helper: &'a str,
+impl ReplaySpec {
+    pub fn from_hg_recording_entry(
+        bundle_helper: String,
         entry: HgRecordingEntry,
-    ) -> Result<ReplaySpec<'a>, Error> {
+    ) -> Result<ReplaySpec, Error> {
         let HgRecordingEntry {
             id,
             onto,
@@ -192,7 +190,7 @@ mod test {
     #[tokio::test]
     async fn test_load_external_success() -> Result<(), Error> {
         let bundle = ExternalHandle {
-            bundle_helper: "printf",
+            bundle_helper: "printf".to_string(),
             handle: "foo".to_string(),
         };
 
@@ -203,7 +201,7 @@ mod test {
     #[tokio::test]
     async fn test_load_external_err() -> Result<(), Error> {
         let bundle = ExternalHandle {
-            bundle_helper: "false",
+            bundle_helper: "false".to_string(),
             handle: "foo".to_string(),
         };
 

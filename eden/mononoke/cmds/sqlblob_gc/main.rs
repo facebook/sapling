@@ -10,11 +10,11 @@
 use std::ops::Range;
 
 use anyhow::{anyhow, bail, Context, Result};
-use clap::{App, Arg};
+use clap::Arg;
 use fbinit::FacebookInit;
 
 use blobstore_factory::{make_sql_blobstore, BlobstoreOptions};
-use cmdlib::args;
+use cmdlib::args::{self, MononokeClapApp};
 use metaconfig_types::{BlobConfig, BlobstoreId, ShardableRemoteDatabaseConfig};
 
 mod subcommand_mark;
@@ -25,7 +25,7 @@ const ARG_START_SHARD: &str = "start-shard";
 const ARG_SHARD_COUNT: &str = "shard-count";
 const ARG_INNER_ID: &str = "inner-blobstore-id";
 
-fn setup_app<'a, 'b>() -> App<'a, 'b> {
+fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("SQLblob GC")
         .with_advanced_args_hidden()
         .with_all_repos()

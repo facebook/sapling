@@ -6,11 +6,12 @@
  */
 
 use anyhow::{anyhow, Error};
+use args::MononokeClapApp;
 use ascii::AsciiStr;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use clap::{App, Arg};
+use clap::Arg;
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
@@ -23,7 +24,7 @@ use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-fn setup_app<'a, 'b>() -> App<'a, 'b> {
+fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Tool to backfill git mappings for given commits")
         .build()
         .arg(Arg::from_usage(

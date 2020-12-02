@@ -15,7 +15,7 @@ use std::sync::{
 
 use anyhow::{format_err, Error, Result};
 use bytes::Bytes;
-use clap::{App, Arg, ArgMatches};
+use clap::Arg;
 use fbinit::FacebookInit;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::future::TryFutureExt;
@@ -26,7 +26,10 @@ use slog::{debug, info, Logger};
 use blobrepo::BlobRepo;
 use blobstore::{Loadable, Storable};
 use changesets::SqlChangesets;
-use cmdlib::{args, helpers::block_execute};
+use cmdlib::{
+    args::{self, MononokeClapApp, MononokeMatches},
+    helpers::block_execute,
+};
 use context::CoreContext;
 use filestore::{self, Alias, AliasBlob, FetchKey};
 use mercurial_types::FileBytes;
@@ -275,7 +278,7 @@ impl AliasVerification {
     }
 }
 
-fn setup_app<'a, 'b>() -> App<'a, 'b> {
+fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Verify and reload all the alias blobs")
         .build()
         .about("Verify and reload all the alias blobs into Mononoke blobstore.")
@@ -310,7 +313,7 @@ async fn run_aliasverify<'a>(
     step: u64,
     min_cs_db_id: u64,
     repoid: RepositoryId,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
     mode: Mode,
 ) -> Result<(), Error> {
     let config_store = args::init_config_store(fb, logger, matches)?;

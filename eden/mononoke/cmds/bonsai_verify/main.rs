@@ -13,9 +13,9 @@ use anyhow::{format_err, Error, Result};
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use blobstore::Loadable;
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::args::{self, MononokeClapApp, MononokeMatches};
 use context::CoreContext;
 use failure_ext::DisplayChain;
 use fbinit::FacebookInit;
@@ -45,7 +45,7 @@ use std::{
     time::Instant,
 };
 
-fn setup_app<'a, 'b>() -> App<'a, 'b> {
+fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("bonsai roundtrip verification")
         .build()
         .subcommand(
@@ -100,7 +100,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let logger = args::init_logging(fb, &matches);
     args::init_tunables(fb, &matches, logger.clone())?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-
     match matches.subcommand() {
         ("round-trip", Some(sub_m)) => subcommand_round_trip(ctx, logger, &matches, sub_m),
         ("hg-manifest", Some(sub_m)) => {
@@ -113,16 +112,16 @@ fn main(fb: FacebookInit) -> Result<()> {
 fn subcommand_round_trip(
     ctx: CoreContext,
     logger: Logger,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> Result<()> {
-    args::init_cachelib(ctx.fb, &matches);
-    let mut runtime = args::init_runtime(&matches)?;
-    let repo = runtime.block_on_std(args::open_repo(ctx.fb, &logger, &matches))?;
+    args::init_cachelib(ctx.fb, matches);
+    let mut runtime = args::init_runtime(matches)?;
+    let repo = runtime.block_on_std(args::open_repo(ctx.fb, &logger, matches))?;
 
-    let config = config::get_config(&matches).expect("getting configuration failed");
-    let start_points = get_start_points(&sub_m);
-    let follow_limit = args::get_usize(&sub_m, "limit", 1024);
+    let config = config::get_config(matches).expect("getting configuration failed");
+    let start_points = get_start_points(sub_m);
+    let follow_limit = args::get_usize(sub_m, "limit", 1024);
     let print_changes = sub_m.is_present("changes");
     let debug_bonsai_diff = matches.is_present("debug") && sub_m.is_present("changes");
 
@@ -294,7 +293,7 @@ fn summarize(
 fn subcommmand_hg_manifest_verify(
     ctx: &CoreContext,
     logger: &Logger,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> Result<()> {
     args::init_cachelib(ctx.fb, &matches);
@@ -314,7 +313,7 @@ fn subcommmand_hg_manifest_verify(
                 "required parameter `hg-changeset-id` is not set",
             ))
             .and_then(HgChangesetId::from_str)?;
-        let repo = &args::open_repo(ctx.fb, &logger, &matches).await?;
+        let repo = &args::open_repo(ctx.fb, &logger, matches).await?;
         let csid = repo
             .get_bonsai_from_hg(ctx.clone(), hg_csid)
             .compat()

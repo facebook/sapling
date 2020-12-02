@@ -13,7 +13,10 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, helpers};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use context::CoreContext;
 use deleted_files_manifest::{find_entries, list_all_entries, RootDeletedManifestId};
 use derived_data::BonsaiDerived;
@@ -70,7 +73,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 pub async fn subcommand_deleted_manifest<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     args::init_cachelib(fb, &matches);

@@ -23,8 +23,11 @@ use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateLog, Freshness};
 use cached_config::ConfigStore;
-use clap::{App, ArgMatches};
-use cmdlib::{args, monitoring};
+use clap::ArgMatches;
+use cmdlib::{
+    args::{self, MononokeClapApp, MononokeMatches},
+    monitoring,
+};
 use cmdlib_x_repo::create_commit_syncer_from_matches;
 use context::CoreContext;
 use cross_repo_sync::{
@@ -384,10 +387,10 @@ fn format_counter<M: SyncedCommitMapping + Clone + 'static>(
     format!("xreposync_from_{}", source_repo_id)
 }
 
-async fn run(
+async fn run<'a>(
     fb: FacebookInit,
     ctx: CoreContext,
-    matches: ArgMatches<'static>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
     let mut scuba_sample = get_scuba_sample(ctx.clone(), &matches);
@@ -454,16 +457,16 @@ async fn run(
                 try_join(source_skiplist, target_skiplist).await?;
             add_common_fields(&mut scuba_sample, &commit_syncer);
 
-            let sleep_secs = get_sleep_secs(&sub_m)?;
+            let sleep_secs = get_sleep_secs(sub_m)?;
             let tailing_args = if sub_m.is_present(ARG_CATCH_UP_ONCE) {
                 TailingArgs::CatchUpOnce(commit_syncer)
             } else {
-                let config_store = args::init_config_store(fb, ctx.logger(), &matches)?;
+                let config_store = args::init_config_store(fb, ctx.logger(), matches)?;
 
                 TailingArgs::LoopForever(commit_syncer, config_store)
             };
 
-            let backpressure_params = BackpressureParams::new(&ctx, &matches, sub_m).await?;
+            let backpressure_params = BackpressureParams::new(&ctx, matches, sub_m).await?;
 
             let derived_data_types: Vec<String> = match sub_m.values_of(ARG_DERIVED_DATA_TYPES) {
                 Some(derived_data_types) => derived_data_types
@@ -500,7 +503,10 @@ async fn run(
     }
 }
 
-fn context_and_matches<'a>(fb: FacebookInit, app: App<'a, '_>) -> (CoreContext, ArgMatches<'a>) {
+fn context_and_matches<'a>(
+    fb: FacebookInit,
+    app: MononokeClapApp<'a, '_>,
+) -> (CoreContext, MononokeMatches<'a>) {
     let matches = app.get_matches();
     let logger = args::init_logging(fb, &matches);
     args::init_cachelib(fb, &matches);
@@ -514,10 +520,10 @@ struct BackpressureParams {
 }
 
 impl BackpressureParams {
-    async fn new(
+    async fn new<'a>(
         ctx: &CoreContext,
-        matches: &ArgMatches<'static>,
-        sub_m: &ArgMatches<'static>,
+        matches: &'a MononokeMatches<'a>,
+        sub_m: &'a ArgMatches<'a>,
     ) -> Result<Self, Error> {
         let backsync_repos_ids = sub_m.values_of(ARG_BACKSYNC_BACKPRESSURE_REPOS_IDS);
         let backsync_repos = match backsync_repos_ids {
@@ -563,7 +569,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         &matches,
         monitoring::AliveService,
     )?;
-    let res = runtime.block_on_std(run(fb, ctx.clone(), matches));
+    let res = runtime.block_on_std(run(fb, ctx.clone(), &matches));
     if let Err(ref err) = res {
         print_error(ctx, err);
     }

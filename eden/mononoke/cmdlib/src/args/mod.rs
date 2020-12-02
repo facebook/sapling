@@ -9,9 +9,11 @@ mod cache;
 #[cfg(fbcode_build)]
 mod facebook;
 
-pub use self::cache::{init_cachelib, parse_and_init_cachelib, CachelibSettings};
+pub use self::cache::{init_cachelib, CachelibSettings};
 
+use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
+use std::ffi::{OsStr, OsString};
 use std::future::Future;
 use std::io;
 use std::iter::FromIterator;
@@ -23,17 +25,17 @@ use std::time::Duration;
 
 use anyhow::{bail, format_err, Error, Result};
 use cached_config::{ConfigHandle, ConfigStore, TestSource};
-use clap::{App, Arg, ArgGroup, ArgMatches};
+use clap::{App, Arg, ArgGroup, ArgMatches, Values};
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
+use maybe_owned::MaybeOwned;
 use once_cell::sync::OnceCell;
 use panichandler::{self, Fate};
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
-use slog_term::TermDecorator;
-
 use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
+use slog_term::TermDecorator;
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, Caching, ReadOnlyStorage};
@@ -53,7 +55,7 @@ use crate::helpers::{
 };
 use crate::log;
 
-use self::cache::{add_cachelib_args, parse_caching};
+use self::cache::{add_cachelib_args, parse_and_init_cachelib, parse_caching};
 
 const CONFIG_PATH: &str = "mononoke-config-path";
 const REPO_ID: &str = "repo-id";
@@ -141,6 +143,7 @@ const DEFAULT_ARG_TYPES: &[ArgType] = &[
     ArgType::Tunables,
 ];
 
+/// Build clap App with appropriate default settings.
 pub struct MononokeAppBuilder {
     /// The app name.
     name: String,
@@ -160,6 +163,120 @@ pub struct MononokeAppBuilder {
 
     /// Cachelib default settings, as shown in usage
     cachelib_settings: CachelibSettings,
+}
+
+/// Things we want to live for the lifetime of the mononoke binary
+#[derive(Default)]
+pub struct MononokeAppData {
+    cachelib_settings: CachelibSettings,
+}
+
+// Result of MononokeAppBuilder::build() which has clap plus the MononokeApp data
+pub struct MononokeClapApp<'a, 'b> {
+    clap: App<'a, 'b>,
+    app_data: MononokeAppData,
+}
+
+impl<'a, 'b> MononokeClapApp<'a, 'b> {
+    pub fn about<S: Into<&'b str>>(self, about: S) -> Self {
+        Self {
+            clap: self.clap.about(about),
+            app_data: self.app_data,
+        }
+    }
+
+    pub fn subcommand(self, subcmd: App<'a, 'b>) -> Self {
+        Self {
+            clap: self.clap.subcommand(subcmd),
+            app_data: self.app_data,
+        }
+    }
+
+    pub fn arg<A: Into<Arg<'a, 'b>>>(mut self, a: A) -> Self {
+        self.clap.p.add_arg(a.into());
+        self
+    }
+
+    pub fn args_from_usage(self, usage: &'a str) -> Self {
+        Self {
+            clap: self.clap.args_from_usage(usage),
+            app_data: self.app_data,
+        }
+    }
+
+    pub fn get_matches(self) -> MononokeMatches<'a> {
+        MononokeMatches {
+            matches: MaybeOwned::from(self.clap.get_matches()),
+            app_data: self.app_data,
+        }
+    }
+
+    pub fn get_matches_from<I, T>(self, itr: I) -> MononokeMatches<'a>
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<OsString> + Clone,
+    {
+        MononokeMatches {
+            matches: MaybeOwned::from(self.clap.get_matches_from(itr)),
+            app_data: self.app_data,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct MononokeMatches<'a> {
+    matches: MaybeOwned<'a, ArgMatches<'a>>,
+    app_data: MononokeAppData,
+}
+
+impl<'a> MononokeMatches<'a> {
+    pub fn parse_and_init_cachelib(&self, fb: FacebookInit) -> Caching {
+        parse_and_init_cachelib(fb, &self.matches, self.app_data.cachelib_settings.clone())
+    }
+
+    pub fn init_mononoke(
+        &'a self,
+        fb: FacebookInit,
+    ) -> Result<(Caching, Logger, tokio_compat::runtime::Runtime)> {
+        init_mononoke_with_cache_settings(fb, self, self.app_data.cachelib_settings.clone())
+    }
+
+    // Delegate some common methods to save on .as_ref() calls
+    pub fn is_present<S: AsRef<str>>(&self, name: S) -> bool {
+        self.matches.is_present(name)
+    }
+
+    pub fn subcommand(&'a self) -> (&str, Option<&'a ArgMatches<'a>>) {
+        self.matches.subcommand()
+    }
+
+    pub fn usage(&self) -> &str {
+        self.matches.usage()
+    }
+
+    pub fn value_of<S: AsRef<str>>(&self, name: S) -> Option<&str> {
+        self.matches.value_of(name)
+    }
+
+    pub fn value_of_os<S: AsRef<str>>(&self, name: S) -> Option<&OsStr> {
+        self.matches.value_of_os(name)
+    }
+
+    pub fn values_of<S: AsRef<str>>(&'a self, name: S) -> Option<Values<'a>> {
+        self.matches.values_of(name)
+    }
+}
+
+impl<'a> AsRef<ArgMatches<'a>> for MononokeMatches<'a> {
+    fn as_ref(&self) -> &ArgMatches<'a> {
+        &self.matches
+    }
+}
+
+impl<'a> Borrow<ArgMatches<'a>> for MononokeMatches<'a> {
+    fn borrow(&self) -> &ArgMatches<'a> {
+        &self.matches
+    }
 }
 
 /// Create a default root logger for Facebook services
@@ -282,8 +399,8 @@ impl MononokeAppBuilder {
         self
     }
 
-    /// Build a `clap::App` for this Mononoke app, which can then be customized further.
-    pub fn build<'a, 'b>(self) -> App<'a, 'b> {
+    /// Build a MononokeClapApp around a `clap::App` for this Mononoke app, which can then be customized further.
+    pub fn build<'a, 'b>(self) -> MononokeClapApp<'a, 'b> {
         let mut app = App::new(self.name);
 
         if self.arg_types.contains(&ArgType::Config) {
@@ -426,7 +543,12 @@ impl MononokeAppBuilder {
             app = add_fb303_args(app);
         }
 
-        app
+        MononokeClapApp {
+            clap: app,
+            app_data: MononokeAppData {
+                cachelib_settings: self.cachelib_settings,
+            },
+        }
     }
 }
 
@@ -483,7 +605,7 @@ fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-pub fn init_logging<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
+pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Logger {
     // Set the panic handler up here. Not really relevent to logger other than it emits output
     // when things go wrong. This writes directly to stderr as coredumper expects.
     let fate = match matches
@@ -561,7 +683,7 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
 
 fn get_repo_id_and_name_from_values<'a>(
     config_store: &ConfigStore,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
     option_repo_name: &str,
     option_repo_id: &str,
 ) -> Result<(RepositoryId, String)> {
@@ -614,13 +736,16 @@ fn get_repo_id_and_name_from_values<'a>(
 
 pub fn get_repo_id<'a>(
     config_store: &ConfigStore,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<RepositoryId> {
     let (repo_id, _) = get_repo_id_and_name_from_values(config_store, matches, REPO_NAME, REPO_ID)?;
     Ok(repo_id)
 }
 
-pub fn get_repo_name<'a>(config_store: &ConfigStore, matches: &ArgMatches<'a>) -> Result<String> {
+pub fn get_repo_name<'a>(
+    config_store: &ConfigStore,
+    matches: &'a MononokeMatches<'a>,
+) -> Result<String> {
     let (_, repo_name) =
         get_repo_id_and_name_from_values(config_store, matches, REPO_NAME, REPO_ID)?;
     Ok(repo_name)
@@ -628,7 +753,7 @@ pub fn get_repo_name<'a>(config_store: &ConfigStore, matches: &ArgMatches<'a>) -
 
 pub fn get_source_repo_id<'a>(
     config_store: &ConfigStore,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<RepositoryId> {
     let (repo_id, _) =
         get_repo_id_and_name_from_values(config_store, matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
@@ -637,7 +762,7 @@ pub fn get_source_repo_id<'a>(
 
 pub fn get_source_repo_id_opt<'a>(
     config_store: &ConfigStore,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<Option<RepositoryId>> {
     if matches.is_present(SOURCE_REPO_NAME) || matches.is_present(SOURCE_REPO_ID) {
         let (repo_id, _) = get_repo_id_and_name_from_values(
@@ -654,7 +779,7 @@ pub fn get_source_repo_id_opt<'a>(
 
 pub fn get_target_repo_id<'a>(
     config_store: &ConfigStore,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<RepositoryId> {
     let (repo_id, _) =
         get_repo_id_and_name_from_values(config_store, matches, TARGET_REPO_NAME, TARGET_REPO_ID)?;
@@ -663,17 +788,17 @@ pub fn get_target_repo_id<'a>(
 
 pub fn get_repo_id_from_value<'a>(
     config_store: &ConfigStore,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
     repo_id_arg: &str,
 ) -> Result<RepositoryId> {
     let (repo_id, _) = get_repo_id_and_name_from_values(config_store, matches, "", repo_id_arg)?;
     Ok(repo_id)
 }
 
-pub async fn open_sql<T>(
+pub async fn open_sql<'a, T>(
     fb: FacebookInit,
     config_store: &ConfigStore,
-    matches: &ArgMatches<'_>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<T, Error>
 where
     T: SqlConstructFromMetadataDatabaseConfig,
@@ -691,10 +816,10 @@ where
     .await
 }
 
-pub async fn open_source_sql<T>(
+pub async fn open_source_sql<'a, T>(
     fb: FacebookInit,
     config_store: &ConfigStore,
-    matches: &ArgMatches<'_>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<T, Error>
 where
     T: SqlConstructFromMetadataDatabaseConfig,
@@ -718,14 +843,14 @@ where
 pub fn create_repo<'a>(
     fb: FacebookInit,
     logger: &'a Logger,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
     open_repo_internal(
         fb,
         logger,
         matches,
         true,
-        parse_caching(matches),
+        parse_caching(matches.as_ref()),
         Scrubbing::Disabled,
         None,
     )
@@ -737,14 +862,14 @@ pub fn create_repo<'a>(
 pub fn create_repo_unredacted<'a>(
     fb: FacebookInit,
     logger: &'a Logger,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
     open_repo_internal(
         fb,
         logger,
         matches,
         true,
-        parse_caching(matches),
+        parse_caching(matches.as_ref()),
         Scrubbing::Disabled,
         Some(Redaction::Disabled),
     )
@@ -755,14 +880,14 @@ pub fn create_repo_unredacted<'a>(
 pub fn open_repo<'a>(
     fb: FacebookInit,
     logger: &'a Logger,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
     open_repo_internal(
         fb,
         logger,
         matches,
         false,
-        parse_caching(matches),
+        parse_caching(matches.as_ref()),
         Scrubbing::Disabled,
         None,
     )
@@ -774,14 +899,14 @@ pub fn open_repo<'a>(
 pub fn open_repo_unredacted<'a>(
     fb: FacebookInit,
     logger: &'a Logger,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
     open_repo_internal(
         fb,
         logger,
         matches,
         false,
-        parse_caching(matches),
+        parse_caching(matches.as_ref()),
         Scrubbing::Disabled,
         Some(Redaction::Disabled),
     )
@@ -794,14 +919,14 @@ pub fn open_repo_unredacted<'a>(
 pub async fn open_scrub_repo<'a>(
     fb: FacebookInit,
     logger: &'a Logger,
-    matches: &'a ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
     open_repo_internal(
         fb,
         logger,
         matches,
         false,
-        parse_caching(matches),
+        parse_caching(matches.as_ref()),
         Scrubbing::Enabled,
         None,
     )
@@ -900,7 +1025,7 @@ fn add_blobstore_args<'a, 'b>(
     )
 }
 
-pub fn add_mcrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn add_mcrouter_args<'a, 'b>(app: MononokeClapApp<'a, 'b>) -> MononokeClapApp<'a, 'b> {
     app.arg(
         Arg::with_name(ENABLE_MCROUTER)
             .long(ENABLE_MCROUTER)
@@ -909,7 +1034,7 @@ pub fn add_mcrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-pub(crate) fn add_fb303_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+fn add_fb303_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.args_from_usage(r"--fb303-thrift-port=[PORT]    'port for fb303 service'")
 }
 
@@ -945,7 +1070,7 @@ fn add_shutdown_timeout_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-pub fn get_shutdown_grace_period<'a>(matches: &ArgMatches<'a>) -> Result<Duration> {
+pub fn get_shutdown_grace_period<'a>(matches: &MononokeMatches<'a>) -> Result<Duration> {
     let seconds = matches
         .value_of("shutdown-grace-period")
         .ok_or(Error::msg("shutdown-grace-period must be specified"))?
@@ -954,7 +1079,7 @@ pub fn get_shutdown_grace_period<'a>(matches: &ArgMatches<'a>) -> Result<Duratio
     Ok(Duration::from_secs(seconds))
 }
 
-pub fn get_shutdown_timeout<'a>(matches: &ArgMatches<'a>) -> Result<Duration> {
+pub fn get_shutdown_timeout<'a>(matches: &MononokeMatches<'a>) -> Result<Duration> {
     let seconds = matches
         .value_of("shutdown-timeout")
         .ok_or(Error::msg("shutdown-timeout must be specified"))?
@@ -980,7 +1105,7 @@ fn add_scuba_logging_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 pub fn get_scuba_sample_builder<'a>(
     fb: FacebookInit,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
 ) -> Result<MononokeScubaSampleBuilder> {
     let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of("scuba-dataset") {
         MononokeScubaSampleBuilder::new(fb, scuba_dataset)
@@ -994,7 +1119,7 @@ pub fn get_scuba_sample_builder<'a>(
     Ok(scuba_logger)
 }
 
-pub fn add_scribe_logging_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn add_scribe_logging_args<'a, 'b>(app: MononokeClapApp<'a, 'b>) -> MononokeClapApp<'a, 'b> {
     app.arg(
         Arg::with_name("scribe-logging-directory")
             .long("scribe-logging-directory")
@@ -1003,14 +1128,14 @@ pub fn add_scribe_logging_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-pub fn get_scribe<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<Scribe> {
+pub fn get_scribe<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Result<Scribe> {
     match matches.value_of("scribe-logging-directory") {
         Some(dir) => Ok(Scribe::new_to_file(PathBuf::from(dir))),
         None => Ok(Scribe::new(fb)),
     }
 }
 
-pub fn get_config_path<'a>(matches: &'a ArgMatches<'a>) -> Result<&'a str> {
+pub fn get_config_path<'a>(matches: &'a MononokeMatches<'a>) -> Result<&'a str> {
     matches
         .value_of(CONFIG_PATH)
         .ok_or(Error::msg(format!("{} must be specified", CONFIG_PATH)))
@@ -1018,28 +1143,28 @@ pub fn get_config_path<'a>(matches: &'a ArgMatches<'a>) -> Result<&'a str> {
 
 pub fn load_repo_configs<'a>(
     config_store: &ConfigStore,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<RepoConfigs> {
     metaconfig_parser::load_repo_configs(get_config_path(matches)?, config_store)
 }
 
 pub fn load_common_config<'a>(
     config_store: &ConfigStore,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<CommonConfig> {
     metaconfig_parser::load_common_config(get_config_path(matches)?, config_store)
 }
 
 pub fn load_storage_configs<'a>(
     config_store: &ConfigStore,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<StorageConfigs> {
     metaconfig_parser::load_storage_configs(get_config_path(matches)?, config_store)
 }
 
 pub fn get_config<'a>(
     config_store: &ConfigStore,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<(String, RepoConfig)> {
     let repo_id = get_repo_id(config_store, matches)?;
     get_config_by_repoid(config_store, matches, repo_id)
@@ -1047,7 +1172,7 @@ pub fn get_config<'a>(
 
 pub fn get_config_by_repoid<'a>(
     config_store: &ConfigStore,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
     repo_id: RepositoryId,
 ) -> Result<(String, RepoConfig)> {
     let configs = load_repo_configs(config_store, matches)?;
@@ -1060,7 +1185,7 @@ pub fn get_config_by_repoid<'a>(
 async fn open_repo_internal(
     fb: FacebookInit,
     logger: &Logger,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
     create: bool,
     caching: Caching,
     scrub: Scrubbing,
@@ -1085,7 +1210,7 @@ async fn open_repo_internal_with_repo_id(
     fb: FacebookInit,
     logger: &Logger,
     repo_id: RepositoryId,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
     create: bool,
     caching: Caching,
     scrub: Scrubbing,
@@ -1140,11 +1265,11 @@ async fn open_repo_internal_with_repo_id(
     builder.build().await
 }
 
-pub async fn open_repo_with_repo_id(
+pub async fn open_repo_with_repo_id<'a>(
     fb: FacebookInit,
     logger: &Logger,
     repo_id: RepositoryId,
-    matches: &ArgMatches<'_>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<BlobRepo, Error> {
     open_repo_internal_with_repo_id(
         fb,
@@ -1152,18 +1277,18 @@ pub async fn open_repo_with_repo_id(
         repo_id,
         matches,
         false,
-        parse_caching(matches),
+        parse_caching(matches.as_ref()),
         Scrubbing::Disabled,
         None,
     )
     .await
 }
 
-pub fn parse_readonly_storage<'a>(matches: &ArgMatches<'a>) -> ReadOnlyStorage {
+pub fn parse_readonly_storage<'a>(matches: &MononokeMatches<'a>) -> ReadOnlyStorage {
     ReadOnlyStorage(matches.is_present("readonly-storage"))
 }
 
-pub fn parse_mysql_options<'a>(matches: &ArgMatches<'a>) -> MysqlOptions {
+pub fn parse_mysql_options<'a>(matches: &MononokeMatches<'a>) -> MysqlOptions {
     let connection_type = if let Some(port) = matches.value_of(MYSQL_MYROUTER_PORT) {
         let port = port
             .parse::<u16>()
@@ -1183,7 +1308,7 @@ pub fn parse_mysql_options<'a>(matches: &ArgMatches<'a>) -> MysqlOptions {
     }
 }
 
-pub fn parse_blobstore_options<'a>(matches: &ArgMatches<'a>) -> BlobstoreOptions {
+pub fn parse_blobstore_options<'a>(matches: &MononokeMatches<'a>) -> BlobstoreOptions {
     let read_qps: Option<NonZeroU32> = matches
         .value_of(READ_QPS_ARG)
         .map(|v| v.parse().expect("Provided qps is not u32"));
@@ -1231,7 +1356,7 @@ pub fn parse_blobstore_options<'a>(matches: &ArgMatches<'a>) -> BlobstoreOptions
     )
 }
 
-pub fn maybe_enable_mcrouter<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) {
+pub fn maybe_enable_mcrouter<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) {
     if matches.is_present(ENABLE_MCROUTER) {
         #[cfg(fbcode_build)]
         {
@@ -1248,39 +1373,40 @@ pub fn maybe_enable_mcrouter<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) {
     }
 }
 
-pub fn get_usize_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<usize> {
-    matches.value_of(key).map(|val| {
+pub fn get_usize_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Option<usize> {
+    matches.borrow().value_of(key).map(|val| {
         val.parse::<usize>()
             .expect(&format!("{} must be integer", key))
     })
 }
 
 #[inline]
-pub fn get_usize<'a>(matches: &ArgMatches<'a>, key: &str, default: usize) -> usize {
+pub fn get_usize<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str, default: usize) -> usize {
     get_usize_opt(matches, key).unwrap_or(default)
 }
 
 #[inline]
-pub fn get_u64<'a>(matches: &ArgMatches<'a>, key: &str, default: u64) -> u64 {
+pub fn get_u64<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str, default: u64) -> u64 {
     get_u64_opt(matches, key).unwrap_or(default)
 }
 
 #[inline]
-pub fn get_and_parse_opt<'a, T: ::std::str::FromStr>(
-    matches: &ArgMatches<'a>,
+pub fn get_and_parse_opt<'a, T: ::std::str::FromStr, M: Borrow<ArgMatches<'a>>>(
+    matches: &M,
     key: &str,
 ) -> Option<T>
 where
     <T as std::str::FromStr>::Err: std::fmt::Debug,
 {
     matches
+        .borrow()
         .value_of(key)
         .map(|val| val.parse::<T>().expect(&format!("{} - invalid value", key)))
 }
 
 #[inline]
-pub fn get_and_parse<'a, T: ::std::str::FromStr>(
-    matches: &ArgMatches<'a>,
+pub fn get_and_parse<'a, T: ::std::str::FromStr, M: Borrow<ArgMatches<'a>>>(
+    matches: &M,
     key: &str,
     default: T,
 ) -> T
@@ -1291,36 +1417,36 @@ where
 }
 
 #[inline]
-pub fn get_u64_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<u64> {
-    matches.value_of(key).map(|val| {
+pub fn get_u64_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Option<u64> {
+    matches.borrow().value_of(key).map(|val| {
         val.parse::<u64>()
             .expect(&format!("{} must be integer", key))
     })
 }
 
 #[inline]
-pub fn get_i32_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<i32> {
-    matches.value_of(key).map(|val| {
+pub fn get_i32_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Option<i32> {
+    matches.borrow().value_of(key).map(|val| {
         val.parse::<i32>()
             .expect(&format!("{} must be integer", key))
     })
 }
 
 #[inline]
-pub fn get_i32<'a>(matches: &ArgMatches<'a>, key: &str, default: i32) -> i32 {
+pub fn get_i32<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str, default: i32) -> i32 {
     get_i32_opt(matches, key).unwrap_or(default)
 }
 
 #[inline]
-pub fn get_i64_opt<'a>(matches: &ArgMatches<'a>, key: &str) -> Option<i64> {
-    matches.value_of(key).map(|val| {
+pub fn get_i64_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Option<i64> {
+    matches.borrow().value_of(key).map(|val| {
         val.parse::<i64>()
             .expect(&format!("{} must be integer", key))
     })
 }
 
-pub fn parse_disabled_hooks_with_repo_prefix(
-    matches: &ArgMatches,
+pub fn parse_disabled_hooks_with_repo_prefix<'a>(
+    matches: &'a MononokeMatches<'a>,
     logger: &Logger,
 ) -> Result<HashMap<String, HashSet<String>>, Error> {
     let disabled_hooks = matches
@@ -1349,8 +1475,8 @@ pub fn parse_disabled_hooks_with_repo_prefix(
     Ok(res)
 }
 
-pub fn parse_disabled_hooks_no_repo_prefix(
-    matches: &ArgMatches,
+pub fn parse_disabled_hooks_no_repo_prefix<'a>(
+    matches: &'a MononokeMatches<'a>,
     logger: &Logger,
 ) -> HashSet<String> {
     let disabled_hooks: HashSet<String> = matches
@@ -1373,20 +1499,21 @@ pub fn parse_disabled_hooks_no_repo_prefix(
 
 pub fn init_mononoke<'a>(
     fb: FacebookInit,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<(Caching, Logger, tokio_compat::runtime::Runtime)> {
     init_mononoke_with_cache_settings(fb, matches, CachelibSettings::default())
 }
 
-pub fn init_mononoke_with_cache_settings<'a>(
+// TODO(ahornby) move into MononokeMatches when all init_mononoke call sites changed to call MononokeMatches::init_mononoke()
+fn init_mononoke_with_cache_settings<'a>(
     fb: FacebookInit,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
     cachelib_settings: CachelibSettings,
 ) -> Result<(Caching, Logger, tokio_compat::runtime::Runtime)> {
     let logger = init_logging(fb, matches);
 
     debug!(logger, "Initialising cachelib...");
-    let caching = parse_and_init_cachelib(fb, matches, cachelib_settings);
+    let caching = parse_and_init_cachelib(fb, matches.as_ref(), cachelib_settings);
     debug!(logger, "Initialising runtime...");
     let runtime = init_runtime(matches)?;
     init_tunables(fb, matches, logger.clone())?;
@@ -1394,7 +1521,11 @@ pub fn init_mononoke_with_cache_settings<'a>(
     Ok((caching, logger, runtime))
 }
 
-pub fn init_tunables<'a>(fb: FacebookInit, matches: &ArgMatches<'a>, logger: Logger) -> Result<()> {
+pub fn init_tunables<'a>(
+    fb: FacebookInit,
+    matches: &'a MononokeMatches<'a>,
+    logger: Logger,
+) -> Result<()> {
     if matches.is_present(DISABLE_TUNABLES) {
         debug!(logger, "Tunables are disabled");
         return Ok(());
@@ -1411,7 +1542,7 @@ pub fn init_tunables<'a>(fb: FacebookInit, matches: &ArgMatches<'a>, logger: Log
     init_tunables_worker(logger, config_handle)
 }
 /// Initialize a new `tokio_compat::runtime::Runtime` with thread number parsed from the CLI
-pub fn init_runtime(matches: &ArgMatches) -> io::Result<tokio_compat::runtime::Runtime> {
+pub fn init_runtime(matches: &MononokeMatches) -> io::Result<tokio_compat::runtime::Runtime> {
     let core_threads = get_usize_opt(matches, RUNTIME_THREADS);
     create_runtime(None, core_threads)
 }
@@ -1459,14 +1590,14 @@ where
 
 static CONFIGERATOR: OnceCell<ConfigStore> = OnceCell::new();
 
-pub fn is_test_instance<'a>(matches: &ArgMatches<'a>) -> bool {
+pub fn is_test_instance<'a>(matches: &MononokeMatches<'a>) -> bool {
     matches.is_present(TEST_INSTANCE_ARG)
 }
 
 pub fn init_config_store<'a>(
     fb: FacebookInit,
     root_log: impl Into<Option<&'a Logger>>,
-    matches: &ArgMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<&'static ConfigStore, Error> {
     CONFIGERATOR.get_or_try_init(|| {
         let local_configerator_path = matches.value_of(LOCAL_CONFIGERATOR_PATH_ARG);

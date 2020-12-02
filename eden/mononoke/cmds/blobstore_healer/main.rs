@@ -17,9 +17,9 @@ use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use cached_config::ConfigStore;
 use chrono::Duration as ChronoDuration;
-use clap::{value_t, App, Arg};
+use clap::{value_t, Arg};
 use cmdlib::{
-    args::{self, get_scuba_sample_builder},
+    args::{self, get_scuba_sample_builder, MononokeClapApp},
     helpers::block_execute,
 };
 use context::{CoreContext, SessionContainer};
@@ -215,7 +215,7 @@ async fn schedule_healing(
     }
 }
 
-fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
+fn setup_app<'a, 'b>(app_name: &str) -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new(app_name)
         .with_scuba_logging_args()
         .with_fb303_args()

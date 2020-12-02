@@ -15,9 +15,8 @@
 use anyhow::{format_err, Context, Error, Result};
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshness};
-use clap::{App, ArgMatches};
 use cmdlib::{
-    args,
+    args::{self, MononokeClapApp, MononokeMatches},
     helpers::{block_execute, open_sql_with_config_and_mysql_options},
     monitoring::AliveService,
 };
@@ -150,10 +149,10 @@ async fn run_in_once_mode(
         .await
 }
 
-async fn run(
+async fn run<'a>(
     fb: FacebookInit,
     ctx: CoreContext,
-    matches: ArgMatches<'static>,
+    matches: &'a MononokeMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
     let repo_id = args::get_repo_id(config_store, &matches)?;
@@ -172,7 +171,7 @@ async fn run(
         ctx.clone(),
         blobrepo.clone(),
         repo_config,
-        matches.clone(),
+        matches,
         mysql_options.clone(),
         readonly_storage.clone(),
         scuba_sample.clone(),
@@ -182,7 +181,7 @@ async fn run(
 
     match matches.subcommand() {
         (ARG_ONCE, Some(sub_m)) => {
-            let entry_id = get_entry_id(sub_m.clone())?;
+            let entry_id = get_entry_id(sub_m)?;
             run_in_once_mode(&ctx, blobrepo, validation_helpers, entry_id).await
         }
         (ARG_TAIL, Some(sub_m)) => {
@@ -196,7 +195,7 @@ async fn run(
             .await
             .context("While opening MutableCounters")?;
 
-            let start_id = get_start_id(ctx.clone(), repo_id, &mutable_counters, sub_m.clone())
+            let start_id = get_start_id(ctx.clone(), repo_id, &mutable_counters, sub_m)
                 .await
                 .context("While fetching the start_id")?;
 
@@ -214,7 +213,10 @@ async fn run(
     }
 }
 
-fn context_and_matches<'a>(fb: FacebookInit, app: App<'a, '_>) -> (CoreContext, ArgMatches<'a>) {
+fn context_and_matches<'a>(
+    fb: FacebookInit,
+    app: MononokeClapApp<'a, '_>,
+) -> (CoreContext, MononokeMatches<'a>) {
     let matches = app.get_matches();
     let logger = args::init_logging(fb, &matches);
     args::init_cachelib(fb, &matches);
@@ -227,7 +229,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let (ctx, matches) = context_and_matches(fb, create_app());
     args::init_config_store(fb, ctx.logger(), &matches)?;
     block_execute(
-        run(fb, ctx.clone(), matches.clone()),
+        run(fb, ctx.clone(), &matches),
         fb,
         SERVICE_NAME,
         ctx.logger(),

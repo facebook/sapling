@@ -14,9 +14,12 @@ mod protocol;
 use anyhow::{Context, Error};
 use blobstore_factory::make_blobstore;
 use cached_config::ConfigHandle;
-use clap::{Arg, ArgMatches};
+use clap::Arg;
 use cloned::cloned;
-use cmdlib::{args, monitoring::ReadyFlagService};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    monitoring::ReadyFlagService,
+};
 use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::{
@@ -221,7 +224,7 @@ fn extract_alias(alias: &str) -> Result<(String, String), Error> {
 
 async fn bootstrap_repositories<'a>(
     fb: FacebookInit,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     logger: &Logger,
     scuba: &MononokeScubaSampleBuilder,
 ) -> Result<HashMap<String, FastReplayDispatcher>, Error> {
@@ -373,7 +376,7 @@ impl ReplayOpts {
     fn parse<'a>(
         fb: FacebookInit,
         logger: Logger,
-        matches: &ArgMatches<'a>,
+        matches: &MononokeMatches<'a>,
     ) -> Result<Self, Error> {
         let aliases = match matches.values_of(ARG_ALIASES) {
             Some(values) => values
@@ -469,7 +472,7 @@ async fn fastreplay<R: AsyncRead + Unpin>(
 
 async fn do_main<'a>(
     fb: FacebookInit,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
     logger: &Logger,
     service: &ReadyFlagService,
 ) -> Result<(), Error> {
@@ -488,7 +491,7 @@ async fn do_main<'a>(
     // Start replaying
     let count = Arc::new(AtomicU64::new(0));
 
-    match matches.values_of_os(ARG_COMMAND) {
+    match matches.as_ref().values_of_os(ARG_COMMAND) {
         Some(mut args) => {
             let program = args
                 .next()

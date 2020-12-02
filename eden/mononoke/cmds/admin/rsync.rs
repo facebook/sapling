@@ -14,7 +14,10 @@ use fsnodes::RootFsnodeId;
 use futures::{compat::Future01CompatExt, future::try_join, TryStreamExt};
 
 use blobrepo::BlobRepo;
-use cmdlib::{args, helpers};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use context::CoreContext;
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
@@ -142,7 +145,7 @@ pub fn add_common_args<'a, 'b>(sub_m: App<'a, 'b>) -> App<'a, 'b> {
 pub async fn subcommand_rsync<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     args::init_cachelib(fb, &matches);
@@ -224,8 +227,8 @@ pub async fn subcommand_rsync<'a>(
                 .value_of(ARG_COMMIT_MESSAGE)
                 .ok_or_else(|| anyhow!("{} arg is not specified", ARG_COMMIT_MESSAGE))?;
 
-            let maybe_file_num_limit =
-                args::get_and_parse_opt::<NonZeroU64>(sub_matches, ARG_FILE_NUM_LIMIT);
+            let maybe_file_num_limit: Option<NonZeroU64> =
+                args::get_and_parse_opt(sub_matches, ARG_FILE_NUM_LIMIT);
 
             let result_cs_id = remove_excessive_files(
                 &ctx,
@@ -256,10 +259,12 @@ struct Limits {
 
 impl Limits {
     pub fn new(sub_m: &ArgMatches<'_>) -> Self {
-        let maybe_file_num_limit = args::get_and_parse_opt::<NonZeroU64>(sub_m, ARG_FILE_NUM_LIMIT);
-        let maybe_total_size_limit =
-            args::get_and_parse_opt::<NonZeroU64>(sub_m, ARG_TOTAL_SIZE_LIMIT);
-        let maybe_lfs_threshold = args::get_and_parse_opt::<NonZeroU64>(sub_m, ARG_LFS_THRESHOLD);
+        let maybe_file_num_limit: Option<NonZeroU64> =
+            args::get_and_parse_opt(sub_m, ARG_FILE_NUM_LIMIT);
+        let maybe_total_size_limit: Option<NonZeroU64> =
+            args::get_and_parse_opt(sub_m, ARG_TOTAL_SIZE_LIMIT);
+        let maybe_lfs_threshold: Option<NonZeroU64> =
+            args::get_and_parse_opt(sub_m, ARG_LFS_THRESHOLD);
 
         Self {
             file_num_limit: maybe_file_num_limit,

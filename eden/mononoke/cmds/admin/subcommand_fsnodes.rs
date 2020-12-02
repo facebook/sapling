@@ -10,7 +10,10 @@ use crate::error::SubcommandError;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use clap::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::{args, helpers};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
@@ -44,7 +47,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 pub async fn subcommand_fsnodes<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     args::init_cachelib(fb, &matches);

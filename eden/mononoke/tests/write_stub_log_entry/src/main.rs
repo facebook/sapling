@@ -9,8 +9,8 @@
 
 use anyhow::{bail, Context, Result};
 use bookmarks::{BookmarkName, BookmarkUpdateReason, Bookmarks};
-use clap::{App, Arg, SubCommand};
-use cmdlib::args;
+use clap::{Arg, SubCommand};
+use cmdlib::args::{self, MononokeClapApp};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
@@ -26,7 +26,7 @@ const FROM_ID: &'static str = "from_id";
 const TO_ID: &'static str = "to_id";
 const ID: &'static str = "id";
 
-fn setup_app<'a, 'b>() -> App<'a, 'b> {
+fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     let create = SubCommand::with_name(CREATE).arg(Arg::with_name(ID).required(true));
 
     let update = SubCommand::with_name(UPDATE)

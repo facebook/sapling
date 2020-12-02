@@ -14,7 +14,7 @@ use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use borrowed::borrowed;
 use clap::ArgMatches;
-use cmdlib::args;
+use cmdlib::args::{self, MononokeMatches};
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use cross_repo_sync::{
@@ -835,7 +835,7 @@ async fn get_pushredirected_vars(
     repo: &BlobRepo,
     repo_import_setting: &RepoImportSetting,
     large_repo_config: &RepoConfig,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(BlobRepo, RepoImportSetting, Syncers<SqlSyncedCommitMapping>), Error> {
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
@@ -904,7 +904,7 @@ async fn repo_import(
     mut repo: BlobRepo,
     recovery_fields: &mut RecoveryFields,
     fb: FacebookInit,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
 ) -> Result<(), Error> {
     let arg_git_repo_path = recovery_fields.git_repo_path.clone();
     let path = Path::new(&arg_git_repo_path);
@@ -1174,7 +1174,7 @@ async fn check_additional_setup_steps(
     repo: BlobRepo,
     fb: FacebookInit,
     sub_arg_matches: &ArgMatches<'_>,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
 ) -> Result<(), Error> {
     let bookmark_suffix = match sub_arg_matches.value_of(ARG_BOOKMARK_SUFFIX) {
         Some(suffix) => suffix,

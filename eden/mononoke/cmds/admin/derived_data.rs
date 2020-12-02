@@ -10,7 +10,10 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::{args, helpers::csid_resolve};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers::csid_resolve,
+};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_utils::{derived_data_utils, POSSIBLE_DERIVED_TYPES};
@@ -98,7 +101,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 pub async fn subcommand_derived_data<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     args::init_cachelib(fb, &matches);

@@ -11,7 +11,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason, Freshness};
 use clap::{App, Arg, ArgMatches, SubCommand};
-use cmdlib::args;
+use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
@@ -531,7 +531,7 @@ async fn get_entry_by_id(
 pub async fn subcommand_process_hg_sync<'a>(
     fb: FacebookInit,
     sub_m: &'a ArgMatches<'_>,
-    matches: &'a ArgMatches<'_>,
+    matches: &'a MononokeMatches<'_>,
     logger: Logger,
 ) -> Result<(), SubcommandError> {
     let config_store = args::init_config_store(fb, &logger, matches)?;

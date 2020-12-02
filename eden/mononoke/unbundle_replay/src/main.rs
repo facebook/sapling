@@ -19,8 +19,11 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateLog, Freshness};
 use bytes::Bytes;
-use clap::{Arg, ArgMatches, SubCommand};
-use cmdlib::{args, monitoring::ReadyFlagService};
+use clap::{Arg, SubCommand};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    monitoring::ReadyFlagService,
+};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
@@ -71,12 +74,13 @@ const ARG_LOG_ENTRY_ID: &str = "log-entry-id";
 async fn get_replay_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
-    matches: &'a ArgMatches<'a>,
-) -> Result<impl Stream<Item = Result<ReplaySpec<'a>, Error>> + 'a, Error> {
+    matches: &'a MononokeMatches<'a>,
+) -> Result<impl Stream<Item = Result<ReplaySpec, Error>> + 'a, Error> {
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+
     match matches.subcommand() {
         (SUBCOMMAND_HG_RECORDING, Some(sub)) => {
-            let bundle_helper = sub.value_of(ARG_HG_BUNDLE_HELPER).unwrap();
+            let bundle_helper: String = sub.value_of(ARG_HG_BUNDLE_HELPER).unwrap().into();
             let bundle_id: i64 = sub.value_of(ARG_HG_RECORDING_ID).unwrap().parse()?;
 
             let client = HgRecordingClient::new(ctx.fb, config_store, matches).await?;
@@ -91,13 +95,12 @@ async fn get_replay_stream<'a>(
             }
 
             let spec = ReplaySpec::from_hg_recording_entry(bundle_helper, entry)?;
-
-            Ok(stream::once(async { Ok(spec) }).boxed())
+            Ok(stream::once(future::ok(spec)).right_stream())
         }
         (SUBCOMMAND_HG_BOOKMARK, Some(sub)) => {
-            let bundle_helper = sub.value_of(ARG_HG_BUNDLE_HELPER).unwrap();
-            let onto = sub.value_of(ARG_HG_BOOKMARK_NAME).unwrap().try_into()?;
-            let poll_interval = sub
+            let bundle_helper: String = sub.value_of(ARG_HG_BUNDLE_HELPER).unwrap().into();
+            let onto: BookmarkName = sub.value_of(ARG_HG_BOOKMARK_NAME).unwrap().try_into()?;
+            let poll_interval: Option<Duration> = sub
                 .value_of(ARG_HG_BOOKMARK_POLL_INTERVAL)
                 .map(|i| i.parse())
                 .transpose()?
@@ -130,10 +133,9 @@ async fn get_replay_stream<'a>(
                 // returned by `next()` on a stream doesn't have a lifetime bound by the lifetime
                 // of the stream, it seems like this might be simply not possible.
                 let state = state.clone();
-
+                let bundle_helper = bundle_helper.clone();
                 async move {
                     let (client, onto) = state.as_ref();
-
                     let entry = loop {
                         let entry = client.next_entry_by_onto(&ctx, &onto, &onto_rev).await?;
 
@@ -185,7 +187,7 @@ async fn get_replay_stream<'a>(
                     }
                 }
             })
-            .boxed())
+            .left_stream())
         }
         (SUBCOMMAND_LOG_ENTRY, Some(sub)) => {
             let id: u64 = sub.value_of(ARG_LOG_ENTRY_ID).unwrap().parse()?;
@@ -205,7 +207,7 @@ async fn get_replay_stream<'a>(
 
             let spec = ReplaySpec::from_bookmark_update_log_entry(entry)?;
 
-            Ok(stream::once(async { Ok(spec) }).boxed())
+            Ok(stream::once(future::ok(spec)).right_stream())
         }
         (name, _) => Err(format_err!("Invalid subcommand: {:?}", name)),
     }
@@ -375,7 +377,7 @@ async fn maybe_unbundle(
 
 async fn do_main(
     fb: FacebookInit,
-    matches: &ArgMatches<'_>,
+    matches: &MononokeMatches<'_>,
     logger: &Logger,
     service: &ReadyFlagService,
 ) -> Result<(), Error> {

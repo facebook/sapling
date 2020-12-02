@@ -12,7 +12,7 @@ use bookmarks::BookmarkName;
 use borrowed::borrowed;
 use clap::ArgMatches;
 use cloned::cloned;
-use cmdlib::args;
+use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use cross_repo_sync::types::{Large, Small};
 use fbinit::FacebookInit;
@@ -34,12 +34,12 @@ use crate::cli::{ARG_ENTRY_ID, ARG_MASTER_BOOKMARK, ARG_START_ID};
 use crate::reporting::add_common_commit_syncing_fields;
 use crate::validation::ValidationHelpers;
 
-pub async fn get_validation_helpers(
+pub async fn get_validation_helpers<'a>(
     fb: FacebookInit,
     ctx: CoreContext,
     large_repo: BlobRepo,
     repo_config: RepoConfig,
-    matches: ArgMatches<'static>,
+    matches: &'a MononokeMatches<'a>,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     scuba_sample: MononokeScubaSampleBuilder,
@@ -120,11 +120,11 @@ pub fn format_counter() -> String {
     "x_repo_commit_validator".to_string()
 }
 
-pub async fn get_start_id<T: MutableCounters>(
+pub async fn get_start_id<'a, T: MutableCounters>(
     ctx: CoreContext,
     repo_id: RepositoryId,
     mutable_counters: &T,
-    matches: ArgMatches<'static>,
+    matches: &'a ArgMatches<'a>,
 ) -> Result<u64, Error> {
     match matches.value_of(ARG_START_ID) {
         Some(start_id) => start_id
@@ -142,7 +142,7 @@ pub async fn get_start_id<T: MutableCounters>(
     }
 }
 
-pub fn get_entry_id(matches: ArgMatches<'static>) -> Result<u64, Error> {
+pub fn get_entry_id<'a>(matches: &'a ArgMatches<'a>) -> Result<u64, Error> {
     matches
         .value_of(ARG_ENTRY_ID)
         .ok_or(format_err!("Entry id argument missing"))?
@@ -165,7 +165,7 @@ async fn get_lca_hint(
     Ok(lca_hint)
 }
 
-fn get_master_bookmark<'a, 'b>(matches: &'a ArgMatches<'b>) -> Result<BookmarkName, Error> {
+fn get_master_bookmark<'a, 'b>(matches: &'a MononokeMatches<'b>) -> Result<BookmarkName, Error> {
     let name = matches
         .value_of(ARG_MASTER_BOOKMARK)
         .ok_or(format_err!("Argument {} is required", ARG_MASTER_BOOKMARK))?;

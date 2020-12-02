@@ -13,9 +13,12 @@ use bonsai_globalrev_mapping::{
 };
 use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
-use clap::{App, Arg};
+use clap::Arg;
 use cloned::cloned;
-use cmdlib::{args, helpers::block_execute};
+use cmdlib::{
+    args::{self, MononokeClapApp},
+    helpers::block_execute,
+};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, future::try_join, FutureExt, TryFutureExt};
@@ -27,7 +30,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 
-fn setup_app<'a, 'b>() -> App<'a, 'b> {
+fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Tool to upload globalrevs from commits saved in file")
         .build()
         .arg(Arg::from_usage(

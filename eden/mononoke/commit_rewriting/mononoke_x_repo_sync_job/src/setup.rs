@@ -8,7 +8,7 @@
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use clap::ArgMatches;
-use cmdlib::helpers;
+use cmdlib::{args::MononokeMatches, helpers};
 use context::CoreContext;
 use futures_old::{Future, IntoFuture};
 use mononoke_types::ChangesetId;
@@ -51,7 +51,7 @@ pub fn get_starting_commit<'a>(
 
 pub fn get_scuba_sample<'a>(
     ctx: CoreContext,
-    matches: &ArgMatches<'a>,
+    matches: &MononokeMatches<'a>,
 ) -> MononokeScubaSampleBuilder {
     let log_to_scuba = matches.is_present(ARG_LOG_TO_SCUBA);
     let mut scuba_sample = if log_to_scuba {

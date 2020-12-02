@@ -10,7 +10,6 @@
 use std::thread::{self};
 
 use anyhow::{format_err, Error};
-use clap::ArgMatches;
 use fbinit::FacebookInit;
 use futures_old::Future;
 use services::{self, Fb303Service, FbStatus};
@@ -20,6 +19,8 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
+
+use crate::args::MononokeMatches;
 
 // Re-eport AliveService for convenience so callers do not have to get the services dependency to
 // get AliveService.
@@ -60,7 +61,7 @@ pub fn start_fb303_and_stats_agg<S: Fb303Service + Sync + Send + 'static>(
     runtime: &mut tokio_compat::runtime::Runtime,
     service_name: &str,
     logger: &Logger,
-    matches: &ArgMatches,
+    matches: &MononokeMatches,
     service: S,
 ) -> Result<(), Error> {
     let service_name = service_name.to_string();
@@ -81,7 +82,7 @@ pub fn start_fb303_server<S: Fb303Service + Sync + Send + 'static>(
     fb: FacebookInit,
     service_name: &str,
     logger: &Logger,
-    matches: &ArgMatches,
+    matches: &MononokeMatches,
     service: S,
 ) -> Result<Option<()>, Error> {
     let service_name = service_name.to_string();

@@ -10,12 +10,15 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Error};
-use clap::{Arg, ArgMatches};
+use clap::Arg;
 use futures::compat::Future01CompatExt;
 use slog::info;
 
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
-use cmdlib::{args, helpers};
+use cmdlib::{
+    args::{self, MononokeMatches},
+    helpers,
+};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::MetadataDatabaseConfig;
@@ -61,8 +64,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     )
 }
 
-async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Error> {
-    let idmap_version_arg: Option<u64> = args::get_u64_opt(&matches, IDMAP_VERSION_ARG);
+async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(), Error> {
+    let idmap_version_arg: Option<u64> = args::get_u64_opt(matches, IDMAP_VERSION_ARG);
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
 
     // This is a bit weird from the dependency point of view but I think that it is best. The
@@ -74,7 +77,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Er
         .context("opening repo")?;
 
     let mysql_options = args::parse_mysql_options(matches);
-    let (_, config) = args::get_config(config_store, &matches)?;
+    let (_, config) = args::get_config(config_store, matches)?;
     let storage_config = config.storage_config;
     let readonly_storage = ReadOnlyStorage(false);
 
