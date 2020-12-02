@@ -313,7 +313,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let matches = app.get_matches();
 
-    let (caching, logger, mut runtime) = args::init_mononoke(fb, &matches, None)?;
+    let (caching, logger, mut runtime) = args::init_mononoke(fb, &matches)?;
     args::init_config_store(fb, &logger, &matches)?;
     runtime.block_on_std(start(fb, caching, logger, matches))
 }

@@ -38,7 +38,6 @@ clap = "2.33"
 env_logger = "0.7"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
-lazy_static = "1.0"
 libc = "0.2"
 log = { version = "0.4.8", features = ["kv_unstable"] }
 num_cpus = "1.11"

@@ -98,7 +98,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
 
     let matches = app.get_matches();
     let (_, logger, mut runtime) =
-        args::init_mononoke(fb, &matches, None).context("failed to initialise mononoke")?;
+        args::init_mononoke(fb, &matches).context("failed to initialise mononoke")?;
     let config_store = args::init_config_store(fb, &logger, &matches)?;
 
     let scheduled_max = args::get_usize_opt(&matches, ARG_SCHEDULED_MAX).unwrap_or(100) as usize;

@@ -49,7 +49,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
     cmdlib::args::maybe_enable_mcrouter(fb, &matches);
 
-    let (caching, root_log, runtime) = cmdlib::args::init_mononoke(fb, &matches, None)?;
+    let (caching, root_log, runtime) = cmdlib::args::init_mononoke(fb, &matches)?;
     let config_source = cmdlib::args::init_config_store(fb, &root_log, &matches)?;
 
     info!(root_log, "Starting up");

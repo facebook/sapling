@@ -40,7 +40,7 @@ use tokio::net::TcpListener;
 use blobrepo::BlobRepo;
 use blobrepo_factory::BlobrepoBuilder;
 use cmdlib::{
-    args::{self, get_config_handle},
+    args::{self, get_config_handle, CachelibSettings},
     helpers::serve_forever,
     monitoring::{start_fb303_server, AliveService},
 };
@@ -91,7 +91,13 @@ const CACHE_OBJECT_SIZE: usize = 256 * 1024;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
+    let cachelib_settings = CachelibSettings {
+        expected_item_size_bytes: Some(CACHE_OBJECT_SIZE),
+        ..Default::default()
+    };
+
     let app = args::MononokeAppBuilder::new("Mononoke LFS Server")
+        .with_cachelib_settings(cachelib_settings.clone())
         .with_advanced_args_hidden()
         .with_all_repos()
         .with_shutdown_timeout_args()
@@ -219,8 +225,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let matches = app.get_matches();
 
+
     let (caching, logger, mut runtime) =
-        args::init_mononoke(fb, &matches, Some(CACHE_OBJECT_SIZE))?;
+        args::init_mononoke_with_cache_settings(fb, &matches, cachelib_settings)?;
 
     let config_store = args::init_config_store(fb, &logger, &matches)?;
 

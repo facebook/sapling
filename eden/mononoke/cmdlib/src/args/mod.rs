@@ -157,6 +157,9 @@ pub struct MononokeAppBuilder {
 
     /// This app is special admin tool, needs to run with specific PutBehaviour
     special_put_behaviour: Option<PutBehaviour>,
+
+    /// Cachelib default settings, as shown in usage
+    cachelib_settings: CachelibSettings,
 }
 
 /// Create a default root logger for Facebook services
@@ -179,6 +182,7 @@ impl MononokeAppBuilder {
             repo_required: false,
             arg_types: HashSet::from_iter(DEFAULT_ARG_TYPES.iter().cloned()),
             special_put_behaviour: None,
+            cachelib_settings: CachelibSettings::default(),
         }
     }
 
@@ -269,6 +273,12 @@ impl MononokeAppBuilder {
     /// This command needs a special default put behaviour (e.g. its an admin tool)
     pub fn with_special_put_behaviour(mut self, put_behaviour: PutBehaviour) -> Self {
         self.special_put_behaviour = Some(put_behaviour);
+        self
+    }
+
+    /// This command has different cachelib defaults, show them in --help
+    pub fn with_cachelib_settings(mut self, cachelib_settings: CachelibSettings) -> Self {
+        self.cachelib_settings = cachelib_settings;
         self
     }
 
@@ -395,7 +405,7 @@ impl MononokeAppBuilder {
             app = add_blobstore_args(app, self.special_put_behaviour);
         }
         if self.arg_types.contains(&ArgType::Cachelib) {
-            app = add_cachelib_args(app, self.hide_advanced_args);
+            app = add_cachelib_args(app, self.hide_advanced_args, self.cachelib_settings.clone());
         }
         if self.arg_types.contains(&ArgType::Runtime) {
             app = add_runtime_args(app);
@@ -1364,14 +1374,19 @@ pub fn parse_disabled_hooks_no_repo_prefix(
 pub fn init_mononoke<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
-    expected_item_size_bytes: Option<usize>,
+) -> Result<(Caching, Logger, tokio_compat::runtime::Runtime)> {
+    init_mononoke_with_cache_settings(fb, matches, CachelibSettings::default())
+}
+
+pub fn init_mononoke_with_cache_settings<'a>(
+    fb: FacebookInit,
+    matches: &ArgMatches<'a>,
+    cachelib_settings: CachelibSettings,
 ) -> Result<(Caching, Logger, tokio_compat::runtime::Runtime)> {
     let logger = init_logging(fb, matches);
 
     debug!(logger, "Initialising cachelib...");
-    let mut settings = CachelibSettings::default();
-    settings.expected_item_size_bytes = expected_item_size_bytes;
-    let caching = parse_and_init_cachelib(fb, matches, settings);
+    let caching = parse_and_init_cachelib(fb, matches, cachelib_settings);
     debug!(logger, "Initialising runtime...");
     let runtime = init_runtime(matches)?;
     init_tunables(fb, matches, logger.clone())?;

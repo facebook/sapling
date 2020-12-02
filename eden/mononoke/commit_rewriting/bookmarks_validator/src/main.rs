@@ -44,7 +44,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_fb303_args()
         .build();
     let matches = app.get_matches();
-    let (_, logger, mut runtime) = args::init_mononoke(fb, &matches, None)?;
+    let (_, logger, mut runtime) = args::init_mononoke(fb, &matches)?;
     let ctx = create_core_context(fb, logger.clone());
     let config_store = args::init_config_store(fb, &logger, &matches)?;
     let source_repo_id = args::get_source_repo_id(config_store, &matches)?;

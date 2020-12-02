@@ -8,7 +8,7 @@
 use blobrepo_factory::Caching;
 use clap::{App, Arg, ArgMatches};
 use fbinit::FacebookInit;
-use lazy_static::lazy_static;
+use once_cell::sync::{Lazy, OnceCell};
 
 const CACHE_SIZE_GB: &str = "cache-size-gb";
 const USE_TUPPERWARE_SHRINKER: &str = "use-tupperware-shrinker";
@@ -21,6 +21,8 @@ const READONLY_STORAGE: &str = "readonly-storage";
 
 const PHASES_CACHE_SIZE: &str = "phases-cache-size";
 const BUCKETS_POWER: &str = "buckets-power";
+
+const ONE_GIB: usize = 1073741824; // 2^30 aka 1GiB
 
 const CACHE_ARGS: &[(&str, &str)] = &[
     ("blob-cache-size", "override size of the blob cache"),
@@ -51,7 +53,11 @@ const CACHE_ARGS: &[(&str, &str)] = &[
     ),
 ];
 
-pub(crate) fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> App<'a, 'b> {
+pub(crate) fn add_cachelib_args<'a, 'b>(
+    app: App<'a, 'b>,
+    hide_advanced_args: bool,
+    defaults: CachelibSettings,
+) -> App<'a, 'b> {
     let cache_args: Vec<_> = CACHE_ARGS
         .iter()
         .map(|(flag, help)| {
@@ -65,19 +71,25 @@ pub(crate) fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bo
         })
         .collect();
 
-    // Computed help strings with lifetime 'b is problematic, so use lazy_static instead:
-    lazy_static! {
-        static ref MIN_PROCESS_SIZE_HELP: std::string::String = format!(
+    // Computed default_value and help strings with lifetime 'b is problematic, so use once_cell
+    static MIN_PROCESS_SIZE_HELP: Lazy<String> = Lazy::new(|| {
+        format!(
             "process size at which cachelib will grow back to {} in GiB",
             CACHE_SIZE_GB
-        );
-    }
+        )
+    });
+
+    static CACHE_SIZE_GB_DEFAULT: OnceCell<String> = OnceCell::new();
 
     app.arg(
         Arg::with_name(CACHE_SIZE_GB)
             .long(CACHE_SIZE_GB)
             .takes_value(true)
             .value_name("SIZE")
+            .default_value(
+                CACHE_SIZE_GB_DEFAULT
+                    .get_or_init(|| format!("{:3}", defaults.cache_size / ONE_GIB)),
+            )
             .help("size of the cachelib cache, in GiB"),
     )
     .arg(
@@ -97,7 +109,7 @@ pub(crate) fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bo
             .long(MIN_PROCESS_SIZE)
             .takes_value(true)
             .value_name("SIZE")
-            .help(&*MIN_PROCESS_SIZE_HELP),
+            .help(&MIN_PROCESS_SIZE_HELP),
     )
     .arg(
         Arg::with_name(SKIP_CACHING)
@@ -157,7 +169,7 @@ pub fn parse_and_init_cachelib<'a>(
         Caching::Enabled(..) | Caching::CachelibOnlyBlobstore(..) => {
             if let Some(cache_size) = matches.value_of(CACHE_SIZE_GB) {
                 settings.cache_size =
-                    (cache_size.parse::<f64>().unwrap() * (1024 * 1024 * 1024) as f64) as usize;
+                    (cache_size.parse::<f64>().unwrap() * ONE_GIB as f64) as usize;
             }
             if let Some(max_process_size) = matches.value_of(MAX_PROCESS_SIZE) {
                 settings.max_process_size_gib = Some(max_process_size.parse().unwrap());
@@ -212,6 +224,7 @@ pub fn parse_and_init_cachelib<'a>(
     caching
 }
 
+#[derive(Clone)]
 pub struct CachelibSettings {
     pub cache_size: usize,
     pub max_process_size_gib: Option<u32>,
@@ -231,7 +244,7 @@ pub struct CachelibSettings {
 impl Default for CachelibSettings {
     fn default() -> Self {
         Self {
-            cache_size: 20 * 1024 * 1024 * 1024,
+            cache_size: 20 * ONE_GIB,
             max_process_size_gib: None,
             min_process_size_gib: None,
             buckets_power: None,

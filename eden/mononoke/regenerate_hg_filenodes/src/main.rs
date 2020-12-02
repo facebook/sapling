@@ -102,7 +102,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         bail!("this is a dangerous tool. DO NOT RUN if unsure how it works");
     }
 
-    let (_, logger, mut rt) = args::init_mononoke(fb, &matches, None)?;
+    let (_, logger, mut rt) = args::init_mononoke(fb, &matches)?;
 
     let repo_fut = args::open_repo(fb, &logger, &matches);
     let repo = rt.block_on_std(repo_fut).unwrap();

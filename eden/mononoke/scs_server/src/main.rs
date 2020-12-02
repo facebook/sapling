@@ -82,7 +82,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .get_matches();
 
     let (caching, logger, mut runtime) =
-        args::init_mononoke(fb, &matches, None).expect("failed to create tokio runtime");
+        args::init_mononoke(fb, &matches).expect("failed to create tokio runtime");
     let port = value_t!(matches.value_of(ARG_PORT), u16)?;
     let host = matches.value_of(ARG_HOST).unwrap_or("::");
     let config_path = matches
