@@ -15,6 +15,7 @@ bookmarks = { path = "../../bookmarks" }
 bookmarks_movement = { path = "../../bookmarks/bookmarks_movement" }
 context = { path = "../../server/context" }
 cross_repo_sync = { path = "../../commit_rewriting/cross_repo_sync" }
+derived_data = { path = "../../derived_data" }
 filestore = { path = "../../filestore" }
 getbundle_response = { path = "../getbundle_response" }
 git_mapping_pushrebase_hook = { path = "../../bonsai_git_mapping/git_mapping_pushrebase_hook" }
@@ -39,6 +40,7 @@ repo_read_write_status = { path = "../repo_read_write_status" }
 reverse_filler_queue = { path = "../reverse_filler_queue" }
 scribe_commit_queue = { path = "../scribe_commit_queue" }
 scuba_ext = { path = "../../common/scuba_ext" }
+skeleton_manifest = { path = "../../derived_data/skeleton_manifest" }
 synced_commit_mapping = { path = "../../commit_rewriting/synced_commit_mapping" }
 time_window_counter = { path = "../../time_window_counter" }
 topo_sort = { path = "../../common/topo_sort" }

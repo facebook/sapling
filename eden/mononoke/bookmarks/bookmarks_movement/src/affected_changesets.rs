@@ -295,6 +295,10 @@ impl AffectedChangesets {
         if kind == BookmarkKind::Public
             && pushrebase_params.flags.casefolding_check
             && tunables().get_check_case_conflicts_on_bookmark_movement()
+            && repo
+                .get_derived_data_config()
+                .derived_data_types
+                .contains(RootSkeletonManifestId::NAME)
         {
             self.load_additional_changesets(
                 ctx,

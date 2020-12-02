@@ -24,6 +24,7 @@ use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
 use context::CoreContext;
 use core::fmt::Debug;
+use derived_data::BonsaiDerived;
 use failure_ext::{Compat as FailureCompat, FutureFailureErrorExt};
 use futures::{
     compat::Stream01CompatExt,
@@ -45,6 +46,7 @@ use mercurial_types::{blobs::ContentBlobMeta, HgChangesetId, HgFileNodeId, HgNod
 use metaconfig_types::{PushrebaseFlags, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase::HgReplayData;
+use skeleton_manifest::RootSkeletonManifestId;
 use slog::{debug, trace};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
@@ -1240,6 +1242,22 @@ impl<'r> Bundle2Resolver<'r> {
         // To avoid it we commit changesets in relatively small chunks.
         let chunk_size = 100;
 
+        // Work out whether we are going to check case conflicts on upload.
+        let check_case_conflicts_on_upload = if self.pushrebase_flags.casefolding_check {
+            let has_skeleton_manifests = self
+                .repo
+                .get_derived_data_config()
+                .derived_data_types
+                .contains(RootSkeletonManifestId::NAME);
+            let skip_on_upload = tunables().get_skip_case_conflict_check_on_changeset_upload();
+            // If casefolding checks are enabled we need to check on upload if
+            // skeleton manifests are disabled for this repo, or if skipping
+            // on upload is disabled in general.
+            !has_skeleton_manifests || !skip_on_upload
+        } else {
+            false
+        };
+
         let mut bonsais = UploadedBonsais::new();
         let mut hg_cs_ids = UploadedHgChangesetIds::new();
         for chunk in changesets.chunks(chunk_size) {
@@ -1255,8 +1273,7 @@ impl<'r> Bundle2Resolver<'r> {
                     &filelogs,
                     &manifests,
                     &content_blobs,
-                    self.pushrebase_flags.casefolding_check
-                        && !tunables().get_skip_case_conflict_check_on_changeset_upload(),
+                    check_case_conflicts_on_upload,
                 )
                 .await
                 .with_context(err_context)?;
