@@ -587,30 +587,6 @@ def run_cmd_quietly(args, check=True) -> int:
     return proc.returncode
 
 
-def compact_redirection_sparse_images(instance: EdenInstance) -> None:
-    if sys.platform != "darwin":
-        return
-
-    # This section will be able to be deleted after all users are switched
-    # to APFS volumes
-    mount_table = mtab.new()
-    for checkout in instance.get_checkouts():
-        for redir in get_effective_redirections(checkout, mount_table).values():
-            if redir.type == RedirectionType.BIND:
-                target = redir.expand_target_abspath(checkout)
-                assert target is not None
-                dmg_file = redir._dmg_file_name(target)
-                if not dmg_file.exists():
-                    continue
-                print(f"\nCompacting {redir.expand_repo_path(checkout)}: {dmg_file}")
-                size_before = file_size(dmg_file)
-
-                run_cmd_quietly(["hdiutil", "compact", dmg_file], check=False)
-
-                size_after = file_size(dmg_file)
-                print(f"Size {format_size(size_before)} -> {format_size(size_after)}")
-
-
 def apply_redirection_configs_to_checkout_config(
     checkout: EdenCheckout, redirs: Iterable[Redirection]
 ) -> CheckoutConfig:
