@@ -8,13 +8,13 @@
 use anyhow::{format_err, Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, BlobstoreBytes, Loadable};
+use blobstore::{Blobstore, Loadable};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use derived_data::{impl_bonsai_derived_mapping, BlobstoreExistsMapping, BonsaiDerived};
 use filestore::{self, FetchKey};
-use futures::{future, stream::FuturesUnordered, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use manifest::find_intersection_of_diffs;
 use mononoke_types::{
     blame::{store_blame, Blame, BlameId, BlameRejected},
@@ -28,6 +28,12 @@ pub const BLAME_FILESIZE_LIMIT: u64 = 10 * 1024 * 1024;
 
 #[derive(Debug, Clone, Copy)]
 pub struct BlameRoot(ChangesetId);
+
+impl From<ChangesetId> for BlameRoot {
+    fn from(csid: ChangesetId) -> BlameRoot {
+        BlameRoot(csid)
+    }
+}
 
 #[async_trait]
 impl BonsaiDerived for BlameRoot {
@@ -97,51 +103,22 @@ impl BlameRootMapping {
     pub fn new(blobstore: Arc<dyn Blobstore>) -> Self {
         Self { blobstore }
     }
-
-    fn format_key(&self, csid: &ChangesetId) -> String {
-        format!("derived_rootblame.v1.{}", csid)
-    }
 }
 
 #[async_trait]
-impl BonsaiDerivedMapping for BlameRootMapping {
+impl BlobstoreExistsMapping for BlameRootMapping {
     type Value = BlameRoot;
 
-    async fn get(
-        &self,
-        ctx: CoreContext,
-        csids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        csids
-            .into_iter()
-            .map(move |csid| {
-                cloned!(ctx);
-                async move {
-                    let val = self.blobstore.get(&ctx, &self.format_key(&csid)).await?;
-                    Ok(val.map(|_| (csid.clone(), BlameRoot(csid))))
-                }
-            })
-            .collect::<FuturesUnordered<_>>()
-            .try_filter_map(future::ok)
-            .try_collect()
-            .await
+    fn blobstore(&self) -> &dyn Blobstore {
+        &self.blobstore
     }
 
-    async fn put(
-        &self,
-        ctx: CoreContext,
-        csid: ChangesetId,
-        _id: Self::Value,
-    ) -> Result<(), Error> {
-        self.blobstore
-            .put(
-                &ctx,
-                self.format_key(&csid),
-                BlobstoreBytes::from_bytes(Bytes::new()),
-            )
-            .await
+    fn prefix(&self) -> &'static str {
+        "derived_rootblame.v1."
     }
 }
+
+impl_bonsai_derived_mapping!(BlameRootMapping, BlobstoreExistsMapping);
 
 async fn create_blame(
     ctx: &CoreContext,

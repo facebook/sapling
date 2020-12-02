@@ -22,6 +22,9 @@ use thiserror::Error;
 
 pub mod batch;
 pub mod derive_impl;
+pub mod mapping_impl;
+
+pub use mapping_impl::{BlobstoreExistsMapping, BlobstoreRootIdMapping};
 
 pub use crate::derive_impl::DeriveMode;
 

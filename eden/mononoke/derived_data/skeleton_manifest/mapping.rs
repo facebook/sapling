@@ -12,11 +12,13 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
-use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping, DeriveMode};
-use futures::stream::{self, FuturesUnordered, StreamExt, TryStreamExt};
+use derived_data::{
+    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerived, BonsaiDerivedMapping,
+    DeriveMode,
+};
+use futures::stream::{self, StreamExt, TryStreamExt};
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, SkeletonManifestId,
 };
@@ -125,55 +127,22 @@ impl RootSkeletonManifestMapping {
     pub fn new(blobstore: RepoBlobstore) -> Self {
         Self { blobstore }
     }
-
-    fn format_key(&self, cs_id: ChangesetId) -> String {
-        format!("derived_root_skeletonmanifest.{}", cs_id)
-    }
-
-    async fn fetch_skeleton_manifest(
-        &self,
-        ctx: &CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<Option<RootSkeletonManifestId>> {
-        match self.blobstore.get(ctx, &self.format_key(cs_id)).await? {
-            Some(blob) => Ok(Some(blob.try_into()?)),
-            None => Ok(None),
-        }
-    }
 }
 
 #[async_trait]
-impl BonsaiDerivedMapping for RootSkeletonManifestMapping {
+impl BlobstoreRootIdMapping for RootSkeletonManifestMapping {
     type Value = RootSkeletonManifestId;
 
-    async fn get(
-        &self,
-        ctx: CoreContext,
-        csids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        borrowed!(ctx);
-        csids
-            .into_iter()
-            .map(|cs_id| async move {
-                match self.fetch_skeleton_manifest(ctx, cs_id).await? {
-                    Some(root_skeleton_manifest_id) => Ok(Some((cs_id, root_skeleton_manifest_id))),
-                    None => Ok(None),
-                }
-            })
-            .collect::<FuturesUnordered<_>>()
-            .try_filter_map(|maybe_skeleton_manifest_mapping| async move {
-                Ok(maybe_skeleton_manifest_mapping)
-            })
-            .try_collect()
-            .await
+    fn blobstore(&self) -> &dyn Blobstore {
+        &self.blobstore
     }
 
-    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
-        self.blobstore
-            .put(&ctx, self.format_key(csid), id.into())
-            .await
+    fn prefix(&self) -> &'static str {
+        "derived_root_skeletonmanifest."
     }
 }
+
+impl_bonsai_derived_mapping!(RootSkeletonManifestMapping, BlobstoreRootIdMapping);
 
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
@@ -194,6 +163,7 @@ mod test {
     use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
+    use borrowed::borrowed;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::{
@@ -202,10 +172,11 @@ mod test {
     };
     use futures::compat::{Future01CompatExt, Stream01CompatExt};
     use futures::future::Future;
-    use futures::stream::Stream;
+    use futures::stream::{Stream, TryStreamExt};
     use futures::try_join;
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
+    use mononoke_types::ChangesetId;
     use revset::AncestorsNodeStream;
     use tokio_compat::runtime::Runtime;
 

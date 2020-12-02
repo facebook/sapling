@@ -181,6 +181,11 @@ impl BlobstoreMetadata {
 pub struct BlobstoreBytes(Bytes);
 
 impl BlobstoreBytes {
+    /// Construct an empty BlobstoreBytes
+    pub fn empty() -> Self {
+        BlobstoreBytes(Bytes::new())
+    }
+
     #[inline]
     pub fn len(&self) -> usize {
         self.0.len()

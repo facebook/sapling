@@ -10,20 +10,16 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
-use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::{stream::FuturesUnordered, TryFutureExt, TryStreamExt};
+use derived_data::{impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerived};
+use futures::TryFutureExt;
 use metaconfig_types::UnodeVersion;
 use mononoke_types::{
-    BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, ManifestUnodeId,
+    BlobstoreBytes, BonsaiChangeset, ContentId, FileType, MPath, ManifestUnodeId,
 };
 use repo_blobstore::RepoBlobstore;
-use std::{
-    collections::HashMap,
-    convert::{TryFrom, TryInto},
-};
+use std::convert::{TryFrom, TryInto};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootUnodeManifestId(ManifestUnodeId);
@@ -90,7 +86,6 @@ impl BonsaiDerived for RootUnodeManifestId {
     }
 }
 
-// TODO(stash): have a generic version of blobstore derived data mapping?
 #[derive(Clone)]
 pub struct RootUnodeManifestMapping {
     blobstore: RepoBlobstore,
@@ -104,52 +99,25 @@ impl RootUnodeManifestMapping {
             unode_version,
         }
     }
-
-    fn format_key(&self, cs_id: ChangesetId) -> String {
-        match self.unode_version {
-            UnodeVersion::V1 => format!("derived_root_unode.{}", cs_id),
-            UnodeVersion::V2 => format!("derived_root_unode_v2.{}", cs_id),
-        }
-    }
-
-    async fn fetch_unode<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<Option<(ChangesetId, RootUnodeManifestId)>, Error> {
-        let bytes = self.blobstore.get(ctx, &self.format_key(cs_id)).await?;
-        match bytes {
-            Some(bytes) => Ok(Some((cs_id, bytes.try_into()?))),
-            None => Ok(None),
-        }
-    }
 }
 
 #[async_trait]
-impl BonsaiDerivedMapping for RootUnodeManifestMapping {
+impl BlobstoreRootIdMapping for RootUnodeManifestMapping {
     type Value = RootUnodeManifestId;
 
-    async fn get(
-        &self,
-        ctx: CoreContext,
-        csids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        borrowed!(ctx);
-        csids
-            .into_iter()
-            .map(|cs_id| async move { self.fetch_unode(ctx, cs_id).await })
-            .collect::<FuturesUnordered<_>>()
-            .try_filter_map(|x| async move { Ok(x) })
-            .try_collect()
-            .await
+    fn blobstore(&self) -> &dyn Blobstore {
+        &self.blobstore
     }
 
-    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
-        self.blobstore
-            .put(&ctx, self.format_key(csid), id.into())
-            .await
+    fn prefix(&self) -> &'static str {
+        match self.unode_version {
+            UnodeVersion::V1 => "derived_root_unode.",
+            UnodeVersion::V2 => "derived_root_unode_v2.",
+        }
     }
 }
+
+impl_bonsai_derived_mapping!(RootUnodeManifestMapping, BlobstoreRootIdMapping);
 
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
@@ -171,6 +139,7 @@ mod test {
     use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
+    use borrowed::borrowed;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::{
@@ -183,6 +152,7 @@ mod test {
     };
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
+    use mononoke_types::ChangesetId;
     use revset::AncestorsNodeStream;
 
     async fn fetch_manifest_by_cs_id(

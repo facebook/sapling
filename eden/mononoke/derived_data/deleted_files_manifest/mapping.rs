@@ -12,14 +12,10 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::stream::{FuturesUnordered, TryStreamExt};
-use mononoke_types::{BlobstoreBytes, BonsaiChangeset, ChangesetId, DeletedManifestId};
+use derived_data::{impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerived};
+use mononoke_types::{BlobstoreBytes, BonsaiChangeset, DeletedManifestId};
 use repo_blobstore::RepoBlobstore;
-use std::{
-    collections::HashMap,
-    convert::{TryFrom, TryInto},
-};
+use std::convert::{TryFrom, TryInto};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootDeletedManifestId(DeletedManifestId);
@@ -91,45 +87,19 @@ impl RootDeletedManifestMapping {
     pub fn new(blobstore: RepoBlobstore) -> Self {
         Self { blobstore }
     }
-
-    fn format_key(&self, cs_id: ChangesetId) -> String {
-        format!("derived_root_deleted_manifest.{}", cs_id)
-    }
-
-    async fn fetch_deleted_manifest<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        cs_id: ChangesetId,
-    ) -> Result<Option<(ChangesetId, RootDeletedManifestId)>, Error> {
-        let maybe_bytes = self.blobstore.get(ctx, &self.format_key(cs_id)).await?;
-        match maybe_bytes {
-            Some(bytes) => Ok(Some((cs_id, bytes.try_into()?))),
-            None => Ok(None),
-        }
-    }
 }
 
 #[async_trait]
-impl BonsaiDerivedMapping for RootDeletedManifestMapping {
+impl BlobstoreRootIdMapping for RootDeletedManifestMapping {
     type Value = RootDeletedManifestId;
 
-    async fn get(
-        &self,
-        ctx: CoreContext,
-        csids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        csids
-            .into_iter()
-            .map(|cs_id| self.fetch_deleted_manifest(&ctx, cs_id))
-            .collect::<FuturesUnordered<_>>()
-            .try_filter_map(|maybe_metadata| async move { Ok(maybe_metadata) })
-            .try_collect()
-            .await
+    fn blobstore(&self) -> &dyn Blobstore {
+        &self.blobstore
     }
 
-    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
-        self.blobstore
-            .put(&ctx, self.format_key(csid), id.into())
-            .await
+    fn prefix(&self) -> &'static str {
+        "derived_root_deleted_manifest."
     }
 }
+
+impl_bonsai_derived_mapping!(RootDeletedManifestMapping, BlobstoreRootIdMapping);

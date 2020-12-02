@@ -5,14 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Context, Result};
+use anyhow::{format_err, Context, Error, Result};
+use blobstore::BlobstoreGetData;
 use fbthrift::compact_protocol;
 use std::collections::BTreeMap;
+use std::convert::{TryFrom, TryInto};
 use unicode_segmentation::UnicodeSegmentation;
 
 use derived_data_thrift as thrift;
 use mononoke_types::{
-    errors::ErrorKind, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime,
+    errors::ErrorKind, BlobstoreBytes, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime,
 };
 
 /// Changeset Info is a derived data structure that represents a Bonsai changeset's
@@ -213,6 +215,29 @@ impl ChangesetInfo {
         let thrift_tc = compact_protocol::deserialize(bytes)
             .with_context(|| ErrorKind::BlobDeserializeError("ChangesetInfo".into()))?;
         Self::from_thrift(thrift_tc)
+    }
+}
+
+impl TryFrom<BlobstoreBytes> for ChangesetInfo {
+    type Error = Error;
+
+    fn try_from(blob_bytes: BlobstoreBytes) -> Result<Self> {
+        ChangesetInfo::from_bytes(&blob_bytes.into_bytes())
+    }
+}
+
+impl TryFrom<BlobstoreGetData> for ChangesetInfo {
+    type Error = Error;
+
+    fn try_from(blob_get_data: BlobstoreGetData) -> Result<Self> {
+        blob_get_data.into_bytes().try_into()
+    }
+}
+
+impl From<ChangesetInfo> for BlobstoreBytes {
+    fn from(info: ChangesetInfo) -> BlobstoreBytes {
+        let data = compact_protocol::serialize(&info.into_thrift());
+        BlobstoreBytes::from_bytes(data)
     }
 }
 

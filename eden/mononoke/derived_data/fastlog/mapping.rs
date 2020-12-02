@@ -8,19 +8,14 @@
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, BlobstoreBytes, Loadable};
-use borrowed::borrowed;
-use bytes::Bytes;
+use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::{
-    future,
-    stream::{FuturesUnordered, TryStreamExt},
-};
+use derived_data::{impl_bonsai_derived_mapping, BlobstoreExistsMapping, BonsaiDerived};
+use futures::future;
+use futures::stream::TryStreamExt;
 use manifest::{find_intersection_of_diffs, Entry};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, ManifestUnodeId};
-use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
@@ -48,6 +43,12 @@ pub enum ErrorKind {
 
 #[derive(Clone, Debug)]
 pub struct RootFastlog(ChangesetId);
+
+impl From<ChangesetId> for RootFastlog {
+    fn from(csid: ChangesetId) -> RootFastlog {
+        RootFastlog(csid)
+    }
+}
 
 #[async_trait]
 impl BonsaiDerived for RootFastlog {
@@ -144,50 +145,21 @@ impl RootFastlogMapping {
     pub fn new(blobstore: Arc<dyn Blobstore>) -> Self {
         Self { blobstore }
     }
-
-    fn format_key(&self, cs_id: &ChangesetId) -> String {
-        format!("derived_rootfastlog.{}", cs_id)
-    }
 }
 
-#[async_trait]
-impl BonsaiDerivedMapping for RootFastlogMapping {
+impl BlobstoreExistsMapping for RootFastlogMapping {
     type Value = RootFastlog;
 
-    async fn get(
-        &self,
-        ctx: CoreContext,
-        csids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        borrowed!(ctx);
-        csids
-            .into_iter()
-            .map(|cs_id| async move {
-                let maybe_val = self.blobstore.get(ctx, &self.format_key(&cs_id)).await?;
-                Ok(maybe_val.map(|_| (cs_id.clone(), RootFastlog(cs_id))))
-            })
-            .collect::<FuturesUnordered<_>>()
-            .try_filter_map(future::ok) // Remove None
-            .try_collect()
-            .await
+    fn blobstore(&self) -> &dyn Blobstore {
+        &self.blobstore
     }
 
-    async fn put(
-        &self,
-        ctx: CoreContext,
-        csid: ChangesetId,
-        _id: Self::Value,
-    ) -> Result<(), Error> {
-        self.blobstore
-            .put(
-                &ctx,
-                self.format_key(&csid),
-                // Value doesn't matter here, so just put empty Value
-                BlobstoreBytes::from_bytes(Bytes::new()),
-            )
-            .await
+    fn prefix(&self) -> &'static str {
+        "derived_rootfastlog."
     }
 }
+
+impl_bonsai_derived_mapping!(RootFastlogMapping, BlobstoreExistsMapping);
 
 #[cfg(test)]
 mod tests {
@@ -204,10 +176,8 @@ mod tests {
         create_bonsai_changeset_with_files, linear, merge_even, merge_uneven, store_files,
         unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::{
-        compat::{Future01CompatExt, Stream01CompatExt},
-        Stream, TryFutureExt,
-    };
+    use futures::compat::{Future01CompatExt, Stream01CompatExt};
+    use futures::{Stream, TryFutureExt};
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;

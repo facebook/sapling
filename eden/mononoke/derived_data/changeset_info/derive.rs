@@ -5,19 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
-use borrowed::borrowed;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use fbthrift::compact_protocol;
-use futures::{future, stream::FuturesUnordered, TryStreamExt};
-use mononoke_types::{BlobstoreBytes, BonsaiChangeset, ChangesetId};
+use derived_data::{impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerived};
+use mononoke_types::BonsaiChangeset;
 
 use crate::ChangesetInfo;
 
@@ -50,55 +46,22 @@ impl ChangesetInfoMapping {
     pub fn new(blobstore: Arc<dyn Blobstore>) -> Self {
         Self { blobstore }
     }
-
-    fn format_key(&self, csid: &ChangesetId) -> String {
-        format!("changeset_info.blake2.{}", csid)
-    }
 }
 
 #[async_trait]
-impl BonsaiDerivedMapping for ChangesetInfoMapping {
+impl BlobstoreRootIdMapping for ChangesetInfoMapping {
     type Value = ChangesetInfo;
 
-    async fn get(
-        &self,
-        ctx: CoreContext,
-        csids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        borrowed!(ctx);
-        csids
-            .into_iter()
-            .map(|csid| {
-                let key = self.format_key(&csid);
-                async move {
-                    let maybe_bytes = self.blobstore.get(ctx, &key).await?;
-                    maybe_bytes
-                        .map(|bytes| {
-                            let info = ChangesetInfo::from_bytes(bytes.as_raw_bytes())?;
-                            Ok((csid, info))
-                        })
-                        .transpose()
-                }
-            })
-            .collect::<FuturesUnordered<_>>()
-            .try_filter_map(future::ok)
-            .try_collect()
-            .await
+    fn blobstore(&self) -> &dyn Blobstore {
+        &self.blobstore
     }
 
-    async fn put(
-        &self,
-        ctx: CoreContext,
-        csid: ChangesetId,
-        info: Self::Value,
-    ) -> Result<(), Error> {
-        let data = {
-            let data = compact_protocol::serialize(&info.into_thrift());
-            BlobstoreBytes::from_bytes(data)
-        };
-        self.blobstore.put(&ctx, self.format_key(&csid), data).await
+    fn prefix(&self) -> &'static str {
+        "changeset_info.blake2."
     }
 }
+
+impl_bonsai_derived_mapping!(ChangesetInfoMapping, BlobstoreRootIdMapping);
 
 #[cfg(test)]
 mod test {
