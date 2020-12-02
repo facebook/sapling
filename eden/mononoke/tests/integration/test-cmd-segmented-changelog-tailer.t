@@ -40,7 +40,7 @@ Setup repository
 
 Run Segmented Changelog Tailer. Error because there was no seeding.
 
-  $ segmented_changelog_tailer --track-bookmark=master_bookmark &>"$TESTTMP/error.log"
+  $ segmented_changelog_tailer --repo repo --track-bookmark=master_bookmark --once &>"$TESTTMP/error.log"
   [1]
   $ grep seeded "$TESTTMP/error.log"
   * maybe repo is not seeded (glob)
@@ -50,23 +50,25 @@ Seed repository.
 
 Actually run Segmented Changelog Tailer.
 
-  $ quiet segmented_changelog_tailer --track-bookmark=master_bookmark --once
+  $ quiet segmented_changelog_tailer --repo repo --track-bookmark=master_bookmark --once
   $ grep segmented_changelog "$TESTTMP/quiet.last.log"
-  * SegmentedChangelogTailer initialized for repository 'repo' (glob)
-  * starting incremental update to segmented changelog for repo 0 (glob)
-  * bookmark master_bookmark resolved to * (glob)
-  * IdMap updated, IdDag updated (glob)
-  * IdDag rebuilt (glob)
-  * segmented changelog dag bundle saved, repo_id: 0, idmap_version: 1, iddag_version: 5bdcf177* (glob)
-  * successful incremental update to segmented changelog for repo 0 (glob)
-  * SegmentedChangelogTailer is done for repo repo (glob)
+  * repo name 'repo' translates to id 0 (glob)
+  * repo 0: SegmentedChangelogTailer initialized (glob)
+  * repo 0: starting incremental update to segmented changelog (glob)
+  * repo 0: bookmark master_bookmark resolved to * (glob)
+  * repo 0: IdMap updated, IdDag updated (glob)
+  * repo 0: IdDag rebuilt (glob)
+  * repo 0: segmented changelog dag bundle saved, idmap_version: 1, iddag_version: 5bdcf177* (glob)
+  * repo 0: successful incremental update to segmented changelog (glob)
+  * repo 0: SegmentedChangelogTailer is done (glob)
 
 Run Segmented Changelog Tailer. Nothing to do.
 
-  $ quiet segmented_changelog_tailer --track-bookmark=master_bookmark --once
+  $ quiet segmented_changelog_tailer --repo repo --track-bookmark=master_bookmark --once
   $ grep segmented_changelog "$TESTTMP/quiet.last.log"
-  * SegmentedChangelogTailer initialized for repository 'repo' (glob)
-  * starting incremental update to segmented changelog for repo 0 (glob)
-  * bookmark master_bookmark resolved to * (glob)
-  * dag already up to date, skipping update to iddag (glob)
-  * SegmentedChangelogTailer is done for repo repo (glob)
+  * repo name 'repo' translates to id 0 (glob)
+  * repo 0: SegmentedChangelogTailer initialized (glob)
+  * repo 0: starting incremental update to segmented changelog (glob)
+  * repo 0: bookmark master_bookmark resolved to * (glob)
+  * repo 0: dag already up to date, skipping update to iddag (glob)
+  * repo 0: SegmentedChangelogTailer is done (glob)

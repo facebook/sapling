@@ -57,18 +57,17 @@ impl SegmentedChangelogManager {
             .iddag_save_store
             .save(&ctx, &iddag)
             .await
-            .context("saving iddag")?;
+            .with_context(|| format!("repo {}: error saving iddag", self.repo_id))?;
         // Update BundleStore
         let bundle = DagBundle::new(iddag_version, idmap_version);
         self.bundle_store
             .set(&ctx, bundle)
             .await
-            .context("updating bundle store")?;
+            .with_context(|| format!("repo {}: error updating bundle store", self.repo_id))?;
         log_new_bundle(ctx, self.repo_id, bundle);
         info!(
             ctx.logger(),
-            "segmented changelog dag bundle saved, repo_id: {}, idmap_version: {}, \
-            iddag_version: {} ",
+            "repo {}: segmented changelog dag bundle saved, idmap_version: {}, iddag_version: {}",
             self.repo_id,
             idmap_version,
             iddag_version,
@@ -81,15 +80,23 @@ impl SegmentedChangelogManager {
             .bundle_store
             .get(&ctx)
             .await
-            .context("failed to load segmented changelog bundle data")?
+            .with_context(|| {
+                format!(
+                    "repo {}: error loading segmented changelog bundle data",
+                    self.repo_id
+                )
+            })?
             .ok_or_else(|| {
-                format_err!("segmented changelog metadata not found, maybe repo is not seeded")
+                format_err!(
+                    "repo {}: segmented changelog metadata not found, maybe repo is not seeded",
+                    self.repo_id
+                )
             })?;
         let iddag = self
             .iddag_save_store
             .load(&ctx, bundle.iddag_version)
             .await
-            .context("failed to load iddag")?;
+            .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
         let idmap = self.new_sql_idmap(bundle.idmap_version);
         debug!(
             ctx.logger(),
@@ -117,19 +124,23 @@ impl SegmentedChangelog for SegmentedChangelogManager {
         distance: u64,
         count: u64,
     ) -> Result<Vec<ChangesetId>> {
-        let (_, dag) = self
-            .load_dag(&ctx)
-            .await
-            .context("error loading segmented changelog from save")?;
+        let (_, dag) = self.load_dag(&ctx).await.with_context(|| {
+            format!(
+                "repo {}: error loading segmented changelog from save",
+                self.repo_id
+            )
+        })?;
         dag.location_to_many_changeset_ids(ctx, known, distance, count)
             .await
     }
 
     async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
-        let (_, dag) = self
-            .load_dag(&ctx)
-            .await
-            .context("error loading segmented changelog from save")?;
+        let (_, dag) = self.load_dag(&ctx).await.with_context(|| {
+            format!(
+                "repo {}: error loading segmented changelog from save",
+                self.repo_id
+            )
+        })?;
         dag.clone_data(ctx).await
     }
 }

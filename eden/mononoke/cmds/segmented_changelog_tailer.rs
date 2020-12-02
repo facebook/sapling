@@ -10,10 +10,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{Context, Error};
+use anyhow::{format_err, Context, Error};
 use clap::{Arg, ArgMatches};
 use futures::compat::Future01CompatExt;
-use slog::info;
+use futures::future::join_all;
+use slog::{error, info};
 
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
 use bookmarks::BookmarkName;
@@ -27,6 +28,7 @@ use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 
 const DELAY_ARG: &str = "delay";
 const ONCE_ARG: &str = "once";
+const REPO_ARG: &str = "repo";
 const TRACK_BOOKMARK_ARG: &str = "track-bookmark";
 
 #[fbinit::main]
@@ -37,6 +39,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .build()
         .about("Builds a new version of segmented changelog.")
         .arg(
+            Arg::with_name(REPO_ARG)
+                .long(REPO_ARG)
+                .takes_value(true)
+                .required(true)
+                .multiple(true)
+                .help("Repository name to warm-up"),
+        )
+        .arg(
+            // it would make sense to pair the delay with the repository
             Arg::with_name(DELAY_ARG)
                 .long(DELAY_ARG)
                 .takes_value(true)
@@ -51,6 +62,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help("When set, the tailer will perform a single incremental build run."),
         )
         .arg(
+            // it would make sense to pair the bookmark with the repository
             Arg::with_name(TRACK_BOOKMARK_ARG)
                 .long(TRACK_BOOKMARK_ARG)
                 .takes_value(true)
@@ -72,86 +84,112 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 }
 
 async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Error> {
-    // This is a bit weird from the dependency point of view but I think that it is best. The
-    // BlobRepo may have a SegmentedChangelog attached to it but that doesn't hurt us in any way.
-    // On the other hand reconstructing the dependencies for SegmentedChangelog without BlobRepo is
-    // probably prone to more problems from the maintenance perspective.
-    let repo = args::open_repo(ctx.fb, ctx.logger(), &matches)
-        .await
-        .context("opening repo")?;
+    let reponames: Vec<_> = matches
+        .values_of(REPO_ARG)
+        .ok_or_else(|| format_err!("--{} argument is required", REPO_ARG))?
+        .map(ToString::to_string)
+        .collect();
+    if reponames.is_empty() {
+        error!(ctx.logger(), "At least one repo had to be specified");
+        return Ok(());
+    }
 
-    let mysql_options = args::parse_mysql_options(matches);
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
-    let (_, config) = args::get_config(config_store, &matches)?;
-    let storage_config = config.storage_config;
+    let mysql_options = args::parse_mysql_options(matches);
+    let configs = args::load_repo_configs(config_store, matches)?;
     let readonly_storage = ReadOnlyStorage(false);
-
-    let db_address = match &storage_config.metadata {
-        MetadataDatabaseConfig::Local(_) => None,
-        MetadataDatabaseConfig::Remote(remote_config) => {
-            Some(remote_config.primary.db_address.clone())
-        }
-    };
-    let replica_lag_monitor: Arc<dyn ReplicaLagMonitor> = match db_address {
-        None => Arc::new(NoReplicaLagMonitor()),
-        Some(address) => {
-            let my_admin = MyAdmin::new(ctx.fb).context("building myadmin client")?;
-            Arc::new(my_admin.single_shard_lag_monitor(address))
-        }
-    };
-
-    let sql_factory = make_metadata_sql_factory(
-        ctx.fb,
-        storage_config.metadata,
-        mysql_options,
-        readonly_storage,
-        ctx.logger().clone(),
-    )
-    .compat()
-    .await
-    .context("constructing metadata sql factory")?;
 
     let track_bookmark =
         BookmarkName::new(matches.value_of(TRACK_BOOKMARK_ARG).unwrap_or("master"))
             .context("parsing the name of the bookmark to track")?;
 
-    let segmented_changelog_builder = sql_factory
-        .open::<SegmentedChangelogBuilder>()
+    let mut tasks = Vec::new();
+    let repo_count = reponames.len() as u32;
+    for (index, reponame) in reponames.into_iter().enumerate() {
+        let config = configs
+            .repos
+            .get(&reponame)
+            .ok_or_else(|| format_err!("unknown repository: {}", reponame))?;
+        let repo_id = config.repoid;
+        info!(
+            ctx.logger(),
+            "repo name '{}' translates to id {}", reponame, repo_id
+        );
+
+        let storage_config = config.storage_config.clone();
+        let db_address = match &storage_config.metadata {
+            MetadataDatabaseConfig::Local(_) => None,
+            MetadataDatabaseConfig::Remote(remote_config) => {
+                Some(remote_config.primary.db_address.clone())
+            }
+        };
+        let replica_lag_monitor: Arc<dyn ReplicaLagMonitor> = match db_address {
+            None => Arc::new(NoReplicaLagMonitor()),
+            Some(address) => {
+                let my_admin = MyAdmin::new(ctx.fb).context("building myadmin client")?;
+                Arc::new(my_admin.single_shard_lag_monitor(address))
+            }
+        };
+
+        let sql_factory = make_metadata_sql_factory(
+            ctx.fb,
+            storage_config.metadata,
+            mysql_options,
+            readonly_storage,
+            ctx.logger().clone(),
+        )
         .compat()
         .await
-        .context("constructing segmented changelog builder")?;
+        .with_context(|| format!("repo {}: constructing metadata sql factory", repo_id))?;
 
-    let segmented_changelog_tailer = segmented_changelog_builder
-        .with_blobrepo(&repo)
-        .with_replica_lag_monitor(replica_lag_monitor)
-        .with_bookmark_name(track_bookmark)
-        .build_tailer()
-        .context("building SegmentedChangelogTailer")?;
-
-    info!(
-        ctx.logger(),
-        "SegmentedChangelogTailer initialized for repository '{}'",
-        repo.name()
-    );
-
-    if matches.is_present(ONCE_ARG) {
-        segmented_changelog_tailer
-            .once(&ctx)
+        let segmented_changelog_builder = sql_factory
+            .open::<SegmentedChangelogBuilder>()
+            .compat()
             .await
-            .with_context(|| format!("incrementally building repo {}", repo.name()))?;
-    } else {
-        let delay = Duration::from_secs(args::get_u64(&matches, DELAY_ARG, 60));
-        segmented_changelog_tailer
-            .run(&ctx, delay)
-            .await
-            .with_context(|| format!("continuously building repo {}", repo.name()))?;
+            .with_context(|| {
+                format!("repo {}: constructing segmented changelog builder", repo_id)
+            })?;
+
+        // This is a bit weird from the dependency point of view but I think that it is best. The
+        // BlobRepo may have a SegmentedChangelog attached to it but that doesn't hurt us in any
+        // way.  On the other hand reconstructing the dependencies for SegmentedChangelog without
+        // BlobRepo is probably prone to more problems from the maintenance perspective.
+        let blobrepo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), repo_id, matches).await?;
+        let segmented_changelog_tailer = segmented_changelog_builder
+            .with_blobrepo(&blobrepo)
+            .with_replica_lag_monitor(replica_lag_monitor)
+            .with_bookmark_name(track_bookmark.clone())
+            .build_tailer()
+            .with_context(|| format!("repo {}: building SegmentedChangelogTailer", repo_id))?;
+
+        info!(
+            ctx.logger(),
+            "repo {}: SegmentedChangelogTailer initialized", repo_id
+        );
+
+        if matches.is_present(ONCE_ARG) {
+            segmented_changelog_tailer
+                .once(&ctx)
+                .await
+                .with_context(|| format!("repo {}: incrementally building repo", repo_id))?;
+            info!(
+                ctx.logger(),
+                "repo {}: SegmentedChangelogTailer is done", repo_id,
+            );
+        } else {
+            let delay = Duration::from_secs(args::get_u64(&matches, DELAY_ARG, 300));
+            // spread out repo operations
+            let offset_delay = delay / repo_count;
+            let ctx = ctx.clone();
+            tasks.push(async move {
+                tokio::time::delay_for(offset_delay * index as u32).await;
+                segmented_changelog_tailer.run(&ctx, delay).await;
+            });
+        }
     }
 
-    info!(
-        ctx.logger(),
-        "SegmentedChangelogTailer is done for repo {}",
-        repo.name(),
-    );
+    join_all(tasks).await;
+
 
     Ok(())
 }

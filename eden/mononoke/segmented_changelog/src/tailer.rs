@@ -9,7 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{format_err, Context, Result};
-use slog::info;
+use slog::{debug, error, info};
 
 use dag::{Group, Id as Vertex, InProcessIdDag};
 use stats::prelude::*;
@@ -53,10 +53,22 @@ impl SegmentedChangelogTailer {
         }
     }
 
-    pub async fn run(&self, ctx: &CoreContext, delay: Duration) -> Result<()> {
+    pub async fn run(&self, ctx: &CoreContext, delay: Duration) {
         loop {
-            self.once(&ctx).await.context("running periodic update")?;
-            info!(ctx.logger(), "sleeping for {} seconds", delay.as_secs());
+            if let Err(err) = self.once(&ctx).await {
+                error!(
+                    ctx.logger(),
+                    "repo {}: failed to incrementally update segmented changelog: {}",
+                    self.repo_id,
+                    err
+                );
+            }
+            debug!(
+                ctx.logger(),
+                "repo {}: sleeping for {} seconds",
+                self.repo_id,
+                delay.as_secs()
+            );
             tokio::time::delay_for(delay).await;
         }
     }
@@ -64,7 +76,7 @@ impl SegmentedChangelogTailer {
     pub async fn once(&self, ctx: &CoreContext) -> Result<(Dag, Vertex)> {
         info!(
             ctx.logger(),
-            "starting incremental update to segmented changelog for repo {}", self.repo_id,
+            "repo {}: starting incremental update to segmented changelog", self.repo_id,
         );
 
         let (bundle, mut dag) = self
@@ -81,7 +93,7 @@ impl SegmentedChangelogTailer {
             .ok_or_else(|| format_err!("'{}' bookmark could not be found", self.bookmark_name))?;
         info!(
             ctx.logger(),
-            "bookmark {} resolved to {}", self.bookmark_name, head
+            "repo {}: bookmark {} resolved to {}", self.repo_id, self.bookmark_name, head
         );
         let old_master_vertex = dag
             .iddag
@@ -96,18 +108,21 @@ impl SegmentedChangelogTailer {
         if old_master_vertex > head_vertex {
             info!(
                 ctx.logger(),
-                "dag already up to date, skipping update to iddag"
+                "repo {}: dag already up to date, skipping update to iddag", self.repo_id
             );
             return Ok((dag, head_vertex));
         } else {
-            info!(ctx.logger(), "IdMap updated, IdDag updated");
+            info!(
+                ctx.logger(),
+                "repo {}: IdMap updated, IdDag updated", self.repo_id
+            );
         }
 
         // Let's rebuild the dag to keep segment fragmentation low
         let mut new_iddag = InProcessIdDag::new_in_process();
         let get_parents = |id| dag.iddag.parent_ids(id);
         new_iddag.build_segments_volatile(head_vertex, &get_parents)?;
-        info!(ctx.logger(), "IdDag rebuilt");
+        info!(ctx.logger(), "repo {}: IdDag rebuilt", self.repo_id);
 
         // Save the Dag
         self.manager
@@ -117,7 +132,7 @@ impl SegmentedChangelogTailer {
 
         info!(
             ctx.logger(),
-            "successful incremental update to segmented changelog for repo {}", self.repo_id,
+            "repo {}: successful incremental update to segmented changelog", self.repo_id,
         );
 
         let new_dag = Dag::new(new_iddag, dag.idmap);
