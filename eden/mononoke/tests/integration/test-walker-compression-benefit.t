@@ -18,7 +18,7 @@ setup configuration
   $ blobimport repo-hg/.hg repo --derived-data-type=fsnodes
 
 compression-benefit, file content only, not expecting any compression from the tiny test files
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore compression-benefit -q --bookmark master_bookmark --sample-rate 1 --include-sample-node-type FileContent 2>&1 | strip_glog
+  $ mononoke_walker --cachelib-only-blobstore compression-benefit -q --bookmark master_bookmark --sample-rate 1 --include-sample-node-type FileContent 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -27,7 +27,7 @@ compression-benefit, file content only, not expecting any compression from the t
   Walked/s,* (glob)
 
 compression-benefit, all compressible types
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore compression-benefit -q --bookmark master_bookmark --sample-rate 1 2>&1 | strip_glog
+  $ mononoke_walker --cachelib-only-blobstore compression-benefit -q --bookmark master_bookmark --sample-rate 1 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)

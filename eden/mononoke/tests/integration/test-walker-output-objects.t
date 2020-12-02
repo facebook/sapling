@@ -18,7 +18,7 @@ setup configuration
   $ blobimport repo-hg/.hg repo --derived-data-type=blame --derived-data-type=changeset_info --derived-data-type=fsnodes --derived-data-type=unodes
 
 Output pretty debug to stdout
-  $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I shallow -i bonsai --include-output-node-type=Changeset 2>&1 | strip_glog
+  $ mononoke_walker scrub -q --bookmark master_bookmark -I shallow -i bonsai --include-output-node-type=Changeset 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types [BookmarkToChangeset]
   Walking node types [Bookmark, Changeset]
@@ -63,7 +63,7 @@ Output pretty debug to stdout
   * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:1,1,0 (glob)
 
 Output non-pretty debug to stdout
-  $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I shallow -i bonsai --include-output-node-type=Changeset --output-format=Debug 2>&1 | strip_glog
+  $ mononoke_walker scrub -q --bookmark master_bookmark -I shallow -i bonsai --include-output-node-type=Changeset --output-format=Debug 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types [BookmarkToChangeset]
   Walking node types [Bookmark, Changeset]

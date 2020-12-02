@@ -49,7 +49,7 @@ Check error as data fails if not in readonly-storage mode
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Execution error: Error as data could mean internal state is invalid, run with --readonly-storage to ensure no risk of persisting it
+  Execution error: Error as data could mean internal state is invalid, run with --with-readonly-storage=true to ensure no risk of persisting it
   Error: Execution failed
 
 Check counts with error-as-data-node-type

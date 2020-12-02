@@ -21,7 +21,7 @@ Drain the healer queue
   $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "DELETE FROM blobstore_sync_queue";
 
 Base case, check can walk fine
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --cachelib-only-blobstore scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -35,7 +35,7 @@ Delete all data from one side of the multiplex
   $ rm blobstore/0/blobs/*
 
 Check fails on only the deleted side
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore scrub --inner-blobstore-id=0 -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --cachelib-only-blobstore scrub --inner-blobstore-id=0 -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -46,7 +46,7 @@ Check fails on only the deleted side
   Error: Execution failed
 
 Check can walk fine on the only remaining side
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore scrub --inner-blobstore-id=1 -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --cachelib-only-blobstore scrub --inner-blobstore-id=1 -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -55,7 +55,7 @@ Check can walk fine on the only remaining side
   Walked* (glob)
 
 Check can walk fine on the multiplex remaining side
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --cachelib-only-blobstore scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -64,7 +64,7 @@ Check can walk fine on the multiplex remaining side
   Walked* (glob)
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly mode, should log the scrub repairs needed
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore scrub --scrub-blobstore-action=ReportOnly -I deep -q --bookmark master_bookmark --scuba-log-file scuba-reportonly.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --cachelib-only-blobstore scrub --scrub-blobstore-action=ReportOnly -I deep -q --bookmark master_bookmark --scuba-log-file scuba-reportonly.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
@@ -107,7 +107,7 @@ Note - we might get duplicate reports, we just expect that there should not be a
   1,"scrub_repair","repo0000.hgmanifest.sha1.eb79886383871977bccdb3000c275a279f0d4c99","repo","scrub",1* (glob)
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode, should also log the scrub repairs done
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore scrub --scrub-blobstore-action=Repair -I deep -q --bookmark master_bookmark --scuba-log-file scuba-repair.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --cachelib-only-blobstore scrub --scrub-blobstore-action=Repair -I deep -q --bookmark master_bookmark --scuba-log-file scuba-repair.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
@@ -150,7 +150,7 @@ Note - we might get duplicate repairs, we just expect that there should not be a
   0,"scrub_repair","repo0000.hgmanifest.sha1.eb79886383871977bccdb3000c275a279f0d4c99","repo","scrub",1* (glob)
 
 Check that all is repaired by running on only the deleted side
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore scrub --inner-blobstore-id=0 -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --cachelib-only-blobstore scrub --inner-blobstore-id=0 -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)

@@ -24,7 +24,7 @@ check blobstore numbers, walk will do some more steps for mappings
   27
 
 Full edge base case, sample all in one go.  We are excluding several edges
-  $ mononoke_walker --readonly-storage compression-benefit -q --bookmark master_bookmark --sample-rate 1 -I deep 2>&1 | strip_glog
+  $ mononoke_walker compression-benefit -q --bookmark master_bookmark --sample-rate 1 -I deep 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -33,7 +33,7 @@ Full edge base case, sample all in one go.  We are excluding several edges
   Walked/s,* (glob)
 
 Reduced edge base case, sample all in one go.  We are excluding several edges from the usual deep walk to force path tracking to work harder
-  $ mononoke_walker --readonly-storage compression-benefit -q --bookmark master_bookmark --sample-rate 1 -I deep -X ChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent 2>&1 | strip_glog
+  $ mononoke_walker compression-benefit -q --bookmark master_bookmark --sample-rate 1 -I deep -X ChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -42,7 +42,7 @@ Reduced edge base case, sample all in one go.  We are excluding several edges fr
   Walked/s,* (glob)
 
 Three separate cycles allowing all edges, total bytes should be the same as full edge base case
-  $ for i in {0..2}; do mononoke_walker --readonly-storage compression-benefit -q --bookmark master_bookmark -I deep --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
+  $ for i in {0..2}; do mononoke_walker compression-benefit -q --bookmark master_bookmark -I deep --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -63,7 +63,7 @@ Three separate cycles allowing all edges, total bytes should be the same as full
   Walked/s,* (glob)
 
 Reduced edge three separate cycles moving offset each time, total in each cycle should be the same as above.
-  $ for i in {0..2}; do mononoke_walker --readonly-storage compression-benefit -q --bookmark master_bookmark -I deep -x FsnodeMapping -x Fsnode -X ChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
+  $ for i in {0..2}; do mononoke_walker compression-benefit -q --bookmark master_bookmark -I deep -x FsnodeMapping -x Fsnode -X ChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)

@@ -18,7 +18,7 @@ setup configuration
   $ blobimport repo-hg/.hg repo --derived-data-type=blame --derived-data-type=unodes
 
 validate, expecting all valid, checking marker types
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --cachelib-only-blobstore validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -31,7 +31,7 @@ Remove the phase information, linknodes already point to them
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
 
 validate, expect no failures on phase info, as the commits are still public, just not marked as so in the phases table
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --cachelib-only-blobstore validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -60,7 +60,7 @@ Update filenode for public commit C to have linknode pointing to non-public comm
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE filenodes SET linknode=x'$HGCOMMITCNEW' where path_hash=x'$PATHHASHC'"
 
 Check we can walk blame on a public commit. In this walk all the Changeset history steps come from blame as we exclude ChangesetToBonsaiParent etc
-  $ mononoke_walker --readonly-storage scrub -q --walk-root=HgBonsaiMapping:${HGCOMMITC} -I deep -i bonsai -i derived_unodes -i derived_blame -i HgBonsaiMapping -X ChangesetToBonsaiParent -X UnodeFileToLinkedChangeset -X UnodeManifestToLinkedChangeset 2>&1 | strip_glog
+  $ mononoke_walker scrub -q --walk-root=HgBonsaiMapping:${HGCOMMITC} -I deep -i bonsai -i derived_unodes -i derived_blame -i HgBonsaiMapping -X ChangesetToBonsaiParent -X UnodeFileToLinkedChangeset -X UnodeManifestToLinkedChangeset 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types [BlameToChangeset, ChangesetToUnodeMapping, HgBonsaiMappingToChangeset, UnodeFileToBlame, UnodeFileToUnodeFileParent, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent, UnodeMappingToRootUnodeManifest]
   Walking node types [Blame, Changeset, HgBonsaiMapping, UnodeFile, UnodeManifest, UnodeMapping]
@@ -69,7 +69,7 @@ Check we can walk blame on a public commit. In this walk all the Changeset histo
   * Type:Walked,Checks,Children Blame:3,* Changeset:3,* HgBonsaiMapping:1,* UnodeFile:3,* UnodeManifest:3,* UnodeMapping:3,* (glob)
 
 Check we dont walk blame on a non-public commit.  Because blame is the only path to Changeset history, this results in a shallow walk
-  $ mononoke_walker --readonly-storage scrub -q --walk-root=HgBonsaiMapping:${HGCOMMITCNEW} -I deep -i bonsai -i derived_unodes -i derived_blame -i HgBonsaiMapping -X ChangesetToBonsaiParent -X UnodeFileToLinkedChangeset -X UnodeManifestToLinkedChangeset 2>&1 | strip_glog
+  $ mononoke_walker scrub -q --walk-root=HgBonsaiMapping:${HGCOMMITCNEW} -I deep -i bonsai -i derived_unodes -i derived_blame -i HgBonsaiMapping -X ChangesetToBonsaiParent -X UnodeFileToLinkedChangeset -X UnodeManifestToLinkedChangeset 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types [BlameToChangeset, ChangesetToUnodeMapping, HgBonsaiMappingToChangeset, UnodeFileToBlame, UnodeFileToUnodeFileParent, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent, UnodeMappingToRootUnodeManifest]
   Walking node types [Blame, Changeset, HgBonsaiMapping, UnodeFile, UnodeManifest, UnodeMapping]
@@ -78,7 +78,7 @@ Check we dont walk blame on a non-public commit.  Because blame is the only path
   * Type:Walked,Checks,Children Blame:0,* Changeset:1,* HgBonsaiMapping:1,* UnodeFile:1,* UnodeManifest:1,* UnodeMapping:1,* (glob)
 
 Check we can walk filenodes on a public commit. In this walk all the HgChangeset history steps come from filenodes as we exclude HgChangesetToHgParent etc
-  $ mononoke_walker --readonly-storage scrub -q --walk-root=HgChangeset:${HGCOMMITC} -I deep -x HgBonsaiMapping -i derived_filenodes -i derived_hgchangesets -X HgChangesetToHgParent 2>&1 | strip_glog
+  $ mononoke_walker scrub -q --walk-root=HgChangeset:${HGCOMMITC} -I deep -x HgBonsaiMapping -i derived_filenodes -i derived_hgchangesets -X HgChangesetToHgParent 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types [HgChangesetToHgManifest, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
@@ -87,7 +87,7 @@ Check we can walk filenodes on a public commit. In this walk all the HgChangeset
   * Type:Walked,Checks,Children HgChangeset:4,* HgFileEnvelope:4,* HgFileNode:4,* HgManifest:4,* (glob)
 
 Check we dont walk filenodes on a non-public commit.  Because filenodes is the only path to HgChangeset history, this results in a shallow walk
-  $ mononoke_walker --readonly-storage scrub -q --walk-root=HgChangeset:${HGCOMMITCNEW} -I deep -x HgBonsaiMapping -i derived_filenodes -i derived_hgchangesets -X HgChangesetToHgParent 2>&1 | strip_glog
+  $ mononoke_walker scrub -q --walk-root=HgChangeset:${HGCOMMITCNEW} -I deep -x HgBonsaiMapping -i derived_filenodes -i derived_hgchangesets -X HgChangesetToHgParent 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types [HgChangesetToHgManifest, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
@@ -96,7 +96,7 @@ Check we dont walk filenodes on a non-public commit.  Because filenodes is the o
   * Type:Walked,Checks,Children HgChangeset:1,* HgFileEnvelope:1,* HgFileNode:1,* HgManifest:1,* (glob)
 
 validate, expect failures on phase info, and linknode as we now point to a non-public commit
-  $ mononoke_walker --readonly-storage --cachelib-only-blobstore validate --scuba-log-file scuba.json -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog | sort
+  $ mononoke_walker --cachelib-only-blobstore validate --scuba-log-file scuba.json -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog | sort
   Final count: * (glob)
   Nodes,Pass,Fail:56,6,2; EdgesChecked:14; CheckType:Pass,Fail Total:6,2 ChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:3,1
   Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
