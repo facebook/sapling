@@ -11,7 +11,10 @@ use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{
-    tree::{TreeChildDirectoryEntry, TreeChildEntry, TreeChildFileEntry, TreeEntry, TreeRequest},
+    tree::{
+        TreeAttributes, TreeChildDirectoryEntry, TreeChildEntry, TreeChildFileEntry, TreeEntry,
+        TreeRequest,
+    },
     wire::{
         is_default, ToApi, ToWire, WireDirectoryMetadata, WireEdenApiServerError, WireFileMetadata,
         WireKey, WireParents, WireToApiConversionError,
@@ -182,6 +185,31 @@ pub struct WireTreeAttributesRequest {
     with_child_metadata: bool,
 }
 
+impl ToWire for TreeAttributes {
+    type Wire = WireTreeAttributesRequest;
+
+    fn to_wire(self) -> Self::Wire {
+        WireTreeAttributesRequest {
+            with_data: self.manifest_blob,
+            with_parents: self.parents,
+            with_child_metadata: self.child_metadata,
+        }
+    }
+}
+
+impl ToApi for WireTreeAttributesRequest {
+    type Api = TreeAttributes;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(TreeAttributes {
+            child_metadata: self.with_child_metadata,
+            parents: self.with_parents,
+            manifest_blob: self.with_data,
+        })
+    }
+}
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireTreeRequest {
     #[serde(rename = "0", default, skip_serializing_if = "is_default")]
@@ -200,11 +228,7 @@ impl ToWire for TreeRequest {
                 keys: self.keys.to_wire(),
             })),
 
-            attributes: Some(WireTreeAttributesRequest {
-                with_data: true,
-                with_parents: true,
-                with_child_metadata: self.with_child_metadata,
-            }),
+            attributes: Some(self.attributes.to_wire()),
         }
     }
 }
@@ -228,10 +252,7 @@ impl ToApi for WireTreeRequest {
                     ));
                 }
             },
-            with_child_metadata: self
-                .attributes
-                .map(|a| a.with_child_metadata)
-                .unwrap_or(false),
+            attributes: self.attributes.to_api()?.unwrap_or_default(),
         })
     }
 }

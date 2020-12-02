@@ -23,7 +23,8 @@ use edenapi_types::{
         WireToApiConversionError, WireTreeEntry,
     },
     CloneData, CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError,
-    FileEntry, FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire, TreeEntry, TreeRequest,
+    FileEntry, FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire, TreeAttributes, TreeEntry,
+    TreeRequest,
 };
 use hg_http::http_client;
 use http_client::{HttpClient, HttpClientError, Request};
@@ -310,6 +311,7 @@ impl EdenApi for Client {
         &self,
         repo: String,
         keys: Vec<Key>,
+        attributes: Option<TreeAttributes>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         let msg = format!("Requesting {} trees(s)", keys.len());
@@ -326,7 +328,7 @@ impl EdenApi for Client {
         let requests = self.prepare(&url, keys, self.config.max_trees, |keys| {
             TreeRequest {
                 keys,
-                with_child_metadata: true,
+                attributes: attributes.clone().unwrap_or_default(),
             }
             .to_wire()
         })?;

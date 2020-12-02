@@ -87,10 +87,11 @@ py_class!(pub class client |py| {
         store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
+        attributes: Option<PyDict> = None,
         callback: Option<PyObject> = None
     ) -> PyResult<stats> {
         let progress = self.progress(py).clone();
-        self.inner(py).clone().trees_py(py, store, repo, keys, callback, progress)
+        self.inner(py).clone().trees_py(py, store, repo, keys, attributes, callback, progress)
     }
 
     def complete_trees(

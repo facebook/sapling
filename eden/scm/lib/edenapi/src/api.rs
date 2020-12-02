@@ -8,7 +8,8 @@
 use async_trait::async_trait;
 
 use edenapi_types::{
-    CloneData, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeEntry,
+    CloneData, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeAttributes,
+    TreeEntry,
 };
 use http_client::Progress;
 use types::{HgId, Key, RepoPathBuf};
@@ -41,6 +42,7 @@ pub trait EdenApi: Send + Sync + 'static {
         &self,
         repo: String,
         keys: Vec<Key>,
+        attributes: Option<TreeAttributes>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError>;
 

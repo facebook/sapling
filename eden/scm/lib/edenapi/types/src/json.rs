@@ -32,7 +32,7 @@ use crate::complete_tree::CompleteTreeRequest;
 use crate::file::FileRequest;
 use crate::history::HistoryRequest;
 use crate::metadata::{DirectoryMetadataRequest, FileMetadataRequest};
-use crate::tree::TreeRequest;
+use crate::tree::{TreeAttributes, TreeRequest};
 
 /// Parse a `CommitRevlogDataRequest` from JSON.
 ///
@@ -141,11 +141,39 @@ pub fn parse_file_req(json: &Value) -> Result<FileRequest> {
 pub fn parse_tree_req(json: &Value) -> Result<TreeRequest> {
     let json = json.as_object().context("input must be a JSON object")?;
     let keys = json.get("keys").context("missing field: keys")?;
-    let with_child_metadata = optional_bool_field(json, "with_child_metadata")?;
+    let attrs = optional_default_field(json, "attributes")?;
 
     Ok(TreeRequest {
         keys: parse_keys(keys)?,
-        with_child_metadata,
+        attributes: attrs,
+    })
+}
+
+/// Parse a `TreeAttributes` from JSON.
+///
+/// The request is represented as a JSON object containing a "keys" field
+/// consisting of an array of path/filenode pairs.
+///
+/// Example request:
+///
+/// ```json
+/// {
+///   "manifest_blob": true,
+///   "parents": true,
+///   "child_metadata": false,
+/// }
+/// ```
+///
+pub fn parse_tree_attrs(json: &Value) -> Result<TreeAttributes> {
+    let json = json.as_object().context("input must be a JSON object")?;
+    let manifest_blob = optional_bool_field(json, "manifest_blob")?;
+    let parents = optional_bool_field(json, "parents")?;
+    let child_metadata = optional_bool_field(json, "child_metadata")?;
+
+    Ok(TreeAttributes {
+        manifest_blob,
+        parents,
+        child_metadata,
     })
 }
 
@@ -340,6 +368,17 @@ fn optional_bool_field(json: &Map<String, Value>, field: &str) -> Result<bool> {
         .unwrap_or_default())
 }
 
+fn optional_default_field<T: Default + FromJson>(
+    json: &Map<String, Value>,
+    field: &str,
+) -> Result<T> {
+    Ok(json
+        .get(field)
+        .map(|w| T::from_json(w).context(format!("{} {}", field, "had incorrect type")))
+        .transpose()?
+        .unwrap_or_default())
+}
+
 pub trait FromJson: Sized {
     fn from_json(json: &Value) -> Result<Self>;
 }
@@ -353,6 +392,12 @@ impl FromJson for FileRequest {
 impl FromJson for TreeRequest {
     fn from_json(json: &Value) -> Result<Self> {
         parse_tree_req(json)
+    }
+}
+
+impl FromJson for TreeAttributes {
+    fn from_json(json: &Value) -> Result<Self> {
+        parse_tree_attrs(json)
     }
 }
 
@@ -406,7 +451,17 @@ impl ToJson for TreeRequest {
     fn to_json(&self) -> Value {
         json!({
             "keys": self.keys.to_json(),
-            "with_child_metadata": self.with_child_metadata,
+            "attributes": self.attributes.to_json(),
+        })
+    }
+}
+
+impl ToJson for TreeAttributes {
+    fn to_json(&self) -> Value {
+        json!({
+            "manifest_blob": self.manifest_blob,
+            "parents": self.parents,
+            "child_metadata": self.child_metadata,
         })
     }
 }

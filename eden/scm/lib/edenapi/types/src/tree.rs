@@ -209,7 +209,35 @@ impl Arbitrary for TreeChildDirectoryEntry {
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 pub struct TreeRequest {
     pub keys: Vec<Key>,
-    pub with_child_metadata: bool,
+    pub attributes: TreeAttributes,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct TreeAttributes {
+    pub manifest_blob: bool,
+    pub parents: bool,
+    pub child_metadata: bool,
+}
+
+impl Default for TreeAttributes {
+    fn default() -> Self {
+        TreeAttributes {
+            manifest_blob: true,
+            parents: true,
+            child_metadata: false,
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for TreeAttributes {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            manifest_blob: Arbitrary::arbitrary(g),
+            parents: Arbitrary::arbitrary(g),
+            child_metadata: Arbitrary::arbitrary(g),
+        }
+    }
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -217,7 +245,7 @@ impl Arbitrary for TreeRequest {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
-            with_child_metadata: Arbitrary::arbitrary(g),
+            attributes: Arbitrary::arbitrary(g),
         }
     }
 }

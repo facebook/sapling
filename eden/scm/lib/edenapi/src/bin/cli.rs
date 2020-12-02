@@ -22,7 +22,7 @@ use configparser::config::{ConfigSet, Options};
 use edenapi::{Builder, Client, EdenApi, Entries, Fetch, Progress, ProgressCallback};
 use edenapi_types::{
     json::FromJson, wire::ToWire, CommitRevlogDataRequest, CompleteTreeRequest, FileRequest,
-    HistoryRequest, TreeRequest,
+    HistoryRequest, TreeAttributes, TreeRequest,
 };
 
 const DEFAULT_CONFIG_FILE: &str = ".hgrc.edenapi";
@@ -145,7 +145,7 @@ async fn cmd_trees(args: Args) -> Result<()> {
         log::trace!("{:?}", &req);
 
         let (bar, cb) = progress_bar();
-        let res = client.trees(repo.clone(), req.keys, Some(cb)).await?;
+        let res = client.trees(repo.clone(), req.keys, None, Some(cb)).await?;
         handle_response(res, bar).await?;
     }
 

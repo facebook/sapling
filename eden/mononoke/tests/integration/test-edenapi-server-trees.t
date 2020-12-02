@@ -39,7 +39,11 @@ Create and send tree request.
   >     ["", "$ROOT_MFID_1"],
   >     ["", "$ROOT_MFID_2"]
   >   ],
-  >   "with_child_metadata": true
+  >   "attributes": {
+  >     "manifest_blob": true,
+  >     "parents": true,
+  >     "child_metadata": true
+  >   }
   > }
   > EOF
   Reading from stdin

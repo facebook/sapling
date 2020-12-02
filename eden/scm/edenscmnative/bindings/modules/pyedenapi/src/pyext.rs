@@ -23,7 +23,8 @@ use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
-    as_deltastore, as_historystore, meta_to_dict, to_hgids, to_keys, to_path, wrap_callback,
+    as_deltastore, as_historystore, meta_to_dict, to_hgids, to_keys, to_path, to_tree_attrs,
+    wrap_callback,
 };
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
@@ -104,12 +105,17 @@ pub trait EdenApiPyExt: EdenApi {
         store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
+        attributes: Option<PyDict>,
         callback: Option<PyObject>,
         progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<stats> {
         let keys = to_keys(py, &keys)?;
         let store = as_deltastore(py, store)?;
         let callback = callback.map(wrap_callback);
+        let attributes = attributes
+            .as_ref()
+            .map(|a| to_tree_attrs(py, a))
+            .transpose()?;
 
         let stats = py
             .allow_threads(|| {
@@ -119,7 +125,7 @@ pub trait EdenApiPyExt: EdenApi {
                         Some(keys.len() as u64),
                         Unit::Named("trees"),
                     )?;
-                    let response = self.trees(repo, keys, callback).await?;
+                    let response = self.trees(repo, keys, attributes, callback).await?;
                     write_trees(response, store, prog.as_ref()).await
                 })
             })

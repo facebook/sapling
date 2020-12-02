@@ -15,7 +15,8 @@ use futures::prelude::*;
 use configparser::config::ConfigSet;
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stats};
 use edenapi_types::{
-    CloneData, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeEntry,
+    CloneData, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeAttributes,
+    TreeEntry,
 };
 use types::{HgId, Key, NodeInfo, Parents, RepoPathBuf};
 
@@ -300,6 +301,7 @@ impl EdenApi for FakeEdenApi {
         &self,
         _repo: String,
         keys: Vec<Key>,
+        _attrs: Option<TreeAttributes>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         Self::get_trees(&self.trees, keys)

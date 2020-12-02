@@ -47,7 +47,7 @@ pub use crate::metadata::{
     ContentId, DirectoryMetadata, DirectoryMetadataRequest, FileMetadata, FileMetadataRequest,
     FileType, FsnodeId, Sha1, Sha256,
 };
-pub use crate::tree::{TreeChildEntry, TreeEntry, TreeError, TreeRequest};
+pub use crate::tree::{TreeAttributes, TreeChildEntry, TreeEntry, TreeError, TreeRequest};
 pub use crate::wire::{ToApi, ToWire, WireToApiConversionError};
 
 // re-export CloneData

@@ -7,7 +7,8 @@
 
 use async_runtime::block_on_exclusive as block_on_future;
 use edenapi_types::{
-    CloneData, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeEntry,
+    CloneData, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeAttributes,
+    TreeEntry,
 };
 use types::{HgId, Key, RepoPathBuf};
 
@@ -43,9 +44,10 @@ pub trait EdenApiBlocking: EdenApi {
         &self,
         repo: String,
         keys: Vec<Key>,
+        attributes: Option<TreeAttributes>,
         progress: Option<ProgressCallback>,
     ) -> Result<BlockingFetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
-        BlockingFetch::from_async(self.trees(repo, keys, progress))
+        BlockingFetch::from_async(self.trees(repo, keys, attributes, progress))
     }
 
     fn complete_trees_blocking(

@@ -11,6 +11,7 @@ use cpython::*;
 
 use cpython_ext::{ExtractInner, PyPath, PyPathBuf, ResultPyErrExt};
 use edenapi::{Progress, ProgressCallback, ResponseMeta};
+use edenapi_types::TreeAttributes;
 use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 use types::{HgId, Key, RepoPathBuf};
@@ -25,6 +26,28 @@ pub fn to_hgid(py: Python, hgid: &PyBytes) -> HgId {
     let mut bytes = [0u8; 20];
     bytes.copy_from_slice(&hgid.data(py)[0..20]);
     HgId::from(&bytes)
+}
+
+pub fn to_tree_attrs(py: Python, attrs: &PyDict) -> PyResult<TreeAttributes> {
+    let mut attributes = TreeAttributes::default();
+
+    attributes.manifest_blob = attrs
+        .get_item(py, "manifest_blob")
+        .map(|v| v.extract::<bool>(py))
+        .transpose()?
+        .unwrap_or(attributes.manifest_blob);
+    attributes.parents = attrs
+        .get_item(py, "parents")
+        .map(|v| v.extract::<bool>(py))
+        .transpose()?
+        .unwrap_or(attributes.parents);
+    attributes.child_metadata = attrs
+        .get_item(py, "child_metadata")
+        .map(|v| v.extract::<bool>(py))
+        .transpose()?
+        .unwrap_or(attributes.child_metadata);
+
+    Ok(attributes)
 }
 
 pub fn to_hgids(py: Python, hgids: impl IntoIterator<Item = PyBytes>) -> Vec<HgId> {

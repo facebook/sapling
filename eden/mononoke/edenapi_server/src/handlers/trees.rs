@@ -60,7 +60,7 @@ fn fetch_all_trees(
     repo: HgRepoContext,
     request: TreeRequest,
 ) -> impl Stream<Item = Result<TreeEntry, EdenApiServerError>> {
-    let fetch_metadata = request.with_child_metadata;
+    let fetch_metadata = request.attributes.child_metadata;
     let fetches = request.keys.into_iter().map(move |key| {
         fetch_tree(repo.clone(), key.clone(), fetch_metadata)
             .map(|r| r.map_err(|e| EdenApiServerError::with_key(key, e)))
