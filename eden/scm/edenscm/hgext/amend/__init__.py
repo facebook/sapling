@@ -188,7 +188,7 @@ def uisetup(ui):
 
     # manual call of the decorator
     command(
-        "amend|am|ame|amen",
+        "amend|am|ame|amen|ramen",
         [
             (
                 "A",
