@@ -84,10 +84,15 @@ const WRITE_ZSTD_ARG: &str = "blobstore-write-zstd-level";
 const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
 const CACHELIB_ATTEMPT_ZSTD_ARG: &str = "blobstore-cachelib-attempt-zstd";
 const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
+
+// Old version took no args which means it would be no good for overriding default for a binary that defaults to true.
+const READONLY_STORAGE_OLD_ARG: &str = "readonly-storage";
+const READONLY_STORAGE_NEW_ARG: &str = "with-readonly-storage";
+
 const TEST_INSTANCE_ARG: &str = "test-instance";
+
 const LOCAL_CONFIGERATOR_PATH_ARG: &str = "local-configerator-path";
 const CRYPTO_PATH_REGEX_ARG: &str = "crypto-path-regex";
-
 const CRYPTO_PROJECT: &str = "SCM";
 
 const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
@@ -163,6 +168,9 @@ pub struct MononokeAppBuilder {
 
     /// Cachelib default settings, as shown in usage
     cachelib_settings: CachelibSettings,
+
+    // Whether to default to readonly storage or not
+    readonly_storage_default: ReadOnlyStorage,
 }
 
 /// Things we want to live for the lifetime of the mononoke binary
@@ -300,6 +308,7 @@ impl MononokeAppBuilder {
             arg_types: HashSet::from_iter(DEFAULT_ARG_TYPES.iter().cloned()),
             special_put_behaviour: None,
             cachelib_settings: CachelibSettings::default(),
+            readonly_storage_default: ReadOnlyStorage(false),
         }
     }
 
@@ -390,6 +399,12 @@ impl MononokeAppBuilder {
     /// This command needs a special default put behaviour (e.g. its an admin tool)
     pub fn with_special_put_behaviour(mut self, put_behaviour: PutBehaviour) -> Self {
         self.special_put_behaviour = Some(put_behaviour);
+        self
+    }
+
+    /// This command has a special default readonly storage setting
+    pub fn with_readonly_storage_default(mut self, v: ReadOnlyStorage) -> Self {
+        self.readonly_storage_default = v;
         self
     }
 
@@ -519,7 +534,11 @@ impl MononokeAppBuilder {
             app = add_mysql_options_args(app);
         }
         if self.arg_types.contains(&ArgType::Blobstore) {
-            app = add_blobstore_args(app, self.special_put_behaviour);
+            app = add_blobstore_args(
+                app,
+                self.special_put_behaviour,
+                self.readonly_storage_default,
+            );
         }
         if self.arg_types.contains(&ArgType::Cachelib) {
             app = add_cachelib_args(app, self.hide_advanced_args, self.cachelib_settings.clone());
@@ -954,9 +973,16 @@ fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
+fn bool_as_str(v: bool) -> &'static str {
+    if v { "true" } else { "false" }
+}
+
+const BOOL_VALUES: &[&str] = &["false", "true"];
+
 fn add_blobstore_args<'a, 'b>(
     app: App<'a, 'b>,
     special_put_behaviour: Option<PutBehaviour>,
+    default_readonly: ReadOnlyStorage,
 ) -> App<'a, 'b> {
     let mut put_arg = Arg::with_name(BLOBSTORE_PUT_BEHAVIOUR_ARG)
         .long(BLOBSTORE_PUT_BEHAVIOUR_ARG)
@@ -1022,6 +1048,19 @@ fn add_blobstore_args<'a, 'b>(
     )
     .arg(
       put_arg
+    )
+    .arg(
+        Arg::with_name(READONLY_STORAGE_OLD_ARG)
+            .long(READONLY_STORAGE_OLD_ARG)
+            .help("Error on any attempts to write to storage (deprecated, use --with-readonly-storage=<true|false>)"),
+    )
+    .arg(
+        Arg::with_name(READONLY_STORAGE_NEW_ARG)
+            .long(READONLY_STORAGE_NEW_ARG)
+            .takes_value(true)
+            .possible_values(BOOL_VALUES)
+            .default_value(bool_as_str(default_readonly.0))
+            .help("Error on any attempts to write to storage if set to true"),
     )
 }
 
@@ -1285,7 +1324,19 @@ pub async fn open_repo_with_repo_id<'a>(
 }
 
 pub fn parse_readonly_storage<'a>(matches: &MononokeMatches<'a>) -> ReadOnlyStorage {
-    ReadOnlyStorage(matches.is_present("readonly-storage"))
+    if matches.is_present(READONLY_STORAGE_OLD_ARG) {
+        ReadOnlyStorage(true)
+    } else {
+        ReadOnlyStorage(
+            matches
+                .value_of(READONLY_STORAGE_NEW_ARG)
+                .map_or(false, |v| {
+                    v.parse().unwrap_or_else(|_| {
+                        panic!("Provided {} is not bool", READONLY_STORAGE_NEW_ARG)
+                    })
+                }),
+        )
+    }
 }
 
 pub fn parse_mysql_options<'a>(matches: &MononokeMatches<'a>) -> MysqlOptions {

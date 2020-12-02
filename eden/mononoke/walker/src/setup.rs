@@ -17,7 +17,7 @@ use crate::walk::OutgoingEdge;
 
 use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
-use blobrepo_factory::open_blobrepo_given_datasources;
+use blobrepo_factory::{open_blobrepo_given_datasources, ReadOnlyStorage};
 use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
@@ -399,6 +399,7 @@ pub fn setup_toplevel_app<'a, 'b>(
     cachelib_defaults: CachelibSettings,
 ) -> MononokeClapApp<'a, 'b> {
     let app_template = args::MononokeAppBuilder::new(app_name)
+        .with_readonly_storage_default(ReadOnlyStorage(true))
         .with_fb303_args()
         .with_cachelib_settings(cachelib_defaults);
 

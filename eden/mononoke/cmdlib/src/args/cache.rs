@@ -19,7 +19,6 @@ const MIN_PROCESS_SIZE: &str = "min-process-size";
 const SKIP_CACHING: &str = "skip-caching";
 const CACHELIB_ONLY_BLOBSTORE: &str = "cachelib-only-blobstore";
 const CACHELIB_SHARDS: &str = "cachelib-shards";
-const READONLY_STORAGE: &str = "readonly-storage";
 
 const PHASES_CACHE_SIZE: &str = "phases-cache-size";
 const BUCKETS_POWER: &str = "buckets-power";
@@ -128,11 +127,6 @@ pub(crate) fn add_cachelib_args<'a, 'b>(
             .long(CACHELIB_SHARDS)
             .takes_value(true)
             .help("number of shards to control concurrent access to a blobstore behind cachelib"),
-    )
-    .arg(
-        Arg::with_name(READONLY_STORAGE)
-            .long(READONLY_STORAGE)
-            .help("Error on any attempts to write to storage"),
     )
     .args(&cache_args)
 }
