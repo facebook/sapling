@@ -34,5 +34,5 @@ create master bookmark
 blobimport, check blobstore puts are blocked
   $ cd ..
   $ rm -rf repo
-  $ blobimport repo-hg/.hg repo --readonly-storage | grep 'root cause:'
+  $ blobimport repo-hg/.hg repo --with-readonly-storage=true | grep 'root cause:'
   * root cause: ReadOnlyPut("*") (glob)

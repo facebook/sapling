@@ -36,17 +36,17 @@ blobimport, succeeding
   $ rm -rf ./repo
   $ blobimport repo-hg/.hg repo
 
-check the read sql path still works with --readonly-storage
-  $ mononoke_admin --readonly-storage bookmarks log master_bookmark 2>&1 | grep master_bookmark
+check the read sql path still works with readonly storage
+  $ mononoke_admin --with-readonly-storage=true bookmarks log master_bookmark 2>&1 | grep master_bookmark
   (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
 
-check that sql writes are blocked by --readonly-storage
-  $ mononoke_admin --readonly-storage bookmarks set another_bookmark 26805aba1e600a82e93661149f2313866a221a7b 2>&1
+check that sql writes are blocked by readonly storage
+  $ mononoke_admin --with-readonly-storage=true bookmarks set another_bookmark 26805aba1e600a82e93661149f2313866a221a7b 2>&1
   * using repo "repo" repoid * (glob)
   * changeset resolved as: * (glob)
   * Current position of BookmarkName { bookmark: "another_bookmark" } is None (glob)
   * While executing InsertBookmarks query (glob)
-  
+  * (glob)
   Caused by:
       0: attempt to write a readonly database
       1: Error code 8: Attempt to write a readonly database
