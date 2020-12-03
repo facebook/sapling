@@ -128,7 +128,7 @@ fn upload_hg_file_entry(
         path: path.into_mpath().expect("expected a path to be present"),
     };
 
-    let (_, upload_fut) = upload.upload(ctx, repo.get_blobstore().boxed()).unwrap();
+    let upload_fut = upload.upload(ctx, repo.get_blobstore().boxed());
     (HgFileNodeId::new(node_id), upload_fut)
 }
 

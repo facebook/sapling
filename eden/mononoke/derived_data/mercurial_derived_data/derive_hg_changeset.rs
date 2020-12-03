@@ -130,8 +130,12 @@ async fn store_file_change(
                 p2,
                 path: path.clone(),
             };
-            let (_, upload_fut) = upload_entry.upload(ctx, repo.get_blobstore().boxed())?;
-            let (filenode_id, _) = upload_fut.compat().await?;
+
+            let (filenode_id, _) = upload_entry
+                .upload(ctx, repo.get_blobstore().boxed())
+                .compat()
+                .await?;
+
             Ok((change.file_type(), filenode_id))
         }
     }

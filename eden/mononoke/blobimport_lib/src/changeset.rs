@@ -228,7 +228,7 @@ fn upload_entry(
                         p2: p2.map(HgFileNodeId::new),
                         path,
                     };
-                    let (_, upload_fut) = try_boxfuture!(upload.upload_as_entry(ctx, blobstore));
+                    let upload_fut = upload.upload_as_entry(ctx, blobstore);
                     spawn_future(upload_fut).boxify()
                 }
                 (Type::File(..), true) => {
@@ -254,8 +254,7 @@ fn upload_entry(
                                 p2,
                                 path,
                             };
-                            let (_, upload_fut) =
-                                try_boxfuture!(upload.upload_as_entry(ctx, blobstore));
+                            let upload_fut = upload.upload_as_entry(ctx, blobstore);
                             spawn_future(upload_fut).boxify()
                         })
                         .boxify()

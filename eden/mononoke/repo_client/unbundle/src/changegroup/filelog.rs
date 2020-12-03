@@ -84,7 +84,7 @@ impl UploadableHgBlob for Filelog {
             path,
         };
 
-        let (_, fut) = upload.upload(ctx, repo.get_blobstore().boxed())?;
+        let fut = upload.upload(ctx, repo.get_blobstore().boxed());
         Ok((node_key, fut.map_err(Compat).boxify().shared()))
     }
 }

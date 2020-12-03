@@ -222,8 +222,7 @@ async fn resolve_conflict(
         p2,
         path,
     }
-    .upload(ctx, blobstore)?
-    .1
+    .upload(ctx, blobstore)
     .compat()
     .await?;
 

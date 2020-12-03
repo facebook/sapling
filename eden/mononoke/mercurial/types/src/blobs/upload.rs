@@ -413,7 +413,7 @@ impl UploadHgFileEntry {
         self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-    ) -> Result<(ContentBlobMeta, BoxFuture<(HgFileNodeId, RepoPath), Error>)> {
+    ) -> BoxFuture<(HgFileNodeId, RepoPath), Error> {
         STATS::upload_hg_file_entry.add_value(1);
         let UploadHgFileEntry {
             upload_node_id,
@@ -490,29 +490,20 @@ impl UploadHgFileEntry {
             }
         });
 
-        let fut = envelope_upload
+        envelope_upload
             .join(content_upload)
-            .map(move |(envelope_res, ())| envelope_res);
-        Ok((cbmeta, fut.boxify()))
+            .map(move |(envelope_res, ())| envelope_res)
+            .boxify()
     }
 
     pub fn upload_as_entry(
         self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-    ) -> Result<(
-        ContentBlobMeta,
-        BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>,
-    )> {
-        self.upload(ctx, blobstore.clone()).map({
-            move |(cbmeta, fut)| {
-                (
-                    cbmeta,
-                    fut.map(move |(filenode_id, repo_path)| (Entry::Leaf(filenode_id), repo_path))
-                        .boxify(),
-                )
-            }
-        })
+    ) -> BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
+        self.upload(ctx, blobstore.clone())
+            .map(move |(filenode_id, repo_path)| (Entry::Leaf(filenode_id), repo_path))
+            .boxify()
     }
 
 
