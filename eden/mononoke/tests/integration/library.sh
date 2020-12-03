@@ -428,13 +428,13 @@ ack=*
 changegroup3=True
 [mutation]
 record=False
-[mononokepeer]
-cn=localhost
 [web]
 cacerts=$TEST_CERTDIR/root-ca.crt
 [auth]
-edenapi.cert=$TEST_CERTDIR/localhost.crt
-edenapi.key=$TEST_CERTDIR/localhost.key
+mononoke.cert=$TEST_CERTDIR/localhost.crt
+mononoke.key=$TEST_CERTDIR/localhost.key
+mononoke.prefix=mononoke://*
+mononoke.cn=localhost
 EOF
 }
 

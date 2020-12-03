@@ -36,7 +36,7 @@ import socket
 from enum import Enum
 from struct import pack, unpack
 
-from . import error, progress, sslutil, util, stdiopeer
+from . import error, progress, httpconnection, sslutil, util, stdiopeer
 from .i18n import _
 from .pycompat import decodeutf8, encodeutf8
 
@@ -192,14 +192,19 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._host = u.host
         self._port = u.port or 443
         self._path = u.path
-        self._cn = ui.config("mononokepeer", "cn") or self._host
 
-        # Let's share certificate finding logic with EdenAPI
-        self._cert = ui.config("auth", "edenapi.cert")
-        self._key = ui.config("auth", "edenapi.key")
+        authdata = httpconnection.readauthforuri(self._ui, path, self._user)
+        if not authdata:
+            self._abort(
+                error.RepoError(
+                    _("missing auth configuration for connecting to mononoke")
+                )
+            )
 
-        if self._cert is None or self._key is None:
-            self._abort(error.RepoError(_("missing certificate or private key")))
+        (authname, auth) = authdata
+        self._cert = auth.get("cert")
+        self._key = auth.get("key")
+        self._cn = auth.get("cn") or self._host
 
         if create:
             self._abort(
