@@ -12,6 +12,7 @@
 #include <folly/logging/xlog.h>
 #include "eden/fs/prjfs/Dispatcher.h"
 #include "eden/fs/prjfs/PrjfsRequestContext.h"
+#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -31,7 +32,8 @@ using namespace facebook::eden;
     }                                                                      \
   } while (false)
 
-PrjfsChannelInner* getChannel(const PRJ_CALLBACK_DATA* callbackData) noexcept {
+std::shared_ptr<PrjfsChannelInner> getChannel(
+    const PRJ_CALLBACK_DATA* callbackData) noexcept {
   XDCHECK(callbackData);
   auto* channel = static_cast<PrjfsChannel*>(callbackData->InstanceContext);
   XDCHECK(channel);
@@ -44,7 +46,11 @@ HRESULT startEnumeration(
   BAIL_ON_RECURSIVE_CALL(callbackData);
 
   try {
-    auto* channel = getChannel(callbackData);
+    auto channel = getChannel(callbackData);
+    if (!channel) {
+      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+    }
+
     return channel->startEnumeration(callbackData, enumerationId);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
@@ -57,7 +63,11 @@ HRESULT endEnumeration(
   BAIL_ON_RECURSIVE_CALL(callbackData);
 
   try {
-    auto* channel = getChannel(callbackData);
+    auto channel = getChannel(callbackData);
+    if (!channel) {
+      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+    }
+
     return channel->endEnumeration(callbackData, enumerationId);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
@@ -72,7 +82,11 @@ HRESULT getEnumerationData(
   BAIL_ON_RECURSIVE_CALL(callbackData);
 
   try {
-    auto* channel = getChannel(callbackData);
+    auto channel = getChannel(callbackData);
+    if (!channel) {
+      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+    }
+
     return channel->getEnumerationData(
         callbackData, enumerationId, searchExpression, dirEntryBufferHandle);
   } catch (const std::exception& ex) {
@@ -84,7 +98,11 @@ HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
 
   try {
-    auto* channel = getChannel(callbackData);
+    auto channel = getChannel(callbackData);
+    if (!channel) {
+      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+    }
+
     return channel->getPlaceholderInfo(callbackData);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
@@ -95,7 +113,11 @@ HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
 
   try {
-    auto* channel = getChannel(callbackData);
+    auto channel = getChannel(callbackData);
+    if (!channel) {
+      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+    }
+
     return channel->queryFileName(callbackData);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
@@ -109,7 +131,11 @@ HRESULT getFileData(
   BAIL_ON_RECURSIVE_CALL(callbackData);
 
   try {
-    auto* channel = getChannel(callbackData);
+    auto channel = getChannel(callbackData);
+    if (!channel) {
+      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+    }
+
     return channel->getFileData(callbackData, byteOffset, length);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
@@ -129,7 +155,19 @@ HRESULT notification(
   BAIL_ON_RECURSIVE_CALL(callbackData);
 
   try {
-    auto* channel = getChannel(callbackData);
+    auto channel = getChannel(callbackData);
+    if (!channel) {
+      // TODO(zeyi): Something modified the working copy while it is being
+      // unmounted. At this point, we have no way to deal with this properly
+      // and the next time this repository is mounted, there will be a
+      // discrepency between what EdenFS thinks the state of the working copy
+      // should be and what it actually is. To solve this, we will need to scan
+      // the working copy at mount time to find these files and fixup EdenFS
+      // inodes.
+      EDEN_BUG() << "A notification was received while unmounting";
+      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+    }
+
     return channel->notification(
         callbackData,
         isDirectory,
@@ -149,10 +187,16 @@ namespace eden {
 PrjfsChannelInner::PrjfsChannelInner(
     Dispatcher* const dispatcher,
     const folly::Logger* straceLogger,
-    ProcessAccessLog& processAccessLog)
+    ProcessAccessLog& processAccessLog,
+    folly::Promise<folly::Unit> deletedPromise)
     : dispatcher_(dispatcher),
       straceLogger_(straceLogger),
-      processAccessLog_(processAccessLog) {}
+      processAccessLog_(processAccessLog),
+      deletedPromise_(std::move(deletedPromise)) {}
+
+PrjfsChannelInner::~PrjfsChannelInner() {
+  deletedPromise_.setValue(folly::unit);
+}
 
 HRESULT PrjfsChannelInner::startEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
@@ -679,13 +723,20 @@ PrjfsChannel::PrjfsChannel(
     std::shared_ptr<ProcessNameCache> processNameCache)
     : mountPath_(mountPath),
       mountId_(Guid::generate()),
-      processAccessLog_(std::move(processNameCache)),
-      inner_(dispatcher, straceLogger, processAccessLog_) {}
+      processAccessLog_(std::move(processNameCache)) {
+  auto [innerDeletedPromise, innerDeletedFuture] =
+      folly::makePromiseContract<folly::Unit>();
+  innerDeleted_ = std::move(innerDeletedFuture);
+  *inner_.wlock() = std::make_shared<PrjfsChannelInner>(
+      dispatcher,
+      straceLogger,
+      processAccessLog_,
+      std::move(innerDeletedPromise));
+}
 
 PrjfsChannel::~PrjfsChannel() {
-  if (isRunning_) {
-    stop();
-  }
+  XCHECK(stopPromise_.isFulfilled())
+      << "stop() must be called before destroying the channel";
 }
 
 void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
@@ -744,20 +795,21 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
     throw makeHResultErrorExplicit(result, "Failed to start the mount point");
   }
 
-  inner_.setMountChannel(mountChannel_);
+  (*inner_.wlock())->setMountChannel(mountChannel_);
 
   XLOG(INFO) << "Started PrjfsChannel for: " << mountPath_;
-
-  isRunning_ = true;
 }
 
-void PrjfsChannel::stop() {
+folly::SemiFuture<folly::Unit> PrjfsChannel::stop() {
   XLOG(INFO) << "Stopping PrjfsChannel for: " << mountPath_;
-  XDCHECK(isRunning_);
+  XCHECK(!stopPromise_.isFulfilled());
   PrjStopVirtualizing(mountChannel_);
-  stopPromise_.setValue(StopData{});
-  isRunning_ = false;
-  inner_.setMountChannel(nullptr);
+  mountChannel_ = nullptr;
+
+  inner_.wlock()->reset();
+  return std::move(innerDeleted_).deferValue([this](auto&&) {
+    stopPromise_.setValue(StopData{});
+  });
 }
 
 folly::SemiFuture<PrjfsChannel::StopData> PrjfsChannel::getStopFuture() {

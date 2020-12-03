@@ -629,8 +629,9 @@ folly::Future<folly::Unit> EdenMount::unmount() {
             return folly::makeFuture();
           }
 #ifdef _WIN32
-          channel_->stop();
-          return folly::makeFuture();
+          return channel_->stop()
+              .via(serverState_->getThreadPool().get())
+              .ensure([this] { channel_.reset(); });
 #else
           return serverState_->getPrivHelper()->fuseUnmount(
               getPath().stringPiece());

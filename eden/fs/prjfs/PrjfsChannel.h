@@ -26,9 +26,10 @@ class PrjfsChannelInner {
   PrjfsChannelInner(
       Dispatcher* const dispatcher,
       const folly::Logger* straceLogger,
-      ProcessAccessLog& processAccessLog);
+      ProcessAccessLog& processAccessLog,
+      folly::Promise<folly::Unit> deletedPromise);
 
-  ~PrjfsChannelInner() = default;
+  ~PrjfsChannelInner();
 
   explicit PrjfsChannelInner() = delete;
   PrjfsChannelInner(const PrjfsChannelInner&) = delete;
@@ -119,6 +120,9 @@ class PrjfsChannelInner {
   // Set of currently active directory enumerations.
   folly::Synchronized<folly::F14FastMap<Guid, std::shared_ptr<Enumerator>>>
       enumSessions_;
+
+  // Set when the destructor is called.
+  folly::Promise<folly::Unit> deletedPromise_;
 };
 
 class PrjfsChannel {
@@ -133,10 +137,21 @@ class PrjfsChannel {
       Dispatcher* const dispatcher,
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache);
+
   ~PrjfsChannel();
 
   void start(bool readOnly, bool useNegativePathCaching);
-  void stop();
+
+  /**
+   * Stop the PrjfsChannel.
+   *
+   * The returned future will complete once all the pending callbacks and
+   * notifications are completed.
+   *
+   * PrjfsChannel must not be destructed until the returned future is
+   * fulfilled.
+   */
+  folly::SemiFuture<folly::Unit> stop();
 
   struct StopData {};
   folly::SemiFuture<StopData> getStopFuture();
@@ -166,20 +181,27 @@ class PrjfsChannel {
     return processAccessLog_;
   }
 
-  PrjfsChannelInner* getInner() {
-    return &inner_;
+  /**
+   * Copy the inner channel.
+   *
+   * As long as the returned value is alive, the mount cannot be unmounted.
+   * When an unmount is pending, the shared_ptr will be NULL.
+   */
+  std::shared_ptr<PrjfsChannelInner> getInner() {
+    return *inner_.rlock();
   }
 
  private:
   const AbsolutePath mountPath_;
   Guid mountId_;
-  bool isRunning_{false};
   bool useNegativePathCaching_{true};
   folly::Promise<StopData> stopPromise_;
 
   ProcessAccessLog processAccessLog_;
 
-  PrjfsChannelInner inner_;
+  folly::SemiFuture<folly::Unit> innerDeleted_;
+  folly::Synchronized<std::shared_ptr<PrjfsChannelInner>> inner_;
+
   // Internal ProjectedFS channel used to communicate with ProjectedFS.
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
 };
