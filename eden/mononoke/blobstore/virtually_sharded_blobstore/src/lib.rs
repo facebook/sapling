@@ -40,8 +40,10 @@ define_stats! {
     puts_deduped: timeseries(Sum),
 }
 
-// 4MiB, minus a little space for the STORED prefix and the key.
-const MAX_CACHELIB_VALUE_SIZE: u64 = 4 * 1024 * 1024 - 1024;
+// 4MiB, minus a little space for the STORED prefix and the key. Note that we also arbitrarily add
+// 8 bytes because 4 * 1024 * 1024 - 1024 is also our Filestore threshold so it's a good idea to
+// not attempt to recompress that given it was chosen to fit in cachelib.
+const MAX_CACHELIB_VALUE_SIZE: u64 = 4 * 1024 * 1024 - 1024 + 8;
 
 const NOT_STORABLE: Bytes = Bytes::from_static(&[0]);
 const STORED: Bytes = Bytes::from_static(&[1]);
