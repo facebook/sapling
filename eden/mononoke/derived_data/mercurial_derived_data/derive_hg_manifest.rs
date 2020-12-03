@@ -220,9 +220,8 @@ async fn resolve_conflict(
         contents: UploadHgFileContents::ContentUploaded(contents),
         p1,
         p2,
-        path,
     }
-    .upload(ctx, blobstore)
+    .upload_with_path(ctx, blobstore, path)
     .await?;
 
     Ok((file_type, filenode_id))

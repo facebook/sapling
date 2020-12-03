@@ -233,7 +233,7 @@ Change "sha256:oid" to an another valid oid to check sha1 consisnency
   remote:                         source: Error {
   remote:                             context: "While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(a1da9053000e0fb9217762d82ba5db793cfb26ce)))",
   remote:                             source: SharedError {
-  remote:                                 error: InconsistentEntryHash(
+  remote:                                 error: InconsistentEntryHashForPath(
   remote:                                     FilePath(
   remote:                                         MPath("inconsistent_file"),
   remote:                                     ),

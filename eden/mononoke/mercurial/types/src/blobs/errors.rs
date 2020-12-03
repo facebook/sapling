@@ -27,5 +27,7 @@ pub enum ErrorKind {
     #[error("Incorrect LFS file content {0}")]
     IncorrectLfsFileContent(String),
     #[error("Inconsistent node hash for entry: path {0}, provided: {1}, computed: {2}")]
-    InconsistentEntryHash(RepoPath, HgNodeHash, HgNodeHash),
+    InconsistentEntryHashForPath(RepoPath, HgNodeHash, HgNodeHash),
+    #[error("Inconsistent node hash for entry: provided: {0}, computed: {1}")]
+    InconsistentEntryHash(HgNodeHash, HgNodeHash),
 }

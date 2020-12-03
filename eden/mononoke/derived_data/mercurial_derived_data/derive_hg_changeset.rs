@@ -128,11 +128,10 @@ async fn store_file_change(
                 }),
                 p1,
                 p2,
-                path: path.clone(),
             };
 
-            let (filenode_id, _) = upload_entry
-                .upload(ctx, repo.get_blobstore().boxed())
+            let filenode_id = upload_entry
+                .upload(ctx, repo.get_blobstore().boxed(), Some(&path))
                 .await?;
 
             Ok((change.file_type(), filenode_id))

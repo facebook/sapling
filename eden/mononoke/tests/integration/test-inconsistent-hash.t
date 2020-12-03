@@ -96,7 +96,7 @@ filenode won't be send at all
   remote:                         source: Error {
   remote:                             context: "While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(314550e1ace48fe6245515c137b38ea8aeb04c7d)))",
   remote:                             source: SharedError {
-  remote:                                 error: InconsistentEntryHash(
+  remote:                                 error: InconsistentEntryHashForPath(
   remote:                                     FilePath(
   remote:                                         MPath("file"),
   remote:                                     ),

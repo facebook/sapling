@@ -102,7 +102,7 @@ impl UploadHgTreeEntry {
             UploadHgNodeHash::Supplied(node_id) => node_id,
             UploadHgNodeHash::Checked(node_id) => {
                 if node_id != computed_node_id {
-                    bail!(ErrorKind::InconsistentEntryHash(
+                    bail!(ErrorKind::InconsistentEntryHashForPath(
                         path,
                         node_id,
                         computed_node_id
@@ -406,7 +406,6 @@ pub struct UploadHgFileEntry {
     pub contents: UploadHgFileContents,
     pub p1: Option<HgFileNodeId>,
     pub p2: Option<HgFileNodeId>,
-    pub path: MPath,
 }
 
 impl UploadHgFileEntry {
@@ -414,14 +413,14 @@ impl UploadHgFileEntry {
         self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-    ) -> Result<(HgFileNodeId, RepoPath), Error> {
+        path: Option<&MPath>, // This is used for logging
+    ) -> Result<HgFileNodeId, Error> {
         STATS::upload_hg_file_entry.add_value(1);
         let UploadHgFileEntry {
             upload_node_id,
             contents,
             p1,
             p2,
-            path,
         } = self;
 
         let (cbmeta, content_upload, compute_fut) =
@@ -438,12 +437,18 @@ impl UploadHgFileEntry {
                 UploadHgNodeHash::Checked(node_id) => {
                     let node_id = HgFileNodeId::new(node_id);
                     if node_id != computed_node_id {
-                        return Err(ErrorKind::InconsistentEntryHash(
-                            RepoPath::FilePath(path),
-                            node_id.into_nodehash(),
-                            computed_node_id.into_nodehash(),
-                        )
-                        .into());
+                        let err = match path {
+                            Some(path) => ErrorKind::InconsistentEntryHashForPath(
+                                RepoPath::FilePath((*path).clone()),
+                                node_id.into_nodehash(),
+                                computed_node_id.into_nodehash(),
+                            ),
+                            None => ErrorKind::InconsistentEntryHash(
+                                node_id.into_nodehash(),
+                                computed_node_id.into_nodehash(),
+                            ),
+                        };
+                        return Err(Error::from(err));
                     }
                     node_id
                 }
@@ -467,15 +472,9 @@ impl UploadHgFileEntry {
                 .await?;
 
 
-            Self::log_stats(
-                logger,
-                Some(&path),
-                node_id,
-                "file_envelope_uploaded",
-                stats,
-            );
+            Self::log_stats(logger, path, node_id, "file_envelope_uploaded", stats);
 
-            Ok((node_id, RepoPath::FilePath(path)))
+            Ok(node_id)
         };
 
         let (ret, ()) = future::try_join(envelope_upload, content_upload.compat()).await?;
@@ -483,15 +482,27 @@ impl UploadHgFileEntry {
         Ok(ret)
     }
 
+    /// Upload and provide a path for this upload. This will be returned to the caller, but wil
+    /// also be used for logging.
+    pub async fn upload_with_path(
+        self,
+        ctx: CoreContext,
+        blobstore: Arc<dyn Blobstore>,
+        path: MPath,
+    ) -> Result<(HgFileNodeId, RepoPath), Error> {
+        let filenode_id = self.upload(ctx, blobstore.clone(), Some(&path)).await?;
+        Ok((filenode_id, RepoPath::FilePath(path)))
+    }
+
     pub async fn upload_as_entry(
         self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
+        path: MPath,
     ) -> Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
-        let (filenode_id, repo_path) = self.upload(ctx, blobstore.clone()).await?;
-        Ok((Entry::Leaf(filenode_id), repo_path))
+        let filenode_id = self.upload(ctx, blobstore.clone(), Some(&path)).await?;
+        Ok((Entry::Leaf(filenode_id), RepoPath::FilePath(path)))
     }
-
 
     fn log_stats(
         logger: Logger,

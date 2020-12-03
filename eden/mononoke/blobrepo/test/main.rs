@@ -1297,9 +1297,7 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
     let content_len = content_blob.len() as u64;
     content_blob.store(&ctx, repo.blobstore()).await?;
 
-    let path1 = RepoPath::file("path/1")?;
-    let path2 = RepoPath::file("path/2")?;
-    let path3 = RepoPath::file("path/3")?;
+    let path = RepoPath::file("path/3")?;
 
     let content_key = format!("repo0000.content.blake2.{}", content_id.to_hex());
 
@@ -1312,7 +1310,7 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
     let cbmeta_copy = ContentBlobMeta {
         id: content_id,
         size: content_len,
-        copy_from: Some((to_mpath(path3.clone())?, ONES_FNID)),
+        copy_from: Some((to_mpath(path.clone())?, ONES_FNID)),
     };
 
     // Clear our blobstore first.
@@ -1328,10 +1326,10 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
         contents: UploadHgFileContents::ContentUploaded(cbmeta.clone()),
         p1,
         p2,
-        path: to_mpath(path1.clone())?,
     };
-    let future = upload.upload(ctx.clone(), repo.get_blobstore().boxed());
-    future.await?;
+    upload
+        .upload(ctx.clone(), repo.get_blobstore().boxed(), None)
+        .await?;
 
     let gets = blobstore.tracing_gets();
     assert_eq!(gets.len(), 3);
@@ -1348,10 +1346,11 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
         contents: UploadHgFileContents::ContentUploaded(cbmeta.clone()),
         p1,
         p2,
-        path: to_mpath(path2.clone())?,
     };
-    let future = upload.upload(ctx.clone(), repo.get_blobstore().boxed());
-    future.await?;
+
+    upload
+        .upload(ctx.clone(), repo.get_blobstore().boxed(), None)
+        .await?;
 
     let gets = blobstore.tracing_gets();
     assert_eq!(gets.len(), 2);
@@ -1365,10 +1364,10 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
         contents: UploadHgFileContents::ContentUploaded(cbmeta_copy.clone()),
         p1,
         p2,
-        path: to_mpath(path2.clone())?,
     };
-    let future = upload.upload(ctx.clone(), repo.get_blobstore().boxed());
-    future.await?;
+    upload
+        .upload(ctx.clone(), repo.get_blobstore().boxed(), None)
+        .await?;
 
     let gets = blobstore.tracing_gets();
     assert_eq!(gets.len(), 3);
@@ -1398,13 +1397,12 @@ async fn test_content_uploaded_filenode_id(fb: FacebookInit) -> Result<(), Error
     let content_len = content_blob.len() as u64;
     content_blob.store(&ctx, repo.blobstore()).await?;
 
-    let path1 = RepoPath::file("path/1")?;
-    let path2 = RepoPath::file("path/2")?;
+    let path = RepoPath::file("path/2")?;
 
     let cbmeta = ContentBlobMeta {
         id: content_id,
         size: content_len,
-        copy_from: Some((to_mpath(path2.clone())?, ONES_FNID)),
+        copy_from: Some((to_mpath(path.clone())?, ONES_FNID)),
     };
 
     let upload = UploadHgFileEntry {
@@ -1414,10 +1412,10 @@ async fn test_content_uploaded_filenode_id(fb: FacebookInit) -> Result<(), Error
         contents: UploadHgFileContents::ContentUploaded(cbmeta.clone()),
         p1,
         p2,
-        path: to_mpath(path1.clone())?,
     };
-    let future = upload.upload(ctx.clone(), repo.get_blobstore().boxed());
-    future.await?;
+    upload
+        .upload(ctx.clone(), repo.get_blobstore().boxed(), None)
+        .await?;
 
     Ok(())
 }

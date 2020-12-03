@@ -226,9 +226,11 @@ fn upload_entry(
                         ),
                         p1: p1.map(HgFileNodeId::new),
                         p2: p2.map(HgFileNodeId::new),
-                        path,
                     };
-                    let upload_fut = upload.upload_as_entry(ctx, blobstore).boxed().compat();
+                    let upload_fut = upload
+                        .upload_as_entry(ctx, blobstore, path)
+                        .boxed()
+                        .compat();
                     spawn_future(upload_fut).boxify()
                 }
                 (Type::File(..), true) => {
@@ -252,10 +254,11 @@ fn upload_entry(
                                 contents: UploadHgFileContents::ContentUploaded(cbmeta),
                                 p1,
                                 p2,
-                                path,
                             };
-                            let upload_fut =
-                                upload.upload_as_entry(ctx, blobstore).boxed().compat();
+                            let upload_fut = upload
+                                .upload_as_entry(ctx, blobstore, path)
+                                .boxed()
+                                .compat();
                             spawn_future(upload_fut).boxify()
                         })
                         .boxify()
