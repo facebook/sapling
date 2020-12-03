@@ -163,6 +163,9 @@ impl CreateChangeset {
                                 parent_manifest_hashes.get(0).cloned(),
                                 parent_manifest_hashes.get(1).cloned(),
                             )
+                            .boxed()
+                            .compat()
+                            .boxify()
                         };
 
                         let p1_mf = parent_manifest_hashes.get(0).cloned();

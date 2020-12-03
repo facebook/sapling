@@ -106,7 +106,6 @@ async fn store_file_change(
                     p2.unwrap(),
                     path.clone(),
                 )
-                .compat()
                 .await?;
 
                 use blobrepo_common::file_history::FilenodesRelatedResult::*;
@@ -311,9 +310,8 @@ async fn generate_hg_changeset(
 
     let manifest_id =
         get_manifest_from_bonsai(&repo, ctx.clone(), bcs.clone(), parent_manifests).await?;
-    let files = compute_changed_files(ctx.clone(), repo.clone(), manifest_id.clone(), mf_p1, mf_p2)
-        .compat()
-        .await?;
+    let files =
+        compute_changed_files(ctx.clone(), repo.clone(), manifest_id.clone(), mf_p1, mf_p2).await?;
 
     let mut metadata = ChangesetMetadata {
         user: bcs.author().to_string(),

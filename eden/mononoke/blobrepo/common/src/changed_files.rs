@@ -7,14 +7,8 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    future::{FutureExt, TryFutureExt},
-    stream::{StreamExt, TryStreamExt},
-};
-use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as _, StreamExt as _};
-use futures_old::{future as old_future, Future as _, Stream as _};
+use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, MPath};
@@ -27,90 +21,69 @@ use std::collections::HashSet;
 /// A files is considered new when it was not present in neither of parent manifests or it was
 /// present, but with a different content.
 /// It sorts the returned Vec<MPath> in the order expected by Mercurial.
-pub fn compute_changed_files(
+pub async fn compute_changed_files(
     ctx: CoreContext,
     repo: BlobRepo,
     root: HgManifestId,
     p1: Option<HgManifestId>,
     p2: Option<HgManifestId>,
-) -> OldBoxFuture<Vec<MPath>, Error> {
-    match (p1, p2) {
-        (None, None) => root
-            .list_leaf_entries(ctx, repo.get_blobstore())
-            .compat()
-            .map(|(path, _)| path)
-            .collect_to()
-            .boxify(),
+) -> Result<Vec<MPath>, Error> {
+    let files = match (p1, p2) {
+        (None, None) => {
+            root.list_leaf_entries(ctx, repo.get_blobstore())
+                .map_ok(|(path, _)| path)
+                .try_collect()
+                .await?
+        }
         (Some(manifest), None) | (None, Some(manifest)) => {
-            compute_changed_files_pair(ctx, root, manifest, repo)
+            compute_changed_files_pair(ctx, root, manifest, repo).await?
         }
         (Some(p1), Some(p2)) => {
-            let f1 = compute_changed_files_pair(ctx.clone(), root, p1, repo.clone())
-                .join(compute_changed_files_pair(
-                    ctx.clone(),
-                    root,
-                    p2,
-                    repo.clone(),
-                ))
-                .map(|(left, right)| left.intersection(&right).cloned().collect::<Vec<_>>());
+            let changed = future::try_join(
+                compute_changed_files_pair(ctx.clone(), root, p1, repo.clone()),
+                compute_changed_files_pair(ctx.clone(), root, p2, repo.clone()),
+            )
+            .map_ok(|(left, right)| left.intersection(&right).cloned().collect::<Vec<_>>());
 
             // Mercurial always includes removed files, we need to match this behaviour
-            let f2 = {
-                cloned!(ctx, repo);
-                async move { compute_removed_files(&ctx, &repo, root, Some(p1)).await }
-            }
-            .boxed()
-            .compat();
-            let f3 = {
-                cloned!(ctx, repo);
-                async move { compute_removed_files(&ctx, &repo, root, Some(p2)).await }
-            }
-            .boxed()
-            .compat();
-
-            f1.join3(f2, f3)
-                .map(|(ch1, ch2, ch3)| {
-                    ch1.into_iter()
-                        .chain(ch2.into_iter())
-                        .chain(ch3.into_iter())
-                        .collect::<HashSet<_>>()
-                })
-                .boxify()
+            let (ch1, ch2, ch3) = future::try_join3(
+                changed,
+                compute_removed_files(&ctx, &repo, root, Some(p1)),
+                compute_removed_files(&ctx, &repo, root, Some(p2)),
+            )
+            .await?;
+            ch1.into_iter()
+                .chain(ch2.into_iter())
+                .chain(ch3.into_iter())
+                .collect::<HashSet<_>>()
         }
-    }
-    .map(|files| {
-        let mut files: Vec<MPath> = files.into_iter().collect();
-        files.sort_unstable_by(mercurial_mpath_comparator);
+    };
 
-        files
-    })
-    .boxify()
+    let mut files: Vec<MPath> = files.into_iter().collect();
+    files.sort_unstable_by(mercurial_mpath_comparator);
+    Ok(files)
 }
 
-fn compute_changed_files_pair(
+async fn compute_changed_files_pair(
     ctx: CoreContext,
     to: HgManifestId,
     from: HgManifestId,
     repo: BlobRepo,
-) -> OldBoxFuture<HashSet<MPath>, Error> {
+) -> Result<HashSet<MPath>, Error> {
     from.diff(ctx, repo.get_blobstore(), to)
-        .compat()
-        .filter_map(|diff| {
+        .try_filter_map(|diff| async move {
             let (path, entry) = match diff {
                 Diff::Added(path, entry) | Diff::Removed(path, entry) => (path, entry),
                 Diff::Changed(path, .., entry) => (path, entry),
             };
 
             match entry {
-                Entry::Tree(_) => None,
-                Entry::Leaf(_) => path,
+                Entry::Tree(_) => Ok(None),
+                Entry::Leaf(_) => Ok(path),
             }
         })
-        .fold(HashSet::new(), |mut set, path| {
-            set.insert(path);
-            old_future::ok::<_, Error>(set)
-        })
-        .boxify()
+        .try_collect()
+        .await
 }
 
 async fn compute_removed_files(

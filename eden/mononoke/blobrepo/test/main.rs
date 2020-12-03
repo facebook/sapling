@@ -506,7 +506,6 @@ async fn test_compute_changed_files_no_parents(fb: FacebookInit) {
         .unwrap();
 
     let diff = (compute_changed_files(ctx.clone(), repo.clone(), cs.manifestid(), None, None))
-        .compat()
         .await
         .unwrap();
     assert!(
@@ -544,14 +543,13 @@ async fn test_compute_changed_files_one_parent(fb: FacebookInit) {
         .await
         .unwrap();
 
-    let diff = (compute_changed_files(
+    let diff = compute_changed_files(
         ctx.clone(),
         repo.clone(),
         cs.manifestid(),
         Some(parent_cs.manifestid()),
         None,
-    ))
-    .compat()
+    )
     .await
     .unwrap();
     assert!(

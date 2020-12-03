@@ -19,7 +19,7 @@ use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FetchKey;
-use futures::future::{FutureExt, TryFutureExt};
+use futures::{FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use futures_ext::{select_all, BoxFuture, FutureExt as _};
 use futures_old::{Future, IntoFuture, Stream};
 use getbundle_response::SessionLfsParams;
@@ -228,6 +228,8 @@ pub fn get_unordered_file_history_for_multiple_nodes(
     };
     select_all(filenodes.into_iter().map(|filenode| {
         get_file_history_maybe_incomplete(ctx.clone(), repo.clone(), filenode, path.clone(), limit)
+            .boxed()
+            .compat()
     }))
     .filter({
         let mut used_filenodes = HashSet::new();

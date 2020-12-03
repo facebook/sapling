@@ -14,7 +14,6 @@ use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
 use fixtures::linear;
-use futures::compat::Future01CompatExt;
 use manifest::ManifestOps;
 use mercurial_types::HgChangesetId;
 use mononoke_types::MPath;
@@ -103,7 +102,6 @@ async fn assert_linknodes(
         .ok_or_else(|| anyhow!("expected leaf"))?;
 
     let history = get_file_history(ctx.clone(), repo.clone(), files_hg_id, path, max_length)
-        .compat()
         .await?
         .do_not_handle_disabled_filenodes()?;
 

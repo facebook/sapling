@@ -9,10 +9,7 @@ use async_trait::async_trait;
 use blobrepo_hg::file_history::get_file_history_maybe_incomplete;
 use blobstore::{Loadable, LoadableError};
 use bytes::Bytes;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    TryStream, TryStreamExt,
-};
+use futures::{compat::Future01CompatExt, TryStream, TryStreamExt};
 use getbundle_response::SessionLfsParams;
 use mercurial_types::{
     envelope::HgFileEnvelope, FileType, HgFileHistoryEntry, HgFileNodeId, HgNodeHash, HgParents,
@@ -90,7 +87,6 @@ impl HgFileContext {
             path,
             max_length.map(|len| len as u64),
         )
-        .compat()
         .map_err(MononokeError::from)
     }
 
