@@ -5,52 +5,60 @@
  * GNU General Public License version 2.
  */
 
-use anyhow;
+use anyhow::{Context, Error};
 use gotham_ext::middleware::PostRequestConfig;
 use permission_checker::MononokeIdentity;
-use serde::de::{Deserializer, Error};
+use serde::de::{Deserializer, Error as _};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::default::Default;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RawLimit {
-    pub counter: String,
-    pub limit: i64,
-    pub sleep_ms: i64,
-    pub max_jitter_ms: i64,
-    pub client_identities: Vec<String>,
-    pub probability_pct: i64,
+pub struct ObjectPopularity {
+    /// SCS counter category to use for blob popularity.
+    pub category: String,
+    /// How long (in seconds) to lookback
+    pub window: u32,
+    /// Objects whose sum of downloads exceeds the threshold during the window will not be
+    /// consistently-routed. This ensures the full pool of servers can be used to serve very
+    /// popular blobs.
+    pub threshold: u64,
 }
 
-/// Struct representing actual config data.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RawServerConfig {
-    pub track_bytes_sent: bool,
-    pub enable_consistent_routing: bool,
-    pub disable_hostname_logging: bool,
-    pub throttle_limits: Vec<RawLimit>,
-    pub enforce_acl_check: bool,
-    /// SCS counter category to use for blob popularity.
-    pub object_popularity_category: Option<String>,
-    /// Objects requested more than object_popularity_threshold recently (look at batch.rs for the
-    /// time window) will not be consistently-routed. This ensures the full pool of servers can be
-    /// used to serve very popular blobs.
-    pub object_popularity_threshold: Option<u64>,
+impl TryFrom<lfs_server_config::ObjectPopularity> for ObjectPopularity {
+    type Error = Error;
+
+    fn try_from(value: lfs_server_config::ObjectPopularity) -> Result<Self, Self::Error> {
+        let window = value
+            .window
+            .try_into()
+            .with_context(|| format!("Invalid window: {:?}", value.window))?;
+
+        let threshold = value
+            .threshold
+            .try_into()
+            .with_context(|| format!("Invalid threshold: {:?}", value.threshold))?;
+
+        Ok(Self {
+            category: value.category,
+            window,
+            threshold,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct Limit {
-    raw_limit: RawLimit,
+    raw_limit: lfs_server_config::ThrottleLimit,
     client_identities: Vec<MononokeIdentity>,
 }
 
-impl TryFrom<RawLimit> for Limit {
-    type Error = anyhow::Error;
+impl TryFrom<lfs_server_config::ThrottleLimit> for Limit {
+    type Error = Error;
 
-    fn try_from(value: RawLimit) -> Result<Self, Self::Error> {
+    fn try_from(value: lfs_server_config::ThrottleLimit) -> Result<Self, Self::Error> {
         let client_identities = value
             .client_identities
             .iter()
@@ -66,8 +74,36 @@ impl TryFrom<RawLimit> for Limit {
 
 #[derive(Debug, Clone)]
 pub struct ServerConfig {
-    pub raw_server_config: RawServerConfig,
+    pub raw_server_config: lfs_server_config::LfsServerConfig,
     throttle_limits: Vec<Limit>,
+    object_popularity: Option<ObjectPopularity>,
+}
+
+impl TryFrom<lfs_server_config::LfsServerConfig> for ServerConfig {
+    type Error = Error;
+
+    fn try_from(value: lfs_server_config::LfsServerConfig) -> Result<Self, Error> {
+        let throttle_limits = value
+            .throttle_limits
+            .iter()
+            .cloned()
+            .map(Limit::try_from)
+            .collect::<Result<Vec<_>, _>>()
+            .with_context(|| "Invalid throttle limits")?;
+
+        let object_popularity = value
+            .object_popularity
+            .as_ref()
+            .map(|o| o.clone().try_into())
+            .transpose()
+            .with_context(|| "Invalid object popularity")?;
+
+        Ok(Self {
+            raw_server_config: value,
+            throttle_limits,
+            object_popularity,
+        })
+    }
 }
 
 impl<'de> Deserialize<'de> for ServerConfig {
@@ -75,23 +111,9 @@ impl<'de> Deserialize<'de> for ServerConfig {
     where
         D: Deserializer<'de>,
     {
-        let raw_server_config = RawServerConfig::deserialize(deserializer)?;
-        let try_throttle_limits = raw_server_config
-            .throttle_limits
-            .iter()
-            .cloned()
-            .map(Limit::try_from)
-            .collect::<Result<Vec<_>, _>>();
-
-        let throttle_limits = match try_throttle_limits {
-            Err(e) => return Err(D::Error::custom(e.to_string())),
-            Ok(v) => v,
-        };
-
-        Ok(Self {
-            raw_server_config,
-            throttle_limits,
-        })
+        let raw = lfs_server_config::LfsServerConfig::deserialize(deserializer)?;
+        let config = Self::try_from(raw).map_err(|e| D::Error::custom(format!("{:?}", e)))?;
+        Ok(config)
     }
 }
 
@@ -100,28 +122,28 @@ impl Serialize for ServerConfig {
     where
         S: Serializer,
     {
-        RawServerConfig::serialize(&self.raw_server_config, serializer)
+        lfs_server_config::LfsServerConfig::serialize(&self.raw_server_config, serializer)
     }
 }
 
-impl Default for RawServerConfig {
+impl Default for ServerConfig {
     fn default() -> Self {
-        Self {
+        let raw_server_config = lfs_server_config::LfsServerConfig {
             track_bytes_sent: false,
             enable_consistent_routing: false,
             disable_hostname_logging: false,
-            throttle_limits: vec![],
             enforce_acl_check: false,
-            object_popularity_category: None,
-            object_popularity_threshold: None,
-        }
-    }
-}
-impl Default for ServerConfig {
-    fn default() -> Self {
-        Self {
-            raw_server_config: RawServerConfig::default(),
             throttle_limits: vec![],
+            object_popularity: None,
+            // TODO: Remove those once they're gone from Thrift configs.
+            object_popularity_category: Default::default(),
+            object_popularity_threshold: Default::default(),
+        };
+
+        Self {
+            raw_server_config,
+            throttle_limits: vec![],
+            object_popularity: None,
         }
     }
 }
@@ -142,11 +164,12 @@ impl ServerConfig {
     pub fn enforce_acl_check(&self) -> bool {
         self.raw_server_config.enforce_acl_check
     }
-    pub fn object_popularity_category(&self) -> Option<&str> {
-        self.raw_server_config.object_popularity_category.as_deref()
+    pub fn object_popularity(&self) -> Option<&ObjectPopularity> {
+        self.object_popularity.as_ref()
     }
-    pub fn object_popularity_threshold(&self) -> Option<u64> {
-        self.raw_server_config.object_popularity_threshold
+    #[cfg(test)]
+    pub fn object_popularity_mut(&mut self) -> &mut Option<ObjectPopularity> {
+        &mut self.object_popularity
     }
 }
 

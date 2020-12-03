@@ -129,11 +129,10 @@ fn limit_applies_probabilistically(limit: &Limit) -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::config::RawLimit;
 
     #[test]
     fn test_limit_applies_probabilistically() {
-        let base = RawLimit {
+        let base = lfs_server_config::ThrottleLimit {
             counter: "".to_string(),
             limit: 0,
             sleep_ms: 0,
@@ -142,7 +141,7 @@ mod test {
             probability_pct: 0,
         };
 
-        let l0: Limit = RawLimit {
+        let l0: Limit = lfs_server_config::ThrottleLimit {
             probability_pct: 0,
             ..base.clone()
         }
@@ -151,7 +150,7 @@ mod test {
 
         assert!(!limit_applies_probabilistically(&l0));
 
-        let l100: Limit = RawLimit {
+        let l100: Limit = lfs_server_config::ThrottleLimit {
             probability_pct: 100,
             ..base.clone()
         }

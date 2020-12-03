@@ -7,7 +7,7 @@
 
 use anyhow::{Context, Error};
 use futures::{
-    future::{self, FutureExt, TryFutureExt},
+    future::{self, FutureExt},
     pin_mut, select,
 };
 use gotham::state::{FromState, State};
@@ -144,10 +144,30 @@ async fn upstream_objects(
     Ok(UpstreamObjects::UpstreamPresence(objects))
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct StoredObject {
+    id: ContentId,
+    size: Option<u64>,
+}
+
+impl StoredObject {
+    pub fn new(id: ContentId, size: Option<u64>) -> Self {
+        Self { id, size }
+    }
+
+    pub fn id(&self) -> ContentId {
+        self.id
+    }
+
+    pub fn download_size(&self) -> u64 {
+        self.size.unwrap_or(0)
+    }
+}
+
 async fn resolve_internal_object(
     ctx: &RepositoryRequestContext,
     oid: Sha256,
-) -> Result<Option<ContentId>, Error> {
+) -> Result<Option<StoredObject>, Error> {
     let blobstore = ctx.repo.blobstore();
 
     let content_id = Alias::Sha256(oid).load(&ctx.ctx, blobstore).await;
@@ -160,34 +180,46 @@ async fn resolve_internal_object(
 
     // The filestore may allow aliases to be created before the contents are created (the creation
     // of the content is what makes it logically exists), so we should check for the content's
-    // existence before we proceed here. This wouldn't matter if we didn't have an upstream, but it
-    // does matter for now to handle the (very much edge-y) case of the content existing in the
+    // existence before we proceed here. Querying metadata does this implicitly, since metadata is
+    // written after content. This wouldn't matter if we didn't have an upstream, but it does
+    // matter for now to handle the (very much edge-y) case of the content existing in the
     // upstream, its alias existing locally, but not its content (T57777060).
+
+    let meta = filestore::get_metadata(&blobstore, &ctx.ctx, &(content_id.into()))
+        .await
+        .with_context(|| format!("Failed fetching content metadata for {:?}", content_id));
+
+    match meta {
+        Ok(Some(meta)) => {
+            return Ok(Some(StoredObject::new(
+                meta.content_id,
+                Some(meta.total_size),
+            )));
+        }
+        Ok(None) => {
+            return Ok(None);
+        }
+        Err(e) if has_redaction_root_cause(&e) => {
+            // Fallthrough to an existence check.
+        }
+        Err(e) => {
+            return Err(e);
+        }
+    };
+
+    // If a load error was caused by redaction, then check for existence instead, which isn't
+    // subject to redaction (only the content is).
+
     let exists = blobstore
-        .get(&ctx.ctx, &content_id.blobstore_key())
-        .map_ok(|b| b.is_some())
-        .or_else(|e| async move {
-            // If a load error was caused by redaction, then check for existence instead, which
-            // isn't subject to redaction (only the content is). The reason we normally check for
-            // the content itself is because doing a exists() check does not fill our Cachelib
-            // cache on hit, whereas get() does (and those blobs are all very small because they're
-            // just lists of the blobs that make up the actual large file). We therefore only
-            // fallback to this slow path when redaction gets in the way (uncommon).
-            if has_redaction_root_cause(&e) {
-                Ok(blobstore
-                    .is_present(&ctx.ctx, &content_id.blobstore_key())
-                    .await?)
-            } else {
-                Err(e)
-            }
-        })
-        .await?;
+        .is_present(&ctx.ctx, &content_id.blobstore_key())
+        .await
+        .with_context(|| format!("Failed to check for existence of: {:?}", content_id))?;
 
     if exists {
-        Ok(Some(content_id))
-    } else {
-        Ok(None)
+        return Ok(Some(StoredObject::new(content_id, None)));
     }
+
+    Ok(None)
 }
 
 async fn internal_objects(
@@ -197,15 +229,16 @@ async fn internal_objects(
     let futs = objects.iter().map(|object| async move {
         let oid = object.oid.0.into();
 
-        let (content_id, allow_consistent_routing) = future::join(
-            resolve_internal_object(ctx, oid),
-            allow_consistent_routing(ctx, oid, GlobalTimeWindowCounterBuilder),
-        )
-        .await;
+        let stored = resolve_internal_object(ctx, oid).await?;
 
-        let content_id = content_id?;
+        let allow_consistent_routing = match stored {
+            Some(stored) => {
+                allow_consistent_routing(&ctx, stored, GlobalTimeWindowCounterBuilder).await
+            }
+            None => true,
+        };
 
-        Result::<_, Error>::Ok((content_id, object.oid, allow_consistent_routing))
+        Result::<_, Error>::Ok((stored, object.oid, allow_consistent_routing))
     });
 
     let content_ids = future::try_join_all(futs).await?;
@@ -214,15 +247,15 @@ async fn internal_objects(
         .iter()
         .zip(content_ids.into_iter())
         .filter_map(
-            |(obj, (content_id, oid, allow_consistent_routing))| match content_id {
+            |(obj, (stored, oid, allow_consistent_routing))| match stored {
                 // Map the objects we have locally into an action routing to a Mononoke LFS server.
-                Some(content_id) => {
+                Some(stored) => {
                     let uri = if allow_consistent_routing && ctx.config.enable_consistent_routing()
                     {
                         ctx.uri_builder
-                            .consistent_download_uri(&content_id, oid.0.into())
+                            .consistent_download_uri(&stored.id, oid.0.into())
                     } else {
-                        ctx.uri_builder.download_uri(&content_id)
+                        ctx.uri_builder.download_uri(&stored.id)
                     };
 
                     let action = uri.map(ObjectAction::new).map(|action| (*obj, action));
@@ -564,17 +597,25 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 mod test {
     use super::*;
 
+    use async_trait::async_trait;
     use blobrepo_factory::TestRepoBuilder;
     use blobrepo_override::DangerousOverride;
+    use blobstore::{BlobstoreBytes, BlobstoreGetData};
     use bytes::Bytes;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use filestore::{self, StoreRequest};
     use futures::stream;
     use hyper::Uri;
+    use mononoke_types::ContentMetadataId;
     use mononoke_types_mocks::hash::ONES_SHA256;
     use redactedblobstore::RedactedMetadata;
-    use std::sync::Arc;
+    use std::collections::HashSet;
+    use std::iter::FromIterator;
+    use std::sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    };
 
     use lfs_protocol::Sha256 as LfsSha256;
     use pretty_assertions::assert_eq;
@@ -809,10 +850,43 @@ mod test {
         .await?;
 
         assert_eq!(
-            resolve_internal_object(&ctx, meta.sha256).await?,
+            resolve_internal_object(&ctx, meta.sha256)
+                .await?
+                .map(|o| o.id),
             Some(meta.content_id)
         );
         Ok(())
+    }
+
+    #[derive(Debug)]
+    struct HideBlob<B> {
+        inner: B,
+        hide: HashSet<String>,
+        hits: Arc<AtomicU64>,
+    }
+
+    #[async_trait]
+    impl<B: Blobstore> Blobstore for HideBlob<B> {
+        async fn get<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: &'a str,
+        ) -> Result<Option<BlobstoreGetData>, Error> {
+            if self.hide.contains(key) {
+                self.hits.fetch_add(1, Ordering::SeqCst);
+                return Ok(None);
+            }
+            self.inner.get(ctx, key).await
+        }
+
+        async fn put<'a>(
+            &'a self,
+            ctx: &'a CoreContext,
+            key: String,
+            value: BlobstoreBytes,
+        ) -> Result<(), Error> {
+            self.inner.put(ctx, key, value).await
+        }
     }
 
     #[fbinit::compat_test]
@@ -835,24 +909,63 @@ mod test {
 
         // Now, create a new blob repo with redaction, then swap the blobstore from the stub repo
         // into it, which has the data (but now it is redacted)!
-        let repo = TestRepoBuilder::new()
-            .redacted(Some(
-                hashmap! { meta.content_id.blobstore_key() => RedactedMetadata {
-                   task: "test".to_string(),
-                   log_only: false,
-                }},
-            ))
+        let builder = TestRepoBuilder::new().redacted(Some(
+            hashmap! { meta.content_id.blobstore_key() => RedactedMetadata {
+               task: "test".to_string(),
+               log_only: false,
+            }},
+        ));
+
+        let repo = builder
+            .clone()
             .build()?
-            .dangerous_override(|_: Arc<dyn Blobstore>| stub_blobstore);
+            .dangerous_override(|_: Arc<dyn Blobstore>| stub_blobstore.clone());
 
         let ctx = RepositoryRequestContext::test_builder(fb)?
             .repo(repo)
             .build()?;
 
         assert_eq!(
-            resolve_internal_object(&ctx, meta.sha256).await?,
+            resolve_internal_object(&ctx, meta.sha256)
+                .await?
+                .map(|o| o.id),
             Some(meta.content_id)
         );
+
+        // Now, create another one with the same redaction, but this time pretend the metadata does
+        // not exist. Buidling the key is a bit hacky here, but we have an assertion on the number
+        // of hits later to make sure it works.
+
+        let key = format!(
+            "repo0000.{}",
+            ContentMetadataId::from(meta.content_id).blobstore_key()
+        );
+
+        let hits = Arc::new(AtomicU64::new(0));
+
+        let hide_blobstore = HideBlob {
+            inner: stub_blobstore,
+            hide: HashSet::from_iter(Some(key)),
+            hits: hits.clone(),
+        };
+
+        let repo = builder
+            .clone()
+            .build()?
+            .dangerous_override(|_: Arc<dyn Blobstore>| Arc::new(hide_blobstore));
+
+        let ctx = RepositoryRequestContext::test_builder(fb)?
+            .repo(repo)
+            .build()?;
+
+        assert_eq!(
+            resolve_internal_object(&ctx, meta.sha256)
+                .await?
+                .map(|o| o.id),
+            Some(meta.content_id)
+        );
+
+        assert_eq!(hits.load(Ordering::SeqCst), 1);
 
         Ok(())
     }

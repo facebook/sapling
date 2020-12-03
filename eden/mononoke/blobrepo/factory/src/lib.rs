@@ -294,6 +294,7 @@ pub async fn open_blobrepo_given_datasources(
 }
 
 /// A helper to build test repositories.
+#[derive(Clone)]
 pub struct TestRepoBuilder {
     repo_id: RepositoryId,
     blobstore: Arc<dyn Blobstore>,

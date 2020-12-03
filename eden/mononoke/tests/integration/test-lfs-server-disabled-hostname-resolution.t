@@ -31,8 +31,9 @@
     "disable_hostname_logging": true,
     "enable_consistent_routing": false,
     "enforce_acl_check": false,
-    "object_popularity_category": null,
-    "object_popularity_threshold": null,
+    "object_popularity": null,
+    "object_popularity_category": "",
+    "object_popularity_threshold": 0,
     "throttle_limits": [],
     "track_bytes_sent": true
   }
