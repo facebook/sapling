@@ -15,7 +15,6 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, DeriveError};
 use futures::{
-    compat::Future01CompatExt,
     future::{self, try_join, try_join_all},
     stream, FutureExt, TryStreamExt,
 };
