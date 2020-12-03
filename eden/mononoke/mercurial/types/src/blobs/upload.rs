@@ -21,13 +21,14 @@ use failure_ext::FutureFailureErrorExt;
 use filestore::FilestoreConfig;
 use filestore::{self, FetchKey};
 use futures::{
+    compat::Future01CompatExt,
     future::{self, Future, FutureExt, TryFutureExt},
     pin_mut,
     stream::{StreamExt, TryStreamExt},
 };
 use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::{future as future_old, stream, Future as FutureOld, IntoFuture, Stream};
-use futures_stats::{FutureStats, Timed};
+use futures_stats::{FutureStats, Timed, TimedTryFutureExt};
 use mononoke_types::{ContentId, MPath, RepoPath};
 use slog::{trace, Logger};
 use stats::prelude::*;
@@ -409,11 +410,11 @@ pub struct UploadHgFileEntry {
 }
 
 impl UploadHgFileEntry {
-    pub fn upload(
+    pub async fn upload(
         self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-    ) -> BoxFuture<(HgFileNodeId, RepoPath), Error> {
+    ) -> Result<(HgFileNodeId, RepoPath), Error> {
         STATS::upload_hg_file_entry.add_value(1);
         let UploadHgFileEntry {
             upload_node_id,
@@ -428,82 +429,67 @@ impl UploadHgFileEntry {
         let content_id = cbmeta.id;
         let logger = ctx.logger().clone();
 
-        let envelope_upload = compute_fut.and_then({
-            cloned!(path);
-            move |(computed_node_id, metadata, content_size)| {
-                let node_id = match upload_node_id {
-                    UploadHgNodeHash::Generate => computed_node_id,
-                    UploadHgNodeHash::Supplied(node_id) => HgFileNodeId::new(node_id),
-                    UploadHgNodeHash::Checked(node_id) => {
-                        let node_id = HgFileNodeId::new(node_id);
-                        if node_id != computed_node_id {
-                            return future_old::err(
-                                ErrorKind::InconsistentEntryHash(
-                                    RepoPath::FilePath(path),
-                                    node_id.into_nodehash(),
-                                    computed_node_id.into_nodehash(),
-                                )
-                                .into(),
-                            )
-                            .left_future();
-                        }
-                        node_id
+        let envelope_upload = async move {
+            let (computed_node_id, metadata, content_size) = compute_fut.compat().await?;
+
+            let node_id = match upload_node_id {
+                UploadHgNodeHash::Generate => computed_node_id,
+                UploadHgNodeHash::Supplied(node_id) => HgFileNodeId::new(node_id),
+                UploadHgNodeHash::Checked(node_id) => {
+                    let node_id = HgFileNodeId::new(node_id);
+                    if node_id != computed_node_id {
+                        return Err(ErrorKind::InconsistentEntryHash(
+                            RepoPath::FilePath(path),
+                            node_id.into_nodehash(),
+                            computed_node_id.into_nodehash(),
+                        )
+                        .into());
                     }
-                };
-
-                let file_envelope = HgFileEnvelopeMut {
-                    node_id,
-                    p1,
-                    p2,
-                    content_id,
-                    content_size,
-                    metadata,
-                };
-                let envelope_blob = file_envelope.freeze().into_blob();
-
-                let blobstore_key = node_id.blobstore_key();
-
-                async move {
-                    blobstore
-                        .put(&ctx, blobstore_key, envelope_blob.into())
-                        .await
+                    node_id
                 }
-                .boxed()
-                .compat()
-                .timed({
-                    let path = path.clone();
-                    move |stats, result| {
-                        if result.is_ok() {
-                            Self::log_stats(
-                                logger,
-                                Some(&path),
-                                node_id,
-                                "file_envelope_uploaded",
-                                stats,
-                            );
-                        }
-                        Ok(())
-                    }
-                })
-                .map(move |()| (node_id, RepoPath::FilePath(path)))
-                .right_future()
-            }
-        });
+            };
 
-        envelope_upload
-            .join(content_upload)
-            .map(move |(envelope_res, ())| envelope_res)
-            .boxify()
+            let file_envelope = HgFileEnvelopeMut {
+                node_id,
+                p1,
+                p2,
+                content_id,
+                content_size,
+                metadata,
+            };
+            let envelope_blob = file_envelope.freeze().into_blob();
+
+            let blobstore_key = node_id.blobstore_key();
+
+            let (stats, ()) = blobstore
+                .put(&ctx, blobstore_key, envelope_blob.into())
+                .try_timed()
+                .await?;
+
+
+            Self::log_stats(
+                logger,
+                Some(&path),
+                node_id,
+                "file_envelope_uploaded",
+                stats,
+            );
+
+            Ok((node_id, RepoPath::FilePath(path)))
+        };
+
+        let (ret, ()) = future::try_join(envelope_upload, content_upload.compat()).await?;
+
+        Ok(ret)
     }
 
-    pub fn upload_as_entry(
+    pub async fn upload_as_entry(
         self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-    ) -> BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
-        self.upload(ctx, blobstore.clone())
-            .map(move |(filenode_id, repo_path)| (Entry::Leaf(filenode_id), repo_path))
-            .boxify()
+    ) -> Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
+        let (filenode_id, repo_path) = self.upload(ctx, blobstore.clone()).await?;
+        Ok((Entry::Leaf(filenode_id), repo_path))
     }
 
 

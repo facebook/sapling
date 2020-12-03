@@ -11,6 +11,7 @@ use anyhow::Error;
 use ascii::AsAsciiStr;
 use bytes::Bytes;
 use fbinit::FacebookInit;
+use futures::future::{FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt, StreamExt};
 use futures_old::{future::Future as OldFuture, stream::futures_unordered};
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -129,7 +130,10 @@ fn upload_hg_file_entry(
     };
 
     let upload_fut = upload.upload(ctx, repo.get_blobstore().boxed());
-    (HgFileNodeId::new(node_id), upload_fut)
+    (
+        HgFileNodeId::new(node_id),
+        upload_fut.boxed().compat().boxify(),
+    )
 }
 
 pub fn create_changeset_no_parents(

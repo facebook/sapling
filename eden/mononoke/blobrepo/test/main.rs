@@ -1331,7 +1331,7 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
         path: to_mpath(path1.clone())?,
     };
     let future = upload.upload(ctx.clone(), repo.get_blobstore().boxed());
-    future.compat().await?;
+    future.await?;
 
     let gets = blobstore.tracing_gets();
     assert_eq!(gets.len(), 3);
@@ -1351,7 +1351,7 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
         path: to_mpath(path2.clone())?,
     };
     let future = upload.upload(ctx.clone(), repo.get_blobstore().boxed());
-    future.compat().await?;
+    future.await?;
 
     let gets = blobstore.tracing_gets();
     assert_eq!(gets.len(), 2);
@@ -1368,7 +1368,7 @@ async fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
         path: to_mpath(path2.clone())?,
     };
     let future = upload.upload(ctx.clone(), repo.get_blobstore().boxed());
-    future.compat().await?;
+    future.await?;
 
     let gets = blobstore.tracing_gets();
     assert_eq!(gets.len(), 3);
@@ -1417,7 +1417,7 @@ async fn test_content_uploaded_filenode_id(fb: FacebookInit) -> Result<(), Error
         path: to_mpath(path1.clone())?,
     };
     let future = upload.upload(ctx.clone(), repo.get_blobstore().boxed());
-    future.compat().await?;
+    future.await?;
 
     Ok(())
 }

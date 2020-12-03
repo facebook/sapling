@@ -133,7 +133,6 @@ async fn store_file_change(
 
             let (filenode_id, _) = upload_entry
                 .upload(ctx, repo.get_blobstore().boxed())
-                .compat()
                 .await?;
 
             Ok((change.file_type(), filenode_id))

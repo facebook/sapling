@@ -223,7 +223,6 @@ async fn resolve_conflict(
         path,
     }
     .upload(ctx, blobstore)
-    .compat()
     .await?;
 
     Ok((file_type, filenode_id))
