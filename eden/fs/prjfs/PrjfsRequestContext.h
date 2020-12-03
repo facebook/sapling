@@ -9,6 +9,7 @@
 
 #include <ProjectedFSLib.h> // @manual
 #include "eden/fs/inodes/RequestContext.h"
+#include "eden/fs/notifications/Notifications.h"
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -33,18 +34,24 @@ class PrjfsRequestContext : public RequestContext {
     return clientPid_;
   }
 
-  folly::Future<folly::Unit> catchErrors(folly::Future<folly::Unit>&& fut) {
-    return std::move(fut).thenTryInline([this](folly::Try<folly::Unit>&& try_) {
-      SCOPE_EXIT {
-        finishRequest();
-      };
+  folly::Future<folly::Unit> catchErrors(
+      folly::Future<folly::Unit>&& fut,
+      Notifications* FOLLY_NULLABLE notifications) {
+    return std::move(fut).thenTryInline(
+        [this, notifications](folly::Try<folly::Unit>&& try_) {
+          SCOPE_EXIT {
+            finishRequest();
+          };
 
-      if (try_.hasException()) {
-        auto* err = try_.tryGetExceptionObject<std::exception>();
-        XDCHECK(err);
-        sendError(exceptionToHResult(*err));
-      }
-    });
+          if (try_.hasException()) {
+            auto* err = try_.tryGetExceptionObject<std::exception>();
+            XDCHECK(err);
+            sendError(exceptionToHResult(*err));
+            if (notifications) {
+              notifications->showGenericErrorNotification(*err);
+            }
+          }
+        });
   }
 
   void sendSuccess() const {

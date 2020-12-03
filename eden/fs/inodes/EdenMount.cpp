@@ -1226,7 +1226,8 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                          std::chrono::duration_cast<folly::Duration>(
                              serverState_->getReloadableConfig()
                                  .getEdenConfig()
-                                 ->prjfsRequestTimeout.getValue()));
+                                 ->prjfsRequestTimeout.getValue()),
+                         serverState_->getNotifications());
                      channel->start(
                          readOnly,
                          serverState_->getReloadableConfig()

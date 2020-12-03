@@ -189,11 +189,13 @@ PrjfsChannelInner::PrjfsChannelInner(
     const folly::Logger* straceLogger,
     ProcessAccessLog& processAccessLog,
     folly::Duration requestTimeout,
+    Notifications* notifications,
     folly::Promise<folly::Unit> deletedPromise)
     : dispatcher_(dispatcher),
       straceLogger_(straceLogger),
       processAccessLog_(processAccessLog),
       requestTimeout_(requestTimeout),
+      notifications_(notifications),
       deletedPromise_(std::move(deletedPromise)) {}
 
 PrjfsChannelInner::~PrjfsChannelInner() {
@@ -228,7 +230,7 @@ HRESULT PrjfsChannelInner::startEnumeration(
       })
           .within(requestTimeout_);
 
-  context->catchErrors(std::move(fut)).ensure([context] {});
+  context->catchErrors(std::move(fut), notifications_).ensure([context] {});
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -330,7 +332,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
     return folly::makeFuture(folly::unit);
   });
 
-  context->catchErrors(std::move(fut)).ensure([context] {});
+  context->catchErrors(std::move(fut), notifications_).ensure([context] {});
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -389,7 +391,7 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
       })
           .within(requestTimeout_);
 
-  context->catchErrors(std::move(fut)).ensure([context] {});
+  context->catchErrors(std::move(fut), notifications_).ensure([context] {});
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -422,7 +424,7 @@ HRESULT PrjfsChannelInner::queryFileName(
       })
           .within(requestTimeout_);
 
-  context->catchErrors(std::move(fut)).ensure([context] {});
+  context->catchErrors(std::move(fut), notifications_).ensure([context] {});
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -609,7 +611,7 @@ HRESULT PrjfsChannelInner::getFileData(
       })
           .within(requestTimeout_);
 
-  context->catchErrors(std::move(fut)).ensure([context] {});
+  context->catchErrors(std::move(fut), notifications_).ensure([context] {});
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -702,7 +704,7 @@ HRESULT PrjfsChannelInner::notification(
           .thenValue([context](auto&&) { context->sendNotificationSuccess(); });
     });
 
-    context->catchErrors(std::move(fut)).ensure([context] {});
+    context->catchErrors(std::move(fut), notifications_).ensure([context] {});
 
     return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   }
@@ -737,7 +739,8 @@ PrjfsChannel::PrjfsChannel(
     Dispatcher* const dispatcher,
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
-    folly::Duration requestTimeout)
+    folly::Duration requestTimeout,
+    Notifications* notifications)
     : mountPath_(mountPath),
       mountId_(Guid::generate()),
       processAccessLog_(std::move(processNameCache)) {
@@ -749,6 +752,7 @@ PrjfsChannel::PrjfsChannel(
       straceLogger,
       processAccessLog_,
       requestTimeout,
+      notifications,
       std::move(innerDeletedPromise));
 }
 
