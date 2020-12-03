@@ -22,7 +22,7 @@ class PrjfsRequestContext : public RequestContext {
   PrjfsRequestContext& operator=(PrjfsRequestContext&&) = delete;
 
   explicit PrjfsRequestContext(
-      PrjfsChannel* channel,
+      PrjfsChannelInner* channel,
       const PRJ_CALLBACK_DATA& prjfsData)
       : RequestContext(channel->getProcessAccessLog()),
         channel_(channel),
@@ -69,7 +69,7 @@ class PrjfsRequestContext : public RequestContext {
   }
 
  private:
-  PrjfsChannel* channel_;
+  PrjfsChannelInner* channel_;
   int32_t commandId_;
   pid_t clientPid_;
 };

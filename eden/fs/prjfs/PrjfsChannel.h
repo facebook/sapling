@@ -21,6 +21,106 @@ namespace eden {
 class EdenMount;
 class Dispatcher;
 
+class PrjfsChannelInner {
+ public:
+  PrjfsChannelInner(
+      Dispatcher* const dispatcher,
+      const folly::Logger* straceLogger,
+      ProcessAccessLog& processAccessLog);
+
+  ~PrjfsChannelInner() = default;
+
+  explicit PrjfsChannelInner() = delete;
+  PrjfsChannelInner(const PrjfsChannelInner&) = delete;
+  PrjfsChannelInner& operator=(const PrjfsChannelInner&) = delete;
+
+  HRESULT startEnumeration(
+      const PRJ_CALLBACK_DATA* callbackData,
+      const GUID* enumerationId);
+
+  HRESULT endEnumeration(
+      const PRJ_CALLBACK_DATA* callbackData,
+      const GUID* enumerationId);
+
+  HRESULT getEnumerationData(
+      const PRJ_CALLBACK_DATA* callbackData,
+      const GUID* enumerationId,
+      PCWSTR searchExpression,
+      PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle);
+
+  HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData);
+
+  HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData);
+
+  HRESULT getFileData(
+      const PRJ_CALLBACK_DATA* callbackData,
+      UINT64 byteOffset,
+      UINT32 length);
+
+  HRESULT notification(
+      const PRJ_CALLBACK_DATA* callbackData,
+      BOOLEAN isDirectory,
+      PRJ_NOTIFICATION notificationType,
+      PCWSTR destinationFileName,
+      PRJ_NOTIFICATION_PARAMETERS* notificationParameters);
+
+  ProcessAccessLog& getProcessAccessLog() {
+    return processAccessLog_;
+  }
+
+  void setMountChannel(PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT channel) {
+    mountChannel_ = channel;
+  }
+
+  void sendSuccess(
+      int32_t commandId,
+      PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS* FOLLY_NULLABLE extra);
+
+  void sendError(int32_t commandId, HRESULT error);
+
+ private:
+  const folly::Logger& getStraceLogger() const {
+    return *straceLogger_;
+  }
+
+  void addDirectoryEnumeration(Guid guid, std::vector<FileMetadata> dirents) {
+    auto [iterator, inserted] = enumSessions_.wlock()->emplace(
+        std::move(guid), std::make_shared<Enumerator>(std::move(dirents)));
+    XDCHECK(inserted);
+  }
+
+  std::optional<std::shared_ptr<Enumerator>> findDirectoryEnumeration(
+      Guid& guid) {
+    auto enumerators = enumSessions_.rlock();
+    auto it = enumerators->find(guid);
+
+    if (it == enumerators->end()) {
+      return std::nullopt;
+    }
+
+    return it->second;
+  }
+
+  void removeDirectoryEnumeration(Guid& guid) {
+    auto erasedCount = enumSessions_.wlock()->erase(guid);
+    XDCHECK(erasedCount == 1);
+  }
+
+  // Internal ProjectedFS channel used to communicate with ProjectedFS.
+  PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
+
+  Dispatcher* const dispatcher_{nullptr};
+  const folly::Logger* const straceLogger_{nullptr};
+
+  // The processAccessLog_ is owned by PrjfsChannel which is guaranteed to have
+  // its lifetime be longer than that of PrjfsChannelInner.
+  ProcessAccessLog& processAccessLog_;
+
+  // Set of currently active directory enumerations.
+  folly::Synchronized<folly::F14FastMap<Guid, std::shared_ptr<Enumerator>>>
+      enumSessions_;
+};
+
 class PrjfsChannel {
  public:
   PrjfsChannel(const PrjfsChannel&) = delete;
@@ -62,60 +162,16 @@ class PrjfsChannel {
 
   void flushNegativePathCache();
 
-  Dispatcher* getDispatcher() {
-    return dispatcher_;
-  }
-
-  const folly::Logger& getStraceLogger() const {
-    return *straceLogger_;
-  }
-
   ProcessAccessLog& getProcessAccessLog() {
     return processAccessLog_;
   }
 
-  PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT getMountChannelContext() const {
-    return mountChannel_;
-  }
-
-  void sendSuccess(
-      int32_t commandId,
-      PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS* FOLLY_NULLABLE extra);
-
-  void sendError(int32_t commandId, HRESULT error);
-
-  void addDirectoryEnumeration(Guid guid, std::vector<FileMetadata> dirents) {
-    auto [iterator, inserted] = enumSessions_.wlock()->emplace(
-        std::move(guid), std::make_shared<Enumerator>(std::move(dirents)));
-    XDCHECK(inserted);
-  }
-
-  std::optional<std::shared_ptr<Enumerator>> findDirectoryEnumeration(
-      Guid& guid) {
-    auto enumerators = enumSessions_.rlock();
-    auto it = enumerators->find(guid);
-
-    if (it == enumerators->end()) {
-      return std::nullopt;
-    }
-
-    return it->second;
-  }
-
-  void removeDirectoryEnumeration(Guid& guid) {
-    auto erasedCount = enumSessions_.wlock()->erase(guid);
-    XDCHECK(erasedCount == 1);
+  PrjfsChannelInner* getInner() {
+    return &inner_;
   }
 
  private:
-  //
-  // Channel to talk to projectedFS.
-  //
-  PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
-
   const AbsolutePath mountPath_;
-  Dispatcher* const dispatcher_{nullptr};
-  const folly::Logger* const straceLogger_{nullptr};
   Guid mountId_;
   bool isRunning_{false};
   bool useNegativePathCaching_{true};
@@ -123,9 +179,9 @@ class PrjfsChannel {
 
   ProcessAccessLog processAccessLog_;
 
-  // Set of currently active directory enumerations.
-  folly::Synchronized<folly::F14FastMap<Guid, std::shared_ptr<Enumerator>>>
-      enumSessions_;
+  PrjfsChannelInner inner_;
+  // Internal ProjectedFS channel used to communicate with ProjectedFS.
+  PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
 };
 
 } // namespace eden
