@@ -188,10 +188,12 @@ PrjfsChannelInner::PrjfsChannelInner(
     Dispatcher* const dispatcher,
     const folly::Logger* straceLogger,
     ProcessAccessLog& processAccessLog,
+    folly::Duration requestTimeout,
     folly::Promise<folly::Unit> deletedPromise)
     : dispatcher_(dispatcher),
       straceLogger_(straceLogger),
       processAccessLog_(processAccessLog),
+      requestTimeout_(requestTimeout),
       deletedPromise_(std::move(deletedPromise)) {}
 
 PrjfsChannelInner::~PrjfsChannelInner() {
@@ -205,23 +207,26 @@ HRESULT PrjfsChannelInner::startEnumeration(
   auto context = std::make_shared<PrjfsRequestContext>(this, *callbackData);
   auto path = RelativePath(callbackData->FilePathName);
 
-  auto fut = folly::makeFutureWith([context,
-                                    this,
-                                    dispatcher = dispatcher_,
-                                    guid = std::move(guid),
-                                    path = std::move(path)] {
-    auto requestWatch =
-        std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
-    auto histogram = &ChannelThreadStats::openDir;
-    context->startRequest(dispatcher->getStats(), histogram, requestWatch);
+  auto fut =
+      folly::makeFutureWith([context,
+                             this,
+                             dispatcher = dispatcher_,
+                             guid = std::move(guid),
+                             path = std::move(path)] {
+        auto requestWatch =
+            std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
+                nullptr);
+        auto histogram = &ChannelThreadStats::openDir;
+        context->startRequest(dispatcher->getStats(), histogram, requestWatch);
 
-    FB_LOGF(getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
-    return dispatcher->opendir(path, *context)
-        .thenValue([context, guid = std::move(guid), this](auto&& dirents) {
-          addDirectoryEnumeration(std::move(guid), std::move(dirents));
-          context->sendSuccess();
-        });
-  });
+        FB_LOGF(getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
+        return dispatcher->opendir(path, *context)
+            .thenValue([context, guid = std::move(guid), this](auto&& dirents) {
+              addDirectoryEnumeration(std::move(guid), std::move(dirents));
+              context->sendSuccess();
+            });
+      })
+          .within(requestTimeout_);
 
   context->catchErrors(std::move(fut)).ensure([context] {});
 
@@ -278,6 +283,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
 
   auto context = std::make_shared<PrjfsRequestContext>(this, *callbackData);
   auto fut = folly::makeFutureWith([context,
+                                    timeout = requestTimeout_,
                                     dispatcher = dispatcher_,
                                     enumerator = std::move(enumerator),
                                     buffer = dirEntryBufferHandle] {
@@ -292,7 +298,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
       auto fileInfo = PRJ_FILE_BASIC_INFO();
 
       fileInfo.IsDirectory = entry->isDirectory;
-      fileInfo.FileSize = entry->getSize().get();
+      fileInfo.FileSize = entry->getSize().get(timeout);
 
       XLOGF(
           DBG6,
@@ -336,48 +342,52 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
   auto path = RelativePath(callbackData->FilePathName);
   auto virtualizationContext = callbackData->NamespaceVirtualizationContext;
 
-  auto fut = folly::makeFutureWith([context,
-                                    this,
-                                    dispatcher = dispatcher_,
-                                    path = std::move(path),
-                                    virtualizationContext] {
-    auto requestWatch =
-        std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
-    auto histogram = &ChannelThreadStats::lookup;
-    context->startRequest(dispatcher->getStats(), histogram, requestWatch);
+  auto fut =
+      folly::makeFutureWith([context,
+                             this,
+                             dispatcher = dispatcher_,
+                             path = std::move(path),
+                             virtualizationContext] {
+        auto requestWatch =
+            std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
+                nullptr);
+        auto histogram = &ChannelThreadStats::lookup;
+        context->startRequest(dispatcher->getStats(), histogram, requestWatch);
 
-    FB_LOGF(getStraceLogger(), DBG7, "lookup({})", path);
-    return dispatcher->lookup(std::move(path), *context)
-        .thenValue([context, virtualizationContext = virtualizationContext](
-                       const std::optional<InodeMetadata>&& optMetadata) {
-          if (!optMetadata) {
-            context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
-            return folly::makeFuture(folly::unit);
-          }
-          auto metadata = std::move(optMetadata).value();
+        FB_LOGF(getStraceLogger(), DBG7, "lookup({})", path);
+        return dispatcher->lookup(std::move(path), *context)
+            .thenValue([context, virtualizationContext = virtualizationContext](
+                           const std::optional<InodeMetadata>&& optMetadata) {
+              if (!optMetadata) {
+                context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+                return folly::makeFuture(folly::unit);
+              }
+              auto metadata = std::move(optMetadata).value();
 
-          PRJ_PLACEHOLDER_INFO placeholderInfo{};
-          placeholderInfo.FileBasicInfo.IsDirectory = metadata.isDir;
-          placeholderInfo.FileBasicInfo.FileSize = metadata.size;
-          auto inodeName = metadata.path.wide();
+              PRJ_PLACEHOLDER_INFO placeholderInfo{};
+              placeholderInfo.FileBasicInfo.IsDirectory = metadata.isDir;
+              placeholderInfo.FileBasicInfo.FileSize = metadata.size;
+              auto inodeName = metadata.path.wide();
 
-          HRESULT result = PrjWritePlaceholderInfo(
-              virtualizationContext,
-              inodeName.c_str(),
-              &placeholderInfo,
-              sizeof(placeholderInfo));
+              HRESULT result = PrjWritePlaceholderInfo(
+                  virtualizationContext,
+                  inodeName.c_str(),
+                  &placeholderInfo,
+                  sizeof(placeholderInfo));
 
-          if (FAILED(result)) {
-            return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
-                result,
-                fmt::format(
-                    FMT_STRING("Writing placeholder for {}"), metadata.path)));
-          }
+              if (FAILED(result)) {
+                return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
+                    result,
+                    fmt::format(
+                        FMT_STRING("Writing placeholder for {}"),
+                        metadata.path)));
+              }
 
-          context->sendSuccess();
-          return folly::makeFuture(folly::unit);
-        });
-  });
+              context->sendSuccess();
+              return folly::makeFuture(folly::unit);
+            });
+      })
+          .within(requestTimeout_);
 
   context->catchErrors(std::move(fut)).ensure([context] {});
 
@@ -390,8 +400,11 @@ HRESULT PrjfsChannelInner::queryFileName(
 
   auto path = RelativePath(callbackData->FilePathName);
 
-  auto fut = folly::makeFutureWith(
-      [context, this, dispatcher = dispatcher_, path = std::move(path)] {
+  auto fut =
+      folly::makeFutureWith([context,
+                             this,
+                             dispatcher = dispatcher_,
+                             path = std::move(path)] {
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
@@ -406,7 +419,8 @@ HRESULT PrjfsChannelInner::queryFileName(
                 context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
               }
             });
-      });
+      })
+          .within(requestTimeout_);
 
   context->catchErrors(std::move(fut)).ensure([context] {});
 
@@ -500,15 +514,16 @@ HRESULT PrjfsChannelInner::getFileData(
     UINT32 length) {
   auto context = std::make_shared<PrjfsRequestContext>(this, *callbackData);
 
-  auto fut = folly::makeFutureWith(
-      [context,
-       this,
-       dispatcher = dispatcher_,
-       path = RelativePath(callbackData->FilePathName),
-       virtualizationContext = callbackData->NamespaceVirtualizationContext,
-       dataStreamId = Guid(callbackData->DataStreamId),
-       byteOffset,
-       length] {
+  auto fut =
+      folly::makeFutureWith([context,
+                             this,
+                             dispatcher = dispatcher_,
+                             path = RelativePath(callbackData->FilePathName),
+                             virtualizationContext =
+                                 callbackData->NamespaceVirtualizationContext,
+                             dataStreamId = Guid(callbackData->DataStreamId),
+                             byteOffset,
+                             length] {
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
@@ -591,7 +606,8 @@ HRESULT PrjfsChannelInner::getFileData(
                 context->sendSuccess();
               }
             });
-      });
+      })
+          .within(requestTimeout_);
 
   context->catchErrors(std::move(fut)).ensure([context] {});
 
@@ -720,7 +736,8 @@ PrjfsChannel::PrjfsChannel(
     AbsolutePathPiece mountPath,
     Dispatcher* const dispatcher,
     const folly::Logger* straceLogger,
-    std::shared_ptr<ProcessNameCache> processNameCache)
+    std::shared_ptr<ProcessNameCache> processNameCache,
+    folly::Duration requestTimeout)
     : mountPath_(mountPath),
       mountId_(Guid::generate()),
       processAccessLog_(std::move(processNameCache)) {
@@ -731,6 +748,7 @@ PrjfsChannel::PrjfsChannel(
       dispatcher,
       straceLogger,
       processAccessLog_,
+      requestTimeout,
       std::move(innerDeletedPromise));
 }
 

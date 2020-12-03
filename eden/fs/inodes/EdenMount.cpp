@@ -1222,7 +1222,11 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                          mountPath,
                          getDispatcher(),
                          &getStraceLogger(),
-                         serverState_->getProcessNameCache());
+                         serverState_->getProcessNameCache(),
+                         std::chrono::duration_cast<folly::Duration>(
+                             serverState_->getReloadableConfig()
+                                 .getEdenConfig()
+                                 ->prjfsRequestTimeout.getValue()));
                      channel->start(
                          readOnly,
                          serverState_->getReloadableConfig()

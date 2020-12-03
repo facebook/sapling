@@ -313,6 +313,17 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * The maximum time duration allowed for a ProjectedFS callback. If a request
+   * exceeds this amount of time, the request will fail to avoid blocking
+   * forever. A notification will also be shown to alert the user of the
+   * timeout.
+   */
+  ConfigSetting<std::chrono::nanoseconds> prjfsRequestTimeout{
+      "prjfs:request-timeout",
+      std::chrono::minutes(1),
+      this};
+
+  /**
    * If the number of fetching requests of a process reaches this number,
    * a FetchHeavy event will be sent to Scuba.
    */
