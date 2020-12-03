@@ -88,8 +88,7 @@ pub(crate) fn add_cachelib_args<'a, 'b>(
             .takes_value(true)
             .value_name("SIZE")
             .default_value(
-                CACHE_SIZE_GB_DEFAULT
-                    .get_or_init(|| format!("{:3}", defaults.cache_size / ONE_GIB)),
+                CACHE_SIZE_GB_DEFAULT.get_or_init(|| (defaults.cache_size / ONE_GIB).to_string()),
             )
             .help("size of the cachelib cache, in GiB"),
     )
