@@ -59,10 +59,7 @@ impl UploadableHgBlob for Filelog {
     // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
     //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
     //   implements Error.
-    type Value = (
-        ContentBlobMeta,
-        Shared<BoxFuture<(HgFileNodeId, RepoPath), Compat<Error>>>,
-    );
+    type Value = Shared<BoxFuture<(HgFileNodeId, RepoPath), Compat<Error>>>;
 
     fn upload(self, ctx: CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
@@ -87,8 +84,8 @@ impl UploadableHgBlob for Filelog {
             path,
         };
 
-        let (cbmeta, fut) = upload.upload(ctx, repo.get_blobstore().boxed())?;
-        Ok((node_key, (cbmeta, fut.map_err(Compat).boxify().shared())))
+        let (_, fut) = upload.upload(ctx, repo.get_blobstore().boxed())?;
+        Ok((node_key, fut.map_err(Compat).boxify().shared()))
     }
 }
 

@@ -42,7 +42,7 @@ use mercurial_bundles::{
 };
 use mercurial_mutation::HgMutationEntry;
 use mercurial_revlog::changeset::RevlogChangeset;
-use mercurial_types::{blobs::ContentBlobMeta, HgChangesetId, HgFileNodeId, HgNodeKey, RepoPath};
+use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeKey, RepoPath};
 use metaconfig_types::{PushrebaseFlags, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase::HgReplayData;
@@ -75,7 +75,6 @@ mod UNBUNDLE_STATS {
 pub type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
 type Filelogs =
     HashMap<HgNodeKey, Shared<OldBoxFuture<(HgFileNodeId, RepoPath), FailureCompat<Error>>>>;
-type ContentBlobs = HashMap<HgNodeKey, ContentBlobMeta>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 pub type UploadedBonsais = HashSet<BonsaiChangeset>;
 pub type UploadedHgChangesetIds = HashSet<HgChangesetId>;
@@ -776,7 +775,6 @@ struct ChangegroupPush {
     part_id: PartId,
     changesets: Changesets,
     filelogs: Filelogs,
-    content_blobs: ContentBlobs,
     mparams: HashMap<String, Bytes>,
     /// Infinitepush data provided through the Changegroup. If the push was an Infinitepush, this
     /// will be present.
@@ -1041,7 +1039,7 @@ impl<'r> Bundle2Resolver<'r> {
                 )
                 .await?;
 
-                let upload_map = upload_hg_blobs(
+                let filelogs = upload_hg_blobs(
                     self.ctx.clone(),
                     self.repo.clone(),
                     convert_to_revlog_filelog(self.ctx.clone(), self.repo.clone(), filelogs),
@@ -1051,25 +1049,9 @@ impl<'r> Bundle2Resolver<'r> {
                 .await
                 .context("While uploading File Blobs")?;
 
-                let (filelogs, content_blobs) = {
-                    let mut filelogs = HashMap::new();
-                    let mut content_blobs = HashMap::new();
-                    for (node_key, (cbinfo, file_upload)) in upload_map {
-                        filelogs.insert(node_key.clone(), file_upload);
-                        content_blobs.insert(node_key, cbinfo);
-                    }
-                    (filelogs, content_blobs)
-                };
-
-                let cg_push = build_changegroup_push(
-                    &self.ctx,
-                    &self.repo,
-                    header,
-                    changesets,
-                    filelogs,
-                    content_blobs,
-                )
-                .await?;
+                let cg_push =
+                    build_changegroup_push(&self.ctx, &self.repo, header, changesets, filelogs)
+                        .await?;
 
                 Some(cg_push)
             }
@@ -1208,7 +1190,6 @@ impl<'r> Bundle2Resolver<'r> {
     ) -> Result<(UploadedBonsais, UploadedHgChangesetIds), Error> {
         let changesets = toposort_changesets(cg_push.changesets)?;
         let filelogs = cg_push.filelogs;
-        let content_blobs = cg_push.content_blobs;
 
         self.ctx
             .scuba()
@@ -1221,7 +1202,6 @@ impl<'r> Bundle2Resolver<'r> {
         STATS::changesets_count.add_value(changesets.len() as i64);
         STATS::manifests_count.add_value(manifests.len() as i64);
         STATS::filelogs_count.add_value(filelogs.len() as i64);
-        STATS::content_blobs_count.add_value(content_blobs.len() as i64);
 
         let err_context = || {
             let changesets_hashes: Vec<_> = changesets.iter().map(|(hash, _)| *hash).collect();
@@ -1231,11 +1211,6 @@ impl<'r> Bundle2Resolver<'r> {
         trace!(self.ctx.logger(), "changesets: {:?}", changesets);
         trace!(self.ctx.logger(), "filelogs: {:?}", filelogs.keys());
         trace!(self.ctx.logger(), "manifests: {:?}", manifests.keys());
-        trace!(
-            self.ctx.logger(),
-            "content blobs: {:?}",
-            content_blobs.keys()
-        );
 
         // Each commit gets a future. This future polls futures of parent commits, which poll futures
         // of their parents and so on. However that might cause stackoverflow on very large pushes
@@ -1272,7 +1247,6 @@ impl<'r> Bundle2Resolver<'r> {
                     uploaded_changesets,
                     &filelogs,
                     &manifests,
-                    &content_blobs,
                     check_case_conflicts_on_upload,
                 )
                 .await
@@ -1386,7 +1360,6 @@ async fn build_changegroup_push(
     part_header: PartHeader,
     changesets: Changesets,
     filelogs: Filelogs,
-    content_blobs: ContentBlobs,
 ) -> Result<ChangegroupPush, Error> {
     let PartHeaderInner {
         part_id,
@@ -1437,7 +1410,6 @@ async fn build_changegroup_push(
         part_id,
         changesets,
         filelogs,
-        content_blobs,
         mparams,
         infinitepush_payload,
     })

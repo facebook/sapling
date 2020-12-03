@@ -26,8 +26,8 @@ use mercurial_revlog::{
     manifest::{Details, ManifestContent},
 };
 use mercurial_types::{
-    blobs::{ChangesetMetadata, ContentBlobMeta},
-    HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
+    blobs::ChangesetMetadata, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgNodeKey,
+    MPath, RepoPath, NULL_HASH,
 };
 use scuba_ext::MononokeScubaSampleBuilder;
 use std::collections::HashMap;
@@ -35,7 +35,6 @@ use std::ops::AddAssign;
 use wirepack::TreemanifestEntry;
 
 type Filelogs = HashMap<HgNodeKey, Shared<OldBoxFuture<(HgFileNodeId, RepoPath), Compat<Error>>>>;
-type ContentBlobs = HashMap<HgNodeKey, ContentBlobMeta>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 type UploadedChangesets = HashMap<HgChangesetId, ChangesetHandle>;
 
@@ -50,10 +49,6 @@ pub(crate) struct NewBlobs {
     root_manifest: OldBoxFuture<Option<(HgManifestId, RepoPath)>, Error>,
     // sub_entries has both submanifest and filenode entries.
     sub_entries: HgBlobStream,
-    // This is returned as a Vec rather than a Stream so that the path and metadata are
-    // available before the content blob is uploaded. This will allow creating and uploading
-    // changeset blobs without being blocked on content blob uploading being complete.
-    content_blobs: Vec<ContentBlobMeta>,
 }
 
 struct WalkHelperCounters {
@@ -77,14 +72,12 @@ impl NewBlobs {
         manifest_root_id: HgManifestId,
         manifests: &Manifests,
         filelogs: &Filelogs,
-        content_blobs: &ContentBlobs,
     ) -> Result<Self> {
         if manifest_root_id.into_nodehash() == NULL_HASH {
             // If manifest root id is NULL_HASH then there is no content in this changest
             return Ok(Self {
                 root_manifest: ok(None).boxify(),
                 sub_entries: old_stream::empty().boxify(),
-                content_blobs: Vec::new(),
             });
         }
 
@@ -93,16 +86,15 @@ impl NewBlobs {
             hash: manifest_root_id.clone().into_nodehash(),
         };
 
-        let (entries, content_blobs, root_manifest) = match manifests.get(&root_key) {
+        let (entries, root_manifest) = match manifests.get(&root_key) {
             Some((ref manifest_content, ref p1, ref p2, ref manifest_root)) => {
-                let (entries, content_blobs, counters) = Self::walk_helper(
+                let (entries, counters) = Self::walk_helper(
                     &RepoPath::root(),
                     &manifest_content,
                     get_manifest_parent_content(manifests, RepoPath::root(), p1.clone()),
                     get_manifest_parent_content(manifests, RepoPath::root(), p2.clone()),
                     manifests,
                     filelogs,
-                    content_blobs,
                 )?;
                 STATS::per_changeset_manifests_count.add_value(counters.manifests_count as i64);
                 STATS::per_changeset_filelogs_count.add_value(counters.filelogs_count as i64);
@@ -114,11 +106,11 @@ impl NewBlobs {
                     .from_err()
                     .boxify();
 
-                (entries, content_blobs, root_manifest)
+                (entries, root_manifest)
             }
             None => {
                 let entry = (manifest_root_id, RepoPath::RootPath);
-                (vec![], vec![], old_future::ok(Some(entry)).boxify())
+                (vec![], old_future::ok(Some(entry)).boxify())
             }
         };
 
@@ -133,7 +125,6 @@ impl NewBlobs {
                 })
                 .from_err()
                 .boxify(),
-            content_blobs,
         })
     }
 
@@ -144,8 +135,7 @@ impl NewBlobs {
         p2: Option<&ManifestContent>,
         manifests: &Manifests,
         filelogs: &Filelogs,
-        content_blobs: &ContentBlobs,
-    ) -> Result<(Vec<HgBlobFuture>, Vec<ContentBlobMeta>, WalkHelperCounters)> {
+    ) -> Result<(Vec<HgBlobFuture>, WalkHelperCounters)> {
         if path_taken.len() > 4096 {
             bail!(
                 "Exceeded max manifest path during walking with path: {:?}",
@@ -154,7 +144,6 @@ impl NewBlobs {
         }
 
         let mut entries: Vec<HgBlobFuture> = Vec::new();
-        let mut cbmetas: Vec<ContentBlobMeta> = Vec::new();
         let mut counters = WalkHelperCounters {
             manifests_count: 0,
             filelogs_count: 0,
@@ -197,17 +186,15 @@ impl NewBlobs {
                             .from_err()
                             .boxify(),
                     );
-                    let (mut walked_entries, mut walked_cbmetas, sub_counters) = Self::walk_helper(
+                    let (mut walked_entries, sub_counters) = Self::walk_helper(
                         &key.path,
                         manifest_content,
                         get_manifest_parent_content(manifests, key.path.clone(), p1.clone()),
                         get_manifest_parent_content(manifests, key.path.clone(), p2.clone()),
                         manifests,
                         filelogs,
-                        content_blobs,
                     )?;
                     entries.append(&mut walked_entries);
-                    cbmetas.append(&mut walked_cbmetas);
                     counters += sub_counters;
                 }
             } else {
@@ -228,15 +215,11 @@ impl NewBlobs {
                             .from_err()
                             .boxify(),
                     );
-                    match content_blobs.get(&key) {
-                        Some(cbmeta) => cbmetas.push(cbmeta.clone()),
-                        None => bail!("internal error: content blob future missing for filenode"),
-                    }
                 }
             }
         }
 
-        Ok((entries, cbmetas, counters))
+        Ok((entries, counters))
     }
 }
 
@@ -290,20 +273,12 @@ pub(crate) async fn upload_changeset(
     mut uploaded_changesets: UploadedChangesets,
     filelogs: &Filelogs,
     manifests: &Manifests,
-    content_blobs: &ContentBlobs,
     must_check_case_conflicts: bool,
 ) -> Result<UploadedChangesets, Error> {
     let NewBlobs {
         root_manifest,
         sub_entries,
-        // XXX use these content blobs in the future
-        content_blobs: _content_blobs,
-    } = NewBlobs::new(
-        revlog_cs.manifestid(),
-        &manifests,
-        &filelogs,
-        &content_blobs,
-    )?;
+    } = NewBlobs::new(revlog_cs.manifestid(), &manifests, &filelogs)?;
 
     let cs_metadata = ChangesetMetadata {
         user: String::from_utf8(revlog_cs.user().into())?,
