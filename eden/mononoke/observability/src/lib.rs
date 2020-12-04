@@ -8,5 +8,7 @@
 #![deny(warnings)]
 
 mod context;
+mod drain;
 
 pub use context::ObservabilityContext;
+pub use drain::DynamicLevelDrain;

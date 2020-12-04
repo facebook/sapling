@@ -36,6 +36,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
 use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
 use slog_term::TermDecorator;
+use std::panic::{RefUnwindSafe, UnwindSafe};
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, Caching, ReadOnlyStorage};
@@ -46,7 +47,7 @@ use blobstore_factory::{
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAction};
 use mononoke_types::RepositoryId;
-use observability::ObservabilityContext;
+use observability::{DynamicLevelDrain, ObservabilityContext};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::{MysqlConnectionType, MysqlOptions};
 use tunables::init_tunables_worker;
@@ -298,13 +299,31 @@ impl<'a> Borrow<ArgMatches<'a>> for MononokeMatches<'a> {
 }
 
 /// Create a default root logger for Facebook services
-pub fn glog_drain() -> impl Drain<Ok = (), Err = Never> {
+fn glog_drain() -> impl Drain<Ok = (), Err = Never> {
     let decorator = TermDecorator::new().build();
     // FacebookCategorizer is used for slog KV arguments.
     // At the time of writing this code FacebookCategorizer and FacebookKV
     // that was added below was mainly useful for logview logging and had no effect on GlogFormat
     let drain = GlogFormat::new(decorator, FacebookCategorizer).ignore_res();
     ::std::sync::Mutex::new(drain).ignore_res()
+}
+
+/// Create a `Drain` whose `Level` is dynamically read from the `ConfigStore`
+fn dynamic_level_drain<'a>(
+    fb: FacebookInit,
+    matches: &'a MononokeMatches<'a>,
+    inner_drain: impl Drain<Ok = (), Err = Never>
+    + Clone
+    + Send
+    + Sync
+    + UnwindSafe
+    + RefUnwindSafe
+    + 'static,
+) -> Result<impl Drain<Ok = (), Err = Never>, Error> {
+    let kv = FacebookKV::new().expect("cannot initialize FacebookKV");
+    let logger = Logger::root(inner_drain.clone(), o![kv]);
+    let observability_context = init_observability_context(fb, matches, Some(&logger))?;
+    Ok(DynamicLevelDrain::new(inner_drain, observability_context))
 }
 
 impl MononokeAppBuilder {
@@ -725,6 +744,9 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Logg
         log::init_stdlog_once(Logger::root(root_log_drain.clone(), o![]), stdlog_env);
 
     let root_log_drain = root_log_drain.filter_level(level).ignore_res();
+    let root_log_drain = dynamic_level_drain(fb, matches, root_log_drain)
+        .expect("Failed to initialize DynamicLevelDrain")
+        .ignore_res();
 
     let kv = FacebookKV::new().expect("cannot initialize FacebookKV");
     let logger = if matches.is_present("fb303-thrift-port") {
