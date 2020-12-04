@@ -980,7 +980,9 @@ FileInodePtr TreeInode::createImpl(
   }
 
   if (InvalidationRequired::Yes == invalidate) {
-    invalidateChannelEntryCache(*contents, name).throwIfFailed();
+    invalidateChannelEntryCache(*contents, name, std::nullopt).throwIfFailed();
+    // Make sure that the directory cache is invalidated so a subsequent
+    // readdir will see the added file.
     invalidateChannelDirCache(*contents).throwIfFailed();
   }
 
@@ -1079,7 +1081,8 @@ TreeInodePtr TreeInode::mkdir(
     }
 
     if (InvalidationRequired::Yes == invalidate) {
-      invalidateChannelEntryCache(*contents, name).throwIfFailed();
+      invalidateChannelEntryCache(*contents, name, std::nullopt)
+          .throwIfFailed();
       invalidateChannelDirCache(*contents).throwIfFailed();
     }
 
@@ -1301,7 +1304,8 @@ int TreeInode::tryRemoveChild(
     // Since invalidation can fail on ProjectedFS, do it while holding the
     // TreeInode write lock and before updating the contents.
     if (InvalidationRequired::Yes == invalidate) {
-      auto success = invalidateChannelEntryCache(*contents, name);
+      auto success =
+          invalidateChannelEntryCache(*contents, name, ent.getInodeNumber());
       if (success.hasException()) {
         return EIO;
       }
@@ -1636,8 +1640,12 @@ Future<Unit> TreeInode::doRename(
   // If the rename occurred outside of a FUSE request (unlikely), make sure to
   // invalidate the kernel caches.
   if (InvalidationRequired::Yes == invalidate) {
-    invalidateChannelEntryCache(locks.srcInodeState(), srcName).throwIfFailed();
-    destParent->invalidateChannelEntryCache(locks.dstInodeState(), destName)
+    invalidateChannelEntryCache(
+        locks.srcInodeState(), srcName, srcIter->second.getInodeNumber())
+        .throwIfFailed();
+    destParent
+        ->invalidateChannelEntryCache(
+            locks.dstInodeState(), destName, std::nullopt)
         .throwIfFailed();
 
     invalidateChannelDirCache(locks.srcInodeState()).throwIfFailed();
@@ -2754,7 +2762,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       // do want to invalidate the kernel's dcache and inode caches.
       wasDirectoryListModified = true;
 
-      auto success = invalidateChannelEntryCache(state, name);
+      auto success = invalidateChannelEntryCache(state, name, std::nullopt);
       if (success.hasValue()) {
         contents.emplace(
             newScmEntry->getName(),
@@ -2840,7 +2848,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
 
   // We are removing or replacing an entry - attempt to invalidate it while the
   // write lock is held and before the contents are updated.
-  auto success = invalidateChannelEntryCache(state, name);
+  auto success = invalidateChannelEntryCache(state, name, oldEntryInodeNumber);
   if (success.hasException()) {
     ctx->addError(this, name, success.exception());
     return nullptr;
@@ -2921,7 +2929,8 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       }
 
       // Tell the OS to invalidate its cache for this entry.
-      auto success = invalidateChannelEntryCache(*contents, name);
+      auto success = invalidateChannelEntryCache(
+          *contents, name, it->second.getInodeNumber());
       if (success.hasException()) {
         ctx->addError(this, name, success.exception());
         return InvalidationRequired::No;
@@ -3039,7 +3048,8 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
 
 folly::Try<void> TreeInode::invalidateChannelEntryCache(
     TreeInodeState&,
-    PathComponentPiece name) {
+    PathComponentPiece name,
+    FOLLY_MAYBE_UNUSED std::optional<InodeNumber> ino) {
 #ifndef _WIN32
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     fuseChannel->invalidateEntry(getNodeId(), name);
@@ -3048,6 +3058,12 @@ folly::Try<void> TreeInode::invalidateChannelEntryCache(
   if (auto* fsChannel = getMount()->getPrjfsChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
+      if (ino && getInodeMap()->isInodeRemembered(*ino)) {
+        // When no inode number is passed in, we still need to invalidate the
+        // ProjectedFS file, as tombstones are a special kind of placeholder
+        // that EdenFS doesn't have inodes for.
+        getInodeMap()->decFsRefcount(*ino);
+      }
       return fsChannel->removeCachedFile(path.value() + name);
     }
   }
@@ -3068,6 +3084,9 @@ folly::Try<void> TreeInode::invalidateChannelDirCache(TreeInodeState&) {
   if (auto* fsChannel = getMount()->getPrjfsChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
+      if (getInodeMap()->isInodeRemembered(getNodeId())) {
+        getInodeMap()->decFsRefcount(getNodeId());
+      }
       return fsChannel->addDirectoryPlaceholder(path.value());
     }
   }

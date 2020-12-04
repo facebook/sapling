@@ -19,9 +19,9 @@
 #include "eden/fs/utils/StringConv.h"
 #include "eden/fs/utils/WinError.h"
 
-namespace {
+namespace facebook::eden {
 
-using namespace facebook::eden;
+namespace {
 
 #define BAIL_ON_RECURSIVE_CALL(callbackData)                               \
   do {                                                                     \
@@ -180,9 +180,6 @@ HRESULT notification(
 }
 
 } // namespace
-
-namespace facebook {
-namespace eden {
 
 PrjfsChannelInner::PrjfsChannelInner(
     Dispatcher* const dispatcher,
@@ -359,17 +356,18 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
         FB_LOGF(getStraceLogger(), DBG7, "lookup({})", path);
         return dispatcher->lookup(std::move(path), *context)
             .thenValue([context, virtualizationContext = virtualizationContext](
-                           const std::optional<InodeMetadata>&& optMetadata) {
-              if (!optMetadata) {
+                           std::optional<LookupResult>&& optLookupResult) {
+              if (!optLookupResult) {
                 context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
                 return folly::makeFuture(folly::unit);
               }
-              auto metadata = std::move(optMetadata).value();
+              auto lookupResult = std::move(optLookupResult).value();
 
               PRJ_PLACEHOLDER_INFO placeholderInfo{};
-              placeholderInfo.FileBasicInfo.IsDirectory = metadata.isDir;
-              placeholderInfo.FileBasicInfo.FileSize = metadata.size;
-              auto inodeName = metadata.path.wide();
+              placeholderInfo.FileBasicInfo.IsDirectory =
+                  lookupResult.meta.isDir;
+              placeholderInfo.FileBasicInfo.FileSize = lookupResult.meta.size;
+              auto inodeName = lookupResult.meta.path.wide();
 
               HRESULT result = PrjWritePlaceholderInfo(
                   virtualizationContext,
@@ -382,10 +380,13 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
                     result,
                     fmt::format(
                         FMT_STRING("Writing placeholder for {}"),
-                        metadata.path)));
+                        lookupResult.meta.path)));
               }
 
               context->sendSuccess();
+
+              lookupResult.incFsRefcount();
+
               return folly::makeFuture(folly::unit);
             });
       })
@@ -936,7 +937,6 @@ void PrjfsChannel::flushNegativePathCache() {
   }
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
 
 #endif

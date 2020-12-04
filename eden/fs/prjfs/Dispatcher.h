@@ -33,6 +33,11 @@ struct InodeMetadata {
   bool isDir;
 };
 
+struct LookupResult {
+  InodeMetadata meta;
+  std::function<void()> incFsRefcount;
+};
+
 class Dispatcher {
  public:
   virtual ~Dispatcher();
@@ -50,7 +55,7 @@ class Dispatcher {
   /**
    * Lookup the specified file and get its attributes.
    */
-  virtual folly::Future<std::optional<InodeMetadata>> lookup(
+  virtual folly::Future<std::optional<LookupResult>> lookup(
       RelativePath path,
       ObjectFetchContext& context) = 0;
 

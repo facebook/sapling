@@ -683,7 +683,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   FOLLY_NODISCARD folly::Try<void> invalidateChannelEntryCache(
       TreeInodeState&,
-      PathComponentPiece name);
+      PathComponentPiece name,
+      std::optional<InodeNumber> ino);
 
   /**
    * Attempt to remove an empty directory during a checkout operation.

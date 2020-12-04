@@ -485,36 +485,44 @@ folly::Future<std::vector<FileMetadata>> EdenDispatcher::opendir(
       });
 }
 
-folly::Future<std::optional<InodeMetadata>> EdenDispatcher::lookup(
+folly::Future<std::optional<LookupResult>> EdenDispatcher::lookup(
     RelativePath path,
     ObjectFetchContext& context) {
   return mount_->getInode(path, context)
       .thenValue(
           [&context](const InodePtr inode) mutable
-          -> folly::Future<std::optional<InodeMetadata>> {
+          -> folly::Future<std::optional<LookupResult>> {
             return inode->stat(context).thenValue(
                 [inode = std::move(inode)](struct stat&& stat) {
+                  size_t size = stat.st_size;
                   // Ensure that the OS has a record of the canonical
                   // file name, and not just whatever case was used to
                   // lookup the file
-                  size_t size = stat.st_size;
-                  return InodeMetadata{*inode->getPath(), size, inode->isDir()};
+                  auto inodeMetadata =
+                      InodeMetadata{*inode->getPath(), size, inode->isDir()};
+                  auto incFsRefcount = [inode = std::move(inode)] {
+                    inode->incFsRefcount();
+                  };
+                  return LookupResult{std::move(inodeMetadata),
+                                      std::move(incFsRefcount)};
                 });
           })
       .thenError(
           folly::tag_t<std::system_error>{},
           [path = std::move(path), this](const std::system_error& ex)
-              -> folly::Future<std::optional<InodeMetadata>> {
+              -> folly::Future<std::optional<LookupResult>> {
             if (isEnoent(ex)) {
               if (path == kDotEdenConfigPath) {
-                return folly::makeFuture(InodeMetadata{
-                    std::move(path), dotEdenConfig_.length(), false});
+                return folly::makeFuture(LookupResult{
+                    InodeMetadata{
+                        std::move(path), dotEdenConfig_.length(), false},
+                    [] {}});
               } else {
                 XLOG(DBG6) << path << ": File not found";
                 return folly::makeFuture(std::nullopt);
               }
             }
-            return folly::makeFuture<std::optional<InodeMetadata>>(ex);
+            return folly::makeFuture<std::optional<LookupResult>>(ex);
           });
 }
 
@@ -590,9 +598,10 @@ folly::Future<TreeInodePtr> createDirInode(
             for (auto parent : path.paths()) {
               fut = std::move(fut).thenValue([parent](TreeInodePtr treeInode) {
                 try {
-                  treeInode->mkdir(
+                  auto inode = treeInode->mkdir(
                       parent.basename(), _S_IFDIR, InvalidationRequired::No);
-                } catch (std::system_error& ex) {
+                  inode->incFsRefcount();
+                } catch (const std::system_error& ex) {
                   if (ex.code().value() != EEXIST) {
                     throw;
                   }
@@ -615,9 +624,10 @@ folly::Future<folly::Unit> createFile(
       .thenValue([=, &mount](const TreeInodePtr treeInode) {
         if (isDirectory) {
           try {
-            treeInode->mkdir(
+            auto inode = treeInode->mkdir(
                 path.basename(), _S_IFDIR, InvalidationRequired::No);
-          } catch (std::system_error& ex) {
+            inode->incFsRefcount();
+          } catch (const std::system_error& ex) {
             /*
              * If a concurrent createFile for a child of this directory finished
              * before this one, the directory will already exist. This is not an
@@ -628,8 +638,9 @@ folly::Future<folly::Unit> createFile(
             }
           }
         } else {
-          treeInode->mknod(
+          auto inode = treeInode->mknod(
               path.basename(), _S_IFREG, 0, InvalidationRequired::No);
+          inode->incFsRefcount();
         }
 
         return folly::makeFuture(folly::unit);

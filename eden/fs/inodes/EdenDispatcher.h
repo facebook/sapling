@@ -113,7 +113,7 @@ class EdenDispatcher : public Dispatcher {
       RelativePathPiece path,
       ObjectFetchContext& context) override;
 
-  folly::Future<std::optional<InodeMetadata>> lookup(
+  folly::Future<std::optional<LookupResult>> lookup(
       RelativePath path,
       ObjectFetchContext& context) override;
 
