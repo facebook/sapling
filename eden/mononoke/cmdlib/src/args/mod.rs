@@ -46,6 +46,7 @@ use blobstore_factory::{
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAction};
 use mononoke_types::RepositoryId;
+use observability::ObservabilityContext;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::{MysqlConnectionType, MysqlOptions};
 use tunables::init_tunables_worker;
@@ -90,6 +91,9 @@ const READONLY_STORAGE_OLD_ARG: &str = "readonly-storage";
 const READONLY_STORAGE_NEW_ARG: &str = "with-readonly-storage";
 
 const TEST_INSTANCE_ARG: &str = "test-instance";
+
+// Argument, responsible for instantiation of `ObservabilityContext::Dynamic`
+const WITH_DYNAMIC_OBSERVABILITY: &str = "with-dynamic-observability";
 
 const LOCAL_CONFIGERATOR_PATH_ARG: &str = "local-configerator-path";
 const CRYPTO_PATH_REGEX_ARG: &str = "crypto-path-regex";
@@ -644,6 +648,30 @@ fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .possible_values(&["CRITICAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"])
             .conflicts_with("debug"),
     )
+    .arg(
+        Arg::with_name(WITH_DYNAMIC_OBSERVABILITY)
+            .long(WITH_DYNAMIC_OBSERVABILITY)
+            .help(
+                "whether to instantiate ObservabilityContext::Dynamic,\
+                 which reads logging levels from configerator. Overwrites\
+                 --log-level or --debug",
+            )
+            .takes_value(true)
+            .possible_values(&["true", "false"])
+            .default_value("false"),
+    )
+}
+
+fn get_log_level<'a>(matches: &MononokeMatches<'a>) -> Level {
+    if matches.is_present("debug") {
+        Level::Debug
+    } else {
+        match matches.value_of("log-level") {
+            Some(log_level_str) => Level::from_str(log_level_str)
+                .unwrap_or_else(|_| panic!("Unknown log level: {}", log_level_str)),
+            None => Level::Info,
+        }
+    }
 }
 
 pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Logger {
@@ -665,15 +693,7 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Logg
 
     let stdlog_env = "RUST_LOG";
 
-    let level = if matches.is_present("debug") {
-        Level::Debug
-    } else {
-        match matches.value_of("log-level") {
-            Some(log_level_str) => Level::from_str(log_level_str)
-                .expect(&format!("Unknown log level: {}", log_level_str)),
-            None => Level::Info,
-        }
-    };
+    let level = get_log_level(matches);
 
     let glog_drain = Arc::new(glog_drain());
     let root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> = match matches
@@ -707,7 +727,6 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Logg
     let root_log_drain = root_log_drain.filter_level(level).ignore_res();
 
     let kv = FacebookKV::new().expect("cannot initialize FacebookKV");
-
     let logger = if matches.is_present("fb303-thrift-port") {
         Logger::root(slog_stats::StatsDrain::new(root_log_drain), o![kv])
     } else {
@@ -1678,6 +1697,26 @@ where
 }
 
 static CONFIGERATOR: OnceCell<ConfigStore> = OnceCell::new();
+
+static OBSERVABILITY_CONTEXT: OnceCell<ObservabilityContext> = OnceCell::new();
+
+pub fn init_observability_context<'a>(
+    fb: FacebookInit,
+    matches: &'a MononokeMatches<'a>,
+    root_log: impl Into<Option<&'a Logger>>,
+) -> Result<&'static ObservabilityContext, Error> {
+    OBSERVABILITY_CONTEXT.get_or_try_init(|| match matches.value_of(WITH_DYNAMIC_OBSERVABILITY) {
+        Some("true") => {
+            let config_store = init_config_store(fb, root_log, matches)?;
+            Ok(ObservabilityContext::new(config_store)?)
+        }
+        Some("false") | None => Ok(ObservabilityContext::new_static(get_log_level(matches))),
+        Some(other) => panic!(
+            "Unexpected --{} value: {}",
+            WITH_DYNAMIC_OBSERVABILITY, other
+        ),
+    })
+}
 
 pub fn is_test_instance<'a>(matches: &MononokeMatches<'a>) -> bool {
     matches.is_present(TEST_INSTANCE_ARG)

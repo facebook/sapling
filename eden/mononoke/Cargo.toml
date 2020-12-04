@@ -336,6 +336,7 @@ members = [
     "mononoke_types/mocks",
     "mutable_counters",
     "newfilenodes",
+    "observability",
     "permission_checker",
     "phases",
     "pushrebase",
