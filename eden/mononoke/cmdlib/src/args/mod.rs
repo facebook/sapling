@@ -171,6 +171,9 @@ pub struct MononokeAppBuilder {
 
     // Whether to default to readonly storage or not
     readonly_storage_default: ReadOnlyStorage,
+
+    // Whether to defailt to attempting to compress to cachelib for large objects
+    blobstore_cachelib_attempt_zstd_default: bool,
 }
 
 /// Things we want to live for the lifetime of the mononoke binary
@@ -309,6 +312,7 @@ impl MononokeAppBuilder {
             special_put_behaviour: None,
             cachelib_settings: CachelibSettings::default(),
             readonly_storage_default: ReadOnlyStorage(false),
+            blobstore_cachelib_attempt_zstd_default: true,
         }
     }
 
@@ -405,6 +409,12 @@ impl MononokeAppBuilder {
     /// This command has a special default readonly storage setting
     pub fn with_readonly_storage_default(mut self, v: ReadOnlyStorage) -> Self {
         self.readonly_storage_default = v;
+        self
+    }
+
+    /// This command has a special default blobstore_cachelib_attempt_zstd setting
+    pub fn with_blobstore_cachelib_attempt_zstd_default(mut self, d: bool) -> Self {
+        self.blobstore_cachelib_attempt_zstd_default = d;
         self
     }
 
@@ -538,6 +548,7 @@ impl MononokeAppBuilder {
                 app,
                 self.special_put_behaviour,
                 self.readonly_storage_default,
+                self.blobstore_cachelib_attempt_zstd_default,
             );
         }
         if self.arg_types.contains(&ArgType::Cachelib) {
@@ -983,6 +994,7 @@ fn add_blobstore_args<'a, 'b>(
     app: App<'a, 'b>,
     special_put_behaviour: Option<PutBehaviour>,
     default_readonly: ReadOnlyStorage,
+    blobstore_cachelib_attempt_zstd_default: bool,
 ) -> App<'a, 'b> {
     let mut put_arg = Arg::with_name(BLOBSTORE_PUT_BEHAVIOUR_ARG)
         .long(BLOBSTORE_PUT_BEHAVIOUR_ARG)
@@ -1043,8 +1055,10 @@ fn add_blobstore_args<'a, 'b>(
         Arg::with_name(CACHELIB_ATTEMPT_ZSTD_ARG)
             .long(CACHELIB_ATTEMPT_ZSTD_ARG)
             .takes_value(true)
+            .possible_values(BOOL_VALUES)
             .required(false)
-            .help("Whether to attempt zstd compression when blobstore is putting things into cachelib over threshold size.  Default is true."),
+            .default_value(bool_as_str(blobstore_cachelib_attempt_zstd_default))
+            .help("Whether to attempt zstd compression when blobstore is putting things into cachelib over threshold size."),
     )
     .arg(
       put_arg
@@ -1385,11 +1399,13 @@ pub fn parse_blobstore_options<'a>(matches: &MononokeMatches<'a>) -> BlobstoreOp
             .expect("Provided Zstd compression level is not i32")
     });
 
-    let attempt_zstd: Option<bool> = matches.value_of(CACHELIB_ATTEMPT_ZSTD_ARG).map(|v| {
-        v.parse()
-            .expect("Provided blobstore-cachelib-attempt-zstd is not bool")
-    });
-
+    let attempt_zstd: bool = matches
+        .value_of(CACHELIB_ATTEMPT_ZSTD_ARG)
+        .map(|v| {
+            v.parse()
+                .expect("Provided blobstore-cachelib-attempt-zstd is not bool")
+        })
+        .expect("A default is set, should never be None");
 
     let blobstore_put_behaviour: Option<PutBehaviour> =
         matches.value_of(BLOBSTORE_PUT_BEHAVIOUR_ARG).map(|v| {
@@ -1402,7 +1418,7 @@ pub fn parse_blobstore_options<'a>(matches: &MononokeMatches<'a>) -> BlobstoreOp
         ThrottleOptions::new(read_qps, write_qps),
         manifold_api_key,
         PackOptions::new(write_zstd_level),
-        CachelibBlobstoreOptions::new_lazy(attempt_zstd),
+        CachelibBlobstoreOptions::new_lazy(Some(attempt_zstd)),
         blobstore_put_behaviour,
     )
 }

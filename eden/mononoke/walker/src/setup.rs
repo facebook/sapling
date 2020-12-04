@@ -399,6 +399,7 @@ pub fn setup_toplevel_app<'a, 'b>(
     cachelib_defaults: CachelibSettings,
 ) -> MononokeClapApp<'a, 'b> {
     let app_template = args::MononokeAppBuilder::new(app_name)
+        .with_blobstore_cachelib_attempt_zstd_default(false)
         .with_readonly_storage_default(ReadOnlyStorage(true))
         .with_fb303_args()
         .with_cachelib_settings(cachelib_defaults);
