@@ -37,6 +37,7 @@ from edenscm.mercurial import (
     error,
     exchange,
     extensions,
+    hintutil,
     hg,
     lock as lockmod,
     mdiff,
@@ -467,6 +468,8 @@ def _includeunknownfiles(repo, pats, opts, extra):
 
 
 def _docreatecmd(ui, repo, pats, opts):
+    if "eden" in repo.requirements:
+        hintutil.trigger("buck-shelve")
     wctx = repo[None]
     parents = wctx.parents()
     if len(parents) > 1:
@@ -1041,6 +1044,8 @@ def _dounshelve(ui, repo, *shelved, **opts):
     continuef = opts.get("continue")
     if not abortf and not continuef:
         cmdutil.checkunfinished(repo)
+    if "eden" in repo.requirements:
+        hintutil.trigger("buck-shelve")
     shelved = list(shelved)
     if opts.get("name"):
         shelved.append(opts["name"])
