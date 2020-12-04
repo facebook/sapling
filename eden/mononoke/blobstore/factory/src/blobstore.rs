@@ -413,6 +413,7 @@ pub fn make_blobstore_put_ops<'a>(
                         region_name,
                         endpoint,
                         blobstore_options.put_behaviour,
+                        logger,
                     )
                     .await
                     .context(ErrorKind::StateOpen)
