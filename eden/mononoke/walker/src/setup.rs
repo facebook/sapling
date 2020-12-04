@@ -37,6 +37,7 @@ use std::{
     borrow::Borrow,
     collections::{HashMap, HashSet},
     iter::FromIterator,
+    num::NonZeroU32,
     str::FromStr,
     sync::Arc,
     time::Duration,
@@ -400,6 +401,7 @@ pub fn setup_toplevel_app<'a, 'b>(
 ) -> MononokeClapApp<'a, 'b> {
     let app_template = args::MononokeAppBuilder::new(app_name)
         .with_blobstore_cachelib_attempt_zstd_default(false)
+        .with_blobstore_read_qps_default(NonZeroU32::new(20000))
         .with_readonly_storage_default(ReadOnlyStorage(true))
         .with_fb303_args()
         .with_cachelib_settings(cachelib_defaults);

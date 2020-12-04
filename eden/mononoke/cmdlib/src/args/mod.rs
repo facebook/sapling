@@ -174,6 +174,9 @@ pub struct MononokeAppBuilder {
 
     // Whether to defailt to attempting to compress to cachelib for large objects
     blobstore_cachelib_attempt_zstd_default: bool,
+
+    // Whether to defailt to limit blobstore read QPS
+    blobstore_read_qps_default: Option<NonZeroU32>,
 }
 
 /// Things we want to live for the lifetime of the mononoke binary
@@ -313,6 +316,7 @@ impl MononokeAppBuilder {
             cachelib_settings: CachelibSettings::default(),
             readonly_storage_default: ReadOnlyStorage(false),
             blobstore_cachelib_attempt_zstd_default: true,
+            blobstore_read_qps_default: None,
         }
     }
 
@@ -415,6 +419,12 @@ impl MononokeAppBuilder {
     /// This command has a special default blobstore_cachelib_attempt_zstd setting
     pub fn with_blobstore_cachelib_attempt_zstd_default(mut self, d: bool) -> Self {
         self.blobstore_cachelib_attempt_zstd_default = d;
+        self
+    }
+
+    /// This command has a special default blobstore_read_qps default setting
+    pub fn with_blobstore_read_qps_default(mut self, d: Option<NonZeroU32>) -> Self {
+        self.blobstore_read_qps_default = d;
         self
     }
 
@@ -549,6 +559,7 @@ impl MononokeAppBuilder {
                 self.special_put_behaviour,
                 self.readonly_storage_default,
                 self.blobstore_cachelib_attempt_zstd_default,
+                self.blobstore_read_qps_default,
             );
         }
         if self.arg_types.contains(&ArgType::Cachelib) {
@@ -995,6 +1006,7 @@ fn add_blobstore_args<'a, 'b>(
     special_put_behaviour: Option<PutBehaviour>,
     default_readonly: ReadOnlyStorage,
     blobstore_cachelib_attempt_zstd_default: bool,
+    blobstore_read_qps_default: Option<NonZeroU32>,
 ) -> App<'a, 'b> {
     let mut put_arg = Arg::with_name(BLOBSTORE_PUT_BEHAVIOUR_ARG)
         .long(BLOBSTORE_PUT_BEHAVIOUR_ARG)
@@ -1009,12 +1021,22 @@ fn add_blobstore_args<'a, 'b>(
         put_arg = put_arg.default_value(DEFAULT_PUT_BEHAVIOUR.into());
     }
 
+    let mut read_qps_arg = Arg::with_name(READ_QPS_ARG)
+        .long(READ_QPS_ARG)
+        .takes_value(true)
+        .required(false)
+        .help("Read QPS limit to ThrottledBlob");
+
+    if let Some(default) = blobstore_read_qps_default {
+        // Lazy static is nicer to LeakSanitizer than Box::leak
+        static QPS_FORMATTED: OnceCell<String> = OnceCell::new();
+        // clap needs &'static str
+        read_qps_arg =
+            read_qps_arg.default_value(&QPS_FORMATTED.get_or_init(|| format!("{}", default)));
+    }
+
     app.arg(
-        Arg::with_name(READ_QPS_ARG)
-            .long(READ_QPS_ARG)
-            .takes_value(true)
-            .required(false)
-            .help("Read QPS limit to ThrottledBlob"),
+       read_qps_arg
     )
     .arg(
         Arg::with_name(WRITE_QPS_ARG)
