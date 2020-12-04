@@ -748,6 +748,66 @@ class FixupCmd(Subcmd):
         return 0 if ok else 1
 
 
+def resolve_repo_relative_path(checkout_path: Path, repo_rel_path: Path) -> Path:
+    """Given a path, verify that it is an appropriate repo-root-relative path
+    and return the resolved form of that path.
+    The ideal is that they pass in `foo` and we return `foo`, but we also
+    allow for the path to be absolute path to `foo`, in which case we resolve
+    it and verify that it falls with the repo and then return the relative
+    path to `foo`."""
+
+    if repo_rel_path.is_absolute():
+        # Well, the original intent was to only interpret paths as relative
+        # to the repo root, but it's a bit burdensome to require the caller
+        # to correctly relativize for that case, so we'll allow an absolute
+        # path to be specified.
+        try:
+            canonical_repo_path = repo_rel_path.resolve()
+            return canonical_repo_path.relative_to(checkout_path)
+        except ValueError:
+            raise RuntimeError(
+                (
+                    f"The redirection path `{repo_rel_path}` doesn't resolve "
+                    f"to a path inside the repo `{checkout_path}`"
+                )
+            )
+
+    # Otherwise, the path must be interpreted as being relative to the repo
+    # root, so let's resolve that and verify that it lies within the repo
+    candidate = (checkout_path / repo_rel_path).resolve()
+    try:
+        relative = candidate.relative_to(checkout_path)
+    except ValueError:
+        raise RuntimeError(
+            (
+                f"The repo-root-relative redirection path `{repo_rel_path}` "
+                f"doesn't resolve to a path inside the repo `{checkout_path}`. "
+                "Specify either a canonical absolute path to the redirection, or "
+                "a canonical (without `..` components) path relative to the "
+                f"repository root at `{checkout_path}`."
+            )
+        )
+
+    # If the resolved and relativized path doesn't match the user-specified
+    # path then it means that they either used `..` or a path that resolved
+    # through a symlink.  The former is ambiguous, especially because it likely
+    # implies that the user is assuming that the path is current working directory
+    # relative instead of repo root relative, and the latter is problematic for
+    # all of the usual symlink reasons.
+    if relative != repo_rel_path:
+        raise RuntimeError(
+            (
+                f"The redirection path `{repo_rel_path}` resolves to `{relative}` "
+                "but must be a canonical repo-root-relative path. Specify either a "
+                "canonical absolute path to the redirection, or a canonical "
+                "(without `..` components) path "
+                f"relative to the repository root at `{checkout_path}`."
+            )
+        )
+
+    return repo_rel_path
+
+
 @redirect_cmd("add", "Add or change a redirection")
 class AddCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
@@ -784,6 +844,14 @@ class AddCmd(Subcmd):
         # However, we keep this separate from the `redirs` list below for
         # the reasons stated in the comment below.
         effective_redirs = get_effective_redirections(checkout, mtab.new())
+
+        try:
+            args.repo_path = str(
+                resolve_repo_relative_path(checkout.path, Path(args.repo_path))
+            )
+        except RuntimeError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
 
         # Get only the explicitly configured entries for the purposes of the
         # add command, so that we avoid writing out any of the effective list
@@ -837,6 +905,10 @@ class DelCmd(Subcmd):
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
 
         redirs = get_configured_redirections(checkout)
+        # Note that we're deliberately not using the same validation logic
+        # for args.repo_path that we do for the add case for now so that we
+        # provide a way to remove bogus redirection paths.  After we've deployed
+        # the improved `add` validation for a while, we can use it here also.
         redir = redirs.get(args.repo_path)
         if redir:
             redir.remove_existing(checkout)
