@@ -128,9 +128,11 @@ class Dispatcher {
       ObjectFetchContext& context) = 0;
 
   /**
-   * Notification sent when a file is being removed
+   * Notification sent when a file is about to be removed
+   *
+   * A failure will block the removal operation
    */
-  virtual folly::Future<folly::Unit> fileHandleClosedFileDeleted(
+  virtual folly::Future<folly::Unit> preDelete(
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,

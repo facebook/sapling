@@ -156,7 +156,7 @@ class EdenDispatcher : public Dispatcher {
       bool isDirectory,
       ObjectFetchContext& context) override;
 
-  folly::Future<folly::Unit> fileHandleClosedFileDeleted(
+  folly::Future<folly::Unit> preDelete(
       RelativePath relPath,
       RelativePath destPath,
       bool isDirectory,
