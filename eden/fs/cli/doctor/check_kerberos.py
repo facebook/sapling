@@ -25,7 +25,7 @@ class KerberosChecker:
 class KerberosProblem(Problem):
     def __init__(self) -> None:
         remediation = """\
-Run `kdestroy && kinit` to obtain new Kerberos credentials.
+Run `kdestroy ; kinit` to obtain new Kerberos credentials.
             """
         super().__init__(
             "Kerberos ccache is empty or expired.", remediation=remediation
