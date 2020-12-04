@@ -79,7 +79,12 @@ class InodeBase {
    * by ProjectedFS APIs that write a placeholder to disk.
    */
   void incFsRefcount(uint32_t count = 1) {
-    numFsReferences_.fetch_add(count, std::memory_order_acq_rel);
+    if (!folly::kIsWindows) {
+      numFsReferences_.fetch_add(count, std::memory_order_acq_rel);
+    } else {
+      XDCHECK_EQ(count, 1u);
+      numFsReferences_.store(1u, std::memory_order_release);
+    }
   }
 
   /**
@@ -90,9 +95,14 @@ class InodeBase {
    * when a ProjectedFS placeholder is manually invalidated.
    */
   void decFsRefcount(uint32_t count = 1) {
-    auto prevValue =
-        numFsReferences_.fetch_sub(count, std::memory_order_acq_rel);
-    XDCHECK_GE(prevValue, count);
+    if (!folly::kIsWindows) {
+      auto prevValue =
+          numFsReferences_.fetch_sub(count, std::memory_order_acq_rel);
+      XDCHECK_GE(prevValue, count);
+    } else {
+      XDCHECK_GE(count, 1u);
+      numFsReferences_.store(0u, std::memory_order_release);
+    }
   }
 
   /**
@@ -291,6 +301,9 @@ class InodeBase {
    * before the Inode object has been returned to any users.
    */
   void setChannelRefcount(uint32_t count) {
+    if (folly::kIsWindows) {
+      XDCHECK_GE(1u, count);
+    }
     return numFsReferences_.store(count, std::memory_order_release);
   }
 

@@ -47,7 +47,11 @@ InodeMap::UnloadedInode::UnloadedInode(
       isUnlinked{isUnlinked},
       mode{mode},
       hash{hash},
-      numFsReferences{fsRefcount} {}
+      numFsReferences{fsRefcount} {
+  if (folly::kIsWindows) {
+    XDCHECK_LE(numFsReferences, 1u);
+  }
+}
 
 InodeMap::UnloadedInode::UnloadedInode(
     TreeInode* parent,
@@ -64,7 +68,11 @@ InodeMap::UnloadedInode::UnloadedInode(
       // force the value down here.
       mode{S_IFDIR | 0755},
       hash{hash},
-      numFsReferences{fsRefcount} {}
+      numFsReferences{fsRefcount} {
+  if (folly::kIsWindows) {
+    XDCHECK_LE(numFsReferences, 1u);
+  }
+}
 
 InodeMap::UnloadedInode::UnloadedInode(
     FileInode* inode,
@@ -77,7 +85,11 @@ InodeMap::UnloadedInode::UnloadedInode(
       isUnlinked{isUnlinked},
       mode{inode->getMode()},
       hash{inode->getBlobHash()},
-      numFsReferences{fsRefcount} {}
+      numFsReferences{fsRefcount} {
+  if (folly::kIsWindows) {
+    XDCHECK_LE(numFsReferences, 1u);
+  }
+}
 
 InodeMap::InodeMap(EdenMount* mount) : mount_{mount} {}
 
@@ -476,6 +488,10 @@ std::optional<RelativePath> InodeMap::getPathForInodeHelper(
 
 void InodeMap::decFsRefcount(InodeNumber number, uint32_t count) {
   auto data = data_.wlock();
+
+  if (folly::kIsWindows) {
+    XDCHECK_EQ(count, 1u);
+  }
 
   // First check in the loaded inode map
   auto loadedIter = data->loadedInodes_.find(number);
