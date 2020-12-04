@@ -40,6 +40,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let app_name = "walker";
     let cachelib_defaults = CachelibSettings {
         cache_size: 2 * 1024 * 1024 * 1024,
+        blobstore_cachelib_only: true,
         ..Default::default()
     };
     let matches = setup::setup_toplevel_app(app_name, cachelib_defaults.clone()).get_matches();

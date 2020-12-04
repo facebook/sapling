@@ -995,11 +995,11 @@ fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-fn bool_as_str(v: bool) -> &'static str {
+pub(crate) fn bool_as_str(v: bool) -> &'static str {
     if v { "true" } else { "false" }
 }
 
-const BOOL_VALUES: &[&str] = &["false", "true"];
+pub(crate) const BOOL_VALUES: &[&str] = &["false", "true"];
 
 fn add_blobstore_args<'a, 'b>(
     app: App<'a, 'b>,
@@ -1088,7 +1088,7 @@ fn add_blobstore_args<'a, 'b>(
     .arg(
         Arg::with_name(READONLY_STORAGE_OLD_ARG)
             .long(READONLY_STORAGE_OLD_ARG)
-            .help("Error on any attempts to write to storage (deprecated, use --with-readonly-storage=<true|false>)"),
+            .help("Error on any attempts to write to storage. DEPRECATED, prefer --with-readonly-storage=<true|false>"),
     )
     .arg(
         Arg::with_name(READONLY_STORAGE_NEW_ARG)

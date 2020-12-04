@@ -10,14 +10,15 @@ use clap::{App, Arg, ArgMatches};
 use fbinit::FacebookInit;
 use once_cell::sync::{Lazy, OnceCell};
 
-use crate::args::MononokeMatches;
+use crate::args::{bool_as_str, MononokeMatches, BOOL_VALUES};
 
 const CACHE_SIZE_GB: &str = "cache-size-gb";
 const USE_TUPPERWARE_SHRINKER: &str = "use-tupperware-shrinker";
 const MAX_PROCESS_SIZE: &str = "max-process-size";
 const MIN_PROCESS_SIZE: &str = "min-process-size";
 const SKIP_CACHING: &str = "skip-caching";
-const CACHELIB_ONLY_BLOBSTORE: &str = "cachelib-only-blobstore";
+const CACHELIB_ONLY_BLOBSTORE_OLD: &str = "cachelib-only-blobstore";
+const CACHELIB_ONLY_BLOBSTORE_NEW: &str = "blobstore-cachelib-only";
 const CACHELIB_SHARDS: &str = "cachelib-shards";
 
 const PHASES_CACHE_SIZE: &str = "phases-cache-size";
@@ -117,9 +118,17 @@ pub(crate) fn add_cachelib_args<'a, 'b>(
             .help("do not init cachelib and disable caches (useful for tests)"),
     )
     .arg(
-        Arg::with_name(CACHELIB_ONLY_BLOBSTORE)
-            .long(CACHELIB_ONLY_BLOBSTORE)
-            .help("do not init memcache for blobstore"),
+        Arg::with_name(CACHELIB_ONLY_BLOBSTORE_OLD)
+            .long(CACHELIB_ONLY_BLOBSTORE_OLD)
+            .help("do not init memcache for blobstore. DEPRECATED, prefer --blobstore-cachelib-only=true"),
+    )
+    .arg(
+        Arg::with_name(CACHELIB_ONLY_BLOBSTORE_NEW)
+            .long(CACHELIB_ONLY_BLOBSTORE_NEW)
+            .possible_values(BOOL_VALUES)
+            .default_value(bool_as_str(defaults.blobstore_cachelib_only))
+            .takes_value(true)
+            .help("whether to run without memcache for blobstore"),
     )
     .arg(
         Arg::with_name(CACHELIB_SHARDS)
@@ -140,10 +149,22 @@ pub(crate) fn parse_cachelib_shards<'a>(matches: &ArgMatches<'a>) -> usize {
 pub(crate) fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
     if matches.is_present(SKIP_CACHING) {
         Caching::Disabled
-    } else if matches.is_present(CACHELIB_ONLY_BLOBSTORE) {
+    } else if matches.is_present(CACHELIB_ONLY_BLOBSTORE_OLD) {
         Caching::CachelibOnlyBlobstore(parse_cachelib_shards(matches))
     } else {
-        Caching::Enabled(parse_cachelib_shards(matches))
+        let cachelib_only = matches
+            .value_of(CACHELIB_ONLY_BLOBSTORE_NEW)
+            .map_or(false, |v| {
+                v.parse().unwrap_or_else(|_| {
+                    panic!("Provided {} is not bool", CACHELIB_ONLY_BLOBSTORE_NEW)
+                })
+            });
+
+        if cachelib_only {
+            Caching::CachelibOnlyBlobstore(parse_cachelib_shards(matches))
+        } else {
+            Caching::Enabled(parse_cachelib_shards(matches))
+        }
     }
 }
 
@@ -238,6 +259,7 @@ pub struct CachelibSettings {
     pub blob_cache_size: Option<usize>,
     pub phases_cache_size: Option<usize>,
     pub expected_item_size_bytes: Option<usize>,
+    pub blobstore_cachelib_only: bool,
 }
 
 impl Default for CachelibSettings {
@@ -256,6 +278,7 @@ impl Default for CachelibSettings {
             blob_cache_size: None,
             phases_cache_size: None,
             expected_item_size_bytes: None,
+            blobstore_cachelib_only: false,
         }
     }
 }
