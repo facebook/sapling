@@ -18,7 +18,7 @@ setup configuration
   $ blobimport repo-hg/.hg repo --derived-data-type=blame --derived-data-type=unodes
 
 validate, expecting all valid, checking marker types
-  $ mononoke_walker --cachelib-only-blobstore validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -31,7 +31,7 @@ Remove the phase information, linknodes already point to them
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
 
 validate, expect no failures on phase info, as the commits are still public, just not marked as so in the phases table
-  $ mononoke_walker --cachelib-only-blobstore validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -96,7 +96,7 @@ Check we dont walk filenodes on a non-public commit.  Because filenodes is the o
   * Type:Walked,Checks,Children HgChangeset:1,* HgFileEnvelope:1,* HgFileNode:1,* HgManifest:1,* (glob)
 
 validate, expect failures on phase info, and linknode as we now point to a non-public commit
-  $ mononoke_walker --cachelib-only-blobstore validate --scuba-log-file scuba.json -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog | sort
+  $ mononoke_walker validate --scuba-log-file scuba.json -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog | sort
   Final count: * (glob)
   Nodes,Pass,Fail:56,6,2; EdgesChecked:14; CheckType:Pass,Fail Total:6,2 ChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:3,1
   Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]

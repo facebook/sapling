@@ -18,7 +18,7 @@ setup configuration
   blobimporting
 
 validate, expecting all valid
-  $ mononoke_walker --cachelib-only-blobstore validate -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker validate -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -54,7 +54,7 @@ Remove all filenodes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where linknode=x'112478962961147124EDD43549AEDD1A335E44BF'";
 
 validate, expecting validation fails
-  $ mononoke_walker --cachelib-only-blobstore validate -I deep -q --bookmark master_bookmark --scuba-log-file scuba.json 2>&1 | strip_glog
+  $ mononoke_walker validate -I deep -q --bookmark master_bookmark --scuba-log-file scuba.json 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -74,7 +74,7 @@ repair by blobimport.
   $ blobimport repo-hg/.hg repo
 
 validate, expecting all valid, this time checking marker types as well
-  $ mononoke_walker --cachelib-only-blobstore validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -87,7 +87,7 @@ Remove the phase information, linknodes already point to them
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
 
 validate, expect no failures on phase info, as the commits are still public, just not marked as so in the phases table
-  $ mononoke_walker --cachelib-only-blobstore validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -99,7 +99,7 @@ validate, expect no failures on phase info, as the commits are still public, jus
 Remove all filenodes for the last commit, validation should succeed (i.e. filenodes were not derived yet)
   $ cd "$TESTTMP"
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where HEX(linknode) like '26805aba1e600a82e93661149f2313866a221a7b'";
-  $ mononoke_walker --cachelib-only-blobstore validate -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker validate -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
