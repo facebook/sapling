@@ -1526,7 +1526,13 @@ async fn walk_one<V, VOut, Route>(
     mut scuba: MononokeScubaSampleBuilder,
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
     checker: Arc<Checker<V>>,
-) -> Result<(VOut, Vec<(Option<Route>, OutgoingEdge)>), Error>
+) -> Result<
+    (
+        VOut,
+        impl IntoIterator<Item = (Option<Route>, OutgoingEdge)>,
+    ),
+    Error,
+>
 where
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
     VOut: 'static + Send,
@@ -1696,7 +1702,7 @@ where
             Ok(visitor.visit(&ctx, walk_item, Some(node_data), via, children)).map(
                 |(vout, via, next)| {
                     let via = Some(via);
-                    let next = next.into_iter().map(|e| (via.clone(), e)).collect();
+                    let next = next.into_iter().map(move |e| (via.clone(), e));
                     (vout, next)
                 },
             )
