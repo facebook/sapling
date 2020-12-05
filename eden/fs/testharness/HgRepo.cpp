@@ -77,7 +77,8 @@ HgRepo::HgRepo(AbsolutePathPiece path) : path_{path} {
   hgEnv_.set("HGRCPATH", "");
   hgEnv_.set("CHGDISABLE", "1");
   hgEnv_.set("NOSCMLOG", "1");
-  hgEnv_.set("LOCALE", "C");
+  hgEnv_.set("LOCALE", "en_US.UTF-8");
+  hgEnv_.set("LC_ALL", "en_US.UTF-8");
   // Trick Mercurial into thinking it's in a test so it doesn't generate
   // prod configs.
   hgEnv_.set("TESTTMP", "");

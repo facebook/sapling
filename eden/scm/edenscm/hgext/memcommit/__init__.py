@@ -92,7 +92,7 @@ def debugserializecommit(ui, repo, *args, **opts):
     )
 
     params = commitdata.params(changelist, metadata, destination)
-    ui.write(serialization.serialize(params.todict()))
+    ui.writebytes(serialization.serialize(params.todict()))
 
 
 @command("memcommit", [], _("hg memcommit"))
