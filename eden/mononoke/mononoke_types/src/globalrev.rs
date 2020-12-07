@@ -6,6 +6,7 @@
  */
 
 use crate::BonsaiChangeset;
+use abomonation_derive::Abomonation;
 use anyhow::{bail, Error, Result};
 use sql::mysql;
 use std::str;
@@ -19,7 +20,7 @@ pub const GLOBALREV_EXTRA: &str = "global_rev";
 pub const START_COMMIT_GLOBALREV: u64 = 1000147970;
 
 // Changeset globalrev.
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Abomonation, Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(mysql::OptTryFromRowField)]
 pub struct Globalrev(u64);
 

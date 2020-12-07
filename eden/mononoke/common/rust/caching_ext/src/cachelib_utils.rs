@@ -103,6 +103,13 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
             }
         }
     }
+
+    pub fn mock_store(&self) -> Option<&MockStore<T>> {
+        match self {
+            CachelibHandler::Real(_) => None,
+            CachelibHandler::Mock(ref mock) => Some(mock),
+        }
+    }
 }
 
 #[cfg(test)]

@@ -9,10 +9,6 @@
 
 use anyhow::Error;
 use assert_matches::assert_matches;
-use bonsai_globalrev_mapping::{
-    add_globalrevs, AddGlobalrevsErrorKind, BonsaiGlobalrevMapping, BonsaiGlobalrevMappingEntry,
-    BonsaisOrGlobalrevs, SqlBonsaiGlobalrevMapping,
-};
 use futures::compat::Future01CompatExt;
 use mercurial_types_mocks::globalrev::*;
 use mononoke_types_mocks::changesetid as bonsai;
@@ -20,6 +16,12 @@ use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 use sql::Connection;
 use sql_construct::SqlConstruct;
 use sql_ext::{open_sqlite_in_memory, SqlConnections};
+use std::sync::Arc;
+
+use bonsai_globalrev_mapping::{
+    add_globalrevs, AddGlobalrevsErrorKind, BonsaiGlobalrevMapping, BonsaiGlobalrevMappingEntry,
+    BonsaisOrGlobalrevs, CachingBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
+};
 
 #[fbinit::test]
 async fn test_add_and_get() -> Result<(), Error> {
@@ -235,6 +237,96 @@ async fn test_closest_globalrev() -> Result<(), Error> {
             .get_closest_globalrev(REPO_ONE, GLOBALREV_THREE)
             .await?,
         None,
+    );
+
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_caching() -> Result<(), Error> {
+    let mapping = Arc::new(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?);
+    let caching = CachingBonsaiGlobalrevMapping::new_test(mapping.clone());
+
+    let store = caching
+        .cachelib()
+        .mock_store()
+        .expect("new_test gives us a MockStore");
+
+    let e0 = BonsaiGlobalrevMappingEntry {
+        repo_id: REPO_ZERO,
+        bcs_id: bonsai::ONES_CSID,
+        globalrev: GLOBALREV_ONE,
+    };
+
+    let e1 = BonsaiGlobalrevMappingEntry {
+        repo_id: REPO_ZERO,
+        bcs_id: bonsai::TWOS_CSID,
+        globalrev: GLOBALREV_TWO,
+    };
+
+    let ex = BonsaiGlobalrevMappingEntry {
+        repo_id: REPO_ONE,
+        bcs_id: bonsai::TWOS_CSID,
+        globalrev: GLOBALREV_ONE,
+    };
+
+    mapping.bulk_import(&[e0, e1, ex]).await?;
+
+    assert_eq!(
+        caching
+            .get_globalrev_from_bonsai(REPO_ZERO, bonsai::ONES_CSID)
+            .await?,
+        Some(GLOBALREV_ONE)
+    );
+
+    assert_eq!(store.stats().gets, 1);
+    assert_eq!(store.stats().hits, 0);
+    assert_eq!(store.stats().sets, 1);
+
+    assert_eq!(
+        caching
+            .get_globalrev_from_bonsai(REPO_ZERO, bonsai::ONES_CSID)
+            .await?,
+        Some(GLOBALREV_ONE)
+    );
+
+    assert_eq!(store.stats().gets, 2);
+    assert_eq!(store.stats().hits, 1);
+    assert_eq!(store.stats().sets, 1);
+
+    assert_eq!(
+        caching
+            .get_globalrev_from_bonsai(REPO_ZERO, bonsai::TWOS_CSID)
+            .await?,
+        Some(GLOBALREV_TWO)
+    );
+
+    assert_eq!(
+        caching
+            .get_globalrev_from_bonsai(REPO_ONE, bonsai::TWOS_CSID)
+            .await?,
+        Some(GLOBALREV_ONE)
+    );
+
+    assert_eq!(
+        caching
+            .get_bonsai_from_globalrev(REPO_ZERO, GLOBALREV_ONE)
+            .await?,
+        Some(bonsai::ONES_CSID)
+    );
+
+    assert_eq!(
+        caching
+            .get_bonsai_from_globalrev(REPO_ZERO, GLOBALREV_TWO)
+            .await?,
+        Some(bonsai::TWOS_CSID)
+    );
+
+    assert_eq!(
+        caching
+            .get_bonsai_from_globalrev(REPO_ONE, GLOBALREV_ONE)
+            .await?,
+        Some(bonsai::TWOS_CSID)
     );
 
     Ok(())

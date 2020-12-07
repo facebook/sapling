@@ -7,18 +7,21 @@
 
 #![deny(warnings)]
 
+mod caching;
 mod sql;
 
+use abomonation_derive::Abomonation;
 use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mononoke_types::{ChangesetId, Globalrev, RepositoryId};
 
+pub use crate::caching::CachingBonsaiGlobalrevMapping;
 pub use crate::sql::{
     add_globalrevs, bulk_import_globalrevs, AddGlobalrevsErrorKind, SqlBonsaiGlobalrevMapping,
 };
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiGlobalrevMappingEntry {
     pub repo_id: RepositoryId,
     pub bcs_id: ChangesetId,
