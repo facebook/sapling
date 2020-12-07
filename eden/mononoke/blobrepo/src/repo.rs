@@ -247,7 +247,6 @@ impl BlobRepo {
             .inner
             .bonsai_globalrev_mapping
             .get_bonsai_from_globalrev(self.get_repoid(), globalrev)
-            .compat()
             .await?;
         Ok(maybe_changesetid)
     }
@@ -260,7 +259,6 @@ impl BlobRepo {
             .inner
             .bonsai_globalrev_mapping
             .get_globalrev_from_bonsai(self.get_repoid(), bcs)
-            .compat()
             .await?;
         Ok(maybe_globalrev)
     }
@@ -273,7 +271,6 @@ impl BlobRepo {
             .inner
             .bonsai_globalrev_mapping
             .get(self.get_repoid(), bonsai_or_globalrev_ids.into())
-            .compat()
             .await?;
         Ok(entries
             .into_iter()

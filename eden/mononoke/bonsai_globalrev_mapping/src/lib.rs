@@ -7,6 +7,8 @@
 
 #![deny(warnings)]
 
+use async_trait::async_trait;
+use auto_impl::auto_impl;
 use sql::{Connection, Transaction};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
@@ -14,19 +16,11 @@ use std::collections::HashSet;
 use thiserror::Error;
 
 use anyhow::Error;
-use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt as _, TryFutureExt},
-};
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::Future;
-use futures_old::{future, IntoFuture};
+use futures::compat::Future01CompatExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, Globalrev, RepositoryId};
 use slog::warn;
 use sql::queries;
-use std::sync::Arc;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiGlobalrevMappingEntry {
@@ -83,78 +77,38 @@ impl From<Vec<Globalrev>> for BonsaisOrGlobalrevs {
     }
 }
 
+#[async_trait]
+#[auto_impl(&, Arc, Box)]
 pub trait BonsaiGlobalrevMapping: Send + Sync {
-    fn bulk_import(&self, entries: &[BonsaiGlobalrevMappingEntry]) -> BoxFuture<(), Error>;
+    async fn bulk_import(&self, entries: &[BonsaiGlobalrevMappingEntry]) -> Result<(), Error>;
 
-    fn get(
+    async fn get(
         &self,
         repo_id: RepositoryId,
         field: BonsaisOrGlobalrevs,
-    ) -> BoxFuture<Vec<BonsaiGlobalrevMappingEntry>, Error>;
+    ) -> Result<Vec<BonsaiGlobalrevMappingEntry>, Error>;
 
-    fn get_globalrev_from_bonsai(
+    async fn get_globalrev_from_bonsai(
         &self,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Option<Globalrev>, Error>;
+    ) -> Result<Option<Globalrev>, Error>;
 
-    fn get_bonsai_from_globalrev(
+    async fn get_bonsai_from_globalrev(
         &self,
         repo_id: RepositoryId,
         globalrev: Globalrev,
-    ) -> BoxFuture<Option<ChangesetId>, Error>;
+    ) -> Result<Option<ChangesetId>, Error>;
 
-    fn get_closest_globalrev(
+    async fn get_closest_globalrev(
         &self,
         repo_id: RepositoryId,
         globalrev: Globalrev,
-    ) -> BoxFuture<Option<Globalrev>, Error>;
+    ) -> Result<Option<Globalrev>, Error>;
 
     /// Read the most recent Globalrev. This produces the freshest data possible, and is meant to
     /// be used for Globalrev assignment.
-    fn get_max(&self, repo_id: RepositoryId) -> BoxFuture<Option<Globalrev>, Error>;
-}
-
-impl BonsaiGlobalrevMapping for Arc<dyn BonsaiGlobalrevMapping> {
-    fn bulk_import(&self, entries: &[BonsaiGlobalrevMappingEntry]) -> BoxFuture<(), Error> {
-        (**self).bulk_import(entries)
-    }
-
-    fn get(
-        &self,
-        repo_id: RepositoryId,
-        field: BonsaisOrGlobalrevs,
-    ) -> BoxFuture<Vec<BonsaiGlobalrevMappingEntry>, Error> {
-        (**self).get(repo_id, field)
-    }
-
-    fn get_globalrev_from_bonsai(
-        &self,
-        repo_id: RepositoryId,
-        cs_id: ChangesetId,
-    ) -> BoxFuture<Option<Globalrev>, Error> {
-        (**self).get_globalrev_from_bonsai(repo_id, cs_id)
-    }
-
-    fn get_bonsai_from_globalrev(
-        &self,
-        repo_id: RepositoryId,
-        globalrev: Globalrev,
-    ) -> BoxFuture<Option<ChangesetId>, Error> {
-        (**self).get_bonsai_from_globalrev(repo_id, globalrev)
-    }
-
-    fn get_closest_globalrev(
-        &self,
-        repo_id: RepositoryId,
-        globalrev: Globalrev,
-    ) -> BoxFuture<Option<Globalrev>, Error> {
-        (**self).get_closest_globalrev(repo_id, globalrev)
-    }
-
-    fn get_max(&self, repo_id: RepositoryId) -> BoxFuture<Option<Globalrev>, Error> {
-        (**self).get_max(repo_id)
-    }
+    async fn get_max(&self, repo_id: RepositoryId) -> Result<Option<Globalrev>, Error>;
 }
 
 queries! {
@@ -230,8 +184,9 @@ impl SqlConstruct for SqlBonsaiGlobalrevMapping {
 
 impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiGlobalrevMapping {}
 
+#[async_trait]
 impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
-    fn bulk_import(&self, entries: &[BonsaiGlobalrevMappingEntry]) -> BoxFuture<(), Error> {
+    async fn bulk_import(&self, entries: &[BonsaiGlobalrevMappingEntry]) -> Result<(), Error> {
         let entries: Vec<_> = entries
             .iter()
             .map(
@@ -246,92 +201,75 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             .collect();
 
         DangerouslyAddGlobalrevs::query(&self.write_connection, &entries[..])
-            .from_err()
-            .map(|_| ())
-            .boxify()
+            .compat()
+            .await?;
+
+        Ok(())
     }
 
-    fn get(
+    async fn get(
         &self,
         repo_id: RepositoryId,
         objects: BonsaisOrGlobalrevs,
-    ) -> BoxFuture<Vec<BonsaiGlobalrevMappingEntry>, Error> {
-        cloned!(self.read_master_connection);
+    ) -> Result<Vec<BonsaiGlobalrevMappingEntry>, Error> {
+        let mut mappings = select_mapping(&self.read_connection, repo_id, &objects).await?;
 
-        select_mapping(&self.read_connection, repo_id, &objects)
-            .and_then(move |mut mappings| {
-                let left_to_fetch = filter_fetched_objects(objects, &mappings[..]);
+        let left_to_fetch = filter_fetched_objects(objects, &mappings[..]);
 
-                if left_to_fetch.is_empty() {
-                    Ok(mappings).into_future().left_future()
-                } else {
-                    select_mapping(&read_master_connection, repo_id, &left_to_fetch)
-                        .map(move |mut master_mappings| {
-                            mappings.append(&mut master_mappings);
-                            mappings
-                        })
-                        .right_future()
-                }
-            })
-            .boxify()
+        if left_to_fetch.is_empty() {
+            return Ok(mappings);
+        }
+
+        let mut master_mappings =
+            select_mapping(&self.read_master_connection, repo_id, &left_to_fetch).await?;
+        mappings.append(&mut master_mappings);
+        Ok(mappings)
     }
 
-    fn get_globalrev_from_bonsai(
+    async fn get_globalrev_from_bonsai(
         &self,
         repo_id: RepositoryId,
         bcs_id: ChangesetId,
-    ) -> BoxFuture<Option<Globalrev>, Error> {
-        self.get(repo_id, BonsaisOrGlobalrevs::Bonsai(vec![bcs_id]))
-            .map(|result| result.into_iter().next().map(|entry| entry.globalrev))
-            .boxify()
+    ) -> Result<Option<Globalrev>, Error> {
+        let result = self
+            .get(repo_id, BonsaisOrGlobalrevs::Bonsai(vec![bcs_id]))
+            .await?;
+        Ok(result.into_iter().next().map(|entry| entry.globalrev))
     }
 
-    fn get_bonsai_from_globalrev(
+    async fn get_bonsai_from_globalrev(
         &self,
         repo_id: RepositoryId,
         globalrev: Globalrev,
-    ) -> BoxFuture<Option<ChangesetId>, Error> {
-        self.get(repo_id, BonsaisOrGlobalrevs::Globalrev(vec![globalrev]))
-            .map(|result| result.into_iter().next().map(|entry| entry.bcs_id))
-            .boxify()
+    ) -> Result<Option<ChangesetId>, Error> {
+        let result = self
+            .get(repo_id, BonsaisOrGlobalrevs::Globalrev(vec![globalrev]))
+            .await?;
+        Ok(result.into_iter().next().map(|entry| entry.bcs_id))
     }
 
-    fn get_closest_globalrev(
+    async fn get_closest_globalrev(
         &self,
         repo_id: RepositoryId,
         globalrev: Globalrev,
-    ) -> BoxFuture<Option<Globalrev>, Error> {
-        cloned!(self.read_connection);
+    ) -> Result<Option<Globalrev>, Error> {
+        let row = SelectClosestGlobalrev::query(&self.read_connection, &repo_id, &globalrev)
+            .compat()
+            .await?
+            .into_iter()
+            .next();
 
-        async move {
-            let row = SelectClosestGlobalrev::query(&read_connection, &repo_id, &globalrev)
-                .compat()
-                .await?
-                .into_iter()
-                .next();
-
-            Ok(row.map(|r| r.0))
-        }
-        .boxed()
-        .compat()
-        .boxify()
+        Ok(row.map(|r| r.0))
     }
 
-    fn get_max(&self, repo_id: RepositoryId) -> BoxFuture<Option<Globalrev>, Error> {
-        cloned!(self.read_master_connection);
+    async fn get_max(&self, repo_id: RepositoryId) -> Result<Option<Globalrev>, Error> {
+        let row = SelectMaxEntry::query(&self.read_master_connection, &repo_id)
+            .compat()
+            .await?
+            .into_iter()
+            .next();
 
-        async move {
-            let row = SelectMaxEntry::query(&read_master_connection, &repo_id)
-                .compat()
-                .await?
-                .into_iter()
-                .next();
-
-            Ok(row.map(|r| r.0))
-        }
-        .boxed()
-        .compat()
-        .boxify()
+        Ok(row.map(|r| r.0))
     }
 }
 
@@ -375,46 +313,47 @@ fn filter_fetched_objects(
     }
 }
 
-fn select_mapping(
+async fn select_mapping(
     connection: &Connection,
     repo_id: RepositoryId,
     objects: &BonsaisOrGlobalrevs,
-) -> BoxFuture<Vec<BonsaiGlobalrevMappingEntry>, Error> {
-    cloned!(repo_id, objects);
+) -> Result<Vec<BonsaiGlobalrevMappingEntry>, Error> {
     if objects.is_empty() {
-        return future::ok(vec![]).boxify();
+        return Ok(vec![]);
     }
 
-    let rows_fut = match objects {
+    let rows = match objects {
         BonsaisOrGlobalrevs::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..]).left_future()
+            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..])
+                .compat()
+                .await?
         }
         BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
-            SelectMappingByGlobalrev::query(&connection, &repo_id, &globalrevs[..]).right_future()
+            SelectMappingByGlobalrev::query(&connection, &repo_id, &globalrevs[..])
+                .compat()
+                .await?
         }
     };
 
-    rows_fut
-        .map(move |rows| {
-            rows.into_iter()
-                .map(move |(bcs_id, globalrev)| BonsaiGlobalrevMappingEntry {
-                    repo_id,
-                    bcs_id,
-                    globalrev,
-                })
-                .collect()
+
+    Ok(rows
+        .into_iter()
+        .map(move |(bcs_id, globalrev)| BonsaiGlobalrevMappingEntry {
+            repo_id,
+            bcs_id,
+            globalrev,
         })
-        .boxify()
+        .collect())
 }
 
 /// This method is for importing Globalrevs in bulk from a set of BonsaiChangesets where you know
 /// they are correct. Don't use this to assign new Globalrevs.
-pub fn bulk_import_globalrevs<'a>(
-    ctx: CoreContext,
+pub async fn bulk_import_globalrevs<'a>(
+    ctx: &'a CoreContext,
     repo_id: RepositoryId,
-    globalrevs_store: Arc<dyn BonsaiGlobalrevMapping>,
+    globalrevs_store: &'a impl BonsaiGlobalrevMapping,
     changesets: impl IntoIterator<Item = &'a BonsaiChangeset>,
-) -> BoxFuture<(), Error> {
+) -> Result<(), Error> {
     let mut entries = vec![];
     for bcs in changesets.into_iter() {
         match Globalrev::from_bcs(bcs) {
@@ -431,7 +370,10 @@ pub fn bulk_import_globalrevs<'a>(
             }
         }
     }
-    globalrevs_store.bulk_import(&entries)
+
+    globalrevs_store.bulk_import(&entries).await?;
+
+    Ok(())
 }
 
 #[derive(Debug, Error)]

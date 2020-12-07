@@ -18,7 +18,6 @@ pushrebase = { path = "../../pushrebase" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 async-trait = "0.1.29"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
@@ -26,6 +25,7 @@ blobstore = { path = "../../blobstore" }
 tests_utils = { path = "../../tests/utils" }
 borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
 tokio = { version = "=0.2.13", features = ["full"] }

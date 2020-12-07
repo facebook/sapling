@@ -201,7 +201,6 @@ mod test {
 
             repo.bonsai_globalrev_mapping()
                 .bulk_import(&vec![e1, e2])
-                .compat()
                 .await?;
 
             let syncer = SqlGlobalrevSyncer {

@@ -67,12 +67,13 @@ pub fn upload<P: AsRef<Path>>(
                 .buffered(chunk_size)
                 .chunks(chunk_size)
                 .and_then(move |chunk| {
-                    bulk_import_globalrevs(
-                        ctx.clone(),
-                        repo.get_repoid(),
-                        globalrevs_store.clone(),
-                        chunk.iter(),
-                    )
+                    let ctx = ctx.clone();
+                    let repo_id = repo.get_repoid();
+                    let store = globalrevs_store.clone();
+
+                    async move { bulk_import_globalrevs(&ctx, repo_id, &store, chunk.iter()).await }
+                        .boxed()
+                        .compat()
                 })
                 .for_each(|_| Ok(()))
         })

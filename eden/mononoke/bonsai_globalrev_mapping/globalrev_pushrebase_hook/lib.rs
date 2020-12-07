@@ -9,7 +9,6 @@ use anyhow::{anyhow, Error};
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use mononoke_types::{
     globalrev::{Globalrev, GLOBALREV_EXTRA, START_COMMIT_GLOBALREV},
     BonsaiChangesetMut, ChangesetId, RepositoryId,
@@ -49,7 +48,7 @@ impl GlobalrevPushrebaseHook {
 #[async_trait]
 impl PushrebaseHook for GlobalrevPushrebaseHook {
     async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
-        let max = self.mapping.get_max(self.repository_id).compat().await?;
+        let max = self.mapping.get_max(self.repository_id).await?;
 
         let next_rev = match max {
             None => START_COMMIT_GLOBALREV,

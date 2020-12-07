@@ -832,7 +832,6 @@ impl RepoContext {
                     self.blob_repo()
                         .bonsai_globalrev_mapping()
                         .get_closest_globalrev(self.blob_repo().get_repoid(), prefix)
-                        .compat()
                         .await?,
                 )
             }

@@ -31,24 +31,21 @@ async fn test_add_and_get() -> Result<(), Error> {
         globalrev: GLOBALREV_ZERO,
     };
 
-    mapping.bulk_import(&vec![entry.clone()]).compat().await?;
+    mapping.bulk_import(&[entry.clone()]).await?;
 
     let result = mapping
         .get(
             REPO_ZERO,
             BonsaisOrGlobalrevs::Bonsai(vec![bonsai::ONES_CSID]),
         )
-        .compat()
         .await?;
     assert_eq!(result, vec![entry.clone()]);
     let result = mapping
         .get_globalrev_from_bonsai(REPO_ZERO, bonsai::ONES_CSID)
-        .compat()
         .await?;
     assert_eq!(result, Some(GLOBALREV_ZERO));
     let result = mapping
         .get_bonsai_from_globalrev(REPO_ZERO, GLOBALREV_ZERO)
-        .compat()
         .await?;
     assert_eq!(result, Some(bonsai::ONES_CSID));
 
@@ -76,8 +73,7 @@ async fn test_bulk_import() -> Result<(), Error> {
     };
 
     mapping
-        .bulk_import(&vec![entry1.clone(), entry2.clone(), entry3.clone()])
-        .compat()
+        .bulk_import(&[entry1.clone(), entry2.clone(), entry3.clone()])
         .await?;
 
     Ok(())
@@ -92,7 +88,6 @@ async fn test_missing() -> Result<(), Error> {
             REPO_ZERO,
             BonsaisOrGlobalrevs::Bonsai(vec![bonsai::ONES_CSID]),
         )
-        .compat()
         .await?;
 
     assert_eq!(result, vec![]);
@@ -104,29 +99,23 @@ async fn test_missing() -> Result<(), Error> {
 async fn test_get_max() -> Result<(), Error> {
     let mapping = SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?;
 
-    assert_eq!(None, mapping.get_max(REPO_ZERO).compat().await?);
+    assert_eq!(None, mapping.get_max(REPO_ZERO).await?);
 
     let e0 = BonsaiGlobalrevMappingEntry {
         repo_id: REPO_ZERO,
         bcs_id: bonsai::ONES_CSID,
         globalrev: GLOBALREV_ZERO,
     };
-    mapping.bulk_import(&[e0.clone()]).compat().await?;
-    assert_eq!(
-        Some(GLOBALREV_ZERO),
-        mapping.get_max(REPO_ZERO).compat().await?
-    );
+    mapping.bulk_import(&[e0.clone()]).await?;
+    assert_eq!(Some(GLOBALREV_ZERO), mapping.get_max(REPO_ZERO).await?);
 
     let e1 = BonsaiGlobalrevMappingEntry {
         repo_id: REPO_ZERO,
         bcs_id: bonsai::TWOS_CSID,
         globalrev: GLOBALREV_ONE,
     };
-    mapping.bulk_import(&[e1.clone()]).compat().await?;
-    assert_eq!(
-        Some(GLOBALREV_ONE),
-        mapping.get_max(REPO_ZERO).compat().await?
-    );
+    mapping.bulk_import(&[e1.clone()]).await?;
+    assert_eq!(Some(GLOBALREV_ONE), mapping.get_max(REPO_ZERO).await?);
 
     Ok(())
 }
@@ -160,7 +149,6 @@ async fn test_add_globalrevs() -> Result<(), Error> {
         Some(GLOBALREV_ZERO),
         mapping
             .get_globalrev_from_bonsai(REPO_ZERO, bonsai::ONES_CSID)
-            .compat()
             .await?
     );
 
@@ -172,7 +160,6 @@ async fn test_add_globalrevs() -> Result<(), Error> {
         Some(GLOBALREV_ONE),
         mapping
             .get_globalrev_from_bonsai(REPO_ZERO, bonsai::TWOS_CSID)
-            .compat()
             .await?
     );
 
@@ -191,7 +178,6 @@ async fn test_add_globalrevs() -> Result<(), Error> {
         Some(GLOBALREV_ONE),
         mapping
             .get_globalrev_from_bonsai(REPO_ZERO, bonsai::TWOS_CSID)
-            .compat()
             .await?
     );
 
@@ -214,12 +200,11 @@ async fn test_closest_globalrev() -> Result<(), Error> {
         globalrev: GLOBALREV_TWO,
     };
 
-    mapping.bulk_import(&[e0, e1]).compat().await?;
+    mapping.bulk_import(&[e0, e1]).await?;
 
     assert_eq!(
         mapping
             .get_closest_globalrev(REPO_ZERO, GLOBALREV_ZERO)
-            .compat()
             .await?,
         None
     );
@@ -227,7 +212,6 @@ async fn test_closest_globalrev() -> Result<(), Error> {
     assert_eq!(
         mapping
             .get_closest_globalrev(REPO_ZERO, GLOBALREV_ONE)
-            .compat()
             .await?,
         Some(GLOBALREV_ONE)
     );
@@ -235,7 +219,6 @@ async fn test_closest_globalrev() -> Result<(), Error> {
     assert_eq!(
         mapping
             .get_closest_globalrev(REPO_ZERO, GLOBALREV_TWO)
-            .compat()
             .await?,
         Some(GLOBALREV_TWO)
     );
@@ -243,7 +226,6 @@ async fn test_closest_globalrev() -> Result<(), Error> {
     assert_eq!(
         mapping
             .get_closest_globalrev(REPO_ZERO, GLOBALREV_THREE)
-            .compat()
             .await?,
         Some(GLOBALREV_TWO)
     );
@@ -251,7 +233,6 @@ async fn test_closest_globalrev() -> Result<(), Error> {
     assert_eq!(
         mapping
             .get_closest_globalrev(REPO_ONE, GLOBALREV_THREE)
-            .compat()
             .await?,
         None,
     );
