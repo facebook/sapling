@@ -91,14 +91,24 @@ pub trait BonsaiGlobalrevMapping: Send + Sync {
     async fn get_globalrev_from_bonsai(
         &self,
         repo_id: RepositoryId,
-        cs_id: ChangesetId,
-    ) -> Result<Option<Globalrev>, Error>;
+        bcs_id: ChangesetId,
+    ) -> Result<Option<Globalrev>, Error> {
+        let result = self
+            .get(repo_id, BonsaisOrGlobalrevs::Bonsai(vec![bcs_id]))
+            .await?;
+        Ok(result.into_iter().next().map(|entry| entry.globalrev))
+    }
 
     async fn get_bonsai_from_globalrev(
         &self,
         repo_id: RepositoryId,
         globalrev: Globalrev,
-    ) -> Result<Option<ChangesetId>, Error>;
+    ) -> Result<Option<ChangesetId>, Error> {
+        let result = self
+            .get(repo_id, BonsaisOrGlobalrevs::Globalrev(vec![globalrev]))
+            .await?;
+        Ok(result.into_iter().next().map(|entry| entry.bcs_id))
+    }
 
     async fn get_closest_globalrev(
         &self,
@@ -224,28 +234,6 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             select_mapping(&self.read_master_connection, repo_id, &left_to_fetch).await?;
         mappings.append(&mut master_mappings);
         Ok(mappings)
-    }
-
-    async fn get_globalrev_from_bonsai(
-        &self,
-        repo_id: RepositoryId,
-        bcs_id: ChangesetId,
-    ) -> Result<Option<Globalrev>, Error> {
-        let result = self
-            .get(repo_id, BonsaisOrGlobalrevs::Bonsai(vec![bcs_id]))
-            .await?;
-        Ok(result.into_iter().next().map(|entry| entry.globalrev))
-    }
-
-    async fn get_bonsai_from_globalrev(
-        &self,
-        repo_id: RepositoryId,
-        globalrev: Globalrev,
-    ) -> Result<Option<ChangesetId>, Error> {
-        let result = self
-            .get(repo_id, BonsaisOrGlobalrevs::Globalrev(vec![globalrev]))
-            .await?;
-        Ok(result.into_iter().next().map(|entry| entry.bcs_id))
     }
 
     async fn get_closest_globalrev(
