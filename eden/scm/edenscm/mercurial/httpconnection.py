@@ -114,7 +114,16 @@ def readauthforuri(ui, uri, user):
             schemes, prefix = [p[0]], p[1]
         else:
             schemes = (auth.get("schemes") or "https").split()
-        priority = auth.get("priority", 0)
+
+        try:
+            priority = int(auth.get("priority", "0"))
+        except ValueError:
+            ui.warn(
+                _("priority is not an integer: auth.%s.priority=%s\n")
+                % (group, auth.get("priority", "0"))
+            )
+            continue
+
         if (
             (prefix == "*" or hostpath.startswith(prefix))
             and (
