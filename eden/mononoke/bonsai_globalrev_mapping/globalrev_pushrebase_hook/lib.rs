@@ -29,16 +29,19 @@ mod test;
 
 #[derive(Clone)]
 pub struct GlobalrevPushrebaseHook {
+    ctx: CoreContext,
     mapping: Arc<dyn BonsaiGlobalrevMapping>,
     repository_id: RepositoryId,
 }
 
 impl GlobalrevPushrebaseHook {
     pub fn new(
+        ctx: CoreContext,
         mapping: Arc<dyn BonsaiGlobalrevMapping>,
         repository_id: RepositoryId,
     ) -> Box<dyn PushrebaseHook> {
         Box::new(Self {
+            ctx,
             mapping,
             repository_id,
         })
@@ -48,7 +51,7 @@ impl GlobalrevPushrebaseHook {
 #[async_trait]
 impl PushrebaseHook for GlobalrevPushrebaseHook {
     async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
-        let max = self.mapping.get_max(self.repository_id).await?;
+        let max = self.mapping.get_max(&self.ctx, self.repository_id).await?;
 
         let next_rev = match max {
             None => START_COMMIT_GLOBALREV,

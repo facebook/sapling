@@ -10,7 +10,7 @@
 use ::sql::{queries, Connection, Transaction};
 use anyhow::Error;
 use async_trait::async_trait;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
 use futures::compat::Future01CompatExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, Globalrev, RepositoryId};
 use slog::warn;
@@ -96,7 +96,14 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiGlobalrevMapping {}
 
 #[async_trait]
 impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
-    async fn bulk_import(&self, entries: &[BonsaiGlobalrevMappingEntry]) -> Result<(), Error> {
+    async fn bulk_import(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiGlobalrevMappingEntry],
+    ) -> Result<(), Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
+
         let entries: Vec<_> = entries
             .iter()
             .map(
@@ -119,9 +126,13 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
 
     async fn get(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         objects: BonsaisOrGlobalrevs,
     ) -> Result<Vec<BonsaiGlobalrevMappingEntry>, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
         let mut mappings = select_mapping(&self.read_connection, repo_id, &objects).await?;
 
         let left_to_fetch = filter_fetched_objects(objects, &mappings[..]);
@@ -129,6 +140,9 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
         if left_to_fetch.is_empty() {
             return Ok(mappings);
         }
+
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsMaster);
 
         let mut master_mappings =
             select_mapping(&self.read_master_connection, repo_id, &left_to_fetch).await?;
@@ -138,9 +152,13 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
 
     async fn get_closest_globalrev(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         globalrev: Globalrev,
     ) -> Result<Option<Globalrev>, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
         let row = SelectClosestGlobalrev::query(&self.read_connection, &repo_id, &globalrev)
             .compat()
             .await?
@@ -150,7 +168,14 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
         Ok(row.map(|r| r.0))
     }
 
-    async fn get_max(&self, repo_id: RepositoryId) -> Result<Option<Globalrev>, Error> {
+    async fn get_max(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<Option<Globalrev>, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsMaster);
+
         let row = SelectMaxEntry::query(&self.read_master_connection, &repo_id)
             .compat()
             .await?
@@ -259,7 +284,7 @@ pub async fn bulk_import_globalrevs<'a>(
         }
     }
 
-    globalrevs_store.bulk_import(&entries).await?;
+    globalrevs_store.bulk_import(ctx, &entries).await?;
 
     Ok(())
 }

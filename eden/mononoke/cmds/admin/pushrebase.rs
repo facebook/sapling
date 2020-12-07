@@ -74,7 +74,7 @@ pub async fn subcommand_pushrebase<'a>(
     let bookmark = BookmarkName::new(bookmark)?;
 
     let pushrebase_flags = repo_config.pushrebase.flags;
-    let pushrebase_hooks = get_pushrebase_hooks(&repo, &repo_config.pushrebase);
+    let pushrebase_hooks = get_pushrebase_hooks(ctx.clone(), &repo, &repo_config.pushrebase);
 
     let bcs = cs_id
         .load(&ctx, &repo.get_blobstore())

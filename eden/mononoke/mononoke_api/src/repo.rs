@@ -759,7 +759,9 @@ impl RepoContext {
                     .await?
             }
             ChangesetSpecifier::Globalrev(rev) => {
-                self.blob_repo().get_bonsai_from_globalrev(rev).await?
+                self.blob_repo()
+                    .get_bonsai_from_globalrev(&self.ctx, rev)
+                    .await?
             }
             ChangesetSpecifier::GitSha1(git_sha1) => {
                 self.blob_repo()
@@ -831,7 +833,7 @@ impl RepoContext {
                 ChangesetSpecifierPrefixResolution::from(
                     self.blob_repo()
                         .bonsai_globalrev_mapping()
-                        .get_closest_globalrev(self.blob_repo().get_repoid(), prefix)
+                        .get_closest_globalrev(&self.ctx, self.blob_repo().get_repoid(), prefix)
                         .await?,
                 )
             }
@@ -902,7 +904,7 @@ impl RepoContext {
     ) -> Result<Vec<(ChangesetId, Globalrev)>, MononokeError> {
         let mapping = self
             .blob_repo()
-            .get_bonsai_globalrev_mapping(changesets)
+            .get_bonsai_globalrev_mapping(&self.ctx, changesets)
             .await?
             .into_iter()
             .collect();

@@ -7,6 +7,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use metaconfig_types::HgsqlGlobalrevsName;
@@ -77,19 +78,19 @@ impl GlobalrevSyncer {
         Ok(GlobalrevSyncer::Sql(Arc::new(syncer)))
     }
 
-    pub async fn sync(&self, bcs_id: ChangesetId) -> Result<(), Error> {
+    pub async fn sync(&self, ctx: &CoreContext, bcs_id: ChangesetId) -> Result<(), Error> {
         match self {
             Self::Noop => Ok(()),
-            Self::Sql(syncer) => syncer.sync(bcs_id).await,
+            Self::Sql(syncer) => syncer.sync(ctx, bcs_id).await,
         }
     }
 }
 
 impl SqlGlobalrevSyncer {
-    pub async fn sync(&self, bcs_id: ChangesetId) -> Result<(), Error> {
+    pub async fn sync(&self, ctx: &CoreContext, bcs_id: ChangesetId) -> Result<(), Error> {
         let rev = self
             .repo
-            .get_globalrev_from_bonsai(bcs_id)
+            .get_globalrev_from_bonsai(ctx, bcs_id)
             .await?
             .ok_or_else(|| format_err!("Globalrev is missing for bcs_id = {}", bcs_id))?
             .id()
@@ -177,9 +178,11 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_sync() -> Result<(), Error> {
+    #[fbinit::test]
+    fn test_sync(fb: FacebookInit) -> Result<(), Error> {
         async_unit::tokio_unit_test(async move {
+            let ctx = CoreContext::test_mock(fb);
+
             let sqlite = SqliteConnection::open_in_memory()?;
             sqlite.execute_batch(HgsqlConnection::CREATION_QUERY)?;
             let connection = Connection::with_sqlite(sqlite);
@@ -200,7 +203,7 @@ mod test {
             };
 
             repo.bonsai_globalrev_mapping()
-                .bulk_import(&vec![e1, e2])
+                .bulk_import(&ctx, &[e1, e2])
                 .await?;
 
             let syncer = SqlGlobalrevSyncer {
@@ -212,7 +215,7 @@ mod test {
             };
 
             // First, check that setting a globalrev before the counter exists fails.
-            assert!(syncer.sync(ONES_CSID).await.is_err());
+            assert!(syncer.sync(&ctx, ONES_CSID).await.is_err());
 
             // Now, set the counter
 
@@ -222,7 +225,7 @@ mod test {
 
             // Now, try again to set the globalrev
 
-            syncer.sync(TWOS_CSID).await?;
+            syncer.sync(&ctx, TWOS_CSID).await?;
 
             assert_eq!(
                 GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
@@ -237,11 +240,11 @@ mod test {
 
             // Check that we can sync the same value again successfully
 
-            syncer.sync(TWOS_CSID).await?;
+            syncer.sync(&ctx, TWOS_CSID).await?;
 
             // Check that we can't move it back
 
-            assert!(syncer.sync(ONES_CSID).await.is_err());
+            assert!(syncer.sync(&ctx, ONES_CSID).await.is_err());
 
             assert_eq!(
                 GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())

@@ -59,7 +59,11 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
 
     let book = bookmark(ctx, repo, "master").set_to(cs1).await?;
 
-    let hooks = [GlobalrevPushrebaseHook::new(mapping, repo.get_repoid())];
+    let hooks = [GlobalrevPushrebaseHook::new(
+        ctx.clone(),
+        mapping,
+        repo.get_repoid(),
+    )];
 
     let rebased = do_pushrebase_bonsai(
         ctx,
@@ -198,7 +202,7 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
     let book = bookmark(ctx, repo, "master").set_to(root).await?;
 
     let hooks = [
-        GlobalrevPushrebaseHook::new(mapping, repo.get_repoid()),
+        GlobalrevPushrebaseHook::new(ctx.clone(), mapping, repo.get_repoid()),
         Box::new(SleepHook) as Box<dyn PushrebaseHook>,
     ];
 

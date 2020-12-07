@@ -14,6 +14,7 @@ use caching_ext::{
     MemcacheHandler,
 };
 use cloned::cloned;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::{
@@ -80,23 +81,28 @@ impl<T> BonsaiGlobalrevMapping for CachingBonsaiGlobalrevMapping<T>
 where
     T: BonsaiGlobalrevMapping + Clone + Sync + Send + 'static,
 {
-    async fn bulk_import(&self, entries: &[BonsaiGlobalrevMappingEntry]) -> Result<(), Error> {
-        self.inner.bulk_import(entries).await
+    async fn bulk_import(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiGlobalrevMappingEntry],
+    ) -> Result<(), Error> {
+        self.inner.bulk_import(ctx, entries).await
     }
 
     async fn get(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         objects: BonsaisOrGlobalrevs,
     ) -> Result<Vec<BonsaiGlobalrevMappingEntry>, Error> {
         let res = match objects {
             BonsaisOrGlobalrevs::Bonsai(cs_ids) => {
                 let get_from_db = {
-                    cloned!(self.inner);
+                    cloned!(self.inner, ctx);
                     move |keys: HashSet<ChangesetId>| -> OldBoxFuture<HashMap<ChangesetId, BonsaiGlobalrevMappingEntry>, Error> {
-                        cloned!(inner);
+                        cloned!(inner, ctx);
                         async move {
-                            let res = inner.get(repo_id, BonsaisOrGlobalrevs::Bonsai(keys.into_iter().collect()))
+                            let res = inner.get(&ctx, repo_id, BonsaisOrGlobalrevs::Bonsai(keys.into_iter().collect()))
                                 .await
                                 .with_context(|| "Error fetching globalrevs from bonsais from SQL")?;
                             Result::<_, Error>::Ok(res.into_iter().map(|e| (e.bcs_id, e)).collect())
@@ -128,11 +134,11 @@ where
             }
             BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
                 let get_from_db = {
-                    cloned!(self.inner);
+                    cloned!(self.inner, ctx);
                     move |keys: HashSet<Globalrev>| -> OldBoxFuture<HashMap<Globalrev, BonsaiGlobalrevMappingEntry>, Error> {
-                        cloned!(inner);
+                        cloned!(inner, ctx);
                         async move {
-                            let res = inner.get(repo_id, BonsaisOrGlobalrevs::Globalrev(keys.into_iter().collect()))
+                            let res = inner.get(&ctx, repo_id, BonsaisOrGlobalrevs::Globalrev(keys.into_iter().collect()))
                                 .await
                                 .with_context(|| "Error fetching bonsais from globalrevs from SQL")?;
                             Result::<_, Error>::Ok(res.into_iter().map(|e| (e.globalrev, e)).collect())
@@ -170,14 +176,21 @@ where
 
     async fn get_closest_globalrev(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         globalrev: Globalrev,
     ) -> Result<Option<Globalrev>, Error> {
-        self.inner.get_closest_globalrev(repo_id, globalrev).await
+        self.inner
+            .get_closest_globalrev(ctx, repo_id, globalrev)
+            .await
     }
 
-    async fn get_max(&self, repo_id: RepositoryId) -> Result<Option<Globalrev>, Error> {
-        self.inner.get_max(repo_id).await
+    async fn get_max(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<Option<Globalrev>, Error> {
+        self.inner.get_max(ctx, repo_id).await
     }
 }
 

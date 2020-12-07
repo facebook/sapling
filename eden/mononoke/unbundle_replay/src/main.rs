@@ -545,7 +545,8 @@ async fn do_main(
                 "Pushrebase starting: {}: {:?} -> {:?}", onto_bookmark, onto_rev, target
             );
 
-            let mut pushrebase_hooks = get_pushrebase_hooks(&repo, &repo_config.pushrebase);
+            let mut pushrebase_hooks =
+                get_pushrebase_hooks(ctx.clone(), &repo, &repo_config.pushrebase);
 
             pushrebase_hooks.push(UnbundleReplayHook::new(
                 repo.clone(),

@@ -406,7 +406,7 @@ async fn sync_single_combined_entry(
     globalrev_syncer: &GlobalrevSyncer,
 ) -> Result<RetryAttemptsCount, Error> {
     if let Some((cs_id, _hg_cs_id)) = combined_entry.cs_id {
-        globalrev_syncer.sync(cs_id).await?
+        globalrev_syncer.sync(ctx, cs_id).await?
     }
 
     let (_, attempts) = retry(

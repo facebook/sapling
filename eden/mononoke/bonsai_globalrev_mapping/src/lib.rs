@@ -14,6 +14,7 @@ use abomonation_derive::Abomonation;
 use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
+use context::CoreContext;
 use mononoke_types::{ChangesetId, Globalrev, RepositoryId};
 
 pub use crate::caching::CachingBonsaiGlobalrevMapping;
@@ -79,43 +80,59 @@ impl From<Vec<Globalrev>> for BonsaisOrGlobalrevs {
 #[async_trait]
 #[auto_impl(&, Arc, Box)]
 pub trait BonsaiGlobalrevMapping: Send + Sync {
-    async fn bulk_import(&self, entries: &[BonsaiGlobalrevMappingEntry]) -> Result<(), Error>;
+    async fn bulk_import(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiGlobalrevMappingEntry],
+    ) -> Result<(), Error>;
 
     async fn get(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         field: BonsaisOrGlobalrevs,
     ) -> Result<Vec<BonsaiGlobalrevMappingEntry>, Error>;
 
     async fn get_globalrev_from_bonsai(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         bcs_id: ChangesetId,
     ) -> Result<Option<Globalrev>, Error> {
         let result = self
-            .get(repo_id, BonsaisOrGlobalrevs::Bonsai(vec![bcs_id]))
+            .get(ctx, repo_id, BonsaisOrGlobalrevs::Bonsai(vec![bcs_id]))
             .await?;
         Ok(result.into_iter().next().map(|entry| entry.globalrev))
     }
 
     async fn get_bonsai_from_globalrev(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         globalrev: Globalrev,
     ) -> Result<Option<ChangesetId>, Error> {
         let result = self
-            .get(repo_id, BonsaisOrGlobalrevs::Globalrev(vec![globalrev]))
+            .get(
+                ctx,
+                repo_id,
+                BonsaisOrGlobalrevs::Globalrev(vec![globalrev]),
+            )
             .await?;
         Ok(result.into_iter().next().map(|entry| entry.bcs_id))
     }
 
     async fn get_closest_globalrev(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         globalrev: Globalrev,
     ) -> Result<Option<Globalrev>, Error>;
 
     /// Read the most recent Globalrev. This produces the freshest data possible, and is meant to
     /// be used for Globalrev assignment.
-    async fn get_max(&self, repo_id: RepositoryId) -> Result<Option<Globalrev>, Error>;
+    async fn get_max(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<Option<Globalrev>, Error>;
 }

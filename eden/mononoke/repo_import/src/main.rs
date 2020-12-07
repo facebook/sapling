@@ -584,7 +584,7 @@ async fn push_merge_commit(
 
     let merged_cs = merged_cs_id.load(ctx, repo.blobstore()).await?;
     let pushrebase_flags = repo_config.pushrebase.flags;
-    let pushrebase_hooks = get_pushrebase_hooks(&repo, &repo_config.pushrebase);
+    let pushrebase_hooks = get_pushrebase_hooks(ctx.clone(), &repo, &repo_config.pushrebase);
 
     let pushrebase_res = do_pushrebase_bonsai(
         &ctx,

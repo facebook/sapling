@@ -913,6 +913,7 @@ async fn log_commits_to_scribe(
 /// Get a Vec of the relevant pushrebase hooks for PushrebaseParams, using this BlobRepo when
 /// required by those hooks.
 pub fn get_pushrebase_hooks(
+    ctx: CoreContext,
     repo: &BlobRepo,
     params: &PushrebaseParams,
 ) -> Vec<Box<dyn PushrebaseHook>> {
@@ -920,6 +921,7 @@ pub fn get_pushrebase_hooks(
 
     if params.assign_globalrevs {
         let hook = GlobalrevPushrebaseHook::new(
+            ctx,
             repo.bonsai_globalrev_mapping().clone(),
             repo.get_repoid(),
         );

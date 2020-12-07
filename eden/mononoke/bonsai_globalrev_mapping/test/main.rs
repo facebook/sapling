@@ -9,6 +9,8 @@
 
 use anyhow::Error;
 use assert_matches::assert_matches;
+use context::CoreContext;
+use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use mercurial_types_mocks::globalrev::*;
 use mononoke_types_mocks::changesetid as bonsai;
@@ -24,7 +26,8 @@ use bonsai_globalrev_mapping::{
 };
 
 #[fbinit::test]
-async fn test_add_and_get() -> Result<(), Error> {
+async fn test_add_and_get(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?;
 
     let entry = BonsaiGlobalrevMappingEntry {
@@ -33,21 +36,22 @@ async fn test_add_and_get() -> Result<(), Error> {
         globalrev: GLOBALREV_ZERO,
     };
 
-    mapping.bulk_import(&[entry.clone()]).await?;
+    mapping.bulk_import(&ctx, &[entry.clone()]).await?;
 
     let result = mapping
         .get(
+            &ctx,
             REPO_ZERO,
             BonsaisOrGlobalrevs::Bonsai(vec![bonsai::ONES_CSID]),
         )
         .await?;
     assert_eq!(result, vec![entry.clone()]);
     let result = mapping
-        .get_globalrev_from_bonsai(REPO_ZERO, bonsai::ONES_CSID)
+        .get_globalrev_from_bonsai(&ctx, REPO_ZERO, bonsai::ONES_CSID)
         .await?;
     assert_eq!(result, Some(GLOBALREV_ZERO));
     let result = mapping
-        .get_bonsai_from_globalrev(REPO_ZERO, GLOBALREV_ZERO)
+        .get_bonsai_from_globalrev(&ctx, REPO_ZERO, GLOBALREV_ZERO)
         .await?;
     assert_eq!(result, Some(bonsai::ONES_CSID));
 
@@ -55,7 +59,8 @@ async fn test_add_and_get() -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn test_bulk_import() -> Result<(), Error> {
+async fn test_bulk_import(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?;
 
     let entry1 = BonsaiGlobalrevMappingEntry {
@@ -75,18 +80,20 @@ async fn test_bulk_import() -> Result<(), Error> {
     };
 
     mapping
-        .bulk_import(&[entry1.clone(), entry2.clone(), entry3.clone()])
+        .bulk_import(&ctx, &[entry1.clone(), entry2.clone(), entry3.clone()])
         .await?;
 
     Ok(())
 }
 
 #[fbinit::test]
-async fn test_missing() -> Result<(), Error> {
+async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?;
 
     let result = mapping
         .get(
+            &ctx,
             REPO_ZERO,
             BonsaisOrGlobalrevs::Bonsai(vec![bonsai::ONES_CSID]),
         )
@@ -98,32 +105,37 @@ async fn test_missing() -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn test_get_max() -> Result<(), Error> {
+async fn test_get_max(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?;
 
-    assert_eq!(None, mapping.get_max(REPO_ZERO).await?);
+    assert_eq!(None, mapping.get_max(&ctx, REPO_ZERO).await?);
 
     let e0 = BonsaiGlobalrevMappingEntry {
         repo_id: REPO_ZERO,
         bcs_id: bonsai::ONES_CSID,
         globalrev: GLOBALREV_ZERO,
     };
-    mapping.bulk_import(&[e0.clone()]).await?;
-    assert_eq!(Some(GLOBALREV_ZERO), mapping.get_max(REPO_ZERO).await?);
+    mapping.bulk_import(&ctx, &[e0.clone()]).await?;
+    assert_eq!(
+        Some(GLOBALREV_ZERO),
+        mapping.get_max(&ctx, REPO_ZERO).await?
+    );
 
     let e1 = BonsaiGlobalrevMappingEntry {
         repo_id: REPO_ZERO,
         bcs_id: bonsai::TWOS_CSID,
         globalrev: GLOBALREV_ONE,
     };
-    mapping.bulk_import(&[e1.clone()]).await?;
-    assert_eq!(Some(GLOBALREV_ONE), mapping.get_max(REPO_ZERO).await?);
+    mapping.bulk_import(&ctx, &[e1.clone()]).await?;
+    assert_eq!(Some(GLOBALREV_ONE), mapping.get_max(&ctx, REPO_ZERO).await?);
 
     Ok(())
 }
 
 #[fbinit::test]
-async fn test_add_globalrevs() -> Result<(), Error> {
+async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let conn = open_sqlite_in_memory()?;
     conn.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
     let conn = Connection::with_sqlite(conn);
@@ -150,7 +162,7 @@ async fn test_add_globalrevs() -> Result<(), Error> {
     assert_eq!(
         Some(GLOBALREV_ZERO),
         mapping
-            .get_globalrev_from_bonsai(REPO_ZERO, bonsai::ONES_CSID)
+            .get_globalrev_from_bonsai(&ctx, REPO_ZERO, bonsai::ONES_CSID)
             .await?
     );
 
@@ -161,7 +173,7 @@ async fn test_add_globalrevs() -> Result<(), Error> {
     assert_eq!(
         Some(GLOBALREV_ONE),
         mapping
-            .get_globalrev_from_bonsai(REPO_ZERO, bonsai::TWOS_CSID)
+            .get_globalrev_from_bonsai(&ctx, REPO_ZERO, bonsai::TWOS_CSID)
             .await?
     );
 
@@ -179,7 +191,7 @@ async fn test_add_globalrevs() -> Result<(), Error> {
     assert_eq!(
         Some(GLOBALREV_ONE),
         mapping
-            .get_globalrev_from_bonsai(REPO_ZERO, bonsai::TWOS_CSID)
+            .get_globalrev_from_bonsai(&ctx, REPO_ZERO, bonsai::TWOS_CSID)
             .await?
     );
 
@@ -187,7 +199,8 @@ async fn test_add_globalrevs() -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn test_closest_globalrev() -> Result<(), Error> {
+async fn test_closest_globalrev(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?;
 
     let e0 = BonsaiGlobalrevMappingEntry {
@@ -202,39 +215,39 @@ async fn test_closest_globalrev() -> Result<(), Error> {
         globalrev: GLOBALREV_TWO,
     };
 
-    mapping.bulk_import(&[e0, e1]).await?;
+    mapping.bulk_import(&ctx, &[e0, e1]).await?;
 
     assert_eq!(
         mapping
-            .get_closest_globalrev(REPO_ZERO, GLOBALREV_ZERO)
+            .get_closest_globalrev(&ctx, REPO_ZERO, GLOBALREV_ZERO)
             .await?,
         None
     );
 
     assert_eq!(
         mapping
-            .get_closest_globalrev(REPO_ZERO, GLOBALREV_ONE)
+            .get_closest_globalrev(&ctx, REPO_ZERO, GLOBALREV_ONE)
             .await?,
         Some(GLOBALREV_ONE)
     );
 
     assert_eq!(
         mapping
-            .get_closest_globalrev(REPO_ZERO, GLOBALREV_TWO)
+            .get_closest_globalrev(&ctx, REPO_ZERO, GLOBALREV_TWO)
             .await?,
         Some(GLOBALREV_TWO)
     );
 
     assert_eq!(
         mapping
-            .get_closest_globalrev(REPO_ZERO, GLOBALREV_THREE)
+            .get_closest_globalrev(&ctx, REPO_ZERO, GLOBALREV_THREE)
             .await?,
         Some(GLOBALREV_TWO)
     );
 
     assert_eq!(
         mapping
-            .get_closest_globalrev(REPO_ONE, GLOBALREV_THREE)
+            .get_closest_globalrev(&ctx, REPO_ONE, GLOBALREV_THREE)
             .await?,
         None,
     );
@@ -243,7 +256,8 @@ async fn test_closest_globalrev() -> Result<(), Error> {
 }
 
 #[fbinit::compat_test]
-async fn test_caching() -> Result<(), Error> {
+async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
     let mapping = Arc::new(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?);
     let caching = CachingBonsaiGlobalrevMapping::new_test(mapping.clone());
 
@@ -270,11 +284,11 @@ async fn test_caching() -> Result<(), Error> {
         globalrev: GLOBALREV_ONE,
     };
 
-    mapping.bulk_import(&[e0, e1, ex]).await?;
+    mapping.bulk_import(&ctx, &[e0, e1, ex]).await?;
 
     assert_eq!(
         caching
-            .get_globalrev_from_bonsai(REPO_ZERO, bonsai::ONES_CSID)
+            .get_globalrev_from_bonsai(&ctx, REPO_ZERO, bonsai::ONES_CSID)
             .await?,
         Some(GLOBALREV_ONE)
     );
@@ -285,7 +299,7 @@ async fn test_caching() -> Result<(), Error> {
 
     assert_eq!(
         caching
-            .get_globalrev_from_bonsai(REPO_ZERO, bonsai::ONES_CSID)
+            .get_globalrev_from_bonsai(&ctx, REPO_ZERO, bonsai::ONES_CSID)
             .await?,
         Some(GLOBALREV_ONE)
     );
@@ -296,35 +310,35 @@ async fn test_caching() -> Result<(), Error> {
 
     assert_eq!(
         caching
-            .get_globalrev_from_bonsai(REPO_ZERO, bonsai::TWOS_CSID)
+            .get_globalrev_from_bonsai(&ctx, REPO_ZERO, bonsai::TWOS_CSID)
             .await?,
         Some(GLOBALREV_TWO)
     );
 
     assert_eq!(
         caching
-            .get_globalrev_from_bonsai(REPO_ONE, bonsai::TWOS_CSID)
+            .get_globalrev_from_bonsai(&ctx, REPO_ONE, bonsai::TWOS_CSID)
             .await?,
         Some(GLOBALREV_ONE)
     );
 
     assert_eq!(
         caching
-            .get_bonsai_from_globalrev(REPO_ZERO, GLOBALREV_ONE)
+            .get_bonsai_from_globalrev(&ctx, REPO_ZERO, GLOBALREV_ONE)
             .await?,
         Some(bonsai::ONES_CSID)
     );
 
     assert_eq!(
         caching
-            .get_bonsai_from_globalrev(REPO_ZERO, GLOBALREV_TWO)
+            .get_bonsai_from_globalrev(&ctx, REPO_ZERO, GLOBALREV_TWO)
             .await?,
         Some(bonsai::TWOS_CSID)
     );
 
     assert_eq!(
         caching
-            .get_bonsai_from_globalrev(REPO_ONE, GLOBALREV_ONE)
+            .get_bonsai_from_globalrev(&ctx, REPO_ONE, GLOBALREV_ONE)
             .await?,
         Some(bonsai::TWOS_CSID)
     );
