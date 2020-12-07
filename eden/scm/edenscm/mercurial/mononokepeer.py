@@ -254,10 +254,10 @@ class mononokepeer(stdiopeer.stdiopeer):
             if len(headerparts) < 2:
                 self._abort(error.BadResponseError("invalid http response: %s" % line))
 
-            if headerparts[0] != b"HTTP/1.1" and headerparts[1] != b"101":
+            if headerparts[0] != b"HTTP/1.1" or headerparts[1] != b"101":
                 self._abort(
                     error.BadResponseError(
-                        "expected HTTP/1.1 101 Upgrade, got: {}".format(headerparts)
+                        'unexpected server response: "{}"'.format(decodeutf8(line))
                     )
                 )
 
