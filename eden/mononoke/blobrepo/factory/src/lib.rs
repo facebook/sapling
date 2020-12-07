@@ -12,7 +12,9 @@ use blobrepo_errors::*;
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, make_metadata_sql_factory, MetadataSqlFactory};
 use bonsai_git_mapping::{BonsaiGitMapping, SqlBonsaiGitMappingConnection};
-use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping};
+use bonsai_globalrev_mapping::{
+    BonsaiGlobalrevMapping, CachingBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
+};
 use bonsai_hg_mapping::{BonsaiHgMapping, CachingBonsaiHgMapping, SqlBonsaiHgMapping};
 use bookmarks::{BookmarkUpdateLog, Bookmarks, CachedBookmarks};
 use cacheblob::{
@@ -696,6 +698,7 @@ async fn new_production(
     let filenodes_pool = get_volatile_pool("filenodes")?;
     let filenodes_history_pool = get_volatile_pool("filenodes_history")?;
     let changesets_cache_pool = get_volatile_pool("changesets")?;
+    let bonsai_globalrev_mapping_cache_pool = get_volatile_pool("bonsai_globalrev_mapping")?;
     let bonsai_hg_mapping_cache_pool = get_volatile_pool("bonsai_hg_mapping")?;
     let phases_cache_pool = get_volatile_pool("phases")?;
     let derived_data_lease = MemcacheOps::new(fb, "derived-data-lease", "")?;
@@ -780,6 +783,12 @@ async fn new_production(
         changesets_cache_pool,
     ));
     let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
+
+    let bonsai_globalrev_mapping = CachingBonsaiGlobalrevMapping::new(
+        fb,
+        Arc::new(bonsai_globalrev_mapping),
+        bonsai_globalrev_mapping_cache_pool,
+    );
 
     let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
         fb,

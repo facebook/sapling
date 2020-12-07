@@ -22,6 +22,7 @@ const CACHELIB_ONLY_BLOBSTORE_NEW: &str = "blobstore-cachelib-only";
 const CACHELIB_SHARDS: &str = "cachelib-shards";
 
 const PHASES_CACHE_SIZE: &str = "phases-cache-size";
+const GLOBALREVS_CACHE_SIZE: &str = "globalrevs-cache-size";
 const BUCKETS_POWER: &str = "buckets-power";
 
 const ONE_GIB: usize = 1073741824; // 2^30 aka 1GiB
@@ -47,6 +48,10 @@ const CACHE_ARGS: &[(&str, &str)] = &[
     (
         "idmapping-cache-size",
         "override size of the bonsai/hg mapping cache",
+    ),
+    (
+        GLOBALREVS_CACHE_SIZE,
+        "override size of the bonsai/globalrev mapping cache",
     ),
     (PHASES_CACHE_SIZE, "override size of the phases cache"),
     (
@@ -216,6 +221,9 @@ pub(crate) fn parse_and_init_cachelib<'a>(
             if let Some(idmapping_cache_size) = matches.value_of("idmapping-cache-size") {
                 settings.idmapping_cache_size = Some(idmapping_cache_size.parse().unwrap());
             }
+            if let Some(globalrev_cache_size) = matches.value_of(GLOBALREVS_CACHE_SIZE) {
+                settings.globalrev_cache_size = Some(globalrev_cache_size.parse().unwrap());
+            }
             if let Some(blob_cache_size) = matches.value_of("blob-cache-size") {
                 settings.blob_cache_size = Some(blob_cache_size.parse().unwrap());
             }
@@ -256,6 +264,7 @@ pub struct CachelibSettings {
     pub filenodes_cache_size: Option<usize>,
     pub filenodes_history_cache_size: Option<usize>,
     pub idmapping_cache_size: Option<usize>,
+    pub globalrev_cache_size: Option<usize>,
     pub blob_cache_size: Option<usize>,
     pub phases_cache_size: Option<usize>,
     pub expected_item_size_bytes: Option<usize>,
@@ -275,6 +284,7 @@ impl Default for CachelibSettings {
             filenodes_cache_size: None,
             filenodes_history_cache_size: None,
             idmapping_cache_size: None,
+            globalrev_cache_size: None,
             blob_cache_size: None,
             phases_cache_size: None,
             expected_item_size_bytes: None,
