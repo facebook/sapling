@@ -147,6 +147,10 @@ folly::Future<folly::Unit> FakePrivHelper::setDaemonTimeout(
     std::chrono::nanoseconds /* duration */) {
   return folly::Unit{};
 }
+
+folly::Future<folly::Unit> FakePrivHelper::setUseEdenFs(bool /* useEdenFs */) {
+  return folly::unit;
+}
 #endif // !_WIN32
 
 } // namespace eden

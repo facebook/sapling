@@ -121,6 +121,13 @@ class PrivHelper {
       std::chrono::nanoseconds duration) = 0;
 
   /**
+   * Tell the privhelper server whether it should try loading /dev/edenfs
+   * rather than the system fuse implementation.
+   */
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> setUseEdenFs(
+      bool useEdenFs) = 0;
+
+  /**
    * setLogFileBlocking() is a wrapper around setLogFile() that blocks until
    * the call has completed.
    *
@@ -131,6 +138,7 @@ class PrivHelper {
    */
   void setLogFileBlocking(folly::File logFile);
   void setDaemonTimeoutBlocking(std::chrono::nanoseconds duration);
+  void setUseEdenFsBlocking(bool useEdenFs);
 
   /*
    * Explicitly stop the privhelper process.
@@ -172,6 +180,7 @@ class PrivHelper {
  public:
   void setLogFileBlocking(folly::File logFile);
   void setDaemonTimeoutBlocking(std::chrono::nanoseconds duration);
+  void setUseEdenFsBlocking(bool useEdenFs);
 };
 
 #endif // _WIN32

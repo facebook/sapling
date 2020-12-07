@@ -45,6 +45,7 @@ class PrivHelperConn {
     REQ_SET_LOG_FILE = 7,
     REQ_UNMOUNT_BIND = 8,
     REQ_SET_DAEMON_TIMEOUT = 9,
+    REQ_SET_USE_EDENFS = 10,
   };
 
   /**
@@ -127,6 +128,13 @@ class PrivHelperConn {
   static void parseSetDaemonTimeoutRequest(
       folly::io::Cursor& cursor,
       std::chrono::nanoseconds& duration);
+
+  static UnixSocket::Message serializeSetUseEdenFsRequest(
+      uint32_t xid,
+      bool useEdenFs);
+  static void parseSetUseEdenFsRequest(
+      folly::io::Cursor& cursor,
+      bool& useEdenFs);
 
   /**
    * Parse a response that is expected to be empty.

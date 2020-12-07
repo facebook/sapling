@@ -132,20 +132,28 @@ std::string computeOSXFuseKextPath() {
       OSXFUSE_KEXT_NAME);
 }
 
+std::string computeEdenFsKextPath() {
+  auto version = determineMacOsVersion();
+  return folly::to<std::string>(
+      "/Library/Filesystems/eden.fs/Contents/Extensions/",
+      version.first,
+      ".",
+      version.second,
+      "/edenfs.kext");
+}
+
 // Returns true if the system already knows about the fuse filesystem stuff
 bool isOSXFuseKextLoaded() {
   struct vfsconf vfc;
   return getvfsbyname("osxfuse", &vfc) == 0;
 }
 
-bool isMacFuseKextLoaded() {
+bool isEdenFsKextLoaded() {
   struct vfsconf vfc;
-  return getvfsbyname("macfuse", &vfc) == 0;
+  return getvfsbyname("edenfs", &vfc) == 0;
 }
 
-bool tryLoadOSXFuse() {
-  auto kextPathString = computeOSXFuseKextPath();
-
+bool tryLoadKext(const std::string& kextPathString) {
   CFStringRef kextPath = CFStringCreateWithCString(
       kCFAllocatorDefault, kextPathString.c_str(), kCFStringEncodingUTF8);
   SCOPE_EXIT {
@@ -177,26 +185,25 @@ bool tryLoadOSXFuse() {
   return true;
 }
 
-void ensureFuseKextIsLoaded() {
-  if (isOSXFuseKextLoaded() || isMacFuseKextLoaded()) {
-    return;
-  }
-
-  tryLoadOSXFuse();
-}
-
 // The osxfuse kernel doesn't automatically assign a device, so we have
 // to loop through the different units and attempt to allocate them,
 // one by one.  Returns the fd and its unit number on success, throws
 // an exception on error.
-std::pair<folly::File, int> allocateFuseDevice() {
-  ensureFuseKextIsLoaded();
+std::pair<folly::File, int> allocateFuseDevice(bool useDevEdenFs) {
+  if (useDevEdenFs) {
+    if (!isEdenFsKextLoaded()) {
+      tryLoadKext(computeEdenFsKextPath());
+    }
+  } else if (!isOSXFuseKextLoaded()) {
+    tryLoadKext(computeOSXFuseKextPath());
+  }
 
   int fd = -1;
   const int nDevices = OSXFUSE_NDEVICES;
   int dindex;
   for (dindex = 0; dindex < nDevices; dindex++) {
-    auto devName = folly::to<std::string>("/dev/osxfuse", dindex);
+    auto devName = folly::to<std::string>(
+        useDevEdenFs ? "/dev/edenfs" : "/dev/osxfuse", dindex);
     fd = folly::openNoInt(devName.c_str(), O_RDWR | O_CLOEXEC);
     if (fd >= 0) {
       return std::make_pair(folly::File{fd, true}, dindex);
@@ -249,8 +256,9 @@ void checkedSnprintf(
 folly::File mountOSXFuse(
     const char* mountPath,
     bool readOnly,
-    std::chrono::nanoseconds fuseTimeout) {
-  auto [fuseDev, dindex] = allocateFuseDevice();
+    std::chrono::nanoseconds fuseTimeout,
+    bool useDevEdenFs) {
+  auto [fuseDev, dindex] = allocateFuseDevice(useDevEdenFs);
 
   fuse_mount_args args{};
   auto canonicalPath = ::realpath(mountPath, NULL);
@@ -280,7 +288,11 @@ folly::File mountOSXFuse(
       "failed negotiation with ioctl FUSEDEVIOCGETRANDOM");
 
   // We get to set some metadata for for mounted volume
-  checkedSnprintf(args.fsname, "eden@" OSXFUSE_DEVICE_BASENAME "%d", dindex);
+  checkedSnprintf(
+      args.fsname,
+      "eden@%s%d",
+      useDevEdenFs ? "edenfs" : OSXFUSE_DEVICE_BASENAME,
+      dindex);
   args.altflags |= FUSE_MOPT_FSNAME;
 
   auto mountPathBaseName = basename(canonicalPath);
@@ -347,14 +359,16 @@ folly::File mountOSXFuse(
   // with an error and propagate that.
   auto shared_errno = std::make_shared<std::atomic<int>>(0);
 
-  auto thr = std::thread([args, mountFlags, shared_errno]() mutable {
-    auto res = mount(OSXFUSE_NAME, args.mntpath, mountFlags, &args);
-    if (res != 0) {
-      *shared_errno = errno;
-      XLOG(ERR) << "failed to mount " << args.mntpath << ": "
-                << folly::errnoStr(*shared_errno);
-    }
-  });
+  auto thr =
+      std::thread([args, mountFlags, useDevEdenFs, shared_errno]() mutable {
+        auto devName = useDevEdenFs ? "edenfs" : OSXFUSE_NAME;
+        auto res = mount(devName, args.mntpath, mountFlags, &args);
+        if (res != 0) {
+          *shared_errno = errno;
+          XLOG(ERR) << "failed to mount " << args.mntpath << " using "
+                    << devName << ": " << folly::errnoStr(*shared_errno);
+        }
+      });
   thr.detach();
 
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -486,12 +500,16 @@ folly::File mountMacFuse(
 
 folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
 #ifdef __APPLE__
+  if (useDevEdenFs_) {
+    return mountOSXFuse(mountPath, readOnly, fuseTimeout_, useDevEdenFs_);
+  }
+
   try {
     return mountMacFuse(mountPath, readOnly, fuseTimeout_);
   } catch (const std::exception& macFuseExc) {
     XLOG(ERR) << "Failed to mount using MacFuse, trying OSXFuse ("
               << folly::exceptionStr(macFuseExc) << ")";
-    return mountOSXFuse(mountPath, readOnly, fuseTimeout_);
+    return mountOSXFuse(mountPath, readOnly, fuseTimeout_, useDevEdenFs_);
   }
 #else
   // We manually call open() here rather than using the folly::File()
@@ -730,6 +748,15 @@ void PrivHelperServer::setDaemonTimeout(std::chrono::nanoseconds duration) {
   fuseTimeout_ = duration;
 }
 
+UnixSocket::Message PrivHelperServer::processSetUseEdenFs(
+    folly::io::Cursor& cursor,
+    UnixSocket::Message& /* request */) {
+  XLOG(DBG3) << "set use /dev/edenfs";
+  PrivHelperConn::parseSetUseEdenFsRequest(cursor, useDevEdenFs_);
+
+  return makeResponse();
+}
+
 namespace {
 /// Get the file system ID, or an errno value on error
 folly::Expected<unsigned long, int> getFSID(const char* path) {
@@ -898,6 +925,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processBindUnMountMsg(cursor);
     case PrivHelperConn::REQ_SET_DAEMON_TIMEOUT:
       return processSetDaemonTimeout(cursor, request);
+    case PrivHelperConn::REQ_SET_USE_EDENFS:
+      return processSetUseEdenFs(cursor, request);
     case PrivHelperConn::MSG_TYPE_NONE:
     case PrivHelperConn::RESP_ERROR:
       break;

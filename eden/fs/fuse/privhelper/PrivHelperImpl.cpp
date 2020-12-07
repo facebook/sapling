@@ -108,6 +108,7 @@ class PrivHelperClientImpl : public PrivHelper,
   Future<Unit> setLogFile(folly::File logFile) override;
   Future<folly::Unit> setDaemonTimeout(
       std::chrono::nanoseconds duration) override;
+  Future<folly::Unit> setUseEdenFs(bool useEdenFs) override;
   int stop() override;
   int getRawClientFd() const override {
     return conn_->getRawFd();
@@ -442,6 +443,18 @@ Future<Unit> PrivHelperClientImpl::setDaemonTimeout(
       .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_SET_DAEMON_TIMEOUT, response);
+      });
+}
+
+Future<Unit> PrivHelperClientImpl::setUseEdenFs(bool useEdenFs) {
+  auto xid = getNextXid();
+  auto request =
+      PrivHelperConn::serializeSetUseEdenFsRequest(xid, std::move(useEdenFs));
+
+  return sendAndRecv(xid, std::move(request))
+      .thenValue([](UnixSocket::Message&& response) {
+        PrivHelperConn::parseEmptyResponse(
+            PrivHelperConn::REQ_SET_USE_EDENFS, response);
       });
 }
 

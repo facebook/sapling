@@ -67,6 +67,7 @@ class FakePrivHelper : public PrivHelper {
   folly::Future<folly::Unit> setLogFile(folly::File logFile) override;
   folly::Future<folly::Unit> setDaemonTimeout(
       std::chrono::nanoseconds duration) override;
+  folly::Future<folly::Unit> setUseEdenFs(bool useEdenFs) override;
   int stop() override;
   int getRawClientFd() const override {
     return -1;

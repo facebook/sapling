@@ -243,6 +243,21 @@ void PrivHelperConn::parseSetDaemonTimeoutRequest(
   checkAtEnd(cursor, "set daemon timeout request");
 }
 
+UnixSocket::Message PrivHelperConn::serializeSetUseEdenFsRequest(
+    uint32_t xid,
+    bool useEdenFs) {
+  auto msg = serializeHeader(xid, REQ_SET_USE_EDENFS);
+  Appender appender(&msg.data, kDefaultBufferSize);
+  appender.writeBE<uint64_t>(((useEdenFs) ? 1 : 0));
+
+  return msg;
+}
+
+void PrivHelperConn::parseSetUseEdenFsRequest(Cursor& cursor, bool& useEdenFs) {
+  useEdenFs = bool(cursor.readBE<uint64_t>());
+  checkAtEnd(cursor, "set use /dev/edenfs");
+}
+
 UnixSocket::Message PrivHelperConn::serializeBindUnMountRequest(
     uint32_t xid,
     folly::StringPiece mountPath) {

@@ -343,6 +343,12 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * Whether Eden should attempt to load and use /dev/edenfs in preference
+   * to other fuse implementations that may be available on the system.
+   */
+  ConfigSetting<bool> fuseUseEdenFS{"fuse:use-edenfs", false, this};
+
+  /**
    * Whether Eden should implement its own unix domain socket permission checks
    * or rely on filesystem permissions.
    */

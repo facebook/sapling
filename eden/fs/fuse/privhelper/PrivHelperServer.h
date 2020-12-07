@@ -92,6 +92,9 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   UnixSocket::Message processSetDaemonTimeout(
       folly::io::Cursor& cursor,
       UnixSocket::Message& request);
+  UnixSocket::Message processSetUseEdenFs(
+      folly::io::Cursor& cursor,
+      UnixSocket::Message& request);
 
   // These methods are virtual so we can override them during unit tests
   virtual folly::File fuseMount(const char* mountPath, bool readOnly);
@@ -107,6 +110,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   uid_t uid_{std::numeric_limits<uid_t>::max()};
   gid_t gid_{std::numeric_limits<gid_t>::max()};
   std::chrono::nanoseconds fuseTimeout_{std::chrono::seconds(60)};
+  bool useDevEdenFs_{false};
 
   // The privhelper server only has a single thread,
   // so we don't need to lock the following state
