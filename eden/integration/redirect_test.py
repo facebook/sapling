@@ -173,6 +173,14 @@ via-profile = "bind"
             )
 
         output = self.eden.run_cmd(
+            "redirect",
+            "del",
+            "--mount",
+            self.mount,
+            repo_path,
+        )
+        self.assertEqual(output, "", msg="we believe we removed the bind mount")
+        output = self.eden.run_cmd(
             "redirect", "add", "--mount", self.mount, repo_path, "symlink"
         )
         self.assertEqual(output, "", msg="we believe we switched to a symlink")
