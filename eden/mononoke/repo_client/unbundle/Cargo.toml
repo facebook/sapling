@@ -47,8 +47,6 @@ topo_sort = { path = "../../common/topo_sort" }
 tunables = { path = "../../tunables" }
 wirepack = { path = "../wirepack" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_01_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -59,7 +57,6 @@ bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
-futures-util = "0.3"
 hex = "0.4"
 lazy_static = "1.0"
 maplit = "1.0"

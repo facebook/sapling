@@ -5,22 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use crate::stats::*;
-use crate::upload_blobs::UploadableHgBlob;
 use ::manifest::Entry;
-use anyhow::{bail, Context, Error, Result};
+use anyhow::{bail, Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_hg::{ChangesetHandle, CreateChangeset};
 use context::CoreContext;
-use failure_ext::{Compat, StreamFailureErrorExt};
-use futures_01_ext::{
-    BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
-    StreamExt as OldStreamExt,
+use futures::{
+    future::{self, BoxFuture},
+    stream::{self, BoxStream, FuturesUnordered},
+    FutureExt, StreamExt, TryFutureExt, TryStreamExt,
 };
-use futures_old::future::{self as old_future, ok, Shared};
-use futures_old::Future as OldFuture;
-use futures_old::{stream as old_stream, Stream as OldStream};
-use futures_util::compat::Future01CompatExt;
 use mercurial_revlog::{
     changeset::RevlogChangeset,
     manifest::{Details, ManifestContent},
@@ -34,19 +28,23 @@ use std::collections::HashMap;
 use std::ops::AddAssign;
 use wirepack::TreemanifestEntry;
 
-type Filelogs = HashMap<HgNodeKey, Shared<OldBoxFuture<(HgFileNodeId, RepoPath), Compat<Error>>>>;
-type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
+use crate::changegroup::Filelog;
+use crate::stats::*;
+use crate::upload_blobs::UploadableHgBlob;
+
+pub(crate) type Filelogs = HashMap<HgNodeKey, <Filelog as UploadableHgBlob>::Value>;
+pub(crate) type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 type UploadedChangesets = HashMap<HgChangesetId, ChangesetHandle>;
 
-type HgBlobFuture = OldBoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>;
-type HgBlobStream = OldBoxStream<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>;
+type HgBlobFuture = BoxFuture<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath)>>;
+type HgBlobStream = BoxStream<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath)>>;
 
 /// In order to generate the DAG of dependencies between Root Manifest and other Manifests and
 /// Filelogs we need to walk that DAG.
 /// This represents the manifests and file nodes introduced by a particular changeset.
 pub(crate) struct NewBlobs {
     // root_manifest can be None f.e. when commit removes all the content of the repo
-    root_manifest: OldBoxFuture<Option<(HgManifestId, RepoPath)>, Error>,
+    root_manifest: BoxFuture<'static, Result<Option<(HgManifestId, RepoPath)>>>,
     // sub_entries has both submanifest and filenode entries.
     sub_entries: HgBlobStream,
 }
@@ -76,8 +74,8 @@ impl NewBlobs {
         if manifest_root_id.into_nodehash() == NULL_HASH {
             // If manifest root id is NULL_HASH then there is no content in this changest
             return Ok(Self {
-                root_manifest: ok(None).boxify(),
-                sub_entries: old_stream::empty().boxify(),
+                root_manifest: future::ok(None).boxed(),
+                sub_entries: stream::empty().boxed(),
             });
         }
 
@@ -102,29 +100,30 @@ impl NewBlobs {
                     .add_value(counters.content_blobs_count as i64);
                 let root_manifest = manifest_root
                     .clone()
-                    .map(|it| Some((*it).clone()))
-                    .from_err()
-                    .boxify();
+                    .map_ok(Some)
+                    .map_err(Error::from)
+                    .boxed();
 
                 (entries, root_manifest)
             }
             None => {
                 let entry = (manifest_root_id, RepoPath::RootPath);
-                (vec![], old_future::ok(Some(entry)).boxify())
+                (vec![], future::ok(Some(entry)).boxed())
             }
         };
 
         Ok(Self {
             root_manifest,
-            sub_entries: old_stream::futures_unordered(entries)
-                .with_context(move || {
-                    format!(
+            sub_entries: entries
+                .into_iter()
+                .collect::<FuturesUnordered<_>>()
+                .map_err(move |err| {
+                    err.context(format!(
                         "While walking dependencies of Root Manifest with id {:?}",
                         manifest_root_id
-                    )
+                    ))
                 })
-                .from_err()
-                .boxify(),
+                .boxed(),
         })
     }
 
@@ -179,12 +178,9 @@ impl NewBlobs {
                     entries.push(
                         blobfuture
                             .clone()
-                            .map(|it| {
-                                let (id, path) = (*it).clone();
-                                (Entry::Tree(id), path)
-                            })
-                            .from_err()
-                            .boxify(),
+                            .map_ok(|(id, path)| (Entry::Tree(id), path))
+                            .map_err(Error::from)
+                            .boxed(),
                     );
                     let (mut walked_entries, sub_counters) = Self::walk_helper(
                         &key.path,
@@ -208,12 +204,9 @@ impl NewBlobs {
                     entries.push(
                         blobfuture
                             .clone()
-                            .map(|it| {
-                                let (id, path) = (*it).clone();
-                                (Entry::Leaf(id), path)
-                            })
-                            .from_err()
-                            .boxify(),
+                            .map_ok(|(id, path)| (Entry::Leaf(id), path))
+                            .map_err(Error::from)
+                            .boxed(),
                     );
                 }
             }
@@ -249,8 +242,8 @@ fn get_parent(
     repo: &BlobRepo,
     map: &UploadedChangesets,
     p: Option<HgNodeHash>,
-) -> impl OldFuture<Item = Option<ChangesetHandle>, Error = Error> {
-    let res = match p {
+) -> Option<ChangesetHandle> {
+    match p {
         None => None,
         Some(p) => match map.get(&HgChangesetId::new(p)) {
             None => Some(ChangesetHandle::ready_cs_handle(
@@ -260,8 +253,7 @@ fn get_parent(
             )),
             Some(cs) => Some(cs.clone()),
         },
-    };
-    ok(res)
+    }
 }
 
 pub(crate) async fn upload_changeset(
@@ -289,17 +281,8 @@ pub(crate) async fn upload_changeset(
 
     // DO NOT try to comute p1 and p2 concurrently!
     // It may result in a combinatoral explosion in mergy repos (see D14100259)
-    let p1 = get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p1)
-        .boxify()
-        .compat()
-        .await
-        .with_context(move || format!("While fetching parents for Changeset {}", node))?;
-
-    let p2 = get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p2)
-        .boxify()
-        .compat()
-        .await
-        .with_context(move || format!("While fetching parents for Changeset {}", node))?;
+    let p1 = get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p1);
+    let p2 = get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p2);
 
     let create_changeset = CreateChangeset {
         expected_nodeid: Some(node.into_nodehash()),

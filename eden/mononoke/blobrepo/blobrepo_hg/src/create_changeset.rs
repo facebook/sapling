@@ -9,15 +9,18 @@ use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_chang
 use crate::repo_commit::*;
 use crate::{BlobRepoHg, ErrorKind};
 use ::manifest::Entry;
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
 use changesets::{ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt, FutureFailureExt};
-use futures::future::{FutureExt as NewFutureExt, TryFutureExt};
-use futures_ext::{spawn_future, BoxFuture, BoxStream, FutureExt};
+use futures::{
+    future::{BoxFuture, FutureExt, TryFutureExt},
+    stream::BoxStream,
+};
+use futures_ext::{spawn_future, BoxFuture as OldBoxFuture, FutureExt as _};
 use futures_old::future::{self, Future};
 use futures_old::sync::oneshot;
 use futures_old::IntoFuture;
@@ -51,8 +54,8 @@ pub struct CreateChangeset {
     pub p1: Option<ChangesetHandle>,
     pub p2: Option<ChangesetHandle>,
     // root_manifest can be None f.e. when commit removes all the content of the repo
-    pub root_manifest: BoxFuture<Option<(HgManifestId, RepoPath)>, Error>,
-    pub sub_entries: BoxStream<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>,
+    pub root_manifest: BoxFuture<'static, Result<Option<(HgManifestId, RepoPath)>>>,
+    pub sub_entries: BoxStream<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath)>>,
     pub cs_metadata: ChangesetMetadata,
     pub must_check_case_conflicts: bool,
     pub create_bonsai_changeset_hook: Option<
@@ -63,7 +66,7 @@ pub struct CreateChangeset {
                 Vec<HgManifestId>,
                 Vec<ChangesetId>,
                 BlobRepo,
-            ) -> BoxFuture<BonsaiChangeset, Error>
+            ) -> BoxFuture<'static, Result<BonsaiChangeset>>
                 + Send
                 + Sync,
         >,
@@ -89,12 +92,14 @@ impl CreateChangeset {
         let signal_parent_ready = Arc::new(Mutex::new(Some(signal_parent_ready)));
         let expected_nodeid = self.expected_nodeid;
 
-        let upload_entries = process_entries(
-            ctx.clone(),
-            &entry_processor,
-            self.root_manifest,
-            self.sub_entries,
-        )
+        let upload_entries = {
+            cloned!(ctx, entry_processor);
+            let root_manifest = self.root_manifest;
+            let sub_entries = self.sub_entries;
+            async move { process_entries(&ctx, &entry_processor, root_manifest, sub_entries).await }
+        }
+        .boxed()
+        .compat()
         .context("While processing entries")
         .traced_with_id(&ctx.trace(), "uploading entries", trace_args!(), event_id);
 
@@ -118,22 +123,17 @@ impl CreateChangeset {
                     bonsai_parents: Vec<ChangesetId>,
                     repo: BlobRepo,
                 | {
-                    {
-                        cloned!(ctx, repo);
-                        async move {
-                            create_bonsai_changeset_object(
-                                &ctx,
-                                hg_cs,
-                                parent_manifest_hashes,
-                                bonsai_parents,
-                                &repo,
-                            )
-                            .await
-                        }
+                    async move {
+                        create_bonsai_changeset_object(
+                            &ctx,
+                            hg_cs,
+                            parent_manifest_hashes,
+                            bonsai_parents,
+                            &repo,
+                        )
+                        .await
                     }
                     .boxed()
-                    .compat()
-                    .boxify()
                 },
             ),
         };
@@ -197,7 +197,8 @@ impl CreateChangeset {
                                         bonsai_parents,
                                         repo.clone(),
                                     )
-                                    .map(|bonsai_cs| (hg_cs, bonsai_cs))
+                                    .map_ok(|bonsai_cs| (hg_cs, bonsai_cs))
+                                    .compat()
                                 }
                             });
 
@@ -206,86 +207,81 @@ impl CreateChangeset {
                             .and_then({
                                 cloned!(ctx);
                                 move |(blobcs, bonsai_cs)| {
-                                    let fut: BoxFuture<(HgBlobChangeset, BonsaiChangeset), Error> =
-                                        (move || {
-                                            let bonsai_blob = bonsai_cs.clone().into_blob();
-                                            let bcs_id = bonsai_blob.id().clone();
+                                    let fut: OldBoxFuture<
+                                        (HgBlobChangeset, BonsaiChangeset),
+                                        Error,
+                                    > = (move || {
+                                        let bonsai_blob = bonsai_cs.clone().into_blob();
+                                        let bcs_id = bonsai_blob.id().clone();
 
-                                            let cs_id = blobcs.get_changeset_id().into_nodehash();
-                                            let manifest_id = blobcs.manifestid();
+                                        let cs_id = blobcs.get_changeset_id().into_nodehash();
+                                        let manifest_id = blobcs.manifestid();
 
-                                            if let Some(expected_nodeid) = expected_nodeid {
-                                                if cs_id != expected_nodeid {
-                                                    return future::err(
-                                                        ErrorKind::InconsistentChangesetHash(
-                                                            expected_nodeid,
-                                                            cs_id,
-                                                            blobcs,
-                                                        )
-                                                        .into(),
+                                        if let Some(expected_nodeid) = expected_nodeid {
+                                            if cs_id != expected_nodeid {
+                                                return future::err(
+                                                    ErrorKind::InconsistentChangesetHash(
+                                                        expected_nodeid,
+                                                        cs_id,
+                                                        blobcs,
                                                     )
-                                                    .boxify();
-                                                }
+                                                    .into(),
+                                                )
+                                                .boxify();
                                             }
+                                        }
 
-                                            scuba_logger
-                                                .add("changeset_id", format!("{}", cs_id))
-                                                .log_with_msg(
-                                                    "Changeset uuid to hash mapping",
-                                                    None,
-                                                );
-                                            // NOTE(luk): an attempt was made in D8187210 to split the
-                                            // upload_entries signal into upload_entries and
-                                            // processed_entries and to signal_parent_ready after
-                                            // upload_entries, so that one doesn't need to wait for the
-                                            // entries to be processed. There were no performance gains
-                                            // from that experiment
-                                            //
-                                            // We deliberately eat this error - this is only so that
-                                            // another changeset can start verifying data in the blob
-                                            // store while we verify this one
-                                            let _ = signal_parent_ready
-                                                .lock()
-                                                .expect("poisoned lock")
-                                                .take()
-                                                .expect("signal_parent_ready cannot be taken yet")
-                                                .send(Ok((bcs_id, cs_id, manifest_id)));
+                                        scuba_logger
+                                            .add("changeset_id", format!("{}", cs_id))
+                                            .log_with_msg("Changeset uuid to hash mapping", None);
+                                        // NOTE(luk): an attempt was made in D8187210 to split the
+                                        // upload_entries signal into upload_entries and
+                                        // processed_entries and to signal_parent_ready after
+                                        // upload_entries, so that one doesn't need to wait for the
+                                        // entries to be processed. There were no performance gains
+                                        // from that experiment
+                                        //
+                                        // We deliberately eat this error - this is only so that
+                                        // another changeset can start verifying data in the blob
+                                        // store while we verify this one
+                                        let _ = signal_parent_ready
+                                            .lock()
+                                            .expect("poisoned lock")
+                                            .take()
+                                            .expect("signal_parent_ready cannot be taken yet")
+                                            .send(Ok((bcs_id, cs_id, manifest_id)));
 
-                                            let bonsai_cs_fut = {
-                                                cloned!(ctx, blobstore, bonsai_cs);
-                                                async move {
-                                                    save_bonsai_changeset_object(
-                                                        &ctx,
-                                                        &blobstore,
-                                                        bonsai_cs.clone(),
-                                                    )
-                                                    .await
-                                                }
+                                        let bonsai_cs_fut = {
+                                            cloned!(ctx, blobstore, bonsai_cs);
+                                            async move {
+                                                save_bonsai_changeset_object(
+                                                    &ctx,
+                                                    &blobstore,
+                                                    bonsai_cs.clone(),
+                                                )
+                                                .await
                                             }
-                                            .boxed()
-                                            .compat();
+                                        }
+                                        .boxed()
+                                        .compat();
 
-                                            {
-                                                cloned!(ctx, blobcs);
-                                                async move { blobcs.save(&ctx, &blobstore).await }
-                                            }
-                                            .boxed()
-                                            .compat()
-                                            .join(bonsai_cs_fut)
-                                            .context("While writing to blobstore")
-                                            .join(
-                                                entry_processor
-                                                    .finalize(
-                                                        ctx,
-                                                        root_mf_id,
-                                                        parent_manifest_hashes,
-                                                    )
-                                                    .context("While finalizing processing"),
-                                            )
-                                            .from_err()
-                                            .map(move |_| (blobcs, bonsai_cs))
-                                            .boxify()
-                                        })();
+                                        {
+                                            cloned!(ctx, blobcs);
+                                            async move { blobcs.save(&ctx, &blobstore).await }
+                                        }
+                                        .boxed()
+                                        .compat()
+                                        .join(bonsai_cs_fut)
+                                        .context("While writing to blobstore")
+                                        .join(
+                                            entry_processor
+                                                .finalize(ctx, root_mf_id, parent_manifest_hashes)
+                                                .context("While finalizing processing"),
+                                        )
+                                        .from_err()
+                                        .map(move |_| (blobcs, bonsai_cs))
+                                        .boxify()
+                                    })();
 
                                     fut.context(
                                         "While creating and verifying Changeset for blobstore",

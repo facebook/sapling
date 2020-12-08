@@ -14,11 +14,13 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt, FutureFailureExt, StreamFailureErrorExt};
-use futures::compat::Future01CompatExt;
-use futures::{FutureExt, TryFutureExt};
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    FutureExt, StreamExt, TryFutureExt,
+};
 use futures_ext::{
-    spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt as FutureExt01,
-    StreamExt,
+    spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt as _,
+    StreamExt as _,
 };
 use futures_old::{
     future::{self, SharedItem},
@@ -383,8 +385,6 @@ impl UploadChangesets {
                     verify_bonsai_changeset_with_origin(ctx, bonsai_cs, hg_cs, origin_repo).await
                 }
                 .boxed()
-                .compat()
-                .boxify()
             },
         );
 
@@ -509,8 +509,8 @@ impl UploadChangesets {
                     expected_files: Some(Vec::from(cs.files())),
                     p1: p1handle,
                     p2: p2handle,
-                    root_manifest: rootmf,
-                    sub_entries: entries,
+                    root_manifest: rootmf.compat().boxed(),
+                    sub_entries: entries.compat().boxed(),
                     cs_metadata,
                     // Repositories can contain case conflicts - we still need to import them
                     must_check_case_conflicts: false,

@@ -11,9 +11,12 @@ use anyhow::Error;
 use ascii::AsAsciiStr;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use futures::future::{FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt, StreamExt};
-use futures_old::{future::Future as OldFuture, stream::futures_unordered};
+use futures::{
+    compat::Future01CompatExt, stream::futures_unordered::FuturesUnordered, FutureExt, StreamExt,
+    TryFutureExt,
+};
+use futures_ext::{BoxFuture, FutureExt as _};
+use futures_old::future::Future as _;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use ::manifest::Entry;
@@ -153,8 +156,12 @@ pub fn create_changeset_no_parents(
         expected_files: None,
         p1: None,
         p2: None,
-        root_manifest,
-        sub_entries: futures_unordered(other_nodes).boxify(),
+        root_manifest: root_manifest.compat().boxed(),
+        sub_entries: other_nodes
+            .into_iter()
+            .map(|f| f.compat())
+            .collect::<FuturesUnordered<_>>()
+            .boxed(),
         cs_metadata,
         must_check_case_conflicts: true,
         create_bonsai_changeset_hook: None,
@@ -184,8 +191,12 @@ pub fn create_changeset_one_parent(
         expected_files: None,
         p1: Some(p1),
         p2: None,
-        root_manifest,
-        sub_entries: futures_unordered(other_nodes).boxify(),
+        root_manifest: root_manifest.compat().boxed(),
+        sub_entries: other_nodes
+            .into_iter()
+            .map(|f| f.compat())
+            .collect::<FuturesUnordered<_>>()
+            .boxed(),
         cs_metadata,
         must_check_case_conflicts: true,
         create_bonsai_changeset_hook: None,

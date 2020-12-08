@@ -5,15 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::changegroup::{
-    convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
-};
-use crate::errors::*;
-use crate::hook_running::{make_hook_rejection_remapper, HookRejectionRemapper};
-use crate::rate_limits::{enforce_file_changes_rate_limits, RateLimitedPushKind};
-use crate::stats::*;
-use crate::upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
-use crate::upload_changesets::upload_changeset;
 use anyhow::{bail, ensure, format_err, Context, Error, Result};
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
@@ -25,15 +16,12 @@ use bytes_old::Bytes as BytesOld;
 use context::CoreContext;
 use core::fmt::Debug;
 use derived_data::BonsaiDerived;
-use failure_ext::{Compat as FailureCompat, FutureFailureErrorExt};
 use futures::{
-    compat::Stream01CompatExt,
-    future::{self, try_join_all, Future},
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{self, try_join_all},
     stream::{self, BoxStream},
+    try_join, Future, StreamExt, TryFutureExt, TryStreamExt,
 };
-use futures_01_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
-use futures_old::{future::Shared, Future as OldFuture};
-use futures_util::{compat::Future01CompatExt, try_join, StreamExt, TryStreamExt};
 use hooks::HookRejectionInfo;
 use lazy_static::lazy_static;
 use limits::types::RateLimit;
@@ -42,7 +30,7 @@ use mercurial_bundles::{
 };
 use mercurial_mutation::HgMutationEntry;
 use mercurial_revlog::changeset::RevlogChangeset;
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeKey, RepoPath};
+use mercurial_types::HgChangesetId;
 use metaconfig_types::{PushrebaseFlags, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase::HgReplayData;
@@ -53,7 +41,17 @@ use std::fmt::Display;
 use std::sync::{Arc, Mutex};
 use topo_sort::sort_topological;
 use tunables::tunables;
-use wirepack::{TreemanifestBundle2Parser, TreemanifestEntry};
+use wirepack::TreemanifestBundle2Parser;
+
+use crate::changegroup::{
+    convert_to_revlog_changesets, convert_to_revlog_filelog, split_changegroup,
+};
+use crate::errors::*;
+use crate::hook_running::{make_hook_rejection_remapper, HookRejectionRemapper};
+use crate::rate_limits::{enforce_file_changes_rate_limits, RateLimitedPushKind};
+use crate::stats::*;
+use crate::upload_blobs::{upload_hg_blobs, UploadBlobsType};
+use crate::upload_changesets::{upload_changeset, Filelogs, Manifests};
 
 #[allow(non_snake_case)]
 mod UNBUNDLE_STATS {
@@ -73,9 +71,6 @@ mod UNBUNDLE_STATS {
 }
 
 pub type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
-type Filelogs =
-    HashMap<HgNodeKey, Shared<OldBoxFuture<(HgFileNodeId, RepoPath), FailureCompat<Error>>>>;
-type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 pub type UploadedBonsais = HashSet<BonsaiChangeset>;
 pub type UploadedHgChangesetIds = HashSet<HgChangesetId>;
 
@@ -1040,12 +1035,11 @@ impl<'r> Bundle2Resolver<'r> {
                 .await?;
 
                 let filelogs = upload_hg_blobs(
-                    self.ctx.clone(),
-                    self.repo.clone(),
+                    self.ctx,
+                    self.repo,
                     convert_to_revlog_filelog(self.ctx.clone(), self.repo.clone(), filelogs),
                     UploadBlobsType::EnsureNoDuplicates,
                 )
-                .compat()
                 .await
                 .context("While uploading File Blobs")?;
 
@@ -1143,16 +1137,13 @@ impl<'r> Bundle2Resolver<'r> {
             Some(Bundle2Item::B2xTreegroup2(_, parts))
             | Some(Bundle2Item::B2xRebasePack(_, parts)) => {
                 let manifests = upload_hg_blobs(
-                    self.ctx.clone(),
-                    self.repo.clone(),
+                    self.ctx,
+                    self.repo,
                     TreemanifestBundle2Parser::new(parts).compat(),
                     UploadBlobsType::IgnoreDuplicates,
                 )
-                .context("While uploading Manifest Blobs")
-                .boxify()
-                .compat()
                 .await
-                .map_err(Error::from)?;
+                .context("While uploading Manifest Blobs")?;
 
                 Ok((manifests, bundle2))
             }
@@ -1257,8 +1248,8 @@ impl<'r> Bundle2Resolver<'r> {
                 .map(move |(hg_cs_id, handle): (HgChangesetId, _)| async move {
                     let shared_item_bcs_and_something = handle
                         .get_completed_changeset()
-                        .map_err(Error::from)
                         .compat()
+                        .map_err(Error::from)
                         .await?;
 
                     let bcs = shared_item_bcs_and_something.0.clone();

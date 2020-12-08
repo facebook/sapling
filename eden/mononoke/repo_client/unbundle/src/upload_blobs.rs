@@ -7,11 +7,9 @@
 
 use std::collections::HashMap;
 
-use anyhow::{ensure, Error, Result};
-use failure_ext::Compat;
-use futures::stream::{Stream, StreamExt, TryStreamExt};
-use futures_01_ext::{BoxFuture, FutureExt};
-use futures_old::{future::Shared, Future, Stream as OldStream};
+use anyhow::{ensure, Result};
+use futures::{compat::Future01CompatExt, future::BoxFuture, FutureExt, Stream, TryStreamExt};
+use futures_ext::{future::TryShared, FbFutureExt};
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
@@ -27,7 +25,7 @@ use wirepack::TreemanifestEntry;
 pub(crate) trait UploadableHgBlob {
     type Value: Send + 'static;
 
-    fn upload(self, ctx: CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)>;
+    fn upload(self, ctx: &CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)>;
 }
 
 #[derive(PartialEq, Eq)]
@@ -37,45 +35,41 @@ pub(crate) enum UploadBlobsType {
 }
 use self::UploadBlobsType::*;
 
-pub(crate) fn upload_hg_blobs<S, B>(
-    ctx: CoreContext,
-    repo: BlobRepo,
+pub(crate) async fn upload_hg_blobs<'a, S, B>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     blobs: S,
     ubtype: UploadBlobsType,
-) -> BoxFuture<HashMap<HgNodeKey, B::Value>, Error>
+) -> Result<HashMap<HgNodeKey, B::Value>>
 where
-    S: Stream<Item = Result<B>> + Send + 'static,
-    B: UploadableHgBlob + 'static,
+    S: Stream<Item = Result<B>> + Send + 'a,
+    B: UploadableHgBlob + 'a,
 {
+    let ignore_duplicates = ubtype == IgnoreDuplicates;
     blobs
-        .boxed()
-        .compat()
-        .fold(HashMap::new(), move |mut map, item| {
-            let (key, value) = item.upload(ctx.clone(), &repo)?;
+        .try_fold(HashMap::new(), move |mut map, item| async move {
+            let (key, value) = item.upload(ctx, repo)?;
             ensure!(
-                map.insert(key.clone(), value).is_none() || ubtype == IgnoreDuplicates,
+                map.insert(key.clone(), value).is_none() || ignore_duplicates,
                 "HgBlob {:?} already provided before",
                 key
             );
             Ok(map)
         })
-        .boxify()
+        .await
 }
 
 impl UploadableHgBlob for TreemanifestEntry {
     // * Shared is required here because a single tree manifest can be referred to by more than
     //   one changeset, and all of those will want to refer to the corresponding future.
-    // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
-    //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
-    //   implements Error.
     type Value = (
         ManifestContent,
         Option<HgNodeHash>,
         Option<HgNodeHash>,
-        Shared<BoxFuture<(HgManifestId, RepoPath), Compat<Error>>>,
+        TryShared<BoxFuture<'static, Result<(HgManifestId, RepoPath)>>>,
     );
 
-    fn upload(self, ctx: CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
+    fn upload(self, ctx: &CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
         let manifest_content = self.manifest_content;
         let p1 = self.p1;
@@ -94,18 +88,15 @@ impl UploadableHgBlob for TreemanifestEntry {
             p2: self.p2,
             path: node_key.path.clone(),
         };
-        upload
-            .upload(ctx, repo.get_blobstore().boxed())
-            .map(move |(_node, value)| {
-                (
-                    node_key,
-                    (
-                        manifest_content,
-                        p1,
-                        p2,
-                        value.map_err(Compat).boxify().shared(),
-                    ),
-                )
-            })
+        let (_node, value) = upload.upload(ctx.clone(), repo.get_blobstore().boxed())?;
+        Ok((
+            node_key,
+            (
+                manifest_content,
+                p1,
+                p2,
+                value.compat().boxed().try_shared(),
+            ),
+        ))
     }
 }

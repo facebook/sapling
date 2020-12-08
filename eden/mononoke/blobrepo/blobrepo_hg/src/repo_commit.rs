@@ -8,21 +8,19 @@
 use crate::BlobRepoHg;
 use anyhow::{format_err, Context, Error, Result};
 use cloned::cloned;
-use failure_ext::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
+use failure_ext::{Compat, FutureFailureErrorExt};
 use futures::{
-    future::{FutureExt, TryFutureExt},
-    stream::{self, StreamExt, TryStreamExt},
+    future::{self, BoxFuture, FutureExt, TryFutureExt},
+    stream::{self, BoxStream, StreamExt, TryStreamExt},
 };
-use futures_ext::{
-    BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
-};
+use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
 use futures_old::future::{
     self as old_future, result, Future as OldFuture, Shared, SharedError, SharedItem,
 };
 use futures_old::stream::Stream as OldStream;
 use futures_old::sync::oneshot;
 use futures_old::IntoFuture;
-use futures_stats::Timed;
+use futures_stats::{Timed, TimedTryFutureExt};
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
@@ -385,66 +383,54 @@ impl UploadEntries {
     }
 }
 
-pub fn process_entries(
-    ctx: CoreContext,
-    entry_processor: &UploadEntries,
-    root_manifest: OldBoxFuture<Option<(HgManifestId, RepoPath)>, Error>,
-    new_child_entries: OldBoxStream<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>,
-) -> OldBoxFuture<HgManifestId, Error> {
-    let root_manifest_fut = root_manifest
-        .context("While uploading root manifest")
-        .from_err()
-        .and_then({
-            cloned!(ctx, entry_processor);
-            move |root_manifest| match root_manifest {
-                None => old_future::ok(None).boxify(),
-                Some((mfid, path)) => {
-                    if path == RepoPath::RootPath {
-                        async move { entry_processor.process_root_manifest(&ctx, mfid).await }
-                            .boxed()
-                            .compat()
-                            .map(move |_| Some(mfid))
-                            .boxify()
-                    } else {
-                        old_future::err(Error::from(ErrorKind::BadRootManifest(mfid))).boxify()
-                    }
+pub async fn process_entries<'a>(
+    ctx: &'a CoreContext,
+    entry_processor: &'a UploadEntries,
+    root_manifest: BoxFuture<'a, Result<Option<(HgManifestId, RepoPath)>>>,
+    new_child_entries: BoxStream<'a, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath)>>,
+) -> Result<HgManifestId> {
+    let root_manifest_fut = async move {
+        let root_manifest = root_manifest
+            .await
+            .context("While uploading root manifest")?;
+        match root_manifest {
+            None => Ok(None),
+            Some((mfid, path)) => {
+                if path == RepoPath::RootPath {
+                    entry_processor.process_root_manifest(ctx, mfid).await?;
+                    Ok(Some(mfid))
+                } else {
+                    Err(Error::from(ErrorKind::BadRootManifest(mfid)))
                 }
             }
-        });
+        }
+    };
 
-    let child_entries_fut = new_child_entries
-        .context("While uploading child entries")
-        .from_err()
-        .map({
-            cloned!(ctx, entry_processor);
-            move |(entry, path)| {
-                cloned!(ctx, entry_processor);
-                async move { entry_processor.process_one_entry(&ctx, entry, path).await }
-                    .boxed()
-                    .compat()
-            }
-        })
-        .buffer_unordered(100)
-        .for_each(|()| old_future::ok(()));
+    // Not wrapping this future in "async move" causes mismatched opaque types
+    // error ¯\_(ツ)_/¯
+    let child_entries_fut = async move {
+        new_child_entries
+            .map_err(|err| err.context("While uploading child entries"))
+            .try_for_each_concurrent(100, move |(entry, path)| {
+                entry_processor.process_one_entry(ctx, entry, path)
+            })
+            .await
+    };
 
-    let mut scuba_logger = entry_processor.scuba_logger();
-    root_manifest_fut
-        .join(child_entries_fut)
-        .and_then(move |(root_hash, ())| {
-            match root_hash {
-                None => old_future::ok(HgManifestId::new(NULL_HASH)).boxify(),
-                Some(root_hash) => old_future::ok(root_hash).boxify(),
-            }
-        })
-        .timed(move |stats, result| {
-            if result.is_ok() {
-                scuba_logger
-                    .add_future_stats(&stats)
-                    .log_with_msg("Upload entries", None);
-            }
-            Ok(())
-        })
-        .boxify()
+    let (stats, (root_hash, ())) = future::try_join(root_manifest_fut, child_entries_fut)
+        .try_timed()
+        .await?;
+
+    entry_processor
+        .scuba_logger
+        .clone()
+        .add_future_stats(&stats)
+        .log_with_msg("Upload entries", None);
+
+    match root_hash {
+        None => Ok(HgManifestId::new(NULL_HASH)),
+        Some(root_hash) => Ok(root_hash),
+    }
 }
 
 pub fn extract_parents_complete(

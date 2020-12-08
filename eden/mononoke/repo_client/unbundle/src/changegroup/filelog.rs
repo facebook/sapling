@@ -12,10 +12,8 @@ use anyhow::{bail, Context, Error, Result};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::Compat;
-use futures::{compat::Future01CompatExt, FutureExt, Stream, TryFutureExt, TryStreamExt};
-use futures_01_ext::{BoxFuture, FutureExt as OldFutureExt};
-use futures_old::{future::Shared, Future, IntoFuture};
+use futures::{future::BoxFuture, Future, FutureExt, Stream, TryFutureExt, TryStreamExt};
+use futures_ext::{future::TryShared, FbFutureExt};
 use quickcheck::{Arbitrary, Gen};
 
 use blobrepo::BlobRepo;
@@ -56,12 +54,9 @@ pub(crate) struct Filelog {
 impl UploadableHgBlob for Filelog {
     // * Shared is required here because a single file node can be referred to by more than
     //   one changeset, and all of those will want to refer to the corresponding future.
-    // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
-    //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
-    //   implements Error.
-    type Value = Shared<BoxFuture<(HgFileNodeId, RepoPath), Compat<Error>>>;
+    type Value = TryShared<BoxFuture<'static, Result<(HgFileNodeId, RepoPath)>>>;
 
-    fn upload(self, ctx: CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
+    fn upload(self, ctx: &CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
         let node_key = self.node_key;
         let path = match &node_key.path {
             RepoPath::FilePath(path) => path.clone(),
@@ -83,11 +78,8 @@ impl UploadableHgBlob for Filelog {
             p2: self.p2.map(HgFileNodeId::new),
         };
 
-        let fut = upload.upload_with_path(ctx, repo.get_blobstore().boxed(), path);
-        Ok((
-            node_key,
-            fut.boxed().compat().map_err(Compat).boxify().shared(),
-        ))
+        let fut = upload.upload_with_path(ctx.clone(), repo.get_blobstore().boxed(), path);
+        Ok((node_key, fut.boxed().try_shared()))
     }
 }
 
@@ -110,8 +102,7 @@ pub(crate) fn convert_to_revlog_filelog(
             } = chunk;
 
             delta_cache
-                .decode(ctx.clone(), node.clone(), base.into_option(), delta)
-                .compat()
+                .decode(&ctx, node, base.into_option(), delta)
                 .and_then({
                     cloned!(ctx, node, path, repo);
                     move |data| {
@@ -178,7 +169,7 @@ async fn get_filelog_data(
 
 struct DeltaCache {
     repo: BlobRepo,
-    bytes_cache: HashMap<HgNodeHash, Shared<BoxFuture<Bytes, Compat<Error>>>>,
+    bytes_cache: HashMap<HgNodeHash, TryShared<BoxFuture<'static, Result<Bytes>>>>,
 }
 
 impl DeltaCache {
@@ -191,79 +182,71 @@ impl DeltaCache {
 
     fn decode(
         &mut self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         node: HgNodeHash,
         base: Option<HgNodeHash>,
         delta: Delta,
-    ) -> BoxFuture<Bytes, Error> {
-        let bytes = match self.bytes_cache.get(&node).cloned() {
-            Some(bytes) => bytes,
-            None => {
-                let vec = match base {
-                    None => delta::apply(b"", &delta)
-                        .with_context(|| format!("File content empty, delta: {:?}", delta))
-                        .map_err(Compat)
-                        .into_future()
-                        .boxify(),
-                    Some(base) => {
-                        let fut = match self.bytes_cache.get(&base) {
-                            Some(bytes) => bytes
-                                .clone()
-                                .map_err(Error::from)
-                                .and_then(move |bytes| {
-                                    delta::apply(&bytes, &delta)
-                                        .with_context(|| {
-                                            format!("File content: {:?} delta: {:?}", bytes, delta)
-                                        })
-                                        .map_err(Error::from)
-                                })
-                                .boxify(),
-                            None => {
-                                let validate_hash = false;
-                                create_raw_filenode_blob(
-                                    ctx,
-                                    self.repo.clone(),
-                                    HgFileNodeId::new(base),
-                                    validate_hash,
-                                )
-                                .and_then(move |bytes| {
-                                    delta::apply(bytes.as_ref(), &delta)
-                                        .with_context(|| {
-                                            format!("File content: {:?} delta: {:?}", bytes, delta)
-                                        })
-                                        .map_err(Error::from)
-                                })
-                                .boxify()
-                            }
-                        };
-                        fut.map_err(move |err| {
-                            Compat(err.context(format!(
+    ) -> impl Future<Output = Result<Bytes>> {
+        let bytes = self.bytes_cache.get(&node).cloned().unwrap_or_else(|| {
+            let bytes = {
+                let vec_u8 = match base {
+                    None => async move {
+                        delta::apply(b"", &delta)
+                            .with_context(|| format!("File content empty, delta: {:?}", delta))
+                    }
+                    .left_future(),
+                    Some(base) => self
+                        .apply_delta_on_base(ctx, base, delta)
+                        .map_err(move |err| {
+                            err.context(format!(
                                 "While looking for base {:?} to apply on delta {:?}",
                                 base, node
-                            )))
+                            ))
                         })
-                        .boxify()
-                    }
+                        .right_future(),
                 };
+                vec_u8.map_ok(Bytes::from)
+            };
 
-                let bytes = vec.map(|vec| Bytes::from(vec)).boxify().shared();
+            let bytes = bytes.boxed().try_shared();
 
-                if self.bytes_cache.insert(node, bytes.clone()).is_some() {
-                    panic!("Logic error: byte cache returned None for HashMap::get with node");
-                }
-                bytes
+            if self.bytes_cache.insert(node, bytes.clone()).is_some() {
+                panic!("Logic error: byte cache returned Some for HashMap::get with node");
             }
-        };
+            bytes
+        });
 
-        bytes
-            .inspect(|bytes| {
-                let fsize = (mem::size_of::<u8>() * bytes.as_ref().len()) as i64;
-                STATS::deltacache_fsize.add_value(fsize);
-                STATS::deltacache_fsize_large.add_value(fsize);
-            })
-            .map(|bytes| (*bytes).clone())
-            .from_err()
-            .boxify()
+        async move {
+            let bytes = bytes.await?;
+
+            let fsize = (mem::size_of::<u8>() * bytes.as_ref().len()) as i64;
+            STATS::deltacache_fsize.add_value(fsize);
+            STATS::deltacache_fsize_large.add_value(fsize);
+
+            Ok(bytes)
+        }
+    }
+
+    fn apply_delta_on_base(
+        &self,
+        ctx: &CoreContext,
+        base: HgNodeHash,
+        delta: Delta,
+    ) -> impl Future<Output = Result<Vec<u8>>> {
+        let cache_entry = self.bytes_cache.get(&base).cloned();
+        cloned!(ctx, self.repo);
+        async move {
+            let bytes = match cache_entry {
+                Some(bytes) => bytes.clone().await?,
+                None => {
+                    let validate_hash = false;
+                    create_raw_filenode_blob(ctx, repo, HgFileNodeId::new(base), validate_hash)
+                        .await?
+                }
+            };
+            delta::apply(&bytes, &delta)
+                .with_context(|| format!("File content: {:?} delta: {:?}", bytes, delta))
+        }
     }
 }
 
