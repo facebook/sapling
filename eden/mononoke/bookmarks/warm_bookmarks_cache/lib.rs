@@ -11,7 +11,7 @@ use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context as _, Error};
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, Freshness};
@@ -210,9 +210,16 @@ async fn init_bookmarks(
         .try_collect::<HashMap<_, _>>()
         .await?;
 
-    all_bookmarks
+    info!(ctx.logger(), "{} bookmarks to warm up", all_bookmarks.len());
+
+    let total = all_bookmarks.len();
+
+    let futs = all_bookmarks
         .into_iter()
-        .map(|(book, cs_id)| async move {
+        .enumerate()
+        .map(|(i, (book, cs_id))| async move {
+            let remaining = total - i - 1;
+
             let kind = *book.kind();
             if !is_warm(ctx, repo, &cs_id, warmers).await {
                 let book_name = book.into_name();
@@ -224,15 +231,31 @@ async fn init_bookmarks(
                     ctx.logger(),
                     "moved {} back in history to {:?}", book_name, maybe_cs_id
                 );
-                Ok(maybe_cs_id.map(|cs_id| (book_name, (cs_id, kind))))
+                Ok((
+                    remaining,
+                    maybe_cs_id.map(|cs_id| (book_name, (cs_id, kind))),
+                ))
             } else {
-                Ok(Some((book.into_name(), (cs_id, kind))))
+                Ok((remaining, Some((book.into_name(), (cs_id, kind)))))
             }
+        });
+
+    let res = stream::iter(futs)
+        .buffered(100)
+        .try_filter_map(|element| async move {
+            let (remaining, entry) = element;
+            if remaining % 100 == 0 {
+                info!(ctx.logger(), "{} bookmarks left to warm up", remaining);
+            }
+            Result::<_, Error>::Ok(entry)
         })
-        .collect::<FuturesUnordered<_>>()
-        .try_filter_map(|x| async { Ok(x) })
         .try_collect::<HashMap<_, _>>()
         .await
+        .with_context(|| "Error warming up bookmarks")?;
+
+    info!(ctx.logger(), "all bookmarks are warmed up");
+
+    Ok(res)
 }
 
 async fn is_warm(
