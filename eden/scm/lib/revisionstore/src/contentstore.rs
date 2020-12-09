@@ -395,28 +395,44 @@ impl<'a> ContentStoreBuilder<'a> {
                     None,
                     extstored_policy,
                 )?);
+                let local_indexedlogdatastore = Arc::new(IndexedLogHgIdDataStore::new(
+                    get_indexedlogdatastore_path(&unsuffixed_local_path)?,
+                    extstored_policy,
+                    self.config,
+                    IndexedLogDataStoreType::Local,
+                )?);
+
+                let primary: Arc<dyn HgIdMutableDeltaStore> = if self
+                    .config
+                    .get_or_default::<bool>("remotefilelog", "write-local-to-indexedlog")?
+                {
+                    // Put the indexedlog first, since recent data will have gone there.
+                    datastore.add(local_indexedlogdatastore.clone());
+                    datastore.add(local_pack_store);
+                    local_indexedlogdatastore
+                } else {
+                    datastore.add(local_pack_store.clone());
+                    datastore.add(local_indexedlogdatastore);
+                    local_pack_store
+                };
 
                 let local_lfs_store = Arc::new(LfsStore::local(&local_path.unwrap(), self.config)?);
                 blob_stores.add(local_lfs_store.clone());
+                datastore.add(local_lfs_store.clone());
 
-                let local_store: Arc<dyn HgIdMutableDeltaStore> =
+                let local_mutabledatastore: Arc<dyn HgIdMutableDeltaStore> = {
                     if let Some(lfs_threshold) = lfs_threshold {
-                        let local_store = Arc::new(LfsMultiplexer::new(
+                        Arc::new(LfsMultiplexer::new(
                             local_lfs_store.clone(),
-                            local_pack_store,
+                            primary,
                             lfs_threshold.value() as usize,
-                        ));
-
-                        datastore.add(local_store.clone());
-
-                        local_store
+                        ))
                     } else {
-                        datastore.add(local_pack_store.clone());
-                        datastore.add(local_lfs_store.clone());
-                        local_pack_store
-                    };
+                        primary
+                    }
+                };
 
-                (Some(local_store), Some(local_lfs_store))
+                (Some(local_mutabledatastore), Some(local_lfs_store))
             } else {
                 if !self.no_local_store {
                     return Err(format_err!(
@@ -735,6 +751,45 @@ mod tests {
 
         let k = StoreKey::hgid(key("a", "1"));
         assert_eq!(store.get(k.clone())?, StoreResult::NotFound(k));
+        Ok(())
+    }
+
+    #[test]
+    fn test_local_indexedlog_write() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let mut config = make_config(&cachedir);
+        config.set(
+            "remotefilelog",
+            "write-local-to-indexedlog",
+            Some("True"),
+            &Default::default(),
+        );
+
+        let store = ContentStoreBuilder::new(&config)
+            .local_path(&localdir)
+            .build()?;
+
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: k1.clone(),
+        };
+        store.add(&delta, &Default::default())?;
+        store.flush()?;
+        drop(store);
+
+        let store = IndexedLogHgIdDataStore::new(
+            get_indexedlogdatastore_path(&localdir)?,
+            ExtStoredPolicy::Use,
+            &config,
+            IndexedLogDataStoreType::Local,
+        )?;
+        assert_eq!(
+            store.get(StoreKey::hgid(k1))?,
+            StoreResult::Found(delta.data.as_ref().to_vec())
+        );
         Ok(())
     }
 
