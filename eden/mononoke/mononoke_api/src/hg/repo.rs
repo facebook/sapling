@@ -7,21 +7,20 @@
 
 use std::collections::HashMap;
 
-use anyhow::{format_err, Context};
+use anyhow::{self, format_err, Context};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
-use futures::future;
-use futures::{TryStream, TryStreamExt};
+use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
 use hgproto::GettreepackArgs;
 use mercurial_types::blobs::RevlogChangeset;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
-use mononoke_types::MPath;
+use mononoke_types::{ChangesetId, MPath};
 use repo_client::gettreepack_entries;
-use segmented_changelog::CloneData;
+use segmented_changelog::{CloneData, StreamCloneData, Vertex};
 
 use crate::errors::MononokeError;
 use crate::path::MononokePath;
@@ -213,6 +212,60 @@ impl HgRepoContext {
         };
         Ok(hg_clone_data)
     }
+
+    pub async fn segmented_changelog_full_idmap_clone_data(
+        &self,
+    ) -> Result<StreamCloneData<HgChangesetId>, MononokeError> {
+        const CHUNK_SIZE: usize = 1000;
+        const BUFFERED_BATCHES: usize = 5;
+        let m_clone_data = self
+            .repo()
+            .segmented_changelog_full_idmap_clone_data()
+            .await?;
+        let hg_idmap_stream = m_clone_data
+            .idmap_stream
+            .chunks(CHUNK_SIZE)
+            .map({
+                let blobrepo = self.blob_repo().clone();
+                let ctx = self.ctx().clone();
+                move |chunk| hg_convert_idmap_chunk(ctx.clone(), blobrepo.clone(), chunk)
+            })
+            .buffered(BUFFERED_BATCHES)
+            .try_flatten()
+            .boxed();
+        let hg_clone_data = StreamCloneData {
+            head_id: m_clone_data.head_id,
+            flat_segments: m_clone_data.flat_segments,
+            idmap_stream: hg_idmap_stream,
+        };
+        Ok(hg_clone_data)
+    }
+}
+
+async fn hg_convert_idmap_chunk(
+    ctx: CoreContext,
+    blobrepo: BlobRepo,
+    chunk: Vec<Result<(Vertex, ChangesetId), anyhow::Error>>,
+) -> Result<impl Stream<Item = Result<(Vertex, HgChangesetId), anyhow::Error>>, anyhow::Error> {
+    let chunk: Vec<(Vertex, ChangesetId)> = chunk
+        .into_iter()
+        .collect::<Result<Vec<_>, anyhow::Error>>()?;
+    let csids = chunk.iter().map(|(_, csid)| *csid).collect::<Vec<_>>();
+    let mapping = blobrepo
+        .get_hg_bonsai_mapping(ctx, csids)
+        .compat()
+        .await
+        .context("error fetching hg bonsai mapping")?
+        .into_iter()
+        .map(|(hgid, csid)| (csid, hgid))
+        .collect::<HashMap<_, _>>();
+    let converted = chunk.into_iter().map(move |(v, csid)| {
+        let hgid = mapping
+            .get(&csid)
+            .ok_or_else(|| format_err!("failed to find bonsai '{}' mapping to hg", csid))?;
+        Ok((v, *hgid))
+    });
+    Ok(stream::iter(converted))
 }
 
 #[cfg(test)]

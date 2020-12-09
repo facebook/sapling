@@ -34,8 +34,7 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-use ::dag::Id as Vertex;
-pub use ::dag::{CloneData, FlatSegment, PreparedFlatSegments};
+pub use ::dag::{CloneData, FlatSegment, Id as Vertex, PreparedFlatSegments};
 
 pub use crate::builder::SegmentedChangelogBuilder;
 

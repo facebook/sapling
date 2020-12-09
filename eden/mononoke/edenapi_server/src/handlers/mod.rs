@@ -44,6 +44,7 @@ pub enum EdenApiMethod {
     CommitLocationToHash,
     CommitRevlogData,
     Clone,
+    FullIdMapClone,
 }
 
 impl fmt::Display for EdenApiMethod {
@@ -56,6 +57,7 @@ impl fmt::Display for EdenApiMethod {
             Self::CommitLocationToHash => "commit_location_to_hash",
             Self::CommitRevlogData => "commit_revlog_data",
             Self::Clone => "clone",
+            Self::FullIdMapClone => "full_idmap_clone",
         };
         write!(f, "{}", name)
     }
@@ -111,6 +113,7 @@ define_handler!(history_handler, history::history);
 define_handler!(commit_location_to_hash_handler, commit::location_to_hash);
 define_handler!(commit_revlog_data_handler, commit::revlog_data);
 define_handler!(clone_handler, clone::clone_data);
+define_handler!(full_idmap_clone_handler, clone::full_idmap_clone_data);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -155,5 +158,9 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/clone")
             .with_path_extractor::<clone::CloneParams>()
             .to(clone_handler);
+        route
+            .post("/:repo/full_idmap_clone")
+            .with_path_extractor::<clone::CloneParams>()
+            .to(full_idmap_clone_handler);
     })
 }

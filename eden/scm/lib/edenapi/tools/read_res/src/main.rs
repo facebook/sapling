@@ -18,13 +18,16 @@ use std::io::{prelude::*, stdin, stdout};
 use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
-use serde::de::DeserializeOwned;
+use serde::de::{Deserialize, DeserializeOwned};
 use serde_cbor::Deserializer;
 use sha1::{Digest, Sha1};
 use structopt::StructOpt;
 
 use edenapi_types::{
-    wire::{ToApi, WireCloneData, WireFileEntry, WireHistoryResponseChunk, WireTreeEntry},
+    wire::{
+        ToApi, WireCloneData, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
+        WireTreeEntry,
+    },
     CommitLocationToHash, CommitRevlogData, FileError, TreeError, WireHistoryEntry,
 };
 use types::{HgId, Key, Parents, RepoPathBuf};
@@ -38,6 +41,7 @@ enum Args {
     CommitRevlogData(CommitRevlogDataArgs),
     CommitLocationToHash(CommitLocationToHashArgs),
     Clone(CloneArgs),
+    FullIdmapClone(CloneArgs),
 }
 
 #[derive(Debug, StructOpt)]
@@ -189,6 +193,7 @@ fn main() -> Result<()> {
         Args::CommitRevlogData(args) => cmd_commit_revlog_data(args),
         Args::CommitLocationToHash(args) => cmd_commit_location_to_hash(args),
         Args::Clone(args) => cmd_clone(args),
+        Args::FullIdmapClone(args) => cmd_full_idmap_clone(args),
     }
 }
 
@@ -426,6 +431,54 @@ fn cmd_clone(args: CloneArgs) -> Result<()> {
         .iter()
         .map(|(k, v)| format!("  {}: {}\n", k, v.to_hex()))
         .collect::<Vec<_>>();
+    idmap_entries.sort();
+    println!("idmap: {{\n{}}}", idmap_entries.join(""));
+    Ok(())
+}
+
+fn cmd_full_idmap_clone(args: CloneArgs) -> Result<()> {
+    let mut buffer = Vec::new();
+    match args.input {
+        None => {
+            eprintln!("Reading from stdin");
+            stdin().read_to_end(&mut buffer)?;
+        }
+        Some(path) => {
+            eprintln!("Reading from file: {:?}", &path);
+            let mut file = File::open(&path)?;
+            file.read_to_end(&mut buffer)?;
+        }
+    };
+    let mut deserializer = Deserializer::from_slice(&buffer);
+    let wire_clone_data = WireCloneData::deserialize(&mut deserializer)?;
+    let clone_data = wire_clone_data.to_api()?;
+    println!("head_id: {}", clone_data.head_id);
+    println!("flat_segments: [");
+    for fs in clone_data.flat_segments.segments {
+        println!(
+            "  {}, {}, [{}]",
+            fs.low,
+            fs.high,
+            fs.parents
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    }
+    println!("]");
+    let mut idmap_entries = deserializer
+        .into_iter::<WireIdMapEntry>()
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .map(|e| {
+            Ok(format!(
+                "  {}: {}\n",
+                e.dag_id.to_api()?,
+                e.hg_id.to_api()?.to_hex()
+            ))
+        })
+        .collect::<Result<Vec<_>>>()?;
     idmap_entries.sort();
     println!("idmap: {{\n{}}}", idmap_entries.join(""));
     Ok(())

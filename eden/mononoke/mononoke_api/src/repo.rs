@@ -54,7 +54,7 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use revset::AncestorsNodeStream;
-use segmented_changelog::{CloneData, SegmentedChangelog};
+use segmented_changelog::{CloneData, SegmentedChangelog, StreamCloneData};
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
 use sql_construct::facebook::FbSqlConstruct;
@@ -1346,6 +1346,25 @@ impl RepoContext {
                 })?;
         let clone_data = segmented_changelog
             .clone_data(&self.ctx)
+            .await
+            .map_err(MononokeError::from)?;
+        Ok(clone_data)
+    }
+
+    pub async fn segmented_changelog_full_idmap_clone_data(
+        &self,
+    ) -> Result<StreamCloneData<ChangesetId>, MononokeError> {
+        let blob_repo = self.blob_repo();
+        let segmented_changelog =
+            blob_repo
+                .attribute::<dyn SegmentedChangelog>()
+                .ok_or_else(|| {
+                    MononokeError::InvalidRequest(String::from(
+                        "Segmented Changelog is not enabled for this repo",
+                    ))
+                })?;
+        let clone_data = segmented_changelog
+            .full_idmap_clone_data(&self.ctx)
             .await
             .map_err(MononokeError::from)?;
         Ok(clone_data)
