@@ -17,7 +17,7 @@ bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 futures = "0.1"
 maplit = "1.0"
 serde = { version = "1.0", features = ["derive", "rc"] }
-serde_json = "1.0"
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
 tokio = { version = "=0.2.13", features = ["full"] }
 tokio-util = { version = "0.2", features = ["codec", "udp"] }
 trust-dns-resolver = "0.19"
