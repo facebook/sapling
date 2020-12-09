@@ -88,7 +88,18 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             )
         ),
     )?;
-    m.add(py, "repair", py_fn!(py, repair(path: &PyPath)))?;
+    m.add(
+        py,
+        "repair",
+        py_fn!(
+            py,
+            repair(
+                shared_path: &PyPath,
+                local_path: Option<&PyPath>,
+                config: config
+            )
+        ),
+    )?;
     Ok(m)
 }
 
@@ -127,10 +138,20 @@ fn repack_py(
     Ok(PyNone)
 }
 
-fn repair(py: Python, path: &PyPath) -> PyResult<Str> {
+fn repair(
+    py: Python,
+    shared_path: &PyPath,
+    local_path: Option<&PyPath>,
+    config: config,
+) -> PyResult<Str> {
+    let config = config.get_cfg(py);
     py.allow_threads(|| {
-        ContentStore::repair(path.as_path())?;
-        MetadataStore::repair(path.as_path())
+        ContentStore::repair(
+            shared_path.as_path(),
+            local_path.map(|p| p.as_path()),
+            &config,
+        )?;
+        MetadataStore::repair(shared_path.as_path())
     })
     .map_pyerr(py)
     .map(Into::into)

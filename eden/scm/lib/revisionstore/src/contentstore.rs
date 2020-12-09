@@ -69,12 +69,27 @@ impl ContentStore {
     ///
     /// As this may violate some of the stores asumptions, care must be taken to call this only
     /// when no other `ContentStore` have been created for the `shared_path`.
-    pub fn repair(shared_path: impl AsRef<Path>) -> Result<String> {
+    pub fn repair(
+        shared_path: impl AsRef<Path>,
+        local_path: Option<impl AsRef<Path>>,
+        config: &ConfigSet,
+    ) -> Result<String> {
         let shared_path = shared_path.as_ref();
+        let local_path = local_path.as_ref();
         let mut repair_str = String::new();
 
-        // Temporarily disabled until the subsequent diff.
-        //repair_str += &IndexedLogHgIdDataStore::repair(get_indexedlogdatastore_path(shared_path)?)?;
+        repair_str += &IndexedLogHgIdDataStore::repair(
+            get_indexedlogdatastore_path(shared_path)?,
+            config,
+            IndexedLogDataStoreType::Shared,
+        )?;
+        if let Some(local_path) = local_path {
+            repair_str += &IndexedLogHgIdDataStore::repair(
+                get_indexedlogdatastore_path(local_path)?,
+                config,
+                IndexedLogDataStoreType::Local,
+            )?;
+        }
         repair_str += &LfsStore::repair(shared_path)?;
 
         Ok(repair_str)

@@ -208,6 +208,21 @@ impl IndexedLogHgIdDataStore {
         }
         Ok(open_options)
     }
+
+    pub fn repair(
+        path: PathBuf,
+        config: &ConfigSet,
+        store_type: IndexedLogDataStoreType,
+    ) -> Result<String> {
+        match store_type {
+            IndexedLogDataStoreType::Local => {
+                IndexedLogHgIdDataStore::open_options(config)?.repair_local(path)
+            }
+            IndexedLogDataStoreType::Shared => {
+                IndexedLogHgIdDataStore::open_options(config)?.repair_shared(path)
+            }
+        }
+    }
 }
 
 impl HgIdMutableDeltaStore for IndexedLogHgIdDataStore {

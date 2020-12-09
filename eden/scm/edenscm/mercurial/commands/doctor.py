@@ -91,8 +91,16 @@ def doctor(ui, **opts):
     if "remotefilelog" in repo.requirements:
         from ...hgext.remotefilelog import shallowutil
 
-        path = os.path.join(shallowutil.getcachepath(ui), repo.name)
-        repair(ui, "revisionstore", path, revisionstore.repair)
+        sharedpath = os.path.join(shallowutil.getcachepath(ui), repo.name)
+        localpath = svfs.base
+        repair(
+            ui,
+            "revisionstore",
+            sharedpath,
+            revisionstore.repair,
+            localpath,
+            ui._uiconfig._rcfg._rcfg,
+        )
 
     ui.write(_("checking commit references\n"))
     _try(ui, checklaggingremotename, repo)
@@ -112,13 +120,13 @@ def repairsvfs(ui, svfs, name, fixobj):
     return fixobj(path)
 
 
-def repair(ui, name, path, fixfunc):
+def repair(ui, name, path, fixfunc, *args, **kwargs):
     # type: (..., str, str, ...) -> None
     """Attempt to repair path by using fixfunc"""
     with progress.spinner(ui, "checking %s" % name):
         oldfshash = fshash(path)
         try:
-            message = fixfunc(path)
+            message = fixfunc(path, *args, **kwargs)
         except Exception as ex:
             ui.warn(_("%s: failed to fix: %s\n") % (name, ex))
         else:
@@ -489,4 +497,11 @@ def runglobalindexedlogdoctor(ui):
     from ...hgext.remotefilelog import shallowutil
 
     for path in shallowutil.getallcachepaths(ui):
-        repair(ui, "revisionstore", path, revisionstore.repair)
+        repair(
+            ui,
+            "revisionstore",
+            path,
+            revisionstore.repair,
+            None,
+            ui._uiconfig._rcfg._rcfg,
+        )

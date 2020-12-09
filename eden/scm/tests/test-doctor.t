@@ -71,12 +71,30 @@ Test that 'hg doctor' can fix them:
   hgcommits/v1: repaired
   metalog: repaired
   allheads: repaired
+  revisionstore: repaired
   checking commit references
 
 Check the repo is usable again:
 
-# Temporarily delete this test
-
+  $ hg log -GpT '{desc}\n'
+  o  C
+  │  diff --git a/C b/C
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/C
+  │  @@ -0,0 +1,1 @@
+  │  +C
+  │  \ No newline at end of file
+  │
+  o  A
+     diff --git a/A b/A
+     new file mode 100644
+     --- /dev/null
+     +++ b/A
+     @@ -0,0 +1,1 @@
+     +A
+     \ No newline at end of file
+  
 Check changelog repiar:
 
   $ newrepo
