@@ -45,6 +45,9 @@ std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode);
 
 class TreeEntry {
  public:
+  explicit TreeEntry(const Hash& hash, PathComponent name, TreeEntryType type)
+      : type_(type), hash_(hash), name_(std::move(name)) {}
+
   explicit TreeEntry(
       const Hash& hash,
       folly::StringPiece name,

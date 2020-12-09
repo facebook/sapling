@@ -41,9 +41,6 @@
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
-#include "edenscm/hgext/extlib/ctreemanifest/manifest.h" // @manual=//eden/scm:manifest
-#include "edenscm/hgext/extlib/ctreemanifest/store.h" // @manual=//eden/scm:manifest
-
 using folly::Future;
 using folly::IOBuf;
 using folly::makeFuture;
@@ -346,98 +343,140 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
                    folly::Try<std::unique_ptr<IOBuf>> val) {
         // Note: the `value` call will throw if fetchTree threw an exception
         auto iobuf = std::move(val).value();
-        // This copies the iobuf, since treemanifest are fairly small, this
-        // should be OK to do. Once the fallback path is removed, we can
-        // change processTree to take the IOBuf directly and remove this copy.
-        auto content = ConstantStringRef{
-            reinterpret_cast<const char*>(iobuf->data()), iobuf->length()};
         return processTree(
-            content, node, treeID, ownedPath, commitId, batch.get());
+            std::move(iobuf), node, treeID, ownedPath, commitId, batch.get());
       });
 }
 
+namespace {
+constexpr size_t kNodeHexLen = Hash::RAW_SIZE * 2;
+
+struct ManifestEntry {
+  Hash node;
+  PathComponent name;
+  TreeEntryType type;
+
+  /**
+   * Parse a manifest entry.
+   *
+   * The format of a Mercurial manifest is the following:
+   * name: NUL terminated string
+   * node: 40 bytes hex
+   * flags: single character in: txl
+   * <name><node><flag>\n
+   */
+  static ManifestEntry parse(const char** start, const char* end) {
+    const auto* nameend =
+        reinterpret_cast<const char*>(memchr(*start, '\0', end - *start));
+
+    if (nameend == end) {
+      throw std::domain_error("invalid manifest entry");
+    }
+
+    auto name = PathComponent(
+        StringPiece{*start, folly::to_unsigned(nameend - *start)});
+
+    if (nameend + kNodeHexLen + 1 >= end) {
+      throw std::domain_error(fmt::format(
+          FMT_STRING(
+              "invalid manifest entry for {}: 40-bytes hash is too short: only {}-bytes available"),
+          name,
+          nameend - end));
+    }
+
+    auto node = Hash(StringPiece{nameend + 1, kNodeHexLen});
+
+    auto flagsPtr = nameend + kNodeHexLen + 1;
+    TreeEntryType type;
+    switch (*flagsPtr) {
+      case 't':
+        type = TreeEntryType::TREE;
+        *start = flagsPtr + 2;
+        break;
+      case 'x':
+        type = TreeEntryType::EXECUTABLE_FILE;
+        *start = flagsPtr + 2;
+        break;
+      case 'l':
+        type = TreeEntryType::SYMLINK;
+        *start = flagsPtr + 2;
+        break;
+      case '\n':
+        type = TreeEntryType::REGULAR_FILE;
+        *start = flagsPtr + 1;
+        break;
+      default:
+        throw std::domain_error(fmt::format(
+            FMT_STRING(
+                "invalid manifest entry for {}: unsupported file flags: {}"),
+            name,
+            *flagsPtr));
+    }
+
+    return ManifestEntry{node, std::move(name), type};
+  }
+};
+
+class Manifest {
+ public:
+  explicit Manifest(std::unique_ptr<IOBuf> raw) {
+    XDCHECK(!raw->isChained());
+
+    auto start = reinterpret_cast<const char*>(raw->data());
+    const auto end = reinterpret_cast<const char*>(raw->tail());
+
+    while (start < end) {
+      auto entry = ManifestEntry::parse(&start, end);
+      entries_.push_back(std::move(entry));
+    }
+  }
+
+  Manifest(const Manifest&) = delete;
+  Manifest(Manifest&&) = delete;
+  Manifest& operator=(const Manifest&) = delete;
+  Manifest& operator=(Manifest&&) = delete;
+
+  ~Manifest() = default;
+
+  using iterator = std::vector<ManifestEntry>::iterator;
+
+  iterator begin() {
+    return entries_.begin();
+  }
+
+  iterator end() {
+    return entries_.end();
+  }
+
+ private:
+  std::vector<ManifestEntry> entries_;
+};
+
+} // namespace
+
 std::unique_ptr<Tree> HgBackingStore::processTree(
-    ConstantStringRef& content,
+    std::unique_ptr<IOBuf> content,
     const Hash& manifestNode,
     const Hash& edenTreeID,
     RelativePathPiece path,
     const std::optional<Hash>& commitHash,
     LocalStore::WriteBatch* writeBatch) {
-  if (!content.content()) {
-    // This generally shouldn't happen: the UnionDatapackStore throws on
-    // error instead of returning null.  We're checking simply due to an
-    // abundance of caution.
-    throw std::domain_error(folly::to<std::string>(
-        "HgBackingStore::importTree received null tree from mercurial store for ",
-        path,
-        ", ID ",
-        manifestNode.toString()));
-  }
-  Manifest manifest(
-      content, reinterpret_cast<const char*>(manifestNode.getBytes().data()));
+  auto manifest = Manifest(std::move(content));
   std::vector<TreeEntry> entries;
 
-  auto iter = manifest.getIterator();
-  while (!iter.isfinished()) {
-    auto* entry = iter.currentvalue();
+  for (auto& entry : manifest) {
+    XLOG(DBG9) << "tree: " << manifestNode << " " << entry.name
+               << " node: " << entry.node << " flag: " << entry.type;
 
-    // The node is the hex string representation of the hash, but
-    // it is not NUL terminated!
-    StringPiece node(entry->get_node(), 40);
-    Hash entryHash(node);
-
-    StringPiece entryName(entry->filename, entry->filenamelen);
-
-    TreeEntryType fileType;
-
-    StringPiece entryFlag;
-    if (entry->flag) {
-      // entry->flag is a char* but is unfortunately not nul terminated.
-      // All known flag values are currently only a single character, and
-      // there are never any multi-character flags.
-      entryFlag.assign(entry->flag, entry->flag + 1);
-    }
-
-    XLOG(DBG9) << "tree: " << manifestNode << " " << entryName
-               << " node: " << node << " flag: " << entryFlag;
-
-    if (entry->isdirectory()) {
-      fileType = TreeEntryType::TREE;
-    } else if (entry->flag) {
-      switch (*entry->flag) {
-        case 'x':
-          fileType = TreeEntryType::EXECUTABLE_FILE;
-          break;
-        case 'l':
-          fileType = TreeEntryType::SYMLINK;
-          break;
-        default:
-          throw std::runtime_error(folly::to<std::string>(
-              "unsupported file flags for ",
-              path,
-              "/",
-              entryName,
-              ": ",
-              entryFlag));
-      }
-    } else {
-      fileType = TreeEntryType::REGULAR_FILE;
-    }
-
-    auto proxyHash = HgProxyHash::store(
-        path + RelativePathPiece(entryName), entryHash, writeBatch);
+    auto relPath = path + entry.name;
+    auto proxyHash = HgProxyHash::store(relPath, entry.node, writeBatch);
     if (commitHash) {
-      ScsProxyHash::store(
-          proxyHash,
-          path + RelativePathPiece(entryName),
-          commitHash.value(),
-          writeBatch);
+      ScsProxyHash::store(proxyHash, relPath, *commitHash, writeBatch);
     }
 
-    entries.emplace_back(proxyHash, entryName, fileType);
-
-    iter.next();
+    entries.emplace_back(proxyHash, std::move(entry.name), entry.type);
   }
+
   writeBatch->flush();
 
   return make_unique<Tree>(std::move(entries), edenTreeID);

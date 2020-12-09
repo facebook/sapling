@@ -120,7 +120,6 @@ set_property(
 )
 add_subdirectory(eden/fs)
 add_subdirectory(eden/integration)
-add_subdirectory(eden/scm/edenscm/hgext/extlib)
 add_subdirectory(eden/scm/lib)
 add_subdirectory(eden/test_support)
 add_subdirectory(eden/scm/exec/eden_apfs_mount_helper)

@@ -24,9 +24,6 @@
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-/* forward declare support classes from mercurial */
-class ConstantStringRef;
-
 namespace facebook {
 namespace eden {
 
@@ -182,7 +179,7 @@ class HgBackingStore {
       std::optional<Hash> commitId,
       std::shared_ptr<LocalStore::WriteBatch> writeBatch);
   std::unique_ptr<Tree> processTree(
-      ConstantStringRef& content,
+      std::unique_ptr<folly::IOBuf> content,
       const Hash& manifestNode,
       const Hash& edenTreeID,
       RelativePathPiece path,
