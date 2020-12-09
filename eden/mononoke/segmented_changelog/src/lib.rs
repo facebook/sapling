@@ -11,11 +11,11 @@
 ///!
 ///! This represents an implementation for the core commit graph that we have
 ///! in a given repository. It provides algorithms over the commit graph.
-use std::sync::Arc;
-
 use anyhow::{format_err, Result};
 use async_trait::async_trait;
+use auto_impl::auto_impl;
 use context::CoreContext;
+use futures::stream::BoxStream;
 use mononoke_types::ChangesetId;
 
 mod builder;
@@ -34,13 +34,21 @@ mod types;
 #[cfg(test)]
 mod tests;
 
+use ::dag::Id as Vertex;
 pub use ::dag::{CloneData, FlatSegment, PreparedFlatSegments};
 
 pub use crate::builder::SegmentedChangelogBuilder;
 
 // TODO(T74420661): use `thiserror` to represent error case
 
+pub struct StreamCloneData<T> {
+    pub head_id: Vertex,
+    pub flat_segments: PreparedFlatSegments,
+    pub idmap_stream: BoxStream<'static, Result<(Vertex, T)>>,
+}
+
 #[async_trait]
+#[auto_impl(Arc)]
 pub trait SegmentedChangelog: Send + Sync {
     /// Get the identifier of a commit given it's commit graph location.
     ///
@@ -76,25 +84,14 @@ pub trait SegmentedChangelog: Send + Sync {
     /// Note that the heads that are sent over in a clone can vary. Strictly speaking the client
     /// only needs one head.
     async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>>;
-}
 
-#[async_trait]
-impl SegmentedChangelog for Arc<dyn SegmentedChangelog> {
-    async fn location_to_many_changeset_ids(
+    /// An intermediate step in the quest for Segmented Changelog clones requires the server to
+    /// send over the full idmap. For every commit (in master) we send the id that it corresponds
+    /// to in the iddag.
+    async fn full_idmap_clone_data(
         &self,
         ctx: &CoreContext,
-        known: ChangesetId,
-        distance: u64,
-        count: u64,
-    ) -> Result<Vec<ChangesetId>> {
-        (**self)
-            .location_to_many_changeset_ids(ctx, known, distance, count)
-            .await
-    }
-
-    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
-        (**self).clone_data(ctx).await
-    }
+    ) -> Result<StreamCloneData<ChangesetId>>;
 }
 
 pub struct DisabledSegmentedChangelog;
@@ -121,6 +118,15 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
     }
 
     async fn clone_data(&self, _ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+        Err(format_err!(
+            "Segmented Changelog is not enabled for this repo",
+        ))
+    }
+
+    async fn full_idmap_clone_data(
+        &self,
+        _ctx: &CoreContext,
+    ) -> Result<StreamCloneData<ChangesetId>> {
         Err(format_err!(
             "Segmented Changelog is not enabled for this repo",
         ))

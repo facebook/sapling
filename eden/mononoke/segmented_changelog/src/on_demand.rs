@@ -24,7 +24,7 @@ use mononoke_types::ChangesetId;
 
 use crate::dag::{Dag, StartState};
 use crate::idmap::IdMap;
-use crate::SegmentedChangelog;
+use crate::{SegmentedChangelog, StreamCloneData};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.ondemand";
@@ -84,6 +84,14 @@ impl SegmentedChangelog for OnDemandUpdateDag {
     async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
         let dag = self.dag.read().await;
         dag.clone_data(ctx).await
+    }
+
+    async fn full_idmap_clone_data(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<StreamCloneData<ChangesetId>> {
+        let dag = self.dag.read().await;
+        dag.full_idmap_clone_data(ctx).await
     }
 }
 

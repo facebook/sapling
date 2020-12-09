@@ -13,6 +13,7 @@ use futures::stream::{self, StreamExt, TryStreamExt};
 use maplit::hashset;
 use slog::{debug, trace};
 
+use cloned::cloned;
 use dag::{self, CloneData, Group, Id as Vertex, InProcessIdDag};
 use stats::prelude::*;
 
@@ -20,7 +21,7 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::{IdMap, MemIdMap};
-use crate::SegmentedChangelog;
+use crate::{SegmentedChangelog, StreamCloneData};
 
 const IDMAP_CHANGESET_FETCH_BATCH: usize = 500;
 
@@ -53,16 +54,7 @@ impl SegmentedChangelog for Dag {
 
     async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
         let group = Group::MASTER;
-        let level = 0;
-        let next_id = self
-            .iddag
-            .next_free_id(level, group)
-            .context("error computing next free id for dag")?;
-        let head_id = if next_id > group.min_id() {
-            next_id - 1
-        } else {
-            return Err(format_err!("error generating clone data for empty iddag"));
-        };
+        let head_id = self.clone_data_head_id()?;
         let flat_segments = self
             .iddag
             .flat_segments(group)
@@ -84,6 +76,39 @@ impl SegmentedChangelog for Dag {
             idmap,
         };
         Ok(clone_data)
+    }
+
+    async fn full_idmap_clone_data(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<StreamCloneData<ChangesetId>> {
+        const CHUNK_SIZE: usize = 1000;
+        const BUFFERED_BATCHES: usize = 5;
+        let group = Group::MASTER;
+        let head_id = self.clone_data_head_id()?;
+        let flat_segments = self
+            .iddag
+            .flat_segments(group)
+            .context("error during flat segment retrieval")?;
+        let idmap_stream = stream::iter((group.min_id().0..=head_id.0).into_iter().map(Vertex))
+            .chunks(CHUNK_SIZE)
+            .map({
+                cloned!(ctx, self.idmap);
+                move |chunk| {
+                    cloned!(ctx, idmap);
+                    async move { idmap.find_many_changeset_ids(&ctx, chunk).await }
+                }
+            })
+            .buffered(BUFFERED_BATCHES)
+            .map_ok(|map_chunk| stream::iter(map_chunk.into_iter().map(Ok)))
+            .try_flatten()
+            .boxed();
+        let stream_clone_data = StreamCloneData {
+            head_id,
+            flat_segments,
+            idmap_stream,
+        };
+        Ok(stream_clone_data)
     }
 }
 
@@ -228,6 +253,20 @@ impl Dag {
         );
 
         Ok(head_vertex)
+    }
+
+    fn clone_data_head_id(&self) -> Result<Vertex> {
+        let group = Group::MASTER;
+        let level = 0;
+        let next_id = self
+            .iddag
+            .next_free_id(level, group)
+            .context("error computing next free id for dag")?;
+        if next_id > group.min_id() {
+            Ok(next_id - 1)
+        } else {
+            Err(format_err!("error generating clone data for empty iddag"))
+        }
     }
 }
 

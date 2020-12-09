@@ -11,6 +11,7 @@ use anyhow::Result;
 use fbinit::FacebookInit;
 use futures::compat::Stream01CompatExt;
 use futures::future::try_join_all;
+use futures::stream::TryStreamExt;
 use futures::StreamExt;
 
 use blobrepo::BlobRepo;
@@ -431,6 +432,25 @@ async fn test_clone_data(fb: FacebookInit) -> Result<()> {
     let expected_cs =
         resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
     assert_eq!(answer, expected_cs);
+
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_full_idmap_clone_data(fb: FacebookInit) -> Result<()> {
+    // In this test we first build a dag from scratch and then we reuse the idmap in an ondemand
+    // dag that starts off with an empty iddag.
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = linear::getrepo(fb).await;
+
+    let head = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+    setup_phases(&ctx, &blobrepo, head).await?;
+    let dag = new_build_all_from_blobrepo(&ctx, &blobrepo, head).await?;
+
+    let clone_data = dag.full_idmap_clone_data(&ctx).await?;
+    let idmap = clone_data.idmap_stream.try_collect::<Vec<_>>().await?;
+
+    assert_eq!(idmap.len(), 11);
 
     Ok(())
 }

@@ -22,7 +22,7 @@ use crate::iddag::IdDagSaveStore;
 use crate::idmap::{SqlIdMap, SqlIdMapFactory};
 use crate::logging::log_new_bundle;
 use crate::types::{DagBundle, IdMapVersion};
-use crate::{CloneData, SegmentedChangelog};
+use crate::{CloneData, SegmentedChangelog, StreamCloneData};
 
 pub struct SegmentedChangelogManager {
     repo_id: RepositoryId,
@@ -142,5 +142,16 @@ impl SegmentedChangelog for SegmentedChangelogManager {
             )
         })?;
         dag.clone_data(ctx).await
+    }
+
+    async fn full_idmap_clone_data(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<StreamCloneData<ChangesetId>> {
+        let (_, dag) = self
+            .load_dag(&ctx)
+            .await
+            .context("error loading segmented changelog from save")?;
+        dag.full_idmap_clone_data(ctx).await
     }
 }
