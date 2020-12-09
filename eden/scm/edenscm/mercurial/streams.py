@@ -24,18 +24,11 @@ def prefetchtextstream(repo, ctxstream):
 
 
 def _prefetchtextstream(repo, ctxstream):
-    def rewritenone(n):
-        # None is used as a way to refer to "working parent", ex. `repo[None]`.
-        # Rust bindings do not like None. Rewrite it to `wdirid`.
-        if n is None:
-            return wdirid
-        else:
-            return n
-
-    # NOTE: This _might_ be optimized to be zero-cost Python <-> Rust,
-    # by providing extra hints about Rust nameset object.
-    nodestream = (rewritenone(ctx.node()) for ctx in ctxstream)
-    for node, text in repo.changelog.inner.streamcommitrawtext(nodestream):
-        ctx = repo[node]
-        ctx._text = text
-        yield ctx
+    # streamcommitrawtext will turn a Python iterator to a Rust Stream in a
+    # background thread. Multiple threads might try to obtain
+    # async_runtime::block_on_exclusive lock and cause deadlock. Upgrading
+    # tokio would allow us to block_on without taking &mut Runtime and avoid
+    # deadlocks.
+    #
+    # Do not streamcommitrawtext it for now.
+    return ctxstream
