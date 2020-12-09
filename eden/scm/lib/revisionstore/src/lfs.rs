@@ -979,12 +979,14 @@ impl LfsRemoteInner {
             }
 
             if let Some(auth) = &auth {
-                if let (Some(cert), Some(key)) = (&auth.cert, &auth.key) {
-                    req = req.creds(cert, key)?;
+                if let Some(cert) = &auth.cert {
+                    req = req.cert(cert);
                 }
-
+                if let Some(key) = &auth.key {
+                    req = req.key(key);
+                }
                 if let Some(ca) = &auth.cacerts {
-                    req = req.cainfo(ca)?;
+                    req = req.cainfo(ca);
                 }
             }
 

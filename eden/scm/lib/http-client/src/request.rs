@@ -18,7 +18,7 @@ use serde::Serialize;
 use url::Url;
 
 use crate::{
-    errors::{CertOrKeyMissing, HttpClientError},
+    errors::HttpClientError,
     handler::{Buffered, Configure, Streaming},
     receiver::{ChannelReceiver, Receiver},
     response::{AsyncResponse, Response},
@@ -55,7 +55,8 @@ pub struct Request {
     method: Method,
     headers: Vec<(String, String)>,
     body: Option<Vec<u8>>,
-    creds: Option<(PathBuf, PathBuf)>,
+    cert: Option<PathBuf>,
+    key: Option<PathBuf>,
     cainfo: Option<PathBuf>,
     timeout: Option<Duration>,
     http_version: HttpVersion,
@@ -70,7 +71,8 @@ impl Request {
             // That would require two response reads, which breaks the http_client model.
             headers: vec![("Expect".to_string(), "".to_string())],
             body: None,
-            creds: None,
+            cert: None,
+            key: None,
             cainfo: None,
             timeout: None,
             // Attempt to use HTTP/2 by default. Will fall back to HTTP/1.1
@@ -135,43 +137,40 @@ impl Request {
         self
     }
 
-    /// Specify client credentials for mTLS. The arguments should be
-    /// paths to a PEM-encoded X.509 client certificate chain and the
-    /// corresponding private key. (It is possible for the certificate
-    /// and private key to be in the same file.)
-    pub fn creds(
-        self,
-        cert: impl AsRef<Path>,
-        key: impl AsRef<Path>,
-    ) -> Result<Self, CertOrKeyMissing> {
-        let cert = cert.as_ref();
-        if !cert.is_file() {
-            return Err(CertOrKeyMissing(cert.into()));
-        }
-        let key = key.as_ref();
-        if !key.is_file() {
-            return Err(CertOrKeyMissing(key.into()));
-        }
-
-        Ok(Self {
-            creds: Some((cert.into(), key.into())),
+    /// Specify a client certificate for TLS mutual authentiation.
+    ///
+    /// This should be a path to a base64-encoded PEM file containing the
+    /// client's X.509 certificate. When using a client certificate, the client
+    /// must also provide the corresponding private key; this can either be
+    /// concatenated to the certificate in the PEM file (in which case it will
+    /// be used automatically), or specified separately via the `key` method.
+    pub fn cert(self, cert: impl AsRef<Path>) -> Self {
+        Self {
+            cert: Some(cert.as_ref().into()),
             ..self
-        })
+        }
+    }
+
+    /// Specify a client private key for TLS mutual authentiation.
+    ///
+    /// This method can be used to specify the path to the client's private
+    /// key if this key was not included in the certificate file specified via
+    /// the `cert` method.
+    pub fn key(self, key: impl AsRef<Path>) -> Self {
+        Self {
+            key: Some(key.as_ref().into()),
+            ..self
+        }
     }
 
     /// Specify a CA certificate bundle to be used to verify the
     /// server's certificate. If not specified, the client will
     /// use the system default CA certificate bundle.
-    pub fn cainfo(self, cainfo: impl AsRef<Path>) -> Result<Self, CertOrKeyMissing> {
-        let cainfo = cainfo.as_ref();
-        if !cainfo.is_file() {
-            return Err(CertOrKeyMissing(cainfo.into()));
-        }
-
-        Ok(Self {
-            cainfo: Some(cainfo.into()),
+    pub fn cainfo(self, cainfo: impl AsRef<Path>) -> Self {
+        Self {
+            cainfo: Some(cainfo.as_ref().into()),
             ..self
-        })
+        }
     }
 
     /// Set the maximum time this request is allowed to take.
@@ -255,8 +254,10 @@ impl Request {
         easy.http_headers(headers)?;
 
         // Set up client credentials for mTLS.
-        if let Some((cert, key)) = self.creds {
+        if let Some(cert) = self.cert {
             easy.ssl_cert(cert)?;
+        }
+        if let Some(key) = self.key {
             easy.ssl_key(key)?;
         }
 
@@ -326,8 +327,6 @@ impl<R: Receiver> TryFrom<StreamRequest<R>> for Easy2<Streaming<R>> {
 mod tests {
     use super::*;
 
-    use std::fs::File;
-
     use anyhow::Result;
     use futures::TryStreamExt;
     use http::{
@@ -336,7 +335,6 @@ mod tests {
     };
     use mockito::{mock, Matcher};
     use serde_json::json;
-    use tempdir::TempDir;
 
     #[test]
     fn test_get() -> Result<()> {
@@ -543,35 +541,6 @@ mod tests {
 
         mock.assert();
         assert_eq!(res.status, StatusCode::CREATED);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_creds_exist() -> Result<()> {
-        let tmp = TempDir::new("test_creds_exist")?;
-        let cert = tmp.path().to_path_buf().join("cert.pem");
-        let key = tmp.path().to_path_buf().join("key.pem");
-        let cainfo = tmp.path().to_path_buf().join("cainfo.pem");
-        let url = Url::parse("https://example.com")?;
-
-        // Cert and key missing.
-        assert!(Request::get(url.clone()).creds(&cert, &key).is_err());
-
-        // Just key missing.
-        let _ = File::create(&cert)?;
-        assert!(Request::get(url.clone()).creds(&cert, &key).is_err());
-
-        // Both present.
-        let _ = File::create(&key)?;
-        let _ = Request::get(url.clone()).creds(&cert, &key)?;
-
-        // CA cert bundle missing.
-        assert!(Request::get(url.clone()).cainfo(&cainfo).is_err());
-
-        // CA cert bundle present.
-        let _ = File::create(&cainfo)?;
-        let _ = Request::get(url).cainfo(&cainfo)?;
 
         Ok(())
     }

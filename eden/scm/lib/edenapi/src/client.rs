@@ -31,7 +31,7 @@ use http_client::{HttpClient, HttpClientError, Request};
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::api::{EdenApi, ProgressCallback};
-use crate::builder::{ClientCreds, Config};
+use crate::builder::Config;
 use crate::errors::EdenApiError;
 use crate::response::{Fetch, ResponseMeta};
 
@@ -76,12 +76,16 @@ impl Client {
 
     /// Add configured values to a request.
     fn configure(&self, mut req: Request) -> Result<Request, EdenApiError> {
-        if let Some(ClientCreds { cert, key }) = &self.config.client_creds {
-            req = req.creds(cert, key)?;
+        if let Some(ref cert) = self.config.cert {
+            req = req.cert(cert);
         }
 
-        if let Some(ca) = &self.config.ca_bundle {
-            req = req.cainfo(ca)?;
+        if let Some(ref key) = self.config.key {
+            req = req.key(key);
+        }
+
+        if let Some(ref ca) = self.config.ca_bundle {
+            req = req.cainfo(ca);
         }
 
         for (k, v) in &self.config.headers {

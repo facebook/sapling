@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::path::PathBuf;
-
 use futures::channel::oneshot;
 use thiserror::Error;
 
@@ -29,15 +27,6 @@ pub enum HttpClientError {
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
-
-/// This error is a separate struct rather than a variant
-/// of `HttpClientError` because it is the only error that
-/// can occur when setting the TLS credential paths.
-/// As such, the downstream crate can more easily report
-/// the problem to the user without pattern matching.
-#[derive(Error, Debug)]
-#[error("TLS certificate or key not found: {0:?}")]
-pub struct CertOrKeyMissing(pub PathBuf);
 
 /// Error type for user-provided callbacks. Indicates
 /// that the client should abort the operation and

@@ -69,10 +69,7 @@ async fn main() -> Result<()> {
 async fn cmd_get(args: Args) -> Result<()> {
     let req = Request::get(args.url()?);
     let req = add_headers(req, &args.headers);
-
-    let creds = get_creds();
-    let ca = get_ca();
-    let req = configure_tls(req, &creds, &ca)?;
+    let req = configure_tls(req);
 
     let res = req.send_async().await?;
     write_response(res).await
@@ -81,10 +78,7 @@ async fn cmd_get(args: Args) -> Result<()> {
 async fn cmd_head(args: Args) -> Result<()> {
     let req = Request::head(args.url()?);
     let req = add_headers(req, &args.headers);
-
-    let creds = get_creds();
-    let ca = get_ca();
-    let req = configure_tls(req, &creds, &ca)?;
+    let req = configure_tls(req);
 
     let res = req.send_async().await?;
     write_response(res).await
@@ -96,10 +90,7 @@ async fn cmd_post(args: Args) -> Result<()> {
 
     let req = Request::post(args.url()?).body(body);
     let req = add_headers(req, &args.headers);
-
-    let creds = get_creds();
-    let ca = get_ca();
-    let req = configure_tls(req, &creds, &ca)?;
+    let req = configure_tls(req);
 
     let res = req.send_async().await?;
     write_response(res).await
@@ -111,10 +102,7 @@ async fn cmd_put(args: Args) -> Result<()> {
 
     let req = Request::put(args.url()?).body(body);
     let req = add_headers(req, &args.headers);
-
-    let creds = get_creds();
-    let ca = get_ca();
-    let req = configure_tls(req, &creds, &ca)?;
+    let req = configure_tls(req);
 
     let res = req.send_async().await?;
     write_response(res).await
@@ -141,28 +129,17 @@ async fn write_response(res: AsyncResponse) -> Result<()> {
     Ok(())
 }
 
-fn configure_tls(
-    mut req: Request,
-    creds: &Option<(String, String)>,
-    ca: &Option<String>,
-) -> Result<Request> {
-    if let Some((cert, key)) = creds {
-        req = req.creds(cert, key)?;
+fn configure_tls(mut req: Request) -> Request {
+    if let Ok(cert) = env::var(CERT_ENV_VAR) {
+        req = req.cert(cert);
     }
-    if let Some(ca) = ca {
-        req = req.cainfo(ca)?;
+    if let Ok(cert) = env::var(KEY_ENV_VAR) {
+        req = req.cert(cert);
     }
-    Ok(req)
-}
-
-fn get_creds() -> Option<(String, String)> {
-    let cert = env::var(CERT_ENV_VAR).ok()?;
-    let key = env::var(KEY_ENV_VAR).ok()?;
-    Some((cert, key))
-}
-
-fn get_ca() -> Option<String> {
-    env::var(CA_ENV_VAR).ok()
+    if let Ok(ca) = env::var(CA_ENV_VAR) {
+        req = req.cainfo(ca);
+    }
+    req
 }
 
 fn add_headers(mut req: Request, headers: &[String]) -> Request {

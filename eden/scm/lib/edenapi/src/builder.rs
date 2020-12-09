@@ -25,7 +25,8 @@ use crate::errors::{ConfigError, EdenApiError};
 #[derive(Debug, Default)]
 pub struct Builder {
     server_url: Option<Url>,
-    client_creds: Option<ClientCreds>,
+    cert: Option<PathBuf>,
+    key: Option<PathBuf>,
     ca_bundle: Option<PathBuf>,
     headers: HashMap<String, String>,
     max_files: Option<usize>,
@@ -56,9 +57,9 @@ impl Builder {
             .parse::<Url>()
             .map_err(ConfigError::InvalidUrl)?;
 
-        let (client_creds, ca_bundle) = AuthConfig::new(&config)
+        let (cert, key, ca_bundle) = AuthConfig::new(&config)
             .auth_for_url(&server_url)
-            .map(|auth| (ClientCreds::from_options(auth.cert, auth.key), auth.cacerts))
+            .map(|auth| (auth.cert, auth.key, auth.cacerts))
             .unwrap_or_default();
 
         let headers = config
@@ -108,7 +109,8 @@ impl Builder {
 
         Ok(Self {
             server_url: Some(server_url),
-            client_creds,
+            cert,
+            key,
             ca_bundle,
             headers,
             max_files,
@@ -127,14 +129,18 @@ impl Builder {
         self
     }
 
-    /// Specify client credentials for TLS mutual authentication. `cert` should
-    /// be a path to a valid X.509 client certificate chain, and `key` should be
-    /// the path to the corresponding private key. Both are expected to be in
-    /// the base64 PEM format.
-    pub fn client_creds(mut self, cert: impl AsRef<Path>, key: impl AsRef<Path>) -> Self {
-        let cert = cert.as_ref().into();
-        let key = key.as_ref().into();
-        self.client_creds = Some(ClientCreds { cert, key });
+    /// Specify a client certificate for authenticating with the server.
+    /// The caller should provide a path to PEM-encoded X.509 certificate file.
+    /// The corresponding private key may either be provided in the same file
+    /// as the certificate, or separately using the `key` method.
+    pub fn cert(mut self, cert: impl AsRef<Path>) -> Self {
+        self.cert = Some(cert.as_ref().into());
+        self
+    }
+
+    /// Specify the client's private key
+    pub fn key(mut self, key: impl AsRef<Path>) -> Self {
+        self.key = Some(key.as_ref().into());
         self
     }
 
@@ -203,29 +209,14 @@ impl Builder {
     }
 }
 
-/// Client certificate and private key paths for TLS mutual authentication.
-#[derive(Debug)]
-pub(crate) struct ClientCreds {
-    pub(crate) cert: PathBuf,
-    pub(crate) key: PathBuf,
-}
-
-impl ClientCreds {
-    fn from_options(cert: Option<PathBuf>, key: Option<PathBuf>) -> Option<Self> {
-        match (cert, key) {
-            (Some(cert), Some(key)) => Some(Self { cert, key }),
-            _ => None,
-        }
-    }
-}
-
 /// Configuration for a `Client`. Essentially has the same fields as a
 /// `Builder`, but required fields are not optional and values have been
 /// appropriately parsed and validated.
 #[derive(Debug)]
 pub(crate) struct Config {
     pub(crate) server_url: Url,
-    pub(crate) client_creds: Option<ClientCreds>,
+    pub(crate) cert: Option<PathBuf>,
+    pub(crate) key: Option<PathBuf>,
     pub(crate) ca_bundle: Option<PathBuf>,
     pub(crate) headers: HashMap<String, String>,
     pub(crate) max_files: Option<usize>,
@@ -243,7 +234,8 @@ impl TryFrom<Builder> for Config {
     fn try_from(builder: Builder) -> Result<Self, Self::Error> {
         let Builder {
             server_url,
-            client_creds,
+            cert,
+            key,
             ca_bundle,
             headers,
             max_files,
@@ -265,7 +257,8 @@ impl TryFrom<Builder> for Config {
 
         Ok(Config {
             server_url,
-            client_creds,
+            cert,
+            key,
             ca_bundle,
             headers,
             max_files,
