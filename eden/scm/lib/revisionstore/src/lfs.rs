@@ -170,7 +170,7 @@ struct LfsPointersEntry {
 
 impl DefaultOpenOptions<rotate::OpenOptions> for LfsPointersStore {
     fn default_open_options() -> rotate::OpenOptions {
-        Self::default_store_open_options().into_rotate_open_options()
+        Self::default_store_open_options().into_shared_open_options()
     }
 }
 
@@ -258,7 +258,7 @@ struct LfsIndexedLogBlobsEntry {
 
 impl DefaultOpenOptions<rotate::OpenOptions> for LfsIndexedLogBlobsStore {
     fn default_open_options() -> rotate::OpenOptions {
-        Self::default_store_open_options().into_rotate_open_options()
+        Self::default_store_open_options().into_shared_open_options()
     }
 }
 

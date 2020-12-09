@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 
@@ -123,25 +123,28 @@ impl StoreOpenOptions {
         self
     }
 
+    fn into_local_open_options(self) -> log::OpenOptions {
+        log::OpenOptions::new()
+            .create(true)
+            .fsync(true)
+            .index_defs(self.indexes)
+            .auto_sync_threshold(self.auto_sync_threshold)
+    }
+
     /// Create a local `Store`.
     ///
     /// Data added to a local store will never be rotated out, and `fsync(2)` is used to guarantee
     /// data consistency.
     pub fn local(self, path: impl AsRef<Path>) -> Result<Store> {
         Ok(Store::Local(
-            log::OpenOptions::new()
-                .create(true)
-                .fsync(true)
-                .index_defs(self.indexes)
-                .auto_sync_threshold(self.auto_sync_threshold)
-                .open(path.as_ref())?,
+            self.into_local_open_options().open(path.as_ref())?,
         ))
     }
 
     /// Convert a `StoreOpenOptions` to a `rotate::OpenOptions`.
     ///
     /// Should only be used to implement `indexedlog::DefaultOpenOptions`
-    pub fn into_rotate_open_options(self) -> rotate::OpenOptions {
+    pub fn into_shared_open_options(self) -> rotate::OpenOptions {
         let mut opts = rotate::OpenOptions::new()
             .create(true)
             .auto_sync_threshold(self.auto_sync_threshold)
@@ -163,8 +166,29 @@ impl StoreOpenOptions {
     /// Data added to a shared store will be rotated out depending on the values of `max_log_count`
     /// and `max_bytes_per_log`.
     pub fn shared(self, path: impl AsRef<Path>) -> Result<Store> {
-        let opts = self.into_rotate_open_options();
+        let opts = self.into_shared_open_options();
         Ok(Store::Shared(opts.open(path.as_ref())?))
+    }
+
+    /// Attempts to repair corruption in a local indexedlog store.
+    ///
+    /// Note, this may delete data, though it should only delete data that is unreadable.
+    #[allow(dead_code)]
+    pub fn repair_local(self, path: PathBuf) -> Result<String> {
+        self.into_local_open_options()
+            .repair(path)
+            .map_err(|e| e.into())
+    }
+
+    /// Attempts to repair corruption in a shared rotatelog store.
+    ///
+    /// Note, this may delete data, though that should be fine since a rotatelog is free to delete
+    /// data already.
+    #[allow(dead_code)]
+    pub fn repair_shared(self, path: PathBuf) -> Result<String> {
+        self.into_shared_open_options()
+            .repair(path)
+            .map_err(|e| e.into())
     }
 }
 
