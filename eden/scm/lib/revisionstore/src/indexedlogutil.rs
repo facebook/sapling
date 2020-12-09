@@ -12,6 +12,7 @@ use anyhow::Result;
 use indexedlog::{
     log::{self, IndexDef, IndexOutput, Log, LogLookupIter},
     rotate::{self, RotateLog, RotateLogLookupIter},
+    Result as IndexedlogResult,
 };
 use minibytes::Bytes;
 
@@ -51,6 +52,13 @@ impl Store {
         }
     }
 
+    pub fn iter(&self) -> Box<dyn Iterator<Item = IndexedlogResult<&[u8]>> + '_> {
+        match self {
+            Store::Local(log) => Box::new(log.iter()),
+            Store::Shared(log) => Box::new(log.iter()),
+        }
+    }
+
     pub fn flush(&mut self) -> Result<()> {
         match self {
             Store::Local(log) => {
@@ -83,9 +91,10 @@ impl<'a> Iterator for LookupIter<'a> {
 
 pub struct StoreOpenOptions {
     auto_sync_threshold: Option<u64>,
-    max_log_count: Option<u8>,
-    max_bytes_per_log: Option<u64>,
+    pub max_log_count: Option<u8>,
+    pub max_bytes_per_log: Option<u64>,
     indexes: Vec<IndexDef>,
+    create: bool,
 }
 
 impl StoreOpenOptions {
@@ -95,6 +104,7 @@ impl StoreOpenOptions {
             max_log_count: None,
             max_bytes_per_log: None,
             indexes: Vec::new(),
+            create: true,
         }
     }
 
@@ -123,9 +133,14 @@ impl StoreOpenOptions {
         self
     }
 
+    pub fn create(mut self, create: bool) -> Self {
+        self.create = create;
+        self
+    }
+
     fn into_local_open_options(self) -> log::OpenOptions {
         log::OpenOptions::new()
-            .create(true)
+            .create(self.create)
             .fsync(true)
             .index_defs(self.indexes)
             .auto_sync_threshold(self.auto_sync_threshold)
@@ -146,7 +161,7 @@ impl StoreOpenOptions {
     /// Should only be used to implement `indexedlog::DefaultOpenOptions`
     pub fn into_shared_open_options(self) -> rotate::OpenOptions {
         let mut opts = rotate::OpenOptions::new()
-            .create(true)
+            .create(self.create)
             .auto_sync_threshold(self.auto_sync_threshold)
             .index_defs(self.indexes);
 

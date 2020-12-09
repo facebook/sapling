@@ -154,7 +154,7 @@ mod tests {
 
     use crate::{
         edenapi::{File, Tree},
-        indexedlogdatastore::IndexedLogHgIdDataStore,
+        indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
         localstore::ExtStoredPolicy,
         remotestore::HgIdRemoteStore,
         testutil::*,
@@ -178,6 +178,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
         )?);
 
         // Set up `EdenApiDataStore<File>`.
@@ -216,6 +217,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
         )?);
         let edenapi_trees = remote_trees.datastore(local.clone());
 
@@ -243,6 +245,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
         )?);
 
         // Set up `EdenApiDataStore<Tree>`.
@@ -281,6 +284,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
         )?);
         let edenapi_files = remote_files.datastore(local);
 
@@ -302,6 +306,7 @@ mod tests {
             &tmp,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
         )?);
 
         // Set up `EdenApiDataStore`.

@@ -19,24 +19,27 @@ use configparser::{
     config::ConfigSet,
     hg::{ByteCount, ConfigSetHgExt},
 };
-use indexedlog::{
-    log::IndexOutput,
-    rotate::{OpenOptions, RotateLog},
-    DefaultOpenOptions,
-};
+use indexedlog::log::IndexOutput;
 use lz4_pyframe::{compress, decompress};
 use types::{hgid::ReadHgIdExt, HgId, Key, RepoPath};
 
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
+    indexedlogutil::{Store, StoreOpenOptions},
     localstore::{ExtStoredPolicy, LocalStore},
     repack::ToKeys,
     sliceext::SliceExt,
     types::StoreKey,
 };
 
+#[derive(Clone, Copy)]
+pub enum IndexedLogDataStoreType {
+    Local,
+    Shared,
+}
+
 struct IndexedLogHgIdDataStoreInner {
-    log: RotateLog,
+    log: Store,
 }
 
 pub struct IndexedLogHgIdDataStore {
@@ -103,7 +106,7 @@ impl Entry {
     }
 
     /// Read an entry from the IndexedLog and deserialize it.
-    pub fn from_log(key: &Key, log: &RotateLog) -> Result<Option<Self>> {
+    pub fn from_log(key: &Key, log: &Store) -> Result<Option<Self>> {
         let mut log_entry = log.lookup(0, key.hgid.as_ref().to_vec())?;
         let buf = match log_entry.next() {
             None => return Ok(None),
@@ -114,7 +117,7 @@ impl Entry {
     }
 
     /// Write an entry to the IndexedLog. See [`from_log`] for the detail about the on-disk format.
-    pub fn write_to_log(self, log: &mut RotateLog) -> Result<()> {
+    pub fn write_to_log(self, log: &mut Store) -> Result<()> {
         let mut buf = Vec::new();
         buf.write_all(self.key.hgid.as_ref())?;
         let path_slice = self.key.path.as_byte_slice();
@@ -163,8 +166,32 @@ impl IndexedLogHgIdDataStore {
         path: impl AsRef<Path>,
         extstored_policy: ExtStoredPolicy,
         config: &ConfigSet,
+        store_type: IndexedLogDataStoreType,
     ) -> Result<Self> {
-        let mut open_options = Self::default_open_options();
+        let open_options = IndexedLogHgIdDataStore::open_options(config)?;
+
+        let log = match store_type {
+            IndexedLogDataStoreType::Local => open_options.local(&path),
+            IndexedLogDataStoreType::Shared => open_options.shared(&path),
+        }?;
+
+        Ok(IndexedLogHgIdDataStore {
+            inner: RwLock::new(IndexedLogHgIdDataStoreInner { log }),
+            extstored_policy,
+        })
+    }
+
+    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
+        // Default configuration: 4 x 2.5GB.
+        let mut open_options = StoreOpenOptions::new()
+            .max_log_count(4)
+            .max_bytes_per_log(2500 * 1000 * 1000)
+            .auto_sync_threshold(250 * 1024 * 1024)
+            .create(true)
+            .index("node", |_| {
+                vec![IndexOutput::Reference(0..HgId::len() as u64)]
+            });
+
         if let Some(max_log_count) = config.get_opt::<u8>("indexedlog", "data.max-log-count")? {
             open_options = open_options.max_log_count(max_log_count);
         }
@@ -175,30 +202,11 @@ impl IndexedLogHgIdDataStore {
         } else if let Some(max_bytes_per_log) =
             config.get_opt::<ByteCount>("remotefilelog", "cachelimit")?
         {
-            let log_count: u64 = open_options.max_log_count.max(1).into();
+            let log_count: u64 = open_options.max_log_count.unwrap_or(1).max(1).into();
             open_options =
                 open_options.max_bytes_per_log((max_bytes_per_log.value() / log_count).max(1));
         }
-
-        let log = open_options.open(&path)?;
-        Ok(IndexedLogHgIdDataStore {
-            inner: RwLock::new(IndexedLogHgIdDataStoreInner { log }),
-            extstored_policy,
-        })
-    }
-}
-
-impl DefaultOpenOptions<OpenOptions> for IndexedLogHgIdDataStore {
-    /// Default configuration: 4 x 2.5GB.
-    fn default_open_options() -> OpenOptions {
-        OpenOptions::new()
-            .max_log_count(4)
-            .max_bytes_per_log(2500 * 1000 * 1000)
-            .auto_sync_threshold(Some(250 * 1024 * 1024))
-            .create(true)
-            .index("node", |_| {
-                vec![IndexOutput::Reference(0..HgId::len() as u64)]
-            })
+        Ok(open_options)
     }
 }
 
@@ -306,16 +314,26 @@ mod tests {
     #[test]
     fn test_empty() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())
-            .unwrap();
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
         log.flush().unwrap();
     }
 
     #[test]
     fn test_add() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())
-            .unwrap();
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -331,8 +349,13 @@ mod tests {
     #[test]
     fn test_add_get() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())
-            .unwrap();
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -344,8 +367,13 @@ mod tests {
         log.add(&delta, &metadata).unwrap();
         log.flush().unwrap();
 
-        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())
-            .unwrap();
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
         let read_data = log.get(StoreKey::hgid(delta.key)).unwrap();
         assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), read_data);
     }
@@ -353,8 +381,13 @@ mod tests {
     #[test]
     fn test_lookup_failure() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())
-            .unwrap();
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
 
         let key = StoreKey::hgid(key("a", "1"));
         assert_eq!(log.get(key.clone()).unwrap(), StoreResult::NotFound(key));
@@ -363,7 +396,12 @@ mod tests {
     #[test]
     fn test_add_chain() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())?;
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )?;
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -379,7 +417,12 @@ mod tests {
     #[test]
     fn test_iter() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())?;
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )?;
 
         let k = key("a", "2");
         let delta = Delta {
@@ -397,7 +440,12 @@ mod tests {
     #[test]
     fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())?;
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )?;
 
         let k = key("a", "2");
         let delta = Delta {
@@ -417,7 +465,12 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())?;
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )?;
         let k = key("a", "3");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -436,9 +489,13 @@ mod tests {
     #[test]
     fn test_extstored_ignore() -> Result<()> {
         let tempdir = TempDir::new().unwrap();
-        let log =
-            IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Ignore, &ConfigSet::new())
-                .unwrap();
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Ignore,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -463,8 +520,13 @@ mod tests {
     #[test]
     fn test_extstored_use() -> Result<()> {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())
-            .unwrap();
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),

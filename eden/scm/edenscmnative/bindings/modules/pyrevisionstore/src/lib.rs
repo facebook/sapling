@@ -31,10 +31,10 @@ use revisionstore::{
     repack, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
     DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore,
     HgIdHistoryStore, HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack,
-    HistoryPackStore, HistoryPackVersion, IndexedLogHgIdDataStore, IndexedLogHgIdHistoryStore,
-    LocalStore, MemcacheStore, Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack,
-    MutableHistoryPack, RemoteDataStore, RemoteHistoryStore, RepackKind, RepackLocation, StoreKey,
-    StoreResult,
+    HistoryPackStore, HistoryPackVersion, IndexedLogDataStoreType, IndexedLogHgIdDataStore,
+    IndexedLogHgIdHistoryStore, LocalStore, MemcacheStore, Metadata, MetadataStore,
+    MetadataStoreBuilder, MutableDataPack, MutableHistoryPack, RemoteDataStore, RemoteHistoryStore,
+    RepackKind, RepackLocation, StoreKey, StoreResult,
 };
 use types::{Key, NodeInfo};
 
@@ -365,7 +365,7 @@ py_class!(class indexedlogdatastore |py| {
         let config = config.get_cfg(py);
         indexedlogdatastore::create_instance(
             py,
-            Box::new(IndexedLogHgIdDataStore::new(path.as_path(), ExtStoredPolicy::Ignore, &config).map_pyerr(py)?),
+            Box::new(IndexedLogHgIdDataStore::new(path.as_path(), ExtStoredPolicy::Ignore, &config, IndexedLogDataStoreType::Local).map_pyerr(py)?),
         )
     }
 
@@ -449,6 +449,7 @@ fn make_mutabledeltastore(
             indexedlogpath.as_path(),
             ExtStoredPolicy::Ignore,
             &config,
+            IndexedLogDataStoreType::Local,
         )?)
     } else {
         return Err(format_err!("Foo"));

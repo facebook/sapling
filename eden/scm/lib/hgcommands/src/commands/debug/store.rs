@@ -11,8 +11,8 @@ use super::Result;
 use super::IO;
 use clidispatch::errors;
 use revisionstore::{
-    CorruptionPolicy, DataPackStore, ExtStoredPolicy, HgIdDataStore, IndexedLogHgIdDataStore,
-    StoreKey, StoreResult, UnionHgIdDataStore,
+    CorruptionPolicy, DataPackStore, ExtStoredPolicy, HgIdDataStore, IndexedLogDataStoreType,
+    IndexedLogHgIdDataStore, StoreKey, StoreResult, UnionHgIdDataStore,
 };
 use std::str::FromStr;
 use types::{HgId, Key, RepoPathBuf};
@@ -50,8 +50,15 @@ pub fn run(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Result<u8> {
         ExtStoredPolicy::Use,
     ));
     let fullpath = format!("{}/{}/indexedlogdatastore", cachepath, reponame);
-    let indexedstore =
-        Box::new(IndexedLogHgIdDataStore::new(fullpath, ExtStoredPolicy::Use, &config).unwrap());
+    let indexedstore = Box::new(
+        IndexedLogHgIdDataStore::new(
+            fullpath,
+            ExtStoredPolicy::Use,
+            &config,
+            IndexedLogDataStoreType::Local,
+        )
+        .unwrap(),
+    );
     let mut unionstore: UnionHgIdDataStore<Box<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
     unionstore.add(packstore);
     unionstore.add(indexedstore);

@@ -22,7 +22,6 @@ use configparser::{
     hg::{ByteCount, ConfigSetHgExt},
 };
 use hgtime::HgTime;
-use indexedlog::Repair;
 use types::{Key, RepoPathBuf};
 
 use crate::{
@@ -30,7 +29,7 @@ use crate::{
         strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
         HgIdMutableDeltaStore, Metadata, RemoteDataStore, ReportingRemoteDataStore, StoreResult,
     },
-    indexedlogdatastore::IndexedLogHgIdDataStore,
+    indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
     lfs::{LfsFallbackRemoteStore, LfsMultiplexer, LfsRemote, LfsStore},
     localstore::{ExtStoredPolicy, LocalStore},
     memcache::MemcacheStore,
@@ -74,7 +73,8 @@ impl ContentStore {
         let shared_path = shared_path.as_ref();
         let mut repair_str = String::new();
 
-        repair_str += &IndexedLogHgIdDataStore::repair(get_indexedlogdatastore_path(shared_path)?)?;
+        // Temporarily disabled until the subsequent diff.
+        //repair_str += &IndexedLogHgIdDataStore::repair(get_indexedlogdatastore_path(shared_path)?)?;
         repair_str += &LfsStore::repair(shared_path)?;
 
         Ok(repair_str)
@@ -327,6 +327,7 @@ impl<'a> ContentStoreBuilder<'a> {
             get_indexedlogdatastore_path(&cache_path)?,
             extstored_policy,
             self.config,
+            IndexedLogDataStoreType::Shared,
         )?);
 
         // The shared stores should precede the local one since we expect both the number of blobs,

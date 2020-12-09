@@ -1698,7 +1698,8 @@ mod tests {
     use types::testutil::*;
 
     use crate::{
-        indexedlogdatastore::IndexedLogHgIdDataStore, localstore::ExtStoredPolicy,
+        indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
+        localstore::ExtStoredPolicy,
         testutil::make_lfs_config,
     };
 
@@ -2012,6 +2013,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 10);
@@ -2043,6 +2045,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
@@ -2077,6 +2080,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
@@ -2148,6 +2152,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
         )?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
@@ -2222,6 +2227,7 @@ mod tests {
             &dir,
             ExtStoredPolicy::Ignore,
             &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
         )?);
 
         let blob = Bytes::from(&b"\x01\nTHIS IS A BLOB WITH A HEADER"[..]);
