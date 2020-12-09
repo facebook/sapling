@@ -38,9 +38,19 @@ impl TryFrom<(&str, HashMap<&str, Text>)> for Auth {
             .map(|s| s.to_string())
             .ok_or_else(|| Error::msg("auth prefix missing"))?;
 
-        let cert = settings.get("cert").map(expand_path);
-        let key = settings.get("key").map(expand_path);
-        let cacerts = settings.get("cacerts").map(expand_path);
+        let cert = settings
+            .get("cert")
+            .filter(|s| !s.is_empty())
+            .map(expand_path);
+        let key = settings
+            .get("key")
+            .filter(|s| !s.is_empty())
+            .map(expand_path);
+        let cacerts = settings
+            .get("cacerts")
+            .filter(|s| !s.is_empty())
+            .map(expand_path);
+
         let username = settings.get("username").map(|s| s.to_string());
 
         let schemes = settings
