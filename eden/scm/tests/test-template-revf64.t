@@ -37,3 +37,9 @@ Both the original and the mapped revs can be resolved just fine:
   $ hg log -r 72057594037927936+281474976710657 -T '{desc}\n'
   A
   B
+
+The pattern "ifcontains(rev, revset('.'), ...)" can still be used:
+
+  $ hg up -q $B
+  $ hg log -r . -T "{ifcontains(rev, revset('.'), '@', 'o')}\n"
+  @

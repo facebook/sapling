@@ -917,9 +917,17 @@ def ifcontains(context, mapping, args):
 
     haystack = evalfuncarg(context, mapping, args[1])
     try:
-        needle = evalastype(
-            context, mapping, args[0], getattr(haystack, "keytype", None) or bytes
-        )
+        # Disable revf64 compatibility when calculating needle.
+        # This makes templates like {ifcontains(rev, revset('.'), '@', 'o')}
+        # work with revf64 compatibility.
+        origf64encode = scmutil.revf64encode
+        try:
+            scmutil.revf64encode = lambda rev: rev
+            needle = evalastype(
+                context, mapping, args[0], getattr(haystack, "keytype", None) or bytes
+            )
+        finally:
+            scmutil.revf64encode = origf64encode
         found = needle in haystack
     except error.ParseError:
         found = False
