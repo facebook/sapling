@@ -33,7 +33,7 @@ log = { version = "0.4.8", features = ["kv_unstable"] }
 percent-encoding = "2.1"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_cbor = "0.11"
-serde_json = "1.0"
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
 structopt = "0.3.7"
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
