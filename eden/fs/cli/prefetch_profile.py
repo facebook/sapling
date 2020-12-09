@@ -355,30 +355,40 @@ class ActivateProfileCmd(Subcmd):
 
         instance, checkout, _rel_path = require_checkout(args, checkout)
 
-        activation_result = checkout.activate_profile(args.profile_name)
+        with instance.get_telemetry_logger().new_sample(
+            "prefetch_profile"
+        ) as telemetry_sample:
+            telemetry_sample.add_string("action", "activate")
+            telemetry_sample.add_string("name", args.profile_name)
+            telemetry_sample.add_string("checkout", args.checkout)
+            telemetry_sample.add_bool("skip_prefetch", args.skip_prefetch)
 
-        # error in activation, no point in continuing, so exit early
-        if activation_result:
-            return activation_result
-
-        if not args.skip_prefetch:
-            result = prefetch_profiles(
-                checkout,
-                instance,
-                [args.profile_name],
-                run_in_foreground=args.foreground,
-                enable_prefetch=True,
-                silent=not args.verbose,
-                revisions=None,
-                predict_revisions=False,
+            activation_result = checkout.activate_profile(
+                args.profile_name, telemetry_sample
             )
-            # there will only every be one commit used to query globFiles here,
-            # so no need to list which commit a file is fetched for, it will
-            # be the current commit.
-            if args.verbose and result is not None:
-                print_prefetch_results(result, False)
 
-        return 0
+            # error in activation, no point in continuing, so exit early
+            if activation_result:
+                return activation_result
+
+            if not args.skip_prefetch:
+                result = prefetch_profiles(
+                    checkout,
+                    instance,
+                    [args.profile_name],
+                    run_in_foreground=args.foreground,
+                    enable_prefetch=True,
+                    silent=not args.verbose,
+                    revisions=None,
+                    predict_revisions=False,
+                )
+                # there will only every be one commit used to query globFiles here,
+                # so no need to list which commit a file is fetched for, it will
+                # be the current commit.
+                if args.verbose and result is not None:
+                    print_prefetch_results(result, False)
+
+            return 0
 
 
 @prefetch_profile_cmd(

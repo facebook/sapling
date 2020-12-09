@@ -1011,7 +1011,9 @@ class EdenCheckout:
         repo_path = self.get_config().backing_repo
         return self.instance.get_hg_repo(repo_path)
 
-    def activate_profile(self, profile) -> int:
+    def activate_profile(
+        self, profile: str, telemetry_sample: telemetry.TelemetrySample
+    ) -> int:
         """Add a profile to the config (read the config file and write it back
         with profile added). Returns 0 on sucess and anything else on failure.
         Note this should print information on why it failed if this is not
@@ -1021,6 +1023,7 @@ class EdenCheckout:
         old_active_profiles = old_config.active_prefetch_profiles
         if profile in old_active_profiles:
             print(f"Profile {profile} already activated.")
+            telemetry_sample.fail(f"Profile {profile} already activated.")
             return 1
 
         new_active_profiles = old_active_profiles.copy()
