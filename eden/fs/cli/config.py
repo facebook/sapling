@@ -1040,7 +1040,9 @@ class EdenCheckout:
         self.save_config(new_config)
         return 0
 
-    def deactivate_profile(self, profile) -> int:
+    def deactivate_profile(
+        self, profile: str, telemetry_sample: telemetry.TelemetrySample
+    ) -> int:
         """Remove a profile to the config (read the config file and write it back
         with profile added). Returns 0 on sucess and anything else on failure.
         Note this should print information on why it failed if this is not
@@ -1049,7 +1051,8 @@ class EdenCheckout:
         old_config = self.get_config()
         old_active_profiles = old_config.active_prefetch_profiles
         if profile not in old_active_profiles:
-            print(f"Profile {profile} was not activated.")
+            print(f"Profile {profile} was not active.")
+            telemetry_sample.fail(f"Profile {profile} was not active.")
             return 1
 
         new_active_profiles = old_active_profiles.copy()

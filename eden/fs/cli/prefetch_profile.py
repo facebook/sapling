@@ -410,7 +410,14 @@ class DeactivateProfileCmd(Subcmd):
 
         instance, checkout, _rel_path = require_checkout(args, checkout)
 
-        return checkout.deactivate_profile(args.profile_name)
+        with instance.get_telemetry_logger().new_sample(
+            "prefetch_profile"
+        ) as telemetry_sample:
+            telemetry_sample.add_string("action", "deactivate")
+            telemetry_sample.add_string("name", args.profile_name)
+            telemetry_sample.add_string("checkout", args.checkout)
+
+            return checkout.deactivate_profile(args.profile_name, telemetry_sample)
 
 
 @prefetch_profile_cmd(
