@@ -16,12 +16,11 @@ use configparser::{
     config::ConfigSet,
     hg::{ByteCount, ConfigSetHgExt},
 };
-use indexedlog::Repair;
 use types::{Key, NodeInfo};
 
 use crate::{
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
-    indexedloghistorystore::IndexedLogHgIdHistoryStore,
+    indexedloghistorystore::{IndexedLogHgIdHistoryStore, IndexedLogHistoryStoreType},
     localstore::LocalStore,
     memcache::MemcacheStore,
     multiplexstore::MultiplexHgIdHistoryStore,
@@ -58,10 +57,25 @@ impl MetadataStore {
     ///
     /// As this may violate some of the stores asumptions, care must be taken to call this only
     /// when no other `MetadataStore` have been created for the `shared_path`.
-    pub fn repair(shared_path: impl AsRef<Path>) -> Result<String> {
-        Ok(IndexedLogHgIdHistoryStore::repair(
+    pub fn repair(
+        shared_path: impl AsRef<Path>,
+        local_path: Option<impl AsRef<Path>>,
+        config: &ConfigSet,
+    ) -> Result<String> {
+        let mut repair_str = String::new();
+        repair_str += &IndexedLogHgIdHistoryStore::repair(
             get_indexedloghistorystore_path(shared_path)?,
-        )?)
+            config,
+            IndexedLogHistoryStoreType::Shared,
+        )?;
+        if let Some(local_path) = local_path {
+            repair_str += &IndexedLogHgIdHistoryStore::repair(
+                get_indexedloghistorystore_path(local_path)?,
+                config,
+                IndexedLogHistoryStoreType::Local,
+            )?;
+        }
+        Ok(repair_str)
     }
 }
 
@@ -225,6 +239,7 @@ impl<'a> MetadataStoreBuilder<'a> {
         let shared_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
             get_indexedloghistorystore_path(&cache_path)?,
             &self.config,
+            IndexedLogHistoryStoreType::Shared,
         )?);
 
         // The shared store should precede the local one for 2 reasons:

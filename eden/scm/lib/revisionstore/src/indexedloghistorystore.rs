@@ -19,11 +19,7 @@ use configparser::{
     config::ConfigSet,
     hg::{ByteCount, ConfigSetHgExt},
 };
-use indexedlog::{
-    log::IndexOutput,
-    rotate::{OpenOptions, RotateLog},
-    DefaultOpenOptions,
-};
+use indexedlog::log::IndexOutput;
 use types::{
     hgid::{ReadHgIdExt, WriteHgIdExt},
     HgId, Key, NodeInfo, RepoPath, RepoPathBuf,
@@ -31,14 +27,21 @@ use types::{
 
 use crate::{
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
+    indexedlogutil::{Store, StoreOpenOptions},
     localstore::LocalStore,
     repack::ToKeys,
     sliceext::SliceExt,
     types::StoreKey,
 };
 
+#[derive(Clone, Copy)]
+pub enum IndexedLogHistoryStoreType {
+    Local,
+    Shared,
+}
+
 struct IndexedLogHgIdHistoryStoreInner {
-    log: RotateLog,
+    log: Store,
 }
 
 pub struct IndexedLogHgIdHistoryStore {
@@ -140,7 +143,7 @@ impl Entry {
     }
 
     /// Read an entry from the `IndexedLog` and deserialize it.
-    pub fn from_log(key: &Key, log: &RotateLog) -> Result<Option<Self>> {
+    pub fn from_log(key: &Key, log: &Store) -> Result<Option<Self>> {
         let index_key = Self::key_to_index_key(key);
         let mut log_entry = log.lookup(0, index_key)?;
         let buf = match log_entry.next() {
@@ -153,7 +156,7 @@ impl Entry {
 
     /// Write an entry to the `IndexedLog`. See [`from_slice`] for the detail about the on-disk
     /// format.
-    pub fn write_to_log(self, log: &mut RotateLog) -> Result<()> {
+    pub fn write_to_log(self, log: &mut Store) -> Result<()> {
         let mut buf = Vec::new();
         buf.write_all(Self::key_to_index_key(&self.key).as_ref())?;
         let path_slice = self.key.path.as_byte_slice();
@@ -191,8 +194,31 @@ impl Entry {
 
 impl IndexedLogHgIdHistoryStore {
     /// Create or open an `IndexedLogHgIdHistoryStore`.
-    pub fn new(path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
-        let mut open_options = Self::default_open_options();
+    pub fn new(
+        path: impl AsRef<Path>,
+        config: &ConfigSet,
+        store_type: IndexedLogHistoryStoreType,
+    ) -> Result<Self> {
+        let open_options = Self::open_options(config)?;
+        let log = match store_type {
+            IndexedLogHistoryStoreType::Local => open_options.local(&path),
+            IndexedLogHistoryStoreType::Shared => open_options.shared(&path),
+        }?;
+        Ok(IndexedLogHgIdHistoryStore {
+            inner: RwLock::new(IndexedLogHgIdHistoryStoreInner { log }),
+        })
+    }
+
+    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
+        let mut open_options = StoreOpenOptions::new()
+            .max_log_count(4)
+            .max_bytes_per_log(500 * 1000 * 1000)
+            .auto_sync_threshold(250 * 1024 * 1024)
+            .create(true)
+            .index("node_and_path", |_| {
+                vec![IndexOutput::Reference(0..(HgId::len() * 2) as u64)]
+            });
+
         if let Some(max_bytes_per_log) =
             config.get_opt::<ByteCount>("indexedlog", "history.max-bytes-per-log")?
         {
@@ -201,24 +227,22 @@ impl IndexedLogHgIdHistoryStore {
         if let Some(max_log_count) = config.get_opt::<u8>("indexedlog", "history.max-log-count")? {
             open_options = open_options.max_log_count(max_log_count);
         }
-        let log = open_options.open(&path)?;
-        Ok(IndexedLogHgIdHistoryStore {
-            inner: RwLock::new(IndexedLogHgIdHistoryStoreInner { log }),
-        })
+        Ok(open_options)
     }
-}
 
-impl DefaultOpenOptions<OpenOptions> for IndexedLogHgIdHistoryStore {
-    /// Default configuration: 4 x 0.5GB.
-    fn default_open_options() -> OpenOptions {
-        OpenOptions::new()
-            .max_log_count(4)
-            .max_bytes_per_log(500 * 1000 * 1000)
-            .auto_sync_threshold(Some(250 * 1024 * 1024))
-            .create(true)
-            .index("node_and_path", |_| {
-                vec![IndexOutput::Reference(0..(HgId::len() * 2) as u64)]
-            })
+    pub fn repair(
+        path: PathBuf,
+        config: &ConfigSet,
+        store_type: IndexedLogHistoryStoreType,
+    ) -> Result<String> {
+        match store_type {
+            IndexedLogHistoryStoreType::Local => {
+                IndexedLogHgIdHistoryStore::open_options(config)?.repair_local(path)
+            }
+            IndexedLogHistoryStoreType::Shared => {
+                IndexedLogHgIdHistoryStore::open_options(config)?.repair_shared(path)
+            }
+        }
     }
 }
 
@@ -297,7 +321,11 @@ mod tests {
     #[test]
     fn test_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
+        let log = IndexedLogHgIdHistoryStore::new(
+            &tempdir,
+            &ConfigSet::new(),
+            IndexedLogHistoryStoreType::Shared,
+        )?;
         log.flush()?;
         Ok(())
     }
@@ -305,7 +333,11 @@ mod tests {
     #[test]
     fn test_add() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
+        let log = IndexedLogHgIdHistoryStore::new(
+            &tempdir,
+            &ConfigSet::new(),
+            IndexedLogHistoryStoreType::Shared,
+        )?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
@@ -320,7 +352,11 @@ mod tests {
     #[test]
     fn test_add_get_node_info() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
+        let log = IndexedLogHgIdHistoryStore::new(
+            &tempdir,
+            &ConfigSet::new(),
+            IndexedLogHistoryStoreType::Shared,
+        )?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
@@ -329,7 +365,11 @@ mod tests {
         log.add(&k, &nodeinfo)?;
         log.flush()?;
 
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
+        let log = IndexedLogHgIdHistoryStore::new(
+            &tempdir,
+            &ConfigSet::new(),
+            IndexedLogHistoryStoreType::Shared,
+        )?;
         let read_nodeinfo = log.get_node_info(&k)?;
         assert_eq!(Some(nodeinfo), read_nodeinfo);
         Ok(())
@@ -338,7 +378,11 @@ mod tests {
     #[test]
     fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
+        let log = IndexedLogHgIdHistoryStore::new(
+            &tempdir,
+            &ConfigSet::new(),
+            IndexedLogHistoryStoreType::Shared,
+        )?;
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
 
         let nodes = get_nodes(&mut rng);
@@ -354,7 +398,11 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
+        let log = IndexedLogHgIdHistoryStore::new(
+            &tempdir,
+            &ConfigSet::new(),
+            IndexedLogHistoryStoreType::Shared,
+        )?;
         for (key, info) in nodes.iter() {
             log.add(&key, &info)?;
         }
@@ -367,7 +415,11 @@ mod tests {
     #[test]
     fn test_iter() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdHistoryStore::new(&tempdir, &ConfigSet::new())?;
+        let log = IndexedLogHgIdHistoryStore::new(
+            &tempdir,
+            &ConfigSet::new(),
+            IndexedLogHistoryStoreType::Shared,
+        )?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],

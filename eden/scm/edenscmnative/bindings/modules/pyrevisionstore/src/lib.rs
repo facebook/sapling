@@ -32,9 +32,9 @@ use revisionstore::{
     DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore,
     HgIdHistoryStore, HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack,
     HistoryPackStore, HistoryPackVersion, IndexedLogDataStoreType, IndexedLogHgIdDataStore,
-    IndexedLogHgIdHistoryStore, LocalStore, MemcacheStore, Metadata, MetadataStore,
-    MetadataStoreBuilder, MutableDataPack, MutableHistoryPack, RemoteDataStore, RemoteHistoryStore,
-    RepackKind, RepackLocation, StoreKey, StoreResult,
+    IndexedLogHgIdHistoryStore, IndexedLogHistoryStoreType, LocalStore, MemcacheStore, Metadata,
+    MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableHistoryPack, RemoteDataStore,
+    RemoteHistoryStore, RepackKind, RepackLocation, StoreKey, StoreResult,
 };
 use types::{Key, NodeInfo};
 
@@ -151,7 +151,11 @@ fn repair(
             local_path.map(|p| p.as_path()),
             &config,
         )?;
-        MetadataStore::repair(shared_path.as_path())
+        MetadataStore::repair(
+            shared_path.as_path(),
+            local_path.map(|p| p.as_path()),
+            &config,
+        )
     })
     .map_pyerr(py)
     .map(Into::into)
@@ -429,7 +433,7 @@ py_class!(class indexedloghistorystore |py| {
         let config = config.get_cfg(py);
         indexedloghistorystore::create_instance(
             py,
-            Box::new(IndexedLogHgIdHistoryStore::new(path.as_path(), &config).map_pyerr(py)?),
+            Box::new(IndexedLogHgIdHistoryStore::new(path.as_path(), &config, IndexedLogHistoryStoreType::Local).map_pyerr(py)?),
         )
     }
 
