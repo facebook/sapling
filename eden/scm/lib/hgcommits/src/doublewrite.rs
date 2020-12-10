@@ -86,7 +86,7 @@ impl StripCommits for DoubleWriteCommits {
     }
 }
 
-delegate!(IdConvert | PrefixLookup | DagAlgorithm | ToIdSet | ToSet, DoubleWriteCommits => self.commits);
+delegate!(IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, DoubleWriteCommits => self.commits);
 
 impl DescribeBackend for DoubleWriteCommits {
     fn algorithm_backend(&self) -> &'static str {

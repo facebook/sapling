@@ -120,7 +120,7 @@ impl StripCommits for MemHgCommits {
     }
 }
 
-delegate!(IdConvert | PrefixLookup | DagAlgorithm | ToIdSet | ToSet, MemHgCommits => self.dag);
+delegate!(IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, MemHgCommits => self.dag);
 
 impl DescribeBackend for MemHgCommits {
     fn algorithm_backend(&self) -> &'static str {

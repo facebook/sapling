@@ -126,6 +126,14 @@ macro_rules! delegate {
         }
     };
 
+    (IdMapSnapshot, $type:ty => self.$($t:tt)*) => {
+        impl $crate::ops::IdMapSnapshot for $type {
+            fn id_map_snapshot(&self) -> $crate::Result<std::sync::Arc<dyn $crate::ops::IdConvert + Send + Sync>> {
+                self.$($t)*.id_map_snapshot()
+            }
+        }
+    };
+
     ($name:ident | $name2:ident $(| $name3:ident )*, $type:ty => self.$($t:tt)*) => {
         delegate!($name, $type => self.$($t)*);
         delegate!($name2 $(| $name3 )*, $type => self.$($t)*);

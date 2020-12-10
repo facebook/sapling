@@ -123,7 +123,7 @@ impl StripCommits for RevlogCommits {
     }
 }
 
-delegate!(IdConvert | PrefixLookup | DagAlgorithm | ToIdSet | ToSet, RevlogCommits => self.revlog);
+delegate!(IdConvert | IdMapSnapshot | PrefixLookup | DagAlgorithm, RevlogCommits => self.revlog);
 
 impl DescribeBackend for RevlogCommits {
     fn algorithm_backend(&self) -> &'static str {
