@@ -11,19 +11,39 @@
 macro_rules! delegate {
     {IdConvert { impl $($impl:tt)* } => self.$($t:tt)*} => {
         impl $($impl)* {
-            fn vertex_id(&self, name: $crate::Vertex) -> $crate::Result<$crate::Id> {
+            fn vertex_id<'a: 's, 's>(&'a self, name: $crate::Vertex)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Id>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.vertex_id(name)
             }
-            fn vertex_id_with_max_group(&self, name: &$crate::Vertex, max_group: $crate::Group) -> $crate::Result<Option<$crate::Id>> {
+            fn vertex_id_with_max_group<'a: 's, 'b: 's, 's>(&'a self, name: &'b $crate::Vertex, max_group: $crate::Group)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<Option<$crate::Id>>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.vertex_id_with_max_group(name, max_group)
             }
-            fn vertex_name(&self, id: $crate::Id) -> $crate::Result<$crate::Vertex> {
+            fn vertex_name<'a: 's, 's>(&'a self, id: $crate::Id)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Vertex>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.vertex_name(id)
             }
-            fn contains_vertex_name(&self, name: &$crate::Vertex) -> $crate::Result<bool> {
+            fn contains_vertex_name<'a: 's, 'b: 's, 's>(&'a self, name: &'b $crate::Vertex)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<bool>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.contains_vertex_name(name)
             }
-            fn vertex_id_optional(&self, name: &$crate::Vertex) -> $crate::Result<Option<$crate::Id>> {
+            fn vertex_id_optional<'a: 's, 'b: 's, 's>(&'a self, name: &'b $crate::Vertex)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<Option<$crate::Id>>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.vertex_id_with_max_group(name, $crate::Group::NON_MASTER)
             }
         }

@@ -85,7 +85,11 @@ impl TestDag {
     /// Render the graph.
     pub fn render_graph(&self) -> String {
         render_namedag(&self.dag, |v| {
-            Some(self.dag.vertex_id(v.clone()).unwrap().to_string())
+            Some(
+                non_blocking_result(self.dag.vertex_id(v.clone()))
+                    .unwrap()
+                    .to_string(),
+            )
         })
         .unwrap()
     }
@@ -94,8 +98,8 @@ impl TestDag {
         // All vertexes should be accessible, and round-trip through IdMap.
         for v in non_blocking_result(self.dag.all()).unwrap().iter().unwrap() {
             let v = v.unwrap();
-            let id = self.dag.vertex_id(v.clone()).unwrap();
-            let v2 = self.dag.vertex_name(id).unwrap();
+            let id = non_blocking_result(self.dag.vertex_id(v.clone())).unwrap();
+            let v2 = non_blocking_result(self.dag.vertex_name(id)).unwrap();
             assert_eq!(v, v2);
         }
     }

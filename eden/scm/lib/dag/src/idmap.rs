@@ -15,6 +15,7 @@ use crate::locked::Locked;
 use crate::ops::IdConvert;
 use crate::segment::PreparedFlatSegments;
 use crate::Result;
+use nonblocking::non_blocking_result;
 
 mod indexedlog_idmap;
 mod mem_idmap;
@@ -111,7 +112,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                 Visit(head) => {
                     // If the id was not assigned, or was assigned to a higher group,
                     // (re-)assign it to this group.
-                    match self.vertex_id_with_max_group(&head, group)? {
+                    match self.vertex_id_with_max_group(&head, group).await? {
                         None => {
                             let parents = parents_by_name(head.clone())?;
                             todo_stack.push(Todo::Assign(head, parents.len()));
@@ -119,7 +120,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                             // (re-)assign the parent to this group.
                             // "rev" is the "optimization"
                             for p in parents.into_iter().rev() {
-                                match self.vertex_id_with_max_group(&p, group) {
+                                match self.vertex_id_with_max_group(&p, group).await {
                                     Ok(Some(id)) => todo_stack.push(Todo::AssignedId(id)),
                                     _ => todo_stack.push(Todo::Visit(p)),
                                 }
@@ -133,7 +134,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                 }
                 Assign(head, parent_len) => {
                     let parent_start = parent_ids.len() - parent_len;
-                    let id = match self.vertex_id_with_max_group(&head, group)? {
+                    let id = match self.vertex_id_with_max_group(&head, group).await? {
                         Some(id) => id,
                         None => {
                             let id = self.next_free_id(group)?;
@@ -166,16 +167,18 @@ pub trait IdMapBuildParents: IdConvert {
         get_parents_by_name: &'a dyn Fn(VertexName) -> Result<Vec<VertexName>>,
     ) -> Box<dyn Fn(Id) -> Result<Vec<Id>> + 'a> {
         let func = move |id: Id| -> Result<Vec<Id>> {
-            let name = self.vertex_name(id)?;
+            // XXX: Consider remove build_get_parents_by_id and build_segments_volatile
+            // based on parent function.
+            let name = non_blocking_result(self.vertex_name(id))?;
             let parent_names: Vec<VertexName> = get_parents_by_name(name.clone())?;
             let mut result = Vec::with_capacity(parent_names.len());
             for parent_name in parent_names {
-                let parent_id = self.vertex_id(parent_name)?;
+                let parent_id = non_blocking_result(self.vertex_id(parent_name))?;
                 if parent_id >= id {
                     return programming(format!(
                         "parent {} {:?} should <= {} {:?}",
                         parent_id,
-                        self.vertex_name(parent_id)?,
+                        non_blocking_result(self.vertex_name(parent_id)).ok(),
                         id,
                         &name
                     ));

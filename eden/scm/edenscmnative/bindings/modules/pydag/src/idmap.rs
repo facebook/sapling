@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use async_runtime::block_on_exclusive as block_on;
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use dag::ops::IdConvert;
@@ -23,7 +24,7 @@ py_class!(pub class idmap |py| {
         if id == -1 {
             Ok(PyBytes::new(py, &NULL_NODE))
         } else {
-            let v = self.map(py).vertex_name(Id(id as u64)).map_pyerr(py)?;
+            let v = block_on(self.map(py).vertex_name(Id(id as u64))).map_pyerr(py)?;
             Ok(PyBytes::new(py, v.as_ref()))
         }
     }
@@ -34,7 +35,7 @@ py_class!(pub class idmap |py| {
         if node == &NULL_NODE {
             Ok(-1)
         } else {
-            let id = self.map(py).vertex_id(Vertex::copy_from(node)).map_pyerr(py)?;
+            let id = block_on(self.map(py).vertex_id(Vertex::copy_from(node))).map_pyerr(py)?;
             Ok(id.0 as i64)
         }
     }
@@ -68,7 +69,7 @@ py_class!(pub class idmap |py| {
             Ok(true)
         } else {
             let name = Vertex::copy_from(node);
-            Ok(self.map(py).contains_vertex_name(&name).map_pyerr(py)?)
+            Ok(block_on(self.map(py).contains_vertex_name(&name)).map_pyerr(py)?)
         }
     }
 });

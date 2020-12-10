@@ -44,15 +44,20 @@ impl Clone for MemIdMap {
     }
 }
 
+#[async_trait::async_trait]
 impl IdConvert for MemIdMap {
-    fn vertex_id(&self, name: VertexName) -> Result<Id> {
+    async fn vertex_id(&self, name: VertexName) -> Result<Id> {
         let id = self
             .name2id
             .get(&name)
             .ok_or_else(|| name.not_found_error())?;
         Ok(*id)
     }
-    fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>> {
+    async fn vertex_id_with_max_group(
+        &self,
+        name: &VertexName,
+        max_group: Group,
+    ) -> Result<Option<Id>> {
         let optional_id = self.name2id.get(name).and_then(|id| {
             if id.group() <= max_group {
                 Some(*id)
@@ -62,11 +67,11 @@ impl IdConvert for MemIdMap {
         });
         Ok(optional_id)
     }
-    fn vertex_name(&self, id: Id) -> Result<VertexName> {
+    async fn vertex_name(&self, id: Id) -> Result<VertexName> {
         let name = self.id2name.get(&id).ok_or_else(|| id.not_found_error())?;
         Ok(name.clone())
     }
-    fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
+    async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
         Ok(self.name2id.contains_key(name))
     }
 }

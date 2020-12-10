@@ -281,7 +281,7 @@ impl NameSet {
         }
         let mut ids = Vec::with_capacity(self.count()?);
         for vertex in self.iter()? {
-            let id = id_map.vertex_id(vertex?)?;
+            let id = id_map.vertex_id(vertex?).await?;
             ids.push(id);
         }
         ids.sort_unstable_by_key(|i| u64::MAX - i.0);

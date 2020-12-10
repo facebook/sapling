@@ -309,19 +309,24 @@ impl fmt::Debug for IdMap {
     }
 }
 
+#[async_trait::async_trait]
 impl IdConvert for IdMap {
-    fn vertex_id(&self, name: VertexName) -> Result<Id> {
+    async fn vertex_id(&self, name: VertexName) -> Result<Id> {
         self.find_id_by_name(name.as_ref())?
             .ok_or_else(|| name.not_found_error())
     }
-    fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>> {
+    async fn vertex_id_with_max_group(
+        &self,
+        name: &VertexName,
+        max_group: Group,
+    ) -> Result<Option<Id>> {
         self.find_id_by_name_with_max_group(name.as_ref(), max_group)
     }
-    fn vertex_name(&self, id: Id) -> Result<VertexName> {
+    async fn vertex_name(&self, id: Id) -> Result<VertexName> {
         self.find_vertex_name_by_id(id)?
             .ok_or_else(|| id.not_found_error())
     }
-    fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
+    async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
         Ok(self.find_id_by_name(name.as_ref())?.is_some())
     }
 }

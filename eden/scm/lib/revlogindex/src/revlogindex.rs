@@ -33,6 +33,7 @@ use indexedlog::lock::ScopedDirLock;
 use indexedlog::utils::atomic_write_plain;
 use indexedlog::utils::mmap_bytes;
 use minibytes::Bytes;
+use nonblocking::non_blocking_result;
 use parking_lot::Mutex;
 use parking_lot::RwLock;
 use std::collections::BTreeMap;
@@ -592,7 +593,7 @@ impl RevlogIndex {
 
     /// Insert a new revision with given parents at the end.
     pub fn insert(&mut self, node: Vertex, parents: Vec<u32>, raw_data: Bytes) {
-        if self.contains_vertex_name(&node).unwrap_or(false) {
+        if non_blocking_result(self.contains_vertex_name(&node)).unwrap_or(false) {
             return;
         }
         let p1 = parents.get(0).map(|r| *r as i32).unwrap_or(-1);
@@ -614,10 +615,15 @@ impl RevlogIndex {
             let parent_nodes = parent_revs
                 .as_revs()
                 .iter()
-                .map(|&rev| self.vertex_name(Id(rev as _)).unwrap().as_ref().to_vec())
+                .map(|&rev| {
+                    non_blocking_result(self.vertex_name(Id(rev as _)))
+                        .unwrap()
+                        .as_ref()
+                        .to_vec()
+                })
                 .collect::<Vec<_>>();
             let rev = self.data_len() + i;
-            let node = self.vertex_name(Id(rev as _)).unwrap();
+            let node = non_blocking_result(self.vertex_name(Id(rev as _))).unwrap();
             result.insert(node.as_ref().to_vec(), parent_nodes);
         }
         Ok(result)
@@ -914,8 +920,9 @@ impl PrefixLookup for RevlogIndex {
     }
 }
 
+#[async_trait::async_trait]
 impl IdConvert for RevlogIndex {
-    fn vertex_id(&self, vertex: Vertex) -> dag::Result<Id> {
+    async fn vertex_id(&self, vertex: Vertex) -> dag::Result<Id> {
         if let Some(pending_id) = self.pending_nodes_index.get(&vertex) {
             Ok(Id((pending_id + self.data_len()) as _))
         } else if let Some(id) = self.nodemap.node_to_rev(vertex.as_ref())? {
@@ -924,7 +931,7 @@ impl IdConvert for RevlogIndex {
             vertex.not_found()
         }
     }
-    fn vertex_id_with_max_group(
+    async fn vertex_id_with_max_group(
         &self,
         vertex: &Vertex,
         _max_group: Group,
@@ -938,7 +945,7 @@ impl IdConvert for RevlogIndex {
             Ok(None)
         }
     }
-    fn vertex_name(&self, id: Id) -> dag::Result<Vertex> {
+    async fn vertex_name(&self, id: Id) -> dag::Result<Vertex> {
         let rev = id.0 as usize;
         if rev < self.data_len() {
             Ok(Vertex::from(self.data()[rev].node.as_ref().to_vec()))
@@ -949,7 +956,7 @@ impl IdConvert for RevlogIndex {
             }
         }
     }
-    fn contains_vertex_name(&self, vertex: &Vertex) -> dag::Result<bool> {
+    async fn contains_vertex_name(&self, vertex: &Vertex) -> dag::Result<bool> {
         if let Some(_pending_id) = self.pending_nodes_index.get(vertex) {
             Ok(true)
         } else if let Some(_id) = self.nodemap.node_to_rev(vertex.as_ref())? {
@@ -969,7 +976,7 @@ impl DagAlgorithm for RevlogIndex {
         } else {
             let mut spans = IdSet::empty();
             for name in set.iter()? {
-                let id = self.vertex_id(name?)?;
+                let id = self.vertex_id(name?).await?;
                 spans.push(id);
             }
             let result = Set::from_spans_dag(spans, self)?;
@@ -979,12 +986,12 @@ impl DagAlgorithm for RevlogIndex {
 
     /// Get ordered parent vertexes.
     async fn parent_names(&self, name: Vertex) -> dag::Result<Vec<Vertex>> {
-        let rev = self.vertex_id(name)?.0 as u32;
+        let rev = self.vertex_id(name).await?.0 as u32;
         let parent_revs = self.parent_revs(rev)?;
         let parent_revs = parent_revs.as_revs();
         let mut result = Vec::with_capacity(parent_revs.len());
         for &rev in parent_revs {
-            result.push(self.vertex_name(Id(rev as _))?);
+            result.push(self.vertex_name(Id(rev as _)).await?);
         }
         Ok(result)
     }
@@ -1171,7 +1178,7 @@ impl DagAlgorithm for RevlogIndex {
         if revs.is_empty() {
             Ok(None)
         } else {
-            Ok(Some(self.vertex_name(Id(revs[0] as _))?))
+            Ok(Some(self.vertex_name(Id(revs[0] as _)).await?))
         }
     }
 
@@ -1196,8 +1203,8 @@ impl DagAlgorithm for RevlogIndex {
 
     /// Tests if `ancestor` is an ancestor of `descendant`.
     async fn is_ancestor(&self, ancestor: Vertex, descendant: Vertex) -> dag::Result<bool> {
-        let ancestor_rev = self.vertex_id(ancestor)?.0 as u32;
-        let descendant_rev = self.vertex_id(descendant)?.0 as u32;
+        let ancestor_rev = self.vertex_id(ancestor).await?.0 as u32;
+        let descendant_rev = self.vertex_id(descendant).await?.0 as u32;
         if ancestor_rev == descendant_rev {
             return Ok(true);
         }
@@ -1484,7 +1491,7 @@ impl DagAlgorithm for RevlogIndex {
 
         let eval_contains = evaluate.clone();
         let is_public = move |_: &MetaSet, v: &Vertex| -> dag::Result<bool> {
-            let id = match dag.vertex_id(v.clone()) {
+            let id = match non_blocking_result(dag.vertex_id(v.clone())) {
                 Ok(id) => id,
                 Err(DagError::VertexNotFound(_)) => return Ok(false),
                 Err(e) => {
@@ -1644,15 +1651,15 @@ impl RevlogIndex {
 
         // Update IdMap. Keep track of what heads are added.
         for head in heads.iter() {
-            if !self.contains_vertex_name(&head)? {
+            if !non_blocking_result(self.contains_vertex_name(&head))? {
                 let parents = parents_func(head.clone())?;
                 for parent in parents.iter() {
                     self.add_heads_for_testing(parents_func, &[parent.clone()])?;
                 }
-                if !self.contains_vertex_name(&head)? {
+                if !non_blocking_result(self.contains_vertex_name(&head))? {
                     let parent_revs: Vec<u32> = parents
                         .iter()
-                        .map(|p| self.vertex_id(p.clone()).unwrap().0 as u32)
+                        .map(|p| non_blocking_result(self.vertex_id(p.clone())).unwrap().0 as u32)
                         .collect();
                     if parent_revs.len() > 2 {
                         return Err(Error::Unsupported(format!(
@@ -2039,8 +2046,8 @@ commit 3"#
         assert_eq!(r(revlog3.vertexes_by_hex_prefix(b"0303", 2))?, vec![v(3)]);
 
         // Id - Vertex.
-        assert_eq!(revlog3.vertex_name(Id(2))?, v(3));
-        assert_eq!(revlog3.vertex_id(v(3))?, Id(2));
+        assert_eq!(r(revlog3.vertex_name(Id(2)))?, v(3));
+        assert_eq!(r(revlog3.vertex_id(v(3)))?, Id(2));
 
         // Read commit data.
         let read = |rev: u32| -> Result<String> {

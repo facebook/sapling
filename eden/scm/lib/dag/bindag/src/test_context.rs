@@ -95,7 +95,7 @@ impl<T: AsRef<[usize]> + Send + Sync> GeneralTestContext<T> {
             .unwrap()
             .map(|name| {
                 let name = name.unwrap();
-                let dag_id: Id = dag.vertex_id(name.clone()).unwrap();
+                let dag_id: Id = non_blocking_result(dag.vertex_id(name.clone())).unwrap();
                 let plain_id: usize = std::str::from_utf8(name.as_ref()).unwrap().parse().unwrap();
                 (dag_id, plain_id)
             })

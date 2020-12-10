@@ -39,6 +39,7 @@ use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
 use crate::spanset::SpanSet;
 use crate::Result;
+use futures::future::join_all;
 use futures::future::BoxFuture;
 use nonblocking::non_blocking_result;
 use parking_lot::RwLock;
@@ -111,16 +112,6 @@ where
                 &self.pending_heads,
             ));
         }
-        // Already include specified nodes?
-        if master_names
-            .iter()
-            .all(|n| is_ok_some(self.map.vertex_id_with_max_group(n, Group::MASTER)))
-            && non_master_names
-                .iter()
-                .all(|n| self.map.contains_vertex_name(n).unwrap_or(false))
-        {
-            return Ok(());
-        }
 
         // Take lock.
         //
@@ -154,7 +145,7 @@ where
     async fn flush(&mut self, master_heads: &[VertexName]) -> Result<()> {
         // Sanity check.
         for head in master_heads.iter() {
-            if !self.map.contains_vertex_name(head)? {
+            if !self.map.contains_vertex_name(head).await? {
                 return head.not_found();
             }
         }
@@ -223,7 +214,7 @@ where
         // Update IdMap. Keep track of what heads are added.
         let mut outcome = PreparedFlatSegments::default();
         for head in heads.iter() {
-            if !self.map.contains_vertex_name(head)? {
+            if !self.map.contains_vertex_name(head).await? {
                 outcome.merge(self.map.assign_head(head.clone(), &parents, group).await?);
                 self.pending_heads.push(head.clone());
             }
@@ -332,7 +323,7 @@ where
             let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
             let mut spans = SpanSet::empty();
             for name in set.iter()? {
-                let id = self.map().vertex_id(name?)?;
+                let id = self.map().vertex_id(name?).await?;
                 spans.push(id);
             }
             let result = NameSet::from_spans_dag(spans, self)?;
@@ -343,12 +334,13 @@ where
 
     /// Get ordered parent vertexes.
     async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
-        let id = self.map().vertex_id(name)?;
-        self.dag()
-            .parent_ids(id)?
-            .into_iter()
-            .map(|id| self.map().vertex_name(id))
-            .collect()
+        let id = self.map().vertex_id(name).await?;
+        let parent_ids = self.dag().parent_ids(id)?;
+        let mut result = Vec::with_capacity(parent_ids.len());
+        for id in parent_ids {
+            result.push(self.map().vertex_name(id).await?);
+        }
+        Ok(result)
     }
 
     /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
@@ -394,9 +386,9 @@ where
     async fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<VertexName> {
         #[cfg(test)]
         let name2 = name.clone();
-        let id = self.map().vertex_id(name)?;
+        let id = self.map().vertex_id(name).await?;
         let id = self.dag().first_ancestor_nth(id, n)?;
-        let result = self.map().vertex_name(id)?;
+        let result = self.map().vertex_name(id).await?;
         #[cfg(test)]
         {
             let result2 = crate::default_impl::first_ancestor_nth(self, name2, n).await?;
@@ -450,7 +442,7 @@ where
     async fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
         let result: Option<VertexName> = match self.dag().gca_one(self.to_id_set(&set).await?)? {
             None => None,
-            Some(id) => Some(self.map().vertex_name(id)?),
+            Some(id) => Some(self.map().vertex_name(id).await?),
         };
         #[cfg(test)]
         {
@@ -488,8 +480,8 @@ where
         #[cfg(test)]
         let result2 =
             crate::default_impl::is_ancestor(self, ancestor.clone(), descendant.clone()).await?;
-        let ancestor_id = self.map().vertex_id(ancestor)?;
-        let descendant_id = self.map().vertex_id(descendant)?;
+        let ancestor_id = self.map().vertex_id(ancestor).await?;
+        let descendant_id = self.map().vertex_id(descendant).await?;
         let result = self.dag().is_ancestor(ancestor_id, descendant_id)?;
         #[cfg(test)]
         {
@@ -572,28 +564,29 @@ delegate! {
 /// This can be expensive. It is expected to be either called infrequently,
 /// or called with a small amount of data. For example, bounded amount of
 /// non-master commits.
-fn non_master_parent_names<M, S>(
-    map: &Locked<M>,
-    dag: &Locked<IdDag<S>>,
+async fn non_master_parent_names<M, S>(
+    map: &Locked<'_, M>,
+    dag: &Locked<'_, IdDag<S>>,
 ) -> Result<HashMap<VertexName, Vec<VertexName>>>
 where
     M: IdMapAssignHead + Persist,
     S: IdDagStore + Persist,
 {
     let parent_ids = dag.non_master_parent_ids()?;
+    // PERF: This is suboptimal async iteration. It might be okay if non-master
+    // part is not lazy.
+    //
     // Map id to name.
-    let parent_names = parent_ids
-        .iter()
-        .map(|(id, parent_ids)| {
-            let name = map.vertex_name(*id)?;
-            let parent_names = parent_ids
-                .into_iter()
-                .map(|p| map.vertex_name(*p))
-                .collect::<Result<Vec<_>>>()?;
-            Ok((name, parent_names))
-        })
-        .collect::<Result<HashMap<_, _>>>()?;
-    Ok(parent_names)
+    let mut parent_names_map = HashMap::with_capacity(parent_ids.len());
+    for (id, parent_ids) in parent_ids.into_iter() {
+        let name = map.vertex_name(id).await?;
+        let parent_names = join_all(parent_ids.into_iter().map(|p| map.vertex_name(p)))
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()?;
+        parent_names_map.insert(name, parent_names);
+    }
+    Ok(parent_names_map)
 }
 
 /// Re-assign ids and segments for non-master group.
@@ -608,7 +601,7 @@ where
 {
     let fut = async move {
         // backup part of the named graph in memory.
-        let parents = non_master_parent_names(map, dag)?;
+        let parents = non_master_parent_names(map, dag).await?;
         let mut heads = parents
             .keys()
             .collect::<HashSet<_>>()
@@ -731,7 +724,7 @@ fn debug<S: IdDagStore>(
     // Show Id, with optional hash.
     let show = |id: Id| DebugId {
         id,
-        name: idmap.vertex_name(id).ok(),
+        name: non_blocking_result(idmap.vertex_name(id)).ok(),
     };
     let show_flags = |flags: SegmentFlags| -> String {
         let mut result = Vec::new();

@@ -15,6 +15,7 @@ use crate::spanset::{SpanSet, SpanSetIter};
 use crate::Group;
 use crate::Result;
 use crate::VertexName;
+use nonblocking::non_blocking_result;
 use std::any::Any;
 use std::fmt;
 use std::sync::Arc;
@@ -34,23 +35,22 @@ struct Iter {
     reversed: bool,
 }
 
-impl Iterator for Iter {
-    type Item = Result<VertexName>;
+impl Iter {
+    fn into_box_stream(self) -> BoxVertexStream {
+        Box::pin(futures::stream::unfold(self, |this| this.next()))
+    }
 
-    fn next(&mut self) -> Option<Self::Item> {
+    async fn next(mut self) -> Option<(Result<VertexName>, Self)> {
         let map = &self.map;
-        if self.reversed {
+        let opt_id = if self.reversed {
             self.iter.next_back()
         } else {
             self.iter.next()
+        };
+        match opt_id {
+            None => None,
+            Some(id) => Some((map.vertex_name(id).await, self)),
         }
-        .map(|id| map.vertex_name(id))
-    }
-}
-
-impl Iter {
-    fn into_stream(self) -> BoxVertexStream {
-        Box::pin(futures::stream::iter(self))
     }
 }
 
@@ -96,8 +96,8 @@ impl fmt::Debug for IdStaticSet {
         f.debug_list()
             .entries(spans.iter().take(limit).map(|span| DebugSpan {
                 span: *span,
-                low_name: self.map.vertex_name(span.low).ok(),
-                high_name: self.map.vertex_name(span.high).ok(),
+                low_name: non_blocking_result(self.map.vertex_name(span.low)).ok(),
+                high_name: non_blocking_result(self.map.vertex_name(span.high)).ok(),
             }))
             .finish()?;
         match spans.len().max(limit) - limit {
@@ -141,7 +141,7 @@ impl AsyncNameSetQuery for IdStaticSet {
             map: self.map.clone(),
             reversed: false,
         };
-        Ok(iter.into_stream())
+        Ok(iter.into_box_stream())
     }
 
     async fn iter_rev(&self) -> Result<BoxVertexStream> {
@@ -150,7 +150,7 @@ impl AsyncNameSetQuery for IdStaticSet {
             map: self.map.clone(),
             reversed: true,
         };
-        Ok(iter.into_stream())
+        Ok(iter.into_box_stream())
     }
 
     async fn count(&self) -> Result<usize> {
@@ -162,7 +162,7 @@ impl AsyncNameSetQuery for IdStaticSet {
         match self.spans.max() {
             Some(id) => {
                 let map = &self.map;
-                let name = map.vertex_name(id)?;
+                let name = map.vertex_name(id).await?;
                 Ok(Some(name))
             }
             None => Ok(None),
@@ -174,7 +174,7 @@ impl AsyncNameSetQuery for IdStaticSet {
         match self.spans.min() {
             Some(id) => {
                 let map = &self.map;
-                let name = map.vertex_name(id)?;
+                let name = map.vertex_name(id).await?;
                 Ok(Some(name))
             }
             None => Ok(None),
@@ -186,7 +186,11 @@ impl AsyncNameSetQuery for IdStaticSet {
     }
 
     async fn contains(&self, name: &VertexName) -> Result<bool> {
-        let result = match self.map.vertex_id_with_max_group(name, Group::NON_MASTER)? {
+        let result = match self
+            .map
+            .vertex_id_with_max_group(name, Group::NON_MASTER)
+            .await?
+        {
             Some(id) => self.spans.contains(id),
             None => false,
         };

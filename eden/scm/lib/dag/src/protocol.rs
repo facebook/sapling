@@ -24,8 +24,11 @@ use crate::spanset::SpanSet;
 use crate::Error;
 use crate::Result;
 use crate::{Id, IdMap};
+use nonblocking::non_blocking_result;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+
+// TODO: Check the usage of non_blocking_result.
 
 // Request and Response structures -------------------------------------------
 
@@ -116,7 +119,7 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<VertexName>, RequestNameToL
         let heads = dag
             .heads_ancestors(dag.master_group()?)?
             .iter()
-            .map(|id| map.vertex_name(id))
+            .map(|id| non_blocking_result(map.vertex_name(id)))
             .collect::<Result<Vec<VertexName>>>()?;
         Ok(RequestNameToLocation { names, heads })
     }
@@ -143,7 +146,7 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<Id>, RequestLocationToName>
                         },
                     )?
                     .ok_or_else(|| id.not_found_error())?;
-                let x = map.vertex_name(x)?;
+                let x = non_blocking_result(map.vertex_name(x))?;
                 Ok(AncestorPath {
                     x,
                     n,
@@ -167,14 +170,14 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestNameToLocation, Response
         let heads = request
             .heads
             .into_iter()
-            .map(|s| map.vertex_id(s))
+            .map(|s| non_blocking_result(map.vertex_id(s)))
             .collect::<Result<Vec<Id>>>()?;
         let heads = SpanSet::from_spans(heads);
         let path_names = request
             .names
             .into_iter()
             .map(|name| -> Result<_> {
-                let id = map.vertex_id(name.clone())?;
+                let id = non_blocking_result(map.vertex_id(name.clone()))?;
                 let (x, n) = dag
                     .to_first_ancestor_nth(
                         id,
@@ -185,7 +188,7 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestNameToLocation, Response
                     .ok_or_else(|| {
                         Error::Programming(format!("no path found for name {:?}", &name))
                     })?;
-                let x = map.vertex_name(x)?;
+                let x = non_blocking_result(map.vertex_name(x))?;
                 Ok((
                     AncestorPath {
                         x,
@@ -212,14 +215,14 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestLocationToName, Response
             .paths
             .into_iter()
             .map(|path| -> Result<_> {
-                let id = map.vertex_id(path.x.clone())?;
+                let id = non_blocking_result(map.vertex_id(path.x.clone()))?;
                 let mut id = dag.first_ancestor_nth(id, path.n)?;
                 let names = (0..path.batch_size)
                     .map(|i| -> Result<VertexName> {
                         if i > 0 {
                             id = dag.first_ancestor_nth(id, 1)?;
                         }
-                        let name = map.vertex_name(id)?;
+                        let name = non_blocking_result(map.vertex_name(id))?;
                         Ok(name)
                     })
                     .collect::<Result<Vec<VertexName>>>()?;

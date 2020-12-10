@@ -17,6 +17,7 @@ use crate::Id;
 use crate::Result;
 use crate::VertexName;
 use indexmap::IndexSet;
+use nonblocking::non_blocking_result;
 use std::any::Any;
 use std::fmt;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -77,33 +78,48 @@ pub struct Iter {
     map: Arc<dyn IdConvert + Send + Sync>,
 }
 
-impl Iterator for Iter {
-    type Item = Result<VertexName>;
+impl Iter {
+    fn into_box_stream(self) -> BoxVertexStream {
+        Box::pin(futures::stream::unfold(self, |this| this.next()))
+    }
 
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut inner = self.inner.lock().unwrap();
+    async fn next(mut self) -> Option<(Result<VertexName>, Self)> {
         loop {
-            match inner.state {
+            let state = {
+                let inner = self.inner.lock().unwrap();
+                inner.state
+            };
+            match state {
                 State::Error => break None,
-                State::Complete if inner.visited.len() <= self.index => break None,
+                State::Complete if self.inner.lock().unwrap().visited.len() <= self.index => {
+                    break None;
+                }
                 State::Complete | State::Incomplete => {
-                    match inner.visited.get_index(self.index) {
-                        Some(&id) => {
+                    let opt_id = {
+                        let inner = self.inner.lock().unwrap();
+                        inner.visited.get_index(self.index).cloned()
+                    };
+                    match opt_id {
+                        Some(id) => {
                             self.index += 1;
-                            match self.map.vertex_name(id) {
+                            match self.map.vertex_name(id).await {
                                 Err(err) => {
-                                    inner.state = State::Error;
-                                    return Some(Err(err));
+                                    self.inner.lock().unwrap().state = State::Error;
+                                    return Some((Err(err), self));
                                 }
                                 Ok(vertex) => {
-                                    break Some(Ok(vertex));
+                                    break Some((Ok(vertex), self));
                                 }
                             }
                         }
                         None => {
                             // Data not available. Load more.
-                            if let Err(err) = inner.load_more(1, None) {
-                                return Some(Err(err));
+                            let more = {
+                                let mut inner = self.inner.lock().unwrap();
+                                inner.load_more(1, None)
+                            };
+                            if let Err(err) = more {
+                                return Some((Err(err), self));
                             }
                         }
                     }
@@ -138,7 +154,7 @@ impl fmt::Debug for IdLazySet {
         f.debug_list()
             .entries(inner.visited.iter().take(limit).map(|&id| DebugId {
                 id,
-                name: self.map.vertex_name(id).ok(),
+                name: non_blocking_result(self.map.vertex_name(id)).ok(),
             }))
             .finish()?;
         let remaining = inner.visited.len().max(limit) - limit;
@@ -209,19 +225,31 @@ impl AsyncNameSetQuery for IdLazySet {
             index: 0,
             map,
         };
-        Ok(Box::pin(futures::stream::iter(iter)))
+        Ok(iter.into_box_stream())
     }
 
     async fn iter_rev(&self) -> Result<BoxVertexStream> {
         let inner = self.load_all()?;
-        let map = self.map.clone();
-        let iter = inner
-            .visited
-            .clone()
-            .into_iter()
-            .rev()
-            .map(move |id| map.vertex_name(id));
-        Ok(Box::pin(futures::stream::iter(iter)))
+        struct State {
+            map: Arc<dyn IdConvert + Send + Sync>,
+            iter: Box<dyn Iterator<Item = Id> + Send>,
+        }
+        let state = State {
+            map: self.map.clone(),
+            iter: Box::new(inner.visited.clone().into_iter().rev()),
+        };
+        async fn next(mut state: State) -> Option<(Result<VertexName>, State)> {
+            match state.iter.next() {
+                None => None,
+                Some(id) => {
+                    let result = state.map.vertex_name(id).await;
+                    Some((result, state))
+                }
+            }
+        }
+
+        let stream = futures::stream::unfold(state, next);
+        Ok(Box::pin(stream))
     }
 
     async fn count(&self) -> Result<usize> {
@@ -230,21 +258,28 @@ impl AsyncNameSetQuery for IdLazySet {
     }
 
     async fn last(&self) -> Result<Option<VertexName>> {
-        let inner = self.load_all()?;
-        match inner.visited.iter().rev().nth(0) {
-            Some(&id) => Ok(Some(self.map.vertex_name(id)?)),
+        let opt_id = {
+            let inner = self.load_all()?;
+            inner.visited.iter().rev().nth(0).cloned()
+        };
+        match opt_id {
+            Some(id) => Ok(Some(self.map.vertex_name(id).await?)),
             None => Ok(None),
         }
     }
 
     async fn contains(&self, name: &VertexName) -> Result<bool> {
-        let mut inner = self.inner.lock().unwrap();
-        let id = match self.map.vertex_id_with_max_group(name, Group::NON_MASTER)? {
+        let id = match self
+            .map
+            .vertex_id_with_max_group(name, Group::NON_MASTER)
+            .await?
+        {
             None => {
                 return Ok(false);
             }
             Some(id) => id,
         };
+        let mut inner = self.inner.lock().unwrap();
         if inner.visited.contains(&id) {
             return Ok(true);
         } else {
@@ -325,29 +360,30 @@ pub(crate) mod tests {
             Ok(Vec::new())
         }
     }
+    #[async_trait::async_trait]
     impl IdConvert for StrIdMap {
-        fn vertex_id(&self, name: VertexName) -> Result<Id> {
+        async fn vertex_id(&self, name: VertexName) -> Result<Id> {
             let slice: [u8; 8] = name.as_ref().try_into().unwrap();
             let id = u64::from_le(unsafe { std::mem::transmute(slice) });
             Ok(Id(id))
         }
-        fn vertex_id_with_max_group(
+        async fn vertex_id_with_max_group(
             &self,
             name: &VertexName,
             _max_group: Group,
         ) -> Result<Option<Id>> {
             if name.as_ref().len() == 8 {
-                let id = self.vertex_id(name.clone())?;
+                let id = self.vertex_id(name.clone()).await?;
                 Ok(Some(id))
             } else {
                 Ok(None)
             }
         }
-        fn vertex_name(&self, id: Id) -> Result<VertexName> {
+        async fn vertex_name(&self, id: Id) -> Result<VertexName> {
             let buf: [u8; 8] = unsafe { std::mem::transmute(id.0.to_le()) };
             Ok(VertexName::copy_from(&buf))
         }
-        fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
+        async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
             Ok(name.as_ref().len() == 8)
         }
     }
@@ -375,7 +411,7 @@ pub(crate) mod tests {
         // Incorrect hints, but useful for testing.
         set.hints().add_flags(Flags::ID_ASC);
 
-        let v = |i: u64| -> VertexName { StrIdMap.vertex_name(Id(i)).unwrap() };
+        let v = |i: u64| -> VertexName { r(StrIdMap.vertex_name(Id(i))).unwrap() };
         assert!(nb(set.contains(&v(0x20)))?);
         assert!(nb(set.contains(&v(0x50)))?);
         assert!(!nb(set.contains(&v(0x30)))?);

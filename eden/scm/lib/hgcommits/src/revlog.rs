@@ -15,6 +15,7 @@ use crate::Result;
 use crate::StreamCommitText;
 use crate::StripCommits;
 use dag::delegate;
+use dag::nonblocking::non_blocking_result;
 use dag::ops::IdConvert;
 use dag::Group;
 use dag::Set;
@@ -53,7 +54,7 @@ impl AppendCommits for RevlogCommits {
         for commit in commits {
             let mut parent_revs = Vec::with_capacity(commit.parents.len());
             for parent in &commit.parents {
-                parent_revs.push(self.revlog.vertex_id(parent.clone())?.0 as u32);
+                parent_revs.push(self.revlog.vertex_id(parent.clone()).await?.0 as u32);
             }
             self.revlog
                 .insert(commit.vertex.clone(), parent_revs, commit.raw_text.clone())
@@ -75,7 +76,10 @@ impl AppendCommits for RevlogCommits {
 #[async_trait::async_trait]
 impl ReadCommitText for RevlogCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        match self.vertex_id_with_max_group(vertex, Group::NON_MASTER)? {
+        match self
+            .vertex_id_with_max_group(vertex, Group::NON_MASTER)
+            .await?
+        {
             Some(id) => Ok(Some(self.revlog.raw_data(id.0 as u32)?)),
             None => Ok(None),
         }
@@ -99,7 +103,8 @@ impl StreamCommitText for RevlogCommits {
                     raw_text: Default::default(),
                 });
             }
-            match revlog.vertex_id_with_max_group(&vertex, Group::NON_MASTER)? {
+            match non_blocking_result(revlog.vertex_id_with_max_group(&vertex, Group::NON_MASTER))?
+            {
                 Some(id) => {
                     let raw_text = revlog.raw_data(id.0 as u32)?;
                     Ok(ParentlessHgCommit { vertex, raw_text })

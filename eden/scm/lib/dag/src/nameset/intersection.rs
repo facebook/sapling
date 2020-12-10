@@ -49,7 +49,7 @@ impl Iter {
                         // Check if we can stop iteration early using hints.
                         if let Some(ref cond) = self.stop_condition {
                             if let Some(id_convert) = self.rhs.id_convert() {
-                                if let Ok(Some(id)) = id_convert.vertex_id_optional(&name) {
+                                if let Ok(Some(id)) = id_convert.vertex_id_optional(&name).await {
                                     if cond.should_stop_with_id(id) {
                                         self.ended = true;
                                         return None;

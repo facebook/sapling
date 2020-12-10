@@ -248,13 +248,18 @@ pub trait PrefixLookup {
 }
 
 /// Convert between `Vertex` and `Id`.
+#[async_trait::async_trait]
 pub trait IdConvert: PrefixLookup + Sync {
-    fn vertex_id(&self, name: VertexName) -> Result<Id>;
-    fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>>;
-    fn vertex_name(&self, id: Id) -> Result<VertexName>;
-    fn contains_vertex_name(&self, name: &VertexName) -> Result<bool>;
-    fn vertex_id_optional(&self, name: &VertexName) -> Result<Option<Id>> {
-        self.vertex_id_with_max_group(name, Group::NON_MASTER)
+    async fn vertex_id(&self, name: VertexName) -> Result<Id>;
+    async fn vertex_id_with_max_group(
+        &self,
+        name: &VertexName,
+        max_group: Group,
+    ) -> Result<Option<Id>>;
+    async fn vertex_name(&self, id: Id) -> Result<VertexName>;
+    async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool>;
+    async fn vertex_id_optional(&self, name: &VertexName) -> Result<Option<Id>> {
+        self.vertex_id_with_max_group(name, Group::NON_MASTER).await
     }
 }
 
@@ -389,7 +394,7 @@ impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
         let mut spans = IdSet::empty();
         for name in set.iter()? {
             let name = name?;
-            let id = self.vertex_id(name)?;
+            let id = self.vertex_id(name).await?;
             spans.push(id);
         }
         Ok(spans)
