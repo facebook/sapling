@@ -764,6 +764,7 @@ def _pushing(pushop):
 
 
 @b2partsgenerator("check-bookmarks")
+@perftrace.tracefunc("check-bookmarks")
 def _pushb2checkbookmarks(pushop, bundler):
     """insert bookmark move checking"""
     if not _pushing(pushop) or pushop.force:
@@ -781,6 +782,7 @@ def _pushb2checkbookmarks(pushop, bundler):
 
 
 @b2partsgenerator("changeset")
+@perftrace.tracefunc("changeset")
 def _pushb2ctx(pushop, bundler):
     """handle changegroup push through bundle2
 
@@ -824,6 +826,7 @@ def _pushb2ctx(pushop, bundler):
 
 
 @b2partsgenerator("phase")
+@perftrace.tracefunc("phase")
 def _pushb2phases(pushop, bundler):
     """handle phase push through bundle2"""
     # Skip phase sync if narrow-heads is on.
@@ -891,6 +894,7 @@ def _pushb2phasespushkey(pushop, bundler):
 
 
 @b2partsgenerator("obsmarkers")
+@perftrace.tracefunc("obsmarkers")
 def _pushb2obsmarkers(pushop, bundler):
     if "obsmarkers" in pushop.stepsdone:
         return
@@ -904,6 +908,7 @@ def _pushb2obsmarkers(pushop, bundler):
 
 
 @b2partsgenerator("bookmarks")
+@perftrace.tracefunc("bookmarks")
 def _pushb2bookmarks(pushop, bundler):
     """handle bookmark push through bundle2"""
     if "bookmarks" in pushop.stepsdone:
@@ -998,6 +1003,7 @@ def _pushb2bookmarkspushkey(pushop, bundler):
 
 
 @b2partsgenerator("pushvars", idx=0)
+@perftrace.tracefunc("pushvars")
 def _getbundlesendvars(pushop, bundler):
     """send shellvars via bundle2"""
     pushvars = pushop.pushvars

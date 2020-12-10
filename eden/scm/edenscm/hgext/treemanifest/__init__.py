@@ -2158,6 +2158,7 @@ def _registerbundle2parts():
         pass
 
     @exchange.b2partsgenerator(TREEGROUP_PARTTYPE2)
+    @perftrace.tracefunc("gettreepackpart2")
     def gettreepackpart2(pushop, bundler):
         """add parts containing trees being pushed"""
         if "treepack" in pushop.stepsdone or not treeenabled(pushop.repo.ui):

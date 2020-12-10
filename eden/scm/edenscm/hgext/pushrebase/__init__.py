@@ -67,6 +67,7 @@ from edenscm.mercurial import (
     manifest,
     mutation,
     obsolete,
+    perftrace,
     phases as phasesmod,
     pushkey,
     pycompat,
@@ -655,6 +656,7 @@ def _exchangesetup():
     """Make changes to exchange and bundle2"""
 
     @exchange.b2partsgenerator(commonheadsparttype)
+    @perftrace.tracefunc("commonheads")
     def commonheadspartgen(pushop, bundler):
         if rebaseparttype not in bundle2.bundle2caps(pushop.remote):
             # Server doesn't support pushrebase, so just fallback to normal push.
@@ -682,6 +684,7 @@ def _exchangesetup():
             return False
 
     @exchange.b2partsgenerator(rebasepackparttype)
+    @perftrace.tracefunc("rebasepackpart")
     def packpartgen(pushop, bundler):
         # We generate this part manually during pushrebase pushes, so this is a
         # no-op. But it's required because bundle2 expects there to be a generator
@@ -689,6 +692,7 @@ def _exchangesetup():
         pass
 
     @exchange.b2partsgenerator(rebaseparttype)
+    @perftrace.tracefunc("rebasepart")
     def rebasepartgen(pushop, bundler):
         onto = pushop.ui.config(experimental, configonto)
         if "changesets" in pushop.stepsdone or not onto:

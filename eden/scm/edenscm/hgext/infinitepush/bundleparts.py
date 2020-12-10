@@ -34,6 +34,7 @@ def uisetup(ui):
 
 def _exchangesetup():
     @exchange.b2partsgenerator(constants.scratchbranchparttype)
+    @perftrace.tracefunc("scratchbranchpart")
     def partgen(pushop, bundler):
         bookmark = pushop.ui.config("experimental", "server-bundlestore-bookmark")
         bookmarknode = pushop.ui.config(
