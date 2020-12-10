@@ -56,7 +56,12 @@
   $ blobimport --log repo-hg/.hg repo --find-already-imported-rev-only
   * using repo "repo" repoid RepositoryId(0) (glob)
   * didn't import any commits (glob)
-  $ blobimport repo-hg/.hg repo --commits-limit 1
+  $ blobimport --log repo-hg/.hg repo --commits-limit 1
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * inserted commits # 0 (glob)
+  * Deriving data for: ["filenodes"] (glob)
+  * finished uploading changesets, globalrevs and deriving data (glob)
+  * latest imported revision 0 (glob)
   $ blobimport --log repo-hg/.hg repo --find-already-imported-rev-only
   * using repo "repo" repoid RepositoryId(0) (glob)
   * latest imported revision 0 (glob)

@@ -186,7 +186,7 @@ impl<'a> Blobimport<'a> {
                 let max_rev = max_rev_and_bcs_id
                     .map(|(revidx, _)| revidx)
                     .unwrap_or_else(RevIdx::zero);
-                if rev > &max_rev {
+                if rev >= &max_rev {
                     max_rev_and_bcs_id = Some((*rev, cs.get_changeset_id()))
                 }
             }

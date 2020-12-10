@@ -116,5 +116,5 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   * skipping log entry #4 for somebookmark (glob)
   * processing log entry * (glob)
   * skipping log entry #6 for somebookmark (glob)
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters";
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters where name = 'xreposync_from_2'";
   0|xreposync_from_2|6
