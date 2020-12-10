@@ -63,7 +63,7 @@ Three separate cycles allowing all edges, total bytes should be the same as full
   Walked/s,* (glob)
 
 Reduced edge three separate cycles moving offset each time, total in each cycle should be the same as above.
-  $ for i in {0..2}; do mononoke_walker compression-benefit -q --bookmark master_bookmark -I deep -x FsnodeMapping -x Fsnode -X ChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
+  $ for i in {0..2}; do mononoke_walker compression-benefit -q --bookmark master_bookmark -I deep -X ChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)

@@ -32,5 +32,5 @@ compression-benefit, all compressible types
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
-  Raw/s,Compressed/s,Raw,Compressed,%Saving; Delta */s,*/s,3086,3057,0%,*s; Run */s,*/s,3086,3057,0%,*s; Type:Raw,Compressed,%Saving AliasContentMapping:333,333,0% BonsaiHgMapping:281,281,0% Bookmark:0,0,0% Changeset:277,277,0% FileContent:12,12,0% FileContentMetadata:351,351,0% Fsnode:822,822,0% FsnodeMapping:96,96,0% HgBonsaiMapping:0,0,0% HgChangeset:281,281,0% HgFileEnvelope:189,189,0% HgFileNode:0,0,0% HgManifest:444,415,6%* (glob)
+  * Run */s,*/s,2168,2139,1%,*s; Type:Raw,Compressed,%Saving AliasContentMapping:333,333,0% BonsaiHgMapping:281,281,0% Bookmark:0,0,0% Changeset:277,277,0% FileContent:12,12,0% FileContentMetadata:351,351,0% HgBonsaiMapping:0,0,0% HgChangeset:281,281,0% HgFileEnvelope:189,189,0% HgFileNode:0,0,0% HgManifest:444,415,6%* (glob)
   Walked/s,* (glob)

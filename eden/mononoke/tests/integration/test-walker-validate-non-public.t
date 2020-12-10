@@ -25,7 +25,7 @@ validate, expecting all valid, checking marker types
   Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:40,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
 
 Remove the phase information, linknodes already point to them
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
@@ -38,7 +38,7 @@ validate, expect no failures on phase info, as the commits are still public, jus
   Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:40,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
 
 Record the filenode info
   $ PATHHASHC=$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT hex(path_hash) FROM paths WHERE path = CAST('C' as BLOB)")
@@ -98,7 +98,7 @@ Check we dont walk filenodes on a non-public commit.  Because filenodes is the o
 validate, expect failures on phase info, and linknode as we now point to a non-public commit
   $ mononoke_walker validate --scuba-log-file scuba.json -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog | sort
   Final count: * (glob)
-  Nodes,Pass,Fail:56,6,2; EdgesChecked:14; CheckType:Pass,Fail Total:6,2 ChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:3,1
+  Nodes,Pass,Fail:52,6,2; EdgesChecked:14; CheckType:Pass,Fail Total:6,2 ChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:3,1
   Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
   Validation failed: *bonsai_phase_is_public* (glob)
   Validation failed: *hg_link_node_populated* (glob)

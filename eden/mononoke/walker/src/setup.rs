@@ -154,7 +154,7 @@ static EDGE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
 // so keeping it there for consistency
 const STORAGE_ID_ARG: &str = "storage-id";
 
-pub const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
+const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::Bookmark,
     NodeType::Changeset,
     NodeType::BonsaiHgMapping,
@@ -168,8 +168,6 @@ pub const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::FileContent,
     NodeType::FileContentMetadata,
     NodeType::AliasContentMapping,
-    NodeType::Fsnode,
-    NodeType::FsnodeMapping,
 ];
 
 const BONSAI_INCLUDE_NODE_TYPES: &[NodeType] = &[NodeType::Bookmark, NodeType::Changeset];

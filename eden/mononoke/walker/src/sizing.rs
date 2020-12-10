@@ -15,9 +15,9 @@ use crate::sampling::{
 };
 use crate::setup::{
     parse_node_types, setup_common, COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG,
-    DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG,
-    PROGRESS_INTERVAL_ARG, PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE,
-    PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG, SAMPLE_RATE_ARG,
+    EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG, PROGRESS_INTERVAL_ARG,
+    PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE, PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG,
+    SAMPLE_RATE_ARG,
 };
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 
@@ -304,7 +304,7 @@ pub async fn compression_benefit<'a>(
         sub_m,
         INCLUDE_SAMPLE_NODE_TYPE_ARG,
         EXCLUDE_SAMPLE_NODE_TYPE_ARG,
-        DEFAULT_INCLUDE_NODE_TYPES,
+        &include_node_types.iter().cloned().collect::<Vec<_>>(),
     )?;
     sampling_node_types.retain(|i| include_node_types.contains(i));
 
