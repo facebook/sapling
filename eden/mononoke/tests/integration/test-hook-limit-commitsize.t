@@ -39,14 +39,18 @@ Large file
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_commitsize for b4b4dcaa16f97662c6a6e70b6eb8c3af1aea8253: Commit size limit is 10 bytes. You tried to push commit that is over the limit. See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_commitsize for b4b4dcaa16f97662c6a6e70b6eb8c3af1aea8253: Commit size limit is 10 bytes.
+  remote:     You tried to push a commit 11 bytes in size that is over the limit.
+  remote:     See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Root cause:
   remote:     hooks failed:
-  remote:     limit_commitsize for b4b4dcaa16f97662c6a6e70b6eb8c3af1aea8253: Commit size limit is 10 bytes. You tried to push commit that is over the limit. See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_commitsize for b4b4dcaa16f97662c6a6e70b6eb8c3af1aea8253: Commit size limit is 10 bytes.
+  remote:     You tried to push a commit 11 bytes in size that is over the limit.
+  remote:     See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commitsize for b4b4dcaa16f97662c6a6e70b6eb8c3af1aea8253: Commit size limit is 10 bytes. You tried to push commit that is over the limit. See https://fburl.com/landing_big_diffs for instructions."
+  remote:     "hooks failed:\nlimit_commitsize for b4b4dcaa16f97662c6a6e70b6eb8c3af1aea8253: Commit size limit is 10 bytes.\nYou tried to push a commit 11 bytes in size that is over the limit.\nSee https://fburl.com/landing_big_diffs for instructions."
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
@@ -60,14 +64,18 @@ Large commit
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_commitsize for 0d437325fdc4006bbd174b823446331bfa53a68d: Commit size limit is 10 bytes. You tried to push commit that is over the limit. See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_commitsize for 0d437325fdc4006bbd174b823446331bfa53a68d: Commit size limit is 10 bytes.
+  remote:     You tried to push a commit 11 bytes in size that is over the limit.
+  remote:     See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Root cause:
   remote:     hooks failed:
-  remote:     limit_commitsize for 0d437325fdc4006bbd174b823446331bfa53a68d: Commit size limit is 10 bytes. You tried to push commit that is over the limit. See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_commitsize for 0d437325fdc4006bbd174b823446331bfa53a68d: Commit size limit is 10 bytes.
+  remote:     You tried to push a commit 11 bytes in size that is over the limit.
+  remote:     See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nlimit_commitsize for 0d437325fdc4006bbd174b823446331bfa53a68d: Commit size limit is 10 bytes. You tried to push commit that is over the limit. See https://fburl.com/landing_big_diffs for instructions."
+  remote:     "hooks failed:\nlimit_commitsize for 0d437325fdc4006bbd174b823446331bfa53a68d: Commit size limit is 10 bytes.\nYou tried to push a commit 11 bytes in size that is over the limit.\nSee https://fburl.com/landing_big_diffs for instructions."
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
