@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use caching_ext::{
     get_or_fill, CacheDisposition, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
-    McErrorKind, McResult, MemcacheEntity, MemcacheHandler,
+    MemcacheEntity, MemcacheHandler,
 };
 use changeset_entry_thrift as thrift;
 use context::CoreContext;
@@ -28,21 +28,12 @@ use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };
-use stats::prelude::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
 #[cfg(test)]
 use caching_ext::MockStoreStats;
-
-define_stats! {
-    prefix = "mononoke.changesets";
-    memcache_hit: timeseries("memcache.hit"; Rate, Sum),
-    memcache_miss: timeseries("memcache.miss"; Rate, Sum),
-    memcache_internal_err: timeseries("memcache.internal_err"; Rate, Sum),
-    memcache_deserialize_err: timeseries("memcache.deserialize_err"; Rate, Sum),
-}
 
 pub fn get_cache_key(repo_id: RepositoryId, cs_id: &ChangesetId) -> String {
     format!("{}.{}", repo_id.prefix(), cs_id).to_string()
@@ -214,15 +205,6 @@ impl MemcacheEntity for ChangesetEntry {
             .and_then(ChangesetEntry::from_thrift)
             .map_err(|_| ())
     }
-
-    fn report_mc_result(res: &McResult<Self>) {
-        match res.as_ref() {
-            Ok(..) => STATS::memcache_hit.add_value(1),
-            Err(McErrorKind::MemcacheInternal) => STATS::memcache_internal_err.add_value(1),
-            Err(McErrorKind::Missing) => STATS::memcache_miss.add_value(1),
-            Err(McErrorKind::Deserialization) => STATS::memcache_deserialize_err.add_value(1),
-        };
-    }
 }
 
 type CacheRequest<'a> = (&'a CoreContext, RepositoryId, &'a CachingChangesets);
@@ -246,6 +228,8 @@ impl EntityStore<ChangesetEntry> for CacheRequest<'_> {
     fn cache_determinator(&self, _: &ChangesetEntry) -> CacheDisposition {
         CacheDisposition::Cache(CacheTtl::NoTtl)
     }
+
+    caching_ext::impl_singleton_stats!("changesets");
 
     #[cfg(test)]
     fn spawn_memcache_writes(&self) -> bool {

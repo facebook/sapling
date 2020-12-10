@@ -25,10 +25,42 @@ use bytes::Bytes;
 use cloned::cloned;
 use futures::stream::{self, StreamExt};
 use memcache::{KeyGen, MEMCACHE_VALUE_MAX_SIZE};
+use stats::prelude::*;
 
 pub use crate::cachelib_utils::CachelibHandler;
 pub use crate::memcache_utils::MemcacheHandler;
 pub use crate::mock_store::MockStoreStats;
+
+pub mod macro_reexport {
+    pub use once_cell;
+}
+
+define_stats_struct! {
+    CacheStats("mononoke.cache.{}", label: String),
+
+    cachelib_hit: timeseries("cachelib.hit"; Rate, Sum),
+    cachelib_miss: timeseries("cachelib.miss"; Rate, Sum),
+
+    memcache_hit: timeseries("memcache.hit"; Rate, Sum),
+    memcache_miss: timeseries("memcache.miss"; Rate, Sum),
+    memcache_internal_err: timeseries("memcache.internal_err"; Rate, Sum),
+    memcache_deserialize_err: timeseries("memcache.deserialize_err"; Rate, Sum),
+
+    origin_hit: timeseries("origin.hit"; Rate, Sum),
+    origin_miss: timeseries("origin.miss"; Rate, Sum),
+}
+
+#[macro_export]
+macro_rules! impl_singleton_stats {
+    ( $name:literal ) => {
+        fn stats(&self) -> &$crate::CacheStats {
+            use $crate::macro_reexport::once_cell::sync::Lazy;
+            static STATS: Lazy<$crate::CacheStats> =
+                Lazy::new(|| $crate::CacheStats::new(String::from($name)));
+            &*STATS
+        }
+    };
+}
 
 /// Error type to help with proper reporting of memcache errors
 pub enum McErrorKind {
@@ -63,8 +95,6 @@ pub trait MemcacheEntity: Sized {
     fn serialize(&self) -> Bytes;
 
     fn deserialize(bytes: Bytes) -> Result<Self, ()>;
-
-    fn report_mc_result(res: &McResult<Self>); // TODO: Default impl here
 }
 
 #[auto_impl(&)]
@@ -76,6 +106,8 @@ pub trait EntityStore<V> {
     fn memcache(&self) -> &MemcacheHandler;
 
     fn cache_determinator(&self, v: &V) -> CacheDisposition;
+
+    fn stats(&self) -> &CacheStats;
 
     /// Whether Memcache writes should run in the background. This is normally the desired behavior
     /// so this defaults to true, but for tests it's useful to run them synchronously to get
@@ -104,6 +136,8 @@ where
 {
     let mut ret = HashMap::<K, V>::new();
 
+    let stats = store.stats();
+
     let cachelib_keys: Vec<_> = keys
         .into_iter()
         .map(|key| {
@@ -117,6 +151,13 @@ where
         .get_multiple_from_cachelib::<K>(cachelib_keys)
         .with_context(|| "Error reading from cachelib")?;
 
+    stats
+        .cachelib_hit
+        .add_value(fetched_from_cachelib.len() as i64);
+    stats
+        .cachelib_miss
+        .add_value(to_fetch_from_memcache.len() as i64);
+
     ret.extend(fetched_from_cachelib);
 
     let to_fetch_from_memcache: Vec<(K, CachelibKey, MemcacheKey)> = to_fetch_from_memcache
@@ -129,7 +170,14 @@ where
 
     let to_fetch_from_store = {
         let (fetched_from_memcache, to_fetch_from_store) =
-            get_multiple_from_memcache(store.memcache(), to_fetch_from_memcache).await;
+            get_multiple_from_memcache(store.memcache(), to_fetch_from_memcache, stats).await;
+
+        stats
+            .memcache_hit
+            .add_value(fetched_from_memcache.len() as i64);
+        stats
+            .memcache_miss
+            .add_value(to_fetch_from_store.len() as i64);
 
         fill_multiple_cachelib(
             store.cachelib(),
@@ -156,10 +204,15 @@ where
         .collect();
 
     if !to_fetch_from_store.is_empty() {
+        let n_keys = to_fetch_from_store.len();
+
         let data = store
             .get_from_db(to_fetch_from_store)
             .await
             .with_context(|| "Error reading from store")?;
+
+        stats.origin_hit.add_value(data.len() as i64);
+        stats.origin_miss.add_value((n_keys - data.len()) as i64);
 
         fill_caches_by_key(
             store,
@@ -229,6 +282,7 @@ async fn fill_caches_by_key<'a, V>(
 async fn get_multiple_from_memcache<K, V>(
     memcache: &MemcacheHandler,
     keys: Vec<(K, CachelibKey, MemcacheKey)>,
+    stats: &CacheStats,
 ) -> (
     HashMap<K, (V, CachelibKey)>,
     Vec<(K, CachelibKey, MemcacheKey)>,
@@ -261,13 +315,17 @@ where
     let mut left_to_fetch = Vec::new();
 
     while let Some((key, cachelib_key, memcache_key, res)) = entries.next().await {
-        V::report_mc_result(&res);
-
         match res {
             Ok(entity) => {
                 fetched.insert(key, (entity, cachelib_key));
             }
-            Err(..) => {
+            Err(e) => {
+                match e {
+                    McErrorKind::MemcacheInternal => stats.memcache_internal_err.add_value(1),
+                    McErrorKind::Deserialization => stats.memcache_deserialize_err.add_value(1),
+                    McErrorKind::Missing => {} // no op, we record missing at a higher level anyway.
+                };
+
                 left_to_fetch.push((key, cachelib_key, memcache_key));
             }
         }
@@ -356,8 +414,6 @@ mod test {
         fn deserialize(bytes: Bytes) -> Result<Self, ()> {
             Ok(Self(bytes.to_vec()))
         }
-
-        fn report_mc_result(_: &McResult<Self>) {}
     }
 
     struct TestStore {
@@ -398,6 +454,8 @@ mod test {
         fn cache_determinator(&self, _: &TestEntity) -> CacheDisposition {
             CacheDisposition::Cache(CacheTtl::NoTtl)
         }
+
+        impl_singleton_stats!("test");
 
         fn spawn_memcache_writes(&self) -> bool {
             false

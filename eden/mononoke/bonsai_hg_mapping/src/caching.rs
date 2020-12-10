@@ -13,7 +13,7 @@ use bytes::Bytes;
 use cachelib::VolatileLruCachePool;
 use caching_ext::{
     get_or_fill, CacheDisposition, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
-    McErrorKind, McResult, MemcacheEntity, MemcacheHandler,
+    MemcacheEntity, MemcacheHandler,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -187,15 +187,6 @@ impl MemcacheEntity for BonsaiHgMappingEntry {
     fn deserialize(bytes: Bytes) -> Result<Self, ()> {
         memcache_deserialize(bytes)
     }
-
-    fn report_mc_result(res: &McResult<Self>) {
-        match res.as_ref() {
-            Ok(_) => STATS::memcache_hit.add_value(1),
-            Err(McErrorKind::MemcacheInternal) => STATS::memcache_internal_err.add_value(1),
-            Err(McErrorKind::Missing) => STATS::memcache_miss.add_value(1),
-            Err(McErrorKind::Deserialization) => STATS::memcache_deserialize_err.add_value(1),
-        };
-    }
 }
 
 type CacheRequest<'a> = (&'a CoreContext, RepositoryId, &'a CachingBonsaiHgMapping);
@@ -219,6 +210,8 @@ impl EntityStore<BonsaiHgMappingEntry> for CacheRequest<'_> {
     fn cache_determinator(&self, _: &BonsaiHgMappingEntry) -> CacheDisposition {
         CacheDisposition::Cache(CacheTtl::NoTtl)
     }
+
+    caching_ext::impl_singleton_stats!("bonsai_hg_mapping");
 }
 
 #[async_trait]

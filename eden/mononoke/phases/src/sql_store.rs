@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use caching_ext::{
     fill_cache, get_or_fill, CacheDisposition, CacheTtl, CachelibHandler, EntityStore,
-    KeyedEntityStore, McErrorKind, McResult, MemcacheEntity, MemcacheHandler,
+    KeyedEntityStore, MemcacheEntity, MemcacheHandler,
 };
 use context::{CoreContext, PerfCounterType};
 use futures::compat::Future01CompatExt;
@@ -35,10 +35,6 @@ define_stats! {
     get_many: timeseries(Rate, Sum),
     add_many: timeseries(Rate, Sum),
     list_all: timeseries(Rate, Sum),
-    memcache_hit: timeseries("memcache.hit"; Rate, Sum),
-    memcache_miss: timeseries("memcache.miss"; Rate, Sum),
-    memcache_internal_err: timeseries("memcache.internal_err"; Rate, Sum),
-    memcache_deserialize_err: timeseries("memcache.deserialize_err"; Rate, Sum),
 }
 
 pub struct Caches {
@@ -173,15 +169,6 @@ impl MemcacheEntity for Phase {
     fn deserialize(bytes: Bytes) -> Result<Self, ()> {
         bytes.as_ref().try_into().map_err(|_| ())
     }
-
-    fn report_mc_result(res: &McResult<Self>) {
-        match res.as_ref() {
-            Ok(_) => STATS::memcache_hit.add_value(1),
-            Err(McErrorKind::MemcacheInternal) => STATS::memcache_internal_err.add_value(1),
-            Err(McErrorKind::Missing) => STATS::memcache_miss.add_value(1),
-            Err(McErrorKind::Deserialization) => STATS::memcache_deserialize_err.add_value(1),
-        };
-    }
 }
 
 type CacheRequest<'a> = (&'a CoreContext, RepositoryId, &'a SqlPhasesStore);
@@ -211,6 +198,8 @@ impl EntityStore<Phase> for CacheRequest<'_> {
 
         CacheDisposition::Cache(ttl)
     }
+
+    caching_ext::impl_singleton_stats!("phases");
 }
 
 #[async_trait]

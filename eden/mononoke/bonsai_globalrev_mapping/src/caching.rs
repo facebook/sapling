@@ -11,7 +11,7 @@ use bytes::Bytes;
 use cachelib::VolatileLruCachePool;
 use caching_ext::{
     get_or_fill, CacheDisposition, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
-    McResult, MemcacheEntity, MemcacheHandler,
+    MemcacheEntity, MemcacheHandler,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -162,8 +162,6 @@ impl MemcacheEntity for BonsaiGlobalrevMappingEntry {
             globalrev,
         })
     }
-
-    fn report_mc_result(_: &McResult<Self>) {}
 }
 
 type CacheRequest<'a, T> = (
@@ -191,6 +189,8 @@ impl<T> EntityStore<BonsaiGlobalrevMappingEntry> for CacheRequest<'_, T> {
     fn cache_determinator(&self, _: &BonsaiGlobalrevMappingEntry) -> CacheDisposition {
         CacheDisposition::Cache(CacheTtl::NoTtl)
     }
+
+    caching_ext::impl_singleton_stats!("bonsai_globalrev_mapping");
 }
 
 #[async_trait]
