@@ -10,14 +10,20 @@ include = ["src/**/*.rs"]
 mononoke_types = { path = "../../../mononoke_types" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_01_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+abomonation = "0.7"
 anyhow = "1.0"
+async-trait = "0.1.29"
+auto_impl = "0.4"
 bytes = { version = "0.5", features = ["serde"] }
-futures = "0.1"
-tokio = "0.1"
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+tokio = { version = "=0.2.13", features = ["full"] }
+tokio-old = { package = "tokio", version = "0.1" }
 
 [dev-dependencies]
+abomonation_derive = "0.5"
 maplit = "1.0"
 quickcheck = "0.9"
 tokio-compat = "0.1"

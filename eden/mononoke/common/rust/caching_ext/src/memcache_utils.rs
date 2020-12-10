@@ -7,8 +7,8 @@
 
 use crate::mock_store::MockStore;
 use bytes::Bytes;
-use futures::{future::ok, Future};
-use futures_ext::FutureExt;
+use futures_01_ext::FutureExt;
+use futures_old::{future::ok, Future};
 use memcache::{MemcacheClient, MemcacheSetType};
 use std::{sync::atomic::Ordering, time::Duration};
 
