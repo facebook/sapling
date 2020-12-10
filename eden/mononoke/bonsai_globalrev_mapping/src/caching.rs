@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use cachelib::VolatileLruCachePool;
 use caching_ext::{
-    get_or_fill, CacheDispositionNew, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
+    get_or_fill, CacheDisposition, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
     McResult, MemcacheEntity, MemcacheHandler,
 };
 use context::CoreContext;
@@ -188,8 +188,8 @@ impl<T> EntityStore<BonsaiGlobalrevMappingEntry> for CacheRequest<'_, T> {
         &mapping.memcache
     }
 
-    fn cache_determinator(&self, _: &BonsaiGlobalrevMappingEntry) -> CacheDispositionNew {
-        CacheDispositionNew::Cache(CacheTtl::NoTtl)
+    fn cache_determinator(&self, _: &BonsaiGlobalrevMappingEntry) -> CacheDisposition {
+        CacheDisposition::Cache(CacheTtl::NoTtl)
     }
 }
 

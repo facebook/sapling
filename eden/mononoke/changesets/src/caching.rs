@@ -10,7 +10,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
 use caching_ext::{
-    get_or_fill, CacheDispositionNew, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
+    get_or_fill, CacheDisposition, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
     McErrorKind, McResult, MemcacheEntity, MemcacheHandler,
 };
 use changeset_entry_thrift as thrift;
@@ -243,8 +243,8 @@ impl EntityStore<ChangesetEntry> for CacheRequest<'_> {
         &mapping.memcache
     }
 
-    fn cache_determinator(&self, _: &ChangesetEntry) -> CacheDispositionNew {
-        CacheDispositionNew::Cache(CacheTtl::NoTtl)
+    fn cache_determinator(&self, _: &ChangesetEntry) -> CacheDisposition {
+        CacheDisposition::Cache(CacheTtl::NoTtl)
     }
 
     #[cfg(test)]

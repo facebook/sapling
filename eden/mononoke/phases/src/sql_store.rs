@@ -9,7 +9,7 @@ use anyhow::{Context as _, Error};
 use async_trait::async_trait;
 use bytes::Bytes;
 use caching_ext::{
-    fill_cache, get_or_fill, CacheDispositionNew, CacheTtl, CachelibHandler, EntityStore,
+    fill_cache, get_or_fill, CacheDisposition, CacheTtl, CachelibHandler, EntityStore,
     KeyedEntityStore, McErrorKind, McResult, MemcacheEntity, MemcacheHandler,
 };
 use context::{CoreContext, PerfCounterType};
@@ -202,14 +202,14 @@ impl EntityStore<Phase> for CacheRequest<'_> {
         &phases.caches.memcache
     }
 
-    fn cache_determinator(&self, phase: &Phase) -> CacheDispositionNew {
+    fn cache_determinator(&self, phase: &Phase) -> CacheDisposition {
         let ttl = if phase == &Phase::Public {
             CacheTtl::NoTtl
         } else {
             CacheTtl::Ttl(Duration::from_secs(TTL_DRAFT_SEC))
         };
 
-        CacheDispositionNew::Cache(ttl)
+        CacheDisposition::Cache(ttl)
     }
 }
 

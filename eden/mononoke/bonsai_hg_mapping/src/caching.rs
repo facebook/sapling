@@ -12,7 +12,7 @@ use bonsai_hg_mapping_entry_thrift as thrift;
 use bytes::Bytes;
 use cachelib::VolatileLruCachePool;
 use caching_ext::{
-    get_or_fill, CacheDispositionNew, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
+    get_or_fill, CacheDisposition, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
     McErrorKind, McResult, MemcacheEntity, MemcacheHandler,
 };
 use context::CoreContext;
@@ -216,8 +216,8 @@ impl EntityStore<BonsaiHgMappingEntry> for CacheRequest<'_> {
         &mapping.memcache
     }
 
-    fn cache_determinator(&self, _: &BonsaiHgMappingEntry) -> CacheDispositionNew {
-        CacheDispositionNew::Cache(CacheTtl::NoTtl)
+    fn cache_determinator(&self, _: &BonsaiHgMappingEntry) -> CacheDisposition {
+        CacheDisposition::Cache(CacheTtl::NoTtl)
     }
 }
 

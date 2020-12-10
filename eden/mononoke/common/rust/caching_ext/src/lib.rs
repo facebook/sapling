@@ -45,18 +45,6 @@ pub type McResult<T> = Result<T, McErrorKind>;
 struct CachelibKey(String);
 struct MemcacheKey(String);
 
-pub type CachingDeterminator<T> = fn(&T) -> CacheDisposition;
-
-pub fn cache_all_determinator<T>(_value: &T) -> CacheDisposition {
-    CacheDisposition::Cache
-}
-
-pub enum CacheDisposition {
-    Cache,
-    CacheWithTtl(Duration),
-    Ignore,
-}
-
 #[derive(Copy, Clone)]
 pub enum CacheTtl {
     NoTtl,
@@ -64,7 +52,7 @@ pub enum CacheTtl {
 }
 
 #[derive(Copy, Clone)]
-pub enum CacheDispositionNew {
+pub enum CacheDisposition {
     Cache(CacheTtl),
     Ignore,
 }
@@ -85,7 +73,7 @@ pub trait EntityStore<V> {
 
     fn memcache(&self) -> &MemcacheHandler;
 
-    fn cache_determinator(&self, v: &V) -> CacheDispositionNew;
+    fn cache_determinator(&self, v: &V) -> CacheDisposition;
 
     /// Whether Memcache writes should run in the background. This is normally the desired behavior
     /// so this defaults to true, but for tests it's useful to run them synchronously to get
@@ -146,7 +134,7 @@ where
             fetched_from_memcache
                 .values()
                 .filter_map(|(v, k)| match store.cache_determinator(v) {
-                    CacheDispositionNew::Cache(ttl) => Some((k, ttl, v)),
+                    CacheDisposition::Cache(ttl) => Some((k, ttl, v)),
                     _ => None,
                 }),
         );
@@ -218,8 +206,8 @@ async fn fill_caches_by_key<'a, V>(
 
     for (cachelib_key, memcache_key, v) in data.into_iter() {
         let ttl = match store.cache_determinator(v) {
-            CacheDispositionNew::Cache(ttl) => ttl,
-            CacheDispositionNew::Ignore => continue,
+            CacheDisposition::Cache(ttl) => ttl,
+            CacheDisposition::Ignore => continue,
         };
 
         memcache_keys.push((memcache_key, ttl, v));
@@ -405,8 +393,8 @@ mod test {
             &self.memcache
         }
 
-        fn cache_determinator(&self, _: &TestEntity) -> CacheDispositionNew {
-            CacheDispositionNew::Cache(CacheTtl::NoTtl)
+        fn cache_determinator(&self, _: &TestEntity) -> CacheDisposition {
+            CacheDisposition::Cache(CacheTtl::NoTtl)
         }
 
         fn spawn_memcache_writes(&self) -> bool {
