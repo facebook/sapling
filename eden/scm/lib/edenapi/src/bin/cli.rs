@@ -22,7 +22,7 @@ use configparser::config::{ConfigSet, Options};
 use edenapi::{Builder, Client, EdenApi, Entries, Fetch, Progress, ProgressCallback};
 use edenapi_types::{
     json::FromJson, wire::ToWire, CommitRevlogDataRequest, CompleteTreeRequest, FileRequest,
-    HistoryRequest, TreeAttributes, TreeRequest,
+    HistoryRequest, TreeRequest,
 };
 
 const DEFAULT_CONFIG_FILE: &str = ".hgrc.edenapi";
