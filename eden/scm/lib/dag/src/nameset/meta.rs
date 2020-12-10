@@ -11,7 +11,8 @@ use super::Hints;
 use super::NameSet;
 use crate::Result;
 use crate::VertexName;
-use once_cell::sync::OnceCell;
+use futures::future::BoxFuture;
+use parking_lot::RwLock;
 use std::any::Any;
 use std::fmt;
 
@@ -32,11 +33,17 @@ use std::fmt;
 /// `MetaSet` is different from a pure filtering set (ex. only has "contains"
 /// fast path), as `MetaSet` supports fast path for iteration.
 pub struct MetaSet {
-    evaluate: Box<dyn Fn() -> Result<NameSet> + Send + Sync>,
-    evaluated: OnceCell<NameSet>,
+    evaluate: Box<dyn Fn() -> BoxFuture<'static, Result<NameSet>> + Send + Sync>,
+    evaluated: RwLock<Option<NameSet>>,
 
     /// Optional "contains" fast path.
-    contains: Option<Box<dyn Fn(&MetaSet, &VertexName) -> Result<bool> + Send + Sync>>,
+    contains: Option<
+        Box<
+            dyn for<'a> Fn(&'a MetaSet, &'a VertexName) -> BoxFuture<'a, Result<bool>>
+                + Send
+                + Sync,
+        >,
+    >,
 
     hints: Hints,
 }
@@ -57,9 +64,11 @@ impl fmt::Debug for MetaSet {
 impl MetaSet {
     /// Constructs `MetaSet` from an `evaluate` function that returns a
     /// `NameSet`. The `evaluate` function is not called immediately.
-    pub fn from_evaluate(evaluate: impl Fn() -> Result<NameSet> + Send + Sync + 'static) -> Self {
+    pub fn from_evaluate(
+        evaluate: Box<dyn Fn() -> BoxFuture<'static, Result<NameSet>> + Send + Sync + 'static>,
+    ) -> Self {
         Self {
-            evaluate: Box::new(evaluate),
+            evaluate,
             evaluated: Default::default(),
             contains: None,
             hints: Hints::default(),
@@ -70,50 +79,57 @@ impl MetaSet {
     /// matches "evaluate".
     pub fn with_contains(
         mut self,
-        contains: impl Fn(&MetaSet, &VertexName) -> Result<bool> + Send + Sync + 'static,
+        contains: Box<
+            dyn for<'a> Fn(&'a MetaSet, &'a VertexName) -> BoxFuture<'a, Result<bool>>
+                + Send
+                + Sync,
+        >,
     ) -> Self {
-        self.contains = Some(Box::new(contains));
+        self.contains = Some(contains);
         self
     }
 
     /// Evaluate the set. Returns a new set.
-    pub fn evaluate(&self) -> Result<NameSet> {
-        self.evaluated
-            .get_or_try_init(&self.evaluate)
-            .map(|s| s.clone())
+    pub async fn evaluate(&self) -> Result<NameSet> {
+        if let Some(s) = &*self.evaluated.read() {
+            return Ok(s.clone());
+        }
+        let s = (self.evaluate)().await?;
+        *self.evaluated.write() = Some(s.clone());
+        Ok(s)
     }
 
     /// Returns the evaluated set if it was evaluated.
     /// Returns None if the set was not evaluated.
     pub fn evaluated(&self) -> Option<NameSet> {
-        self.evaluated.get().cloned()
+        self.evaluated.read().clone()
     }
 }
 
 #[async_trait::async_trait]
 impl AsyncNameSetQuery for MetaSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
-        self.evaluate()?.iter().await
+        self.evaluate().await?.iter().await
     }
 
     async fn iter_rev(&self) -> Result<BoxVertexStream> {
-        self.evaluate()?.iter_rev().await
+        self.evaluate().await?.iter_rev().await
     }
 
     async fn count(&self) -> Result<usize> {
-        self.evaluate()?.count().await
+        self.evaluate().await?.count().await
     }
 
     async fn last(&self) -> Result<Option<VertexName>> {
-        self.evaluate()?.last().await
+        self.evaluate().await?.last().await
     }
 
     async fn contains(&self, name: &VertexName) -> Result<bool> {
         match self.evaluated() {
             Some(set) => set.contains(name).await,
             None => match &self.contains {
-                Some(f) => f(self, name),
-                None => self.evaluate()?.contains(name).await,
+                Some(f) => f(self, name).await,
+                None => self.evaluate().await?.contains(name).await,
             },
         }
     }
@@ -131,15 +147,15 @@ impl AsyncNameSetQuery for MetaSet {
 mod tests {
     use super::super::tests::*;
     use super::*;
+    use nonblocking::non_blocking_result as r;
 
     fn meta_set(v: &[impl ToString]) -> MetaSet {
         let v: Vec<_> = v.iter().map(|s| s.to_string()).collect();
-        let f = move || {
-            Ok(NameSet::from_static_names(
-                v.clone().into_iter().map(Into::into),
-            ))
+        let f = move || -> BoxFuture<_> {
+            let s = NameSet::from_static_names(v.clone().into_iter().map(Into::into));
+            Box::pin(async move { Ok(s) })
         };
-        MetaSet::from_evaluate(f)
+        MetaSet::from_evaluate(Box::new(f))
     }
 
     #[test]
@@ -157,8 +173,10 @@ mod tests {
 
     #[test]
     fn test_meta_contains() -> Result<()> {
-        let set = meta_set(&["1", "3", "2", "7", "5"])
-            .with_contains(|_, v| Ok(v.as_ref().len() == 1 && b"12357".contains(&v.as_ref()[0])));
+        let set = meta_set(&["1", "3", "2", "7", "5"]).with_contains(Box::new(|_, v| {
+            let r = Ok(v.as_ref().len() == 1 && b"12357".contains(&v.as_ref()[0]));
+            Box::pin(async move { r })
+        }));
 
         assert!(nb(set.contains(&"2".into()))?);
         assert!(!nb(set.contains(&"6".into()))?);
@@ -173,7 +191,7 @@ mod tests {
     fn test_debug() {
         let set = meta_set(&["1", "3", "2", "7", "5"]);
         assert_eq!(format!("{:?}", &set), "<meta ?>");
-        set.evaluate().unwrap();
+        r(set.evaluate()).unwrap();
         assert_eq!(format!("{:5?}", &set), "<meta <static [1, 3, 2, 7, 5]>>");
     }
 

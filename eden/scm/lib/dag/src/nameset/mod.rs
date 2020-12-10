@@ -16,6 +16,7 @@ use crate::spanset::SpanSet;
 use crate::Id;
 use crate::Result;
 use crate::VertexName;
+use futures::future::BoxFuture;
 use futures::Stream;
 use futures::StreamExt;
 use nonblocking::non_blocking;
@@ -122,9 +123,37 @@ impl NameSet {
 
     /// Creates from a function that evaluates to a [`NameSet`], and a
     /// `contains` fast path.
-    pub fn from_evaluate_contains(
+    pub fn from_evaluate_contains<C>(
         evaluate: impl Fn() -> Result<NameSet> + Send + Sync + 'static,
-        contains: impl Fn(&MetaSet, &VertexName) -> Result<bool> + Send + Sync + 'static,
+        contains: C,
+    ) -> NameSet
+    where
+        C: for<'a> Fn(&'a MetaSet, &'a VertexName) -> Result<bool>,
+        C: Send + Sync + 'static,
+    {
+        let evaluate = move || -> BoxFuture<_> {
+            let result = evaluate();
+            Box::pin(async move { result })
+        };
+        let contains = Arc::new(contains);
+        Self::from_async_evaluate_contains(
+            Box::new(evaluate),
+            Box::new(move |m, v| {
+                let contains = contains.clone();
+                Box::pin(async move { contains(m, v) })
+            }),
+        )
+    }
+
+    /// Creates from an async function that evaluates to a [`NameSet`], and a
+    /// async `contains` fast path.
+    pub fn from_async_evaluate_contains(
+        evaluate: Box<dyn Fn() -> BoxFuture<'static, Result<NameSet>> + Send + Sync>,
+        contains: Box<
+            dyn for<'a> Fn(&'a MetaSet, &'a VertexName) -> BoxFuture<'a, Result<bool>>
+                + Send
+                + Sync,
+        >,
     ) -> NameSet {
         Self::from_query(MetaSet::from_evaluate(evaluate).with_contains(contains))
     }

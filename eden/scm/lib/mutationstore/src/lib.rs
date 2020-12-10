@@ -48,6 +48,7 @@ use std::io::Cursor;
 use std::path::Path;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::SeqCst;
+use std::sync::Arc;
 use types::mutation::MutationEntry;
 use types::node::Node;
 use vlqencoding::VLQDecodeAt;
@@ -238,50 +239,55 @@ impl MutationStore {
     /// commit graph.
     pub async fn calculate_obsolete(&self, public: Set, draft: Set) -> Result<Set> {
         let visible = public | draft.clone();
-        let this = self.try_clone()?;
+        let this = Arc::new(self.try_clone()?);
 
         // Evaluate `obsolete()` for all `draft`.
         // A draft is obsoleted if it has a visible successor.
-        let evaluate = {
-            let visible = visible.clone();
-            move || -> dag::Result<Set> {
-                // Vertex -> Node.
-                let draft_nodes = draft
-                    .iter()?
-                    .filter_map(|v| v.ok().and_then(|v| Node::from_slice(v.as_ref()).ok()))
-                    .collect::<Vec<Node>>();
+        async fn evaluate_fn(
+            this: Arc<MutationStore>,
+            visible: Set,
+            draft: Set,
+        ) -> dag::Result<Set> {
+            // Vertex -> Node.
+            let draft_nodes = draft
+                .iter()?
+                .filter_map(|v| v.ok().and_then(|v| Node::from_slice(v.as_ref()).ok()))
+                .collect::<Vec<Node>>();
 
-                // Obtain the obsolete graph about draft successors.
-                let obsdag = this
-                    .get_dag_advanced(draft_nodes, DagFlags::SUCCESSORS)
-                    .map_err(|e| dag::errors::BackendError::Other(e))?;
+            // Obtain the obsolete graph about draft successors.
+            let obsdag = this
+                .get_dag_advanced(draft_nodes, DagFlags::SUCCESSORS)
+                .map_err(|e| dag::errors::BackendError::Other(e))?;
 
-                // Filter out invisible successors.
-                let obsvisible = obsdag.ancestors(obsdag.all()? & visible.clone())?;
+            // Filter out invisible successors.
+            let obsvisible = obsdag.ancestors(obsdag.all()? & visible)?;
 
-                // Heads of `obsvisible` are not obsoleted. Other part (parent) of
-                // `obsvisible` are obsoleted.
-                let obsoleted = obsdag.parents(obsvisible)?;
+            // Heads of `obsvisible` are not obsoleted. Other part (parent) of
+            // `obsvisible` are obsoleted.
+            let obsoleted = obsdag.parents(obsvisible)?;
 
-                // Filter out unknown nodes.
-                let obsoleted = draft.clone() & obsoleted;
+            // Filter out unknown nodes.
+            let obsoleted = draft & obsoleted;
 
-                // Flatten the set for performance.
-                Ok(obsoleted.flatten()?)
-            }
-        };
+            // Flatten the set for performance.
+            Ok(obsoleted.flatten()?)
+        }
 
         // Spot check `obsolete()` for nodes.
         //
         // This is faster for revsets like `smallset & obsolete()`, where
         // smallset is way smaller than `draft()`.
-        let contains_count = AtomicUsize::new(0);
-        let this = self.try_clone()?;
-        let contains = move |set: &MetaSet, v: &VertexName| -> dag::Result<bool> {
+        async fn contains_fn(
+            this: Arc<MutationStore>,
+            contains_count: Arc<AtomicUsize>,
+            visible: Set,
+            set: &MetaSet,
+            v: &VertexName,
+        ) -> dag::Result<bool> {
             // If "contains" is called a few times, calculate the full "obsolete()"
             // and use that instead.
             if contains_count.fetch_add(1, SeqCst) > 4 {
-                set.evaluate()?.contains(v)
+                set.evaluate().await?.contains(v)
             } else if let Ok(id) = Node::from_slice(v.as_ref()) {
                 let obsdag = this
                     .get_dag_advanced(vec![id], DagFlags::SUCCESSORS)
@@ -290,7 +296,7 @@ impl MutationStore {
             } else {
                 Ok(false)
             }
-        };
+        }
 
         // The set has 2 code paths: contains, and full iteration.
         //
@@ -298,7 +304,27 @@ impl MutationStore {
         // calculating the full set (ex. smallset & obsolete()).
         //
         // The full iteration is used in other cases.
-        Ok(Set::from_evaluate_contains(evaluate, contains))
+        Ok(Set::from_async_evaluate_contains(
+            {
+                let visible = visible.clone();
+                let this = this.clone();
+                Box::new(move || {
+                    Box::pin(evaluate_fn(this.clone(), visible.clone(), draft.clone()))
+                })
+            },
+            {
+                let contains_count = Arc::new(AtomicUsize::new(0));
+                Box::new(move |set, v| {
+                    Box::pin(contains_fn(
+                        this.clone(),
+                        contains_count.clone(),
+                        visible.clone(),
+                        set,
+                        v,
+                    ))
+                })
+            },
+        ))
     }
 
     pub fn get_successors_sets(&self, node: Node) -> Result<Vec<Vec<Node>>> {
