@@ -39,6 +39,7 @@ use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
 use crate::spanset::SpanSet;
 use crate::Result;
+use futures::future::BoxFuture;
 use nonblocking::non_blocking_result;
 use parking_lot::RwLock;
 use std::collections::{HashMap, HashSet};
@@ -102,7 +103,7 @@ where
     ) -> Result<()>
     where
         F: Fn(VertexName) -> Result<Vec<VertexName>>,
-        F: Send,
+        F: Send + Sync,
     {
         if !self.pending_heads.is_empty() {
             return programming(format!(
@@ -136,7 +137,8 @@ where
             parent_names_func,
             master_names,
             non_master_names,
-        )?;
+        )
+        .await?;
 
         // Write to disk.
         map.sync()?;
@@ -198,7 +200,7 @@ where
     /// can re-assign Ids to the MASTER group.
     async fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
     where
-        F: Send,
+        F: Send + Sync,
         F: Fn(VertexName) -> Result<Vec<VertexName>>,
     {
         // Assign to the NON_MASTER group unconditionally so we can avoid the
@@ -222,7 +224,7 @@ where
         let mut outcome = PreparedFlatSegments::default();
         for head in heads.iter() {
             if !self.map.contains_vertex_name(head)? {
-                outcome.merge(self.map.assign_head(head.clone(), &parents, group)?);
+                outcome.merge(self.map.assign_head(head.clone(), &parents, group).await?);
                 self.pending_heads.push(head.clone());
             }
         }
@@ -595,55 +597,64 @@ where
 }
 
 /// Re-assign ids and segments for non-master group.
-pub fn rebuild_non_master<M, S>(map: &mut Locked<M>, dag: &mut Locked<IdDag<S>>) -> Result<()>
+pub fn rebuild_non_master<'a: 's, 'b: 's, 's, M, S>(
+    map: &'a mut Locked<M>,
+    dag: &'b mut Locked<IdDag<S>>,
+) -> BoxFuture<'s, Result<()>>
 where
     M: IdMapAssignHead + Persist,
     S: IdDagStore + Persist,
+    M: Send,
 {
-    // backup part of the named graph in memory.
-    let parents = non_master_parent_names(map, dag)?;
-    let mut heads = parents
-        .keys()
-        .collect::<HashSet<_>>()
-        .difference(
-            &parents
-                .values()
-                .flat_map(|ps| ps.into_iter())
-                .collect::<HashSet<_>>(),
-        )
-        .map(|&v| v.clone())
-        .collect::<Vec<_>>();
-    heads.sort_unstable();
+    let fut = async move {
+        // backup part of the named graph in memory.
+        let parents = non_master_parent_names(map, dag)?;
+        let mut heads = parents
+            .keys()
+            .collect::<HashSet<_>>()
+            .difference(
+                &parents
+                    .values()
+                    .flat_map(|ps| ps.into_iter())
+                    .collect::<HashSet<_>>(),
+            )
+            .map(|&v| v.clone())
+            .collect::<Vec<_>>();
+        heads.sort_unstable();
 
-    // Remove existing non-master data.
-    dag.remove_non_master()?;
-    map.remove_non_master()?;
+        // Remove existing non-master data.
+        dag.remove_non_master()?;
+        map.remove_non_master()?;
 
-    // Rebuild them.
-    let parent_func = |name: VertexName| match parents.get(&name) {
-        Some(names) => Ok(names.iter().cloned().collect()),
-        None => bug(format!(
-            "bug: parents of {:?} is missing (in rebuild_non_master)",
-            name
-        )),
+        // Rebuild them.
+        let parent_func = |name: VertexName| match parents.get(&name) {
+            Some(names) => Ok(names.iter().cloned().collect()),
+            None => bug(format!(
+                "bug: parents of {:?} is missing (in rebuild_non_master)",
+                name
+            )),
+        };
+        build(map, dag, parent_func, &[], &heads[..]).await?;
+
+        Ok(())
     };
-    build(map, dag, parent_func, &[], &heads[..])?;
-
-    Ok(())
+    Box::pin(fut)
 }
 
 /// Build IdMap and Segments for the given heads.
-pub fn build<F, IS, M>(
-    map: &mut Locked<M>,
-    dag: &mut Locked<IdDag<IS>>,
+pub async fn build<F, IS, M>(
+    map: &mut Locked<'_, M>,
+    dag: &mut Locked<'_, IdDag<IS>>,
     parent_names_func: F,
     master_heads: &[VertexName],
     non_master_heads: &[VertexName],
 ) -> Result<()>
 where
     F: Fn(VertexName) -> Result<Vec<VertexName>>,
+    F: Send + Sync,
     IS: IdDagStore + Persist,
     M: IdMapAssignHead + Persist,
+    M: Send,
 {
     // Update IdMap.
     let mut outcome = PreparedFlatSegments::default();
@@ -654,7 +665,10 @@ where
     .iter()
     {
         for node in nodes.iter() {
-            outcome.merge(map.assign_head(node.clone(), &parent_names_func, *group)?);
+            outcome.merge(
+                map.assign_head(node.clone(), &parent_names_func, *group)
+                    .await?,
+            );
         }
     }
 
@@ -671,7 +685,7 @@ where
 
     // Rebuild non-master ids and segments.
     if map.need_rebuild_non_master() {
-        rebuild_non_master(map, dag)?;
+        rebuild_non_master(map, dag).await?;
     }
 
     Ok(())

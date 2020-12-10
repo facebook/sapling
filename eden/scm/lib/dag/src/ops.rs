@@ -174,7 +174,7 @@ pub trait DagAddHeads {
     /// changes to disk.
     async fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
     where
-        F: Send,
+        F: Send + Sync,
         F: Fn(VertexName) -> Result<Vec<VertexName>>;
 }
 
@@ -200,7 +200,7 @@ pub trait DagPersistent {
     ) -> Result<()>
     where
         F: Fn(VertexName) -> Result<Vec<VertexName>>,
-        F: Send;
+        F: Send + Sync;
 
     /// Import from another (potentially large) DAG. Write to disk immediately.
     async fn import_and_flush(

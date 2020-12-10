@@ -12,6 +12,7 @@ use dag::Dag;
 use dag::Set;
 use dag::Vertex;
 use nonblocking::non_blocking_result;
+use parking_lot::Mutex;
 use std::collections::BTreeMap;
 use std::ops::Deref;
 use std::path::Path;
@@ -115,11 +116,14 @@ fn sync_from_git(
     unsafe impl<T> Send for ForceSend<T> {}
 
     let git_repo = ForceSend(git_repo);
+    let git_repo = Mutex::new(git_repo);
+
     let parent_func = move |v: Vertex| -> dag::Result<Vec<Vertex>> {
         tracing::trace!("visiting git commit {:?}", &v);
         let oid = git2::Oid::from_bytes(v.as_ref())
             .with_context(|| format!("converting to git oid for {:?}", &v))?;
         let commit = git_repo
+            .lock()
             .0
             .find_commit(oid)
             .with_context(|| format!("resolving {:?} to git commit", &v))?;

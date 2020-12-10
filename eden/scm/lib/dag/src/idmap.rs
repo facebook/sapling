@@ -26,6 +26,7 @@ pub use mem_idmap::MemIdMap;
 pub type SyncableIdMap<'a> = Locked<'a, IdMap>;
 
 /// DAG-aware write operations.
+#[async_trait::async_trait]
 pub trait IdMapAssignHead: IdConvert + IdMapWrite {
     /// Assign an id for a head in a DAG. This implies ancestors of the
     /// head will also have ids assigned.
@@ -41,7 +42,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
     /// New `id`s inserted by this function will have the specified `group`.
     /// Existing `id`s that are ancestors of `head` will get re-assigned
     /// if they have a higher `group`.
-    fn assign_head<F>(
+    async fn assign_head<F>(
         &mut self,
         head: VertexName,
         parents_by_name: F,
@@ -49,6 +50,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
     ) -> Result<PreparedFlatSegments>
     where
         F: Fn(VertexName) -> Result<Vec<VertexName>>,
+        F: Send + Sync,
     {
         // There are some interesting cases to optimize the numbers:
         //
