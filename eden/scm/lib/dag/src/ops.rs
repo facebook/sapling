@@ -23,7 +23,7 @@ use crate::Result;
 use std::sync::Arc;
 
 /// DAG related read-only algorithms.
-pub trait DagAlgorithm {
+pub trait DagAlgorithm: Send + Sync {
     /// Sort a `NameSet` topologically.
     fn sort(&self, set: &NameSet) -> Result<NameSet>;
 
@@ -237,7 +237,7 @@ pub trait PrefixLookup {
 }
 
 /// Convert between `Vertex` and `Id`.
-pub trait IdConvert: PrefixLookup {
+pub trait IdConvert: PrefixLookup + Sync {
     fn vertex_id(&self, name: VertexName) -> Result<Id>;
     fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>>;
     fn vertex_name(&self, id: Id) -> Result<VertexName>;

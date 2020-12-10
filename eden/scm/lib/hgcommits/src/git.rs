@@ -22,6 +22,7 @@ use gitdag::git2;
 use gitdag::GitDag;
 use metalog::MetaLog;
 use minibytes::Bytes;
+use parking_lot::Mutex;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
@@ -41,7 +42,7 @@ use std::path::PathBuf;
 /// In the future when we abstract away the HG SHA1 logic, we can
 /// revisit and build something writable based on this.
 pub struct GitSegmentedCommits {
-    git_repo: git2::Repository,
+    git_repo: Mutex<git2::Repository>,
     dag: GitDag,
     dag_path: PathBuf,
     git_path: PathBuf,
@@ -55,7 +56,7 @@ impl GitSegmentedCommits {
         let dag_path = dag_dir.to_path_buf();
         let git_path = git_dir.to_path_buf();
         Ok(Self {
-            git_repo,
+            git_repo: Mutex::new(git_repo),
             dag,
             dag_path,
             git_path,
@@ -118,7 +119,8 @@ impl ReadCommitText for GitSegmentedCommits {
             Ok(oid) => oid,
             Err(_) => return Ok(None),
         };
-        let commit = self.git_repo.find_commit(oid)?;
+        let repo = self.git_repo.lock();
+        let commit = repo.find_commit(oid)?;
         let text = to_hg_text(&commit);
         Ok(Some(text))
     }

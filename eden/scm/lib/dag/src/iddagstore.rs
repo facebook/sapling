@@ -17,7 +17,7 @@ mod indexedlog_store;
 pub(crate) use in_process_store::InProcessStore;
 pub(crate) use indexedlog_store::IndexedLogStore;
 
-pub trait IdDagStore {
+pub trait IdDagStore: Send + Sync {
     /// Maximum level segment in the store
     fn max_level(&self) -> Result<Level>;
 

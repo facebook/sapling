@@ -544,7 +544,7 @@ delegate! {
 }
 delegate! {
     IdConvert {
-        impl<I, M: IdConvert, P, S> IdConvert for AbstractNameDag<I, M, P, S>
+        impl<I: Send + Sync, M: IdConvert + Send, P: Send + Sync, S: Send + Sync> IdConvert for AbstractNameDag<I, M, P, S>
     } => self.map
 }
 
