@@ -48,9 +48,6 @@ use std::fmt;
 use std::ops::Deref;
 use std::sync::Arc;
 
-#[cfg(test)]
-use crate::idmap::IdMapBuildParents;
-
 mod indexedlog_namedag;
 mod mem_namedag;
 
@@ -221,12 +218,6 @@ where
         }
 
         // Update segments in the NON_MASTER group.
-        #[cfg(test)]
-        {
-            let parent_ids_func = self.map.build_get_parents_by_id(&parents);
-            outcome.verify(&parent_ids_func);
-        }
-
         self.dag
             .build_segments_volatile_from_prepared_flat_segments(&outcome)?;
 
@@ -666,15 +657,7 @@ where
     }
 
     // Update segments.
-    {
-        #[cfg(test)]
-        {
-            let parent_ids_func = map.build_get_parents_by_id(&parent_names_func);
-            outcome.verify(&parent_ids_func);
-        }
-
-        dag.build_segments_volatile_from_prepared_flat_segments(&outcome)?;
-    }
+    dag.build_segments_volatile_from_prepared_flat_segments(&outcome)?;
 
     // Rebuild non-master ids and segments.
     if map.need_rebuild_non_master() {

@@ -9,13 +9,11 @@
 //!
 //! See [`IdMap`] for the main structure.
 
-use crate::errors::programming;
 use crate::id::{Group, Id, VertexName};
 use crate::locked::Locked;
 use crate::ops::IdConvert;
 use crate::segment::PreparedFlatSegments;
 use crate::Result;
-use nonblocking::non_blocking_result;
 
 mod indexedlog_idmap;
 mod mem_idmap;
@@ -159,39 +157,6 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
 }
 
 impl<T> IdMapAssignHead for T where T: IdConvert + IdMapWrite {}
-
-pub trait IdMapBuildParents: IdConvert {
-    /// Translate `get_parents` from taking names to taking `Id`s.
-    fn build_get_parents_by_id<'a>(
-        &'a self,
-        get_parents_by_name: &'a dyn Fn(VertexName) -> Result<Vec<VertexName>>,
-    ) -> Box<dyn Fn(Id) -> Result<Vec<Id>> + 'a> {
-        let func = move |id: Id| -> Result<Vec<Id>> {
-            // XXX: Consider remove build_get_parents_by_id and build_segments_volatile
-            // based on parent function.
-            let name = non_blocking_result(self.vertex_name(id))?;
-            let parent_names: Vec<VertexName> = get_parents_by_name(name.clone())?;
-            let mut result = Vec::with_capacity(parent_names.len());
-            for parent_name in parent_names {
-                let parent_id = non_blocking_result(self.vertex_id(parent_name))?;
-                if parent_id >= id {
-                    return programming(format!(
-                        "parent {} {:?} should <= {} {:?}",
-                        parent_id,
-                        non_blocking_result(self.vertex_name(parent_id)).ok(),
-                        id,
-                        &name
-                    ));
-                };
-                result.push(parent_id);
-            }
-            Ok(result)
-        };
-        Box::new(func)
-    }
-}
-
-impl<T> IdMapBuildParents for T where T: IdConvert {}
 
 /// Write operations for IdMap.
 pub trait IdMapWrite {
