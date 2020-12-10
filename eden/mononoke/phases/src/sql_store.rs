@@ -5,23 +5,29 @@
  * GNU General Public License version 2.
  */
 
-use crate::caching::{get_cache_key, phase_caching_determinator, Caches};
-use anyhow::Error;
+use anyhow::{Context as _, Error};
+use async_trait::async_trait;
 use bytes::Bytes;
-use caching_ext::{GetOrFillMultipleFromCacheLayers, McErrorKind, McResult};
-use cloned::cloned;
+use caching_ext::{
+    fill_cache, get_or_fill, CacheDispositionNew, CacheTtl, CachelibHandler, EntityStore,
+    KeyedEntityStore, McErrorKind, McResult, MemcacheEntity, MemcacheHandler,
+};
 use context::{CoreContext, PerfCounterType};
 use futures::compat::Future01CompatExt;
-use futures_ext::FutureExt as OldFutureExt;
-use futures_old::Future as OldFuture;
+use maplit::hashset;
+use memcache::KeyGen;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::{queries, Connection};
 use stats::prelude::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::Phase;
+
+// 6 hours in sec
+pub const TTL_DRAFT_SEC: u64 = 21600;
 
 define_stats! {
     prefix = "mononoke.phases";
@@ -35,6 +41,22 @@ define_stats! {
     memcache_deserialize_err: timeseries("memcache.deserialize_err"; Rate, Sum),
 }
 
+pub struct Caches {
+    pub memcache: MemcacheHandler, // Memcache Client for temporary caching
+    pub cache_pool: CachelibHandler<Phase>,
+    pub keygen: KeyGen,
+}
+
+impl Caches {
+    pub fn new_mock(keygen: KeyGen) -> Self {
+        Self {
+            memcache: MemcacheHandler::create_mock(),
+            cache_pool: CachelibHandler::create_mock(),
+            keygen,
+        }
+    }
+}
+
 /// Object that reads/writes to phases db
 #[derive(Clone)]
 pub struct SqlPhasesStore {
@@ -45,48 +67,6 @@ pub struct SqlPhasesStore {
 }
 
 impl SqlPhasesStore {
-    fn get_cacher(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-    ) -> GetOrFillMultipleFromCacheLayers<ChangesetId, Phase> {
-        let report_mc_result = |res: McResult<()>| {
-            match res {
-                Ok(_) => STATS::memcache_hit.add_value(1),
-                Err(McErrorKind::MemcacheInternal) => STATS::memcache_internal_err.add_value(1),
-                Err(McErrorKind::Missing) => STATS::memcache_miss.add_value(1),
-                Err(McErrorKind::Deserialization) => STATS::memcache_deserialize_err.add_value(1),
-            };
-        };
-
-        cloned!(ctx, self.read_connection);
-        let get_from_db = {
-            move |cs_ids: HashSet<ChangesetId>| {
-                let cs_ids: Vec<_> = cs_ids.into_iter().collect();
-                ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlReadsReplica);
-                SelectPhases::query(&read_connection, &repo_id, &cs_ids)
-                    .map(move |public| public.into_iter().collect())
-                    .boxify()
-            }
-        };
-
-        let determinator = phase_caching_determinator;
-
-        GetOrFillMultipleFromCacheLayers {
-            repo_id,
-            get_cache_key: Arc::new(get_cache_key),
-            cachelib: self.caches.cache_pool.clone(),
-            keygen: self.caches.keygen.clone(),
-            memcache: self.caches.memcache.clone(),
-            deserialize: Arc::new(|buf| buf.as_ref().try_into().map_err(|_| ())),
-            serialize: Arc::new(|phase| Bytes::from(phase.to_string())),
-            report_mc_result: Arc::new(report_mc_result),
-            get_from_db: Arc::new(get_from_db),
-            determinator,
-        }
-    }
-
     pub async fn get_single_raw(
         &self,
         ctx: &CoreContext,
@@ -94,12 +74,17 @@ impl SqlPhasesStore {
         cs_id: ChangesetId,
     ) -> Result<Option<Phase>, Error> {
         STATS::get_single.add_value(1);
-        let csids = vec![cs_id];
 
-        let cacher = self.get_cacher(ctx, repo_id);
-        let cs_to_phase = cacher.run(csids.into_iter().collect()).compat().await?;
+        let ctx = (ctx, repo_id, self);
 
-        Ok(cs_to_phase.into_iter().next().map(|(_, phase)| phase))
+        let res = get_or_fill(ctx, hashset! { cs_id })
+            .await
+            .with_context(|| "Error fetching phases via cache")?
+            .into_iter()
+            .map(|(_, val)| val)
+            .next();
+
+        Ok(res)
     }
 
     pub async fn get_public_raw(
@@ -113,9 +98,12 @@ impl SqlPhasesStore {
         }
 
         STATS::get_many.add_value(1);
-        let cacher = self.get_cacher(ctx, repo_id);
-        let csids = csids.iter().cloned().collect();
-        let cs_to_phase = cacher.run(csids).compat().await?;
+
+        let ctx = (ctx, repo_id, self);
+
+        let cs_to_phase = get_or_fill(ctx, csids.iter().cloned().collect())
+            .await
+            .with_context(|| "Error fetching phases via cache")?;
 
         Ok(cs_to_phase
             .into_iter()
@@ -139,7 +127,6 @@ impl SqlPhasesStore {
             return Ok(());
         }
         STATS::add_many.add_value(1);
-        let cacher = self.get_cacher(ctx, repoid);
         let phases: Vec<_> = csids
             .iter()
             .map(|csid| (&repoid, csid, &Phase::Public))
@@ -151,7 +138,15 @@ impl SqlPhasesStore {
             .compat()
             .await?;
 
-        cacher.fill_caches(csids.iter().map(|csid| (*csid, Phase::Public)).collect());
+        {
+            let ctx = (ctx, repoid, self);
+            let phases = csids
+                .iter()
+                .map(|csid| (csid, &Phase::Public))
+                .collect::<Vec<_>>();
+            fill_cache(ctx, phases).await;
+        }
+
         Ok(())
     }
 
@@ -168,6 +163,84 @@ impl SqlPhasesStore {
             .await?;
         Ok(ans.into_iter().map(|x| x.0).collect())
     }
+}
+
+impl MemcacheEntity for Phase {
+    fn serialize(&self) -> Bytes {
+        Bytes::from(self.to_string())
+    }
+
+    fn deserialize(bytes: Bytes) -> Result<Self, ()> {
+        bytes.as_ref().try_into().map_err(|_| ())
+    }
+
+    fn report_mc_result(res: &McResult<Self>) {
+        match res.as_ref() {
+            Ok(_) => STATS::memcache_hit.add_value(1),
+            Err(McErrorKind::MemcacheInternal) => STATS::memcache_internal_err.add_value(1),
+            Err(McErrorKind::Missing) => STATS::memcache_miss.add_value(1),
+            Err(McErrorKind::Deserialization) => STATS::memcache_deserialize_err.add_value(1),
+        };
+    }
+}
+
+type CacheRequest<'a> = (&'a CoreContext, RepositoryId, &'a SqlPhasesStore);
+
+impl EntityStore<Phase> for CacheRequest<'_> {
+    fn cachelib(&self) -> &CachelibHandler<Phase> {
+        let (_, _, phases) = self;
+        &phases.caches.cache_pool
+    }
+
+    fn keygen(&self) -> &KeyGen {
+        let (_, _, phases) = self;
+        &phases.caches.keygen
+    }
+
+    fn memcache(&self) -> &MemcacheHandler {
+        let (_, _, phases) = self;
+        &phases.caches.memcache
+    }
+
+    fn cache_determinator(&self, phase: &Phase) -> CacheDispositionNew {
+        let ttl = if phase == &Phase::Public {
+            CacheTtl::NoTtl
+        } else {
+            CacheTtl::Ttl(Duration::from_secs(TTL_DRAFT_SEC))
+        };
+
+        CacheDispositionNew::Cache(ttl)
+    }
+}
+
+#[async_trait]
+impl KeyedEntityStore<ChangesetId, Phase> for CacheRequest<'_> {
+    fn get_cache_key(&self, cs_id: &ChangesetId) -> String {
+        let (_, repo_id, _) = self;
+        get_cache_key(*repo_id, cs_id)
+    }
+
+    async fn get_from_db(
+        &self,
+        cs_ids: HashSet<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Phase>, Error> {
+        let (ctx, repo_id, mapping) = self;
+
+        let cs_ids: Vec<_> = cs_ids.into_iter().collect();
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
+        // NOTE: We only track public phases in the DB.
+        let public = SelectPhases::query(&mapping.read_connection, &repo_id, &cs_ids)
+            .compat()
+            .await?;
+
+        Result::<_, Error>::Ok(public.into_iter().collect())
+    }
+}
+
+pub fn get_cache_key(repo_id: RepositoryId, cs_id: &ChangesetId) -> String {
+    format!("{}.{}", repo_id.prefix(), cs_id)
 }
 
 queries! {

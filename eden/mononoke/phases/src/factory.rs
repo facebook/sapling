@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::caching::Caches;
-use crate::{sql_store::SqlPhasesStore, HeadsFetcher, Phases, SqlPhases};
+use crate::{
+    sql_store::{Caches, SqlPhasesStore},
+    HeadsFetcher, Phases, SqlPhases,
+};
 use cachelib::VolatileLruCachePool;
 use changeset_fetcher::ChangesetFetcher;
 use fbinit::FacebookInit;

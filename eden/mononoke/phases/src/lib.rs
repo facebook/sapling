@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-mod caching;
 mod errors;
 pub use errors::ErrorKind;
 mod factory;
