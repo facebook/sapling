@@ -270,9 +270,26 @@ impl<'a> MetadataStoreBuilder<'a> {
                     max_pending,
                     None,
                 )?);
-                historystore.add(local_pack_store.clone());
+                let local_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
+                    get_indexedloghistorystore_path(&local_path)?,
+                    &self.config,
+                    IndexedLogHistoryStoreType::Local,
+                )?);
+                let primary: Arc<dyn HgIdMutableHistoryStore> = if self
+                    .config
+                    .get_or_default::<bool>("remotefilelog", "write-local-to-indexedlog")?
+                {
+                    // Put the indexedlog first, since recent data will have gone there.
+                    historystore.add(local_indexedloghistorystore.clone());
+                    historystore.add(local_pack_store);
+                    local_indexedloghistorystore
+                } else {
+                    historystore.add(local_pack_store.clone());
+                    historystore.add(local_indexedloghistorystore);
+                    local_pack_store
+                };
 
-                Some(local_pack_store)
+                Some(primary)
             } else {
                 if !self.no_local_store {
                     return Err(format_err!(
@@ -582,6 +599,41 @@ mod tests {
         let cachedir = TempDir::new()?;
         let config = make_config(&cachedir);
         assert!(MetadataStoreBuilder::new(&config).build().is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_local_indexedlog_write() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let mut config = make_config(&cachedir);
+        config.set(
+            "remotefilelog",
+            "write-local-to-indexedlog",
+            Some("True"),
+            &Default::default(),
+        );
+
+        let store = MetadataStoreBuilder::new(&config)
+            .local_path(&localdir)
+            .build()?;
+
+        let k1 = key("a", "1");
+        let nodeinfo = NodeInfo {
+            parents: [key("a", "2"), null_key("a")],
+            linknode: hgid("3"),
+        };
+
+        store.add(&k1, &nodeinfo)?;
+        store.flush()?;
+        drop(store);
+
+        let store = IndexedLogHgIdHistoryStore::new(
+            get_indexedloghistorystore_path(&localdir)?,
+            &config,
+            IndexedLogHistoryStoreType::Local,
+        )?;
+        assert_eq!(store.get_node_info(&k1)?, Some(nodeinfo));
         Ok(())
     }
 
