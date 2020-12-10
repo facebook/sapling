@@ -7,8 +7,7 @@
 
 use crate::mock_store::MockStore;
 use bytes::Bytes;
-use futures_01_ext::FutureExt;
-use futures_old::{future::ok, Future};
+use futures::compat::Future01CompatExt;
 use memcache::{MemcacheClient, MemcacheSetType};
 use std::{sync::atomic::Ordering, time::Duration};
 
@@ -26,39 +25,33 @@ impl From<MemcacheClient> for MemcacheHandler {
 }
 
 impl MemcacheHandler {
-    pub fn get(&self, key: String) -> impl Future<Item = Option<Bytes>, Error = ()> {
+    pub async fn get(&self, key: String) -> Result<Option<Bytes>, ()> {
         match self {
             MemcacheHandler::Real(ref client) => client
                 .get(key)
-                .map(|value| value.map(Bytes::from))
-                .left_future(),
-            MemcacheHandler::Mock(store) => {
-                ok(store.get(&key).map(|value| value.clone())).right_future()
-            }
+                .compat()
+                .await
+                .map(|value| value.map(Bytes::from)),
+            MemcacheHandler::Mock(store) => Ok(store.get(&key)),
         }
     }
 
-    pub fn set<V>(&self, key: String, value: V) -> impl Future<Item = (), Error = ()>
+    pub async fn set<V>(&self, key: String, value: V) -> Result<(), ()>
     where
         MemcacheSetType: From<V>,
         Bytes: From<V>,
         V: 'static,
     {
         match self {
-            MemcacheHandler::Real(ref client) => client.set(key, value).left_future(),
+            MemcacheHandler::Real(ref client) => client.set(key, value).compat().await,
             MemcacheHandler::Mock(store) => {
                 store.set(&key, value.into());
-                ok(()).right_future()
+                Ok(())
             }
         }
     }
 
-    pub fn set_with_ttl<V>(
-        &self,
-        key: String,
-        value: V,
-        duration: Duration,
-    ) -> impl Future<Item = (), Error = ()>
+    pub async fn set_with_ttl<V>(&self, key: String, value: V, duration: Duration) -> Result<(), ()>
     where
         MemcacheSetType: From<V>,
         Bytes: From<V>,
@@ -66,11 +59,11 @@ impl MemcacheHandler {
     {
         match self {
             MemcacheHandler::Real(ref client) => {
-                client.set_with_ttl(key, value, duration).left_future()
+                client.set_with_ttl(key, value, duration).compat().await
             }
             MemcacheHandler::Mock(_) => {
                 // For now we ignore TTLs here
-                self.set(key, value).right_future()
+                self.set(key, value).await
             }
         }
     }

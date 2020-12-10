@@ -23,7 +23,7 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use bytes::Bytes;
 use cloned::cloned;
-use futures::{compat::Future01CompatExt, future};
+use futures::future;
 use memcache::{KeyGen, MEMCACHE_VALUE_MAX_SIZE};
 
 pub use crate::cachelib_utils::CachelibHandler;
@@ -254,7 +254,6 @@ where
             async move {
                 let res = memcache
                     .get(memcache_key.0.clone())
-                    .compat()
                     .await
                     .map_err(|()| McErrorKind::MemcacheInternal)
                     .and_then(|maybe_bytes| maybe_bytes.ok_or(McErrorKind::Missing))
@@ -328,13 +327,10 @@ async fn fill_multiple_memcache<'a, V: 'a>(
         Some(async move {
             match ttl {
                 CacheTtl::NoTtl => {
-                    memcache.set(memcache_key.0, bytes).compat().await?;
+                    memcache.set(memcache_key.0, bytes).await?;
                 }
                 CacheTtl::Ttl(ttl) => {
-                    memcache
-                        .set_with_ttl(memcache_key.0, bytes, ttl)
-                        .compat()
-                        .await?;
+                    memcache.set_with_ttl(memcache_key.0, bytes, ttl).await?;
                 }
             }
 

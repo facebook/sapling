@@ -9,7 +9,7 @@ use bytes::Bytes;
 use caching_ext::MemcacheHandler;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
-use futures::{compat::Future01CompatExt, future::try_join_all};
+use futures::future::try_join_all;
 use memcache::{KeyGen, MemcacheClient, MEMCACHE_VALUE_MAX_SIZE};
 use rand::random;
 use stats::prelude::*;
@@ -187,7 +187,7 @@ async fn get_single_filenode_from_memcache(
 ) -> Option<FilenodeInfo> {
     let key = keygen.key(&key.key);
 
-    let serialized = match memcache.get(key).compat().await {
+    let serialized = match memcache.get(key).await {
         Ok(Some(serialized)) => serialized,
         Ok(None) => {
             STATS::point_filenode_miss.add_value(1);
@@ -235,7 +235,7 @@ async fn get_history_from_memcache(
         res.ok()
     }
 
-    let serialized = match memcache.get(keygen.key(&key.key)).compat().await {
+    let serialized = match memcache.get(keygen.key(&key.key)).await {
         Ok(Some(serialized)) => serialized,
         Ok(None) => {
             STATS::gaf_miss.add_value(1);
@@ -270,7 +270,7 @@ async fn get_history_from_memcache(
                 let chunk_key = get_mc_key_for_filenodes_list_chunk(keygen, key, pointer);
 
                 async move {
-                    match memcache.get(chunk_key).compat().await {
+                    match memcache.get(chunk_key).await {
                         Ok(Some(chunk)) => Ok(chunk),
                         _ => Err(()),
                     }
@@ -320,7 +320,11 @@ fn schedule_fill_filenode(
     // Quite unlikely that single filenode will be bigger than MEMCACHE_VALUE_MAX_SIZE
     // It's probably not even worth logging it
     if serialized.len() < MEMCACHE_VALUE_MAX_SIZE {
-        let fut = memcache.set(keygen.key(&key.key), serialized).compat();
+        let memcache = memcache.clone();
+        let key = keygen.key(&key.key);
+        let fut = async move {
+            let _ = memcache.set(key, serialized).await;
+        };
 
         tokio::spawn(fut);
     }
@@ -379,10 +383,7 @@ async fn fill_history(
                         // longer than the pointer
                         let chunk_ttl = Duration::from_secs(TTL_SEC + TTL_SEC_RAND);
 
-                        memcache
-                            .set_with_ttl(chunk_key, chunk, chunk_ttl)
-                            .compat()
-                            .await?;
+                        memcache.set_with_ttl(chunk_key, chunk, chunk_ttl).await?;
 
                         Ok(pointer)
                     }
@@ -397,10 +398,7 @@ async fn fill_history(
     let root_key = keygen.key(&key.key);
     let root_ttl = Duration::from_secs(TTL_SEC + random::<u64>() % TTL_SEC_RAND);
 
-    memcache
-        .set_with_ttl(root_key, root, root_ttl)
-        .compat()
-        .await?;
+    memcache.set_with_ttl(root_key, root, root_ttl).await?;
 
     Ok(())
 }
