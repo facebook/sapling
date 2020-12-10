@@ -418,7 +418,7 @@ impl MutationStore {
         }
 
         // Construct parent_func.
-        let parent_func = |node: VertexName| -> dag::Result<Vec<VertexName>> {
+        let parent_func = move |node: VertexName| -> dag::Result<Vec<VertexName>> {
             match parent_map.get(&Node::from_slice(node.as_ref()).unwrap()) {
                 None => Ok(Vec::new()),
                 Some(parents) => Ok(parents
@@ -440,8 +440,11 @@ impl MutationStore {
 
         // Construct the graph.
         let mut dag = MemNameDag::new();
+        let parents: Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync> =
+            Box::new(parent_func);
+
         // Inserting to a memory DAG from a fully known parent function is non-blocking.
-        non_blocking_result(dag.add_heads(parent_func, &heads))?;
+        non_blocking_result(dag.add_heads(&parents, &heads))?;
         Ok(dag)
     }
 }

@@ -12,9 +12,9 @@ use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
 use crate::render::render_namedag;
 use crate::NameDag;
-use crate::Result;
 use crate::Vertex;
 use nonblocking::non_blocking_result;
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 /// Dag structure for testing purpose.
@@ -107,7 +107,7 @@ impl TestDag {
 
 fn get_heads_and_parents_func_from_ascii(
     text: &str,
-) -> (Vec<Vertex>, impl Fn(Vertex) -> Result<Vec<Vertex>>) {
+) -> (Vec<Vertex>, HashMap<Vertex, Vec<Vertex>>) {
     let parents = drawdag::parse(&text);
     let mut heads = parents
         .keys()
@@ -116,11 +116,10 @@ fn get_heads_and_parents_func_from_ascii(
         .map(|&v| Vertex::copy_from(v.as_bytes()))
         .collect::<Vec<_>>();
     heads.sort();
-    let func = move |name: Vertex| -> Result<Vec<Vertex>> {
-        Ok(parents[&String::from_utf8(name.as_ref().to_vec()).unwrap()]
-            .iter()
-            .map(|p| Vertex::copy_from(p.as_bytes()))
-            .collect())
-    };
-    (heads, func)
+    let v = |s: String| Vertex::copy_from(s.as_bytes());
+    let parents = parents
+        .into_iter()
+        .map(|(k, vs)| (v(k), vs.into_iter().map(v).collect()))
+        .collect();
+    (heads, parents)
 }

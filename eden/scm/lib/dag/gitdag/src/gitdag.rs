@@ -132,7 +132,9 @@ fn sync_from_git(
             .map(|id| Vertex::copy_from(id.as_bytes()))
             .collect())
     };
-    non_blocking_result(dag.add_heads_and_flush(parent_func, &master_heads, &non_master_heads))?;
+    let parents: Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync> =
+        Box::new(parent_func);
+    non_blocking_result(dag.add_heads_and_flush(&parents, &master_heads, &non_master_heads))?;
 
     let possible_heads =
         Set::from_static_names(master_heads.into_iter().chain(non_master_heads.into_iter()));

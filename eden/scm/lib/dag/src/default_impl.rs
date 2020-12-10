@@ -16,7 +16,6 @@ use futures::future::BoxFuture;
 use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
-use nonblocking::non_blocking_result;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::future::Future;
@@ -174,8 +173,7 @@ pub(crate) async fn beautify(
     sort(&get_ancestors, &mut heads[..], main_branch).await?;
 
     let mut dag = MemNameDag::new();
-    let get_parents = |v| non_blocking_result(this.parent_names(v));
-    dag.add_heads(get_parents, &heads).await?;
+    dag.add_heads(&this.dag_snapshot()?, &heads).await?;
     Ok(dag)
 }
 

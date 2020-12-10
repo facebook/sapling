@@ -20,7 +20,6 @@ use crate::nameset::NameSet;
 use crate::nameset::SyncNameSetQuery;
 use crate::IdSet;
 use crate::Result;
-use nonblocking::non_blocking_result;
 use std::sync::Arc;
 
 /// DAG related read-only algorithms.
@@ -167,15 +166,41 @@ pub trait DagAlgorithm: Send + Sync {
     fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>>;
 }
 
+#[async_trait::async_trait]
+pub trait Parents: Send + Sync {
+    async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>>;
+}
+
+#[async_trait::async_trait]
+impl Parents for Arc<dyn DagAlgorithm + Send + Sync> {
+    async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+        DagAlgorithm::parent_names(self, name).await
+    }
+}
+
+#[async_trait::async_trait]
+impl<'a> Parents for Box<dyn Fn(VertexName) -> Result<Vec<VertexName>> + Send + Sync + 'a> {
+    async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+        (self)(name)
+    }
+}
+
+#[async_trait::async_trait]
+impl Parents for std::collections::HashMap<VertexName, Vec<VertexName>> {
+    async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+        match self.get(&name) {
+            Some(v) => Ok(v.clone()),
+            None => name.not_found(),
+        }
+    }
+}
+
 /// Add vertexes recursively to the DAG.
 #[async_trait::async_trait]
 pub trait DagAddHeads {
     /// Add vertexes and their ancestors to the DAG. This does not persistent
     /// changes to disk.
-    async fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
-    where
-        F: Send + Sync,
-        F: Fn(VertexName) -> Result<Vec<VertexName>>;
+    async fn add_heads(&mut self, parents: &dyn Parents, heads: &[VertexName]) -> Result<()>;
 }
 
 /// Import a generated `CloneData` object into the DAG.
@@ -192,15 +217,12 @@ pub trait DagPersistent {
     async fn flush(&mut self, master_heads: &[VertexName]) -> Result<()>;
 
     /// A faster path for add_heads, followed by flush.
-    async fn add_heads_and_flush<F>(
+    async fn add_heads_and_flush(
         &mut self,
-        parent_names_func: F,
+        parent_names_func: &dyn Parents,
         master_names: &[VertexName],
         non_master_names: &[VertexName],
-    ) -> Result<()>
-    where
-        F: Fn(VertexName) -> Result<Vec<VertexName>>,
-        F: Send + Sync;
+    ) -> Result<()>;
 
     /// Import from another (potentially large) DAG. Write to disk immediately.
     async fn import_and_flush(
@@ -213,8 +235,7 @@ pub trait DagPersistent {
         let master_heads: Vec<VertexName> = master_heads.iter()?.collect::<Result<Vec<_>>>()?;
         let non_master_heads: Vec<VertexName> =
             non_master_heads.iter()?.collect::<Result<Vec<_>>>()?;
-        let parent_func = |v| non_blocking_result(dag.parent_names(v));
-        self.add_heads_and_flush(parent_func, &master_heads, &non_master_heads)
+        self.add_heads_and_flush(&dag.dag_snapshot()?, &master_heads, &non_master_heads)
             .await
     }
 }
@@ -288,13 +309,12 @@ where
             }
         };
 
-        let parents_func = move |name: VertexName| -> Result<Vec<VertexName>> {
-            Ok(parents[&String::from_utf8(name.as_ref().to_vec()).unwrap()]
-                .iter()
-                .map(|p| VertexName::copy_from(p.as_bytes()))
-                .collect())
-        };
-        nonblocking::non_blocking_result(self.add_heads(&parents_func, &heads[..]))?;
+        let v = |s: String| VertexName::copy_from(s.as_bytes());
+        let parents: std::collections::HashMap<VertexName, Vec<VertexName>> = parents
+            .into_iter()
+            .map(|(k, vs)| (v(k), vs.into_iter().map(v).collect()))
+            .collect();
+        nonblocking::non_blocking_result(self.add_heads(&parents, &heads[..]))?;
         Ok(())
     }
 }

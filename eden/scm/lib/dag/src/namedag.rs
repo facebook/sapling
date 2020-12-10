@@ -11,7 +11,6 @@
 
 use crate::clone::CloneData;
 use crate::delegate;
-use crate::errors::bug;
 use crate::errors::programming;
 use crate::id::Group;
 use crate::id::Id;
@@ -31,6 +30,7 @@ use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
 use crate::ops::Open;
+use crate::ops::Parents;
 use crate::ops::Persist;
 use crate::ops::PrefixLookup;
 use crate::ops::ToIdSet;
@@ -93,16 +93,12 @@ where
     ///
     /// This is similar to calling `add_heads` followed by `flush`.
     /// But is faster.
-    async fn add_heads_and_flush<F>(
+    async fn add_heads_and_flush(
         &mut self,
-        parent_names_func: F,
+        parent_names_func: &dyn Parents,
         master_names: &[VertexName],
         non_master_names: &[VertexName],
-    ) -> Result<()>
-    where
-        F: Fn(VertexName) -> Result<Vec<VertexName>>,
-        F: Send + Sync,
-    {
+    ) -> Result<()> {
         if !self.pending_heads.is_empty() {
             return programming(format!(
                 "ProgrammingError: add_heads_and_flush called with pending heads ({:?})",
@@ -152,17 +148,14 @@ where
         // PERF: There could be a fast path that does not re-assign numbers.
         // But in practice we might always want to re-assign master commits.
         let snapshot = self.try_snapshot()?;
-        let parents = {
-            let snapshot = snapshot.clone();
-            move |name| non_blocking_result(snapshot.parent_names(name))
-        };
+        let dag_snapshot = self.dag_snapshot()?;
         let non_master_heads = &snapshot.pending_heads;
 
         let mut new_name_dag: Self = self.path.open()?;
         let seg_size = self.dag.get_new_segment_size();
         new_name_dag.dag.set_new_segment_size(seg_size);
         new_name_dag
-            .add_heads_and_flush(&parents, master_heads, non_master_heads)
+            .add_heads_and_flush(&dag_snapshot, master_heads, non_master_heads)
             .await?;
         *self = new_name_dag;
         Ok(())
@@ -186,11 +179,7 @@ where
     /// The added vertexes are immediately query-able. They will get Ids
     /// assigned to the NON_MASTER group internally. The `flush` function
     /// can re-assign Ids to the MASTER group.
-    async fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
-    where
-        F: Send + Sync,
-        F: Fn(VertexName) -> Result<Vec<VertexName>>,
-    {
+    async fn add_heads(&mut self, parents: &dyn Parents, heads: &[VertexName]) -> Result<()> {
         // Assign to the NON_MASTER group unconditionally so we can avoid the
         // complexity re-assigning non-master ids.
         //
@@ -212,7 +201,7 @@ where
         let mut outcome = PreparedFlatSegments::default();
         for head in heads.iter() {
             if !self.map.contains_vertex_name(head).await? {
-                outcome.merge(self.map.assign_head(head.clone(), &parents, group).await?);
+                outcome.merge(self.map.assign_head(head.clone(), parents, group).await?);
                 self.pending_heads.push(head.clone());
             }
         }
@@ -611,14 +600,7 @@ where
         map.remove_non_master()?;
 
         // Rebuild them.
-        let parent_func = |name: VertexName| match parents.get(&name) {
-            Some(names) => Ok(names.iter().cloned().collect()),
-            None => bug(format!(
-                "bug: parents of {:?} is missing (in rebuild_non_master)",
-                name
-            )),
-        };
-        build(map, dag, parent_func, &[], &heads[..]).await?;
+        build(map, dag, &parents, &[], &heads[..]).await?;
 
         Ok(())
     };
@@ -626,16 +608,14 @@ where
 }
 
 /// Build IdMap and Segments for the given heads.
-pub async fn build<F, IS, M>(
+pub async fn build<IS, M>(
     map: &mut Locked<'_, M>,
     dag: &mut Locked<'_, IdDag<IS>>,
-    parent_names_func: F,
+    parent_names_func: &dyn Parents,
     master_heads: &[VertexName],
     non_master_heads: &[VertexName],
 ) -> Result<()>
 where
-    F: Fn(VertexName) -> Result<Vec<VertexName>>,
-    F: Send + Sync,
     IS: IdDagStore + Persist,
     M: IdMapAssignHead + Persist,
     M: Send,
@@ -650,7 +630,7 @@ where
     {
         for node in nodes.iter() {
             outcome.merge(
-                map.assign_head(node.clone(), &parent_names_func, *group)
+                map.assign_head(node.clone(), parent_names_func, *group)
                     .await?,
             );
         }

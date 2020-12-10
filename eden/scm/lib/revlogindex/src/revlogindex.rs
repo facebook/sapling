@@ -22,6 +22,7 @@ use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
 use dag::ops::IdMapSnapshot;
+use dag::ops::Parents;
 use dag::ops::PrefixLookup;
 use dag::ops::ToIdSet;
 use dag::Group;
@@ -1636,10 +1637,11 @@ impl IdMapSnapshot for RevlogIndex {
 }
 
 impl RevlogIndex {
-    fn add_heads_for_testing<F>(&mut self, parents_func: &F, heads: &[Vertex]) -> dag::Result<()>
-    where
-        F: Fn(Vertex) -> dag::Result<Vec<Vertex>>,
-    {
+    fn add_heads_for_testing(
+        &mut self,
+        parents_func: &dyn Parents,
+        heads: &[Vertex],
+    ) -> dag::Result<()> {
         if !cfg!(test) {
             panic!(
                 "add_heads should only works for testing \
@@ -1652,7 +1654,7 @@ impl RevlogIndex {
         // Update IdMap. Keep track of what heads are added.
         for head in heads.iter() {
             if !non_blocking_result(self.contains_vertex_name(&head))? {
-                let parents = parents_func(head.clone())?;
+                let parents = non_blocking_result(parents_func.parent_names(head.clone()))?;
                 for parent in parents.iter() {
                     self.add_heads_for_testing(parents_func, &[parent.clone()])?;
                 }
@@ -1680,12 +1682,8 @@ impl RevlogIndex {
 
 #[async_trait::async_trait]
 impl DagAddHeads for RevlogIndex {
-    async fn add_heads<F>(&mut self, parents_func: F, heads: &[Vertex]) -> dag::Result<()>
-    where
-        F: Fn(Vertex) -> dag::Result<Vec<Vertex>>,
-        F: Send,
-    {
-        self.add_heads_for_testing(&parents_func, heads)
+    async fn add_heads(&mut self, parents_func: &dyn Parents, heads: &[Vertex]) -> dag::Result<()> {
+        self.add_heads_for_testing(parents_func, heads)
     }
 }
 

@@ -12,6 +12,7 @@
 use crate::id::{Group, Id, VertexName};
 use crate::locked::Locked;
 use crate::ops::IdConvert;
+use crate::ops::Parents;
 use crate::segment::PreparedFlatSegments;
 use crate::Result;
 
@@ -41,16 +42,12 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
     /// New `id`s inserted by this function will have the specified `group`.
     /// Existing `id`s that are ancestors of `head` will get re-assigned
     /// if they have a higher `group`.
-    async fn assign_head<F>(
+    async fn assign_head(
         &mut self,
         head: VertexName,
-        parents_by_name: F,
+        parents_by_name: &dyn Parents,
         group: Group,
-    ) -> Result<PreparedFlatSegments>
-    where
-        F: Fn(VertexName) -> Result<Vec<VertexName>>,
-        F: Send + Sync,
-    {
+    ) -> Result<PreparedFlatSegments> {
         // There are some interesting cases to optimize the numbers:
         //
         // C     For a merge C, it has choice to assign numbers to A or B
@@ -112,7 +109,7 @@ pub trait IdMapAssignHead: IdConvert + IdMapWrite {
                     // (re-)assign it to this group.
                     match self.vertex_id_with_max_group(&head, group).await? {
                         None => {
-                            let parents = parents_by_name(head.clone())?;
+                            let parents = parents_by_name.parent_names(head.clone()).await?;
                             todo_stack.push(Todo::Assign(head, parents.len()));
                             // If the parent was not assigned, or was assigned to a higher group,
                             // (re-)assign the parent to this group.

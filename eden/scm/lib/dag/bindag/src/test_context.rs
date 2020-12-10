@@ -52,19 +52,22 @@ impl TestContext {
     }
 }
 
-impl<T: AsRef<[usize]> + Send + Sync> GeneralTestContext<T> {
+impl<T: AsRef<[usize]> + Send + Sync + Clone + 'static> GeneralTestContext<T> {
     pub fn from_parents(parents: Vec<T>) -> Self {
         // Prepare NameDag
-        let parents_by_name = |name: VertexName| -> dag::Result<Vec<VertexName>> {
-            let i = String::from_utf8(name.as_ref().to_vec())
-                .unwrap()
-                .parse::<usize>()
-                .unwrap();
-            Ok(parents[i]
-                .as_ref()
-                .iter()
-                .map(|p| format!("{}", p).as_bytes().to_vec().into())
-                .collect())
+        let parents_by_name = {
+            let parents = parents.clone();
+            move |name: VertexName| -> dag::Result<Vec<VertexName>> {
+                let i = String::from_utf8(name.as_ref().to_vec())
+                    .unwrap()
+                    .parse::<usize>()
+                    .unwrap();
+                Ok(parents[i]
+                    .as_ref()
+                    .iter()
+                    .map(|p| format!("{}", p).as_bytes().to_vec().into())
+                    .collect())
+            }
         };
         // Pick heads from 0..n
         let get_heads = |n: usize| -> Vec<VertexName> {
@@ -85,7 +88,9 @@ impl<T: AsRef<[usize]> + Send + Sync> GeneralTestContext<T> {
 
         let dir = tempfile::tempdir().unwrap();
         let mut dag = NameDag::open(dir.path()).unwrap();
-        non_blocking_result(dag.add_heads_and_flush(&parents_by_name, &master_names, &head_names))
+        let parents_map: Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync> =
+            Box::new(parents_by_name);
+        non_blocking_result(dag.add_heads_and_flush(&parents_map, &master_names, &head_names))
             .unwrap();
 
         // Prepare idmap

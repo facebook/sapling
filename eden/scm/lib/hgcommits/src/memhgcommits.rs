@@ -72,7 +72,9 @@ impl AppendCommits for MemHgCommits {
             }
             heads.into_iter().collect()
         };
-        self.dag.add_heads(parent_func, &heads).await?;
+        let parent_func: Box<dyn Fn(Vertex) -> dag::Result<Vec<Vertex>> + Send + Sync> =
+            Box::new(parent_func);
+        self.dag.add_heads(&parent_func, &heads).await?;
 
         Ok(())
     }
