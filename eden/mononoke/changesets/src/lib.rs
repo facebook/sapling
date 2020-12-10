@@ -13,8 +13,8 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use fbthrift::compact_protocol;
-use futures::{future::ok, stream, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_old::{future::ok, stream, Future, IntoFuture};
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };

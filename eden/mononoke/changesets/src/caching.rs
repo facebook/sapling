@@ -18,8 +18,8 @@ use changeset_entry_thrift as thrift;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
-use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::Future;
 use maplit::hashset;
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{
