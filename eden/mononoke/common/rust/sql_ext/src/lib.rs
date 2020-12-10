@@ -118,6 +118,7 @@ pub mod facebook {
         Master,
     }
 
+    #[derive(Copy, Clone, Debug)]
     pub struct PoolSizeConfig {
         pub write_pool_size: usize,
         pub read_pool_size: usize,
