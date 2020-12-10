@@ -23,7 +23,7 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use bytes::Bytes;
 use cloned::cloned;
-use futures::future;
+use futures::stream::{self, StreamExt};
 use memcache::{KeyGen, MEMCACHE_VALUE_MAX_SIZE};
 
 pub use crate::cachelib_utils::CachelibHandler;
@@ -39,6 +39,8 @@ pub enum McErrorKind {
     /// deserialization of memcache data to Rust structures failed
     Deserialization,
 }
+
+const MEMCACHE_CONCURRENCY: usize = 100;
 
 pub type McResult<T> = Result<T, McErrorKind>;
 
@@ -235,7 +237,7 @@ where
     K: Eq + Hash,
     V: MemcacheEntity,
 {
-    let mc_fetch_futs: Vec<_> = keys
+    let mc_fetch_futs = keys
         .into_iter()
         .map(move |(key, cachelib_key, memcache_key)| {
             cloned!(memcache);
@@ -251,15 +253,14 @@ where
 
                 (key, cachelib_key, memcache_key, res)
             }
-        })
-        .collect();
+        });
 
-    let entries = future::join_all(mc_fetch_futs).await;
+    let mut entries = stream::iter(mc_fetch_futs).buffered(MEMCACHE_CONCURRENCY);
 
     let mut fetched = HashMap::new();
     let mut left_to_fetch = Vec::new();
 
-    for (key, cachelib_key, memcache_key, res) in entries {
+    while let Some((key, cachelib_key, memcache_key, res)) = entries.next().await {
         V::report_mc_result(&res);
 
         match res {
@@ -303,30 +304,31 @@ async fn fill_multiple_memcache<'a, V: 'a>(
 ) where
     V: MemcacheEntity,
 {
-    let futs = data.into_iter().filter_map(|(memcache_key, ttl, v)| {
-        let bytes = v.serialize();
+    let futs = data
+        .into_iter()
+        .filter_map(|(memcache_key, ttl, v)| {
+            let bytes = v.serialize();
 
-        if bytes.len() >= MEMCACHE_VALUE_MAX_SIZE {
-            return None;
-        }
-
-        cloned!(memcache);
-
-        Some(async move {
-            match ttl {
-                CacheTtl::NoTtl => {
-                    memcache.set(memcache_key.0, bytes).await?;
-                }
-                CacheTtl::Ttl(ttl) => {
-                    memcache.set_with_ttl(memcache_key.0, bytes, ttl).await?;
-                }
+            if bytes.len() >= MEMCACHE_VALUE_MAX_SIZE {
+                return None;
             }
 
-            Result::<_, ()>::Ok(())
-        })
-    });
+            cloned!(memcache);
 
-    let fut = future::join_all(futs);
+            Some(async move {
+                match ttl {
+                    CacheTtl::NoTtl => {
+                        let _ = memcache.set(memcache_key.0, bytes).await;
+                    }
+                    CacheTtl::Ttl(ttl) => {
+                        let _ = memcache.set_with_ttl(memcache_key.0, bytes, ttl).await;
+                    }
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let fut = stream::iter(futs).for_each_concurrent(MEMCACHE_CONCURRENCY, |fut| fut);
 
     if spawn {
         tokio::task::spawn(fut);
