@@ -6,10 +6,12 @@
  */
 
 use super::hints::Flags;
-use super::{AsyncNameSetQuery, Hints, NameIter, NameSet};
+use super::BoxVertexStream;
+use super::{AsyncNameSetQuery, Hints, NameSet};
 use crate::fmt::write_debug;
 use crate::Result;
 use crate::VertexName;
+use futures::StreamExt;
 use std::any::Any;
 use std::fmt;
 
@@ -23,7 +25,7 @@ pub struct DifferenceSet {
 }
 
 struct Iter {
-    iter: Box<dyn NameIter>,
+    iter: BoxVertexStream,
     rhs: NameSet,
 }
 
@@ -51,20 +53,20 @@ impl DifferenceSet {
 
 #[async_trait::async_trait]
 impl AsyncNameSetQuery for DifferenceSet {
-    async fn iter(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter(&self) -> Result<BoxVertexStream> {
         let iter = Iter {
             iter: self.lhs.iter().await?,
             rhs: self.rhs.clone(),
         };
-        Ok(Box::new(iter))
+        Ok(iter.into_stream())
     }
 
-    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<BoxVertexStream> {
         let iter = Iter {
             iter: self.lhs.iter_rev().await?,
             rhs: self.rhs.clone(),
         };
-        Ok(Box::new(iter))
+        Ok(iter.into_stream())
     }
 
     async fn contains(&self, name: &VertexName) -> Result<bool> {
@@ -89,14 +91,12 @@ impl fmt::Debug for DifferenceSet {
     }
 }
 
-impl Iterator for Iter {
-    type Item = Result<VertexName>;
-
-    fn next(&mut self) -> Option<Self::Item> {
+impl Iter {
+    async fn next(&mut self) -> Option<Result<VertexName>> {
         loop {
-            let result = NameIter::next(self.iter.as_mut());
+            let result = self.iter.as_mut().next().await;
             if let Some(Ok(ref name)) = result {
-                match super::SyncNameSetQuery::contains(&self.rhs, &name) {
+                match self.rhs.contains(&name).await {
                     Err(err) => break Some(Err(err)),
                     Ok(true) => continue,
                     _ => {}
@@ -104,6 +104,13 @@ impl Iterator for Iter {
             }
             break result;
         }
+    }
+
+    fn into_stream(self) -> BoxVertexStream {
+        Box::pin(futures::stream::unfold(self, |mut state| async move {
+            let result = state.next().await;
+            result.map(|r| (r, state))
+        }))
     }
 }
 
@@ -123,8 +130,8 @@ mod tests {
     fn test_difference_basic() -> Result<()> {
         let set = difference(b"\x11\x33\x55\x22\x44", b"\x44\x33\x66");
         check_invariants(&set)?;
-        assert_eq!(shorten_iter(nb(set.iter())?), ["11", "55", "22"]);
-        assert_eq!(shorten_iter(nb(set.iter_rev())?), ["22", "55", "11"]);
+        assert_eq!(shorten_iter(ni(set.iter())), ["11", "55", "22"]);
+        assert_eq!(shorten_iter(ni(set.iter_rev())), ["22", "55", "11"]);
         assert!(!nb(set.is_empty())??);
         assert_eq!(nb(set.count())??, 3);
         assert_eq!(shorten_name(nb(set.first())??.unwrap()), "11");

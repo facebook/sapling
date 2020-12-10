@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use super::{AsyncNameSetQuery, Hints, NameIter};
+use super::BoxVertexStream;
+use super::{AsyncNameSetQuery, Hints};
 use crate::Result;
 use crate::VertexName;
 use indexmap::IndexSet;
@@ -64,10 +65,8 @@ pub struct Iter {
     index: usize,
 }
 
-impl Iterator for Iter {
-    type Item = Result<VertexName>;
-
-    fn next(&mut self) -> Option<Self::Item> {
+impl Iter {
+    async fn next(&mut self) -> Option<Result<VertexName>> {
         let mut inner = self.inner.lock().unwrap();
         loop {
             match inner.state {
@@ -90,6 +89,13 @@ impl Iterator for Iter {
                 }
             }
         }
+    }
+
+    fn into_stream(self) -> BoxVertexStream {
+        Box::pin(futures::stream::unfold(self, |mut state| async move {
+            let result = state.next().await;
+            result.map(|r| (r, state))
+        }))
     }
 }
 
@@ -141,16 +147,17 @@ impl LazySet {
 
 #[async_trait::async_trait]
 impl AsyncNameSetQuery for LazySet {
-    async fn iter(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter(&self) -> Result<BoxVertexStream> {
         let inner = self.inner.clone();
         let iter = Iter { inner, index: 0 };
-        Ok(Box::new(iter))
+        Ok(iter.into_stream())
     }
 
-    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<BoxVertexStream> {
         let inner = self.load_all()?;
         let iter = inner.visited.clone().into_iter().rev().map(Ok);
-        Ok(Box::new(iter))
+        let stream = futures::stream::iter(iter);
+        Ok(Box::pin(stream))
     }
 
     async fn count(&self) -> Result<usize> {
@@ -207,9 +214,9 @@ mod tests {
     fn test_lazy_basic() -> Result<()> {
         let set = lazy_set(b"\x11\x33\x22\x77\x22\x55\x11");
         check_invariants(&set)?;
-        assert_eq!(shorten_iter(nb(set.iter())), ["11", "33", "22", "77", "55"]);
+        assert_eq!(shorten_iter(ni(set.iter())), ["11", "33", "22", "77", "55"]);
         assert_eq!(
-            shorten_iter(nb(set.iter_rev())),
+            shorten_iter(ni(set.iter_rev())),
             ["55", "77", "22", "33", "11"]
         );
         assert!(!nb(set.is_empty())?);
@@ -228,7 +235,7 @@ mod tests {
 
         let set = lazy_set(b"\x11\x33\x22");
         assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
-        let mut iter = nb(set.iter()).unwrap();
+        let mut iter = ni(set.iter()).unwrap();
         iter.next();
         assert_eq!(format!("{:?}", &set), "<lazy [1111] + ? more>");
         iter.next();

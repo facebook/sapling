@@ -6,8 +6,8 @@
  */
 
 use super::AsyncNameSetQuery;
+use super::BoxVertexStream;
 use super::Hints;
-use super::NameIter;
 use super::NameSet;
 use crate::Result;
 use crate::VertexName;
@@ -92,11 +92,11 @@ impl MetaSet {
 
 #[async_trait::async_trait]
 impl AsyncNameSetQuery for MetaSet {
-    async fn iter(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter(&self) -> Result<BoxVertexStream> {
         self.evaluate()?.iter().await
     }
 
-    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<BoxVertexStream> {
         self.evaluate()?.iter_rev().await
     }
 

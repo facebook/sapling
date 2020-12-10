@@ -6,7 +6,8 @@
  */
 
 use super::hints::Flags;
-use super::{AsyncNameSetQuery, Hints, NameIter};
+use super::BoxVertexStream;
+use super::{AsyncNameSetQuery, Hints};
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::spanset::Span;
@@ -44,6 +45,12 @@ impl Iterator for Iter {
             self.iter.next()
         }
         .map(|id| map.vertex_name(id))
+    }
+}
+
+impl Iter {
+    fn into_stream(self) -> BoxVertexStream {
+        Box::pin(futures::stream::iter(self))
     }
 }
 
@@ -128,22 +135,22 @@ impl IdStaticSet {
 
 #[async_trait::async_trait]
 impl AsyncNameSetQuery for IdStaticSet {
-    async fn iter(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter(&self) -> Result<BoxVertexStream> {
         let iter = Iter {
             iter: self.spans.clone().into_iter(),
             map: self.map.clone(),
             reversed: false,
         };
-        Ok(Box::new(iter))
+        Ok(iter.into_stream())
     }
 
-    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<BoxVertexStream> {
         let iter = Iter {
             iter: self.spans.clone().into_iter(),
             map: self.map.clone(),
             reversed: true,
         };
-        Ok(Box::new(iter))
+        Ok(iter.into_stream())
     }
 
     async fn count(&self) -> Result<usize> {

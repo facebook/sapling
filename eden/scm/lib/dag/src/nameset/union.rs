@@ -6,11 +6,12 @@
  */
 
 use super::hints::Flags;
-use super::{AsyncNameSetQuery, Hints, NameIter, NameSet};
+use super::BoxVertexStream;
+use super::{AsyncNameSetQuery, Hints, NameSet};
 use crate::fmt::write_debug;
 use crate::Result;
 use crate::VertexName;
-use nonblocking::non_blocking;
+use futures::StreamExt;
 use std::any::Any;
 use std::fmt;
 
@@ -52,39 +53,22 @@ impl UnionSet {
 
 #[async_trait::async_trait]
 impl AsyncNameSetQuery for UnionSet {
-    async fn iter(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter(&self) -> Result<BoxVertexStream> {
         debug_assert_eq!(self.sets.len(), 2);
-        let set0 = self.sets[0].clone();
-        let iter = self.sets[0]
-            .iter()
-            .await?
-            .chain(self.sets[1].iter().await?.filter(move |name| {
-                match name {
-                    Ok(name) => {
-                        non_blocking(set0.contains(name)).ok().map(|s| s.ok()) != Some(Some(true))
-                    }
-                    _ => true,
-                }
-            }));
-        Ok(Box::new(iter))
+        let diff = self.sets[1].clone() - self.sets[0].clone();
+        let diff_iter = diff.iter().await?;
+        let set0_iter = self.sets[0].iter().await?;
+        let iter = set0_iter.chain(diff_iter);
+        Ok(Box::pin(iter))
     }
 
-    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<BoxVertexStream> {
         debug_assert_eq!(self.sets.len(), 2);
-        let set0 = self.sets[0].clone();
-        let iter = self.sets[1]
-            .iter_rev()
-            .await?
-            .filter(move |name| {
-                match name {
-                    Ok(name) => {
-                        non_blocking(set0.contains(name)).ok().map(|s| s.ok()) != Some(Some(true))
-                    }
-                    _ => true,
-                }
-            })
-            .chain(self.sets[0].iter_rev().await?);
-        Ok(Box::new(iter))
+        let diff = self.sets[1].clone() - self.sets[0].clone();
+        let diff_iter = diff.iter_rev().await?;
+        let set0_iter = self.sets[0].iter_rev().await?;
+        let iter = diff_iter.chain(set0_iter);
+        Ok(Box::pin(iter))
     }
 
     async fn count(&self) -> Result<usize> {
@@ -92,8 +76,10 @@ impl AsyncNameSetQuery for UnionSet {
         // This is more efficient if sets[0] is a large set that has a fast path
         // for "count()".
         let mut count = self.sets[0].count().await?;
-        for name in self.sets[1].iter().await? {
-            if !non_blocking(self.sets[0].contains(&name?))?? {
+        let mut iter = self.sets[1].iter().await?;
+        while let Some(item) = iter.next().await {
+            let name = item?;
+            if !self.sets[0].contains(&name).await? {
                 count += 1;
             }
         }
@@ -153,9 +139,9 @@ mod tests {
         // 'a' overlaps with 'b'. UnionSet should de-duplicate items.
         let set = union(b"\x11\x33\x22", b"\x44\x11\x55\x33");
         check_invariants(&set)?;
-        assert_eq!(shorten_iter(nb(set.iter())), ["11", "33", "22", "44", "55"]);
+        assert_eq!(shorten_iter(ni(set.iter())), ["11", "33", "22", "44", "55"]);
         assert_eq!(
-            shorten_iter(nb(set.iter_rev())),
+            shorten_iter(ni(set.iter_rev())),
             ["55", "44", "22", "33", "11"]
         );
         assert!(!nb(set.is_empty())?);

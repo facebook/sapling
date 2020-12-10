@@ -7,7 +7,8 @@
 
 use super::hints::Flags;
 use super::id_static::IdStaticSet;
-use super::{AsyncNameSetQuery, Hints, NameIter};
+use super::BoxVertexStream;
+use super::{AsyncNameSetQuery, Hints};
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::spanset::SpanSet;
@@ -200,7 +201,7 @@ impl IdLazySet {
 
 #[async_trait::async_trait]
 impl AsyncNameSetQuery for IdLazySet {
-    async fn iter(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter(&self) -> Result<BoxVertexStream> {
         let inner = self.inner.clone();
         let map = self.map.clone();
         let iter = Iter {
@@ -208,10 +209,10 @@ impl AsyncNameSetQuery for IdLazySet {
             index: 0,
             map,
         };
-        Ok(Box::new(iter))
+        Ok(Box::pin(futures::stream::iter(iter)))
     }
 
-    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<BoxVertexStream> {
         let inner = self.load_all()?;
         let map = self.map.clone();
         let iter = inner
@@ -220,7 +221,7 @@ impl AsyncNameSetQuery for IdLazySet {
             .into_iter()
             .rev()
             .map(move |id| map.vertex_name(id));
-        Ok(Box::new(iter) as Box<dyn NameIter>)
+        Ok(Box::pin(futures::stream::iter(iter)))
     }
 
     async fn count(&self) -> Result<usize> {
@@ -346,9 +347,9 @@ pub(crate) mod tests {
     fn test_id_lazy_basic() -> Result<()> {
         let set = lazy_set(&[0x11, 0x33, 0x22, 0x77, 0x55]);
         check_invariants(&set)?;
-        assert_eq!(shorten_iter(nb(set.iter())), ["11", "33", "22", "77", "55"]);
+        assert_eq!(shorten_iter(ni(set.iter())), ["11", "33", "22", "77", "55"]);
         assert_eq!(
-            shorten_iter(nb(set.iter_rev())),
+            shorten_iter(ni(set.iter_rev())),
             ["55", "77", "22", "33", "11"]
         );
         assert!(!nb(set.is_empty())?);
@@ -386,7 +387,7 @@ pub(crate) mod tests {
 
         let set = lazy_set(&[1, 3, 2]);
         assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
-        let mut iter = nb(set.iter()).unwrap();
+        let mut iter = ni(set.iter()).unwrap();
         iter.next();
         assert_eq!(
             format!("{:?}", &set),

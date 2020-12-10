@@ -6,11 +6,13 @@
  */
 
 use super::hints::Flags;
-use super::{AsyncNameSetQuery, Hints, NameIter, NameSet};
+use super::BoxVertexStream;
+use super::{AsyncNameSetQuery, Hints, NameSet};
 use crate::fmt::write_debug;
 use crate::Id;
 use crate::Result;
 use crate::VertexName;
+use futures::StreamExt;
 use std::any::Any;
 use std::cmp::Ordering;
 use std::fmt;
@@ -25,12 +27,51 @@ pub struct IntersectionSet {
 }
 
 struct Iter {
-    iter: Box<dyn NameIter>,
+    iter: BoxVertexStream,
     rhs: NameSet,
     ended: bool,
 
     /// Optional fast path for stop.
     stop_condition: Option<StopCondition>,
+}
+
+impl Iter {
+    async fn next(&mut self) -> Option<Result<VertexName>> {
+        if self.ended {
+            return None;
+        }
+        loop {
+            let result = self.iter.as_mut().next().await;
+            if let Some(Ok(ref name)) = result {
+                match self.rhs.contains(&name).await {
+                    Err(err) => break Some(Err(err)),
+                    Ok(false) => {
+                        // Check if we can stop iteration early using hints.
+                        if let Some(ref cond) = self.stop_condition {
+                            if let Some(id_convert) = self.rhs.id_convert() {
+                                if let Ok(Some(id)) = id_convert.vertex_id_optional(&name) {
+                                    if cond.should_stop_with_id(id) {
+                                        self.ended = true;
+                                        return None;
+                                    }
+                                }
+                            }
+                        }
+                        continue;
+                    }
+                    Ok(true) => {}
+                }
+            }
+            break result;
+        }
+    }
+
+    fn into_stream(self) -> BoxVertexStream {
+        Box::pin(futures::stream::unfold(self, |mut state| async move {
+            let result = state.next().await;
+            result.map(|r| (r, state))
+        }))
+    }
 }
 
 struct StopCondition {
@@ -95,7 +136,7 @@ impl IntersectionSet {
 
 #[async_trait::async_trait]
 impl AsyncNameSetQuery for IntersectionSet {
-    async fn iter(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter(&self) -> Result<BoxVertexStream> {
         let stop_condition = if !self.lhs.hints().is_id_map_compatible(self.rhs.hints()) {
             None
         } else if self.lhs.hints().contains(Flags::ID_ASC) {
@@ -126,10 +167,10 @@ impl AsyncNameSetQuery for IntersectionSet {
             ended: false,
             stop_condition,
         };
-        Ok(Box::new(iter))
+        Ok(iter.into_stream())
     }
 
-    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<BoxVertexStream> {
         let stop_condition = if !self.lhs.hints().is_id_map_compatible(self.rhs.hints()) {
             None
         } else if self.lhs.hints().contains(Flags::ID_DESC) {
@@ -160,7 +201,7 @@ impl AsyncNameSetQuery for IntersectionSet {
             ended: false,
             stop_condition,
         };
-        Ok(Box::new(iter))
+        Ok(iter.into_stream())
     }
 
     async fn contains(&self, name: &VertexName) -> Result<bool> {
@@ -185,40 +226,6 @@ impl fmt::Debug for IntersectionSet {
     }
 }
 
-impl Iterator for Iter {
-    type Item = Result<VertexName>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.ended {
-            return None;
-        }
-        loop {
-            let result = NameIter::next(self.iter.as_mut());
-            if let Some(Ok(ref name)) = result {
-                match super::SyncNameSetQuery::contains(&self.rhs, &name) {
-                    Err(err) => break Some(Err(err)),
-                    Ok(false) => {
-                        // Check if we can stop iteration early using hints.
-                        if let Some(ref cond) = self.stop_condition {
-                            if let Some(id_convert) = self.rhs.id_convert() {
-                                if let Ok(Some(id)) = id_convert.vertex_id_optional(&name) {
-                                    if cond.should_stop_with_id(id) {
-                                        self.ended = true;
-                                        return None;
-                                    }
-                                }
-                            }
-                        }
-                        continue;
-                    }
-                    Ok(true) => {}
-                }
-            }
-            break result;
-        }
-    }
-}
-
 #[cfg(test)]
 #[allow(clippy::redundant_clone)]
 mod tests {
@@ -239,8 +246,8 @@ mod tests {
     fn test_intersection_basic() -> Result<()> {
         let set = intersection(b"\x11\x33\x55\x22\x44", b"\x44\x33\x66");
         check_invariants(&set)?;
-        assert_eq!(shorten_iter(nb(set.iter())), ["33", "44"]);
-        assert_eq!(shorten_iter(nb(set.iter_rev())), ["44", "33"]);
+        assert_eq!(shorten_iter(ni(set.iter())), ["33", "44"]);
+        assert_eq!(shorten_iter(ni(set.iter_rev())), ["44", "33"]);
         assert!(!nb(set.is_empty())?);
         assert_eq!(nb(set.count())?, 2);
         assert_eq!(shorten_name(nb(set.first())?.unwrap()), "33");
@@ -264,9 +271,9 @@ mod tests {
 
         let set = IntersectionSet::new(a, b.clone());
         // No "20" - filtered out by min id fast path.
-        assert_eq!(shorten_iter(nb(set.iter())), ["70", "50", "40"]);
+        assert_eq!(shorten_iter(ni(set.iter())), ["70", "50", "40"]);
         // No "70" - filtered out by max id fast path.
-        assert_eq!(shorten_iter(nb(set.iter_rev())), ["20", "40", "50"]);
+        assert_eq!(shorten_iter(ni(set.iter_rev())), ["20", "40", "50"]);
 
         // Test the reversed sort order.
         let a = lazy_set(&[0x20, 0x30, 0x40, 0x50, 0x60, 0x70]);
@@ -278,17 +285,17 @@ mod tests {
         b.hints().set_max_id(Id(0x50));
         let set = IntersectionSet::new(a, b.clone());
         // No "70".
-        assert_eq!(shorten_iter(nb(set.iter())), ["20", "40", "50"]);
+        assert_eq!(shorten_iter(ni(set.iter())), ["20", "40", "50"]);
         // No "20".
-        assert_eq!(shorten_iter(nb(set.iter_rev())), ["70", "50", "40"]);
+        assert_eq!(shorten_iter(ni(set.iter_rev())), ["70", "50", "40"]);
 
         // If two sets have incompatible IdMap, fast paths are not used.
         let a = NameSet::from_query(lazy_set(&[0x20, 0x30, 0x40, 0x50, 0x60, 0x70]));
         a.hints().add_flags(Flags::ID_ASC);
         let set = IntersectionSet::new(a, b.clone());
         // Should contain "70" and "20".
-        assert_eq!(shorten_iter(nb(set.iter())), ["20", "40", "50", "70"]);
-        assert_eq!(shorten_iter(nb(set.iter_rev())), ["70", "50", "40", "20"]);
+        assert_eq!(shorten_iter(ni(set.iter())), ["20", "40", "50", "70"]);
+        assert_eq!(shorten_iter(ni(set.iter_rev())), ["70", "50", "40", "20"]);
     }
 
     quickcheck::quickcheck! {

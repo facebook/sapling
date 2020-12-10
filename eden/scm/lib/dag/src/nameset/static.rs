@@ -6,7 +6,8 @@
  */
 
 use super::hints::Flags;
-use super::{AsyncNameSetQuery, Hints, NameIter};
+use super::BoxVertexStream;
+use super::{AsyncNameSetQuery, Hints};
 use crate::Result;
 use crate::VertexName;
 use indexmap::IndexSet;
@@ -36,14 +37,14 @@ impl StaticSet {
 
 #[async_trait::async_trait]
 impl AsyncNameSetQuery for StaticSet {
-    async fn iter(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter(&self) -> Result<BoxVertexStream> {
         let iter = self.0.clone().into_iter().map(Ok);
-        Ok(Box::new(iter))
+        Ok(Box::pin(futures::stream::iter(iter)))
     }
 
-    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<BoxVertexStream> {
         let iter = self.0.clone().into_iter().rev().map(Ok);
-        Ok(Box::new(iter))
+        Ok(Box::pin(futures::stream::iter(iter)))
     }
 
     async fn count(&self) -> Result<usize> {
@@ -102,9 +103,9 @@ mod tests {
     fn test_static_basic() -> Result<()> {
         let set = static_set(b"\x11\x33\x22\x77\x22\x55\x11");
         check_invariants(&set)?;
-        assert_eq!(shorten_iter(nb(set.iter())), ["11", "33", "22", "77", "55"]);
+        assert_eq!(shorten_iter(ni(set.iter())), ["11", "33", "22", "77", "55"]);
         assert_eq!(
-            shorten_iter(nb(set.iter_rev())),
+            shorten_iter(ni(set.iter_rev())),
             ["55", "77", "22", "33", "11"]
         );
         assert!(!nb(set.is_empty())?);
