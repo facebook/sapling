@@ -126,6 +126,20 @@ impl<T, L> Entry<T, L> {
             _ => None,
         }
     }
+
+    pub fn map_leaf<L2>(self, m: impl FnOnce(L) -> L2) -> Entry<T, L2> {
+        match self {
+            Entry::Tree(tree) => Entry::Tree(tree),
+            Entry::Leaf(leaf) => Entry::Leaf(m(leaf)),
+        }
+    }
+
+    pub fn map_tree<T2>(self, m: impl FnOnce(T) -> T2) -> Entry<T2, L> {
+        match self {
+            Entry::Tree(tree) => Entry::Tree(m(tree)),
+            Entry::Leaf(leaf) => Entry::Leaf(leaf),
+        }
+    }
 }
 
 #[async_trait]
