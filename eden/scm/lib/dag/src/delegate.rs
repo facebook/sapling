@@ -139,3 +139,13 @@ macro_rules! delegate {
         delegate!($name2 $(| $name3 )*, $type => self.$($t)*);
     };
 }
+
+mod impls {
+    use crate::ops::DagAlgorithm;
+    use crate::ops::IdConvert;
+    use std::ops::Deref;
+    use std::sync::Arc;
+
+    delegate!(IdConvert | PrefixLookup, Arc<dyn IdConvert + Send + Sync> => self.deref());
+    delegate!(DagAlgorithm, Arc<dyn DagAlgorithm + Send + Sync> => self.deref());
+}

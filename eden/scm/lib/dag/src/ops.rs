@@ -378,6 +378,12 @@ impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
     }
 }
 
+impl IdMapSnapshot for Arc<dyn IdConvert + Send + Sync> {
+    fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>> {
+        Ok(self.clone())
+    }
+}
+
 impl<T: IdMapSnapshot + DagAlgorithm> ToSet for T {
     /// Converts [`SpanSet`] to [`NameSet`].
     fn to_set(&self, set: &IdSet) -> Result<NameSet> {
