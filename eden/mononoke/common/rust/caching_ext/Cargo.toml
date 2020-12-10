@@ -7,7 +7,6 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-mononoke_types = { path = "../../../mononoke_types" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_01_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -26,4 +25,3 @@ tokio-old = { package = "tokio", version = "0.1" }
 abomonation_derive = "0.5"
 maplit = "1.0"
 quickcheck = "0.9"
-tokio-compat = "0.1"

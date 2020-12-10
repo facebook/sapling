@@ -9,11 +9,11 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::atomic::Ordering;
 
-use crate::{mock_store::MockStore, CachingDeterminator};
+use crate::mock_store::MockStore;
 use anyhow::Result;
 use cachelib::{get_cached, set_cached, Abomonation, VolatileLruCachePool};
 
-use crate::{CacheDisposition, CachelibKey};
+use crate::CachelibKey;
 
 #[derive(Clone)]
 pub enum CachelibHandler<T> {
@@ -48,28 +48,6 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
         }
 
         Ok((fetched, left_to_fetch))
-    }
-
-    pub(crate) fn fill_multiple_cachelib<Key: Eq + Hash>(
-        &self,
-        determinator: CachingDeterminator<T>,
-        keys: HashMap<Key, (T, CachelibKey)>,
-    ) -> HashMap<Key, T> {
-        keys.into_iter()
-            .map(|(key, (value, cache_key))| {
-                // See comment in get_cached_or_fill why we ignore the result
-                use CacheDisposition::*;
-                match determinator(&value) {
-                    Cache => {
-                        let _ = self.set_cached(&cache_key.0, &value);
-                    }
-                    // TODO - add TTL for cachelib
-                    CacheWithTtl(_) => {}
-                    Ignore => {}
-                };
-                (key, value)
-            })
-            .collect()
     }
 
     pub fn get_cached(&self, key: &String) -> Result<Option<T>> {
@@ -125,15 +103,17 @@ mod tests {
             initial_keys: HashMap<String, String>,
             keys_to_query: HashSet<String>
         ) -> TestResult {
-            let fill_query = initial_keys.clone().into_iter().map(|(key, val)| (key.clone(), (val, CachelibKey(key)))).collect();
             let get_query = keys_to_query.clone().into_iter().map(|key| (key.clone(),  CachelibKey(key))).collect();
 
             let mock_cachelib = MockStore::new();
             let cachelib_handler = CachelibHandler::Mock(mock_cachelib.clone());
-            cachelib_handler.fill_multiple_cachelib(crate::cache_all_determinator::<String>, fill_query);
+
+            for (k, v) in initial_keys.iter() {
+                let _ = cachelib_handler.set_cached(k, v);
+            }
 
             if mock_cachelib.data() != initial_keys {
-                return TestResult::error("After fill_multiple_cachelib the content of cache is incorrect");
+                return TestResult::error("After fill the content of cache is incorrect");
             }
 
             let (fetched, left) = cachelib_handler.get_multiple_from_cachelib(get_query).unwrap();
