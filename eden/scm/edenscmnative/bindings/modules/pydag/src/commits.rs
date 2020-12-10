@@ -10,6 +10,7 @@ use crate::idmap;
 use crate::Names;
 use crate::Spans;
 use anyhow::Result;
+use async_runtime::block_on_exclusive as block_on;
 use cpython::*;
 use cpython_async::futures;
 use cpython_async::TStream;
@@ -79,7 +80,7 @@ py_class!(pub class commits |py| {
             HgCommit { vertex, parents, raw_text }
         }).collect();
         let mut inner = self.inner(py).borrow_mut();
-        inner.add_commits(&commits).map_pyerr(py)?;
+        block_on(inner.add_commits(&commits)).map_pyerr(py)?;
         Ok(PyNone)
     }
 
@@ -88,7 +89,7 @@ py_class!(pub class commits |py| {
     def flush(&self, masterheads: Vec<PyBytes>) -> PyResult<PyNone> {
         let heads = masterheads.into_iter().map(|h| h.data(py).to_vec().into()).collect::<Vec<_>>();
         let mut inner = self.inner(py).borrow_mut();
-        inner.flush(&heads).map_pyerr(py)?;
+        block_on(inner.flush(&heads)).map_pyerr(py)?;
         Ok(PyNone)
     }
 
@@ -96,7 +97,7 @@ py_class!(pub class commits |py| {
     /// For the revlog backend, this also write the commit graph to disk.
     def flushcommitdata(&self) -> PyResult<PyNone> {
         let mut inner = self.inner(py).borrow_mut();
-        inner.flush_commit_data().map_pyerr(py)?;
+        block_on(inner.flush_commit_data()).map_pyerr(py)?;
         Ok(PyNone)
     }
 
@@ -105,7 +106,7 @@ py_class!(pub class commits |py| {
     /// New tests should avoid depending on `strip`.
     def strip(&self, set: Names) -> PyResult<PyNone> {
         let mut inner = self.inner(py).borrow_mut();
-        inner.strip_commits(set.0).map_pyerr(py)?;
+        block_on(inner.strip_commits(set.0)).map_pyerr(py)?;
         Ok(PyNone)
     }
 
@@ -113,7 +114,7 @@ py_class!(pub class commits |py| {
     def getcommitrawtext(&self, node: PyBytes) -> PyResult<Option<PyBytes>> {
         let vertex = node.data(py).to_vec().into();
         let inner = self.inner(py).borrow();
-        let optional_bytes = inner.get_commit_raw_text(&vertex).map_pyerr(py)?;
+        let optional_bytes = block_on(inner.get_commit_raw_text(&vertex)).map_pyerr(py)?;
         Ok(optional_bytes.map(|bytes| PyBytes::new(py, bytes.as_ref())))
     }
 

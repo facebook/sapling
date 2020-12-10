@@ -47,8 +47,9 @@ impl RevlogCommits {
     }
 }
 
+#[async_trait::async_trait]
 impl AppendCommits for RevlogCommits {
-    fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
+    async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
         for commit in commits {
             let mut parent_revs = Vec::with_capacity(commit.parents.len());
             for parent in &commit.parents {
@@ -60,19 +61,20 @@ impl AppendCommits for RevlogCommits {
         Ok(())
     }
 
-    fn flush(&mut self, _master_heads: &[Vertex]) -> Result<()> {
+    async fn flush(&mut self, _master_heads: &[Vertex]) -> Result<()> {
         self.revlog.flush()?;
         Ok(())
     }
 
-    fn flush_commit_data(&mut self) -> Result<()> {
+    async fn flush_commit_data(&mut self) -> Result<()> {
         self.revlog.flush()?;
         Ok(())
     }
 }
 
+#[async_trait::async_trait]
 impl ReadCommitText for RevlogCommits {
-    fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
+    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         match self.vertex_id_with_max_group(vertex, Group::NON_MASTER)? {
             Some(id) => Ok(Some(self.revlog.raw_data(id.0 as u32)?)),
             None => Ok(None),
@@ -109,13 +111,14 @@ impl StreamCommitText for RevlogCommits {
     }
 }
 
+#[async_trait::async_trait]
 impl StripCommits for RevlogCommits {
-    fn strip_commits(&mut self, set: Set) -> Result<()> {
+    async fn strip_commits(&mut self, set: Set) -> Result<()> {
         let old_dir = &self.dir;
         let new_dir = old_dir.join("strip");
         let _ = fs::create_dir(&new_dir);
         let mut new = Self::new(&new_dir)?;
-        strip::migrate_commits(self, &mut new, set)?;
+        strip::migrate_commits(self, &mut new, set).await?;
         drop(new);
         strip::racy_unsafe_move_files(&new_dir, old_dir)?;
         *self = Self::new(old_dir)?;

@@ -66,29 +66,31 @@ impl HybridCommits {
     }
 }
 
+#[async_trait::async_trait]
 impl AppendCommits for HybridCommits {
-    fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
-        self.revlog.add_commits(commits)?;
-        self.commits.add_commits(commits)?;
+    async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
+        self.revlog.add_commits(commits).await?;
+        self.commits.add_commits(commits).await?;
         Ok(())
     }
 
-    fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {
-        self.revlog.flush(master_heads)?;
-        self.commits.flush(master_heads)?;
+    async fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {
+        self.revlog.flush(master_heads).await?;
+        self.commits.flush(master_heads).await?;
         Ok(())
     }
 
-    fn flush_commit_data(&mut self) -> Result<()> {
-        self.revlog.flush_commit_data()?;
-        self.commits.flush_commit_data()?;
+    async fn flush_commit_data(&mut self) -> Result<()> {
+        self.revlog.flush_commit_data().await?;
+        self.commits.flush_commit_data().await?;
         Ok(())
     }
 }
 
+#[async_trait::async_trait]
 impl ReadCommitText for HybridCommits {
-    fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        self.commits.get_commit_raw_text(vertex)
+    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
+        self.commits.get_commit_raw_text(vertex).await
     }
 }
 
@@ -113,10 +115,11 @@ impl StreamCommitText for HybridCommits {
     }
 }
 
+#[async_trait::async_trait]
 impl StripCommits for HybridCommits {
-    fn strip_commits(&mut self, set: Set) -> Result<()> {
-        self.revlog.strip_commits(set.clone())?;
-        self.commits.strip_commits(set)?;
+    async fn strip_commits(&mut self, set: Set) -> Result<()> {
+        self.revlog.strip_commits(set.clone()).await?;
+        self.commits.strip_commits(set).await?;
         Ok(())
     }
 }

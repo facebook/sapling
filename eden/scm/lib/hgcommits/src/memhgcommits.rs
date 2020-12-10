@@ -42,8 +42,9 @@ impl MemHgCommits {
     }
 }
 
+#[async_trait::async_trait]
 impl AppendCommits for MemHgCommits {
-    fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
+    async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
         // Write commit data to zstore.
         for commit in commits {
             self.commits
@@ -76,17 +77,18 @@ impl AppendCommits for MemHgCommits {
         Ok(())
     }
 
-    fn flush(&mut self, _master_heads: &[Vertex]) -> Result<()> {
+    async fn flush(&mut self, _master_heads: &[Vertex]) -> Result<()> {
         Ok(())
     }
 
-    fn flush_commit_data(&mut self) -> Result<()> {
+    async fn flush_commit_data(&mut self) -> Result<()> {
         Ok(())
     }
 }
 
+#[async_trait::async_trait]
 impl ReadCommitText for MemHgCommits {
-    fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
+    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         Ok(self.commits.get(vertex).cloned())
     }
 }
@@ -111,10 +113,11 @@ impl StreamCommitText for MemHgCommits {
     }
 }
 
+#[async_trait::async_trait]
 impl StripCommits for MemHgCommits {
-    fn strip_commits(&mut self, set: Set) -> Result<()> {
+    async fn strip_commits(&mut self, set: Set) -> Result<()> {
         let mut new = Self::new()?;
-        strip::migrate_commits(self, &mut new, set)?;
+        strip::migrate_commits(self, &mut new, set).await?;
         *self = new;
         Ok(())
     }

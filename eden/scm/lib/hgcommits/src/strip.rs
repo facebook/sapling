@@ -18,15 +18,16 @@ use std::path::Path;
 // TODO: Consider migrating to async, or get rid of strip in tests.
 use dag::nameset::SyncNameSetQuery;
 
+#[async_trait::async_trait]
 pub trait StripCommits {
     /// Strip commits. This is for legacy tests only that wouldn't be used
     /// much in production. The callsite should take care of locking or
     /// otherwise risk data race and loss.
-    fn strip_commits(&mut self, set: Set) -> Result<()>;
+    async fn strip_commits(&mut self, set: Set) -> Result<()>;
 }
 
 /// Enumerate all commits in `orig`, re-insert them to `new` except for `strip_set::`.
-pub(crate) fn migrate_commits(
+pub(crate) async fn migrate_commits(
     orig: &(impl ReadCommitText + DagAlgorithm),
     new: &mut impl AppendCommits,
     strip_set: Set,
@@ -39,24 +40,27 @@ pub(crate) fn migrate_commits(
         .heads(set.clone())?
         .iter_rev()?
         .collect::<dag::Result<Vec<_>>>()?;
-    let commits: Vec<HgCommit> = set
-        .iter_rev()?
-        .map(|vertex| -> Result<HgCommit> {
-            let vertex = vertex?;
-            let raw_text = match orig.get_commit_raw_text(&vertex)? {
-                Some(text) => text,
-                None => return Err(vertex.not_found_error().into()),
-            };
-            let parents = orig.parent_names(vertex.clone())?;
-            Ok(HgCommit {
-                vertex,
-                parents,
-                raw_text,
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
-    new.add_commits(&commits)?;
-    new.flush(&heads)?;
+    let mut commits: Vec<HgCommit> = Vec::with_capacity(set.count()?);
+    // This is inefficient - one by one fetching via async.
+    // However the strip code paths only exist to support legacy `.t`
+    // tests that use real strips. It's not used anywhere in production.
+    // So no optimization is done here.
+    for vertex in set.iter_rev()? {
+        let vertex = vertex?;
+        let raw_text = match orig.get_commit_raw_text(&vertex).await? {
+            Some(text) => text,
+            None => return Err(vertex.not_found_error().into()),
+        };
+        let parents = orig.parent_names(vertex.clone())?;
+        let commit = HgCommit {
+            vertex,
+            parents,
+            raw_text,
+        };
+        commits.push(commit);
+    }
+    new.add_commits(&commits).await?;
+    new.flush(&heads).await?;
     Ok(())
 }
 

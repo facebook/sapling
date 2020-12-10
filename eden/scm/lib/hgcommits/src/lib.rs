@@ -16,9 +16,10 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::io;
 
+#[async_trait::async_trait]
 pub trait ReadCommitText {
     /// Read raw text for a commit.
-    fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>>;
+    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>>;
 }
 
 pub trait StreamCommitText {
@@ -29,19 +30,20 @@ pub trait StreamCommitText {
     ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>>;
 }
 
+#[async_trait::async_trait]
 pub trait AppendCommits {
     /// Add commits. They stay in-memory until `flush`.
-    fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()>;
+    async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()>;
 
     /// Write in-memory changes to disk.
     ///
     /// This function does more things than `flush_commit_data`.
-    fn flush(&mut self, master_heads: &[Vertex]) -> Result<()>;
+    async fn flush(&mut self, master_heads: &[Vertex]) -> Result<()>;
 
     /// Write buffered commit data to disk.
     ///
     /// For the revlog backend, this also write the commit graph to disk.
-    fn flush_commit_data(&mut self) -> Result<()>;
+    async fn flush_commit_data(&mut self) -> Result<()>;
 }
 
 pub trait DescribeBackend {

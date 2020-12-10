@@ -99,22 +99,24 @@ impl GitSegmentedCommits {
     }
 }
 
+#[async_trait::async_trait]
 impl AppendCommits for GitSegmentedCommits {
-    fn add_commits(&mut self, _commits: &[HgCommit]) -> Result<()> {
+    async fn add_commits(&mut self, _commits: &[HgCommit]) -> Result<()> {
         Err(crate::Error::Unsupported("add commits for git backend"))
     }
 
-    fn flush(&mut self, _master_heads: &[Vertex]) -> Result<()> {
+    async fn flush(&mut self, _master_heads: &[Vertex]) -> Result<()> {
         Ok(())
     }
 
-    fn flush_commit_data(&mut self) -> Result<()> {
+    async fn flush_commit_data(&mut self) -> Result<()> {
         Ok(())
     }
 }
 
+#[async_trait::async_trait]
 impl ReadCommitText for GitSegmentedCommits {
-    fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
+    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         let oid = match git2::Oid::from_bytes(vertex.as_ref()) {
             Ok(oid) => oid,
             Err(_) => return Ok(None),
@@ -146,8 +148,9 @@ impl StreamCommitText for GitSegmentedCommits {
     }
 }
 
+#[async_trait::async_trait]
 impl StripCommits for GitSegmentedCommits {
-    fn strip_commits(&mut self, _set: Set) -> Result<()> {
+    async fn strip_commits(&mut self, _set: Set) -> Result<()> {
         Err(crate::Error::Unsupported("strip for git backend"))
     }
 }

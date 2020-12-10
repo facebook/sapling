@@ -66,8 +66,9 @@ impl HgCommits {
     }
 }
 
+#[async_trait::async_trait]
 impl AppendCommits for HgCommits {
-    fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
+    async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
         fn null_id() -> Vertex {
             Vertex::copy_from(Id20::null_id().as_ref())
         }
@@ -132,21 +133,22 @@ impl AppendCommits for HgCommits {
         Ok(())
     }
 
-    fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {
-        self.flush_commit_data()?;
+    async fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {
+        self.flush_commit_data().await?;
         self.dag.flush(master_heads)?;
         Ok(())
     }
 
-    fn flush_commit_data(&mut self) -> Result<()> {
+    async fn flush_commit_data(&mut self) -> Result<()> {
         let mut zstore = self.commits.write();
         zstore.flush()?;
         Ok(())
     }
 }
 
+#[async_trait::async_trait]
 impl ReadCommitText for HgCommits {
-    fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
+    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         let id = Id20::from_slice(vertex.as_ref())?;
         match self.commits.read().get(id)? {
             Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
@@ -179,12 +181,13 @@ impl StreamCommitText for HgCommits {
     }
 }
 
+#[async_trait::async_trait]
 impl StripCommits for HgCommits {
-    fn strip_commits(&mut self, set: Set) -> Result<()> {
+    async fn strip_commits(&mut self, set: Set) -> Result<()> {
         let old_path = &self.dag_path;
         let new_path = self.dag_path.join("strip");
         let mut new = Self::new(&new_path, &self.commits_path)?;
-        strip::migrate_commits(self, &mut new, set)?;
+        strip::migrate_commits(self, &mut new, set).await?;
         drop(new);
         strip::racy_unsafe_move_files(&new_path, &self.dag_path)?;
         *self = Self::new(&old_path, &self.commits_path)?;
