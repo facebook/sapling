@@ -30,7 +30,7 @@ use maplit::{hashmap, hashset};
 use mercurial_types::HgManifestId;
 use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, PushrebaseFlags};
 use mononoke_types::{
-    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
+    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentId, FileChange, MPath, RepositoryId,
 };
 use movers::Mover;
 use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
@@ -1645,6 +1645,32 @@ impl CommitSyncRepos {
     }
 }
 
+pub async fn copy_file_contents<'a>(
+    ctx: &'a CoreContext,
+    source_repo: &'a BlobRepo,
+    target_repo: &'a BlobRepo,
+    content_ids: impl IntoIterator<Item = ContentId>,
+) -> Result<(), Error> {
+    let source_blobstore = source_repo.get_blobstore();
+    let target_blobstore = target_repo.get_blobstore();
+    let target_filestore_config = target_repo.filestore_config();
+    let uploader: FuturesUnordered<_> = content_ids
+        .into_iter()
+        .map({
+            |content_id| {
+                copy_content(
+                    ctx,
+                    &source_blobstore,
+                    &target_blobstore,
+                    target_filestore_config.clone(),
+                    content_id,
+                )
+            }
+        })
+        .collect();
+    uploader.try_for_each_concurrent(100, identity).await
+}
+
 pub async fn upload_commits<'a>(
     ctx: &'a CoreContext,
     rewritten_list: Vec<BonsaiChangeset>,
@@ -1660,25 +1686,7 @@ pub async fn upload_commits<'a>(
             .filter_map(|opt_change| opt_change.as_ref().map(|change| change.content_id()));
         files_to_sync.extend(new_files_to_sync);
     }
-
-    let source_blobstore = source_repo.get_blobstore();
-    let target_blobstore = target_repo.get_blobstore();
-    let target_filestore_config = target_repo.filestore_config();
-    let uploader: FuturesUnordered<_> = files_to_sync
-        .into_iter()
-        .map({
-            |content_id| {
-                copy_content(
-                    ctx,
-                    &source_blobstore,
-                    &target_blobstore,
-                    target_filestore_config.clone(),
-                    content_id,
-                )
-            }
-        })
-        .collect();
-    uploader.try_for_each_concurrent(100, identity).await?;
+    copy_file_contents(ctx, source_repo, target_repo, files_to_sync).await?;
     save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo.clone()).await?;
     Ok(())
 }

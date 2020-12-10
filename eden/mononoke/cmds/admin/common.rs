@@ -10,8 +10,10 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
-use cmdlib::helpers;
+use cmdlib::{args, helpers};
 use context::CoreContext;
+use fbinit::FacebookInit;
+use futures::try_join;
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
 use futures_ext::{FutureExt as _, StreamExt};
 use futures_old::{
@@ -24,6 +26,7 @@ use mononoke_types::{BonsaiChangeset, DateTime, Timestamp};
 use serde_json::{json, to_string_pretty};
 use slog::{debug, Logger};
 use std::collections::HashMap;
+use synced_commit_mapping::SqlSyncedCommitMapping;
 
 pub const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
 
@@ -149,4 +152,23 @@ pub fn get_file_nodes(
             .left_future(),
         }
     })
+}
+
+pub async fn get_source_target_repos_and_mapping<'a>(
+    fb: FacebookInit,
+    logger: Logger,
+    matches: &'a args::MononokeMatches<'_>,
+) -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
+    let config_store = args::init_config_store(fb, &logger, matches)?;
+
+    let source_repo_id = args::get_source_repo_id(config_store, matches)?;
+    let target_repo_id = args::get_target_repo_id(config_store, matches)?;
+
+    let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches);
+    let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
+    // TODO(stash): in reality both source and target should point to the same mapping
+    // It'll be nice to verify it
+    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, config_store, &matches);
+
+    try_join!(source_repo, target_repo, mapping)
 }

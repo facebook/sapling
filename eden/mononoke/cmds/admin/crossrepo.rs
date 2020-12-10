@@ -38,6 +38,7 @@ use std::convert::TryInto;
 use std::sync::Arc;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
+use crate::common::get_source_target_repos_and_mapping;
 use crate::error::SubcommandError;
 
 pub const CROSSREPO: &str = "crossrepo";
@@ -428,25 +429,6 @@ async fn move_bookmark(
             repo.name()
         ))
     }
-}
-
-async fn get_source_target_repos_and_mapping<'a>(
-    fb: FacebookInit,
-    logger: Logger,
-    matches: &'a MononokeMatches<'_>,
-) -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
-    let config_store = args::init_config_store(fb, &logger, matches)?;
-
-    let source_repo_id = args::get_source_repo_id(config_store, matches)?;
-    let target_repo_id = args::get_target_repo_id(config_store, matches)?;
-
-    let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches);
-    let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
-    // TODO(stash): in reality both source and target should point to the same mapping
-    // It'll be nice to verify it
-    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, config_store, &matches);
-
-    try_join!(source_repo, target_repo, mapping)
 }
 
 fn print_commit_sync_config(csc: CommitSyncConfig, line_prefix: &str) {
