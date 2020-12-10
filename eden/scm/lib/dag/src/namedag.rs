@@ -39,6 +39,7 @@ use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
 use crate::spanset::SpanSet;
 use crate::Result;
+use nonblocking::non_blocking_result;
 use parking_lot::RwLock;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -163,11 +164,11 @@ where
         let snapshot = self.try_snapshot()?;
         let parents = {
             let snapshot = snapshot.clone();
-            move |name| snapshot.parent_names(name)
+            move |name| non_blocking_result(snapshot.parent_names(name))
         };
         let non_master_heads = &snapshot.pending_heads;
 
-        let mut new_name_dag = self.path.open()?;
+        let mut new_name_dag: Self = self.path.open()?;
         let seg_size = self.dag.get_new_segment_size();
         new_name_dag.dag.set_new_segment_size(seg_size);
         new_name_dag
@@ -310,6 +311,7 @@ where
 // See [`IdDag`] for the actual implementations of these algorithms.
 
 /// DAG related read-only algorithms.
+#[async_trait::async_trait]
 impl<IS, M, P, S> DagAlgorithm for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
@@ -319,7 +321,7 @@ where
     S: TryClone + Sync + Send + 'static,
 {
     /// Sort a `NameSet` topologically.
-    fn sort(&self, set: &NameSet) -> Result<NameSet> {
+    async fn sort(&self, set: &NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::TOPO_DESC)
             && set.hints().is_dag_compatible(self.dag_snapshot()?)
         {
@@ -338,7 +340,7 @@ where
     }
 
     /// Get ordered parent vertexes.
-    fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+    async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
         let id = self.map().vertex_id(name)?;
         self.dag()
             .parent_ids(id)?
@@ -348,7 +350,7 @@ where
     }
 
     /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
-    fn all(&self) -> Result<NameSet> {
+    async fn all(&self) -> Result<NameSet> {
         let spans = self.dag().all()?;
         let result = NameSet::from_spans_dag(spans, self)?;
         result.hints().add_flags(Flags::FULL);
@@ -356,7 +358,7 @@ where
     }
 
     /// Calculates all ancestors reachable from any name from the given set.
-    fn ancestors(&self, set: NameSet) -> Result<NameSet> {
+    async fn ancestors(&self, set: NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::ANCESTORS)
             && set.hints().is_dag_compatible(self.dag_snapshot()?)
         {
@@ -373,7 +375,7 @@ where
     ///
     /// Note: Parent order is not preserved. Use [`NameDag::parent_names`]
     /// to preserve order.
-    fn parents(&self, set: NameSet) -> Result<NameSet> {
+    async fn parents(&self, set: NameSet) -> Result<NameSet> {
         // Preserve ANCESTORS flag. If ancestors(x) == x, then ancestors(parents(x)) == parents(x).
         let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
         let spans = self.dag().parents(self.to_id_set(&set)?)?;
@@ -381,13 +383,13 @@ where
         result.hints().add_flags(flags);
         #[cfg(test)]
         {
-            result.assert_eq(crate::default_impl::parents(self, set)?);
+            result.assert_eq(crate::default_impl::parents(self, set).await?);
         }
         Ok(result)
     }
 
     /// Calculates the n-th first ancestor.
-    fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<VertexName> {
+    async fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<VertexName> {
         #[cfg(test)]
         let name2 = name.clone();
         let id = self.map().vertex_id(name)?;
@@ -395,45 +397,45 @@ where
         let result = self.map().vertex_name(id)?;
         #[cfg(test)]
         {
-            let result2 = crate::default_impl::first_ancestor_nth(self, name2, n)?;
+            let result2 = crate::default_impl::first_ancestor_nth(self, name2, n).await?;
             assert_eq!(result, result2);
         }
         Ok(result)
     }
 
     /// Calculates heads of the given set.
-    fn heads(&self, set: NameSet) -> Result<NameSet> {
+    async fn heads(&self, set: NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::ANCESTORS)
             && set.hints().is_dag_compatible(self.dag_snapshot()?)
         {
             // heads_ancestors is faster.
-            return self.heads_ancestors(set);
+            return self.heads_ancestors(set).await;
         }
         let spans = self.dag().heads(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         #[cfg(test)]
         {
-            result.assert_eq(crate::default_impl::heads(self, set)?);
+            result.assert_eq(crate::default_impl::heads(self, set).await?);
         }
         Ok(result)
     }
 
     /// Calculates children of the given set.
-    fn children(&self, set: NameSet) -> Result<NameSet> {
+    async fn children(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag().children(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         Ok(result)
     }
 
     /// Calculates roots of the given set.
-    fn roots(&self, set: NameSet) -> Result<NameSet> {
+    async fn roots(&self, set: NameSet) -> Result<NameSet> {
         let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
         let spans = self.dag().roots(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         result.hints().add_flags(flags);
         #[cfg(test)]
         {
-            result.assert_eq(crate::default_impl::roots(self, set)?);
+            result.assert_eq(crate::default_impl::roots(self, set).await?);
         }
         Ok(result)
     }
@@ -443,46 +445,47 @@ where
     /// If there are no common ancestors, return None.
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
-    fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
+    async fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
         let result: Option<VertexName> = match self.dag().gca_one(self.to_id_set(&set)?)? {
             None => None,
             Some(id) => Some(self.map().vertex_name(id)?),
         };
         #[cfg(test)]
         {
-            assert_eq!(&result, &crate::default_impl::gca_one(self, set)?);
+            assert_eq!(&result, &crate::default_impl::gca_one(self, set).await?);
         }
         Ok(result)
     }
 
     /// Calculates all "greatest common ancestor"s of the given set.
     /// `gca_one` is faster if an arbitrary answer is ok.
-    fn gca_all(&self, set: NameSet) -> Result<NameSet> {
+    async fn gca_all(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag().gca_all(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         #[cfg(test)]
         {
-            result.assert_eq(crate::default_impl::gca_all(self, set)?);
+            result.assert_eq(crate::default_impl::gca_all(self, set).await?);
         }
         Ok(result)
     }
 
     /// Calculates all common ancestors of the given set.
-    fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
+    async fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag().common_ancestors(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         result.hints().add_flags(Flags::ANCESTORS);
         #[cfg(test)]
         {
-            result.assert_eq(crate::default_impl::common_ancestors(self, set)?);
+            result.assert_eq(crate::default_impl::common_ancestors(self, set).await?);
         }
         Ok(result)
     }
 
     /// Tests if `ancestor` is an ancestor of `descendant`.
-    fn is_ancestor(&self, ancestor: VertexName, descendant: VertexName) -> Result<bool> {
+    async fn is_ancestor(&self, ancestor: VertexName, descendant: VertexName) -> Result<bool> {
         #[cfg(test)]
-        let result2 = crate::default_impl::is_ancestor(self, ancestor.clone(), descendant.clone())?;
+        let result2 =
+            crate::default_impl::is_ancestor(self, ancestor.clone(), descendant.clone()).await?;
         let ancestor_id = self.map().vertex_id(ancestor)?;
         let descendant_id = self.map().vertex_id(descendant)?;
         let result = self.dag().is_ancestor(ancestor_id, descendant_id)?;
@@ -502,7 +505,7 @@ where
     /// This is different from `heads`. In case set contains X and Y, and Y is
     /// an ancestor of X, but not the immediate ancestor, `heads` will include
     /// Y while this function won't.
-    fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
+    async fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag().heads_ancestors(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         #[cfg(test)]
@@ -510,14 +513,14 @@ where
             // default_impl::heads_ancestors calls `heads` if `Flags::ANCESTORS`
             // is set. Prevent infinite loop.
             if !set.hints().contains(Flags::ANCESTORS) {
-                result.assert_eq(crate::default_impl::heads_ancestors(self, set)?);
+                result.assert_eq(crate::default_impl::heads_ancestors(self, set).await?);
             }
         }
         Ok(result)
     }
 
     /// Calculates the "dag range" - vertexes reachable from both sides.
-    fn range(&self, roots: NameSet, heads: NameSet) -> Result<NameSet> {
+    async fn range(&self, roots: NameSet, heads: NameSet) -> Result<NameSet> {
         let roots = self.to_id_set(&roots)?;
         let heads = self.to_id_set(&heads)?;
         let spans = self.dag().range(roots, heads)?;
@@ -526,7 +529,7 @@ where
     }
 
     /// Calculates the descendants of the given set.
-    fn descendants(&self, set: NameSet) -> Result<NameSet> {
+    async fn descendants(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag().descendants(self.to_id_set(&set)?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         Ok(result)

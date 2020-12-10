@@ -16,6 +16,7 @@ use unicode_width::UnicodeWidthStr;
 
 use super::render::{Ancestor, Renderer};
 use super::test_fixtures::TestFixture;
+use nonblocking::non_blocking_result;
 
 pub(crate) fn render_string(
     fixture: &TestFixture,
@@ -57,8 +58,7 @@ pub(crate) fn render_string_with_order(
     let messages: HashMap<_, _> = messages.iter().cloned().collect();
 
     let iter: Vec<_> = match order {
-        None => dag
-            .all()
+        None => non_blocking_result(dag.all())
             .unwrap()
             .iter()
             .unwrap()
@@ -72,8 +72,7 @@ pub(crate) fn render_string_with_order(
         if missing.contains(&node) {
             continue;
         }
-        let parents = dag
-            .parent_names(node.clone())
+        let parents = non_blocking_result(dag.parent_names(node.clone()))
             .unwrap()
             .into_iter()
             .map(|parent| {

@@ -34,6 +34,7 @@ bindag = { path = "bindag" }
 mincode = { path = "../mincode" }
 minibench = { path = "../minibench" }
 once_cell = "1"
+tokio = { version = "0.2", features = ["full"] }
 unicode-width = "0.1.7"
 
 [[bench]]

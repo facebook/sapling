@@ -37,12 +37,13 @@ mod tests {
     use super::*;
     use crate::DagAlgorithm;
     use crate::Result;
+    use nonblocking::non_blocking_result as r;
 
     #[test]
     fn test_legacy_convert() -> Result<()> {
         use LegacyCodeNeedIdAccess as L;
         with_dag(|dag| -> Result<()> {
-            let set1 = dag.ancestors("G".into())?;
+            let set1 = r(dag.ancestors("G".into()))?;
             let spans: SpanSet = (
                 L,
                 set1.as_any().downcast_ref::<IdStaticSet>().unwrap().clone(),

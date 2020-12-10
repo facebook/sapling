@@ -92,7 +92,7 @@ impl TestDag {
 
     fn validate(&self) {
         // All vertexes should be accessible, and round-trip through IdMap.
-        for v in self.dag.all().unwrap().iter().unwrap() {
+        for v in non_blocking_result(self.dag.all()).unwrap().iter().unwrap() {
             let v = v.unwrap();
             let id = self.dag.vertex_id(v.clone()).unwrap();
             let v2 = self.dag.vertex_name(id).unwrap();

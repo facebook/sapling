@@ -20,51 +20,53 @@ use crate::nameset::NameSet;
 use crate::nameset::SyncNameSetQuery;
 use crate::IdSet;
 use crate::Result;
+use nonblocking::non_blocking_result;
 use std::sync::Arc;
 
 /// DAG related read-only algorithms.
+#[async_trait::async_trait]
 pub trait DagAlgorithm: Send + Sync {
     /// Sort a `NameSet` topologically.
-    fn sort(&self, set: &NameSet) -> Result<NameSet>;
+    async fn sort(&self, set: &NameSet) -> Result<NameSet>;
 
     /// Re-create the graph so it looks better when rendered.
-    fn beautify(&self, main_branch: Option<NameSet>) -> Result<MemNameDag> {
-        default_impl::beautify(self, main_branch)
+    async fn beautify(&self, main_branch: Option<NameSet>) -> Result<MemNameDag> {
+        default_impl::beautify(self, main_branch).await
     }
 
     /// Get ordered parent vertexes.
-    fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>>;
+    async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>>;
 
     /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
-    fn all(&self) -> Result<NameSet>;
+    async fn all(&self) -> Result<NameSet>;
 
     /// Calculates all ancestors reachable from any name from the given set.
-    fn ancestors(&self, set: NameSet) -> Result<NameSet>;
+    async fn ancestors(&self, set: NameSet) -> Result<NameSet>;
 
     /// Calculates parents of the given set.
     ///
     /// Note: Parent order is not preserved. Use [`NameDag::parent_names`]
     /// to preserve order.
-    fn parents(&self, set: NameSet) -> Result<NameSet> {
-        default_impl::parents(self, set)
+    async fn parents(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::parents(self, set).await
     }
 
     /// Calculates the n-th first ancestor.
-    fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<VertexName> {
-        default_impl::first_ancestor_nth(self, name, n)
+    async fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<VertexName> {
+        default_impl::first_ancestor_nth(self, name, n).await
     }
 
     /// Calculates heads of the given set.
-    fn heads(&self, set: NameSet) -> Result<NameSet> {
-        default_impl::heads(self, set)
+    async fn heads(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::heads(self, set).await
     }
 
     /// Calculates children of the given set.
-    fn children(&self, set: NameSet) -> Result<NameSet>;
+    async fn children(&self, set: NameSet) -> Result<NameSet>;
 
     /// Calculates roots of the given set.
-    fn roots(&self, set: NameSet) -> Result<NameSet> {
-        default_impl::roots(self, set)
+    async fn roots(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::roots(self, set).await
     }
 
     /// Calculates one "greatest common ancestor" of the given set.
@@ -72,24 +74,24 @@ pub trait DagAlgorithm: Send + Sync {
     /// If there are no common ancestors, return None.
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
-    fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
-        default_impl::gca_one(self, set)
+    async fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
+        default_impl::gca_one(self, set).await
     }
 
     /// Calculates all "greatest common ancestor"s of the given set.
     /// `gca_one` is faster if an arbitrary answer is ok.
-    fn gca_all(&self, set: NameSet) -> Result<NameSet> {
-        default_impl::gca_all(self, set)
+    async fn gca_all(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::gca_all(self, set).await
     }
 
     /// Calculates all common ancestors of the given set.
-    fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
-        default_impl::common_ancestors(self, set)
+    async fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::common_ancestors(self, set).await
     }
 
     /// Tests if `ancestor` is an ancestor of `descendant`.
-    fn is_ancestor(&self, ancestor: VertexName, descendant: VertexName) -> Result<bool> {
-        default_impl::is_ancestor(self, ancestor, descendant)
+    async fn is_ancestor(&self, ancestor: VertexName, descendant: VertexName) -> Result<bool> {
+        default_impl::is_ancestor(self, ancestor, descendant).await
     }
 
     /// Calculates "heads" of the ancestors of the given set. That is,
@@ -102,28 +104,32 @@ pub trait DagAlgorithm: Send + Sync {
     /// This is different from `heads`. In case set contains X and Y, and Y is
     /// an ancestor of X, but not the immediate ancestor, `heads` will include
     /// Y while this function won't.
-    fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
-        default_impl::heads_ancestors(self, set)
+    async fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::heads_ancestors(self, set).await
     }
 
     /// Calculates the "dag range" - vertexes reachable from both sides.
-    fn range(&self, roots: NameSet, heads: NameSet) -> Result<NameSet>;
+    async fn range(&self, roots: NameSet, heads: NameSet) -> Result<NameSet>;
 
     /// Calculates `ancestors(reachable) - ancestors(unreachable)`.
-    fn only(&self, reachable: NameSet, unreachable: NameSet) -> Result<NameSet> {
-        default_impl::only(self, reachable, unreachable)
+    async fn only(&self, reachable: NameSet, unreachable: NameSet) -> Result<NameSet> {
+        default_impl::only(self, reachable, unreachable).await
     }
 
     /// Calculates `ancestors(reachable) - ancestors(unreachable)`, and
     /// `ancestors(unreachable)`.
     /// This might be faster in some implementations than calculating `only` and
     /// `ancestors` separately.
-    fn only_both(&self, reachable: NameSet, unreachable: NameSet) -> Result<(NameSet, NameSet)> {
-        default_impl::only_both(self, reachable, unreachable)
+    async fn only_both(
+        &self,
+        reachable: NameSet,
+        unreachable: NameSet,
+    ) -> Result<(NameSet, NameSet)> {
+        default_impl::only_both(self, reachable, unreachable).await
     }
 
     /// Calculates the descendants of the given set.
-    fn descendants(&self, set: NameSet) -> Result<NameSet>;
+    async fn descendants(&self, set: NameSet) -> Result<NameSet>;
 
     /// Calculates `roots` that are reachable from `heads` without going
     /// through other `roots`. For example, given the following graph:
@@ -151,8 +157,8 @@ pub trait DagAlgorithm: Send + Sync {
     /// The `roots & ancestors(heads)` portion filters out bogus roots for
     /// compatibility, if the callsite does not provide bogus roots, it
     /// could be simplified to just `roots`.
-    fn reachable_roots(&self, roots: NameSet, heads: NameSet) -> Result<NameSet> {
-        default_impl::reachable_roots(self, roots, heads)
+    async fn reachable_roots(&self, roots: NameSet, heads: NameSet) -> Result<NameSet> {
+        default_impl::reachable_roots(self, roots, heads).await
     }
 
     /// Get a snapshot of the current graph that can operate separately.
@@ -202,12 +208,12 @@ pub trait DagPersistent {
         dag: &dyn DagAlgorithm,
         master_heads: NameSet,
     ) -> Result<()> {
-        let heads = dag.heads(dag.all()?)?;
+        let heads = dag.heads(dag.all().await?).await?;
         let non_master_heads = heads - master_heads.clone();
         let master_heads: Vec<VertexName> = master_heads.iter()?.collect::<Result<Vec<_>>>()?;
         let non_master_heads: Vec<VertexName> =
             non_master_heads.iter()?.collect::<Result<Vec<_>>>()?;
-        let parent_func = |v| dag.parent_names(v);
+        let parent_func = |v| non_blocking_result(dag.parent_names(v));
         self.add_heads_and_flush(parent_func, &master_heads, &non_master_heads)
             .await
     }

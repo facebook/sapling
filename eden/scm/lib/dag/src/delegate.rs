@@ -63,64 +63,142 @@ macro_rules! delegate {
 
     (DagAlgorithm, $type:ty => self.$($t:tt)*) => {
         impl $crate::DagAlgorithm for $type {
-            fn sort(&self, set: &$crate::Set) -> $crate::Result<$crate::Set> {
+            fn sort<'a: 'c, 'b: 'c, 'c>(&'a self, set: &'b $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 'c>> where Self: 'c
+            {
                 self.$($t)*.sort(set)
             }
-            fn parent_names(&self, name: $crate::Vertex) -> $crate::Result<Vec<$crate::Vertex>> {
+            fn parent_names<'a: 'c, 'c>(&'a self, name: $crate::Vertex)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<Vec<$crate::Vertex>>
+                    > + Send + 'c>> where Self: 'c
+            {
                 self.$($t)*.parent_names(name)
             }
-            fn all(&self) -> $crate::Result<$crate::Set> {
+            fn all<'a: 's, 's>(&'a self)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.all()
             }
-            fn ancestors(&self, set: $crate::Set) -> $crate::Result<$crate::Set> {
+            fn ancestors<'a: 's, 's>(&'a self, set: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.ancestors(set)
             }
-            fn parents(&self, set: $crate::Set) -> $crate::Result<$crate::Set> {
+            fn parents<'a: 's, 's>(&'a self, set: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.parents(set)
             }
-            fn first_ancestor_nth(&self, name: $crate::Vertex, n: u64) -> $crate::Result<$crate::Vertex> {
+            fn first_ancestor_nth<'a: 's, 's>(&'a self, name: $crate::Vertex, n: u64)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Vertex>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.first_ancestor_nth(name, n)
             }
-            fn heads(&self, set: $crate::Set) -> $crate::Result<$crate::Set> {
+            fn heads<'a: 's, 's>(&'a self, set: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.heads(set)
             }
-            fn children(&self, set: $crate::Set) -> $crate::Result<$crate::Set> {
+            fn children<'a: 's, 's>(&'a self, set: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.children(set)
             }
-            fn roots(&self, set: $crate::Set) -> $crate::Result<$crate::Set> {
+            fn roots<'a: 's, 's>(&'a self, set: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.roots(set)
             }
-            fn gca_one(&self, set: $crate::Set) -> $crate::Result<Option<$crate::Vertex>> {
+            fn gca_one<'a: 's, 's>(&'a self, set: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<Option<$crate::Vertex>>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.gca_one(set)
             }
-            fn gca_all(&self, set: $crate::Set) -> $crate::Result<$crate::Set> {
+            fn gca_all<'a: 's, 's>(&'a self, set: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.gca_all(set)
             }
-            fn common_ancestors(&self, set: $crate::Set) -> $crate::Result<$crate::Set> {
+            fn common_ancestors<'a: 's, 's>(&'a self, set: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.common_ancestors(set)
             }
-            fn is_ancestor(&self, ancestor: $crate::Vertex, descendant: $crate::Vertex) -> $crate::Result<bool> {
+            fn is_ancestor<'a: 's, 's>(&'a self, ancestor: $crate::Vertex, descendant: $crate::Vertex)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<bool>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.is_ancestor(ancestor, descendant)
             }
-            fn heads_ancestors(&self, set: $crate::Set) -> $crate::Result<$crate::Set> {
+            fn heads_ancestors<'a: 's, 's>(&'a self, set: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.heads_ancestors(set)
             }
-            fn range(&self, roots: $crate::Set, heads: $crate::Set) -> $crate::Result<$crate::Set> {
+            fn range<'a: 's, 's>(&'a self, roots: $crate::Set, heads: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.range(roots, heads)
             }
-            fn only(&self, reachable: $crate::Set, unreachable: $crate::Set) -> $crate::Result<$crate::Set> {
+            fn only<'a: 's, 's>(&'a self, reachable: $crate::Set, unreachable: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.only(reachable, unreachable)
             }
-            fn only_both(&self, reachable: $crate::Set, unreachable: $crate::Set) -> $crate::Result<($crate::Set, $crate::Set)> {
+            fn only_both<'a: 's, 's>(&'a self, reachable: $crate::Set, unreachable: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<($crate::Set, $crate::Set)>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.only_both(reachable, unreachable)
             }
-            fn descendants(&self, set: $crate::Set) -> $crate::Result<$crate::Set> {
+            fn descendants<'a: 's, 's>(&'a self, set: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.descendants(set)
             }
-            fn reachable_roots(&self, roots: $crate::Set, heads: $crate::Set) -> $crate::Result<$crate::Set> {
+            fn reachable_roots<'a: 's, 's>(&'a self, roots: $crate::Set, heads: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
                 self.$($t)*.reachable_roots(roots, heads)
             }
-            fn dag_snapshot(&self) -> $crate::Result<std::sync::Arc<dyn $crate::DagAlgorithm + Send + Sync>> {
+            fn dag_snapshot(&self)
+                -> $crate::Result<std::sync::Arc<dyn $crate::DagAlgorithm + Send + Sync>>
+            {
                 self.$($t)*.dag_snapshot()
             }
         }

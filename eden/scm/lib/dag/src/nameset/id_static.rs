@@ -207,6 +207,7 @@ impl AsyncNameSetQuery for IdStaticSet {
 }
 
 #[cfg(test)]
+#[allow(clippy::redundant_clone)]
 pub(crate) mod tests {
     use super::super::tests::*;
     use super::super::NameSet;
@@ -214,6 +215,7 @@ pub(crate) mod tests {
     use crate::tests::build_segments;
     use crate::DagAlgorithm;
     use crate::NameDag;
+    use nonblocking::non_blocking_result as r;
     use std::ops::Deref;
 
     /// Test with a predefined DAG.
@@ -233,7 +235,7 @@ pub(crate) mod tests {
     #[test]
     fn test_dag_invariants() -> Result<()> {
         with_dag(|dag| {
-            let bef = dag.range("B".into(), "F".into())?;
+            let bef = r(dag.range("B".into(), "F".into()))?;
             check_invariants(bef.deref())?;
 
             Ok(())
@@ -243,8 +245,8 @@ pub(crate) mod tests {
     #[test]
     fn test_dag_fast_paths() -> Result<()> {
         with_dag(|dag| {
-            let abcd = dag.ancestors("D".into())?;
-            let abefg = dag.ancestors("G".into())?;
+            let abcd = r(dag.ancestors("D".into()))?;
+            let abefg = r(dag.ancestors("G".into()))?;
 
             let ab = abcd.intersection(&abefg);
             check_invariants(ab.deref())?;
@@ -274,8 +276,8 @@ pub(crate) mod tests {
         let f = |s: NameSet| -> String { format!("{:?}", s) };
         with_dag(|dag1| -> Result<()> {
             with_dag(|dag2| -> Result<()> {
-                let abcd = dag1.ancestors("D".into())?;
-                let abefg = dag2.ancestors("G".into())?;
+                let abcd = r(dag1.ancestors("D".into()))?;
+                let abefg = r(dag2.ancestors("G".into()))?;
 
                 // Since abcd and abefg are from 2 "separate" Dags, fast paths should not
                 // be used for intersection, union, and difference.
@@ -306,8 +308,8 @@ pub(crate) mod tests {
 
                 // Should not use FULL hint fast paths for "&, |, -" operations, because
                 // dag1 and dag2 are not considered compatible.
-                let a1 = || dag1.all().unwrap();
-                let a2 = || dag2.all().unwrap();
+                let a1 = || r(dag1.all()).unwrap();
+                let a2 = || r(dag2.all()).unwrap();
                 assert_eq!(f(a1() & a2()), "<and <spans [A:G+0:6]> <spans [A:G+0:6]>>");
                 assert_eq!(f(a1() | a2()), "<or <spans [A:G+0:6]> <spans [A:G+0:6]>>");
                 assert_eq!(f(a1() - a2()), "<diff <spans [A:G+0:6]> <spans [A:G+0:6]>>");
@@ -340,11 +342,11 @@ pub(crate) mod tests {
     #[test]
     fn test_dag_all() -> Result<()> {
         with_dag(|dag| {
-            let all = dag.all()?;
+            let all = r(dag.all())?;
             assert_eq!(format!("{:?}", &all), "<spans [A:G+0:6]>");
 
             let ac: NameSet = "A C".into();
-            let ac = dag.sort(&ac)?;
+            let ac = r(dag.sort(&ac))?;
 
             let intersection = all.intersection(&ac);
             // should not be "<and ...>"
@@ -357,7 +359,7 @@ pub(crate) mod tests {
     fn test_sort() -> Result<()> {
         with_dag(|dag| -> Result<()> {
             let set = "G C A E".into();
-            let sorted = dag.sort(&set)?;
+            let sorted = r(dag.sort(&set))?;
             assert_eq!(format!("{:?}", &sorted), "<spans [G+6, E+4, C+2] + 1 span>");
             Ok(())
         })
@@ -366,20 +368,20 @@ pub(crate) mod tests {
     #[test]
     fn test_dag_hints_ancestors() -> Result<()> {
         with_dag(|dag| -> Result<()> {
-            let abc = dag.ancestors("B C".into())?;
-            let abe = dag.common_ancestors("E".into())?;
+            let abc = r(dag.ancestors("B C".into()))?;
+            let abe = r(dag.common_ancestors("E".into()))?;
             let f: NameSet = "F".into();
-            let all = dag.all()?;
+            let all = r(dag.all())?;
 
             assert!(has_ancestors_flag(abc.clone()));
             assert!(has_ancestors_flag(abe.clone()));
             assert!(has_ancestors_flag(all.clone()));
-            assert!(has_ancestors_flag(dag.roots(abc.clone())?));
-            assert!(has_ancestors_flag(dag.parents(all.clone())?));
+            assert!(has_ancestors_flag(r(dag.roots(abc.clone()))?));
+            assert!(has_ancestors_flag(r(dag.parents(all.clone()))?));
 
             assert!(!has_ancestors_flag(f.clone()));
-            assert!(!has_ancestors_flag(dag.roots(f.clone())?));
-            assert!(!has_ancestors_flag(dag.parents(f.clone())?));
+            assert!(!has_ancestors_flag(r(dag.roots(f.clone()))?));
+            assert!(!has_ancestors_flag(r(dag.parents(f.clone()))?));
 
             Ok(())
         })
@@ -389,20 +391,20 @@ pub(crate) mod tests {
     fn test_dag_hints_ancestors_inheritance() -> Result<()> {
         with_dag(|dag1| -> Result<()> {
             with_dag(|dag2| -> Result<()> {
-                let abc = dag1.ancestors("B C".into())?;
+                let abc = r(dag1.ancestors("B C".into()))?;
 
                 // The ANCESTORS flag is kept by 'sort', 'parents', 'roots' on
                 // the same dag.
-                assert!(has_ancestors_flag(dag1.sort(&abc)?));
-                assert!(has_ancestors_flag(dag1.parents(abc.clone())?));
-                assert!(has_ancestors_flag(dag1.roots(abc.clone())?));
+                assert!(has_ancestors_flag(r(dag1.sort(&abc))?));
+                assert!(has_ancestors_flag(r(dag1.parents(abc.clone()))?));
+                assert!(has_ancestors_flag(r(dag1.roots(abc.clone()))?));
 
                 // The ANCESTORS flag is removed on a different dag, since the
                 // different dag does not assume same graph / ancestry
                 // relationship.
-                assert!(!has_ancestors_flag(dag2.sort(&abc)?));
-                assert!(!has_ancestors_flag(dag2.parents(abc.clone())?));
-                assert!(!has_ancestors_flag(dag2.roots(abc.clone())?));
+                assert!(!has_ancestors_flag(r(dag2.sort(&abc))?));
+                assert!(!has_ancestors_flag(r(dag2.parents(abc.clone()))?));
+                assert!(!has_ancestors_flag(r(dag2.roots(abc.clone()))?));
 
                 Ok(())
             })
@@ -419,30 +421,30 @@ pub(crate) mod tests {
 
             // Fast paths are not used if the set is not "bound" to the dag.
             assert_eq!(
-                format!("{:?}", dag.ancestors(bfg.clone())?),
+                format!("{:?}", r(dag.ancestors(bfg.clone()))?),
                 "<spans [E:G+4:6, A:B+0:1]>"
             );
             assert_eq!(
-                format!("{:?}", dag.heads(bfg.clone())?),
+                format!("{:?}", r(dag.heads(bfg.clone()))?),
                 "<spans [G+6, B+1]>"
             );
 
             // Binding to the Dag enables fast paths.
-            let bfg = dag.sort(&bfg)?;
+            let bfg = r(dag.sort(&bfg))?;
             bfg.hints().add_flags(Flags::ANCESTORS);
             assert_eq!(
-                format!("{:?}", dag.ancestors(bfg.clone())?),
+                format!("{:?}", r(dag.ancestors(bfg.clone()))?),
                 "<spans [F:G+5:6, B+1]>"
             );
 
             // 'heads' has a fast path that uses 'heads_ancestors' to do the calculation.
             // (in this case the result is incorrect because the hints are wrong).
-            assert_eq!(format!("{:?}", dag.heads(bfg.clone())?), "<spans [G+6]>");
+            assert_eq!(format!("{:?}", r(dag.heads(bfg.clone()))?), "<spans [G+6]>");
 
             // 'ancestors' has a fast path that returns set as-is.
             // (in this case the result is incorrect because the hints are wrong).
             assert_eq!(
-                format!("{:?}", dag.ancestors(bfg.clone())?),
+                format!("{:?}", r(dag.ancestors(bfg.clone()))?),
                 "<spans [F:G+5:6, B+1]>"
             );
 

@@ -35,9 +35,10 @@ pub(crate) async fn migrate_commits(
     if std::env::var_os("TESTTMP").is_none() {
         return Err(crate::errors::test_only("strip"));
     }
-    let set = orig.all()? - orig.descendants(strip_set)?;
+    let set = orig.all().await? - orig.descendants(strip_set).await?;
     let heads: Vec<Vertex> = orig
-        .heads(set.clone())?
+        .heads(set.clone())
+        .await?
         .iter_rev()?
         .collect::<dag::Result<Vec<_>>>()?;
     let mut commits: Vec<HgCommit> = Vec::with_capacity(set.count()?);
@@ -51,7 +52,7 @@ pub(crate) async fn migrate_commits(
             Some(text) => text,
             None => return Err(vertex.not_found_error().into()),
         };
-        let parents = orig.parent_names(vertex.clone())?;
+        let parents = orig.parent_names(vertex.clone()).await?;
         let commit = HgCommit {
             vertex,
             parents,

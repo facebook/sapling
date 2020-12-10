@@ -89,8 +89,7 @@ impl<T: AsRef<[usize]> + Send + Sync> GeneralTestContext<T> {
             .unwrap();
 
         // Prepare idmap
-        let idmap: HashMap<Id, usize> = dag
-            .all()
+        let idmap: HashMap<Id, usize> = non_blocking_result(dag.all())
             .unwrap()
             .iter()
             .unwrap()

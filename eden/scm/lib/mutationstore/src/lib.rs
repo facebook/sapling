@@ -175,7 +175,8 @@ impl MutationStore {
             let x = entry.preds[0];
             // Find all "P"s, as in P -> ... -> X, and X -> Y.
             let x_set = VertexName::copy_from(x.as_ref()).into();
-            let x_ancestors = match dag.ancestors(x_set) {
+            // "dag" is locally built and should be non-blocking.
+            let x_ancestors = match non_blocking_result(dag.ancestors(x_set)) {
                 Ok(set) => set,
                 Err(_) => continue, // might have cycles
             };
@@ -260,11 +261,11 @@ impl MutationStore {
                 .map_err(|e| dag::errors::BackendError::Other(e))?;
 
             // Filter out invisible successors.
-            let obsvisible = obsdag.ancestors(obsdag.all()? & visible)?;
+            let obsvisible = obsdag.ancestors(obsdag.all().await? & visible).await?;
 
             // Heads of `obsvisible` are not obsoleted. Other part (parent) of
             // `obsvisible` are obsoleted.
-            let obsoleted = obsdag.parents(obsvisible)?;
+            let obsoleted = obsdag.parents(obsvisible).await?;
 
             // Filter out unknown nodes.
             let obsoleted = draft & obsoleted;
@@ -292,7 +293,7 @@ impl MutationStore {
                 let obsdag = this
                     .get_dag_advanced(vec![id], DagFlags::SUCCESSORS)
                     .map_err(|e| dag::errors::BackendError::Other(e))?;
-                Ok((obsdag.all()? & visible.clone()).count()? > 1)
+                Ok((obsdag.all().await? & visible).count()? > 1)
             } else {
                 Ok(false)
             }
@@ -585,7 +586,7 @@ mod tests {
         }
 
         let dag = ms.get_dag(vec![n("B")])?;
-        assert_eq!(dag.all()?.count()?, 5); // A B C D E
+        assert_eq!(non_blocking_result(dag.all())?.count()?, 5); // A B C D E
         assert_eq!(
             renderdag::render_namedag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))?,
             r#"

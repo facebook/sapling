@@ -17,7 +17,7 @@ use crate::NameDag;
 use crate::NameSet;
 use crate::Result;
 use crate::SpanSet;
-use nonblocking::non_blocking_result;
+use nonblocking::non_blocking_result as r;
 use tempfile::tempdir;
 use test_dag::TestDag;
 
@@ -71,13 +71,16 @@ static ASCII_DAG5: &str = r#"
 
 fn test_generic_dag1<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
     let dag = from_ascii(dag, ASCII_DAG1);
-    assert_eq!(expand(dag.all()?), "A B C D E F G H I J K L");
-    assert_eq!(expand(dag.ancestors(nameset("H I"))?), "A B C D E F G H I");
-    assert_eq!(expand(dag.parents(nameset("H I E"))?), "B D G");
-    assert_eq!(expand(dag.children(nameset("G D L"))?), "E H I");
-    assert_eq!(expand(dag.roots(nameset("A B E F C D I J"))?), "A C I");
-    assert_eq!(expand(dag.heads(nameset("A B E F C D I J"))?), "F J");
-    assert_eq!(expand(dag.gca_all(nameset("J K H"))?), "G");
+    assert_eq!(expand(r(dag.all())?), "A B C D E F G H I J K L");
+    assert_eq!(
+        expand(r(dag.ancestors(nameset("H I")))?),
+        "A B C D E F G H I"
+    );
+    assert_eq!(expand(r(dag.parents(nameset("H I E")))?), "B D G");
+    assert_eq!(expand(r(dag.children(nameset("G D L")))?), "E H I");
+    assert_eq!(expand(r(dag.roots(nameset("A B E F C D I J")))?), "A C I");
+    assert_eq!(expand(r(dag.heads(nameset("A B E F C D I J")))?), "F J");
+    assert_eq!(expand(r(dag.gca_all(nameset("J K H")))?), "G");
     Ok(dag)
 }
 
@@ -90,16 +93,16 @@ fn test_generic_dag_beautify<D: DagAlgorithm + DagAddHeads>(new_dag: impl Fn() -
         E"#;
     let order = ["B", "D", "A", "C"];
     let dag = from_ascii_with_heads(new_dag(), ascii, Some(&order));
-    assert_eq!(expand(dag.all()?), "A B C D E");
+    assert_eq!(expand(r(dag.all())?), "A B C D E");
 
-    let dag2 = dag.beautify(None)?;
-    assert_eq!(expand(dag2.all()?), "A B C D E");
+    let dag2 = r(dag.beautify(None))?;
+    assert_eq!(expand(r(dag2.all())?), "A B C D E");
 
-    let dag3 = dag.beautify(Some(nameset("A B E")))?;
-    assert_eq!(expand(dag3.all()?), "A B C D E");
+    let dag3 = r(dag.beautify(Some(nameset("A B E"))))?;
+    assert_eq!(expand(r(dag3.all())?), "A B C D E");
 
-    let dag4 = dag.beautify(Some(nameset("C D E")))?;
-    assert_eq!(expand(dag4.all()?), "A B C D E");
+    let dag4 = r(dag.beautify(Some(nameset("C D E"))))?;
+    assert_eq!(expand(r(dag4.all())?), "A B C D E");
 
     let ascii = r#"
         A G
@@ -111,13 +114,13 @@ fn test_generic_dag_beautify<D: DagAlgorithm + DagAddHeads>(new_dag: impl Fn() -
         D"#;
     let order = ["C", "E", "G", "F", "A"];
     let dag = from_ascii_with_heads(new_dag(), ascii, Some(&order));
-    assert_eq!(expand(dag.all()?), "A B C D E F G");
+    assert_eq!(expand(r(dag.all())?), "A B C D E F G");
 
-    let dag2 = dag.beautify(None)?;
-    assert_eq!(expand(dag2.all()?), "A B C D E F G");
+    let dag2 = r(dag.beautify(None))?;
+    assert_eq!(expand(r(dag2.all())?), "A B C D E F G");
 
-    let dag3 = dag.beautify(Some(dag.ancestors(nameset("A"))?))?;
-    assert_eq!(expand(dag3.all()?), "A B C D E F G");
+    let dag3 = r(dag.beautify(Some(r(dag.ancestors(nameset("A")))?)))?;
+    assert_eq!(expand(r(dag3.all())?), "A B C D E F G");
 
     let ascii = r#"
         A---B---C---D---E---F---G
@@ -127,10 +130,10 @@ fn test_generic_dag_beautify<D: DagAlgorithm + DagAddHeads>(new_dag: impl Fn() -
                     L "#;
     let order = ["D", "J", "L", "K", "G"];
     let dag = from_ascii_with_heads(new_dag(), ascii, Some(&order));
-    assert_eq!(expand(dag.all()?), "A B C D E F G H I J K L");
+    assert_eq!(expand(r(dag.all())?), "A B C D E F G H I J K L");
 
-    let dag2 = dag.beautify(None)?;
-    assert_eq!(expand(dag2.all()?), "A B C D E F G H I J K L");
+    let dag2 = r(dag.beautify(None))?;
+    assert_eq!(expand(r(dag2.all())?), "A B C D E F G H I J K L");
 
     Ok(())
 }
@@ -152,31 +155,33 @@ fn test_generic_dag_reachable_roots(dag: impl DagAlgorithm + DagAddHeads) -> Res
     // B is not reachable without going through other roots (C).
     // A is reachable through Z -> F -> E -> A.
     assert_eq!(
-        expand(dag.reachable_roots(nameset("A B C"), nameset("Z"))?),
+        expand(r(dag.reachable_roots(nameset("A B C"), nameset("Z")))?),
         "A C"
     );
 
     // A, E are not reachable without going through other roots (C, F).
     assert_eq!(
-        expand(dag.reachable_roots(nameset("A C E F"), nameset("Z"))?),
+        expand(r(dag.reachable_roots(nameset("A C E F"), nameset("Z")))?),
         "C F"
     );
 
     // roots and heads overlap.
     assert_eq!(
-        expand(dag.reachable_roots(nameset("A B C D E F Z"), nameset("D F"))?),
+        expand(r(
+            dag.reachable_roots(nameset("A B C D E F Z"), nameset("D F"))
+        )?),
         "D F"
     );
 
     // E, F are not reachable.
     assert_eq!(
-        expand(dag.reachable_roots(nameset("A B E F"), nameset("D"))?),
+        expand(r(dag.reachable_roots(nameset("A B E F"), nameset("D")))?),
         "B"
     );
 
     // "Bogus" root "Z".
     assert_eq!(
-        expand(dag.reachable_roots(nameset("A Z"), nameset("C"))?),
+        expand(r(dag.reachable_roots(nameset("A Z"), nameset("C")))?),
         "A"
     );
 
@@ -196,7 +201,7 @@ fn test_generic_dag_import(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
 
     let dir = tempdir().unwrap();
     let mut dag2 = NameDag::open(&dir.path())?;
-    non_blocking_result(dag2.import_and_flush(&dag1, nameset("J")))?;
+    r(dag2.import_and_flush(&dag1, nameset("J")))?;
     assert_eq!(
         render(&dag2),
         r#"
@@ -266,29 +271,32 @@ fn test_generic_dag2<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
 
     let v = |name: &str| -> VertexName { VertexName::copy_from(name.as_bytes()) };
 
-    assert_eq!(expand(dag.all()?), "A B C D E F G H I J K");
-    assert_eq!(expand(dag.ancestors(nameset("H I"))?), "A B C D E F H I");
-    assert_eq!(expand(dag.parents(nameset("H I E"))?), "A B D E F");
-    assert_eq!(dag.first_ancestor_nth(v("H"), 2)?, v("A"));
-    assert_eq!(expand(dag.heads(nameset("E H F K I D"))?), "K");
-    assert_eq!(expand(dag.children(nameset("E F I"))?), "G H I J K");
-    assert_eq!(expand(dag.roots(nameset("E G H J I K D"))?), "D E");
-    assert_eq!(dag.gca_one(nameset("J K"))?, Some(v("I")));
-    assert_eq!(expand(dag.gca_all(nameset("J K"))?), "E I");
-    assert_eq!(expand(dag.common_ancestors(nameset("G H"))?), "A B E");
-    assert!(dag.is_ancestor(v("B"), v("K"))?);
-    assert!(!dag.is_ancestor(v("K"), v("B"))?);
-    assert_eq!(expand(dag.heads_ancestors(nameset("A E F D G"))?), "D F G");
-    assert_eq!(expand(dag.range(nameset("A"), nameset("K"))?), "A E H K");
-    assert_eq!(expand(dag.only(nameset("I"), nameset("G"))?), "C D F I");
-    let (reachable, unreachable) = dag.only_both(nameset("I"), nameset("G"))?;
+    assert_eq!(expand(r(dag.all())?), "A B C D E F G H I J K");
+    assert_eq!(expand(r(dag.ancestors(nameset("H I")))?), "A B C D E F H I");
+    assert_eq!(expand(r(dag.parents(nameset("H I E")))?), "A B D E F");
+    assert_eq!(r(dag.first_ancestor_nth(v("H"), 2))?, v("A"));
+    assert_eq!(expand(r(dag.heads(nameset("E H F K I D")))?), "K");
+    assert_eq!(expand(r(dag.children(nameset("E F I")))?), "G H I J K");
+    assert_eq!(expand(r(dag.roots(nameset("E G H J I K D")))?), "D E");
+    assert_eq!(r(dag.gca_one(nameset("J K")))?, Some(v("I")));
+    assert_eq!(expand(r(dag.gca_all(nameset("J K")))?), "E I");
+    assert_eq!(expand(r(dag.common_ancestors(nameset("G H")))?), "A B E");
+    assert!(r(dag.is_ancestor(v("B"), v("K")))?);
+    assert!(!r(dag.is_ancestor(v("K"), v("B")))?);
+    assert_eq!(
+        expand(r(dag.heads_ancestors(nameset("A E F D G")))?),
+        "D F G"
+    );
+    assert_eq!(expand(r(dag.range(nameset("A"), nameset("K")))?), "A E H K");
+    assert_eq!(expand(r(dag.only(nameset("I"), nameset("G")))?), "C D F I");
+    let (reachable, unreachable) = r(dag.only_both(nameset("I"), nameset("G")))?;
     assert_eq!(expand(reachable), "C D F I");
-    assert_eq!(expand(unreachable), expand(dag.ancestors(nameset("G"))?));
-    assert_eq!(expand(dag.descendants(nameset("F E"))?), "E F G H I J K");
+    assert_eq!(expand(unreachable), expand(r(dag.ancestors(nameset("G")))?));
+    assert_eq!(expand(r(dag.descendants(nameset("F E")))?), "E F G H I J K");
 
-    assert!(dag.is_ancestor(v("B"), v("J"))?);
-    assert!(dag.is_ancestor(v("F"), v("F"))?);
-    assert!(!dag.is_ancestor(v("K"), v("I"))?);
+    assert!(r(dag.is_ancestor(v("B"), v("J")))?);
+    assert!(r(dag.is_ancestor(v("F"), v("F")))?);
+    assert!(!r(dag.is_ancestor(v("K"), v("I")))?);
 
     Ok(dag)
 }
@@ -730,17 +738,17 @@ fn test_namedag_reassign_master() -> crate::Result<()> {
     dag = from_ascii(dag, "A-B-C");
 
     // The in-memory DAG can answer parent_names questions.
-    assert_eq!(format!("{:?}", dag.parent_names("A".into())?), "[]");
-    assert_eq!(format!("{:?}", dag.parent_names("C".into())?), "[B]");
+    assert_eq!(format!("{:?}", r(dag.parent_names("A".into()))?), "[]");
+    assert_eq!(format!("{:?}", r(dag.parent_names("C".into()))?), "[B]");
 
     // First flush, A, B, C are non-master.
-    non_blocking_result(dag.flush(&[])).unwrap();
+    r(dag.flush(&[])).unwrap();
 
     assert_eq!(format!("{:?}", dag.vertex_id("A".into())?), "N0");
     assert_eq!(format!("{:?}", dag.vertex_id("C".into())?), "N2");
 
     // Second flush, making B master without adding new vertexes.
-    non_blocking_result(dag.flush(&["B".into()])).unwrap();
+    r(dag.flush(&["B".into()])).unwrap();
     assert_eq!(format!("{:?}", dag.vertex_id("A".into())?), "0");
     assert_eq!(format!("{:?}", dag.vertex_id("B".into())?), "1");
     assert_eq!(format!("{:?}", dag.vertex_id("C".into())?), "N0");

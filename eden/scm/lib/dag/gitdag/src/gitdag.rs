@@ -132,7 +132,7 @@ fn sync_from_git(
 
     let possible_heads =
         Set::from_static_names(master_heads.into_iter().chain(non_master_heads.into_iter()));
-    let heads = dag.heads_ancestors(possible_heads)?;
+    let heads = non_blocking_result(dag.heads_ancestors(possible_heads))?;
 
     Ok(GitDag {
         dag,

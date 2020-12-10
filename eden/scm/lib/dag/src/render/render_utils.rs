@@ -10,6 +10,7 @@ use crate::nameset::SyncNameSetQuery;
 use crate::DagAlgorithm;
 use crate::VertexName;
 use anyhow::Result;
+use nonblocking::non_blocking_result;
 
 /// Render a NameDag or MemNameDag into a String.
 pub fn render_namedag(
@@ -18,12 +19,13 @@ pub fn render_namedag(
 ) -> Result<String> {
     let mut renderer = super::GraphRowRenderer::new().output().build_box_drawing();
 
-    let iter: Vec<_> = dag.all()?.iter()?.collect::<crate::Result<_>>()?;
+    let iter: Vec<_> = non_blocking_result(dag.all())?
+        .iter()?
+        .collect::<crate::Result<_>>()?;
 
     let mut out = String::new();
     for node in iter {
-        let parents = dag
-            .parent_names(node.clone())?
+        let parents = non_blocking_result(dag.parent_names(node.clone()))?
             .into_iter()
             .map(Ancestor::Parent)
             .collect();
