@@ -236,7 +236,7 @@ impl MutationStore {
     /// For best performance, the callsite should consider calling
     /// `dag.sort(result)` to bind the `result` of this function to the main
     /// commit graph.
-    pub fn calculate_obsolete(&self, public: Set, draft: Set) -> Result<Set> {
+    pub async fn calculate_obsolete(&self, public: Set, draft: Set) -> Result<Set> {
         let visible = public | draft.clone();
         let this = self.try_clone()?;
 
@@ -673,7 +673,7 @@ mod tests {
         }
         let public = Set::from_static_names(vec![v("Y"), v("Z")]);
         let draft = Set::from_static_names(vec![v("B"), v("E"), v("C"), v("X")]);
-        let obsolete = ms.calculate_obsolete(public, draft)?;
+        let obsolete = non_blocking_result(ms.calculate_obsolete(public, draft))?;
 
         // B is obsoleted. It has a visible successor E (draft).
         assert!(obsolete.contains(&v("B"))?);

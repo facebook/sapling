@@ -10,6 +10,7 @@
 use std::{cell::RefCell, io::Cursor};
 
 use anyhow::Error;
+use async_runtime::block_on_exclusive as block_on;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use cpython::*;
 use cpython_ext::{PyNone, PyPath, ResultPyErrExt, Str};
@@ -268,7 +269,7 @@ py_class!(class mutationstore |py| {
     /// Calculate the `obsolete` set from `public` and `draft` sets.
     def calculateobsolete(&self, public: Names, draft: Names) -> PyResult<Names> {
         let store = self.mut_store(py).borrow();
-        Ok(Names(store.calculate_obsolete(public.0, draft.0).map_pyerr(py)?))
+        Ok(Names(block_on(store.calculate_obsolete(public.0, draft.0)).map_pyerr(py)?))
     }
 
     @staticmethod
