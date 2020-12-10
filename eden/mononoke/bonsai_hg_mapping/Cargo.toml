@@ -32,7 +32,9 @@ stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch 
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
+async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 thiserror = "1.0"
 
@@ -41,4 +43,3 @@ mercurial_types-mocks = { path = "../mercurial/types/mocks" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 assert_matches = "1.3"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }

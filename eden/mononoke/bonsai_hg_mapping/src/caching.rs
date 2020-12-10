@@ -7,18 +7,22 @@
 
 use super::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use anyhow::Error;
+use async_trait::async_trait;
 use bonsai_hg_mapping_entry_thrift as thrift;
 use bytes::Bytes;
 use cachelib::VolatileLruCachePool;
 use caching_ext::{
-    cache_all_determinator, CachelibHandler, GetOrFillMultipleFromCacheLayers, McErrorKind,
-    McResult, MemcacheHandler,
+    get_or_fill, CacheDispositionNew, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
+    McErrorKind, McResult, MemcacheEntity, MemcacheHandler,
 };
-use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{FutureExt, TryFutureExt},
+};
+use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::Future;
 use memcache::{KeyGen, MemcacheClient};
 use mercurial_types::{HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
@@ -54,6 +58,7 @@ impl From<HgChangesetId> for BonsaiOrHgChangesetId {
     }
 }
 
+#[derive(Clone)]
 pub struct CachingBonsaiHgMapping {
     mapping: Arc<dyn BonsaiHgMapping>,
     cache_pool: CachelibHandler<BonsaiHgMappingEntry>,
@@ -117,86 +122,33 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
         repo_id: RepositoryId,
         cs: BonsaiOrHgChangesetIds,
     ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
-        let from_bonsai;
-        let keys: HashSet<_> = match cs {
-            BonsaiOrHgChangesetIds::Bonsai(cs) => {
-                from_bonsai = true;
-                cs.into_iter().map(BonsaiOrHgChangesetId::Bonsai).collect()
-            }
-            BonsaiOrHgChangesetIds::Hg(cs) => {
-                from_bonsai = false;
-                cs.into_iter().map(BonsaiOrHgChangesetId::Hg).collect()
-            }
-        };
+        let this = (*self).clone();
 
-        let report_mc_result = |res: McResult<()>| {
-            match res {
-                Ok(_) => STATS::memcache_hit.add_value(1),
-                Err(McErrorKind::MemcacheInternal) => STATS::memcache_internal_err.add_value(1),
-                Err(McErrorKind::Missing) => STATS::memcache_miss.add_value(1),
-                Err(McErrorKind::Deserialization) => STATS::memcache_deserialize_err.add_value(1),
-            };
-        };
-        cloned!(self.mapping);
-        let get_from_db = move |keys: HashSet<BonsaiOrHgChangesetId>| -> BoxFuture<
-            HashMap<BonsaiOrHgChangesetId, BonsaiHgMappingEntry>,
-            Error,
-        > {
-            let mut bcs_ids = vec![];
-            let mut hg_cs_ids = vec![];
-            for key in keys {
-                match key {
-                    BonsaiOrHgChangesetId::Bonsai(bcs_id) => {
-                        bcs_ids.push(bcs_id);
-                    }
-                    BonsaiOrHgChangesetId::Hg(hg_cs_id) => {
-                        hg_cs_ids.push(hg_cs_id);
-                    }
-                }
-            }
+        async move {
+            let ctx = (&ctx, repo_id, &this);
 
-            let bonsai_or_hg_csids = if from_bonsai {
-                assert!(hg_cs_ids.is_empty());
-                BonsaiOrHgChangesetIds::Bonsai(bcs_ids)
-            } else {
-                assert!(bcs_ids.is_empty());
-                BonsaiOrHgChangesetIds::Hg(hg_cs_ids)
-            };
-
-            mapping
-                .get(ctx.clone(), repo_id, bonsai_or_hg_csids)
-                .map(move |mapping_entries| {
-                    mapping_entries
+            let res = match cs {
+                BonsaiOrHgChangesetIds::Bonsai(cs_ids) => {
+                    get_or_fill(ctx, cs_ids.into_iter().collect())
+                        .await?
                         .into_iter()
-                        .map(|entry| {
-                            if from_bonsai {
-                                (BonsaiOrHgChangesetId::Bonsai(entry.bcs_id), entry)
-                            } else {
-                                (BonsaiOrHgChangesetId::Hg(entry.hg_cs_id), entry)
-                            }
-                        })
+                        .map(|(_, val)| val)
                         .collect()
-                })
-                .boxify()
-        };
+                }
+                BonsaiOrHgChangesetIds::Hg(hg_ids) => {
+                    get_or_fill(ctx, hg_ids.into_iter().collect())
+                        .await?
+                        .into_iter()
+                        .map(|(_, val)| val)
+                        .collect()
+                }
+            };
 
-        let params = GetOrFillMultipleFromCacheLayers {
-            repo_id,
-            get_cache_key: Arc::new(get_cache_key),
-            cachelib: self.cache_pool.clone().into(),
-            keygen: self.keygen.clone(),
-            memcache: self.memcache.clone(),
-            deserialize: Arc::new(memcache_deserialize),
-            serialize: Arc::new(memcache_serialize),
-            report_mc_result: Arc::new(report_mc_result),
-            get_from_db: Arc::new(get_from_db),
-            determinator: cache_all_determinator::<BonsaiHgMappingEntry>,
-        };
-
-        params
-            .run(keys)
-            .map(|map| map.into_iter().map(|(_, val)| val).collect())
-            .boxify()
+            Ok(res)
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 
     /// Use caching for the full changeset ids and slower path otherwise.
@@ -225,4 +177,100 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
 
 fn get_cache_key(repo_id: RepositoryId, cs: &BonsaiOrHgChangesetId) -> String {
     format!("{}.{:?}", repo_id.prefix(), cs).to_string()
+}
+
+impl MemcacheEntity for BonsaiHgMappingEntry {
+    fn serialize(&self) -> Bytes {
+        memcache_serialize(self)
+    }
+
+    fn deserialize(bytes: Bytes) -> Result<Self, ()> {
+        memcache_deserialize(bytes)
+    }
+
+    fn report_mc_result(res: &McResult<Self>) {
+        match res.as_ref() {
+            Ok(_) => STATS::memcache_hit.add_value(1),
+            Err(McErrorKind::MemcacheInternal) => STATS::memcache_internal_err.add_value(1),
+            Err(McErrorKind::Missing) => STATS::memcache_miss.add_value(1),
+            Err(McErrorKind::Deserialization) => STATS::memcache_deserialize_err.add_value(1),
+        };
+    }
+}
+
+type CacheRequest<'a> = (&'a CoreContext, RepositoryId, &'a CachingBonsaiHgMapping);
+
+impl EntityStore<BonsaiHgMappingEntry> for CacheRequest<'_> {
+    fn cachelib(&self) -> &CachelibHandler<BonsaiHgMappingEntry> {
+        let (_, _, mapping) = self;
+        &mapping.cache_pool
+    }
+
+    fn keygen(&self) -> &KeyGen {
+        let (_, _, mapping) = self;
+        &mapping.keygen
+    }
+
+    fn memcache(&self) -> &MemcacheHandler {
+        let (_, _, mapping) = self;
+        &mapping.memcache
+    }
+
+    fn cache_determinator(&self, _: &BonsaiHgMappingEntry) -> CacheDispositionNew {
+        CacheDispositionNew::Cache(CacheTtl::NoTtl)
+    }
+}
+
+#[async_trait]
+impl KeyedEntityStore<ChangesetId, BonsaiHgMappingEntry> for CacheRequest<'_> {
+    fn get_cache_key(&self, key: &ChangesetId) -> String {
+        let (_, repo_id, _) = self;
+        get_cache_key(*repo_id, &BonsaiOrHgChangesetId::Bonsai(*key))
+    }
+
+    async fn get_from_db(
+        &self,
+        keys: HashSet<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, BonsaiHgMappingEntry>, Error> {
+        let (ctx, repo_id, mapping) = self;
+
+        let res = mapping
+            .mapping
+            .get(
+                (*ctx).clone(),
+                *repo_id,
+                BonsaiOrHgChangesetIds::Bonsai(keys.into_iter().collect()),
+            )
+            .compat()
+            .await?;
+
+        Result::<_, Error>::Ok(res.into_iter().map(|e| (e.bcs_id, e)).collect())
+    }
+}
+
+#[async_trait]
+impl KeyedEntityStore<HgChangesetId, BonsaiHgMappingEntry> for CacheRequest<'_> {
+    fn get_cache_key(&self, key: &HgChangesetId) -> String {
+        let (_, repo_id, _) = self;
+        get_cache_key(*repo_id, &BonsaiOrHgChangesetId::Hg(*key))
+    }
+
+    async fn get_from_db(
+        &self,
+        keys: HashSet<HgChangesetId>,
+    ) -> Result<HashMap<HgChangesetId, BonsaiHgMappingEntry>, Error> {
+        let (ctx, repo_id, mapping) = self;
+
+        let res = mapping
+            .mapping
+            .get(
+                (*ctx).clone(),
+                *repo_id,
+                BonsaiOrHgChangesetIds::Hg(keys.into_iter().collect()),
+            )
+            .compat()
+            .await?;
+
+        Result::<_, Error>::Ok(res.into_iter().map(|e| (e.hg_cs_id, e)).collect())
+    }
 }
