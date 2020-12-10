@@ -200,7 +200,7 @@ py_class!(pub class commits |py| {
     def migraterevlogtosegments(revlogdir: &PyPath, segmentsdir: &PyPath, commitsdir: &PyPath, master: Names) -> PyResult<PyNone> {
         let revlog = RevlogCommits::new(revlogdir.as_path()).map_pyerr(py)?;
         let mut segments = HgCommits::new(segmentsdir.as_path(), commitsdir.as_path()).map_pyerr(py)?;
-        py.allow_threads(|| segments.import_dag(revlog, master.0)).map_pyerr(py)?;
+        py.allow_threads(|| block_on(segments.import_dag(revlog, master.0))).map_pyerr(py)?;
         Ok(PyNone)
     }
 

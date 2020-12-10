@@ -11,6 +11,7 @@ use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
 use dag::OnDiskIdDag;
 use dag::{ops::DagPersistent, spanset::SpanSet, Id, NameDag, VertexName};
+use nonblocking::non_blocking_result;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::ops::Range;
@@ -51,7 +52,7 @@ impl TestContext {
     }
 }
 
-impl<T: AsRef<[usize]>> GeneralTestContext<T> {
+impl<T: AsRef<[usize]> + Send + Sync> GeneralTestContext<T> {
     pub fn from_parents(parents: Vec<T>) -> Self {
         // Prepare NameDag
         let parents_by_name = |name: VertexName| -> dag::Result<Vec<VertexName>> {
@@ -84,7 +85,7 @@ impl<T: AsRef<[usize]>> GeneralTestContext<T> {
 
         let dir = tempfile::tempdir().unwrap();
         let mut dag = NameDag::open(dir.path()).unwrap();
-        dag.add_heads_and_flush(&parents_by_name, &master_names, &head_names)
+        non_blocking_result(dag.add_heads_and_flush(&parents_by_name, &master_names, &head_names))
             .unwrap();
 
         // Prepare idmap

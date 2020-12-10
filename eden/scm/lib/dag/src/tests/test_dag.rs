@@ -14,6 +14,7 @@ use crate::render::render_namedag;
 use crate::NameDag;
 use crate::Result;
 use crate::Vertex;
+use nonblocking::non_blocking_result;
 use std::collections::HashSet;
 
 /// Dag structure for testing purpose.
@@ -61,13 +62,13 @@ impl TestDag {
             None => all_heads,
         };
         self.dag.dag.set_new_segment_size(self.seg_size);
-        self.dag.add_heads(&parent_func, &heads).unwrap();
+        non_blocking_result(self.dag.add_heads(&parent_func, &heads)).unwrap();
         self.validate();
         let master_heads = master_heads
             .iter()
             .map(|s| Vertex::copy_from(s.as_bytes()))
             .collect::<Vec<_>>();
-        self.dag.flush(&master_heads).unwrap();
+        non_blocking_result(self.dag.flush(&master_heads)).unwrap();
         self.validate();
     }
 

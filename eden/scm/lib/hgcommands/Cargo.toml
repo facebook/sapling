@@ -11,6 +11,7 @@ python3 = ["bindings/python3", "pytracing/python3", "python3-sys", "cpython-ext/
 
 [dependencies]
 anyhow = "1.0.20"
+async-runtime = { path = "../async-runtime" }
 bindings = { path = "../../edenscmnative/bindings", default-features = false }
 blackbox = { path = "../blackbox" }
 clidispatch = { path = "../clidispatch" }

@@ -6,5 +6,6 @@ edition = "2018"
 [dependencies]
 dag = { path = ".." }
 drawdag = { path = "../../drawdag" }
+nonblocking = { path = "../../nonblocking" }
 tempfile = "3"
 vlqencoding = { path = "../../vlqencoding" }

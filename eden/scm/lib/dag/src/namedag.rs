@@ -80,6 +80,7 @@ where
     state: S,
 }
 
+#[async_trait::async_trait]
 impl<IS, M, P, S> DagPersistent for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore + Persist,
@@ -92,7 +93,7 @@ where
     ///
     /// This is similar to calling `add_heads` followed by `flush`.
     /// But is faster.
-    fn add_heads_and_flush<F>(
+    async fn add_heads_and_flush<F>(
         &mut self,
         parent_names_func: F,
         master_names: &[VertexName],
@@ -100,6 +101,7 @@ where
     ) -> Result<()>
     where
         F: Fn(VertexName) -> Result<Vec<VertexName>>,
+        F: Send,
     {
         if !self.pending_heads.is_empty() {
             return programming(format!(
@@ -146,7 +148,7 @@ where
 
     /// Write in-memory DAG to disk. This will also pick up changes to
     /// the DAG by other processes.
-    fn flush(&mut self, master_heads: &[VertexName]) -> Result<()> {
+    async fn flush(&mut self, master_heads: &[VertexName]) -> Result<()> {
         // Sanity check.
         for head in master_heads.iter() {
             if !self.map.contains_vertex_name(head)? {
@@ -168,12 +170,15 @@ where
         let mut new_name_dag = self.path.open()?;
         let seg_size = self.dag.get_new_segment_size();
         new_name_dag.dag.set_new_segment_size(seg_size);
-        new_name_dag.add_heads_and_flush(&parents, master_heads, non_master_heads)?;
+        new_name_dag
+            .add_heads_and_flush(&parents, master_heads, non_master_heads)
+            .await?;
         *self = new_name_dag;
         Ok(())
     }
 }
 
+#[async_trait::async_trait]
 impl<IS, M, P, S> DagAddHeads for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
@@ -190,8 +195,9 @@ where
     /// The added vertexes are immediately query-able. They will get Ids
     /// assigned to the NON_MASTER group internally. The `flush` function
     /// can re-assign Ids to the MASTER group.
-    fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
+    async fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
     where
+        F: Send,
         F: Fn(VertexName) -> Result<Vec<VertexName>>,
     {
         // Assign to the NON_MASTER group unconditionally so we can avoid the

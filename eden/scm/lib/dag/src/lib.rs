@@ -58,3 +58,5 @@ pub mod tests;
 
 pub use errors::DagError as Error;
 pub type Result<T> = std::result::Result<T, Error>;
+
+pub use nonblocking;

@@ -17,6 +17,7 @@ use crate::NameDag;
 use crate::NameSet;
 use crate::Result;
 use crate::SpanSet;
+use nonblocking::non_blocking_result;
 use tempfile::tempdir;
 use test_dag::TestDag;
 
@@ -195,7 +196,7 @@ fn test_generic_dag_import(dag: impl DagAlgorithm + DagAddHeads) -> Result<()> {
 
     let dir = tempdir().unwrap();
     let mut dag2 = NameDag::open(&dir.path())?;
-    dag2.import_and_flush(&dag1, nameset("J"))?;
+    non_blocking_result(dag2.import_and_flush(&dag1, nameset("J")))?;
     assert_eq!(
         render(&dag2),
         r#"
@@ -733,13 +734,13 @@ fn test_namedag_reassign_master() -> crate::Result<()> {
     assert_eq!(format!("{:?}", dag.parent_names("C".into())?), "[B]");
 
     // First flush, A, B, C are non-master.
-    dag.flush(&[]).unwrap();
+    non_blocking_result(dag.flush(&[])).unwrap();
 
     assert_eq!(format!("{:?}", dag.vertex_id("A".into())?), "N0");
     assert_eq!(format!("{:?}", dag.vertex_id("C".into())?), "N2");
 
     // Second flush, making B master without adding new vertexes.
-    dag.flush(&["B".into()]).unwrap();
+    non_blocking_result(dag.flush(&["B".into()])).unwrap();
     assert_eq!(format!("{:?}", dag.vertex_id("A".into())?), "0");
     assert_eq!(format!("{:?}", dag.vertex_id("B".into())?), "1");
     assert_eq!(format!("{:?}", dag.vertex_id("C".into())?), "N0");

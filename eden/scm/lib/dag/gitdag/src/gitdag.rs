@@ -11,6 +11,7 @@ use dag::ops::DagPersistent;
 use dag::Dag;
 use dag::Set;
 use dag::Vertex;
+use nonblocking::non_blocking_result;
 use std::collections::BTreeMap;
 use std::ops::Deref;
 use std::path::Path;
@@ -107,11 +108,19 @@ fn sync_from_git(
         }
     }
 
-    let parent_func = |v: Vertex| -> dag::Result<Vec<Vertex>> {
+    struct ForceSend<T>(T);
+
+    // See https://github.com/rust-lang/git2-rs/issues/194, libgit2 can be
+    // accessed by a different thread.
+    unsafe impl<T> Send for ForceSend<T> {}
+
+    let git_repo = ForceSend(git_repo);
+    let parent_func = move |v: Vertex| -> dag::Result<Vec<Vertex>> {
         tracing::trace!("visiting git commit {:?}", &v);
         let oid = git2::Oid::from_bytes(v.as_ref())
             .with_context(|| format!("converting to git oid for {:?}", &v))?;
         let commit = git_repo
+            .0
             .find_commit(oid)
             .with_context(|| format!("resolving {:?} to git commit", &v))?;
         Ok(commit
@@ -119,7 +128,7 @@ fn sync_from_git(
             .map(|id| Vertex::copy_from(id.as_bytes()))
             .collect())
     };
-    dag.add_heads_and_flush(parent_func, &master_heads, &non_master_heads)?;
+    non_blocking_result(dag.add_heads_and_flush(parent_func, &master_heads, &non_master_heads))?;
 
     let possible_heads =
         Set::from_static_names(master_heads.into_iter().chain(non_master_heads.into_iter()));

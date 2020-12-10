@@ -1668,10 +1668,12 @@ impl RevlogIndex {
     }
 }
 
+#[async_trait::async_trait]
 impl DagAddHeads for RevlogIndex {
-    fn add_heads<F>(&mut self, parents_func: F, heads: &[Vertex]) -> dag::Result<()>
+    async fn add_heads<F>(&mut self, parents_func: F, heads: &[Vertex]) -> dag::Result<()>
     where
         F: Fn(Vertex) -> dag::Result<Vec<Vertex>>,
+        F: Send,
     {
         self.add_heads_for_testing(&parents_func, heads)
     }

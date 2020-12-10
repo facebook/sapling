@@ -33,6 +33,7 @@ use anyhow::Result;
 use bitflags::bitflags;
 use dag::namedag::MemNameDag;
 use dag::nameset::meta::MetaSet;
+use dag::nonblocking::non_blocking_result;
 use dag::ops::DagAddHeads;
 use dag::DagAlgorithm;
 use dag::Set;
@@ -412,7 +413,8 @@ impl MutationStore {
 
         // Construct the graph.
         let mut dag = MemNameDag::new();
-        dag.add_heads(parent_func, &heads)?;
+        // Inserting to a memory DAG from a fully known parent function is non-blocking.
+        non_blocking_result(dag.add_heads(parent_func, &heads))?;
         Ok(dag)
     }
 }

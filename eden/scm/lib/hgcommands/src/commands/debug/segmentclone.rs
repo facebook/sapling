@@ -10,6 +10,7 @@ use super::Result;
 use super::IO;
 use anyhow::format_err;
 use anyhow::Context;
+use async_runtime::block_on_exclusive as block_on;
 use clidispatch::errors;
 use cliparser::define_flags;
 use dag::namedag::IndexedLogNameDagPath;
@@ -75,8 +76,7 @@ pub fn run(opts: StatusOpts, _io: &mut IO, config: ConfigSet) -> Result<u8> {
         .import_clone_data(vertex_clone_data)
         .context("error importing segmented changelog")?;
 
-    namedag
-        .flush(&[master.clone()])
+    block_on(namedag.flush(&[master.clone()]))
         .context("error writing segmented changelog to disk")?;
 
     fs::write(

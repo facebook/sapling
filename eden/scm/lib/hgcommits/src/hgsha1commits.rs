@@ -56,8 +56,8 @@ impl HgCommits {
 
     /// Import another DAG. `main` specifies the main branch for commit graph
     /// optimization.
-    pub fn import_dag(&mut self, other: impl DagAlgorithm, main: Set) -> Result<()> {
-        self.dag.import_and_flush(&other, main)?;
+    pub async fn import_dag(&mut self, other: impl DagAlgorithm, main: Set) -> Result<()> {
+        self.dag.import_and_flush(&other, main).await?;
         Ok(())
     }
 
@@ -92,15 +92,13 @@ impl AppendCommits for HgCommits {
         }
 
         // Write commit data to zstore.
-        let mut zstore = self.commits.write();
         for commit in commits {
             let text = text_with_header(&commit.raw_text, &commit.parents)?;
-            let vertex = Vertex::copy_from(zstore.insert(&text, &[])?.as_ref());
+            let vertex = Vertex::copy_from(self.commits.write().insert(&text, &[])?.as_ref());
             if vertex != commit.vertex {
                 return Err(crate::Error::HashMismatch(vertex, commit.vertex.clone()));
             }
         }
-        drop(zstore);
 
         // Write commit graph to DAG.
         let commits_map: HashMap<Vertex, HgCommit> = commits
@@ -108,7 +106,7 @@ impl AppendCommits for HgCommits {
             .cloned()
             .map(|c| (c.vertex.clone(), c))
             .collect();
-        let parent_func = |v: Vertex| -> dag::Result<Vec<Vertex>> {
+        let parent_func = move |v: Vertex| -> dag::Result<Vec<Vertex>> {
             match commits_map.get(&v) {
                 Some(commit) => Ok(commit.parents.clone()),
                 None => v.not_found(),
@@ -128,14 +126,14 @@ impl AppendCommits for HgCommits {
                 .cloned()
                 .collect()
         };
-        self.dag.add_heads(parent_func, &heads)?;
+        self.dag.add_heads(parent_func, &heads).await?;
 
         Ok(())
     }
 
     async fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {
         self.flush_commit_data().await?;
-        self.dag.flush(master_heads)?;
+        self.dag.flush(master_heads).await?;
         Ok(())
     }
 

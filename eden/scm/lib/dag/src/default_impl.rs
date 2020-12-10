@@ -150,7 +150,7 @@ pub(crate) fn beautify(
 
     let mut dag = MemNameDag::new();
     let get_parents = |v| this.parent_names(v);
-    dag.add_heads(get_parents, &heads)?;
+    nonblocking::non_blocking(dag.add_heads(get_parents, &heads))??;
     Ok(dag)
 }
 

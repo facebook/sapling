@@ -162,11 +162,13 @@ pub trait DagAlgorithm: Send + Sync {
 }
 
 /// Add vertexes recursively to the DAG.
+#[async_trait::async_trait]
 pub trait DagAddHeads {
     /// Add vertexes and their ancestors to the DAG. This does not persistent
     /// changes to disk.
-    fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
+    async fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
     where
+        F: Send,
         F: Fn(VertexName) -> Result<Vec<VertexName>>;
 }
 
@@ -177,23 +179,29 @@ pub trait DagImportCloneData {
 }
 
 /// Persistent the DAG on disk.
+#[async_trait::async_trait]
 pub trait DagPersistent {
     /// Write in-memory DAG to disk. This might also pick up changes to
     /// the DAG by other processes.
-    fn flush(&mut self, master_heads: &[VertexName]) -> Result<()>;
+    async fn flush(&mut self, master_heads: &[VertexName]) -> Result<()>;
 
     /// A faster path for add_heads, followed by flush.
-    fn add_heads_and_flush<F>(
+    async fn add_heads_and_flush<F>(
         &mut self,
         parent_names_func: F,
         master_names: &[VertexName],
         non_master_names: &[VertexName],
     ) -> Result<()>
     where
-        F: Fn(VertexName) -> Result<Vec<VertexName>>;
+        F: Fn(VertexName) -> Result<Vec<VertexName>>,
+        F: Send;
 
     /// Import from another (potentially large) DAG. Write to disk immediately.
-    fn import_and_flush(&mut self, dag: &dyn DagAlgorithm, master_heads: NameSet) -> Result<()> {
+    async fn import_and_flush(
+        &mut self,
+        dag: &dyn DagAlgorithm,
+        master_heads: NameSet,
+    ) -> Result<()> {
         let heads = dag.heads(dag.all()?)?;
         let non_master_heads = heads - master_heads.clone();
         let master_heads: Vec<VertexName> = master_heads.iter()?.collect::<Result<Vec<_>>>()?;
@@ -201,6 +209,7 @@ pub trait DagPersistent {
             non_master_heads.iter()?.collect::<Result<Vec<_>>>()?;
         let parent_func = |v| dag.parent_names(v);
         self.add_heads_and_flush(parent_func, &master_heads, &non_master_heads)
+            .await
     }
 }
 
@@ -274,7 +283,7 @@ where
                 .map(|p| VertexName::copy_from(p.as_bytes()))
                 .collect())
         };
-        self.add_heads(&parents_func, &heads[..])?;
+        nonblocking::non_blocking_result(self.add_heads(&parents_func, &heads[..]))?;
         Ok(())
     }
 }

@@ -72,7 +72,7 @@ impl AppendCommits for MemHgCommits {
             }
             heads.into_iter().collect()
         };
-        self.dag.add_heads(parent_func, &heads)?;
+        self.dag.add_heads(parent_func, &heads).await?;
 
         Ok(())
     }
