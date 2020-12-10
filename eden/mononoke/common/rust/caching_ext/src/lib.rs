@@ -177,38 +177,69 @@ where
             .await
             .with_context(|| "Error reading from store")?;
 
-        let mut cachelib_keys = Vec::new();
-        let mut memcache_keys = Vec::new();
-
-        {
-            for (key, v) in data.iter() {
+        fill_caches_by_key(
+            store,
+            data.iter().map(|(key, v)| {
                 let (cachelib_key, memcache_key) = key_mapping
                     .remove(&key)
                     .expect("caching_ext: Missing entry in key_mapping, this should not happen");
 
-                let ttl = match store.cache_determinator(v) {
-                    CacheDispositionNew::Cache(ttl) => ttl,
-                    CacheDispositionNew::Ignore => continue,
-                };
-
-                memcache_keys.push((memcache_key, ttl, v));
-                cachelib_keys.push((cachelib_key, ttl, v));
-            }
-
-            fill_multiple_cachelib(store.cachelib(), cachelib_keys);
-
-            fill_multiple_memcache_new(
-                store.memcache(),
-                memcache_keys,
-                store.spawn_memcache_writes(),
-            )
-            .await;
-        }
+                (cachelib_key, memcache_key, v)
+            }),
+        )
+        .await;
 
         ret.extend(data);
     };
 
     Ok(ret)
+}
+
+pub async fn fill_cache<'a, K, V>(
+    store: impl KeyedEntityStore<K, V>,
+    data: impl IntoIterator<Item = (&'a K, &'a V)>,
+) where
+    K: Hash + Eq + Clone + 'a,
+    V: Abomonation + MemcacheEntity + Send + Clone + 'static,
+{
+    fill_caches_by_key(
+        &store,
+        data.into_iter().map(|(k, v)| {
+            let cachelib_key = CachelibKey(store.get_cache_key(&k));
+            let memcache_key = MemcacheKey(store.keygen().key(&cachelib_key.0));
+            (cachelib_key, memcache_key, v)
+        }),
+    )
+    .await;
+}
+
+async fn fill_caches_by_key<'a, V>(
+    store: impl EntityStore<V>,
+    data: impl IntoIterator<Item = (CachelibKey, MemcacheKey, &'a V)>,
+) where
+    V: Abomonation + MemcacheEntity + Send + Clone + 'static,
+{
+    let mut cachelib_keys = Vec::new();
+    let mut memcache_keys = Vec::new();
+
+    for (cachelib_key, memcache_key, v) in data.into_iter() {
+        let ttl = match store.cache_determinator(v) {
+            CacheDispositionNew::Cache(ttl) => ttl,
+            CacheDispositionNew::Ignore => continue,
+        };
+
+        memcache_keys.push((memcache_key, ttl, v));
+        cachelib_keys.push((cachelib_key, ttl, v));
+    }
+
+    fill_multiple_cachelib(store.cachelib(), cachelib_keys);
+
+    fill_multiple_memcache_new(
+        store.memcache(),
+        memcache_keys,
+        store.spawn_memcache_writes(),
+    )
+    .await;
 }
 
 async fn get_multiple_from_memcache_new<K, V>(
@@ -1029,6 +1060,21 @@ mod test {
         let store = TestStore::new();
 
         get_or_fill(&store, hashset! {}).await?;
+        assert_eq!(store.calls.load(Ordering::Relaxed), 0);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_fill_cache() -> Result<(), Error> {
+        let store = TestStore::new();
+        let e0 = TestEntity(vec![0]);
+        fill_cache(&store, hashmap! { "key0".into() => e0.clone() }.iter()).await;
+
+        let res = get_or_fill(&store, hashset! { "key0".into() }).await?;
+        assert_eq!(res, hashmap! { "key0".into() => e0.clone() });
+        assert_eq!(store.cachelib.gets_count(), 1);
+        assert_eq!(store.memcache.gets_count(), 0);
         assert_eq!(store.calls.load(Ordering::Relaxed), 0);
 
         Ok(())
