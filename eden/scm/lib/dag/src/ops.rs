@@ -313,7 +313,7 @@ pub trait IdMapSnapshot {
 /// Describes how to persist state to disk.
 pub trait Persist {
     /// Return type of `lock()`.
-    type Lock;
+    type Lock: Send + Sync;
 
     /// Obtain an exclusive lock for writing.
     /// This should prevent other writers.
