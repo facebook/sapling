@@ -364,7 +364,7 @@ where
         {
             return Ok(set);
         }
-        let spans = self.to_id_set(&set)?;
+        let spans = self.to_id_set(&set).await?;
         let spans = self.dag().ancestors(spans)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         result.hints().add_flags(Flags::ANCESTORS);
@@ -378,7 +378,7 @@ where
     async fn parents(&self, set: NameSet) -> Result<NameSet> {
         // Preserve ANCESTORS flag. If ancestors(x) == x, then ancestors(parents(x)) == parents(x).
         let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
-        let spans = self.dag().parents(self.to_id_set(&set)?)?;
+        let spans = self.dag().parents(self.to_id_set(&set).await?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         result.hints().add_flags(flags);
         #[cfg(test)]
@@ -411,7 +411,7 @@ where
             // heads_ancestors is faster.
             return self.heads_ancestors(set).await;
         }
-        let spans = self.dag().heads(self.to_id_set(&set)?)?;
+        let spans = self.dag().heads(self.to_id_set(&set).await?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         #[cfg(test)]
         {
@@ -422,7 +422,7 @@ where
 
     /// Calculates children of the given set.
     async fn children(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().children(self.to_id_set(&set)?)?;
+        let spans = self.dag().children(self.to_id_set(&set).await?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         Ok(result)
     }
@@ -430,7 +430,7 @@ where
     /// Calculates roots of the given set.
     async fn roots(&self, set: NameSet) -> Result<NameSet> {
         let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
-        let spans = self.dag().roots(self.to_id_set(&set)?)?;
+        let spans = self.dag().roots(self.to_id_set(&set).await?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         result.hints().add_flags(flags);
         #[cfg(test)]
@@ -446,7 +446,7 @@ where
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
     async fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
-        let result: Option<VertexName> = match self.dag().gca_one(self.to_id_set(&set)?)? {
+        let result: Option<VertexName> = match self.dag().gca_one(self.to_id_set(&set).await?)? {
             None => None,
             Some(id) => Some(self.map().vertex_name(id)?),
         };
@@ -460,7 +460,7 @@ where
     /// Calculates all "greatest common ancestor"s of the given set.
     /// `gca_one` is faster if an arbitrary answer is ok.
     async fn gca_all(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().gca_all(self.to_id_set(&set)?)?;
+        let spans = self.dag().gca_all(self.to_id_set(&set).await?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         #[cfg(test)]
         {
@@ -471,7 +471,7 @@ where
 
     /// Calculates all common ancestors of the given set.
     async fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().common_ancestors(self.to_id_set(&set)?)?;
+        let spans = self.dag().common_ancestors(self.to_id_set(&set).await?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         result.hints().add_flags(Flags::ANCESTORS);
         #[cfg(test)]
@@ -506,7 +506,7 @@ where
     /// an ancestor of X, but not the immediate ancestor, `heads` will include
     /// Y while this function won't.
     async fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().heads_ancestors(self.to_id_set(&set)?)?;
+        let spans = self.dag().heads_ancestors(self.to_id_set(&set).await?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         #[cfg(test)]
         {
@@ -521,8 +521,8 @@ where
 
     /// Calculates the "dag range" - vertexes reachable from both sides.
     async fn range(&self, roots: NameSet, heads: NameSet) -> Result<NameSet> {
-        let roots = self.to_id_set(&roots)?;
-        let heads = self.to_id_set(&heads)?;
+        let roots = self.to_id_set(&roots).await?;
+        let heads = self.to_id_set(&heads).await?;
         let spans = self.dag().range(roots, heads)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         Ok(result)
@@ -530,7 +530,7 @@ where
 
     /// Calculates the descendants of the given set.
     async fn descendants(&self, set: NameSet) -> Result<NameSet> {
-        let spans = self.dag().descendants(self.to_id_set(&set)?)?;
+        let spans = self.dag().descendants(self.to_id_set(&set).await?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         Ok(result)
     }

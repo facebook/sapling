@@ -136,7 +136,7 @@ py_class!(pub class commits |py| {
             Some(map) => map,
             None => self.inner(py).borrow().id_map_snapshot().map_pyerr(py)?,
         };
-        Ok(Spans(id_map.to_id_set(&set.0).map_pyerr(py)?))
+        Ok(Spans(block_on(id_map.to_id_set(&set.0)).map_pyerr(py)?))
     }
 
     /// Convert IdSet to Set. For compatibility with legacy code only.

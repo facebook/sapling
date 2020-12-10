@@ -1006,7 +1006,7 @@ impl DagAlgorithm for RevlogIndex {
         if set.hints().contains(Flags::ANCESTORS) {
             return Ok(set);
         }
-        let id_set = self.to_id_set(&set)?;
+        let id_set = self.to_id_set(&set).await?;
         if id_set.is_empty() {
             return Ok(Set::empty());
         }
@@ -1047,7 +1047,7 @@ impl DagAlgorithm for RevlogIndex {
 
     /// Calculates parents.
     async fn parents(&self, set: Set) -> dag::Result<Set> {
-        let id_set = self.to_id_set(&set)?;
+        let id_set = self.to_id_set(&set).await?;
         if id_set.is_empty() {
             return Ok(Set::empty());
         }
@@ -1086,7 +1086,7 @@ impl DagAlgorithm for RevlogIndex {
 
     /// Calculates children of the given set.
     async fn children(&self, set: Set) -> dag::Result<Set> {
-        let id_set = self.to_id_set(&set)?;
+        let id_set = self.to_id_set(&set).await?;
         if id_set.is_empty() {
             return Ok(Set::empty());
         }
@@ -1117,7 +1117,7 @@ impl DagAlgorithm for RevlogIndex {
 
     /// Calculates roots of the given set.
     async fn roots(&self, set: Set) -> dag::Result<Set> {
-        let id_set = self.to_id_set(&set)?;
+        let id_set = self.to_id_set(&set).await?;
         if id_set.is_empty() {
             return Ok(Set::empty());
         }
@@ -1150,7 +1150,7 @@ impl DagAlgorithm for RevlogIndex {
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
     async fn gca_one(&self, set: Set) -> dag::Result<Option<Vertex>> {
-        let id_set = self.to_id_set(&set)?;
+        let id_set = self.to_id_set(&set).await?;
         let mut revs: Vec<u32> = id_set.iter().map(|id| id.0 as u32).collect();
         while revs.len() > 1 {
             let mut new_revs = Vec::new();
@@ -1178,7 +1178,7 @@ impl DagAlgorithm for RevlogIndex {
     /// Calculates all "greatest common ancestor"s of the given set.
     /// `gca_one` is faster if an arbitrary answer is ok.
     async fn gca_all(&self, set: Set) -> dag::Result<Set> {
-        let id_set = self.to_id_set(&set)?;
+        let id_set = self.to_id_set(&set).await?;
         // XXX: Limited by gca_revs implementation detail.
         if id_set.count() > 6 {
             return Err(Error::Unsupported(format!(
@@ -1208,7 +1208,7 @@ impl DagAlgorithm for RevlogIndex {
     /// Find Y, which is the smallest subset of set X, where `ancestors(Y)` is
     /// `ancestors(X)`.
     async fn heads_ancestors(&self, set: Set) -> dag::Result<Set> {
-        let id_set = self.to_id_set(&set)?;
+        let id_set = self.to_id_set(&set).await?;
         if id_set.is_empty() {
             return Ok(Set::empty());
         }
@@ -1270,8 +1270,8 @@ impl DagAlgorithm for RevlogIndex {
 
     /// Calculates the "dag range" - vertexes reachable from both sides.
     async fn range(&self, roots: Set, heads: Set) -> dag::Result<Set> {
-        let root_ids = self.to_id_set(&roots)?;
-        let head_ids = self.to_id_set(&heads)?;
+        let root_ids = self.to_id_set(&roots).await?;
+        let head_ids = self.to_id_set(&heads).await?;
         let root_revs: Vec<u32> = root_ids.into_iter().map(|i| i.0 as u32).collect();
         let head_revs: Vec<u32> = head_ids.into_iter().map(|i| i.0 as u32).collect();
         let result_revs = self.range_revs(&root_revs, &head_revs)?;
@@ -1282,8 +1282,8 @@ impl DagAlgorithm for RevlogIndex {
 
     /// Calculate `::reachable - ::unreachable`.
     async fn only(&self, reachable: Set, unreachable: Set) -> dag::Result<Set> {
-        let reachable_ids = self.to_id_set(&reachable)?;
-        let unreachable_ids = self.to_id_set(&unreachable)?;
+        let reachable_ids = self.to_id_set(&reachable).await?;
+        let unreachable_ids = self.to_id_set(&unreachable).await?;
 
         if reachable_ids.is_empty() {
             return Ok(Set::empty());
@@ -1352,8 +1352,8 @@ impl DagAlgorithm for RevlogIndex {
 
     /// Calculate `::reachable - ::unreachable` and `::unreachable`.
     async fn only_both(&self, reachable: Set, unreachable: Set) -> dag::Result<(Set, Set)> {
-        let reachable_ids = self.to_id_set(&reachable)?;
-        let unreachable_ids = self.to_id_set(&unreachable)?;
+        let reachable_ids = self.to_id_set(&reachable).await?;
+        let unreachable_ids = self.to_id_set(&unreachable).await?;
         let reachable_revs = reachable_ids.into_iter().map(|i| i.0 as u32);
         let unreachable_revs = unreachable_ids.into_iter().map(|i| i.0 as u32);
 
@@ -1514,7 +1514,7 @@ impl DagAlgorithm for RevlogIndex {
 
     /// Calculates the descendants of the given set.
     async fn descendants(&self, set: Set) -> dag::Result<Set> {
-        let id_set = self.to_id_set(&set)?;
+        let id_set = self.to_id_set(&set).await?;
         if id_set.is_empty() {
             return Ok(Set::empty());
         }
@@ -1552,12 +1552,12 @@ impl DagAlgorithm for RevlogIndex {
     }
 
     async fn reachable_roots(&self, roots: Set, heads: Set) -> dag::Result<Set> {
-        let id_roots = self.to_id_set(&roots)?;
+        let id_roots = self.to_id_set(&roots).await?;
         if id_roots.is_empty() {
             return Ok(Set::empty());
         }
 
-        let id_heads = self.to_id_set(&heads)?;
+        let id_heads = self.to_id_set(&heads).await?;
         if id_heads.is_empty() {
             return Ok(Set::empty());
         }

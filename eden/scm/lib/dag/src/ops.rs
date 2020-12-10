@@ -294,9 +294,10 @@ where
     }
 }
 
+#[async_trait::async_trait]
 pub trait ToIdSet {
     /// Converts [`NameSet`] to [`SpanSet`].
-    fn to_id_set(&self, set: &NameSet) -> Result<IdSet>;
+    async fn to_id_set(&self, set: &NameSet) -> Result<IdSet>;
 }
 
 pub trait ToSet {
@@ -349,7 +350,7 @@ pub trait Open: Clone {
     fn open(&self) -> Result<Self::OpenTarget>;
 }
 
-/// Faillible clone.
+/// Fallible clone.
 pub trait TryClone {
     fn try_clone(&self) -> Result<Self>
     where
@@ -362,9 +363,10 @@ impl<T: Clone> TryClone for T {
     }
 }
 
+#[async_trait::async_trait]
 impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
     /// Converts [`NameSet`] to [`IdSet`].
-    fn to_id_set(&self, set: &NameSet) -> Result<IdSet> {
+    async fn to_id_set(&self, set: &NameSet) -> Result<IdSet> {
         // Fast path: extract IdSet from IdStaticSet.
         if let Some(set) = set.as_any().downcast_ref::<IdStaticSet>() {
             let snapshot = self.id_map_snapshot()?;
