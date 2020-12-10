@@ -151,7 +151,8 @@ class ChannelThreadStats : public EdenThreadStatsBase {
       createHistogram("prjfs.fileHandleClosedFileModified_us")};
   Histogram fileRenamed{createHistogram("prjfs.fileRenamed_us")};
   Histogram preRenamed{createHistogram("prjfs.preRenamed_us")};
-  Histogram preDelete{createHistogram("prjfs.preDelete_us")};
+  Histogram fileHandleClosedFileDeleted{
+      createHistogram("prjfs.fileHandleClosedFileDeleted_us")};
   Histogram preSetHardlink{createHistogram("prjfs.preSetHardlink_us")};
 
   Histogram openDir{createHistogram("prjfs.opendir_us")};

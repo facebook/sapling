@@ -663,22 +663,30 @@ folly::Future<folly::Unit> renameFile(
     const RelativePath oldPath,
     const RelativePath newPath,
     ObjectFetchContext& context) {
-  auto oldParentInode = mount.getInode(oldPath.dirname(), context);
-  auto newParentInode = mount.getInode(newPath.dirname(), context);
+  auto oldParentInode = createDirInode(mount, oldPath.dirname(), context);
+  auto newParentInode = createDirInode(mount, newPath.dirname(), context);
 
   return folly::collect(oldParentInode, newParentInode)
       .via(mount.getThreadPool().get())
       .thenValue([oldPath = std::move(oldPath), newPath = std::move(newPath)](
-                     std::tuple<InodePtr, InodePtr> inodes) {
-        auto [oldParentTreePtr, newParentTreePtr] = std::move(inodes);
-
-        return std::move(oldParentTreePtr)
-            .asTreePtr()
-            ->rename(
-                oldPath.basename(),
-                std::move(newParentTreePtr).asTreePtr(),
-                newPath.basename(),
-                InvalidationRequired::No);
+                     const std::tuple<TreeInodePtr, TreeInodePtr> inodes) {
+        auto& oldParentTreePtr = std::get<0>(inodes);
+        auto& newParentTreePtr = std::get<1>(inodes);
+        // TODO(xavierd): In the case where the oldPath is actually being
+        // created in another thread, EdenFS simply might not know about
+        // it at this point. Creating the file and renaming it at this
+        // point won't help as the other thread will re-create it. In the
+        // future, we may want to try, wait a bit and retry, or re-think
+        // this and somehow order requests so the file creation always
+        // happens before the rename.
+        //
+        // This should be *extremely* rare, for now let's just let it
+        // error out.
+        return oldParentTreePtr->rename(
+            oldPath.basename(),
+            newParentTreePtr,
+            newPath.basename(),
+            InvalidationRequired::No);
       });
 }
 
@@ -747,16 +755,12 @@ folly::Future<folly::Unit> EdenDispatcher::fileRenamed(
 
   // When files are moved in and out of the repo, the rename paths are
   // empty, handle these like creation/removal of files.
-  //
-  // To avoid races with other processes removing directories, we need to make
-  // sure that the removal operations are handled by EdenFS prior to these
-  // being visible to the rest of the system. For this reason, moving a file
-  // out of the repository and the rename case are handled in
-  // `EdenDispatcher::preRename`.
   if (oldPath.empty()) {
     return createFile(*mount_, newPath, isDirectory, context);
+  } else if (newPath.empty()) {
+    return removeFile(*mount_, oldPath, isDirectory, context);
   } else {
-    return folly::unit;
+    return renameFile(*mount_, std::move(oldPath), std::move(newPath), context);
   }
 }
 
@@ -768,17 +772,10 @@ folly::Future<folly::Unit> EdenDispatcher::preRename(
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
   FB_LOGF(
       mount_->getStraceLogger(), DBG7, "prerename({} -> {})", oldPath, newPath);
-
-  if (oldPath.empty()) {
-    return folly::unit;
-  } else if (newPath.empty()) {
-    return removeFile(*mount_, oldPath, isDirectory, context);
-  } else {
-    return renameFile(*mount_, std::move(oldPath), std::move(newPath), context);
-  }
+  return folly::unit;
 }
 
-folly::Future<folly::Unit> EdenDispatcher::preDelete(
+folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileDeleted(
     RelativePath oldPath,
     RelativePath destPath,
     bool isDirectory,

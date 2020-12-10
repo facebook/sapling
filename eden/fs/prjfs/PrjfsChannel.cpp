@@ -660,8 +660,9 @@ const std::unordered_map<PRJ_NOTIFICATION, NotificationHandlerEntry>
             {&Dispatcher::preRename, &ChannelThreadStats::preRenamed},
         },
         {
-            PRJ_NOTIFICATION_PRE_DELETE,
-            {&Dispatcher::preDelete, &ChannelThreadStats::preDelete},
+            PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
+            {&Dispatcher::fileHandleClosedFileDeleted,
+             &ChannelThreadStats::fileHandleClosedFileDeleted},
         },
         {
             PRJ_NOTIFICATION_PRE_SET_HARDLINK,
@@ -778,9 +779,9 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
 
   PRJ_NOTIFICATION_MAPPING notificationMappings[] = {
       {PRJ_NOTIFY_NEW_FILE_CREATED | PRJ_NOTIFY_FILE_OVERWRITTEN |
-           PRJ_NOTIFY_PRE_DELETE | PRJ_NOTIFY_PRE_RENAME |
-           PRJ_NOTIFY_FILE_RENAMED |
+           PRJ_NOTIFY_PRE_RENAME | PRJ_NOTIFY_FILE_RENAMED |
            PRJ_NOTIFY_FILE_HANDLE_CLOSED_FILE_MODIFIED |
+           PRJ_NOTIFY_FILE_HANDLE_CLOSED_FILE_DELETED |
            PRJ_NOTIFY_PRE_SET_HARDLINK,
        L""},
   };

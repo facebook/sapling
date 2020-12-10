@@ -82,12 +82,6 @@ HRESULT exceptionToHResult(const std::exception& ex) noexcept {
     if (code.category() == Win32ErrorCategory::get()) {
       return HRESULT_FROM_WIN32(code.value());
     }
-    if (code.category() == std::generic_category()) {
-      switch (code.value()) {
-        case ENOTEMPTY:
-          return HRESULT_FROM_WIN32(ERROR_DIR_NOT_EMPTY);
-      }
-    }
     return HRESULT_FROM_WIN32(ERROR_ERRORS_ENCOUNTERED);
   } else if (auto e = dynamic_cast<const std::bad_alloc*>(&ex)) {
     return E_OUTOFMEMORY;
