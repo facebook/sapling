@@ -1237,7 +1237,7 @@ impl<Store: IdDagStore> IdDag<Store> {
 impl<Store: IdDagStore> IdDag<Store> {
     /// Copy a subset of "Universal" mapping from `full_idmap` to
     /// `sparse_idmap`. See [`IdDag::universal`].
-    pub fn write_sparse_idmap(
+    pub async fn write_sparse_idmap(
         &self,
         full_idmap: &dyn crate::ops::IdConvert,
         sparse_idmap: &mut crate::idmap::IdMap,

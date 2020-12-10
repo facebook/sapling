@@ -454,11 +454,11 @@ Lv1: R0-0[] R1-1[] 2-4[0, 1]"#
     // Try applying response2 to a sparse IdMap.
     // Prepare the sparse IdMap.
     let mut sparse_id_map = IdMap::open(built.dir.path().join("sparse-id")).unwrap();
-    built
+    r(built
         .name_dag
         .dag
-        .write_sparse_idmap(&built.name_dag.map, &mut sparse_id_map)
-        .unwrap();
+        .write_sparse_idmap(&built.name_dag.map, &mut sparse_id_map))
+    .unwrap();
     assert_eq!(
         format!("{:?}", &sparse_id_map),
         r#"IdMap {
