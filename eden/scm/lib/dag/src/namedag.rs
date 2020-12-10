@@ -56,7 +56,13 @@ pub use indexedlog_namedag::NameDag;
 pub use mem_namedag::MemNameDag;
 pub use mem_namedag::MemNameDagPath;
 
-pub struct AbstractNameDag<I, M, P, S> {
+pub struct AbstractNameDag<I, M, P, S>
+where
+    I: Send + Sync,
+    M: Send + Sync,
+    P: Send + Sync,
+    S: Send + Sync,
+{
     pub(crate) dag: I,
     pub(crate) map: M,
 
@@ -77,7 +83,7 @@ pub struct AbstractNameDag<I, M, P, S> {
 impl<IS, M, P, S> DagPersistent for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore + Persist,
-    IdDag<IS>: TryClone + Send + Sync + 'static,
+    IdDag<IS>: TryClone + 'static,
     M: TryClone + IdMapAssignHead + Persist + Send + Sync + 'static,
     P: Open<OpenTarget = Self> + Send + Sync + 'static,
     S: TryClone + Persist + Send + Sync + 'static,
@@ -172,9 +178,9 @@ impl<IS, M, P, S> DagAddHeads for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
-    M: TryClone + IdMapAssignHead,
-    P: TryClone,
-    S: TryClone,
+    M: TryClone + IdMapAssignHead + Send + Sync,
+    P: TryClone + Send + Sync,
+    S: TryClone + Send + Sync,
 {
     /// Add vertexes and their ancestors to the in-memory DAG.
     ///
@@ -233,7 +239,9 @@ where
 impl<IS, M, P, S> DagImportCloneData for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
-    M: IdMapAssignHead,
+    M: IdMapAssignHead + Send + Sync,
+    P: Send + Sync,
+    S: Send + Sync,
 {
     fn import_clone_data(&mut self, clone_data: CloneData<VertexName>) -> Result<()> {
         for (id, name) in clone_data.idmap {
@@ -249,9 +257,9 @@ impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
-    M: TryClone,
-    P: TryClone,
-    S: TryClone,
+    M: TryClone + Send + Sync,
+    P: TryClone + Send + Sync,
+    S: TryClone + Send + Sync,
 {
     /// Invalidate cached content. Call this after changing the graph.
     fn invalidate_snapshot(&mut self) {
@@ -299,7 +307,7 @@ where
 impl<IS, M, P, S> DagAlgorithm for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
-    IdDag<IS>: TryClone + Send + Sync + 'static,
+    IdDag<IS>: TryClone + 'static,
     M: TryClone + IdMapAssignHead + Sync + Send + 'static,
     P: TryClone + Sync + Send + 'static,
     S: TryClone + Sync + Send + 'static,
@@ -539,7 +547,7 @@ fn extract_ancestor_flag_if_compatible(
 
 delegate! {
     PrefixLookup {
-        impl<I, M: PrefixLookup, P, S> PrefixLookup for AbstractNameDag<I, M, P, S>
+        impl<I: Send + Sync, M: PrefixLookup + Send + Sync, P: Send + Sync, S: Send + Sync> PrefixLookup for AbstractNameDag<I, M, P, S>
     } => self.map
 }
 delegate! {
@@ -670,7 +678,7 @@ fn is_ok_some<T>(value: Result<Option<T>>) -> bool {
 impl<IS, M, P, S> IdMapSnapshot for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
-    IdDag<IS>: TryClone + Send + Sync + 'static,
+    IdDag<IS>: TryClone + 'static,
     M: TryClone + IdMapAssignHead + Send + Sync + 'static,
     P: TryClone + Send + Sync + 'static,
     S: TryClone + Send + Sync + 'static,
@@ -683,7 +691,9 @@ where
 impl<IS, M, P, S> fmt::Debug for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
-    M: IdConvert,
+    M: IdConvert + Send + Sync,
+    P: Send + Sync,
+    S: Send + Sync,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         debug(&self.dag, &self.map, f)
