@@ -386,8 +386,13 @@ impl Persist for IdMap {
     }
 }
 
+#[async_trait::async_trait]
 impl PrefixLookup for IdMap {
-    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<VertexName>> {
+    async fn vertexes_by_hex_prefix(
+        &self,
+        hex_prefix: &[u8],
+        limit: usize,
+    ) -> Result<Vec<VertexName>> {
         self.find_names_by_hex_prefix(hex_prefix, limit)
     }
 }

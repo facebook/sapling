@@ -19,8 +19,8 @@ use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
 use cpython_ext::Str;
-use dag::delegate;
 use dag::ops::IdConvert;
+use dag::ops::IdMapSnapshot;
 use dag::ops::PrefixLookup;
 use dag::ops::ToIdSet;
 use dag::ops::ToSet;
@@ -52,6 +52,7 @@ pub trait Commits:
     + DescribeBackend
     + DagAlgorithm
     + IdConvert
+    + IdMapSnapshot
     + StreamCommitText
     + PrefixLookup
     + ToIdSet
@@ -129,8 +130,12 @@ py_class!(pub class commits |py| {
 
     /// Convert Set to IdSet. For compatibility with legacy code only.
     def torevs(&self, set: Names) -> PyResult<Spans> {
-        let inner = self.inner(py).borrow();
-        Ok(Spans(inner.to_id_set(&set.0).map_pyerr(py)?))
+        // Attempt to use IdMap bound to `set` if possible for performance.
+        let id_map = match set.0.hints().id_map() {
+            Some(map) => map,
+            None => self.inner(py).borrow().id_map_snapshot().map_pyerr(py)?,
+        };
+        Ok(Spans(id_map.to_id_set(&set.0).map_pyerr(py)?))
     }
 
     /// Convert IdSet to Set. For compatibility with legacy code only.
@@ -141,13 +146,13 @@ py_class!(pub class commits |py| {
 
     /// Obtain the read-only dagalgo object that supports various DAG algorithms.
     def dagalgo(&self) -> PyResult<dagalgo> {
-        dagalgo::from_dag(py, self.clone_ref(py))
+        dagalgo::from_arc_dag(py, self.inner(py).borrow().dag_snapshot().map_pyerr(py)?)
     }
 
     /// Obtain the read-only object that can do hex prefix lookup and convert
     /// between binary commit hashes and integer Ids.
     def idmap(&self) -> PyResult<idmap::idmap> {
-        idmap::idmap::from_idmap(py, self.clone_ref(py))
+        idmap::idmap::from_arc_idmap(py, self.inner(py).borrow().id_map_snapshot().map_pyerr(py)?)
     }
 
     /// Name of the backend used for DAG algorithms.
@@ -251,7 +256,3 @@ impl commits {
         Self::create_instance(py, RefCell::new(Box::new(commits)))
     }
 }
-
-// Delegate trait implementations to `inner`.
-// commits are used by other Python objects: the other Python objects hold the GIL.
-delegate!(PrefixLookup | IdConvert | DagAlgorithm, commits => self.inner(unsafe { Python::assume_gil_acquired() }).borrow());

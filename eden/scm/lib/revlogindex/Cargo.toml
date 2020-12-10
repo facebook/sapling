@@ -4,12 +4,14 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+async-trait = "0.1"
 bit-vec = "0.6"
 byteorder = "1"
 dag = { path = "../dag" }
 indexedlog = { path = "../indexedlog" }
 lz4-pyframe = { path = "../lz4-pyframe" }
 minibytes = { path = "../minibytes" }
+nonblocking = { path = "../nonblocking" }
 parking_lot = "0.10"
 radixbuf = { path = "../radixbuf" }
 thiserror = "1"

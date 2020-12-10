@@ -201,6 +201,7 @@ mod tests {
     use super::*;
     use crate::ops::Persist;
     use crate::ops::PrefixLookup;
+    use nonblocking::non_blocking_result as r;
     use std::ops::Deref;
     use tempfile::tempdir;
 
@@ -233,17 +234,17 @@ mod tests {
         // Test hex lookup.
         assert_eq!(0x6a, b'j');
         assert_eq!(
-            map.vertexes_by_hex_prefix(b"6a", 3).unwrap(),
+            r(map.vertexes_by_hex_prefix(b"6a", 3)).unwrap(),
             [
                 VertexName::from(&b"jkl"[..]),
                 VertexName::from(&b"jkl2"[..])
             ]
         );
         assert_eq!(
-            map.vertexes_by_hex_prefix(b"6a", 1).unwrap(),
+            r(map.vertexes_by_hex_prefix(b"6a", 1)).unwrap(),
             [VertexName::from(&b"jkl"[..])]
         );
-        assert!(map.vertexes_by_hex_prefix(b"6b", 1).unwrap().is_empty());
+        assert!(r(map.vertexes_by_hex_prefix(b"6b", 1)).unwrap().is_empty());
 
         for _ in 0..=1 {
             assert_eq!(map.find_name_by_id(Id(1)).unwrap().unwrap(), b"abc");

@@ -2683,7 +2683,14 @@ class localrepository(object):
         else:
             publickey = None
 
-        key = (tuple(self.dirstate.parents()), len(cl), draftkey, publickey)
+        # Invalidate heads if metalog root has changed.
+        metalog = getattr(self.svfs, "metalog", None)
+        if metalog:
+            mlroot = metalog.root()
+        else:
+            mlroot = None
+
+        key = (tuple(self.dirstate.parents()), mlroot, len(cl), draftkey, publickey)
         result = self._headcache.get(key)
         if result is not None:
             return result

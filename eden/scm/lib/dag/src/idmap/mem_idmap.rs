@@ -115,8 +115,13 @@ impl Persist for MemIdMap {
     }
 }
 
+#[async_trait::async_trait]
 impl PrefixLookup for MemIdMap {
-    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<VertexName>> {
+    async fn vertexes_by_hex_prefix(
+        &self,
+        hex_prefix: &[u8],
+        limit: usize,
+    ) -> Result<Vec<VertexName>> {
         let start = VertexName::from_hex(hex_prefix)?;
         let mut result = Vec::new();
         for (vertex, _) in self.name2id.range(start..) {

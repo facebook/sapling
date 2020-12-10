@@ -10,12 +10,13 @@ use cpython_ext::ResultPyErrExt;
 use dag::ops::IdConvert;
 use dag::Id;
 use dag::Vertex;
+use std::sync::Arc;
 
 // Mercurial's special case. -1 maps to (b"\0" * 20)
 pub(crate) const NULL_NODE: [u8; 20] = [0u8; 20];
 
 py_class!(pub class idmap |py| {
-    data map: Box<dyn IdConvert + Send + 'static>;
+    data map: Arc<dyn IdConvert + Send + Sync + 'static>;
 
     /// Translate id to node.
     def id2node(&self, id: i64) -> PyResult<PyBytes> {
@@ -49,8 +50,11 @@ py_class!(pub class idmap |py| {
             // Invalid hex prefix. Pretend nothing matches.
             return Ok(Vec::new())
         }
-        let nodes = self.map(py)
-            .vertexes_by_hex_prefix(&prefix, limit)
+        let map = self.map(py).clone();
+        let vertexes = async_runtime::block_on_future(async move {
+            map.vertexes_by_hex_prefix(&prefix, limit).await
+        });
+        let nodes = vertexes
             .map_pyerr(py)?
             .into_iter()
             .map(|s| PyBytes::new(py, s.as_ref()))
@@ -70,7 +74,10 @@ py_class!(pub class idmap |py| {
 });
 
 impl idmap {
-    pub(crate) fn from_idmap(py: Python, map: impl IdConvert + Send + 'static) -> PyResult<Self> {
-        Self::create_instance(py, Box::new(map))
+    pub(crate) fn from_arc_idmap(
+        py: Python,
+        map: Arc<dyn IdConvert + Send + Sync>,
+    ) -> PyResult<Self> {
+        Self::create_instance(py, map)
     }
 }

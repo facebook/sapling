@@ -873,8 +873,13 @@ fn read_path(path: &Path, length: Option<usize>, fallback: Bytes) -> io::Result<
     }
 }
 
+#[async_trait::async_trait]
 impl PrefixLookup for RevlogIndex {
-    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> dag::Result<Vec<Vertex>> {
+    async fn vertexes_by_hex_prefix(
+        &self,
+        hex_prefix: &[u8],
+        limit: usize,
+    ) -> dag::Result<Vec<Vertex>> {
         // Search through the BTreeMap
         let start = Vertex::from_hex(hex_prefix)?;
         let mut result = Vec::new();
@@ -1676,6 +1681,7 @@ impl DagAddHeads for RevlogIndex {
 mod tests {
     use super::*;
     use anyhow::Result;
+    use nonblocking::non_blocking_result as r;
     use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering::SeqCst;
     use tempfile::tempdir;
@@ -2025,7 +2031,7 @@ commit 3"#
         assert_eq!(revlog3.parent_revs(4)?, ParentRevs([0, 2])); // 0: "commit 1"
 
         // Prefix lookup.
-        assert_eq!(revlog3.vertexes_by_hex_prefix(b"0303", 2)?, vec![v(3)]);
+        assert_eq!(r(revlog3.vertexes_by_hex_prefix(b"0303", 2))?, vec![v(3)]);
 
         // Id - Vertex.
         assert_eq!(revlog3.vertex_name(Id(2))?, v(3));

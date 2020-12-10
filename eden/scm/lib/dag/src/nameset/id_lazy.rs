@@ -317,8 +317,9 @@ pub(crate) mod tests {
 
     struct StrIdMap;
 
+    #[async_trait::async_trait]
     impl PrefixLookup for StrIdMap {
-        fn vertexes_by_hex_prefix(&self, _: &[u8], _: usize) -> Result<Vec<VertexName>> {
+        async fn vertexes_by_hex_prefix(&self, _: &[u8], _: usize) -> Result<Vec<VertexName>> {
             // Dummy implementation.
             Ok(Vec::new())
         }

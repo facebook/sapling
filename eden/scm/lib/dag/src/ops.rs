@@ -226,9 +226,14 @@ pub trait ImportAscii {
 }
 
 /// Lookup vertexes by prefixes.
+#[async_trait::async_trait]
 pub trait PrefixLookup {
     /// Lookup vertexes by hex prefix.
-    fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<VertexName>>;
+    async fn vertexes_by_hex_prefix(
+        &self,
+        hex_prefix: &[u8],
+        limit: usize,
+    ) -> Result<Vec<VertexName>>;
 }
 
 /// Convert between `Vertex` and `Id`.

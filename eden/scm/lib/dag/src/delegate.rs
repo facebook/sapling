@@ -35,7 +35,7 @@ macro_rules! delegate {
 
     {PrefixLookup { impl $($impl:tt)* } => self.$($t:tt)*} => {
         impl $($impl)* {
-            fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> $crate::Result<Vec<$crate::Vertex>> {
+            fn vertexes_by_hex_prefix<'a: 'c, 'b: 'c, 'c>(&'a self, hex_prefix: &'b [u8], limit: usize) -> std::pin::Pin<Box<dyn std::future::Future<Output=$crate::Result<Vec<$crate::Vertex>>> + Send + 'c>> where Self: 'c {
                 self.$($t)*.vertexes_by_hex_prefix(hex_prefix, limit)
             }
         }
