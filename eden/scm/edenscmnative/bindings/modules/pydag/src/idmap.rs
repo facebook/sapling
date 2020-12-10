@@ -8,19 +8,14 @@
 use cpython::*;
 use cpython_ext::ResultPyErrExt;
 use dag::ops::IdConvert;
-use dag::ops::PrefixLookup;
 use dag::Id;
 use dag::Vertex;
-
-/// A combination of IdConvert + PrefixLookup.
-pub trait IdMap: IdConvert + PrefixLookup {}
-impl<T> IdMap for T where T: IdConvert + PrefixLookup {}
 
 // Mercurial's special case. -1 maps to (b"\0" * 20)
 pub(crate) const NULL_NODE: [u8; 20] = [0u8; 20];
 
 py_class!(pub class idmap |py| {
-    data map: Box<dyn IdMap + Send + 'static>;
+    data map: Box<dyn IdConvert + Send + 'static>;
 
     /// Translate id to node.
     def id2node(&self, id: i64) -> PyResult<PyBytes> {
@@ -75,7 +70,7 @@ py_class!(pub class idmap |py| {
 });
 
 impl idmap {
-    pub(crate) fn from_idmap(py: Python, map: impl IdMap + Send + 'static) -> PyResult<Self> {
+    pub(crate) fn from_idmap(py: Python, map: impl IdConvert + Send + 'static) -> PyResult<Self> {
         Self::create_instance(py, Box::new(map))
     }
 }

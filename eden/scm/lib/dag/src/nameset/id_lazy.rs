@@ -296,6 +296,7 @@ pub(crate) mod tests {
     use super::super::tests::*;
     use super::super::NameSet;
     use super::*;
+    use crate::ops::PrefixLookup;
     use crate::tests::dummy_dag::DummyDag;
     use std::collections::HashSet;
     use std::convert::TryInto;
@@ -316,6 +317,12 @@ pub(crate) mod tests {
 
     struct StrIdMap;
 
+    impl PrefixLookup for StrIdMap {
+        fn vertexes_by_hex_prefix(&self, _: &[u8], _: usize) -> Result<Vec<VertexName>> {
+            // Dummy implementation.
+            Ok(Vec::new())
+        }
+    }
     impl IdConvert for StrIdMap {
         fn vertex_id(&self, name: VertexName) -> Result<Id> {
             let slice: [u8; 8] = name.as_ref().try_into().unwrap();

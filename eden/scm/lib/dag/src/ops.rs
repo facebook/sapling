@@ -232,7 +232,7 @@ pub trait PrefixLookup {
 }
 
 /// Convert between `Vertex` and `Id`.
-pub trait IdConvert {
+pub trait IdConvert: PrefixLookup {
     fn vertex_id(&self, name: VertexName) -> Result<Id>;
     fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>>;
     fn vertex_name(&self, id: Id) -> Result<VertexName>;
