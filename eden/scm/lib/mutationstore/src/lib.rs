@@ -271,7 +271,7 @@ impl MutationStore {
             let obsoleted = draft & obsoleted;
 
             // Flatten the set for performance.
-            Ok(obsoleted.flatten()?)
+            Ok(obsoleted.flatten().await?)
         }
 
         // Spot check `obsolete()` for nodes.

@@ -257,21 +257,21 @@ impl NameSet {
     /// Convert the current set into a flat static set so it can be used in some
     /// fast paths. This is useful for some common sets like `obsolete()` that
     /// might be represented by a complex expression.
-    pub fn flatten(&self) -> Result<NameSet> {
+    pub async fn flatten(&self) -> Result<NameSet> {
         match (self.id_map(), self.dag()) {
             (Some(id_map), Some(dag)) => {
                 // Convert to IdStaticSet
-                self.flatten_id(id_map, dag)
+                self.flatten_id(id_map, dag).await
             }
             _ => {
                 // Convert to StaticSet
-                self.flatten_names()
+                self.flatten_names().await
             }
         }
     }
 
     /// Convert this set to a static id set.
-    pub fn flatten_id(
+    pub async fn flatten_id(
         &self,
         id_map: Arc<dyn IdConvert + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
@@ -292,7 +292,7 @@ impl NameSet {
     }
 
     /// Convert this set to a static name set.
-    pub fn flatten_names(&self) -> Result<NameSet> {
+    pub async fn flatten_names(&self) -> Result<NameSet> {
         if self.as_any().is::<StaticSet>() {
             return Ok(self.clone());
         }
@@ -573,6 +573,7 @@ impl From<&VertexName> for NameSet {
 pub(crate) mod tests {
     use super::*;
     use crate::Id;
+    use nonblocking::non_blocking_result as r;
 
     pub(crate) fn nb<F, R>(future: F) -> R
     where
@@ -754,7 +755,7 @@ pub(crate) mod tests {
                     .intersection(&NameSet::from_static_names(vec![to_name(2), to_name(3)])),
             );
         assert_eq!(
-            format!("{:?}", set.flatten().unwrap()),
+            format!("{:?}", r(set.flatten()).unwrap()),
             "<static [0202, 0101]>"
         );
     }

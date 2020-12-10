@@ -298,6 +298,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::ops::PrefixLookup;
     use crate::tests::dummy_dag::DummyDag;
+    use nonblocking::non_blocking_result as r;
     use std::collections::HashSet;
     use std::convert::TryInto;
 
@@ -423,8 +424,8 @@ pub(crate) mod tests {
         // The first should be <static ...>, the second should be <spans ...>.
         let show = |set: NameSet| {
             [
-                format!("{:5.2?}", set.flatten_names().unwrap()),
-                format!("{:5.2?}", set.flatten().unwrap()),
+                format!("{:5.2?}", r(set.flatten_names()).unwrap()),
+                format!("{:5.2?}", r(set.flatten()).unwrap()),
             ]
         };
 

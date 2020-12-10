@@ -8,6 +8,7 @@
 use crate::dagalgo::dagalgo;
 use crate::idmap::NULL_NODE;
 use anyhow::Result;
+use async_runtime::block_on_exclusive as block_on;
 use cpython::*;
 use cpython_ext::{AnyhowResultExt, ResultPyErrExt};
 use dag::nameset::hints::Flags;
@@ -106,7 +107,7 @@ py_class!(pub class nameset |py| {
     /// Convert the set to a plain static set.
     def flatten(&self) -> PyResult<Names> {
         let inner = self.inner(py);
-        let set = inner.flatten().map_pyerr(py)?;
+        let set = block_on(inner.flatten()).map_pyerr(py)?;
         Ok(Names(set))
     }
 
