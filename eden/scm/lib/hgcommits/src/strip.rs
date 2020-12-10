@@ -15,6 +15,9 @@ use dag::Vertex;
 use std::fs;
 use std::path::Path;
 
+// TODO: Consider migrating to async, or get rid of strip in tests.
+use dag::nameset::SyncNameSetQuery;
+
 pub trait StripCommits {
     /// Strip commits. This is for legacy tests only that wouldn't be used
     /// much in production. The callsite should take care of locking or

@@ -6,6 +6,7 @@
  */
 
 use crate::id::{Group, VertexName};
+use crate::nameset::SyncNameSetQuery;
 use crate::ops::DagAddHeads;
 use crate::ops::DagPersistent;
 use crate::ops::ImportAscii;

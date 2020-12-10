@@ -9,6 +9,7 @@ use crate::ops::DagAlgorithm;
 use crate::NameSet;
 use crate::Result;
 use crate::VertexName;
+use nonblocking::non_blocking;
 use std::sync::Arc;
 
 /// The DummyDag implements a DAG that contains all vertexes with no parents.
@@ -73,8 +74,8 @@ impl DagAlgorithm for DummyDag {
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
     fn gca_one(&self, set: NameSet) -> Result<Option<VertexName>> {
-        if set.count()? == 1 {
-            set.first()
+        if non_blocking(set.count())?? == 1 {
+            non_blocking(set.first())?
         } else {
             Ok(None)
         }
@@ -88,7 +89,7 @@ impl DagAlgorithm for DummyDag {
 
     /// Calculates all common ancestors of the given set.
     fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
-        if set.count()? == 1 {
+        if non_blocking(set.count())?? == 1 {
             Ok(set)
         } else {
             Ok(NameSet::empty())

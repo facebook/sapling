@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use super::{Hints, NameIter, NameSetQuery};
+use super::{AsyncNameSetQuery, Hints, NameIter};
 use crate::Result;
 use crate::VertexName;
 use indexmap::IndexSet;
@@ -139,30 +139,31 @@ impl LazySet {
     }
 }
 
-impl NameSetQuery for LazySet {
-    fn iter(&self) -> Result<Box<dyn NameIter>> {
+#[async_trait::async_trait]
+impl AsyncNameSetQuery for LazySet {
+    async fn iter(&self) -> Result<Box<dyn NameIter>> {
         let inner = self.inner.clone();
         let iter = Iter { inner, index: 0 };
         Ok(Box::new(iter))
     }
 
-    fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
         let inner = self.load_all()?;
         let iter = inner.visited.clone().into_iter().rev().map(Ok);
         Ok(Box::new(iter))
     }
 
-    fn count(&self) -> Result<usize> {
+    async fn count(&self) -> Result<usize> {
         let inner = self.load_all()?;
         Ok(inner.visited.len())
     }
 
-    fn last(&self) -> Result<Option<VertexName>> {
+    async fn last(&self) -> Result<Option<VertexName>> {
         let inner = self.load_all()?;
         Ok(inner.visited.iter().rev().nth(0).cloned())
     }
 
-    fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &VertexName) -> Result<bool> {
         let mut inner = self.inner.lock().unwrap();
         if inner.visited.contains(name) {
             return Ok(true);
@@ -206,12 +207,15 @@ mod tests {
     fn test_lazy_basic() -> Result<()> {
         let set = lazy_set(b"\x11\x33\x22\x77\x22\x55\x11");
         check_invariants(&set)?;
-        assert_eq!(shorten_iter(set.iter()), ["11", "33", "22", "77", "55"]);
-        assert_eq!(shorten_iter(set.iter_rev()), ["55", "77", "22", "33", "11"]);
-        assert!(!set.is_empty()?);
-        assert_eq!(set.count()?, 5);
-        assert_eq!(shorten_name(set.first()?.unwrap()), "11");
-        assert_eq!(shorten_name(set.last()?.unwrap()), "55");
+        assert_eq!(shorten_iter(nb(set.iter())), ["11", "33", "22", "77", "55"]);
+        assert_eq!(
+            shorten_iter(nb(set.iter_rev())),
+            ["55", "77", "22", "33", "11"]
+        );
+        assert!(!nb(set.is_empty())?);
+        assert_eq!(nb(set.count())?, 5);
+        assert_eq!(shorten_name(nb(set.first())?.unwrap()), "11");
+        assert_eq!(shorten_name(nb(set.last())?.unwrap()), "55");
         Ok(())
     }
 
@@ -219,12 +223,12 @@ mod tests {
     fn test_debug() {
         let set = lazy_set(b"");
         assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
-        set.count().unwrap();
+        nb(set.count()).unwrap();
         assert_eq!(format!("{:?}", &set), "<lazy []>");
 
         let set = lazy_set(b"\x11\x33\x22");
         assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
-        let mut iter = set.iter().unwrap();
+        let mut iter = nb(set.iter()).unwrap();
         iter.next();
         assert_eq!(format!("{:?}", &set), "<lazy [1111] + ? more>");
         iter.next();
@@ -240,7 +244,7 @@ mod tests {
             let set = lazy_set(&a);
             check_invariants(&set).unwrap();
 
-            let count = set.count().unwrap();
+            let count = nb(set.count()).unwrap();
             assert!(count <= a.len());
 
             let set2: HashSet<_> = a.iter().cloned().collect();

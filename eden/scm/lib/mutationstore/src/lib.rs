@@ -51,6 +51,9 @@ use types::mutation::MutationEntry;
 use types::node::Node;
 use vlqencoding::VLQDecodeAt;
 
+// TODO: Migrate to async APIs.
+use dag::nameset::SyncNameSetQuery;
+
 pub use indexedlog::Repair;
 
 pub struct MutationStore {

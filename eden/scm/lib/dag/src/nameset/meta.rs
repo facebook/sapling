@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use super::AsyncNameSetQuery;
 use super::Hints;
 use super::NameIter;
 use super::NameSet;
-use super::NameSetQuery;
 use crate::Result;
 use crate::VertexName;
 use once_cell::sync::OnceCell;
@@ -90,29 +90,30 @@ impl MetaSet {
     }
 }
 
-impl NameSetQuery for MetaSet {
-    fn iter(&self) -> Result<Box<dyn NameIter>> {
-        self.evaluate()?.iter()
+#[async_trait::async_trait]
+impl AsyncNameSetQuery for MetaSet {
+    async fn iter(&self) -> Result<Box<dyn NameIter>> {
+        self.evaluate()?.iter().await
     }
 
-    fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
-        self.evaluate()?.iter_rev()
+    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+        self.evaluate()?.iter_rev().await
     }
 
-    fn count(&self) -> Result<usize> {
-        self.evaluate()?.count()
+    async fn count(&self) -> Result<usize> {
+        self.evaluate()?.count().await
     }
 
-    fn last(&self) -> Result<Option<VertexName>> {
-        self.evaluate()?.last()
+    async fn last(&self) -> Result<Option<VertexName>> {
+        self.evaluate()?.last().await
     }
 
-    fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &VertexName) -> Result<bool> {
         match self.evaluated() {
-            Some(set) => set.contains(name),
+            Some(set) => set.contains(name).await,
             None => match &self.contains {
                 Some(f) => f(self, name),
-                None => self.evaluate()?.contains(name),
+                None => self.evaluate()?.contains(name).await,
             },
         }
     }
@@ -146,7 +147,7 @@ mod tests {
         let set = meta_set(&["1", "3", "2", "7", "5"]);
 
         assert!(set.evaluated().is_none());
-        assert!(set.contains(&"2".into())?);
+        assert!(nb(set.contains(&"2".into()))?);
         // The set is evaluated after a "contains" check without a "contains" fast path.
         assert!(set.evaluated().is_some());
 
@@ -159,8 +160,8 @@ mod tests {
         let set = meta_set(&["1", "3", "2", "7", "5"])
             .with_contains(|_, v| Ok(v.as_ref().len() == 1 && b"12357".contains(&v.as_ref()[0])));
 
-        assert!(set.contains(&"2".into())?);
-        assert!(!set.contains(&"6".into())?);
+        assert!(nb(set.contains(&"2".into()))?);
+        assert!(!nb(set.contains(&"6".into()))?);
         // The set is not evaluated - contains fast path takes care of the checks.
         assert!(set.evaluated().is_none());
 

@@ -8,6 +8,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::namedag::MemNameDag;
+use crate::nameset::SyncNameSetQuery;
 use crate::ops::ImportAscii;
 use crate::DagAlgorithm;
 use crate::VertexName;

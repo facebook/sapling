@@ -6,10 +6,11 @@
  */
 
 use super::hints::Flags;
-use super::{Hints, NameIter, NameSet, NameSetQuery};
+use super::{AsyncNameSetQuery, Hints, NameIter, NameSet};
 use crate::fmt::write_debug;
 use crate::Result;
 use crate::VertexName;
+use nonblocking::non_blocking;
 use std::any::Any;
 use std::fmt;
 
@@ -49,61 +50,68 @@ impl UnionSet {
     }
 }
 
-impl NameSetQuery for UnionSet {
-    fn iter(&self) -> Result<Box<dyn NameIter>> {
+#[async_trait::async_trait]
+impl AsyncNameSetQuery for UnionSet {
+    async fn iter(&self) -> Result<Box<dyn NameIter>> {
         debug_assert_eq!(self.sets.len(), 2);
         let set0 = self.sets[0].clone();
         let iter = self.sets[0]
-            .iter()?
-            .chain(self.sets[1].iter()?.filter(move |name| {
+            .iter()
+            .await?
+            .chain(self.sets[1].iter().await?.filter(move |name| {
                 match name {
-                    Ok(name) => set0.contains(name).ok() != Some(true),
+                    Ok(name) => {
+                        non_blocking(set0.contains(name)).ok().map(|s| s.ok()) != Some(Some(true))
+                    }
                     _ => true,
                 }
             }));
         Ok(Box::new(iter))
     }
 
-    fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
         debug_assert_eq!(self.sets.len(), 2);
         let set0 = self.sets[0].clone();
         let iter = self.sets[1]
-            .iter_rev()?
+            .iter_rev()
+            .await?
             .filter(move |name| {
                 match name {
-                    Ok(name) => set0.contains(name).ok() != Some(true),
+                    Ok(name) => {
+                        non_blocking(set0.contains(name)).ok().map(|s| s.ok()) != Some(Some(true))
+                    }
                     _ => true,
                 }
             })
-            .chain(self.sets[0].iter_rev()?);
+            .chain(self.sets[0].iter_rev().await?);
         Ok(Box::new(iter))
     }
 
-    fn count(&self) -> Result<usize> {
+    async fn count(&self) -> Result<usize> {
         debug_assert_eq!(self.sets.len(), 2);
         // This is more efficient if sets[0] is a large set that has a fast path
         // for "count()".
-        let mut count = self.sets[0].count()?;
-        for name in self.sets[1].iter()? {
-            if !self.sets[0].contains(&name?)? {
+        let mut count = self.sets[0].count().await?;
+        for name in self.sets[1].iter().await? {
+            if !non_blocking(self.sets[0].contains(&name?))?? {
                 count += 1;
             }
         }
         Ok(count)
     }
 
-    fn is_empty(&self) -> Result<bool> {
+    async fn is_empty(&self) -> Result<bool> {
         for set in &self.sets {
-            if !set.is_empty()? {
+            if !set.is_empty().await? {
                 return Ok(false);
             }
         }
         Ok(true)
     }
 
-    fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &VertexName) -> Result<bool> {
         for set in &self.sets {
-            if set.contains(name)? {
+            if set.contains(name).await? {
                 return Ok(true);
             }
         }
@@ -145,17 +153,20 @@ mod tests {
         // 'a' overlaps with 'b'. UnionSet should de-duplicate items.
         let set = union(b"\x11\x33\x22", b"\x44\x11\x55\x33");
         check_invariants(&set)?;
-        assert_eq!(shorten_iter(set.iter()), ["11", "33", "22", "44", "55"]);
-        assert_eq!(shorten_iter(set.iter_rev()), ["55", "44", "22", "33", "11"]);
-        assert!(!set.is_empty()?);
-        assert_eq!(set.count()?, 5);
-        assert_eq!(shorten_name(set.first()?.unwrap()), "11");
-        assert_eq!(shorten_name(set.last()?.unwrap()), "55");
+        assert_eq!(shorten_iter(nb(set.iter())), ["11", "33", "22", "44", "55"]);
+        assert_eq!(
+            shorten_iter(nb(set.iter_rev())),
+            ["55", "44", "22", "33", "11"]
+        );
+        assert!(!nb(set.is_empty())?);
+        assert_eq!(nb(set.count())?, 5);
+        assert_eq!(shorten_name(nb(set.first())?.unwrap()), "11");
+        assert_eq!(shorten_name(nb(set.last())?.unwrap()), "55");
         for &b in b"\x11\x22\x33\x44\x55".iter() {
-            assert!(set.contains(&to_name(b))?);
+            assert!(nb(set.contains(&to_name(b)))?);
         }
         for &b in b"\x66\x77\x88".iter() {
-            assert!(!set.contains(&to_name(b))?);
+            assert!(!nb(set.contains(&to_name(b)))?);
         }
         Ok(())
     }
@@ -165,14 +176,14 @@ mod tests {
             let set = union(&a, &b);
             check_invariants(&set).unwrap();
 
-            let count = set.count().unwrap();
+            let count = nb(set.count()).unwrap();
             assert!(count <= a.len() + b.len());
 
             let set2: HashSet<_> = a.iter().chain(b.iter()).cloned().collect();
             assert_eq!(count, set2.len());
 
-            assert!(a.iter().all(|&b| set.contains(&to_name(b)).ok() == Some(true)));
-            assert!(b.iter().all(|&b| set.contains(&to_name(b)).ok() == Some(true)));
+            assert!(a.iter().all(|&b| nb(set.contains(&to_name(b))).ok() == Some(true)));
+            assert!(b.iter().all(|&b| nb(set.contains(&to_name(b))).ok() == Some(true)));
 
             true
         }

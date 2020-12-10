@@ -6,6 +6,7 @@
  */
 
 use super::render::{Ancestor, Renderer};
+use crate::nameset::SyncNameSetQuery;
 use crate::DagAlgorithm;
 use crate::VertexName;
 use anyhow::Result;

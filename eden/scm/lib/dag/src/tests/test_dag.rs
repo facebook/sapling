@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::nameset::SyncNameSetQuery;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagPersistent;

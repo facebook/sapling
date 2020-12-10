@@ -7,6 +7,7 @@
 
 use crate::errors::programming;
 use crate::namedag::MemNameDag;
+use crate::nameset::SyncNameSetQuery;
 use crate::ops::DagAddHeads;
 use crate::DagAlgorithm;
 use crate::NameSet;

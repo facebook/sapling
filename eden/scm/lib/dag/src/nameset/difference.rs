@@ -6,7 +6,7 @@
  */
 
 use super::hints::Flags;
-use super::{Hints, NameIter, NameSet, NameSetQuery};
+use super::{AsyncNameSetQuery, Hints, NameIter, NameSet};
 use crate::fmt::write_debug;
 use crate::Result;
 use crate::VertexName;
@@ -49,25 +49,26 @@ impl DifferenceSet {
     }
 }
 
-impl NameSetQuery for DifferenceSet {
-    fn iter(&self) -> Result<Box<dyn NameIter>> {
+#[async_trait::async_trait]
+impl AsyncNameSetQuery for DifferenceSet {
+    async fn iter(&self) -> Result<Box<dyn NameIter>> {
         let iter = Iter {
-            iter: self.lhs.iter()?,
+            iter: self.lhs.iter().await?,
             rhs: self.rhs.clone(),
         };
         Ok(Box::new(iter))
     }
 
-    fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
         let iter = Iter {
-            iter: self.lhs.iter_rev()?,
+            iter: self.lhs.iter_rev().await?,
             rhs: self.rhs.clone(),
         };
         Ok(Box::new(iter))
     }
 
-    fn contains(&self, name: &VertexName) -> Result<bool> {
-        Ok(self.lhs.contains(name)? && !self.rhs.contains(name)?)
+    async fn contains(&self, name: &VertexName) -> Result<bool> {
+        Ok(self.lhs.contains(name).await? && !self.rhs.contains(name).await?)
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -95,7 +96,7 @@ impl Iterator for Iter {
         loop {
             let result = NameIter::next(self.iter.as_mut());
             if let Some(Ok(ref name)) = result {
-                match self.rhs.contains(&name) {
+                match super::SyncNameSetQuery::contains(&self.rhs, &name) {
                     Err(err) => break Some(Err(err)),
                     Ok(true) => continue,
                     _ => {}
@@ -110,6 +111,7 @@ impl Iterator for Iter {
 mod tests {
     use super::super::tests::*;
     use super::*;
+    use nonblocking::non_blocking as nb;
 
     fn difference(a: &[u8], b: &[u8]) -> DifferenceSet {
         let a = NameSet::from_query(VecQuery::from_bytes(a));
@@ -121,17 +123,17 @@ mod tests {
     fn test_difference_basic() -> Result<()> {
         let set = difference(b"\x11\x33\x55\x22\x44", b"\x44\x33\x66");
         check_invariants(&set)?;
-        assert_eq!(shorten_iter(set.iter()), ["11", "55", "22"]);
-        assert_eq!(shorten_iter(set.iter_rev()), ["22", "55", "11"]);
-        assert!(!set.is_empty()?);
-        assert_eq!(set.count()?, 3);
-        assert_eq!(shorten_name(set.first()?.unwrap()), "11");
-        assert_eq!(shorten_name(set.last()?.unwrap()), "22");
+        assert_eq!(shorten_iter(nb(set.iter())?), ["11", "55", "22"]);
+        assert_eq!(shorten_iter(nb(set.iter_rev())?), ["22", "55", "11"]);
+        assert!(!nb(set.is_empty())??);
+        assert_eq!(nb(set.count())??, 3);
+        assert_eq!(shorten_name(nb(set.first())??.unwrap()), "11");
+        assert_eq!(shorten_name(nb(set.last())??.unwrap()), "22");
         for &b in b"\x11\x22\x55".iter() {
-            assert!(set.contains(&to_name(b))?);
+            assert!(nb(set.contains(&to_name(b)))??);
         }
         for &b in b"\x33\x44\x66".iter() {
-            assert!(!set.contains(&to_name(b))?);
+            assert!(!nb(set.contains(&to_name(b)))??);
         }
         Ok(())
     }
@@ -141,10 +143,10 @@ mod tests {
             let set = difference(&a, &b);
             check_invariants(&set).unwrap();
 
-            let count = set.count().unwrap();
+            let count = nb(set.count()).unwrap().unwrap();
             assert!(count <= a.len());
 
-            assert!(b.iter().all(|&b| set.contains(&to_name(b)).ok() == Some(false)));
+            assert!(b.iter().all(|&b| nb(set.contains(&to_name(b))).unwrap().ok() == Some(false)));
 
             true
         }

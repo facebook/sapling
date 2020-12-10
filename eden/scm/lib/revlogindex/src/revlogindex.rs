@@ -55,6 +55,9 @@ use std::sync::Arc;
 use util::path::atomic_write_symlink;
 use util::path::remove_file;
 
+// Revset is non-lazy. Sync APIs can be used.
+use dag::nameset::SyncNameSetQuery;
+
 impl RevlogIndex {
     /// Calculate `heads(ancestors(revs))`.
     pub fn headsancestors(&self, revs: Vec<u32>) -> dag::Result<Vec<u32>> {

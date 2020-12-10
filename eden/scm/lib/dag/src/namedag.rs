@@ -23,6 +23,7 @@ use crate::locked::Locked;
 use crate::nameset::hints::Flags;
 use crate::nameset::hints::Hints;
 use crate::nameset::NameSet;
+use crate::nameset::SyncNameSetQuery;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagImportCloneData;

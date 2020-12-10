@@ -11,9 +11,11 @@ for-tests = ["quickcheck"]
 drawdag = { path = "../drawdag" }
 indexedlog = { path = "../indexedlog" }
 minibytes = { path = "../minibytes" }
+nonblocking = { path = "../nonblocking" }
 vlqencoding = { path = "../vlqencoding" }
 
 anyhow = "1.0.20"
+async-trait = "0.1"
 bitflags = "1"
 byteorder = "1.2.7"
 fs2 = "0.4.3"

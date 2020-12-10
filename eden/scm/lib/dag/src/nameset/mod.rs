@@ -16,6 +16,7 @@ use crate::spanset::SpanSet;
 use crate::Id;
 use crate::Result;
 use crate::VertexName;
+use nonblocking::non_blocking;
 use std::any::Any;
 use std::fmt;
 use std::fmt::Debug;
@@ -44,10 +45,10 @@ use self::r#static::StaticSet;
 /// It provides order-preserving iteration and set operations,
 /// and is cheaply clonable.
 #[derive(Clone)]
-pub struct NameSet(Arc<dyn NameSetQuery>);
+pub struct NameSet(Arc<dyn AsyncNameSetQuery>);
 
 impl NameSet {
-    pub(crate) fn from_query(query: impl NameSetQuery) -> Self {
+    pub(crate) fn from_query(query: impl AsyncNameSetQuery) -> Self {
         Self(Arc::new(query))
     }
 
@@ -295,7 +296,7 @@ impl Sub for NameSet {
 }
 
 impl Deref for NameSet {
-    type Target = dyn NameSetQuery;
+    type Target = dyn AsyncNameSetQuery;
 
     fn deref(&self) -> &Self::Target {
         self.0.deref()
@@ -312,45 +313,47 @@ impl fmt::Debug for NameSet {
 ///
 /// Types implementating this trait should rewrite methods to use fast paths
 /// when possible.
-pub trait NameSetQuery: Any + Debug + Send + Sync {
+#[async_trait::async_trait]
+pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
     /// Iterate through the set in defined order.
-    fn iter(&self) -> Result<Box<dyn NameIter>>;
+    async fn iter(&self) -> Result<Box<dyn NameIter>>;
 
     /// Iterate through the set in the reversed order.
-    fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
         let names = self
-            .iter()?
+            .iter()
+            .await?
             .collect::<std::result::Result<Vec<VertexName>, _>>()?;
         let iter = names.into_iter().rev().map(Ok);
         Ok(Box::new(iter))
     }
 
     /// Number of names in this set.
-    fn count(&self) -> Result<usize> {
-        self.iter()?.try_fold(0, |count, result| {
+    async fn count(&self) -> Result<usize> {
+        self.iter().await?.try_fold(0, |count, result| {
             result?;
             Ok(count + 1)
         })
     }
 
     /// The first name in the set.
-    fn first(&self) -> Result<Option<VertexName>> {
-        self.iter()?.nth(0).transpose()
+    async fn first(&self) -> Result<Option<VertexName>> {
+        self.iter().await?.nth(0).transpose()
     }
 
     /// The last name in the set.
-    fn last(&self) -> Result<Option<VertexName>> {
-        self.iter_rev()?.nth(0).transpose()
+    async fn last(&self) -> Result<Option<VertexName>> {
+        self.iter_rev().await?.nth(0).transpose()
     }
 
     /// Test if this set is empty.
-    fn is_empty(&self) -> Result<bool> {
-        self.first().map(|n| n.is_none())
+    async fn is_empty(&self) -> Result<bool> {
+        self.first().await.map(|n| n.is_none())
     }
 
     /// Test if this set contains a given name.
-    fn contains(&self, name: &VertexName) -> Result<bool> {
-        for iter_name in self.iter()? {
+    async fn contains(&self, name: &VertexName) -> Result<bool> {
+        for iter_name in self.iter().await? {
             if &iter_name? == name {
                 return Ok(true);
             }
@@ -367,6 +370,123 @@ pub trait NameSetQuery: Any + Debug + Send + Sync {
     /// Get an optional IdConvert interface to check hints.
     fn id_convert(&self) -> Option<&dyn IdConvert> {
         None
+    }
+}
+
+/// Sync version of `AsyncNameSetQuery`.
+pub trait SyncNameSetQuery {
+    /// Iterate through the set in defined order.
+    fn iter(&self) -> Result<Box<dyn NameIter>>;
+
+    /// Iterate through the set in the reversed order.
+    fn iter_rev(&self) -> Result<Box<dyn NameIter>>;
+
+    /// Number of names in this set.
+    fn count(&self) -> Result<usize>;
+
+    /// The first name in the set.
+    fn first(&self) -> Result<Option<VertexName>>;
+
+    /// The last name in the set.
+    fn last(&self) -> Result<Option<VertexName>>;
+
+    /// Test if this set is empty.
+    fn is_empty(&self) -> Result<bool>;
+
+    /// Test if this set contains a given name.
+    fn contains(&self, name: &VertexName) -> Result<bool>;
+
+    /// For downcasting.
+    fn as_any(&self) -> &dyn Any;
+
+    /// Get or set optimization hints.
+    fn hints(&self) -> &Hints;
+
+    /// Get an optional IdConvert interface to check hints.
+    fn id_convert(&self) -> Option<&dyn IdConvert>;
+}
+
+impl<T: AsyncNameSetQuery> SyncNameSetQuery for T {
+    fn iter(&self) -> Result<Box<dyn NameIter>> {
+        non_blocking(AsyncNameSetQuery::iter(self))?
+    }
+
+    fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+        non_blocking(AsyncNameSetQuery::iter_rev(self))?
+    }
+
+    fn count(&self) -> Result<usize> {
+        non_blocking(AsyncNameSetQuery::count(self))?
+    }
+
+    fn first(&self) -> Result<Option<VertexName>> {
+        non_blocking(AsyncNameSetQuery::first(self))?
+    }
+
+    fn last(&self) -> Result<Option<VertexName>> {
+        non_blocking(AsyncNameSetQuery::last(self))?
+    }
+
+    fn is_empty(&self) -> Result<bool> {
+        non_blocking(AsyncNameSetQuery::is_empty(self))?
+    }
+
+    fn contains(&self, name: &VertexName) -> Result<bool> {
+        non_blocking(AsyncNameSetQuery::contains(self, name))?
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        AsyncNameSetQuery::as_any(self)
+    }
+
+    fn hints(&self) -> &Hints {
+        AsyncNameSetQuery::hints(self)
+    }
+
+    fn id_convert(&self) -> Option<&dyn IdConvert> {
+        AsyncNameSetQuery::id_convert(self)
+    }
+}
+
+impl SyncNameSetQuery for NameSet {
+    fn iter(&self) -> Result<Box<dyn NameIter>> {
+        non_blocking(AsyncNameSetQuery::iter(self.0.deref()))?
+    }
+
+    fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+        non_blocking(AsyncNameSetQuery::iter_rev(self.0.deref()))?
+    }
+
+    fn count(&self) -> Result<usize> {
+        non_blocking(AsyncNameSetQuery::count(self.0.deref()))?
+    }
+
+    fn first(&self) -> Result<Option<VertexName>> {
+        non_blocking(AsyncNameSetQuery::first(self.0.deref()))?
+    }
+
+    fn last(&self) -> Result<Option<VertexName>> {
+        non_blocking(AsyncNameSetQuery::last(self.0.deref()))?
+    }
+
+    fn is_empty(&self) -> Result<bool> {
+        non_blocking(AsyncNameSetQuery::is_empty(self.0.deref()))?
+    }
+
+    fn contains(&self, name: &VertexName) -> Result<bool> {
+        non_blocking(AsyncNameSetQuery::contains(self.0.deref(), name))?
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        AsyncNameSetQuery::as_any(self.0.deref())
+    }
+
+    fn hints(&self) -> &Hints {
+        AsyncNameSetQuery::hints(self.0.deref())
+    }
+
+    fn id_convert(&self) -> Option<&dyn IdConvert> {
+        AsyncNameSetQuery::id_convert(self.0.deref())
     }
 }
 
@@ -392,6 +512,13 @@ impl From<&VertexName> for NameSet {
 pub(crate) mod tests {
     use super::*;
     use crate::Id;
+
+    pub(crate) fn nb<F, R>(future: F) -> R
+    where
+        F: std::future::Future<Output = R>,
+    {
+        non_blocking(future).unwrap()
+    }
 
     // For easier testing.
     impl From<&str> for NameSet {
@@ -424,8 +551,9 @@ pub(crate) mod tests {
     #[derive(Default, Debug)]
     pub(crate) struct VecQuery(Vec<VertexName>, Hints);
 
-    impl NameSetQuery for VecQuery {
-        fn iter(&self) -> Result<Box<dyn NameIter>> {
+    #[async_trait::async_trait]
+    impl AsyncNameSetQuery for VecQuery {
+        async fn iter(&self) -> Result<Box<dyn NameIter>> {
             let iter = self.0.clone().into_iter().map(Ok);
             Ok(Box::new(iter))
         }
@@ -481,13 +609,13 @@ pub(crate) mod tests {
     fn test_empty_query() -> Result<()> {
         let query = VecQuery::default();
         check_invariants(&query)?;
-        assert_eq!(query.iter()?.count(), 0);
-        assert_eq!(query.iter_rev()?.count(), 0);
-        assert_eq!(query.first()?, None);
-        assert_eq!(query.last()?, None);
-        assert_eq!(query.count()?, 0);
-        assert!(query.is_empty()?);
-        assert!(!query.contains(&to_name(0))?);
+        assert_eq!(SyncNameSetQuery::iter(&query)?.count(), 0);
+        assert_eq!(SyncNameSetQuery::iter_rev(&query)?.count(), 0);
+        assert_eq!(SyncNameSetQuery::first(&query)?, None);
+        assert_eq!(SyncNameSetQuery::last(&query)?, None);
+        assert_eq!(SyncNameSetQuery::count(&query)?, 0);
+        assert!(SyncNameSetQuery::is_empty(&query)?);
+        assert!(!SyncNameSetQuery::contains(&query, &to_name(0))?);
         Ok(())
     }
 
@@ -495,13 +623,22 @@ pub(crate) mod tests {
     fn test_vec_query() -> Result<()> {
         let query = VecQuery::from_bytes(b"\xab\xef\xcd");
         check_invariants(&query)?;
-        assert_eq!(shorten_iter(query.iter()), ["ab", "ef", "cd"]);
-        assert_eq!(shorten_iter(query.iter_rev()), ["cd", "ef", "ab"]);
-        assert_eq!(shorten_name(query.first()?.unwrap()), "ab");
-        assert_eq!(shorten_name(query.last()?.unwrap()), "cd");
-        assert!(!query.is_empty()?);
-        assert!(query.contains(&to_name(0xef))?);
-        assert!(!query.contains(&to_name(0))?);
+        assert_eq!(
+            shorten_iter(SyncNameSetQuery::iter(&query)),
+            ["ab", "ef", "cd"]
+        );
+        assert_eq!(
+            shorten_iter(SyncNameSetQuery::iter_rev(&query)),
+            ["cd", "ef", "ab"]
+        );
+        assert_eq!(
+            shorten_name(SyncNameSetQuery::first(&query)?.unwrap()),
+            "ab"
+        );
+        assert_eq!(shorten_name(SyncNameSetQuery::last(&query)?.unwrap()), "cd");
+        assert!(!SyncNameSetQuery::is_empty(&query)?);
+        assert!(SyncNameSetQuery::contains(&query, &to_name(0xef))?);
+        assert!(!SyncNameSetQuery::contains(&query, &to_name(0))?);
         Ok(())
     }
 
@@ -693,14 +830,14 @@ pub(crate) mod tests {
         .collect()
     }
 
-    /// Check consistency of a `NameSetQuery`, such as `iter().nth(0)` matches
+    /// Check consistency of a `AsyncNameSetQuery`, such as `iter().nth(0)` matches
     /// `first()` etc.
-    pub(crate) fn check_invariants(query: &dyn NameSetQuery) -> Result<()> {
-        let is_empty = query.is_empty()?;
-        let count = query.count()?;
-        let first = query.first()?;
-        let last = query.last()?;
-        let names: Vec<VertexName> = query.iter()?.collect::<Result<Vec<_>>>()?;
+    pub(crate) fn check_invariants(query: &dyn AsyncNameSetQuery) -> Result<()> {
+        let is_empty = nb(query.is_empty())?;
+        let count = nb(query.count())?;
+        let first = nb(query.first())?;
+        let last = nb(query.last())?;
+        let names: Vec<VertexName> = nb(query.iter())?.collect::<Result<Vec<_>>>()?;
         assert_eq!(
             first,
             names.first().cloned(),
@@ -728,19 +865,19 @@ pub(crate) mod tests {
         assert!(
             names
                 .iter()
-                .all(|name| query.contains(name).ok() == Some(true)),
+                .all(|name| nb(query.contains(name)).ok() == Some(true)),
             "contains() should return true for names returned by iter() (set: {:?})",
             &query
         );
         assert!(
             (0..=0xff).all(|b| {
                 let name = VertexName::from(vec![b; 20]);
-                query.contains(&name).ok() == Some(names.contains(&name))
+                nb(query.contains(&name)).ok() == Some(names.contains(&name))
             }),
             "contains() should return false for names not returned by iter() (set: {:?})",
             &query
         );
-        let reversed: Vec<VertexName> = query.iter_rev()?.collect::<Result<Vec<_>>>()?;
+        let reversed: Vec<VertexName> = nb(query.iter_rev())?.collect::<Result<Vec<_>>>()?;
         assert_eq!(
             names,
             reversed.into_iter().rev().collect::<Vec<VertexName>>(),

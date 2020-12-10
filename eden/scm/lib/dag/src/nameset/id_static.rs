@@ -6,7 +6,7 @@
  */
 
 use super::hints::Flags;
-use super::{Hints, NameIter, NameSetQuery};
+use super::{AsyncNameSetQuery, Hints, NameIter};
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::spanset::Span;
@@ -126,8 +126,9 @@ impl IdStaticSet {
     }
 }
 
-impl NameSetQuery for IdStaticSet {
-    fn iter(&self) -> Result<Box<dyn NameIter>> {
+#[async_trait::async_trait]
+impl AsyncNameSetQuery for IdStaticSet {
+    async fn iter(&self) -> Result<Box<dyn NameIter>> {
         let iter = Iter {
             iter: self.spans.clone().into_iter(),
             map: self.map.clone(),
@@ -136,7 +137,7 @@ impl NameSetQuery for IdStaticSet {
         Ok(Box::new(iter))
     }
 
-    fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
         let iter = Iter {
             iter: self.spans.clone().into_iter(),
             map: self.map.clone(),
@@ -145,11 +146,11 @@ impl NameSetQuery for IdStaticSet {
         Ok(Box::new(iter))
     }
 
-    fn count(&self) -> Result<usize> {
+    async fn count(&self) -> Result<usize> {
         Ok(self.spans.count() as usize)
     }
 
-    fn first(&self) -> Result<Option<VertexName>> {
+    async fn first(&self) -> Result<Option<VertexName>> {
         debug_assert_eq!(self.spans.max(), self.spans.iter().nth(0));
         match self.spans.max() {
             Some(id) => {
@@ -161,7 +162,7 @@ impl NameSetQuery for IdStaticSet {
         }
     }
 
-    fn last(&self) -> Result<Option<VertexName>> {
+    async fn last(&self) -> Result<Option<VertexName>> {
         debug_assert_eq!(self.spans.min(), self.spans.iter().rev().nth(0));
         match self.spans.min() {
             Some(id) => {
@@ -173,11 +174,11 @@ impl NameSetQuery for IdStaticSet {
         }
     }
 
-    fn is_empty(&self) -> Result<bool> {
+    async fn is_empty(&self) -> Result<bool> {
         Ok(self.spans.is_empty())
     }
 
-    fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &VertexName) -> Result<bool> {
         let result = match self.map.vertex_id_with_max_group(name, Group::NON_MASTER)? {
             Some(id) => self.spans.contains(id),
             None => false,
@@ -241,8 +242,8 @@ pub(crate) mod tests {
             let ab = abcd.intersection(&abefg);
             check_invariants(ab.deref())?;
 
-            assert!(abcd.contains(&vec![b'A'].into())?);
-            assert!(!abcd.contains(&vec![b'E'].into())?);
+            assert!(nb(abcd.contains(&vec![b'A'].into()))?);
+            assert!(!nb(abcd.contains(&vec![b'E'].into()))?);
 
             // should not be "<and <...> <...>>"
             assert_eq!(format!("{:?}", &ab), "<spans [A:B+0:1]>");

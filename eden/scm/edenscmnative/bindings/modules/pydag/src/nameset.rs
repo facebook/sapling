@@ -15,6 +15,9 @@ use dag::{nameset::NameIter, Set, Vertex};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
+// TODO: Migrate to blocking / async APIs.
+use dag::nameset::SyncNameSetQuery;
+
 /// A wrapper around [`Set`] with Python integration added.
 ///
 /// Differences from the `py_class` version:

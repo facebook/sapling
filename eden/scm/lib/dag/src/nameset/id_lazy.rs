@@ -7,7 +7,7 @@
 
 use super::hints::Flags;
 use super::id_static::IdStaticSet;
-use super::{Hints, NameIter, NameSetQuery};
+use super::{AsyncNameSetQuery, Hints, NameIter};
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::spanset::SpanSet;
@@ -198,8 +198,9 @@ impl IdLazySet {
     }
 }
 
-impl NameSetQuery for IdLazySet {
-    fn iter(&self) -> Result<Box<dyn NameIter>> {
+#[async_trait::async_trait]
+impl AsyncNameSetQuery for IdLazySet {
+    async fn iter(&self) -> Result<Box<dyn NameIter>> {
         let inner = self.inner.clone();
         let map = self.map.clone();
         let iter = Iter {
@@ -210,7 +211,7 @@ impl NameSetQuery for IdLazySet {
         Ok(Box::new(iter))
     }
 
-    fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
         let inner = self.load_all()?;
         let map = self.map.clone();
         let iter = inner
@@ -222,12 +223,12 @@ impl NameSetQuery for IdLazySet {
         Ok(Box::new(iter) as Box<dyn NameIter>)
     }
 
-    fn count(&self) -> Result<usize> {
+    async fn count(&self) -> Result<usize> {
         let inner = self.load_all()?;
         Ok(inner.visited.len())
     }
 
-    fn last(&self) -> Result<Option<VertexName>> {
+    async fn last(&self) -> Result<Option<VertexName>> {
         let inner = self.load_all()?;
         match inner.visited.iter().rev().nth(0) {
             Some(&id) => Ok(Some(self.map.vertex_name(id)?)),
@@ -235,7 +236,7 @@ impl NameSetQuery for IdLazySet {
         }
     }
 
-    fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &VertexName) -> Result<bool> {
         let mut inner = self.inner.lock().unwrap();
         let id = match self.map.vertex_id_with_max_group(name, Group::NON_MASTER)? {
             None => {
@@ -345,12 +346,15 @@ pub(crate) mod tests {
     fn test_id_lazy_basic() -> Result<()> {
         let set = lazy_set(&[0x11, 0x33, 0x22, 0x77, 0x55]);
         check_invariants(&set)?;
-        assert_eq!(shorten_iter(set.iter()), ["11", "33", "22", "77", "55"]);
-        assert_eq!(shorten_iter(set.iter_rev()), ["55", "77", "22", "33", "11"]);
-        assert!(!set.is_empty()?);
-        assert_eq!(set.count()?, 5);
-        assert_eq!(shorten_name(set.first()?.unwrap()), "11");
-        assert_eq!(shorten_name(set.last()?.unwrap()), "55");
+        assert_eq!(shorten_iter(nb(set.iter())), ["11", "33", "22", "77", "55"]);
+        assert_eq!(
+            shorten_iter(nb(set.iter_rev())),
+            ["55", "77", "22", "33", "11"]
+        );
+        assert!(!nb(set.is_empty())?);
+        assert_eq!(nb(set.count())?, 5);
+        assert_eq!(shorten_name(nb(set.first())?.unwrap()), "11");
+        assert_eq!(shorten_name(nb(set.last())?.unwrap()), "55");
         Ok(())
     }
 
@@ -362,13 +366,13 @@ pub(crate) mod tests {
         set.hints().add_flags(Flags::ID_ASC);
 
         let v = |i: u64| -> VertexName { StrIdMap.vertex_name(Id(i)).unwrap() };
-        assert!(set.contains(&v(0x20))?);
-        assert!(set.contains(&v(0x50))?);
-        assert!(!set.contains(&v(0x30))?);
+        assert!(nb(set.contains(&v(0x20)))?);
+        assert!(nb(set.contains(&v(0x50)))?);
+        assert!(!nb(set.contains(&v(0x30)))?);
 
         set.hints().add_flags(Flags::ID_DESC);
-        assert!(set.contains(&v(0x30))?);
-        assert!(!set.contains(&v(0x70))?);
+        assert!(nb(set.contains(&v(0x30)))?);
+        assert!(!nb(set.contains(&v(0x70)))?);
 
         Ok(())
     }
@@ -377,12 +381,12 @@ pub(crate) mod tests {
     fn test_debug() {
         let set = lazy_set(&[0]);
         assert_eq!(format!("{:?}", set), "<lazy [] + ? more>");
-        set.count().unwrap();
+        nb(set.count()).unwrap();
         assert_eq!(format!("{:?}", set), "<lazy [0000000000000000+0]>");
 
         let set = lazy_set(&[1, 3, 2]);
         assert_eq!(format!("{:?}", &set), "<lazy [] + ? more>");
-        let mut iter = set.iter().unwrap();
+        let mut iter = nb(set.iter()).unwrap();
         iter.next();
         assert_eq!(
             format!("{:?}", &set),
@@ -437,7 +441,7 @@ pub(crate) mod tests {
             let set = lazy_set(&a);
             check_invariants(&set).unwrap();
 
-            let count = set.count().unwrap();
+            let count = nb(set.count()).unwrap();
             assert!(count <= a.len());
 
             let set2: HashSet<_> = a.iter().cloned().collect();

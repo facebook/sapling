@@ -17,7 +17,7 @@ use crate::namedag::MemNameDag;
 use crate::nameset::id_lazy::IdLazySet;
 use crate::nameset::id_static::IdStaticSet;
 use crate::nameset::NameSet;
-use crate::nameset::NameSetQuery;
+use crate::nameset::SyncNameSetQuery;
 use crate::IdSet;
 use crate::Result;
 use std::sync::Arc;

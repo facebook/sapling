@@ -6,7 +6,7 @@
  */
 
 use super::hints::Flags;
-use super::{Hints, NameIter, NameSetQuery};
+use super::{AsyncNameSetQuery, Hints, NameIter};
 use crate::Result;
 use crate::VertexName;
 use indexmap::IndexSet;
@@ -34,26 +34,27 @@ impl StaticSet {
     }
 }
 
-impl NameSetQuery for StaticSet {
-    fn iter(&self) -> Result<Box<dyn NameIter>> {
+#[async_trait::async_trait]
+impl AsyncNameSetQuery for StaticSet {
+    async fn iter(&self) -> Result<Box<dyn NameIter>> {
         let iter = self.0.clone().into_iter().map(Ok);
         Ok(Box::new(iter))
     }
 
-    fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
+    async fn iter_rev(&self) -> Result<Box<dyn NameIter>> {
         let iter = self.0.clone().into_iter().rev().map(Ok);
         Ok(Box::new(iter))
     }
 
-    fn count(&self) -> Result<usize> {
+    async fn count(&self) -> Result<usize> {
         Ok(self.0.len())
     }
 
-    fn is_empty(&self) -> Result<bool> {
+    async fn is_empty(&self) -> Result<bool> {
         Ok(self.0.is_empty())
     }
 
-    fn contains(&self, name: &VertexName) -> Result<bool> {
+    async fn contains(&self, name: &VertexName) -> Result<bool> {
         Ok(self.0.contains(name))
     }
 
@@ -101,12 +102,15 @@ mod tests {
     fn test_static_basic() -> Result<()> {
         let set = static_set(b"\x11\x33\x22\x77\x22\x55\x11");
         check_invariants(&set)?;
-        assert_eq!(shorten_iter(set.iter()), ["11", "33", "22", "77", "55"]);
-        assert_eq!(shorten_iter(set.iter_rev()), ["55", "77", "22", "33", "11"]);
-        assert!(!set.is_empty()?);
-        assert_eq!(set.count()?, 5);
-        assert_eq!(shorten_name(set.first()?.unwrap()), "11");
-        assert_eq!(shorten_name(set.last()?.unwrap()), "55");
+        assert_eq!(shorten_iter(nb(set.iter())), ["11", "33", "22", "77", "55"]);
+        assert_eq!(
+            shorten_iter(nb(set.iter_rev())),
+            ["55", "77", "22", "33", "11"]
+        );
+        assert!(!nb(set.is_empty())?);
+        assert_eq!(nb(set.count())?, 5);
+        assert_eq!(shorten_name(nb(set.first())?.unwrap()), "11");
+        assert_eq!(shorten_name(nb(set.last())?.unwrap()), "55");
         Ok(())
     }
 
@@ -140,7 +144,7 @@ mod tests {
             let set = static_set(&a);
             check_invariants(&set).unwrap();
 
-            let count = set.count().unwrap();
+            let count = nb(set.count()).unwrap();
             assert!(count <= a.len());
 
             let set2: HashSet<_> = a.iter().cloned().collect();
