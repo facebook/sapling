@@ -138,15 +138,25 @@ class DiskUsageCmd(Subcmd):
     hasLFS = False
     hasWorkingCopyBacked = False
 
+    json_mode = False
+
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "mounts", default=[], nargs="*", help="Names of the mount points"
         )
-        parser.add_argument("--clean", action="store_true")
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument("--clean", action="store_true")
+        group.add_argument(
+            "--json",
+            action="store_true",
+            default=False,
+            help="Print the output in JSON format",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         mounts = args.mounts
         clean = args.clean
+        self.json_mode = args.json
 
         color_out = self.color_out
 
@@ -161,7 +171,7 @@ class DiskUsageCmd(Subcmd):
                 raise subcmd_mod.CmdError("no Eden mount found\n")
 
         if clean:
-            color_out.write(
+            self.write_ui(
                 """
 WARNING: --clean option doesn't remove ignored files.
 Materialized files will be de-materialized once committed.
@@ -179,7 +189,7 @@ files outside the repo rather than to ignore and clean them up.\n""",
 
         # print all mounts together.
         for mount in mounts:
-            print(mount)
+            self.writeln_ui(mount)
 
         # loop again because fsck details for each mount
         # are printed if exist
@@ -197,12 +207,12 @@ files outside the repo rather than to ignore and clean them up.\n""",
             self.usage_for_redirections(checkout, all_redirections, clean)
 
         if not all_redirections:
-            print("No redirection")
+            self.writeln_ui("No redirection")
 
         if not clean and all_redirections:
             for redir in all_redirections:
-                print(redir)
-            print(
+                self.writeln_ui(redir)
+            self.writeln_ui(
                 """
 To reclaim space from buck-out directories, run `buck clean` from the
 parent of the buck-out directory.
@@ -212,9 +222,9 @@ parent of the buck-out directory.
         if backing_repos:
             self.underlined("Backing repos")
             for backing in backing_repos:
-                print(backing)
+                self.writeln_ui(backing)
 
-            color_out.write(
+            self.write_ui(
                 """
 CAUTION: You can lose work and break things by manually deleting data
 from the backing repo directory!
@@ -229,16 +239,16 @@ from the backing repo directory!
             self.backing_usage(backing, lfs_repos, backed_working_copy_repos)
 
         if lfs_repos:
-            print(
+            self.writeln_ui(
                 """
 LFS cache detected in backing repo. To reclaim space from the LFS cache directory, run:
 """
             )
             for lfs_repo in lfs_repos:
-                print(f"hg -R {lfs_repo} gc")
+                self.writeln_ui(f"hg -R {lfs_repo} gc")
 
         if backed_working_copy_repos:
-            print(
+            self.writeln_ui(
                 f"""
 Working copy detected in backing repo.  This is not generally useful
 and just takes up space.  You can make this a bare repo to reclaim
@@ -246,12 +256,15 @@ space by running:
 """
             )
             for backed_working_copy in backed_working_copy_repos:
-                print(f"hg -R {backed_working_copy} checkout null")
+                self.writeln_ui(f"hg -R {backed_working_copy} checkout null")
 
         if instance:
             self.shared_usage(instance, clean)
 
         self.make_summary(clean)
+
+        if self.json_mode:
+            print(json.dumps(self.aggregated_usage_counts))
 
         return 0
 
@@ -290,14 +303,14 @@ space by running:
             type_label = type_labels[key]
             clean_label = clean_labels[key] if clean else ""
             if value:
-                self.color_out.write(f.format(type_label, format_size(value)))
+                self.write_ui(f.format(type_label, format_size(value)))
                 if clean_label == "Cleaned":
-                    self.color_out.writeln(clean_label, fg=self.color_out.GREEN)
+                    self.writeln_ui(clean_label, fg=self.color_out.GREEN)
                 else:
-                    self.color_out.writeln(clean_label, fg=self.color_out.YELLOW)
-        self.color_out.writeln("")
+                    self.writeln_ui(clean_label, fg=self.color_out.YELLOW)
+        self.writeln_ui("")
         if not clean:
-            print("To perform automated cleanup, run `eden du --clean`\n")
+            self.writeln_ui("To perform automated cleanup, run `eden du --clean`\n")
 
     def du(self, path) -> int:
         dev = os.stat(path).st_dev
@@ -330,7 +343,7 @@ space by running:
                     failed_to_check_files.append(dirent.path)
             if failed_to_check_files:
                 pretry_failed_to_check_files = ", ".join(failed_to_check_files)
-                self.color_out.write(
+                self.write_ui(
                     "Warning: failed to check paths"
                     f" {pretry_failed_to_check_files} due to file not found or"
                     " permission errors. Note that will also not be able to"
@@ -341,9 +354,16 @@ space by running:
 
         return get_size(path)
 
+    def write_ui(self, message, fg=None) -> None:
+        if not self.json_mode:
+            self.color_out.write(message, fg=fg)
+
+    def writeln_ui(self, message, fg=None) -> None:
+        self.write_ui(f"{message}\n")
+
     def underlined(self, message) -> None:
         underline = "-" * len(message)
-        print(f"\n{message}\n{underline}\n")
+        self.write_ui(f"\n{message}\n{underline}\n")
 
     def usage_for_dir(
         self, path, usage_type: str, print_label: Optional[str] = None
@@ -352,7 +372,9 @@ space by running:
         if usage_type in self.aggregated_usage_counts.keys():
             self.aggregated_usage_counts[usage_type] += usage
         if print_label:
-            print(f"{self.MOVE_TO_SOL_CLEAR_TO_EOL}{print_label}: {format_size(usage)}")
+            self.writeln_ui(
+                f"{self.MOVE_TO_SOL_CLEAR_TO_EOL}{print_label}: {format_size(usage)}"
+            )
 
     def backing_usage(
         self,
@@ -380,10 +402,12 @@ space by running:
         self.usage_for_dir(logs_dir, "shared")
         self.usage_for_dir(storage_dir, "shared")
         if clean:
-            print("Cleaning shared space used by the storage engine...")
+            self.writeln_ui("Cleaning shared space used by the storage engine...")
             subprocess.check_call(["eden", "gc"])
         else:
-            print("\nRun `eden gc` to reduce the space used by the storage engine.")
+            self.writeln_ui(
+                "\nRun `eden gc` to reduce the space used by the storage engine."
+            )
 
     def usage_for_redirections(
         self, checkout: EdenCheckout, redirection_repos: Set[str], clean: bool
@@ -402,10 +426,12 @@ space by running:
                     redir_full_path = os.path.join(checkout.path, redir.repo_path)
                     redirection_repos.add(redir_full_path)
                     if clean:
-                        print(f"\nReclaiming space from redirection: {redir_full_path}")
+                        self.writeln_ui(
+                            f"\nReclaiming space from redirection: {redir_full_path}"
+                        )
                         result = run_buck_command(["buck", "clean"], parent)
                         result.check_returncode()
-                        print("Space reclaimed.\n")
+                        self.writeln_ui("Space reclaimed.\n")
 
         # Deal with any legacy bind mounts that may have been made
         # obsolete by being migrated to redirections
@@ -422,7 +448,7 @@ space by running:
                     )
 
         if legacy_dirs:
-            print(
+            self.writeln_ui(
                 """
 Legacy bind mount dirs listed above are unused and can be removed!
 """
@@ -460,7 +486,7 @@ Legacy bind mount dirs listed above are unused and can be removed!
         if os.path.exists(fsck_dir):
             self.usage_for_dir(fsck_dir, "fsck")
             if clean:
-                print(
+                self.writeln_ui(
                     f"""
 A filesytem check recovered data and stored it at:
 {fsck_dir}
