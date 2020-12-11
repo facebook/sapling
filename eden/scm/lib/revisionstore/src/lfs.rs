@@ -63,6 +63,7 @@ use crate::{
     historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::LocalStore,
+    redacted::{self, is_redacted},
     remotestore::HgIdRemoteStore,
     types::{ContentHash, StoreKey},
     uniondatastore::UnionHgIdDataStore,
@@ -354,10 +355,10 @@ impl LfsIndexedLogBlobsStore {
         }
 
         let data = res.freeze();
-        if &ContentHash::sha256(&data).unwrap_sha256() != hash {
-            Ok(None)
-        } else {
+        if &ContentHash::sha256(&data).unwrap_sha256() == hash || is_redacted(&data) {
             Ok(Some(data))
+        } else {
+            Ok(None)
         }
     }
 
@@ -461,10 +462,10 @@ impl LfsBlobsStore {
                 let mut buf = Vec::new();
                 file.read_to_end(&mut buf)?;
                 let blob = Bytes::from(buf);
-                if &ContentHash::sha256(&blob).unwrap_sha256() != hash {
-                    None
-                } else {
+                if &ContentHash::sha256(&blob).unwrap_sha256() == hash || is_redacted(&blob) {
                     Some(blob)
+                } else {
+                    None
                 }
             }
 
@@ -1168,14 +1169,28 @@ impl LfsRemoteInner {
             accept_zstd,
             http_version,
         )
-        .await?;
+        .await;
 
         if op == Operation::Download {
+            let data = match data {
+                Ok(data) => data,
+                Err(err) => match err.downcast_ref::<FetchError>() {
+                    None => return Err(err),
+                    Some(fetch_error) => match fetch_error {
+                        FetchError::Http(http::StatusCode::GONE, _, _) => {
+                            Some(redacted::REDACTED_CONTENT.clone())
+                        }
+                        _ => return Err(err),
+                    },
+                },
+            };
+
             if let Some(data) = data {
                 spawn_blocking(move || write_to_store(oid, data)).await??
             }
+        } else {
+            let _ = data?;
         }
-
         Ok(())
     }
 
@@ -2580,6 +2595,39 @@ mod tests {
                 stored,
                 StoreResult::Found(expected_delta.data.as_ref().to_vec())
             );
+
+            Ok(())
+        }
+
+        #[test]
+        fn test_lfs_redacted() -> Result<()> {
+            let _env_lock = crate::env_lock();
+
+            let cachedir = TempDir::new()?;
+            let lfsdir = TempDir::new()?;
+            let mut config = make_lfs_config(&cachedir);
+            config.set(
+                "lfs",
+                "url",
+                Some("https://mononoke-lfs.internal.tfbnw.net/fbsource"),
+                &Default::default(),
+            );
+
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let remote = LfsRemote::new(lfs, None, &config)?;
+
+            let blob = (
+                Sha256::from_str(
+                    "5009a98366ddfa6302ff4a12f8ece03d995b8fd2847431699462709212552440",
+                )?,
+                0,
+            );
+
+            let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
+            remote.batch_fetch(&objs, |_, data| {
+                assert!(is_redacted(&data));
+                Ok(())
+            })?;
 
             Ok(())
         }

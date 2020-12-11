@@ -17,15 +17,14 @@ use std::{
 };
 
 use anyhow::{bail, format_err, Context, Result};
-use bytes::Bytes;
 use cpython::*;
 use crossbeam::channel::{bounded, Receiver, Sender};
 
 use cpython_ext::{ExtractInner, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str};
 use pyrevisionstore::contentstore;
 use revisionstore::{
-    datastore::RemoteDataStore, localstore::LocalStore, ContentStore, HgIdDataStore, StoreKey,
-    StoreResult,
+    datastore::RemoteDataStore, localstore::LocalStore, redact_if_needed, ContentStore,
+    HgIdDataStore, StoreKey, StoreResult,
 };
 use types::{HgId, Key, RepoPathBuf};
 use vfs::{UpdateFlag, VFS};
@@ -132,18 +131,6 @@ impl<Ret: Send + 'static, Work: Sync + Send + 'static> Worker<Ret, Work> {
     }
 }
 
-static REDACTED_CONTENT: &str = "PoUOK1GkdH6Xtx5j9WKYew3dZXspyfkahcNkhV6MJ4rhyNICTvX0nxmbCImFoT0oHAF9ivWGaC6ByswQZUgf1nlyxcDcahHknJS15Vl9Lvc4NokYhMg0mV1rapq1a4bhNoUI9EWTBiAkYmkadkO3YQXV0TAjyhUQWxxLVskjOwiiFPdL1l1pdYYCLTE3CpgOoxQV3EPVxGUPh1FGfk7F9Myv22qN1sUPSNN4h3IFfm2NNPRFgWPDsqAcaQ7BUSKa\n";
-static REDACTED_MESSAGE: &str = "This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.\n";
-
-/// If the content was redacted, display a nice message to the user about it.
-fn censor_if_needed(data: Bytes) -> Bytes {
-    if data == REDACTED_CONTENT {
-        Bytes::from_static(REDACTED_MESSAGE.as_bytes())
-    } else {
-        data
-    }
-}
-
 /// Fetch the content of the passed in `key` and write it to it's path.
 fn update(state: &WriterState, key: Key, flag: Option<UpdateFlag>) -> Result<usize> {
     let content = state
@@ -162,7 +149,7 @@ fn update(state: &WriterState, key: Key, flag: Option<UpdateFlag>) -> Result<usi
         bail!("LFS pointers cannot be deserialized properly yet");
     }
 
-    let content = censor_if_needed(content);
+    let content = redact_if_needed(content);
 
     // Fast path: let's try to open the file directly, we'll handle the failure only if this fails.
     match state.working_copy.write(&key.path, &content, flag) {
@@ -378,6 +365,7 @@ mod tests {
     use std::{fs::OpenOptions, os::windows::fs::OpenOptionsExt};
 
     use anyhow::ensure;
+    use bytes::Bytes;
     use memmap::MmapOptions;
     use quickcheck::{quickcheck, TestResult};
     use tempfile::TempDir;

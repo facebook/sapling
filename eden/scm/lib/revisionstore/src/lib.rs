@@ -135,6 +135,7 @@ mod indexedlogutil;
 mod lfs;
 mod memcache;
 mod metadatastore;
+mod redacted;
 mod remotestore;
 mod repack;
 mod sliceext;
@@ -180,6 +181,7 @@ pub use crate::packstore::{
     CorruptionPolicy, DataPackStore, HistoryPackStore, MutableDataPackStore,
     MutableHistoryPackStore,
 };
+pub use crate::redacted::redact_if_needed;
 pub use crate::remotestore::HgIdRemoteStore;
 pub use crate::repack::{repack, RepackKind, RepackLocation, Repackable, ToKeys};
 pub use crate::types::{ContentHash, StoreKey};
