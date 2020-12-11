@@ -51,25 +51,26 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const NODES: &'static str = "nodes";
-pub const EDGES: &'static str = "edges";
-pub const PASS: &'static str = "pass";
-pub const FAIL: &'static str = "fail";
-pub const TOTAL: &'static str = "total";
-pub const NODE_KEY: &'static str = "node_key";
-pub const NODE_TYPE: &'static str = "node_type";
-pub const NODE_PATH: &'static str = "node_path";
-pub const EDGE_TYPE: &'static str = "edge_type";
-pub const CHECK_TYPE: &'static str = "check_type";
-pub const CHECK_FAIL: &'static str = "check_fail";
-pub const WALK_TYPE: &'static str = "walk_type";
-pub const REPO: &'static str = "repo";
-const SRC_NODE_KEY: &'static str = "src_node_key";
-const SRC_NODE_TYPE: &'static str = "src_node_type";
-const SRC_NODE_PATH: &'static str = "src_node_path";
-const VIA_NODE_KEY: &'static str = "via_node_key";
-const VIA_NODE_TYPE: &'static str = "via_node_type";
-const VIA_NODE_PATH: &'static str = "via_node_path";
+pub const NODES: &str = "nodes";
+pub const EDGES: &str = "edges";
+pub const PASS: &str = "pass";
+pub const FAIL: &str = "fail";
+pub const TOTAL: &str = "total";
+pub const NODE_KEY: &str = "node_key";
+pub const NODE_TYPE: &str = "node_type";
+pub const NODE_PATH: &str = "node_path";
+pub const EDGE_TYPE: &str = "edge_type";
+pub const CHECK_TYPE: &str = "check_type";
+pub const CHECK_FAIL: &str = "check_fail";
+pub const WALK_TYPE: &str = "walk_type";
+pub const REPO: &str = "repo";
+pub const ERROR_MSG: &str = "error_msg";
+const SRC_NODE_KEY: &str = "src_node_key";
+const SRC_NODE_TYPE: &str = "src_node_type";
+const SRC_NODE_PATH: &str = "src_node_path";
+const VIA_NODE_KEY: &str = "via_node_key";
+const VIA_NODE_TYPE: &str = "via_node_type";
+const VIA_NODE_PATH: &str = "via_node_path";
 
 define_stats! {
     prefix = "mononoke.walker.validate";

@@ -9,7 +9,7 @@ use crate::graph::{
     AliasKey, EdgeType, FastlogKey, FileContentData, Node, NodeData, NodeType, PathKey, UnodeFlags,
     UnodeKey, UnodeManifestEntry, WrappedPath,
 };
-use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
+use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE, ERROR_MSG};
 
 use anyhow::{format_err, Context, Error};
 use async_trait::async_trait;
@@ -1661,7 +1661,7 @@ where
                 .add(EDGE_TYPE, Into::<&'static str>::into(edge_label))
                 .add(CHECK_TYPE, "step")
                 .add(CHECK_FAIL, 1)
-                .add("error_msg", msg.clone())
+                .add(ERROR_MSG, msg.clone())
                 .log();
             // Optionally attempt to continue
             if error_as_data_node_types.contains(&walk_item.target.get_type()) {
