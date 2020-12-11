@@ -28,9 +28,9 @@ jobs:
     - name: Install curl-openssl
       run: |
         brew install curl-openssl
+        echo "PATH=\"/usr/local/opt/curl-openssl/bin:$PATH\"" >> $GITHUB_ENV
     - name: Install system deps
       run: >-
-        export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
         sudo python3 build/fbcode_builder/getdeps.py
         --allow-system-packages
         install-system-deps
@@ -38,7 +38,6 @@ jobs:
         mononoke_integration
     - name: Build eden_scm dependencies
       run: >-
-        export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
         python3 build/fbcode_builder/getdeps.py build
         --allow-system-packages
         --scratch-path /tmp/build
@@ -48,7 +47,6 @@ jobs:
         eden_scm
     - name: Build eden_scm
       run: >-
-        export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
         python3 build/fbcode_builder/getdeps.py build
         --allow-system-packages
         --scratch-path /tmp/build
@@ -58,7 +56,6 @@ jobs:
         eden_scm
     - name: Build eden_scm_lib_edenapi_tools
       run: >-
-        export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
         python3 build/fbcode_builder/getdeps.py build
         --allow-system-packages
         --scratch-path /tmp/build
@@ -67,7 +64,6 @@ jobs:
         eden_scm_lib_edenapi_tools
     - name: Build mononoke dependencies
       run: >-
-        export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
         python3 build/fbcode_builder/getdeps.py build
         --allow-system-packages
         --scratch-path /tmp/build
@@ -77,7 +73,6 @@ jobs:
         mononoke
     - name: Build mononoke
       run: >-
-        export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
         python3 build/fbcode_builder/getdeps.py build
         --allow-system-packages
         --scratch-path /tmp/build
@@ -97,7 +92,6 @@ jobs:
       # We have to do this unfortunately to avoid rebuilding the previous
       # project as they have been built with "--src-dir=." option.
       run: >-
-        export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
         for x in $(
         sort
         <(python3 build/fbcode_builder/getdeps.py list-deps mononoke_integration)
@@ -119,7 +113,6 @@ jobs:
         ;done
     - name: Build mononoke_integration
       run: >-
-        export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
         python3 build/fbcode_builder/getdeps.py build
         --allow-system-packages
         --scratch-path /tmp/build
@@ -128,7 +121,6 @@ jobs:
         mononoke_integration
     - name: Test mononoke_integration
       run: >-
-        export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
         python3 build/fbcode_builder/getdeps.py test
         --allow-system-packages
         --scratch-path /tmp/build
