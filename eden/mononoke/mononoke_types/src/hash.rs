@@ -357,6 +357,10 @@ macro_rules! impl_hash {
                 unsafe { AsciiString::from_ascii_unchecked(v) }
             }
 
+            pub fn to_brief(&self) -> AsciiString {
+                self.to_hex().into_iter().take(8).collect()
+            }
+
             #[inline]
             pub fn from_ascii_str(s: &AsciiStr) -> Result<Self> {
                 Self::from_str(s.as_str())

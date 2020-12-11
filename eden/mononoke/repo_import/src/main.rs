@@ -28,7 +28,7 @@ use futures::{
     future::{self, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
-use import_tools::{GitimportPreferences, GitimportTarget};
+use import_tools::{FullRepoImport, GitimportPreferences};
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::ManifestOps;
@@ -1038,9 +1038,9 @@ async fn repo_import(
     // Importing process starts here
     if recovery_fields.import_stage == ImportStage::GitImport {
         let prefs = GitimportPreferences::default();
-        let target = GitimportTarget::FullRepo;
+        let target = FullRepoImport {};
         info!(ctx.logger(), "Started importing git commits to Mononoke");
-        let import_map = import_tools::gitimport(&ctx, &repo, &path, target, prefs).await?;
+        let import_map = import_tools::gitimport(&ctx, &repo, &path, &target, prefs).await?;
         info!(ctx.logger(), "Added commits to Mononoke");
 
         let bonsai_values: Vec<(ChangesetId, BonsaiChangeset)> =

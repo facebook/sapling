@@ -26,3 +26,4 @@ futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 git2 = "0.13"
 linked-hash-map = { version = "0.5", features = ["serde_impl"] }
+slog = { version = "2.5", features = ["max_level_debug"] }

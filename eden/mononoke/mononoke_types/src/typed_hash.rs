@@ -194,6 +194,10 @@ macro_rules! impl_typed_hash_no_context {
                 self.0.to_hex()
             }
 
+            pub fn to_brief(&self) -> AsciiString {
+                self.to_hex().into_iter().take(8).collect()
+            }
+
             // (this is public because downstream code wants to be able to serialize these nodes)
             pub fn into_thrift(self) -> thrift::$typed {
                 thrift::$typed(thrift::IdType::Blake2(self.0.into_thrift()))

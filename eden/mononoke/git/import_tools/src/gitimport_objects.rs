@@ -12,12 +12,15 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::LoadableError;
+use bytes::Bytes;
 use context::CoreContext;
 use git2::{ObjectType, Oid, Repository, Revwalk};
 use git_types::mode;
 use manifest::{Entry, Manifest, StoreLoadable};
-use mononoke_types::{hash::GitSha1, typed_hash::ChangesetId, DateTime, FileType, MPathElement};
+use mononoke_types::{hash, typed_hash::ChangesetId, DateTime, FileType, MPathElement};
+use slog::debug;
 use std::collections::{HashMap, HashSet};
+use std::time::Instant;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct GitTree(pub Oid);
@@ -94,19 +97,16 @@ impl StoreLoadable<GitPool> for GitTree {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub struct GitimportPreferences {
-    pub dry_run: bool,
     pub derive_trees: bool,
     pub derive_hg: bool,
     pub hggit_compatibility: bool,
+    pub bonsai_git_mapping: bool,
+    pub gitrepo_name: Option<String>,
 }
 
 impl GitimportPreferences {
-    pub fn enable_dry_run(&mut self) {
-        self.dry_run = true
-    }
-
     pub fn enable_derive_trees(&mut self) {
         self.derive_trees = true
     }
@@ -118,70 +118,198 @@ impl GitimportPreferences {
     pub fn enable_hggit_compatibility(&mut self) {
         self.hggit_compatibility = true
     }
+
+    pub fn enable_bonsai_git_mapping(&mut self) {
+        self.bonsai_git_mapping = true
+    }
+
+    /// Only for logging purpuses,
+    /// useful when several repos are imported simultainously.
+    pub fn set_gitrepo_name(&mut self, name: String) {
+        self.gitrepo_name = Some(name);
+    }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum GitimportTarget {
-    FullRepo,
-    GitRange(Oid, Oid),
+pub fn oid_to_sha1(oid: &Oid) -> Result<hash::GitSha1, Error> {
+    hash::GitSha1::from_bytes(Bytes::copy_from_slice(oid.as_bytes()))
 }
 
-impl GitimportTarget {
-    pub fn populate_walk(&self, repo: &Repository, walk: &mut Revwalk) -> Result<(), Error> {
-        match self {
-            Self::FullRepo => {
-                for reference in repo.references()? {
-                    let reference = reference?;
-                    if let Some(oid) = reference.target() {
-                        walk.push(oid)?;
-                    }
-                }
-            }
-            Self::GitRange(from, to) => {
-                walk.hide(*from)?;
-                walk.push(*to)?;
-            }
-        };
+pub trait GitimportTarget {
+    fn populate_walk(&self, repo: &Repository, walk: &mut Revwalk) -> Result<(), Error>;
 
+    /// Roots are the Oid -> ChangesetId mappings that already are
+    /// imported into Mononoke.
+    fn get_roots(&self) -> Result<HashMap<Oid, ChangesetId>, Error>;
+
+    fn get_nb_commits(&self, repo: &Repository) -> Result<usize, Error> {
+        let mut walk = repo.revwalk()?;
+        self.populate_walk(repo, &mut walk)?;
+        Ok(walk.count())
+    }
+}
+
+pub struct FullRepoImport {}
+
+impl GitimportTarget for FullRepoImport {
+    fn populate_walk(&self, repo: &Repository, walk: &mut Revwalk) -> Result<(), Error> {
+        for reference in repo.references()? {
+            let reference = reference?;
+            if let Some(oid) = reference.target() {
+                walk.push(oid)?;
+            }
+        }
         Ok(())
     }
 
-    pub async fn populate_roots(
-        &self,
+    fn get_roots(&self) -> Result<HashMap<Oid, ChangesetId>, Error> {
+        Ok(HashMap::new())
+    }
+}
+
+pub struct GitRangeImport {
+    pub from: Oid,
+    pub from_csid: ChangesetId,
+    pub to: Oid,
+}
+
+impl GitRangeImport {
+    pub async fn new(
+        from: Oid,
+        to: Oid,
         ctx: &CoreContext,
         repo: &BlobRepo,
-        roots: &mut HashMap<Oid, ChangesetId>,
-    ) -> Result<(), Error> {
-        match self {
-            Self::FullRepo => {
-                // Noop
-            }
-            Self::GitRange(from, _to) => {
-                let root = repo
-                    .bonsai_git_mapping()
-                    .get_bonsai_from_git_sha1(&ctx, GitSha1::from_bytes(from)?)
-                    .await?
-                    .ok_or_else(|| {
-                        format_err!(
-                            "Cannot start import from {}: commit does not exist in Blobrepo",
-                            from
-                        )
-                    })?;
+    ) -> Result<GitRangeImport, Error> {
+        let from_csid = repo
+            .bonsai_git_mapping()
+            .get_bonsai_from_git_sha1(&ctx, hash::GitSha1::from_bytes(from)?)
+            .await?
+            .ok_or_else(|| {
+                format_err!(
+                    "Cannot start import from root {}: commit does not exist in Blobrepo",
+                    from
+                )
+            })?;
+        Ok(GitRangeImport {
+            from,
+            from_csid,
+            to,
+        })
+    }
+}
 
-                roots.insert(*from, root);
-            }
-        };
-
+impl GitimportTarget for GitRangeImport {
+    fn populate_walk(&self, _: &Repository, walk: &mut Revwalk) -> Result<(), Error> {
+        walk.hide(self.from)?;
+        walk.push(self.to)?;
         Ok(())
+    }
+
+    fn get_roots(&self) -> Result<HashMap<Oid, ChangesetId>, Error> {
+        let mut roots = HashMap::new();
+        roots.insert(self.from, self.from_csid);
+        Ok(roots)
+    }
+}
+
+/// Intended to import all git commits that are missing to fully
+/// represent specified commit with all its histroy.
+/// It will check what is already present and only import the minimum set required.
+pub struct ImportMissingForCommit {
+    commit: Oid,
+    commits_to_add: usize,
+    roots: HashMap<Oid, ChangesetId>,
+}
+
+impl ImportMissingForCommit {
+    pub async fn new(
+        commit: Oid,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        gitrepo: &Repository,
+    ) -> Result<ImportMissingForCommit, Error> {
+        let ta = Instant::now();
+
+        // Starting from the specified commit. We need to get the boundaries of what already is imported into Mononoke.
+        // We do this by doing a bfs search from the specified commit.
+        let mut existing = HashMap::<Oid, ChangesetId>::new();
+        let mut visisted = HashSet::new();
+        let mut q = Vec::new();
+        q.push(commit);
+        while !q.is_empty() {
+            let id = q.pop().unwrap();
+            if !visisted.contains(&id) {
+                visisted.insert(id);
+                if let Some(changeset) =
+                    ImportMissingForCommit::commit_in_mononoke(ctx, repo, &id).await?
+                {
+                    existing.insert(id, changeset);
+                } else {
+                    q.extend(gitrepo.find_commit(id)?.parent_ids());
+                }
+            }
+        }
+
+        let commits_to_add = visisted.len() - existing.len();
+
+        let tb = Instant::now();
+        debug!(
+            ctx.logger(),
+            "Time to find missing commits {:?}",
+            tb.duration_since(ta)
+        );
+
+        Ok(ImportMissingForCommit {
+            commit,
+            commits_to_add,
+            roots: existing,
+        })
+    }
+
+    async fn commit_in_mononoke(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        commit_id: &Oid,
+    ) -> Result<Option<ChangesetId>, Error> {
+        let changeset = repo
+            .bonsai_git_mapping()
+            .get_bonsai_from_git_sha1(ctx, oid_to_sha1(commit_id)?)
+            .await?;
+        if let Some(existing_changeset) = changeset {
+            debug!(
+                ctx.logger(),
+                "Commit found in Mononoke Oid:{} -> ChangesetId:{}",
+                oid_to_sha1(commit_id)?.to_brief(),
+                existing_changeset.to_brief()
+            );
+        }
+        Ok(changeset)
+    }
+}
+
+impl GitimportTarget for ImportMissingForCommit {
+    fn populate_walk(&self, _: &Repository, walk: &mut Revwalk) -> Result<(), Error> {
+        walk.push(self.commit)?;
+        self.roots.keys().try_for_each(|v| walk.hide(*v))?;
+        Ok(())
+    }
+
+    fn get_roots(&self) -> Result<HashMap<Oid, ChangesetId>, Error> {
+        Ok(self.roots.clone())
+    }
+
+    fn get_nb_commits(&self, _: &Repository) -> Result<usize, Error> {
+        Ok(self.commits_to_add)
     }
 }
 
 pub struct CommitMetadata {
     pub oid: Oid,
     pub parents: Vec<Oid>,
-    pub author: String,
     pub message: String,
+    pub author: String,
     pub author_date: DateTime,
+    pub committer: String,
+    pub committer_date: DateTime,
 }
 
 pub struct ExtractedCommit {
@@ -205,19 +333,18 @@ impl ExtractedCommit {
                 })
                 .collect::<Result<_, Error>>()?;
 
-            // TODO: Include email in the author
-            let author = commit
-                .author()
-                .name()
-                .ok_or_else(|| format_err!("Commit has no author: {:?}", commit.id()))?
-                .to_owned();
+            let author = format!("{}", commit.author());
+            let committer = format!("{}", commit.committer());
 
             let message = commit.message().unwrap_or_default().to_owned();
 
             let parents = commit.parents().map(|p| p.id()).collect();
 
-            let time = commit.time();
+            let time = commit.author().when();
             let author_date = DateTime::from_timestamp(time.seconds(), time.offset_minutes() * 60)?;
+            let time = commit.committer().when();
+            let committer_date =
+                DateTime::from_timestamp(time.seconds(), time.offset_minutes() * 60)?;
 
             Result::<_, Error>::Ok(ExtractedCommit {
                 metadata: CommitMetadata {
@@ -226,6 +353,8 @@ impl ExtractedCommit {
                     message,
                     author,
                     author_date,
+                    committer,
+                    committer_date,
                 },
                 tree,
                 parent_trees,

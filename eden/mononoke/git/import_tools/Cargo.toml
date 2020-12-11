@@ -10,6 +10,7 @@ include = ["src/**/*.rs"]
 blobrepo = { path = "../../blobrepo" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobstore = { path = "../../blobstore" }
+bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
 changesets = { path = "../../changesets" }
 context = { path = "../../server/context" }
 derived_data = { path = "../../derived_data" }

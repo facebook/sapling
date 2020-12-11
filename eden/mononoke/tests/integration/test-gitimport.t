@@ -25,25 +25,23 @@
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO" --derive-trees --derive-hg --hggit-compatibility full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Created 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e => ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0)) (glob)
-  * 1 bonsai changesets have been committed (glob)
-  * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0))) (glob)
+  * GitRepo:repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * 1 tree(s) are valid! (glob)
-  * Hg: 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e: HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
+  * Hg: 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e: HgManifestId(HgNodeHash(Sha1(*))) (glob)
+  * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(d4229e9850e9244c3a986a62590ffada646e7200593bc26e4cc8c9aa10730a26))) (glob)
 
 # Also check that a readonly import works
   $ gitimport "$GIT_REPO" --with-readonly-storage=true --derive-trees --derive-hg --hggit-compatibility full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Created 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e => ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0)) (glob)
-  * 1 bonsai changesets have been committed (glob)
-  * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0))) (glob)
+  * GitRepo:repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * 1 tree(s) are valid! (glob)
-  * Hg: 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e: HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
+  * Hg: 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e: HgManifestId(HgNodeHash(Sha1(*))) (glob)
+  * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(*))) (glob)
 
 # Set master (gitimport does not do this yet)
-  $ mononoke_admin bookmarks set master 967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0
+  $ mononoke_admin bookmarks set master d4229e9850e9244c3a986a62590ffada646e7200593bc26e4cc8c9aa10730a26
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * changeset resolved as: ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0)) (glob)
+  * changeset resolved as: ChangesetId(Blake2(d4229e9850e9244c3a986a62590ffada646e7200593bc26e4cc8c9aa10730a26)) (glob)
   * Current position of BookmarkName { bookmark: "master" } is None (glob)
 
 # Start Mononoke

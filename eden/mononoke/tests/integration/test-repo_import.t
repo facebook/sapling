@@ -115,15 +115,13 @@
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * Started importing git commits to Mononoke (glob)
-  * Created ce435b03d4ef526648f8654c61e26ae5cc1069cc => ChangesetId(Blake2(f7cbf75d9c08ff96896ed2cebd0327aa514e58b1dd9901d50129b9e08f4aa062)) (glob)
-  * Created 2c01e4a5658421e2bfcd08e31d9b69399319bcd3 => ChangesetId(Blake2(f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb)) (glob)
-  * 2 bonsai changesets have been committed (glob)
-  * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb))) (glob)
+  * GitRepo:* commit 1 of 2 - Oid:* => Bid:* (glob)
+  * GitRepo:* commit 2 of 2 - Oid:* => Bid:* (glob)
   * Added commits to Mononoke (glob)
   * Saving gitimported bonsai changesets (glob)
   * Saved gitimported bonsai changesets (glob)
-  * Remapped ChangesetId(Blake2(f7cbf75d9c08ff96896ed2cebd0327aa514e58b1dd9901d50129b9e08f4aa062)) => ChangesetId(Blake2(a159bc614d2dbd07a5ecc6476156fa464b69e884d819bbc2e854ade3e4c353b9)) (glob)
-  * Remapped ChangesetId(Blake2(f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb)) => ChangesetId(Blake2(a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5)) (glob)
+  * Remapped ChangesetId(Blake2(*)) => ChangesetId(Blake2(*)) (glob)
+  * Remapped ChangesetId(Blake2(*)) => ChangesetId(Blake2(*)) (glob)
   * Saving shifted bonsai changesets (glob)
   * Saved shifted bonsai changesets (glob)
   * Start deriving data types (glob)
@@ -143,21 +141,21 @@
 # Check if we derived all the types
   $ BOOKMARK_NAME="repo_import_new_repo"
   $ mononoke_admin derived-data exists changeset_info $BOOKMARK_NAME 2> /dev/null
-  Derived: a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5
+  Derived: 2dcfd5aae7492591bca9870e9679b74ca607f50093a667c635b3e3e183c11681
   $ mononoke_admin derived-data exists blame $BOOKMARK_NAME 2> /dev/null
-  Derived: a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5
+  Derived: 2dcfd5aae7492591bca9870e9679b74ca607f50093a667c635b3e3e183c11681
   $ mononoke_admin derived-data exists deleted_manifest $BOOKMARK_NAME 2> /dev/null
-  Derived: a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5
+  Derived: 2dcfd5aae7492591bca9870e9679b74ca607f50093a667c635b3e3e183c11681
   $ mononoke_admin derived-data exists fastlog $BOOKMARK_NAME 2> /dev/null
-  Derived: a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5
+  Derived: 2dcfd5aae7492591bca9870e9679b74ca607f50093a667c635b3e3e183c11681
   $ mononoke_admin derived-data exists filenodes $BOOKMARK_NAME 2> /dev/null
-  Derived: a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5
+  Derived: 2dcfd5aae7492591bca9870e9679b74ca607f50093a667c635b3e3e183c11681
   $ mononoke_admin derived-data exists fsnodes $BOOKMARK_NAME 2> /dev/null
-  Derived: a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5
+  Derived: 2dcfd5aae7492591bca9870e9679b74ca607f50093a667c635b3e3e183c11681
   $ mononoke_admin derived-data exists hgchangesets $BOOKMARK_NAME 2> /dev/null
-  Derived: a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5
+  Derived: 2dcfd5aae7492591bca9870e9679b74ca607f50093a667c635b3e3e183c11681
   $ mononoke_admin derived-data exists unodes $BOOKMARK_NAME 2> /dev/null
-  Derived: a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5
+  Derived: 2dcfd5aae7492591bca9870e9679b74ca607f50093a667c635b3e3e183c11681
 
 # Start Mononoke
   $ mononoke
@@ -177,8 +175,8 @@
     "dest_path": "new_dir/new_repo",
     "git_repo_path": "$TESTTMP/repo-git",
     "gitimport_bcs_ids": [
-      "f7cbf75d9c08ff96896ed2cebd0327aa514e58b1dd9901d50129b9e08f4aa062",
-      "f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb"
+      "*", (glob)
+      "*" (glob)
     ],
     "hg_sync_check_disabled": true,
     "import_stage": "PushCommit",
@@ -187,8 +185,8 @@
     "phab_check_disabled": true,
     "recovery_file_path": "$TESTTMP/repo-git/recovery_file.json",
     "shifted_bcs_ids": [
-      "a159bc614d2dbd07a5ecc6476156fa464b69e884d819bbc2e854ade3e4c353b9",
-      "a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5"
+      "*", (glob)
+      "*" (glob)
     ],
     "sleep_time": 5,
     "x_repo_check_disabled": false
@@ -212,9 +210,9 @@
   $ log -r "all()"
   @    merging [draft;rev=5;*] (glob)
   ├─╮
-  │ o  Add file3 [draft;rev=4;12e9a7555b29]
+  │ o  Add file3 [draft;rev=4;*] (glob)
   │ │
-  │ o  Add file1 and file2 [draft;rev=3;25f978935fdd]
+  │ o  Add file1 and file2 [draft;rev=3;*] (glob)
   │
   o  C [draft;rev=2;26805aba1e60]
   │

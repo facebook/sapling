@@ -21,10 +21,13 @@ use cmdlib::args;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use git2::Oid;
-use import_tools::{GitimportPreferences, GitimportTarget};
+use git2::{Oid, Repository};
+use import_tools::{
+    FullRepoImport, GitRangeImport, GitimportPreferences, GitimportTarget, ImportMissingForCommit,
+};
 use linked_hash_map::LinkedHashMap;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
+use slog::info;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -36,19 +39,24 @@ use crate::mem_writes_changesets::MemWritesChangesets;
 
 const SUBCOMMAND_FULL_REPO: &str = "full-repo";
 const SUBCOMMAND_GIT_RANGE: &str = "git-range";
+const SUBCOMMAND_MISSING_FOR_COMMIT: &str = "missing-for-commit";
 
 const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
 const ARG_DERIVE_TREES: &str = "derive-trees";
 const ARG_DERIVE_HG: &str = "derive-hg";
 const ARG_HGGIT_COMPATIBILITY: &str = "hggit-compatibility";
+const ARG_BONSAI_GIT_MAPPING: &str = "bonsai-git-mapping";
+const ARG_SUPPRESS_REF_MAPPING: &str = "suppress-ref-mapping";
 
 const ARG_GIT_FROM: &str = "git-from";
 const ARG_GIT_TO: &str = "git-to";
 
+const ARG_GIT_COMMIT: &str = "git-commit";
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = args::MononokeAppBuilder::new("Mononoke Git Importer")
-        .with_advanced_args_hidden()
+        .with_repo_required()
         .build()
         .arg(
             Arg::with_name(ARG_DERIVE_TREES)
@@ -69,6 +77,20 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .required(false)
                 .takes_value(false),
         )
+        .arg(
+            Arg::with_name(ARG_BONSAI_GIT_MAPPING)
+                .long(ARG_BONSAI_GIT_MAPPING)
+                .help("For each created commit also create a bonsai<->git commit mapping.")
+                .required(false)
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name(ARG_SUPPRESS_REF_MAPPING)
+                .long(ARG_SUPPRESS_REF_MAPPING)
+                .help("This is used to suppress the printing of the potentially really long git Reference -> BonzaiID mapping.")
+                .required(false)
+                .takes_value(false),
+        )
         .arg(Arg::with_name(ARG_GIT_REPOSITORY_PATH).help("Path to a git repository to import"))
         .subcommand(SubCommand::with_name(SUBCOMMAND_FULL_REPO))
         .subcommand(
@@ -79,6 +101,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         .takes_value(true),
                 )
                 .arg(Arg::with_name(ARG_GIT_TO).required(true).takes_value(true)),
+        )
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_MISSING_FOR_COMMIT).arg(
+                Arg::with_name(ARG_GIT_COMMIT)
+                    .required(true)
+                    .takes_value(true),
+            ),
         );
 
     let mut prefs = GitimportPreferences::default();
@@ -87,9 +116,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     // if we are readonly, then we'll set up some overrides to still be able to do meaningful
     // things below.
-    if args::parse_readonly_storage(&matches).0 {
-        prefs.enable_dry_run();
-    }
+    let dry_run = args::parse_readonly_storage(&matches).0;
 
     if matches.is_present(ARG_DERIVE_TREES) {
         prefs.enable_derive_trees();
@@ -103,17 +130,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         prefs.enable_hggit_compatibility();
     }
 
-    let target = match matches.subcommand() {
-        (SUBCOMMAND_FULL_REPO, Some(..)) => GitimportTarget::FullRepo,
-        (SUBCOMMAND_GIT_RANGE, Some(range_matches)) => {
-            let from = range_matches.value_of(ARG_GIT_FROM).unwrap().parse()?;
-            let to = range_matches.value_of(ARG_GIT_TO).unwrap().parse()?;
-            GitimportTarget::GitRange(from, to)
-        }
-        _ => {
-            return Err(Error::msg("A valid subcommand is required"));
-        }
-    };
+    if matches.is_present(ARG_BONSAI_GIT_MAPPING) {
+        prefs.enable_bonsai_git_mapping();
+    }
 
     let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
 
@@ -127,7 +146,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         async {
             let repo = repo.await?;
 
-            let repo = if prefs.dry_run {
+            let repo = if dry_run {
                 repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
                     Arc::new(MemWritesBlobstore::new(blobstore))
                 })
@@ -142,15 +161,37 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 repo
             };
 
-            let gitimport_result: Result<
-                LinkedHashMap<Oid, (ChangesetId, BonsaiChangeset)>,
-                Error,
-            > = import_tools::gitimport(&ctx, &repo, &path, target, prefs).await;
+            let git_repo = Repository::open(&path)?;
 
-            match gitimport_result {
-                Ok(_import_map) => Ok(()),
-                Err(e) => Err(e),
+            let target: Box<dyn GitimportTarget> = match matches.subcommand() {
+                (SUBCOMMAND_FULL_REPO, Some(..)) => Box::new(FullRepoImport {}),
+                (SUBCOMMAND_GIT_RANGE, Some(range_matches)) => {
+                    let from = range_matches.value_of(ARG_GIT_FROM).unwrap().parse()?;
+                    let to = range_matches.value_of(ARG_GIT_TO).unwrap().parse()?;
+                    Box::new(GitRangeImport::new(from, to, &ctx, &repo).await?)
+                }
+                (SUBCOMMAND_MISSING_FOR_COMMIT, Some(matches)) => {
+                    let commit = matches.value_of(ARG_GIT_COMMIT).unwrap().parse()?;
+                    Box::new(ImportMissingForCommit::new(commit, &ctx, &repo, &git_repo).await?)
+                }
+                _ => {
+                    return Err(Error::msg("A valid subcommand is required"));
+                }
+            };
+
+            let gitimport_result: LinkedHashMap<Oid, (ChangesetId, BonsaiChangeset)> =
+                import_tools::gitimport(&ctx, &repo, &path, &*target, prefs).await?;
+
+            if !matches.is_present(ARG_SUPPRESS_REF_MAPPING) {
+                for reference in git_repo.references()? {
+                    let reference = reference?;
+                    let commit = reference.peel_to_commit()?;
+                    let bcs_id = gitimport_result.get(&commit.id()).map(|e| e.0);
+                    info!(ctx.logger(), "Ref: {:?}: {:?}", reference.name(), bcs_id);
+                }
             }
+
+            Ok(())
         },
         fb,
         "gitimport",

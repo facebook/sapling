@@ -28,14 +28,13 @@
   $ git commit -qm "Add test file"
   $ gitimport "$GIT_REPO" --derive-hg full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * Created * => ChangesetId(Blake2(*)) (glob)
-  * 1 bonsai changesets have been committed (glob)
-  * Ref: Some(*): Some(ChangesetId(Blake2(58e2e39ada0c915556ca3ff52fb45a213e09255c752164343ee01af7cd91a604))) (glob)
+  * GitRepo:repo-git commit 1 of 1 - Oid:* => Bid:* (glob)
   * Hg: *: HgManifestId(HgNodeHash(Sha1(*))) (glob)
+  * Ref: Some(*): Some(ChangesetId(Blake2(968ac4f1e35e964e19028f9a81b1fe2ae9852fe09b11697542726017e5f9e3fd))) (glob)
 
 # Set test bookmark
 
-  $ quiet mononoke_admin bookmarks set "$BOOKMARK" 58e2e39ada0c915556ca3ff52fb45a213e09255c752164343ee01af7cd91a604
+  $ quiet mononoke_admin bookmarks set "$BOOKMARK" 968ac4f1e35e964e19028f9a81b1fe2ae9852fe09b11697542726017e5f9e3fd
 
 # Start Mononoke
 

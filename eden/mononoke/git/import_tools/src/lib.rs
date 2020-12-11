@@ -10,19 +10,20 @@ mod gitimport_objects;
 
 pub use crate::git_pool::GitPool;
 pub use crate::gitimport_objects::{
-    CommitMetadata, ExtractedCommit, GitLeaf, GitManifest, GitTree, GitimportPreferences,
-    GitimportTarget,
+    oid_to_sha1, CommitMetadata, ExtractedCommit, FullRepoImport, GitLeaf, GitManifest,
+    GitRangeImport, GitTree, GitimportPreferences, GitimportTarget, ImportMissingForCommit,
 };
 use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Blobstore;
+use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bytes::Bytes;
 use changesets::ChangesetInsert;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use filestore::{self, FilestoreConfig, StoreRequest};
+use filestore::{self, Alias, FetchKey, FilestoreConfig, StoreRequest};
 use futures::{compat::Future01CompatExt, future, stream, Stream, StreamExt, TryStreamExt};
 use git2::{Oid, Repository, Sort};
 use git_types::TreeHandle;
@@ -31,10 +32,10 @@ use manifest::{bonsai_diff, BonsaiDiffFileChange, StoreLoadable};
 use mercurial_derived_data::get_manifest_from_bonsai;
 use mercurial_types::HgManifestId;
 use mononoke_types::{
-    blob::BlobstoreValue, hash::RichGitSha1, typed_hash::MononokeId, BonsaiChangeset,
-    BonsaiChangesetMut, ChangesetId, ContentMetadata, FileChange, MPath,
+    blob::BlobstoreValue, hash, typed_hash::MononokeId, BonsaiChangeset, BonsaiChangesetMut,
+    ChangesetId, ContentMetadata, FileChange, MPath,
 };
-use slog::info;
+use slog::{debug, info};
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
 use std::path::Path;
@@ -48,6 +49,21 @@ async fn do_upload<B: Blobstore + Clone + 'static>(
     pool: GitPool,
     oid: Oid,
 ) -> Result<ContentMetadata, Error> {
+    // First lets see if we already have the blob in Mononoke.
+    let sha1 = oid_to_sha1(&oid)?;
+    if let Some(meta) =
+        filestore::get_metadata(blobstore, ctx, &FetchKey::from(Alias::GitSha1(sha1))).await?
+    {
+        debug!(
+            ctx.logger(),
+            "Found git-blob:{} size:{} in blostore.",
+            sha1.to_brief(),
+            meta.total_size,
+        );
+        return Ok(meta);
+    }
+
+    // Blob not already in Mononoke, lets upload it.
     let (id, bytes) = pool
         .with(move |repo| {
             let blob = repo.find_blob(oid)?;
@@ -58,9 +74,15 @@ async fn do_upload<B: Blobstore + Clone + 'static>(
         .await?;
 
     let size = bytes.len().try_into()?;
-    let git_sha1 = RichGitSha1::from_bytes(Bytes::copy_from_slice(id.as_bytes()), "blob", size)?;
+    let git_sha1 =
+        hash::RichGitSha1::from_bytes(Bytes::copy_from_slice(id.as_bytes()), "blob", size)?;
     let req = StoreRequest::with_git_sha1(size, git_sha1);
-
+    debug!(
+        ctx.logger(),
+        "Uploading git-blob:{} size:{}",
+        sha1.to_brief(),
+        size
+    );
     let meta = filestore::store(
         blobstore,
         FilestoreConfig::default(),
@@ -75,7 +97,6 @@ async fn do_upload<B: Blobstore + Clone + 'static>(
 
 // TODO: Try to produce copy-info?
 // TODO: Translate LFS pointers?
-// TODO: Don't re-upload things we already have
 async fn find_file_changes<S, B: Blobstore + Clone + 'static>(
     ctx: &CoreContext,
     blobstore: &B,
@@ -111,9 +132,18 @@ pub async fn gitimport(
     ctx: &CoreContext,
     repo: &BlobRepo,
     path: &Path,
-    target: GitimportTarget,
+    target: &dyn GitimportTarget,
     prefs: GitimportPreferences,
 ) -> Result<LinkedHashMap<Oid, (ChangesetId, BonsaiChangeset)>, Error> {
+    let repo_name = if let Some(name) = &prefs.gitrepo_name {
+        String::from(name)
+    } else {
+        String::from(path.file_name().unwrap_or_default().to_string_lossy())
+    };
+    let repo_name_ref = &repo_name;
+    let hggit_compatibility = prefs.hggit_compatibility;
+    let bonsai_git_mapping = prefs.bonsai_git_mapping;
+
     let walk_repo = Repository::open(&path)?;
     let pool = &GitPool::new(path.to_path_buf())?;
 
@@ -124,11 +154,12 @@ pub async fn gitimport(
     // TODO: Don't import everything in one go. Instead, hide things we already imported from the
     // traversal.
 
-    let roots = &{
-        let mut roots = HashMap::new();
-        target.populate_roots(&ctx, &repo, &mut roots).await?;
-        roots
-    };
+    let roots = &target.get_roots()?;
+    let nb_commits_to_import = target.get_nb_commits(&walk_repo)?;
+    if 0 == nb_commits_to_import {
+        info!(ctx.logger(), "Nothing to import for repo {}.", repo_name);
+        return Ok(LinkedHashMap::new());
+    }
 
     // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
 
@@ -170,13 +201,15 @@ pub async fn gitimport(
                     let CommitMetadata {
                         oid,
                         parents,
-                        author,
                         message,
+                        author,
                         author_date,
+                        committer,
+                        committer_date,
                     } = metadata;
 
                     let mut extra = BTreeMap::new();
-                    if prefs.hggit_compatibility {
+                    if hggit_compatibility {
                         extra.insert(
                             HGGIT_COMMIT_ID_EXTRA.to_string(),
                             oid.to_string().into_bytes(),
@@ -200,8 +233,8 @@ pub async fn gitimport(
                         parents,
                         author,
                         author_date,
-                        committer: None,
-                        committer_date: None,
+                        committer: Some(committer),
+                        committer_date: Some(committer_date),
                         message,
                         extra,
                         file_changes,
@@ -230,28 +263,32 @@ pub async fn gitimport(
                         .compat()
                         .await?;
 
-                    info!(ctx.logger(), "Created {:?} => {:?}", oid, bcs_id);
+                    if bonsai_git_mapping {
+                        repo.bonsai_git_mapping()
+                            .bulk_add(
+                                &ctx,
+                                &[BonsaiGitMappingEntry::new(oid_to_sha1(&oid)?, bcs_id)],
+                            )
+                            .await?;
+                    }
 
                     import_map.insert(oid, (bcs_id, bcs));
+
+                    info!(
+                        ctx.logger(),
+                        "GitRepo:{} commit {} of {} - Oid:{} => Bid:{}",
+                        repo_name_ref,
+                        import_map.len(),
+                        nb_commits_to_import,
+                        oid_to_sha1(&oid)?.to_brief(),
+                        bcs_id.to_brief()
+                    );
+
                     Result::<_, Error>::Ok(import_map)
                 }
             },
         )
         .await?;
-
-    info!(
-        ctx.logger(),
-        "{} bonsai changesets have been committed",
-        import_map.len()
-    );
-
-    for reference in walk_repo.references()? {
-        let reference = reference?;
-
-        let commit = reference.peel_to_commit()?;
-        let bcs_id = import_map.get(&commit.id()).map(|e| e.0);
-        info!(ctx.logger(), "Ref: {:?}: {:?}", reference.name(), bcs_id);
-    }
 
     if prefs.derive_trees {
         for (id, (bcs_id, _bcs)) in import_map.iter() {
