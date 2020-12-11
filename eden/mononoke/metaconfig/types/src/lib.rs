@@ -698,7 +698,7 @@ impl FromValue for MultiplexId {
 /// can be broadly classified as "local" and "remote". "Local" is primarily for testing, and is
 /// only suitable for single hosts. "Remote" is durable storage which can be shared by multiple
 /// BlobRepo instances on different hosts.
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, Hash)]
 pub struct StorageConfig {
     /// Blobstores. If the blobstore has a BlobstoreId then it can be used as a component of
     /// a Multiplexed blobstore.
@@ -708,7 +708,7 @@ pub struct StorageConfig {
 }
 
 /// What to do when the ScrubBlobstore finds a problem
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize, Hash)]
 pub enum ScrubAction {
     /// Log items needing repair
     ReportOnly,
@@ -730,7 +730,7 @@ impl FromStr for ScrubAction {
 
 /// Whether we should read from this blobstore normally in a Multiplex,
 /// or only read from it in Scrub or when it's our last chance to find the blob
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize, Hash)]
 pub enum MultiplexedStoreType {
     /// Normal operation, no special treatment
     Normal,
@@ -739,7 +739,7 @@ pub enum MultiplexedStoreType {
 }
 
 /// Configuration for a blobstore
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum BlobConfig {
     /// Administratively disabled blobstore
     Disabled,
@@ -894,21 +894,21 @@ impl Default for BlobConfig {
 }
 
 /// Configuration for a local SQLite database
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct LocalDatabaseConfig {
     /// Path to the directory containing the SQLite databases
     pub path: PathBuf,
 }
 
 /// Configuration for a remote MySQL database
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RemoteDatabaseConfig {
     /// SQL database to connect to
     pub db_address: String,
 }
 
 /// Configuration for a sharded remote MySQL database
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ShardedRemoteDatabaseConfig {
     /// SQL database shard map to connect to
     pub shard_map: String,
@@ -917,7 +917,7 @@ pub struct ShardedRemoteDatabaseConfig {
 }
 
 /// Configuration for a potentially sharded remote MySQL database
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum ShardableRemoteDatabaseConfig {
     /// Database is not sharded.
     Unsharded(RemoteDatabaseConfig),
@@ -926,7 +926,7 @@ pub enum ShardableRemoteDatabaseConfig {
 }
 
 /// Configuration for a single database
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum DatabaseConfig {
     /// Local SQLite database
     Local(LocalDatabaseConfig),
@@ -945,7 +945,7 @@ impl DatabaseConfig {
 }
 
 /// Configuration for the Metadata database when it is remote.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RemoteMetadataDatabaseConfig {
     /// Database for the primary metadata.
     pub primary: RemoteDatabaseConfig,
@@ -956,7 +956,7 @@ pub struct RemoteMetadataDatabaseConfig {
 }
 
 /// Configuration for the Metadata database
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum MetadataDatabaseConfig {
     /// Local SQLite database
     Local(LocalDatabaseConfig),
