@@ -216,7 +216,7 @@ impl<'a> MetadataStoreBuilder<'a> {
     }
 
     pub fn build(self) -> Result<MetadataStore> {
-        let _local_path = get_local_path(&self.local_path, &self.suffix)?;
+        let local_path = get_local_path(&self.local_path, &self.suffix)?;
         let cache_path = get_cache_path(self.config, &self.suffix)?;
         let max_pending: u64 = self
             .config
@@ -263,15 +263,15 @@ impl<'a> MetadataStoreBuilder<'a> {
         };
 
         let local_mutablehistorystore: Option<Arc<dyn HgIdMutableHistoryStore>> =
-            if let Some(local_path) = self.local_path {
+            if let Some(unsuffixed_local_path) = self.local_path {
                 let local_pack_store = Arc::new(MutableHistoryPackStore::new(
-                    get_packs_path(&local_path, &self.suffix)?,
+                    get_packs_path(&unsuffixed_local_path, &self.suffix)?,
                     CorruptionPolicy::IGNORE,
                     max_pending,
                     None,
                 )?);
                 let local_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
-                    get_indexedloghistorystore_path(&local_path)?,
+                    get_indexedloghistorystore_path(&local_path.unwrap())?,
                     &self.config,
                     IndexedLogHistoryStoreType::Local,
                 )?);
@@ -559,14 +559,12 @@ mod tests {
             store.shared_mutablehistorystore.get_node_info(&k)?,
             Some(nodeinfo)
         );
-        assert!(
-            store
-                .local_mutablehistorystore
-                .as_ref()
-                .unwrap()
-                .get_node_info(&k)?
-                .is_none()
-        );
+        assert!(store
+            .local_mutablehistorystore
+            .as_ref()
+            .unwrap()
+            .get_node_info(&k)?
+            .is_none());
         Ok(())
     }
 

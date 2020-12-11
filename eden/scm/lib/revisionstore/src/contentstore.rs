@@ -396,7 +396,7 @@ impl<'a> ContentStoreBuilder<'a> {
                     extstored_policy,
                 )?);
                 let local_indexedlogdatastore = Arc::new(IndexedLogHgIdDataStore::new(
-                    get_indexedlogdatastore_path(&unsuffixed_local_path)?,
+                    get_indexedlogdatastore_path(local_path.as_ref().unwrap())?,
                     extstored_policy,
                     self.config,
                     IndexedLogDataStoreType::Local,
