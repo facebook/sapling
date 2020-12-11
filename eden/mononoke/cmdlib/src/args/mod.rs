@@ -772,47 +772,51 @@ fn get_repo_id_and_name_from_values<'a>(
     let repo_name = matches.value_of(option_repo_name);
     let repo_id = matches.value_of(option_repo_id);
     let configs = load_repo_configs(config_store, matches)?;
-
-    match (repo_name, repo_id) {
+    let resolved = match (repo_name, repo_id) {
         (Some(_), Some(_)) => bail!("both repo-name and repo-id parameters set"),
         (None, None) => bail!("neither repo-name nor repo-id parameter set"),
-        (None, Some(repo_id)) => {
-            let repo_id = RepositoryId::from_str(repo_id)?;
-            let mut repo_config: Vec<_> = configs
-                .repos
-                .into_iter()
-                .filter(|(_, repo_config)| repo_config.repoid == repo_id)
-                .collect();
-            if repo_config.is_empty() {
-                Err(format_err!("unknown config for repo-id {:?}", repo_id))
-            } else if repo_config.len() > 1 {
-                Err(format_err!(
-                    "multiple configs defined for repo-id {:?}",
-                    repo_id
-                ))
-            } else {
-                let (repo_name, repo_config) = repo_config.pop().unwrap();
-                Ok((repo_config.repoid, repo_name))
-            }
+        (None, Some(repo_id)) => resolve_repo_given_id(RepositoryId::from_str(repo_id)?, &configs)?,
+        (Some(repo_name), None) => resolve_repo_given_name(repo_name, &configs)?,
+    };
+
+    Ok((resolved.id, resolved.name))
+}
+
+struct ResolvedRepo {
+    id: RepositoryId,
+    name: String,
+}
+
+fn resolve_repo_given_id(id: RepositoryId, configs: &RepoConfigs) -> Result<ResolvedRepo> {
+    let config = configs
+        .repos
+        .iter()
+        .filter(|(_, c)| c.repoid == id)
+        .enumerate()
+        .last();
+    if let Some((count, (name, _config))) = config {
+        if count > 1 {
+            Err(format_err!("multiple configs defined for repo-id {:?}", id))
+        } else {
+            Ok(ResolvedRepo {
+                id,
+                name: name.to_string(),
+            })
         }
-        (Some(repo_name), None) => {
-            let mut repo_config: Vec<_> = configs
-                .repos
-                .into_iter()
-                .filter(|(name, _)| name == repo_name)
-                .collect();
-            if repo_config.is_empty() {
-                Err(format_err!("unknown repo-name {:?}", repo_name))
-            } else if repo_config.len() > 1 {
-                Err(format_err!(
-                    "multiple configs defined for repo-name {:?}",
-                    repo_name
-                ))
-            } else {
-                let (repo_name, repo_config) = repo_config.pop().unwrap();
-                Ok((repo_config.repoid, repo_name))
-            }
-        }
+    } else {
+        Err(format_err!("unknown config for repo-id {:?}", id))
+    }
+}
+
+fn resolve_repo_given_name(name: &str, configs: &RepoConfigs) -> Result<ResolvedRepo> {
+    let config = configs.repos.get(name);
+    if let Some(config) = config {
+        Ok(ResolvedRepo {
+            id: config.repoid,
+            name: name.to_string(),
+        })
+    } else {
+        Err(format_err!("unknown repo-name {:?}", name))
     }
 }
 
