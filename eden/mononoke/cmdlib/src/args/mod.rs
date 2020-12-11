@@ -153,6 +153,12 @@ const DEFAULT_ARG_TYPES: &[ArgType] = &[
     ArgType::Tunables,
 ];
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RepoRequirement {
+    ExactlyOne,
+    AtLeastOne,
+}
+
 /// Build clap App with appropriate default settings.
 pub struct MononokeAppBuilder {
     /// The app name.
@@ -163,7 +169,7 @@ pub struct MononokeAppBuilder {
     hide_advanced_args: bool,
 
     /// Whether to require the user select a repo if the option is present.
-    repo_required: bool,
+    repo_required: Option<RepoRequirement>,
 
     /// Which groups of arguments are enabled for this app
     arg_types: HashSet<ArgType>,
@@ -333,7 +339,7 @@ impl MononokeAppBuilder {
         Self {
             name: name.into(),
             hide_advanced_args: false,
-            repo_required: false,
+            repo_required: None,
             arg_types: HashSet::from_iter(DEFAULT_ARG_TYPES.iter().cloned()),
             special_put_behaviour: None,
             cachelib_settings: CachelibSettings::default(),
@@ -361,9 +367,9 @@ impl MononokeAppBuilder {
     /// repo required.  The default behaviour is for the arguments to specify the repo to be
     /// optional, which is probably not what you want, so you should call either this method or
     /// `with_all_repos`.
-    pub fn with_repo_required(mut self) -> Self {
+    pub fn with_repo_required(mut self, requirement: RepoRequirement) -> Self {
         self.arg_types.insert(ArgType::Repo);
-        self.repo_required = true;
+        self.repo_required = Some(requirement);
         self
     }
 
@@ -504,28 +510,30 @@ impl MononokeAppBuilder {
                 ]
             };
 
-            app = app
-                .arg(
-                    Arg::with_name(REPO_ID)
-                        .long(REPO_ID)
-                        // This is an old form that some consumers use
-                        .alias("repo_id")
-                        .value_name("ID")
-                        .help("numeric ID of repository")
-                        .conflicts_with_all(repo_conflicts),
-                )
-                .arg(
-                    Arg::with_name(REPO_NAME)
-                        .long(REPO_NAME)
-                        .value_name("NAME")
-                        .help("Name of repository")
-                        .conflicts_with_all(repo_conflicts),
-                )
-                .group(
-                    ArgGroup::with_name("repo")
-                        .args(&[REPO_ID, REPO_NAME])
-                        .required(self.repo_required),
-                );
+            let mut repo_id_arg = Arg::with_name(REPO_ID)
+                .long(REPO_ID)
+                // This is an old form that some consumers use
+                .alias("repo_id")
+                .value_name("ID")
+                .help("numeric ID of repository")
+                .conflicts_with_all(repo_conflicts);
+
+            let mut repo_name_arg = Arg::with_name(REPO_NAME)
+                .long(REPO_NAME)
+                .value_name("NAME")
+                .help("Name of repository")
+                .conflicts_with_all(repo_conflicts);
+
+            if self.repo_required == Some(RepoRequirement::AtLeastOne) {
+                repo_id_arg = repo_id_arg.multiple(true);
+                repo_name_arg = repo_name_arg.multiple(true);
+            }
+
+            app = app.arg(repo_id_arg).arg(repo_name_arg).group(
+                ArgGroup::with_name("repo")
+                    .args(&[REPO_ID, REPO_NAME])
+                    .required(self.repo_required.is_some()),
+            );
 
             if self.arg_types.contains(&ArgType::SourceRepo)
                 || self.arg_types.contains(&ArgType::SourceAndTargetRepos)

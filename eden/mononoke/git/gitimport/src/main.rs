@@ -17,8 +17,10 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changesets::Changesets;
 use clap::{Arg, SubCommand};
-use cmdlib::args;
-use cmdlib::helpers::block_execute;
+use cmdlib::{
+    args::{self, RepoRequirement},
+    helpers::block_execute,
+};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use git2::{Oid, Repository};
@@ -56,7 +58,7 @@ const ARG_GIT_COMMIT: &str = "git-commit";
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = args::MononokeAppBuilder::new("Mononoke Git Importer")
-        .with_repo_required()
+        .with_repo_required(RepoRequirement::ExactlyOne)
         .build()
         .arg(
             Arg::with_name(ARG_DERIVE_TREES)

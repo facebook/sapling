@@ -14,7 +14,7 @@ use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use clap::Arg;
 use cmdlib::{
-    args::{self, MononokeClapApp, MononokeMatches},
+    args::{self, MononokeClapApp, MononokeMatches, RepoRequirement},
     helpers::{block_execute, upload_and_show_trace},
 };
 use context::CoreContext;
@@ -48,7 +48,7 @@ const BACKUP_FROM_REPO_ID: &str = "backup-from-repo-id";
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("revlog to blob importer")
-        .with_repo_required()
+        .with_repo_required(RepoRequirement::ExactlyOne)
         .with_source_repos()
         .build()
         .about("Import a revlog-backed Mercurial repo into Mononoke blobstore.")
