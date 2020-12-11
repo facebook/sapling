@@ -315,7 +315,7 @@ impl UploadChangesets {
         changesets: impl Stream<Item = (RevIdx, HgNodeHash), Error = Error> + Send + 'static,
         is_import_from_beggining: bool,
         origin_repo: Option<BlobRepo>,
-    ) -> BoxStream<(RevIdx, SharedItem<(BonsaiChangeset, HgBlobChangeset)>), Error> {
+    ) -> BoxStream<(RevIdx, (BonsaiChangeset, HgBlobChangeset)), Error> {
         let Self {
             ctx,
             blobrepo,
@@ -531,6 +531,7 @@ impl UploadChangesets {
                 oneshot::spawn(
                     cshandle
                         .get_completed_changeset()
+                        .compat()
                         .with_context(move || format!("While uploading changeset: {}", csid))
                         .from_err(),
                     &executor,

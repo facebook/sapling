@@ -8,19 +8,14 @@
 use crate::BlobRepoHg;
 use anyhow::{format_err, Context, Error, Result};
 use cloned::cloned;
-use failure_ext::{Compat, FutureFailureErrorExt};
 use futures::{
+    channel::oneshot,
+    compat::Future01CompatExt,
     future::{self, BoxFuture, FutureExt, TryFutureExt},
-    stream::{self, BoxStream, StreamExt, TryStreamExt},
+    stream::{self, BoxStream, TryStreamExt},
 };
-use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
-use futures_old::future::{
-    self as old_future, result, Future as OldFuture, Shared, SharedError, SharedItem,
-};
-use futures_old::stream::Stream as OldStream;
-use futures_old::sync::oneshot;
-use futures_old::IntoFuture;
-use futures_stats::{Timed, TimedTryFutureExt};
+use futures_ext::{future::TryShared, FbFutureExt};
+use futures_stats::TimedTryFutureExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
@@ -46,7 +41,6 @@ define_stats! {
     prefix = "mononoke.blobrepo_commit";
     process_file_entry: timeseries(Rate, Sum),
     process_tree_entry: timeseries(Rate, Sum),
-    finalize_required: timeseries(Rate, Average, Sum),
     finalize_parent: timeseries(Rate, Average, Sum),
     finalize_uploaded: timeseries(Rate, Average, Sum),
     finalize_uploaded_filenodes: timeseries(Rate, Average, Sum),
@@ -61,19 +55,25 @@ define_stats! {
 /// See `get_completed_changeset()` for the public API you can use to extract the final changeset
 #[derive(Clone)]
 pub struct ChangesetHandle {
-    can_be_parent: Shared<OldBoxFuture<(ChangesetId, HgNodeHash, HgManifestId), Compat<Error>>>,
+    can_be_parent:
+        TryShared<BoxFuture<'static, Result<(ChangesetId, HgNodeHash, HgManifestId), Error>>>,
     // * Shared is required here because a single changeset can have more than one child, and
     //   all of those children will want to refer to the corresponding future for their parents.
     // * The Compat<Error> here is because the error type for Shared (a cloneable wrapper called
     //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
     //   implements Error.
-    completion_future: Shared<OldBoxFuture<(BonsaiChangeset, HgBlobChangeset), Compat<Error>>>,
+    completion_future:
+        TryShared<BoxFuture<'static, Result<(BonsaiChangeset, HgBlobChangeset), Error>>>,
 }
 
 impl ChangesetHandle {
     pub fn new_pending(
-        can_be_parent: Shared<OldBoxFuture<(ChangesetId, HgNodeHash, HgManifestId), Compat<Error>>>,
-        completion_future: Shared<OldBoxFuture<(BonsaiChangeset, HgBlobChangeset), Compat<Error>>>,
+        can_be_parent: TryShared<
+            BoxFuture<'static, Result<(ChangesetId, HgNodeHash, HgManifestId), Error>>,
+        >,
+        completion_future: TryShared<
+            BoxFuture<'static, Result<(BonsaiChangeset, HgBlobChangeset), Error>>,
+        >,
     ) -> Self {
         Self {
             can_be_parent,
@@ -82,47 +82,40 @@ impl ChangesetHandle {
     }
 
     pub fn ready_cs_handle(ctx: CoreContext, repo: BlobRepo, hg_cs: HgChangesetId) -> Self {
-        let bonsai_cs = repo
-            .get_bonsai_from_hg(ctx.clone(), hg_cs)
-            .and_then(move |bonsai_id| {
-                bonsai_id.ok_or(ErrorKind::BonsaiMappingNotFound(hg_cs).into())
-            })
-            .and_then({
-                cloned!(ctx, repo);
-                move |csid| {
-                    async move { csid.load(&ctx, repo.blobstore()).await }
-                        .boxed()
-                        .compat()
-                        .from_err()
-                }
-            });
-
         let (trigger, can_be_parent) = oneshot::channel();
-
         let can_be_parent = can_be_parent
-            .into_future()
             .map_err(|e| format_err!("can_be_parent: {:?}", e))
-            .map_err(Compat)
-            .boxify()
-            .shared();
+            .boxed()
+            .try_shared();
 
-        let completion_future = bonsai_cs
-            .join(
-                async move { hg_cs.load(&ctx, repo.blobstore()).await }
-                    .boxed()
+        let bonsai_cs = {
+            cloned!(ctx, repo);
+            async move {
+                let csid = repo
+                    .get_bonsai_from_hg(ctx.clone(), hg_cs)
                     .compat()
-                    .from_err(),
+                    .await?
+                    .ok_or(ErrorKind::BonsaiMappingNotFound(hg_cs))?;
+                let bonsai_cs = csid.load(&ctx, repo.blobstore()).await?;
+                Ok::<_, Error>(bonsai_cs)
+            }
+        };
+
+        let completion_future = async move {
+            let (bonsai_cs, hg_cs) = future::try_join(
+                bonsai_cs,
+                hg_cs.load(&ctx, repo.blobstore()).map_err(Error::from),
             )
-            .map_err(Compat)
-            .inspect(move |(bonsai_cs, hg_cs)| {
-                let _ = trigger.send((
-                    bonsai_cs.get_changeset_id(),
-                    hg_cs.get_changeset_id().into_nodehash(),
-                    hg_cs.manifestid(),
-                ));
-            })
-            .boxify()
-            .shared();
+            .await?;
+            let _ = trigger.send((
+                bonsai_cs.get_changeset_id(),
+                hg_cs.get_changeset_id().into_nodehash(),
+                hg_cs.manifestid(),
+            ));
+            Ok((bonsai_cs, hg_cs))
+        }
+        .boxed()
+        .try_shared();
 
         Self {
             can_be_parent,
@@ -132,7 +125,7 @@ impl ChangesetHandle {
 
     pub fn get_completed_changeset(
         self,
-    ) -> Shared<OldBoxFuture<(BonsaiChangeset, HgBlobChangeset), Compat<Error>>> {
+    ) -> TryShared<BoxFuture<'static, Result<(BonsaiChangeset, HgBlobChangeset), Error>>> {
         self.completion_future
     }
 }
@@ -241,14 +234,14 @@ impl UploadEntries {
     }
 
     // Check the blobstore to see whether a particular node is present.
-    fn assert_in_blobstore(
+    async fn assert_in_blobstore(
         ctx: CoreContext,
         blobstore: RepoBlobstore,
         node_id: HgNodeHash,
         is_tree: bool,
-    ) -> OldBoxFuture<(), Error> {
+    ) -> Result<(), Error> {
         if node_id == NULL_HASH {
-            return result(Ok(())).boxify();
+            return Ok(());
         }
         let key = if is_tree {
             HgManifestId::new(node_id).blobstore_key()
@@ -256,67 +249,59 @@ impl UploadEntries {
             HgFileNodeId::new(node_id).blobstore_key()
         };
 
-        async move {
-            if blobstore.is_present(&ctx, &key).await? {
-                Ok(())
-            } else {
-                Err(BlobstoreError::NotFound(key).into())
-            }
+        if blobstore.is_present(&ctx, &key).await? {
+            Ok(())
+        } else {
+            Err(BlobstoreError::NotFound(key).into())
         }
-        .boxed()
-        .compat()
-        .boxify()
     }
 
-    pub fn finalize(
+    pub async fn finalize(
         self,
         ctx: CoreContext,
         mf_id: HgManifestId,
         parent_manifest_ids: Vec<HgManifestId>,
-    ) -> OldBoxFuture<(), Error> {
+    ) -> Result<(), Error> {
         let required_checks = {
             let blobstore = self.blobstore.clone();
             let boxed_blobstore = blobstore.boxed();
-            find_intersection_of_diffs(
-                ctx.clone(),
-                boxed_blobstore.clone(),
-                mf_id,
-                parent_manifest_ids,
-            )
-            .boxed()
-            .compat()
-            .map({
-                cloned!(ctx);
-                move |(path, entry)| {
-                    let (node, is_tree) = match entry {
-                        Entry::Tree(mf_id) => (mf_id.into_nodehash(), true),
-                        Entry::Leaf((_, file_id)) => (file_id.into_nodehash(), false),
-                    };
-
-                    let assert =
-                        Self::assert_in_blobstore(ctx.clone(), blobstore.clone(), node, is_tree);
-
-                    assert
-                        .with_context(move || format!("While checking for path: {:?}", path))
-                        .map_err(Error::from)
-                }
-            })
-            .buffer_unordered(100)
-            .collect()
-            .map(|checks| {
-                STATS::finalize_required.add_value(checks.len() as i64);
-            })
-            .timed({
-                let mut scuba_logger = self.scuba_logger();
-                move |stats, result| {
-                    if result.is_ok() {
-                        scuba_logger
-                            .add_future_stats(&stats)
-                            .log_with_msg("Required checks", None);
+            let mut scuba_logger = self.scuba_logger();
+            cloned!(ctx);
+            async move {
+                let (stats, ()) = find_intersection_of_diffs(
+                    ctx.clone(),
+                    boxed_blobstore.clone(),
+                    mf_id,
+                    parent_manifest_ids,
+                )
+                .try_for_each_concurrent(100, {
+                    cloned!(ctx);
+                    move |(path, entry)| {
+                        cloned!(ctx, blobstore);
+                        async move {
+                            let (node, is_tree) = match entry {
+                                Entry::Tree(mf_id) => (mf_id.into_nodehash(), true),
+                                Entry::Leaf((_, file_id)) => (file_id.into_nodehash(), false),
+                            };
+                            Self::assert_in_blobstore(ctx, blobstore, node, is_tree)
+                                .await
+                                .with_context(move || {
+                                    format!("While checking for path: {:?}", path)
+                                })?;
+                            Ok(())
+                        }
+                        .boxed()
                     }
-                    Ok(())
-                }
-            })
+                })
+                .try_timed()
+                .await?;
+
+                scuba_logger
+                    .add_future_stats(&stats)
+                    .log_with_msg("Required checks", None);
+
+                Ok::<_, Error>(())
+            }
         };
 
         let parent_checks = {
@@ -326,32 +311,31 @@ impl UploadEntries {
                 .parents
                 .iter()
                 .map(|node_key| {
-                    let assert = Self::assert_in_blobstore(
-                        ctx.clone(),
-                        blobstore.clone(),
-                        node_key.hash,
-                        node_key.path.is_tree(),
-                    );
-                    let node_key = node_key.clone();
-                    assert
+                    cloned!(ctx, blobstore, node_key);
+                    async move {
+                        Self::assert_in_blobstore(
+                            ctx,
+                            blobstore,
+                            node_key.hash,
+                            node_key.path.is_tree(),
+                        )
+                        .await
                         .with_context(move || {
                             format!("While checking for a parent node: {}", node_key)
-                        })
-                        .from_err()
+                        })?;
+                        Ok(())
+                    }
                 })
                 .collect();
 
             STATS::finalize_parent.add_value(checks.len() as i64);
 
-            old_future::join_all(checks).timed({
+            future::try_join_all(checks).try_timed().map_ok({
                 let mut scuba_logger = self.scuba_logger();
-                move |stats, result| {
-                    if result.is_ok() {
-                        scuba_logger
-                            .add_future_stats(&stats)
-                            .log_with_msg("Parent checks", None);
-                    }
-                    Ok(())
+                move |(stats, _)| {
+                    scuba_logger
+                        .add_future_stats(&stats)
+                        .log_with_msg("Parent checks", None);
                 }
             })
         };
@@ -379,7 +363,8 @@ impl UploadEntries {
                 .log_with_msg("Size of changeset", None);
         }
 
-        parent_checks.join(required_checks).map(|_| ()).boxify()
+        future::try_join(parent_checks, required_checks).await?;
+        Ok(())
     }
 }
 
@@ -436,62 +421,7 @@ pub async fn process_entries<'a>(
 pub fn extract_parents_complete(
     p1: &Option<ChangesetHandle>,
     p2: &Option<ChangesetHandle>,
-) -> OldBoxFuture<SharedItem<()>, SharedError<Compat<Error>>> {
-    match (p1.as_ref(), p2.as_ref()) {
-        (None, None) => old_future::ok(()).shared().boxify(),
-        (Some(p), None) | (None, Some(p)) => p
-            .completion_future
-            .clone()
-            .and_then(|_| old_future::ok(()).shared())
-            .boxify(),
-        (Some(p1), Some(p2)) => p1
-            .completion_future
-            .clone()
-            // DO NOT replace and_then() with join() or futures_ordered()!
-            // It may result in a combinatoral explosion in mergy repos, like the following:
-            //  o
-            //  |\
-            //  | o
-            //  |/|
-            //  o |
-            //  |\|
-            //  | o
-            //  |/|
-            //  o |
-            //  |\|
-            //  ...
-            //  |/|
-            //  | ~
-            //  o
-            //  |\
-            //  ~ ~
-            //
-            .and_then({
-                let p2_completion_future = p2.completion_future.clone();
-                move |_| p2_completion_future
-            })
-            .and_then(|_| old_future::ok(()).shared())
-            .boxify(),
-    }
-    .boxify()
-}
-
-pub fn handle_parents(
-    mut scuba_logger: MononokeScubaSampleBuilder,
-    p1: Option<ChangesetHandle>,
-    p2: Option<ChangesetHandle>,
-) -> OldBoxFuture<(HgParents, Vec<HgManifestId>, Vec<ChangesetId>), Error> {
-    let p1 = p1.map(|cs| cs.can_be_parent);
-    let p2 = p2.map(|cs| cs.can_be_parent);
-    let p1 = match p1 {
-        Some(p1) => p1.map(Some).boxify(),
-        None => old_future::ok(None).boxify(),
-    };
-    let p2 = match p2 {
-        Some(p2) => p2.map(Some).boxify(),
-        None => old_future::ok(None).boxify(),
-    };
-
+) -> BoxFuture<'static, Result<(), Error>> {
     // DO NOT replace and_then() with join() or futures_ordered()!
     // It may result in a combinatoral explosion in mergy repos, like the following:
     //  o
@@ -511,50 +441,74 @@ pub fn handle_parents(
     //  |\
     //  ~ ~
     //
-    p1.and_then(|p1| p2.map(|p2| (p1, p2)))
-        .and_then(|(p1, p2)| {
-            let mut bonsai_parents = vec![];
-            let p1 = match p1 {
-                Some(item) => {
-                    let (bonsai_cs_id, hash, manifest) = *item;
-                    bonsai_parents.push(bonsai_cs_id);
-                    (Some(hash), Some(manifest))
-                }
-                None => (None, None),
-            };
-            let p2 = match p2 {
-                Some(item) => {
-                    let (bonsai_cs_id, hash, manifest) = *item;
-                    bonsai_parents.push(bonsai_cs_id);
-                    (Some(hash), Some(manifest))
-                }
-                None => (None, None),
-            };
-            Ok((p1, p2, bonsai_parents))
-        })
-        .map_err(|e| Error::from(e))
-        .map(
-            move |((p1_hash, p1_manifest), (p2_hash, p2_manifest), bonsai_parents)| {
-                let parents = HgParents::new(p1_hash, p2_hash);
-                let mut parent_manifest_hashes = vec![];
-                if let Some(p1_manifest) = p1_manifest {
-                    parent_manifest_hashes.push(p1_manifest);
-                }
-                if let Some(p2_manifest) = p2_manifest {
-                    parent_manifest_hashes.push(p2_manifest);
-                }
-                (parents, parent_manifest_hashes, bonsai_parents)
-            },
-        )
-        .timed(move |stats, result| {
-            if result.is_ok() {
-                scuba_logger
-                    .add_future_stats(&stats)
-                    .log_with_msg("Wait for parents ready", None);
+    let p1 = p1.as_ref().map(|p1| p1.completion_future.clone());
+    let p2 = p2.as_ref().map(|p2| p2.completion_future.clone());
+    async move {
+        if let Some(p1) = p1 {
+            p1.await?;
+        }
+        if let Some(p2) = p2 {
+            p2.await?;
+        }
+        Ok::<(), Error>(())
+    }
+    .boxed()
+}
+
+pub async fn handle_parents(
+    mut scuba_logger: MononokeScubaSampleBuilder,
+    p1: Option<ChangesetHandle>,
+    p2: Option<ChangesetHandle>,
+) -> Result<(HgParents, Vec<HgManifestId>, Vec<ChangesetId>), Error> {
+    // DO NOT replace and_then() with join() or futures_ordered()!
+    // It may result in a combinatoral explosion in mergy repos, like the following:
+    //  o
+    //  |\
+    //  | o
+    //  |/|
+    //  o |
+    //  |\|
+    //  | o
+    //  |/|
+    //  o |
+    //  |\|
+    //  ...
+    //  |/|
+    //  | ~
+    //  o
+    //  |\
+    //  ~ ~
+    //
+    let (stats, result) = async move {
+        let mut bonsai_parents = Vec::new();
+        let mut parent_manifest_hashes = Vec::new();
+        let p1_hash = match p1 {
+            Some(p1) => {
+                let (bonsai_cs_id, hash, manifest) = p1.can_be_parent.await?;
+                bonsai_parents.push(bonsai_cs_id);
+                parent_manifest_hashes.push(manifest);
+                Some(hash)
             }
-            Ok(())
-        })
-        .boxify()
+            None => None,
+        };
+        let p2_hash = match p2 {
+            Some(p2) => {
+                let (bonsai_cs_id, hash, manifest) = p2.can_be_parent.await?;
+                bonsai_parents.push(bonsai_cs_id);
+                parent_manifest_hashes.push(manifest);
+                Some(hash)
+            }
+            None => None,
+        };
+        let parents = HgParents::new(p1_hash, p2_hash);
+        Ok::<_, Error>((parents, parent_manifest_hashes, bonsai_parents))
+    }
+    .try_timed()
+    .await?;
+    scuba_logger
+        .add_future_stats(&stats)
+        .log_with_msg("Wait for parents ready", None);
+    Ok(result)
 }
 
 pub fn make_new_changeset(

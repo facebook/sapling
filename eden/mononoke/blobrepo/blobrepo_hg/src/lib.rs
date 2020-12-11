@@ -34,7 +34,7 @@ use cloned::cloned;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes};
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
-use futures_ext::{BoxFuture, BoxStream, FutureExt as _, StreamExt};
+use futures_ext_old::{BoxFuture, BoxStream, FutureExt as _, StreamExt};
 use futures_old::{
     future,
     stream::{self, futures_unordered},

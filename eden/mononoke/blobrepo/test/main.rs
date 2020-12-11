@@ -26,7 +26,7 @@ use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use futures::{compat::Future01CompatExt, future, FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::Future;
 use maplit::btreemap;
@@ -167,7 +167,7 @@ async fn create_one_changeset(fb: FacebookInit) {
         vec![to_leaf(file_future), to_tree(manifest_dir_future)],
     );
 
-    let bonsai_hg = commit.get_completed_changeset().compat().await.unwrap();
+    let bonsai_hg = commit.get_completed_changeset().await.unwrap();
     let cs = &bonsai_hg.1;
     assert!(cs.manifestid() == root_mfid);
     assert!(cs.user() == author.as_bytes());
@@ -236,7 +236,8 @@ async fn create_two_changesets(fb: FacebookInit) {
 
     let (commit1, commit2) = (commit1
         .get_completed_changeset()
-        .join(commit2.get_completed_changeset()))
+        .compat()
+        .join(commit2.get_completed_changeset().compat()))
     .compat()
     .await
     .unwrap();
@@ -289,7 +290,7 @@ async fn check_bonsai_creation(fb: FacebookInit) {
         vec![to_leaf(file_future), to_tree(manifest_dir_future)],
     );
 
-    let commit = commit.get_completed_changeset().compat().await.unwrap();
+    let commit = commit.get_completed_changeset().await.unwrap();
     let commit = &commit.1;
     let bonsai_cs_id = repo
         .get_bonsai_from_hg(ctx.clone(), commit.get_changeset_id())
@@ -363,9 +364,9 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
         )
     };
 
-    let parent_cs = parent.get_completed_changeset().compat().await.unwrap();
+    let parent_cs = parent.get_completed_changeset().await.unwrap();
     let parent_cs = &parent_cs.1;
-    let child_cs = child.get_completed_changeset().compat().await.unwrap();
+    let child_cs = child.get_completed_changeset().await.unwrap();
     let child_cs = &child_cs.1;
 
     let parent_bonsai_cs_id = repo
@@ -414,7 +415,6 @@ async fn create_bad_changeset(fb: FacebookInit) {
 
     commit
         .get_completed_changeset()
-        .compat()
         .await
         .expect_err("This should fail");
 }
@@ -453,7 +453,6 @@ async fn upload_entries_finalize_success(fb: FacebookInit) {
         .unwrap();
 
     (entries.finalize(ctx.clone(), roothash, vec![]))
-        .compat()
         .await
         .unwrap();
 }
@@ -481,9 +480,7 @@ async fn upload_entries_finalize_fail(fb: FacebookInit) {
         .await
         .unwrap();
 
-    let res = (entries.finalize(ctx.clone(), root_mfid, vec![]))
-        .compat()
-        .await;
+    let res = (entries.finalize(ctx.clone(), root_mfid, vec![])).await;
 
     assert!(res.is_err());
 }
@@ -871,12 +868,12 @@ async fn test_case_conflict_two_changeset(fb: FacebookInit) {
     };
 
     assert!(
-        commit1
-            .get_completed_changeset()
-            .join(commit2.get_completed_changeset())
-            .compat()
-            .await
-            .is_err()
+        future::try_join(
+            commit1.get_completed_changeset(),
+            commit2.get_completed_changeset(),
+        )
+        .await
+        .is_err()
     );
 }
 
@@ -906,7 +903,7 @@ async fn test_case_conflict_inside_one_changeset(fb: FacebookInit) {
         vec![to_leaf(file_future_1), to_leaf(file_future_2)],
     );
 
-    assert!((commit1.get_completed_changeset()).compat().await.is_err());
+    assert!((commit1.get_completed_changeset()).await.is_err());
 }
 
 #[fbinit::compat_test]
@@ -953,10 +950,10 @@ async fn test_no_case_conflict_removal(fb: FacebookInit) {
     };
 
     assert!(
-        (commit1
-            .get_completed_changeset()
-            .join(commit2.get_completed_changeset()))
-        .compat()
+        future::try_join(
+            commit1.get_completed_changeset(),
+            commit2.get_completed_changeset()
+        )
         .await
         .is_ok()
     );
@@ -1025,10 +1022,10 @@ async fn test_no_case_conflict_removal_dir(fb: FacebookInit) {
     };
 
     assert!(
-        (commit1
-            .get_completed_changeset()
-            .join(commit2.get_completed_changeset()))
-        .compat()
+        future::try_join(
+            commit1.get_completed_changeset(),
+            commit2.get_completed_changeset()
+        )
         .await
         .is_ok()
     );

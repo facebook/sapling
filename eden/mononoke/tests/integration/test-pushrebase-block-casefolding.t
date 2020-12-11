@@ -37,7 +37,7 @@ Push the commit
   remote:   Caused by:
   remote:     While creating Changeset Some(HgNodeHash(Sha1(143fbdc73580e33c8432457df2a10e1038936a72))), uuid: * (glob)
   remote:   Caused by:
-  remote:     While computing changed files
+  remote:     While creating and verifying Changeset for blobstore
   remote:   Caused by:
   remote:     CaseConflict: the changes introduced by this commit have conflicting case. The first offending path is 'Foo.txt', and conflicted with 'foo.txt'. Resolve the conflict.
   remote: 
@@ -48,7 +48,7 @@ Push the commit
   remote:             error: Error {
   remote:                 context: "While creating Changeset Some(HgNodeHash(Sha1(143fbdc73580e33c8432457df2a10e1038936a72))), uuid: *", (glob)
   remote:                 source: Error {
-  remote:                     context: "While computing changed files",
+  remote:                     context: "While creating and verifying Changeset for blobstore",
   remote:                     source: InternalCaseConflict(
   remote:                         MPath("Foo.txt"),
   remote:                         MPath("foo.txt"),

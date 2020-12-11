@@ -20,7 +20,7 @@ use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, try_join_all},
     stream::{self, BoxStream},
-    try_join, Future, StreamExt, TryFutureExt, TryStreamExt,
+    try_join, Future, StreamExt, TryStreamExt,
 };
 use hooks::HookRejectionInfo;
 use lazy_static::lazy_static;
@@ -1246,11 +1246,7 @@ impl<'r> Bundle2Resolver<'r> {
 
             let uploaded: Vec<(BonsaiChangeset, HgChangesetId)> = stream::iter(uploaded_changesets)
                 .map(move |(hg_cs_id, handle): (HgChangesetId, _)| async move {
-                    let shared_item_bcs_and_something = handle
-                        .get_completed_changeset()
-                        .compat()
-                        .map_err(Error::from)
-                        .await?;
+                    let shared_item_bcs_and_something = handle.get_completed_changeset().await?;
 
                     let bcs = shared_item_bcs_and_something.0.clone();
                     Result::<_, Error>::Ok((bcs, hg_cs_id))
