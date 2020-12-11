@@ -190,3 +190,21 @@ count-objects, deep walk across fastlog
   Final count: (19, 19)
   Bytes/s,* (glob)
   * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:3,* FastlogDir:3,* FastlogFile:3,* UnodeFile:3,* UnodeManifest:3,* UnodeMapping:3,* (glob)
+
+count-objects, shallow walk across hg
+  $ mononoke_walker scrub -q --bookmark master_bookmark -I shallow -I BookmarkToBonsaiHgMapping -i Bookmark -i hg 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types [BonsaiHgMappingToHgChangeset, BookmarkToBonsaiHgMapping, HgChangesetToHgManifest, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
+  Walking node types [BonsaiHgMapping, Bookmark, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
+  Final count: (10, 10)
+  Bytes/s,* (glob)
+  * Type:Walked,Checks,Children BonsaiHgMapping:1,* Bookmark:1,* HgChangeset:1,* HgFileEnvelope:3,* HgFileNode:3,* HgManifest:1,* (glob)
+
+count-objects, deep walk across hg
+  $ mononoke_walker scrub -q --bookmark master_bookmark -I deep -I BookmarkToBonsaiHgMapping -i Bookmark -i hg 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types [BonsaiHgMappingToHgChangeset, BookmarkToBonsaiHgMapping, HgChangesetToHgManifest, HgChangesetToHgParent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
+  Walking node types [BonsaiHgMapping, Bookmark, HgBonsaiMapping, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
+  Final count: (17, 17)
+  Bytes/s,* (glob)
+  * Type:Walked,Checks,Children BonsaiHgMapping:1,* Bookmark:1,* HgBonsaiMapping:3,* HgChangeset:3,* HgFileEnvelope:3,* HgFileNode:3,* HgManifest:3,* (glob)

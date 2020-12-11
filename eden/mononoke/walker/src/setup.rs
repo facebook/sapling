@@ -22,12 +22,15 @@ use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args::{self, CachelibSettings, MononokeClapApp, MononokeMatches};
+use derived_data::BonsaiDerived;
+use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
     future::{self, Future},
 };
 use itertools::{process_results, Itertools};
+use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::{Redaction, ScrubAction};
 use once_cell::sync::Lazy;
 use samplingblob::SamplingHandler;
@@ -116,18 +119,27 @@ const HG_VALUE_ARG: &str = "hg";
 const BONSAI_VALUE_ARG: &str = "bonsai";
 const CONTENT_META_VALUE_ARG: &str = "contentmeta";
 
+const DERIVED_PREFIX: &str = "derived_";
+
 static DERIVED_DATA_INCLUDE_NODE_TYPES: Lazy<HashMap<String, Vec<NodeType>>> = Lazy::new(|| {
     let mut m: HashMap<String, Vec<NodeType>> = HashMap::new();
     for t in NodeType::iter() {
         if let Some(n) = t.derived_data_name() {
-            m.entry(format!("derived_{}", n)).or_default().push(t);
+            m.entry(format!("{}{}", DERIVED_PREFIX, n))
+                .or_default()
+                .push(t);
         }
     }
     m
 });
 
 static NODE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
-    let mut v = vec![BONSAI_VALUE_ARG, DEFAULT_VALUE_ARG, DERIVED_VALUE_ARG];
+    let mut v = vec![
+        BONSAI_VALUE_ARG,
+        DEFAULT_VALUE_ARG,
+        DERIVED_VALUE_ARG,
+        HG_VALUE_ARG,
+    ];
     v.extend(
         DERIVED_DATA_INCLUDE_NODE_TYPES
             .keys()
@@ -685,6 +697,14 @@ fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
         BONSAI_VALUE_ARG => HashSet::from_iter(BONSAI_INCLUDE_NODE_TYPES.iter().cloned()),
         DERIVED_VALUE_ARG => {
             HashSet::from_iter(DERIVED_DATA_INCLUDE_NODE_TYPES.values().flatten().cloned())
+        }
+        HG_VALUE_ARG => {
+            let mut s = HashSet::new();
+            for d in &[MappedHgChangesetId::NAME, FilenodesOnlyPublic::NAME] {
+                let d = DERIVED_DATA_INCLUDE_NODE_TYPES.get(&format!("{}{}", DERIVED_PREFIX, d));
+                s.extend(d.unwrap().iter().cloned());
+            }
+            s
         }
         _ => {
             if let Some(v) = DERIVED_DATA_INCLUDE_NODE_TYPES.get(arg) {
