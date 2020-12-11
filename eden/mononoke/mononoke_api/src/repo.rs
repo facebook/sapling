@@ -34,12 +34,10 @@ use futures::try_join;
 use hook_manager_factory::make_hook_manager;
 use hooks::HookManager;
 use itertools::Itertools;
-#[cfg(test)]
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mercurial_types::Globalrev;
 use metaconfig_types::{CommonConfig, RepoConfig};
-#[cfg(test)]
 use metaconfig_types::{
     HookManagerParams, InfinitepushNamespace, InfinitepushParams, SourceControlServiceParams,
 };
@@ -50,7 +48,6 @@ use mononoke_types::{
 use mutable_counters::SqlMutableCounters;
 use permission_checker::{ArcPermissionChecker, PermissionCheckerBuilder};
 use reachabilityindex::LeastCommonAncestorsHint;
-#[cfg(test)]
 use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use revset::AncestorsNodeStream;
@@ -58,7 +55,6 @@ use segmented_changelog::{CloneData, SegmentedChangelog, StreamCloneData};
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
 use sql_construct::facebook::FbSqlConstruct;
-#[cfg(test)]
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
@@ -96,7 +92,7 @@ define_stats! {
     ),
 }
 
-pub(crate) struct Repo {
+pub struct Repo {
     pub(crate) name: String,
     pub(crate) blob_repo: BlobRepo,
     pub(crate) skiplist_index: Arc<SkiplistIndex>,
@@ -149,7 +145,7 @@ pub async fn open_synced_commit_mapping(
 }
 
 impl Repo {
-    pub(crate) async fn new(
+    pub async fn new(
         fb: FacebookInit,
         logger: Logger,
         name: String,
@@ -290,9 +286,8 @@ impl Repo {
         })
     }
 
-    #[cfg(test)]
     /// Construct a Repo from a test BlobRepo
-    pub(crate) async fn new_test(ctx: CoreContext, blob_repo: BlobRepo) -> Result<Self, Error> {
+    pub async fn new_test(ctx: CoreContext, blob_repo: BlobRepo) -> Result<Self, Error> {
         Self::new_test_common(
             ctx,
             blob_repo,
@@ -302,9 +297,8 @@ impl Repo {
         .await
     }
 
-    #[cfg(test)]
     /// Construct a Repo from a test BlobRepo and commit_sync_config
-    pub(crate) async fn new_test_xrepo(
+    pub async fn new_test_xrepo(
         ctx: CoreContext,
         blob_repo: BlobRepo,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
@@ -319,7 +313,6 @@ impl Repo {
         .await
     }
 
-    #[cfg(test)]
     /// Construct a Repo from a test BlobRepo and commit_sync_config
     async fn new_test_common(
         ctx: CoreContext,
@@ -649,7 +642,7 @@ pub struct Stack {
 
 /// A context object representing a query to a particular repo.
 impl RepoContext {
-    pub(crate) async fn new(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
+    pub async fn new(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
         // Check the user is permitted to access this repo.
         repo.check_permissions(&ctx, "read").await?;
         Ok(Self { repo, ctx })
@@ -659,7 +652,7 @@ impl RepoContext {
     ///
     /// Should be used in the internal services that don't serve user queries so all operations are
     /// trusted.
-    pub(crate) async fn new_bypass_acl_check(
+    pub async fn new_bypass_acl_check(
         ctx: CoreContext,
         repo: Arc<Repo>,
     ) -> Result<Self, MononokeError> {
@@ -667,7 +660,7 @@ impl RepoContext {
     }
 
     /// The context for this query.
-    pub(crate) fn ctx(&self) -> &CoreContext {
+    pub fn ctx(&self) -> &CoreContext {
         &self.ctx
     }
 
@@ -692,7 +685,7 @@ impl RepoContext {
     }
 
     /// The skiplist index for the referenced repository.
-    pub(crate) fn skiplist_index(&self) -> &Arc<SkiplistIndex> {
+    pub fn skiplist_index(&self) -> &Arc<SkiplistIndex> {
         &self.repo.skiplist_index
     }
 
@@ -702,17 +695,17 @@ impl RepoContext {
     }
 
     /// The warm bookmarks cache for the referenced repository.
-    pub(crate) fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
+    pub fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
         &self.repo.warm_bookmarks_cache
     }
 
     /// The hook manager for the referenced repository.
-    pub(crate) fn hook_manager(&self) -> &Arc<HookManager> {
+    pub fn hook_manager(&self) -> &Arc<HookManager> {
         &self.repo.hook_manager
     }
 
     /// The Read/Write or Read-Only status fetcher.
-    pub(crate) fn readonly_fetcher(&self) -> &RepoReadWriteFetcher {
+    pub fn readonly_fetcher(&self) -> &RepoReadWriteFetcher {
         &self.repo.readonly_fetcher
     }
 
@@ -721,7 +714,7 @@ impl RepoContext {
         &self.repo.config
     }
 
-    pub(crate) fn derive_changeset_info_enabled(&self) -> bool {
+    pub fn derive_changeset_info_enabled(&self) -> bool {
         self.blob_repo()
             .get_derived_data_config()
             .derived_data_types

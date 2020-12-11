@@ -24,8 +24,6 @@ use sql_ext::facebook::MysqlOptions;
 
 use metaconfig_parser::RepoConfigs;
 
-use crate::repo::Repo;
-
 pub mod changeset;
 pub mod changeset_path;
 pub mod changeset_path_diff;
@@ -55,7 +53,7 @@ pub use crate::file::{
     headerless_unified_diff, FileContext, FileId, FileMetadata, FileType, HeaderlessUnifiedDiff,
 };
 pub use crate::path::MononokePath;
-pub use crate::repo::{BookmarkFreshness, RepoContext};
+pub use crate::repo::{BookmarkFreshness, Repo, RepoContext};
 pub use crate::repo_write::create_changeset::{CreateChange, CreateCopyInfo};
 pub use crate::repo_write::land_stack::PushrebaseOutcome;
 pub use crate::repo_write::RepoWriteContext;
