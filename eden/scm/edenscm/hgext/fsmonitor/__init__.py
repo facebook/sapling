@@ -402,7 +402,7 @@ def _walk(self, match, event, span):
         nonnormalset = self.dirstate._map.nonnormalset
 
     event["old_clock"] = clock
-    event["old_files"] = blackbox.shortlist(nonnormalset)
+    event["old_files"] = blackbox.shortlist(sorted(nonnormalset))
     span.record(oldclock=clock, oldfileslen=len(nonnormalset))
 
     copymap = self.dirstate._map.copymap
@@ -504,7 +504,9 @@ def _walk(self, match, event, span):
         else:
             count = len(files)
             state.setwatchmanchangedfilecount(count)
-            event["new_files"] = blackbox.shortlist((e["name"] for e in files), count)
+            event["new_files"] = blackbox.shortlist(
+                sorted(e["name"] for e in files), count
+            )
             span.record(newfileslen=len(files))
         # XXX: Legacy scuba logging. Remove this once the source of truth
         # is moved to the Rust Event.
