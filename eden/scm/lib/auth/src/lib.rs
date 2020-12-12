@@ -16,6 +16,8 @@ use util::path::expand_path;
 
 pub mod x509;
 
+pub use x509::{check_certs, X509Error};
+
 /// A group of client authentiation settings from the user's config.
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Auth {
@@ -120,26 +122,15 @@ impl AuthConfig {
         Self(groups)
     }
 
-    pub fn auth_for_url(&self, url: &Url) -> Option<Auth> {
+    pub fn auth_for_url(&self, url: &Url) -> Result<Option<Auth>, X509Error> {
         let mut best: Option<&Auth> = None;
+        let mut error: Option<X509Error> = None;
 
         let scheme = url.scheme().to_string();
         let username = url.username();
         let url_suffix = strip_scheme_and_user(&url);
 
         for auth in &self.0 {
-            // Skip if cert or key refers to a non-existent file.
-            // Useful for situation in which credentials may be at
-            // one of several possible paths.
-            match auth.cert {
-                Some(ref path) if !path.is_file() => continue,
-                _ => {}
-            };
-            match auth.key {
-                Some(ref path) if !path.is_file() => continue,
-                _ => {}
-            };
-
             if !auth.schemes.contains(&scheme) {
                 continue;
             }
@@ -177,10 +168,26 @@ impl AuthConfig {
                 }
             }
 
+            // Skip if the cert is missing or invalid since there may be other
+            // matching auth groups with valid certs, but hang on to the error
+            // in case there aren't any others.
+            if let Some(path) = &auth.cert {
+                if let Err(e) = check_certs(path) {
+                    error = Some(e);
+                    continue;
+                }
+            }
+
             best = Some(auth);
         }
 
-        best.cloned()
+        // If we encountered a missing or invalid cert, only return an error
+        // if there were no other matching valid certs.
+        match (best, error) {
+            (Some(auth), _) => Ok(Some(auth.clone())),
+            (None, Some(e)) => Err(e),
+            (None, None) => Ok(None),
+        }
     }
 }
 
@@ -302,55 +309,55 @@ mod test {
 
         // Basic case: an exact match.
         let auth = auth_config
-            .auth_for_url(&"http://example.com".parse()?)
+            .auth_for_url(&"http://example.com".parse()?)?
             .unwrap();
         assert_eq!(auth.group, "a");
 
         // Scheme mismatch.
-        let auth = auth_config.auth_for_url(&"ftp://example.com".parse()?);
+        let auth = auth_config.auth_for_url(&"ftp://example.com".parse()?)?;
         assert!(auth.is_none());
 
         // Given URL's hosts matches a config prefix, but doesn't match
         // the entire prefix.
         let auth = auth_config
-            .auth_for_url(&"https://foo.com.".parse()?)
+            .auth_for_url(&"https://foo.com.".parse()?)?
             .unwrap();
         assert_eq!(auth.group, "default");
 
         // Matching the entire prefix works as expected.
         let auth = auth_config
-            .auth_for_url(&"https://foo.com/bar".parse()?)
+            .auth_for_url(&"https://foo.com/bar".parse()?)?
             .unwrap();
         assert_eq!(auth.group, "b");
 
         // A more specific prefix wins.
         let auth = auth_config
-            .auth_for_url(&"https://foo.com/bar/baz".parse()?)
+            .auth_for_url(&"https://foo.com/bar/baz".parse()?)?
             .unwrap();
         assert_eq!(auth.group, "c");
 
         // Still matches even if the URL has other components in it.
         let auth = auth_config
-            .auth_for_url(&"https://foo.com/bar/baz/dir?query=1#fragment".parse()?)
+            .auth_for_url(&"https://foo.com/bar/baz/dir?query=1#fragment".parse()?)?
             .unwrap();
         assert_eq!(auth.group, "c");
 
         // There are two entries matching this prefix, but one has higher priority.
         let auth = auth_config
-            .auth_for_url(&"https://bar.com".parse()?)
+            .auth_for_url(&"https://bar.com".parse()?)?
             .unwrap();
         assert_eq!(auth.group, "d");
 
         // Even if another entry has a username match, the higher priority should win.
         let auth = auth_config
-            .auth_for_url(&"https://e_user@bar.com".parse()?)
+            .auth_for_url(&"https://e_user@bar.com".parse()?)?
             .unwrap();
         assert_eq!(auth.group, "d");
 
         // Even if no user is specified in the URL, the entry with a username should
         // take precedence all else being equal.
         let auth = auth_config
-            .auth_for_url(&"https://baz.com".parse()?)
+            .auth_for_url(&"https://baz.com".parse()?)?
             .unwrap();
         assert_eq!(auth.group, "f");
 
@@ -358,13 +365,13 @@ mod test {
         // Even if no user is specified in the URL, the entry with a username should
         // take precedence all else being equal.
         let auth = auth_config
-            .auth_for_url(&"https://example.net".parse()?)
+            .auth_for_url(&"https://example.net".parse()?)?
             .unwrap();
         assert_eq!(auth.group, "i");
 
         // If the cert of key is missing, the entry shouldn't match.
         let auth = auth_config
-            .auth_for_url(&"https://invalid.com".parse()?)
+            .auth_for_url(&"https://invalid.com".parse()?)?
             .unwrap();
         assert_eq!(auth.group, "default");
 

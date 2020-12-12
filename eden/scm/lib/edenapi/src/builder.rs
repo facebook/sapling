@@ -58,7 +58,7 @@ impl Builder {
             .map_err(ConfigError::InvalidUrl)?;
 
         let (cert, key, ca_bundle) = AuthConfig::new(&config)
-            .auth_for_url(&server_url)
+            .auth_for_url(&server_url)?
             .map(|auth| (auth.cert, auth.key, auth.cacerts))
             .unwrap_or_default();
 
