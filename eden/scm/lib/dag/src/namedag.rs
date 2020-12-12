@@ -289,7 +289,7 @@ impl<IS, M, P, S> DagAlgorithm for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone + 'static,
-    M: TryClone + IdMapAssignHead + Sync + Send + 'static,
+    M: TryClone + IdConvert + Sync + Send + 'static,
     P: TryClone + Sync + Send + 'static,
     S: TryClone + Sync + Send + 'static,
 {
@@ -549,7 +549,7 @@ async fn non_master_parent_names<M, S>(
     dag: &Locked<'_, IdDag<S>>,
 ) -> Result<HashMap<VertexName, Vec<VertexName>>>
 where
-    M: IdMapAssignHead + Persist,
+    M: IdConvert + Persist,
     S: IdDagStore + Persist,
 {
     let parent_ids = dag.non_master_parent_ids()?;
@@ -658,7 +658,7 @@ impl<IS, M, P, S> IdMapSnapshot for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone + 'static,
-    M: TryClone + IdMapAssignHead + Send + Sync + 'static,
+    M: TryClone + IdConvert + Send + Sync + 'static,
     P: TryClone + Send + Sync + 'static,
     S: TryClone + Send + Sync + 'static,
 {
