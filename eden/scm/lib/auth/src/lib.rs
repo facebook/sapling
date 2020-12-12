@@ -14,6 +14,8 @@ use url::Url;
 use configparser::{config::ConfigSet, Text};
 use util::path::expand_path;
 
+pub mod x509;
+
 /// A group of client authentiation settings from the user's config.
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Auth {
