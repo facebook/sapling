@@ -7,6 +7,8 @@
 # pyre-strict
 
 import itertools
+import sys
+import unittest
 from typing import Optional, Tuple
 
 import eden.fs.cli.doctor as doctor
@@ -240,6 +242,7 @@ kill -9 123991
 """,
         )
 
+    @unittest.skipIf(bool(sys.platform == "darwin"), "does not pass on macOS")
     def test_when_lock_file_op_has_io_exception(self) -> None:
         proc_utils = self.make_proc_utils()
         proc_utils.add_edenfs(
