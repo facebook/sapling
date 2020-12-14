@@ -98,3 +98,18 @@ Update by full hash - infinitepush path should be used (if infinitepushbookmark 
   $ hg update "$FULLHASH"
   pulling 'd15d0da9f84a9bebe6744eba3ec1dd86e2d46818' from 'ssh://user@dummy/repo'
   2 files updated, 0 files merged, 3 files removed, 0 files unresolved
+
+Check that non-scratch bookmark is pulled from normal path
+  $ cd "$TESTTMP/repo"
+  $ hg book newbook
+  $ cd "$TESTTMP/first_client"
+  $ cat << EOF >> .hg/hgrc
+  > [paths]
+  > default=ssh://user@dummy/repo
+  > infinitepush=ssh://user@dummy/broken
+  > infinitepushbookmark=ssh://user@dummy/broken
+  > EOF
+  $ hg pull -B newbook
+  pulling from ssh://user@dummy/repo
+  no changes found
+  adding remote bookmark newbook

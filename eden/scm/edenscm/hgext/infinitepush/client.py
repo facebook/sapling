@@ -356,14 +356,14 @@ def _pull(orig, ui, repo, source="default", **opts):
     # This is useful for dogfooding other hg backend that stores only public commits
     # (e.g. Mononoke)
     if opts.get("rev") or opts.get("bookmark"):
-        with _resetinfinitepushpath(ui, **opts):
+        with _resetinfinitepushpath(repo, ui, **opts):
             return _dopull(orig, ui, repo, source, **opts)
 
     return _dopull(orig, ui, repo, source, **opts)
 
 
 @contextlib.contextmanager
-def _resetinfinitepushpath(ui, **opts):
+def _resetinfinitepushpath(repo, ui, **opts):
     """
     Sets "default" path to "infinitepush" or "infinitepushbookmark" path and
     deletes "infinitepush"/"infinitepushbookmark" path ("infinitepushbookmark"
@@ -381,6 +381,17 @@ def _resetinfinitepushpath(ui, **opts):
     infinitepushpath = pathname.infinitepush
     infinitepushwritepath = pathname.infinitepushwrite
     infinitepushbookmarkpath = pathname.infinitepushbookmark
+
+    if opts.get("bookmark"):
+        for b in opts["bookmark"]:
+            if repo._scratchbranchmatcher.match(b):
+                break
+        else:
+            # Bookmarks were requested to pull, but not
+            # a single bookmark matches scratch branch matcher.
+            # Let's pull from normal path instead
+            yield
+            return
 
     pullingsinglecommithash = False
     if opts.get("rev"):
