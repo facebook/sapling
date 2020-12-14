@@ -27,7 +27,7 @@ def _destrestack(repo, subset, x):
 
     # Empty src or already obsoleted - Do not return a destination
     if not src or src in obsoleted:
-        return smartset.baseset()
+        return smartset.baseset(repo=repo)
 
     # Find the obsoleted "base" by checking source's parent recursively
     base = src
@@ -36,7 +36,7 @@ def _destrestack(repo, subset, x):
         # When encountering a public revision which cannot be obsoleted, stop
         # the search early and return no destination. Do the same for nullrev.
         if getphase(repo, base) == phases.public or base == nullrev:
-            return smartset.baseset()
+            return smartset.baseset(repo=repo)
 
     # Find successors for given base
     # NOTE: Ideally we can use obsutil.successorssets to detect divergence
@@ -63,13 +63,13 @@ def _destrestack(repo, subset, x):
             if base == nullrev:
                 # Root node is pruned. The new base (destination) is the
                 # virtual nullrev.
-                return smartset.baseset([nullrev])
-        return smartset.baseset([base])
+                return smartset.baseset([nullrev], repo=repo)
+        return smartset.baseset([base], repo=repo)
     elif len(succrevs) == 1:
         # Unique visible successor case - A valid destination
-        return smartset.baseset([succrevs[0]])
+        return smartset.baseset([succrevs[0]], repo=repo)
     else:
         # Multiple visible successors - Choose the one with a greater revision
         # number. This is to be compatible with restack old behavior. We might
         # want to revisit it when we introduce the divergence concept to users.
-        return smartset.baseset([max(succrevs)])
+        return smartset.baseset([max(succrevs)], repo=repo)

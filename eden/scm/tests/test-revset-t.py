@@ -33,9 +33,9 @@ def r3232(repo, subset, x):
     """
     if 3 not in subset:
        if 2 in subset:
-           return baseset([2,2])
-       return baseset()
-    return baseset([3,3,2,2])
+           return baseset([2,2], repo=repo)
+       return baseset(repo=repo)
+    return baseset([3,3,2,2], repo=repo)
 
 edenscm.mercurial.revset.symbols['r3232'] = r3232
 ''' > "testrevset.py"

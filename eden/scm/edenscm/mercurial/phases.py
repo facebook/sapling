@@ -257,9 +257,9 @@ class phasecache(object):
             else:
                 revs = set.union(*[self._phasesets[p] for p in phases])
             if subset is None:
-                return smartset.baseset(revs)
+                return smartset.baseset(revs, repo=repo)
             else:
-                return subset & smartset.baseset(revs)
+                return subset & smartset.baseset(revs, repo=repo)
         else:
             phases = set(allphases).difference(phases)
             if not phases:

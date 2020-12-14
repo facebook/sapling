@@ -1302,7 +1302,7 @@ def graph(web, req, tmpl):
         # We have to feed a baseset to dagwalker as it is expecting smartset
         # object. This does not have a big impact on hgweb performance itself
         # since hgweb graphing code is not itself lazy yet.
-        dag = graphmod.dagwalker(web.repo, smartset.baseset(revs))
+        dag = graphmod.dagwalker(web.repo, smartset.baseset(revs), repo=web.repo)
         # As we said one line above... not lazy.
         tree = list(
             item
@@ -1315,7 +1315,7 @@ def graph(web, req, tmpl):
         tree = []
         if pos != -1:
             revs = web.repo.changelog.revs(pos, lastrev)
-            dag = graphmod.dagwalker(web.repo, smartset.baseset(revs))
+            dag = graphmod.dagwalker(web.repo, smartset.baseset(revs), repo=web.repo)
             tree = list(
                 item
                 for item in graphmod.colored(dag, web.repo)

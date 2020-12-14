@@ -67,7 +67,7 @@ def _backup(
         )
 
     if not heads:
-        return smartset.baseset(), smartset.baseset()
+        return smartset.baseset(repo=repo), smartset.baseset(repo=repo)
 
     # Check if any of the heads are already available on the server.
     headnodes = list(unfi.nodes("%ld", heads))
@@ -87,7 +87,7 @@ def _backup(
     heads = unfi.revs("%ld - %ln", heads, remoteheadnodes)
 
     if not heads:
-        return smartset.baseset(), smartset.baseset()
+        return smartset.baseset(repo=repo), smartset.baseset(repo=repo)
 
     # Filter out any commits that have been marked as bad.
     badnodes = repo.ui.configlist("infinitepushbackup", "dontbackupnodes", [])

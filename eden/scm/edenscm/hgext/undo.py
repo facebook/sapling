@@ -540,7 +540,7 @@ def _cachedgetolddrafts(repo, nodedict):
                 "(draft() & ancestors(%ls)) - %ls", oldheadslist, oldobslist
             )
             urepo = repo
-            cache[key] = smartset.baseset(urepo.revs(oldlogrevstring))
+            cache[key] = smartset.baseset(urepo.revs(oldlogrevstring), repo=repo)
     return cache[key]
 
 
@@ -563,7 +563,7 @@ def _olddraft(repo, subset, x):
         args.get("reverseindex"), _("index must be a positive integer"), 1
     )
     revs = _getolddrafts(repo, reverseindex)
-    return subset & smartset.baseset(revs)
+    return subset & smartset.baseset(revs, repo=repo)
 
 
 @revsetpredicate("_localbranch")
@@ -587,7 +587,7 @@ def _localbranch(repo, subset, x):
         querystring = revsetlang.formatspec("(children(%d) & draft())::", revs.first())
     else:
         querystring = revsetlang.formatspec("((::%ld) & draft())::", revs)
-    return subset & smartset.baseset(repo.revs(querystring))
+    return subset & smartset.baseset(repo.revs(querystring), repo=repo)
 
 
 def _getoldworkingcopyparent(repo, reverseindex):
@@ -608,7 +608,7 @@ def _cachedgetoldworkingcopyparent(repo, wkpnode):
         oldworkingparent = filter(None, oldworkingparent.split("\n"))
         oldwkprevstring = revsetlang.formatspec("%ls", oldworkingparent)
         urepo = repo
-        cache[key] = smartset.baseset(urepo.revs(oldwkprevstring))
+        cache[key] = smartset.baseset(urepo.revs(oldwkprevstring), repo=repo)
     return cache[key]
 
 
@@ -624,7 +624,7 @@ def _oldworkingcopyparent(repo, subset, x):
         args.get("reverseindex"), _("index must be a positive interger"), 1
     )
     revs = _getoldworkingcopyparent(repo, reverseindex)
-    return subset & smartset.baseset(revs)
+    return subset & smartset.baseset(revs, repo=repo)
 
 
 # Templates

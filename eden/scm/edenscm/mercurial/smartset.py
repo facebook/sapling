@@ -216,7 +216,9 @@ class abstractsmartset(object):
             if y is None:
                 break
             ys.append(y)
-        return baseset(ys, datarepr=("slice=%d:%d %r", start, stop, self))
+        return baseset(
+            ys, datarepr=("slice=%d:%d %r", start, stop, self), repo=self.repo()
+        )
 
     def clone(self):
         return copy.copy(self)
@@ -266,18 +268,19 @@ class baseset(abstractsmartset):
 
     >>> x = [4, 0, 7, 6]
     >>> y = [5, 6, 7, 3]
+    >>> repo = util.refcell([])
 
     Construct by a set:
-    >>> xs = baseset(set(x))
-    >>> ys = baseset(set(y))
+    >>> xs = baseset(set(x), repo=repo)
+    >>> ys = baseset(set(y), repo=repo)
     >>> [list(i) for i in [xs + ys, xs & ys, xs - ys]]
     [[0, 4, 6, 7, 3, 5], [6, 7], [0, 4]]
     >>> [type(i).__name__ for i in [xs + ys, xs & ys, xs - ys]]
     ['addset', 'baseset', 'baseset']
 
     Construct by a list-like:
-    >>> xs = baseset(x)
-    >>> ys = baseset(i for i in y)
+    >>> xs = baseset(x, repo=repo)
+    >>> ys = baseset((i for i in y), repo=repo)
     >>> [list(i) for i in [xs + ys, xs & ys, xs - ys]]
     [[4, 0, 7, 6, 5, 3], [7, 6], [4, 0]]
     >>> [type(i).__name__ for i in [xs + ys, xs & ys, xs - ys]]
@@ -307,7 +310,7 @@ class baseset(abstractsmartset):
     ['addset', 'baseset', 'baseset']
 
     istopo is preserved across set operations
-    >>> xs = baseset(set(x), istopo=True)
+    >>> xs = baseset(set(x), istopo=True, repo=repo)
     >>> rs = xs & ys
     >>> type(rs).__name__
     'baseset'
@@ -332,8 +335,9 @@ class baseset(abstractsmartset):
                 data = list(data)
             self._list = data
         self._datarepr = datarepr
-        if repo is not None:
-            self._reporef = weakref.ref(repo)
+        if repo is None:
+            raise TypeError("baseset requires repo")
+        self._reporef = weakref.ref(repo)
 
     @util.propertycache
     def _set(self):
@@ -443,7 +447,11 @@ class baseset(abstractsmartset):
             and r"_set" in self.__dict__
             and self._ascending is not None
         ):
-            s = baseset(data=getattr(self._set, op)(other._set), istopo=self._istopo)
+            s = baseset(
+                data=getattr(self._set, op)(other._set),
+                istopo=self._istopo,
+                repo=self.repo(),
+            )
             s._ascending = self._ascending
         else:
             s = getattr(super(baseset, self), op)(other)
@@ -458,12 +466,14 @@ class baseset(abstractsmartset):
     def _slice(self, start, stop):
         # creating new list should be generally cheaper than iterating items
         if self._ascending is None:
-            return baseset(self._list[start:stop], istopo=self._istopo)
+            return baseset(
+                self._list[start:stop], istopo=self._istopo, repo=self.repo()
+            )
 
         data = self._asclist
         if not self._ascending:
             start, stop = max(len(data) - stop, 0), max(len(data) - start, 0)
-        s = baseset(data[start:stop], istopo=self._istopo)
+        s = baseset(data[start:stop], istopo=self._istopo, repo=self.repo())
         s._ascending = self._ascending
         return s
 
@@ -950,8 +960,10 @@ class filteredset(abstractsmartset):
         # until this gets improved, we use generator expression
         # here, since list comprehensions are free to call __len__ again
         # causing infinite recursion
-        l = baseset(r for r in self)
-        return len(l)
+        count = 0
+        for r in self:
+            count += 1
+        return count
 
     def sort(self, reverse=False):
         self._subset.sort(reverse=reverse)
@@ -1045,16 +1057,16 @@ class addset(abstractsmartset):
     them maintaining the order by iterating over both at the same time
 
     >>> repo = util.refcell([])
-    >>> xs = baseset([0, 3, 2])
-    >>> ys = baseset([5, 2, 4])
+    >>> xs = baseset([0, 3, 2], repo=repo)
+    >>> ys = baseset([5, 2, 4], repo=repo)
 
     >>> rs = addset(xs, ys)
     >>> bool(rs), 0 in rs, 1 in rs, 5 in rs, rs.first(), rs.last()
     (True, True, False, True, 0, 4)
-    >>> rs = addset(xs, baseset([]))
+    >>> rs = addset(xs, baseset([], repo=repo))
     >>> bool(rs), 0 in rs, 1 in rs, rs.first(), rs.last()
     (True, True, False, 0, 2)
-    >>> rs = addset(baseset([]), baseset([]))
+    >>> rs = addset(baseset([], repo=repo), baseset([], repo=repo))
     >>> bool(rs), 0 in rs, rs.first(), rs.last()
     (False, False, None, None)
 
@@ -1127,7 +1139,7 @@ class addset(abstractsmartset):
     @util.propertycache
     def _list(self):
         if not self._genlist:
-            self._genlist = baseset(iter(self))
+            self._genlist = baseset(iter(self), repo=self.repo())
         return self._genlist
 
     def __iter__(self):
@@ -1456,9 +1468,9 @@ def spanset(repo, start=0, end=maxrev):
     # special handling of nullrev
     if start == nullrev:
         if ascending:
-            s = baseset([nullrev]) + s
+            s = baseset([nullrev], repo=repo) + s
         else:
-            s = s + baseset([nullrev])
+            s = s + baseset([nullrev], repo=repo)
     return s
 
 
@@ -1495,7 +1507,7 @@ class fullreposet(idset):
             #
             # `other` was used with "&", let's assume this is a set like
             # object.
-            other = baseset(other)
+            other = baseset(other, repo=self.repo())
 
         other.sort(reverse=self.isdescending())
         return other

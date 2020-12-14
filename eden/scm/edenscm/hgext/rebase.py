@@ -138,7 +138,7 @@ def _revsetdestrebase(repo, subset, x):
     sourceset = None
     if x is not None:
         sourceset = revset.getset(repo, smartset.fullreposet(repo), x)
-    return subset & smartset.baseset([_destrebase(repo, sourceset)])
+    return subset & smartset.baseset([_destrebase(repo, sourceset)], repo=repo)
 
 
 def _ctxdesc(ctx):
@@ -501,7 +501,7 @@ class rebaseruntime(object):
         if mutation.enabled(repo):
             # We must traverse mutation edges, too - topo sort is not enough.
             sortedrevs = smartset.baseset(
-                mutation.toposortrevs(repo, subset, self.predmap)
+                mutation.toposortrevs(repo, subset, self.predmap), repo=repo
             )
         else:
             sortedrevs = repo.revs("sort(%ld, -topo)", subset)

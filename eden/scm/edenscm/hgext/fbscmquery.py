@@ -162,7 +162,7 @@ def gitnode(repo, subset, x):
         return subset.filter(lambda r: False)
 
     rn = repo[node.bin(hghash)].rev()
-    return subset & smartset.baseset([rn])
+    return subset & smartset.baseset([rn], repo=repo)
 
 
 @namespacepredicate("conduit", priority=70)

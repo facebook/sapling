@@ -327,7 +327,7 @@ def _reachablerootspure(repo, minroot, roots, heads, includepath, parentrevs=Non
             if parent >= minroot and parent not in seen:
                 dovisit(parent)
     if not reachable:
-        return baseset()
+        return baseset(repo=repo)
     if not includepath:
         return reachable
     for rev in sorted(seen):
@@ -342,7 +342,7 @@ def reachableroots(repo, roots, heads, includepath=False):
 
     If includepath is True, return (<roots>::<heads>)."""
     if not roots:
-        return baseset()
+        return baseset(repo=repo)
     minroot = roots.min()
     roots = list(roots)
     heads = list(heads)
@@ -366,7 +366,7 @@ def reachableroots(repo, roots, heads, includepath=False):
     if wdirroot:
         roots.remove(node.wdirrev)
         if not roots:
-            return baseset([node.wdirrev] if wdirhead else [])
+            return baseset([node.wdirrev] if wdirhead else [], repo=repo)
 
     try:
         revs = repo.changelog.reachableroots(minroot, heads, roots, includepath)
@@ -380,7 +380,7 @@ def reachableroots(repo, roots, heads, includepath=False):
             revs = [r for r in revs if r not in wdirparents]
         revs.append(node.wdirrev)
 
-    revs = baseset(revs)
+    revs = baseset(revs, repo=repo)
     revs.sort()
     return revs
 

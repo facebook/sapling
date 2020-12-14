@@ -512,7 +512,9 @@ def revset_fromgit(repo, subset, x):
     revset.getargs(x, 0, 0, "fromgit takes no arguments")
     git = repo.githandler
     node = repo.changelog.node
-    return baseset(r for r in subset if git.map_git_get(hex(node(r))) is not None)
+    return baseset(
+        (r for r in subset if git.map_git_get(hex(node(r))) is not None), repo=repo
+    )
 
 
 def revset_gitnode(repo, subset, x):
@@ -532,7 +534,7 @@ def revset_gitnode(repo, subset, x):
             return False
         return gitnode.startswith(rev)
 
-    result = baseset(r for r in subset if matches(r))
+    result = baseset((r for r in subset if matches(r)), repo=repo)
     if 0 <= len(result) < 2:
         return result
     raise LookupError(rev, git.map_file, _("ambiguous identifier"))

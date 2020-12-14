@@ -825,7 +825,7 @@ def filelogrevset(orig, repo, subset, x):
             for actx in fctx.ancestors():
                 s.add(actx.linkrev())
 
-    return smartset.baseset([r for r in subset if r in s])
+    return smartset.baseset([r for r in subset if r in s], repo=repo)
 
 
 @contextmanager

@@ -175,4 +175,4 @@ def getstablerev(repo, subset, x):
     trypull = ui.configbool("stablerev", "pullonmissing", False)
     commitctx = _lookup(ui, repo, revspec, trypull=trypull)
 
-    return subset & baseset([commitctx.rev()])
+    return subset & baseset([commitctx.rev()], repo=repo)

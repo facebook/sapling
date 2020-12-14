@@ -200,8 +200,8 @@ def stringset(repo, subset, x, order):
 
     x = i
     if x in subset or x == node.nullrev and isinstance(subset, fullreposet):
-        return baseset([x])
-    return baseset()
+        return baseset([x], repo=repo)
+    return baseset(repo=repo)
 
 
 def rangeset(repo, subset, x, y, order):
@@ -209,7 +209,7 @@ def rangeset(repo, subset, x, y, order):
     n = getset(repo, fullreposet(repo), y)
 
     if not m or not n:
-        return baseset()
+        return baseset(repo=repo)
     return _makerangeset(repo, subset, m.first(), n.last(), order)
 
 
@@ -222,24 +222,24 @@ def rangepre(repo, subset, y, order):
     # ':y' can't be rewritten to '0:y' since '0' may be hidden
     n = getset(repo, fullreposet(repo), y)
     if not n:
-        return baseset()
+        return baseset(repo=repo)
     return _makerangeset(repo, subset, 0, n.last(), order)
 
 
 def rangepost(repo, subset, x, order):
     m = getset(repo, fullreposet(repo), x)
     if not m:
-        return baseset()
+        return baseset(repo=repo)
     return _makerangeset(repo, subset, m.first(), smartset.maxrev, order)
 
 
 def _makerangeset(repo, subset, m, n, order):
     if m == n:
-        r = baseset([m])
+        r = baseset([m], repo=repo)
     elif n == node.wdirrev:
-        r = spanset(repo, m, smartset.maxrev) + baseset([n])
+        r = spanset(repo, m, smartset.maxrev) + baseset([n], repo=repo)
     elif m == node.wdirrev:
-        r = baseset([m]) + spanset(repo, smartset.maxrev, n - 1)
+        r = baseset([m], repo=repo) + spanset(repo, smartset.maxrev, n - 1)
     elif m < n:
         r = spanset(repo, m, n + 1)
     else:
@@ -445,13 +445,13 @@ def ancestor(repo, subset, x):
         nodes = cl.tonodes(yieldrevs(repo, rl, l))
         anc = cl.dag.gcaone(nodes)
         if anc is None:
-            return baseset()
+            return baseset(repo=repo)
         else:
             ancrev = cl.rev(anc)
             if ancrev in subset:
-                return baseset([ancrev])
+                return baseset([ancrev], repo=repo)
             else:
-                return baseset()
+                return baseset(repo=repo)
 
     it = yieldrevs(repo, rl, l)
     ancestors = repo.changelog.index.ancestors
@@ -460,7 +460,7 @@ def ancestor(repo, subset, x):
     try:
         anc = next(it)
     except StopIteration:
-        return baseset()
+        return baseset(repo=repo)
 
     for revs in util.eachslice(it, 23):
         ancrevs = ancestors(anc, *revs)
@@ -471,8 +471,8 @@ def ancestor(repo, subset, x):
             break
 
     if anc is not None and anc in subset:
-        return baseset([anc])
-    return baseset()
+        return baseset([anc], repo=repo)
+    return baseset(repo=repo)
 
 
 def _depth(init, func, startdepth, stopdepth):
@@ -518,7 +518,7 @@ def _ancestors(repo, subset, x, followfirst=False, startdepth=None, stopdepth=No
         return subset & heads
 
     if not heads:
-        return baseset()
+        return baseset(repo=repo)
 
     # rust changelog alternative path
     cl = repo.changelog
@@ -642,7 +642,7 @@ def ancestorsaged(repo, subset, x):
         raise error.ParseError(_("ancestorsaged takes at least 2 arguments"))
     heads = getset(repo, fullreposet(repo), args["set"])
     if not heads:
-        return baseset()
+        return baseset(repo=repo)
     agerange = getstring(args["agerange"], _("ancestorsaged requires an age range"))
     start, end = parseagerange(agerange)
 
@@ -774,7 +774,8 @@ def phasedivergent(repo, subset, x):
     if mutation.enabled(repo):
         clrev = repo.changelog.rev
         phasedivergent = baseset(
-            [clrev(n) for n in mutation.phasedivergentnodes(repo) if n in repo]
+            [clrev(n) for n in mutation.phasedivergentnodes(repo) if n in repo],
+            repo=repo,
         )
     else:
         phasedivergent = obsmod.getrevs(repo, "phasedivergent")
@@ -832,7 +833,7 @@ def checkstatus(repo, subset, pat, field):
 
 def _children(repo, subset, parentset):
     if not parentset:
-        return baseset()
+        return baseset(repo=repo)
     cs = set()
     pr = repo.changelog.parentrevs
     minrev = parentset.min()
@@ -857,7 +858,7 @@ def _children(repo, subset, parentset):
                 cs.add(r)
             if p2 != nullrev and p2 in parentset and isvisible(r):
                 cs.add(r)
-    return baseset(cs)
+    return baseset(cs, repo=repo)
 
 
 @predicate("children(set)", safe=True)
@@ -969,7 +970,7 @@ def desc(repo, subset, x):
 def _descendants(repo, subset, x, followfirst=False, startdepth=None, stopdepth=None):
     roots = getset(repo, fullreposet(repo), x)
     if not roots:
-        return baseset()
+        return baseset(repo=repo)
 
     # rust changelog alternative path
     cl = repo.changelog
@@ -1060,7 +1061,8 @@ def contentdivergent(repo, subset, x):
     if mutation.enabled(repo):
         clrev = repo.changelog.rev
         contentdivergent = baseset(
-            [clrev(n) for n in mutation.contentdivergentnodes(repo) if n in repo]
+            [clrev(n) for n in mutation.contentdivergentnodes(repo) if n in repo],
+            repo=repo,
         )
     else:
         contentdivergent = obsmod.getrevs(repo, "contentdivergent")
@@ -1078,7 +1080,7 @@ def extdata(repo, subset, x):
         _("extdata takes at least 1 string argument"),
     )
     data = scmutil.extdatasource(repo, source)
-    return subset & baseset(data)
+    return subset & baseset(data, repo=repo)
 
 
 @predicate("extinct()", safe=True)
@@ -1235,7 +1237,7 @@ def _follow(repo, subset, x, name, followfirst=False):
         s = dagop.filerevancestors(repo, fctxs, followfirst)
     else:
         if revs is None:
-            revs = baseset([repo["."].rev()])
+            revs = baseset([repo["."].rev()], repo=repo)
         s = dagop.revancestors(repo, revs, followfirst)
 
     return subset & s
@@ -1472,7 +1474,7 @@ def head(repo, subset, x):
     cl = repo.changelog
     for ls in pycompat.itervalues(repo.branchmap()):
         hs.update(cl.rev(h) for h in ls)
-    return subset & baseset(hs)
+    return subset & baseset(hs, repo=repo)
 
 
 @predicate("heads(set)", safe=True)
@@ -1494,7 +1496,7 @@ def hidden(repo, subset, x):
     """Hidden changesets."""
     # i18n: "hidden" is a keyword
     getargs(x, 0, 0, _("hidden takes no arguments"))
-    return baseset([])
+    return baseset([], repo=repo)
 
 
 @predicate("keyword(string)", safe=True, weight=10)
@@ -1567,12 +1569,12 @@ def maxrev(repo, subset, x):
     try:
         m = os.max()
         if m in subset:
-            return baseset([m], datarepr=("<max %r, %r>", subset, os))
+            return baseset([m], datarepr=("<max %r, %r>", subset, os), repo=repo)
     except ValueError:
         # os.max() throws a ValueError when the collection is empty.
         # Same as python's max().
         pass
-    return baseset(datarepr=("<max %r, %r>", subset, os))
+    return baseset(datarepr=("<max %r, %r>", subset, os), repo=repo)
 
 
 @predicate("merge()", safe=True, weight=10)
@@ -1591,7 +1593,7 @@ def branchpoint(repo, subset, x):
     getargs(x, 0, 0, _("branchpoint takes no arguments"))
     cl = repo.changelog
     if not subset:
-        return baseset()
+        return baseset(repo=repo)
     # XXX this should be 'parentset.min()' assuming 'parentset' is a smartset
     # (and if it is not, it should.)
     baserev = min(subset)
@@ -1612,12 +1614,12 @@ def minrev(repo, subset, x):
     try:
         m = os.min()
         if m in subset:
-            return baseset([m], datarepr=("<min %r, %r>", subset, os))
+            return baseset([m], datarepr=("<min %r, %r>", subset, os), repo=repo)
     except ValueError:
         # os.min() throws a ValueError when the collection is empty.
         # Same as python's min().
         pass
-    return baseset(datarepr=("<min %r, %r>", subset, os))
+    return baseset(datarepr=("<min %r, %r>", subset, os), repo=repo)
 
 
 @predicate("modifies(pattern)", safe=True, weight=30)
@@ -1697,8 +1699,8 @@ def node_(repo, subset, x):
             rn = node.wdirrev
 
     if rn is None:
-        return baseset()
-    result = baseset([rn])
+        return baseset(repo=repo)
+    result = baseset([rn], repo=repo)
     return result & subset
 
 
@@ -1716,7 +1718,7 @@ def obsolete(repo, subset, x):
             return subset & cl.torevset(nodes)
 
         clrev = repo.changelog.rev
-        obsoletes = baseset([clrev(n) for n in nodes])
+        obsoletes = baseset([clrev(n) for n in nodes], repo=repo)
     else:
         obsoletes = obsmod.getrevs(repo, "obsolete")
     return subset & obsoletes
@@ -1736,7 +1738,7 @@ def only(repo, subset, x):
 
     if len(args) == 1:
         if not include:
-            return baseset()
+            return baseset(repo=repo)
 
         descendants = set(dagop.revdescendants(repo, include, False))
         exclude = [
@@ -1809,8 +1811,8 @@ def p1(repo, subset, x):
     if x is None:
         p = repo[x].p1().rev()
         if p >= 0:
-            return subset & baseset([p])
-        return baseset()
+            return subset & baseset([p], repo=repo)
+        return baseset(repo=repo)
 
     ps = set()
     cl = repo.changelog
@@ -1833,10 +1835,10 @@ def p2(repo, subset, x):
         try:
             p = ps[1].rev()
             if p >= 0:
-                return subset & baseset([p])
-            return baseset()
+                return subset & baseset([p], repo=repo)
+            return baseset(repo=repo)
         except IndexError:
-            return baseset()
+            return baseset(repo=repo)
 
     ps = set()
     cl = repo.changelog
@@ -1953,7 +1955,7 @@ def present(repo, subset, x, order):
     try:
         return getset(repo, subset, x, order)
     except error.RepoLookupError:
-        return baseset()
+        return baseset(repo=repo)
 
 
 # for internal use
@@ -2036,8 +2038,8 @@ def remote(repo, subset, x):
     if n in repo:
         r = repo[n].rev()
         if r in subset:
-            return baseset([r])
-    return baseset()
+            return baseset([r], repo=repo)
+    return baseset(repo=repo)
 
 
 @predicate("removes(pattern)", safe=True, weight=30)
@@ -2066,8 +2068,8 @@ def rev(repo, subset, x):
         # i18n: "rev" is a keyword
         raise error.ParseError(_("rev expects a number"))
     if l not in repo.changelog and l not in (node.nullrev, node.wdirrev):
-        return baseset()
-    return subset & baseset([l])
+        return baseset(repo=repo)
+    return subset & baseset([l], repo=repo)
 
 
 @predicate("matching(revision [, field])", safe=True, weight=10)
@@ -2309,7 +2311,9 @@ def sort(repo, subset, x, order):
         if "topo.firstbranch" in opts:
             firstbranch = getset(repo, subset, opts["topo.firstbranch"])
         revs = baseset(
-            dagop.toposort(revs, repo.changelog.parentrevs, firstbranch), istopo=True
+            dagop.toposort(revs, repo.changelog.parentrevs, firstbranch),
+            istopo=True,
+            repo=repo,
         )
         if keyflags[0][1]:
             revs.reverse()
@@ -2319,7 +2323,7 @@ def sort(repo, subset, x, order):
     ctxs = list(revs.prefetch("text").iterctx(repo))
     for k, reverse in reversed(keyflags):
         ctxs.sort(key=_sortkeyfuncs[k], reverse=reverse)
-    return baseset([c.rev() for c in ctxs])
+    return baseset([c.rev() for c in ctxs], repo=repo)
 
 
 def _mapbynodefunc(repo, s, f, visiableonly=False):
@@ -2340,7 +2344,7 @@ def _mapbynodefunc(repo, s, f, visiableonly=False):
     else:
         filter = nodemap.__contains__
     result = set(torev(n) for n in f(tonode(r) for r in s) if filter(n))
-    return smartset.baseset(result)
+    return smartset.baseset(result, repo=repo)
 
 
 @predicate("allprecursors(set[, depth])")
@@ -2496,8 +2500,8 @@ def wdir(repo, subset, x):
     # i18n: "wdir" is a keyword
     getargs(x, 0, 0, _("wdir takes no arguments"))
     if node.wdirrev in subset or isinstance(subset, fullreposet):
-        return baseset([node.wdirrev])
-    return baseset()
+        return baseset([node.wdirrev], repo=repo)
+    return baseset(repo=repo)
 
 
 @predicate("remotenames()")
@@ -2507,7 +2511,7 @@ def remotenamesrevset(repo, subset, x):
     remoterevs = set()
     for rname in repo._remotenames.keys():
         remoterevs.update(_getremoterevs(repo, "remote" + rname))
-    return subset & smartset.baseset(sorted(remoterevs))
+    return subset & smartset.baseset(sorted(remoterevs), repo=repo)
 
 
 @predicate("remotebookmark([name])")
@@ -2528,7 +2532,7 @@ def remotebookmarkrevset(repo, subset, x):
         raise error.RepoLookupError(
             _("no remote bookmarks exist that match '%s'") % bookmarkname
         )
-    return subset & smartset.baseset(sorted(remoterevs))
+    return subset & smartset.baseset(sorted(remoterevs), repo=repo)
 
 
 def _getremoterevs(repo, namespacename, matchpattern=None):
@@ -2556,7 +2560,7 @@ def _getremoterevs(repo, namespacename, matchpattern=None):
 def _orderedlist(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
-        return baseset()
+        return baseset(repo=repo)
     # remove duplicates here. it's difficult for caller to deduplicate sets
     # because different symbols can point to the same rev.
     cl = repo.changelog
@@ -2579,7 +2583,7 @@ def _orderedlist(repo, subset, x):
             if r in subset or r == node.nullrev and isinstance(subset, fullreposet):
                 ls.append(r)
             seen.add(r)
-    return baseset(ls)
+    return baseset(ls, repo=repo)
 
 
 # for internal use
@@ -2595,10 +2599,10 @@ def _list(repo, subset, x, order):
 def _orderedintlist(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
-        return baseset()
+        return baseset(repo=repo)
     ls = [int(r) for r in s.split("\0")]
     s = subset
-    return baseset([r for r in ls if r in s])
+    return baseset([r for r in ls if r in s], repo=repo)
 
 
 # for internal use
@@ -2614,11 +2618,11 @@ def _intlist(repo, subset, x, order):
 def _orderedhexlist(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
-        return baseset()
+        return baseset(repo=repo)
     cl = repo.changelog
     ls = [cl.rev(node.bin(r)) for r in s.split("\0")]
     s = subset
-    return baseset([r for r in ls if r in s])
+    return baseset([r for r in ls if r in s], repo=repo)
 
 
 # for internal use
@@ -2738,7 +2742,7 @@ def matchany(ui, specs, repo=None, localalias=None):
     if not specs:
 
         def mfunc(repo, subset=None):
-            return baseset()
+            return baseset(repo=repo)
 
         return mfunc
     if not all(specs):

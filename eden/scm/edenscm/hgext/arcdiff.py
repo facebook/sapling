@@ -198,4 +198,4 @@ def lastsubmitted(repo, subset, x):
         _maybepull(repo, lasthash)
         resultrevs.add(repo[lasthash].rev())
 
-    return subset & smartset.baseset(sorted(resultrevs))
+    return subset & smartset.baseset(sorted(resultrevs), repo=repo)

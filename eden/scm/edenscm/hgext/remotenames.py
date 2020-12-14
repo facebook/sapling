@@ -1601,7 +1601,7 @@ def upstream_revs(filt, repo, subset, x):
                 upstream_tips.update(ns.nodes(repo, name))
 
     if not upstream_tips:
-        return smartset.baseset([])
+        return smartset.baseset([], repo=repo)
 
     tipancestors = repo.revs("::%ln", upstream_tips)
     return smartset.filteredset(subset, lambda n: n in tipancestors)

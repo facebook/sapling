@@ -369,7 +369,9 @@ def _revsetglobalrev(repo, subset, x):
     )
 
     torev = repo.changelog.rev
-    revs = revset.baseset(torev(n) for n in _lookupglobalrev(repo, globalrev))
+    revs = revset.baseset(
+        (torev(n) for n in _lookupglobalrev(repo, globalrev)), repo=repo
+    )
     return subset & revs
 
 
@@ -380,7 +382,7 @@ def _revsetsvnrev(repo, subset, x):
     svnrev = revset.getinteger(args[0], "the argument to svnrev() must be a number")
 
     torev = repo.changelog.rev
-    revs = revset.baseset(torev(n) for n in _lookupglobalrev(repo, svnrev))
+    revs = revset.baseset((torev(n) for n in _lookupglobalrev(repo, svnrev)), repo=repo)
     return subset & revs
 
 

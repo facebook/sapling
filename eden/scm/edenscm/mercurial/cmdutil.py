@@ -2904,7 +2904,7 @@ def _logrevs(repo, opts):
     if opts.get("rev"):
         revs = scmutil.revrange(repo, opts["rev"])
     elif follow and repo.dirstate.p1() == nullid:
-        revs = smartset.baseset()
+        revs = smartset.baseset(repo=repo)
     elif follow:
         revs = repo.revs("reverse(:.)")
     else:
@@ -2924,7 +2924,7 @@ def getgraphlogrevs(repo, pats, opts):
     limit = loglimit(opts)
     revs = _logrevs(repo, opts)
     if not revs:
-        return smartset.baseset(), None, None
+        return smartset.baseset(repo=repo), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if expr:
         if opts.get("rev"):
@@ -2947,7 +2947,7 @@ def getgraphlogrevs(repo, pats, opts):
             if idx >= limit:
                 break
             limitedrevs.append(rev)
-        revs = smartset.baseset(limitedrevs)
+        revs = smartset.baseset(limitedrevs, repo=repo)
 
     return revs, expr, filematcher
 
@@ -2963,7 +2963,7 @@ def getlogrevs(repo, pats, opts):
     limit = loglimit(opts)
     revs = _logrevs(repo, opts)
     if not revs:
-        return smartset.baseset([]), None, None
+        return smartset.baseset([], repo=repo), None, None
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if expr:
         if opts.get("rev"):
@@ -2981,7 +2981,7 @@ def getlogrevs(repo, pats, opts):
             if limit <= idx:
                 break
             limitedrevs.append(r)
-        revs = smartset.baseset(limitedrevs)
+        revs = smartset.baseset(limitedrevs, repo=repo)
 
     return revs, expr, filematcher
 
@@ -3071,7 +3071,7 @@ def getloglinerangerevs(repo, userrevs, opts):
 
     revs = sorted(linerangesbyrev, reverse=True)
 
-    return smartset.baseset(revs), filematcher, hunksfilter
+    return smartset.baseset(revs, repo=repo), filematcher, hunksfilter
 
 
 def _graphnodeformatter(ui, displayer):

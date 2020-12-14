@@ -355,7 +355,7 @@ def cloudremote(repo, subset, x):
             _("unable to pull all changesets from the remote store\n%s\n") % e,
             component="commitcloud",
         )
-    return smartset.baseset([])
+    return smartset.baseset([], repo=repo)
 
 
 def missingcloudrevspull(repo, nodes):

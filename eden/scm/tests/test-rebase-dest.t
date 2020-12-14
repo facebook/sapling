@@ -94,7 +94,7 @@ Setup rebase with multiple destinations
   >     else:
   >         query = revsetlang.formatspec('desc(%s)', newdesc)
   >         revs = repo.revs(query)
-  >     return smartset.baseset(revs)
+  >     return smartset.baseset(revs, repo=repo)
   > EOF
 
   $ setglobalconfig ui.allowemptycommit=1 phases.publish=false

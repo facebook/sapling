@@ -90,7 +90,7 @@ def dagwalker(repo, revs, template):
                     # precompute slow query as we know reachableroots() goes
                     # through all revs (issue4782)
                     if not isinstance(revs, smartset.baseset):
-                        revs = smartset.baseset(revs)
+                        revs = smartset.baseset(revs, repo=repo)
                     gp = gpcache[mpar] = sorted(
                         set(dagop.reachableroots(repo, revs, [mpar]))
                     )

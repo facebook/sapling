@@ -49,8 +49,8 @@ def disallowednewunstable(repo, revs):
         `experimental.evolution.allowunstable=True`
     """
     if mutation.enabled(repo):
-        return revset.baseset()
+        return revset.baseset(repo=repo)
     allowunstable = obsolete.isenabled(repo, obsolete.allowunstableopt)
     if allowunstable:
-        return revset.baseset()
+        return revset.baseset(repo=repo)
     return repo.revs("(%ld::) - %ld", revs, revs)

@@ -184,7 +184,7 @@ def getdag(ui, repo, revs, master, template):
     if simplifygrandparents:
         rootnodes = cl.tonodes(revs)
 
-    revs = smartset.baseset(revs)
+    revs = smartset.baseset(revs, repo=repo)
     revs.sort(reverse=True)
     ctxstream = revs.prefetchbytemplate(repo, template).iterctx(repo)
 
@@ -224,9 +224,7 @@ def getdag(ui, repo, revs, master, template):
                         )
                     )
                 else:
-                    gp = gpcache[mpar] = dagop.reachableroots(
-                        repo, smartset.baseset(revs), [mpar]
-                    )
+                    gp = gpcache[mpar] = dagop.reachableroots(repo, revs, [mpar])
             if not gp:
                 parents.append((graphmod.MISSINGPARENT, mpar))
             else:
@@ -317,7 +315,7 @@ def smartlogrevset(repo, subset, x):
         heads = set(repo.revs("interestingbookmarks() + heads(draft()) + ."))
 
     # Remove "null" commit. "::x" does not support it.
-    masterset -= smartset.baseset([nodemod.nullrev])
+    masterset -= smartset.baseset([nodemod.nullrev], repo=repo)
     if nodemod.nullrev in heads:
         heads.remove(nodemod.nullrev)
 
@@ -343,14 +341,17 @@ def smartlogrevset(repo, subset, x):
     # number of commits to calculate. This is sound because the above logic
     # includes p1 of draft commits, and assume master is public. Practically,
     # this optimization can make a 3x difference.
-    revs = smartset.baseset(repo.revs("ancestor(%ld & public()) + %ld", revs, revs))
+    revs = smartset.baseset(
+        repo.revs("ancestor(%ld & public()) + %ld", revs, revs), repo=repo
+    )
 
     # Collapse long obsoleted stack - only keep their heads and roots.
     # This is incompatible with automation (namely, nuclide-core) yet.
     if repo.ui.configbool("smartlog", "collapse-obsolete") and not repo.ui.plain():
-        obsrevs = smartset.baseset(repo.revs("%ld & obsolete()", revs))
+        obsrevs = smartset.baseset(repo.revs("%ld & obsolete()", revs), repo=repo)
         hiderevs = smartset.baseset(
-            repo.revs("%ld - (heads(%ld) + roots(%ld))", obsrevs, obsrevs, obsrevs)
+            repo.revs("%ld - (heads(%ld) + roots(%ld))", obsrevs, obsrevs, obsrevs),
+            repo=repo,
         )
         revs = repo.revs("%ld - %ld", revs, hiderevs)
 
@@ -399,7 +400,7 @@ def interestingheads(repo, subset, x):
                 ns.accessed(repo, name)
                 heads.add(rev(nodes[0]))
 
-    return subset & smartset.baseset(heads)
+    return subset & smartset.baseset(heads, repo=repo)
 
 
 @revsetpredicate("interestingmaster()")
