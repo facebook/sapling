@@ -486,8 +486,9 @@ class idset(abstractsmartset):
 
     The Rust SpanSet does not keep order. This structure keeps orders.
 
-    >>> xs = idset([1, 3, 2, 4, 11, 10])
-    >>> ys = idset([2, 3, 4, 5, 20])
+    >>> repo = util.refcell([])
+    >>> xs = idset([1, 3, 2, 4, 11, 10], repo=repo)
+    >>> ys = idset([2, 3, 4, 5, 20], repo=repo)
 
     >>> xs
     <idset- [1..=4 10 11]>
@@ -542,12 +543,11 @@ class idset(abstractsmartset):
     <idset+ [1..=5 10 11 20]>
     """
 
-    def __init__(self, spans, repo=None):
+    def __init__(self, spans, repo):
         """data: a dag.spans object, or an iterable of revs"""
         self._spans = dagmod.spans(spans)
         self._ascending = False
-        if repo is not None:
-            self._reporef = weakref.ref(repo)
+        self._reporef = weakref.ref(repo)
 
     @staticmethod
     def range(repo, start, end, ascending=False):
@@ -658,7 +658,7 @@ class idset(abstractsmartset):
     def _fastsetop(self, other, op):
         # try to use native set operations as fast paths
         if type(other) is idset:
-            s = idset(getattr(self._spans, op)(other._spans))
+            s = idset(getattr(self._spans, op)(other._spans), repo=self.repo())
             s._ascending = self._ascending
         elif type(other) is baseset and (
             op != "__add__" or all(r not in other for r in (nullrev, wdirrev))
@@ -666,7 +666,7 @@ class idset(abstractsmartset):
             # baseset is cheap to convert. convert it on the fly, but do not
             # convert if it has troublesome virtual revs and the operation is
             # "__add__" (union).
-            s = idset(getattr(self._spans, op)(dagmod.spans(other)))
+            s = idset(getattr(self._spans, op)(dagmod.spans(other)), repo=self.repo())
             s._ascending = self._ascending
         else:
             # slow path

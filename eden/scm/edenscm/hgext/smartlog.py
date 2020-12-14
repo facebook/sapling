@@ -326,7 +326,7 @@ def smartlogrevset(repo, subset, x):
         heads = cl.tonodes(heads)
         master = cl.tonodes(masterset)
         nodes = smartlognodes(repo, heads, master)
-        return subset & smartset.idset(cl.torevs(nodes))
+        return subset & smartset.idset(cl.torevs(nodes), repo=repo)
 
     # Explicitly disable revnum deprecation warnings.
     with repo.ui.configoverride({("devel", "legacy.revnum:real"): ""}):
