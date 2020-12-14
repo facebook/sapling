@@ -1043,6 +1043,7 @@ class addset(abstractsmartset):
     ordered in either an ascending or descending way. Therefore, we can add
     them maintaining the order by iterating over both at the same time
 
+    >>> repo = util.refcell([])
     >>> xs = baseset([0, 3, 2])
     >>> ys = baseset([5, 2, 4])
 
@@ -1093,13 +1094,13 @@ class addset(abstractsmartset):
     >>> assert rs._asclist
 
     iterate ascending without fastasc:
-    >>> rs = addset(xs, generatorset(ys), ascending=True)
+    >>> rs = addset(xs, generatorset(ys, repo=repo), ascending=True)
     >>> assert rs.fastasc is None
     >>> [x for x in rs]
     [0, 2, 3, 4, 5]
 
     iterate descending without fastdesc:
-    >>> rs = addset(generatorset(xs), ys, ascending=False)
+    >>> rs = addset(generatorset(xs, repo=repo), ys, ascending=False)
     >>> assert rs.fastdesc is None
     >>> [x for x in rs]
     [5, 4, 3, 2, 0]
@@ -1257,7 +1258,8 @@ class generatorset(abstractsmartset):
     When asked for membership it generates values until either it finds the
     requested one or has gone through all the elements in the generator
 
-    >>> xs = generatorset([0, 1, 4], iterasc=True)
+    >>> repo = util.refcell([])
+    >>> xs = generatorset([0, 1, 4], iterasc=True, repo=repo)
     >>> assert xs.last() == xs.last()
     >>> xs.last()  # cached
     4
@@ -1281,8 +1283,9 @@ class generatorset(abstractsmartset):
                 self.fastdesc = self._iterator
                 self.__contains__ = self._desccontains
         self._iterasc = iterasc
-        if repo is not None:
-            self._reporef = weakref.ref(repo)
+        if repo is None:
+            raise TypeError("generatorset requires repo")
+        self._reporef = weakref.ref(repo)
 
     @property
     def _finished(self):

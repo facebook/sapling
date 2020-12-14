@@ -1232,7 +1232,7 @@ def _follow(repo, subset, x, name, followfirst=False):
                         s = repo.revs("reverse(ancestors(%ld)) & %r", revs, matchfiles)
                     return subset & s
             fctxs.extend(ctx[f].introfilectx() for f in files)
-        s = dagop.filerevancestors(fctxs, followfirst)
+        s = dagop.filerevancestors(repo, fctxs, followfirst)
     else:
         if revs is None:
             revs = baseset([repo["."].rev()])
@@ -1311,11 +1311,13 @@ def followlines(repo, subset, x):
                 for c, _linerange in dagop.blockdescendants(fctx, fromline, toline)
             ),
             iterasc=True,
+            repo=repo,
         )
     else:
         rs = generatorset(
             (c.rev() for c, _linerange in dagop.blockancestors(fctx, fromline, toline)),
             iterasc=False,
+            repo=repo,
         )
     return subset & rs
 

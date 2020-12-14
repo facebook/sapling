@@ -151,14 +151,14 @@ def filectxancestors(fctxs, followfirst=False):
     assert not visitheap
 
 
-def filerevancestors(fctxs, followfirst=False):
+def filerevancestors(repo, fctxs, followfirst=False):
     """Like filectx.ancestors(), but can walk from multiple files/revisions,
     and includes the given fctxs themselves
 
     Returns a smartset.
     """
     gen = (rev for rev, _cs in filectxancestors(fctxs, followfirst))
-    return generatorset(gen, iterasc=False)
+    return generatorset(gen, iterasc=False, repo=repo)
 
 
 def _genrevancestors(
@@ -229,7 +229,7 @@ def revancestors(
         cutfunc,
         prefetchtext=prefetchtext,
     )
-    return generatorset(gen, iterasc=False)
+    return generatorset(gen, iterasc=False, repo=repo)
 
 
 def _genrevdescendants(repo, revs, followfirst):
@@ -295,7 +295,7 @@ def revdescendants(repo, revs, followfirst, startdepth=None, stopdepth=None):
         gen = _genrevdescendants(repo, revs, followfirst)
     else:
         gen = _genrevdescendantsofdepth(repo, revs, followfirst, startdepth, stopdepth)
-    return generatorset(gen, iterasc=True)
+    return generatorset(gen, iterasc=True, repo=repo)
 
 
 def _reachablerootspure(repo, minroot, roots, heads, includepath, parentrevs=None):

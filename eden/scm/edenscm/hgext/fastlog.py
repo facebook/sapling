@@ -315,7 +315,7 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
             remote.stop()
 
     revgen = fastlog(repo, rev, dirs, dirmatches)
-    fastlogset = smartset.generatorset(revgen, iterasc=False)
+    fastlogset = smartset.generatorset(revgen, iterasc=False, repo=repo)
     # Optimization: typically for "reverse(:.) & follow(path)" used by
     # "hg log". The left side is more expensive, although it has smaller
     # "weight". Make sure fastlogset is on the left side to avoid slow
@@ -521,7 +521,7 @@ class FastLogThread(Thread):
         self._paths_to_fetch = len(paths)
         for path in paths:
             g = self.generate(path)
-            gen = smartset.generatorset(g, iterasc=False)
+            gen = smartset.generatorset(g, iterasc=False, repo=self.repo)
             gen.reverse()
             if revs:
                 revs = smartset.addset(revs, gen, ascending=False)
