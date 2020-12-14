@@ -12,20 +12,20 @@ use anyhow::{anyhow, Context, Result};
 use bookmarks_types::BookmarkName;
 use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
-    CommitcloudBookmarksFillerMode, ComparableRegex, DerivedDataConfig, HookBypass, HookConfig,
-    HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams, LfsParams,
-    PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs, SegmentedChangelogConfig,
-    ServiceWriteRestrictions, SourceControlServiceMonitoring, SourceControlServiceParams,
-    StorageConfig, UnodeVersion, WireprotoLoggingConfig,
+    CommitcloudBookmarksFillerMode, ComparableRegex, DerivedDataConfig, DerivedDataTypesConfig,
+    HookBypass, HookConfig, HookManagerParams, HookParams, InfinitepushNamespace,
+    InfinitepushParams, LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, RepoClientKnobs,
+    SegmentedChangelogConfig, ServiceWriteRestrictions, SourceControlServiceMonitoring,
+    SourceControlServiceParams, StorageConfig, UnodeVersion, WireprotoLoggingConfig,
 };
 use mononoke_types::{MPath, PrefixTrie};
 use regex::Regex;
 use repos::{
     RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawCommitcloudBookmarksFiller,
-    RawDerivedDataConfig, RawHookConfig, RawHookManagerParams, RawInfinitepushParams, RawLfsParams,
-    RawPushParams, RawPushrebaseParams, RawRepoClientKnobs, RawSegmentedChangelogConfig,
-    RawServiceWriteRestrictions, RawSourceControlServiceMonitoring, RawSourceControlServiceParams,
-    RawUnodeVersion, RawWireprotoLoggingConfig,
+    RawDerivedDataConfig, RawDerivedDataTypesConfig, RawHookConfig, RawHookManagerParams,
+    RawInfinitepushParams, RawLfsParams, RawPushParams, RawPushrebaseParams, RawRepoClientKnobs,
+    RawSegmentedChangelogConfig, RawServiceWriteRestrictions, RawSourceControlServiceMonitoring,
+    RawSourceControlServiceParams, RawWireprotoLoggingConfig,
 };
 
 use crate::convert::Convert;
@@ -367,29 +367,34 @@ impl Convert for RawSourceControlServiceMonitoring {
     }
 }
 
+impl Convert for RawDerivedDataTypesConfig {
+    type Output = DerivedDataTypesConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        let types = self.types.into_iter().collect();
+        let unode_version = match self.unode_version {
+            None => UnodeVersion::default(),
+            Some(1) => UnodeVersion::V1,
+            Some(2) => UnodeVersion::V2,
+            Some(version) => return Err(anyhow!("unknown unode version {}", version)),
+        };
+        let blame_filesize_limit = self.blame_filesize_limit.map(|limit| limit as u64);
+        Ok(DerivedDataTypesConfig {
+            types,
+            unode_version,
+            blame_filesize_limit,
+        })
+    }
+}
+
 impl Convert for RawDerivedDataConfig {
     type Output = DerivedDataConfig;
 
     fn convert(self) -> Result<Self::Output> {
-        let unode_version = if let Some(unode_version) = self.raw_unode_version {
-            match unode_version {
-                RawUnodeVersion::unode_version_v1(_) => UnodeVersion::V1,
-                RawUnodeVersion::unode_version_v2(_) => UnodeVersion::V2,
-                RawUnodeVersion::UnknownField(field) => {
-                    return Err(anyhow!("unknown unode version {}", field));
-                }
-            }
-        } else {
-            UnodeVersion::default()
-        };
-
         Ok(DerivedDataConfig {
             scuba_table: self.scuba_table,
-            derived_data_types: self.derived_data_types.unwrap_or_default(),
-            unode_version,
-            override_blame_filesize_limit: self
-                .override_blame_filesize_limit
-                .map(|limit| limit as u64),
+            enabled: self.enabled.convert()?.unwrap_or_default(),
+            backfilling: self.backfilling.convert()?.unwrap_or_default(),
         })
     }
 }

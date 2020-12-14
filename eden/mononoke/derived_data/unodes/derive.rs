@@ -644,7 +644,7 @@ mod tests {
 
         // Unodes v1 should create a new one that points to the parent unode
         let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
-            derived_data_config.unode_version = UnodeVersion::V1;
+            derived_data_config.enabled.unode_version = UnodeVersion::V1;
             derived_data_config
         });
         let (p1_unodes, merge_unodes) = find_unodes(ctx.clone(), repo.clone()).await?;

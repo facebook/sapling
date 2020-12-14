@@ -64,8 +64,7 @@ pub async fn resolve_path_state(
 
     let use_deleted_manifest = repo
         .get_derived_data_config()
-        .derived_data_types
-        .contains(RootDeletedManifestId::NAME);
+        .is_enabled(RootDeletedManifestId::NAME);
     if !use_deleted_manifest {
         return Ok(None);
     }

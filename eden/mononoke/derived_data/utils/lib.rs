@@ -20,7 +20,7 @@ use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{
     derive_impl::derive_impl, BlobstoreExistsMapping, BlobstoreRootIdMapping, BonsaiDerivable,
-    BonsaiDerived, BonsaiDerivedMapping, DeriveError, DeriveMode, RegenerateMapping,
+    BonsaiDerived, BonsaiDerivedMapping, DeriveError, DerivedDataTypesConfig, RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
@@ -170,13 +170,12 @@ pub trait DerivedUtils: Send + Sync + 'static {
 #[derive(Clone)]
 struct DerivedUtilsFromMapping<M> {
     mapping: RegenerateMapping<M>,
-    mode: DeriveMode,
 }
 
 impl<M> DerivedUtilsFromMapping<M> {
-    fn new(mapping: M, mode: DeriveMode) -> Self {
+    fn new(mapping: M) -> Self {
         let mapping = RegenerateMapping::new(mapping);
-        Self { mapping, mode }
+        Self { mapping }
     }
 }
 
@@ -196,9 +195,9 @@ where
         // `self.mapping` there. This will allow us to
         // e.g. regenerate derived data for the commit
         // even if it was already generated (see RegenerateMapping call).
-        cloned!(self.mapping, self.mode);
+        cloned!(self.mapping);
         async move {
-            let result = derive_impl::<M::Value, _>(&ctx, &repo, &mapping, csid, mode).await?;
+            let result = derive_impl::<M::Value, _>(&ctx, &repo, &mapping, csid).await?;
             Ok(format!("{:?}", result))
         }
         .boxed()
@@ -242,14 +241,7 @@ where
             for csid in csids {
                 // create new context so each derivation batch would have its own trace
                 let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
-                derive_impl::<M::Value, _>(
-                    &ctx,
-                    &repo,
-                    &in_memory_mapping,
-                    csid,
-                    DeriveMode::Unsafe,
-                )
-                .await?;
+                derive_impl::<M::Value, _>(&ctx, &repo, &in_memory_mapping, csid).await?;
             }
 
             // flush blobstore
@@ -403,58 +395,76 @@ pub fn derived_data_utils(
     repo: &BlobRepo,
     name: impl AsRef<str>,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
-    derived_data_utils_impl(repo, name, DeriveMode::OnlyIfEnabled)
+    let name = name.as_ref();
+    let config = repo.get_derived_data_config();
+    let types_config = if config.enabled.types.contains(name) {
+        &config.enabled
+    } else {
+        return Err(anyhow!("Derived data type {} is not configured", name));
+    };
+    derived_data_utils_impl(repo, name, types_config)
 }
 
-pub fn derived_data_utils_unsafe(
+pub fn derived_data_utils_for_backfill(
     repo: &BlobRepo,
     name: impl AsRef<str>,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
-    derived_data_utils_impl(repo, name, DeriveMode::Unsafe)
+    let name = name.as_ref();
+    let config = repo.get_derived_data_config();
+    let types_config = if config.backfilling.types.contains(name) {
+        &config.backfilling
+    } else if config.enabled.types.contains(name) {
+        &config.enabled
+    } else {
+        return Err(anyhow!(
+            "Derived data type {} is not configured for backfilling",
+            name
+        ));
+    };
+    derived_data_utils_impl(repo, name, types_config)
 }
 
 fn derived_data_utils_impl(
     repo: &BlobRepo,
-    name: impl AsRef<str>,
-    mode: DeriveMode,
+    name: &str,
+    config: &DerivedDataTypesConfig,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
-    let repo = &repo;
-    match name.as_ref() {
+    match name {
         RootUnodeManifestId::NAME => {
-            let mapping = RootUnodeManifestMapping::new(repo)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
+            let mapping = RootUnodeManifestMapping::new(repo, config)?;
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         RootFastlog::NAME => {
-            let mapping = RootFastlogMapping::new(repo)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
+            let mapping = RootFastlogMapping::new(repo, config)?;
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         MappedHgChangesetId::NAME => {
-            let mapping = HgChangesetIdMapping::new(repo);
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
+            let mapping = HgChangesetIdMapping::new(repo, config)?;
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         RootFsnodeId::NAME => {
-            let mapping = RootFsnodeMapping::new(repo)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
+            let mapping = RootFsnodeMapping::new(repo, config)?;
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         BlameRoot::NAME => {
-            let mapping = BlameRootMapping::new(repo)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
+            let mapping = BlameRootMapping::new(repo, config)?;
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         ChangesetInfo::NAME => {
-            let mapping = ChangesetInfoMapping::new(repo)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
+            let mapping = ChangesetInfoMapping::new(repo, config)?;
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         RootDeletedManifestId::NAME => {
-            let mapping = RootDeletedManifestMapping::new(repo)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
+            let mapping = RootDeletedManifestMapping::new(repo, config)?;
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         FilenodesOnlyPublic::NAME => {
-            let mapping = FilenodesOnlyPublicMapping::new(repo)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
+            let mapping = FilenodesOnlyPublicMapping::new(repo, config)?;
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         RootSkeletonManifestId::NAME => {
-            let mapping = RootSkeletonManifestMapping::new(repo)?;
-            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
+            let mapping = RootSkeletonManifestMapping::new(repo, config)?;
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping)))
         }
         name => Err(format_err!("Unsupported derived data type: {}", name)),
     }

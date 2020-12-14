@@ -9,7 +9,7 @@
 #![type_length_limit = "1441792"]
 
 mod derived;
-pub use derived::{fetch_file_full_content, BlameRoot, BlameRootMapping};
+pub use derived::{fetch_file_full_content, BlameRoot, BlameRootMapping, BLAME_FILESIZE_LIMIT};
 
 #[cfg(test)]
 mod tests;

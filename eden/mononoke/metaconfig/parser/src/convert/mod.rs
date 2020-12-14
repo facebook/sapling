@@ -16,7 +16,7 @@ pub trait Convert {
     /// Conversion target
     type Output;
 
-    /// Try to convert `self` into `Self::Outpuf`
+    /// Try to convert `self` into `Self::Output`
     fn convert(self) -> Result<Self::Output>;
 }
 

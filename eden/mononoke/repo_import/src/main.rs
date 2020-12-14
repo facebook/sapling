@@ -318,18 +318,16 @@ async fn derive_bonsais_single_repo(
     repo: &BlobRepo,
     bcs_ids: &[ChangesetId],
 ) -> Result<(), Error> {
-    let derived_data_types = &repo.get_derived_data_config().derived_data_types;
+    let derived_data_types = &repo.get_derived_data_config().enabled.types;
 
-    let len = derived_data_types.len();
-    let mut derived_utils = vec![];
-    for ty in derived_data_types {
-        let utils = derived_data_utils(repo, ty)?;
-        derived_utils.push(utils);
-    }
+    let derived_utils: Vec<_> = derived_data_types
+        .iter()
+        .map(|ty| derived_data_utils(repo, ty))
+        .collect::<Result<_, _>>()?;
 
     stream::iter(derived_utils)
         .map(Ok)
-        .try_for_each_concurrent(len, |derived_util| async move {
+        .try_for_each_concurrent(derived_data_types.len(), |derived_util| async move {
             for csid in bcs_ids {
                 derived_util
                     .derive(ctx.clone(), repo.clone(), csid.clone())

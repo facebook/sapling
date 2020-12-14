@@ -431,18 +431,18 @@ mod test {
     use ascii::AsciiString;
     use bookmarks_types::BookmarkName;
     use cached_config::TestSource;
-    use maplit::{btreemap, btreeset, hashmap};
+    use maplit::{btreemap, hashmap, hashset};
     use metaconfig_types::{
         BlobConfig, BlobstoreId, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
         CommitSyncConfigVersion, CommitSyncDirection, DatabaseConfig,
-        DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, FilestoreParams, HookBypass,
-        HookConfig, HookManagerParams, HookParams, InfinitepushNamespace, InfinitepushParams,
-        LfsParams, LocalDatabaseConfig, MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType,
-        PushParams, PushrebaseFlags, PushrebaseParams, RemoteDatabaseConfig,
-        RemoteMetadataDatabaseConfig, RepoClientKnobs, SegmentedChangelogConfig,
-        ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, SmallRepoCommitSyncConfig,
-        SourceControlServiceMonitoring, SourceControlServiceParams, UnodeVersion,
-        WireprotoLoggingConfig,
+        DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, DerivedDataTypesConfig,
+        FilestoreParams, HookBypass, HookConfig, HookManagerParams, HookParams,
+        InfinitepushNamespace, InfinitepushParams, LfsParams, LocalDatabaseConfig,
+        MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PushParams, PushrebaseFlags,
+        PushrebaseParams, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, RepoClientKnobs,
+        SegmentedChangelogConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
+        SmallRepoCommitSyncConfig, SourceControlServiceMonitoring, SourceControlServiceParams,
+        UnodeVersion, WireprotoLoggingConfig,
     };
     use mononoke_types::MPath;
     use nonzero_ext::nonzero;
@@ -719,12 +719,10 @@ mod test {
             all_hooks_bypassed=false
             bypassed_commits_scuba_table="commits_bypassed_hooks"
 
-            [derived_data_config]
-            derived_data_types=["fsnodes"]
-            override_blame_filesize_limit=101
-
-            [derived_data_config.raw_unode_version]
-            unode_version_v2 = {}
+            [derived_data_config.enabled]
+            types = ["fsnodes", "unodes", "blame"]
+            unode_version = 2
+            blame_filesize_limit = 101
 
             [storage.main.metadata.remote]
             primary = { db_address = "db_address" }
@@ -1025,10 +1023,17 @@ mod test {
                     ],
                 }),
                 derived_data_config: DerivedDataConfig {
-                    derived_data_types: btreeset![String::from("fsnodes")],
+                    enabled: DerivedDataTypesConfig {
+                        types: hashset! {
+                            String::from("fsnodes"),
+                            String::from("unodes"),
+                            String::from("blame"),
+                        },
+                        unode_version: UnodeVersion::V2,
+                        blame_filesize_limit: Some(101),
+                    },
+                    backfilling: DerivedDataTypesConfig::default(),
                     scuba_table: None,
-                    unode_version: UnodeVersion::V2,
-                    override_blame_filesize_limit: Some(101),
                 },
                 hgsql_name: HgsqlName("fbsource".to_string()),
                 hgsql_globalrevs_name: HgsqlGlobalrevsName("fbsource".to_string()),

@@ -18,7 +18,7 @@ use futures::{
     TryStreamExt,
 };
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
-use metaconfig_types::DerivedDataConfig;
+use metaconfig_types::{DerivedDataConfig, DerivedDataTypesConfig};
 use mononoke_types::ChangesetId;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
@@ -44,40 +44,23 @@ define_stats! {
 
 const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub enum DeriveMode {
-    /// This mode should almost always be preferred
-    OnlyIfEnabled,
-    /// This mode should rarely be used, perhaps only for backfilling type of derived data
-    /// which is not enabled in this repo yet
-    Unsafe,
-}
-
-impl DeriveMode {
-    /// Check that derivation is suitable for a particular derived data type
-    /// in this mode.
-    ///
-    /// Returns `DeriveError` if derivation should not proceed.
-    pub fn check_if_derive_allowed<Derivable: BonsaiDerivable>(
-        self,
-        repo: &BlobRepo,
-    ) -> Result<(), DeriveError> {
-        if self == DeriveMode::OnlyIfEnabled {
-            if !repo
-                .get_derived_data_config()
-                .derived_data_types
-                .contains(Derivable::NAME)
-            {
-                STATS::derived_data_disabled
-                    .add_value(1, (repo.get_repoid().id(), Derivable::NAME));
-                return Err(DeriveError::Disabled(
-                    Derivable::NAME,
-                    repo.get_repoid(),
-                    repo.name().clone(),
-                ));
-            }
-        }
-        Ok(())
+/// Checks that the named derived data type is enabled, and returns the
+/// enabled derived data types config if it is.  Returns an error if the
+/// derived data type is not enabled.
+pub fn enabled_type_config<'repo>(
+    repo: &'repo BlobRepo,
+    name: &'static str,
+) -> Result<&'repo DerivedDataTypesConfig, DeriveError> {
+    let config = repo.get_derived_data_config();
+    if config.enabled.types.contains(name) {
+        Ok(&config.enabled)
+    } else {
+        STATS::derived_data_disabled.add_value(1, (repo.get_repoid().id(), name));
+        Err(DeriveError::Disabled(
+            name,
+            repo.get_repoid(),
+            repo.name().clone(),
+        ))
     }
 }
 
@@ -114,12 +97,10 @@ pub async fn derive_impl<
     repo: &BlobRepo,
     derived_mapping: &Mapping,
     start_csid: ChangesetId,
-    mode: DeriveMode,
 ) -> Result<Derivable, DeriveError> {
     let derivation = async {
         let all_csids =
-            find_topo_sorted_underived(ctx, repo, derived_mapping, Some(start_csid), None, mode)
-                .await?;
+            find_topo_sorted_underived(ctx, repo, derived_mapping, Some(start_csid), None).await?;
 
         for csid in &all_csids {
             ctx.scuba().clone().log_with_msg(
@@ -200,10 +181,7 @@ pub(crate) async fn find_topo_sorted_underived<
     derived_mapping: &Mapping,
     start_csids: Changesets,
     limit: Option<u64>,
-    mode: DeriveMode,
 ) -> Result<Vec<ChangesetId>, Error> {
-    mode.check_if_derive_allowed::<Derivable>(repo)?;
-
     let changeset_fetcher = repo.get_changeset_fetcher();
     // This is necessary to avoid visiting the same commit a lot of times in mergy repos
     let visited: Arc<Mutex<HashSet<ChangesetId>>> = Arc::new(Mutex::new(HashSet::new()));
@@ -703,7 +681,8 @@ mod test {
     async fn derive_for_master(ctx: CoreContext, repo: BlobRepo) {
         let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
             derived_data_config
-                .derived_data_types
+                .enabled
+                .types
                 .insert(TestGenNum::NAME.to_string());
             derived_data_config
         });
@@ -748,7 +727,8 @@ mod test {
             .await
             .dangerous_override(|mut derived_data_config: DerivedDataConfig| {
                 derived_data_config
-                    .derived_data_types
+                    .enabled
+                    .types
                     .insert(TestGenNum::NAME.to_string());
                 derived_data_config
             })
@@ -860,7 +840,8 @@ mod test {
             let repo = linear::getrepo(fb).await;
             let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
                 derived_data_config
-                    .derived_data_types
+                    .enabled
+                    .types
                     .insert(TestGenNum::NAME.to_string());
                 derived_data_config
             });
@@ -874,8 +855,7 @@ mod test {
             // Reverse them to derive parents before children
             let cs_ids = cs_ids.clone().into_iter().rev().collect::<Vec<_>>();
             let mapping = TestGenNum::default_mapping(&ctx, &repo)?;
-            let derived_batch =
-                TestGenNum::batch_derive(&ctx, &repo, cs_ids, &mapping, DeriveMode::Unsafe).await?;
+            let derived_batch = TestGenNum::batch_derive(&ctx, &repo, cs_ids, &mapping).await?;
             derived_batch
                 .get(&master_cs_id)
                 .unwrap_or_else(|| panic!("{} has not been derived", master_cs_id))
@@ -886,7 +866,8 @@ mod test {
             let repo = linear::getrepo(fb).await;
             let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
                 derived_data_config
-                    .derived_data_types
+                    .enabled
+                    .types
                     .insert(TestGenNum::NAME.to_string());
                 derived_data_config
             });

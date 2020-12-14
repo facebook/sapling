@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use std::collections::{BTreeSet, HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
@@ -92,13 +92,13 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
     }
 
     pub fn add_all_derived_data_warmers(&mut self) -> Result<(), Error> {
-        self.add_derived_data_warmers(&self.repo.get_derived_data_config().derived_data_types)
+        self.add_derived_data_warmers(&self.repo.get_derived_data_config().enabled.types)
     }
 
-    pub fn add_derived_data_warmers(&mut self, types: &BTreeSet<String>) -> Result<(), Error> {
-        let derived_data_types = &self.repo.get_derived_data_config().derived_data_types;
+    pub fn add_derived_data_warmers(&mut self, types: &HashSet<String>) -> Result<(), Error> {
+        let config = &self.repo.get_derived_data_config();
         for ty in types {
-            if !derived_data_types.contains(ty) {
+            if !config.is_enabled(ty) {
                 return Err(anyhow!("{} is not enabled for {}", ty, self.repo.name()));
             }
         }

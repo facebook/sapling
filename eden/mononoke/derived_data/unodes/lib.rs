@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use anyhow::Error;
+use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;

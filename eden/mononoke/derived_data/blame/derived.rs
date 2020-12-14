@@ -14,6 +14,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{
     impl_bonsai_derived_mapping, BlobstoreExistsMapping, BonsaiDerivable, BonsaiDerived,
+    DerivedDataTypesConfig,
 };
 use filestore::{self, FetchKey};
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
@@ -119,13 +120,9 @@ pub struct BlameRootMapping {
 impl BlobstoreExistsMapping for BlameRootMapping {
     type Value = BlameRoot;
 
-    fn new(repo: &BlobRepo) -> Result<Self> {
-        let options = BlameDeriveOptions {
-            filesize_limit: repo
-                .get_derived_data_config()
-                .override_blame_filesize_limit
-                .unwrap_or(BLAME_FILESIZE_LIMIT),
-        };
+    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self> {
+        let filesize_limit = config.blame_filesize_limit.unwrap_or(BLAME_FILESIZE_LIMIT);
+        let options = BlameDeriveOptions { filesize_limit };
         Ok(Self {
             blobstore: repo.get_blobstore().boxed(),
             options,

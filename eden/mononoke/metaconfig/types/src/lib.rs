@@ -13,7 +13,7 @@
 
 use anyhow::{anyhow, Error, Result};
 use std::{
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{HashMap, HashSet},
     fmt, mem,
     num::{NonZeroU64, NonZeroUsize},
     ops::Deref,
@@ -214,14 +214,33 @@ pub struct RepoClientKnobs {
 pub struct DerivedDataConfig {
     /// Name of scuba table where all derivation will be logged to
     pub scuba_table: Option<String>,
-    /// Types of derived data that can be derived for this repo
-    pub derived_data_types: BTreeSet<String>,
-    /// What unode version should be used (defaults to V1)
+
+    /// Configuration for enabled derived data types.
+    pub enabled: DerivedDataTypesConfig,
+
+    /// Configuration for backfilling derived data types.
+    pub backfilling: DerivedDataTypesConfig,
+}
+
+impl DerivedDataConfig {
+    /// Returns whether the named derived data type is enabled.
+    pub fn is_enabled(&self, name: &str) -> bool {
+        self.enabled.types.contains(name)
+    }
+}
+
+/// Config for derived data types
+#[derive(Eq, Clone, Default, Debug, PartialEq)]
+pub struct DerivedDataTypesConfig {
+    /// The configured types.
+    pub types: HashSet<String>,
+
+    /// What unode version should be used. Default: V1.
     pub unode_version: UnodeVersion,
+
     /// Override the file size limit for blame. Blame won't be derived for files which
-    /// size is above the limit. NOTE: if `override_blame_filesize_limit` is None
-    /// then a default limit will be used!
-    pub override_blame_filesize_limit: Option<u64>,
+    /// size is above the limit. Default: `blame::BLAME_FILESIZE_LIMIT`.
+    pub blame_filesize_limit: Option<u64>,
 }
 
 /// What type of unode derived data to generate

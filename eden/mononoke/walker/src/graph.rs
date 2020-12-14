@@ -801,7 +801,7 @@ mod tests {
     #[test]
     fn test_all_derived_data_types_supported() {
         // All types blobrepo can support
-        let a = init_all_derived_data().derived_data_types;
+        let a = init_all_derived_data().enabled.types;
 
         // supported in graph
         let mut s = HashSet::new();

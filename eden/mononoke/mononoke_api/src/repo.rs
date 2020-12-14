@@ -36,6 +36,7 @@ use hooks::HookManager;
 use itertools::Itertools;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::Globalrev;
 use metaconfig_types::{CommonConfig, RepoConfig};
 use metaconfig_types::{
@@ -717,15 +718,13 @@ impl RepoContext {
     pub fn derive_changeset_info_enabled(&self) -> bool {
         self.blob_repo()
             .get_derived_data_config()
-            .derived_data_types
-            .contains(ChangesetInfo::NAME)
+            .is_enabled(ChangesetInfo::NAME)
     }
 
     pub fn derive_hgchangesets_enabled(&self) -> bool {
         self.blob_repo()
             .get_derived_data_config()
-            .derived_data_types
-            .contains("hgchangesets")
+            .is_enabled(MappedHgChangesetId::NAME)
     }
 
     /// Look up a changeset specifier to find the canonical bonsai changeset

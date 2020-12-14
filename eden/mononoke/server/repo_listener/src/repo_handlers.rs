@@ -26,7 +26,7 @@ use futures::{
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::{future, Future};
 use hook_manager_factory::make_hook_manager;
-use maplit::btreeset;
+use maplit::hashset;
 use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::{
     CensoredScubaParams, CommitSyncConfig, RepoClientKnobs, RepoConfig, WireprotoLoggingConfig,
@@ -282,7 +282,7 @@ pub fn repo_handlers(
                         let mut warm_bookmarks_cache_builder =
                             WarmBookmarksCacheBuilder::new(&ctx, &blobrepo);
                         warm_bookmarks_cache_builder.add_derived_data_warmers(
-                            &btreeset! { MappedHgChangesetId::NAME.to_string() },
+                            &hashset! { MappedHgChangesetId::NAME.to_string() },
                         )?;
                         if warm_bookmark_cache_check_blobimport {
                             let mutable_counters =

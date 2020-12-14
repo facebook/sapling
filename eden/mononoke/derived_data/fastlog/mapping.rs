@@ -13,6 +13,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{
     impl_bonsai_derived_mapping, BlobstoreExistsMapping, BonsaiDerivable, BonsaiDerived,
+    DerivedDataTypesConfig,
 };
 use futures::future;
 use futures::stream::TryStreamExt;
@@ -144,7 +145,7 @@ pub struct RootFastlogMapping {
 impl BlobstoreExistsMapping for RootFastlogMapping {
     type Value = RootFastlog;
 
-    fn new(repo: &BlobRepo) -> Result<Self> {
+    fn new(repo: &BlobRepo, _config: &DerivedDataTypesConfig) -> Result<Self> {
         Ok(Self {
             blobstore: repo.get_blobstore().boxed(),
         })

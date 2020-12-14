@@ -74,7 +74,8 @@ mod tests {
         )?;
         repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
             derived_data_config
-                .derived_data_types
+                .enabled
+                .types
                 .remove(&TreeHandle::NAME.to_string());
             derived_data_config
         });
@@ -765,7 +766,7 @@ mod tests {
         repo: &BlobRepo,
         cs_ids: &[ChangesetId],
     ) -> Result<()> {
-        let derived_data_types = &repo.get_derived_data_config().derived_data_types;
+        let derived_data_types = &repo.get_derived_data_config().enabled.types;
 
         for derived_data_type in derived_data_types {
             let derived_utils = derived_data_utils(repo, derived_data_type)?;

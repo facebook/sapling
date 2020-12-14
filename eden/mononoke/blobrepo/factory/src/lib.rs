@@ -36,13 +36,13 @@ use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
 use futures::{compat::Future01CompatExt, future, try_join};
 use git_types::TreeHandle;
-use maplit::btreeset;
+use maplit::hashset;
 use memblob::Memblob;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_mutation::{HgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
-    self, CensoredScubaParams, DerivedDataConfig, FilestoreParams, Redaction, RepoConfig,
-    SegmentedChangelogConfig, StorageConfig, UnodeVersion,
+    self, CensoredScubaParams, DerivedDataConfig, DerivedDataTypesConfig, FilestoreParams,
+    Redaction, RepoConfig, SegmentedChangelogConfig, StorageConfig, UnodeVersion,
 };
 use mononoke_types::RepositoryId;
 use newfilenodes::NewFilenodesBuilder;
@@ -418,20 +418,23 @@ pub fn new_memblob_empty_with_id(
 pub fn init_all_derived_data() -> DerivedDataConfig {
     DerivedDataConfig {
         scuba_table: None,
-        derived_data_types: btreeset! {
-            BlameRoot::NAME.to_string(),
-            FilenodesOnlyPublic::NAME.to_string(),
-            ChangesetInfo::NAME.to_string(),
-            RootFastlog::NAME.to_string(),
-            RootFsnodeId::NAME.to_string(),
-            RootSkeletonManifestId::NAME.to_string(),
-            RootDeletedManifestId::NAME.to_string(),
-            RootUnodeManifestId::NAME.to_string(),
-            TreeHandle::NAME.to_string(),
-            MappedHgChangesetId::NAME.to_string(),
+        enabled: DerivedDataTypesConfig {
+            types: hashset! {
+                BlameRoot::NAME.to_string(),
+                FilenodesOnlyPublic::NAME.to_string(),
+                ChangesetInfo::NAME.to_string(),
+                RootFastlog::NAME.to_string(),
+                RootFsnodeId::NAME.to_string(),
+                RootSkeletonManifestId::NAME.to_string(),
+                RootDeletedManifestId::NAME.to_string(),
+                RootUnodeManifestId::NAME.to_string(),
+                TreeHandle::NAME.to_string(),
+                MappedHgChangesetId::NAME.to_string(),
+            },
+            unode_version: UnodeVersion::V2,
+            ..Default::default()
         },
-        unode_version: UnodeVersion::V2,
-        override_blame_filesize_limit: None,
+        backfilling: DerivedDataTypesConfig::default(),
     }
 }
 

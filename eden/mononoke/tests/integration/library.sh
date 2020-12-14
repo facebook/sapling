@@ -908,13 +908,13 @@ write_infinitepush_config "$reponame"
 
 if [[ -n "${ENABLED_DERIVED_DATA:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
-[derived_data_config]
-derived_data_types = $ENABLED_DERIVED_DATA
+[derived_data_config.enabled]
+types = $ENABLED_DERIVED_DATA
 CONFIG
 else
   cat >> "repos/$reponame/server.toml" <<CONFIG
-[derived_data_config]
-derived_data_types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes", "hgchangesets", "skeleton_manifests"]
+[derived_data_config.enabled]
+types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes", "hgchangesets", "skeleton_manifests"]
 CONFIG
 fi
 

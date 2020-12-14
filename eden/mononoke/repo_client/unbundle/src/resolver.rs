@@ -1213,8 +1213,7 @@ impl<'r> Bundle2Resolver<'r> {
             let has_skeleton_manifests = self
                 .repo
                 .get_derived_data_config()
-                .derived_data_types
-                .contains(RootSkeletonManifestId::NAME);
+                .is_enabled(RootSkeletonManifestId::NAME);
             let skip_on_upload = tunables().get_skip_case_conflict_check_on_changeset_upload();
             // If casefolding checks are enabled we need to check on upload if
             // skeleton manifests are disabled for this repo, or if skipping

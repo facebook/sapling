@@ -24,9 +24,9 @@ pub mod batch;
 pub mod derive_impl;
 pub mod mapping_impl;
 
+pub use derive_impl::enabled_type_config;
 pub use mapping_impl::{BlobstoreExistsMapping, BlobstoreRootIdMapping};
-
-pub use crate::derive_impl::DeriveMode;
+pub use metaconfig_types::DerivedDataTypesConfig;
 
 #[derive(Debug, Error)]
 pub enum DeriveError {
@@ -72,7 +72,6 @@ pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone {
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
         mapping: &Mapping,
-        mode: DeriveMode,
     ) -> Result<HashMap<ChangesetId, Self>, Error>
     where
         Mapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
@@ -83,7 +82,7 @@ pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone {
         // cause O(n^2) derivations.
         for csid in csids {
             let derived =
-                derive_impl::derive_impl::<Self, Mapping>(ctx, repo, mapping, csid, mode).await?;
+                derive_impl::derive_impl::<Self, Mapping>(ctx, repo, mapping, csid).await?;
             res.insert(csid, derived);
         }
         Ok(res)
@@ -120,14 +119,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone + BonsaiDerivable
         csid: ChangesetId,
     ) -> Result<Self, DeriveError> {
         let mapping = Self::default_mapping(&ctx, &repo)?;
-        derive_impl::derive_impl::<Self, Self::DefaultMapping>(
-            ctx,
-            repo,
-            &mapping,
-            csid,
-            DeriveMode::OnlyIfEnabled,
-        )
-        .await
+        derive_impl::derive_impl::<Self, Self::DefaultMapping>(ctx, repo, &mapping, csid).await
     }
 
     /// Fetch the derived data in cases where we might not want to trigger derivation, e.g. when scrubbing.
@@ -156,7 +148,6 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone + BonsaiDerivable
             &mapping,
             Some(*csid),
             Some(limit),
-            DeriveMode::OnlyIfEnabled,
         )
         .await?;
         Ok(underived.len() as u64)
@@ -173,12 +164,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone + BonsaiDerivable
     ) -> Result<Vec<ChangesetId>, DeriveError> {
         let mapping = Self::default_mapping(&ctx, &repo)?;
         let underived = derive_impl::find_topo_sorted_underived::<Self, Self::DefaultMapping, _>(
-            ctx,
-            repo,
-            &mapping,
-            csids,
-            None,
-            DeriveMode::OnlyIfEnabled,
+            ctx, repo, &mapping, csids, None,
         )
         .await?;
         Ok(underived)

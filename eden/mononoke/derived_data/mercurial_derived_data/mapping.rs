@@ -16,7 +16,9 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 
 use std::{collections::HashMap, sync::Arc};
 
-use derived_data::{BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, DeriveError};
+use derived_data::{
+    BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, DeriveError, DerivedDataTypesConfig,
+};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct MappedHgChangesetId(pub HgChangesetId);
@@ -45,11 +47,11 @@ pub struct HgChangesetIdMapping {
 }
 
 impl HgChangesetIdMapping {
-    pub fn new(repo: &BlobRepo) -> Self {
-        Self {
+    pub fn new(repo: &BlobRepo, _config: &DerivedDataTypesConfig) -> Result<Self, DeriveError> {
+        Ok(Self {
             repo_id: repo.get_repoid(),
             mapping: repo.attribute_expected::<dyn BonsaiHgMapping>().clone(),
-        }
+        })
     }
 }
 
@@ -99,6 +101,7 @@ impl BonsaiDerived for MappedHgChangesetId {
         _ctx: &CoreContext,
         repo: &BlobRepo,
     ) -> Result<Self::DefaultMapping, DeriveError> {
-        Ok(HgChangesetIdMapping::new(repo))
+        let config = derived_data::enabled_type_config(repo, Self::NAME)?;
+        Ok(HgChangesetIdMapping::new(repo, config)?)
     }
 }

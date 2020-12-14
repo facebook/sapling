@@ -12,7 +12,9 @@ use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use context::CoreContext;
-use derived_data::{impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable};
+use derived_data::{
+    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable, DerivedDataTypesConfig,
+};
 use mononoke_types::BonsaiChangeset;
 
 use crate::ChangesetInfo;
@@ -44,7 +46,7 @@ pub struct ChangesetInfoMapping {
 impl BlobstoreRootIdMapping for ChangesetInfoMapping {
     type Value = ChangesetInfo;
 
-    fn new(repo: &BlobRepo) -> Result<Self> {
+    fn new(repo: &BlobRepo, _config: &DerivedDataTypesConfig) -> Result<Self> {
         Ok(Self {
             blobstore: repo.get_blobstore().boxed(),
         })

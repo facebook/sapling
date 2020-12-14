@@ -859,7 +859,7 @@ pub fn setup_common<'a>(
         // Only walk derived node types that the repo is configured to contain
         include_node_types.retain(|t| {
             if let Some(t) = t.derived_data_name() {
-                config.derived_data_config.derived_data_types.contains(t)
+                config.derived_data_config.is_enabled(t)
             } else {
                 true
             }

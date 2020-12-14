@@ -247,7 +247,7 @@ async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Err
     fetch_blame(ctx, repo, c1, MPath::new(file1)?).await?;
 
     let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
-        derived_data_config.override_blame_filesize_limit = Some(4);
+        derived_data_config.enabled.blame_filesize_limit = Some(4);
         derived_data_config
     });
 

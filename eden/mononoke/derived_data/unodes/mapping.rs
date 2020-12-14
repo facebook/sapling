@@ -12,7 +12,9 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable};
+use derived_data::{
+    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable, DerivedDataTypesConfig,
+};
 use futures::TryFutureExt;
 use metaconfig_types::UnodeVersion;
 use mononoke_types::{
@@ -93,11 +95,10 @@ pub struct RootUnodeManifestMapping {
 impl BlobstoreRootIdMapping for RootUnodeManifestMapping {
     type Value = RootUnodeManifestId;
 
-    fn new(repo: &BlobRepo) -> Result<Self> {
-        let unode_version = repo.get_derived_data_config().unode_version;
+    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self> {
         Ok(Self {
             blobstore: repo.get_blobstore(),
-            unode_version,
+            unode_version: config.unode_version,
         })
     }
 

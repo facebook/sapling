@@ -16,7 +16,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{
     impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable, BonsaiDerivedMapping,
-    DeriveMode,
+    DerivedDataTypesConfig,
 };
 use futures::stream::{self, StreamExt, TryStreamExt};
 use mononoke_types::{
@@ -94,13 +94,10 @@ impl BonsaiDerivable for RootSkeletonManifestId {
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
         mapping: &BatchMapping,
-        mode: DeriveMode,
     ) -> Result<HashMap<ChangesetId, Self>, Error>
     where
         BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
     {
-        mode.check_if_derive_allowed::<Self>(repo)?;
-
         let derived = derive_skeleton_manifests_in_batch(ctx, repo, csids.clone()).await?;
 
         stream::iter(derived.into_iter().map(|(cs_id, derived)| async move {
@@ -125,7 +122,7 @@ pub struct RootSkeletonManifestMapping {
 impl BlobstoreRootIdMapping for RootSkeletonManifestMapping {
     type Value = RootSkeletonManifestId;
 
-    fn new(repo: &BlobRepo) -> Result<Self> {
+    fn new(repo: &BlobRepo, _config: &DerivedDataTypesConfig) -> Result<Self> {
         Ok(Self {
             blobstore: repo.get_blobstore(),
         })

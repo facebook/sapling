@@ -14,7 +14,9 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use context::CoreContext;
-use derived_data::{BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, DeriveError};
+use derived_data::{
+    BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, DeriveError, DerivedDataTypesConfig,
+};
 use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 use futures::{
     compat::Future01CompatExt, future::try_join_all, pin_mut, stream, FutureExt, StreamExt,
@@ -307,7 +309,7 @@ pub struct FilenodesOnlyPublicMapping {
 }
 
 impl FilenodesOnlyPublicMapping {
-    pub fn new(repo: &BlobRepo) -> Result<Self, DeriveError> {
+    pub fn new(repo: &BlobRepo, _config: &DerivedDataTypesConfig) -> Result<Self, DeriveError> {
         Ok(Self { repo: repo.clone() })
     }
 }
@@ -320,7 +322,8 @@ impl BonsaiDerived for FilenodesOnlyPublic {
         _ctx: &CoreContext,
         repo: &BlobRepo,
     ) -> Result<Self::DefaultMapping, DeriveError> {
-        FilenodesOnlyPublicMapping::new(repo)
+        let config = derived_data::enabled_type_config(repo, Self::NAME)?;
+        FilenodesOnlyPublicMapping::new(repo, config)
     }
 }
 

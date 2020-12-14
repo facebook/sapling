@@ -14,6 +14,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
+use metaconfig_types::DerivedDataTypesConfig;
 use mononoke_types::ChangesetId;
 
 use crate::{BonsaiDerivable, BonsaiDerived};
@@ -31,7 +32,7 @@ pub trait BlobstoreRootIdMapping {
         + Sized;
 
     /// Create a new instance of this mapping.
-    fn new(repo: &BlobRepo) -> Result<Self>
+    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self>
     where
         Self: Sized;
 
@@ -92,7 +93,7 @@ pub trait BlobstoreExistsMapping {
     type Value: BonsaiDerived + From<ChangesetId> + Send + Sync + Clone;
 
     /// Create a new instance of this mapping.
-    fn new(repo: &BlobRepo) -> Result<Self>
+    fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self>
     where
         Self: Sized;
 
@@ -212,7 +213,8 @@ macro_rules! impl_bonsai_derived_mapping {
                 _ctx: &::context::CoreContext,
                 repo: &::blobrepo::BlobRepo,
             ) -> ::std::result::Result<Self::DefaultMapping, $crate::DeriveError> {
-                ::std::result::Result::Ok(<$mapping as $mapping_impl>::new(repo)?)
+                let config = $crate::derive_impl::enabled_type_config(repo, Self::NAME)?;
+                ::std::result::Result::Ok(<$mapping as $mapping_impl>::new(repo, config)?)
             }
         }
     };

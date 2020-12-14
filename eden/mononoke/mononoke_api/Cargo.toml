@@ -28,6 +28,7 @@ hook_manager_factory = { path = "../hooks/hook_manager_factory" }
 hooks = { path = "../hooks" }
 live_commit_sync_config = { path = "../commit_rewriting/live_commit_sync_config" }
 manifest = { path = "../manifest" }
+mercurial_derived_data = { path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { path = "../mercurial/types" }
 metaconfig_parser = { path = "../metaconfig/parser" }
 metaconfig_types = { path = "../metaconfig/types" }

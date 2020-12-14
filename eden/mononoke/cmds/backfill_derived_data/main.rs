@@ -26,7 +26,8 @@ use cmdlib::{
 use context::CoreContext;
 use derived_data::BonsaiDerivable;
 use derived_data_utils::{
-    derived_data_utils, derived_data_utils_unsafe, DerivedUtils, ThinOut, POSSIBLE_DERIVED_TYPES,
+    derived_data_utils, derived_data_utils_for_backfill, DerivedUtils, ThinOut,
+    POSSIBLE_DERIVED_TYPES,
 };
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
@@ -36,12 +37,11 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
 };
 use futures_stats::TimedFutureExt;
-use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{ChangesetId, DateTime};
 use slog::{info, Logger};
 use stats::prelude::*;
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeSet, HashMap, HashSet},
     fs,
     path::Path,
     sync::Arc,
@@ -268,7 +268,10 @@ async fn run_subcmd<'a>(
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
             let repo = args::open_repo_unredacted(fb, logger, matches).await?;
             let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE).map_or_else(
-                || repo.get_derived_data_config().derived_data_types.clone(),
+                || {
+                    let config = repo.get_derived_data_config();
+                    &config.enabled.types | &config.backfilling.types
+                },
                 |names| names.map(ToString::to_string).collect(),
             );
             subcommand_backfill_all(&ctx, &repo, derived_data_types).await
@@ -299,19 +302,9 @@ async fn run_subcmd<'a>(
                 .map(|limit| limit.parse::<usize>())
                 .transpose()?;
 
-            let repo =
+            let mut repo =
                 open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type).await?;
 
-            // Backfill is used when when a derived data type is not enabled yet, and so
-            // any attempt to call BonsaiDerived::derive() fails. However calling
-            // BonsaiDerived::derive() might be useful, and so the lines below explicitly
-            // enable `derived_data_type` to allow calling BonsaiDerived::derive() if necessary.
-            let mut repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
-                derived_data_config
-                    .derived_data_types
-                    .insert(derived_data_type.clone());
-                derived_data_config
-            });
             info!(
                 ctx.logger(),
                 "reading all changesets for: {:?}",
@@ -359,7 +352,7 @@ async fn run_subcmd<'a>(
             subcommand_backfill(
                 &ctx,
                 &repo,
-                &derived_data_type,
+                derived_data_type.as_str(),
                 regenerate,
                 changesets,
                 cleaner,
@@ -406,9 +399,10 @@ async fn run_subcmd<'a>(
                     let repo = args::open_repo_unredacted(fb, logger, matches).await?;
                     let types = repo
                         .get_derived_data_config()
-                        .derived_data_types
-                        .clone()
-                        .into_iter()
+                        .enabled
+                        .types
+                        .iter()
+                        .cloned()
                         .collect();
                     (repo, types)
                 }
@@ -450,12 +444,12 @@ fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntr
 async fn subcommand_backfill_all(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    derived_data_types: BTreeSet<String>,
+    derived_data_types: HashSet<String>,
 ) -> Result<()> {
     info!(ctx.logger(), "derived data types: {:?}", derived_data_types);
     let derivers = derived_data_types
         .iter()
-        .map(|name| derived_data_utils_unsafe(repo, name.as_str()))
+        .map(|name| derived_data_utils_for_backfill(repo, name.as_str()))
         .collect::<Result<Vec<_>, _>>()?;
     tail_batch_iteration(ctx, repo, derivers.as_ref()).await
 }
@@ -467,12 +461,12 @@ fn truncate_duration(duration: Duration) -> Duration {
 async fn subcommand_backfill(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    derived_data_type: &String,
+    derived_data_type: &str,
     regenerate: bool,
     changesets: Vec<ChangesetId>,
     mut cleaner: Option<impl dry_run::Cleaner>,
 ) -> Result<()> {
-    let derived_utils = &derived_data_utils_unsafe(repo, derived_data_type.as_str())?;
+    let derived_utils = &derived_data_utils_for_backfill(repo, derived_data_type)?;
 
     info!(
         ctx.logger(),
@@ -571,9 +565,9 @@ async fn subcommand_tail(
 
     let derive_utils: Vec<Arc<dyn DerivedUtils>> = unredacted_repo
         .get_derived_data_config()
-        .derived_data_types
-        .clone()
-        .into_iter()
+        .enabled
+        .types
+        .iter()
         .map(|name| derived_data_utils(&unredacted_repo, name))
         .collect::<Result<_>>()?;
     slog::info!(

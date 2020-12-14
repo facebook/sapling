@@ -20,7 +20,9 @@ use std::sync::Arc;
 
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Storable};
-use derived_data::{BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, DeriveError};
+use derived_data::{
+    BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, DeriveError, DerivedDataTypesConfig,
+};
 use filestore::{self, FetchKey};
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath};
 
@@ -33,7 +35,7 @@ pub struct TreeMapping {
 }
 
 impl TreeMapping {
-    pub fn new(blobstore: Arc<dyn Blobstore>) -> Self {
+    pub fn new(blobstore: Arc<dyn Blobstore>, _config: &DerivedDataTypesConfig) -> Self {
         Self { blobstore }
     }
 
@@ -113,7 +115,8 @@ impl BonsaiDerived for TreeHandle {
         _ctx: &CoreContext,
         repo: &BlobRepo,
     ) -> Result<Self::DefaultMapping, DeriveError> {
-        Ok(TreeMapping::new(repo.blobstore().boxed()))
+        let config = derived_data::enabled_type_config(repo, Self::NAME)?;
+        Ok(TreeMapping::new(repo.blobstore().boxed(), config))
     }
 }
 

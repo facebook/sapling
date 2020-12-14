@@ -12,7 +12,9 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable};
+use derived_data::{
+    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable, DerivedDataTypesConfig,
+};
 use mononoke_types::{BlobstoreBytes, BonsaiChangeset, DeletedManifestId};
 use repo_blobstore::RepoBlobstore;
 use std::convert::{TryFrom, TryInto};
@@ -85,7 +87,7 @@ pub struct RootDeletedManifestMapping {
 impl BlobstoreRootIdMapping for RootDeletedManifestMapping {
     type Value = RootDeletedManifestId;
 
-    fn new(repo: &BlobRepo) -> Result<Self> {
+    fn new(repo: &BlobRepo, _config: &DerivedDataTypesConfig) -> Result<Self> {
         Ok(Self {
             blobstore: repo.get_blobstore(),
         })
