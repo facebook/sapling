@@ -4206,7 +4206,7 @@ def log(ui, repo, *pats, **opts):
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
 
     template = opts.get("template") or ""
-    ctxstream = revs.prefetchbytemplate(repo, template).iterctx(repo)
+    ctxstream = revs.prefetchbytemplate(repo, template).iterctx()
     for ctx in ctxstream:
         if count == limit:
             break

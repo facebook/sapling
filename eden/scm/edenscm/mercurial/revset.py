@@ -2320,7 +2320,7 @@ def sort(repo, subset, x, order):
         return revs
 
     # sort() is guaranteed to be stable
-    ctxs = list(revs.prefetch("text").iterctx(repo))
+    ctxs = list(revs.prefetch("text").iterctx())
     for k, reverse in reversed(keyflags):
         ctxs.sort(key=_sortkeyfuncs[k], reverse=reverse)
     return baseset([c.rev() for c in ctxs], repo=repo)

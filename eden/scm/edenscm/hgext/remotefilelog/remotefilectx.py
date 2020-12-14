@@ -310,7 +310,7 @@ class remotefilectx(context.filectx):
             perftrace.tracevalue("Source Nodes", [hex(cl.node(rev)) for rev in revs])
             pc = repo._phasecache
             seenpublic = False
-            iterancs = repo.revs("reverse(::%ld)", revs).prefetch("text").iterctx(repo)
+            iterancs = repo.revs("reverse(::%ld)", revs).prefetch("text").iterctx()
             for i, ctx in enumerate(iterancs):
                 ancrev = ctx.rev()
                 if ancrev == srcrev and not inclusive:

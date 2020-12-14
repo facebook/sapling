@@ -74,9 +74,10 @@ class abstractsmartset(object):
         """iterate the set in the order it is supposed to be iterated"""
         raise NotImplementedError()
 
-    def iterctx(self, repo):
+    def iterctx(self):
         """iterate the set using contexes, with prefetch considered"""
-        ctxstream = self._iterctxnoprefetch(repo)
+        repo = self.repo()
+        ctxstream = self._iterctxnoprefetch()
         for field in sorted(self.prefetchfields()):
             if field not in prefetchtable:
                 raise error.ProgrammingError(
@@ -85,8 +86,9 @@ class abstractsmartset(object):
             ctxstream = prefetchtable[field](repo, ctxstream)
         return ctxstream
 
-    def _iterctxnoprefetch(self, repo):
+    def _iterctxnoprefetch(self):
         """iterate the set using contexes, without prefetch"""
+        repo = self.repo()
         for rev in iter(self):
             yield repo[rev]
 
@@ -760,7 +762,8 @@ class nameset(abstractsmartset):
         else:
             return self._set.iter()
 
-    def _iterctxnoprefetch(self, repo):
+    def _iterctxnoprefetch(self):
+        repo = self.repo()
         for n in self._iternode():
             yield repo[n]
 
@@ -909,9 +912,9 @@ class filteredset(abstractsmartset):
             if cond(x):
                 yield x
 
-    def _iterctxnoprefetch(self, repo):
+    def _iterctxnoprefetch(self):
         # respect subset's prefetch settings
-        ctxstream = self._subset.iterctx(repo)
+        ctxstream = self._subset.iterctx()
         cond = self._condition
         for ctx in ctxstream:
             if cond(ctx.rev()):

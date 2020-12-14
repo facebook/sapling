@@ -63,7 +63,7 @@ def dagwalker(repo, revs, template):
         rootnodes = cl.tonodes(revs)
 
     gpcache = {}
-    ctxstream = revs.prefetchbytemplate(repo, template).iterctx(repo)
+    ctxstream = revs.prefetchbytemplate(repo, template).iterctx()
     for ctx in ctxstream:
         # partition into parents in the rev set and missing parents, then
         # augment the lists with markers, to inform graph drawing code about

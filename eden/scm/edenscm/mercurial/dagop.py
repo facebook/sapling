@@ -87,7 +87,7 @@ def _walkrevtree(
             for ctx in (
                 repo.revs("sort(ancestors(%d), -rev)", currev)
                 .prefetch("text")
-                .iterctx(repo)
+                .iterctx()
             ):
                 prefetched.add(ctx.rev())
                 n -= 1

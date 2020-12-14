@@ -186,7 +186,7 @@ def getdag(ui, repo, revs, master, template):
 
     revs = smartset.baseset(revs, repo=repo)
     revs.sort(reverse=True)
-    ctxstream = revs.prefetchbytemplate(repo, template).iterctx(repo)
+    ctxstream = revs.prefetchbytemplate(repo, template).iterctx()
 
     # For each rev we need to show, compute it's parents in the dag.
     # If we have to reach for a grandparent, insert a fake node so we
