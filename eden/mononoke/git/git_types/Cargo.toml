@@ -22,7 +22,6 @@ anyhow = "1.0"
 async-trait = "0.1.29"
 digest = "0.8"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
 sha-1 = "0.8"
 thiserror = "1.0"
 
