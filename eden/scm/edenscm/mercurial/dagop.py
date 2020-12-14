@@ -25,7 +25,16 @@ generatorset = smartset.generatorset
 _maxlogdepth = 0x80000000
 
 
-def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse, stopfunc=None):
+def _walkrevtree(
+    pfunc,
+    revs,
+    startdepth,
+    stopdepth,
+    reverse,
+    stopfunc=None,
+    prefetchtext=False,
+    repo=None,
+):
     """Walk DAG using 'pfunc' from the given 'revs' nodes
 
     'pfunc(rev)' should return the parent/child revisions of the given 'rev'
@@ -52,6 +61,11 @@ def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse, stopfunc=None):
     revs.sort(reverse)
     irevs = iter(revs)
     pendingheap = []  # [(heapsign * rev, depth), ...] (i.e. lower depth first)
+    prefetched = set()
+
+    if repo is None:
+        # prefetch requires repo
+        prefetchtext = False
 
     inputrev = next(irevs, None)
     if inputrev is not None:
@@ -61,6 +75,24 @@ def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse, stopfunc=None):
     while pendingheap:
         currev, curdepth = heapq.heappop(pendingheap)
         currev = heapsign * currev
+
+        if prefetchtext and currev not in prefetched:
+            # prefetch text for 'n' ancestors of currrev
+            if curdepth < 1000:
+                n = 100
+            elif curdepth < 10000:
+                n = 1000
+            else:
+                n = 10000
+            for ctx in (
+                repo.revs("sort(ancestors(%d), -rev)", currev)
+                .prefetch("text")
+                .iterctx(repo)
+            ):
+                prefetched.add(ctx.rev())
+                n -= 1
+                if n <= 0:
+                    break
 
         # Process the stopfunc after the rev has been added to the heap, instead
         # of before, so we don't pay the stopfunc cost for revs that might not
@@ -129,7 +161,9 @@ def filerevancestors(fctxs, followfirst=False):
     return generatorset(gen, iterasc=False)
 
 
-def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth, cutfunc):
+def _genrevancestors(
+    repo, revs, followfirst, startdepth, stopdepth, cutfunc, prefetchtext=False
+):
     if followfirst:
         cut = 1
     else:
@@ -145,12 +179,25 @@ def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth, cutfunc):
     if cutfunc is not None:
         revs = revs.filter(lambda rev: not cutfunc(rev))
     return _walkrevtree(
-        plainpfunc, revs, startdepth, stopdepth, reverse=True, stopfunc=cutfunc
+        plainpfunc,
+        revs,
+        startdepth,
+        stopdepth,
+        reverse=True,
+        stopfunc=cutfunc,
+        prefetchtext=prefetchtext,
+        repo=repo,
     )
 
 
 def revancestors(
-    repo, revs, followfirst=False, startdepth=None, stopdepth=None, cutfunc=None
+    repo,
+    revs,
+    followfirst=False,
+    startdepth=None,
+    stopdepth=None,
+    cutfunc=None,
+    prefetchtext=False,
 ):
     """Like revlog.ancestors(), but supports additional options, includes
     the given revs themselves, and returns a smartset
@@ -173,7 +220,15 @@ def revancestors(
         |/
         A
     """
-    gen = _genrevancestors(repo, revs, followfirst, startdepth, stopdepth, cutfunc)
+    gen = _genrevancestors(
+        repo,
+        revs,
+        followfirst,
+        startdepth,
+        stopdepth,
+        cutfunc,
+        prefetchtext=prefetchtext,
+    )
     return generatorset(gen, iterasc=False)
 
 

@@ -652,8 +652,9 @@ def ancestorsaged(repo, subset, x):
     def notyounger(x):
         return repo[x].date()[0] < end
 
-    # PERF: cutfunc is not prefetch-friendly.
-    s = dagop.revancestors(repo, heads, cutfunc=older if start is not None else None)
+    s = dagop.revancestors(
+        repo, heads, cutfunc=older if start is not None else None, prefetchtext=True
+    )
     if end is not None:
         s = s.filter(notyounger)
 
