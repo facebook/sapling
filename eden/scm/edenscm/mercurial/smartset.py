@@ -13,6 +13,7 @@
 from __future__ import absolute_import
 
 import copy
+import weakref
 
 import bindings
 
@@ -55,6 +56,15 @@ class abstractsmartset(object):
         raise NotImplementedError()
 
     __bool__ = __nonzero__
+
+    def repo(self):
+        reporef = getattr(self, "_reporef", None)
+        if reporef is None:
+            raise error.ProgrammingError("%r does not have repo" % self)
+        repo = reporef()
+        if repo is None:
+            raise error.ProgrammingError("repo from %r was released" % self)
+        return repo
 
     def __contains__(self, rev):
         """provide fast membership testing"""
@@ -305,7 +315,7 @@ class baseset(abstractsmartset):
     True
     """
 
-    def __init__(self, data=(), datarepr=None, istopo=False):
+    def __init__(self, data=(), datarepr=None, istopo=False, repo=None):
         """
         datarepr: a tuple of (format, obj, ...), a function or an object that
                   provides a printable representation of the given data.
@@ -322,6 +332,8 @@ class baseset(abstractsmartset):
                 data = list(data)
             self._list = data
         self._datarepr = datarepr
+        if repo is not None:
+            self._reporef = weakref.ref(repo)
 
     @util.propertycache
     def _set(self):
@@ -530,10 +542,12 @@ class idset(abstractsmartset):
     <idset+ [1..=5 10 11 20]>
     """
 
-    def __init__(self, spans):
+    def __init__(self, spans, repo=None):
         """data: a dag.spans object, or an iterable of revs"""
         self._spans = dagmod.spans(spans)
         self._ascending = False
+        if repo is not None:
+            self._reporef = weakref.ref(repo)
 
     @staticmethod
     def range(repo, start, end, ascending=False):
@@ -559,7 +573,7 @@ class idset(abstractsmartset):
                     allspans = dagmod.spans.unsaferange(0, repolen - 1)
             spans = spans & allspans
         # Convert from Rust to Python object.
-        s = idset(spans)
+        s = idset(spans, repo=repo)
         s._ascending = ascending
         return s
 
@@ -686,7 +700,7 @@ class nameset(abstractsmartset):
     including lazy sets.
     """
 
-    def __init__(self, changelog, nameset, reverse=False):
+    def __init__(self, changelog, nameset, reverse=False, repo=None):
         assert isinstance(nameset, bindings.dag.nameset)
         assert changelog.userust("dag")
         self._changelog = changelog
@@ -695,6 +709,8 @@ class nameset(abstractsmartset):
         self._tonode = changelog.idmap.id2node
         # This controls the order of the set.
         self._reversed = reverse
+        if repo is not None:
+            self._reporef = weakref.ref(repo)
 
     @property
     def fastasc(self):
@@ -868,6 +884,7 @@ class filteredset(abstractsmartset):
         self._subset = subset
         self._condition = condition
         self._condrepr = condrepr
+        self._reporef = getattr(subset, "_reporef", None)
 
     def __contains__(self, x):
         return x in self._subset and self._condition(x)
@@ -1095,6 +1112,7 @@ class addset(abstractsmartset):
         self._ascending = ascending
         self._genlist = None
         self._asclist = None
+        self._reporef = getattr(revs1, "_reporef", getattr(revs2, "_reporef", None))
 
     def __len__(self):
         return len(self._list)
@@ -1245,7 +1263,7 @@ class generatorset(abstractsmartset):
     4
     """
 
-    def __init__(self, gen, iterasc=None):
+    def __init__(self, gen, iterasc=None, repo=None):
         """
         gen: a generator producing the values for the generatorset.
         """
@@ -1263,6 +1281,8 @@ class generatorset(abstractsmartset):
                 self.fastdesc = self._iterator
                 self.__contains__ = self._desccontains
         self._iterasc = iterasc
+        if repo is not None:
+            self._reporef = weakref.ref(repo)
 
     @property
     def _finished(self):
@@ -1452,10 +1472,7 @@ class fullreposet(idset):
 
     def clone(self):
         # cannot use copy.copy because __new__ is incompatible
-        s = idset(())
-        s.__dict__ = self.__dict__.copy()
-        s.__class__ = self.__class__
-        return s
+        return fullreposet(self.repo())
 
     def __init__(cls, repo):
         # __new__ takes care of things
