@@ -24,7 +24,7 @@ use cmdlib::{
     helpers,
 };
 use context::CoreContext;
-use derived_data::BonsaiDerived;
+use derived_data::BonsaiDerivable;
 use derived_data_utils::{
     derived_data_utils, derived_data_utils_unsafe, DerivedUtils, ThinOut, POSSIBLE_DERIVED_TYPES,
 };
@@ -795,6 +795,7 @@ mod tests {
     use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
     use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
+    use derived_data::BonsaiDerived;
     use fixtures::linear;
     use mercurial_types::HgChangesetId;
     use std::{

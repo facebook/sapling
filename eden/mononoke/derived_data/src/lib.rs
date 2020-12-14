@@ -36,20 +36,16 @@ pub enum DeriveError {
     Error(#[from] Error),
 }
 
-/// Trait for the data that can be derived from bonsai changeset.
-/// Examples of that are hg changeset id, unodes root manifest id, git changeset ids etc
+/// Trait for defining how derived data is derived.  This trait should be
+/// implemented by derivable data types.
 #[async_trait]
-pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
+pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone {
     /// Name of derived data
     ///
     /// Should be unique string (among derived data types), which is used to identify or
     /// name data (for example lease keys) assoicated with particular derived data type.
     const NAME: &'static str;
 
-    type Mapping: BonsaiDerivedMapping<Value = Self>;
-
-    /// Get mapping associated with this derived data type.
-    fn mapping(ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping;
 
     /// Defines how to derive new representation for bonsai having derivations
     /// for parents and having a current bonsai object.
@@ -66,6 +62,50 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         parents: Vec<Self>,
     ) -> Result<Self, Error>;
 
+    /// This method might be overridden by BonsaiDerivable implementors if there's a more efficient
+    /// way to derive a batch of commits for a particular mapping.
+    async fn batch_derive<Mapping>(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csids: Vec<ChangesetId>,
+        mapping: &Mapping,
+        mode: DeriveMode,
+    ) -> Result<HashMap<ChangesetId, Self>, Error>
+    where
+        Mapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
+    {
+        let mut res = HashMap::new();
+        // The default implementation must derive sequentially with no
+        // parallelism or concurrency, as dependencies between changesets may
+        // cause O(n^2) derivations.
+        for csid in csids {
+            let derived =
+                derive_impl::derive_impl::<Self, Mapping>(ctx, repo, mapping, csid, mode).await?;
+            res.insert(csid, derived);
+        }
+        Ok(res)
+    }
+}
+
+/// Trait for accessing data that can be derived from bonsai changesets, such
+/// as Mercurial or Git changesets, unodes, fsnodes, skeleton manifests and
+/// other derived data.
+#[async_trait]
+pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone + BonsaiDerivable {
+    /// The default mapping type when deriving this data.
+    type DefaultMapping: BonsaiDerivedMapping<Value = Self>;
+
+    /// Get the default mapping associated with this derived data type.
+    ///
+    /// This is the usual mapping used to access this derived data type, using
+    /// the repository config to configure data derivation.
+    ///
+    /// Returns an error if this derived data type is not enabled.
+    fn default_mapping(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+    ) -> Result<Self::DefaultMapping, DeriveError>;
+
     /// This function is the entrypoint for changeset derivation, it converts
     /// bonsai representation to derived one by calling derive_from_parents(), and saves mapping
     /// from csid -> BonsaiDerived in BonsaiDerivedMapping
@@ -76,8 +116,8 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         repo: &BlobRepo,
         csid: ChangesetId,
     ) -> Result<Self, DeriveError> {
-        let mapping = Self::mapping(&ctx, &repo);
-        derive_impl::derive_impl::<Self, Self::Mapping>(
+        let mapping = Self::default_mapping(&ctx, &repo)?;
+        derive_impl::derive_impl::<Self, Self::DefaultMapping>(
             ctx,
             repo,
             &mapping,
@@ -93,8 +133,8 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         repo: &BlobRepo,
         csid: &ChangesetId,
     ) -> Result<Option<Self>, Error> {
-        let mapping = Self::mapping(ctx, repo);
-        derive_impl::fetch_derived::<Self, Self::Mapping>(ctx, csid, &mapping).await
+        let mapping = Self::default_mapping(ctx, repo)?;
+        derive_impl::fetch_derived::<Self, Self::DefaultMapping>(ctx, csid, &mapping).await
     }
 
     /// Returns min(number of ancestors of `csid` to be derived, `limit`)
@@ -106,8 +146,8 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         csid: &ChangesetId,
         limit: u64,
     ) -> Result<u64, DeriveError> {
-        let mapping = Self::mapping(&ctx, &repo);
-        let underived = derive_impl::find_topo_sorted_underived::<Self, Self::Mapping, _>(
+        let mapping = Self::default_mapping(&ctx, &repo)?;
+        let underived = derive_impl::find_topo_sorted_underived::<Self, Self::DefaultMapping, _>(
             ctx,
             repo,
             &mapping,
@@ -128,8 +168,8 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>, DeriveError> {
-        let mapping = Self::mapping(&ctx, &repo);
-        let underived = derive_impl::find_topo_sorted_underived::<Self, Self::Mapping, _>(
+        let mapping = Self::default_mapping(&ctx, &repo)?;
+        let underived = derive_impl::find_topo_sorted_underived::<Self, Self::DefaultMapping, _>(
             ctx,
             repo,
             &mapping,
@@ -149,31 +189,6 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         let count = Self::count_underived(&ctx, &repo, &csid, 1).await?;
         Ok(count == 0)
     }
-
-    /// This method might be overridden by BonsaiDerived implementors if there's a more efficient
-    /// way to derive a batch of commits
-    async fn batch_derive<BatchMapping>(
-        ctx: &CoreContext,
-        repo: &BlobRepo,
-        csids: Vec<ChangesetId>,
-        mapping: &BatchMapping,
-        mode: DeriveMode,
-    ) -> Result<HashMap<ChangesetId, Self>, Error>
-    where
-        BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
-    {
-        let mut res = HashMap::new();
-        // The default implementation must derive sequentially with no
-        // parallelism or concurrency, as dependencies between changesets may
-        // cause O(n^2) derivations.
-        for csid in csids {
-            let derived =
-                derive_impl::derive_impl::<Self, BatchMapping>(ctx, repo, mapping, csid, mode)
-                    .await?;
-            res.insert(csid, derived);
-        }
-        Ok(res)
-    }
 }
 
 /// After derived data was generated then it will be stored in BonsaiDerivedMapping, which is
@@ -182,7 +197,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
 #[async_trait]
 #[auto_impl(Arc)]
 pub trait BonsaiDerivedMapping: Send + Sync + Clone {
-    type Value: BonsaiDerived;
+    type Value: BonsaiDerivable;
 
     /// Fetches mapping from bonsai changeset ids to generated value
     async fn get(

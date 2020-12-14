@@ -18,7 +18,7 @@ use cmdlib::{
     helpers::{block_execute, upload_and_show_trace},
 };
 use context::CoreContext;
-use derived_data::BonsaiDerived;
+use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use failure_ext::SlogKVError;

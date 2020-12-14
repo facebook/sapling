@@ -17,7 +17,7 @@ use cache_warmup::cache_warmup;
 use cached_config::ConfigStore;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
+use derived_data::BonsaiDerivable;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,

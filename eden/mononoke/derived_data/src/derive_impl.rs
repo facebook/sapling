@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::{BonsaiDerived, BonsaiDerivedMapping, DeriveError};
+use crate::{BonsaiDerivable, BonsaiDerivedMapping, DeriveError};
 use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -58,7 +58,7 @@ impl DeriveMode {
     /// in this mode.
     ///
     /// Returns `DeriveError` if derivation should not proceed.
-    pub fn check_if_derive_allowed<Derived: BonsaiDerived>(
+    pub fn check_if_derive_allowed<Derivable: BonsaiDerivable>(
         self,
         repo: &BlobRepo,
     ) -> Result<(), DeriveError> {
@@ -66,11 +66,12 @@ impl DeriveMode {
             if !repo
                 .get_derived_data_config()
                 .derived_data_types
-                .contains(Derived::NAME)
+                .contains(Derivable::NAME)
             {
-                STATS::derived_data_disabled.add_value(1, (repo.get_repoid().id(), Derived::NAME));
+                STATS::derived_data_disabled
+                    .add_value(1, (repo.get_repoid().id(), Derivable::NAME));
                 return Err(DeriveError::Disabled(
-                    Derived::NAME,
+                    Derivable::NAME,
                     repo.get_repoid(),
                     repo.name().clone(),
                 ));
@@ -106,15 +107,15 @@ impl DeriveMode {
 ///
 /// is possible and valid (but only if the data for commit C is derived).
 pub async fn derive_impl<
-    Derived: BonsaiDerived,
-    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
+    Derivable: BonsaiDerivable,
+    Mapping: BonsaiDerivedMapping<Value = Derivable> + Send + Sync + Clone + 'static,
 >(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derived_mapping: &Mapping,
     start_csid: ChangesetId,
     mode: DeriveMode,
-) -> Result<Derived, DeriveError> {
+) -> Result<Derivable, DeriveError> {
     let derivation = async {
         let all_csids =
             find_topo_sorted_underived(ctx, repo, derived_mapping, Some(start_csid), None, mode)
@@ -123,7 +124,7 @@ pub async fn derive_impl<
         for csid in &all_csids {
             ctx.scuba().clone().log_with_msg(
                 "Waiting for derived data to be generated",
-                Some(format!("{} {}", Derived::NAME, csid)),
+                Some(format!("{} {}", Derivable::NAME, csid)),
             );
 
             let (stats, res) = derive_may_panic(&ctx, &repo, derived_mapping, &csid)
@@ -138,7 +139,7 @@ pub async fn derive_impl<
             ctx.scuba()
                 .clone()
                 .add_future_stats(&stats)
-                .log_with_msg(tag, Some(format!("{} {}", Derived::NAME, csid)));
+                .log_with_msg(tag, Some(format!("{} {}", Derivable::NAME, csid)));
             res?;
         }
 
@@ -158,7 +159,7 @@ pub async fn derive_impl<
             ctx.logger(),
             "slow derivation of {} {} for {}, took {:?}: mononoke_prod/flat/{}.trace",
             count,
-            Derived::NAME,
+            Derivable::NAME,
             start_csid,
             stats.completion_time,
             ctx.trace().id(),
@@ -167,7 +168,7 @@ pub async fn derive_impl<
             "Slow derivation",
             Some(format!(
                 "type={},count={},csid={}",
-                Derived::NAME,
+                Derivable::NAME,
                 count,
                 start_csid.to_string()
             )),
@@ -190,8 +191,8 @@ fn should_log_slow_derivation(duration: Duration) -> bool {
 }
 
 pub(crate) async fn find_topo_sorted_underived<
-    Derived: BonsaiDerived,
-    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
+    Derivable: BonsaiDerivable,
+    Mapping: BonsaiDerivedMapping<Value = Derivable> + Send + Sync + Clone + 'static,
     Changesets: IntoIterator<Item = ChangesetId>,
 >(
     ctx: &CoreContext,
@@ -201,7 +202,7 @@ pub(crate) async fn find_topo_sorted_underived<
     limit: Option<u64>,
     mode: DeriveMode,
 ) -> Result<Vec<ChangesetId>, Error> {
-    mode.check_if_derive_allowed::<Derived>(repo)?;
+    mode.check_if_derive_allowed::<Derivable>(repo)?;
 
     let changeset_fetcher = repo.get_changeset_fetcher();
     // This is necessary to avoid visiting the same commit a lot of times in mergy repos
@@ -268,20 +269,20 @@ pub(crate) async fn find_topo_sorted_underived<
 }
 
 // Panics if any of the parents is not derived yet
-async fn derive_may_panic<Derived, Mapping>(
+async fn derive_may_panic<Derivable, Mapping>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     mapping: &Mapping,
     bcs_id: &ChangesetId,
 ) -> Result<(), Error>
 where
-    Derived: BonsaiDerived,
-    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
+    Derivable: BonsaiDerivable,
+    Mapping: BonsaiDerivedMapping<Value = Derivable> + Send + Sync + Clone + 'static,
 {
     debug!(
         ctx.logger(),
         "derive {} for {}",
-        Derived::NAME,
+        Derivable::NAME,
         bcs_id.to_hex()
     );
 
@@ -289,7 +290,7 @@ where
     let lease_key = Arc::new(format!(
         "repo{}.{}.{}",
         repo.get_repoid().id(),
-        Derived::NAME,
+        Derivable::NAME,
         bcs_id
     ));
 
@@ -298,7 +299,7 @@ where
     res
 }
 
-async fn derive_in_loop<Derived, Mapping>(
+async fn derive_in_loop<Derivable, Mapping>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     mapping: &Mapping,
@@ -307,8 +308,8 @@ async fn derive_in_loop<Derived, Mapping>(
     lease_key: &Arc<String>,
 ) -> Result<(), Error>
 where
-    Derived: BonsaiDerived,
-    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
+    Derivable: BonsaiDerivable,
+    Mapping: BonsaiDerivedMapping<Value = Derivable> + Send + Sync + Clone + 'static,
 {
     let event_id = EventId::new();
     let changeset_fetcher = repo.get_changeset_fetcher();
@@ -368,7 +369,7 @@ where
 
                     let deriver = async {
                         let derived =
-                            Derived::derive_from_parents(ctx.clone(), repo.clone(), bcs, parents)
+                            Derivable::derive_from_parents(ctx.clone(), repo.clone(), bcs, parents)
                                 .boxed()
                                 .compat()
                                 .traced_with_id(
@@ -376,7 +377,7 @@ where
                                     "derive::derive_from_parents",
                                     trace_args! {
                                         "csid" => bcs_id.to_hex().to_string(),
-                                        "type" => Derived::NAME
+                                        "type" => Derivable::NAME
                                     },
                                     event_id,
                                 )
@@ -391,16 +392,16 @@ where
                     lease.renew_lease_until(ctx.clone(), &lease_key, receiver.map(|_| ()).boxed());
 
                     let derived_data_config = repo.get_derived_data_config();
-                    let mut derived_data_scuba = init_derived_data_scuba::<Derived>(
+                    let mut derived_data_scuba = init_derived_data_scuba::<Derivable>(
                         &ctx,
                         repo.name(),
                         &derived_data_config,
                         &bcs_id,
                     );
 
-                    log_derivation_start::<Derived>(&ctx, &mut derived_data_scuba, &bcs_id);
+                    log_derivation_start::<Derivable>(&ctx, &mut derived_data_scuba, &bcs_id);
                     let (stats, res) = deriver.timed().await;
-                    log_derivation_end::<Derived>(
+                    log_derivation_end::<Derivable>(
                         &ctx,
                         &mut derived_data_scuba,
                         &bcs_id,
@@ -428,14 +429,14 @@ where
 
 /// This function returns None if this item is not yet derived,  Some(Self) otherwise.
 /// It does not derive if not already derived.
-pub(crate) async fn fetch_derived<Derived, Mapping>(
+pub(crate) async fn fetch_derived<Derivable, Mapping>(
     ctx: &CoreContext,
     bcs_id: &ChangesetId,
     derived_mapping: &Mapping,
-) -> Result<Option<Derived>, Error>
+) -> Result<Option<Derivable>, Error>
 where
-    Derived: BonsaiDerived,
-    Mapping: BonsaiDerivedMapping<Value = Derived>,
+    Derivable: BonsaiDerivable,
+    Mapping: BonsaiDerivedMapping<Value = Derivable>,
 {
     let derive_node = DeriveNode::from_bonsai(ctx, derived_mapping, bcs_id).await?;
     match derive_node {
@@ -445,14 +446,14 @@ where
 }
 
 // Like fetch_derived but panics if not found
-async fn fetch_derived_may_panic<Derived, Mapping>(
+async fn fetch_derived_may_panic<Derivable, Mapping>(
     ctx: &CoreContext,
     bcs_id: ChangesetId,
     derived_mapping: &Mapping,
-) -> Result<Derived, Error>
+) -> Result<Derivable, Error>
 where
-    Derived: BonsaiDerived,
-    Mapping: BonsaiDerivedMapping<Value = Derived>,
+    Derivable: BonsaiDerivable,
+    Mapping: BonsaiDerivedMapping<Value = Derivable>,
 {
     if let Some(derived) = fetch_derived(ctx, &bcs_id, derived_mapping).await? {
         Ok(derived)
@@ -461,7 +462,7 @@ where
     }
 }
 
-fn init_derived_data_scuba<Derived: BonsaiDerived>(
+fn init_derived_data_scuba<Derivable: BonsaiDerivable>(
     ctx: &CoreContext,
     name: &str,
     derived_data_config: &DerivedDataConfig,
@@ -471,7 +472,7 @@ fn init_derived_data_scuba<Derived: BonsaiDerived>(
         Some(scuba_table) => {
             let mut builder = MononokeScubaSampleBuilder::new(ctx.fb, scuba_table);
             builder.add_common_server_data();
-            builder.add("derived_data", Derived::NAME);
+            builder.add("derived_data", Derivable::NAME);
             builder.add("reponame", name);
             builder.add("changeset", format!("{}", bcs_id));
             builder
@@ -480,29 +481,29 @@ fn init_derived_data_scuba<Derived: BonsaiDerived>(
     }
 }
 
-fn log_derivation_start<Derived>(
+fn log_derivation_start<Derivable>(
     ctx: &CoreContext,
     derived_data_scuba: &mut MononokeScubaSampleBuilder,
     bcs_id: &ChangesetId,
 ) where
-    Derived: BonsaiDerived,
+    Derivable: BonsaiDerivable,
 {
     let tag = "Generating derived data";
     ctx.scuba()
         .clone()
-        .log_with_msg(tag, Some(format!("{} {}", Derived::NAME, bcs_id)));
+        .log_with_msg(tag, Some(format!("{} {}", Derivable::NAME, bcs_id)));
     // derived data name and bcs_id already logged as separate fields
     derived_data_scuba.log_with_msg(tag, None);
 }
 
-fn log_derivation_end<Derived>(
+fn log_derivation_end<Derivable>(
     ctx: &CoreContext,
     derived_data_scuba: &mut MononokeScubaSampleBuilder,
     bcs_id: &ChangesetId,
     stats: &FutureStats,
     success: bool,
 ) where
-    Derived: BonsaiDerived,
+    Derivable: BonsaiDerivable,
 {
     let tag = if success {
         "Generated derived data"
@@ -510,7 +511,7 @@ fn log_derivation_end<Derived>(
         "Failed to generate derived data"
     };
 
-    let msg = Some(format!("{} {}", Derived::NAME, bcs_id));
+    let msg = Some(format!("{} {}", Derivable::NAME, bcs_id));
     ctx.scuba()
         .clone()
         .add_future_stats(&stats)
@@ -525,26 +526,26 @@ fn log_derivation_end<Derived>(
 
     STATS::derived_data_latency.add_value(
         stats.completion_time.as_millis_unchecked() as i64,
-        (Derived::NAME,),
+        (Derivable::NAME,),
     );
 }
 
 #[derive(Clone, Copy)]
-enum DeriveNode<Derived> {
+enum DeriveNode<Derivable> {
     /// Already derived value fetched from mapping
-    Derived(Derived),
+    Derived(Derivable),
     /// Bonsai changeset which requires derivation
     Bonsai(ChangesetId),
 }
 
-impl<Derived: BonsaiDerived> DeriveNode<Derived> {
+impl<Derivable: BonsaiDerivable> DeriveNode<Derivable> {
     async fn from_bonsai<Mapping>(
         ctx: &CoreContext,
         derived_mapping: &Mapping,
         csid: &ChangesetId,
     ) -> Result<Self, Error>
     where
-        Mapping: BonsaiDerivedMapping<Value = Derived>,
+        Mapping: BonsaiDerivedMapping<Value = Derivable>,
     {
         // TODO: do not create intermediate hashmap, since this methods is going to be called
         //       most often, to get derived value
@@ -593,6 +594,8 @@ mod test {
     use tests_utils::resolve_cs_id;
     use tunables::{with_tunables, MononokeTunables};
 
+    use crate::BonsaiDerived;
+
     lazy_static! {
         static ref MAPPINGS: Mutex<HashMap<SessionId, TestMapping>> = Mutex::new(HashMap::new());
     }
@@ -601,14 +604,9 @@ mod test {
     struct TestGenNum(u64, ChangesetId, Vec<ChangesetId>);
 
     #[async_trait]
-    impl BonsaiDerived for TestGenNum {
+    impl BonsaiDerivable for TestGenNum {
         const NAME: &'static str = "test_gen_num";
-        type Mapping = TestMapping;
 
-        fn mapping(ctx: &CoreContext, _repo: &BlobRepo) -> Self::Mapping {
-            let session = ctx.metadata().session_id().clone();
-            MAPPINGS.with(|m| m.entry(session).or_insert_with(TestMapping::new).clone())
-        }
 
         async fn derive_from_parents(
             _ctx: CoreContext,
@@ -623,6 +621,19 @@ mod test {
                 bonsai.get_changeset_id(),
                 parent_commits,
             ))
+        }
+    }
+
+    #[async_trait]
+    impl BonsaiDerived for TestGenNum {
+        type DefaultMapping = TestMapping;
+
+        fn default_mapping(
+            ctx: &CoreContext,
+            _repo: &BlobRepo,
+        ) -> Result<Self::DefaultMapping, DeriveError> {
+            let session = ctx.metadata().session_id().clone();
+            Ok(MAPPINGS.with(|m| m.entry(session).or_insert_with(TestMapping::new).clone()))
         }
     }
 
@@ -699,7 +710,7 @@ mod test {
             .await
             .unwrap();
 
-        let mapping = &TestGenNum::mapping(&ctx, &repo);
+        let mapping = &TestGenNum::default_mapping(&ctx, &repo).unwrap();
         let actual = TestGenNum::derive(&ctx, &repo, bcs_id).await.unwrap();
         assert_eq!(expected.value(), actual.0);
 
@@ -753,7 +764,7 @@ mod test {
 
         // Delete root entry, and derive descendant of after_root changeset, make sure
         // it doesn't fail
-        TestGenNum::mapping(&ctx, &repo).remove(&root_cs_id);
+        TestGenNum::default_mapping(&ctx, &repo)?.remove(&root_cs_id);
         TestGenNum::derive(&ctx, &repo, after_root_cs_id).await?;
 
         let third_cs_id =
@@ -852,7 +863,7 @@ mod test {
                     .await?;
             // Reverse them to derive parents before children
             let cs_ids = cs_ids.clone().into_iter().rev().collect::<Vec<_>>();
-            let mapping = TestGenNum::mapping(&ctx, &repo);
+            let mapping = TestGenNum::default_mapping(&ctx, &repo)?;
             let derived_batch =
                 TestGenNum::batch_derive(&ctx, &repo, cs_ids, &mapping, DeriveMode::Unsafe).await?;
             derived_batch
@@ -881,7 +892,7 @@ mod test {
     async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = init_linear(fb).await;
-        let mapping = TestGenNum::mapping(&ctx, &repo);
+        let mapping = TestGenNum::default_mapping(&ctx, &repo)?;
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = repo
@@ -959,7 +970,7 @@ mod test {
         let repo = init_linear(fb)
             .await
             .dangerous_override(|_| Arc::new(FailingLease) as Arc<dyn LeaseOps>);
-        let mapping = TestGenNum::mapping(&ctx, &repo);
+        let mapping = TestGenNum::default_mapping(&ctx, &repo)?;
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = repo

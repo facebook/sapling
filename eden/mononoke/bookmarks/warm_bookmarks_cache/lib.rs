@@ -20,7 +20,7 @@ use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
-use derived_data::BonsaiDerived;
+use derived_data::BonsaiDerivable;
 use fsnodes::RootFsnodeId;
 use futures::{
     channel::oneshot,
@@ -714,6 +714,7 @@ mod tests {
     use cloned::cloned;
     use consts::HIGHEST_IMPORTED_GEN_NUM;
     use delayblob::DelayedBlobstore;
+    use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::future::TryFutureExt;

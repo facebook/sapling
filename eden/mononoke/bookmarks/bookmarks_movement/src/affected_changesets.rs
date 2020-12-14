@@ -15,7 +15,7 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
+use derived_data::{BonsaiDerivable, BonsaiDerived};
 use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::stream::{self, StreamExt, TryStreamExt};

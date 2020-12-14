@@ -18,7 +18,7 @@ use clap::Arg;
 use cloned::cloned;
 use cmdlib::args::{self, ArgType};
 use context::CoreContext;
-use derived_data::BonsaiDerived;
+use derived_data::{BonsaiDerivable, BonsaiDerived};
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::compat::Future01CompatExt;

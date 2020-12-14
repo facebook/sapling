@@ -12,7 +12,7 @@ use blame::BlameRoot;
 use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
 use deleted_files_manifest::RootDeletedManifestId;
-use derived_data::BonsaiDerived;
+use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use fastlog::{unode_entry_to_fastlog_batch_key, RootFastlog};
 use filenodes::FilenodeInfo;

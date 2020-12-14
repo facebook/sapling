@@ -11,7 +11,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
-use derived_data::BonsaiDerived;
+use derived_data::{BonsaiDerivable, BonsaiDerived};
 use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fsnodes::{prefetch_content_metadata, RootFsnodeId};
 use futures::{

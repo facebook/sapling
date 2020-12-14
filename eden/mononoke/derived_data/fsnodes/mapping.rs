@@ -15,7 +15,7 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{
-    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerived, BonsaiDerivedMapping,
+    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable, BonsaiDerivedMapping,
     DeriveMode,
 };
 use futures::stream::{self, StreamExt, TryStreamExt};
@@ -62,13 +62,9 @@ impl From<RootFsnodeId> for BlobstoreBytes {
 }
 
 #[async_trait]
-impl BonsaiDerived for RootFsnodeId {
+impl BonsaiDerivable for RootFsnodeId {
     const NAME: &'static str = "fsnodes";
-    type Mapping = RootFsnodeMapping;
 
-    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
-        RootFsnodeMapping::new(repo.blobstore().clone())
-    }
 
     async fn derive_from_parents(
         ctx: CoreContext,
@@ -121,15 +117,15 @@ pub struct RootFsnodeMapping {
     blobstore: RepoBlobstore,
 }
 
-impl RootFsnodeMapping {
-    pub fn new(blobstore: RepoBlobstore) -> Self {
-        Self { blobstore }
-    }
-}
-
 #[async_trait]
 impl BlobstoreRootIdMapping for RootFsnodeMapping {
     type Value = RootFsnodeId;
+
+    fn new(repo: &BlobRepo) -> Result<Self> {
+        Ok(Self {
+            blobstore: repo.get_blobstore(),
+        })
+    }
 
     fn blobstore(&self) -> &dyn Blobstore {
         &self.blobstore
@@ -140,7 +136,7 @@ impl BlobstoreRootIdMapping for RootFsnodeMapping {
     }
 }
 
-impl_bonsai_derived_mapping!(RootFsnodeMapping, BlobstoreRootIdMapping);
+impl_bonsai_derived_mapping!(RootFsnodeMapping, BlobstoreRootIdMapping, RootFsnodeId);
 
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
@@ -162,6 +158,7 @@ mod test {
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
     use borrowed::borrowed;
+    use derived_data::BonsaiDerived;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::{

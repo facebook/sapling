@@ -12,7 +12,9 @@ use blobstore::{Blobstore, Loadable};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::{impl_bonsai_derived_mapping, BlobstoreExistsMapping, BonsaiDerived};
+use derived_data::{
+    impl_bonsai_derived_mapping, BlobstoreExistsMapping, BonsaiDerivable, BonsaiDerived,
+};
 use filestore::{self, FetchKey};
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use manifest::find_intersection_of_diffs;
@@ -36,13 +38,9 @@ impl From<ChangesetId> for BlameRoot {
 }
 
 #[async_trait]
-impl BonsaiDerived for BlameRoot {
+impl BonsaiDerivable for BlameRoot {
     const NAME: &'static str = "blame";
-    type Mapping = BlameRootMapping;
 
-    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
-        BlameRootMapping::new(repo.blobstore().boxed())
-    }
 
     async fn derive_from_parents(
         ctx: CoreContext,
@@ -99,15 +97,15 @@ pub struct BlameRootMapping {
     blobstore: Arc<dyn Blobstore>,
 }
 
-impl BlameRootMapping {
-    pub fn new(blobstore: Arc<dyn Blobstore>) -> Self {
-        Self { blobstore }
-    }
-}
-
 #[async_trait]
 impl BlobstoreExistsMapping for BlameRootMapping {
     type Value = BlameRoot;
+
+    fn new(repo: &BlobRepo) -> Result<Self> {
+        Ok(Self {
+            blobstore: repo.get_blobstore().boxed(),
+        })
+    }
 
     fn blobstore(&self) -> &dyn Blobstore {
         &self.blobstore
@@ -118,7 +116,7 @@ impl BlobstoreExistsMapping for BlameRootMapping {
     }
 }
 
-impl_bonsai_derived_mapping!(BlameRootMapping, BlobstoreExistsMapping);
+impl_bonsai_derived_mapping!(BlameRootMapping, BlobstoreExistsMapping, BlameRoot);
 
 async fn create_blame(
     ctx: &CoreContext,

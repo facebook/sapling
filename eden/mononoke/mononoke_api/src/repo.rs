@@ -25,7 +25,7 @@ use context::CoreContext;
 use cross_repo_sync::{
     types::Target, CandidateSelectionHint, CommitSyncContext, CommitSyncRepos, CommitSyncer,
 };
-use derived_data::BonsaiDerived;
+use derived_data::BonsaiDerivable;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};

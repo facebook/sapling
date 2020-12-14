@@ -24,7 +24,7 @@ use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
-use derived_data::BonsaiDerived;
+use derived_data::{BonsaiDerivable, BonsaiDerived};
 use derived_data_filenodes::FilenodesOnlyPublic;
 use fastlog::{fetch_fastlog_batch_by_unode_id, RootFastlog};
 use filestore::{self, Alias};

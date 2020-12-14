@@ -21,7 +21,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
+use derived_data::{BonsaiDerivable, BonsaiDerived};
 use manifest::{Entry, ManifestOps, PathOrPrefix, PathTree};
 use mononoke_types::{ChangesetId, DeletedManifestId, FileUnodeId, MPath, ManifestUnodeId};
 use unodes::RootUnodeManifestId;

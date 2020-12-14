@@ -15,7 +15,7 @@ use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
 use context::CoreContext;
 use core::fmt::Debug;
-use derived_data::BonsaiDerived;
+use derived_data::BonsaiDerivable;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, try_join_all},

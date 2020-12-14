@@ -12,7 +12,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerived};
+use derived_data::{impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable};
 use futures::TryFutureExt;
 use metaconfig_types::UnodeVersion;
 use mononoke_types::{
@@ -53,16 +53,9 @@ impl From<RootUnodeManifestId> for BlobstoreBytes {
 }
 
 #[async_trait]
-impl BonsaiDerived for RootUnodeManifestId {
+impl BonsaiDerivable for RootUnodeManifestId {
     const NAME: &'static str = "unodes";
-    type Mapping = RootUnodeManifestMapping;
 
-    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
-        RootUnodeManifestMapping::new(
-            repo.blobstore().clone(),
-            repo.get_derived_data_config().unode_version,
-        )
-    }
 
     async fn derive_from_parents(
         ctx: CoreContext,
@@ -92,18 +85,17 @@ pub struct RootUnodeManifestMapping {
     unode_version: UnodeVersion,
 }
 
-impl RootUnodeManifestMapping {
-    pub fn new(blobstore: RepoBlobstore, unode_version: UnodeVersion) -> Self {
-        Self {
-            blobstore,
-            unode_version,
-        }
-    }
-}
-
 #[async_trait]
 impl BlobstoreRootIdMapping for RootUnodeManifestMapping {
     type Value = RootUnodeManifestId;
+
+    fn new(repo: &BlobRepo) -> Result<Self> {
+        let unode_version = repo.get_derived_data_config().unode_version;
+        Ok(Self {
+            blobstore: repo.get_blobstore(),
+            unode_version,
+        })
+    }
 
     fn blobstore(&self) -> &dyn Blobstore {
         &self.blobstore
@@ -117,7 +109,11 @@ impl BlobstoreRootIdMapping for RootUnodeManifestMapping {
     }
 }
 
-impl_bonsai_derived_mapping!(RootUnodeManifestMapping, BlobstoreRootIdMapping);
+impl_bonsai_derived_mapping!(
+    RootUnodeManifestMapping,
+    BlobstoreRootIdMapping,
+    RootUnodeManifestId
+);
 
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
@@ -140,6 +136,7 @@ mod test {
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
     use borrowed::borrowed;
+    use derived_data::BonsaiDerived;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::{

@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Storable};
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use derived_data::{BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, DeriveError};
 use filestore::{self, FetchKey};
 use mononoke_types::{BonsaiChangeset, ChangesetId, MPath};
 
@@ -85,13 +85,9 @@ impl BonsaiDerivedMapping for TreeMapping {
 }
 
 #[async_trait]
-impl BonsaiDerived for TreeHandle {
+impl BonsaiDerivable for TreeHandle {
     const NAME: &'static str = "git_trees";
-    type Mapping = TreeMapping;
 
-    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
-        TreeMapping::new(repo.blobstore().boxed())
-    }
 
     async fn derive_from_parents(
         ctx: CoreContext,
@@ -102,6 +98,18 @@ impl BonsaiDerived for TreeHandle {
         let blobstore = repo.get_blobstore();
         let changes = get_file_changes(&blobstore, &ctx, bonsai).await?;
         derive_git_manifest(ctx, blobstore, parents, changes).await
+    }
+}
+
+#[async_trait]
+impl BonsaiDerived for TreeHandle {
+    type DefaultMapping = TreeMapping;
+
+    fn default_mapping(
+        _ctx: &CoreContext,
+        repo: &BlobRepo,
+    ) -> Result<Self::DefaultMapping, DeriveError> {
+        Ok(TreeMapping::new(repo.blobstore().boxed()))
     }
 }
 

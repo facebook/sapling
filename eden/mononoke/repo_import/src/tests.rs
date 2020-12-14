@@ -22,7 +22,7 @@ mod tests {
     use cached_config::{ConfigStore, TestSource};
     use context::CoreContext;
     use cross_repo_sync::{create_commit_syncers, CommitSyncContext};
-    use derived_data::BonsaiDerived;
+    use derived_data::BonsaiDerivable;
     use derived_data_utils::derived_data_utils;
     use fbinit::FacebookInit;
     use futures::{compat::Future01CompatExt, stream::TryStreamExt};

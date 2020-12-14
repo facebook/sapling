@@ -27,7 +27,7 @@ use changeset_info::ChangesetInfo;
 use changesets::{CachingChangesets, Changesets, SqlChangesets};
 use dbbookmarks::SqlBookmarksBuilder;
 use deleted_files_manifest::RootDeletedManifestId;
-use derived_data::BonsaiDerived;
+use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use fastlog::RootFastlog;
 use fbinit::FacebookInit;

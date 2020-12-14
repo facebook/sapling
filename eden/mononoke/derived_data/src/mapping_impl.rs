@@ -10,6 +10,7 @@ use std::convert::{TryFrom, TryInto};
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
+use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
@@ -28,6 +29,11 @@ pub trait BlobstoreRootIdMapping {
         + Send
         + Sync
         + Sized;
+
+    /// Create a new instance of this mapping.
+    fn new(repo: &BlobRepo) -> Result<Self>
+    where
+        Self: Sized;
 
     /// Returns the blobstore prefix to use for the mapping.
     fn prefix(&self) -> &'static str;
@@ -81,6 +87,11 @@ pub trait BlobstoreRootIdMapping {
 #[async_trait]
 pub trait BlobstoreExistsMapping {
     type Value: BonsaiDerived + From<ChangesetId> + Send + Sync + Clone;
+
+    /// Create a new instance of this mapping.
+    fn new(repo: &BlobRepo) -> Result<Self>
+    where
+        Self: Sized;
 
     /// Returns the blobstore prefix to use for the mapping.
     fn prefix(&self) -> &'static str;
@@ -148,18 +159,20 @@ pub trait BlobstoreExistsMapping {
 /// }
 ///
 /// impl MappingImpl for ExampleMapping {
+///      type Value = ExampleValue;
+///
 ///     // Implement required methods for MappingImpl
 /// }
 ///
-/// // Tie the two together and implement BonsaiDerivedMapping
-/// impl_bonsai_derived_mapping!(ExampleMapping, MappingImpl);
+/// // Tie the two together and implement BonsaiDerived and BonsaiDerivedMapping
+/// impl_bonsai_derived_mapping!(ExampleMapping, MappingImpl, ExampleValue);
 /// ```
 #[macro_export]
 macro_rules! impl_bonsai_derived_mapping {
-    ($mapping:ident, $mapping_impl:ident) => {
+    ($mapping:ident, $mapping_impl:ident, $value:ident) => {
         #[::async_trait::async_trait]
         impl $crate::BonsaiDerivedMapping for $mapping {
-            type Value = <$mapping as $mapping_impl>::Value;
+            type Value = $value;
 
             async fn get(
                 &self,
@@ -178,6 +191,18 @@ macro_rules! impl_bonsai_derived_mapping {
                 id: Self::Value,
             ) -> ::anyhow::Result<()> {
                 self.store(&ctx, csid, id).await
+            }
+        }
+
+        #[::async_trait::async_trait]
+        impl $crate::BonsaiDerived for $value {
+            type DefaultMapping = $mapping;
+
+            fn default_mapping(
+                _ctx: &::context::CoreContext,
+                repo: &::blobrepo::BlobRepo,
+            ) -> ::std::result::Result<Self::DefaultMapping, $crate::DeriveError> {
+                ::std::result::Result::Ok(<$mapping as $mapping_impl>::new(repo)?)
             }
         }
     };

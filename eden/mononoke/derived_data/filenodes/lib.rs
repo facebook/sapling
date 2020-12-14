@@ -14,7 +14,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use derived_data::{BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping, DeriveError};
 use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 use futures::{
     compat::Future01CompatExt, future::try_join_all, pin_mut, stream, FutureExt, StreamExt,
@@ -103,13 +103,9 @@ pub enum FilenodesOnlyPublic {
 }
 
 #[async_trait]
-impl BonsaiDerived for FilenodesOnlyPublic {
+impl BonsaiDerivable for FilenodesOnlyPublic {
     const NAME: &'static str = "filenodes";
-    type Mapping = FilenodesOnlyPublicMapping;
 
-    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
-        FilenodesOnlyPublicMapping::new(repo.clone())
-    }
 
     async fn derive_from_parents(
         ctx: CoreContext,
@@ -309,8 +305,20 @@ pub struct FilenodesOnlyPublicMapping {
 }
 
 impl FilenodesOnlyPublicMapping {
-    pub fn new(repo: BlobRepo) -> Self {
-        Self { repo }
+    pub fn new(repo: &BlobRepo) -> Result<Self, DeriveError> {
+        Ok(Self { repo: repo.clone() })
+    }
+}
+
+#[async_trait]
+impl BonsaiDerived for FilenodesOnlyPublic {
+    type DefaultMapping = FilenodesOnlyPublicMapping;
+
+    fn default_mapping(
+        _ctx: &CoreContext,
+        repo: &BlobRepo,
+    ) -> Result<Self::DefaultMapping, DeriveError> {
+        FilenodesOnlyPublicMapping::new(repo)
     }
 }
 
@@ -630,7 +638,7 @@ mod tests {
         FilenodesOnlyPublic::derive(&ctx, &repo, child_empty).await?;
 
         // Make sure they are in the mapping
-        let maps = FilenodesOnlyPublic::mapping(&ctx, &repo)
+        let maps = FilenodesOnlyPublic::default_mapping(&ctx, &repo)?
             .get(ctx.clone(), vec![parent_empty, child_empty])
             .await?;
 
@@ -653,7 +661,7 @@ mod tests {
             .commit()
             .await?;
 
-        let mapping = FilenodesOnlyPublic::mapping(&ctx, &repo);
+        let mapping = FilenodesOnlyPublic::default_mapping(&ctx, &repo)?;
         FilenodesOnlyPublic::derive(&ctx, &repo, child_empty).await?;
 
         // Make sure they are in the mapping
@@ -688,7 +696,7 @@ mod tests {
         let derived = FilenodesOnlyPublic::derive(&ctx, &repo, cs).await?;
         assert_eq!(derived, FilenodesOnlyPublic::Disabled);
 
-        let mapping = FilenodesOnlyPublic::mapping(&ctx, &repo);
+        let mapping = FilenodesOnlyPublic::default_mapping(&ctx, &repo)?;
         let res = mapping.get(ctx.clone(), vec![cs]).await?;
 
         assert_eq!(res.get(&cs).unwrap(), &FilenodesOnlyPublic::Disabled);

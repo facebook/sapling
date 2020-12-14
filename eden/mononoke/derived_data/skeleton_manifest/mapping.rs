@@ -15,7 +15,7 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{
-    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerived, BonsaiDerivedMapping,
+    impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable, BonsaiDerivedMapping,
     DeriveMode,
 };
 use futures::stream::{self, StreamExt, TryStreamExt};
@@ -64,13 +64,9 @@ impl From<RootSkeletonManifestId> for BlobstoreBytes {
 }
 
 #[async_trait]
-impl BonsaiDerived for RootSkeletonManifestId {
+impl BonsaiDerivable for RootSkeletonManifestId {
     const NAME: &'static str = "skeleton_manifests";
-    type Mapping = RootSkeletonManifestMapping;
 
-    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
-        RootSkeletonManifestMapping::new(repo.blobstore().clone())
-    }
 
     async fn derive_from_parents(
         ctx: CoreContext,
@@ -123,15 +119,15 @@ pub struct RootSkeletonManifestMapping {
     blobstore: RepoBlobstore,
 }
 
-impl RootSkeletonManifestMapping {
-    pub fn new(blobstore: RepoBlobstore) -> Self {
-        Self { blobstore }
-    }
-}
-
 #[async_trait]
 impl BlobstoreRootIdMapping for RootSkeletonManifestMapping {
     type Value = RootSkeletonManifestId;
+
+    fn new(repo: &BlobRepo) -> Result<Self> {
+        Ok(Self {
+            blobstore: repo.get_blobstore(),
+        })
+    }
 
     fn blobstore(&self) -> &dyn Blobstore {
         &self.blobstore
@@ -142,7 +138,11 @@ impl BlobstoreRootIdMapping for RootSkeletonManifestMapping {
     }
 }
 
-impl_bonsai_derived_mapping!(RootSkeletonManifestMapping, BlobstoreRootIdMapping);
+impl_bonsai_derived_mapping!(
+    RootSkeletonManifestMapping,
+    BlobstoreRootIdMapping,
+    RootSkeletonManifestId
+);
 
 pub(crate) fn get_file_changes(
     bcs: &BonsaiChangeset,
@@ -164,6 +164,7 @@ mod test {
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
     use borrowed::borrowed;
+    use derived_data::BonsaiDerived;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::{

@@ -22,7 +22,7 @@ use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args::{self, CachelibSettings, MononokeClapApp, MononokeMatches};
-use derived_data::BonsaiDerived;
+use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
 use futures::{

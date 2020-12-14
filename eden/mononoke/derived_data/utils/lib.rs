@@ -19,8 +19,8 @@ use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{
-    derive_impl::derive_impl, BonsaiDerived, BonsaiDerivedMapping, DeriveError, DeriveMode,
-    RegenerateMapping,
+    derive_impl::derive_impl, BlobstoreExistsMapping, BlobstoreRootIdMapping, BonsaiDerivable,
+    BonsaiDerived, BonsaiDerivedMapping, DeriveError, DeriveMode, RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
@@ -414,44 +414,42 @@ fn derived_data_utils_impl(
     name: impl AsRef<str>,
     mode: DeriveMode,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
+    let repo = &repo;
     match name.as_ref() {
         RootUnodeManifestId::NAME => {
-            let mapping = RootUnodeManifestMapping::new(
-                repo.get_blobstore(),
-                repo.get_derived_data_config().unode_version,
-            );
+            let mapping = RootUnodeManifestMapping::new(repo)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         RootFastlog::NAME => {
-            let mapping = RootFastlogMapping::new(repo.get_blobstore().boxed());
+            let mapping = RootFastlogMapping::new(repo)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         MappedHgChangesetId::NAME => {
-            let mapping = HgChangesetIdMapping::new(&repo);
+            let mapping = HgChangesetIdMapping::new(repo);
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         RootFsnodeId::NAME => {
-            let mapping = RootFsnodeMapping::new(repo.get_blobstore());
+            let mapping = RootFsnodeMapping::new(repo)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         BlameRoot::NAME => {
-            let mapping = BlameRootMapping::new(repo.get_blobstore().boxed());
+            let mapping = BlameRootMapping::new(repo)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         ChangesetInfo::NAME => {
-            let mapping = ChangesetInfoMapping::new(repo.get_blobstore().boxed());
+            let mapping = ChangesetInfoMapping::new(repo)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         RootDeletedManifestId::NAME => {
-            let mapping = RootDeletedManifestMapping::new(repo.get_blobstore());
+            let mapping = RootDeletedManifestMapping::new(repo)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         FilenodesOnlyPublic::NAME => {
-            let mapping = FilenodesOnlyPublicMapping::new(repo);
+            let mapping = FilenodesOnlyPublicMapping::new(repo)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         RootSkeletonManifestId::NAME => {
-            let mapping = RootSkeletonManifestMapping::new(repo.get_blobstore());
+            let mapping = RootSkeletonManifestMapping::new(repo)?;
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         name => Err(format_err!("Unsupported derived data type: {}", name)),

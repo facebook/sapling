@@ -7,24 +7,20 @@
 
 use std::sync::Arc;
 
-use anyhow::Error;
+use anyhow::{Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use context::CoreContext;
-use derived_data::{impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerived};
+use derived_data::{impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable};
 use mononoke_types::BonsaiChangeset;
 
 use crate::ChangesetInfo;
 
 #[async_trait]
-impl BonsaiDerived for ChangesetInfo {
+impl BonsaiDerivable for ChangesetInfo {
     const NAME: &'static str = "changeset_info";
-    type Mapping = ChangesetInfoMapping;
 
-    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
-        ChangesetInfoMapping::new(repo.blobstore().boxed())
-    }
 
     async fn derive_from_parents(
         _ctx: CoreContext,
@@ -42,15 +38,15 @@ pub struct ChangesetInfoMapping {
     blobstore: Arc<dyn Blobstore>,
 }
 
-impl ChangesetInfoMapping {
-    pub fn new(blobstore: Arc<dyn Blobstore>) -> Self {
-        Self { blobstore }
-    }
-}
-
 #[async_trait]
 impl BlobstoreRootIdMapping for ChangesetInfoMapping {
     type Value = ChangesetInfo;
+
+    fn new(repo: &BlobRepo) -> Result<Self> {
+        Ok(Self {
+            blobstore: repo.get_blobstore().boxed(),
+        })
+    }
 
     fn blobstore(&self) -> &dyn Blobstore {
         &self.blobstore
@@ -61,7 +57,7 @@ impl BlobstoreRootIdMapping for ChangesetInfoMapping {
     }
 }
 
-impl_bonsai_derived_mapping!(ChangesetInfoMapping, BlobstoreRootIdMapping);
+impl_bonsai_derived_mapping!(ChangesetInfoMapping, BlobstoreRootIdMapping, ChangesetInfo);
 
 #[cfg(test)]
 mod test {
@@ -69,6 +65,7 @@ mod test {
 
     use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
+    use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use mercurial_types::HgChangesetId;

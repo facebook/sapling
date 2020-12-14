@@ -12,7 +12,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerived};
+use derived_data::{impl_bonsai_derived_mapping, BlobstoreRootIdMapping, BonsaiDerivable};
 use mononoke_types::{BlobstoreBytes, BonsaiChangeset, DeletedManifestId};
 use repo_blobstore::RepoBlobstore;
 use std::convert::{TryFrom, TryInto};
@@ -47,13 +47,9 @@ impl From<RootDeletedManifestId> for BlobstoreBytes {
 }
 
 #[async_trait]
-impl BonsaiDerived for RootDeletedManifestId {
+impl BonsaiDerivable for RootDeletedManifestId {
     const NAME: &'static str = "deleted_manifest";
-    type Mapping = RootDeletedManifestMapping;
 
-    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
-        RootDeletedManifestMapping::new(repo.blobstore().clone())
-    }
 
     async fn derive_from_parents(
         ctx: CoreContext,
@@ -83,15 +79,15 @@ pub struct RootDeletedManifestMapping {
     blobstore: RepoBlobstore,
 }
 
-impl RootDeletedManifestMapping {
-    pub fn new(blobstore: RepoBlobstore) -> Self {
-        Self { blobstore }
-    }
-}
-
 #[async_trait]
 impl BlobstoreRootIdMapping for RootDeletedManifestMapping {
     type Value = RootDeletedManifestId;
+
+    fn new(repo: &BlobRepo) -> Result<Self> {
+        Ok(Self {
+            blobstore: repo.get_blobstore(),
+        })
+    }
 
     fn blobstore(&self) -> &dyn Blobstore {
         &self.blobstore
@@ -102,4 +98,8 @@ impl BlobstoreRootIdMapping for RootDeletedManifestMapping {
     }
 }
 
-impl_bonsai_derived_mapping!(RootDeletedManifestMapping, BlobstoreRootIdMapping);
+impl_bonsai_derived_mapping!(
+    RootDeletedManifestMapping,
+    BlobstoreRootIdMapping,
+    RootDeletedManifestId
+);

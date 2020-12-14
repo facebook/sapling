@@ -5,13 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::{impl_bonsai_derived_mapping, BlobstoreExistsMapping, BonsaiDerived};
+use derived_data::{
+    impl_bonsai_derived_mapping, BlobstoreExistsMapping, BonsaiDerivable, BonsaiDerived,
+};
 use futures::future;
 use futures::stream::TryStreamExt;
 use manifest::{find_intersection_of_diffs, Entry};
@@ -51,13 +53,9 @@ impl From<ChangesetId> for RootFastlog {
 }
 
 #[async_trait]
-impl BonsaiDerived for RootFastlog {
+impl BonsaiDerivable for RootFastlog {
     const NAME: &'static str = "fastlog";
-    type Mapping = RootFastlogMapping;
 
-    fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
-        RootFastlogMapping::new(repo.blobstore().boxed())
-    }
 
     async fn derive_from_parents(
         ctx: CoreContext,
@@ -141,14 +139,14 @@ pub struct RootFastlogMapping {
     blobstore: Arc<dyn Blobstore>,
 }
 
-impl RootFastlogMapping {
-    pub fn new(blobstore: Arc<dyn Blobstore>) -> Self {
-        Self { blobstore }
-    }
-}
-
 impl BlobstoreExistsMapping for RootFastlogMapping {
     type Value = RootFastlog;
+
+    fn new(repo: &BlobRepo) -> Result<Self> {
+        Ok(Self {
+            blobstore: repo.get_blobstore().boxed(),
+        })
+    }
 
     fn blobstore(&self) -> &dyn Blobstore {
         &self.blobstore
@@ -159,7 +157,7 @@ impl BlobstoreExistsMapping for RootFastlogMapping {
     }
 }
 
-impl_bonsai_derived_mapping!(RootFastlogMapping, BlobstoreExistsMapping);
+impl_bonsai_derived_mapping!(RootFastlogMapping, BlobstoreExistsMapping, RootFastlog);
 
 #[cfg(test)]
 mod tests {
