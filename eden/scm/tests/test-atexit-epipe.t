@@ -1,5 +1,3 @@
-#chg-compatible
-
   $ cat > a.py << EOF
   > import os
   > def uisetup(ui):
