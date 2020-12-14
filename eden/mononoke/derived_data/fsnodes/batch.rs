@@ -13,7 +13,7 @@ use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::batch::split_batch_in_linear_stacks;
-use derived_data::BonsaiDerived;
+use derived_data::{derive_impl, BonsaiDerivedMapping};
 use futures::stream::{FuturesOrdered, TryStreamExt};
 use mononoke_types::{ChangesetId, FsnodeId};
 
@@ -48,11 +48,15 @@ use crate::RootFsnodeId;
 ///
 /// Fsnode derivation can be cpu-bounded, and the speed up is achieved by spawning derivation on different
 /// tokio tasks - this allows us to use more cpu.
-pub async fn derive_fsnode_in_batch(
+pub async fn derive_fsnode_in_batch<Mapping>(
     ctx: &CoreContext,
     repo: &BlobRepo,
+    mapping: &Mapping,
     batch: Vec<ChangesetId>,
-) -> Result<HashMap<ChangesetId, FsnodeId>, Error> {
+) -> Result<HashMap<ChangesetId, FsnodeId>, Error>
+where
+    Mapping: BonsaiDerivedMapping<Value = RootFsnodeId> + 'static,
+{
     let linear_stacks = split_batch_in_linear_stacks(ctx, repo, batch).await?;
     let mut res = HashMap::new();
     for linear_stack in linear_stacks {
@@ -67,7 +71,11 @@ pub async fn derive_fsnode_in_batch(
                 async move {
                     match res.get(&p) {
                         Some(fsnode_id) => Ok::<_, Error>(*fsnode_id),
-                        None => Ok(RootFsnodeId::derive(ctx, repo, p).await?.into_fsnode_id()),
+                        None => Ok(derive_impl::derive_impl::<RootFsnodeId, Mapping>(
+                            ctx, repo, mapping, p,
+                        )
+                        .await?
+                        .into_fsnode_id()),
                     }
                 }
             })
@@ -105,6 +113,7 @@ pub async fn derive_fsnode_in_batch(
 #[cfg(test)]
 mod test {
     use super::*;
+    use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::compat::Stream01CompatExt;
@@ -118,14 +127,14 @@ mod test {
             let repo = linear::getrepo(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
-            let cs_ids =
+            let mapping = RootFsnodeId::default_mapping(&ctx, &repo)?;
+            let mut cs_ids =
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
                     .compat()
                     .try_collect::<Vec<_>>()
                     .await?;
-            let fsnode_ids =
-                derive_fsnode_in_batch(&ctx, &repo, cs_ids.clone().into_iter().rev().collect())
-                    .await?;
+            cs_ids.reverse();
+            let fsnode_ids = derive_fsnode_in_batch(&ctx, &repo, &mapping, cs_ids).await?;
             fsnode_ids.get(&master_cs_id).unwrap().clone()
         };
 

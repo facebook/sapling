@@ -98,7 +98,7 @@ impl BonsaiDerivable for RootSkeletonManifestId {
     where
         BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
     {
-        let derived = derive_skeleton_manifests_in_batch(ctx, repo, csids.clone()).await?;
+        let derived = derive_skeleton_manifests_in_batch(ctx, repo, mapping, csids.clone()).await?;
 
         stream::iter(derived.into_iter().map(|(cs_id, derived)| async move {
             let derived = RootSkeletonManifestId(derived);

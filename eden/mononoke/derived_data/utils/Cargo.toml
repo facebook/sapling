@@ -42,6 +42,7 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 blobrepo_factory = { path = "../../blobrepo/factory" }
 bookmarks = { path = "../../bookmarks" }
 fixtures = { path = "../../tests/fixtures" }
+metaconfig_types = { path = "../../metaconfig/types" }
 tests_utils = { path = "../../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"

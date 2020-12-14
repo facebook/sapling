@@ -19,8 +19,8 @@ use cloned::cloned;
 use context::{CoreContext, SessionContainer};
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{
-    derive_impl::derive_impl, BlobstoreExistsMapping, BlobstoreRootIdMapping, BonsaiDerivable,
-    BonsaiDerived, BonsaiDerivedMapping, DeriveError, DerivedDataTypesConfig, RegenerateMapping,
+    derive_impl, BlobstoreExistsMapping, BlobstoreRootIdMapping, BonsaiDerivable,
+    BonsaiDerivedMapping, DerivedDataTypesConfig, RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
@@ -186,7 +186,7 @@ impl<M> DerivedUtilsFromMapping<M> {
 impl<M> DerivedUtils for DerivedUtilsFromMapping<M>
 where
     M: BonsaiDerivedMapping + Clone + 'static,
-    M::Value: BonsaiDerived + std::fmt::Debug,
+    M::Value: BonsaiDerivable + std::fmt::Debug,
 {
     fn derive(
         &self,
@@ -200,7 +200,8 @@ where
         // even if it was already generated (see RegenerateMapping call).
         cloned!(self.mapping);
         async move {
-            let result = derive_impl::<M::Value, _>(&ctx, &repo, &mapping, csid).await?;
+            let result =
+                derive_impl::derive_impl::<M::Value, _>(&ctx, &repo, &mapping, csid).await?;
             Ok(format!("{:?}", result))
         }
         .boxed()
@@ -264,7 +265,8 @@ where
                     let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
 
                     // derive each changeset sequentially
-                    derive_impl::<M::Value, _>(&ctx, &repo, &in_memory_mapping, csid).await?;
+                    derive_impl::derive_impl::<M::Value, _>(&ctx, &repo, &in_memory_mapping, csid)
+                        .await?;
                 }
             }
 
@@ -304,15 +306,17 @@ where
     ) -> Result<Option<BonsaiChangeset>, Error> {
         let mut underived_ancestors = vec![];
         for cs_id in csids {
-            underived_ancestors.push(M::Value::find_all_underived_ancestors(
+            underived_ancestors.push(derive_impl::find_topo_sorted_underived::<M::Value, _, _>(
                 ctx,
                 repo,
+                &self.mapping,
                 vec![*cs_id],
+                None,
             ));
         }
 
         let boxed_stream = stream::iter(underived_ancestors)
-            .map(Result::<_, DeriveError>::Ok)
+            .map(Result::<_, Error>::Ok)
             .try_buffer_unordered(100)
             // boxed() is necessary to avoid "one type is more general than the other" error
             .boxed();
@@ -910,14 +914,16 @@ pub fn find_underived_many(
 mod tests {
     use super::*;
     use bookmarks::BookmarkName;
+    use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
     use fixtures::merge_even;
-    use maplit::btreemap;
+    use maplit::{btreemap, hashset};
+    use metaconfig_types::UnodeVersion;
     use std::{
         collections::BTreeMap,
         sync::atomic::{AtomicUsize, Ordering},
     };
-    use tests_utils::drawdag::{changes, create_from_dag_with_changes};
+    use tests_utils::drawdag::create_from_dag;
 
     // decompose graph into map between node indices and list of nodes
     fn derive_graph_unpack(node: &DeriveGraph) -> (BTreeMap<usize, Vec<usize>>, Vec<DeriveGraph>) {
@@ -1113,8 +1119,7 @@ mod tests {
     async fn test_find_underived_many(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
-
-        let dag = create_from_dag_with_changes(&ctx, &repo, "A-B-C", changes! {}).await?;
+        let dag = create_from_dag(&ctx, &repo, "A-B-C").await?;
         let a = *dag.get("A").unwrap();
         let b = *dag.get("B").unwrap();
         let c = *dag.get("C").unwrap();
@@ -1175,5 +1180,94 @@ mod tests {
         );
 
         Ok::<_, Error>(())
+    }
+
+    #[fbinit::compat_test]
+    async fn multiple_independent_mappings(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let dag = create_from_dag(&ctx, &repo, "A-B-C").await?;
+        let a = *dag.get("A").unwrap();
+        let b = *dag.get("B").unwrap();
+        let c = *dag.get("C").unwrap();
+
+        // Create utils for both versions of unodes.
+        let utils_v1 = derived_data_utils_impl(
+            &repo,
+            "unodes",
+            &DerivedDataTypesConfig {
+                types: hashset! { String::from("unodes") },
+                unode_version: UnodeVersion::V1,
+                ..Default::default()
+            },
+        )?;
+
+        let utils_v2 = derived_data_utils_impl(
+            &repo,
+            "unodes",
+            &DerivedDataTypesConfig {
+                types: hashset! { String::from("unodes") },
+                unode_version: UnodeVersion::V2,
+                ..Default::default()
+            },
+        )?;
+
+        assert_eq!(
+            utils_v1
+                .find_oldest_underived(&ctx, &repo, &vec![c])
+                .await?
+                .unwrap()
+                .get_changeset_id(),
+            a
+        );
+        assert_eq!(
+            utils_v2
+                .find_oldest_underived(&ctx, &repo, &vec![c])
+                .await?
+                .unwrap()
+                .get_changeset_id(),
+            a
+        );
+
+        // Derive V1 of A using the V1 utils.  V2 of A should still be underived.
+        utils_v1.derive(ctx.clone(), repo.clone(), a).await?;
+        assert_eq!(
+            utils_v1
+                .find_oldest_underived(&ctx, &repo, &vec![c])
+                .await?
+                .unwrap()
+                .get_changeset_id(),
+            b
+        );
+        assert_eq!(
+            utils_v2
+                .find_oldest_underived(&ctx, &repo, &vec![c])
+                .await?
+                .unwrap()
+                .get_changeset_id(),
+            a
+        );
+
+        // Derive B directly, which should use the V2 mapping, as that is the
+        // version configured on the repo.  V1 of B should still be underived.
+        RootUnodeManifestId::derive(&ctx, &repo, b).await?;
+        assert_eq!(
+            utils_v1
+                .find_oldest_underived(&ctx, &repo, &vec![c])
+                .await?
+                .unwrap()
+                .get_changeset_id(),
+            b
+        );
+        assert_eq!(
+            utils_v2
+                .find_oldest_underived(&ctx, &repo, &vec![c])
+                .await?
+                .unwrap()
+                .get_changeset_id(),
+            c
+        );
+
+        Ok(())
     }
 }

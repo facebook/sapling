@@ -171,7 +171,7 @@ fn should_log_slow_derivation(duration: Duration) -> bool {
     duration > Duration::from_secs(threshold)
 }
 
-pub(crate) async fn find_topo_sorted_underived<
+pub async fn find_topo_sorted_underived<
     Derivable: BonsaiDerivable,
     Mapping: BonsaiDerivedMapping<Value = Derivable> + Send + Sync + Clone + 'static,
     Changesets: IntoIterator<Item = ChangesetId>,
