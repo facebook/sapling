@@ -5,6 +5,7 @@
 
 from __future__ import absolute_import
 
+import weakref
 from typing import IO, Optional, Union
 
 import bindings
@@ -43,8 +44,9 @@ class changelog(object):
     indexfile = "00changelog.i"
     storedeltachains = False
 
-    def __init__(self, svfs, inner, uiconfig):
+    def __init__(self, repo, inner, uiconfig):
         """Construct changelog backed by Rust objects."""
+        svfs = repo.svfs
         self.svfs = svfs
         self.inner = inner
         # TODO: Consider moving visibleheads out?
@@ -54,6 +56,7 @@ class changelog(object):
         self._verifyhghash = not svfs.exists(GIT_DIR_FILE)
         # Number of commit texts to buffer. Useful for bounding memory usage.
         self._groupbuffersize = uiconfig.configint("pull", "buffer-commit-count")
+        self._reporef = weakref.ref(repo)
 
     def userust(self, name=None):
         if name == "revset":
@@ -69,27 +72,30 @@ class changelog(object):
         return self.svfs
 
     @classmethod
-    def openrevlog(cls, svfs, uiconfig):
+    def openrevlog(cls, repo, uiconfig):
         """Construct changelog from 00changelog.i revlog."""
+        svfs = repo.svfs
         inner = bindings.dag.commits.openrevlog(svfs.join(""))
-        return cls(svfs, inner, uiconfig)
+        return cls(repo, inner, uiconfig)
 
     @classmethod
-    def opensegments(cls, svfs, uiconfig):
+    def opensegments(cls, repo, uiconfig):
+        svfs = repo.svfs
         segmentsdir = svfs.join(SEGMENTS_DIR)
         hgcommitsdir = svfs.join(HGCOMMITS_DIR)
         inner = bindings.dag.commits.opensegments(segmentsdir, hgcommitsdir)
-        return cls(svfs, inner, uiconfig)
+        return cls(repo, inner, uiconfig)
 
     @classmethod
-    def opendoublewrite(cls, svfs, uiconfig):
+    def opendoublewrite(cls, repo, uiconfig):
+        svfs = repo.svfs
         revlogdir = svfs.join("")
         segmentsdir = svfs.join(SEGMENTS_DIR)
         hgcommitsdir = svfs.join(HGCOMMITS_DIR)
         inner = bindings.dag.commits.opendoublewrite(
             revlogdir, segmentsdir, hgcommitsdir
         )
-        return cls(svfs, inner, uiconfig)
+        return cls(repo, inner, uiconfig)
 
     @classmethod
     def openhybrid(cls, repo):
@@ -101,15 +107,16 @@ class changelog(object):
         inner = bindings.dag.commits.openhybrid(
             revlogdir, segmentsdir, hgcommitsdir, repo.edenapi, repo.name
         )
-        return cls(svfs, inner, uiconfig)
+        return cls(repo, inner, uiconfig)
 
     @classmethod
-    def opengitsegments(cls, svfs, uiconfig):
+    def opengitsegments(cls, repo, uiconfig):
+        svfs = repo.svfs
         segmentsdir = svfs.join(SEGMENTS_DIR)
         gitdir = svfs.readutf8(GIT_DIR_FILE)
         metalog = svfs.metalog
         inner = bindings.dag.commits.opengitsegments(gitdir, segmentsdir, metalog)
-        return cls(svfs, inner, uiconfig)
+        return cls(repo, inner, uiconfig)
 
     @property
     def dag(self):
@@ -191,7 +198,7 @@ class changelog(object):
         The Rust set uses DESC order by default. Setting `reverse` to True
         will reverse the order.
         """
-        return smartset.nameset(self, nodes, reverse)
+        return smartset.nameset(self, nodes, reverse, repo=self._reporef())
 
     def tonodes(self, revs):
         """Convert an IdSet to Set. The reverse of torevs."""
@@ -745,7 +752,7 @@ def migratetorevlog(repo, python=False, rust=False):
             needmigrate = True
         if needmigrate:
             srccl = repo.changelog
-            dstcl = changelog.openrevlog(svfs, repo.ui.uiconfig())
+            dstcl = changelog.openrevlog(repo, repo.ui.uiconfig())
             with progress.bar(
                 repo.ui, _("migrating commits"), _("commits"), len(srccl)
             ) as prog:

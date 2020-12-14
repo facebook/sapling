@@ -41,7 +41,7 @@ def _readdrafts(repo):
     """read draft commits as [(node, parents, text)]"""
     ui = repo.ui
     zstore = bindings.zstore.zstore(repo.svfs.join(changelog2.HGCOMMITS_DIR))
-    revlog = changelog2.changelog.openrevlog(repo.svfs, ui.uiconfig())
+    revlog = changelog2.changelog.openrevlog(repo, ui.uiconfig())
 
     draftrevs = repo.revs("draft()")
     cl = repo.changelog

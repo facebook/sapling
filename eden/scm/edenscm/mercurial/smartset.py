@@ -709,8 +709,9 @@ class nameset(abstractsmartset):
         self._tonode = changelog.idmap.id2node
         # This controls the order of the set.
         self._reversed = reverse
-        if repo is not None:
-            self._reporef = weakref.ref(repo)
+        if repo is None:
+            raise TypeError("nameset requires repo")
+        self._reporef = weakref.ref(repo)
 
     @property
     def fastasc(self):
@@ -841,7 +842,7 @@ class nameset(abstractsmartset):
         if otherset is not None:
             # set operation by the Rust layer
             newset = getattr(self._set, op)(otherset)
-            s = nameset(self._changelog, newset)
+            s = nameset(self._changelog, newset, repo=self.repo())
             # preserve order
             if self.isascending():
                 s.sort()

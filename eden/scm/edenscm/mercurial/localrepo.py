@@ -3048,7 +3048,7 @@ def _remotenodes(repo):
 def _openchangelog(repo):
     if "gitchangelog" in repo.storerequirements:
         repo.ui.log("changelog_info", changelog_backend="git")
-        return changelog2.changelog.opengitsegments(repo.svfs, repo.ui.uiconfig())
+        return changelog2.changelog.opengitsegments(repo, repo.ui.uiconfig())
     if "hybridchangelog" in repo.storerequirements:
         return changelog2.changelog.openhybrid(repo)
     if "doublewritechangelog" in repo.storerequirements:
@@ -3058,10 +3058,10 @@ def _openchangelog(repo):
             return changelog2.changelog.openhybrid(repo)
         else:
             repo.ui.log("changelog_info", changelog_backend="doublewrite")
-            return changelog2.changelog.opendoublewrite(repo.svfs, repo.ui.uiconfig())
+            return changelog2.changelog.opendoublewrite(repo, repo.ui.uiconfig())
     if "segmentedchangelog" in repo.storerequirements:
         repo.ui.log("changelog_info", changelog_backend="segments")
-        return changelog2.changelog.opensegments(repo.svfs, repo.ui.uiconfig())
+        return changelog2.changelog.opensegments(repo, repo.ui.uiconfig())
 
     if (
         (
@@ -3075,7 +3075,7 @@ def _openchangelog(repo):
         and "pythonrevlogchangelog" not in repo.storerequirements
     ):
         repo.ui.log("changelog_info", changelog_backend="rustrevlog")
-        return changelog2.changelog.openrevlog(repo.svfs, repo.ui.uiconfig())
+        return changelog2.changelog.openrevlog(repo, repo.ui.uiconfig())
 
     if "zstorecommitdata" in repo.storerequirements:
         zstore = bindings.zstore.zstore(repo.svfs.join("hgcommits/v1"))
