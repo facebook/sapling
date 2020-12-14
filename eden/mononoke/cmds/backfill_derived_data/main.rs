@@ -70,6 +70,7 @@ const ARG_PREFETCHED_COMMITS_PATH: &str = "prefetched-commits-path";
 const ARG_CHANGESET: &str = "changeset";
 const ARG_USE_SHARED_LEASES: &str = "use-shared-leases";
 const ARG_BATCHED: &str = "batched";
+const ARG_BATCH_SIZE: &str = "batch-size";
 const ARG_PARALLEL: &str = "parallel";
 
 const SUBCOMMAND_BACKFILL: &str = "backfill";
@@ -78,7 +79,7 @@ const SUBCOMMAND_TAIL: &str = "tail";
 const SUBCOMMAND_PREFETCH_COMMITS: &str = "prefetch-commits";
 const SUBCOMMAND_SINGLE: &str = "single";
 
-const CHUNK_SIZE: usize = 4096;
+const DEFAULT_BATCH_SIZE_STR: &str = "4096";
 
 /// Derived data types that are permitted to access redacted files. This list
 /// should be limited to those data types that need access to the content of
@@ -160,6 +161,12 @@ fn main(fb: FacebookInit) -> Result<()> {
                         ),
                 )
                 .arg(
+                    Arg::with_name(ARG_BATCH_SIZE)
+                    .long(ARG_BATCH_SIZE)
+                    .default_value(DEFAULT_BATCH_SIZE_STR)
+                    .help("number of changesets in each derivation batch")
+                )
+                .arg(
                     Arg::with_name(ARG_PARALLEL)
                     .long(ARG_PARALLEL)
                     .help("derive commits within a batch in parallel")
@@ -197,6 +204,12 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .takes_value(false)
                         .required(false)
                         .help("Use batched deriver instead of calling `::derive` periodically")
+                )
+                .arg(
+                    Arg::with_name(ARG_BATCH_SIZE)
+                    .long(ARG_BATCH_SIZE)
+                    .default_value(DEFAULT_BATCH_SIZE_STR)
+                    .help("number of changesets in each derivation batch")
                 )
                 .arg(
                     Arg::with_name(ARG_PARALLEL)
@@ -252,6 +265,12 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .help("derived data type for which backfill will be run, all enabled if not specified"),
                 )
                 .arg(
+                    Arg::with_name(ARG_BATCH_SIZE)
+                    .long(ARG_BATCH_SIZE)
+                    .default_value(DEFAULT_BATCH_SIZE_STR)
+                    .help("number of changesets in each derivation batch")
+                )
+                .arg(
                     Arg::with_name(ARG_PARALLEL)
                     .long(ARG_PARALLEL)
                     .help("derive commits within a batch in parallel")
@@ -290,8 +309,12 @@ async fn run_subcmd<'a>(
                 },
                 |names| names.map(ToString::to_string).collect(),
             );
+            let batch_size = sub_m
+                .value_of(ARG_BATCH_SIZE)
+                .expect("batch-size must be set")
+                .parse::<usize>()?;
             let parallel = sub_m.is_present(ARG_PARALLEL);
-            subcommand_backfill_all(&ctx, &repo, derived_data_types, parallel).await
+            subcommand_backfill_all(&ctx, &repo, derived_data_types, batch_size, parallel).await
         }
         (SUBCOMMAND_BACKFILL, Some(sub_m)) => {
             let derived_data_type = sub_m
@@ -367,6 +390,10 @@ async fn run_subcmd<'a>(
             };
 
             let parallel = sub_m.is_present(ARG_PARALLEL);
+            let batch_size = sub_m
+                .value_of(ARG_BATCH_SIZE)
+                .expect("batch-size must be set")
+                .parse::<usize>()?;
 
             subcommand_backfill(
                 &ctx,
@@ -374,6 +401,7 @@ async fn run_subcmd<'a>(
                 derived_data_type.as_str(),
                 regenerate,
                 parallel,
+                batch_size,
                 changesets,
                 cleaner,
             )
@@ -384,7 +412,24 @@ async fn run_subcmd<'a>(
             let use_shared_leases = sub_m.is_present(ARG_USE_SHARED_LEASES);
             let batched = sub_m.is_present(ARG_BATCHED);
             let parallel = sub_m.is_present(ARG_PARALLEL);
-            subcommand_tail(&ctx, unredacted_repo, use_shared_leases, batched, parallel).await
+            let batch_size = if batched {
+                Some(
+                    sub_m
+                        .value_of(ARG_BATCH_SIZE)
+                        .expect("batch-size must be set")
+                        .parse::<usize>()?,
+                )
+            } else {
+                None
+            };
+            subcommand_tail(
+                &ctx,
+                unredacted_repo,
+                use_shared_leases,
+                batch_size,
+                parallel,
+            )
+            .await
         }
         (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
             let config_store = args::init_config_store(fb, logger, &matches)?;
@@ -466,6 +511,7 @@ async fn subcommand_backfill_all(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derived_data_types: HashSet<String>,
+    batch_size: usize,
     parallel: bool,
 ) -> Result<()> {
     info!(ctx.logger(), "derived data types: {:?}", derived_data_types);
@@ -473,7 +519,8 @@ async fn subcommand_backfill_all(
         .iter()
         .map(|name| derived_data_utils_for_backfill(repo, name.as_str()))
         .collect::<Result<Vec<_>, _>>()?;
-    tail_batch_iteration(ctx, repo, derivers.as_ref(), parallel).await
+
+    tail_batch_iteration(ctx, repo, derivers.as_ref(), batch_size, parallel).await
 }
 
 fn truncate_duration(duration: Duration) -> Duration {
@@ -486,6 +533,7 @@ async fn subcommand_backfill(
     derived_data_type: &str,
     regenerate: bool,
     parallel: bool,
+    batch_size: usize,
     changesets: Vec<ChangesetId>,
     mut cleaner: Option<impl dry_run::Cleaner>,
 ) -> Result<()> {
@@ -506,7 +554,7 @@ async fn subcommand_backfill(
         derived_utils.regenerate(&changesets);
     }
 
-    for chunk in changesets.chunks(CHUNK_SIZE) {
+    for chunk in changesets.chunks(batch_size) {
         info!(
             ctx.logger(),
             "starting batch of {} from {}",
@@ -571,7 +619,7 @@ async fn subcommand_tail(
     ctx: &CoreContext,
     unredacted_repo: BlobRepo,
     use_shared_leases: bool,
-    batched: bool,
+    batch_size: Option<usize>,
     parallel: bool,
 ) -> Result<()> {
     let unredacted_repo = if use_shared_leases {
@@ -604,10 +652,11 @@ async fn subcommand_tail(
             .collect::<BTreeSet<_>>(),
     );
 
-    if batched {
+    if let Some(batch_size) = batch_size {
         info!(ctx.logger(), "using batched deriver");
         loop {
-            tail_batch_iteration(ctx, &unredacted_repo, &derive_utils, parallel).await?;
+            tail_batch_iteration(ctx, &unredacted_repo, &derive_utils, batch_size, parallel)
+                .await?;
         }
     } else {
         info!(ctx.logger(), "using simple deriver");
@@ -636,6 +685,7 @@ async fn tail_batch_iteration(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derive_utils: &[Arc<dyn DerivedUtils>],
+    batch_size: usize,
     parallel: bool,
 ) -> Result<()> {
     let heads = get_most_recent_heads(ctx, repo).await?;
@@ -644,7 +694,7 @@ async fn tail_batch_iteration(
         repo,
         heads,
         derive_utils.to_vec(),
-        CHUNK_SIZE,
+        batch_size,
         // This means that for 1000 commits it will inspect all changesets for underived data
         // after 1000 commits in 1000 * 1.5 commits, then 1000 in 1000 * 1.5 ^ 2 ... 1000 in 1000 * 1.5 ^ n
         ThinOut::new(1000.0, 1.5),

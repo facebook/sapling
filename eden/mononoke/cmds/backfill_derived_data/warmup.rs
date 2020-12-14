@@ -81,9 +81,8 @@ async fn content_warmup(
     chunk: &Vec<ChangesetId>,
 ) -> Result<(), Error> {
     stream::iter(chunk)
-        .map(move |csid| prefetch_content(ctx, repo, csid))
-        .buffered(crate::CHUNK_SIZE)
-        .try_for_each(|_| async { Ok(()) })
+        .map(move |csid| Ok(prefetch_content(ctx, repo, csid)))
+        .try_for_each_concurrent(100, |_| async { Ok(()) })
         .await
 }
 
