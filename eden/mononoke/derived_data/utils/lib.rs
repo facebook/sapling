@@ -699,7 +699,7 @@ pub async fn build_derive_graph(
         if found_changesets % 1000 == 0 {
             slog::info!(
                 ctx.logger(),
-                "found changsets: {} {:.3}/s",
+                "found changesets: {} {:.3}/s",
                 found_changesets,
                 found_changesets as f32 / start.elapsed().as_secs_f32(),
             );
@@ -708,7 +708,7 @@ pub async fn build_derive_graph(
     if found_changesets > 0 {
         slog::info!(
             ctx.logger(),
-            "found changsets: {} {:.3}/s",
+            "found changesets: {} {:.3}/s",
             found_changesets,
             found_changesets as f32 / start.elapsed().as_secs_f32(),
         );
