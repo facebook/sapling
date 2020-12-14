@@ -71,7 +71,15 @@ class abstractsmartset(object):
         raise NotImplementedError()
 
     def __iter__(self):
-        """iterate the set in the order it is supposed to be iterated"""
+        """iterate the set using rev numbers (aware of prefetch)"""
+        if self.prefetchfields():
+            # Go through iterctx for prefetch side-effect
+            return (c.rev() for c in self.iterctx())
+        else:
+            return self.iterrev()
+
+    def iterrev(self):
+        """iterate the set using rev numbers (not aware of prefetch)"""
         raise NotImplementedError()
 
     def iterctx(self):
@@ -89,7 +97,7 @@ class abstractsmartset(object):
     def _iterctxnoprefetch(self):
         """iterate the set using contexes, without prefetch"""
         repo = self.repo()
-        for rev in iter(self):
+        for rev in self.iterrev():
             yield repo[rev]
 
     # Attributes containing a function to perform a fast iteration in a given
@@ -357,7 +365,7 @@ class baseset(abstractsmartset):
         assert r"_set" in self.__dict__
         return list(self._set)
 
-    def __iter__(self):
+    def iterrev(self):
         if self._ascending is None:
             return iter(self._list)
         elif self._ascending:
@@ -589,7 +597,7 @@ class idset(abstractsmartset):
         s._ascending = ascending
         return s
 
-    def __iter__(self):
+    def iterrev(self):
         if self._ascending:
             return self.fastasc()
         else:
@@ -749,7 +757,7 @@ class nameset(abstractsmartset):
             return getiter
         return None
 
-    def __iter__(self):
+    def iterrev(self):
         it = self._iternode()
         torev = self._torev
         for node in it:
@@ -903,7 +911,7 @@ class filteredset(abstractsmartset):
     def __contains__(self, x):
         return x in self._subset and self._condition(x)
 
-    def __iter__(self):
+    def iterrev(self):
         return self._iterfilter(self._subset)
 
     def _iterfilter(self, it):
@@ -1145,7 +1153,7 @@ class addset(abstractsmartset):
             self._genlist = baseset(iter(self), repo=self.repo())
         return self._genlist
 
-    def __iter__(self):
+    def iterrev(self):
         """Iterate over both collections without repeating elements
 
         If the ascending attribute is not set, iterate over the first one and
@@ -1378,7 +1386,7 @@ class generatorset(abstractsmartset):
         self._cache[x] = False
         return False
 
-    def __iter__(self):
+    def iterrev(self):
         if self._ascending:
             it = self.fastasc
         else:
@@ -1388,7 +1396,7 @@ class generatorset(abstractsmartset):
         # we need to consume the iterator
         self._fulllist()
         # recall the same code
-        return iter(self)
+        return self.iterrev()
 
     def _iterator(self):
         if self._finished:
