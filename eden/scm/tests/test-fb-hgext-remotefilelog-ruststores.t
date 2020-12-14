@@ -12,33 +12,33 @@
   $ echo x > x
   $ hg commit -qAm x
   $ ls_l .hg/store/indexedlogdatastore | grep log
-  -rw-rw-r--      12 log
+  *      12 log (glob)
   $ ls_l .hg/store/indexedloghistorystore | grep log
-  -rw-rw-r--      12 log
+  *      12 log (glob)
   $ ls_l .hg/store/manifests/indexedlogdatastore | grep log
-  -rw-rw-r--      12 log
+  *      12 log (glob)
   $ ls_l .hg/store/manifests/indexedloghistorystore | grep log
-  -rw-rw-r--      12 log
+  *      12 log (glob)
 
   $ echo y > y
   $ hg commit -qAm y
   $ ls_l .hg/store/indexedlogdatastore | grep log
-  -rw-rw-r--      12 log
+  *      12 log (glob)
   $ ls_l .hg/store/indexedloghistorystore | grep log
-  -rw-rw-r--      12 log
+  *      12 log (glob)
   $ ls_l .hg/store/manifests/indexedlogdatastore | grep log
-  -rw-rw-r--      12 log
+  *      12 log (glob)
   $ ls_l .hg/store/manifests/indexedloghistorystore | grep log
-  -rw-rw-r--      12 log
+  *      12 log (glob)
 
   $ setconfig remotefilelog.write-local-to-indexedlog=True
   $ echo z > z
   $ hg commit -qAm z
   $ ls_l .hg/store/indexedlogdatastore | grep log
-  -rw-rw-r--      60 log
+  *      60 log (glob)
   $ ls_l .hg/store/indexedloghistorystore | grep log
-  -rw-rw-r--     127 log
+  *     127 log (glob)
   $ ls_l .hg/store/manifests/indexedlogdatastore | grep log
-  -rw-rw-r--     192 log
+  *     192 log (glob)
   $ ls_l .hg/store/manifests/indexedloghistorystore | grep log
-  -rw-rw-r--     124 log
+  *     124 log (glob)
