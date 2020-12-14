@@ -419,7 +419,7 @@ def age(repo, subset, x):
         xdate = repo[x].date()[0]
         return (start is None or start < xdate) and (end is None or xdate < end)
 
-    return subset.filter(agefunc, condrepr=("<age %r>", agerange))
+    return subset.prefetch("text").filter(agefunc, condrepr=("<age %r>", agerange))
 
 
 @predicate("ancestor(*changeset)", safe=True, weight=0.5)
@@ -652,6 +652,7 @@ def ancestorsaged(repo, subset, x):
     def notyounger(x):
         return repo[x].date()[0] < end
 
+    # PERF: cutfunc is not prefetch-friendly.
     s = dagop.revancestors(repo, heads, cutfunc=older if start is not None else None)
     if end is not None:
         s = s.filter(notyounger)
@@ -665,7 +666,9 @@ def author(repo, subset, x):
     # i18n: "author" is a keyword
     n = getstring(x, _("author requires a string"))
     kind, pattern, matcher = _substringmatcher(n, casesensitive=False)
-    return subset.filter(lambda x: matcher(repo[x].user()), condrepr=("<user %r>", n))
+    return subset.prefetch("text").filter(
+        lambda x: matcher(repo[x].user()), condrepr=("<user %r>", n)
+    )
 
 
 @predicate("bisect(string)", safe=True)
@@ -821,7 +824,9 @@ def checkstatus(repo, subset, pat, field):
                 if m(f):
                     return True
 
-    return subset.filter(matches, condrepr=("<status[%r] %r>", field, pat))
+    return subset.prefetch("text").filter(
+        matches, condrepr=("<status[%r] %r>", field, pat)
+    )
 
 
 def _children(repo, subset, parentset):
@@ -904,7 +909,7 @@ def contains(repo, subset, x):
                     return True
         return False
 
-    return subset.filter(matches, condrepr=("<contains %r>", pat))
+    return subset.prefetch("text").filter(matches, condrepr=("<contains %r>", pat))
 
 
 @predicate("converted([id])", safe=True, weight=10)
@@ -927,7 +932,9 @@ def converted(repo, subset, x):
         source = repo[r].extra().get("convert_revision", None)
         return source is not None and (rev is None or source.startswith(rev))
 
-    return subset.filter(lambda r: _matchvalue(r), condrepr=("<converted %r>", rev))
+    return subset.prefetch("text").filter(
+        lambda r: _matchvalue(r), condrepr=("<converted %r>", rev)
+    )
 
 
 @predicate("date(interval)", safe=True, weight=10)
@@ -936,7 +943,9 @@ def date(repo, subset, x):
     # i18n: "date" is a keyword
     ds = getstring(x, _("date requires a string"))
     dm = util.matchdate(ds)
-    return subset.filter(lambda x: dm(repo[x].date()[0]), condrepr=("<date %r>", ds))
+    return subset.prefetch("text").filter(
+        lambda x: dm(repo[x].date()[0]), condrepr=("<date %r>", ds)
+    )
 
 
 @predicate("desc(string)", safe=True, weight=10)
@@ -951,7 +960,7 @@ def desc(repo, subset, x):
 
     kind, pattern, matcher = _substringmatcher(ds, casesensitive=False)
 
-    return subset.filter(
+    return subset.prefetch("text").filter(
         lambda r: matcher(repo[r].description()), condrepr=("<desc %r>", ds)
     )
 
@@ -1109,7 +1118,7 @@ def extra(repo, subset, x):
         extra = repo[r].extra()
         return label in extra and (value is None or matcher(extra[label]))
 
-    return subset.filter(
+    return subset.prefetch("text").filter(
         lambda r: _matchvalue(r), condrepr=("<extra[%r] %r>", label, value)
     )
 
@@ -1354,7 +1363,7 @@ def grep(repo, subset, x):
                 return True
         return False
 
-    return subset.filter(matches, condrepr=("<grep %r>", gr.pattern))
+    return subset.prefetch("text").filter(matches, condrepr=("<grep %r>", gr.pattern))
 
 
 @predicate("_matchfiles", safe=True, weight=10)
@@ -1424,7 +1433,7 @@ def _matchfiles(repo, subset, x):
                 return True
         return False
 
-    return subset.filter(
+    return subset.prefetch("text").filter(
         matches,
         condrepr=(
             "<matchfiles patterns=%r, include=%r " "exclude=%r, default=%r, rev=%r>",
@@ -1503,7 +1512,7 @@ def keyword(repo, subset, x):
             for t in list(c.files()) + [c.user(), c.description()]
         )
 
-    return subset.filter(matches, condrepr=("<keyword %r>", kw))
+    return subset.prefetch("text").filter(matches, condrepr=("<keyword %r>", kw))
 
 
 @predicate("limit(set[, n[, offset]])", safe=True, takeorder=True, weight=0)
@@ -2180,7 +2189,9 @@ def matching(repo, subset, x):
                 return True
         return False
 
-    return subset.filter(matches, condrepr=("<matching%r %r>", fields, revs))
+    return subset.prefetch("text").filter(
+        matches, condrepr=("<matching%r %r>", fields, revs)
+    )
 
 
 @predicate("reverse(set)", safe=True, takeorder=True, weight=0)
@@ -2302,7 +2313,7 @@ def sort(repo, subset, x, order):
         return revs
 
     # sort() is guaranteed to be stable
-    ctxs = [repo[r] for r in revs]
+    ctxs = list(revs.prefetch("text").iterctx(repo))
     for k, reverse in reversed(keyflags):
         ctxs.sort(key=_sortkeyfuncs[k], reverse=reverse)
     return baseset([c.rev() for c in ctxs])
