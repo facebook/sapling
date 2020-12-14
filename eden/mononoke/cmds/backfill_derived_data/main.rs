@@ -70,6 +70,7 @@ const ARG_PREFETCHED_COMMITS_PATH: &str = "prefetched-commits-path";
 const ARG_CHANGESET: &str = "changeset";
 const ARG_USE_SHARED_LEASES: &str = "use-shared-leases";
 const ARG_BATCHED: &str = "batched";
+const ARG_PARALLEL: &str = "parallel";
 
 const SUBCOMMAND_BACKFILL: &str = "backfill";
 const SUBCOMMAND_BACKFILL_ALL: &str = "backfill-all";
@@ -157,6 +158,11 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .help(
                             "Derives all data but writes it to memory. Note - requires --readonly",
                         ),
+                )
+                .arg(
+                    Arg::with_name(ARG_PARALLEL)
+                    .long(ARG_PARALLEL)
+                    .help("derive commits within a batch in parallel")
                 ),
         )
         .subcommand(
@@ -191,6 +197,11 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .takes_value(false)
                         .required(false)
                         .help("Use batched deriver instead of calling `::derive` periodically")
+                )
+                .arg(
+                    Arg::with_name(ARG_PARALLEL)
+                    .long(ARG_PARALLEL)
+                    .help("derive commits within a batch in parallel")
                 ),
         )
         .subcommand(
@@ -240,6 +251,11 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .multiple(true)
                         .help("derived data type for which backfill will be run, all enabled if not specified"),
                 )
+                .arg(
+                    Arg::with_name(ARG_PARALLEL)
+                    .long(ARG_PARALLEL)
+                    .help("derive commits within a batch in parallel")
+                )
         );
     let matches = app.get_matches();
     args::init_cachelib(fb, &matches);
@@ -274,7 +290,8 @@ async fn run_subcmd<'a>(
                 },
                 |names| names.map(ToString::to_string).collect(),
             );
-            subcommand_backfill_all(&ctx, &repo, derived_data_types).await
+            let parallel = sub_m.is_present(ARG_PARALLEL);
+            subcommand_backfill_all(&ctx, &repo, derived_data_types, parallel).await
         }
         (SUBCOMMAND_BACKFILL, Some(sub_m)) => {
             let derived_data_type = sub_m
@@ -349,11 +366,14 @@ async fn run_subcmd<'a>(
                 None => iter.map(|entry| entry.cs_id).collect(),
             };
 
+            let parallel = sub_m.is_present(ARG_PARALLEL);
+
             subcommand_backfill(
                 &ctx,
                 &repo,
                 derived_data_type.as_str(),
                 regenerate,
+                parallel,
                 changesets,
                 cleaner,
             )
@@ -363,7 +383,8 @@ async fn run_subcmd<'a>(
             let unredacted_repo = args::open_repo_unredacted(fb, &logger, &matches).await?;
             let use_shared_leases = sub_m.is_present(ARG_USE_SHARED_LEASES);
             let batched = sub_m.is_present(ARG_BATCHED);
-            subcommand_tail(&ctx, unredacted_repo, use_shared_leases, batched).await
+            let parallel = sub_m.is_present(ARG_PARALLEL);
+            subcommand_tail(&ctx, unredacted_repo, use_shared_leases, batched, parallel).await
         }
         (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
             let config_store = args::init_config_store(fb, logger, &matches)?;
@@ -445,13 +466,14 @@ async fn subcommand_backfill_all(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derived_data_types: HashSet<String>,
+    parallel: bool,
 ) -> Result<()> {
     info!(ctx.logger(), "derived data types: {:?}", derived_data_types);
     let derivers = derived_data_types
         .iter()
         .map(|name| derived_data_utils_for_backfill(repo, name.as_str()))
         .collect::<Result<Vec<_>, _>>()?;
-    tail_batch_iteration(ctx, repo, derivers.as_ref()).await
+    tail_batch_iteration(ctx, repo, derivers.as_ref(), parallel).await
 }
 
 fn truncate_duration(duration: Duration) -> Duration {
@@ -463,6 +485,7 @@ async fn subcommand_backfill(
     repo: &BlobRepo,
     derived_data_type: &str,
     regenerate: bool,
+    parallel: bool,
     changesets: Vec<ChangesetId>,
     mut cleaner: Option<impl dry_run::Cleaner>,
 ) -> Result<()> {
@@ -500,7 +523,7 @@ async fn subcommand_backfill(
             info!(ctx.logger(), "warmup of {} changesets complete", chunk_size);
 
             derived_utils
-                .backfill_batch_dangerous(ctx.clone(), repo.clone(), chunk)
+                .backfill_batch_dangerous(ctx.clone(), repo.clone(), chunk, parallel)
                 .await?;
             Result::<_>::Ok(chunk_size)
         }
@@ -549,6 +572,7 @@ async fn subcommand_tail(
     unredacted_repo: BlobRepo,
     use_shared_leases: bool,
     batched: bool,
+    parallel: bool,
 ) -> Result<()> {
     let unredacted_repo = if use_shared_leases {
         // "shared" leases are the default - so we don't need to do anything.
@@ -583,7 +607,7 @@ async fn subcommand_tail(
     if batched {
         info!(ctx.logger(), "using batched deriver");
         loop {
-            tail_batch_iteration(ctx, &unredacted_repo, &derive_utils).await?;
+            tail_batch_iteration(ctx, &unredacted_repo, &derive_utils, parallel).await?;
         }
     } else {
         info!(ctx.logger(), "using simple deriver");
@@ -612,6 +636,7 @@ async fn tail_batch_iteration(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derive_utils: &[Arc<dyn DerivedUtils>],
+    parallel: bool,
 ) -> Result<()> {
     let heads = get_most_recent_heads(ctx, repo).await?;
     let derive_graph = derived_data_utils::build_derive_graph(
@@ -647,7 +672,12 @@ async fn tail_batch_iteration(
                         warmup::warmup(&ctx, &repo, deriver.name(), &node.csids).await?;
                         let timestamp = Instant::now();
                         deriver
-                            .backfill_batch_dangerous(ctx.clone(), repo, node.csids.clone())
+                            .backfill_batch_dangerous(
+                                ctx.clone(),
+                                repo,
+                                node.csids.clone(),
+                                parallel,
+                            )
                             .await?;
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
                             slog::info!(
@@ -860,7 +890,7 @@ mod tests {
 
         let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
         derived_utils
-            .backfill_batch_dangerous(ctx, repo, vec![bcs_id])
+            .backfill_batch_dangerous(ctx, repo, vec![bcs_id], false)
             .await?;
 
         Ok(())
@@ -893,7 +923,7 @@ mod tests {
             .await?;
         assert_eq!(pending.len(), hg_cs_ids.len());
         derived_utils
-            .backfill_batch_dangerous(ctx.clone(), repo.clone(), batch.clone())
+            .backfill_batch_dangerous(ctx.clone(), repo.clone(), batch.clone(), false)
             .await?;
         let pending = derived_utils.pending(ctx, repo, batch).await?;
         assert_eq!(pending.len(), 0);
@@ -922,7 +952,7 @@ mod tests {
 
         let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
         let res = derived_utils
-            .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![bcs_id])
+            .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![bcs_id], false)
             .await;
         // Deriving should fail because blobstore writes fail
         assert!(res.is_err());
@@ -938,7 +968,7 @@ mod tests {
             .await?;
         let bcs_id = maybe_bcs_id.unwrap();
         derived_utils
-            .backfill_batch_dangerous(ctx, repo, vec![bcs_id])
+            .backfill_batch_dangerous(ctx, repo, vec![bcs_id], false)
             .await?;
 
         Ok(())
