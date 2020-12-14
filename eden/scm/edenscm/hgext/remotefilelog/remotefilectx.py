@@ -310,8 +310,11 @@ class remotefilectx(context.filectx):
             perftrace.tracevalue("Source Nodes", [hex(cl.node(rev)) for rev in revs])
             pc = repo._phasecache
             seenpublic = False
-            iteranc = cl.ancestors(revs, inclusive=inclusive)
-            for i, ancrev in enumerate(iteranc):
+            iterancs = repo.revs("reverse(::%ld)", revs).prefetch("text").iterctx(repo)
+            for i, ctx in enumerate(iterancs):
+                ancrev = ctx.rev()
+                if ancrev == srcrev and not inclusive:
+                    continue
                 prog.value = i
                 # First, check locally-available history.
                 lnode = self._nodefromancrev(ancrev, cl, mfl, path, fnode)
