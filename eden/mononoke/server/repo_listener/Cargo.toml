@@ -7,7 +7,6 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-async_limiter = { path = "../../common/async_limiter" }
 backsyncer = { path = "../../commit_rewriting/backsyncer" }
 blobrepo = { path = "../../blobrepo" }
 blobrepo_factory = { path = "../../blobrepo/factory" }
@@ -59,7 +58,6 @@ lazy_static = "1.0"
 maplit = "1.0"
 openssl = "0.10"
 percent-encoding = "2.1"
-ratelimit_meter = "5"
 sha-1 = "0.8"
 slog = { version = "2.5", features = ["max_level_debug"] }
 slog-kvfilter = "0.7"

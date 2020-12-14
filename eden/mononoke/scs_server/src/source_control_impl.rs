@@ -6,13 +6,10 @@
  */
 
 use std::collections::HashSet;
-use std::convert::TryInto;
 use std::future::Future;
-use std::num::NonZeroU32;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
 use futures_stats::{FutureStats, TimedFutureExt};
 use identity::Identity;
@@ -24,7 +21,6 @@ use mononoke_api::{
 use mononoke_types::hash::{Sha1, Sha256};
 use once_cell::sync::Lazy;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
-use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
 use slog::Logger;
 use source_control as thrift;
@@ -185,27 +181,14 @@ impl SourceControlServiceImpl {
         identities: MononokeIdentitySet,
     ) -> Result<SessionContainer, errors::ServiceError> {
         let metadata = Metadata::default().set_identities(identities);
-
-        let mut session_builder = SessionContainer::builder(self.fb).metadata(metadata);
-
-        fn maybe_qps(tunable: i64) -> Option<NonZeroU32> {
-            let v = tunable.try_into().ok()?;
-            NonZeroU32::new(v)
-        }
-
-        if let Some(qps) = maybe_qps(tunables().get_scs_request_read_qps()) {
-            session_builder.blobstore_read_limiter(
-                AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(qps)).await,
-            );
-        }
-
-        if let Some(qps) = maybe_qps(tunables().get_scs_request_write_qps()) {
-            session_builder.blobstore_write_limiter(
-                AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(qps)).await,
-            );
-        }
-
-        Ok(session_builder.build())
+        let session = SessionContainer::builder(self.fb)
+            .metadata(metadata)
+            .blobstore_maybe_read_qps_limiter(tunables().get_scs_request_read_qps())
+            .await
+            .blobstore_maybe_write_qps_limiter(tunables().get_scs_request_write_qps())
+            .await
+            .build();
+        Ok(session)
     }
 
     /// Get the repo specified by a `thrift::RepoSpecifier`.

@@ -10,13 +10,9 @@ use crate::security_checker::ConnectionsSecurityChecker;
 use std::collections::HashMap;
 
 use anyhow::{anyhow, Context, Error, Result};
-use async_limiter::AsyncLimiter;
 use bytes::Bytes;
 use cached_config::ConfigHandle;
-use context::{
-    is_quicksand, LoggingContainer, SessionClass, SessionContainer, SessionContainerBuilder,
-    SessionId,
-};
+use context::{is_quicksand, LoggingContainer, SessionClass, SessionContainer, SessionId};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
@@ -28,7 +24,6 @@ use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use load_limiter::{LoadLimiterBuilder, Metric};
 use maplit::{hashmap, hashset};
-use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 use repo_client::RepoClient;
 use scribe_ext::Scribe;
 use slog::{self, error, o, Drain, Level, Logger};
@@ -36,10 +31,8 @@ use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
 use sshrelay::{Metadata, Priority, SenderBytesWrite, Stdio};
 use stats::prelude::*;
-use std::convert::TryInto;
 use std::mem;
 use std::net::IpAddr;
-use std::num::NonZeroU32;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use time_ext::DurationExt;
@@ -74,30 +67,6 @@ define_stats! {
     request_success: timeseries(Rate, Sum),
     request_failure: timeseries(Rate, Sum),
     request_outcome_permille: timeseries(Average),
-}
-
-async fn set_blobstore_limiters(builder: &mut SessionContainerBuilder, priority: Priority) {
-    fn maybe_qps(tunable: i64) -> Option<NonZeroU32> {
-        let v = tunable.try_into().ok()?;
-        NonZeroU32::new(v)
-    }
-
-    match priority {
-        Priority::Wishlist => {
-            if let Some(qps) = maybe_qps(tunables().get_wishlist_read_qps()) {
-                builder.blobstore_read_limiter(
-                    AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(qps)).await,
-                );
-            }
-
-            if let Some(qps) = maybe_qps(tunables().get_wishlist_write_qps()) {
-                builder.blobstore_write_limiter(
-                    AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(qps)).await,
-                );
-            }
-        }
-        _ => {}
-    }
 }
 
 pub async fn request_handler(
@@ -194,9 +163,13 @@ pub async fn request_handler(
         .load_limiter(load_limiter);
 
     if priority == &Priority::Wishlist {
-        session_builder = session_builder.session_class(SessionClass::Background);
+        session_builder = session_builder
+            .session_class(SessionClass::Background)
+            .blobstore_maybe_read_qps_limiter(tunables().get_wishlist_read_qps())
+            .await
+            .blobstore_maybe_write_qps_limiter(tunables().get_wishlist_write_qps())
+            .await;
     }
-    set_blobstore_limiters(&mut session_builder, *priority).await;
 
     let session = session_builder.build();
 

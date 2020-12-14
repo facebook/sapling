@@ -1064,10 +1064,10 @@ mod test {
                 DirectRateLimiter::<LeakyBucket>::new(nonzero!(1u32), Duration::from_millis(10));
             let l2 = AsyncLimiter::new(l2).await;
 
-            let mut builder = SessionContainer::builder(fb);
-            builder.blobstore_read_limiter(l1);
-            builder.blobstore_write_limiter(l2);
-            let session = builder.build();
+            let session = SessionContainer::builder(fb)
+                .blobstore_read_limiter(l1)
+                .blobstore_write_limiter(l2)
+                .build();
             let ctx = session.new_context(logger(), MononokeScubaSampleBuilder::with_discard());
 
             let blobstore = make_blobstore(
@@ -1120,10 +1120,10 @@ mod test {
                 DirectRateLimiter::<LeakyBucket>::new(nonzero!(10u32), Duration::from_millis(100));
             let l2 = AsyncLimiter::new(l2).await;
 
-            let mut builder = SessionContainer::builder(fb);
-            builder.blobstore_read_limiter(l1);
-            builder.blobstore_write_limiter(l2);
-            let session = builder.build();
+            let session = SessionContainer::builder(fb)
+                .blobstore_read_limiter(l1)
+                .blobstore_write_limiter(l2)
+                .build();
             let ctx = &session.new_context(logger(), MononokeScubaSampleBuilder::with_discard());
             borrowed!(ctx);
 
