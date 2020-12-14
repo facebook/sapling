@@ -102,7 +102,7 @@ pub fn derive_data_for_csids(
     let derivations = FuturesUnordered::new();
 
     for data_type in derived_data_types {
-        let derived_utils = derived_data_utils(repo.clone(), data_type)?;
+        let derived_utils = derived_data_utils(repo, data_type)?;
 
         let mut futs = vec![];
         for csid in &csids {
@@ -396,21 +396,21 @@ where
 }
 
 pub fn derived_data_utils(
-    repo: BlobRepo,
+    repo: &BlobRepo,
     name: impl AsRef<str>,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
     derived_data_utils_impl(repo, name, DeriveMode::OnlyIfEnabled)
 }
 
 pub fn derived_data_utils_unsafe(
-    repo: BlobRepo,
+    repo: &BlobRepo,
     name: impl AsRef<str>,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
     derived_data_utils_impl(repo, name, DeriveMode::Unsafe)
 }
 
 fn derived_data_utils_impl(
-    repo: BlobRepo,
+    repo: &BlobRepo,
     name: impl AsRef<str>,
     mode: DeriveMode,
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
@@ -900,8 +900,8 @@ mod tests {
             .get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master").unwrap())
             .await?
             .unwrap();
-        let blame_deriver = derived_data_utils(repo.clone(), "blame")?;
-        let unodes_deriver = derived_data_utils(repo.clone(), "unodes")?;
+        let blame_deriver = derived_data_utils(&repo, "blame")?;
+        let unodes_deriver = derived_data_utils(&repo, "unodes")?;
 
         // make sure we require all dependencies, blame depens on unodes
         let graph = build_derive_graph(
@@ -1070,9 +1070,9 @@ mod tests {
         let c = *dag.get("C").unwrap();
 
         let thin_out = ThinOut::new_keep_all();
-        let blame_deriver = derived_data_utils(repo.clone(), "blame")?;
+        let blame_deriver = derived_data_utils(&repo, "blame")?;
         let unodes_deriver = {
-            let deriver = derived_data_utils(repo.clone(), "unodes")?;
+            let deriver = derived_data_utils(&repo, "unodes")?;
             Arc::new(CountedDerivedUtils::new(deriver))
         };
 

@@ -323,7 +323,7 @@ async fn derive_bonsais_single_repo(
     let len = derived_data_types.len();
     let mut derived_utils = vec![];
     for ty in derived_data_types {
-        let utils = derived_data_utils(repo.clone(), ty)?;
+        let utils = derived_data_utils(repo, ty)?;
         derived_utils.push(utils);
     }
 

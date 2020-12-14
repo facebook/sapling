@@ -455,7 +455,7 @@ async fn subcommand_backfill_all(
     info!(ctx.logger(), "derived data types: {:?}", derived_data_types);
     let derivers = derived_data_types
         .iter()
-        .map(|name| derived_data_utils_unsafe(repo.clone(), name.clone()))
+        .map(|name| derived_data_utils_unsafe(repo, name.as_str()))
         .collect::<Result<Vec<_>, _>>()?;
     tail_batch_iteration(ctx, repo, derivers.as_ref()).await
 }
@@ -472,7 +472,7 @@ async fn subcommand_backfill(
     changesets: Vec<ChangesetId>,
     mut cleaner: Option<impl dry_run::Cleaner>,
 ) -> Result<()> {
-    let derived_utils = &derived_data_utils_unsafe(repo.clone(), derived_data_type.clone())?;
+    let derived_utils = &derived_data_utils_unsafe(repo, derived_data_type.as_str())?;
 
     info!(
         ctx.logger(),
@@ -574,7 +574,7 @@ async fn subcommand_tail(
         .derived_data_types
         .clone()
         .into_iter()
-        .map(|name| derived_data_utils(unredacted_repo.clone(), name))
+        .map(|name| derived_data_utils(&unredacted_repo, name))
         .collect::<Result<_>>()?;
     slog::info!(
         ctx.logger(),
@@ -763,7 +763,7 @@ async fn subcommand_single(
     let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
     let mut derived_utils = vec![];
     for ty in derived_data_types {
-        let utils = derived_data_utils(repo.clone(), ty)?;
+        let utils = derived_data_utils(&repo, ty)?;
         utils.regenerate(&vec![csid]);
         derived_utils.push(utils);
     }
@@ -809,7 +809,7 @@ mod tests {
     async fn test_tail_one_iteration(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
-        let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
+        let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
         let master = resolve_cs_id(&ctx, &repo, "master").await?;
         assert!(!RootUnodeManifestId::is_derived(&ctx, &repo, &master).await?);
         tail_one_iteration(&ctx, &repo, &[derived_utils]).await?;
@@ -864,7 +864,7 @@ mod tests {
             .await?;
         let bcs_id = maybe_bcs_id.unwrap();
 
-        let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
+        let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
         derived_utils
             .backfill_batch_dangerous(ctx, repo, vec![bcs_id])
             .await?;
@@ -893,7 +893,7 @@ mod tests {
             batch.push(maybe_bcs_id.unwrap());
         }
 
-        let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
+        let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
         let pending = derived_utils
             .pending(ctx.clone(), repo.clone(), batch.clone())
             .await?;
@@ -926,7 +926,7 @@ mod tests {
             .await?;
         let bcs_id = maybe_bcs_id.unwrap();
 
-        let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
+        let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
         let res = derived_utils
             .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![bcs_id])
             .await;
