@@ -16,7 +16,7 @@ use blobstore::{Blobstore, Loadable};
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changeset_info::{ChangesetInfo, ChangesetInfoMapping};
 use cloned::cloned;
-use context::CoreContext;
+use context::{CoreContext, SessionContainer};
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{
     derive_impl::derive_impl, BlobstoreExistsMapping, BlobstoreRootIdMapping, BonsaiDerivable,
@@ -34,6 +34,7 @@ use lazy_static::lazy_static;
 use lock_ext::LockExt;
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
+use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::{RootSkeletonManifestId, RootSkeletonManifestMapping};
 use std::{
     collections::{HashMap, HashSet},
@@ -42,6 +43,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 use topo_sort::sort_topological;
+use tunables::tunables;
 use unodes::{RootUnodeManifestId, RootUnodeManifestMapping};
 
 pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
@@ -242,7 +244,17 @@ where
         async move {
             if parallel {
                 // create new context so each derivation batch has its own trace
-                let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
+                // and is rate-limited
+                let session = SessionContainer::builder(ctx.fb)
+                    .blobstore_maybe_read_qps_limiter(tunables().get_backfill_read_qps())
+                    .await
+                    .blobstore_maybe_write_qps_limiter(tunables().get_backfill_write_qps())
+                    .await
+                    .build();
+                let ctx = session.new_context(
+                    ctx.logger().clone(),
+                    MononokeScubaSampleBuilder::with_discard(),
+                );
 
                 // derive the batch of derived data in parallel
                 M::Value::batch_derive(&ctx, &repo, csids, &in_memory_mapping).await?;

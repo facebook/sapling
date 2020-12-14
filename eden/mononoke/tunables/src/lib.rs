@@ -113,6 +113,8 @@ pub struct MononokeTunables {
     // client exchanging commits with us, but when processing bundled uploads (i.e. commit cloud
     // filling), it might help a lot.
     filter_pre_existing_commits_on_infinitepush: AtomicBool,
+    backfill_read_qps: AtomicI64,
+    backfill_write_qps: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
