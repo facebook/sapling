@@ -37,17 +37,33 @@ impl From<ChangesetId> for BlameRoot {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub struct BlameDeriveOptions {
+    filesize_limit: u64,
+}
+
+impl Default for BlameDeriveOptions {
+    fn default() -> Self {
+        BlameDeriveOptions {
+            filesize_limit: BLAME_FILESIZE_LIMIT,
+        }
+    }
+}
+
 #[async_trait]
 impl BonsaiDerivable for BlameRoot {
     const NAME: &'static str = "blame";
 
+    type Options = BlameDeriveOptions;
 
     async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
+        options: &Self::Options,
     ) -> Result<Self, Error> {
+        let blame_options = *options;
         let csid = bonsai.get_changeset_id();
         let root_manifest = RootUnodeManifestId::derive(&ctx, &repo, csid)
             .map_ok(|root_id| root_id.manifest_unode_id().clone());
@@ -78,7 +94,8 @@ impl BonsaiDerivable for BlameRoot {
                     let (path, file) = v?;
                     Result::<_>::Ok(
                         tokio::spawn(async move {
-                            create_blame(&ctx, &repo, renames, csid, path, file).await
+                            create_blame(&ctx, &repo, renames, csid, path, file, blame_options)
+                                .await
                         })
                         .await??,
                     )
@@ -95,6 +112,7 @@ impl BonsaiDerivable for BlameRoot {
 #[derive(Clone)]
 pub struct BlameRootMapping {
     blobstore: Arc<dyn Blobstore>,
+    options: BlameDeriveOptions,
 }
 
 #[async_trait]
@@ -102,8 +120,15 @@ impl BlobstoreExistsMapping for BlameRootMapping {
     type Value = BlameRoot;
 
     fn new(repo: &BlobRepo) -> Result<Self> {
+        let options = BlameDeriveOptions {
+            filesize_limit: repo
+                .get_derived_data_config()
+                .override_blame_filesize_limit
+                .unwrap_or(BLAME_FILESIZE_LIMIT),
+        };
         Ok(Self {
             blobstore: repo.get_blobstore().boxed(),
+            options,
         })
     }
 
@@ -113,6 +138,10 @@ impl BlobstoreExistsMapping for BlameRootMapping {
 
     fn prefix(&self) -> &'static str {
         "derived_rootblame.v1."
+    }
+
+    fn options(&self) -> BlameDeriveOptions {
+        self.options
     }
 }
 
@@ -125,6 +154,7 @@ async fn create_blame(
     csid: ChangesetId,
     path: MPath,
     file_unode_id: FileUnodeId,
+    options: BlameDeriveOptions,
 ) -> Result<BlameId, Error> {
     let blobstore = repo.blobstore();
 
@@ -137,14 +167,14 @@ async fn create_blame(
         .chain(renames.get(&path).cloned())
         .map(|file_unode_id| {
             future::try_join(
-                fetch_file_full_content(ctx, repo, file_unode_id),
+                fetch_file_full_content(ctx, repo, file_unode_id, options),
                 async move { BlameId::from(file_unode_id).load(ctx, blobstore).await }.err_into(),
             )
         })
         .collect();
 
     let (content, parents_content) = future::try_join(
-        fetch_file_full_content(ctx, repo, file_unode_id),
+        fetch_file_full_content(ctx, repo, file_unode_id, options),
         future::try_join_all(parents_content_and_blame),
     )
     .await?;
@@ -169,6 +199,7 @@ pub async fn fetch_file_full_content(
     ctx: &CoreContext,
     repo: &BlobRepo,
     file_unode_id: FileUnodeId,
+    options: BlameDeriveOptions,
 ) -> Result<Result<Bytes, BlameRejected>, Error> {
     let blobstore = repo.blobstore();
     let file_unode = file_unode_id
@@ -177,7 +208,7 @@ pub async fn fetch_file_full_content(
         .await?;
 
     let content_id = *file_unode.content_id();
-    let result = fetch_from_filestore(ctx, repo, content_id).await;
+    let result = fetch_from_filestore(ctx, repo, content_id, options).await;
 
     match result {
         Err(FetchError::Error(error)) => Err(error),
@@ -206,6 +237,7 @@ async fn fetch_from_filestore(
     ctx: &CoreContext,
     repo: &BlobRepo,
     content_id: ContentId,
+    options: BlameDeriveOptions,
 ) -> Result<Bytes, FetchError> {
     let result = filestore::fetch_with_size(
         repo.get_blobstore(),
@@ -221,11 +253,7 @@ async fn fetch_from_filestore(
             Err(error)
         }
         Some((stream, size)) => {
-            let config = repo.get_derived_data_config();
-            let filesize_limit = config
-                .override_blame_filesize_limit
-                .unwrap_or(BLAME_FILESIZE_LIMIT);
-            if size > filesize_limit {
+            if size > options.filesize_limit {
                 return Err(FetchError::Rejected(BlameRejected::TooBig));
             }
             let v = Vec::with_capacity(size as usize);

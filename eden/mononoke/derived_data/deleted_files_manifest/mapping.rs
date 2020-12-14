@@ -50,12 +50,14 @@ impl From<RootDeletedManifestId> for BlobstoreBytes {
 impl BonsaiDerivable for RootDeletedManifestId {
     const NAME: &'static str = "deleted_manifest";
 
+    type Options = ();
 
     async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        _options: &Self::Options,
     ) -> Result<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
         let changes = get_changes(&ctx, &repo, bonsai).await?;
@@ -96,6 +98,8 @@ impl BlobstoreRootIdMapping for RootDeletedManifestMapping {
     fn prefix(&self) -> &'static str {
         "derived_root_deleted_manifest."
     }
+
+    fn options(&self) {}
 }
 
 impl_bonsai_derived_mapping!(

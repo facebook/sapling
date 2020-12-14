@@ -39,9 +39,8 @@ pub(crate) async fn derive_unode_manifest(
     cs_id: ChangesetId,
     parents: Vec<ManifestUnodeId>,
     changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
+    unode_version: UnodeVersion,
 ) -> Result<ManifestUnodeId, Error> {
-    let unode_version = repo.get_derived_data_config().unode_version;
-
     let parents: Vec<_> = parents.into_iter().collect();
     let blobstore = repo.get_blobstore();
 
@@ -420,6 +419,7 @@ mod tests {
                 bcs_id,
                 vec![],
                 get_file_changes(&bcs),
+                UnodeVersion::V2,
             )
             .await?;
 
@@ -452,6 +452,7 @@ mod tests {
                 bcs_id,
                 vec![parent_unode_id.clone()],
                 get_file_changes(&bcs),
+                UnodeVersion::V2,
             )
             .await?;
 
@@ -503,6 +504,7 @@ mod tests {
                 bcs_id,
                 vec![],
                 get_file_changes(&bcs),
+                UnodeVersion::V2,
             )
             .await?;
             let unode_mf = unode_id.load(&ctx, repo.blobstore()).await?;
@@ -706,6 +708,7 @@ mod tests {
             bcs_id,
             vec![p1_root_unode_id, p2_root_unode_id],
             get_file_changes(&bcs),
+            UnodeVersion::V2,
         )
         .await?;
 
@@ -716,6 +719,7 @@ mod tests {
             bcs_id,
             vec![p1_root_unode_id, p2_root_unode_id],
             get_file_changes(&bcs),
+            UnodeVersion::V2,
         )
         .await?;
         assert_eq!(root_unode, same_root_unode);
@@ -727,6 +731,7 @@ mod tests {
             bcs_id,
             vec![p2_root_unode_id, p1_root_unode_id],
             get_file_changes(&bcs),
+            UnodeVersion::V2,
         )
         .await?;
 
@@ -750,6 +755,7 @@ mod tests {
             bcs_id,
             vec![],
             get_file_changes(&bcs),
+            UnodeVersion::V2,
         )
         .await
     }
@@ -773,6 +779,7 @@ mod tests {
             first_bcs_id,
             vec![],
             get_file_changes(&bcs),
+            UnodeVersion::V2,
         )
         .await?;
 
@@ -793,6 +800,7 @@ mod tests {
                 merge_p1_id,
                 vec![first_unode_id.clone()],
                 get_file_changes(&merge_p1),
+                UnodeVersion::V2,
             )
             .await?;
             (merge_p1, merge_p1_unode_id)
@@ -816,6 +824,7 @@ mod tests {
                 merge_p2_id,
                 vec![first_unode_id.clone()],
                 get_file_changes(&merge_p2),
+                UnodeVersion::V2,
             )
             .await?;
             (merge_p2, merge_p2_unode_id)
@@ -837,6 +846,7 @@ mod tests {
             merge_id,
             vec![merge_p1_unode_id, merge_p2_unode_id],
             get_file_changes(&merge),
+            UnodeVersion::V2,
         )
         .await
     }

@@ -56,12 +56,14 @@ impl From<ChangesetId> for RootFastlog {
 impl BonsaiDerivable for RootFastlog {
     const NAME: &'static str = "fastlog";
 
+    type Options = ();
 
     async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
+        _options: &Self::Options,
     ) -> Result<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
         let (root_unode_mf_id, parents) = future::try_join(
@@ -155,6 +157,8 @@ impl BlobstoreExistsMapping for RootFastlogMapping {
     fn prefix(&self) -> &'static str {
         "derived_rootfastlog."
     }
+
+    fn options(&self) {}
 }
 
 impl_bonsai_derived_mapping!(RootFastlogMapping, BlobstoreExistsMapping, RootFastlog);

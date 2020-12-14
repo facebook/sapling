@@ -65,12 +65,14 @@ impl From<RootFsnodeId> for BlobstoreBytes {
 impl BonsaiDerivable for RootFsnodeId {
     const NAME: &'static str = "fsnodes";
 
+    type Options = ();
 
     async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        _options: &Self::Options,
     ) -> Result<Self, Error> {
         let fsnode_id = derive_fsnode(
             &ctx,
@@ -134,6 +136,8 @@ impl BlobstoreRootIdMapping for RootFsnodeMapping {
     fn prefix(&self) -> &'static str {
         "derived_root_fsnode."
     }
+
+    fn options(&self) {}
 }
 
 impl_bonsai_derived_mapping!(RootFsnodeMapping, BlobstoreRootIdMapping, RootFsnodeId);

@@ -16,7 +16,7 @@ use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
 use mononoke_types::ChangesetId;
 
-use crate::BonsaiDerived;
+use crate::{BonsaiDerivable, BonsaiDerived};
 
 /// Implementation of a derived data mapping where the root id is stored
 /// in the blobstore.
@@ -80,6 +80,9 @@ pub trait BlobstoreRootIdMapping {
             .put(ctx, self.format_key(cs_id), value.into())
             .await
     }
+
+    /// Fetch the options for this mapping implementation.
+    fn options(&self) -> <Self::Value as BonsaiDerivable>::Options;
 }
 
 /// Implementation of a derived data mapping where the fact that derivation
@@ -145,6 +148,9 @@ pub trait BlobstoreExistsMapping {
             .put(ctx, self.format_key(cs_id), BlobstoreBytes::empty())
             .await
     }
+
+    /// Fetch the options for this mapping implementation.
+    fn options(&self) -> <Self::Value as BonsaiDerivable>::Options;
 }
 
 /// Macro to implement a bonsai derived mapping using a mapping implementation
@@ -191,6 +197,10 @@ macro_rules! impl_bonsai_derived_mapping {
                 id: Self::Value,
             ) -> ::anyhow::Result<()> {
                 self.store(&ctx, csid, id).await
+            }
+
+            fn options(&self) -> <Self::Value as $crate::BonsaiDerivable>::Options {
+                <$mapping as $mapping_impl>::options(self)
             }
         }
 

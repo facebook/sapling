@@ -368,21 +368,27 @@ where
                     let ctx = ctx.clone_and_reset();
 
                     let deriver = async {
-                        let derived =
-                            Derivable::derive_from_parents(ctx.clone(), repo.clone(), bcs, parents)
-                                .boxed()
-                                .compat()
-                                .traced_with_id(
-                                    &ctx.trace(),
-                                    "derive::derive_from_parents",
-                                    trace_args! {
-                                        "csid" => bcs_id.to_hex().to_string(),
-                                        "type" => Derivable::NAME
-                                    },
-                                    event_id,
-                                )
-                                .compat()
-                                .await?;
+                        let options = mapping.options();
+                        let derived = Derivable::derive_from_parents(
+                            ctx.clone(),
+                            repo.clone(),
+                            bcs,
+                            parents,
+                            &options,
+                        )
+                        .boxed()
+                        .compat()
+                        .traced_with_id(
+                            &ctx.trace(),
+                            "derive::derive_from_parents",
+                            trace_args! {
+                                "csid" => bcs_id.to_hex().to_string(),
+                                "type" => Derivable::NAME
+                            },
+                            event_id,
+                        )
+                        .compat()
+                        .await?;
                         mapping.put(ctx.clone(), bcs_id, derived).await?;
                         let res: Result<_, Error> = Ok(());
                         res
@@ -607,12 +613,14 @@ mod test {
     impl BonsaiDerivable for TestGenNum {
         const NAME: &'static str = "test_gen_num";
 
+        type Options = ();
 
         async fn derive_from_parents(
             _ctx: CoreContext,
             _repo: BlobRepo,
             bonsai: BonsaiChangeset,
             parents: Vec<Self>,
+            _options: &Self::Options,
         ) -> Result<Self, Error> {
             let parent_commits = parents.iter().map(|x| x.1).collect();
 
@@ -688,6 +696,8 @@ mod test {
             }
             Ok(())
         }
+
+        fn options(&self) {}
     }
 
     async fn derive_for_master(ctx: CoreContext, repo: BlobRepo) {

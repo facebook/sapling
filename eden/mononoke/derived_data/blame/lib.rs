@@ -19,7 +19,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Loadable, LoadableError};
 use bytes::Bytes;
 use context::CoreContext;
-use derived_data::{BonsaiDerived, DeriveError};
+use derived_data::{BonsaiDerived, BonsaiDerivedMapping, DeriveError};
 use manifest::ManifestOps;
 use mononoke_types::{
     blame::{Blame, BlameId, BlameMaybeRejected, BlameRejected},
@@ -65,7 +65,10 @@ pub async fn fetch_blame(
             }
         }
     };
-    let content = derived::fetch_file_full_content(ctx, repo, blame_id.into())
+    let mapping = BlameRoot::default_mapping(ctx, repo)?;
+    // TODO(mbthomas): remove file content fetching - the caller can fetch the
+    // content if they want it.
+    let content = derived::fetch_file_full_content(ctx, repo, blame_id.into(), mapping.options())
         .await
         .map_err(BlameError::Error)?
         .map_err(BlameError::Rejected)?;

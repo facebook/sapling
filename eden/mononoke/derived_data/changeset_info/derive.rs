@@ -21,12 +21,14 @@ use crate::ChangesetInfo;
 impl BonsaiDerivable for ChangesetInfo {
     const NAME: &'static str = "changeset_info";
 
+    type Options = ();
 
     async fn derive_from_parents(
         _ctx: CoreContext,
         _repo: BlobRepo,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
+        _options: &Self::Options,
     ) -> Result<Self, Error> {
         let csid = bonsai.get_changeset_id();
         Ok(ChangesetInfo::new(csid, bonsai))
@@ -55,6 +57,8 @@ impl BlobstoreRootIdMapping for ChangesetInfoMapping {
     fn prefix(&self) -> &'static str {
         "changeset_info.blake2."
     }
+
+    fn options(&self) {}
 }
 
 impl_bonsai_derived_mapping!(ChangesetInfoMapping, BlobstoreRootIdMapping, ChangesetInfo);

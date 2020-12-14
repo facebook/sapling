@@ -46,6 +46,8 @@ pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone {
     /// name data (for example lease keys) assoicated with particular derived data type.
     const NAME: &'static str;
 
+    /// Type for additional options to derivation
+    type Options: Send + Sync + 'static;
 
     /// Defines how to derive new representation for bonsai having derivations
     /// for parents and having a current bonsai object.
@@ -60,6 +62,7 @@ pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone {
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        options: &Self::Options,
     ) -> Result<Self, Error>;
 
     /// This method might be overridden by BonsaiDerivable implementors if there's a more efficient
@@ -208,6 +211,9 @@ pub trait BonsaiDerivedMapping: Send + Sync + Clone {
 
     /// Saves mapping between bonsai changeset and derived data id
     async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error>;
+
+    /// Get the derivation options that apply for this mapping.
+    fn options(&self) -> <Self::Value as BonsaiDerivable>::Options;
 }
 
 /// This mapping can be used when we want to ignore values before it was put
@@ -252,5 +258,9 @@ where
     async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
         self.regenerate.with(|regenerate| regenerate.remove(&csid));
         self.base.put(ctx, csid, id).await
+    }
+
+    fn options(&self) -> <M::Value as BonsaiDerivable>::Options {
+        self.base.options()
     }
 }

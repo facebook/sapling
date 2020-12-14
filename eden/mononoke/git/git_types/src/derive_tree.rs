@@ -82,18 +82,22 @@ impl BonsaiDerivedMapping for TreeMapping {
             .put(&ctx, self.root_key(csid), root.into())
             .await
     }
+
+    fn options(&self) {}
 }
 
 #[async_trait]
 impl BonsaiDerivable for TreeHandle {
     const NAME: &'static str = "git_trees";
 
+    type Options = ();
 
     async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        _options: &Self::Options,
     ) -> Result<Self, Error> {
         let blobstore = repo.get_blobstore();
         let changes = get_file_changes(&blobstore, &ctx, bonsai).await?;

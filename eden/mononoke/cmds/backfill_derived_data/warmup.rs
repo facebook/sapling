@@ -11,7 +11,7 @@ use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
 use deleted_files_manifest::RootDeletedManifestId;
-use derived_data::{BonsaiDerivable, BonsaiDerived};
+use derived_data::{BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping};
 use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fsnodes::{prefetch_content_metadata, RootFsnodeId};
 use futures::{
@@ -161,17 +161,18 @@ async fn prefetch_content(
         let repo = &repo;
         let blobstore = repo.blobstore();
         let file_unode = file_unode_id.load(ctx, blobstore).await?;
+        let options = BlameRoot::default_mapping(ctx, repo)?.options();
         let parents_content: Vec<_> = file_unode
             .parents()
             .iter()
             .cloned()
             .chain(rename)
-            .map(|file_unode_id| fetch_file_full_content(ctx, repo, file_unode_id))
+            .map(|file_unode_id| fetch_file_full_content(ctx, repo, file_unode_id, options))
             .collect();
 
         // the assignment is needed to avoid unused_must_use warnings
         let _ = future::try_join(
-            fetch_file_full_content(ctx, repo, file_unode_id),
+            fetch_file_full_content(ctx, repo, file_unode_id, options),
             future::try_join_all(parents_content),
         )
         .await?;

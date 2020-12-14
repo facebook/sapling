@@ -67,12 +67,14 @@ impl From<RootSkeletonManifestId> for BlobstoreBytes {
 impl BonsaiDerivable for RootSkeletonManifestId {
     const NAME: &'static str = "skeleton_manifests";
 
+    type Options = ();
 
     async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        _options: &Self::Options,
     ) -> Result<Self, Error> {
         let skeleton_manifest_id = derive_skeleton_manifest(
             &ctx,
@@ -136,6 +138,8 @@ impl BlobstoreRootIdMapping for RootSkeletonManifestMapping {
     fn prefix(&self) -> &'static str {
         "derived_root_skeletonmanifest."
     }
+
+    fn options(&self) {}
 }
 
 impl_bonsai_derived_mapping!(

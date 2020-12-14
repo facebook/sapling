@@ -8,7 +8,7 @@
 use crate::error::SubcommandError;
 
 use anyhow::{format_err, Error};
-use blame::{fetch_blame, fetch_file_full_content};
+use blame::{fetch_blame, fetch_file_full_content, BlameRoot};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -20,7 +20,7 @@ use cmdlib::{
     helpers,
 };
 use context::CoreContext;
-use derived_data::BonsaiDerived;
+use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
@@ -301,9 +301,10 @@ fn diff(
     old: FileUnodeId,
 ) -> impl Future<Item = String, Error = Error> {
     async move {
-        let f1 = fetch_file_full_content(&ctx, &repo, new)
+        let options = BlameRoot::default_mapping(&ctx, &repo)?.options();
+        let f1 = fetch_file_full_content(&ctx, &repo, new, options)
             .and_then(|result| ready(result.map_err(Error::from)));
-        let f2 = fetch_file_full_content(&ctx, &repo, old)
+        let f2 = fetch_file_full_content(&ctx, &repo, old, options)
             .and_then(|result| ready(result.map_err(Error::from)));
         try_join(f1, f2).await
     }
@@ -341,10 +342,14 @@ fn subcommand_compute_blame(
     line_number: bool,
 ) -> impl Future<Item = (), Error = Error> {
     let blobstore = repo.get_blobstore().boxed();
-    find_leaf(ctx.clone(), repo.clone(), csid, path.clone())
+    BlameRoot::default_mapping(&ctx, &repo)
+        .into_future()
+        .from_err()
+        .join(find_leaf(ctx.clone(), repo.clone(), csid, path.clone()))
         .and_then({
             cloned!(ctx, repo);
-            move |file_unode_id| {
+            move |(blame_mapping, file_unode_id)| {
+                let blame_options = blame_mapping.options();
                 bounded_traversal_dag(
                     256,
                     (file_unode_id, path),
@@ -414,12 +419,19 @@ fn subcommand_compute_blame(
                             {
                                 cloned!(ctx, repo);
                                 async move {
-                                    fetch_file_full_content(&ctx, &repo, file_unode_id).await
+                                    fetch_file_full_content(
+                                        &ctx,
+                                        &repo,
+                                        file_unode_id,
+                                        blame_options,
+                                    )
+                                    .await
                                 }
                             }
                             .boxed()
                             .compat()
-                                .and_then(move |content| match content {
+                            .and_then(move |content| {
+                                match content {
                                     Err(rejected) => Ok(Err(rejected)),
                                     Ok(content) => {
                                         let parents = parents
@@ -434,7 +446,8 @@ fn subcommand_compute_blame(
                                         )
                                         .map(move |blame| Ok((content, blame)))
                                     }
-                                })
+                                }
+                            })
                         }
                     },
                 )

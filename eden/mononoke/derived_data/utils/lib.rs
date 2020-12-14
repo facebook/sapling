@@ -393,6 +393,10 @@ where
         buffer.insert(csid, id);
         Ok(())
     }
+
+    fn options(&self) -> <M::Value as BonsaiDerivable>::Options {
+        self.mapping.options()
+    }
 }
 
 pub fn derived_data_utils(

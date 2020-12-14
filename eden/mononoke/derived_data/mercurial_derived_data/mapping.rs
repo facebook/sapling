@@ -25,12 +25,14 @@ pub struct MappedHgChangesetId(pub HgChangesetId);
 impl BonsaiDerivable for MappedHgChangesetId {
     const NAME: &'static str = "hgchangesets";
 
+    type Options = ();
 
     async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        _options: &Self::Options,
     ) -> Result<Self, Error> {
         crate::derive_hg_changeset::derive_from_parents(ctx, repo, bonsai, parents).await
     }
@@ -85,6 +87,8 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
             .await?;
         Ok(())
     }
+
+    fn options(&self) {}
 }
 
 #[async_trait]

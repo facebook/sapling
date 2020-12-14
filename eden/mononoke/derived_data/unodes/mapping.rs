@@ -56,13 +56,16 @@ impl From<RootUnodeManifestId> for BlobstoreBytes {
 impl BonsaiDerivable for RootUnodeManifestId {
     const NAME: &'static str = "unodes";
 
+    type Options = UnodeVersion;
 
     async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
+        options: &Self::Options,
     ) -> Result<Self, Error> {
+        let unode_version = *options;
         let bcs_id = bonsai.get_changeset_id();
         derive_unode_manifest(
             ctx,
@@ -73,6 +76,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
                 .map(|root_mf_id| root_mf_id.manifest_unode_id().clone())
                 .collect(),
             get_file_changes(&bonsai),
+            unode_version,
         )
         .map_ok(RootUnodeManifestId)
         .await
@@ -106,6 +110,10 @@ impl BlobstoreRootIdMapping for RootUnodeManifestMapping {
             UnodeVersion::V1 => "derived_root_unode.",
             UnodeVersion::V2 => "derived_root_unode_v2.",
         }
+    }
+
+    fn options(&self) -> UnodeVersion {
+        self.unode_version
     }
 }
 

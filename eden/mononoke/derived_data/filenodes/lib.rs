@@ -106,12 +106,14 @@ pub enum FilenodesOnlyPublic {
 impl BonsaiDerivable for FilenodesOnlyPublic {
     const NAME: &'static str = "filenodes";
 
+    type Options = ();
 
     async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
+        _options: &Self::Options,
     ) -> Result<Self, Error> {
         let filenodes = generate_all_filenodes(&ctx, &repo, bonsai.get_changeset_id()).await?;
 
@@ -390,6 +392,8 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
             None => Ok(()),
         }
     }
+
+    fn options(&self) {}
 }
 
 async fn fetch_root_filenode(
