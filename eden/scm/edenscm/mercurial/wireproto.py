@@ -465,7 +465,7 @@ class wirepeer(repository.legacypeer):
             # Let's measure this in both `perftrace` and `timesection`
             # so that this can be looked at through individual traces
             # and aggregated in Scuba
-            with self.ui.timesection("getscratchbranchparts"):
+            with self.ui.timesection("unbundle"):
                 with perftrace.trace("Sending unbundle data to the server"):
                     stream = self._calltwowaystream("unbundle", cg, heads=heads)
             ret = bundle2.getunbundler(self.ui, stream)
