@@ -418,12 +418,6 @@ class changelog(object):
         else:
             node = self.node(nodeorrev)
         text = self.inner.getcommitrawtext(node)
-        # Suboptimal 1-by-1 fetching via streamcommitrawtext.
-        if text is None:
-            for v, t in self.inner.streamcommitrawtext([node]):
-                if v == node:
-                    text = t
-                    break
         if text is None:
             raise error.LookupError(node, self.indexfile, _("no node"))
         # check HG SHA1 hash

@@ -90,10 +90,6 @@ impl AppendCommits for HybridCommits {
 
 #[async_trait::async_trait]
 impl ReadCommitText for HybridCommits {
-    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
-        self.commits.get_commit_raw_text(vertex).await
-    }
-
     async fn get_commit_raw_text_list(&self, vertexes: &[Vertex]) -> Result<Vec<Bytes>> {
         let vertexes: Vec<Vertex> = vertexes.to_vec();
         let stream =
