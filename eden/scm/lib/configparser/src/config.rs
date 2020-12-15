@@ -450,11 +450,10 @@ impl ConfigSet {
                 let mut last_value = None;
                 let mut values_copy = values.clone();
 
-                // Iterate in reverse so we can remove items from the end of values.
-                values_copy.reverse();
+                let mut removals = 0;
                 for (index, value) in values_copy.iter().enumerate() {
-                    // Convert the reverse index into the original index.
-                    let index = values_copy.len() - index - 1;
+                    // Convert the index into the original index.
+                    let index = index - removals;
 
                     // Get the filename of the value's rc location
                     let location: String = match value
@@ -475,6 +474,7 @@ impl ConfigSet {
                     // If it's a disallowed value from a subset, remove it.
                     if disallowed && subset_locations.contains(&location) {
                         values.remove(index);
+                        removals += 1;
                         continue;
                     }
 
@@ -482,16 +482,11 @@ impl ConfigSet {
                         super_value = value.value().clone();
                         super_index = index;
                     } else {
-                        // Since we're iterating in reverse, take the first subset value and the
-                        // first value we see (i.e. the last value in the original order which is value
-                        // that will be exposed to people reading the config).
-                        if sub_value.is_none() && subset_locations.contains(&location) {
+                        if subset_locations.contains(&location) {
                             sub_value = value.value().clone();
                         }
 
-                        if last_value.is_none() {
-                            last_value = value.value().clone();
-                        }
+                        last_value = value.value().clone();
                     }
                 }
 
