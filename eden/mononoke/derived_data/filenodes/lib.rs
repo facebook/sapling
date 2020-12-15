@@ -411,11 +411,13 @@ async fn fetch_root_filenode(
         .get_hg_from_bonsai(ctx.clone(), repo.get_repoid(), cs_id.clone())
         .compat()
         .await?;
-    if maybe_hg_cs_id.is_none() {
+    let hg_cs_id = if let Some(hg_cs_id) = maybe_hg_cs_id {
+        hg_cs_id
+    } else {
         return Ok(FilenodeResult::Present(None));
-    }
+    };
 
-    let mf_id = fetch_root_manifest_id(ctx, &cs_id, repo).await?;
+    let mf_id = hg_cs_id.load(ctx, repo.blobstore()).await?.manifestid();
 
     // Special case null manifest id if we run into it
     let mf_id = mf_id.into_nodehash();
