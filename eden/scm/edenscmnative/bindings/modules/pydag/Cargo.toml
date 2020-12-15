@@ -6,7 +6,6 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.20"
 async-runtime = { path = "../../../../lib/async-runtime" }
-cpython-async = { path = "../../../../lib/cpython-async", default-features = false }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
 dag = { path = "../../../../lib/dag" }
@@ -17,5 +16,5 @@ pymetalog = { path = "../pymetalog" }
 renderdag = { path = "../../../../lib/renderdag" }
 
 [features]
-python2 = ["cpython/python27-sys", "cpython-ext/python2", "cpython-async/python2"]
-python3 = ["cpython/python3-sys", "cpython-ext/python3", "cpython-async/python3"]
+python2 = ["cpython/python27-sys", "cpython-ext/python2"]
+python3 = ["cpython/python3-sys", "cpython-ext/python3"]

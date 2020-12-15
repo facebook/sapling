@@ -12,8 +12,6 @@ use crate::Spans;
 use anyhow::Result;
 use async_runtime::block_on_exclusive as block_on;
 use cpython::*;
-use cpython_async::futures;
-use cpython_async::TStream;
 use cpython_ext::convert::BytesLike;
 use cpython_ext::ExtractInner;
 use cpython_ext::PyNone;
@@ -27,7 +25,6 @@ use dag::ops::ToIdSet;
 use dag::ops::ToSet;
 use dag::DagAlgorithm;
 use dag::Vertex;
-use futures::stream::TryStreamExt;
 use hgcommits::AppendCommits;
 use hgcommits::DescribeBackend;
 use hgcommits::DoubleWriteCommits;
@@ -38,7 +35,6 @@ use hgcommits::HybridCommits;
 use hgcommits::MemHgCommits;
 use hgcommits::ReadCommitText;
 use hgcommits::RevlogCommits;
-use hgcommits::StreamCommitText;
 use hgcommits::StripCommits;
 use minibytes::Bytes;
 use pyedenapi::PyClient;
@@ -54,7 +50,6 @@ pub trait Commits:
     + DagAlgorithm
     + IdConvert
     + IdMapSnapshot
-    + StreamCommitText
     + PrefixLookup
     + ToIdSet
     + ToSet
@@ -118,15 +113,13 @@ py_class!(pub class commits |py| {
         Ok(optional_bytes.map(|bytes| PyBytes::new(py, bytes.as_ref())))
     }
 
-    /// Lookup the raw texts of a stream of binary commit hashes.
-    /// Return a stream of (node, rawtext).
-    def streamcommitrawtext(&self, stream: TStream<anyhow::Result<BytesLike<Vertex>>>)
-        -> PyResult<TStream<anyhow::Result<(BytesLike<Vertex>, BytesLike<Bytes>)>>>
+    /// Lookup the raw texts by a list of binary commit hashes.
+    def getcommitrawtextlist(&self, nodes: Vec<BytesLike<Vertex>>) -> PyResult<Vec<BytesLike<Bytes>>>
     {
+        let vertexes: Vec<Vertex> = nodes.into_iter().map(|b| b.0).collect();
         let inner = self.inner(py).borrow();
-        let stream = Box::pin(stream.stream().map_ok(|bytes_like| bytes_like.0));
-        let output_stream = inner.stream_commit_raw_text(stream).map_pyerr(py)?;
-        Ok(output_stream.map_ok(|c| (BytesLike(c.vertex), BytesLike(c.raw_text))).into())
+        let texts = block_on(inner.get_commit_raw_text_list(&vertexes)).map_pyerr(py)?;
+        Ok(texts.into_iter().map(BytesLike).collect())
     }
 
     /// Convert Set to IdSet. For compatibility with legacy code only.
