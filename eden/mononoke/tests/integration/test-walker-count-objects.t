@@ -29,6 +29,33 @@ check blobstore numbers, walk will do some more steps for mappings
   $ echo "$BLOBCOUNT"
   64
 
+count-objects, all types, shallow edges
+  $ mononoke_walker scrub -q --bookmark master_bookmark -I shallow -i all 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types * (glob)
+  Walking node types * (glob)
+  Final count: (46, 46)
+  Bytes/s,* (glob)
+  * Type:Walked,Checks,Children * (glob)
+
+count-objects, all types, deep edges
+  $ mononoke_walker scrub -q --bookmark master_bookmark -I deep -i all 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types * (glob)
+  Walking node types * (glob)
+  Final count: (77, 77)
+  Bytes/s,* (glob)
+  * Type:Walked,Checks,Children * (glob)
+
+count-objects, all types, all edges, difference in final count vs deep edges is PhaseMapping and one extra BonsaiHgMapping from the bookmark
+  $ mononoke_walker scrub -q --bookmark master_bookmark -I all -i all 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types * (glob)
+  Walking node types * (glob)
+  Final count: (81, 81)
+  Bytes/s,* (glob)
+  * Type:Walked,Checks,Children * (glob)
+
 count-objects, bonsai core data.  total nodes is BONSAICOUNT plus one for the root bookmark step.
   $ mononoke_walker scrub -q --bookmark master_bookmark -I bonsai 2>&1 | strip_glog
   Walking roots * (glob)

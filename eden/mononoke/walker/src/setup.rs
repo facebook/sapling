@@ -118,6 +118,7 @@ const MARKER_VALUE_ARG: &str = "marker";
 const HG_VALUE_ARG: &str = "hg";
 const BONSAI_VALUE_ARG: &str = "bonsai";
 const CONTENT_META_VALUE_ARG: &str = "contentmeta";
+const ALL_VALUE_ARG: &str = "all";
 
 const DERIVED_PREFIX: &str = "derived_";
 
@@ -135,6 +136,7 @@ static DERIVED_DATA_INCLUDE_NODE_TYPES: Lazy<HashMap<String, Vec<NodeType>>> = L
 
 static NODE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
     let mut v = vec![
+        ALL_VALUE_ARG,
         BONSAI_VALUE_ARG,
         DEFAULT_VALUE_ARG,
         DERIVED_VALUE_ARG,
@@ -153,6 +155,7 @@ static EDGE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
     let mut v = vec![
         DEEP_VALUE_ARG,
         SHALLOW_VALUE_ARG,
+        ALL_VALUE_ARG,
         BONSAI_VALUE_ARG,
         HG_VALUE_ARG,
         CONTENT_META_VALUE_ARG,
@@ -693,6 +696,7 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
 // parse the pre-defined groups we have for default etc
 fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
     Ok(match arg {
+        ALL_VALUE_ARG => HashSet::from_iter(NodeType::iter()),
         DEFAULT_VALUE_ARG => HashSet::from_iter(DEFAULT_INCLUDE_NODE_TYPES.iter().cloned()),
         BONSAI_VALUE_ARG => HashSet::from_iter(BONSAI_INCLUDE_NODE_TYPES.iter().cloned()),
         DERIVED_VALUE_ARG => {
@@ -744,6 +748,7 @@ pub fn parse_node_types<'a>(
 // parse the pre-defined groups we have for deep, shallow, hg, bonsai etc.
 fn parse_edge_value(arg: &str) -> Result<HashSet<EdgeType>, Error> {
     Ok(match arg {
+        ALL_VALUE_ARG => HashSet::from_iter(EdgeType::iter()),
         BONSAI_VALUE_ARG => HashSet::from_iter(BONSAI_EDGE_TYPES.iter().cloned()),
         CONTENT_META_VALUE_ARG => HashSet::from_iter(CONTENT_META_EDGE_TYPES.iter().cloned()),
         DEEP_VALUE_ARG => HashSet::from_iter(DEEP_INCLUDE_EDGE_TYPES.iter().cloned()),
