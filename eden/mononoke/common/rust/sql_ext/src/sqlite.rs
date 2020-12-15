@@ -28,7 +28,7 @@ pub fn open_sqlite_in_memory() -> Result<SqliteConnection> {
     Ok(con)
 }
 
-// Open a single sqlite connection
+/// Open a single sqlite connection. The Sqlite DB will be created at path if necessary.
 pub fn open_sqlite_path<P: AsRef<Path>>(path: P, readonly: bool) -> Result<SqliteConnection> {
     let path = path.as_ref();
     let con = {
@@ -51,6 +51,23 @@ pub fn open_sqlite_path<P: AsRef<Path>>(path: P, readonly: bool) -> Result<Sqlit
         con
     };
 
+    sqlite_setup_connection(&con);
+    Ok(con)
+}
+
+/// Open a single sqlite connection. The Sqlite DB must already exist at path.
+pub fn open_existing_sqlite_path<P: AsRef<Path>>(
+    path: P,
+    readonly: bool,
+) -> Result<SqliteConnection> {
+    let path = path.as_ref();
+    let flags = if readonly {
+        SqliteOpenFlags::SQLITE_OPEN_READ_ONLY
+    } else {
+        // NB no creation flag, as db should already exist at this point
+        SqliteOpenFlags::SQLITE_OPEN_READ_WRITE
+    };
+    let con = SqliteConnection::open_with_flags(path, flags)?;
     sqlite_setup_connection(&con);
     Ok(con)
 }

@@ -9,7 +9,10 @@ use std::path::Path;
 
 use anyhow::Result;
 use sql::Connection;
-use sql_ext::{open_sqlite_in_memory, open_sqlite_path, SqlConnections, SqlShardedConnections};
+use sql_ext::{
+    open_existing_sqlite_path, open_sqlite_in_memory, open_sqlite_path, SqlConnections,
+    SqlShardedConnections,
+};
 
 /// Construct a SQL data manager backed by a database
 ///
@@ -39,7 +42,7 @@ pub trait SqlConstruct: Sized + Send + Sync + 'static {
         let conn = open_sqlite_path(path, false)?;
         let _ = conn.execute_batch(Self::CREATION_QUERY);
         let write_connection = Connection::with_sqlite(conn);
-        let read_connection = Connection::with_sqlite(open_sqlite_path(path, true)?);
+        let read_connection = Connection::with_sqlite(open_existing_sqlite_path(path, true)?);
         let connections = SqlConnections {
             write_connection: if readonly {
                 read_connection.clone()

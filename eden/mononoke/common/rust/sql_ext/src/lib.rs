@@ -12,7 +12,7 @@ mod sqlite;
 
 use sql::{Connection, Transaction};
 
-pub use sqlite::{open_sqlite_in_memory, open_sqlite_path};
+pub use sqlite::{open_existing_sqlite_path, open_sqlite_in_memory, open_sqlite_path};
 
 #[derive(Clone)]
 pub struct SqlConnections {
