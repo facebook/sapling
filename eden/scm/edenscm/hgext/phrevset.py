@@ -98,7 +98,7 @@ def graphqlgetdiff(repo, diffid):
     except Exception as e:
         raise error.Abort(
             "Could not call phabricator graphql API: %s" % e,
-            hint="perhaps you need to run 'jf auth'?",
+            hint="perhaps you need to connect to the VPN or run 'jf auth'?",
         )
 
 
