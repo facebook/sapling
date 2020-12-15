@@ -33,6 +33,7 @@ from .cmdtable import command
 
 
 if pycompat.iswindows:
+    # pyre-fixme[21]: Could not find name `open_osfhandle` in `msvcrt`.
     from msvcrt import open_osfhandle
 
     def fdopen(handle, mode):
