@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Error, Result};
 
 use crate::blob::{Blob, BlobstoreValue, SkeletonManifestBlob};
 use crate::errors::ErrorKind;
@@ -14,8 +14,12 @@ use crate::thrift;
 use crate::typed_hash::{SkeletonManifestId, SkeletonManifestIdContext};
 
 use blobstore::{Blobstore, StoreLoadable};
+use borrowed::borrowed;
+use bounded_traversal::bounded_traversal;
 use context::CoreContext;
 use fbthrift::compact_protocol;
+use futures::future::{try_join, try_join_all};
+use futures::stream::{self, StreamExt, TryStreamExt};
 use sorted_vector_map::SortedVectorMap;
 use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
@@ -86,6 +90,10 @@ impl SkeletonManifest {
         &self.summary
     }
 
+    pub fn has_case_conflicts(&self) -> bool {
+        self.summary.child_case_conflicts || self.summary.descendant_case_conflicts
+    }
+
     pub async fn first_case_conflict<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -122,6 +130,157 @@ impl SkeletonManifest {
             }
             return Ok(None);
         }
+    }
+
+    /// Returns the first case conflict that wasn't present in any of the
+    /// parents.
+    pub async fn first_new_case_conflict<'a>(
+        self,
+        ctx: &'a CoreContext,
+        blobstore: &'a impl Blobstore,
+        parents: Vec<SkeletonManifest>,
+    ) -> Result<Option<(MPath, MPath)>> {
+        bounded_traversal(
+            256,
+            (None, self, parents),
+            |(path, sk_mf, parents)| async move {
+                if sk_mf.summary.child_case_conflicts {
+                    if let Some((name1, name2)) = sk_mf.first_new_child_case_conflict(&parents) {
+                        let path1 = MPath::join_opt_element(path.as_ref(), name1);
+                        let path2 = MPath::join_opt_element(path.as_ref(), name2);
+                        // Since we only want the first conflict, don't
+                        // recurse to child directories.
+                        return Ok((Some((path1, path2)), Vec::new()));
+                    }
+                }
+
+                if !sk_mf.summary.descendant_case_conflicts {
+                    return Ok((None, Vec::new()));
+                }
+
+                borrowed!(path);
+                let recurse_ids = sk_mf
+                    .recurse_new_descendant_case_conflicts(&parents)
+                    .map(|(name, recurse_id, recurse_parent_ids)| async move {
+                        let recurse_path = MPath::join_opt_element(path.as_ref(), name);
+                        let (recurse_sk_mf, recurse_parents) = try_join(
+                            recurse_id.load(ctx, blobstore),
+                            try_join_all(
+                                recurse_parent_ids
+                                    .into_iter()
+                                    .map(|id| async move { id.load(ctx, blobstore).await }),
+                            ),
+                        )
+                        .await?;
+                        Ok::<_, Error>((Some(recurse_path), recurse_sk_mf, recurse_parents))
+                    })
+                    .collect::<Vec<_>>();
+
+                let recurse = stream::iter(recurse_ids)
+                    .buffered(100)
+                    .try_collect::<Vec<_>>()
+                    .await?;
+
+                Ok((None, recurse))
+            },
+            |maybe_conflict, child_conflicts| async move {
+                Ok(maybe_conflict.or_else(move || {
+                    for conflict in child_conflicts {
+                        if let Some(conflict) = conflict {
+                            return Some(conflict);
+                        }
+                    }
+                    None
+                }))
+            },
+        )
+        .await
+    }
+
+
+    /// Returns the first case conflict that is an immediate child of this
+    /// skeleton manifest that is not present in any of the parents.
+    fn first_new_child_case_conflict(
+        &self,
+        parents: &[SkeletonManifest],
+    ) -> Option<(&MPathElement, &MPathElement)> {
+        let mut lower_map: BTreeMap<String, Vec<_>> = BTreeMap::new();
+        for name in self.subentries.keys() {
+            if let Some(lower_name) = name.to_lowercase_utf8() {
+                lower_map.entry(lower_name).or_default().push(name)
+            }
+        }
+
+        for (_lower_name, names) in lower_map.iter() {
+            match names.as_slice() {
+                [name1, name2, ..] => {
+                    // These names form a case conflict.  All names
+                    // must exist in at least one parent,
+                    // otherwise this commit introduced a case
+                    // conflict.
+                    let conflict_exists_in_parent = parents.iter().any(|parent| {
+                        names
+                            .iter()
+                            .all(|name| parent.subentries.contains_key(name))
+                    });
+                    if !conflict_exists_in_parent {
+                        return Some((&name1, &name2));
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        None
+    }
+
+    /// Returns the skeleton manifests to recurse into to check for case
+    /// conflicts in descendant directories that are not in any of the
+    /// parents.
+    ///
+    /// Returns an iterator of (name, subdir_id, subdir_parent_ids) for each
+    /// subentry that might have descendant case conflicts, where the parent
+    /// ids are the ids of the corresponding parent subdirectories that might
+    /// also have case conflicts.
+    fn recurse_new_descendant_case_conflicts<'s>(
+        &'s self,
+        parents: &'s [SkeletonManifest],
+    ) -> impl Iterator<
+        Item = (
+            &'s MPathElement,
+            SkeletonManifestId,
+            Vec<SkeletonManifestId>,
+        ),
+    > {
+        self.subentries.iter().filter_map(move |(name, entry)| {
+            if let SkeletonManifestEntry::Directory(subdir) = entry {
+                if !subdir.has_case_conflicts() {
+                    return None;
+                }
+
+                // Recurse into this subdirectory to check its case
+                // conflicts.  Include only the parent subentries that
+                // contain case conflicts, as conflict-free parents can be
+                // ignored.
+                let recurse_id = subdir.id;
+                let recurse_parent_ids: Vec<_> = parents
+                    .iter()
+                    .filter_map(|parent| {
+                        if let Some(SkeletonManifestEntry::Directory(subdir)) =
+                            parent.subentries.get(&name)
+                        {
+                            if subdir.has_case_conflicts() {
+                                return Some(subdir.id);
+                            }
+                        }
+                        None
+                    })
+                    .collect();
+
+                return Some((name, recurse_id, recurse_parent_ids));
+            }
+            None
+        })
     }
 
     pub(crate) fn from_thrift(t: thrift::SkeletonManifest) -> Result<SkeletonManifest> {
@@ -207,6 +366,10 @@ impl SkeletonManifestDirectory {
 
     pub fn summary(&self) -> &SkeletonManifestSummary {
         &self.summary
+    }
+
+    pub fn has_case_conflicts(&self) -> bool {
+        self.summary.child_case_conflicts || self.summary.descendant_case_conflicts
     }
 
     pub(crate) fn from_thrift(

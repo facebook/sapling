@@ -184,37 +184,80 @@ we can't move the bookmark to a commit with a pre-existing case conflict via boo
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
-we can't land to the other because of the pre-existing case conflict
+we can't land to the other if we introduce a new case conflict
   $ hg up -q other
-  $ echo testfile > testfile
-  $ hg add testfile
+  $ echo conflict > testfile
+  $ echo conflict > TestFile
+  $ hg add testfile TestFile
+  warning: possible case-folding collision for testfile
   $ hg commit -qm conflict3
   $ hgmn push -r . --to other
-  pushing rev ecddc5d69d2c to destination ssh://user@dummy/repo bookmark other
+  pushing rev f68266b60b0e to destination ssh://user@dummy/repo bookmark other
   searching for changes
   remote: Command failed
   remote:   Error:
-  remote:     Case conflict found in 67c5c1587e99f6c4e6c0b0bd40411efd2f0da0559835013dcd7d1ffeb65c037e: existing/CaseConflict conflicts with existing/caseconflict
+  remote:     Case conflict found in a1b0639259bc3524b3d1db9b85b9300b1fb9f17c0c60d39e0bd64efa879c5dd5: TestFile conflicts with testfile
   remote: 
   remote:   Root cause:
-  remote:     Case conflict found in 67c5c1587e99f6c4e6c0b0bd40411efd2f0da0559835013dcd7d1ffeb65c037e: existing/CaseConflict conflicts with existing/caseconflict
+  remote:     Case conflict found in a1b0639259bc3524b3d1db9b85b9300b1fb9f17c0c60d39e0bd64efa879c5dd5: TestFile conflicts with testfile
   remote: 
   remote:   Debug context:
   remote:     CaseConflict {
   remote:         changeset_id: ChangesetId(
-  remote:             Blake2(67c5c1587e99f6c4e6c0b0bd40411efd2f0da0559835013dcd7d1ffeb65c037e),
+  remote:             Blake2(a1b0639259bc3524b3d1db9b85b9300b1fb9f17c0c60d39e0bd64efa879c5dd5),
   remote:         ),
-  remote:         path1: MPath("existing/CaseConflict"),
-  remote:         path2: MPath("existing/caseconflict"),
+  remote:         path1: MPath("TestFile"),
+  remote:         path2: MPath("testfile"),
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
-we can land something that fixes all of the case conflicts
+we can land something that doesn't introduce a new case conflict
+  $ hg hide -q .
+  $ echo testfile > testfile
+  $ hg add testfile
+  $ hg commit -qm nonewconflict
+  $ hgmn push -r . --to other
+  pushing rev f7457d858a4a to destination ssh://user@dummy/repo bookmark other
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 0 files
+  updating bookmark other
+
+we can't land if we try to make an existing case conflict worse
+  $ echo conflict > existing/CASECONFLICT
+  $ hg add existing/CASECONFLICT
+  warning: possible case-folding collision for existing/CASECONFLICT
+  $ hg commit -qm conflict4
+  $ hgmn push -r . --to other
+  pushing rev e3670f5cf0ff to destination ssh://user@dummy/repo bookmark other
+  searching for changes
+  remote: Command failed
+  remote:   Error:
+  remote:     Case conflict found in b6801c5486aaa96f45805ddd8c874a5e602888e94cc2c93e44aacdc106e8ed9d: existing/CASECONFLICT conflicts with existing/CaseConflict
+  remote: 
+  remote:   Root cause:
+  remote:     Case conflict found in b6801c5486aaa96f45805ddd8c874a5e602888e94cc2c93e44aacdc106e8ed9d: existing/CASECONFLICT conflicts with existing/CaseConflict
+  remote: 
+  remote:   Debug context:
+  remote:     CaseConflict {
+  remote:         changeset_id: ChangesetId(
+  remote:             Blake2(b6801c5486aaa96f45805ddd8c874a5e602888e94cc2c93e44aacdc106e8ed9d),
+  remote:         ),
+  remote:         path1: MPath("existing/CASECONFLICT"),
+  remote:         path2: MPath("existing/CaseConflict"),
+  remote:     }
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+
+we can land it if we also fix all of the related case conflicts
   $ hg rm existing/CaseConflict
+  $ hg rm existing/caseconflict
   $ hg amend -q
   $ hgmn push -r . --to other
-  pushing rev 495ff9e58583 to destination ssh://user@dummy/repo bookmark other
+  pushing rev d28b31dd21bb to destination ssh://user@dummy/repo bookmark other
   searching for changes
   adding changesets
   adding manifests

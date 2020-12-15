@@ -8,10 +8,12 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 blobstore = { path = "../blobstore" }
+bounded_traversal = { path = "../common/bounded_traversal" }
 context = { path = "../server/context" }
 edenapi_types = { path = "../../scm/lib/edenapi/types" }
 mononoke_types-thrift = { path = "if" }
 xdiff = { path = "../../scm/lib/xdiff" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 sorted_vector_map = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -38,7 +40,6 @@ thiserror = "1.0"
 
 [dev-dependencies]
 memblob = { path = "../blobstore/memblob" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"
 pretty_assertions = "0.6"

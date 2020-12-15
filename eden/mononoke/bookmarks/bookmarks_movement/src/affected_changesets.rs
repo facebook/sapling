@@ -310,8 +310,9 @@ impl AffectedChangesets {
             .await
             .context("Failed to load additional affected changesets")?;
 
-            stream::iter(self.iter().map(BonsaiChangeset::get_changeset_id).map(Ok))
-                .try_for_each_concurrent(100, |bcs_id| async move {
+            stream::iter(self.iter().map(Ok))
+                .try_for_each_concurrent(100, |bcs| async move {
+                    let bcs_id = bcs.get_changeset_id();
                     let sk_mf = RootSkeletonManifestId::derive(ctx, repo, bcs_id)
                         .await
                         .map_err(Error::from)?
@@ -319,14 +320,32 @@ impl AffectedChangesets {
                         .load(ctx, repo.blobstore())
                         .await
                         .map_err(Error::from)?;
-                    if let Some((path1, path2)) =
-                        sk_mf.first_case_conflict(ctx, repo.blobstore()).await?
-                    {
-                        return Err(BookmarkMovementError::CaseConflict {
-                            changeset_id: bcs_id,
-                            path1,
-                            path2,
-                        });
+                    if sk_mf.has_case_conflicts() {
+                        // We only reject a commit if it introduces new case
+                        // conflicts compared to its parents.
+                        let parents = stream::iter(bcs.parents().map(|parent_bcs_id| async move {
+                            RootSkeletonManifestId::derive(ctx, repo, parent_bcs_id)
+                                .await
+                                .map_err(Error::from)?
+                                .into_skeleton_manifest_id()
+                                .load(ctx, repo.blobstore())
+                                .await
+                                .map_err(Error::from)
+                        }))
+                        .buffered(10)
+                        .try_collect::<Vec<_>>()
+                        .await?;
+
+                        if let Some((path1, path2)) = sk_mf
+                            .first_new_case_conflict(ctx, repo.blobstore(), parents)
+                            .await?
+                        {
+                            return Err(BookmarkMovementError::CaseConflict {
+                                changeset_id: bcs_id,
+                                path1,
+                                path2,
+                            });
+                        }
                     }
                     Ok(())
                 })

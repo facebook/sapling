@@ -313,6 +313,14 @@ mod test {
         "nonwin/dir6/ctrl\tchars.txt",
     ];
 
+    const H_FILES: &[&str] = &["dir1/subdir1/SUBSUBDIR3/File3"];
+
+    const J_FILES: &[&str] = &["dir3/FILE1", "dir3/file1"];
+
+    const K_FILES: &[&str] = &["dir3/file2"];
+
+    const L_FILES: &[&str] = &["dir2/subdir1/subsubdir1/FILE1"];
+
     fn add_files<'a>(mut c: CreateCommitContext<'a>, files: &[&str]) -> CreateCommitContext<'a> {
         for &file in files {
             c = c.add_file(file, file);
@@ -333,7 +341,13 @@ mod test {
             ctx,
             &blob_repo,
             r##"
+                    J-K
+                     /
                 A-B-C-D-E-F-G
+                     \
+                      H
+                       \
+                      L-M
             "##,
             changes! {
                 "B" => |c| add_files(c, B_FILES),
@@ -342,6 +356,10 @@ mod test {
                 "E" => |c| delete_files(c, E_FILES),
                 "F" => |c| c.add_file(b"cp1252/euro\x80".as_ref(), "euro"),
                 "G" => |c| add_files(c, G_FILES),
+                "H" => |c| add_files(c, H_FILES),
+                "J" => |c| add_files(c, J_FILES),
+                "K" => |c| add_files(c, K_FILES),
+                "L" => |c| add_files(c, L_FILES),
             },
         )
         .await?;
@@ -447,6 +465,16 @@ mod test {
                 MPath::new(b"dir1/subdir1/subsubdir2")?
             ))
         );
+        assert_eq!(
+            c_skeleton
+                .clone()
+                .first_new_case_conflict(&ctx, repo.blobstore(), vec![b_skeleton])
+                .await?,
+            Some((
+                MPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
+                MPath::new(b"dir1/subdir1/subsubdir2")?
+            ))
+        );
 
         let c_sk_dir1 = skeleton_dir(&c_skeleton, b"dir1")?
             .id()
@@ -494,6 +522,13 @@ mod test {
                 MPath::new(b"dir1/subdir1/subsubdir1/FILE1")?,
                 MPath::new(b"dir1/subdir1/subsubdir1/file1")?
             ))
+        );
+        assert_eq!(
+            d_skeleton
+                .clone()
+                .first_new_case_conflict(&ctx, repo.blobstore(), vec![c_skeleton.clone()])
+                .await?,
+            None,
         );
 
         let d_sk_dir1 = skeleton_dir(&d_skeleton, b"dir1")?
@@ -608,6 +643,122 @@ mod test {
                 dir
             );
         }
+
+        // Changeset H introduces a new case conflict on top of the ones
+        // already in changeset C.
+        let h_bcs = changesets["H"].load(&ctx, repo.blobstore()).await?;
+        let h_skeleton_id =
+            derive_skeleton_manifest(&ctx, &repo, vec![c_skeleton_id], get_file_changes(&h_bcs))
+                .await?;
+        let h_skeleton = h_skeleton_id.load(&ctx, repo.blobstore()).await?;
+        assert_eq!(
+            h_skeleton.summary(),
+            &SkeletonManifestSummary {
+                child_files_count: 4,
+                descendant_files_count: 15,
+                child_dirs_count: 2,
+                descendant_dirs_count: 14,
+                max_path_len: 29,
+                max_path_wchar_len: 29,
+                descendant_case_conflicts: true,
+                ..Default::default()
+            }
+        );
+        assert_eq!(
+            h_skeleton
+                .first_case_conflict(&ctx, repo.blobstore())
+                .await?,
+            Some((
+                MPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
+                MPath::new(b"dir1/subdir1/subsubdir2")?
+            ))
+        );
+        assert_eq!(
+            h_skeleton
+                .clone()
+                .first_new_case_conflict(&ctx, repo.blobstore(), vec![c_skeleton])
+                .await?,
+            Some((
+                MPath::new(b"dir1/subdir1/SUBSUBDIR3/FILE3")?,
+                MPath::new(b"dir1/subdir1/SUBSUBDIR3/File3")?,
+            ))
+        );
+
+        // Changeset J has an internal case conflict.
+        let j_bcs = changesets["J"].load(&ctx, repo.blobstore()).await?;
+        let j_skeleton_id =
+            derive_skeleton_manifest(&ctx, &repo, vec![], get_file_changes(&j_bcs)).await?;
+        let j_skeleton = j_skeleton_id.load(&ctx, repo.blobstore()).await?;
+        assert_eq!(
+            j_skeleton
+                .first_case_conflict(&ctx, repo.blobstore())
+                .await?,
+            Some((MPath::new(b"dir3/FILE1")?, MPath::new(b"dir3/file1")?))
+        );
+
+        // Changeset K is a merge of H and J, both of which have case
+        // conflicts.  It does not introduce any new case conflicts.
+        let k_bcs = changesets["K"].load(&ctx, repo.blobstore()).await?;
+        let k_skeleton_id = derive_skeleton_manifest(
+            &ctx,
+            &repo,
+            vec![h_skeleton_id, j_skeleton_id],
+            get_file_changes(&k_bcs),
+        )
+        .await?;
+        let k_skeleton = k_skeleton_id.load(&ctx, repo.blobstore()).await?;
+        assert_eq!(
+            k_skeleton
+                .first_new_case_conflict(
+                    &ctx,
+                    repo.blobstore(),
+                    vec![h_skeleton.clone(), j_skeleton]
+                )
+                .await?,
+            None,
+        );
+
+        // Changeset L has no case conflicts.
+        let l_bcs = changesets["L"].load(&ctx, repo.blobstore()).await?;
+        let l_skeleton_id =
+            derive_skeleton_manifest(&ctx, &repo, vec![], get_file_changes(&l_bcs)).await?;
+        let l_skeleton = l_skeleton_id.load(&ctx, repo.blobstore()).await?;
+        assert_eq!(
+            l_skeleton
+                .first_case_conflict(&ctx, repo.blobstore())
+                .await?,
+            None,
+        );
+
+        // Changeset M introduces a case conflict by virtue of merging the
+        // manifests of H (which has its own case conflicts) and L.
+        let m_bcs = changesets["M"].load(&ctx, repo.blobstore()).await?;
+        let m_skeleton_id = derive_skeleton_manifest(
+            &ctx,
+            &repo,
+            vec![h_skeleton_id, l_skeleton_id],
+            get_file_changes(&m_bcs),
+        )
+        .await?;
+        let m_skeleton = m_skeleton_id.load(&ctx, repo.blobstore()).await?;
+        assert_eq!(
+            m_skeleton
+                .first_case_conflict(&ctx, repo.blobstore())
+                .await?,
+            Some((
+                MPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
+                MPath::new(b"dir1/subdir1/subsubdir2")?
+            ))
+        );
+        assert_eq!(
+            m_skeleton
+                .first_new_case_conflict(&ctx, repo.blobstore(), vec![h_skeleton, l_skeleton])
+                .await?,
+            Some((
+                MPath::new(b"dir2/subdir1/subsubdir1/FILE1")?,
+                MPath::new(b"dir2/subdir1/subsubdir1/file1")?
+            )),
+        );
 
         Ok(())
     }
