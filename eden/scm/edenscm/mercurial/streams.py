@@ -9,6 +9,7 @@ from typing import Iterable
 
 import edenscm  # noqa: F401
 
+from . import util
 from .node import wdirid
 
 
@@ -24,11 +25,19 @@ def prefetchtextstream(repo, ctxstream):
 
 
 def _prefetchtextstream(repo, ctxstream):
-    # streamcommitrawtext will turn a Python iterator to a Rust Stream in a
-    # background thread. Multiple threads might try to obtain
-    # async_runtime::block_on_exclusive lock and cause deadlock. Upgrading
-    # tokio would allow us to block_on without taking &mut Runtime and avoid
-    # deadlocks.
-    #
-    # Do not streamcommitrawtext it for now.
-    return ctxstream
+    for ctxbatch in util.eachslice(ctxstream, 100):
+        # ctxbatch: [ctx]
+        nodes = [_rewritenone(c.node()) for c in ctxbatch]
+        texts = repo.changelog.inner.getcommitrawtextlist(nodes)
+        for ctx, text in zip(ctxbatch, texts):
+            ctx._text = text
+            yield ctx
+
+
+def _rewritenone(n):
+    # None is used as a way to refer to "working parent", ex. `repo[None]`.
+    # Rust bindings do not like None. Rewrite it to `wdirid`.
+    if n is None:
+        return wdirid
+    else:
+        return n
