@@ -27,6 +27,14 @@ class Guid {
     return Guid{id};
   }
 
+  explicit Guid(const std::string& s) {
+    auto ret = UuidFromStringA((RPC_CSTR)s.c_str(), &guid_);
+    if (ret != RPC_S_OK) {
+      throw makeWin32ErrorExplicit(
+          ret, fmt::format(FMT_STRING("Failed to parse UUID: {}"), s));
+    }
+  }
+
   Guid() = default;
   Guid(const GUID& guid) noexcept : guid_{guid} {}
 

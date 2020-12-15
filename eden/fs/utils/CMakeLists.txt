@@ -35,6 +35,7 @@ if (WIN32)
     eden_utils
     PUBLIC
       Userenv.lib
+      Rpcrt4.lib
   )
 endif()
 

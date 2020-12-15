@@ -16,6 +16,7 @@ import subprocess
 import sys
 import time
 import typing
+import uuid
 from pathlib import Path
 from typing import IO, Any, Dict, List, Mapping, Optional, Set, Tuple, Type, Union, cast
 
@@ -120,6 +121,7 @@ class CheckoutConfig(typing.NamedTuple):
     - backing_repo: The path where the true repo resides on disk.  For mercurial backing
         repositories this does not include the final ".hg" directory component.
     - scm_type: "hg" or "git"
+    - guid: Used on Windows by ProjectedFS to identify this checkout.
     - redirections: dict where keys are relative pathnames in the EdenFS mount
       and the values are RedirectionType enum values that describe the type of
       the redirection.
@@ -127,6 +129,7 @@ class CheckoutConfig(typing.NamedTuple):
 
     backing_repo: Path
     scm_type: str
+    guid: str
     default_revision: str
     redirections: Dict[str, "RedirectionType"]
     active_prefetch_profiles: List[str]
@@ -903,6 +906,7 @@ class EdenCheckout:
                 # TODO: replace is needed to workaround a bug in toml
                 "path": str(checkout_config.backing_repo).replace("\\", "/"),
                 "type": checkout_config.scm_type,
+                "guid": checkout_config.guid,
             },
             "redirections": redirections,
             "profiles": {"active": checkout_config.active_prefetch_profiles},
@@ -941,6 +945,10 @@ class EdenCheckout:
             raise Exception(
                 f'repository "{config_path}" has unsupported type ' f'"{scm_type}"'
             )
+
+        guid = repository.get("guid")
+        if not isinstance(guid, str):
+            guid = str(uuid.uuid4())
 
         redirections = {}
         redirections_dict = config.get("redirections")
@@ -986,6 +994,7 @@ class EdenCheckout:
         return CheckoutConfig(
             backing_repo=Path(get_field("path")),
             scm_type=scm_type,
+            guid=guid,
             redirections=redirections,
             default_revision=(
                 repository.get("default-revision") or DEFAULT_REVISION[scm_type]
@@ -1032,6 +1041,7 @@ class EdenCheckout:
         new_config = CheckoutConfig(
             backing_repo=old_config.backing_repo,
             scm_type=old_config.scm_type,
+            guid=old_config.guid,
             redirections=old_config.redirections,
             default_revision=old_config.default_revision,
             active_prefetch_profiles=new_active_profiles,
@@ -1061,6 +1071,7 @@ class EdenCheckout:
         new_config = CheckoutConfig(
             backing_repo=old_config.backing_repo,
             scm_type=old_config.scm_type,
+            guid=old_config.guid,
             redirections=old_config.redirections,
             default_revision=old_config.default_revision,
             active_prefetch_profiles=new_active_profiles,

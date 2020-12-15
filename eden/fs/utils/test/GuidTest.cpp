@@ -91,4 +91,10 @@ TEST(GuidTest, formatGuid) {
   EXPECT_EQ(s, "{811305DA-F51E-4E2D-9201-0D12A1E7F8D5}");
 }
 
+TEST(GuidTest, fromString) {
+  Guid guid{"811305DA-F51E-4E2D-9201-0D12A1E7F8D5"};
+  auto s = fmt::format(FMT_STRING("{}"), guid);
+  EXPECT_EQ(s, "{811305DA-F51E-4E2D-9201-0D12A1E7F8D5}");
+}
+
 #endif

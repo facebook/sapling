@@ -741,9 +741,10 @@ PrjfsChannel::PrjfsChannel(
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration requestTimeout,
-    Notifications* notifications)
+    Notifications* notifications,
+    Guid guid)
     : mountPath_(mountPath),
-      mountId_(Guid::generate()),
+      mountId_(std::move(guid)),
       processAccessLog_(std::move(processNameCache)) {
   auto [innerDeletedPromise, innerDeletedFuture] =
       folly::makePromiseContract<folly::Unit>();
@@ -796,7 +797,11 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
     startOpts.Flags = PRJ_FLAG_USE_NEGATIVE_PATH_CACHE;
   }
 
-  XLOG(INFO) << "Starting PrjfsChannel for: " << mountPath_;
+  XLOGF(
+      INFO,
+      "Starting PrjfsChannel for: {} with GUID: {}",
+      mountPath_,
+      mountId_);
 
   auto winPath = mountPath_.wide();
 

@@ -17,6 +17,7 @@ import subprocess
 import sys
 import time
 import typing
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Type
 
@@ -800,6 +801,7 @@ re-run `eden clone` with --allow-empty-repo"""
         repo_config = config_mod.CheckoutConfig(
             backing_repo=Path(repo.source),
             scm_type=repo.type,
+            guid=str(uuid.uuid4()),
             default_revision=config_mod.DEFAULT_REVISION[repo.type],
             redirections={},
             active_prefetch_profiles=[],

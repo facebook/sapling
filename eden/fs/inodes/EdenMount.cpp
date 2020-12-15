@@ -1227,7 +1227,8 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                              serverState_->getReloadableConfig()
                                  .getEdenConfig()
                                  ->prjfsRequestTimeout.getValue()),
-                         serverState_->getNotifications());
+                         serverState_->getNotifications(),
+                         getConfig()->getRepoGuid());
                      channel->start(
                          readOnly,
                          serverState_->getReloadableConfig()

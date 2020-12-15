@@ -605,6 +605,7 @@ def apply_redirection_configs_to_checkout_config(
     return CheckoutConfig(
         backing_repo=config.backing_repo,
         scm_type=config.scm_type,
+        guid=config.guid,
         default_revision=config.default_revision,
         redirections=redirections,
         active_prefetch_profiles=config.active_prefetch_profiles,

@@ -10,6 +10,7 @@ import os
 import shutil
 import stat
 import typing
+import uuid
 from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple, Union
 
@@ -105,6 +106,7 @@ class FakeEdenInstance:
         config = CheckoutConfig(
             backing_repo=backing_repo_path,
             scm_type=scm_type,
+            guid=uuid.uuid4(),
             default_revision=snapshot,
             redirections={},
             active_prefetch_profiles=[],

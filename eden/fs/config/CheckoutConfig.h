@@ -13,6 +13,10 @@
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/PathFuncs.h"
 
+#ifdef _WIN32
+#include "eden/fs/utils/Guid.h"
+#endif
+
 namespace facebook {
 namespace eden {
 
@@ -99,12 +103,22 @@ class CheckoutConfig {
   /** Whether this repository is mounted in case-sensitive mode */
   bool getCaseSensitive() const;
 
+#ifdef _WIN32
+  /** Guid for that repository */
+  Guid getRepoGuid() const {
+    return repoGuid_;
+  }
+#endif
+
  private:
   const AbsolutePath clientDirectory_;
   const AbsolutePath mountPath_;
   std::string repoType_;
   std::string repoSource_;
   bool caseSensitive_{!folly::kIsWindows};
+#ifdef _WIN32
+  Guid repoGuid_;
+#endif
 };
 } // namespace eden
 } // namespace facebook

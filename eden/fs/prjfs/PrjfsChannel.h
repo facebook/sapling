@@ -144,7 +144,8 @@ class PrjfsChannel {
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout,
-      Notifications* notifications);
+      Notifications* notifications,
+      Guid guid);
 
   ~PrjfsChannel();
 

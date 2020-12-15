@@ -30,6 +30,9 @@ constexpr folly::StringPiece kRepoSection{"repository"};
 constexpr folly::StringPiece kRepoSourceKey{"path"};
 constexpr folly::StringPiece kRepoTypeKey{"type"};
 constexpr folly::StringPiece kRepoCaseSensitiveKey{"case-sensitive"};
+#ifdef _WIN32
+constexpr folly::StringPiece kRepoGuid{"guid"};
+#endif
 
 // Files of interest in the client directory.
 const facebook::eden::RelativePathPiece kSnapshotFile{"SNAPSHOT"};
@@ -176,6 +179,11 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   auto caseSensitive = repository->get_as<bool>(kRepoCaseSensitiveKey.str());
   config->caseSensitive_ =
       caseSensitive ? *caseSensitive : kPathMapDefaultCaseSensitive;
+
+#ifdef _WIN32
+  auto guid = repository->get_as<std::string>(kRepoGuid.str());
+  config->repoGuid_ = guid ? Guid{*guid} : Guid::generate();
+#endif
 
   return config;
 }
