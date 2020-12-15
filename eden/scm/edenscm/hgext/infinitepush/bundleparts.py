@@ -216,11 +216,23 @@ def _handlelfs(repo, missing):
     """
     try:
         lfsmod = extensions.find("lfs")
-        with perftrace.trace("Upload LFS Blobs"):
-            lfsmod.wrapper.uploadblobsfromrevs(repo, missing)
     except KeyError:
         # Ignore if lfs extension is not enabled
-        return
+        pass
+    else:
+        with perftrace.trace("Upload LFS Blobs"):
+            lfsmod.wrapper.uploadblobsfromrevs(repo, missing)
+
+    # But wait! LFS could also be provided via remotefilelog.
+    try:
+        remotefilelog = extensions.find("remotefilelog")
+    except KeyError:
+        # Ignore if remotefilelog extension is not enabled
+        pass
+    else:
+        if remotefilelog.shallowrepo.requirement in repo.requirements:
+            with perftrace.trace("Upload LFS Blobs"):
+                remotefilelog.uploadblobs(repo, missing)
 
 
 def _bundlesetup():
