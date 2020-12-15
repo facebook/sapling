@@ -20,6 +20,7 @@ import sys
 import bindings
 import edenscm
 import edenscmnative
+from edenscm import hgdemandimport
 from edenscm import hgext, mercurial, traceimport
 from edenscm.hgext import commitcloud as cc
 from edenscm.mercurial import pycompat, registrar, util
@@ -112,7 +113,9 @@ def debugshell(ui, repo, *args, **opts):
         exec(command)
         return 0
 
-    _startipython(ui, repo)
+    # IPython is incompatible with demandimport.
+    with hgdemandimport.deactivated():
+        _startipython(ui, repo)
 
 
 def _startipython(ui, repo):
