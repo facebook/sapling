@@ -2085,11 +2085,10 @@ void EdenServiceHandler::getConfig(
 
 std::optional<pid_t> EdenServiceHandler::getAndRegisterClientPid() {
 #ifndef _WIN32
-  // The ConnectionContext for a thrift request is kept in a thread local
+  // The Cpp2RequestContext for a thrift request is kept in a thread local
   // on the thread which the request originates. This means this must be run
-  // on the Thread in which a thrift request originates in order to correctly
-  // get the ConnectionContext for that request.
-  auto connectionContext = getConnectionContext();
+  // on the Thread in which a thrift request originates.
+  auto connectionContext = getRequestContext();
   // if connectionContext will be a null pointer in an async method, so we need
   // to check for this
   if (connectionContext) {
