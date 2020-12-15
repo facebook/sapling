@@ -33,6 +33,8 @@ def is_buckd_running_for_path(path: str) -> bool:
     try:
         with open(pid_file, "r") as f:
             buckd_pid = int(f.read().strip())
+    except ValueError:
+        return False
     except OSError as exc:
         if exc.errno == errno.ENOENT:
             return False
