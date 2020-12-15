@@ -146,13 +146,9 @@ impl Drop for Resolver {
 impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
     fn resolve_local(&mut self, vertex: &Vertex) -> anyhow::Result<Option<Bytes>> {
         let id = Id20::from_slice(vertex.as_ref())?;
-        // Mercurial hard-coded special-case that does not match SHA1.
-        if id.is_null() || id.is_wdir() {
-            return Ok(Some(Default::default()));
-        }
         match self.zstore.read().get(id)? {
             Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
-            None => Ok(None),
+            None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
         }
     }
 

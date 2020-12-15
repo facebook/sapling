@@ -152,7 +152,7 @@ impl ReadCommitText for HgCommits {
         let id = Id20::from_slice(vertex.as_ref())?;
         match self.commits.read().get(id)? {
             Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
-            None => Ok(None),
+            None => Ok(crate::revlog::get_hard_coded_commit_text(vertex)),
         }
     }
 }

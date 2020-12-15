@@ -36,6 +36,16 @@ pub struct RevlogCommits {
     pub(crate) dir: PathBuf,
 }
 
+/// Hardcoded commit hashes defied by hg.
+pub(crate) fn get_hard_coded_commit_text(vertex: &Vertex) -> Option<Bytes> {
+    let vertex = vertex.as_ref();
+    if vertex == Id20::null_id().as_ref() || vertex == Id20::wdir_id().as_ref() {
+        Some(Default::default())
+    } else {
+        None
+    }
+}
+
 impl RevlogCommits {
     pub fn new(dir: &Path) -> Result<Self> {
         let index_path = dir.join("00changelog.i");
@@ -81,7 +91,7 @@ impl ReadCommitText for RevlogCommits {
             .await?
         {
             Some(id) => Ok(Some(self.revlog.raw_data(id.0 as u32)?)),
-            None => Ok(None),
+            None => Ok(get_hard_coded_commit_text(vertex)),
         }
     }
 }
@@ -95,13 +105,8 @@ impl StreamCommitText for RevlogCommits {
         let stream = stream.map(move |item| {
             let vertex = item?;
             // Mercurial hard-coded special-case that does not match SHA1.
-            if vertex.as_ref() == Id20::null_id().as_ref()
-                || vertex.as_ref() == Id20::wdir_id().as_ref()
-            {
-                return Ok(ParentlessHgCommit {
-                    vertex,
-                    raw_text: Default::default(),
-                });
+            if let Some(raw_text) = get_hard_coded_commit_text(&vertex) {
+                return Ok(ParentlessHgCommit { vertex, raw_text });
             }
             match non_blocking_result(revlog.vertex_id_with_max_group(&vertex, Group::NON_MASTER))?
             {
