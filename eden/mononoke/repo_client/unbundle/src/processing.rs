@@ -400,7 +400,7 @@ async fn run_pushrebase(
         // `BundleResolverError::Error`, which in turn would render incorrectly
         // (see definition of `BundleResolverError`).
         PushrebaseBookmarkSpec::NormalPushrebase(onto_bookmark) => {
-            normal_pushrebase(
+            let (pushrebased_rev, pushrebased_changesets) = normal_pushrebase(
                 ctx,
                 repo,
                 &pushrebase_params,
@@ -416,46 +416,63 @@ async fn run_pushrebase(
                 cross_repo_push_source,
                 readonly_fetcher,
             )
-            .await?
+            .await?;
+            let new_commits: Vec<ChangesetId> =
+                pushrebased_changesets.iter().map(|p| p.id_new).collect();
+            log_commits_to_scribe(
+                ctx,
+                repo,
+                Some(&bookmark),
+                new_commits
+                    .into_iter()
+                    .zip(changed_files_count.into_iter())
+                    .collect(),
+                pushrebase_params.commit_scribe_category.clone(),
+            )
+            .await;
+            (pushrebased_rev, pushrebased_changesets)
         }
-        PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => force_pushrebase(
-            ctx,
-            repo,
-            &pushrebase_params,
-            lca_hint,
-            hook_manager,
-            uploaded_bonsais,
-            plain_push,
-            maybe_pushvars.as_ref(),
-            &maybe_hg_replay_data,
-            bookmark_attrs,
-            infinitepush_params,
-            hook_rejection_remapper.as_ref(),
-            cross_repo_push_source,
-            readonly_fetcher,
-        )
-        .await
-        .context("While doing a force pushrebase")?,
+        PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
+            let mut new_changeset_ids_and_changed_files_count = Vec::new();
+            for bcs in &uploaded_bonsais {
+                let cs_id = bcs.get_changeset_id();
+                new_changeset_ids_and_changed_files_count
+                    .push((cs_id, bcs.file_changes_map().len()));
+            }
+            let (pushrebased_rev, pushrebased_changesets) = force_pushrebase(
+                ctx,
+                repo,
+                &pushrebase_params,
+                lca_hint,
+                hook_manager,
+                uploaded_bonsais,
+                plain_push,
+                maybe_pushvars.as_ref(),
+                &maybe_hg_replay_data,
+                bookmark_attrs,
+                infinitepush_params,
+                hook_rejection_remapper.as_ref(),
+                cross_repo_push_source,
+                readonly_fetcher,
+            )
+            .await
+            .context("While doing a force pushrebase")?;
+            log_commits_to_scribe(
+                ctx,
+                repo,
+                Some(&bookmark),
+                new_changeset_ids_and_changed_files_count,
+                pushrebase_params.commit_scribe_category.clone(),
+            )
+            .await;
+            (pushrebased_rev, pushrebased_changesets)
+        }
     };
 
     repo.get_phases()
         .add_reachable_as_public(ctx.clone(), vec![pushrebased_rev.clone()])
         .await
         .context("While marking pushrebased changeset as public")?;
-
-    let new_commits: Vec<ChangesetId> = pushrebased_changesets.iter().map(|p| p.id_new).collect();
-
-    log_commits_to_scribe(
-        ctx,
-        repo,
-        Some(&bookmark),
-        new_commits
-            .into_iter()
-            .zip(changed_files_count.into_iter())
-            .collect(),
-        pushrebase_params.commit_scribe_category.clone(),
-    )
-    .await;
 
     Ok(UnbundlePushRebaseResponse {
         commonheads,
@@ -591,11 +608,9 @@ async fn force_pushrebase(
         .new
         .ok_or_else(|| anyhow!("new changeset is required for force pushrebase"))?;
 
-    let mut new_changeset_ids_and_changed_files_count = Vec::new();
     let mut new_changesets = HashMap::new();
     for bcs in uploaded_bonsais {
         let cs_id = bcs.get_changeset_id();
-        new_changeset_ids_and_changed_files_count.push((cs_id, bcs.file_changes_map().len()));
         new_changesets.insert(cs_id, bcs);
     }
 
@@ -627,15 +642,6 @@ async fn force_pushrebase(
         readonly_fetcher,
     )
     .await?;
-
-    log_commits_to_scribe(
-        ctx,
-        repo,
-        Some(&bookmark_push.name),
-        new_changeset_ids_and_changed_files_count,
-        pushrebase_params.commit_scribe_category.clone(),
-    )
-    .await;
 
     // Note that this push did not do any actual rebases, so we do not
     // need to provide any actual mapping, an empty Vec will do
