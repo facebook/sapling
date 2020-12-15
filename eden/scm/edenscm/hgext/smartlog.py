@@ -353,7 +353,7 @@ def smartlogrevset(repo, subset, x):
             repo.revs("%ld - (heads(%ld) + roots(%ld))", obsrevs, obsrevs, obsrevs),
             repo=repo,
         )
-        revs = repo.revs("%ld - %ld", revs, hiderevs)
+        revs = repo.revs("(%ld - %ld) + %ld", revs, hiderevs, heads)
 
     return subset & revs
 
@@ -375,7 +375,7 @@ def smartlognodes(repo, headnodes, masternodes):
     if repo.ui.configbool("smartlog", "collapse-obsolete") and not repo.ui.plain():
         obsnodes = repo.dageval(lambda: nodes & obsolete())
         hidenodes = repo.dageval(lambda: obsnodes - heads(obsnodes) - roots(obsnodes))
-        nodes = nodes - hidenodes
+        nodes = nodes - hidenodes + headnodes
 
     return nodes
 
