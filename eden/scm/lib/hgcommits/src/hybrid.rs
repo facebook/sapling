@@ -20,6 +20,7 @@ use dag::delegate;
 use dag::Set;
 use dag::Vertex;
 use edenapi::EdenApi;
+use futures::stream;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use futures::stream::TryStreamExt;
@@ -91,6 +92,14 @@ impl AppendCommits for HybridCommits {
 impl ReadCommitText for HybridCommits {
     async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         self.commits.get_commit_raw_text(vertex).await
+    }
+
+    async fn get_commit_raw_text_list(&self, vertexes: &[Vertex]) -> Result<Vec<Bytes>> {
+        let vertexes: Vec<Vertex> = vertexes.to_vec();
+        let stream =
+            self.stream_commit_raw_text(Box::pin(stream::iter(vertexes.into_iter().map(Ok))))?;
+        let commits: Vec<Bytes> = stream.map(|c| c.map(|c| c.raw_text)).try_collect().await?;
+        Ok(commits)
     }
 }
 

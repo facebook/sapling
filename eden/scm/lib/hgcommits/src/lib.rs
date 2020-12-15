@@ -10,6 +10,7 @@
 //! Commits stored in HG format and backed by efficient `dag` structures.
 
 use dag::Vertex;
+use futures::future::try_join_all;
 use futures::stream::BoxStream;
 use minibytes::Bytes;
 use serde::Deserialize;
@@ -17,9 +18,24 @@ use serde::Serialize;
 use std::io;
 
 #[async_trait::async_trait]
-pub trait ReadCommitText {
+pub trait ReadCommitText: Sync {
     /// Read raw text for a commit.
-    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>>;
+    async fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
+        let list = self.get_commit_raw_text_list(&[vertex.clone()]).await?;
+        Ok(Some(list.into_iter().next().unwrap()))
+    }
+
+    /// Read commit text in batch. Any of the missing commits would cause an error.
+    async fn get_commit_raw_text_list(&self, vertexes: &[Vertex]) -> Result<Vec<Bytes>> {
+        try_join_all(vertexes.iter().map(|v| async move {
+            match self.get_commit_raw_text(v).await {
+                Err(e) => Err(e),
+                Ok(None) => v.not_found().map_err(|e| e.into()),
+                Ok(Some(b)) => Ok(b),
+            }
+        }))
+        .await
+    }
 }
 
 pub trait StreamCommitText {
