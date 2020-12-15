@@ -142,7 +142,7 @@ HRESULT getFileData(
   }
 }
 
-void cancelCommand(const PRJ_CALLBACK_DATA* callbackData) noexcept {
+void cancelCommand(const PRJ_CALLBACK_DATA* /*callbackData*/) noexcept {
   // TODO(T67329233): Interrupt the future.
 }
 
@@ -165,7 +165,6 @@ HRESULT notification(
       // the working copy at mount time to find these files and fixup EdenFS
       // inodes.
       EDEN_BUG() << "A notification was received while unmounting";
-      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
     return channel->notification(
@@ -233,7 +232,7 @@ HRESULT PrjfsChannelInner::startEnumeration(
 }
 
 HRESULT PrjfsChannelInner::endEnumeration(
-    const PRJ_CALLBACK_DATA* callbackData,
+    const PRJ_CALLBACK_DATA* /*callbackData*/,
     const GUID* enumerationId) {
   auto guid = Guid(*enumerationId);
   FB_LOGF(getStraceLogger(), DBG7, "closedir({})", guid);
@@ -540,7 +539,7 @@ HRESULT PrjfsChannelInner::getFileData(
             path,
             byteOffset,
             length);
-        return dispatcher->read(std::move(path), byteOffset, length, *context)
+        return dispatcher->read(std::move(path), *context)
             .thenValue([context,
                         virtualizationContext = virtualizationContext,
                         dataStreamId = std::move(dataStreamId),
@@ -676,7 +675,7 @@ HRESULT PrjfsChannelInner::notification(
     BOOLEAN isDirectory,
     PRJ_NOTIFICATION notificationType,
     PCWSTR destinationFileName,
-    PRJ_NOTIFICATION_PARAMETERS* notificationParameters) {
+    PRJ_NOTIFICATION_PARAMETERS* /*notificationParameters*/) {
   auto it = notificationHandlerMap.find(notificationType);
   if (it == notificationHandlerMap.end()) {
     XLOG(WARN) << "Unrecognized notification: " << notificationType;

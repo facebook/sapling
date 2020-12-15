@@ -478,11 +478,10 @@ EdenDispatcher::EdenDispatcher(EdenMount* mount)
 folly::Future<std::vector<FileMetadata>> EdenDispatcher::opendir(
     RelativePathPiece path,
     ObjectFetchContext& context) {
-  return mount_->getInode(path, context)
-      .thenValue([this](const InodePtr inode) {
-        auto treePtr = inode.asTreePtr();
-        return treePtr->readdir();
-      });
+  return mount_->getInode(path, context).thenValue([](const InodePtr inode) {
+    auto treePtr = inode.asTreePtr();
+    return treePtr->readdir();
+  });
 }
 
 folly::Future<std::optional<LookupResult>> EdenDispatcher::lookup(
@@ -546,8 +545,6 @@ folly::Future<bool> EdenDispatcher::access(
 
 folly::Future<std::string> EdenDispatcher::read(
     RelativePath path,
-    uint64_t byteOffset,
-    uint32_t length,
     ObjectFetchContext& context) {
   return mount_->getInode(path, context)
       .thenValue([&context](const InodePtr inode) {
@@ -621,7 +618,7 @@ folly::Future<folly::Unit> createFile(
     bool isDirectory,
     ObjectFetchContext& context) {
   return createDirInode(mount, path.dirname(), context)
-      .thenValue([=, &mount](const TreeInodePtr treeInode) {
+      .thenValue([=](const TreeInodePtr treeInode) {
         if (isDirectory) {
           try {
             auto inode = treeInode->mkdir(
@@ -711,7 +708,7 @@ folly::Future<folly::Unit> removeFile(
 
 folly::Future<folly::Unit> EdenDispatcher::newFileCreated(
     RelativePath relPath,
-    RelativePath destPath,
+    RelativePath /*destPath*/,
     bool isDirectory,
     ObjectFetchContext& context) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
@@ -726,8 +723,8 @@ folly::Future<folly::Unit> EdenDispatcher::newFileCreated(
 
 folly::Future<folly::Unit> EdenDispatcher::fileOverwritten(
     RelativePath relPath,
-    RelativePath destPath,
-    bool isDirectory,
+    RelativePath /*destPath*/,
+    bool /*isDirectory*/,
     ObjectFetchContext& context) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
   FB_LOGF(mount_->getStraceLogger(), DBG7, "overwrite({})", relPath);
@@ -736,8 +733,8 @@ folly::Future<folly::Unit> EdenDispatcher::fileOverwritten(
 
 folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileModified(
     RelativePath relPath,
-    RelativePath destPath,
-    bool isDirectory,
+    RelativePath /*destPath*/,
+    bool /*isDirectory*/,
     ObjectFetchContext& context) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
   FB_LOGF(mount_->getStraceLogger(), DBG7, "modified({})", relPath);
@@ -767,8 +764,8 @@ folly::Future<folly::Unit> EdenDispatcher::fileRenamed(
 folly::Future<folly::Unit> EdenDispatcher::preRename(
     RelativePath oldPath,
     RelativePath newPath,
-    bool isDirectory,
-    ObjectFetchContext& context) {
+    bool /*isDirectory*/,
+    ObjectFetchContext& /*context*/) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
   FB_LOGF(
       mount_->getStraceLogger(), DBG7, "prerename({} -> {})", oldPath, newPath);
@@ -777,7 +774,7 @@ folly::Future<folly::Unit> EdenDispatcher::preRename(
 
 folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileDeleted(
     RelativePath oldPath,
-    RelativePath destPath,
+    RelativePath /*destPath*/,
     bool isDirectory,
     ObjectFetchContext& context) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
@@ -792,9 +789,9 @@ folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileDeleted(
 
 folly::Future<folly::Unit> EdenDispatcher::preSetHardlink(
     RelativePath relPath,
-    RelativePath destPath,
-    bool isDirectory,
-    ObjectFetchContext& context) {
+    RelativePath /*destPath*/,
+    bool /*isDirectory*/,
+    ObjectFetchContext& /*context*/) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
   FB_LOGF(mount_->getStraceLogger(), DBG7, "link({})", relPath);
   return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(

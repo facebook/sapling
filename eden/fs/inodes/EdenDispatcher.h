@@ -122,8 +122,6 @@ class EdenDispatcher : public Dispatcher {
 
   folly::Future<std::string> read(
       RelativePath path,
-      uint64_t offset,
-      uint32_t length,
       ObjectFetchContext& context) override;
 
   folly::Future<folly::Unit> newFileCreated(

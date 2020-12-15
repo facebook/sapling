@@ -47,7 +47,7 @@ struct FileMetadata {
         isDirectory(isDir),
         sizeFuture_(std::move(sizeFuture)) {}
 
-  FileMetadata() = default;
+  FileMetadata() = delete;
 
  private:
   folly::Future<size_t> sizeFuture_;
