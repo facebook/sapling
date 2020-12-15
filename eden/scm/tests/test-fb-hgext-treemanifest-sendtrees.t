@@ -69,11 +69,11 @@ Make a draft commit
   
 
 Test bundling/unbundling
-  $ hg bundle -r . --base '.^' ../treebundle.hg --debug | grep treegroup
+  $ hg bundle -r . --base '.^' ../treebundle.hg --debug 2>&1 | grep treegroup
   bundle2-output-part: "b2x:treegroup2" (params: 3 mandatory) streamed payload
 
   $ cd ../client2
-  $ hg unbundle ../treebundle.hg --debug | grep treegroup
+  $ hg unbundle ../treebundle.hg --debug 2>&1 | grep treegroup
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   $ hg debugdatapack .hg/store/packs/manifests/*datapack
   .hg/store/packs/manifests/5395c3a9f408d2f2ffac93a2f1d6f039234be6ff:
@@ -86,5 +86,5 @@ Test bundling/unbundling
   c0196aba344d  000000000000  49            (missing)
   
 Test pushing
-  $ hg push -r tip --to master --debug 2>&1 | grep rebasepackpart
+  $ hg push -r tip --to master --debug 2>&1 2>&1 | grep rebasepackpart
   bundle2-output-part: "b2x:rebasepackpart" (params: 3 mandatory) streamed payload

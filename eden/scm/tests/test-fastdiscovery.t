@@ -34,7 +34,7 @@ Make client shallow clone
 
 Make sure that fastdiscovery is used for pull
   $ cd ../client
-  $ hg pull --debug | grep fastdiscovery
+  $ hg pull --debug 2>&1 | grep fastdiscovery
   using fastdiscovery
 
 Make sure that fastdiscovery is used for push

@@ -20,7 +20,7 @@ Rebasing using a single transaction
   > EOF
 - We should only see two status stored messages. One from the start, one from
 - the end.
-  $ hg rebase --debug -b D -d Z | grep 'status stored'
+  $ hg rebase --debug -b D -d Z 2>&1 | grep 'status stored'
   rebase status stored
   rebase status stored
   $ tglog

@@ -18,7 +18,7 @@ Load commonly used test logic
   $ cd ..
 
 clone a branch
-  $ hg clone -r beta gitrepo hgrepo-b | grep -v '^updating'
+  $ hg clone -r beta gitrepo hgrepo-b 2>&1 | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo-b log --graph
@@ -40,7 +40,7 @@ Make sure this is still draft since we didn't pull remote's HEAD
 
 clone with mapsavefreq set
   $ rm -rf hgrepo-b
-  $ hg clone -r beta gitrepo hgrepo-b --config hggit.mapsavefrequency=1 --debug | egrep "(saving|committing)"
+  $ hg clone -r beta gitrepo hgrepo-b --config hggit.mapsavefrequency=1 --debug 2>&1 | egrep "(saving|committing)"
   committing files:
   committing manifest
   committing changelog

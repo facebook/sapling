@@ -120,13 +120,13 @@ issue4463: usage of command line configuration without additional quoting
   $ hg update -q -C 'desc(test1)'
   $ echo a >> a
 
-  $ hg --debug 4463a | grep '^running'
+  $ hg --debug 4463a 2>&1 | grep '^running'
   running 'echo a-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
   running 'echo a-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob) (no-windows !)
-  $ hg --debug 4463b | grep '^running'
+  $ hg --debug 4463b 2>&1 | grep '^running'
   running 'echo b-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
   running 'echo b-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob) (no-windows !)
-  $ hg --debug echo | grep '^running'
+  $ hg --debug echo 2>&1 | grep '^running'
   running '*echo* "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
   running '*echo */a $TESTTMP/a/a' in */extdiff.* (glob) (no-windows !)
 
@@ -146,19 +146,19 @@ issue4463: usage of command line configuration without additional quoting
   > 4463b3.diffargs = b3-naked 'single quoted' "double quoted"
   > EOF
 
-  $ hg --debug 4463b2 | grep '^running'
+  $ hg --debug 4463b2 2>&1 | grep '^running'
   running 'echo b2-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
   running 'echo b2-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob) (no-windows !)
-  $ hg --debug 4463b3 | grep '^running'
+  $ hg --debug 4463b3 2>&1 | grep '^running'
   running 'echo b3-naked \'single quoted\' "double quoted" "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
   running 'echo b3-naked \'single quoted\' "double quoted" */a $TESTTMP/a/a' in */extdiff.* (glob) (no-windows !)
-  $ hg --debug 4463b4 | grep '^running'
+  $ hg --debug 4463b4 2>&1 | grep '^running'
   running 'echo "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
   running 'echo */a $TESTTMP/a/a' in */extdiff.* (glob) (no-windows !)
-  $ hg --debug 4463b4 --option b4-naked --option 'being quoted' | grep '^running'
+  $ hg --debug 4463b4 --option b4-naked --option 'being quoted' 2>&1 | grep '^running'
   running 'echo b4-naked "being quoted" "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
   running "echo b4-naked 'being quoted' */a $TESTTMP/a/a" in */extdiff.* (glob) (no-windows !)
-  $ hg --debug extdiff -p echo --option echo-naked --option 'being quoted' | grep '^running'
+  $ hg --debug extdiff -p echo --option echo-naked --option 'being quoted' 2>&1 | grep '^running'
   running 'echo echo-naked "being quoted" "*\\a" "*\\a"' in */extdiff.* (glob) (windows !)
   running "echo echo-naked 'being quoted' */a $TESTTMP/a/a" in */extdiff.* (glob) (no-windows !)
 
@@ -177,7 +177,7 @@ Test pre-72a89cf86fcd backward compatibility with half-baked manual quoting
   > odd.executable = echo
   > EOF
 
-  $ hg --debug odd | grep '^running'
+  $ hg --debug odd 2>&1 | grep '^running'
   running '"*\\echo.exe" --foo="sp ace" "sp ace" --bar="sp ace" "sp ace"' in * (glob) (windows !)
   running "*/echo --foo='sp ace' 'sp ace' --bar='sp ace' 'sp ace'" in * (glob) (no-windows !)
 
@@ -190,7 +190,7 @@ Empty argument must be quoted
   > kdiff3.diffargs=--L1 \$plabel1 --L2 \$clabel \$parent \$child
   > EOF
 
-  $ hg --debug kdiff3 -r'desc(test1)' | grep '^running'
+  $ hg --debug kdiff3 -r'desc(test1)' 2>&1 | grep '^running'
   running 'echo --L1 "@0" --L2 "" a.8a5febb7f867 a' in * (glob) (windows !)
   running "echo --L1 '@0' --L2 '' a.8a5febb7f867 a" in * (glob) (no-windows !)
 

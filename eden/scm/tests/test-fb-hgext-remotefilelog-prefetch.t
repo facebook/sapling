@@ -293,11 +293,11 @@
 
 # Test connection pool lifetime
   $ clearcache
-  $ hg prefetch -r 0::1 --debug --config connectionpool.lifetime=0 | grep 'closing expired connection'
+  $ hg prefetch -r 0::1 --debug --config connectionpool.lifetime=0 2>&1 | grep 'closing expired connection'
   4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob) (?)
   closing expired connection to ssh://user@dummy/master
   $ clearcache
-  $ hg prefetch -r 0::1 --debug --config connectionpool.lifetime=300 | grep 'closing expired connection'
+  $ hg prefetch -r 0::1 --debug --config connectionpool.lifetime=300 2>&1 | grep 'closing expired connection'
   4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over * (glob) (?)
   [1]
 
@@ -315,7 +315,7 @@
   >     repo.ui.debug("got third connection\n")
   >     time.sleep(2)
   > EOF
-  $ hg debugshell --command "`cat $TESTTMP/testpool`" --config connectionpool.lifetime=1 --debug | grep 'connection'
+  $ hg debugshell --command "`cat $TESTTMP/testpool`" --config connectionpool.lifetime=1 --debug 2>&1 | grep 'connection'
   got first connection
   reusing connection from pool
   got second connection

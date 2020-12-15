@@ -107,12 +107,12 @@ On processs waiting on another, warning after a long time (debug output on)
   $ wait
   $ cat preup-stdout
   calling hook pre-update: hghook_pre-update.sleephalf
-  locker is still running (full unique id: '*') (glob)
-  waiting for lock on working directory of b held by process '*' on host '*' (glob)
-  (hint: run 'hg debugprocesstree *' to see related processes) (glob)
-  got lock after * seconds (glob)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat preup-stderr
+  locker is still running (full unique id: '*') (glob)
+  waiting for lock on working directory of b held by process '*' on host * (glob)
+  (hint: run * to see related processes) (glob)
+  got lock after 1 seconds
   $ cat stdout
   adding e
 
@@ -126,12 +126,12 @@ On processs waiting on another, warning disabled, (debug output on)
   $ wait
   $ cat preup-stdout
   calling hook pre-update: hghook_pre-update.sleephalf
-  locker is still running (full unique id: '*') (glob)
-  waiting for lock on working directory of b held by process '*' on host '*' (glob)
-  (hint: run 'hg debugprocesstree *' to see related processes) (glob)
-  got lock after * seconds (glob)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat preup-stderr
+  locker is still running (full unique id: '*') (glob)
+  waiting for lock on working directory of b held by process '*' on host * (glob)
+  (hint: run * to see related processes) (glob)
+  got lock after 1 seconds
   $ cat stdout
   adding f
 

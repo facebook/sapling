@@ -116,9 +116,9 @@ in the "fctx" mode with the "annotate" command, the client also downloads the
 cache. but not in the (default) "fastannotate" mode.
 
   $ rm $p1/a.l $p1/a.m
-  $ hg annotate a --debug | grep 'fastannotate: writing'
+  $ hg annotate a --debug 2>&1 | grep 'fastannotate: writing'
   [1]
-  $ hg annotate a --config fastannotate.modes=fctx --debug | grep 'fastannotate: writing' | sort
+  $ hg annotate a --config fastannotate.modes=fctx --debug 2>&1 | grep 'fastannotate: writing' | sort
   fastannotate: writing 112 bytes to fastannotate/default/a.l
   fastannotate: writing 94 bytes to fastannotate/default/a.m
 
@@ -130,7 +130,7 @@ have the same content (because the client downloads from the server)
 
 in the "fctx" mode, the client could also build the cache locally
 
-  $ hg annotate a --config fastannotate.modes=fctx --debug --config fastannotate.mainbranch=4 | grep fastannotate
+  $ hg annotate a --config fastannotate.modes=fctx --debug --config fastannotate.mainbranch=4 2>&1 | grep fastannotate
   fastannotate: requesting 1 files
   fastannotate: server returned
   fastannotate: a: 1 new changesets in the main branch
@@ -140,7 +140,7 @@ the server would rebuild broken cache automatically
   $ cp $p2/a.m $p2/a.m.bak
   $ echo BROKEN1 > $p1/a.m
   $ echo BROKEN2 > $p2/a.m
-  $ hg fastannotate a --debug | grep 'fastannotate: writing' | sort
+  $ hg fastannotate a --debug 2>&1 | grep 'fastannotate: writing' | sort
   fastannotate: writing 112 bytes to fastannotate/default/a.l
   fastannotate: writing 94 bytes to fastannotate/default/a.m
   $ diff $p1/a.m $p2/a.m
@@ -200,5 +200,5 @@ with serverbuildondemand=False, the server will not build anything
   > serverbuildondemand=False
   > EOF
   $ rm -rf $p1 $p2
-  $ hg fastannotate a --debug | grep 'fastannotate: writing'
+  $ hg fastannotate a --debug 2>&1 | grep 'fastannotate: writing'
   [1]

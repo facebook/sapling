@@ -33,7 +33,7 @@ Rebase a simple DAG:
   c (no-eol)
   $ hg cat -r $b b
   b (no-eol)
-  $ hg rebase --debug -r $b -d $c | grep rebasing
+  $ hg rebase --debug -r $b -d $c 2>&1 | grep rebasing
   rebasing in-memory
   rebasing db0e82a16a62 "b"
   $ tglog
@@ -92,7 +92,7 @@ Write files to the working copy, and ensure they're still there after the rebase
   b (no-eol)
   $ hg cat -r 'desc(c)' e
   somefile (no-eol)
-  $ hg rebase --debug -s $b -d $a | grep rebasing
+  $ hg rebase --debug -s $b -d $a 2>&1 | grep rebasing
   rebasing in-memory
   rebasing db0e82a16a62 "b"
   $ tglog
@@ -108,7 +108,7 @@ Write files to the working copy, and ensure they're still there after the rebase
   c (no-eol)
   $ hg cat -r 'desc(b)' b
   b (no-eol)
-  $ hg rebase --debug -s 'desc(d)' -d 'desc(b)' | grep rebasing
+  $ hg rebase --debug -s 'desc(d)' -d 'desc(b)' 2>&1 | grep rebasing
   rebasing in-memory
   rebasing 02952614a83d "d"
   rebasing f56b71190a8f "c"
@@ -167,7 +167,7 @@ Rebase the working copy parent:
   $ cd repo2
   $ hg up -C 'desc(c)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg rebase -r '753feb6fd12a' -d 'desc(a)' --debug | egrep 'rebasing|disabling'
+  $ hg rebase -r '753feb6fd12a' -d 'desc(a)' --debug 2>&1 | egrep 'rebasing|disabling'
   rebasing in-memory
   rebasing 753feb6fd12a "c"
   $ tglog

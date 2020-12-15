@@ -57,7 +57,7 @@ Block full streaming clones
 
 Clone with background file closing enabled
 
-  $ hg --debug --config worker.backgroundclose=true --config worker.backgroundcloseminfilecount=1 clone --stream -U ssh://user@dummy/server clone-background | grep -v adding
+  $ hg --debug --config worker.backgroundclose=true --config worker.backgroundcloseminfilecount=1 clone --stream -U ssh://user@dummy/server clone-background 2>&1 | grep -v adding
   running * 'user@dummy' 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command

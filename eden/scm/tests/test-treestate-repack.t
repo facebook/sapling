@@ -30,7 +30,7 @@ Make some commits
 
   $ newrepo
   $ touch -t 200001010000 a b c d e
-  $ hg ci -m init -A a b c d e -q --debug | grep treestate
+  $ hg ci -m init -A a b c d e -q --debug 2>&1 | grep treestate
   treestate repack threshold set to 507
   $ hg debugtreestate
   dirstate v2 (using treestate/00000000-0000-0000-0000-000000000000, offset 169, 5 files tracked)
@@ -53,7 +53,7 @@ Auto repack happens when treestate exceeds size threshold
   >   echo .
   >   echo $i > a
   >   touch -t 200001010000 a
-  >   hg ci -m modify -q --debug | grep treestate
+  >   hg ci -m modify -q --debug 2>&1 | grep treestate
   > done
   .
   treestate repack threshold set to 657

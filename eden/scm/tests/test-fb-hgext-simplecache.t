@@ -228,15 +228,15 @@ Test strange (unicode) filenames
   +x
   
 Test local cache eviction
-  $ echo 'x' >> y && hg commit -qm "1" && hg export --debug > /dev/null
-  $ echo 'x' >> y && hg commit -qm "2" && hg export --debug > /dev/null
-  $ echo 'x' >> y && hg commit -qm "3" && hg export --debug > /dev/null
-  $ echo 'x' >> y && hg commit -qm "4" && hg export --debug > /dev/null
-  $ echo 'x' >> y && hg commit -qm "5" && hg export --debug > /dev/null
-  $ echo 'x' >> y && hg commit -qm "6" && hg export --debug > /dev/null
+  $ echo 'x' >> y && hg commit -qm "1" && hg export --debug &> /dev/null
+  $ echo 'x' >> y && hg commit -qm "2" && hg export --debug &> /dev/null
+  $ echo 'x' >> y && hg commit -qm "3" && hg export --debug &> /dev/null
+  $ echo 'x' >> y && hg commit -qm "4" && hg export --debug &> /dev/null
+  $ echo 'x' >> y && hg commit -qm "5" && hg export --debug &> /dev/null
+  $ echo 'x' >> y && hg commit -qm "6" && hg export --debug &> /dev/null
   $ ls $TESTTMP/hgsimplecache | grep -c buildstatus
   8
   $ echo 'x' >> y && hg commit -qm "7"
-  $ hg --debug --config simplecache.maxcachesize=2 --config simplecache.evictionpercent=50 export > /dev/null
+  $ hg --debug --config simplecache.maxcachesize=2 --config simplecache.evictionpercent=50 export &> /dev/null
   $ ls $TESTTMP/hgsimplecache | grep -c buildstatus
   5

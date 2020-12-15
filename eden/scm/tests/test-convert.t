@@ -375,7 +375,7 @@ user permissions should succeed
 test pre and post conversion actions
 
   $ echo 'include b' > filemap
-  $ hg convert --debug --filemap filemap a partialb | \
+  $ hg convert --debug --filemap filemap a partialb 2>&1 | \
   >     grep 'run hg'
   run hg source pre-conversion action
   run hg sink pre-conversion action

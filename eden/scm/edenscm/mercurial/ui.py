@@ -1303,7 +1303,7 @@ class ui(object):
         """
         if self.debugflag:
             opts[r"label"] = opts.get(r"label", "") + " ui.debug"
-            self.write(*msg, **opts)
+            self.write_err(*msg, **opts)
 
     def edit(
         self,
