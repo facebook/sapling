@@ -5,11 +5,11 @@
 # directory of this source tree.
 
   $ export COMMIT_SCRIBE_CATEGORY=mononoke_commits
+  $ export DRAFT_COMMIT_SCRIBE_CATEGORY=draft_mononoke_commits
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ setup_common_config
-
+  $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
   $ cd $TESTTMP
 
 setup repo
@@ -74,6 +74,24 @@ create new commits in repo2 and check that they are seen as outgoing
   "master_bookmark"
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
   "022352db2112d2f43ca2635686a6275ade50d612865551fa8d1f392b375e412e"
+  $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
+
+  $ echo forcepushrebase > forcepushrebase
+  $ hg add -q forcepushrebase
+  $ hg ci -m forcepushrebase
+  $ hgmn push -r . --to forcepushrebase --create --force --config extensions.remotenames= --config extensions.pushrebase=
+  pushing rev 0c1e5152244c to destination ssh://user@dummy/repo bookmark forcepushrebase
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 0 files
+  exporting bookmark forcepushrebase
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bookmark
+  "forcepushrebase"
+  $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
+  "cf79ab3ba838b597ca4973ba397b4b687f54d9eed2f0edc4f950f3b80a68f8b3"
+
 
 Use normal push (non-pushrebase)
   $ rm "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY"
@@ -87,4 +105,42 @@ Use normal push (non-pushrebase)
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .bookmark
   null
   $ cat "$TESTTMP/scribe_logs/$COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
-  "1286c4a83f690c129224e904ddea4640a441c2a01051973b08acd495ded29e67"
+  "f76800ae3d688512180e7a0805ff18d39f7ea81617bce1aea4e11364584b007a"
+
+Use infinitepush push
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > commitcloud=
+  > infinitepush=
+  > remotenames=
+  > [infinitepush]
+  > server=False
+  > branchpattern=re:^scratch/.+$
+  > EOF
+  $ hgmn up -q master_bookmark
+
+Stop tracking master_bookmark
+  $ hg up -q .
+  $ echo pushbackup > pushbackup
+  $ hg add -q pushbackup
+  $ hg ci -m pushbackup
+  $ hgmn pushbackup -r .
+  backing up stack rooted at 0ed0fbff8a24
+  commitcloud: backed up 1 commit
+  $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .bookmark
+  null
+  $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
+  "29259d73c8207a083a44f2635df387b194f76c41d2ccb71e7529ec0f70a4af28"
+  $ rm "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY"
+
+  $ hgmn up -q master_bookmark
+  $ echo infinitepush > infinitepush
+  $ hg add -q infinitepush
+  $ hg ci -m 'infinitepush'
+  $ hgmn push ssh://user@dummy/repo -r . --to "scratch/123" --create
+  pushing to ssh://user@dummy/repo
+  searching for changes
+  $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .bookmark
+  "scratch/123"
+  $ cat "$TESTTMP/scribe_logs/$DRAFT_COMMIT_SCRIBE_CATEGORY" | jq .changeset_id
+  "06b8cee4d65704bcb81b988c1153daee3063d9e565f4d65e9e68475676b2438b"

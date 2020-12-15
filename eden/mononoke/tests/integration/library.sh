@@ -962,6 +962,12 @@ bookmarks_filler = 3
 ${namespace}
 CONFIG
   fi
+
+if [[ -n "${DRAFT_COMMIT_SCRIBE_CATEGORY:-}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+commit_scribe_category = "$DRAFT_COMMIT_SCRIBE_CATEGORY"
+CONFIG
+fi
 }
 
 function register_hook {
