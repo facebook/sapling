@@ -214,7 +214,7 @@ def backgroundbackup(repo, command=None, dest=None):
 
             reponame = os.path.basename(repo.sharedroot)
             _removeoldlogfiles(userlogdir, reponame)
-            logfile = _getlogfilename(logdir, username, reponame)
+            logfile = getlogfilename(logdir, username, reponame)
         except (OSError, IOError) as e:
             ui.debug("background backup log is disabled: %s\n" % e)
         except WrongPermissionsException as e:
@@ -253,7 +253,7 @@ class WrongPermissionsException(Exception):
 _timeformat = "%Y%m%d"
 
 
-def _getlogfilename(logdir, username, reponame):
+def getlogfilename(logdir, username, reponame):
     """Returns name of the log file for particular user and repo
 
     Different users have different directories inside logdir. Log filename

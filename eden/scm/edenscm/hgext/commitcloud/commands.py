@@ -1598,6 +1598,14 @@ def cloudstatus(ui, repo, **opts):
     else:
         ui.write(_("Automatic Sync via 'Scm Daemon' (on remote changes): OFF\n"))
 
+    logdir = ui.config("infinitepushbackup", "logdir", "")
+    if logdir:
+        user = util.getuser()
+        if user:
+            logpath = background.getlogfilename(logdir, user, ccutil.getreponame(repo))
+            if logpath:
+                ui.write(_("Background Backup Log Path (recent): %s\n") % logpath)
+
     state = syncstate.SyncState(repo, workspacename)
 
     ui.write(_("Last Sync Version: %s\n") % state.version)
