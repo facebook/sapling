@@ -98,8 +98,8 @@ pub fn read_subscriptions(
                         info!(
                             "Skipping the file '{}' because 'repo_root' '{}' \
                              is not an existing directory",
-                            repo_root.display(),
-                            path.display()
+                            path.display(),
+                            repo_root.display()
                         );
                         continue;
                     }
