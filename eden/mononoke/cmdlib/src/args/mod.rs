@@ -194,6 +194,7 @@ pub struct MononokeAppBuilder {
 #[derive(Default)]
 pub struct MononokeAppData {
     cachelib_settings: CachelibSettings,
+    repo_required: Option<RepoRequirement>,
 }
 
 // Result of MononokeAppBuilder::build() which has clap plus the MononokeApp data
@@ -524,16 +525,17 @@ impl MononokeAppBuilder {
                 .help("Name of repository")
                 .conflicts_with_all(repo_conflicts);
 
+            let mut repo_group = ArgGroup::with_name("repo")
+                .args(&[REPO_ID, REPO_NAME])
+                .required(self.repo_required.is_some());
+
             if self.repo_required == Some(RepoRequirement::AtLeastOne) {
-                repo_id_arg = repo_id_arg.multiple(true);
-                repo_name_arg = repo_name_arg.multiple(true);
+                repo_id_arg = repo_id_arg.multiple(true).number_of_values(1);
+                repo_name_arg = repo_name_arg.multiple(true).number_of_values(1);
+                repo_group = repo_group.multiple(true)
             }
 
-            app = app.arg(repo_id_arg).arg(repo_name_arg).group(
-                ArgGroup::with_name("repo")
-                    .args(&[REPO_ID, REPO_NAME])
-                    .required(self.repo_required.is_some()),
-            );
+            app = app.arg(repo_id_arg).arg(repo_name_arg).group(repo_group);
 
             if self.arg_types.contains(&ArgType::SourceRepo)
                 || self.arg_types.contains(&ArgType::SourceAndTargetRepos)
@@ -619,6 +621,7 @@ impl MononokeAppBuilder {
             clap: app,
             app_data: MononokeAppData {
                 cachelib_settings: self.cachelib_settings,
+                repo_required: self.repo_required,
             },
         }
     }
@@ -777,22 +780,77 @@ fn get_repo_id_and_name_from_values<'a>(
     option_repo_name: &str,
     option_repo_id: &str,
 ) -> Result<(RepositoryId, String)> {
-    let repo_name = matches.value_of(option_repo_name);
-    let repo_id = matches.value_of(option_repo_id);
-    let configs = load_repo_configs(config_store, matches)?;
-    let resolved = match (repo_name, repo_id) {
-        (Some(_), Some(_)) => bail!("both repo-name and repo-id parameters set"),
-        (None, None) => bail!("neither repo-name nor repo-id parameter set"),
-        (None, Some(repo_id)) => resolve_repo_given_id(RepositoryId::from_str(repo_id)?, &configs)?,
-        (Some(repo_name), None) => resolve_repo_given_name(repo_name, &configs)?,
-    };
-
+    let resolved = resolve_repo(config_store, matches, option_repo_name, option_repo_id)?;
     Ok((resolved.id, resolved.name))
 }
 
-struct ResolvedRepo {
-    id: RepositoryId,
-    name: String,
+pub struct ResolvedRepo {
+    pub id: RepositoryId,
+    pub name: String,
+    pub config: RepoConfig,
+}
+
+pub fn resolve_repo<'a>(
+    config_store: &ConfigStore,
+    matches: &'a MononokeMatches<'a>,
+    option_repo_name: &str,
+    option_repo_id: &str,
+) -> Result<ResolvedRepo> {
+    let repo_name = matches.value_of(option_repo_name);
+    let repo_id = matches.value_of(option_repo_id);
+    let configs = load_repo_configs(config_store, matches)?;
+    match (repo_name, repo_id) {
+        (Some(_), Some(_)) => bail!("both repo-name and repo-id parameters set"),
+        (None, None) => bail!("neither repo-name nor repo-id parameter set"),
+        (None, Some(repo_id)) => resolve_repo_given_id(RepositoryId::from_str(repo_id)?, &configs),
+        (Some(repo_name), None) => resolve_repo_given_name(repo_name, &configs),
+    }
+}
+
+pub fn resolve_repos<'a>(
+    config_store: &ConfigStore,
+    matches: &'a MononokeMatches<'a>,
+) -> Result<Vec<ResolvedRepo>> {
+    resolve_repos_from_args(config_store, matches, REPO_NAME, REPO_ID)
+}
+
+fn resolve_repos_from_args<'a>(
+    config_store: &ConfigStore,
+    matches: &'a MononokeMatches<'a>,
+    option_repo_name: &str,
+    option_repo_id: &str,
+) -> Result<Vec<ResolvedRepo>> {
+    if matches.app_data.repo_required == Some(RepoRequirement::ExactlyOne) {
+        return resolve_repo(config_store, matches, option_repo_name, option_repo_id)
+            .map(|r| vec![r]);
+    }
+
+    let repo_names = matches.values_of(option_repo_name);
+    let repo_ids = matches.values_of(option_repo_id);
+    let configs = load_repo_configs(config_store, matches)?;
+
+    let mut repos = Vec::new();
+    let mut names = HashSet::new();
+    if let Some(repo_ids) = repo_ids {
+        for i in repo_ids {
+            let resolved = resolve_repo_given_id(RepositoryId::from_str(i)?, &configs)?;
+            if names.insert(resolved.name.clone()) {
+                repos.push(resolved);
+            }
+        }
+    }
+    if let Some(repo_names) = repo_names {
+        for n in repo_names {
+            let resolved = resolve_repo_given_name(n, &configs)?;
+            if names.insert(n.to_string()) {
+                repos.push(resolved)
+            }
+        }
+    }
+    if repos.is_empty() {
+        bail!("neither repo-name nor repo-id parameters set");
+    }
+    Ok(repos)
 }
 
 fn resolve_repo_given_id(id: RepositoryId, configs: &RepoConfigs) -> Result<ResolvedRepo> {
@@ -802,13 +860,14 @@ fn resolve_repo_given_id(id: RepositoryId, configs: &RepoConfigs) -> Result<Reso
         .filter(|(_, c)| c.repoid == id)
         .enumerate()
         .last();
-    if let Some((count, (name, _config))) = config {
+    if let Some((count, (name, config))) = config {
         if count > 1 {
             Err(format_err!("multiple configs defined for repo-id {:?}", id))
         } else {
             Ok(ResolvedRepo {
                 id,
                 name: name.to_string(),
+                config: config.clone(),
             })
         }
     } else {
@@ -822,6 +881,7 @@ fn resolve_repo_given_name(name: &str, configs: &RepoConfigs) -> Result<Resolved
         Ok(ResolvedRepo {
             id: config.repoid,
             name: name.to_string(),
+            config: config.clone(),
         })
     } else {
         Err(format_err!("unknown repo-name {:?}", name))
