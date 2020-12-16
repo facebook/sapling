@@ -228,7 +228,7 @@ impl CreateChangeset {
                     save_bonsai_changeset_object(&ctx, &blobstore, bonsai_cs.clone()),
                     hg_cs.save(&ctx, &blobstore),
                     entry_processor
-                        .finalize(ctx.clone(), root_mf_id, parent_manifest_hashes)
+                        .finalize(&ctx, root_mf_id, parent_manifest_hashes)
                         .map_err(|err| err.context("While finalizing processing")),
                 )?;
 

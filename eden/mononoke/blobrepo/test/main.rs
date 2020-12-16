@@ -452,9 +452,7 @@ async fn upload_entries_finalize_success(fb: FacebookInit) {
         .await
         .unwrap();
 
-    (entries.finalize(ctx.clone(), roothash, vec![]))
-        .await
-        .unwrap();
+    (entries.finalize(&ctx, roothash, vec![])).await.unwrap();
 }
 
 #[fbinit::compat_test]
@@ -480,7 +478,7 @@ async fn upload_entries_finalize_fail(fb: FacebookInit) {
         .await
         .unwrap();
 
-    let res = (entries.finalize(ctx.clone(), root_mfid, vec![])).await;
+    let res = (entries.finalize(&ctx, root_mfid, vec![])).await;
 
     assert!(res.is_err());
 }

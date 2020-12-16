@@ -27,11 +27,14 @@ pub use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::{Blobstore, ErrorKind as BlobstoreError, Loadable};
 use context::CoreContext;
 use mercurial_types::{
-    blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEnvelope, HgChangesetContent},
+    blobs::{
+        fetch_manifest_envelope, ChangesetMetadata, HgBlobChangeset, HgBlobEnvelope,
+        HgChangesetContent,
+    },
     nodehash::{HgFileNodeId, HgManifestId},
-    HgChangesetId, HgNodeHash, HgNodeKey, HgParents, MPath, MPathElement, RepoPath, NULL_HASH,
+    HgChangesetId, HgNodeHash, HgParents, MPath, MPathElement, RepoPath, NULL_HASH,
 };
-use mononoke_types::{self, BonsaiChangeset, ChangesetId};
+use mononoke_types::{self, BonsaiChangeset, ChangesetId, MononokeId};
 
 use crate::errors::*;
 use crate::BlobRepo;
@@ -138,7 +141,7 @@ struct UploadEntriesState {
     /// Parent hashes (if any) of the blobs that have been uploaded in this changeset. Used for
     /// validation of this upload - all parents must either have been uploaded in this changeset,
     /// or be present in the blobstore before the changeset can complete.
-    parents: HashSet<HgNodeKey>,
+    parents: HashSet<Entry<HgManifestId, HgFileNodeId>>,
 }
 
 #[derive(Clone)]
@@ -162,24 +165,6 @@ impl UploadEntries {
 
     fn scuba_logger(&self) -> MononokeScubaSampleBuilder {
         self.scuba_logger.clone()
-    }
-
-    async fn find_parents<'a, E: HgBlobEnvelope>(
-        &'a self,
-        ctx: &'a CoreContext,
-        entry: impl Loadable<Value = E> + 'a,
-        path: RepoPath,
-    ) -> Result<()> {
-        let entry = entry.load(ctx, &self.blobstore).await?;
-
-        let parents = entry.get_parents();
-        let node_keys = parents.into_iter().map(move |hash| HgNodeKey {
-            path: path.clone(),
-            hash,
-        });
-        let mut inner = self.inner.lock().expect("Lock poisoned");
-        inner.parents.extend(node_keys);
-        Ok(())
     }
 
     /// The root manifest needs special processing - unlike all other entries, it is required even
@@ -207,87 +192,115 @@ impl UploadEntries {
             inner.uploaded_entries.insert(path.clone(), entry.clone());
         }
 
-        let (err_context, res) = match entry {
+        let parents = match entry {
             Entry::Tree(manifest_id) => {
                 STATS::process_tree_entry.add_value(1);
-                (
-                    format!(
-                        "While processing manifest with id {} and path {}",
-                        manifest_id, path
-                    ),
-                    self.find_parents(ctx, manifest_id, path).await,
-                )
+
+                // NOTE: Just fetch the envelope here, because we don't actually need the
+                // deserialized manifest: just the parents will do.
+                let envelope = fetch_manifest_envelope(&ctx, &self.blobstore, manifest_id)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Error processing manifest with id {} and path {}",
+                            manifest_id, path
+                        )
+                    })?;
+
+                envelope
+                    .get_parents()
+                    .into_iter()
+                    .map(|p| Entry::Tree(HgManifestId::new(p)))
+                    .collect::<Vec<_>>()
             }
             Entry::Leaf(filenode_id) => {
                 STATS::process_file_entry.add_value(1);
-                (
-                    format!(
-                        "While processing file with id {} and path {}",
-                        filenode_id, path
-                    ),
-                    self.find_parents(ctx, filenode_id, path).await,
-                )
+
+                let envelope = filenode_id
+                    .load(ctx, &self.blobstore)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "Error processing file with id {} and path {}",
+                            filenode_id, path
+                        )
+                    })?;
+
+                envelope
+                    .get_parents()
+                    .into_iter()
+                    .map(|p| Entry::Leaf(HgFileNodeId::new(p)))
+                    .collect::<Vec<_>>()
             }
         };
 
-        res.context(err_context)
+        {
+            let mut inner = self.inner.lock().expect("Lock poisoned");
+            inner.parents.extend(parents.into_iter());
+        }
+
+        Ok(())
     }
 
     // Check the blobstore to see whether a particular node is present.
     async fn assert_in_blobstore(
-        ctx: CoreContext,
-        blobstore: RepoBlobstore,
-        node_id: HgNodeHash,
-        is_tree: bool,
+        ctx: &CoreContext,
+        blobstore: &RepoBlobstore,
+        entry: Entry<HgManifestId, HgFileNodeId>,
     ) -> Result<(), Error> {
-        if node_id == NULL_HASH {
-            return Ok(());
-        }
-        let key = if is_tree {
-            HgManifestId::new(node_id).blobstore_key()
-        } else {
-            HgFileNodeId::new(node_id).blobstore_key()
-        };
+        match entry {
+            Entry::Tree(mfid) => {
+                if mfid.into_nodehash() == NULL_HASH {
+                    return Ok(());
+                }
 
-        if blobstore.is_present(&ctx, &key).await? {
-            Ok(())
-        } else {
-            Err(BlobstoreError::NotFound(key).into())
+                let key = mfid.blobstore_key();
+                if !blobstore.is_present(ctx, &key).await? {
+                    return Err(BlobstoreError::NotFound(key).into());
+                }
+            }
+            Entry::Leaf(fnid) => {
+                if fnid.into_nodehash() == NULL_HASH {
+                    return Ok(());
+                }
+
+                let envelope = fnid.load(ctx, &blobstore).await?;
+
+                let key = envelope.content_id().blobstore_key();
+                if !blobstore.is_present(ctx, &key).await? {
+                    return Err(BlobstoreError::NotFound(key).into());
+                }
+            }
         }
+
+        Ok(())
     }
 
     pub async fn finalize(
         self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         mf_id: HgManifestId,
         parent_manifest_ids: Vec<HgManifestId>,
     ) -> Result<(), Error> {
+        // NOTE: we consume self.entries hence the signature, even if we don't actually need
+        // mutable access
+        let this = &self;
+
         let required_checks = {
-            let blobstore = self.blobstore.clone();
-            let boxed_blobstore = blobstore.boxed();
-            let mut scuba_logger = self.scuba_logger();
-            cloned!(ctx);
             async move {
                 let (stats, ()) = find_intersection_of_diffs(
                     ctx.clone(),
-                    boxed_blobstore.clone(),
+                    this.blobstore.clone().boxed(),
                     mf_id,
                     parent_manifest_ids,
                 )
                 .try_for_each_concurrent(100, {
-                    cloned!(ctx);
                     move |(path, entry)| {
-                        cloned!(ctx, blobstore);
                         async move {
-                            let (node, is_tree) = match entry {
-                                Entry::Tree(mf_id) => (mf_id.into_nodehash(), true),
-                                Entry::Leaf((_, file_id)) => (file_id.into_nodehash(), false),
-                            };
-                            Self::assert_in_blobstore(ctx, blobstore, node, is_tree)
+                            let entry = entry.map_leaf(|(_, fnid)| fnid);
+                            Self::assert_in_blobstore(ctx, &this.blobstore, entry)
                                 .await
-                                .with_context(move || {
-                                    format!("While checking for path: {:?}", path)
-                                })?;
+                                .with_context(|| format!("Error checking for path: {:?}", path))?;
                             Ok(())
                         }
                         .boxed()
@@ -296,7 +309,7 @@ impl UploadEntries {
                 .try_timed()
                 .await?;
 
-                scuba_logger
+                this.scuba_logger()
                     .add_future_stats(&stats)
                     .log_with_msg("Required checks", None);
 
@@ -305,33 +318,28 @@ impl UploadEntries {
         };
 
         let parent_checks = {
-            let inner = self.inner.lock().expect("Lock poisoned");
-            let blobstore = self.blobstore.clone();
-            let checks: Vec<_> = inner
-                .parents
-                .iter()
-                .map(|node_key| {
-                    cloned!(ctx, blobstore, node_key);
-                    async move {
-                        Self::assert_in_blobstore(
-                            ctx,
-                            blobstore,
-                            node_key.hash,
-                            node_key.path.is_tree(),
-                        )
-                        .await
-                        .with_context(move || {
-                            format!("While checking for a parent node: {}", node_key)
-                        })?;
+            let checks: Vec<_> = {
+                let inner = this.inner.lock().expect("Lock poisoned");
+
+                inner
+                    .parents
+                    .iter()
+                    .copied()
+                    .map(|entry| async move {
+                        Self::assert_in_blobstore(ctx, &this.blobstore, entry)
+                            .await
+                            .with_context(|| {
+                                format!("Error checking for a parent node: {:?}", entry)
+                            })?;
                         Ok(())
-                    }
-                })
-                .collect();
+                    })
+                    .collect()
+            };
 
             STATS::finalize_parent.add_value(checks.len() as i64);
 
             future::try_join_all(checks).try_timed().map_ok({
-                let mut scuba_logger = self.scuba_logger();
+                let mut scuba_logger = this.scuba_logger();
                 move |(stats, _)| {
                     scuba_logger
                         .add_future_stats(&stats)
@@ -341,7 +349,7 @@ impl UploadEntries {
         };
 
         {
-            let mut inner = self.inner.lock().expect("Lock poisoned");
+            let mut inner = this.inner.lock().expect("Lock poisoned");
             let uploaded_entries = mem::replace(&mut inner.uploaded_entries, HashMap::new());
 
             let uploaded_filenodes_cnt = uploaded_entries
@@ -357,7 +365,7 @@ impl UploadEntries {
             STATS::finalize_uploaded_filenodes.add_value(uploaded_filenodes_cnt as i64);
             STATS::finalize_uploaded_manifests.add_value(uploaded_manifests_cnt as i64);
 
-            self.scuba_logger()
+            this.scuba_logger()
                 .add("manifests_count", uploaded_manifests_cnt)
                 .add("filelogs_count", uploaded_filenodes_cnt)
                 .log_with_msg("Size of changeset", None);
