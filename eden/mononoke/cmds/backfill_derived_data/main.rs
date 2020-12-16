@@ -834,26 +834,28 @@ async fn subcommand_tail(
     if let Some(batch_size) = batch_size {
         info!(ctx.logger(), "using batched deriver");
 
-        let (sender, mut receiver) = tokio::sync::watch::channel(Vec::new());
+        let (sender, mut receiver) = tokio::sync::watch::channel(HashSet::new());
 
         let tail_loop = async move {
             cloned!(ctx, repo);
             tokio::spawn(async move {
+                let mut derived_heads = HashSet::new();
                 loop {
                     let heads = match get_most_recent_heads(&ctx, &repo).await {
-                        Ok(heads) => heads,
+                        Ok(heads) => heads.into_iter().collect::<HashSet<_>>(),
                         Err(e) => return Err::<(), _>(e),
                     };
                     tail_batch_iteration(
                         &ctx,
                         &repo,
                         &tail_derivers,
-                        heads.clone(),
+                        heads.difference(&derived_heads).cloned().collect(),
                         batch_size,
                         parallel,
                     )
                     .await?;
-                    let _ = sender.broadcast(heads);
+                    let _ = sender.broadcast(heads.clone());
+                    derived_heads = heads;
                 }
             })
             .await?
@@ -863,18 +865,20 @@ async fn subcommand_tail(
             cloned!(ctx, repo);
             tokio::spawn(async move {
                 if backfill {
+                    let mut derived_heads = HashSet::new();
                     while let Some(heads) = receiver.recv().await {
                         backfill_heads(
                             &ctx,
                             &repo,
                             skiplist_index.as_deref(),
                             &backfill_derivers,
-                            heads,
+                            heads.difference(&derived_heads).cloned().collect(),
                             slice_size,
                             batch_size,
                             parallel,
                         )
                         .await?;
+                        derived_heads = heads;
                     }
                 }
                 Ok::<_, Error>(())
