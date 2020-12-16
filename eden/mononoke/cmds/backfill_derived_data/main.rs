@@ -167,14 +167,14 @@ fn main(fb: FacebookInit) -> Result<()> {
                 )
                 .arg(
                     Arg::with_name(ARG_BATCH_SIZE)
-                    .long(ARG_BATCH_SIZE)
-                    .default_value(DEFAULT_BATCH_SIZE_STR)
-                    .help("number of changesets in each derivation batch")
+                        .long(ARG_BATCH_SIZE)
+                        .default_value(DEFAULT_BATCH_SIZE_STR)
+                        .help("number of changesets in each derivation batch"),
                 )
                 .arg(
                     Arg::with_name(ARG_PARALLEL)
-                    .long(ARG_PARALLEL)
-                    .help("derive commits within a batch in parallel")
+                        .long(ARG_PARALLEL)
+                        .help("derive commits within a batch in parallel"),
                 ),
         )
         .subcommand(
@@ -194,32 +194,35 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .long(ARG_USE_SHARED_LEASES)
                         .takes_value(false)
                         .required(false)
-                        .help(
-                            "By default derived_data_tailers doesn't compete with other mononoke services
-                             for a derived data lease, so it will derive the data even if another mononoke services
-                             (e.g. mononoke_server, scs_serve etc) are already deriving it.
-                             This flag disables this behaviour and that means that this subcommand would compete \
-                             for derived data lease with other mononoke services and start deriving only if the lock \
-                             is taken"
-                        ),
+                        .help(concat!(
+                            "By default the derived data tailer doesn't compete with ",
+                            "other mononoke services for a derived data lease, so ",
+                            "it will derive the data even if another mononoke service ",
+                            "(e.g. mononoke_server, scs_server, ...) are already ",
+                            "deriving it.\n\n",
+                            "This flag disables this behaviour, meaning this command ",
+                            "will compete for the derived data lease with other ",
+                            "mononoke services and start deriving only if the lease ",
+                            "is obtained.",
+                        )),
                 )
                 .arg(
                     Arg::with_name(ARG_BATCHED)
                         .long(ARG_BATCHED)
                         .takes_value(false)
                         .required(false)
-                        .help("Use batched deriver instead of calling `::derive` periodically")
+                        .help("Use batched deriver instead of calling `::derive` periodically"),
                 )
                 .arg(
                     Arg::with_name(ARG_BATCH_SIZE)
-                    .long(ARG_BATCH_SIZE)
-                    .default_value(DEFAULT_BATCH_SIZE_STR)
-                    .help("number of changesets in each derivation batch")
+                        .long(ARG_BATCH_SIZE)
+                        .default_value(DEFAULT_BATCH_SIZE_STR)
+                        .help("number of changesets in each derivation batch"),
                 )
                 .arg(
                     Arg::with_name(ARG_PARALLEL)
-                    .long(ARG_PARALLEL)
-                    .help("derive commits within a batch in parallel")
+                        .long(ARG_PARALLEL)
+                        .help("derive commits within a batch in parallel"),
                 ),
         )
         .subcommand(
@@ -267,31 +270,33 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .required(false)
                         .takes_value(true)
                         .multiple(true)
-                        .help("derived data type for which backfill will be run, all enabled if not specified"),
+                        .help(concat!(
+                            "derived data type for which backfill will be run, ",
+                            "all enabled and backfilling types if not specified",
+                        )),
                 )
                 .arg(
                     Arg::with_name(ARG_BATCH_SIZE)
-                    .long(ARG_BATCH_SIZE)
-                    .default_value(DEFAULT_BATCH_SIZE_STR)
-                    .help("number of changesets in each derivation batch")
+                        .long(ARG_BATCH_SIZE)
+                        .default_value(DEFAULT_BATCH_SIZE_STR)
+                        .help("number of changesets in each derivation batch"),
                 )
                 .arg(
                     Arg::with_name(ARG_PARALLEL)
-                    .long(ARG_PARALLEL)
-                    .help("derive commits within a batch in parallel")
+                        .long(ARG_PARALLEL)
+                        .help("derive commits within a batch in parallel"),
                 )
                 .arg(
-                    Arg::with_name(ARG_SLICED)
-                    .long(ARG_SLICED)
-                        .help("pre-slice repository into generation slices using the skiplist index")
-                    )
+                    Arg::with_name(ARG_SLICED).long(ARG_SLICED).help(
+                        "pre-slice repository into generation slices using the skiplist index",
+                    ),
+                )
                 .arg(
                     Arg::with_name(ARG_SLICE_SIZE)
-                    .long(ARG_SLICE_SIZE)
-                    .default_value(DEFAULT_SLICE_SIZE_STR)
-                        .help("number of generations to include in each generation slice")
-                    )
-
+                        .long(ARG_SLICE_SIZE)
+                        .default_value(DEFAULT_SLICE_SIZE_STR)
+                        .help("number of generations to include in each generation slice"),
+                ),
         );
     let matches = app.get_matches();
     args::init_cachelib(fb, &matches);
