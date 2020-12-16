@@ -9,7 +9,7 @@
 #![deny(warnings)]
 #![feature(map_first_last)]
 
-use anyhow::{anyhow, format_err, Result};
+use anyhow::{anyhow, format_err, Error, Result};
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
@@ -40,6 +40,7 @@ use futures::{
 use futures_stats::TimedFutureExt;
 use metaconfig_types::RepoConfig;
 use mononoke_types::{ChangesetId, DateTime};
+use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{info, Logger};
 use stats::prelude::*;
 use std::{
@@ -76,6 +77,7 @@ const ARG_BATCH_SIZE: &str = "batch-size";
 const ARG_PARALLEL: &str = "parallel";
 const ARG_SLICED: &str = "sliced";
 const ARG_SLICE_SIZE: &str = "slice-size";
+const ARG_BACKFILL: &str = "backfill";
 
 const SUBCOMMAND_BACKFILL: &str = "backfill";
 const SUBCOMMAND_BACKFILL_ALL: &str = "backfill-all";
@@ -223,6 +225,22 @@ fn main(fb: FacebookInit) -> Result<()> {
                     Arg::with_name(ARG_PARALLEL)
                         .long(ARG_PARALLEL)
                         .help("derive commits within a batch in parallel"),
+                )
+                .arg(
+                    Arg::with_name(ARG_BACKFILL)
+                        .long(ARG_BACKFILL)
+                        .help("also backfill derived data types configured for backfilling"),
+                )
+                .arg(
+                    Arg::with_name(ARG_SLICED)
+                        .long(ARG_SLICED)
+                        .help("pre-slice repository using the skiplist index when backfilling"),
+                )
+                .arg(
+                    Arg::with_name(ARG_SLICE_SIZE)
+                        .long(ARG_SLICE_SIZE)
+                        .default_value(DEFAULT_SLICE_SIZE_STR)
+                        .help("number of generations to include in each generation slice"),
                 ),
         )
         .subcommand(
@@ -452,7 +470,9 @@ async fn run_subcmd<'a>(
             .await
         }
         (SUBCOMMAND_TAIL, Some(sub_m)) => {
-            let unredacted_repo = args::open_repo_unredacted(fb, &logger, &matches).await?;
+            let repo = args::open_repo_unredacted(fb, &logger, &matches).await?;
+            let config_store = args::init_config_store(fb, logger, matches)?;
+            let (_, config) = args::get_config_by_repoid(config_store, matches, repo.get_repoid())?;
             let use_shared_leases = sub_m.is_present(ARG_USE_SHARED_LEASES);
             let batched = sub_m.is_present(ARG_BATCHED);
             let parallel = sub_m.is_present(ARG_PARALLEL);
@@ -466,12 +486,26 @@ async fn run_subcmd<'a>(
             } else {
                 None
             };
+            let backfill = sub_m.is_present(ARG_BACKFILL);
+            let slice_size = if sub_m.is_present(ARG_SLICED) {
+                Some(
+                    sub_m
+                        .value_of(ARG_SLICE_SIZE)
+                        .expect("slice-size must be set")
+                        .parse::<u64>()?,
+                )
+            } else {
+                None
+            };
             subcommand_tail(
                 &ctx,
-                unredacted_repo,
+                repo,
+                config,
                 use_shared_leases,
                 batch_size,
                 parallel,
+                backfill,
+                slice_size,
             )
             .await
         }
@@ -565,12 +599,40 @@ async fn subcommand_backfill_all(
         .iter()
         .map(|name| derived_data_utils_for_backfill(repo, name.as_str()))
         .collect::<Result<Vec<_>, _>>()?;
+    let skiplist_index = fetch_skiplist_index(
+        ctx,
+        &config.skiplist_index_blobstore_key,
+        &repo.blobstore().boxed(),
+    )
+    .await?;
 
     let heads = get_most_recent_heads(ctx, repo).await?;
-    if let Some(slice_size) = slice_size {
+    backfill_heads(
+        ctx,
+        repo,
+        Some(&skiplist_index),
+        derivers.as_ref(),
+        heads,
+        slice_size,
+        batch_size,
+        parallel,
+    )
+    .await
+}
+
+async fn backfill_heads(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    skiplist_index: Option<&SkiplistIndex>,
+    derivers: &[Arc<dyn DerivedUtils>],
+    heads: Vec<ChangesetId>,
+    slice_size: Option<u64>,
+    batch_size: usize,
+    parallel: bool,
+) -> Result<()> {
+    if let (Some(skiplist_index), Some(slice_size)) = (skiplist_index, slice_size) {
         let (count, slices) =
-            slice::slice_repository(ctx, repo, config, derivers.as_ref(), heads, slice_size)
-                .await?;
+            slice::slice_repository(ctx, repo, skiplist_index, derivers, heads, slice_size).await?;
         for (index, (id, slice_heads)) in slices.enumerate() {
             info!(
                 ctx.logger(),
@@ -580,18 +642,11 @@ async fn subcommand_backfill_all(
                 count,
                 slice_heads.len()
             );
-            tail_batch_iteration(
-                ctx,
-                repo,
-                derivers.as_ref(),
-                slice_heads,
-                batch_size,
-                parallel,
-            )
-            .await?;
+            tail_batch_iteration(ctx, repo, derivers, slice_heads, batch_size, parallel).await?;
         }
     } else {
-        tail_batch_iteration(ctx, repo, derivers.as_ref(), heads, batch_size, parallel).await?;
+        info!(ctx.logger(), "Deriving {} heads", heads.len());
+        tail_batch_iteration(ctx, repo, derivers, heads, batch_size, parallel).await?;
     }
     Ok(())
 }
@@ -690,14 +745,21 @@ async fn subcommand_backfill(
 
 async fn subcommand_tail(
     ctx: &CoreContext,
-    unredacted_repo: BlobRepo,
+    repo: BlobRepo,
+    config: RepoConfig,
     use_shared_leases: bool,
     batch_size: Option<usize>,
     parallel: bool,
+    mut backfill: bool,
+    slice_size: Option<u64>,
 ) -> Result<()> {
-    let unredacted_repo = if use_shared_leases {
+    if backfill && batch_size == None {
+        return Err(anyhow!("tail --backfill requires --batched"));
+    }
+
+    let repo = if use_shared_leases {
         // "shared" leases are the default - so we don't need to do anything.
-        unredacted_repo
+        repo
     } else {
         // We use a separate derive data lease for derived_data_tailer
         // so that it could continue deriving even if all other services are failing.
@@ -705,46 +767,129 @@ async fn subcommand_tail(
         // problematic for unodes. Blame, fastlog and deleted_file_manifest all want
         // to derive unodes, so with no leases at all we'd derive unodes 4 times.
         let lease = InProcessLease::new();
-        unredacted_repo.dangerous_override(|_| Arc::new(lease) as Arc<dyn LeaseOps>)
+        repo.dangerous_override(|_| Arc::new(lease) as Arc<dyn LeaseOps>)
     };
+    let repo = &repo;
 
-    let derive_utils: Vec<Arc<dyn DerivedUtils>> = unredacted_repo
-        .get_derived_data_config()
+    let derived_data_config = repo.get_derived_data_config();
+
+    let tail_derivers: Vec<Arc<dyn DerivedUtils>> = derived_data_config
         .enabled
         .types
         .iter()
-        .map(|name| derived_data_utils(&unredacted_repo, name))
+        .map(|name| derived_data_utils(&repo, name))
         .collect::<Result<_>>()?;
     slog::info!(
         ctx.logger(),
-        "[{}] derived data: {:?}",
-        unredacted_repo.name(),
-        derive_utils
+        "[{}] tailing derived data: {:?}",
+        repo.name(),
+        tail_derivers
             .iter()
             .map(|d| d.name())
             .collect::<BTreeSet<_>>(),
     );
+    let backfill_derivers: Vec<Arc<dyn DerivedUtils>> =
+        if backfill && !derived_data_config.backfilling.types.is_empty() {
+            // Some backfilling types may depend on enabled types for their
+            // derivation.  This means we need to include the appropriate
+            // derivers for all types (enabled and backfilling).  Since the
+            // enabled type will already have been derived, the deriver for
+            // those types will just be used for mapping look-ups.  The
+            // `derived_data_utils_for_backfill` function takes care of giving
+            // us the right deriver type for the config.
+            derived_data_config
+                .enabled
+                .types
+                .union(&derived_data_config.backfilling.types)
+                .map(|name| derived_data_utils_for_backfill(repo, name))
+                .collect::<Result<_>>()?
+        } else {
+            backfill = false;
+            Vec::new()
+        };
+    if backfill {
+        slog::info!(
+            ctx.logger(),
+            "[{}] backfilling derived data: {:?}",
+            repo.name(),
+            backfill_derivers
+                .iter()
+                .map(|d| d.name())
+                .collect::<BTreeSet<_>>(),
+        );
+    }
+    let skiplist_index = if backfill {
+        Some(
+            fetch_skiplist_index(
+                ctx,
+                &config.skiplist_index_blobstore_key,
+                &repo.blobstore().boxed(),
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
 
     if let Some(batch_size) = batch_size {
         info!(ctx.logger(), "using batched deriver");
-        loop {
-            let heads = get_most_recent_heads(ctx, &unredacted_repo).await?;
-            tail_batch_iteration(
-                ctx,
-                &unredacted_repo,
-                &derive_utils,
-                heads,
-                batch_size,
-                parallel,
-            )
-            .await?;
-        }
+
+        let (sender, mut receiver) = tokio::sync::watch::channel(Vec::new());
+
+        let tail_loop = async move {
+            cloned!(ctx, repo);
+            tokio::spawn(async move {
+                loop {
+                    let heads = match get_most_recent_heads(&ctx, &repo).await {
+                        Ok(heads) => heads,
+                        Err(e) => return Err::<(), _>(e),
+                    };
+                    tail_batch_iteration(
+                        &ctx,
+                        &repo,
+                        &tail_derivers,
+                        heads.clone(),
+                        batch_size,
+                        parallel,
+                    )
+                    .await?;
+                    let _ = sender.broadcast(heads);
+                }
+            })
+            .await?
+        };
+
+        let backfill_loop = async move {
+            cloned!(ctx, repo);
+            tokio::spawn(async move {
+                if backfill {
+                    while let Some(heads) = receiver.recv().await {
+                        backfill_heads(
+                            &ctx,
+                            &repo,
+                            skiplist_index.as_deref(),
+                            &backfill_derivers,
+                            heads,
+                            slice_size,
+                            batch_size,
+                            parallel,
+                        )
+                        .await?;
+                    }
+                }
+                Ok::<_, Error>(())
+            })
+            .await?
+        };
+
+        try_join(tail_loop, backfill_loop).await?;
     } else {
         info!(ctx.logger(), "using simple deriver");
         loop {
-            tail_one_iteration(ctx, &unredacted_repo, &derive_utils).await?;
+            tail_one_iteration(ctx, repo, &tail_derivers).await?;
         }
     }
+    Ok(())
 }
 
 async fn get_most_recent_heads(ctx: &CoreContext, repo: &BlobRepo) -> Result<Vec<ChangesetId>> {

@@ -13,9 +13,8 @@ use blobrepo::BlobRepo;
 use context::CoreContext;
 use derived_data_utils::DerivedUtils;
 use futures::stream::{self, FuturesUnordered, StreamExt, TryStreamExt};
-use metaconfig_types::RepoConfig;
 use mononoke_types::{ChangesetId, Generation};
-use skiplist::fetch_skiplist_index;
+use skiplist::SkiplistIndex;
 use slog::info;
 
 /// Determine which heads are underived in any of the derivers.
@@ -116,18 +115,11 @@ async fn parents_with_generations(
 pub(crate) async fn slice_repository(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    config: &RepoConfig,
+    skiplist_index: &SkiplistIndex,
     derivers: &[Arc<dyn DerivedUtils>],
     heads: Vec<ChangesetId>,
     slice_size: u64,
 ) -> Result<(usize, impl Iterator<Item = (u64, Vec<ChangesetId>)>)> {
-    let skiplist_index = fetch_skiplist_index(
-        ctx,
-        &config.skiplist_index_blobstore_key,
-        &repo.blobstore().boxed(),
-    )
-    .await?;
-
     let heads = underived_heads(ctx, repo, derivers, heads.as_slice()).await?;
 
     if skiplist_index.indexed_node_count() == 0 {
