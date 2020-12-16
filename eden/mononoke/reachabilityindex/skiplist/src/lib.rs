@@ -508,6 +508,22 @@ impl SkiplistIndex {
         }
     }
 
+    /// Returns the changesets that are the furthest distance from the
+    /// originating changeset.
+    pub fn get_furthest_edges(&self, node: ChangesetId) -> Option<Vec<(ChangesetId, Generation)>> {
+        if let Some(read_guard) = self.skip_list_edges.mapping.get(&node) {
+            match &*read_guard {
+                SkiplistNodeType::SingleEdge(edge) => Some(vec![edge.clone()]),
+                SkiplistNodeType::SkipEdges(edges) => {
+                    Some(edges.last().into_iter().cloned().collect())
+                }
+                SkiplistNodeType::ParentEdges(edges) => Some(edges.clone()),
+            }
+        } else {
+            None
+        }
+    }
+
     /// Returns true if there are any skip edges originating from changesets
     /// in a node frontier.
     pub fn has_any_skip_edges(&self, node_frontier: &NodeFrontier) -> bool {

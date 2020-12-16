@@ -7,6 +7,7 @@
 
 #![type_length_limit = "15000000"]
 #![deny(warnings)]
+#![feature(map_first_last)]
 
 use anyhow::{anyhow, format_err, Result};
 use blame::BlameRoot;
@@ -37,6 +38,7 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
 };
 use futures_stats::TimedFutureExt;
+use metaconfig_types::RepoConfig;
 use mononoke_types::{ChangesetId, DateTime};
 use slog::{info, Logger};
 use stats::prelude::*;
@@ -49,9 +51,9 @@ use std::{
 };
 use time_ext::DurationExt;
 
-mod warmup;
-
 mod dry_run;
+mod slice;
+mod warmup;
 
 define_stats! {
     prefix = "mononoke.derived_data";
@@ -72,6 +74,8 @@ const ARG_USE_SHARED_LEASES: &str = "use-shared-leases";
 const ARG_BATCHED: &str = "batched";
 const ARG_BATCH_SIZE: &str = "batch-size";
 const ARG_PARALLEL: &str = "parallel";
+const ARG_SLICED: &str = "sliced";
+const ARG_SLICE_SIZE: &str = "slice-size";
 
 const SUBCOMMAND_BACKFILL: &str = "backfill";
 const SUBCOMMAND_BACKFILL_ALL: &str = "backfill-all";
@@ -80,6 +84,7 @@ const SUBCOMMAND_PREFETCH_COMMITS: &str = "prefetch-commits";
 const SUBCOMMAND_SINGLE: &str = "single";
 
 const DEFAULT_BATCH_SIZE_STR: &str = "4096";
+const DEFAULT_SLICE_SIZE_STR: &str = "20000";
 
 /// Derived data types that are permitted to access redacted files. This list
 /// should be limited to those data types that need access to the content of
@@ -275,6 +280,18 @@ fn main(fb: FacebookInit) -> Result<()> {
                     .long(ARG_PARALLEL)
                     .help("derive commits within a batch in parallel")
                 )
+                .arg(
+                    Arg::with_name(ARG_SLICED)
+                    .long(ARG_SLICED)
+                        .help("pre-slice repository into generation slices using the skiplist index")
+                    )
+                .arg(
+                    Arg::with_name(ARG_SLICE_SIZE)
+                    .long(ARG_SLICE_SIZE)
+                    .default_value(DEFAULT_SLICE_SIZE_STR)
+                        .help("number of generations to include in each generation slice")
+                    )
+
         );
     let matches = app.get_matches();
     args::init_cachelib(fb, &matches);
@@ -302,6 +319,8 @@ async fn run_subcmd<'a>(
     match matches.subcommand() {
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
             let repo = args::open_repo_unredacted(fb, logger, matches).await?;
+            let config_store = args::init_config_store(fb, logger, matches)?;
+            let (_, config) = args::get_config_by_repoid(config_store, matches, repo.get_repoid())?;
             let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE).map_or_else(
                 || {
                     let config = repo.get_derived_data_config();
@@ -314,7 +333,27 @@ async fn run_subcmd<'a>(
                 .expect("batch-size must be set")
                 .parse::<usize>()?;
             let parallel = sub_m.is_present(ARG_PARALLEL);
-            subcommand_backfill_all(&ctx, &repo, derived_data_types, batch_size, parallel).await
+            let slice_size = if sub_m.is_present(ARG_SLICED) {
+                Some(
+                    sub_m
+                        .value_of(ARG_SLICE_SIZE)
+                        .expect("slice-size must be set")
+                        .parse::<u64>()?,
+                )
+            } else {
+                None
+            };
+
+            subcommand_backfill_all(
+                &ctx,
+                &repo,
+                &config,
+                derived_data_types,
+                slice_size,
+                batch_size,
+                parallel,
+            )
+            .await
         }
         (SUBCOMMAND_BACKFILL, Some(sub_m)) => {
             let derived_data_type = sub_m
@@ -510,7 +549,9 @@ fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntr
 async fn subcommand_backfill_all(
     ctx: &CoreContext,
     repo: &BlobRepo,
+    config: &RepoConfig,
     derived_data_types: HashSet<String>,
+    slice_size: Option<u64>,
     batch_size: usize,
     parallel: bool,
 ) -> Result<()> {
@@ -520,7 +561,34 @@ async fn subcommand_backfill_all(
         .map(|name| derived_data_utils_for_backfill(repo, name.as_str()))
         .collect::<Result<Vec<_>, _>>()?;
 
-    tail_batch_iteration(ctx, repo, derivers.as_ref(), batch_size, parallel).await
+    let heads = get_most_recent_heads(ctx, repo).await?;
+    if let Some(slice_size) = slice_size {
+        let (count, slices) =
+            slice::slice_repository(ctx, repo, config, derivers.as_ref(), heads, slice_size)
+                .await?;
+        for (index, (id, slice_heads)) in slices.enumerate() {
+            info!(
+                ctx.logger(),
+                "Deriving slice {} ({}/{}) with {} heads",
+                id,
+                index + 1,
+                count,
+                slice_heads.len()
+            );
+            tail_batch_iteration(
+                ctx,
+                repo,
+                derivers.as_ref(),
+                slice_heads,
+                batch_size,
+                parallel,
+            )
+            .await?;
+        }
+    } else {
+        tail_batch_iteration(ctx, repo, derivers.as_ref(), heads, batch_size, parallel).await?;
+    }
+    Ok(())
 }
 
 fn truncate_duration(duration: Duration) -> Duration {
@@ -655,8 +723,16 @@ async fn subcommand_tail(
     if let Some(batch_size) = batch_size {
         info!(ctx.logger(), "using batched deriver");
         loop {
-            tail_batch_iteration(ctx, &unredacted_repo, &derive_utils, batch_size, parallel)
-                .await?;
+            let heads = get_most_recent_heads(ctx, &unredacted_repo).await?;
+            tail_batch_iteration(
+                ctx,
+                &unredacted_repo,
+                &derive_utils,
+                heads,
+                batch_size,
+                parallel,
+            )
+            .await?;
         }
     } else {
         info!(ctx.logger(), "using simple deriver");
@@ -685,10 +761,10 @@ async fn tail_batch_iteration(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derive_utils: &[Arc<dyn DerivedUtils>],
+    heads: Vec<ChangesetId>,
     batch_size: usize,
     parallel: bool,
 ) -> Result<()> {
-    let heads = get_most_recent_heads(ctx, repo).await?;
     let derive_graph = derived_data_utils::build_derive_graph(
         ctx,
         repo,
