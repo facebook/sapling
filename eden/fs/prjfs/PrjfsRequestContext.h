@@ -44,12 +44,7 @@ class PrjfsRequestContext : public RequestContext {
           };
 
           if (try_.hasException()) {
-            auto* err = try_.tryGetExceptionObject<std::exception>();
-            XDCHECK(err);
-            sendError(exceptionToHResult(*err));
-            if (notifications) {
-              notifications->showGenericErrorNotification(*err);
-            }
+            handleException(std::move(try_), notifications);
           }
         });
   }
@@ -76,6 +71,10 @@ class PrjfsRequestContext : public RequestContext {
   }
 
  private:
+  void handleException(
+      folly::Try<folly::Unit> try_,
+      Notifications* FOLLY_NULLABLE notifications) const;
+
   PrjfsChannelInner* channel_;
   int32_t commandId_;
   pid_t clientPid_;
