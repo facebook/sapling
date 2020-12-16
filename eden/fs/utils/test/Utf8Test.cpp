@@ -15,6 +15,12 @@ constexpr folly::StringPiece kValidStrings[] = {
     "",
     "abcdef",
     "\0foo\n\0",
+    u8"\u0080", // 2 bytes
+    u8"\u00A2", // 2 bytes
+    u8"\u0800", // 3 bytes
+    u8"\u0939", // 3 bytes
+    u8"\U00010348", // 4 bytes
+    u8"\U00040000", // 4 bytes
 };
 }
 
