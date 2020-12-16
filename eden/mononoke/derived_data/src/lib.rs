@@ -6,6 +6,81 @@
  */
 
 #![deny(warnings)]
+//! # Derived Data
+//!
+//! This crate defines the traits that are used to implement data derivation
+//! in Mononoke.
+//!
+//! Each type of derived data can be derived from a changeset when given:
+//!   * The bonsai changeset (including its changeset ID).
+//!   * The derived data of the same type for the immediate parent changesets.
+//!
+//! ## Traits
+//!
+//! ### BonsaiDerivable
+//!
+//! The `BonsaiDerivable` trait defines how derivation occurs.  Each derived
+//! data type must implement `BonsaiDerivable` to describe how to derive
+//! a new value from the inputs given above.
+//!
+//! As a performance enhancement, a derived data type may also implement the
+//! `batch_derive` method of this trait to implement a fast path for deriving
+//! data from a batch of changesets.  The default implementation derives each
+//! changeset in the batch sequentially.
+//!
+//! The exact behaviour of derivation can be customized by an `Options` type
+//! which is passed to each call of `derive_from_parents`.  This can be used,
+//! for example, to derive different versions of the same data type.
+//!
+//! ### BonsaiDerivedMapping
+//!
+//! The `BonsaiDerivedMapping` trait defines storage of a mapping from bonsai
+//! changeset IDs to derived data.  Once data has been derived, it will be
+//! stored in the mapping so that it does not need to be derived again.
+//!
+//! The mapping also defines the derivation options that are used when
+//! deriving data within that mapping.  For example, a unodes V1 mapping will
+//! map changesets to their V1 root unodes, and a unodes V2 mapping map
+//! changesets to their V2 root unodes.
+//!
+//! There are two utility traits to make implementing `BonsaiDerivedMapping`
+//! simpler for the common cases.  These are located in the `mapping_impl`
+//! module:
+//!
+//! * `BlobstoreRootIdMapping` maps changeset IDs to a root derived ID,
+//!   stored in the blobstore.  This is useful for manifest-style derived
+//!   data, where all that needs to be stored is a single blob pointing to a
+//!   root ID, e.g. unodes, fsnodes or skeleton_manifests.
+//!
+//! * `BlobstoreExistsMapping` records that a changeset has been derived
+//!   in the blobstore, but doesn't store any additional data.  This is
+//!   useful for derived data types where it's sufficient to record that
+//!   derivation has occurred, as all derived data can be found via
+//!   other IDs, e.g. blame data, which is looked-up via unode ID.
+//!
+//! ### BonsaiDerived
+//!
+//! The `BonsaiDerived` trait ties these together by proving a default
+//! mapping implementation that uses the configuration on the repository,
+//! provided the derived data type is enabled for that repository.
+//!
+//! ## Usage
+//!
+//! The usual usage for deriving a particular derived data type in a
+//! repository is the methods of the `BonsaiDerived` trait.  For example:
+//!
+//! ```ignore
+//! use derived_data::BonsaiDerived;
+//!
+//! let value = DerivedDataType::derive(ctx, repo, cs_id).await?;
+//! ```
+//!
+//! This will obtain the default mapping for this derived data type for the
+//! repository, and derive the value for that changeset.
+//!
+//! More complex derivations, for example when deriving data for many
+//! changesets, can be performed using the `DerivedUtils` implementation
+//! in the `derived_data_utils` crate.
 
 use anyhow::Error;
 use async_trait::async_trait;
