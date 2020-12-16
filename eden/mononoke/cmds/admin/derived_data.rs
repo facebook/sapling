@@ -16,7 +16,9 @@ use cmdlib::{
 };
 use context::CoreContext;
 use derived_data::{BonsaiDerivable, BonsaiDerived};
-use derived_data_utils::{derived_data_utils, POSSIBLE_DERIVED_TYPES};
+use derived_data_utils::{
+    derived_data_utils, derived_data_utils_for_backfill, POSSIBLE_DERIVED_TYPES,
+};
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
@@ -44,6 +46,7 @@ const SUBCOMMAND_VERIFY_MANIFESTS: &str = "verify-manifests";
 const ARG_HASH_OR_BOOKMARK: &str = "hash-or-bookmark";
 const ARG_TYPE: &str = "type";
 const ARG_IF_DERIVED: &str = "if-derived";
+const ARG_BACKFILL: &str = "backfill";
 
 const MANIFEST_DERIVED_DATA_TYPES: &'static [&'static str] = &[
     RootFsnodeId::NAME,
@@ -58,6 +61,11 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .subcommand(
             SubCommand::with_name(SUBCOMMAND_EXISTS)
                 .about("check if derived data has been generated")
+                .arg(
+                    Arg::with_name(ARG_BACKFILL)
+                        .long("backfill")
+                        .help("use backfilling config rather than enabled config"),
+                )
                 .arg(
                     Arg::with_name(ARG_TYPE)
                         .help("type of derived data")
@@ -120,7 +128,10 @@ pub async fn subcommand_derived_data<'a>(
                 .map(|m| m.to_string())
                 .unwrap();
 
-            check_derived_data_exists(ctx, repo, derived_data_type, hashes_or_bookmarks).await
+            let backfill = arg_matches.is_present(ARG_BACKFILL);
+
+            check_derived_data_exists(ctx, repo, derived_data_type, hashes_or_bookmarks, backfill)
+                .await
         }
         (SUBCOMMAND_VERIFY_MANIFESTS, Some(arg_matches)) => {
             let hash_or_bookmark = arg_matches
@@ -158,8 +169,13 @@ async fn check_derived_data_exists(
     repo: BlobRepo,
     derived_data_type: String,
     hashes_or_bookmarks: Vec<String>,
+    backfill: bool,
 ) -> Result<(), SubcommandError> {
-    let derived_utils = derived_data_utils(&repo, derived_data_type)?;
+    let derived_utils = if backfill {
+        derived_data_utils_for_backfill(&repo, derived_data_type)?
+    } else {
+        derived_data_utils(&repo, derived_data_type)?
+    };
 
     let cs_id_futs: Vec<_> = hashes_or_bookmarks
         .into_iter()

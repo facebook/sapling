@@ -72,6 +72,7 @@ const ARG_REGENERATE: &str = "regenerate";
 const ARG_PREFETCHED_COMMITS_PATH: &str = "prefetched-commits-path";
 const ARG_CHANGESET: &str = "changeset";
 const ARG_USE_SHARED_LEASES: &str = "use-shared-leases";
+const ARG_STOP_ON_IDLE: &str = "stop-on-idle";
 const ARG_BATCHED: &str = "batched";
 const ARG_BATCH_SIZE: &str = "batch-size";
 const ARG_PARALLEL: &str = "parallel";
@@ -207,6 +208,11 @@ fn main(fb: FacebookInit) -> Result<()> {
                             "mononoke services and start deriving only if the lease ",
                             "is obtained.",
                         )),
+                )
+                .arg(
+                    Arg::with_name(ARG_STOP_ON_IDLE)
+                        .long(ARG_STOP_ON_IDLE)
+                        .help("Stop tailing or backfilling when there is nothing left"),
                 )
                 .arg(
                     Arg::with_name(ARG_BATCHED)
@@ -474,6 +480,7 @@ async fn run_subcmd<'a>(
             let config_store = args::init_config_store(fb, logger, matches)?;
             let (_, config) = args::get_config_by_repoid(config_store, matches, repo.get_repoid())?;
             let use_shared_leases = sub_m.is_present(ARG_USE_SHARED_LEASES);
+            let stop_on_idle = sub_m.is_present(ARG_STOP_ON_IDLE);
             let batched = sub_m.is_present(ARG_BATCHED);
             let parallel = sub_m.is_present(ARG_PARALLEL);
             let batch_size = if batched {
@@ -502,6 +509,7 @@ async fn run_subcmd<'a>(
                 repo,
                 config,
                 use_shared_leases,
+                stop_on_idle,
                 batch_size,
                 parallel,
                 backfill,
@@ -748,6 +756,7 @@ async fn subcommand_tail(
     repo: BlobRepo,
     config: RepoConfig,
     use_shared_leases: bool,
+    stop_on_idle: bool,
     batch_size: Option<usize>,
     parallel: bool,
     mut backfill: bool,
@@ -845,11 +854,19 @@ async fn subcommand_tail(
                         Ok(heads) => heads.into_iter().collect::<HashSet<_>>(),
                         Err(e) => return Err::<(), _>(e),
                     };
+                    let underived_heads = heads
+                        .difference(&derived_heads)
+                        .cloned()
+                        .collect::<Vec<_>>();
+                    if stop_on_idle && underived_heads.is_empty() {
+                        info!(ctx.logger(), "tail stopping due to --stop-on-idle");
+                        return Ok(());
+                    }
                     tail_batch_iteration(
                         &ctx,
                         &repo,
                         &tail_derivers,
-                        heads.difference(&derived_heads).cloned().collect(),
+                        underived_heads,
                         batch_size,
                         parallel,
                     )
@@ -867,12 +884,16 @@ async fn subcommand_tail(
                 if backfill {
                     let mut derived_heads = HashSet::new();
                     while let Some(heads) = receiver.recv().await {
+                        let underived_heads = heads
+                            .difference(&derived_heads)
+                            .cloned()
+                            .collect::<Vec<_>>();
                         backfill_heads(
                             &ctx,
                             &repo,
                             skiplist_index.as_deref(),
                             &backfill_derivers,
-                            heads.difference(&derived_heads).cloned().collect(),
+                            underived_heads,
                             slice_size,
                             batch_size,
                             parallel,
@@ -880,6 +901,7 @@ async fn subcommand_tail(
                         .await?;
                         derived_heads = heads;
                     }
+                    info!(ctx.logger(), "backfill stopping");
                 }
                 Ok::<_, Error>(())
             })

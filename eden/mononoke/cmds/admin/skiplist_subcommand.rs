@@ -39,6 +39,10 @@ pub const SKIPLIST: &str = "skiplist";
 const SKIPLIST_BUILD: &str = "build";
 const ARG_SPARSE: &str = "sparse";
 const SKIPLIST_READ: &str = "read";
+const ARG_EXPONENT: &str = "exponent";
+
+// skiplist will jump up to 2^9 changesets
+const DEFAULT_SKIPLIST_EXPONENT_STR: &str = "9";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(SKIPLIST)
@@ -61,6 +65,12 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                     Arg::with_name(ARG_SPARSE)
                         .long(ARG_SPARSE)
                         .help("EXPERIMENTAL: build sparse skiplist. Makes skiplist smaller"),
+                )
+                .arg(
+                    Arg::with_name(ARG_EXPONENT)
+                        .long(ARG_EXPONENT)
+                        .default_value(DEFAULT_SKIPLIST_EXPONENT_STR)
+                        .help("Skiplist will skip up to 2^EXPONENT commits"),
                 ),
         )
         .subcommand(
@@ -105,6 +115,11 @@ pub async fn subcommand_skiplist<'a>(
                 .to_string();
             let rebuild = sub_m.is_present("rebuild");
             let skiplist_ty = SkiplistType::new(sub_m.is_present(ARG_SPARSE));
+            let exponent = sub_m
+                .value_of(ARG_EXPONENT)
+                .expect("exponent must be set")
+                .parse::<u32>()
+                .map_err(Error::from)?;
 
             args::init_cachelib(fb, &matches);
             let config_store = args::init_config_store(fb, &logger, matches)?;
@@ -120,6 +135,7 @@ pub async fn subcommand_skiplist<'a>(
                 &sql_changesets,
                 rebuild,
                 skiplist_ty,
+                exponent,
             )
             .await
             .map_err(SubcommandError::Error)
@@ -162,10 +178,11 @@ async fn build_skiplist_index<'a, S: ToString>(
     sql_changesets: &'a SqlChangesets,
     force_full_rebuild: bool,
     skiplist_ty: SkiplistType,
+    exponent: u32,
 ) -> Result<(), Error> {
     let blobstore = repo.get_blobstore();
-    // skiplist will jump up to 2^9 changesets
-    let skiplist_depth = 10;
+    // Depth must be one more than the maximum exponent.
+    let skiplist_depth = exponent + 1;
     // Index all changesets
     let max_index_depth = 20000000000;
     let key = key.to_string();
