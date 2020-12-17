@@ -107,6 +107,14 @@ def print_os_version(out: IO[bytes]) -> None:
                     version = release_info["PRETTY_NAME"]
     elif sys.platform == "darwin":
         version = "MacOS " + platform.mac_ver()[0]
+    elif sys.platform == "win32":
+        import winreg
+
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"
+        ) as k:
+            build = winreg.QueryValueEx(k, "CurrentBuild")
+        version = f"Windows {build[0]}"
 
     if not version:
         version = platform.system() + " " + platform.version()
