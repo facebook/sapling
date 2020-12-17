@@ -24,7 +24,7 @@ use futures::{
 use futures_stats::{FutureStats, TimedFutureExt};
 use mononoke_types::{ContentMetadata, MononokeId};
 use rand::Rng;
-use sql_ext::facebook::ReadConnectionType;
+use sql_ext::facebook::{MysqlConnectionType, ReadConnectionType};
 use sqlblob::Sqlblob;
 use std::fmt::Debug;
 use std::num::NonZeroU32;
@@ -201,44 +201,48 @@ async fn get_blob<'a>(
         (CMD_XDB, Some(sub)) => {
             let shardmap = sub.value_of(ARG_SHARDMAP).unwrap().to_string();
             let shard_count = sub.value_of(ARG_SHARD_COUNT).unwrap().parse()?;
-            let blobstore = if let Some(port) = sub.value_of(ARG_MYROUTER_PORT) {
-                let port = port.parse()?;
-                Sqlblob::with_myrouter(
-                    fb,
-                    shardmap,
-                    port,
-                    ReadConnectionType::Replica,
-                    shard_count,
-                    false,
-                    put_behaviour,
-                    config_store,
-                )
-                .compat()
-                .await?
-            } else if sub.is_present(ARG_USE_MYSQL_CLIENT) {
-                Sqlblob::with_mysql(
-                    fb,
-                    shardmap,
-                    shard_count,
-                    ReadConnectionType::Replica,
-                    false,
-                    put_behaviour,
-                    config_store,
-                )
-                .compat()
-                .await?
-            } else {
-                Sqlblob::with_raw_xdb_shardmap(
-                    fb,
-                    shardmap,
-                    ReadConnectionType::Replica,
-                    shard_count,
-                    false,
-                    put_behaviour,
-                    config_store,
-                )
-                .compat()
-                .await?
+            let mysql_options = args::parse_mysql_options(&matches);
+            let blobstore = match mysql_options.connection_type {
+                MysqlConnectionType::Myrouter(port) => {
+                    Sqlblob::with_myrouter(
+                        fb,
+                        shardmap,
+                        port,
+                        ReadConnectionType::Replica,
+                        shard_count,
+                        false,
+                        put_behaviour,
+                        config_store,
+                    )
+                    .compat()
+                    .await?
+                }
+                MysqlConnectionType::Mysql => {
+                    Sqlblob::with_mysql(
+                        fb,
+                        shardmap,
+                        shard_count,
+                        ReadConnectionType::Replica,
+                        false,
+                        put_behaviour,
+                        config_store,
+                    )
+                    .compat()
+                    .await?
+                }
+                MysqlConnectionType::RawXDB => {
+                    Sqlblob::with_raw_xdb_shardmap(
+                        fb,
+                        shardmap,
+                        ReadConnectionType::Replica,
+                        shard_count,
+                        false,
+                        put_behaviour,
+                        config_store,
+                    )
+                    .compat()
+                    .await?
+                }
             };
             Arc::new(blobstore)
         }
