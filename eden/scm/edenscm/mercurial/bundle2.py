@@ -326,6 +326,7 @@ class bundleoperation(object):
         captureoutput=True,
         replaydata=None,
         respondlightly=False,
+        extras=None,
     ):
         self.repo = repo
         self.ui = repo.ui
@@ -340,6 +341,7 @@ class bundleoperation(object):
         self.respondlightly = respondlightly
         self.replaydata = replaydata
         self._addreplayhookargs()
+        self.extras = extras or {}
 
     def _addreplayhookargs(self):
         if self.replaydata is None:
@@ -516,6 +518,7 @@ def processparts(repo, op, unbundler):
 
 @perftrace.tracefunc("Apply Changegroup")
 def _processchangegroup(op, cg, tr, source, url, **kwargs):
+    kwargs["updatevisibility"] = op.extras.get("updatevisibility", True)
     ret = cg.apply(op.repo, tr, source, url, **kwargs)
     op.records.add("changegroup", {"return": ret})
     return ret

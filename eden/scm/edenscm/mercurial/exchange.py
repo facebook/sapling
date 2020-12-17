@@ -1603,7 +1603,9 @@ def _pullbundle2(pullop):
     _pullbundle2extraprepare(pullop, kwargs)
     bundle = pullop.remote.getbundle("pull", **kwargs)
     try:
-        op = bundle2.bundleoperation(pullop.repo, pullop.gettransaction)
+        op = bundle2.bundleoperation(
+            pullop.repo, pullop.gettransaction, extras=pullop.extras
+        )
         op.modes["bookmarks"] = "records"
         bundle2.processbundle(pullop.repo, bundle, op=op)
     except bundle2.AbortFromPart as exc:

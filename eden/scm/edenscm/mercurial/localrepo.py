@@ -981,7 +981,13 @@ class localrepository(object):
                 # information while the exchange.pull does not know about what
                 # to delete.  Consider also bypass phases if narrow-heads is
                 # enabled everywhere.
-                extras = {"bookmarks": False, "obsolete": False}
+                # Bypass inefficient visibility updating as this function will
+                # take care of them.
+                extras = {
+                    "bookmarks": False,
+                    "obsolete": False,
+                    "updatevisibility": False,
+                }
                 opargs = {"extras": extras}
                 heads = sorted(heads)
                 exchange.pull(self, remote, heads, opargs=opargs)
@@ -994,6 +1000,10 @@ class localrepository(object):
                 bookmarks.saveremotenames(
                     self, {remotename: remotenamechanges}, override=False
                 )
+
+            # Update visibleheads:
+            if heads:
+                visibility.add(self, heads)
 
     def conn(self, source="default", **opts):
         """Create a connection from the connection pool"""

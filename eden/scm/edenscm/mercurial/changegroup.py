@@ -311,7 +311,14 @@ class cg1unpacker(object):
         return mfnodes
 
     def apply(
-        self, repo, tr, srctype, url, targetphase=phases.draft, expectedtotal=None
+        self,
+        repo,
+        tr,
+        srctype,
+        url,
+        targetphase=phases.draft,
+        expectedtotal=None,
+        updatevisibility=True,
     ):
         # types: (Any, Any, str, str, int, Optional[int]) -> int
         """Add the changegroup returned by source.read() to this repo.
@@ -433,7 +440,7 @@ class cg1unpacker(object):
                     targetphase = phaseall = phases.draft
             if added:
                 phases.registernew(repo, tr, targetphase, added)
-                if targetphase > phases.public:
+                if updatevisibility and targetphase > phases.public:
                     visibility.add(repo, added)
 
             if phaseall is not None:
