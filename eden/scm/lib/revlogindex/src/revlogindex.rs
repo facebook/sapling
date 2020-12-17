@@ -384,6 +384,9 @@ pub struct RevlogIndex {
     /// Paths to the on-disk files.
     index_path: PathBuf,
     nodemap_path: PathBuf,
+
+    /// Identity of the revlog.
+    id: String,
 }
 
 /// "smallvec" optimization
@@ -499,6 +502,7 @@ impl RevlogIndex {
             data_handler: Default::default(),
             index_path: changelogi_path.to_path_buf(),
             nodemap_path: nodemap_path.to_path_buf(),
+            id: format!("rlog:{}", &nodemap_path.display()),
         };
         Ok(result)
     }
@@ -795,6 +799,7 @@ impl RevlogIndex {
                     changelogi_data: self.changelogi_data.clone(),
                     index_path: self.index_path.clone(),
                     nodemap_path: self.nodemap_path.clone(),
+                    id: self.id.clone(),
                 });
                 *snapshot = Some(result.clone());
                 result
@@ -965,6 +970,9 @@ impl IdConvert for RevlogIndex {
         } else {
             Ok(false)
         }
+    }
+    fn map_id(&self) -> &str {
+        &self.id
     }
 }
 

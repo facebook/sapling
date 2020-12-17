@@ -31,6 +31,7 @@ pub struct IdMap {
     path: PathBuf,
     cached_next_free_ids: [AtomicU64; Group::COUNT],
     need_rebuild_non_master: bool,
+    map_id: String,
 }
 
 impl IdMap {
@@ -63,6 +64,7 @@ impl TryClone for IdMap {
             path: self.path.clone(),
             cached_next_free_ids: Default::default(),
             need_rebuild_non_master: self.need_rebuild_non_master,
+            map_id: self.map_id.clone(),
         };
         Ok(result)
     }
@@ -71,11 +73,13 @@ impl TryClone for IdMap {
 impl IdMap {
     pub(crate) fn open_from_log(log: log::Log) -> Result<Self> {
         let path = log.path().as_opt_path().unwrap().to_path_buf();
+        let map_id = format!("ilog:{}", path.display());
         Ok(Self {
             log,
             path,
             cached_next_free_ids: Default::default(),
             need_rebuild_non_master: false,
+            map_id,
         })
     }
 
@@ -328,6 +332,9 @@ impl IdConvert for IdMap {
     }
     async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
         Ok(self.find_id_by_name(name.as_ref())?.is_some())
+    }
+    fn map_id(&self) -> &str {
+        &self.map_id
     }
 }
 

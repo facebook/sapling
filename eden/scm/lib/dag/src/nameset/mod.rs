@@ -170,7 +170,7 @@ impl NameSet {
             self.as_any().downcast_ref::<IdStaticSet>(),
             other.as_any().downcast_ref::<IdStaticSet>(),
         ) {
-            if Arc::ptr_eq(&this.map, &other.map) {
+            if this.map.map_id() == other.map.map_id() {
                 // Fast path for IdStaticSet
                 let result = Self::from_spans_idmap_dag(
                     this.spans.difference(&other.spans),
@@ -198,7 +198,7 @@ impl NameSet {
             self.as_any().downcast_ref::<IdStaticSet>(),
             other.as_any().downcast_ref::<IdStaticSet>(),
         ) {
-            if Arc::ptr_eq(&this.map, &other.map) {
+            if this.map.map_id() == other.map.map_id() {
                 // Fast path for IdStaticSet
                 let result = Self::from_spans_idmap_dag(
                     this.spans.intersection(&other.spans),
@@ -231,7 +231,7 @@ impl NameSet {
             self.as_any().downcast_ref::<IdStaticSet>(),
             other.as_any().downcast_ref::<IdStaticSet>(),
         ) {
-            if Arc::ptr_eq(&this.map, &other.map) {
+            if this.map.map_id() == other.map.map_id() {
                 // Fast path for IdStaticSet
                 let result = Self::from_spans_idmap_dag(
                     this.spans.union(&other.spans),

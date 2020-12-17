@@ -22,12 +22,16 @@ pub struct MemIdMap {
     id2name: HashMap<Id, VertexName>,
     name2id: BTreeMap<VertexName, Id>,
     cached_next_free_ids: [AtomicU64; Group::COUNT],
+    map_id: String,
 }
 
 impl MemIdMap {
     /// Create an empty [`MemIdMap`].
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            map_id: format!("mem:{}", next_id()),
+            ..Self::default()
+        }
     }
 }
 
@@ -36,6 +40,7 @@ impl Clone for MemIdMap {
         Self {
             id2name: self.id2name.clone(),
             name2id: self.name2id.clone(),
+            map_id: self.map_id.clone(),
             cached_next_free_ids: [
                 AtomicU64::new(self.cached_next_free_ids[0].load(atomic::Ordering::SeqCst)),
                 AtomicU64::new(self.cached_next_free_ids[1].load(atomic::Ordering::SeqCst)),
@@ -73,6 +78,10 @@ impl IdConvert for MemIdMap {
     }
     async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
         Ok(self.name2id.contains_key(name))
+    }
+
+    fn map_id(&self) -> &str {
+        &self.map_id
     }
 }
 
@@ -140,4 +149,9 @@ impl PrefixLookup for MemIdMap {
         }
         Ok(result)
     }
+}
+
+fn next_id() -> u64 {
+    static ID: AtomicU64 = AtomicU64::new(0);
+    ID.fetch_add(1, atomic::Ordering::AcqRel)
 }

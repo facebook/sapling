@@ -282,6 +282,9 @@ pub trait IdConvert: PrefixLookup + Sync {
     async fn vertex_id_optional(&self, name: &VertexName) -> Result<Option<Id>> {
         self.vertex_id_with_max_group(name, Group::NON_MASTER).await
     }
+
+    /// Identity of the map. If two maps have a same id, they are considered compatible.
+    fn map_id(&self) -> &str;
 }
 
 impl<T> ImportAscii for T

@@ -151,7 +151,7 @@ impl Hints {
         let rhs = other.into().0;
         match (lhs, rhs) {
             (None, None) => true,
-            (Some(l), Some(r)) => Arc::ptr_eq(&l, &r),
+            (Some(l), Some(r)) => l.map_id() == r.map_id(),
             (None, Some(_)) | (Some(_), None) => false,
         }
     }

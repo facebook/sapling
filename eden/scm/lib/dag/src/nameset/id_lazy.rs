@@ -336,12 +336,13 @@ pub(crate) mod tests {
     use nonblocking::non_blocking_result as r;
     use std::collections::HashSet;
     use std::convert::TryInto;
+    use std::sync::atomic::{AtomicU64, Ordering::AcqRel};
 
     pub fn lazy_set(a: &[u64]) -> IdLazySet {
         let ids: Vec<Id> = a.iter().map(|i| Id(*i as _)).collect();
         IdLazySet::from_iter_idmap_dag(
             ids.into_iter().map(Ok),
-            Arc::new(StrIdMap),
+            Arc::new(StrIdMap::new()),
             Arc::new(DummyDag),
         )
     }
@@ -351,7 +352,19 @@ pub(crate) mod tests {
         IdLazySet::from_iter_idmap_dag(ids.into_iter().map(Ok), set.map.clone(), set.dag.clone())
     }
 
-    struct StrIdMap;
+    static STR_ID_MAP_ID: AtomicU64 = AtomicU64::new(0);
+
+    struct StrIdMap {
+        id: String,
+    }
+
+    impl StrIdMap {
+        fn new() -> Self {
+            Self {
+                id: format!("str:{}", STR_ID_MAP_ID.fetch_add(1, AcqRel)),
+            }
+        }
+    }
 
     #[async_trait::async_trait]
     impl PrefixLookup for StrIdMap {
@@ -386,6 +399,9 @@ pub(crate) mod tests {
         async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
             Ok(name.as_ref().len() == 8)
         }
+        fn map_id(&self) -> &str {
+            &self.id
+        }
     }
 
     #[test]
@@ -411,7 +427,7 @@ pub(crate) mod tests {
         // Incorrect hints, but useful for testing.
         set.hints().add_flags(Flags::ID_ASC);
 
-        let v = |i: u64| -> VertexName { r(StrIdMap.vertex_name(Id(i))).unwrap() };
+        let v = |i: u64| -> VertexName { r(StrIdMap::new().vertex_name(Id(i))).unwrap() };
         assert!(nb(set.contains(&v(0x20)))?);
         assert!(nb(set.contains(&v(0x50)))?);
         assert!(!nb(set.contains(&v(0x30)))?);

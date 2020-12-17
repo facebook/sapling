@@ -46,6 +46,9 @@ macro_rules! delegate {
             {
                 self.$($t)*.vertex_id_with_max_group(name, $crate::Group::NON_MASTER)
             }
+            fn map_id(&self) -> &str {
+                self.$($t)*.map_id()
+            }
         }
     };
 
