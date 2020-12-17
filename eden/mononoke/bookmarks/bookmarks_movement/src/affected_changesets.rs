@@ -593,3 +593,103 @@ pub async fn log_commits_to_scribe(
             .log_with_msg("Failed to log pushed commits", Some(format!("{}", err)));
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use blobrepo_factory::new_memblob_empty;
+    use fbinit::FacebookInit;
+    use maplit::hashset;
+    use std::collections::HashSet;
+    use tests_utils::{bookmark, drawdag::create_from_dag};
+
+    #[fbinit::compat_test]
+    async fn test_find_draft_ancestors_simple(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = new_memblob_empty(None)?;
+        let mapping = create_from_dag(
+            &ctx,
+            &repo,
+            r##"
+            A-B-C-D
+            "##,
+        )
+        .await?;
+
+        let cs_id = mapping.get("A").unwrap();
+        let to_cs_id = mapping.get("D").unwrap();
+        bookmark(&ctx, &repo, "book").set_to(*cs_id).await?;
+        let drafts = find_draft_ancestors(&ctx, &repo, *to_cs_id).await?;
+
+        let drafts = drafts
+            .into_iter()
+            .map(|bcs| bcs.get_changeset_id())
+            .collect::<HashSet<_>>();
+
+        assert_eq!(
+            drafts,
+            hashset! {
+                *mapping.get("B").unwrap(),
+                *mapping.get("C").unwrap(),
+                *mapping.get("D").unwrap(),
+            }
+        );
+
+        bookmark(&ctx, &repo, "book")
+            .set_to(*mapping.get("B").unwrap())
+            .await?;
+        let drafts = find_draft_ancestors(&ctx, &repo, *to_cs_id).await?;
+
+        let drafts = drafts
+            .into_iter()
+            .map(|bcs| bcs.get_changeset_id())
+            .collect::<HashSet<_>>();
+
+        assert_eq!(
+            drafts,
+            hashset! {
+                *mapping.get("C").unwrap(),
+                *mapping.get("D").unwrap(),
+            }
+        );
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_find_draft_ancestors_merge(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = new_memblob_empty(None)?;
+        let mapping = create_from_dag(
+            &ctx,
+            &repo,
+            r##"
+              B
+             /  \
+            A    D
+             \  /
+               C
+            "##,
+        )
+        .await?;
+
+        let cs_id = mapping.get("B").unwrap();
+        let to_cs_id = mapping.get("D").unwrap();
+        bookmark(&ctx, &repo, "book").set_to(*cs_id).await?;
+        let drafts = find_draft_ancestors(&ctx, &repo, *to_cs_id).await?;
+
+        let drafts = drafts
+            .into_iter()
+            .map(|bcs| bcs.get_changeset_id())
+            .collect::<HashSet<_>>();
+
+        assert_eq!(
+            drafts,
+            hashset! {
+                *mapping.get("C").unwrap(),
+                *mapping.get("D").unwrap(),
+            }
+        );
+
+        Ok(())
+    }
+}
