@@ -1463,3 +1463,38 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
 
     # log the number of accessed bookmarks currently tracked
     repo.ui.log("accessedremotenames", accessedremotenames_totalnum=totalaccessednames)
+
+
+def _readisselectivepullenabledfile(repo):
+    try:
+        with repo.sharedvfs(_selectivepullenabledfile, "rb") as f:
+            for line in f:
+                yield pycompat.decodeutf8(line.strip())
+    except EnvironmentError as er:
+        if er.errno != errno.ENOENT:
+            raise
+        return
+
+
+def _isselectivepullenabledforremote(repo, remote):
+    for enabledremote in _readisselectivepullenabledfile(repo):
+        if enabledremote == remote:
+            return True
+    return False
+
+
+def _enableselectivepullforremote(repo, remote):
+    vfs = repo.sharedvfs
+    with lockmod.lock(vfs, _selectivepullenabledfilelock):
+        enabledremotes = set(_readisselectivepullenabledfile(repo))
+        enabledremotes.add(remote)
+        with vfs(_selectivepullenabledfile, "wb", atomictemp=True) as f:
+            for renabled in enabledremotes:
+                f.write(pycompat.encodeutf8("%s\n" % renabled))
+
+
+def _disableselectivepull(repo):
+    vfs = repo.sharedvfs
+    if vfs.exists(_selectivepullenabledfile):
+        with lockmod.lock(vfs, _selectivepullenabledfilelock):
+            vfs.unlink(_selectivepullenabledfile)
