@@ -26,9 +26,10 @@ use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
-use futures::{compat::Future01CompatExt, future, FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::Future;
+use futures::{
+    future::{self, BoxFuture},
+    FutureExt, TryFutureExt,
+};
 use maplit::btreemap;
 use memblob::Memblob;
 use mercurial_derived_data::get_manifest_from_bonsai;
@@ -85,7 +86,7 @@ async fn upload_blob_no_parents(fb: FacebookInit) {
     assert!(fnid == expected_hash);
 
     // The entry we're given is correct...
-    let (fnid, path) = future.compat().await.unwrap();
+    let (fnid, path) = future.await.unwrap();
     assert!(path == fake_path);
     assert!(fnid == expected_hash);
 
@@ -113,13 +114,7 @@ async fn upload_blob_one_parent(fb: FacebookInit) {
     assert!(hash == expected_hash);
 
     // The entry we're given is correct...
-    let (fnid, path) = future2
-        .join(future)
-        .map(|(item, _)| item)
-        .compat()
-        .await
-        .unwrap();
-
+    let ((fnid, path), _) = futures::try_join!(future2, future).unwrap();
     assert!(path == fake_path);
     assert!(fnid == expected_hash);
 
@@ -134,13 +129,12 @@ async fn create_one_changeset(fb: FacebookInit) {
     let repo = get_empty_repo();
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
-    let expected_files = vec![
-        RepoPath::file("dir/file")
-            .expect("Can't generate fake RepoPath")
-            .mpath()
-            .unwrap()
-            .clone(),
-    ];
+    let path = RepoPath::file("dir/file")
+        .expect("Can't generate fake RepoPath")
+        .mpath()
+        .unwrap()
+        .clone();
+    let expected_files = vec![path];
     let author: String = "author <author@fb.com>".into();
 
     let (filehash, file_future) =
@@ -163,7 +157,7 @@ async fn create_one_changeset(fb: FacebookInit) {
     let commit = create_changeset_no_parents(
         fb,
         &repo,
-        root_manifest_future.map(Some).boxify(),
+        root_manifest_future.map_ok(Some).boxed(),
         vec![to_leaf(file_future), to_tree(manifest_dir_future)],
     );
 
@@ -211,7 +205,7 @@ async fn create_two_changesets(fb: FacebookInit) {
     let commit1 = create_changeset_no_parents(
         fb,
         &repo,
-        root_manifest_future.map(Some).boxify(),
+        root_manifest_future.map_ok(Some).boxed(),
         vec![to_leaf(file_future), to_tree(manifest_dir_future)],
     );
 
@@ -229,17 +223,15 @@ async fn create_two_changesets(fb: FacebookInit) {
     let commit2 = create_changeset_one_parent(
         fb,
         &repo,
-        root_manifest_future.map(Some).boxify(),
+        root_manifest_future.map_ok(Some).boxed(),
         vec![to_leaf(file_future)],
         commit1.clone(),
     );
 
-    let (commit1, commit2) = (commit1
-        .get_completed_changeset()
-        .compat()
-        .join(commit2.get_completed_changeset().compat()))
-    .compat()
-    .await
+    let (commit1, commit2) = futures::try_join!(
+        commit1.get_completed_changeset(),
+        commit2.get_completed_changeset(),
+    )
     .unwrap();
 
     let commit1 = &commit1.1;
@@ -286,7 +278,7 @@ async fn check_bonsai_creation(fb: FacebookInit) {
     let commit = create_changeset_no_parents(
         fb,
         &repo,
-        root_manifest_future.map(Some).boxify(),
+        root_manifest_future.map_ok(Some).boxed(),
         vec![to_leaf(file_future), to_tree(manifest_dir_future)],
     );
 
@@ -331,7 +323,7 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
         create_changeset_no_parents(
             fb,
             &repo,
-            root_manifest_future.map(Some).boxify(),
+            root_manifest_future.map_ok(Some).boxed(),
             vec![to_leaf(file_future)],
         )
     };
@@ -357,7 +349,7 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
         create_changeset_one_parent(
             fb,
             &repo,
-            root_manifest_future.map(Some).boxify(),
+            root_manifest_future.map_ok(Some).boxed(),
             vec![to_leaf(file_future)],
             parent.clone(),
         )
@@ -408,7 +400,7 @@ async fn create_bad_changeset(fb: FacebookInit) {
     );
 
     let commit =
-        create_changeset_no_parents(fb, &repo, root_manifest_future.map(Some).boxify(), vec![]);
+        create_changeset_no_parents(fb, &repo, root_manifest_future.map_ok(Some).boxed(), vec![]);
 
     commit
         .get_completed_changeset()
@@ -433,19 +425,21 @@ async fn upload_entries_finalize_success(fb: FacebookInit) {
         &RepoPath::root(),
     );
 
-    let (fnid, _) = file_future.compat().await.unwrap();
-    let (root_mfid, _) = root_manifest_future.compat().await.unwrap();
+    let (fnid, _) = file_future.await.unwrap();
+    let (root_mfid, _) = root_manifest_future.await.unwrap();
 
     let entries = UploadEntries::new(
         repo.get_blobstore(),
         MononokeScubaSampleBuilder::with_discard(),
     );
 
-    (entries.process_root_manifest(&ctx, root_mfid))
+    entries
+        .process_root_manifest(&ctx, root_mfid)
         .await
         .unwrap();
 
-    (entries.process_one_entry(&ctx, Entry::Leaf(fnid), fake_file_path))
+    entries
+        .process_one_entry(&ctx, Entry::Leaf(fnid), fake_file_path)
         .await
         .unwrap();
 
@@ -469,9 +463,10 @@ async fn upload_entries_finalize_fail(fb: FacebookInit) {
         format!("dir\0{}t\n", dirhash),
         &RepoPath::root(),
     );
-    let (root_mfid, _) = (root_manifest_future).compat().await.unwrap();
+    let (root_mfid, _) = root_manifest_future.await.unwrap();
 
-    (entries.process_root_manifest(&ctx, root_mfid))
+    entries
+        .process_root_manifest(&ctx, root_mfid)
         .await
         .unwrap();
 
@@ -574,18 +569,23 @@ fn make_bonsai_changeset(
     .unwrap()
 }
 
-fn make_file_change<'a>(
+async fn make_file_change<'a>(
     ctx: &'a CoreContext,
     content: impl AsRef<[u8]>,
     repo: &'a BlobRepo,
-) -> impl Future<Item = FileChange, Error = Error> + Send + 'a {
+) -> Result<FileChange, Error> {
     let content = content.as_ref();
     let content_size = content.len() as u64;
-    FileContents::new_bytes(Bytes::copy_from_slice(content))
+    let content_id = FileContents::new_bytes(Bytes::copy_from_slice(content))
         .into_blob()
         .store(ctx, repo.blobstore())
-        .compat()
-        .map(move |content_id| FileChange::new(content_id, FileType::Regular, content_size, None))
+        .await?;
+    Ok(FileChange::new(
+        content_id,
+        FileType::Regular,
+        content_size,
+        None,
+    ))
 }
 
 fn entry_nodehash(e: &Entry<HgManifestId, (FileType, HgFileNodeId)>) -> HgNodeHash {
@@ -640,22 +640,20 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     let get_entries = {
         cloned!(ctx, repo);
         move |ms_hash: HgManifestId| -> BoxFuture<
-            HashMap<String, Entry<HgManifestId, (FileType, HgFileNodeId)>>,
-            Error,
-        > {
+                'static,
+                Result<HashMap<String, Entry<HgManifestId, (FileType, HgFileNodeId)>>, Error>,
+            > {
             cloned!(ctx, repo);
-            async move { ms_hash.load(&ctx, repo.blobstore()).await }
-                .boxed()
-                .compat()
-                .from_err()
-                .map(|ms| {
-                    Manifest::list(&ms)
-                        .map(|(name, entry)| {
-                            (String::from_utf8(Vec::from(name.as_ref())).unwrap(), entry)
-                        })
-                        .collect::<HashMap<_, _>>()
-                })
-                .boxify()
+            async move {
+                let ms = ms_hash.load(&ctx, repo.blobstore()).await?;
+                let result = Manifest::list(&ms)
+                    .map(|(name, entry)| {
+                        (String::from_utf8(Vec::from(name.as_ref())).unwrap(), entry)
+                    })
+                    .collect::<HashMap<_, _>>();
+                Ok(result)
+            }
+            .boxed()
         }
     };
 
@@ -713,7 +711,7 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         ))
         .await
         .expect("merge should have succeeded");
-        let entries = (get_entries(ms_hash)).compat().await.unwrap();
+        let entries = get_entries(ms_hash).await.unwrap();
 
         assert!(entries.get("1").is_some());
         assert!(entries.get("2").is_some());
@@ -723,10 +721,8 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         assert!(entries.get("base").is_none());
 
         // check trivial merge parents
-        let (ms1_entries, ms2_entries) = (get_entries(ms1).join(get_entries(ms2)))
-            .compat()
-            .await
-            .unwrap();
+        let (ms1_entries, ms2_entries) =
+            futures::try_join!(get_entries(ms1), get_entries(ms2)).unwrap();
         let mut br_expected_parents = HashSet::new();
         br_expected_parents.insert(entry_nodehash(ms1_entries.get("branch").unwrap()));
         br_expected_parents.insert(entry_nodehash(ms2_entries.get("branch").unwrap()));
@@ -743,15 +739,14 @@ async fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     // add file
     {
         let content_expected = &b"some awesome content"[..];
-        let fc = (make_file_change(&ctx, content_expected, &repo))
-            .compat()
+        let fc = make_file_change(&ctx, content_expected, &repo)
             .await
             .unwrap();
         let bcs = make_bonsai_changeset(None, None, vec![("base", None), ("new", Some(fc))]);
         let ms_hash = (get_manifest_from_bonsai(&repo, ctx.clone(), bcs, vec![ms1, ms2]))
             .await
             .expect("adding new file should not produce coflict");
-        let entries = (get_entries(ms_hash)).compat().await.unwrap();
+        let entries = get_entries(ms_hash).await.unwrap();
         let new = entries.get("new").expect("new file should be in entries");
         let bytes = entry_content(&ctx, &repo, new).await.unwrap();
         assert_eq!(bytes.as_ref(), content_expected.as_ref());
@@ -838,7 +833,7 @@ async fn test_case_conflict_two_changeset(fb: FacebookInit) {
     let commit1 = create_changeset_no_parents(
         fb,
         &repo,
-        root_manifest_future.map(Some).boxify(),
+        root_manifest_future.map_ok(Some).boxed(),
         vec![to_leaf(file_future_1)],
     );
 
@@ -856,7 +851,7 @@ async fn test_case_conflict_two_changeset(fb: FacebookInit) {
         create_changeset_one_parent(
             fb,
             &repo,
-            root_manifest_future.map(Some).boxify(),
+            root_manifest_future.map_ok(Some).boxed(),
             vec![to_leaf(file_future_2)],
             commit1.clone(),
         )
@@ -894,7 +889,7 @@ async fn test_case_conflict_inside_one_changeset(fb: FacebookInit) {
     let commit1 = create_changeset_no_parents(
         fb,
         &repo,
-        root_manifest_future.map(Some).boxify(),
+        root_manifest_future.map_ok(Some).boxed(),
         vec![to_leaf(file_future_1), to_leaf(file_future_2)],
     );
 
@@ -920,7 +915,7 @@ async fn test_no_case_conflict_removal(fb: FacebookInit) {
     let commit1 = create_changeset_no_parents(
         fb,
         &repo,
-        root_manifest_future.map(Some).boxify(),
+        root_manifest_future.map_ok(Some).boxed(),
         vec![to_leaf(file_future_1)],
     );
 
@@ -938,7 +933,7 @@ async fn test_no_case_conflict_removal(fb: FacebookInit) {
         create_changeset_one_parent(
             fb,
             &repo,
-            root_manifest_future.map(Some).boxify(),
+            root_manifest_future.map_ok(Some).boxed(),
             vec![to_leaf(file_future_2)],
             commit1.clone(),
         )
@@ -982,7 +977,7 @@ async fn test_no_case_conflict_removal_dir(fb: FacebookInit) {
         create_changeset_no_parents(
             fb,
             &repo,
-            root_manifest_future.map(Some).boxify(),
+            root_manifest_future.map_ok(Some).boxed(),
             vec![to_leaf(file_future), to_tree(manifest_dir_future)],
         )
     };
@@ -1010,7 +1005,7 @@ async fn test_no_case_conflict_removal_dir(fb: FacebookInit) {
         create_changeset_one_parent(
             fb,
             &repo,
-            root_manifest_future.map(Some).boxify(),
+            root_manifest_future.map_ok(Some).boxed(),
             vec![to_leaf(file_future), to_tree(manifest_dir_future)],
             commit1.clone(),
         )

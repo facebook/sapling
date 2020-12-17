@@ -12,11 +12,9 @@ use ascii::AsAsciiStr;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt, stream::futures_unordered::FuturesUnordered, FutureExt, StreamExt,
+    compat::Future01CompatExt, future::BoxFuture, stream::FuturesUnordered, FutureExt, StreamExt,
     TryFutureExt,
 };
-use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::future::Future as _;
 use scuba_ext::MononokeScubaSampleBuilder;
 
 use ::manifest::Entry;
@@ -44,7 +42,10 @@ pub fn upload_file_no_parents<B>(
     repo: &BlobRepo,
     data: B,
     path: &RepoPath,
-) -> (HgFileNodeId, BoxFuture<(HgFileNodeId, RepoPath), Error>)
+) -> (
+    HgFileNodeId,
+    BoxFuture<'static, Result<(HgFileNodeId, RepoPath), Error>>,
+)
 where
     B: Into<Bytes>,
 {
@@ -57,7 +58,10 @@ pub fn upload_file_one_parent<B>(
     data: B,
     path: &RepoPath,
     p1: HgFileNodeId,
-) -> (HgFileNodeId, BoxFuture<(HgFileNodeId, RepoPath), Error>)
+) -> (
+    HgFileNodeId,
+    BoxFuture<'static, Result<(HgFileNodeId, RepoPath), Error>>,
+)
 where
     B: Into<Bytes>,
 {
@@ -69,7 +73,10 @@ pub fn upload_manifest_no_parents<B>(
     repo: &BlobRepo,
     data: B,
     path: &RepoPath,
-) -> (HgManifestId, BoxFuture<(HgManifestId, RepoPath), Error>)
+) -> (
+    HgManifestId,
+    BoxFuture<'static, Result<(HgManifestId, RepoPath), Error>>,
+)
 where
     B: Into<Bytes>,
 {
@@ -82,7 +89,10 @@ pub fn upload_manifest_one_parent<B>(
     data: B,
     path: &RepoPath,
     p1: HgManifestId,
-) -> (HgManifestId, BoxFuture<(HgManifestId, RepoPath), Error>)
+) -> (
+    HgManifestId,
+    BoxFuture<'static, Result<(HgManifestId, RepoPath), Error>>,
+)
 where
     B: Into<Bytes>,
 {
@@ -96,7 +106,10 @@ fn upload_hg_tree_entry(
     path: RepoPath,
     p1: Option<HgManifestId>,
     p2: Option<HgManifestId>,
-) -> (HgManifestId, BoxFuture<(HgManifestId, RepoPath), Error>) {
+) -> (
+    HgManifestId,
+    BoxFuture<'static, Result<(HgManifestId, RepoPath), Error>>,
+) {
     let upload = UploadHgTreeEntry {
         upload_node_id: UploadHgNodeHash::Generate,
         contents,
@@ -104,7 +117,8 @@ fn upload_hg_tree_entry(
         p2: p2.map(|mfid| mfid.into_nodehash()),
         path,
     };
-    upload.upload(ctx, repo.get_blobstore().boxed()).unwrap()
+    let (hgcsid, fut) = upload.upload(ctx, repo.blobstore().boxed()).unwrap();
+    (hgcsid, fut.compat().boxed())
 }
 
 fn upload_hg_file_entry(
@@ -114,7 +128,10 @@ fn upload_hg_file_entry(
     path: RepoPath,
     p1: Option<HgFileNodeId>,
     p2: Option<HgFileNodeId>,
-) -> (HgFileNodeId, BoxFuture<(HgFileNodeId, RepoPath), Error>) {
+) -> (
+    HgFileNodeId,
+    BoxFuture<'static, Result<(HgFileNodeId, RepoPath), Error>>,
+) {
     // Ideally the node id returned from upload.upload would be used, but that isn't immediately
     // available -- so compute it ourselves.
     let node_id = HgBlobNode::new(
@@ -133,17 +150,16 @@ fn upload_hg_file_entry(
     let path = path.into_mpath().expect("expected a path to be present");
 
     let upload_fut = upload.upload_with_path(ctx, repo.get_blobstore().boxed(), path);
-    (
-        HgFileNodeId::new(node_id),
-        upload_fut.boxed().compat().boxify(),
-    )
+    (HgFileNodeId::new(node_id), upload_fut.boxed())
 }
 
 pub fn create_changeset_no_parents(
     fb: FacebookInit,
     repo: &BlobRepo,
-    root_manifest: BoxFuture<Option<(HgManifestId, RepoPath)>, Error>,
-    other_nodes: Vec<BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>>,
+    root_manifest: BoxFuture<'static, Result<Option<(HgManifestId, RepoPath)>, Error>>,
+    other_nodes: Vec<
+        BoxFuture<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>>,
+    >,
 ) -> ChangesetHandle {
     let cs_metadata = ChangesetMetadata {
         user: "author <author@fb.com>".into(),
@@ -156,10 +172,9 @@ pub fn create_changeset_no_parents(
         expected_files: None,
         p1: None,
         p2: None,
-        root_manifest: root_manifest.compat().boxed(),
+        root_manifest,
         sub_entries: other_nodes
             .into_iter()
-            .map(|f| f.compat())
             .collect::<FuturesUnordered<_>>()
             .boxed(),
         cs_metadata,
@@ -176,8 +191,10 @@ pub fn create_changeset_no_parents(
 pub fn create_changeset_one_parent(
     fb: FacebookInit,
     repo: &BlobRepo,
-    root_manifest: BoxFuture<Option<(HgManifestId, RepoPath)>, Error>,
-    other_nodes: Vec<BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>>,
+    root_manifest: BoxFuture<'static, Result<Option<(HgManifestId, RepoPath)>, Error>>,
+    other_nodes: Vec<
+        BoxFuture<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>>,
+    >,
     p1: ChangesetHandle,
 ) -> ChangesetHandle {
     let cs_metadata = ChangesetMetadata {
@@ -191,10 +208,9 @@ pub fn create_changeset_one_parent(
         expected_files: None,
         p1: Some(p1),
         p2: None,
-        root_manifest: root_manifest.compat().boxed(),
+        root_manifest: root_manifest.boxed(),
         sub_entries: other_nodes
             .into_iter()
-            .map(|f| f.compat())
             .collect::<FuturesUnordered<_>>()
             .boxed(),
         cs_metadata,
@@ -218,13 +234,13 @@ pub fn to_mpath(path: RepoPath) -> Result<MPath, Error> {
 }
 
 pub fn to_leaf(
-    fut: BoxFuture<(HgFileNodeId, RepoPath), Error>,
-) -> BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
-    fut.map(|(id, path)| (Entry::Leaf(id), path)).boxify()
+    fut: BoxFuture<'static, Result<(HgFileNodeId, RepoPath), Error>>,
+) -> BoxFuture<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>> {
+    fut.map_ok(|(id, path)| (Entry::Leaf(id), path)).boxed()
 }
 
 pub fn to_tree(
-    fut: BoxFuture<(HgManifestId, RepoPath), Error>,
-) -> BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
-    fut.map(|(id, path)| (Entry::Tree(id), path)).boxify()
+    fut: BoxFuture<'static, Result<(HgManifestId, RepoPath), Error>>,
+) -> BoxFuture<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>> {
+    fut.map_ok(|(id, path)| (Entry::Tree(id), path)).boxed()
 }

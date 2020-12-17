@@ -51,12 +51,10 @@ mercurial_types-mocks = { path = "../mercurial/types/mocks" }
 scuba_ext = { path = "../common/scuba_ext" }
 tests_utils = { path = "../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 ascii = "1.0"
 assert_matches = "1.3"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
-futures-old = { package = "futures", version = "0.1" }
 maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
 rand_distr = "0.2"
