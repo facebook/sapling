@@ -6,14 +6,9 @@
  */
 
 use anyhow::Error;
+use async_trait::async_trait;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt as _, TryFutureExt},
-};
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::Future;
 use lock_ext::LockExt;
 use mercurial_types::{HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -43,14 +38,14 @@ impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
 }
 
 impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
-    fn get_from_cache_and_inner<I, O>(
+    async fn get_from_cache_and_inner<I, O>(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_ids: Vec<I>,
         get_cache: impl Fn(&Cache) -> &HashMap<(RepositoryId, I), O>,
         make_entry: impl Fn(RepositoryId, I, O) -> BonsaiHgMappingEntry,
-    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error>
+    ) -> Result<Vec<BonsaiHgMappingEntry>, Error>
     where
         Vec<I>: Into<BonsaiOrHgChangesetIds>,
         I: Eq + Hash + Copy,
@@ -70,18 +65,15 @@ impl<T: BonsaiHgMapping + Clone + 'static> MemWritesBonsaiHgMapping<T> {
             });
         }
 
-        self.inner
-            .get(ctx, repo_id, from_inner.into())
-            .map(move |from_inner| {
-                from_cache.extend(from_inner);
-                from_cache
-            })
-            .boxify()
+        let from_inner = self.inner.get(ctx, repo_id, from_inner.into()).await?;
+        from_cache.extend(from_inner);
+        Ok(from_cache)
     }
 }
 
+#[async_trait]
 impl<T: BonsaiHgMapping + Clone + 'static> BonsaiHgMapping for MemWritesBonsaiHgMapping<T> {
-    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
+    async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
         let this = self.clone();
 
         let BonsaiHgMappingEntry {
@@ -90,65 +82,63 @@ impl<T: BonsaiHgMapping + Clone + 'static> BonsaiHgMapping for MemWritesBonsaiHg
             bcs_id,
         } = entry;
 
-        async move {
-            let entry = this
-                .get_hg_from_bonsai(ctx.clone(), repo_id, bcs_id)
-                .compat()
-                .await?;
-            if entry.is_some() {
-                Ok(false)
-            } else {
-                this.cache.with(|cache| {
-                    cache.0.insert((repo_id, bcs_id), hg_cs_id);
-                    cache.1.insert((repo_id, hg_cs_id), bcs_id);
-                });
-                Ok(true)
-            }
+        let entry = this.get_hg_from_bonsai(ctx, repo_id, bcs_id).await?;
+        if entry.is_some() {
+            Ok(false)
+        } else {
+            this.cache.with(|cache| {
+                cache.0.insert((repo_id, bcs_id), hg_cs_id);
+                cache.1.insert((repo_id, hg_cs_id), bcs_id);
+            });
+            Ok(true)
         }
-        .boxed()
-        .compat()
-        .boxify()
     }
 
-    fn get(
+    async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_ids: BonsaiOrHgChangesetIds,
-    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
+    ) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
         match cs_ids {
-            BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => self.get_from_cache_and_inner(
-                ctx,
-                repo_id,
-                bcs_ids,
-                |cache| &cache.0,
-                |repo_id, bcs_id, hg_cs_id| BonsaiHgMappingEntry {
+            BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
+                self.get_from_cache_and_inner(
+                    ctx,
                     repo_id,
-                    bcs_id,
-                    hg_cs_id,
-                },
-            ),
-            BonsaiOrHgChangesetIds::Hg(hg_cs_ids) => self.get_from_cache_and_inner(
-                ctx,
-                repo_id,
-                hg_cs_ids,
-                |cache| &cache.1,
-                |repo_id, hg_cs_id, bcs_id| BonsaiHgMappingEntry {
+                    bcs_ids,
+                    |cache| &cache.0,
+                    |repo_id, bcs_id, hg_cs_id| BonsaiHgMappingEntry {
+                        repo_id,
+                        bcs_id,
+                        hg_cs_id,
+                    },
+                )
+                .await
+            }
+            BonsaiOrHgChangesetIds::Hg(hg_cs_ids) => {
+                self.get_from_cache_and_inner(
+                    ctx,
                     repo_id,
-                    bcs_id,
-                    hg_cs_id,
-                },
-            ),
+                    hg_cs_ids,
+                    |cache| &cache.1,
+                    |repo_id, hg_cs_id, bcs_id| BonsaiHgMappingEntry {
+                        repo_id,
+                        bcs_id,
+                        hg_cs_id,
+                    },
+                )
+                .await
+            }
         }
     }
 
-    fn get_many_hg_by_prefix(
+    async fn get_many_hg_by_prefix(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         _repo_id: RepositoryId,
         _cs_prefix: HgChangesetIdPrefix,
         _limit: usize,
-    ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
+    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
         unimplemented!("This is not currently implemented in Gitimport")
     }
 }

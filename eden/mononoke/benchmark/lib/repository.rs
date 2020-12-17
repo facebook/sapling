@@ -7,7 +7,9 @@
 
 //! Main function is `new_benchmark_repo` which creates `BlobRepo` which delay applied
 //! to all underlying stores, but which all the caching enabled.
+
 use anyhow::{Error, Result};
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobrepo_factory::init_all_derived_data;
 use blobstore::Blobstore;
@@ -189,6 +191,12 @@ where
     })
 }
 
+async fn delay_v2(distribution: impl Distribution<f64>) {
+    let seconds = rand::thread_rng().sample(distribution).abs();
+    let duration = Duration::new(seconds.trunc() as u64, (seconds.fract() * 1e+9) as u32);
+    tokio::time::delay_for(duration).await;
+}
+
 struct DelayedFilenodes<F> {
     inner: F,
     get_dist: Normal,
@@ -346,32 +354,33 @@ impl<M> DelayedBonsaiHgMapping<M> {
     }
 }
 
+#[async_trait]
 impl<M: BonsaiHgMapping> BonsaiHgMapping for DelayedBonsaiHgMapping<M> {
-    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
-        delay(self.put_dist, self.inner.add(ctx, entry)).boxify()
+    async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
+        delay_v2(self.put_dist).await;
+        self.inner.add(ctx, entry).await
     }
 
-    fn get(
+    async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_id: BonsaiOrHgChangesetIds,
-    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
-        delay(self.get_dist, self.inner.get(ctx, repo_id, cs_id)).boxify()
+    ) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
+        delay_v2(self.get_dist).await;
+        self.inner.get(ctx, repo_id, cs_id).await
     }
 
-    fn get_many_hg_by_prefix(
+    async fn get_many_hg_by_prefix(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_prefix: HgChangesetIdPrefix,
         limit: usize,
-    ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
-        delay(
-            self.get_dist,
-            self.inner
-                .get_many_hg_by_prefix(ctx, repo_id, cs_prefix, limit),
-        )
-        .boxify()
+    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
+        delay_v2(self.get_dist).await;
+        self.inner
+            .get_many_hg_by_prefix(ctx, repo_id, cs_prefix, limit)
+            .await
     }
 }

@@ -800,12 +800,11 @@ impl RepoContext {
                 self.blob_repo()
                     .get_bonsai_hg_mapping()
                     .get_many_hg_by_prefix(
-                        self.ctx.clone(),
+                        &self.ctx,
                         self.blob_repo().get_repoid(),
                         prefix,
                         MAX_LIMIT_AMBIGUOUS_IDS,
                     )
-                    .compat()
                     .await?,
             ),
             ChangesetPrefixSpecifier::Bonsai(prefix) => ChangesetSpecifierPrefixResolution::from(

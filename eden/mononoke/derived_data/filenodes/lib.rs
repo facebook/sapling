@@ -405,8 +405,7 @@ async fn fetch_root_filenode(
     // Check it and return None if hg changeset is not generated
     let maybe_hg_cs_id = repo
         .get_bonsai_hg_mapping()
-        .get_hg_from_bonsai(ctx.clone(), repo.get_repoid(), cs_id.clone())
-        .compat()
+        .get_hg_from_bonsai(ctx, repo.get_repoid(), cs_id.clone())
         .await?;
     let hg_cs_id = if let Some(hg_cs_id) = maybe_hg_cs_id {
         hg_cs_id

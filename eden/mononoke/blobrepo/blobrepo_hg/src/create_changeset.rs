@@ -276,8 +276,7 @@ impl CreateChangeset {
                 bcs_id,
             };
             bonsai_hg_mapping
-                .add(ctx.clone(), bonsai_hg_entry)
-                .compat()
+                .add(&ctx, bonsai_hg_entry)
                 .await
                 .context("While inserting mapping")?;
 

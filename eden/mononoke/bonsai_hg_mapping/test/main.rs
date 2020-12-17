@@ -10,6 +10,7 @@
 #![deny(warnings)]
 
 use anyhow::Error;
+use async_trait::async_trait;
 
 use assert_matches::assert_matches;
 use bonsai_hg_mapping::{
@@ -18,8 +19,6 @@ use bonsai_hg_mapping::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
-use futures_ext::BoxFuture;
 use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
 use mercurial_types_mocks::nodehash as hg;
 use mononoke_types::RepositoryId;
@@ -43,35 +42,30 @@ async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     assert_eq!(
         true,
         mapping
-            .add(ctx.clone(), entry.clone())
-            .compat()
+            .add(&ctx, entry.clone())
             .await
             .expect("Adding new entry failed")
     );
     assert_eq!(
         false,
         mapping
-            .add(ctx.clone(), entry.clone())
-            .compat()
+            .add(&ctx, entry.clone())
             .await
             .expect("Adding same entry failed")
     );
 
     let result = mapping
-        .get(ctx.clone(), REPO_ZERO, hg::ONES_CSID.into())
-        .compat()
+        .get(&ctx, REPO_ZERO, hg::ONES_CSID.into())
         .await
         .expect("Get failed");
     assert_eq!(result, vec![entry.clone()]);
     let result = mapping
-        .get_hg_from_bonsai(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID)
-        .compat()
+        .get_hg_from_bonsai(&ctx, REPO_ZERO, bonsai::ONES_CSID)
         .await
         .expect("Failed to get hg changeset by its bonsai counterpart");
     assert_eq!(result, Some(hg::ONES_CSID));
     let result = mapping
-        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::ONES_CSID)
-        .compat()
+        .get_bonsai_from_hg(&ctx, REPO_ZERO, hg::ONES_CSID)
         .await
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
@@ -82,8 +76,7 @@ async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
         bcs_id: bonsai::ONES_CSID,
     };
     let result = mapping
-        .add(ctx.clone(), same_bc_entry.clone())
-        .compat()
+        .add(&ctx, same_bc_entry.clone())
         .await
         .expect_err("Conflicting entries should haved produced an error");
     assert_matches!(
@@ -97,8 +90,7 @@ async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
         bcs_id: bonsai::TWOS_CSID, // differ from entry.bcs_id
     };
     let result = mapping
-        .add(ctx.clone(), same_hg_entry.clone())
-        .compat()
+        .add(&ctx, same_hg_entry.clone())
         .await
         .expect_err("Conflicting entries should haved produced an error");
     assert_matches!(
@@ -110,8 +102,7 @@ async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
 async fn missing<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);
     let result = mapping
-        .get(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID.into())
-        .compat()
+        .get(&ctx, REPO_ZERO, bonsai::ONES_CSID.into())
         .await
         .expect("Failed to fetch missing changeset (should succeed with None instead)");
     assert_eq!(result, vec![]);
@@ -144,32 +135,28 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     assert_eq!(
         true,
         mapping
-            .add(ctx.clone(), entry1.clone())
-            .compat()
+            .add(&ctx, entry1.clone())
             .await
             .expect("Adding entry1 failed")
     );
     assert_eq!(
         true,
         mapping
-            .add(ctx.clone(), entry2.clone())
-            .compat()
+            .add(&ctx, entry2.clone())
             .await
             .expect("Adding entry2 failed")
     );
     assert_eq!(
         true,
         mapping
-            .add(ctx.clone(), entry3.clone())
-            .compat()
+            .add(&ctx, entry3.clone())
             .await
             .expect("Adding entry3 failed")
     );
     assert_eq!(
         true,
         mapping
-            .add(ctx.clone(), entry4.clone())
-            .compat()
+            .add(&ctx, entry4.clone())
             .await
             .expect("Adding entry4 failed")
     );
@@ -177,12 +164,11 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     // found a single changeset
     let result = mapping
         .get_many_hg_by_prefix(
-            ctx.clone(),
+            &ctx,
             REPO_ZERO,
             HgChangesetIdPrefix::from_bytes(&hg::ONES_CSID.as_ref()[0..8]).unwrap(),
             10,
         )
-        .compat()
         .await
         .expect("Failed to get hg changeset by its prefix");
 
@@ -194,12 +180,11 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     // found a single changeset
     let result = mapping
         .get_many_hg_by_prefix(
-            ctx.clone(),
+            &ctx,
             REPO_ZERO,
             HgChangesetIdPrefix::from_bytes(&hg::TWOS_CSID.as_ref()[0..10]).unwrap(),
             1,
         )
-        .compat()
         .await
         .expect("Failed to get hg changeset by its prefix");
 
@@ -211,12 +196,11 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     // found several changesets within the limit
     let result = mapping
         .get_many_hg_by_prefix(
-            ctx.clone(),
+            &ctx,
             REPO_ZERO,
             HgChangesetIdPrefix::from_bytes(&hg::FS_CSID.as_ref()[0..8]).unwrap(),
             10,
         )
-        .compat()
         .await
         .expect("Failed to get hg changeset by its prefix");
 
@@ -228,12 +212,11 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     // found several changesets within the limit (try odd hex string prefix this time)
     let result = mapping
         .get_many_hg_by_prefix(
-            ctx.clone(),
+            &ctx,
             REPO_ZERO,
             HgChangesetIdPrefix::from_str(&"fff").unwrap(),
             10,
         )
-        .compat()
         .await
         .expect("Failed to get hg changeset by its prefix");
 
@@ -245,12 +228,11 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     // found several changesets exceeding the limit
     let result = mapping
         .get_many_hg_by_prefix(
-            ctx.clone(),
+            &ctx,
             REPO_ZERO,
             HgChangesetIdPrefix::from_bytes(&hg::FS_CSID.as_ref()[0..8]).unwrap(),
             1,
         )
-        .compat()
         .await
         .expect("Failed to get hg changeset by its prefix");
 
@@ -262,12 +244,11 @@ async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M)
     // not found
     let result = mapping
         .get_many_hg_by_prefix(
-            ctx.clone(),
+            &ctx,
             REPO_ZERO,
             HgChangesetIdPrefix::from_bytes(&hg::THREES_CSID.as_ref()[0..16]).unwrap(),
             10,
         )
-        .compat()
         .await
         .expect("Failed to get hg changeset by its prefix");
 
@@ -297,32 +278,34 @@ impl CountedBonsaiHgMapping {
     }
 }
 
+#[async_trait]
 impl BonsaiHgMapping for CountedBonsaiHgMapping {
-    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
+    async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
         self.adds.fetch_add(1, Ordering::Relaxed);
-        self.mapping.add(ctx, entry)
+        self.mapping.add(ctx, entry).await
     }
 
-    fn get(
+    async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_id: BonsaiOrHgChangesetIds,
-    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
+    ) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
         self.gets.fetch_add(1, Ordering::Relaxed);
-        self.mapping.get(ctx, repo_id, cs_id)
+        self.mapping.get(ctx, repo_id, cs_id).await
     }
 
-    fn get_many_hg_by_prefix(
+    async fn get_many_hg_by_prefix(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_prefix: HgChangesetIdPrefix,
         limit: usize,
-    ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
+    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
         self.gets_many_hg_by_prefix.fetch_add(1, Ordering::Relaxed);
         self.mapping
             .get_many_hg_by_prefix(ctx, repo_id, cs_prefix, limit)
+            .await
     }
 }
 
@@ -347,65 +330,49 @@ async fn caching<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
     assert_eq!(
         true,
         mapping
-            .add(ctx.clone(), entry.clone())
-            .compat()
+            .add(&ctx, entry.clone())
             .await
             .expect("Adding new entry failed")
     );
 
     let result = mapping
-        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::ONES_CSID)
-        .compat()
+        .get_bonsai_from_hg(&ctx, REPO_ZERO, hg::ONES_CSID)
         .await
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
     assert_eq!(gets.load(Ordering::Relaxed), 1);
 
     let result = mapping
-        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::ONES_CSID)
-        .compat()
+        .get_bonsai_from_hg(&ctx, REPO_ZERO, hg::ONES_CSID)
         .await
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
     assert_eq!(gets.load(Ordering::Relaxed), 1);
 
     let result = mapping
-        .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::TWOS_CSID)
-        .compat()
+        .get_bonsai_from_hg(&ctx, REPO_ZERO, hg::TWOS_CSID)
         .await
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, None);
     assert_eq!(gets.load(Ordering::Relaxed), 2);
 }
 
-#[fbinit::test]
-fn test_add_and_get(fb: FacebookInit) {
-    async_unit::tokio_unit_test(add_and_get(
-        fb,
-        SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap(),
-    ));
+#[fbinit::compat_test]
+async fn test_add_and_get(fb: FacebookInit) {
+    add_and_get(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap()).await;
 }
 
-#[fbinit::test]
-fn test_missing(fb: FacebookInit) {
-    async_unit::tokio_unit_test(missing(
-        fb,
-        SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap(),
-    ));
+#[fbinit::compat_test]
+async fn test_missing(fb: FacebookInit) {
+    missing(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap()).await;
 }
 
-#[fbinit::test]
-fn test_caching(fb: FacebookInit) {
-    async_unit::tokio_unit_test(caching(
-        fb,
-        SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap(),
-    ));
+#[fbinit::compat_test]
+async fn test_caching(fb: FacebookInit) {
+    caching(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap()).await;
 }
 
-#[fbinit::test]
-fn test_get_many_hg_by_prefix(fb: FacebookInit) {
-    async_unit::tokio_unit_test(get_many_hg_by_prefix(
-        fb,
-        SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap(),
-    ));
+#[fbinit::compat_test]
+async fn test_get_many_hg_by_prefix(fb: FacebookInit) {
+    get_many_hg_by_prefix(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap()).await;
 }

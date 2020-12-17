@@ -1231,15 +1231,22 @@ impl HgCommands for RepoClient {
                 })
                 .boxify(),
                 Err(_) => match HgChangesetIdPrefix::from_str(&key) {
-                    Ok(cs_prefix) => repo
-                        .get_bonsai_hg_mapping()
-                        .get_many_hg_by_prefix(
-                            ctx.clone(),
-                            repo.get_repoid(),
-                            cs_prefix,
-                            MAX_NUMBER_OF_SUGGESTIONS_TO_FETCH,
-                        )
-                        .boxify(),
+                    Ok(cs_prefix) => {
+                        cloned!(repo, ctx);
+                        async move {
+                            repo.get_bonsai_hg_mapping()
+                                .get_many_hg_by_prefix(
+                                    &ctx,
+                                    repo.get_repoid(),
+                                    cs_prefix,
+                                    MAX_NUMBER_OF_SUGGESTIONS_TO_FETCH,
+                                )
+                                .await
+                        }
+                        .boxed()
+                        .compat()
+                        .boxify()
+                    }
                     Err(_) => ok(HgChangesetIdsResolvedFromPrefix::NoMatch).boxify(),
                 },
             };

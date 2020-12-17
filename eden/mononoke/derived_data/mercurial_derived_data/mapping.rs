@@ -10,7 +10,6 @@ use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 
@@ -66,8 +65,7 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         let map = self
             .mapping
-            .get(ctx, self.repo_id, csids.into())
-            .compat()
+            .get(&ctx, self.repo_id, csids.into())
             .await?
             .into_iter()
             .map(|entry| (entry.bcs_id, MappedHgChangesetId(entry.hg_cs_id)))
@@ -78,14 +76,13 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
     async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
         self.mapping
             .add(
-                ctx,
+                &ctx,
                 BonsaiHgMappingEntry {
                     repo_id: self.repo_id,
                     hg_cs_id: id.0,
                     bcs_id: csid,
                 },
             )
-            .compat()
             .await?;
         Ok(())
     }

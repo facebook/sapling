@@ -18,12 +18,6 @@ use caching_ext::{
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
-};
-use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::Future;
 use memcache::{KeyGen, MemcacheClient};
 use mercurial_types::{HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -111,67 +105,58 @@ fn memcache_serialize(entry: &BonsaiHgMappingEntry) -> Bytes {
     compact_protocol::serialize(&entry.clone().into_thrift())
 }
 
+#[async_trait]
 impl BonsaiHgMapping for CachingBonsaiHgMapping {
-    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
-        self.mapping.add(ctx, entry)
+    async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
+        self.mapping.add(ctx, entry).await
     }
 
-    fn get(
+    async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs: BonsaiOrHgChangesetIds,
-    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
-        let this = (*self).clone();
+    ) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
+        let ctx = (ctx, repo_id, self);
 
-        async move {
-            let ctx = (&ctx, repo_id, &this);
+        let res = match cs {
+            BonsaiOrHgChangesetIds::Bonsai(cs_ids) => {
+                get_or_fill(ctx, cs_ids.into_iter().collect())
+                    .await?
+                    .into_iter()
+                    .map(|(_, val)| val)
+                    .collect()
+            }
+            BonsaiOrHgChangesetIds::Hg(hg_ids) => get_or_fill(ctx, hg_ids.into_iter().collect())
+                .await?
+                .into_iter()
+                .map(|(_, val)| val)
+                .collect(),
+        };
 
-            let res = match cs {
-                BonsaiOrHgChangesetIds::Bonsai(cs_ids) => {
-                    get_or_fill(ctx, cs_ids.into_iter().collect())
-                        .await?
-                        .into_iter()
-                        .map(|(_, val)| val)
-                        .collect()
-                }
-                BonsaiOrHgChangesetIds::Hg(hg_ids) => {
-                    get_or_fill(ctx, hg_ids.into_iter().collect())
-                        .await?
-                        .into_iter()
-                        .map(|(_, val)| val)
-                        .collect()
-                }
-            };
-
-            Ok(res)
-        }
-        .boxed()
-        .compat()
-        .boxify()
+        Ok(res)
     }
 
     /// Use caching for the full changeset ids and slower path otherwise.
-    fn get_many_hg_by_prefix(
+    async fn get_many_hg_by_prefix(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_prefix: HgChangesetIdPrefix,
         limit: usize,
-    ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
+    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
         if let Some(id) = cs_prefix.into_hg_changeset_id() {
-            return self
-                .get(ctx, repo_id, id.into())
-                .map(move |result| {
-                    match result.into_iter().next() {
-                        Some(_) if limit > 0 => HgChangesetIdsResolvedFromPrefix::Single(id),
-                        _ => HgChangesetIdsResolvedFromPrefix::NoMatch,
-                    }
-                })
-                .boxify();
+            let res = self.get(ctx, repo_id, id.into()).await?;
+            let res = match res.into_iter().next() {
+                Some(_) if limit > 0 => HgChangesetIdsResolvedFromPrefix::Single(id),
+                _ => HgChangesetIdsResolvedFromPrefix::NoMatch,
+            };
+            return Ok(res);
         }
+
         self.mapping
             .get_many_hg_by_prefix(ctx, repo_id, cs_prefix, limit)
+            .await
     }
 }
 
@@ -230,11 +215,10 @@ impl KeyedEntityStore<ChangesetId, BonsaiHgMappingEntry> for CacheRequest<'_> {
         let res = mapping
             .mapping
             .get(
-                (*ctx).clone(),
+                ctx,
                 *repo_id,
                 BonsaiOrHgChangesetIds::Bonsai(keys.into_iter().collect()),
             )
-            .compat()
             .await?;
 
         Result::<_, Error>::Ok(res.into_iter().map(|e| (e.bcs_id, e)).collect())
@@ -257,11 +241,10 @@ impl KeyedEntityStore<HgChangesetId, BonsaiHgMappingEntry> for CacheRequest<'_> 
         let res = mapping
             .mapping
             .get(
-                (*ctx).clone(),
+                ctx,
                 *repo_id,
                 BonsaiOrHgChangesetIds::Hg(keys.into_iter().collect()),
             )
-            .compat()
             .await?;
 
         Result::<_, Error>::Ok(res.into_iter().map(|e| (e.hg_cs_id, e)).collect())

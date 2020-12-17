@@ -22,10 +22,8 @@ mononoke_types = { path = "../mononoke_types" }
 sql_construct = { path = "../common/sql_construct" }
 sql_ext = { path = "../common/rust/sql_ext" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -33,13 +31,13 @@ abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
 async-trait = "0.1.29"
+auto_impl = "0.4"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
 thiserror = "1.0"
 
 [dev-dependencies]
 mercurial_types-mocks = { path = "../mercurial/types/mocks" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 assert_matches = "1.3"
+tokio-compat = "0.1"

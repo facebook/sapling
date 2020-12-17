@@ -7,8 +7,9 @@
 
 #![deny(warnings)]
 
+use async_trait::async_trait;
+use auto_impl::auto_impl;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use sql::Connection;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
@@ -16,10 +17,8 @@ use sql_ext::SqlConnections;
 
 use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
-use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, Future, IntoFuture};
+use futures::{compat::Future01CompatExt, future};
 use mercurial_types::{
     HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgNodeHash,
 };
@@ -113,70 +112,47 @@ impl From<Vec<HgChangesetId>> for BonsaiOrHgChangesetIds {
     }
 }
 
+#[async_trait]
+#[auto_impl(&, Arc, Box)]
 pub trait BonsaiHgMapping: Send + Sync {
-    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error>;
+    async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error>;
 
-    fn get(
+    async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_id: BonsaiOrHgChangesetIds,
-    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error>;
+    ) -> Result<Vec<BonsaiHgMappingEntry>, Error>;
 
-    fn get_hg_from_bonsai(
+    async fn get_hg_from_bonsai(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Option<HgChangesetId>, Error> {
-        self.get(ctx, repo_id, cs_id.into())
-            .map(|result| result.into_iter().next().map(|entry| entry.hg_cs_id))
-            .boxify()
+    ) -> Result<Option<HgChangesetId>, Error> {
+        let result = self.get(ctx, repo_id, cs_id.into()).await?;
+        let hg_cs_id = result.into_iter().next().map(|entry| entry.hg_cs_id);
+        Ok(hg_cs_id)
     }
 
-    fn get_bonsai_from_hg(
+    async fn get_bonsai_from_hg(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_id: HgChangesetId,
-    ) -> BoxFuture<Option<ChangesetId>, Error> {
-        self.get(ctx, repo_id, cs_id.into())
-            .map(|result| result.into_iter().next().map(|entry| entry.bcs_id))
-            .boxify()
+    ) -> Result<Option<ChangesetId>, Error> {
+        let result = self.get(ctx, repo_id, cs_id.into()).await?;
+        let bcs_id = result.into_iter().next().map(|entry| entry.bcs_id);
+        Ok(bcs_id)
     }
 
-    fn get_many_hg_by_prefix(
+    async fn get_many_hg_by_prefix(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_prefix: HgChangesetIdPrefix,
         limit: usize,
-    ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error>;
-}
-
-impl BonsaiHgMapping for Arc<dyn BonsaiHgMapping> {
-    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
-        (**self).add(ctx, entry)
-    }
-
-    fn get(
-        &self,
-        ctx: CoreContext,
-        repo_id: RepositoryId,
-        cs_id: BonsaiOrHgChangesetIds,
-    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
-        (**self).get(ctx, repo_id, cs_id)
-    }
-
-    fn get_many_hg_by_prefix(
-        &self,
-        ctx: CoreContext,
-        repo_id: RepositoryId,
-        cs_prefix: HgChangesetIdPrefix,
-        limit: usize,
-    ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
-        (**self).get_many_hg_by_prefix(ctx, repo_id, cs_prefix, limit)
-    }
+    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error>;
 }
 
 #[derive(Clone)]
@@ -243,42 +219,38 @@ impl SqlConstruct for SqlBonsaiHgMapping {
 impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiHgMapping {}
 
 impl SqlBonsaiHgMapping {
-    fn verify_consistency(
-        &self,
-        entry: BonsaiHgMappingEntry,
-    ) -> impl Future<Item = (), Error = Error> {
+    async fn verify_consistency(&self, entry: BonsaiHgMappingEntry) -> Result<(), Error> {
         let BonsaiHgMappingEntry {
             repo_id,
             hg_cs_id,
             bcs_id,
         } = entry.clone();
-        cloned!(self.read_master_connection);
 
-        let by_hg = SelectMappingByHg::query(&read_master_connection, &repo_id, &[hg_cs_id]);
-        let by_bcs = SelectMappingByBonsai::query(&read_master_connection, &repo_id, &[bcs_id]);
+        let by_hg = SelectMappingByHg::query(&self.read_master_connection, &repo_id, &[hg_cs_id]);
+        let by_bcs =
+            SelectMappingByBonsai::query(&self.read_master_connection, &repo_id, &[bcs_id]);
 
-        by_hg
-            .join(by_bcs)
-            .and_then(move |(by_hg_rows, by_bcs_rows)| {
-                match by_hg_rows.into_iter().chain(by_bcs_rows.into_iter()).next() {
-                    Some(entry) if entry == (hg_cs_id, bcs_id) => Ok(()),
-                    Some((hg_cs_id, bcs_id)) => Err(ErrorKind::ConflictingEntries(
-                        BonsaiHgMappingEntry {
-                            repo_id,
-                            hg_cs_id,
-                            bcs_id,
-                        },
-                        entry,
-                    )
-                    .into()),
-                    None => Err(ErrorKind::RaceConditionWithDelete(entry).into()),
-                }
-            })
+        let (by_hg_rows, by_bcs_rows) = future::try_join(by_hg.compat(), by_bcs.compat()).await?;
+
+        match by_hg_rows.into_iter().chain(by_bcs_rows.into_iter()).next() {
+            Some(entry) if entry == (hg_cs_id, bcs_id) => Ok(()),
+            Some((hg_cs_id, bcs_id)) => Err(ErrorKind::ConflictingEntries(
+                BonsaiHgMappingEntry {
+                    repo_id,
+                    hg_cs_id,
+                    bcs_id,
+                },
+                entry,
+            )
+            .into()),
+            None => Err(ErrorKind::RaceConditionWithDelete(entry).into()),
+        }
     }
 }
 
+#[async_trait]
 impl BonsaiHgMapping for SqlBonsaiHgMapping {
-    fn add(&self, ctx: CoreContext, entry: BonsaiHgMappingEntry) -> BoxFuture<bool, Error> {
+    async fn add(&self, ctx: &CoreContext, entry: BonsaiHgMappingEntry) -> Result<bool, Error> {
         STATS::adds.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
@@ -289,104 +261,99 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
             bcs_id,
         } = entry.clone();
 
-        let this = self.clone();
-        InsertMapping::query(&self.write_connection, &[(&repo_id, &hg_cs_id, &bcs_id)])
-            .and_then(move |result| {
-                if result.affected_rows() == 1 {
-                    Ok(true).into_future().left_future()
-                } else {
-                    this.verify_consistency(entry)
-                        .map(|()| false)
-                        .right_future()
-                }
-            })
-            .boxify()
+        let result =
+            InsertMapping::query(&self.write_connection, &[(&repo_id, &hg_cs_id, &bcs_id)])
+                .compat()
+                .await?;
+
+        if result.affected_rows() == 1 {
+            Ok(true)
+        } else {
+            self.verify_consistency(entry).await?;
+            Ok(false)
+        }
     }
 
-    fn get(
+    async fn get(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         ids: BonsaiOrHgChangesetIds,
-    ) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
+    ) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
         STATS::gets.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        cloned!(self.read_master_connection);
+        let mut mappings = select_mapping(&self.read_connection, repo_id, &ids).await?;
 
-        select_mapping(&self.read_connection, repo_id, &ids)
-            .and_then(move |mut mappings| {
-                let left_to_fetch = filter_fetched_ids(ids, &mappings[..]);
+        let left_to_fetch = filter_fetched_ids(ids, &mappings[..]);
+        if left_to_fetch.is_empty() {
+            return Ok(mappings);
+        }
 
-                if left_to_fetch.is_empty() {
-                    Ok(mappings).into_future().left_future()
-                } else {
-                    STATS::gets_master.add_value(1);
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::SqlReadsMaster);
-                    select_mapping(&read_master_connection, repo_id, &left_to_fetch)
-                        .map(move |mut master_mappings| {
-                            mappings.append(&mut master_mappings);
-                            mappings
-                        })
-                        .right_future()
-                }
-            })
-            .boxify()
+        STATS::gets_master.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsMaster);
+        let mut master_mappings =
+            select_mapping(&self.read_master_connection, repo_id, &left_to_fetch).await?;
+
+        mappings.append(&mut master_mappings);
+        Ok(mappings)
     }
 
-    fn get_many_hg_by_prefix(
+    async fn get_many_hg_by_prefix(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_prefix: HgChangesetIdPrefix,
         limit: usize,
-    ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
+    ) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
         STATS::get_many_hg_by_prefix.add_value(1);
-        cloned!(self.read_master_connection);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        fetch_many_hg_by_prefix(&self.read_connection, repo_id, &cs_prefix, limit)
-            .and_then(move |resolved_cs| {
-                match resolved_cs {
-                    HgChangesetIdsResolvedFromPrefix::NoMatch => {
-                        ctx.perf_counters()
-                            .increment_counter(PerfCounterType::SqlReadsMaster);
-                        fetch_many_hg_by_prefix(&read_master_connection, repo_id, &cs_prefix, limit)
-                    }
-                    _ => future::ok(resolved_cs).boxify(),
-                }
-            })
-            .boxify()
+        let resolved_cs =
+            fetch_many_hg_by_prefix(&self.read_connection, repo_id, &cs_prefix, limit).await?;
+
+        match resolved_cs {
+            HgChangesetIdsResolvedFromPrefix::NoMatch => {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlReadsMaster);
+                fetch_many_hg_by_prefix(&self.read_master_connection, repo_id, &cs_prefix, limit)
+                    .await
+            }
+            _ => Ok(resolved_cs),
+        }
     }
 }
 
-fn fetch_many_hg_by_prefix(
+async fn fetch_many_hg_by_prefix(
     connection: &Connection,
     repo_id: RepositoryId,
     cs_prefix: &HgChangesetIdPrefix,
     limit: usize,
-) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
-    SelectHgChangesetsByRange::query(
+) -> Result<HgChangesetIdsResolvedFromPrefix, Error> {
+    let rows = SelectHgChangesetsByRange::query(
         &connection,
         &repo_id,
         &cs_prefix.min_as_ref(),
         &cs_prefix.max_as_ref(),
         &(limit + 1),
     )
-    .map(move |rows| {
-        let mut fetched_cs: Vec<HgChangesetId> = rows.into_iter().map(|row| row.0).collect();
-        match fetched_cs.len() {
-            0 => HgChangesetIdsResolvedFromPrefix::NoMatch,
-            1 => HgChangesetIdsResolvedFromPrefix::Single(fetched_cs[0].clone()),
-            l if l <= limit => HgChangesetIdsResolvedFromPrefix::Multiple(fetched_cs),
-            _ => HgChangesetIdsResolvedFromPrefix::TooMany({
-                fetched_cs.pop();
-                fetched_cs
-            }),
-        }
-    })
-    .boxify()
+    .compat()
+    .await?;
+
+    let mut fetched_cs: Vec<HgChangesetId> = rows.into_iter().map(|row| row.0).collect();
+
+    let res = match fetched_cs.len() {
+        0 => HgChangesetIdsResolvedFromPrefix::NoMatch,
+        1 => HgChangesetIdsResolvedFromPrefix::Single(fetched_cs[0].clone()),
+        l if l <= limit => HgChangesetIdsResolvedFromPrefix::Multiple(fetched_cs),
+        _ => HgChangesetIdsResolvedFromPrefix::TooMany({
+            fetched_cs.pop();
+            fetched_cs
+        }),
+    };
+
+    Ok(res)
 }
 
 fn filter_fetched_ids(
@@ -429,34 +396,34 @@ fn filter_fetched_ids(
     }
 }
 
-fn select_mapping(
+async fn select_mapping(
     connection: &Connection,
     repo_id: RepositoryId,
     cs_id: &BonsaiOrHgChangesetIds,
-) -> BoxFuture<Vec<BonsaiHgMappingEntry>, Error> {
-    cloned!(repo_id, cs_id);
+) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
     if cs_id.is_empty() {
-        return future::ok(vec![]).boxify();
+        return Ok(vec![]);
     }
 
-    let rows_fut = match cs_id {
+    let rows = match cs_id {
         BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..]).boxify()
+            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..])
+                .compat()
+                .await?
         }
         BonsaiOrHgChangesetIds::Hg(hg_cs_ids) => {
-            SelectMappingByHg::query(&connection, &repo_id, &hg_cs_ids[..]).boxify()
+            SelectMappingByHg::query(&connection, &repo_id, &hg_cs_ids[..])
+                .compat()
+                .await?
         }
     };
 
-    rows_fut
-        .map(move |rows| {
-            rows.into_iter()
-                .map(move |(hg_cs_id, bcs_id)| BonsaiHgMappingEntry {
-                    repo_id,
-                    hg_cs_id,
-                    bcs_id,
-                })
-                .collect()
+    Ok(rows
+        .into_iter()
+        .map(move |(hg_cs_id, bcs_id)| BonsaiHgMappingEntry {
+            repo_id,
+            hg_cs_id,
+            bcs_id,
         })
-        .boxify()
+        .collect())
 }
