@@ -11,8 +11,8 @@ use std::sync::Arc;
 use anyhow::{format_err, Error};
 use ascii::AsciiString;
 use cloned::cloned;
-use futures::future::TryFutureExt;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures::{FutureExt, TryFutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt as _};
 use futures_old::{prelude::*, stream};
 use slog::{info, Logger};
 
@@ -73,9 +73,13 @@ pub fn upload_bookmarks(
             cloned!(ctx, logger, blobrepo, stale_bookmarks);
             move |bookmarks| {
                 stream::futures_unordered(bookmarks.into_iter().map(|(key, cs_id)| {
-                    blobrepo
-                        .changeset_exists(ctx.clone(), cs_id)
-                        .and_then({
+                    {
+                        cloned!(ctx, blobrepo);
+                        async move { blobrepo.changeset_exists(ctx, cs_id).await }
+                    }
+                    .boxed()
+                    .compat()
+                    .and_then({
                             cloned!(ctx, logger, key, blobrepo, stale_bookmarks);
                             move |exists| {
                                 match (exists, stale_bookmarks.get(&key).cloned()) {
@@ -90,24 +94,25 @@ pub fn upload_bookmarks(
                                             stale_cs_id,
                                         );
 
-                                        blobrepo
-                                            .changeset_exists(ctx, stale_cs_id)
-                                            .map(move |exists| (key, stale_cs_id, exists))
-                                            .boxify()
+                                        async move {
+                                            let exists = blobrepo.changeset_exists(ctx, stale_cs_id).await?;
+                                            Ok((key, stale_cs_id, exists))
+                                        }
+                                        .boxed()
+                                        .compat()
+                                        .boxify()
                                     }
                                     _ => Ok((key, cs_id, exists)).into_future().boxify(),
                                 }
                             }})
                         .and_then({
                             cloned!(ctx, blobrepo, logger);
-                            move |(key, cs_id, exists)| {
+                            move |(key, cs_id, exists)| async move {
                                 if exists {
-                                    blobrepo.get_bonsai_from_hg(ctx, cs_id)
-                                        .and_then(move |bcs_id| bcs_id.ok_or(
-                                            format_err!("failed to resolve hg to bonsai: {}", cs_id),
-                                        ))
-                                        .map(move |bcs_id| Some((key, bcs_id)))
-                                        .left_future()
+                                    let bcs_id = blobrepo.get_bonsai_from_hg(ctx, cs_id)
+                                        .await?
+                                        .ok_or_else(|| format_err!("failed to resolve hg to bonsai: {}", cs_id))?;
+                                    Ok(Some((key, bcs_id)))
                                 } else {
                                     info!(
                                         logger,
@@ -115,9 +120,11 @@ pub fn upload_bookmarks(
                                         String::from_utf8_lossy(&key),
                                         cs_id,
                                     );
-                                    Ok(None).into_future().right_future()
+                                    Ok(None)
                                 }
                             }
+                            .boxed()
+                            .compat()
                         })
                 }))
             }

@@ -26,7 +26,6 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
     try_join,
 };
-use futures_old::Future;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
@@ -84,17 +83,15 @@ async fn derive_target_hg_changesets(
 ) -> Result<(), Error> {
     match maybe_target_cs_id {
         Some(target_cs_id) => {
-            commit_syncer
+            let hg_cs_id = commit_syncer
                 .get_target_repo()
                 .get_hg_from_bonsai_changeset(ctx.clone(), target_cs_id)
-                .map(move |hg_cs_id| {
-                    info!(
-                        ctx.logger(),
-                        "Hg cs id {} derived for {}", hg_cs_id, target_cs_id
-                    );
-                })
-                .compat()
-                .await
+                .await?;
+            info!(
+                ctx.logger(),
+                "Hg cs id {} derived for {}", hg_cs_id, target_cs_id
+            );
+            Ok(())
         }
         None => Ok(()),
     }
@@ -370,9 +367,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .and_then({
                     cloned!(ctx);
                     move |chunk| {
-                        source_repo
-                            .get_hg_bonsai_mapping(ctx.clone(), chunk)
-                            .compat()
+                        cloned!(ctx, source_repo);
+                        async move { source_repo.get_hg_bonsai_mapping(ctx.clone(), chunk).await }
                     }
                 })
                 .try_fold(0, move |backsynced_so_far, hg_bonsai_mapping| {

@@ -109,7 +109,6 @@ async fn get_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
             async move {
                 let cs_id = repo
                     .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                    .compat()
                     .await?;
                 let hg_blob_changeset = cs_id.load(&ctx, repo.blobstore()).await?;
                 Ok(hg_blob_changeset.manifestid())

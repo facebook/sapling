@@ -13,7 +13,7 @@ use clap::{App, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, TryFutureExt};
+use futures::TryFutureExt;
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, MPath,
 };
@@ -85,10 +85,7 @@ pub async fn subcommand_create_bonsai<'a>(
     save_bonsai_changesets(vec![bcs], ctx.clone(), blobrepo.clone())
         .map_err(|e| SubcommandError::Error(anyhow!(e)))
         .await?;
-    let hg_cs = blobrepo
-        .get_hg_from_bonsai_changeset(ctx, bcs_id)
-        .compat()
-        .await?;
+    let hg_cs = blobrepo.get_hg_from_bonsai_changeset(ctx, bcs_id).await?;
     println!(
         "Created bonsai changeset {} for hg_changeset {}",
         bcs_id, hg_cs

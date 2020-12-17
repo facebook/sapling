@@ -20,7 +20,6 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use futures::compat::Future01CompatExt;
 use futures::future::{self, try_join, try_join_all, FutureExt, Shared};
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use manifest::{Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, PathOrPrefix};
@@ -154,7 +153,6 @@ impl ChangesetContext {
             .repo()
             .blob_repo()
             .get_hg_bonsai_mapping(self.ctx().clone(), self.id)
-            .compat()
             .await?;
         Ok(mapping.iter().next().map(|(hg_cs_id, _)| *hg_cs_id))
     }

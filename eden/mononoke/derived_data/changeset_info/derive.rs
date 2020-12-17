@@ -111,29 +111,23 @@ mod test {
     use std::collections::BTreeMap;
     use std::str::FromStr;
     use tests_utils::resolve_cs_id;
-    use tokio_compat::runtime::Runtime;
 
-    #[fbinit::test]
-    fn derive_info_test(fb: FacebookInit) {
-        let mut runtime = Runtime::new().unwrap();
-        let repo = runtime.block_on_std(linear::getrepo(fb));
+    #[fbinit::compat_test]
+    async fn derive_info_test(fb: FacebookInit) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let hg_cs_id = HgChangesetId::from_str("3c15267ebf11807f3d772eb891272b911ec68759").unwrap();
-        let bcs_id = runtime
-            .block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))
-            .unwrap()
+        let bcs_id = repo
+            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .await?
             .unwrap();
-        let bcs = runtime
-            .block_on_std(bcs_id.load(&ctx, repo.blobstore()))
-            .unwrap();
-
+        let bcs = bcs_id.load(&ctx, repo.blobstore()).await?;
         // Make sure that the changeset info was saved in the blobstore
-        let info = runtime
-            .block_on_std(ChangesetInfo::derive(&ctx, &repo, bcs_id))
-            .unwrap();
+        let info = ChangesetInfo::derive(&ctx, &repo, bcs_id).await?;
 
         check_info(&info, &bcs);
+        Ok(())
     }
 
     fn check_info(info: &ChangesetInfo, bcs: &BonsaiChangeset) {

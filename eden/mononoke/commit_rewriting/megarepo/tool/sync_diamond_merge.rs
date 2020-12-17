@@ -422,16 +422,13 @@ fn id_to_manifestid(
     repo: BlobRepo,
     bcs_id: ChangesetId,
 ) -> impl Future<Item = HgManifestId, Error = Error> {
-    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .and_then({
-            cloned!(ctx, repo);
-            move |cs_id| {
-                cloned!(ctx, repo);
-                async move { cs_id.load(&ctx, repo.blobstore()).await }
-                    .boxed()
-                    .compat()
-                    .from_err()
-            }
-        })
-        .map(|cs| cs.manifestid())
+    async move {
+        let cs_id = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+            .await?;
+        let cs = cs_id.load(&ctx, repo.blobstore()).await?;
+        Ok(cs.manifestid())
+    }
+    .boxed()
+    .compat()
 }

@@ -11,7 +11,6 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bounded_traversal::bounded_traversal_stream;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use futures::stream::{self, Stream, TryStreamExt};
 use manifest::{Entry, Manifest};
 use mercurial_types::HgChangesetId;
@@ -25,7 +24,6 @@ pub async fn bonsai_changeset_from_hg(
     let hg_cs_id = s.parse::<HgChangesetId>()?;
     let bcs_id = repo
         .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-        .compat()
         .await?
         .ok_or_else(|| anyhow!("Failed to find bonsai changeset id for {}", hg_cs_id))?;
     let bcs = bcs_id.load(ctx, repo.blobstore()).await?;

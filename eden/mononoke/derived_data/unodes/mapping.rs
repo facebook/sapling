@@ -145,6 +145,7 @@ mod test {
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
     use borrowed::borrowed;
+    use cloned::cloned;
     use derived_data::BonsaiDerived;
     use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
@@ -152,10 +153,7 @@ mod test {
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::{
-        compat::{Future01CompatExt, Stream01CompatExt},
-        future, Future, Stream, TryStreamExt,
-    };
+    use futures::{compat::Stream01CompatExt, future, Future, Stream, TryStreamExt};
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use mononoke_types::ChangesetId;
@@ -218,9 +216,13 @@ mod test {
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
                     .compat()
                     .and_then(move |new_bcs_id| {
-                        repo.get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
-                            .compat()
-                            .map_ok(move |hg_cs_id| (new_bcs_id, hg_cs_id))
+                        cloned!(ctx, repo);
+                        async move {
+                            let hg_cs_id = repo
+                                .get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
+                                .await?;
+                            Ok((new_bcs_id, hg_cs_id))
+                        }
                     })
             })
             .try_flatten_stream()

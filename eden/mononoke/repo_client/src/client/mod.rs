@@ -1216,16 +1216,20 @@ impl HgCommands for RepoClient {
             // Note: `get_many_hg_by_prefix` works for the full hex hashes well but
             //       `changeset_exists` has better caching and is preferable for the full length hex hashes.
             let node_fut = match HgChangesetId::from_str(&key) {
-                Ok(csid) => repo
-                    .changeset_exists(ctx.clone(), csid)
-                    .map(move |exists| {
-                        if exists {
-                            HgChangesetIdsResolvedFromPrefix::Single(csid)
-                        } else {
-                            HgChangesetIdsResolvedFromPrefix::NoMatch
-                        }
-                    })
-                    .boxify(),
+                Ok(csid) => {
+                    cloned!(ctx, repo);
+                    async move { repo.changeset_exists(ctx, csid).await }
+                }
+                .boxed()
+                .compat()
+                .map(move |exists| {
+                    if exists {
+                        HgChangesetIdsResolvedFromPrefix::Single(csid)
+                    } else {
+                        HgChangesetIdsResolvedFromPrefix::NoMatch
+                    }
+                })
+                .boxify(),
                 Err(_) => match HgChangesetIdPrefix::from_str(&key) {
                     Ok(cs_prefix) => repo
                         .get_bonsai_hg_mapping()
@@ -1291,16 +1295,19 @@ impl HgCommands for RepoClient {
 
                         match (outcome, bookmark) {
                             (LookupOutcome::HighPriority(res), _) => res,
-                            (LookupOutcome::LowPriority(res), Some(bookmark)) => repo
-                                .get_bookmark(ctx.clone(), &bookmark)
-                                .and_then(move |maybe_csid| {
-                                    if let Some(csid) = maybe_csid {
-                                        generate_changeset_resp_buf(csid)
-                                    } else {
-                                        res
-                                    }
-                                })
-                                .boxify(),
+                            (LookupOutcome::LowPriority(res), Some(bookmark)) => {
+                                async move { repo.get_bookmark(ctx.clone(), &bookmark).await }
+                                    .boxed()
+                                    .compat()
+                                    .and_then(move |maybe_csid| {
+                                        if let Some(csid) = maybe_csid {
+                                            generate_changeset_resp_buf(csid)
+                                        } else {
+                                            res
+                                        }
+                                    })
+                                    .boxify()
+                            }
                             (LookupOutcome::LowPriority(res), None) => res,
                         }
                     }
@@ -1335,53 +1342,57 @@ impl HgCommands for RepoClient {
             let nodes_len = nodes.len();
             let phases_hint = blobrepo.get_phases().clone();
 
-            blobrepo
-                .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
-                .map(|hg_bcs_mapping| {
-                    let mut bcs_ids = vec![];
-                    let mut bcs_hg_mapping = hashmap! {};
+            {
+                cloned!(ctx, nodes);
+                async move { blobrepo.get_hg_bonsai_mapping(ctx, nodes).await }
+            }
+            .boxed()
+            .compat()
+            .map(|hg_bcs_mapping| {
+                let mut bcs_ids = vec![];
+                let mut bcs_hg_mapping = hashmap! {};
 
-                    for (hg, bcs) in hg_bcs_mapping {
-                        bcs_ids.push(bcs);
-                        bcs_hg_mapping.insert(bcs, hg);
-                    }
-                    (bcs_ids, bcs_hg_mapping)
-                })
-                .and_then({
-                    cloned!(ctx);
-                    move |(bcs_ids, bcs_hg_mapping)| {
-                        phases_hint
-                            .get_public(ctx, bcs_ids, false)
-                            .map_ok(move |public_csids| {
-                                public_csids
-                                    .into_iter()
-                                    .filter_map(|csid| bcs_hg_mapping.get(&csid).cloned())
-                                    .collect::<HashSet<_>>()
-                            })
-                            .compat()
-                    }
-                })
-                .map(move |found_hg_changesets| {
-                    nodes
-                        .into_iter()
-                        .map(move |node| found_hg_changesets.contains(&node))
-                        .collect::<Vec<_>>()
-                })
-                .timeout(default_timeout())
-                .map_err(process_timeout_error)
-                .traced(self.session.trace(), ops::KNOWN, trace_args!())
-                .timed(move |stats, known_nodes| {
-                    if let Ok(known) = known_nodes {
-                        ctx.perf_counters()
-                            .add_to_counter(PerfCounterType::NumKnown, known.len() as i64);
-                        ctx.perf_counters().add_to_counter(
-                            PerfCounterType::NumUnknown,
-                            (nodes_len - known.len()) as i64,
-                        );
-                    }
-                    command_logger.without_wireproto().finalize_command(&stats);
-                    Ok(())
-                })
+                for (hg, bcs) in hg_bcs_mapping {
+                    bcs_ids.push(bcs);
+                    bcs_hg_mapping.insert(bcs, hg);
+                }
+                (bcs_ids, bcs_hg_mapping)
+            })
+            .and_then({
+                cloned!(ctx);
+                move |(bcs_ids, bcs_hg_mapping)| {
+                    phases_hint
+                        .get_public(ctx, bcs_ids, false)
+                        .map_ok(move |public_csids| {
+                            public_csids
+                                .into_iter()
+                                .filter_map(|csid| bcs_hg_mapping.get(&csid).cloned())
+                                .collect::<HashSet<_>>()
+                        })
+                        .compat()
+                }
+            })
+            .map(move |found_hg_changesets| {
+                nodes
+                    .into_iter()
+                    .map(move |node| found_hg_changesets.contains(&node))
+                    .collect::<Vec<_>>()
+            })
+            .timeout(default_timeout())
+            .map_err(process_timeout_error)
+            .traced(self.session.trace(), ops::KNOWN, trace_args!())
+            .timed(move |stats, known_nodes| {
+                if let Ok(known) = known_nodes {
+                    ctx.perf_counters()
+                        .add_to_counter(PerfCounterType::NumKnown, known.len() as i64);
+                    ctx.perf_counters().add_to_counter(
+                        PerfCounterType::NumUnknown,
+                        (nodes_len - known.len()) as i64,
+                    );
+                }
+                command_logger.without_wireproto().finalize_command(&stats);
+                Ok(())
+            })
         })
     }
 
@@ -1391,30 +1402,34 @@ impl HgCommands for RepoClient {
 
             let nodes_len = nodes.len();
 
-            blobrepo
-                .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
-                .map(|hg_bcs_mapping| {
-                    let hg_bcs_mapping: HashMap<_, _> = hg_bcs_mapping.into_iter().collect();
-                    nodes
-                        .into_iter()
-                        .map(move |node| hg_bcs_mapping.contains_key(&node))
-                        .collect::<Vec<_>>()
-                })
-                .timeout(default_timeout())
-                .map_err(process_timeout_error)
-                .traced(self.session.trace(), ops::KNOWNNODES, trace_args!())
-                .timed(move |stats, known_nodes| {
-                    if let Ok(known) = known_nodes {
-                        ctx.perf_counters()
-                            .add_to_counter(PerfCounterType::NumKnown, known.len() as i64);
-                        ctx.perf_counters().add_to_counter(
-                            PerfCounterType::NumUnknown,
-                            (nodes_len - known.len()) as i64,
-                        );
-                    }
-                    command_logger.without_wireproto().finalize_command(&stats);
-                    Ok(())
-                })
+            {
+                cloned!(ctx, nodes);
+                async move { blobrepo.get_hg_bonsai_mapping(ctx, nodes).await }
+            }
+            .boxed()
+            .compat()
+            .map(|hg_bcs_mapping| {
+                let hg_bcs_mapping: HashMap<_, _> = hg_bcs_mapping.into_iter().collect();
+                nodes
+                    .into_iter()
+                    .map(move |node| hg_bcs_mapping.contains_key(&node))
+                    .collect::<Vec<_>>()
+            })
+            .timeout(default_timeout())
+            .map_err(process_timeout_error)
+            .traced(self.session.trace(), ops::KNOWNNODES, trace_args!())
+            .timed(move |stats, known_nodes| {
+                if let Ok(known) = known_nodes {
+                    ctx.perf_counters()
+                        .add_to_counter(PerfCounterType::NumKnown, known.len() as i64);
+                    ctx.perf_counters().add_to_counter(
+                        PerfCounterType::NumUnknown,
+                        (nodes_len - known.len()) as i64,
+                    );
+                }
+                command_logger.without_wireproto().finalize_command(&stats);
+                Ok(())
+            })
         })
     }
 
@@ -1512,13 +1527,14 @@ impl HgCommands for RepoClient {
             let queries = patterns.into_iter().map({
                 cloned!(ctx);
                 let max = self.repo.list_keys_patterns_max();
-                let repo = self.repo.blobrepo();
+                let repo = self.repo.blobrepo().clone();
                 move |pattern| {
                     if pattern.ends_with("*") {
                         // prefix match
                         let prefix =
                             try_boxfuture!(BookmarkPrefix::new(&pattern[..pattern.len() - 1]));
                         repo.get_bookmarks_by_prefix_maybe_stale(ctx.clone(), &prefix, max)
+                            .compat()
                             .map(|(bookmark, cs_id): (Bookmark, HgChangesetId)| {
                                 (bookmark.into_name().to_string(), cs_id)
                             })
@@ -1537,12 +1553,19 @@ impl HgCommands for RepoClient {
                     } else {
                         // literal match
                         let bookmark = try_boxfuture!(BookmarkName::new(&pattern));
-                        repo.get_bookmark(ctx.clone(), &bookmark)
-                            .map(move |cs_id| match cs_id {
-                                Some(cs_id) => vec![(pattern, cs_id)],
-                                None => Vec::new(),
-                            })
-                            .boxify()
+                        {
+                            cloned!(ctx, repo);
+                            async move {
+                                let cs_id = repo.get_bookmark(ctx, &bookmark).await?;
+                                match cs_id {
+                                    Some(cs_id) => Ok(vec![(pattern, cs_id)]),
+                                    None => Ok(Vec::new()),
+                                }
+                            }
+                        }
+                        .boxed()
+                        .compat()
+                        .boxify()
                     }
                 }
             });
@@ -2242,20 +2265,23 @@ pub fn fetch_treepack_part_input(
     .boxed()
     .compat();
 
-    let filenode_fut = repo
-        .get_filenode_opt(
-            ctx.clone(),
-            &repo_path,
-            HgFileNodeId::new(hg_mf_id.into_nodehash()),
-        )
-        .map(|filenode_res| {
-            match filenode_res {
-                FilenodeResult::Present(maybe_filenode) => maybe_filenode,
-                // Filenodes are disabled - that means we can't fetch
-                // linknode so we'll return NULL to clients.
-                FilenodeResult::Disabled => None,
-            }
-        });
+    let filenode_fut = {
+        cloned!(repo, ctx, repo_path);
+        async move {
+            repo.get_filenode_opt(ctx, &repo_path, HgFileNodeId::new(hg_mf_id.into_nodehash()))
+                .await
+        }
+    }
+    .boxed()
+    .compat()
+    .map(|filenode_res| {
+        match filenode_res {
+            FilenodeResult::Present(maybe_filenode) => maybe_filenode,
+            // Filenodes are disabled - that means we can't fetch
+            // linknode so we'll return NULL to clients.
+            FilenodeResult::Disabled => None,
+        }
+    });
 
     filenode_fut
         .join(envelope_fut)
@@ -2481,7 +2507,6 @@ impl GitLookup {
                     Some(bcs_id) => {
                         let hg_cs_id = repo
                             .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                            .compat()
                             .await?;
                         Ok(Some(generate_lookup_resp_buf(
                             true,
@@ -2494,7 +2519,6 @@ impl GitLookup {
             HgToGit(hg_changeset_id) => {
                 let maybe_bcs_id = repo
                     .get_bonsai_from_hg(ctx.clone(), *hg_changeset_id)
-                    .compat()
                     .await?;
                 let bonsai_git_mapping = repo.bonsai_git_mapping();
 

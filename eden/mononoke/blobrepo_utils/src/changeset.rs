@@ -178,28 +178,32 @@ where
 
         shared.mark_visit_started(changeset_id);
 
-        let parents_fut = shared
-            .repo
-            .get_changeset_parents(ctx.clone(), changeset_id)
-            .map({
-                cloned!(ctx, shared, mut sender);
-                move |parent_hashes| {
-                    for parent_id in parent_hashes {
-                        let visit_one = VisitOne::new(
-                            ctx.clone(),
-                            &shared,
-                            parent_id,
-                            follow_remaining,
-                            &mut sender,
-                        );
-                        if let Some(visit_one) = visit_one {
-                            // Avoid unbounded recursion by spawning separate futures for each parent
-                            // directly on the executor.
-                            tokio_old::spawn(visit_one.visit());
-                        }
+        let parents_fut = {
+            let repo = shared.repo.clone();
+            cloned!(ctx);
+            async move { repo.get_changeset_parents(ctx, changeset_id).await }
+        }
+        .boxed()
+        .compat()
+        .map({
+            cloned!(ctx, shared, mut sender);
+            move |parent_hashes| {
+                for parent_id in parent_hashes {
+                    let visit_one = VisitOne::new(
+                        ctx.clone(),
+                        &shared,
+                        parent_id,
+                        follow_remaining,
+                        &mut sender,
+                    );
+                    if let Some(visit_one) = visit_one {
+                        // Avoid unbounded recursion by spawning separate futures for each parent
+                        // directly on the executor.
+                        tokio_old::spawn(visit_one.visit());
                     }
                 }
-            });
+            }
+        });
 
         let visit_fut = {
             cloned!(ctx, changeset_id, shared);

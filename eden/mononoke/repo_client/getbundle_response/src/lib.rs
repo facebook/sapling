@@ -420,7 +420,6 @@ async fn create_hg_changeset_part(
                 async move {
                     let mapping = blobrepo
                         .get_hg_bonsai_mapping(ctx.clone(), bonsais.clone())
-                        .compat()
                         .await?
                         .into_iter()
                         .map(|(hg_cs_id, bonsai_cs_id)| (bonsai_cs_id, hg_cs_id))
@@ -510,11 +509,8 @@ async fn hg_to_bonsai_stream(
             move |node| async move {
                 let bcs_id = repo
                     .get_bonsai_from_hg(ctx.clone(), node)
-                    .and_then(move |maybe_bonsai| {
-                        maybe_bonsai.ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(node).into())
-                    })
-                    .compat()
-                    .await?;
+                    .await?
+                    .ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(node))?;
 
                 let cs_fetcher = repo.get_changeset_fetcher();
                 let gen_num = cs_fetcher
@@ -687,7 +683,6 @@ async fn traverse_draft_commits(
     // Find the bonsai changeset id for all of the heads.
     let hg_bonsai_heads = repo
         .get_hg_bonsai_mapping(ctx.clone(), heads.to_vec())
-        .compat()
         .await?;
 
     // Find the initial set of public changesets.
@@ -743,8 +738,7 @@ async fn traverse_draft_commits(
             .collect();
 
         let (new_next_changesets, new_public_changesets) = try_join!(
-            repo.get_hg_bonsai_mapping(ctx.clone(), parents.clone())
-                .compat(),
+            repo.get_hg_bonsai_mapping(ctx.clone(), parents.clone()),
             phases.get_public(ctx.clone(), parents, false)
         )?;
         next_changesets = new_next_changesets;
@@ -977,10 +971,7 @@ async fn diff_with_parents(
     Error,
 > {
     let (mf_id, parent_mf_ids) = try_join!(fetch_manifest(ctx, repo, &hg_cs_id), async {
-        let parents = repo
-            .get_changeset_parents(ctx.clone(), hg_cs_id)
-            .compat()
-            .await?;
+        let parents = repo.get_changeset_parents(ctx.clone(), hg_cs_id).await?;
 
         future::try_join_all(parents.iter().map(|p| fetch_manifest(ctx, repo, p))).await
     })?;

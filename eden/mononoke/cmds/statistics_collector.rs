@@ -21,7 +21,7 @@ use cmdlib::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::compat::Stream01CompatExt;
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use futures::{future::FutureExt, try_join};
 use futures_ext::{BoxStream, StreamExt as OldStreamExt};
@@ -315,7 +315,6 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
                 let ChangesetEntry { repo_id, cs_id, .. } = changeset;
                 let hg_cs_id = repo
                     .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                    .compat()
                     .await?;
                 let cs_timestamp =
                     get_changeset_timestamp_from_changeset(ctx, repo, &hg_cs_id).await?;
@@ -440,7 +439,6 @@ async fn run_statistics<'a>(
     let blobstore = Arc::new(repo.get_blobstore());
     let mut changeset = repo
         .get_bookmark(ctx.clone(), &bookmark)
-        .compat()
         .await?
         .ok_or(Error::msg("cannot load bookmark"))?;
 
@@ -466,7 +464,6 @@ async fn run_statistics<'a>(
         let prev_changeset = changeset;
         changeset = repo
             .get_bookmark(ctx.clone(), &bookmark)
-            .compat()
             .await?
             .ok_or(Error::msg("cannot load bookmark"))?;
 
@@ -642,7 +639,6 @@ mod tests {
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
                 .get_bonsai_from_hg(ctx.clone(), root)
-                .compat()
                 .await
                 .unwrap()
                 .unwrap();
@@ -666,7 +662,6 @@ mod tests {
 
             let hg_cs_id = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .compat()
                 .await
                 .unwrap();
 
@@ -696,7 +691,6 @@ mod tests {
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
             let p = repo
                 .get_bonsai_from_hg(ctx.clone(), root)
-                .compat()
                 .await
                 .unwrap()
                 .unwrap();
@@ -720,7 +714,6 @@ mod tests {
 
             let hg_cs_id = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .compat()
                 .await
                 .unwrap();
 

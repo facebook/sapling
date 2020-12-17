@@ -320,7 +320,6 @@ async fn push_merge_commit(
     // that this merge commit is correct
     let merge_hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), merge_cs_id)
-        .compat()
         .await?;
 
     info!(ctx.logger(), "Generated hg changeset {}", merge_hg_cs_id);
@@ -701,7 +700,6 @@ mod test {
         for merge_cs_id in gradual_merge_result.values() {
             let hg_cs_id = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), *merge_cs_id)
-                .compat()
                 .await?;
             let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await?;
             assert!(hg_cs.files().is_empty());

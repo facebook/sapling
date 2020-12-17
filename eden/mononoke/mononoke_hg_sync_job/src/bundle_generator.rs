@@ -18,10 +18,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use futures_ext::{try_boxfuture, FutureExt as _, StreamExt as _};
-use futures_old::{
-    future::{self, IntoFuture},
-    stream as stream_old, Future, Stream,
-};
+use futures_old::{future::IntoFuture, stream as stream_old, Future, Stream};
 use getbundle_response::{
     create_filenodes, create_manifest_entries_stream, get_manifests_and_filenodes,
     PreparedFilenodeEntry, SessionLfsParams,
@@ -154,13 +151,16 @@ impl BookmarkChange {
         maybe_cs: Option<ChangesetId>,
         repo: &BlobRepo,
     ) -> impl Future<Item = Option<HgChangesetId>, Error = Error> {
-        match maybe_cs {
-            Some(cs_id) => repo
-                .get_hg_from_bonsai_changeset(ctx, cs_id)
-                .map(Some)
-                .left_future(),
-            None => future::ok(None).right_future(),
+        cloned!(repo);
+        async move {
+            let res = match maybe_cs {
+                Some(cs_id) => Some(repo.get_hg_from_bonsai_changeset(ctx, cs_id).await?),
+                None => None,
+            };
+            Ok(res)
         }
+        .boxed()
+        .compat()
     }
 }
 
@@ -351,7 +351,12 @@ fn find_commits_to_push(
         maybe_to_cs_id.into_iter().collect(),
         hg_server_heads.into_iter().collect(),
     )
-    .map(move |bcs_id| repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id))
+    .map(move |bcs_id| {
+        cloned!(ctx, repo);
+        async move { repo.get_hg_from_bonsai_changeset(ctx, bcs_id).await }
+            .boxed()
+            .compat()
+    })
     .buffered(100)
 }
 

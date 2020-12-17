@@ -10,7 +10,6 @@ use anyhow::{format_err, Context, Error, Result};
 use cloned::cloned;
 use futures::{
     channel::oneshot,
-    compat::Future01CompatExt,
     future::{self, BoxFuture, FutureExt, TryFutureExt},
     stream::{self, BoxStream, TryStreamExt},
 };
@@ -96,7 +95,6 @@ impl ChangesetHandle {
             async move {
                 let csid = repo
                     .get_bonsai_from_hg(ctx.clone(), hg_cs)
-                    .compat()
                     .await?
                     .ok_or(ErrorKind::BonsaiMappingNotFound(hg_cs))?;
                 let bonsai_cs = csid.load(&ctx, repo.blobstore()).await?;

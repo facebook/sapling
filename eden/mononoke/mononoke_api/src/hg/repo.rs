@@ -12,7 +12,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::compat::Stream01CompatExt;
 use futures::{future, stream, Stream, StreamExt, TryStream, TryStreamExt};
 use hgproto::GettreepackArgs;
 use mercurial_types::blobs::RevlogChangeset;
@@ -134,7 +134,6 @@ impl HgRepoContext {
         let known_descendent_csid = self
             .blob_repo()
             .get_bonsai_from_hg(self.ctx().clone(), known_descendant)
-            .compat()
             .await?
             .ok_or_else(|| {
                 MononokeError::InvalidRequest(format!(
@@ -149,7 +148,6 @@ impl HgRepoContext {
         let hg_id_futures = result_csids.iter().map(|result_csid| {
             self.blob_repo()
                 .get_hg_from_bonsai_changeset(self.ctx().clone(), *result_csid)
-                .compat()
         });
         future::try_join_all(hg_id_futures)
             .await
@@ -189,7 +187,6 @@ impl HgRepoContext {
             let mapping = self
                 .blob_repo()
                 .get_hg_bonsai_mapping(self.ctx().clone(), csids)
-                .compat()
                 .await
                 .context("error fetching hg bonsai mapping")?
                 .into_iter()
@@ -253,7 +250,6 @@ async fn hg_convert_idmap_chunk(
     let csids = chunk.iter().map(|(_, csid)| *csid).collect::<Vec<_>>();
     let mapping = blobrepo
         .get_hg_bonsai_mapping(ctx, csids)
-        .compat()
         .await
         .context("error fetching hg bonsai mapping")?
         .into_iter()
@@ -278,7 +274,6 @@ mod tests {
     use anyhow::Error;
     use blobstore::Loadable;
     use fbinit::FacebookInit;
-    use futures::compat::Future01CompatExt;
     use mononoke_types::ChangesetId;
     use tests_utils::CreateCommitContext;
 
@@ -355,7 +350,6 @@ mod tests {
     ) -> Result<HgManifestId, Error> {
         let hg_cs_id = blob_repo
             .get_hg_from_bonsai_changeset(ctx.clone(), csid)
-            .compat()
             .await?;
         let hg_cs = hg_cs_id.load(&ctx, &blob_repo.get_blobstore()).await?;
         Ok(hg_cs.manifestid())

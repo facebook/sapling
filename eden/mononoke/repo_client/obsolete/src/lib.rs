@@ -11,7 +11,8 @@ use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use context::CoreContext;
-use futures::{stream, Future, Stream};
+use futures::{FutureExt, TryFutureExt};
+use futures_old::{stream, Stream as StreamOld};
 use mercurial_bundles::obsmarkers::MetadataEntry;
 use mercurial_bundles::{part_encode::PartEncodeBuilder, parts};
 use mercurial_types::HgChangesetId;
@@ -50,12 +51,21 @@ fn pushrebased_changesets_to_hg_stream(
     ctx: CoreContext,
     blobrepo: &BlobRepo,
     pushrebased_changesets: Vec<pushrebase::PushrebaseChangesetPair>,
-) -> impl Stream<Item = (HgChangesetId, Vec<HgChangesetId>), Error = Error> {
+) -> impl StreamOld<Item = (HgChangesetId, Vec<HgChangesetId>), Error = Error> {
+    let blobrepo = blobrepo.clone();
     let futures = pushrebased_changesets.into_iter().map({
         move |p| {
-            let hg_old = blobrepo.get_hg_from_bonsai_changeset(ctx.clone(), p.id_old);
-            let hg_new = blobrepo.get_hg_from_bonsai_changeset(ctx.clone(), p.id_new);
-            hg_old.join(hg_new).map(move |(old, new)| (old, vec![new]))
+            let blobrepo = blobrepo.clone();
+            let ctx = ctx.clone();
+            async move {
+                let (old, new) = futures::try_join!(
+                    blobrepo.get_hg_from_bonsai_changeset(ctx.clone(), p.id_old),
+                    blobrepo.get_hg_from_bonsai_changeset(ctx.clone(), p.id_new),
+                )?;
+                Ok((old, vec![new]))
+            }
+            .boxed()
+            .compat()
         }
     });
 

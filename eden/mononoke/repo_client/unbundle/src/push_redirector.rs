@@ -34,7 +34,6 @@ use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::types::Target;
 use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer};
 use futures::{
-    compat::Future01CompatExt,
     future::{try_join_all, FutureExt},
     try_join,
 };
@@ -229,7 +228,6 @@ impl PushRedirector {
 
                     let hg_cs_id = repo
                         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                        .compat()
                         .await?;
 
                     Ok(HgHookRejection {
@@ -350,7 +348,6 @@ impl PushRedirector {
             hook_rejection_remapper: _,
         } = orig;
 
-
         // We cannot yet call `convert_pushrebase_bookmark_spec`, as that fn requires
         // changesets to be rewritten
         let maybe_renamed_bookmark = self
@@ -383,16 +380,17 @@ impl PushRedirector {
                 hg_replay_data.override_convertor(Arc::new({
                     cloned!(large_to_small);
                     move |large_cs_id| {
-                        let small_cs_id = large_to_small.get(&large_cs_id).ok_or_else(|| {
-                            format_err!("{} doesn't remap in small repo", large_cs_id)
-                        });
-                        match small_cs_id {
-                            Err(err) => async move { Err(err) }.boxed(),
-                            Ok(id) => source_repo
-                                .get_hg_from_bonsai_changeset(ctx.clone(), *id)
-                                .compat()
-                                .boxed(),
+                        cloned!(ctx, source_repo, large_to_small);
+                        async move {
+                            let small_cs_id = large_to_small.get(&large_cs_id).ok_or_else(|| {
+                                format_err!("{} doesn't remap in small repo", large_cs_id)
+                            });
+                            match small_cs_id {
+                                Err(err) => Err(err),
+                                Ok(id) => source_repo.get_hg_from_bonsai_changeset(ctx, *id).await,
+                            }
                         }
+                        .boxed()
                     }
                 }));
                 hg_replay_data

@@ -179,7 +179,7 @@ mod tests {
         create_bonsai_changeset_with_files, linear, merge_even, merge_uneven, store_files,
         unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::compat::{Future01CompatExt, Stream01CompatExt};
+    use futures::compat::Stream01CompatExt;
     use futures::{Stream, TryFutureExt};
     use manifest::ManifestOps;
     use maplit::btreemap;
@@ -221,7 +221,6 @@ mod tests {
         let hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
         let bcs_id = repo
             .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-            .compat()
             .await
             .unwrap()
             .unwrap();
@@ -254,7 +253,6 @@ mod tests {
         let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb").unwrap();
         let bcs_id = repo
             .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-            .compat()
             .await
             .unwrap()
             .unwrap();
@@ -627,9 +625,13 @@ mod tests {
                 AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
                     .compat()
                     .and_then(move |new_bcs_id| {
-                        repo.get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
-                            .compat()
-                            .map_ok(move |hg_cs_id| (new_bcs_id, hg_cs_id))
+                        cloned!(ctx, repo);
+                        async move {
+                            let hg_cs_id = repo
+                                .get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
+                                .await?;
+                            Ok((new_bcs_id, hg_cs_id))
+                        }
                     })
             })
             .try_flatten_stream()
@@ -663,9 +665,8 @@ mod tests {
         let hg_cs_id = HgChangesetId::from_str(hg_cs)?;
         let bcs_id = repo
             .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-            .compat()
-            .await?;
-        let bcs_id = bcs_id.unwrap();
+            .await?
+            .unwrap();
         let root_unode = RootUnodeManifestId::derive(&ctx, &repo, bcs_id).await?;
         Ok(root_unode.manifest_unode_id().clone())
     }

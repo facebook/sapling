@@ -10,11 +10,9 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
-use slog::info;
-
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange};
+use slog::info;
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
@@ -93,7 +91,6 @@ async fn generate_hg_changeset(
     info!(ctx.logger(), "Generating an HG equivalent of {:?}", bcs_id);
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .compat()
         .await?;
 
     info!(

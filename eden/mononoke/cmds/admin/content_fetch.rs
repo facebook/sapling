@@ -106,7 +106,6 @@ async fn fetch_entry(
         .await?;
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .compat()
         .await?;
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
 

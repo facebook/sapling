@@ -357,7 +357,6 @@ mod test {
     use borrowed::borrowed;
     use fbinit::FacebookInit;
     use filestore::FilestoreConfig;
-    use futures::compat::Future01CompatExt;
     use manifest::{Entry, Manifest};
     use mononoke_types::MPathElement;
     use tests_utils::CreateCommitContext;
@@ -380,7 +379,6 @@ mod test {
 
         let hg_manifest = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-            .compat()
             .await?
             .load(ctx, repo.blobstore())
             .await?

@@ -389,7 +389,7 @@ mod tests {
     use derived_data_test_utils::{bonsai_changeset_from_hg, iterate_all_manifest_entries};
     use fbinit::FacebookInit;
     use fixtures::linear;
-    use futures::{compat::Future01CompatExt, TryStreamExt};
+    use futures::TryStreamExt;
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::{blobs::HgBlobManifest, HgFileNodeId, HgManifestId};
@@ -1024,13 +1024,11 @@ mod tests {
 
             let hg_linknode = repo
                 .get_filenode(ctx.clone(), &RepoPath::RootPath, filenode_id)
-                .compat()
                 .await?
                 .map(|filenode| filenode.linknode)
                 .do_not_handle_disabled_filenodes()?;
             let linknode = repo
                 .get_bonsai_from_hg(ctx.clone(), hg_linknode)
-                .compat()
                 .await?
                 .unwrap();
             history.push(linknode);
@@ -1068,7 +1066,6 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let hg_cs_id = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-            .compat()
             .await?;
         let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await?;
         Ok(HgFileNodeId::new(hg_cs.manifestid().into_nodehash()))

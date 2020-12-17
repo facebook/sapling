@@ -325,7 +325,6 @@ impl BundlePreparer {
                     Some(to_changeset_id) => {
                         let hg_cs_id = repo
                             .get_hg_from_bonsai_changeset(ctx.clone(), to_changeset_id)
-                            .compat()
                             .await?;
                         Ok(Some((to_changeset_id, hg_cs_id)))
                     }

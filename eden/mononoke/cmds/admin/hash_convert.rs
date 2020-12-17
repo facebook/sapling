@@ -7,8 +7,6 @@
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
-use futures_old::Future as _;
 use std::str::FromStr;
 
 use blobrepo_hg::BlobRepoHg;
@@ -67,36 +65,30 @@ pub async fn subcommand_hash_convert<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::open_repo(fb, &logger, &matches).await?;
     if source == "hg" {
-        repo.get_bonsai_from_hg(
-            ctx,
-            HgChangesetId::from_str(&source_hash)
-                .expect("source hash is not valid hg changeset id"),
-        )
-        .and_then(move |maybebonsai| {
-            match maybebonsai {
-                Some(bonsai) => {
-                    println!("{}", bonsai);
-                }
-                None => {
-                    panic!("no matching mononoke id found");
-                }
+        let maybebonsai = repo
+            .get_bonsai_from_hg(
+                ctx,
+                HgChangesetId::from_str(&source_hash)
+                    .expect("source hash is not valid hg changeset id"),
+            )
+            .await?;
+        match maybebonsai {
+            Some(bonsai) => {
+                println!("{}", bonsai);
             }
-            Ok(())
-        })
-        .from_err()
-        .compat()
-        .await
+            None => {
+                panic!("no matching mononoke id found");
+            }
+        }
+        Ok(())
     } else {
-        repo.get_hg_from_bonsai_changeset(
-            ctx,
-            ChangesetId::from_str(&source_hash).expect("source hash is not valid mononoke id"),
-        )
-        .and_then(move |mercurial| {
-            println!("{}", mercurial);
-            Ok(())
-        })
-        .from_err()
-        .compat()
-        .await
+        let mercurial = repo
+            .get_hg_from_bonsai_changeset(
+                ctx,
+                ChangesetId::from_str(&source_hash).expect("source hash is not valid mononoke id"),
+            )
+            .await?;
+        println!("{}", mercurial);
+        Ok(())
     }
 }

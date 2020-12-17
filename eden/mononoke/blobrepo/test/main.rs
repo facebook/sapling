@@ -294,7 +294,6 @@ async fn check_bonsai_creation(fb: FacebookInit) {
     let commit = &commit.1;
     let bonsai_cs_id = repo
         .get_bonsai_from_hg(ctx.clone(), commit.get_changeset_id())
-        .compat()
         .await
         .unwrap();
     assert!(bonsai_cs_id.is_some());
@@ -371,14 +370,12 @@ async fn check_bonsai_creation_with_rename(fb: FacebookInit) {
 
     let parent_bonsai_cs_id = repo
         .get_bonsai_from_hg(ctx.clone(), parent_cs.get_changeset_id())
-        .compat()
         .await
         .unwrap()
         .unwrap();
 
     let bonsai_cs_id = repo
         .get_bonsai_from_hg(ctx.clone(), child_cs.get_changeset_id())
-        .compat()
         .await
         .unwrap();
     let bonsai = bonsai_cs_id
@@ -778,8 +775,8 @@ async fn test_case_conflict_in_manifest(fb: FacebookInit) {
         .unwrap()
         .manifestid();
 
-    let bonsai_parent = (repo.get_bonsai_from_hg(ctx.clone(), hg_cs))
-        .compat()
+    let bonsai_parent = repo
+        .get_bonsai_from_hg(ctx.clone(), hg_cs)
         .await
         .unwrap()
         .unwrap();
@@ -798,8 +795,8 @@ async fn test_case_conflict_in_manifest(fb: FacebookInit) {
         )
         .await;
 
-        let child_hg_cs = (repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id.clone()))
-            .compat()
+        let child_hg_cs = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id.clone())
             .await
             .unwrap();
         let child_mf = child_hg_cs
@@ -1041,7 +1038,6 @@ async fn test_hg_commit_generation_simple(fb: FacebookInit) {
         .unwrap();
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .compat()
         .await
         .unwrap();
 
@@ -1052,11 +1048,7 @@ async fn test_hg_commit_generation_simple(fb: FacebookInit) {
         ))
     );
     // make sure bonsai hg mapping is updated
-    let map_bcs_id = repo
-        .get_bonsai_from_hg(ctx, hg_cs_id)
-        .compat()
-        .await
-        .unwrap();
+    let map_bcs_id = repo.get_bonsai_from_hg(ctx, hg_cs_id).await.unwrap();
     assert_eq!(map_bcs_id, Some(bcs_id));
 }
 
@@ -1085,7 +1077,6 @@ async fn test_hg_commit_generation_stack(fb: FacebookInit) {
 
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx, top_of_stack)
-        .compat()
         .await
         .unwrap();
     assert_eq!(
@@ -1112,7 +1103,6 @@ async fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
 
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), first_bcs_id)
-        .compat()
         .await
         .unwrap();
     assert_eq!(
@@ -1124,7 +1114,6 @@ async fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
 
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx, second_bcs_id)
-        .compat()
         .await
         .unwrap();
     assert_eq!(
@@ -1146,7 +1135,6 @@ async fn test_hg_commit_generation_diamond(fb: FacebookInit) {
 
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), last_bcs_id)
-        .compat()
         .await
         .unwrap();
     assert_eq!(
@@ -1170,7 +1158,6 @@ async fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
 
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx, bcs_id)
-        .compat()
         .await
         .unwrap();
     assert_eq!(
@@ -1214,7 +1201,6 @@ async fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
 
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), merge.get_changeset_id())
-        .compat()
         .await
         .unwrap();
     assert_eq!(
@@ -1247,7 +1233,7 @@ async fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> 
     let mut gen = GenManifest::new();
     let settings = Default::default();
 
-    let test = gen
+    let csid = gen
         .gen_stack(
             ctx.clone(),
             repo.clone(),
@@ -1256,14 +1242,10 @@ async fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> 
             None,
             std::iter::repeat(16).take(50),
         )
-        .boxed()
-        .compat()
-        .and_then(move |csid| repo.get_hg_from_bonsai_changeset(ctx, csid));
+        .await?;
+    let hgcsid = repo.get_hg_from_bonsai_changeset(ctx, csid).await?;
 
-    assert_eq!(
-        test.compat().await?,
-        "e9b73f926c993c5232139d4eefa6f77fa8c41279".parse()?,
-    );
+    assert_eq!(hgcsid, "e9b73f926c993c5232139d4eefa6f77fa8c41279".parse()?);
 
     Ok(())
 }
@@ -1433,7 +1415,6 @@ impl TestHelper {
         let hg_cs_id = self
             .repo
             .get_hg_from_bonsai_changeset(self.ctx.clone(), cs_id)
-            .compat()
             .await?;
 
         let hg_cs = hg_cs_id.load(&self.ctx, self.repo.blobstore()).await?;
@@ -1534,7 +1515,6 @@ mod octopus_merges {
 
         let hg_cs_id = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), commit)
-            .compat()
             .await?;
 
         let hg_cs = hg_cs_id.load(&ctx, repo.blobstore()).await?;

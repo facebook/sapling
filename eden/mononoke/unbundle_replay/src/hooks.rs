@@ -11,7 +11,6 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, Timestamp};
 use slog::info;
@@ -106,7 +105,6 @@ impl PushrebaseCommitHook for UnbundleReplayHook {
         let mapping = self
             .repo
             .get_hg_bonsai_mapping(ctx.clone(), changesets)
-            .compat()
             .await?;
 
         let ok = mapping

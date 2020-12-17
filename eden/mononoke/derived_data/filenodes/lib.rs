@@ -194,10 +194,7 @@ pub async fn generate_all_filenodes(
             .iter()
             .map(|p| fetch_root_manifest_id(&ctx, p, &repo)),
     );
-
-    let linknode = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .compat();
+    let linknode = repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id);
 
     let (root_mf, parents, linknode) = try_join!(root_mf, parents, linknode)?;
     let blobstore = repo.get_blobstore();
@@ -465,11 +462,8 @@ async fn fetch_root_manifest_id(
 ) -> Result<HgManifestId, Error> {
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), *cs_id)
-        .compat()
         .await?;
-
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
-
     Ok(hg_cs.manifestid())
 }
 
@@ -503,7 +497,6 @@ mod tests {
 
         let linknode = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-            .compat()
             .await?;
 
         for filenode in filenodes {

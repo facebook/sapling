@@ -264,7 +264,6 @@ mod test {
     use blobrepo_hg::BlobRepoHg;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use futures::compat::Future01CompatExt;
     use futures_ext::StreamExt;
     use mercurial_types::HgChangesetId;
     use revset_test_helper::assert_changesets_sequence;
@@ -277,7 +276,6 @@ mod test {
     ) -> ChangesetId {
         let node = string_to_nodehash(s);
         repo.get_bonsai_from_hg(ctx, HgChangesetId::new(node))
-            .compat()
             .await
             .unwrap()
             .unwrap()

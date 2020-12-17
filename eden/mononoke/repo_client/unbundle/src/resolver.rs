@@ -17,7 +17,7 @@ use context::CoreContext;
 use core::fmt::Debug;
 use derived_data::BonsaiDerivable;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Stream01CompatExt,
     future::{self, try_join_all},
     stream::{self, BoxStream},
     try_join, Future, StreamExt, TryStreamExt,
@@ -996,7 +996,6 @@ impl<'r> Bundle2Resolver<'r> {
                     let mapping = self
                         .repo
                         .get_hg_bonsai_mapping(self.ctx.clone(), hg_cs_ids)
-                        .compat()
                         .await
                         .with_context(|| "Failed to query for pre-existing changesets")?;
 
@@ -1366,7 +1365,7 @@ async fn build_changegroup_push(
                 Ok(maybe_name) => match maybe_name {
                     None => None,
                     Some(name) => {
-                        let old = repo.get_bookmark(ctx.clone(), &name).compat().await?;
+                        let old = repo.get_bookmark(ctx.clone(), &name).await?;
                         // NOTE: We do not validate that the bookmarknode selected (i.e. the
                         // changeset we should update our bookmark to) is part of the
                         // changegroup being pushed. We do however validate at a later point
@@ -1490,7 +1489,7 @@ async fn bonsai_from_hg_opt(
     match cs_id {
         None => Ok(None),
         Some(cs_id) => {
-            let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), cs_id).compat().await?;
+            let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), cs_id).await?;
             if maybe_bcs_id.is_none() {
                 Err(format_err!("No bonsai mapping found for {}", cs_id))
             } else {
@@ -1540,7 +1539,7 @@ async fn infinite_hg_bookmark_push_to_bonsai(
 
     let (old, new) = try_join!(
         bonsai_from_hg_opt(ctx, &repo, old),
-        repo.get_bonsai_from_hg(ctx.clone(), new).compat()
+        repo.get_bonsai_from_hg(ctx.clone(), new)
     )?;
     let new = match new {
         Some(new) => new,

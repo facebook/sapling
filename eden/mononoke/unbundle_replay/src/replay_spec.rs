@@ -12,7 +12,6 @@ use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry};
 use bytes::Bytes;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use mercurial_bundle_replay_data::BundleReplayData;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{ChangesetId, RawBundle2Id, Timestamp};
@@ -172,7 +171,6 @@ impl OntoRev {
             Self::Hg(hg_cs_id) => {
                 let cs_id = repo
                     .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-                    .compat()
                     .await?
                     .ok_or_else(|| format_err!("Bonsai changeset missing for {:?}", hg_cs_id))?;
 

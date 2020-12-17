@@ -156,7 +156,11 @@ fn handle_filenodes_at_revision(
     helpers::csid_resolve(ctx.clone(), blobrepo.clone(), revision.to_string())
         .and_then({
             cloned!(ctx, blobrepo);
-            move |cs_id| blobrepo.get_hg_from_bonsai_changeset(ctx, cs_id)
+            move |cs_id| {
+                async move { blobrepo.get_hg_from_bonsai_changeset(ctx, cs_id).await }
+                    .boxed()
+                    .compat()
+            }
         })
         .map(|cs_id| (blobrepo, cs_id))
         .and_then({
@@ -182,9 +186,17 @@ fn handle_filenodes_at_revision(
                         .map(move |(path, filenode_id)| {
                             let path = RepoPath::FilePath(path);
 
-                            let filenode = blobrepo
-                                .get_filenode(ctx.clone(), &path, filenode_id)
-                                .and_then(|filenode| filenode.do_not_handle_disabled_filenodes());
+                            let filenode = {
+                                cloned!(ctx, blobrepo, path);
+                                async move {
+                                    blobrepo
+                                        .get_filenode(ctx, &path, filenode_id)
+                                        .await?
+                                        .do_not_handle_disabled_filenodes()
+                                }
+                                .boxed()
+                                .compat()
+                            };
 
                             let envelope = if log_envelope {
                                 cloned!(ctx, blobrepo);
@@ -253,35 +265,21 @@ pub async fn subcommand_filenodes<'a>(
 
             let id = matches.value_of(ARG_ID).unwrap().parse::<HgFileNodeId>()?;
 
-            repo.get_filenode(ctx.clone(), &path, id)
-                .and_then(|filenode| filenode.do_not_handle_disabled_filenodes())
-                .and_then({
-                    cloned!(ctx);
-                    move |filenode| {
-                        let envelope = if log_envelope {
-                            let filenode = filenode.filenode.clone();
-                            let blobstore = repo.get_blobstore();
-                            async move { filenode.load(&ctx, &blobstore).await }
-                                .boxed()
-                                .compat()
-                                .from_err()
-                                .map(Some)
-                                .left_future()
-                        } else {
-                            Ok(None).into_future().right_future()
-                        };
-
-                        (Ok(path), Ok(filenode), envelope)
-                    }
-                })
-                .map({
-                    cloned!(ctx);
-                    move |(path, filenode, envelope)| {
-                        log_filenode(ctx.logger(), &path, &filenode, envelope.as_ref());
-                    }
-                })
-                .compat()
-                .await?;
+            let filenode = repo
+                .get_filenode(ctx.clone(), &path, id)
+                .await?
+                .do_not_handle_disabled_filenodes()?;
+            let envelope = if log_envelope {
+                let res = filenode
+                    .filenode
+                    .load(&ctx, repo.blobstore())
+                    .await
+                    .map_err(Error::from)?;
+                Some(res)
+            } else {
+                None
+            };
+            log_filenode(ctx.logger(), &path, &filenode, envelope.as_ref());
             Ok(())
         }
         (COMMAND_VALIDATE, Some(matches)) => {
@@ -308,15 +306,23 @@ pub async fn subcommand_filenodes<'a>(
                                 }
                             };
 
-                            repo.get_filenode_opt(ctx.clone(), &repo_path, filenode_id)
-                                .and_then(|filenode| filenode.do_not_handle_disabled_filenodes())
-                                .and_then(move |maybe_filenode| {
-                                    if maybe_filenode.is_some() {
-                                        Ok(())
-                                    } else {
-                                        Err(format_err!("not found filenode for {}", repo_path))
-                                    }
-                                })
+                            {
+                                cloned!(ctx, repo, repo_path);
+                                async move {
+                                    repo.get_filenode_opt(ctx, &repo_path, filenode_id)
+                                        .await?
+                                        .do_not_handle_disabled_filenodes()
+                                }
+                            }
+                            .boxed()
+                            .compat()
+                            .and_then(move |maybe_filenode| {
+                                if maybe_filenode.is_some() {
+                                    Ok(())
+                                } else {
+                                    Err(format_err!("not found filenode for {}", repo_path))
+                                }
+                            })
                         })
                         .buffer_unordered(100)
                         .for_each(|_| Ok(()))

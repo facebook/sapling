@@ -283,7 +283,6 @@ async fn verify_bonsai_changeset_with_origin(
             // fetch bonsai from the prod in case of mismatch
             let origin_bonsai_id = origin_repo
                 .get_bonsai_from_hg(ctx.clone(), cs.get_changeset_id())
-                .compat()
                 .await?;
             match origin_bonsai_id {
                 Some(id) if id != bcs.get_changeset_id() => {

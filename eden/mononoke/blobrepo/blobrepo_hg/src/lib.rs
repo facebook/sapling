@@ -24,6 +24,7 @@ pub mod file_history {
 }
 
 use anyhow::Error;
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiOrHgChangesetIds};
@@ -33,12 +34,11 @@ use bookmarks::{
 use cloned::cloned;
 use context::CoreContext;
 use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes};
-use futures::{FutureExt, TryFutureExt, TryStreamExt};
-use futures_ext_old::{BoxFuture, BoxStream, FutureExt as _, StreamExt};
-use futures_old::{
+use futures::{
+    compat::Future01CompatExt,
     future,
-    stream::{self, futures_unordered},
-    Future, IntoFuture, Stream,
+    stream::{self, BoxStream},
+    Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
 use mercurial_mutation::HgMutationStore;
 use mercurial_types::{HgChangesetId, HgFileNodeId};
@@ -51,6 +51,7 @@ use std::{
 
 /// `BlobRepoHg` is an extension trait for `BlobRepo` which contains
 /// mercurial specific methods.
+#[async_trait]
 pub trait BlobRepoHg {
     fn get_bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping>;
 
@@ -58,81 +59,84 @@ pub trait BlobRepoHg {
 
     fn hg_mutation_store(&self) -> &Arc<dyn HgMutationStore>;
 
-    fn get_bonsai_from_hg(
+    async fn get_bonsai_from_hg(
         &self,
         ctx: CoreContext,
         hg_cs_id: HgChangesetId,
-    ) -> BoxFuture<Option<ChangesetId>, Error>;
+    ) -> Result<Option<ChangesetId>, Error>;
 
-    fn get_hg_bonsai_mapping(
+    async fn get_hg_bonsai_mapping<'a>(
+        &'a self,
+        ctx: CoreContext,
+        bonsai_or_hg_cs_ids: impl Into<BonsaiOrHgChangesetIds> + 'a + Send,
+    ) -> Result<Vec<(HgChangesetId, ChangesetId)>, Error>;
+
+    fn get_heads_maybe_stale(
         &self,
         ctx: CoreContext,
-        bonsai_or_hg_cs_ids: impl Into<BonsaiOrHgChangesetIds>,
-    ) -> BoxFuture<Vec<(HgChangesetId, ChangesetId)>, Error>;
+    ) -> BoxStream<'static, Result<HgChangesetId, Error>>;
 
-    fn get_heads_maybe_stale(&self, ctx: CoreContext) -> BoxStream<HgChangesetId, Error>;
-
-    fn changeset_exists(
-        &self,
-        ctx: CoreContext,
-        changesetid: HgChangesetId,
-    ) -> BoxFuture<bool, Error>;
-
-    fn get_changeset_parents(
+    async fn changeset_exists(
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
-    ) -> BoxFuture<Vec<HgChangesetId>, Error>;
+    ) -> Result<bool, Error>;
 
-    fn get_bookmark(
+    async fn get_changeset_parents(
+        &self,
+        ctx: CoreContext,
+        changesetid: HgChangesetId,
+    ) -> Result<Vec<HgChangesetId>, Error>;
+
+    async fn get_bookmark(
         &self,
         ctx: CoreContext,
         name: &BookmarkName,
-    ) -> BoxFuture<Option<HgChangesetId>, Error>;
+    ) -> Result<Option<HgChangesetId>, Error>;
 
     fn get_pull_default_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> BoxStream<(Bookmark, HgChangesetId), Error>;
+    ) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>>;
 
     fn get_publishing_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> BoxStream<(Bookmark, HgChangesetId), Error>;
+    ) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>>;
 
     fn get_bookmarks_by_prefix_maybe_stale(
         &self,
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         max: u64,
-    ) -> BoxStream<(Bookmark, HgChangesetId), Error>;
+    ) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>>;
 
-    fn get_filenode_opt(
+    async fn get_filenode_opt(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
-    ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error>;
+    ) -> Result<FilenodeResult<Option<FilenodeInfo>>, Error>;
 
-    fn get_filenode(
+    async fn get_filenode(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
-    ) -> BoxFuture<FilenodeResult<FilenodeInfo>, Error>;
+    ) -> Result<FilenodeResult<FilenodeInfo>, Error>;
 
-    fn get_all_filenodes_maybe_stale(
+    async fn get_all_filenodes_maybe_stale(
         &self,
         ctx: CoreContext,
         path: RepoPath,
         limit: Option<u64>,
-    ) -> BoxFuture<FilenodeRangeResult<Vec<FilenodeInfo>>, Error>;
+    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error>;
 
-    fn get_hg_from_bonsai_changeset(
+    async fn get_hg_from_bonsai_changeset(
         &self,
         ctx: CoreContext,
         bcs_id: ChangesetId,
-    ) -> BoxFuture<HgChangesetId, Error>;
+    ) -> Result<HgChangesetId, Error>;
 }
 
 define_stats! {
@@ -149,6 +153,7 @@ define_stats! {
     get_pull_default_bookmarks_maybe_stale: timeseries(Rate, Sum),
 }
 
+#[async_trait]
 impl BlobRepoHg for BlobRepo {
     fn get_bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping> {
         self.attribute_expected::<dyn BonsaiHgMapping>()
@@ -162,14 +167,16 @@ impl BlobRepoHg for BlobRepo {
         self.attribute_expected::<dyn HgMutationStore>()
     }
 
-    fn get_bonsai_from_hg(
+    async fn get_bonsai_from_hg(
         &self,
         ctx: CoreContext,
         hg_cs_id: HgChangesetId,
-    ) -> BoxFuture<Option<ChangesetId>, Error> {
+    ) -> Result<Option<ChangesetId>, Error> {
         STATS::get_bonsai_from_hg.add_value(1);
         self.get_bonsai_hg_mapping()
             .get_bonsai_from_hg(ctx, self.get_repoid(), hg_cs_id)
+            .compat()
+            .await
     }
 
     // Returns only the mapping for valid changests that are known to the server.
@@ -177,164 +184,152 @@ impl BlobRepoHg for BlobRepo {
     // in the output).
     // For Hg -> Bonsai conversion, missing Bonsais will not be returned, since they cannot be
     // derived from Hg Changesets.
-    fn get_hg_bonsai_mapping(
-        &self,
+    async fn get_hg_bonsai_mapping<'a>(
+        &'a self,
         ctx: CoreContext,
-        bonsai_or_hg_cs_ids: impl Into<BonsaiOrHgChangesetIds>,
-    ) -> BoxFuture<Vec<(HgChangesetId, ChangesetId)>, Error> {
+        bonsai_or_hg_cs_ids: impl Into<BonsaiOrHgChangesetIds> + 'a + Send,
+    ) -> Result<Vec<(HgChangesetId, ChangesetId)>, Error> {
         STATS::get_hg_bonsai_mapping.add_value(1);
         let bonsai_or_hg_cs_ids = bonsai_or_hg_cs_ids.into();
-        let fetched_from_mapping = self
+        let hg_bonsai_list = self
             .get_bonsai_hg_mapping()
             .get(ctx.clone(), self.get_repoid(), bonsai_or_hg_cs_ids.clone())
-            .map(|result| {
-                result
-                    .into_iter()
-                    .map(|entry| (entry.hg_cs_id, entry.bcs_id))
-                    .collect::<Vec<_>>()
-            })
-            .boxify();
+            .compat()
+            .await?
+            .into_iter()
+            .map(|entry| (entry.hg_cs_id, entry.bcs_id))
+            .collect::<Vec<_>>();
 
         use BonsaiOrHgChangesetIds::*;
         match bonsai_or_hg_cs_ids {
-            Bonsai(bonsais) => fetched_from_mapping
-                .and_then({
-                    let repo = self.clone();
-                    move |hg_bonsai_list| {
-                        // If a bonsai commit doesn't exist in the bonsai_hg_mapping,
-                        // that might mean two things: 1) Bonsai commit just doesn't exist
-                        // 2) Bonsai commit exists but hg changesets weren't generated for it
-                        // Normally the callers of get_hg_bonsai_mapping would expect that hg
-                        // changesets will be lazily generated, so the
-                        // code below explicitly checks if a commit exists and if yes then
-                        // generates hg changeset for it.
-                        let mapping: HashMap<_, _> = hg_bonsai_list
-                            .iter()
-                            .map(|(hg_id, bcs_id)| (bcs_id, hg_id))
-                            .collect();
-                        let mut notfound = vec![];
-                        for b in bonsais {
-                            if !mapping.contains_key(&b) {
-                                notfound.push(b);
-                            }
-                        }
-                        repo.get_changesets_object()
-                            .get_many(ctx.clone(), repo.get_repoid(), notfound.clone())
-                            .and_then(move |existing| {
-                                let existing: HashSet<_> =
-                                    existing.into_iter().map(|entry| entry.cs_id).collect();
+            Bonsai(bonsais) => {
+                // If a bonsai commit doesn't exist in the bonsai_hg_mapping,
+                // that might mean two things: 1) Bonsai commit just doesn't exist
+                // 2) Bonsai commit exists but hg changesets weren't generated for it
+                // Normally the callers of get_hg_bonsai_mapping would expect that hg
+                // changesets will be lazily generated, so the
+                // code below explicitly checks if a commit exists and if yes then
+                // generates hg changeset for it.
+                let mapping: HashMap<_, _> = hg_bonsai_list
+                    .iter()
+                    .map(|(hg_id, bcs_id)| (bcs_id, hg_id))
+                    .collect();
 
-                                futures_unordered(
-                                    notfound
-                                        .into_iter()
-                                        .filter(|cs_id| existing.contains(cs_id))
-                                        .map(move |bcs_id| {
-                                            repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                                                .map(move |hg_cs_id| (hg_cs_id, bcs_id))
-                                        }),
-                                )
-                                .collect()
-                            })
-                            .map(move |mut newmapping| {
-                                newmapping.extend(hg_bonsai_list);
-                                newmapping
-                            })
+                let mut notfound = vec![];
+                for b in bonsais {
+                    if !mapping.contains_key(&b) {
+                        notfound.push(b);
                     }
+                }
+
+                let existing: HashSet<_> = self
+                    .get_changesets_object()
+                    .get_many(ctx.clone(), self.get_repoid(), notfound.clone())
+                    .compat()
+                    .await?
+                    .into_iter()
+                    .map(|entry| entry.cs_id)
+                    .collect();
+
+                let mut newmapping: Vec<_> = stream::iter(
+                    notfound
+                        .into_iter()
+                        .filter(|csid| existing.contains(csid))
+                        .map(Ok),
+                )
+                .map_ok(|csid| {
+                    self.get_hg_from_bonsai_changeset(ctx.clone(), csid)
+                        .map_ok(move |hgcsid| (hgcsid, csid))
                 })
-                .boxify(),
-            Hg(_) => fetched_from_mapping,
+                .try_buffer_unordered(100)
+                .try_collect()
+                .await?;
+
+                newmapping.extend(hg_bonsai_list);
+                Ok(newmapping)
+            }
+            Hg(_) => Ok(hg_bonsai_list),
         }
         // TODO(stash, luk): T37303879 also need to check that entries exist in changeset table
     }
 
     /// Get Mercurial heads, which we approximate as publishing Bonsai Bookmarks.
-    fn get_heads_maybe_stale(&self, ctx: CoreContext) -> BoxStream<HgChangesetId, Error> {
+    fn get_heads_maybe_stale(
+        &self,
+        ctx: CoreContext,
+    ) -> BoxStream<'static, Result<HgChangesetId, Error>> {
         STATS::get_heads_maybe_stale.add_value(1);
         self.get_bonsai_heads_maybe_stale(ctx.clone())
-            .compat()
-            .and_then({
+            .map_ok({
                 let repo = self.clone();
-                move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
+                move |cs| {
+                    cloned!(ctx, repo);
+                    async move { repo.get_hg_from_bonsai_changeset(ctx, cs).await }
+                }
             })
-            .boxify()
+            .try_buffer_unordered(100)
+            .boxed()
     }
 
-    fn changeset_exists(
+    async fn changeset_exists(
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
-    ) -> BoxFuture<bool, Error> {
+    ) -> Result<bool, Error> {
         STATS::changeset_exists.add_value(1);
-        let changesetid = changesetid.clone();
-        let repoid = self.get_repoid();
-        let changesets = self.get_changesets_object();
-
-        self.get_bonsai_from_hg(ctx.clone(), changesetid)
-            .and_then(move |maybebonsai| {
-                match maybebonsai {
-                    Some(bonsai) => changesets
-                        .get(ctx, repoid, bonsai)
-                        .map(|res| res.is_some())
-                        .left_future(),
-                    None => Ok(false).into_future().right_future(),
-                }
-            })
-            .boxify()
+        let csid = self.get_bonsai_from_hg(ctx.clone(), changesetid).await?;
+        match csid {
+            Some(bonsai) => {
+                let res = self
+                    .get_changesets_object()
+                    .get(ctx, self.get_repoid(), bonsai)
+                    .compat()
+                    .await?;
+                Ok(res.is_some())
+            }
+            None => Ok(false),
+        }
     }
 
-    fn get_changeset_parents(
+    async fn get_changeset_parents(
         &self,
         ctx: CoreContext,
         changesetid: HgChangesetId,
-    ) -> BoxFuture<Vec<HgChangesetId>, Error> {
+    ) -> Result<Vec<HgChangesetId>, Error> {
         STATS::get_changeset_parents.add_value(1);
-        let repo = self.clone();
-        let repoid = self.get_repoid();
-        let changesets = self.get_changesets_object();
 
-        self.get_bonsai_from_hg(ctx.clone(), changesetid)
-            .and_then(move |maybebonsai| {
-                maybebonsai.ok_or_else(|| ErrorKind::BonsaiMappingNotFound(changesetid).into())
-            })
-            .and_then({
-                cloned!(ctx);
-                move |bonsai| {
-                    changesets
-                        .get(ctx, repoid, bonsai)
-                        .and_then(move |maybe_bonsai| {
-                            maybe_bonsai.ok_or_else(|| ErrorKind::BonsaiNotFound(bonsai).into())
-                        })
-                }
-            })
-            .map(|bonsai| bonsai.parents)
-            .and_then(move |bonsai_parents| {
-                future::join_all(bonsai_parents.into_iter().map(move |bonsai_parent| {
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bonsai_parent)
-                }))
-            })
-            .boxify()
+        let csid = self
+            .get_bonsai_from_hg(ctx.clone(), changesetid)
+            .await?
+            .ok_or(ErrorKind::BonsaiMappingNotFound(changesetid))?;
+
+        let parents = self
+            .get_changesets_object()
+            .get(ctx.clone(), self.get_repoid(), csid)
+            .compat()
+            .await?
+            .ok_or(ErrorKind::BonsaiNotFound(csid))?
+            .parents
+            .into_iter()
+            .map(|parent| self.get_hg_from_bonsai_changeset(ctx.clone(), parent));
+
+        Ok(future::try_join_all(parents).await?)
     }
 
-    fn get_bookmark(
+    async fn get_bookmark(
         &self,
         ctx: CoreContext,
         name: &BookmarkName,
-    ) -> BoxFuture<Option<HgChangesetId>, Error> {
+    ) -> Result<Option<HgChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
-        self.bookmarks()
-            .get(ctx.clone(), name)
-            .compat()
-            .and_then({
-                let repo = self.clone();
-                move |cs_opt| match cs_opt {
-                    None => future::ok(None).left_future(),
-                    Some(cs) => repo
-                        .get_hg_from_bonsai_changeset(ctx, cs)
-                        .map(Some)
-                        .right_future(),
-                }
-            })
-            .boxify()
+        let cs_opt = self.bookmarks().get(ctx.clone(), name).await?;
+        match cs_opt {
+            None => Ok(None),
+            Some(cs) => {
+                let hg_csid = self.get_hg_from_bonsai_changeset(ctx, cs).await?;
+                Ok(Some(hg_csid))
+            }
+        }
     }
 
     /// Get Pull-Default (Pull-Default is a Mercurial concept) bookmarks by prefix, they will be
@@ -342,20 +337,16 @@ impl BlobRepoHg for BlobRepo {
     fn get_pull_default_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
+    ) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>> {
         STATS::get_pull_default_bookmarks_maybe_stale.add_value(1);
-        let stream = self
-            .bookmarks()
-            .list(
-                ctx.clone(),
-                Freshness::MaybeStale,
-                &BookmarkPrefix::empty(),
-                &[BookmarkKind::PullDefaultPublishing][..],
-                &BookmarkPagination::FromStart,
-                std::u64::MAX,
-            )
-            .compat()
-            .boxify();
+        let stream = self.bookmarks().list(
+            ctx.clone(),
+            Freshness::MaybeStale,
+            &BookmarkPrefix::empty(),
+            &[BookmarkKind::PullDefaultPublishing][..],
+            &BookmarkPagination::FromStart,
+            std::u64::MAX,
+        );
         to_hg_bookmark_stream(&self, &ctx, stream)
     }
 
@@ -364,20 +355,16 @@ impl BlobRepoHg for BlobRepo {
     fn get_publishing_bookmarks_maybe_stale(
         &self,
         ctx: CoreContext,
-    ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
+    ) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>> {
         STATS::get_publishing_bookmarks_maybe_stale.add_value(1);
-        let stream = self
-            .bookmarks()
-            .list(
-                ctx.clone(),
-                Freshness::MaybeStale,
-                &BookmarkPrefix::empty(),
-                BookmarkKind::ALL_PUBLISHING,
-                &BookmarkPagination::FromStart,
-                std::u64::MAX,
-            )
-            .compat()
-            .boxify();
+        let stream = self.bookmarks().list(
+            ctx.clone(),
+            Freshness::MaybeStale,
+            &BookmarkPrefix::empty(),
+            BookmarkKind::ALL_PUBLISHING,
+            &BookmarkPagination::FromStart,
+            std::u64::MAX,
+        );
         to_hg_bookmark_stream(&self, &ctx, stream)
     }
 
@@ -387,115 +374,100 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         prefix: &BookmarkPrefix,
         max: u64,
-    ) -> BoxStream<(Bookmark, HgChangesetId), Error> {
+    ) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>> {
         STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
-        let stream = self
-            .bookmarks()
-            .list(
-                ctx.clone(),
-                Freshness::MaybeStale,
-                prefix,
-                BookmarkKind::ALL,
-                &BookmarkPagination::FromStart,
-                max,
-            )
-            .compat()
-            .boxify();
+        let stream = self.bookmarks().list(
+            ctx.clone(),
+            Freshness::MaybeStale,
+            prefix,
+            BookmarkKind::ALL,
+            &BookmarkPagination::FromStart,
+            max,
+        );
         to_hg_bookmark_stream(&self, &ctx, stream)
     }
 
-    fn get_filenode_opt(
+    async fn get_filenode_opt(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
-    ) -> BoxFuture<FilenodeResult<Option<FilenodeInfo>>, Error> {
+    ) -> Result<FilenodeResult<Option<FilenodeInfo>>, Error> {
         self.get_filenodes()
             .get_filenode(ctx, path, node, self.get_repoid())
-            .boxify()
+            .compat()
+            .await
     }
 
-    fn get_filenode(
+    async fn get_filenode(
         &self,
         ctx: CoreContext,
         path: &RepoPath,
         node: HgFileNodeId,
-    ) -> BoxFuture<FilenodeResult<FilenodeInfo>, Error> {
-        self.get_filenode_opt(ctx, path, node)
-            .and_then({
-                cloned!(path);
-                move |filenode_res| match filenode_res {
-                    FilenodeResult::Present(maybe_filenode) => {
-                        let filenode = maybe_filenode
-                            .ok_or_else(|| Error::from(ErrorKind::MissingFilenode(path, node)))?;
-                        Ok(FilenodeResult::Present(filenode))
-                    }
-                    FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
-                }
-            })
-            .boxify()
+    ) -> Result<FilenodeResult<FilenodeInfo>, Error> {
+        match self.get_filenode_opt(ctx, path, node).await? {
+            FilenodeResult::Present(maybe_filenode) => {
+                let filenode = maybe_filenode
+                    .ok_or_else(|| Error::from(ErrorKind::MissingFilenode(path.clone(), node)))?;
+                Ok(FilenodeResult::Present(filenode))
+            }
+            FilenodeResult::Disabled => Ok(FilenodeResult::Disabled),
+        }
     }
 
-    fn get_all_filenodes_maybe_stale(
+    async fn get_all_filenodes_maybe_stale(
         &self,
         ctx: CoreContext,
         path: RepoPath,
         limit: Option<u64>,
-    ) -> BoxFuture<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
+    ) -> Result<FilenodeRangeResult<Vec<FilenodeInfo>>, Error> {
         STATS::get_all_filenodes.add_value(1);
         self.get_filenodes()
             .get_all_filenodes_maybe_stale(ctx, &path, self.get_repoid(), limit)
+            .compat()
+            .await
     }
 
-    fn get_hg_from_bonsai_changeset(
+    async fn get_hg_from_bonsai_changeset(
         &self,
         ctx: CoreContext,
         bcs_id: ChangesetId,
-    ) -> BoxFuture<HgChangesetId, Error> {
-        mercurial_derived_data::get_hg_from_bonsai_changeset(self.clone(), ctx, bcs_id)
-            .boxed()
-            .compat()
-            .boxify()
+    ) -> Result<HgChangesetId, Error> {
+        mercurial_derived_data::get_hg_from_bonsai_changeset(self.clone(), ctx, bcs_id).await
     }
 }
 
 pub fn to_hg_bookmark_stream(
     repo: &BlobRepo,
     ctx: &CoreContext,
-    stream: BoxStream<(Bookmark, ChangesetId), Error>,
-) -> BoxStream<(Bookmark, HgChangesetId), Error> {
+    stream: impl Stream<Item = Result<(Bookmark, ChangesetId), Error>> + Send + 'static,
+) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>> {
     stream
         .chunks(100)
         .map({
             cloned!(repo, ctx);
             move |chunk| {
-                let cs_ids = chunk.iter().map(|(_, cs_id)| *cs_id).collect::<Vec<_>>();
-
-                repo.get_hg_bonsai_mapping(ctx.clone(), cs_ids)
-                    .map(move |mapping| {
-                        let mapping = mapping
-                            .into_iter()
-                            .map(|(hg_cs_id, cs_id)| (cs_id, hg_cs_id))
-                            .collect::<HashMap<_, _>>();
-
-                        let res = chunk
-                            .into_iter()
-                            .map(|(bookmark, cs_id)| {
-                                let hg_cs_id = mapping.get(&cs_id).ok_or_else(|| {
-                                    anyhow::format_err!(
-                                        "cs_id was missing from mapping: {:?}",
-                                        cs_id
-                                    )
-                                })?;
-                                Ok((bookmark, *hg_cs_id))
-                            })
-                            .collect::<Vec<_>>();
-
-                        stream::iter_result(res)
-                    })
-                    .flatten_stream()
+                cloned!(repo, ctx);
+                async move {
+                    let chunk: Vec<_> = chunk.into_iter().collect::<Result<_, _>>()?;
+                    let cs_ids = chunk.iter().map(|(_, cs_id)| *cs_id).collect::<Vec<_>>();
+                    let mapping: HashMap<_, _> = repo
+                        .get_hg_bonsai_mapping(ctx.clone(), cs_ids)
+                        .await?
+                        .into_iter()
+                        .map(|(hg_cs_id, cs_id)| (cs_id, hg_cs_id))
+                        .collect();
+                    let res = chunk.into_iter().map(move |(bookmark, cs_id)| {
+                        let hg_cs_id = mapping.get(&cs_id).ok_or_else(|| {
+                            anyhow::format_err!("cs_id was missing from mapping: {:?}", cs_id)
+                        })?;
+                        Ok((bookmark, *hg_cs_id))
+                    });
+                    Ok(stream::iter(res))
+                }
+                .try_flatten_stream()
             }
         })
         .flatten()
-        .boxify()
+        .boxed()
 }

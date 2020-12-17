@@ -11,8 +11,8 @@ use bookmarks::Freshness;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, StreamExt, TryFutureExt, TryStreamExt};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures::{compat::Future01CompatExt, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt as _};
 use futures_old::{future, Future, IntoFuture, Stream};
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
@@ -155,8 +155,9 @@ fn handle_get<'a>(
     let json_flag: bool = args.is_present("json");
 
     match changeset_type {
-        "hg" => repo
-            .get_bookmark(ctx, &bookmark)
+        "hg" => async move { repo.get_bookmark(ctx, &bookmark).await }
+            .boxed()
+            .compat()
             .and_then(move |cs| {
                 let changeset_id_str = cs.expect("bookmark could not be found").to_string();
                 let output = format_output(json_flag, changeset_id_str, "hg");
@@ -192,12 +193,20 @@ fn list_hg_bookmark_log_entries(
         .compat()
         .map({
             cloned!(ctx, repo);
-            move |(cs_id, rs, ts)| match cs_id {
-                Some(x) => repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), x)
-                    .map(move |cs| (Some(cs), rs, ts))
-                    .boxify(),
-                None => future::ok((None, rs, ts)).boxify(),
+            move |(cs_id, rs, ts)| {
+                cloned!(ctx, repo);
+                async move {
+                    match cs_id {
+                        Some(x) => {
+                            let cs = repo.get_hg_from_bonsai_changeset(ctx.clone(), x).await?;
+                            Ok((Some(cs), rs, ts))
+                        }
+                        None => Ok((None, rs, ts)),
+                    }
+                }
+                .boxed()
+                .compat()
+                .boxify()
             }
         })
 }
@@ -285,23 +294,24 @@ fn handle_list<'a>(
     repo: BlobRepo,
 ) -> BoxFuture<(), Error> {
     match args.value_of("kind") {
-        Some("publishing") => {
-            repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-                .compat()
-                .map({
-                    cloned!(repo, ctx);
-                    move |(bookmark, bonsai_cs_id)| {
-                        repo.get_hg_from_bonsai_changeset(ctx.clone(), bonsai_cs_id)
-                            .map(move |hg_cs_id| (bookmark, bonsai_cs_id, hg_cs_id))
+        Some("publishing") => repo
+            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .try_for_each_concurrent(100, {
+                cloned!(repo, ctx);
+                move |(bookmark, bonsai_cs_id)| {
+                    cloned!(ctx, repo);
+                    async move {
+                        let hg_cs_id = repo
+                            .get_hg_from_bonsai_changeset(ctx.clone(), bonsai_cs_id)
+                            .await?;
+                        println!("{}\t{}\t{}", bookmark.into_name(), bonsai_cs_id, hg_cs_id);
+                        Ok(())
                     }
-                })
-        }
-        .buffer_unordered(100)
-        .for_each(|(bookmark, bonsai_cs_id, hg_cs_id)| {
-            println!("{}\t{}\t{}", bookmark.into_name(), bonsai_cs_id, hg_cs_id);
-            Ok(())
-        })
-        .boxify(),
+                }
+            })
+            .boxed()
+            .compat()
+            .boxify(),
         kind => panic!("Invalid kind {:?}", kind),
     }
 }

@@ -627,7 +627,6 @@ pub async fn fetch_root_mf_id(
 ) -> Result<HgManifestId, Error> {
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .compat()
         .await?;
     let changeset = hg_cs_id.load(ctx, repo.blobstore()).await?;
     Ok(changeset.manifestid())

@@ -30,11 +30,9 @@ use fastlog::{fetch_fastlog_batch_by_unode_id, RootFastlog};
 use filestore::{self, Alias};
 use fsnodes::RootFsnodeId;
 use futures::{
-    compat::Future01CompatExt,
     future::{self, FutureExt, TryFutureExt},
     stream::{BoxStream, StreamExt, TryStreamExt},
 };
-use futures_old::Future as Future01;
 use itertools::{Either, Itertools};
 use manifest::{Entry, Manifest};
 use mercurial_derived_data::MappedHgChangesetId;
@@ -593,7 +591,7 @@ async fn hg_to_bonsai_mapping_step<V: VisitOne>(
     checker: &Checker<V>,
     id: HgChangesetId,
 ) -> Result<StepOutput, Error> {
-    let maybe_bcs_id = repo.get_bonsai_from_hg(ctx, id).compat().await?;
+    let maybe_bcs_id = repo.get_bonsai_from_hg(ctx, id).await?;
     match maybe_bcs_id {
         Some(bcs_id) => {
             let mut edges = vec![];
@@ -676,9 +674,8 @@ async fn hg_file_node_step<V: VisitOne>(
     };
     let file_node_opt = repo
         .get_filenode_opt(ctx, &repo_path, hg_file_node_id)
-        .and_then(|filenode| filenode.do_not_handle_disabled_filenodes())
-        .compat()
-        .await?;
+        .await?
+        .do_not_handle_disabled_filenodes()?;
     match file_node_opt {
         Some(file_node_info) => {
             let mut edges = vec![];

@@ -21,9 +21,11 @@ use context::CoreContext;
 use deleted_files_manifest::{find_entries, list_all_entries, RootDeletedManifestId};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{
+    compat::Future01CompatExt, future, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
+};
 use futures_ext::FutureExt as OldFutureExt;
-use futures_old::{future::err, stream::futures_unordered, Future, IntoFuture, Stream};
+use futures_old::{future::err, Future, IntoFuture, Stream};
 use manifest::{get_implicit_deletes, PathOrPrefix};
 use mercurial_types::HgManifestId;
 use mononoke_types::{ChangesetId, MPath};
@@ -170,27 +172,22 @@ fn get_parents(
     repo: BlobRepo,
     cs_id: ChangesetId,
 ) -> impl Future<Item = Vec<HgManifestId>, Error = Error> {
-    cloned!(ctx, repo);
-    repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .and_then({
+    async move {
+        let hg_cs_id = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+            .await?;
+        let parents = repo.get_changeset_parents(ctx.clone(), hg_cs_id).await?;
+        let parents_futs = parents.into_iter().map(|csid| {
             cloned!(ctx, repo);
-            move |hg_cs_id| repo.get_changeset_parents(ctx.clone(), hg_cs_id)
-        })
-        .and_then({
-            move |parent_hg_cs_ids| {
-                cloned!(ctx, repo);
-                let parents = parent_hg_cs_ids.into_iter().map(|cs_id| {
-                    cloned!(ctx, repo);
-                    async move { cs_id.load(&ctx, repo.blobstore()).await }
-                        .boxed()
-                        .compat()
-                        .from_err()
-                        .map(move |blob_changeset| blob_changeset.manifestid().clone())
-                });
-
-                futures_unordered(parents).collect()
+            async move {
+                let blob = csid.load(&ctx, repo.blobstore()).await?;
+                Ok(blob.manifestid())
             }
-        })
+        });
+        future::try_join_all(parents_futs).await
+    }
+    .boxed()
+    .compat()
 }
 
 fn get_file_changes(

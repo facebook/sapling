@@ -48,7 +48,7 @@ async fn regenerate_single_manifest(
         Arc::new(MemWritesBlobstore::new(blobstore))
     });
 
-    let maybe_cs_id = repo.get_bonsai_from_hg(ctx.clone(), hg_cs).compat().await?;
+    let maybe_cs_id = repo.get_bonsai_from_hg(ctx.clone(), hg_cs).await?;
     let cs_id = maybe_cs_id.ok_or(format_err!("changeset not found {}", hg_cs))?;
 
     let toinsert = generate_all_filenodes(&ctx, &repo, cs_id).await?;

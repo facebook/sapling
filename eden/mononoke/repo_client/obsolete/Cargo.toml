@@ -15,4 +15,5 @@ mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
 pushrebase = { path = "../../pushrebase" }
 anyhow = "1.0"
-futures = "0.1"
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }

@@ -182,31 +182,35 @@ fn single_verify(
     repo: BlobRepo,
     csid: ChangesetId,
 ) -> impl Future<Item = (), Error = Error> {
-    let hg_paths = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), csid)
-        .and_then({
-            cloned!(ctx, repo);
-            move |hg_csid| {
-                println!("CHANGESET: hg_csid:{:?} csid:{:?}", hg_csid, csid);
-                cloned!(ctx);
-                let blobstore = repo.get_blobstore();
-                async move { hg_csid.load(&ctx, &blobstore).await }
-                    .boxed()
-                    .compat()
-                    .from_err()
-            }
-        })
-        .and_then({
-            cloned!(ctx, repo);
-            move |hg_changeset| {
-                hg_changeset
-                    .manifestid()
-                    .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(None)])
-                    .compat()
-                    .filter_map(|(path, _)| path)
-                    .collect_to::<BTreeSet<_>>()
-            }
-        });
+    let hg_paths = {
+        cloned!(ctx, repo);
+        async move { repo.get_hg_from_bonsai_changeset(ctx, csid).await }
+    }
+    .boxed()
+    .compat()
+    .and_then({
+        cloned!(ctx, repo);
+        move |hg_csid| {
+            println!("CHANGESET: hg_csid:{:?} csid:{:?}", hg_csid, csid);
+            cloned!(ctx);
+            let blobstore = repo.get_blobstore();
+            async move { hg_csid.load(&ctx, &blobstore).await }
+                .boxed()
+                .compat()
+                .from_err()
+        }
+    })
+    .and_then({
+        cloned!(ctx, repo);
+        move |hg_changeset| {
+            hg_changeset
+                .manifestid()
+                .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(None)])
+                .compat()
+                .filter_map(|(path, _)| path)
+                .collect_to::<BTreeSet<_>>()
+        }
+    });
 
     let unode_paths = {
         cloned!(ctx, repo);

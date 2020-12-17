@@ -134,11 +134,8 @@ impl UnbundleResponse {
         // should be the same, however they might be different if bookmark
         // suddenly moved before current pushrebase finished.
         let common = commonheads.heads;
-        let maybe_onto_head = repo.get_bookmark(ctx.clone(), &onto).compat();
-
-        let pushrebased_hg_rev = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), pushrebased_rev)
-            .compat();
+        let maybe_onto_head = repo.get_bookmark(ctx.clone(), &onto);
+        let pushrebased_hg_rev = repo.get_hg_from_bonsai_changeset(ctx.clone(), pushrebased_rev);
 
         let bookmark_reply_part = match bookmark_push_part_id {
             Some(part_id) => Some(parts::replypushkey_part(true, part_id)?),

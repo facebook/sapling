@@ -59,7 +59,7 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Stream01CompatExt,
     future::{self, try_join, try_join_all, BoxFuture},
     stream, FutureExt, StreamExt, TryFutureExt, TryStream, TryStreamExt,
 };
@@ -163,9 +163,8 @@ impl HgReplayData {
         let cs_id_convertor: CsIdConvertor = Arc::new({
             cloned!(ctx, repo);
             move |cs_id| {
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                    .compat()
-                    .boxed()
+                cloned!(ctx, repo);
+                async move { repo.get_hg_from_bonsai_changeset(ctx, cs_id).await }.boxed()
             }
         });
 
@@ -482,7 +481,6 @@ async fn maybe_validate_commit(
     // Generate hg changeset to check that this rebased bonsai commit
     // is valid.
     repo.get_hg_from_bonsai_changeset(ctx.clone(), *bcs_id)
-        .compat()
         .map_err(|err| PushrebaseError::ValidationError {
             source_cs_id: *old_id,
             rebased_cs_id: *bcs_id,
@@ -615,11 +613,7 @@ async fn find_closest_ancestor_root(
 
         if let Some(index) = roots.get(&id) {
             if config.forbid_p2_root_rebases && *index != ChildIndex(0) {
-                let hgcs = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), id)
-                    .compat()
-                    .await?;
-
+                let hgcs = repo.get_hg_from_bonsai_changeset(ctx.clone(), id).await?;
                 return Err(PushrebaseError::Error(
                     PushrebaseInternalError::P2RootRebaseForbidden(hgcs, bookmark.clone()).into(),
                 ));
@@ -683,7 +677,6 @@ async fn id_to_manifestid(
 ) -> Result<HgManifestId, Error> {
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .compat()
         .await?;
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
     Ok(hg_cs.manifestid())
@@ -1299,7 +1292,6 @@ mod tests {
             async move {
                 let bcs_id = repo
                     .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-                    .compat()
                     .await?
                     .ok_or(Error::from(
                         PushrebaseInternalError::BonsaiNotFoundForHgChangeset(hg_cs_id),
@@ -1351,7 +1343,6 @@ mod tests {
         let head = HgChangesetId::from_str(cs_id)?;
         let head = repo
             .get_bonsai_from_hg(ctx.clone(), head)
-            .compat()
             .await?
             .ok_or(Error::msg(format_err!("Head not found: {:?}", cs_id)))?;
 
@@ -1393,7 +1384,6 @@ mod tests {
 
         let hgcss = hashset![
             repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                .compat()
                 .await?
         ];
 
@@ -1431,7 +1421,6 @@ mod tests {
 
             let hg_cs = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .compat()
                 .await?;
 
             let book = master_bookmark();
@@ -1632,7 +1621,6 @@ mod tests {
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
                 .get_bonsai_from_hg(ctx.clone(), root)
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![p])
@@ -1660,11 +1648,9 @@ mod tests {
 
             let hg_cs_1 = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                .compat()
                 .await?;
             let hg_cs_2 = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                .compat()
                 .await?;
             do_pushrebase(
                 &ctx,
@@ -1690,7 +1676,6 @@ mod tests {
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
                 .get_bonsai_from_hg(ctx.clone(), root)
-                .compat()
                 .await?
                 .ok_or(Error::msg("p is missing"))?;
             let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![p])
@@ -1718,11 +1703,9 @@ mod tests {
 
             let hg_cs_1 = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                .compat()
                 .await?;
             let hg_cs_2 = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                .compat()
                 .await?;
             do_pushrebase(
                 &ctx,
@@ -1766,7 +1749,6 @@ mod tests {
                     ctx.clone(),
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
-                .compat()
                 .await?
                 .ok_or(Error::msg("root0 is missing"))?;
 
@@ -1775,7 +1757,6 @@ mod tests {
                     ctx.clone(),
                     HgChangesetId::from_str("607314ef579bd2407752361ba1b0c1729d08b281")?,
                 )
-                .compat()
                 .await?
                 .ok_or(Error::msg("root0 is missing"))?;
 
@@ -1806,7 +1787,6 @@ mod tests {
                     ctx.clone(),
                     HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?,
                 )
-                .compat()
                 .await?
                 .ok_or(Error::msg("bcs_id_master is missing"))?;
 
@@ -1830,15 +1810,12 @@ mod tests {
 
             let hg_cs_1 = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                .compat()
                 .await?;
             let hg_cs_2 = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                .compat()
                 .await?;
             let hg_cs_3 = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
-                .compat()
                 .await?;
             let bcs_id_rebased = do_pushrebase(
                 &ctx,
@@ -1883,7 +1860,6 @@ mod tests {
                     ctx.clone(),
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
 
@@ -1911,15 +1887,12 @@ mod tests {
 
             let hg_cs_1 = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                .compat()
                 .await?;
             let hg_cs_2 = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                .compat()
                 .await?;
             let hg_cs_3 = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
-                .compat()
                 .await?;
             let result = do_pushrebase(
                 &ctx,
@@ -1957,7 +1930,6 @@ mod tests {
                     ctx.clone(),
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
 
@@ -1976,13 +1948,10 @@ mod tests {
 
             let hgcss = hashset![
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                    .compat()
                     .await?,
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                    .compat()
                     .await?,
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
-                    .compat()
                     .await?,
             ];
 
@@ -2012,7 +1981,6 @@ mod tests {
                     ctx.clone(),
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
 
@@ -2029,10 +1997,8 @@ mod tests {
                 .await?;
             let hgcss = hashset![
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                    .compat()
                     .await?,
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                    .compat()
                     .await?,
             ];
 
@@ -2062,7 +2028,6 @@ mod tests {
                     ctx.clone(),
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
 
@@ -2084,10 +2049,10 @@ mod tests {
                 })
                 .await?;
 
-            let hgcss = try_join_all(bcss.iter().map(|bcs| {
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), *bcs)
-                    .compat()
-            }))
+            let hgcss = try_join_all(
+                bcss.iter()
+                    .map(|bcs| repo.get_hg_from_bonsai_changeset(ctx.clone(), *bcs)),
+            )
             .await?;
             let book = master_bookmark();
             set_bookmark(
@@ -2112,11 +2077,7 @@ mod tests {
                 .commit()
                 .await?;
 
-            let hgcss = hashset![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-                    .compat()
-                    .await?
-            ];
+            let hgcss = hashset![repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs).await?];
 
             // try rebase with small recursion limit
             let config = PushrebaseFlags {
@@ -2150,7 +2111,6 @@ mod tests {
                     ctx.clone(),
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let book = master_bookmark();
@@ -2158,11 +2118,7 @@ mod tests {
                 .add_file("file", "data")
                 .commit()
                 .await?;
-            let hgcss = hashset![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-                    .compat()
-                    .await?
-            ];
+            let hgcss = hashset![repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs).await?];
 
             set_bookmark(
                 ctx.clone(),
@@ -2212,7 +2168,6 @@ mod tests {
                     ctx.clone(),
                     HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8")?,
                 )
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
 
@@ -2221,11 +2176,7 @@ mod tests {
                 .commit()
                 .await?;
 
-            let hgcss = hashset![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-                    .compat()
-                    .await?
-            ];
+            let hgcss = hashset![repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs).await?];
 
             let book = master_bookmark();
             set_bookmark(
@@ -2312,7 +2263,6 @@ mod tests {
             // crate filechange with with same content as "1" but set executable bit
             let root = repo
                 .get_bonsai_from_hg(ctx.clone(), root_hg)
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root missing"))?;
             let root_bcs = root.load(&ctx, repo.blobstore()).await?;
@@ -2336,11 +2286,7 @@ mod tests {
                 .commit()
                 .await?;
 
-            let hgcss = hashset![
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-                    .compat()
-                    .await?
-            ];
+            let hgcss = hashset![repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs).await?];
 
             let book = master_bookmark();
             set_bookmark(
@@ -2364,7 +2310,6 @@ mod tests {
 
             let result_hg = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), result.head)
-                .compat()
                 .await?;
             let result_cs = result_hg.load(&ctx, repo.blobstore()).await?;
             let result_1_id = result_cs
@@ -2390,19 +2335,16 @@ mod tests {
     ) -> Result<usize, Error> {
         let ancestor = repo
             .get_bonsai_from_hg(ctx.clone(), ancestor)
-            .compat()
             .await?
             .ok_or(Error::msg("ancestor not found"))?;
 
         let descendant = repo
             .get_bookmark(ctx.clone(), &descendant)
-            .compat()
             .await?
             .ok_or(Error::msg("bookmark not found"))?;
 
         let descendant = repo
             .get_bonsai_from_hg(ctx.clone(), descendant)
-            .compat()
             .await?
             .ok_or(Error::msg("bonsai not found"))?;
 
@@ -2468,7 +2410,6 @@ mod tests {
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
                 .get_bonsai_from_hg(ctx.clone(), root)
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let parents = vec![p];
@@ -2544,7 +2485,6 @@ mod tests {
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
                 .get_bonsai_from_hg(ctx.clone(), root)
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let parents = vec![p];
@@ -2556,7 +2496,6 @@ mod tests {
 
             let hg_cs = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .compat()
                 .await?;
 
             let book = BookmarkName::new("newbook")?;
@@ -2583,7 +2522,6 @@ mod tests {
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
                 .get_bonsai_from_hg(ctx.clone(), root)
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let parents = vec![p];
@@ -2649,7 +2587,6 @@ mod tests {
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
                 .get_bonsai_from_hg(ctx.clone(), root)
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let parents = vec![p];
@@ -2660,7 +2597,6 @@ mod tests {
                 .await?;
             let hg_cs = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .compat()
                 .await?;
 
             let book = master_bookmark();
@@ -2702,7 +2638,6 @@ mod tests {
             let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
             let p = repo
                 .get_bonsai_from_hg(ctx.clone(), root)
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
             let parents = vec![p];
@@ -2715,7 +2650,6 @@ mod tests {
                 .await?;
             let hg_cs = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .compat()
                 .await?;
 
             let book = master_bookmark();
@@ -2768,7 +2702,6 @@ mod tests {
                     ctx.clone(),
                     HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
 
@@ -2782,10 +2715,8 @@ mod tests {
                 .await?;
             let hgcss = hashset![
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_0)
-                    .compat()
                     .await?,
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                    .compat()
                     .await?,
             ];
 
@@ -2846,7 +2777,6 @@ mod tests {
 
             let merge_hg_cs_id = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), merge)
-                .compat()
                 .await?;
 
             set_bookmark(ctx.clone(), repo.clone(), &book, &{
@@ -2917,7 +2847,6 @@ mod tests {
                     ctx.clone(),
                     HgChangesetId::from_str("3cda5c78aa35f0f5b09780d971197b51cad4613a")?,
                 )
-                .compat()
                 .await?
                 .ok_or(Error::msg("Root is missing"))?;
 
@@ -2936,7 +2865,6 @@ mod tests {
 
             let hgcss = hashset![
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_should_fail)
-                    .compat()
                     .await?
             ];
 
@@ -2953,7 +2881,6 @@ mod tests {
             should_have_conflicts(res);
             let hgcss = hashset![
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_should_succeed)
-                    .compat()
                     .await?,
             ];
 
@@ -3015,7 +2942,6 @@ mod tests {
 
             let hg_cs = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
-                .compat()
                 .await?;
 
             let book = master_bookmark();
@@ -3028,10 +2954,8 @@ mod tests {
 
             let hgcss = hashset![
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_first_merge)
-                    .compat()
                     .await?,
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_second_merge)
-                    .compat()
                     .await?,
             ];
 
@@ -3051,7 +2975,6 @@ mod tests {
 
             let master_hg = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
-                .compat()
                 .await?;
 
             ensure_content(
@@ -3110,7 +3033,6 @@ mod tests {
 
             let hg_cs = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
-                .compat()
                 .await?;
 
             let book = master_bookmark();
@@ -3123,7 +3045,6 @@ mod tests {
 
             let hgcss = hashset![
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_merge)
-                    .compat()
                     .await?,
             ];
 
@@ -3143,7 +3064,6 @@ mod tests {
 
             let master_hg = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
-                .compat()
                 .await?;
 
             ensure_content(
@@ -3212,7 +3132,6 @@ mod tests {
 
             let hg_cs = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
-                .compat()
                 .await?;
 
             let book = master_bookmark();
@@ -3225,7 +3144,6 @@ mod tests {
 
             let hgcss = hashset![
                 repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_merge)
-                    .compat()
                     .await?
             ];
 
@@ -3245,7 +3163,6 @@ mod tests {
 
             let master_hg = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
-                .compat()
                 .await?;
 
             ensure_content(
@@ -3288,7 +3205,6 @@ mod tests {
 
         let hg_cs = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-            .compat()
             .await?;
 
         let result = do_pushrebase(
@@ -3307,7 +3223,6 @@ mod tests {
 
         let master_hg = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), result.head)
-            .compat()
             .await?;
 
         ensure_content(
@@ -3459,7 +3374,6 @@ mod tests {
 
         let hg_cs = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-            .compat()
             .await?;
 
         let err = do_pushrebase(
@@ -3490,7 +3404,6 @@ mod tests {
 
         let hg_cs = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-            .compat()
             .await?;
 
         do_pushrebase(

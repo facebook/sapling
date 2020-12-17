@@ -219,7 +219,6 @@ where
     config
         .get_source_repo()
         .get_bonsai_from_hg(ctx, source_hg_cs)
-        .compat()
         .await
         .unwrap()
         .unwrap()
@@ -2078,7 +2077,6 @@ async fn assert_working_copy(
 ) -> Result<(), Error> {
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .compat()
         .await?;
 
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;

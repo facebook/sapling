@@ -11,6 +11,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::{to_hg_bookmark_stream, BlobRepoHg};
 use bookmarks::Bookmark;
 use context::CoreContext;
+use futures::{compat::Stream01CompatExt, TryFutureExt, TryStreamExt};
 use futures_ext::{FutureExt, StreamExt};
 use futures_old::{future as future_old, Future, Stream};
 use mercurial_types::HgChangesetId;
@@ -122,9 +123,11 @@ impl SessionBookmarkCache {
                         .into_iter()
                         .map(|(name, (cs_id, kind))| (Bookmark::new(name, kind), cs_id)),
                 )
-                .boxify();
+                .boxify()
+                .compat();
                 return to_hg_bookmark_stream(&self.repo, &ctx, s)
-                    .collect_to()
+                    .try_collect()
+                    .compat()
                     .left_future();
             }
         }
@@ -137,6 +140,7 @@ impl SessionBookmarkCache {
     ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
         self.repo
             .get_publishing_bookmarks_maybe_stale(ctx)
+            .compat()
             .fold(HashMap::new(), |mut map, item| {
                 map.insert(item.0, item.1);
                 let ret: Result<_, Error> = Ok(map);

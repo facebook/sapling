@@ -269,10 +269,7 @@ pub async fn init_small_large_repo(
     )
     .await?;
 
-    let maybe_move_bcs_id = megarepo
-        .get_bonsai_from_hg(ctx.clone(), move_hg_cs)
-        .compat()
-        .await?;
+    let maybe_move_bcs_id = megarepo.get_bonsai_from_hg(ctx.clone(), move_hg_cs).await?;
     let move_bcs_id = maybe_move_bcs_id.unwrap();
 
     bookmark(&ctx, &megarepo, "megarepo_start")

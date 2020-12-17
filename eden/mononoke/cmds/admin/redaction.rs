@@ -252,7 +252,6 @@ async fn get_ctx_blobrepo_redacted_blobs_cs_id<'a>(
         .await?;
     let hg_cs_id = blobrepo
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .compat()
         .await?;
 
     Ok((ctx, blobrepo, redacted_blobs, hg_cs_id))
@@ -442,13 +441,9 @@ async fn check_if_content_is_reachable_from_bookmark(
         .await?;
     let hg_cs_id = blobrepo
         .get_hg_from_bonsai_changeset(ctx.clone(), csid)
-        .compat()
         .await?;
 
-    let hg_cs = hg_cs_id
-        .load(ctx, blobrepo.blobstore())
-        .map_err(Error::from)
-        .await?;
+    let hg_cs = hg_cs_id.load(ctx, blobrepo.blobstore()).await?;
 
     let redacted_files =
         find_files_with_given_content_id_blobstore_keys(&ctx, &blobrepo, hg_cs, keys_to_redact)

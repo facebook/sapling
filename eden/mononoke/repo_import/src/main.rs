@@ -24,7 +24,6 @@ use cross_repo_sync::{
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
     future::{self, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
@@ -427,7 +426,6 @@ async fn move_bookmark(
         let check_repo = async move {
             let hg_csid = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), curr_csid.clone())
-                .compat()
                 .await?;
             check_dependent_systems(
                 &ctx,
@@ -470,7 +468,6 @@ async fn move_bookmark(
             let small_repo_hg_csid = small_repo_back_sync_vars
                 .small_repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), small_repo_cs_id)
-                .compat()
                 .await?;
 
             check_dependent_systems(
@@ -610,7 +607,6 @@ async fn get_leaf_entries(
 ) -> Result<HashSet<MPath>, Error> {
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .compat()
         .await?;
     let hg_cs = hg_cs_id.load(ctx, &repo.get_blobstore()).await?;
     hg_cs

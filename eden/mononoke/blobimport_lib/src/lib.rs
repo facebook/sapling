@@ -318,7 +318,6 @@ impl<'a> Blobimport<'a> {
                             .map(|(_, hg_cs_id)| HgChangesetId::new(hg_cs_id))
                             .collect::<Vec<_>>(),
                     )
-                    .compat()
                     .await?;
 
                 let public = blobrepo

@@ -152,7 +152,6 @@ mod tests {
         for cs_entry in public_changesets {
             let hg_cs_id = blobrepo
                 .get_hg_from_bonsai_changeset(ctx.clone(), cs_entry.cs_id)
-                .compat()
                 .await?;
             hg_mapped.push(hg_cs_id);
         }

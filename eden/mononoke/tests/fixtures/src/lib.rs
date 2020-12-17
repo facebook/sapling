@@ -16,7 +16,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::StoreRequest;
-use futures::{compat::Future01CompatExt, future::try_join_all, stream};
+use futures::{future::try_join_all, stream};
 use maplit::btreemap;
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{
@@ -85,7 +85,6 @@ async fn create_bonsai_changeset_from_test_data(
             async move {
                 blobrepo
                     .get_bonsai_from_hg(ctx.clone(), p)
-                    .compat()
                     .await
                     .map(|maybe_cs| maybe_cs.unwrap())
             }
@@ -114,7 +113,6 @@ async fn create_bonsai_changeset_from_test_data(
 
     let hg_cs = blobrepo
         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .compat()
         .await
         .unwrap();
 
@@ -134,7 +132,6 @@ pub async fn set_bookmark(
     let hg_cs_id = HgChangesetId::from_str(hg_cs_id).unwrap();
     let bcs_id = blobrepo
         .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-        .compat()
         .await
         .unwrap();
     let mut txn = blobrepo.update_bookmark_transaction(ctx.clone());

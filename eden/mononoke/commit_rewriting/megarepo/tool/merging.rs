@@ -85,39 +85,46 @@ pub fn perform_merge(
     second_bcs_id: ChangesetId,
     resulting_changeset_args: ChangesetArgs,
 ) -> impl Future<Item = HgChangesetId, Error = Error> {
-    let first_hg_cs_id_fut = repo.get_hg_from_bonsai_changeset(ctx.clone(), first_bcs_id.clone());
-    let second_hg_cs_id_fut = repo.get_hg_from_bonsai_changeset(ctx.clone(), second_bcs_id.clone());
-    first_hg_cs_id_fut
-        .join(second_hg_cs_id_fut)
-        .and_then({
-            cloned!(ctx, repo);
-            move |(first_hg_cs_id, second_hg_cs_id)| {
-                fail_on_path_conflicts(ctx, repo, first_hg_cs_id, second_hg_cs_id)
+    {
+        cloned!(ctx, repo);
+        async move {
+            futures::try_join!(
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), first_bcs_id.clone()),
+                repo.get_hg_from_bonsai_changeset(ctx, second_bcs_id.clone()),
+            )
+        }
+    }
+    .boxed()
+    .compat()
+    .and_then({
+        cloned!(ctx, repo);
+        move |(first_hg_cs_id, second_hg_cs_id)| {
+            fail_on_path_conflicts(ctx, repo, first_hg_cs_id, second_hg_cs_id)
+        }
+    })
+    .and_then({
+        cloned!(ctx, repo, first_bcs_id, second_bcs_id);
+        move |_| {
+            info!(
+                ctx.logger(),
+                "Creating a merge bonsai changeset with parents: {:?}, {:?}",
+                first_bcs_id,
+                second_bcs_id
+            );
+            async move {
+                create_save_and_generate_hg_changeset(
+                    &ctx,
+                    &repo,
+                    vec![first_bcs_id, second_bcs_id],
+                    BTreeMap::new(),
+                    resulting_changeset_args,
+                )
+                .await
             }
-        })
-        .and_then({
-            cloned!(ctx, repo, first_bcs_id, second_bcs_id);
-            move |_| {
-                info!(
-                    ctx.logger(),
-                    "Creating a merge bonsai changeset with parents: {:?}, {:?}",
-                    first_bcs_id,
-                    second_bcs_id
-                );
-                async move {
-                    create_save_and_generate_hg_changeset(
-                        &ctx,
-                        &repo,
-                        vec![first_bcs_id, second_bcs_id],
-                        BTreeMap::new(),
-                        resulting_changeset_args,
-                    )
-                    .await
-                }
-                .boxed()
-                .compat()
-            }
-        })
+            .boxed()
+            .compat()
+        }
+    })
 }
 
 #[cfg(test)]

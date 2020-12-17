@@ -11,7 +11,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use futures::{compat::Future01CompatExt, future::try_join, TryStreamExt};
+use futures::{future::try_join, TryStreamExt};
 use manifest::{Diff, ManifestOps};
 use mercurial_types::MPath;
 use mononoke_types::ChangesetId;
@@ -51,7 +51,6 @@ async fn get_working_copy_paths(
 ) -> Result<Vec<MPath>, Error> {
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .compat()
         .await?;
 
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
@@ -256,7 +255,6 @@ mod test {
         //     |
         //     O
         //
-
 
         let create_delete_cs_args = |num: StackPosition| ChangesetArgs {
             author: "user".to_string(),

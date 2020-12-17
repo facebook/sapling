@@ -13,7 +13,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, future, Stream, TryStreamExt};
+use futures::{future, Stream, TryStreamExt};
 use itertools::Itertools;
 use manifest::ManifestOps;
 use mercurial_types::{
@@ -161,7 +161,6 @@ where
 {
     let parent_hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), parent_bcs_id)
-        .compat()
         .await?;
 
     let parent_hg_cs = parent_hg_cs_id.load(ctx, repo.blobstore()).await?;
@@ -208,7 +207,6 @@ where
 
         parent_bcs_id = repo
             .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-            .compat()
             .await?
             .ok_or(anyhow!("not found bonsai commit for {}", hg_cs_id))?;
         res.push(hg_cs_id)
@@ -225,7 +223,7 @@ mod test {
     use cloned::cloned;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs};
-    use futures::{compat::Future01CompatExt, FutureExt};
+    use futures::FutureExt;
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime};
@@ -284,7 +282,6 @@ mod test {
         let hg_cs_id = HgChangesetId::from_str("2f866e7e549760934e31bf0420a873f65100ad63").unwrap();
         let bcs_id: ChangesetId = repo
             .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-            .compat()
             .await
             .unwrap()
             .unwrap();
@@ -305,7 +302,6 @@ mod test {
     ) -> BonsaiChangeset {
         let bcs_id = repo
             .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-            .compat()
             .await
             .unwrap()
             .unwrap();

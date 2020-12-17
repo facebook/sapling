@@ -101,7 +101,11 @@ pub fn csid_resolve(
             move |_| {
                 HgChangesetId::from_str(&hash_or_bookmark)
                     .into_future()
-                    .and_then(move |hg_csid| repo.get_bonsai_from_hg(ctx, hg_csid))
+                    .and_then(move |hg_csid| {
+                        async move { repo.get_bonsai_from_hg(ctx, hg_csid).await }
+                            .boxed()
+                            .compat()
+                    })
                     .and_then(|csid| csid.ok_or(Error::msg("invalid hg changeset")))
             }
         })
@@ -126,18 +130,23 @@ pub fn get_root_manifest_id(
     hash_or_bookmark: impl ToString,
 ) -> impl OldFuture<Item = HgManifestId, Error = Error> {
     csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark).and_then(move |bcs_id| {
-        repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-            .and_then({
+        {
+            cloned!(repo, ctx);
+            async move { repo.get_hg_from_bonsai_changeset(ctx, bcs_id).await }
+                .boxed()
+                .compat()
+        }
+        .and_then({
+            cloned!(ctx, repo);
+            move |cs_id| {
                 cloned!(ctx, repo);
-                move |cs_id| {
-                    cloned!(ctx, repo);
-                    async move { cs_id.load(&ctx, repo.blobstore()).await }
-                        .boxed()
-                        .compat()
-                        .from_err()
-                }
-            })
-            .map(|cs| cs.manifestid())
+                async move { cs_id.load(&ctx, repo.blobstore()).await }
+                    .boxed()
+                    .compat()
+                    .from_err()
+            }
+        })
+        .map(|cs| cs.manifestid())
     })
 }
 

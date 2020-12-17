@@ -324,7 +324,6 @@ pub async fn gitimport(
                         *manifest
                     } else {
                         repo.get_hg_from_bonsai_changeset(ctx.clone(), p)
-                            .compat()
                             .await?
                             .load(ctx, repo.blobstore())
                             .await?

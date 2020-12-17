@@ -336,7 +336,6 @@ async fn show(
         let hg_cs_id = match entry.to_changeset_id {
             Some(bcs_id) => repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                .compat()
                 .await?
                 .to_string(),
             None => "DELETED".to_string(),

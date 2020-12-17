@@ -16,7 +16,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, stream};
+use futures::stream;
 use futures_util::future::TryFutureExt;
 use futures_util::stream::{StreamExt, TryStreamExt};
 use mercurial_types::HgChangesetId;
@@ -55,7 +55,6 @@ pub async fn backfill<P: AsRef<Path>>(
             async move {
                 let id = repo
                     .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-                    .compat()
                     .await?
                     .ok_or(anyhow!("hg commit {} is missing", hg_cs_id))?;
                 Ok(id)

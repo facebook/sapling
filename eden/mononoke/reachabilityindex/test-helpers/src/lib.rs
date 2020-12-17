@@ -14,7 +14,6 @@ use blobrepo_hg::BlobRepoHg;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::{branch_wide, linear, merge_uneven};
-use futures::compat::Future01CompatExt;
 
 #[cfg(test)]
 use common::fetch_generation;
@@ -33,7 +32,6 @@ pub async fn string_to_bonsai(
 ) -> ChangesetId {
     let node = string_to_nodehash(s);
     repo.get_bonsai_from_hg(ctx, HgChangesetId::new(node))
-        .compat()
         .await
         .unwrap()
         .unwrap()

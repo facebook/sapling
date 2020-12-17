@@ -166,7 +166,7 @@ mod test {
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::compat::{Future01CompatExt, Stream01CompatExt};
+    use futures::compat::Stream01CompatExt;
     use futures::future::Future;
     use futures::stream::Stream;
     use futures::try_join;
@@ -227,7 +227,6 @@ mod test {
                 .and_then(move |new_bcs_id| async move {
                     let hg_cs_id = repo
                         .get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
-                        .compat()
                         .await?;
                     Ok((new_bcs_id, hg_cs_id))
                 }),

@@ -558,10 +558,7 @@ mod test {
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::{
-        compat::{Future01CompatExt, Stream01CompatExt},
-        future::BoxFuture,
-    };
+    use futures::{compat::Stream01CompatExt, future::BoxFuture};
     use lazy_static::lazy_static;
     use lock_ext::LockExt;
     use maplit::hashmap;
@@ -888,7 +885,6 @@ mod test {
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = repo
             .get_bonsai_from_hg(ctx.clone(), hg_csid)
-            .compat()
             .await?
             .ok_or(Error::msg("known hg does not have bonsai csid"))?;
 
@@ -966,7 +962,6 @@ mod test {
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = repo
             .get_bonsai_from_hg(ctx.clone(), hg_csid)
-            .compat()
             .await?
             .ok_or(Error::msg("known hg does not have bonsai csid"))?;
 

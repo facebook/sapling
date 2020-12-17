@@ -584,11 +584,9 @@ async fn verify_mapping_and_all_wc(
 
         let source_hg_cs_id = source_repo
             .get_hg_from_bonsai_changeset(ctx.clone(), source_cs_id)
-            .compat()
             .await?;
         let target_hg_cs_id = target_repo
             .get_hg_from_bonsai_changeset(ctx.clone(), target_cs_id)
-            .compat()
             .await?;
 
         compare_contents(
@@ -611,10 +609,9 @@ async fn verify_bookmarks(
     let target_repo = commit_syncer.get_target_repo();
     let bookmark_renamer = commit_syncer.get_bookmark_renamer(&ctx)?;
 
-    let bookmarks = source_repo
+    let bookmarks: Vec<_> = source_repo
         .get_publishing_bookmarks_maybe_stale(ctx.clone())
-        .collect()
-        .compat()
+        .try_collect()
         .await?;
 
     // Check that bookmark point to corresponding working copies
@@ -626,14 +623,12 @@ async fn verify_bookmarks(
                     assert!(
                         target_repo
                             .get_bookmark(ctx.clone(), &bookmark.name())
-                            .compat()
                             .await?
                             .is_none()
                     );
                 }
                 let target_hg_cs_id = target_repo
                     .get_bookmark(ctx.clone(), &renamed_book)
-                    .compat()
                     .await?
                     .expect(&format!(
                         "{} bookmark doesn't exist in target repo!",
@@ -642,7 +637,6 @@ async fn verify_bookmarks(
 
                 let source_bcs_id = source_repo
                     .get_bonsai_from_hg(ctx.clone(), source_hg_cs_id)
-                    .compat()
                     .await?
                     .unwrap();
 
@@ -681,7 +675,6 @@ async fn verify_bookmarks(
                 assert!(
                     target_repo
                         .get_bookmark(ctx.clone(), &bookmark.name())
-                        .compat()
                         .await?
                         .is_none()
                 );
@@ -948,7 +941,6 @@ async fn init_repos(
             ctx.clone(),
             HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
         )
-        .compat()
         .await?
         .unwrap();
     let first_bcs = initial_bcs_id.load(&ctx, source_repo.blobstore()).await?;

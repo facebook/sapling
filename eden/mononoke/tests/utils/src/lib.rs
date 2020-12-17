@@ -16,7 +16,6 @@ use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use filestore::{self, FetchKey, StoreRequest};
 use futures::{
-    compat::Future01CompatExt,
     future,
     stream::{self, TryStreamExt},
 };
@@ -54,7 +53,6 @@ pub async fn list_working_copy(
 ) -> Result<HashMap<MPath, Bytes>, Error> {
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .compat()
         .await?;
     let hg_cs = hg_cs_id.load(ctx, repo.blobstore()).await?;
 
@@ -530,10 +528,7 @@ pub async fn resolve_cs_id(
     match cs_ident.into() {
         Bonsai(cs_id) => Ok(cs_id),
         Hg(hg_cs_id) => {
-            let maybe_cs_id = repo
-                .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-                .compat()
-                .await?;
+            let maybe_cs_id = repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).await?;
             maybe_cs_id.ok_or(format_err!("{} not found", hg_cs_id))
         }
         Bookmark(bookmark) => {
@@ -548,11 +543,7 @@ pub async fn resolve_cs_id(
             }
 
             if let Ok(hg_cs_id) = HgChangesetId::from_str(&hash_or_bookmark) {
-                if let Ok(Some(cs_id)) = repo
-                    .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-                    .compat()
-                    .await
-                {
+                if let Ok(Some(cs_id)) = repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).await {
                     return Ok(cs_id);
                 }
             }

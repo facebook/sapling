@@ -105,10 +105,14 @@ pub async fn subcommand_hg_changeset<'a>(
                 .and_then({
                     cloned!(ctx, repo);
                     move |(start_cs, stop_cs)| {
-                        (
-                            repo.get_bonsai_from_hg(ctx.clone(), start_cs),
-                            repo.get_bonsai_from_hg(ctx, stop_cs),
-                        )
+                        async move {
+                            futures::try_join!(
+                                repo.get_bonsai_from_hg(ctx.clone(), start_cs),
+                                repo.get_bonsai_from_hg(ctx, stop_cs),
+                            )
+                        }
+                        .boxed()
+                        .compat()
                     }
                 })
                 .and_then(|(start_cs_opt, stop_cs_opt)| {
@@ -126,7 +130,12 @@ pub async fn subcommand_hg_changeset<'a>(
                             start_cs,
                             stop_cs,
                         )
-                        .map(move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs))
+                        .map(move |cs| {
+                            cloned!(ctx, repo);
+                            async move { repo.get_hg_from_bonsai_changeset(ctx.clone(), cs).await }
+                                .boxed()
+                                .compat()
+                        })
                         .buffered(100)
                         .map(|cs| cs.to_hex().to_string())
                         .collect()

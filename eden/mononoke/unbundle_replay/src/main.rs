@@ -27,7 +27,7 @@ use cmdlib::{
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Stream01CompatExt,
     future,
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
@@ -110,7 +110,6 @@ async fn get_replay_stream<'a>(
 
             let onto_rev = repo
                 .get_bookmark(ctx.clone(), &onto)
-                .compat()
                 .await?
                 .ok_or_else(|| format_err!("Bookmark does not exist: {}", onto))?;
 
@@ -349,7 +348,6 @@ async fn maybe_unbundle(
             .map(|(hg_cs_id, ts)| async move {
                 let bonsai_cs_id = repo
                     .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-                    .compat()
                     .await?
                     .ok_or(format_err!(
                         "Hg Changeset is missing after unbundle: {:?}",

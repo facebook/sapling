@@ -393,7 +393,6 @@ async fn try_sync_single_combined_entry(
         .compat()
         .await?;
 
-
     Ok(())
 }
 
@@ -665,10 +664,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
             let bookmarks = stream::iter(bookmarks.into_iter())
                 .map(move |(book, hg_cs_id)| async move {
-                    let maybe_bcs_id = repo
-                        .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-                        .compat()
-                        .await?;
+                    let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).await?;
                     Result::<_, Error>::Ok(maybe_bcs_id.map(|bcs_id| (book, bcs_id)))
                 })
                 .buffered(100)

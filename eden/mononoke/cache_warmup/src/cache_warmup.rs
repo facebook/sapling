@@ -18,11 +18,10 @@ use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use filenodes::FilenodeResult;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Stream01CompatExt,
     future::{self, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
-use futures_old::Future as FutureOld;
 use futures_stats::TimedFutureExt;
 use manifest::{Entry, ManifestOps};
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
@@ -107,12 +106,17 @@ async fn blobstore_and_filenodes_warmup(
                         None => RepoPath::RootPath,
                     };
 
-                    let fut = get_linknode_opt(&repo, ctx.clone(), &path, hash)
-                        .compat()
-                        .map_ok(|res| match res {
-                            FilenodeResult::Present(maybe_linknode) => maybe_linknode,
-                            FilenodeResult::Disabled => None,
-                        });
+                    cloned!(ctx, repo);
+                    let fut = async move {
+                        let filenode_res = repo.get_filenode_opt(ctx, &path, hash).await?;
+                        let linknode_res = filenode_res
+                            .map(|filenode_opt| filenode_opt.map(|filenode| filenode.linknode));
+                        match linknode_res {
+                            FilenodeResult::Present(maybe_linknode) => Ok(maybe_linknode),
+                            FilenodeResult::Disabled => Ok(None),
+                        }
+                    };
+
                     Some(fut)
                 }
             };
@@ -145,17 +149,6 @@ async fn blobstore_and_filenodes_warmup(
     debug!(ctx.logger(), "finished manifests warmup");
 
     Ok(())
-}
-
-fn get_linknode_opt(
-    repo: &BlobRepo,
-    ctx: CoreContext,
-    path: &RepoPath,
-    node: HgFileNodeId,
-) -> impl FutureOld<Item = FilenodeResult<Option<HgChangesetId>>, Error = Error> {
-    repo.get_filenode_opt(ctx, path, node).map(|filenode_res| {
-        filenode_res.map(|filenode_opt| filenode_opt.map(|filenode| filenode.linknode))
-    })
 }
 
 // Iterate over first parents, and fetch them
@@ -196,7 +189,6 @@ async fn do_cache_warmup(
 
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-        .compat()
         .await?;
 
     let blobstore_warmup = task::spawn({

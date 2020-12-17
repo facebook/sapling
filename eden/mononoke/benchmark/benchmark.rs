@@ -24,7 +24,6 @@ use fsnodes::RootFsnodeId;
 use futures::compat::Future01CompatExt;
 use futures::future::{FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
-use futures_old::Future;
 use futures_stats::futures03::TimedFutureExt;
 use mononoke_types::ChangesetId;
 use rand::SeedableRng;
@@ -77,9 +76,17 @@ fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Res
         None => bail!("required `type` argument is missing"),
         Some(HG_CHANGESET_TYPE) => {
             let derive_hg_changeset = move |csid| {
-                repo.get_hg_from_bonsai_changeset(ctx.clone(), csid)
-                    .map(|hg_csid| hg_csid.to_string())
-                    .boxify()
+                cloned!(ctx, repo);
+                async move {
+                    let hgcsid = repo
+                        .get_hg_from_bonsai_changeset(ctx, csid)
+                        .await?
+                        .to_string();
+                    Ok(hgcsid)
+                }
+                .boxed()
+                .compat()
+                .boxify()
             };
             Ok(Arc::new(derive_hg_changeset))
         }

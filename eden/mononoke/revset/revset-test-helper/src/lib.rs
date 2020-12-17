@@ -10,10 +10,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    FutureExt, StreamExt, TryFutureExt,
-};
+use futures::{compat::Stream01CompatExt, FutureExt, StreamExt, TryFutureExt};
 use futures_ext::BoxStream;
 use futures_old::future::Future;
 use futures_old::stream::Stream;
@@ -47,7 +44,6 @@ pub async fn string_to_bonsai(fb: FacebookInit, repo: &Arc<BlobRepo>, s: &str) -
     let ctx = CoreContext::test_mock(fb);
     let node = string_to_nodehash(s);
     repo.get_bonsai_from_hg(ctx, HgChangesetId::new(node))
-        .compat()
         .await
         .unwrap()
         .unwrap()

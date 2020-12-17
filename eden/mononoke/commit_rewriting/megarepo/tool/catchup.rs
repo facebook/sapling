@@ -13,7 +13,6 @@ use bookmarks::BookmarkName;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use futures::{
-    compat::Future01CompatExt,
     future::{self, try_join},
     TryStreamExt,
 };
@@ -73,7 +72,6 @@ pub async fn create_deletion_head_commits<'a>(
         );
         let hg_cs_id = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-            .compat()
             .await?;
 
         info!(ctx.logger(), "derived {}, pushrebasing...", hg_cs_id);

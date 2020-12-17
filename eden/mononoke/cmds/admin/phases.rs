@@ -172,34 +172,39 @@ fn add_public_phases(
         .chunks(chunk_size)
         .and_then(move |chunk| {
             let count = chunk.len();
-            repo.get_hg_bonsai_mapping(ctx.clone(), chunk)
-                .and_then({
-                    cloned!(ctx, phases);
-                    move |changesets| {
-                        async move {
-                            phases
-                                .get_sql_phases()
-                                .add_public_raw(
-                                    &ctx,
-                                    changesets.into_iter().map(|(_, cs)| cs).collect(),
-                                )
-                                .await
-                        }
-                        .boxed()
-                        .compat()
+            {
+                cloned!(ctx, repo);
+                async move { repo.get_hg_bonsai_mapping(ctx.clone(), chunk).await }
+            }
+            .boxed()
+            .compat()
+            .and_then({
+                cloned!(ctx, phases);
+                move |changesets| {
+                    async move {
+                        phases
+                            .get_sql_phases()
+                            .add_public_raw(
+                                &ctx,
+                                changesets.into_iter().map(|(_, cs)| cs).collect(),
+                            )
+                            .await
                     }
-                })
-                .and_then({
-                    cloned!(entries_processed);
-                    move |_| {
-                        print!(
-                            "\x1b[Khashes processed: {}\r",
-                            entries_processed.fetch_add(count, Ordering::SeqCst) + count,
-                        );
-                        std::io::stdout().flush().expect("flush on stdout failed");
-                        tokio_timer::sleep(Duration::from_secs(5)).map_err(Error::from)
-                    }
-                })
+                    .boxed()
+                    .compat()
+                }
+            })
+            .and_then({
+                cloned!(entries_processed);
+                move |_| {
+                    print!(
+                        "\x1b[Khashes processed: {}\r",
+                        entries_processed.fetch_add(count, Ordering::SeqCst) + count,
+                    );
+                    std::io::stdout().flush().expect("flush on stdout failed");
+                    tokio_timer::sleep(Duration::from_secs(5)).map_err(Error::from)
+                }
+            })
         })
         .for_each(|_| Ok(()))
         .boxify()
@@ -221,10 +226,7 @@ async fn subcommand_list_public_impl(
     } else {
         for chunk in public.chunks(1000) {
             let bonsais: Vec<_> = chunk.iter().cloned().collect();
-            let hg_bonsais = repo
-                .get_hg_bonsai_mapping(ctx.clone(), bonsais)
-                .compat()
-                .await?;
+            let hg_bonsais = repo.get_hg_bonsai_mapping(ctx.clone(), bonsais).await?;
             let hg_css: Vec<HgChangesetId> = hg_bonsais
                 .clone()
                 .into_iter()
@@ -254,7 +256,6 @@ pub async fn subcommand_fetch_phase_impl<'a>(
     } else if ty == "hg" {
         let maybe_bonsai = repo
             .get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(&hash)?)
-            .compat()
             .await?;
         maybe_bonsai.ok_or(format_err!("bonsai not found for {}", hash))?
     } else {

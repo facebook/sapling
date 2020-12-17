@@ -9,9 +9,9 @@ use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{TryFutureExt, TryStreamExt};
+use futures::{future, TryFutureExt, TryStreamExt};
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
-use futures_old::{future as future01, Future as Future01, Stream as Stream01};
+use futures_old::{Future as Future01, Stream as Stream01};
 
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
@@ -52,7 +52,7 @@ fn set_bookmark(
     cs_id: &str,
 ) {
     let head = rt
-        .block_on(repo.get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(cs_id).unwrap()))
+        .block_on_std(repo.get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(cs_id).unwrap()))
         .unwrap()
         .unwrap();
     let mut txn = repo.update_bookmark_transaction(ctx);
@@ -115,7 +115,7 @@ fn get_phase_hint_test(fb: FacebookInit) {
     );
 
     let public_commit = rt
-        .block_on(repo.get_bonsai_from_hg(
+        .block_on_std(repo.get_bonsai_from_hg(
             ctx.clone(),
             HgChangesetId::from_str("d0a361e9022d226ae52f689667bd7d212a19cfe0").unwrap(),
         ))
@@ -123,7 +123,7 @@ fn get_phase_hint_test(fb: FacebookInit) {
         .unwrap();
 
     let other_public_commit = rt
-        .block_on(repo.get_bonsai_from_hg(
+        .block_on_std(repo.get_bonsai_from_hg(
             ctx.clone(),
             HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
         ))
@@ -131,7 +131,7 @@ fn get_phase_hint_test(fb: FacebookInit) {
         .unwrap();
 
     let draft_commit = rt
-        .block_on(repo.get_bonsai_from_hg(
+        .block_on_std(repo.get_bonsai_from_hg(
             ctx.clone(),
             HgChangesetId::from_str("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").unwrap(),
         ))
@@ -139,7 +139,7 @@ fn get_phase_hint_test(fb: FacebookInit) {
         .unwrap();
 
     let other_draft_commit = rt
-        .block_on(repo.get_bonsai_from_hg(
+        .block_on_std(repo.get_bonsai_from_hg(
             ctx.clone(),
             HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap(),
         ))
@@ -147,7 +147,7 @@ fn get_phase_hint_test(fb: FacebookInit) {
         .unwrap();
 
     let public_bookmark_commit = rt
-        .block_on(repo.get_bonsai_from_hg(
+        .block_on_std(repo.get_bonsai_from_hg(
             ctx.clone(),
             HgChangesetId::from_str("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").unwrap(),
         ))
@@ -263,12 +263,12 @@ fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
 
     // resolve bonsai
     let bcss = rt
-        .block_on(future01::join_all(
+        .block_on_std(future::try_join_all(
             hgcss
                 .iter()
                 .map(|hgcs| {
                     repo.get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(hgcs).unwrap())
-                        .map(|bcs| bcs.unwrap())
+                        .map_ok(|bcs| bcs.unwrap())
                 })
                 .collect::<Vec<_>>(),
         ))

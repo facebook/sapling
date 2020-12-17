@@ -1184,10 +1184,7 @@ mod tests {
         let repo = linear::getrepo(fb).await;
 
         let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb")?;
-        let maybe_bcs_id = repo
-            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-            .compat()
-            .await?;
+        let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).await?;
         let bcs_id = maybe_bcs_id.unwrap();
 
         let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
@@ -1212,10 +1209,7 @@ mod tests {
         ];
         for hg_cs_id in &hg_cs_ids {
             let hg_cs_id = HgChangesetId::from_str(hg_cs_id)?;
-            let maybe_bcs_id = repo
-                .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-                .compat()
-                .await?;
+            let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).await?;
             batch.push(maybe_bcs_id.unwrap());
         }
 
@@ -1246,10 +1240,7 @@ mod tests {
         });
 
         let first_hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-        let maybe_bcs_id = repo
-            .get_bonsai_from_hg(ctx.clone(), first_hg_cs_id)
-            .compat()
-            .await?;
+        let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), first_hg_cs_id).await?;
         let bcs_id = maybe_bcs_id.unwrap();
 
         let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
@@ -1266,7 +1257,6 @@ mod tests {
         let second_hg_cs_id = HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f")?;
         let maybe_bcs_id = repo
             .get_bonsai_from_hg(ctx.clone(), second_hg_cs_id)
-            .compat()
             .await?;
         let bcs_id = maybe_bcs_id.unwrap();
         derived_utils

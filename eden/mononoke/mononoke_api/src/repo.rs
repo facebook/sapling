@@ -747,7 +747,6 @@ impl RepoContext {
             ChangesetSpecifier::Hg(hg_cs_id) => {
                 self.blob_repo()
                     .get_bonsai_from_hg(self.ctx.clone(), hg_cs_id)
-                    .compat()
                     .await?
             }
             ChangesetSpecifier::Globalrev(rev) => {
@@ -865,7 +864,6 @@ impl RepoContext {
         let mapping = self
             .blob_repo()
             .get_hg_bonsai_mapping(self.ctx.clone(), changesets)
-            .compat()
             .await?
             .into_iter()
             .map(|(hg_cs_id, cs_id)| (cs_id, hg_cs_id))

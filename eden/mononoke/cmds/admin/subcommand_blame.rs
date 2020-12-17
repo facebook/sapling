@@ -461,39 +461,40 @@ fn subcommand_compute_blame(
 }
 
 /// Format blame the same way `hg blame` does
-fn blame_hg_annotate<C: AsRef<[u8]> + 'static>(
+fn blame_hg_annotate<C: AsRef<[u8]> + 'static + Send>(
     ctx: CoreContext,
     repo: BlobRepo,
     content: C,
     blame: Blame,
     show_line_number: bool,
 ) -> impl Future<Item = String, Error = Error> {
-    if content.as_ref().is_empty() {
-        return future::ok(String::new()).left_future();
-    }
+    async move {
+        if content.as_ref().is_empty() {
+            return Ok(String::new());
+        }
 
-    let csids: Vec<_> = blame.ranges().iter().map(|range| range.csid).collect();
-    repo.get_hg_bonsai_mapping(ctx, csids)
-        .and_then(move |mapping| {
-            let mapping: HashMap<_, _> = mapping.into_iter().map(|(k, v)| (v, k)).collect();
+        let csids: Vec<_> = blame.ranges().iter().map(|range| range.csid).collect();
+        let mapping = repo.get_hg_bonsai_mapping(ctx, csids).await?;
+        let mapping: HashMap<_, _> = mapping.into_iter().map(|(k, v)| (v, k)).collect();
 
-            let content = String::from_utf8_lossy(content.as_ref());
-            let mut result = String::new();
-            for (line, (csid, _path, line_number)) in content.lines().zip(blame.lines()) {
-                let hg_csid = mapping
-                    .get(&csid)
-                    .ok_or_else(|| format_err!("unresolved bonsai csid: {}", csid))?;
-                result.push_str(&hg_csid.to_string()[..12]);
-                result.push_str(":");
-                if show_line_number {
-                    write!(&mut result, "{:>4}:", line_number + 1)?;
-                }
-                result.push_str(" ");
-                result.push_str(line);
-                result.push_str("\n");
+        let content = String::from_utf8_lossy(content.as_ref());
+        let mut result = String::new();
+        for (line, (csid, _path, line_number)) in content.lines().zip(blame.lines()) {
+            let hg_csid = mapping
+                .get(&csid)
+                .ok_or_else(|| format_err!("unresolved bonsai csid: {}", csid))?;
+            result.push_str(&hg_csid.to_string()[..12]);
+            result.push(':');
+            if show_line_number {
+                write!(&mut result, "{:>4}:", line_number + 1)?;
             }
+            result.push(' ');
+            result.push_str(line);
+            result.push('\n');
+        }
 
-            Ok(result)
-        })
-        .right_future()
+        Ok(result)
+    }
+    .boxed()
+    .compat()
 }

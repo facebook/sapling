@@ -12,7 +12,6 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks_movement::BookmarkMovementError;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use futures::future::{BoxFuture, FutureExt};
 use futures::stream::{self, StreamExt, TryStreamExt};
 use hooks::{CrossRepoPushSource, HookManager, HookRejection};
@@ -45,7 +44,6 @@ pub(crate) fn make_hook_rejection_remapper(
             async move {
                 let hg_cs_id = repo
                     .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                    .compat()
                     .await?;
                 Ok(HgHookRejection {
                     hook_name,

@@ -20,7 +20,7 @@ use context::CoreContext;
 use failure_ext::DisplayChain;
 use fbinit::FacebookInit;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Stream01CompatExt,
     future::{self, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
@@ -316,7 +316,6 @@ fn subcommmand_hg_manifest_verify(
         let repo = &args::open_repo(ctx.fb, &logger, matches).await?;
         let csid = repo
             .get_bonsai_from_hg(ctx.clone(), hg_csid)
-            .compat()
             .await?
             .ok_or(format_err!("failed to fetch bonsai changeset"))?;
 
@@ -326,11 +325,7 @@ fn subcommmand_hg_manifest_verify(
             .map(|res| async move {
                 match res {
                     Ok(csid) => {
-                        let cs_id = repo
-                            .get_hg_from_bonsai_changeset(ctx.clone(), csid)
-                            .compat()
-                            .await?;
-
+                        let cs_id = repo.get_hg_from_bonsai_changeset(ctx.clone(), csid).await?;
                         let bonsai_fut = csid.load(ctx, repo.blobstore()).map_err(Error::from);
 
                         let parents_fut = async move {
