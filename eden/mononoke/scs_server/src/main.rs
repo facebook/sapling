@@ -55,7 +55,7 @@ const SERVICE_NAME: &str = "mononoke_scs_server";
 fn main(fb: FacebookInit) -> Result<(), Error> {
     panichandler::set_panichandler(Fate::Abort);
 
-    let matches = args::MononokeAppBuilder::new("Mononoke Source Control Service Server")
+    let app = args::MononokeAppBuilder::new("Mononoke Source Control Service Server")
         .with_advanced_args_hidden()
         .with_all_repos()
         .with_shutdown_timeout_args()
@@ -78,8 +78,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .default_value("8367")
                 .value_name("PORT")
                 .help("Thrift port"),
-        )
-        .get_matches();
+        );
+    let app = args::add_scribe_logging_args(app);
+
+    let matches = app.get_matches();
 
     let (caching, logger, mut runtime) =
         args::init_mononoke(fb, &matches).expect("failed to create tokio runtime");
@@ -128,6 +130,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         mononoke.clone(),
         logger.clone(),
         scuba_builder.clone(),
+        args::get_scribe(fb, &matches)?,
     );
     let service = {
         move |proto| {

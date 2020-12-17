@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Error, Result};
@@ -14,16 +14,21 @@ use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
+use chrono::Utc;
 use context::CoreContext;
 use derived_data::{BonsaiDerivable, BonsaiDerived};
 use futures::compat::Stream01CompatExt;
-use futures::future;
 use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::{
+    future::{self, try_join},
+    stream::FuturesUnordered,
+};
 use hooks::{CrossRepoPushSource, HookManager};
-use metaconfig_types::{BookmarkAttrs, PushrebaseParams};
+use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
+use scribe_commit_queue::{self, LogToScribe};
 use skeleton_manifest::RootSkeletonManifestId;
 use tunables::tunables;
 
@@ -444,5 +449,147 @@ impl AffectedChangesets {
             }
         }
         Ok(())
+    }
+}
+
+pub async fn find_draft_ancestors(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    to_cs_id: ChangesetId,
+) -> Result<Vec<BonsaiChangeset>, Error> {
+    ctx.scuba()
+        .clone()
+        .log_with_msg("Started finding draft ancestors", None);
+
+    let phases = repo.get_phases();
+    let mut queue = VecDeque::new();
+    let mut visited = HashSet::new();
+    let mut drafts = vec![];
+    queue.push_back(to_cs_id);
+    visited.insert(to_cs_id);
+
+    while let Some(cs_id) = queue.pop_front() {
+        let public = phases
+            .get_public(ctx.clone(), vec![cs_id], false /*ephemeral_derive*/)
+            .await?;
+
+        if public.contains(&cs_id) {
+            continue;
+        }
+        drafts.push(cs_id);
+
+        let parents = repo
+            .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
+            .await?;
+        for p in parents {
+            if visited.insert(p) {
+                queue.push_back(p);
+            }
+        }
+    }
+
+    let drafts = stream::iter(drafts)
+        .map(Ok)
+        .map_ok(|cs_id| async move { cs_id.load(&ctx, &repo.get_blobstore()).await })
+        .try_buffer_unordered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    ctx.scuba()
+        .clone()
+        .log_with_msg("Found draft ancestors", Some(format!("{}", drafts.len())));
+    Ok(drafts)
+}
+
+pub(crate) async fn log_bonsai_commits_to_scribe(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark: Option<&BookmarkName>,
+    commits_to_log: Vec<BonsaiChangeset>,
+    kind: BookmarkKind,
+    infinitepush_params: &InfinitepushParams,
+    pushrebase_params: &PushrebaseParams,
+) {
+    let mut new_changeset_ids_and_changed_files_count = Vec::new();
+    for bcs in commits_to_log {
+        let cs_id = bcs.get_changeset_id();
+        let changed_files = bcs.file_changes_map().len();
+        new_changeset_ids_and_changed_files_count.push((cs_id, changed_files));
+    }
+
+    let commit_scribe_category = match kind {
+        BookmarkKind::Scratch => &infinitepush_params.commit_scribe_category,
+        BookmarkKind::Public => &pushrebase_params.commit_scribe_category,
+    };
+
+    log_commits_to_scribe(
+        ctx,
+        repo,
+        bookmark,
+        new_changeset_ids_and_changed_files_count,
+        commit_scribe_category.as_deref(),
+    )
+    .await;
+}
+
+pub async fn log_commits_to_scribe(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark: Option<&BookmarkName>,
+    changesets_and_changed_files_count: Vec<(ChangesetId, usize)>,
+    commit_scribe_category: Option<&str>,
+) {
+    let queue = match commit_scribe_category {
+        Some(category) if !category.is_empty() => {
+            LogToScribe::new(ctx.scribe().clone(), category.to_string())
+        }
+        _ => LogToScribe::new_with_discard(),
+    };
+
+    let repo_id = repo.get_repoid();
+    let bookmark = bookmark.map(|bm| bm.as_str());
+    let received_timestamp = Utc::now();
+
+    let futs: FuturesUnordered<_> = changesets_and_changed_files_count
+        .into_iter()
+        .map(|(changeset_id, changed_files_count)| {
+            let queue = &queue;
+            async move {
+                let get_generation = async {
+                    repo.get_generation_number(ctx.clone(), changeset_id)
+                        .await?
+                        .ok_or_else(|| Error::msg("No generation number found"))
+                };
+                let get_parents = async {
+                    repo.get_changeset_parents_by_bonsai(ctx.clone(), changeset_id)
+                        .await
+                };
+
+                let (generation, parents) = try_join(get_generation, get_parents).await?;
+
+                let username = ctx.metadata().unix_name();
+                let hostname = ctx.metadata().client_hostname();
+                let identities = ctx.metadata().identities();
+                let ci = scribe_commit_queue::CommitInfo::new(
+                    repo_id,
+                    bookmark,
+                    generation,
+                    changeset_id,
+                    parents,
+                    username.as_deref(),
+                    identities,
+                    hostname.as_deref(),
+                    received_timestamp,
+                    changed_files_count,
+                );
+                queue.queue_commit(&ci)
+            }
+        })
+        .collect();
+    let res = futs.try_for_each(|()| async { Ok(()) }).await;
+    if let Err(err) = res {
+        ctx.scuba()
+            .clone()
+            .log_with_msg("Failed to log pushed commits", Some(format!("{}", err)));
     }
 }

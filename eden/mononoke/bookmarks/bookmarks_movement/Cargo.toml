@@ -25,6 +25,7 @@ pushrebase = { path = "../../pushrebase" }
 reachabilityindex = { path = "../../reachabilityindex" }
 repo_read_write_status = { path = "../../repo_client/repo_read_write_status" }
 revset = { path = "../../revset" }
+scribe_commit_queue = { path = "../../repo_client/scribe_commit_queue" }
 skeleton_manifest = { path = "../../derived_data/skeleton_manifest" }
 tunables = { path = "../../tunables" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -33,6 +34,7 @@ sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = 
 anyhow = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 itertools = "0.8"
 slog = { version = "2.5", features = ["max_level_debug"] }

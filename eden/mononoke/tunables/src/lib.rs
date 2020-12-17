@@ -115,6 +115,7 @@ pub struct MononokeTunables {
     filter_pre_existing_commits_on_infinitepush: AtomicBool,
     backfill_read_qps: AtomicI64,
     backfill_write_qps: AtomicI64,
+    disable_commit_scribe_logging_scs: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

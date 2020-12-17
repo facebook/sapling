@@ -14,14 +14,11 @@ use anyhow::{anyhow, Context, Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
-use bookmarks_movement::{BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets};
-use bytes::Bytes;
-use chrono::Utc;
-use context::CoreContext;
-use futures::{
-    future::try_join,
-    stream::{FuturesUnordered, TryStreamExt},
+use bookmarks_movement::{
+    log_commits_to_scribe, BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets,
 };
+use bytes::Bytes;
+use context::CoreContext;
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use hooks::HookManager;
@@ -32,7 +29,6 @@ use pushrebase::{PushrebaseError, PushrebaseHook};
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::RepoReadWriteFetcher;
 use reverse_filler_queue::ReverseFillerQueue;
-use scribe_commit_queue::{self, LogToScribe};
 use slog::{debug, warn};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
@@ -239,7 +235,7 @@ async fn run_push(
         repo,
         maybe_bookmark.as_ref(),
         new_changeset_ids_and_changed_files_count,
-        push_params.commit_scribe_category.clone(),
+        push_params.commit_scribe_category.as_deref(),
     )
     .await;
 
@@ -356,7 +352,7 @@ async fn run_infinitepush(
         repo,
         bookmark.as_ref(),
         new_changeset_ids_and_changed_files_count,
-        infinitepush_params.commit_scribe_category.clone(),
+        infinitepush_params.commit_scribe_category.as_deref(),
     )
     .await;
 
@@ -427,7 +423,7 @@ async fn run_pushrebase(
                     .into_iter()
                     .zip(changed_files_count.into_iter())
                     .collect(),
-                pushrebase_params.commit_scribe_category.clone(),
+                pushrebase_params.commit_scribe_category.as_deref(),
             )
             .await;
             (pushrebased_rev, pushrebased_changesets)
@@ -462,7 +458,7 @@ async fn run_pushrebase(
                 repo,
                 Some(&bookmark),
                 new_changeset_ids_and_changed_files_count,
-                pushrebase_params.commit_scribe_category.clone(),
+                pushrebase_params.commit_scribe_category.as_deref(),
             )
             .await;
             (pushrebased_rev, pushrebased_changesets)
@@ -854,66 +850,6 @@ async fn infinitepush_scratch_bookmark(
     }
 
     Ok(())
-}
-
-async fn log_commits_to_scribe(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    bookmark: Option<&BookmarkName>,
-    changesets_and_changed_files_count: Vec<(ChangesetId, usize)>,
-    commit_scribe_category: Option<String>,
-) {
-    let queue = match commit_scribe_category {
-        Some(category) if !category.is_empty() => LogToScribe::new(ctx.scribe().clone(), category),
-        _ => LogToScribe::new_with_discard(),
-    };
-
-    let repo_id = repo.get_repoid();
-    let bookmark = bookmark.map(|bm| bm.as_str());
-    let received_timestamp = Utc::now();
-
-    let futs: FuturesUnordered<_> = changesets_and_changed_files_count
-        .into_iter()
-        .map(|(changeset_id, changed_files_count)| {
-            let queue = &queue;
-            async move {
-                let get_generation = async {
-                    repo.get_generation_number(ctx.clone(), changeset_id)
-                        .await?
-                        .ok_or_else(|| Error::msg("No generation number found"))
-                };
-                let get_parents = async {
-                    repo.get_changeset_parents_by_bonsai(ctx.clone(), changeset_id)
-                        .await
-                };
-
-                let (generation, parents) = try_join(get_generation, get_parents).await?;
-
-                let username = ctx.metadata().unix_name();
-                let hostname = ctx.metadata().client_hostname();
-                let identities = ctx.metadata().identities();
-                let ci = scribe_commit_queue::CommitInfo::new(
-                    repo_id,
-                    bookmark,
-                    generation,
-                    changeset_id,
-                    parents,
-                    username.as_deref(),
-                    identities,
-                    hostname.as_deref(),
-                    received_timestamp,
-                    changed_files_count,
-                );
-                queue.queue_commit(&ci)
-            }
-        })
-        .collect();
-    let res = futs.try_for_each(|()| async { Ok(()) }).await;
-    if let Err(err) = res {
-        ctx.scuba()
-            .clone()
-            .log_with_msg("Failed to log pushed commits", Some(format!("{}", err)));
-    }
 }
 
 /// Get a Vec of the relevant pushrebase hooks for PushrebaseParams, using this BlobRepo when

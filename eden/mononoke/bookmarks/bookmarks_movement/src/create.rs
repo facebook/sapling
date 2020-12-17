@@ -21,7 +21,9 @@ use mononoke_types::{BonsaiChangeset, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::RepoReadWriteFetcher;
 
-use crate::affected_changesets::{AdditionalChangesets, AffectedChangesets};
+use crate::affected_changesets::{
+    find_draft_ancestors, log_bonsai_commits_to_scribe, AdditionalChangesets, AffectedChangesets,
+};
 use crate::repo_lock::check_repo_lock;
 use crate::restrictions::{BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization};
 use crate::BookmarkMovementError;
@@ -36,6 +38,7 @@ pub struct CreateBookmarkOp<'op> {
     affected_changesets: AffectedChangesets,
     pushvars: Option<&'op HashMap<String, Bytes>>,
     bundle_replay: Option<&'op dyn BundleReplay>,
+    log_new_public_commits_to_scribe: bool,
 }
 
 #[must_use = "CreateBookmarkOp must be run to have an effect"]
@@ -55,6 +58,7 @@ impl<'op> CreateBookmarkOp<'op> {
             affected_changesets: AffectedChangesets::new(),
             pushvars: None,
             bundle_replay: None,
+            log_new_public_commits_to_scribe: false,
         }
     }
 
@@ -86,6 +90,11 @@ impl<'op> CreateBookmarkOp<'op> {
 
     pub fn with_bundle_replay_data(mut self, bundle_replay: Option<&'op dyn BundleReplay>) -> Self {
         self.bundle_replay = bundle_replay;
+        self
+    }
+
+    pub fn log_new_public_commits_to_scribe(mut self) -> Self {
+        self.log_new_public_commits_to_scribe = true;
         self
     }
 
@@ -145,7 +154,7 @@ impl<'op> CreateBookmarkOp<'op> {
         let mut txn = repo.update_bookmark_transaction(ctx.clone());
         let txn_hook;
 
-        match kind {
+        let commits_to_log = match kind {
             BookmarkKind::Scratch => {
                 // TODO: remove this once hg->mononoke migration is done
                 // as we won't need any syncing between hg and mononoke then.
@@ -166,20 +175,43 @@ impl<'op> CreateBookmarkOp<'op> {
                     txn_hook = None;
                 }
                 txn.create_scratch(self.bookmark, self.target)?;
+                vec![]
             }
             BookmarkKind::Public => {
                 crate::globalrev_mapping::require_globalrevs_disabled(pushrebase_params)?;
-                txn_hook = crate::git_mapping::populate_git_mapping_txn_hook(
+                let txn_hook_fut = crate::git_mapping::populate_git_mapping_txn_hook(
                     ctx,
                     repo,
                     pushrebase_params,
                     self.target,
                     self.affected_changesets.new_changesets(),
-                )
-                .await?;
+                );
+
+                let to_log = async {
+                    if self.log_new_public_commits_to_scribe {
+                        let res = find_draft_ancestors(&ctx, &repo, self.target).await;
+                        match res {
+                            Ok(bcss) => bcss,
+                            Err(err) => {
+                                ctx.scuba().clone().log_with_msg(
+                                    "Failed to find draft ancestors",
+                                    Some(format!("{}", err)),
+                                );
+                                vec![]
+                            }
+                        }
+                    } else {
+                        vec![]
+                    }
+                };
+
+                let (txn_hook_res, to_log) = futures::join!(txn_hook_fut, to_log);
+                txn_hook = txn_hook_res?;
+
                 txn.create(self.bookmark, self.target, self.reason, self.bundle_replay)?;
+                to_log
             }
-        }
+        };
 
         let ok = match txn_hook {
             Some(txn_hook) => txn.commit_with_hook(txn_hook).await?,
@@ -187,6 +219,19 @@ impl<'op> CreateBookmarkOp<'op> {
         };
         if !ok {
             return Err(BookmarkMovementError::TransactionFailed);
+        }
+
+        if self.log_new_public_commits_to_scribe {
+            log_bonsai_commits_to_scribe(
+                ctx,
+                repo,
+                Some(self.bookmark),
+                commits_to_log,
+                kind,
+                infinitepush_params,
+                pushrebase_params,
+            )
+            .await;
         }
         Ok(())
     }

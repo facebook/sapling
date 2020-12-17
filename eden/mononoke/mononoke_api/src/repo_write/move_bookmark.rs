@@ -15,6 +15,7 @@ use bytes::Bytes;
 use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
+use tunables::tunables;
 
 use crate::errors::MononokeError;
 use crate::repo_write::{PermissionsModel, RepoWriteContext};
@@ -67,6 +68,10 @@ impl RepoWriteContext {
             BookmarkUpdateReason::ApiRequest,
         )
         .with_pushvars(pushvars);
+
+        if !tunables().get_disable_commit_scribe_logging_scs() {
+            op = op.log_new_public_commits_to_scribe();
+        }
 
         if let PermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
             op = op.for_service(service_identity, &self.config().source_control_service);

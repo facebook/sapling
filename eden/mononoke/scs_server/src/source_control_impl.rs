@@ -21,6 +21,7 @@ use mononoke_api::{
 use mononoke_types::hash::{Sha1, Sha256};
 use once_cell::sync::Lazy;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
+use scribe_ext::Scribe;
 use scuba_ext::{MononokeScubaSampleBuilder, ScubaValue};
 use slog::Logger;
 use source_control as thrift;
@@ -66,6 +67,7 @@ pub(crate) struct SourceControlServiceImpl {
     pub(crate) logger: Logger,
     pub(crate) scuba_builder: MononokeScubaSampleBuilder,
     pub(crate) service_identity: Identity,
+    pub(crate) scribe: Scribe,
 }
 
 pub(crate) struct SourceControlServiceThriftImpl(SourceControlServiceImpl);
@@ -76,6 +78,7 @@ impl SourceControlServiceImpl {
         mononoke: Arc<Mononoke>,
         logger: Logger,
         scuba_builder: MononokeScubaSampleBuilder,
+        scribe: Scribe,
     ) -> Self {
         Self {
             fb,
@@ -83,6 +86,7 @@ impl SourceControlServiceImpl {
             logger,
             scuba_builder,
             service_identity: Identity::with_service(SCS_IDENTITY),
+            scribe,
         }
     }
 
@@ -109,7 +113,7 @@ impl SourceControlServiceImpl {
         let session = self.create_session(identities).await?;
         scuba.add("session_uuid", session.metadata().session_id().to_string());
 
-        let ctx = session.new_context(self.logger.clone(), scuba);
+        let ctx = session.new_context_with_scribe(self.logger.clone(), scuba, self.scribe.clone());
         Ok(ctx)
     }
 

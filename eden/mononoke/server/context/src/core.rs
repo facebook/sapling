@@ -79,8 +79,11 @@ impl CoreContext {
         &self,
         sample: impl FnOnce(MononokeScubaSampleBuilder) -> MononokeScubaSampleBuilder,
     ) -> Self {
-        self.session
-            .new_context(self.logger().clone(), sample(self.scuba().clone()))
+        self.session.new_context_with_scribe(
+            self.logger().clone(),
+            sample(self.scuba().clone()),
+            self.scribe().clone(),
+        )
     }
 
     pub(crate) fn new_with_containers(

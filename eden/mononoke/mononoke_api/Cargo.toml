@@ -46,6 +46,7 @@ skiplist = { path = "../reachabilityindex/skiplist" }
 sql_construct = { path = "../common/sql_construct" }
 sql_ext = { path = "../common/rust/sql_ext" }
 synced_commit_mapping = { path = "../commit_rewriting/synced_commit_mapping" }
+tunables = { path = "../tunables" }
 unodes = { path = "../derived_data/unodes" }
 warm_bookmarks_cache = { path = "../bookmarks/warm_bookmarks_cache" }
 xdiff = { path = "../../scm/lib/xdiff" }
