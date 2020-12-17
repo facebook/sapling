@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # run-tests.py - Run a set of tests on Mercurial
 #

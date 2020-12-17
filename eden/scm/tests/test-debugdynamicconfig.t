@@ -136,6 +136,41 @@ Verify we don't regenerate configs if the Mercurial version hasn't changed
   $ hg config section3.key3
   value3
 
+Verify configs.allowedlocations limits config loading to the allowed locations
+  $ cat > .hg/hgrc <<EOF
+  > %include hgrc1
+  > %include hgrc2
+  > %include hgrc3
+  > [configs]
+  > validatedynamicconfig=True
+  > EOF
+  $ cat >> .hg/hgrc1 <<EOF
+  > [zz_section]
+  > key=foo
+  > [zz_other_section]
+  > other_key=other_foo
+  > EOF
+  $ cat >> .hg/hgrc2 <<EOF
+  > [zz_section]
+  > key=bar
+  > [zz_other_section]
+  > other_key=other_bar
+  > EOF
+  $ hg config --debug | grep zz
+  $TESTTMP/shared_copy/.hg/hgrc2:4: zz_other_section.other_key=other_bar
+  $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
+
+  $ hg config --debug --config configs.allowedlocations=hgrc1 | grep zz
+  $TESTTMP/shared_copy/.hg/hgrc1:4: zz_other_section.other_key=other_foo
+  $TESTTMP/shared_copy/.hg/hgrc1:2: zz_section.key=foo
+
+  $ hg config --debug --config configs.allowedlocations=hgrc2 | grep zz
+  $TESTTMP/shared_copy/.hg/hgrc2:4: zz_other_section.other_key=other_bar
+  $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
+
+  $ hg config --debug --config configs.allowedlocations=hgrc3 | grep zz
+  [1]
+
 Verify we load and verify dynamicconfigs during clone
   $ newserver server
   $ cd $TESTTMP
