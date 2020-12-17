@@ -430,6 +430,7 @@ impl ConfigSet {
         subset_locations: Vec<String>,
         legacy_list: HashSet<(&str, &str)>,
         disallow_list: HashSet<(&str, &str)>,
+        allowed_locations: Option<HashSet<&str>>,
     ) -> SupersetVerification {
         let mut result = SupersetVerification::new();
 
@@ -438,10 +439,6 @@ impl ConfigSet {
 
         for (sname, section) in self.sections.iter_mut() {
             for (kname, values) in section.items.iter_mut() {
-                if !legacy_list.contains(&(sname.as_ref(), kname.as_ref())) {
-                    continue;
-                }
-
                 let disallowed = disallow_list.contains(&(sname.as_ref(), kname.as_ref()));
 
                 let mut super_value = None;
@@ -456,14 +453,14 @@ impl ConfigSet {
                     let index = index - removals;
 
                     // Get the filename of the value's rc location
-                    let location: String = match value
+                    let location: Option<String> = value
                         .location()
                         .map(|l| l.0) // location PathBuf
                         .map(|p| p.file_name().map(|f| f.to_str().map(|s| s.to_string())))
                         .flatten()
-                        .flatten()
-                    {
-                        Some(l) => l,
+                        .flatten();
+                    let loc_or_src: String = match location.as_ref() {
+                        Some(l) => l.clone(),
                         None => {
                             // It's possible the superset was set from in-memory, in which case the
                             // source will match the superset location.
@@ -471,18 +468,37 @@ impl ConfigSet {
                         }
                     };
 
+                    // If only certain locations are allowed, and this isn't one of them, remove
+                    // it. If location is None, it came from inmemory, so don't filter it.
+                    if let Some(location) = location {
+                        if allowed_locations
+                            .as_ref()
+                            .map(|a| a.contains(location.as_str()))
+                            == Some(false)
+                        {
+                            values.remove(index);
+                            removals += 1;
+                            continue;
+                        }
+                    }
+
+                    // After this point, if it's not in the legacy_list do not filter it.
+                    if !legacy_list.contains(&(sname.as_ref(), kname.as_ref())) {
+                        continue;
+                    }
+
                     // If it's a disallowed value from a subset, remove it.
-                    if disallowed && subset_locations.contains(&location) {
+                    if disallowed && subset_locations.contains(&loc_or_src) {
                         values.remove(index);
                         removals += 1;
                         continue;
                     }
 
-                    if location == superset_location {
+                    if loc_or_src == superset_location {
                         super_value = value.value().clone();
                         super_index = index;
                     } else {
-                        if subset_locations.contains(&location) {
+                        if subset_locations.contains(&loc_or_src) {
                             sub_value = value.value().clone();
                         }
 
@@ -1168,6 +1184,7 @@ space_list=value1.a value1.b
             vec!["subset1".to_string(), "subset2".to_string()],
             legacy_list.clone(),
             HashSet::new(),
+            None,
         );
         assert!(result.is_empty());
 
@@ -1180,6 +1197,7 @@ space_list=value1.a value1.b
             vec!["subset1".to_string(), "subset2".to_string()],
             legacy_list.clone(),
             HashSet::new(),
+            None,
         );
         assert_eq!(
             result.missing,
@@ -1197,6 +1215,7 @@ space_list=value1.a value1.b
             vec!["subset1".to_string()],
             legacy_list.clone(),
             HashSet::new(),
+            None,
         );
         assert!(result.is_empty());
 
@@ -1211,6 +1230,7 @@ space_list=value1.a value1.b
             vec!["subset1".to_string(), "subset2".to_string()],
             legacy_list.clone(),
             HashSet::new(),
+            None,
         );
         assert_eq!(
             result.extra,
@@ -1235,6 +1255,7 @@ space_list=value1.a value1.b
             vec!["subset1".to_string(), "subset2".to_string()],
             legacy_list.clone(),
             HashSet::new(),
+            None,
         );
         assert_eq!(
             result.mismatched,
@@ -1263,6 +1284,7 @@ space_list=value1.a value1.b
             vec!["subset2".to_string()],
             legacy_list.clone(),
             HashSet::new(),
+            None,
         );
         assert!(result.is_empty());
         assert_eq!(
@@ -1282,10 +1304,100 @@ space_list=value1.a value1.b
             vec![("section3", "key3")]
                 .into_iter()
                 .collect::<HashSet<_>>(),
+            None,
         );
         assert_eq!(
             tempcfg.get("section3", "key3"),
             Some(Text::from_static("value3")),
         );
+    }
+
+    #[test]
+    fn test_allowed_locations() {
+        let mut cfg = ConfigSet::new();
+
+        fn set(
+            cfg: &mut ConfigSet,
+            section: &'static str,
+            key: &'static str,
+            value: &'static str,
+            location: &'static str,
+        ) {
+            cfg.set_internal(
+                Text::from_static(section),
+                Text::from_static(key),
+                Some(Text::from_static(value)),
+                Some(ValueLocation {
+                    path: Arc::new(Path::new(location).to_owned()),
+                    content: Text::from_static(""),
+                    location: 0..1,
+                }),
+                &Options::new().source(Text::from_static("source")),
+            );
+        }
+
+        set(&mut cfg, "section1", "key1", "value1", "subset1");
+        set(&mut cfg, "section2", "key2", "value2", "subset2");
+
+        let mut allow_list = HashSet::new();
+        allow_list.insert("subset1");
+
+        let result = cfg.ensure_location_supersets(
+            "super".to_string(),
+            vec![],
+            HashSet::new(),
+            HashSet::new(),
+            Some(allow_list),
+        );
+        assert_eq!(
+            cfg.get("section1", "key1"),
+            Some(Text::from_static("value1"))
+        );
+        assert_eq!(cfg.get("section2", "key2"), None);
+    }
+
+    #[test]
+    fn test_verifier_removal() {
+        let mut cfg = ConfigSet::new();
+
+        fn set(
+            cfg: &mut ConfigSet,
+            section: &'static str,
+            key: &'static str,
+            value: &'static str,
+            location: &'static str,
+        ) {
+            cfg.set_internal(
+                Text::from_static(section),
+                Text::from_static(key),
+                Some(Text::from_static(value)),
+                Some(ValueLocation {
+                    path: Arc::new(Path::new(location).to_owned()),
+                    content: Text::from_static(""),
+                    location: 0..1,
+                }),
+                &Options::new().source(Text::from_static("source")),
+            );
+        }
+
+        // This test verifies that allowed location removal and subset removal interact nicely
+        // together.
+        set(&mut cfg, "section", "key", "value", "subset");
+        set(&mut cfg, "section", "key", "value2", "super");
+
+        let mut legacy_list = HashSet::new();
+        legacy_list.insert(("section", "key"));
+
+        let mut allowed_locations = HashSet::new();
+        allowed_locations.insert("super");
+
+        let result = cfg.ensure_location_supersets(
+            "super".to_string(),
+            vec!["subset".to_string()],
+            legacy_list,
+            HashSet::new(),
+            Some(allowed_locations),
+        );
+        assert_eq!(cfg.get("section", "key"), None);
     }
 }
