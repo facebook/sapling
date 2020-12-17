@@ -41,8 +41,8 @@ pull via ssh
 # dummyssh doesn't actually work with Git, but it gets far enough to prove that
 # the connection succeeded and git was invoked.
   $ hg -R hgrepo pull --config paths.default=git+ssh://user@dummy/gitrepo --config ui.ssh="$(dummysshcmd)"
-  fatal: '/gitrepo' does not appear to be a git repository
   pulling from git+ssh://user@dummy/gitrepo
+  fatal: '/gitrepo' does not appear to be a git repository
   abort: git remote error: The remote server unexpectedly closed the connection.
   [255]
 
@@ -350,16 +350,20 @@ test for ssh vulnerability
   $ hg init a
   $ cd a
   $ hg pull 'git+ssh://-oProxyCommand=rm${IFS}nonexistent/path' 2>&1 >/dev/null
+  pulling from git+ssh://-oProxyCommand%3Drm%24%7BIFS%7Dnonexistent/path
   abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
   [255]
   $ hg pull 'git+ssh://-oProxyCommand=rm%20nonexistent/path' 2>&1 >/dev/null
+  pulling from git+ssh://-oProxyCommand%3Drm%20nonexistent/path
   abort: potentially unsafe hostname: '-oProxyCommand=rm nonexistent'
   [255]
   $ hg pull 'git+ssh://fakehost|shellcommand/path' 2>&1 >/dev/null
+  pulling from git+ssh://fakehost%7Cshellcommand/path
   ssh: .* fakehost%7[Cc]shellcommand.* (re)
   abort: git remote error: The remote server unexpectedly closed the connection.
   [255]
   $ hg pull 'git+ssh://fakehost%7Cshellcommand/path' 2>&1 >/dev/null
+  pulling from git+ssh://fakehost%7Cshellcommand/path
   ssh: .* fakehost%7[Cc]shellcommand.* (re)
   abort: git remote error: The remote server unexpectedly closed the connection.
   [255]

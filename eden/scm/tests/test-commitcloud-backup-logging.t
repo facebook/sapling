@@ -59,8 +59,6 @@ Make upload to bundlestore fail
   $ cd client
   $ mkcommit failpushcommit
   $ hg push -r . --to scratch/scratchpush 2>err
-  pushing to ssh://user@dummy/repo
-  searching for changes
   [255]
   $ grep '^remote: ' err
   remote: infinitepush: b2x:infinitepush \(eventtype=start, hostname=.+, requestid=\d+, user=\w+\) (re)

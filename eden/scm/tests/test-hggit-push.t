@@ -178,16 +178,20 @@ test for ssh vulnerability
   > ssh = ssh -o ConnectTimeout=1
   > EOF
   $ hg push 'git+ssh://-oProxyCommand=rm${IFS}nonexistent/path' 2>&1 >/dev/null
+  pushing to git+ssh://-oProxyCommand%3Drm%24%7BIFS%7Dnonexistent/path
   abort: potentially unsafe hostname: '-oProxyCommand=rm${IFS}nonexistent'
   [255]
   $ hg push 'git+ssh://-oProxyCommand=rm%20nonexistent/path' 2>&1 >/dev/null
+  pushing to git+ssh://-oProxyCommand%3Drm%20nonexistent/path
   abort: potentially unsafe hostname: '-oProxyCommand=rm nonexistent'
   [255]
   $ hg push 'git+ssh://fakehost|rm%20nonexistent/path' 2>&1 >/dev/null
+  pushing to git+ssh://fakehost%7Crm%20nonexistent/path
   ssh: .* fakehost%7[Cc]rm%20nonexistent.* (re)
   abort: git remote error: The remote server unexpectedly closed the connection.
   [255]
   $ hg push 'git+ssh://fakehost%7Crm%20nonexistent/path' 2>&1 >/dev/null
+  pushing to git+ssh://fakehost%7Crm%20nonexistent/path
   ssh: .* fakehost%7[Cc]rm%20nonexistent.* (re)
   abort: git remote error: The remote server unexpectedly closed the connection.
   [255]

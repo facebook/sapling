@@ -221,7 +221,7 @@ Make sure commit was pulled by checking that commit is present
   $ hg log -r e0230a60975b38a9014f098fb973199efd25c46f -T '{node}\n'
   pulling 'e0230a60975b38a9014f098fb973199efd25c46f' from 'ssh://user@dummy/repo'
   e0230a60975b38a9014f098fb973199efd25c46f
-  $ hg cloud restorebackup --user anotheruser --reporoot $TESTTMP/backupsource > /dev/null
+  $ hg cloud restorebackup --user anotheruser --reporoot $TESTTMP/backupsource > /dev/null 2>/dev/null
   $ hg log -r tip -T '{node}\n'
   e0230a60975b38a9014f098fb973199efd25c46f
 

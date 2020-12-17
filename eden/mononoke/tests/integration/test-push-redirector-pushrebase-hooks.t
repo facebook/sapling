@@ -44,7 +44,7 @@ blocked by deny_files
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon hgmn push -r . --to master_bookmark | grep updating
+  $ REPONAME=small-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark

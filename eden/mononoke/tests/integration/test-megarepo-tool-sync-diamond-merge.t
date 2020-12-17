@@ -281,7 +281,7 @@ Merge with preserved ancestors
   $ hg book -r . merge_with_preserved
 
 -- push these folks to the server-side repo
-  $ REPONAME=with_merge_mon hgmn push --to with_merge_master | grep updating
+  $ REPONAME=with_merge_mon hgmn push --to with_merge_master 2>&1 | grep updating
   updating bookmark with_merge_master
 
 -- sync p1

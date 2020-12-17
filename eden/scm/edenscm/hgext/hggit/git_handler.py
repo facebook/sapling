@@ -429,7 +429,7 @@ class GitHandler(object):
                             % (remote_name, ref, new_sha[0:8])
                         )
                     else:
-                        self.ui.status(_("adding reference %s\n") % ref)
+                        self.ui.status_err(_("adding reference %s\n") % ref)
                 elif new_sha != old_sha:
                     if self.ui.verbose:
                         self.ui.note(
@@ -437,7 +437,7 @@ class GitHandler(object):
                             % (remote_name, ref, new_sha[0:8])
                         )
                     else:
-                        self.ui.status(_("updating reference %s\n") % ref)
+                        self.ui.status_err(_("updating reference %s\n") % ref)
                 else:
                     self.ui.debug(
                         "unchanged reference %s::%s => GIT:%s\n"
@@ -446,7 +446,7 @@ class GitHandler(object):
 
             self.update_remote_branches(remote_name, new_refs)
         if old_refs == new_refs:
-            self.ui.status(_("no changes found\n"))
+            self.ui.status_err(_("no changes found\n"))
             ret = None
         elif len(new_refs) > len(old_refs):
             ret = 1 + (len(new_refs) - len(old_refs))
@@ -890,9 +890,9 @@ class GitHandler(object):
         # import each of the commits, oldest first
         total = len(commits)
         if total:
-            self.ui.status(_("importing git objects into hg\n"))
+            self.ui.status_err(_("importing git objects into hg\n"))
         else:
-            self.ui.status(_("no changes found\n"))
+            self.ui.status_err(_("no changes found\n"))
 
         importcount = total
         if limit is not None:
@@ -1173,7 +1173,7 @@ class GitHandler(object):
         change_totals = {}
 
         def changed(refs):
-            self.ui.status(_("searching for changes\n"))
+            self.ui.status_err(_("searching for changes\n"))
             old_refs.update(refs)
             all_exportable = self.get_exportable()
             if revs is None:
@@ -1204,7 +1204,7 @@ class GitHandler(object):
                 self.ui.debug("list of commits:\n")
                 for commit in commits:
                     self.ui.debug("%s\n" % commit)
-                self.ui.status(_("adding objects\n"))
+                self.ui.status_err(_("adding objects\n"))
             genpack = getattr(self.git.object_store, "generate_pack_data", None)
             if genpack is not None:
                 # dulwich >= 0.19 has generate_pack_data
@@ -1227,12 +1227,12 @@ class GitHandler(object):
                 remote_info = "\n"
 
             for line in remote_info[:-1].split("\n"):
-                self.ui.status(_("remote: %s\n") % line)
+                self.ui.status_err(_("remote: %s\n") % line)
 
         try:
             new_refs = client.send_pack(path, changed, genpack, progress=callback)
             if len(change_totals) > 0:
-                self.ui.status(
+                self.ui.status_err(
                     _("added %d commits with %d trees" " and %d blobs\n")
                     % (
                         change_totals.get(Commit, 0),

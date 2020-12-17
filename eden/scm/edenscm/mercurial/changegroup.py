@@ -356,7 +356,7 @@ class cg1unpacker(object):
 
             trp = weakref.proxy(tr)
             # pull off the changeset group
-            repo.ui.status(_("adding changesets\n"))
+            repo.ui.status_err(_("adding changesets\n"))
             clstart = len(cl)
             with progress.bar(repo.ui, _("changesets"), total=expectedtotal) as prog:
                 self.progress = prog
@@ -379,7 +379,7 @@ class cg1unpacker(object):
             changesets = clend - clstart
 
             # pull off the manifest group
-            repo.ui.status(_("adding manifests\n"))
+            repo.ui.status_err(_("adding manifests\n"))
             self._unpackmanifests(repo, revmap, trp, changesets)
 
             needfiles = {}
@@ -395,14 +395,14 @@ class cg1unpacker(object):
                         needfiles.setdefault(f, set()).add(n)
 
             # process the files
-            repo.ui.status(_("adding file changes\n"))
+            repo.ui.status_err(_("adding file changes\n"))
             newrevs, newfiles = _addchangegroupfiles(repo, self, revmap, trp, needfiles)
             revisions += newrevs
             files += newfiles
 
             htext = ""
 
-            repo.ui.status(
+            repo.ui.status_err(
                 _("added %d changesets" " with %d changes to %d files%s\n")
                 % (changesets, revisions, files, htext)
             )
@@ -1071,7 +1071,7 @@ def getunbundler(version, fh, alg, extras=None):
 def _changegroupinfo(repo, nodes, source):
     # type: (Any, Sequence[bytes], str) -> None
     if repo.ui.verbose or source == "bundle":
-        repo.ui.status(_("%d changesets found\n") % len(nodes))
+        repo.ui.status_err(_("%d changesets found\n") % len(nodes))
     if repo.ui.debugflag:
         repo.ui.debug("list of changesets:\n")
         for node in nodes:

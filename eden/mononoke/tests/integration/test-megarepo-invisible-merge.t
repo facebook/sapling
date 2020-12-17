@@ -113,7 +113,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
   $ cd "$TESTTMP/ovr-hg-cnt"
   $ REPONAME=ovr-mon hgmn up -q master_bookmark
   $ echo 1 > pushredirected_1 && hg addremove -q && hg ci -q -m pushredirected_1
-  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark | grep updating
+  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 -- pushredirected_1 was correctly pushed to master_bookmark in ovrsource
   $ log -r master_bookmark
@@ -142,7 +142,7 @@ in "all" configs does not cause any undesired effects for push-rebases
   $ cd "$TESTTMP/ovr-hg-cnt"
   $ REPONAME=ovr-mon hgmn up -q master_bookmark
   $ echo 2 > pushredirected_2 && hg addremove -q && hg ci -q -m pushredirected_2
-  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark | grep updating
+  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 -- pushredirected_2 was correctly pushed to master_bookmark
   $ log -r master_bookmark
@@ -298,11 +298,11 @@ Do the invisible merge by gradually merging TOMERGES into master
 Create special marker commits in both repos, which can be just marked as rewritten into each other
   $ cd "$TESTTMP/ovr-hg-cnt"
   $ hg ci -qm "pre push-redirection marker" --config ui.allowemptycommit=True
-  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark | grep updating
+  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
   $ cd "$TESTTMP/fbs-hg-cnt"
   $ hg ci -qm "pre push-redirection marker" --config ui.allowemptycommit=True
-  $ REPONAME=fbs-mon hgmn push -r . --to master_bookmark | grep updating
+  $ REPONAME=fbs-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 
 Set mutable counter for the backsyncer (we've synced everything up until now)
@@ -335,7 +335,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
   $ cd "$TESTTMP/ovr-hg-cnt"
   $ REPONAME=ovr-mon hgmn up -q master_bookmark
   $ echo 1 > pushredirected_3 && hg addremove -q && hg ci -q -m pushredirected_3
-  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark | grep updating
+  $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 -- pushredirected_3 was correctly pushed to master_bookmark in ovrsource
   $ log -r master_bookmark

@@ -34,7 +34,7 @@
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon hgmn push -r . --to master_bookmark | grep updating
+  $ REPONAME=small-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 -- newcommit was correctly pushed to master_bookmark (we need to update, as it's a new commit with date rewriting)
   $ REPONAME=small-mon hgmn up -q master_bookmark
@@ -102,7 +102,7 @@ Check that admin-created bookmark sets and deletes in the large repo can be corr
   $ backsync_large_to_small 2>&1 | grep creating
   * creating bookmark BookmarkName { bookmark: "foobar" } * (glob)
   $ REPOID="$REPOIDLARGE" mononoke_admin bookmarks set bookprefix/foobar $(hg log -T "{node}" -r master_bookmark~1) &>/dev/null
-  $ backsync_large_to_small 2>&1 | grep updating
+  $ backsync_large_to_small 2>&1 2>&1 | grep updating
   * updating bookmark BookmarkName { bookmark: "foobar" } * (glob)
   $ REPOID="$REPOIDLARGE" mononoke_admin bookmarks delete bookprefix/foobar &>/dev/null
   $ backsync_large_to_small 2>&1 | grep deleting

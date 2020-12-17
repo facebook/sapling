@@ -62,7 +62,7 @@ to the small repo
 Force pushrebase to the small repo with one commit succeeds, and does not get
 blocked by deny_files
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon hgmn push -r . --to test_bookmark --force | grep updating
+  $ REPONAME=small-mon hgmn push -r . --to test_bookmark --force 2>&1 | grep updating
   updating bookmark test_bookmark
 -- newcommit was correctly pushed to test_bookmark
   $ log -r test_bookmark

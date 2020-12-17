@@ -139,7 +139,7 @@ def _peersetup(ui, peer):
         if ann is None:
             ann = not ui.plain() and ui._isatty(ui.ferr)
         if ann and not ui.quiet:
-            ui.warn(_("connected to %s\n") % peername)
+            ui.write_err(_("connected to %s\n") % peername)
             perftrace.tracevalue("Server", peername)
 
 

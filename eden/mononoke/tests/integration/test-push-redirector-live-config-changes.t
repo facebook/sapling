@@ -160,7 +160,7 @@ Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
   $ REPONAME=small-mon-1 hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark | grep updating
+  $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
@@ -289,7 +289,7 @@ Again, normal pushrebase with one commit
   
   $ mkdir -p special
   $ echo f > special/f && hg ci -Aqm post_config_change_commit
-  $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark | grep updating
+  $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 
 -- in the large repo, new commit touched an after_change path

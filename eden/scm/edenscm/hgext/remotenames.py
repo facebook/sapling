@@ -127,7 +127,7 @@ def exbookcalcupdate(orig, ui, repo, checkout):
             return orig(ui, repo, checkout)
         if bookmarks.isactivewdirparent(repo):
             movemarkfrom = repo["."].node()
-        ui.status(_("updating to active bookmark %s\n") % activemark)
+        ui.status_err(_("updating to active bookmark %s\n") % activemark)
         checkout = activemark
     return (checkout, movemarkfrom)
 
@@ -277,7 +277,7 @@ def exfindcommonheads(orig, ui, local, remote, **kwargs):
     remotenodes = set(remotenodes)
 
     # Check which remote nodes still exist on the server
-    ui.status(_("searching for changes\n"))
+    ui.status_err(_("searching for changes\n"))
     batch = remote.iterbatch()
     batch.heads()
     batch.known(remotenodes)
@@ -291,7 +291,7 @@ def exfindcommonheads(orig, ui, local, remote, **kwargs):
         # which is weird. This should be very rare though, since it only happens
         # if the client has remote names, but none of those names exist on the
         # server (i.e. the server has been completely replaced, or stripped).
-        ui.status(
+        ui.status_err(
             _(
                 "server has changed since last pull - falling back to the "
                 "default search strategy\n"
@@ -826,7 +826,7 @@ def expushdiscoverybookmarks(pushop):
             hint = _("use --non-forward-move flag to complete arbitrary moves")
             raise error.Abort(msg, hint=hint)
         if repo[old] == repo[rev]:
-            repo.ui.status(_("remote bookmark already points at pushed rev\n"))
+            repo.ui.status_err(_("remote bookmark already points at pushed rev\n"))
             return
 
     pushop.outbookmarks.append((bookmark, old, hex(rev)))
@@ -1013,7 +1013,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     # all checks pass, go for it!
     node = repo.lookup(rev)
-    ui.status(
+    ui.status_err(
         _("pushing rev %s to destination %s bookmark %s\n")
         % (short(node), dest, opargs["to"])
     )
@@ -1172,7 +1172,7 @@ def displaylocalbookmarks(ui, repo, opts, fm):
     hexfn = fm.hexfunc
     marks = repo._bookmarks
     if len(marks) == 0 and (not fm or fm.isplain()):
-        ui.status(_("no bookmarks set\n"))
+        ui.status_err(_("no bookmarks set\n"))
 
     tracking = _readtracking(repo)
     distances = readdistancecache(repo)

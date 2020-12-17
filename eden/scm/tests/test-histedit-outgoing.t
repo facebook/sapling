@@ -12,7 +12,7 @@
   >         hg ci -m $x
   >     done
   >     cd ..
-  >     hg clone r r2 | grep -v updating
+  >     hg clone r r2 2>&1 | grep -v updating
   >     cd r2
   >     for x in d e f ; do
   >         echo $x > $x
@@ -35,7 +35,7 @@
 
 show the edit commands offered by outgoing
   $ cd r2
-  $ HGEDITOR=cat hg histedit --outgoing ../r | grep -v comparing | grep -v searching
+  $ HGEDITOR=cat hg histedit --outgoing ../r 2>&1 | grep -v comparing 2>&1 | grep -v searching
   pick 055a42cdd887 d
   pick e860deea161a e
   pick 652413bf663e f
@@ -60,9 +60,8 @@ show the edit commands offered by outgoing
 
 show the error from unrelated repos
   $ cd r3
-  $ HGEDITOR=cat hg histedit --outgoing ../r | grep -v comparing | grep -v searching
+  $ HGEDITOR=cat hg histedit --outgoing ../r 2>&1 | grep -v comparing 2>&1 | grep -v searching
   abort: repository is unrelated
-  [1]
   $ cd ..
 
 show the error from unrelated repos

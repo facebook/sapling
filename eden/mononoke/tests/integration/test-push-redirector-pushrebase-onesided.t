@@ -210,7 +210,7 @@ Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
   $ REPONAME=small-mon-1 hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark | grep updating
+  $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
@@ -246,7 +246,9 @@ Force pushrebase should fail, because it pushes to a shared bookmark
   $ cd "$TESTTMP/small-hg-client-1"
   $ REPONAME=small-mon-1 hgmn up -q master_bookmark^
   $ echo 3 > 3 && hg add 3 && hg ci -q -m "non-forward move"
-  $ REPONAME=small-mon-1 hgmn push --to master_bookmark --force --pushvar NON_FAST_FORWARD=true | grep updating
+  $ REPONAME=small-mon-1 hgmn push --to master_bookmark --force --pushvar NON_FAST_FORWARD=true >/dev/null
+  pushing * (glob)
+  searching * (glob)
   remote: Command failed
   remote:   Error:
   remote:     cannot force pushrebase to shared bookmark master_bookmark
@@ -257,7 +259,7 @@ Force pushrebase should fail, because it pushes to a shared bookmark
   remote:   Debug context:
   remote:     "cannot force pushrebase to shared bookmark master_bookmark"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [1]
+  [255]
 
 Non-shared bookmark should work
   $ REPONAME=small-mon-1 hgmn push --to master_bookmark_non_fast_forward --force --create -q
@@ -271,7 +273,7 @@ Non-shared bookmark should work
 
 Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   $ cd "$TESTTMP/small-hg-client-1"
-  $ REPONAME=small-mon-1 hgmn push -r master_bookmark^ --to master_bookmark_2 --create | grep exporting
+  $ REPONAME=small-mon-1 hgmn push -r master_bookmark^ --to master_bookmark_2 --create 2>&1 | grep exporting
   exporting bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
@@ -292,7 +294,7 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
 
 Delete a bookmark
   $ cd "$TESTTMP/small-hg-client-1"
-  $ REPONAME=small-mon-1 hgmn push -d master_bookmark_2 | grep deleting
+  $ REPONAME=small-mon-1 hgmn push -d master_bookmark_2 2>&1 | grep deleting
   deleting remote bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set

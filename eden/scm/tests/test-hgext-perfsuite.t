@@ -84,9 +84,10 @@
   rebasing f8d4b0697695 "test commit"
   
   ran 'immrebase' in * sec (glob)
-  stdout: pulling from $TESTTMP/repo1
+  stdout: no changes found
+  
+  stderr: pulling from $TESTTMP/repo1
   searching for changes
-  no changes found
   
   ran 'pull' in * sec (glob)
 

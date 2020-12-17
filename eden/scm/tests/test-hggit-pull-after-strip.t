@@ -19,7 +19,7 @@ Load commonly used test logic
 
   $ cd ..
 clone a tag
-  $ hg clone -r alpha gitrepo hgrepo-a | grep -v '^updating'
+  $ hg clone -r alpha gitrepo hgrepo-a 2>&1 | grep -v '^updating'
   importing git objects into hg
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo-a log --graph
@@ -30,7 +30,7 @@ clone a tag
      summary:     add alpha
   
 clone a branch
-  $ hg clone -r beta gitrepo hgrepo-b | grep -v '^updating'
+  $ hg clone -r beta gitrepo hgrepo-b 2>&1 | grep -v '^updating'
   importing git objects into hg
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo-b log --graph
@@ -53,7 +53,7 @@ clone a branch
 
   $ cd ..
   $ cd hgrepo-b
-  $ hg debugstrip tip 2>&1 | grep -v saving | grep -v backup
+  $ hg debugstrip tip 2>&1 2>&1 | grep -v saving 2>&1 | grep -v backup
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg pull -r beta
   pulling from $TESTTMP/gitrepo
@@ -64,7 +64,7 @@ clone a branch
   git commit map cleaned
 pull works after 'hg git-cleanup'
 "adding remote bookmark" message was added in Mercurial 2.3
-  $ hg pull -r beta | grep -v "adding remote bookmark"
+  $ hg pull -r beta 2>&1 | grep -v "adding remote bookmark"
   pulling from $TESTTMP/gitrepo
   importing git objects into hg
   $ hg log --graph

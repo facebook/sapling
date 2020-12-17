@@ -46,12 +46,6 @@ start a pull...
 
   $ sleep 1
   $ hg pull ../source2 2>/dev/null
-  pulling from ../source2
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
   $ cat pull.out
   pulling from ../source1
   requesting all changes

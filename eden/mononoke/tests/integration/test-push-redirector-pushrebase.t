@@ -29,7 +29,7 @@ Normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ echo 2 > 2 && hg addremove -q && hg ci -q -m newcommit
-  $ REPONAME=small-mon hgmn push -r . --to master_bookmark | grep updating
+  $ REPONAME=small-mon hgmn push -r . --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
@@ -53,7 +53,7 @@ Normal pushrebase with one commit
 
 Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn push -r master_bookmark^ --to master_bookmark_2 --create | grep exporting
+  $ REPONAME=small-mon hgmn push -r master_bookmark^ --to master_bookmark_2 --create 2>&1 | grep exporting
   exporting bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
@@ -72,7 +72,7 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
 
 Delete a bookmark
   $ cd "$TESTTMP/small-hg-client"
-  $ REPONAME=small-mon hgmn push -d master_bookmark_2 | grep deleting
+  $ REPONAME=small-mon hgmn push -d master_bookmark_2 2>&1 | grep deleting
   deleting remote bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
@@ -120,7 +120,7 @@ Pushrebase, which copies and removes files
   $ hg mv 5 5.renamed -q
   $ hg cp 6 subdir/6.copy -q
   $ REPONAME=small-mon hgmn ci -m "Moves, renames and copies"
-  $ REPONAME=small-mon hgmn push --to master_bookmark | grep updating
+  $ REPONAME=small-mon hgmn push --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
   $ log -r master_bookmark
   @  Moves, renames and copies [public;rev=7;b888ee4f19b5] default/master_bookmark
@@ -141,7 +141,7 @@ Pushrebase, which replaces a directory with a file
   $ hg rm subdir
   removing subdir/6.copy
   $ createfile subdir && hg ci -qm "Replace a directory with a file"
-  $ REPONAME=small-mon hgmn push --to master_bookmark | grep updating
+  $ REPONAME=small-mon hgmn push --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
   $ log -r master_bookmark
   @  Replace a directory with a file [public;rev=8;e72ee383159a] default/master_bookmark
@@ -178,7 +178,7 @@ Normal pushrebase to a prefixed bookmark
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark_2
   $ echo "more epicness" >> epicfail && hg ci -m "The epicness of this fail is greater"
-  $ REPONAME=small-mon hgmn push --to master_bookmark_2 | grep updating
+  $ REPONAME=small-mon hgmn push --to master_bookmark_2 2>&1 | grep updating
   updating bookmark master_bookmark_2
   $ log -r master_bookmark_2
   @  The epicness of this fail is greater [public;rev=10;bd5577e4b538] default/master_bookmark_2
@@ -199,7 +199,7 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ createfile non_path_shifting/filetomove && createfile filetonotmove
   $ hg ci -qm "But since it is for you, I vow To slap Aeneas down to hell"
-  $ REPONAME=small-mon hgmn push --to master_bookmark | grep updating
+  $ REPONAME=small-mon hgmn push --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 -- let's sync it, make sure everything is fine
   $ cd "$TESTTMP/large-hg-client"
@@ -214,7 +214,7 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ hg mv non_path_shifting/filetomove filetomove
   $ hg ci -qm "I shall delay no longer now But knock him for a fare-you-well."
-  $ REPONAME=small-mon hgmn push --to master_bookmark | grep updating
+  $ REPONAME=small-mon hgmn push --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 -- let's also sync it to the large repo
   $ cd "$TESTTMP/large-hg-client"
@@ -232,7 +232,7 @@ Pushrebase with a rename between a shifted and a non-shifted behavior
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ hg mv filetomove non_path_shifting/filetomove
   $ hg ci -qm "Now Dido was in such great sorrow All day she neither drank nor ate"
-  $ REPONAME=small-mon hgmn push --to master_bookmark | grep updating
+  $ REPONAME=small-mon hgmn push --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
 -- let's also sync it to the large repo
   $ cd "$TESTTMP/large-hg-client"
@@ -251,7 +251,7 @@ Pushrebase, which replaces a file with a directory
   $ hg rm subdir
   $ mkdir subdir
   $ createfile subdir/greatfile && hg ci -qm "Replace a file with a directory"
-  $ REPONAME=small-mon hgmn push --to master_bookmark | grep updating
+  $ REPONAME=small-mon hgmn push --to master_bookmark 2>&1 | grep updating
   updating bookmark master_bookmark
   $ log -r master_bookmark
   @  Replace a file with a directory [public;rev=14;4d2fda63b03e] default/master_bookmark

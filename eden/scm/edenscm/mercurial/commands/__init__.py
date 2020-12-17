@@ -4771,7 +4771,7 @@ def pull(ui, repo, source="default", **opts):
         raise error.Abort(msg, hint=hint)
 
     source, branches = hg.parseurl(ui.expandpath(source))
-    ui.status(_("pulling from %s\n") % util.hidepassword(source))
+    ui.status_err(_("pulling from %s\n") % util.hidepassword(source))
 
     with repo.connectionpool.get(source, opts=opts) as conn:
         with repo.wlock(), repo.lock(), repo.transaction("pull"):
@@ -4985,7 +4985,7 @@ def push(ui, repo, dest=None, **opts):
         )
     dest = path.pushloc or path.loc
     branches = (path.branch, [])
-    ui.status(_("pushing to %s\n") % util.hidepassword(dest))
+    ui.status_err(_("pushing to %s\n") % util.hidepassword(dest))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get("rev"))
     other = hg.peer(repo, opts, dest)
 
@@ -6148,9 +6148,8 @@ def summary(ui, repo, **opts):
         if revs:
             revs = [other.lookup(rev) for rev in revs]
         ui.debug("comparing with %s\n" % util.hidepassword(source))
-        repo.ui.pushbuffer()
-        commoninc = discovery.findcommonincoming(repo, other, heads=revs)
-        repo.ui.popbuffer()
+        with repo.ui.configoverride({("ui", "quiet"): True}):
+            commoninc = discovery.findcommonincoming(repo, other, heads=revs)
         return source, sbranch, other, commoninc, commoninc[1]
 
     if needsincoming:
@@ -6181,11 +6180,10 @@ def summary(ui, repo, **opts):
             common = commoninc
         if revs:
             revs = [repo.lookup(rev) for rev in revs]
-        repo.ui.pushbuffer()
-        outgoing = discovery.findcommonoutgoing(
-            repo, dother, onlyheads=revs, commoninc=common
-        )
-        repo.ui.popbuffer()
+        with repo.ui.configoverride({("ui", "quiet"): True}):
+            outgoing = discovery.findcommonoutgoing(
+                repo, dother, onlyheads=revs, commoninc=common
+            )
         return dest, dbranch, dother, outgoing
 
     if needsoutgoing:

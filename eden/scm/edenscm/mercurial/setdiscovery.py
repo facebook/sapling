@@ -166,7 +166,7 @@ def fastdiscovery(ui, local, remote):
     publicheads = set(publicheads)
 
     # Check which remote nodes still exist on the server
-    ui.status(_("searching for changes\n"))
+    ui.status_err(_("searching for changes\n"))
     batch = remote.iterbatch()
     batch.heads()
     batch.known(knownbookmarksvalues)
@@ -175,7 +175,7 @@ def fastdiscovery(ui, local, remote):
     srvheadhashes, yesnoknownbookmarks, yesnopublicheads = batch.results()
 
     if knownbookmarksvalues and not any(yesnoknownbookmarks):
-        ui.status(_("No known server bookmarks\n"))
+        ui.status_err(_("No known server bookmarks\n"))
         # Server doesn't known any remote bookmark. That's odd and it's better
         # to fallback to normal discovery process. Otherwise we might request
         # too many commits from the server
@@ -192,7 +192,7 @@ def fastdiscovery(ui, local, remote):
         # which is weird. This should be very rare though, since it only happens
         # if the client has remote names, but none of those names exist on the
         # server (i.e. the server has been completely replaced, or stripped).
-        ui.status(
+        ui.status_err(
             _(
                 "server has changed since last pull - falling back to the "
                 "default search strategy\n"
@@ -429,7 +429,7 @@ def _findcommonheadsnew(
         # The local repo is empty. Everything is 'unknown'.
         return [], bool(remoteheads), remoteheads
 
-    ui.status(_("searching for changes\n"))
+    ui.status_err(_("searching for changes\n"))
 
     # fast paths
 
@@ -565,7 +565,7 @@ def _findcommonheadsold(
 
     # start actual discovery (we note this before the next "if" for
     # compatibility reasons)
-    ui.status(_("searching for changes\n"))
+    ui.status_err(_("searching for changes\n"))
 
     srvheads = dag.internalizeall(srvheadhashes, filterunknown=True)
     if len(srvheads) == len(srvheadhashes):

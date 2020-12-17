@@ -56,7 +56,7 @@
   > url=file:$TESTTMP/dummy-remote/
   > EOF
 
-  $ hg push -v | egrep -v '^(uncompressed| )'
+  $ hg push -v 2>&1 | egrep -v '^(uncompressed| )'
   pushing to $TESTTMP/server
   searching for changes
   2 changesets found
