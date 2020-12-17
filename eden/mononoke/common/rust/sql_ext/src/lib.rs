@@ -74,26 +74,41 @@ pub mod facebook {
     #[cfg(fbcode_build)]
     mod r#impl;
 
+    use std::fmt::{self, Debug};
+
     #[cfg(fbcode_build)]
     pub use r#impl::{
-        create_myrouter_connections, create_mysql_pool_sharded, create_mysql_pool_unsharded,
-        create_raw_xdb_connections,
+        create_myrouter_connections, create_mysql_connections_sharded,
+        create_mysql_connections_unsharded, create_raw_xdb_connections,
+        deprecated_create_mysql_pool_unsharded,
         myadmin::{MyAdmin, MyAdminLagMonitor},
-        myrouter_ready,
+        myrouter_ready, PoolConfig, SharedConnectionPool,
     };
 
     #[cfg(not(fbcode_build))]
     pub use crate::oss::{
-        create_myrouter_connections, create_mysql_pool_sharded, create_mysql_pool_unsharded,
-        create_raw_xdb_connections, myrouter_ready, MyAdmin, MyAdminLagMonitor,
+        create_myrouter_connections, create_mysql_connections_sharded,
+        create_mysql_connections_unsharded, create_raw_xdb_connections,
+        deprecated_create_mysql_pool_unsharded, myrouter_ready, MyAdmin, MyAdminLagMonitor,
+        PoolConfig, SharedConnectionPool,
     };
 
     /// Way to connect to the DB: via myrouter connections, raw xdb or Mysql client
-    #[derive(Copy, Clone, Debug)]
+    #[derive(Clone)]
     pub enum MysqlConnectionType {
         Myrouter(u16),
         RawXDB,
-        Mysql,
+        Mysql(SharedConnectionPool, PoolConfig),
+    }
+
+    impl Debug for MysqlConnectionType {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            match &self {
+                Self::Myrouter(port) => write!(f, "MyRouter(port: {:?})", port),
+                Self::Mysql(_, config) => write!(f, "MySQL with config {:?}", config),
+                Self::RawXDB => write!(f, "RawXDB"),
+            }
+        }
     }
 
     #[derive(Debug, Clone)]

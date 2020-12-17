@@ -40,8 +40,9 @@ use mononoke_types::{hash::Context as HashContext, BlobstoreBytes};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
     facebook::{
-        create_myrouter_connections, create_mysql_pool_sharded, create_mysql_pool_unsharded,
-        create_raw_xdb_connections, PoolSizeConfig, ReadConnectionType,
+        create_myrouter_connections, create_mysql_connections_sharded,
+        create_mysql_connections_unsharded, create_raw_xdb_connections, PoolConfig, PoolSizeConfig,
+        ReadConnectionType, SharedConnectionPool,
     },
     open_sqlite_in_memory, open_sqlite_path, SqlConnections, SqlShardedConnections,
 };
@@ -147,6 +148,8 @@ impl Sqlblob {
         fb: FacebookInit,
         shardmap: String,
         shard_num: NonZeroUsize,
+        global_connection_pool: SharedConnectionPool,
+        pool_config: PoolConfig,
         read_con_type: ReadConnectionType,
         readonly: bool,
         put_behaviour: PutBehaviour,
@@ -156,12 +159,13 @@ impl Sqlblob {
         let config_handle = try_boxfuture!(get_gc_config_handle(config_store));
 
         let shard_count = shard_num.clone().get();
-        create_mysql_pool_sharded(
+        create_mysql_connections_sharded(
             fb,
+            global_connection_pool,
+            pool_config,
             shardmap.clone(),
             0..shard_count,
             read_con_type,
-            PoolSizeConfig::for_mysql_sharded(),
             readonly,
         )
         .map(
@@ -205,6 +209,8 @@ impl Sqlblob {
     pub fn with_mysql_unsharded(
         fb: FacebookInit,
         db_address: String,
+        global_connection_pool: SharedConnectionPool,
+        pool_config: PoolConfig,
         read_con_type: ReadConnectionType,
         readonly: bool,
         put_behaviour: PutBehaviour,
@@ -217,11 +223,12 @@ impl Sqlblob {
             NonZeroUsize::new(1).expect("One should be greater than zero"),
             put_behaviour,
             move |_shard_id| {
-                create_mysql_pool_unsharded(
+                create_mysql_connections_unsharded(
                     fb,
+                    global_connection_pool.clone(),
+                    pool_config,
                     db_address.clone(),
                     read_con_type,
-                    PoolSizeConfig::for_regular_connection(),
                     readonly,
                 )
                 .into_future()

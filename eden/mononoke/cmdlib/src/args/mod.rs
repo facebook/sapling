@@ -49,7 +49,7 @@ use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAct
 use mononoke_types::RepositoryId;
 use observability::{DynamicLevelDrain, ObservabilityContext};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::facebook::{MysqlConnectionType, MysqlOptions};
+use sql_ext::facebook::{MysqlConnectionType, MysqlOptions, PoolConfig, SharedConnectionPool};
 use tunables::init_tunables_worker;
 
 use crate::helpers::{
@@ -72,6 +72,12 @@ const ENABLE_MCROUTER: &str = "enable-mcrouter";
 const MYSQL_MYROUTER_PORT: &str = "myrouter-port";
 const MYSQL_MASTER_ONLY: &str = "mysql-master-only";
 const MYSQL_USE_CLIENT: &str = "use-mysql-client";
+const MYSQL_POOL_LIMIT: &str = "mysql-pool-limit";
+const MYSQL_POOL_PER_KEY_LIMIT: &str = "mysql-pool-per-key-limit";
+const MYSQL_POOL_THREADS_NUM: &str = "mysql-pool-threads-num";
+const MYSQL_POOL_AGE_TIMEOUT: &str = "mysql-pool-age-timeout";
+const MYSQL_POOL_IDLE_TIMEOUT: &str = "mysql-pool-idle-timeout";
+const MYSQL_CONN_OPEN_TIMEOUT: &str = "mysql-conn-open-timeout";
 const RUNTIME_THREADS: &str = "runtime-threads";
 const TUNABLES_CONFIG: &str = "tunables-config";
 const DISABLE_TUNABLES: &str = "disable-tunables";
@@ -195,6 +201,7 @@ pub struct MononokeAppBuilder {
 pub struct MononokeAppData {
     cachelib_settings: CachelibSettings,
     repo_required: Option<RepoRequirement>,
+    global_mysql_connection_pool: SharedConnectionPool,
 }
 
 // Result of MononokeAppBuilder::build() which has clap plus the MononokeApp data
@@ -622,6 +629,7 @@ impl MononokeAppBuilder {
             app_data: MononokeAppData {
                 cachelib_settings: self.cachelib_settings,
                 repo_required: self.repo_required,
+                global_mysql_connection_pool: SharedConnectionPool::new(),
             },
         }
     }
@@ -1106,6 +1114,57 @@ fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .takes_value(false)
             .conflicts_with(MYSQL_MYROUTER_PORT),
     )
+    // All the defaults for Mysql connection pool are derived from sql_ext::facebook::mysql
+    // https://fburl.com/diffusion/n5isd68j
+    // last synced on 17/12/2020
+    .arg(
+        Arg::with_name(MYSQL_POOL_LIMIT)
+            .long(MYSQL_POOL_LIMIT)
+            .help("Size of the connection pool")
+            .takes_value(true)
+            .default_value("10000")
+            .conflicts_with(MYSQL_MYROUTER_PORT),
+    )
+    .arg(
+        Arg::with_name(MYSQL_POOL_PER_KEY_LIMIT)
+            .long(MYSQL_POOL_PER_KEY_LIMIT)
+            .help("Mysql connection pool per key limit")
+            .takes_value(true)
+            .default_value("100")
+            .conflicts_with(MYSQL_MYROUTER_PORT),
+    )
+    .arg(
+        Arg::with_name(MYSQL_POOL_THREADS_NUM)
+            .long(MYSQL_POOL_THREADS_NUM)
+            .help("Number of threads in Mysql connection pool, i.e. number of real pools")
+            .takes_value(true)
+            .default_value("10")
+            .conflicts_with(MYSQL_MYROUTER_PORT),
+    )
+    .arg(
+        Arg::with_name(MYSQL_POOL_AGE_TIMEOUT)
+            .long(MYSQL_POOL_AGE_TIMEOUT)
+            .help("Mysql connection pool age timeout in millisecs")
+            .takes_value(true)
+            .default_value("60000")
+            .conflicts_with(MYSQL_MYROUTER_PORT),
+    )
+    .arg(
+        Arg::with_name(MYSQL_POOL_IDLE_TIMEOUT)
+            .long(MYSQL_POOL_IDLE_TIMEOUT)
+            .help("Mysql connection pool idle timeout in millisecs")
+            .takes_value(true)
+            .default_value("4000")
+            .conflicts_with(MYSQL_MYROUTER_PORT),
+    )
+    .arg(
+        Arg::with_name(MYSQL_CONN_OPEN_TIMEOUT)
+            .long(MYSQL_CONN_OPEN_TIMEOUT)
+            .help("Mysql connection open timeout in millisecs")
+            .takes_value(true)
+            .default_value("3000")
+            .conflicts_with(MYSQL_MYROUTER_PORT),
+    )
 }
 
 pub(crate) fn bool_as_str(v: bool) -> &'static str {
@@ -1488,6 +1547,58 @@ pub fn parse_readonly_storage<'a>(matches: &MononokeMatches<'a>) -> ReadOnlyStor
     }
 }
 
+pub fn get_global_mysql_connection_pool<'a>(matches: &MononokeMatches<'a>) -> SharedConnectionPool {
+    matches.app_data.global_mysql_connection_pool.clone()
+}
+
+fn parse_mysql_pool_options<'a>(matches: &MononokeMatches<'a>) -> PoolConfig {
+    let size: usize = matches
+        .value_of(MYSQL_POOL_LIMIT)
+        .map(|v| v.parse().expect("Provided mysql-pool-limit is not usize"))
+        .expect("A default is set, should never be None");
+    let threads_num: i32 = matches
+        .value_of(MYSQL_POOL_THREADS_NUM)
+        .map(|v| {
+            v.parse()
+                .expect("Provided mysql-pool-threads-num is not i32")
+        })
+        .expect("A default is set, should never be None");
+    let per_key_limit: u64 = matches
+        .value_of(MYSQL_POOL_PER_KEY_LIMIT)
+        .map(|v| {
+            v.parse()
+                .expect("Provided mysql-pool-per-key-limit is not u64")
+        })
+        .expect("A default is set, should never be None");
+    let conn_age_timeout: u64 = matches
+        .value_of(MYSQL_POOL_AGE_TIMEOUT)
+        .map(|v| {
+            v.parse()
+                .expect("Provided mysql-pool-age-timeout is not u64")
+        })
+        .expect("A default is set, should never be None");
+    let conn_idle_timeout: u64 = matches
+        .value_of(MYSQL_POOL_IDLE_TIMEOUT)
+        .map(|v| v.parse().expect("Provided mysql-pool-limit is not usize"))
+        .expect("A default is set, should never be None");
+    let conn_open_timeout: u64 = matches
+        .value_of(MYSQL_CONN_OPEN_TIMEOUT)
+        .map(|v| {
+            v.parse()
+                .expect("Provided mysql-conn-open-timeout is not u64")
+        })
+        .expect("A default is set, should never be None");
+
+    PoolConfig::new(
+        size,
+        threads_num,
+        per_key_limit,
+        conn_age_timeout,
+        conn_idle_timeout,
+        conn_open_timeout,
+    )
+}
+
 pub fn parse_mysql_options<'a>(matches: &MononokeMatches<'a>) -> MysqlOptions {
     let connection_type = if let Some(port) = matches.value_of(MYSQL_MYROUTER_PORT) {
         let port = port
@@ -1495,7 +1606,10 @@ pub fn parse_mysql_options<'a>(matches: &MononokeMatches<'a>) -> MysqlOptions {
             .expect("Provided --myrouter-port is not u16");
         MysqlConnectionType::Myrouter(port)
     } else if matches.is_present(MYSQL_USE_CLIENT) {
-        MysqlConnectionType::Mysql
+        let pool = get_global_mysql_connection_pool(matches);
+        let pool_config = parse_mysql_pool_options(matches);
+
+        MysqlConnectionType::Mysql(pool, pool_config)
     } else {
         MysqlConnectionType::RawXDB
     };

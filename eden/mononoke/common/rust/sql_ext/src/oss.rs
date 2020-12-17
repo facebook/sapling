@@ -29,10 +29,6 @@ impl PoolSizeConfig {
     pub fn for_sharded_connection() -> Self {
         fb_unimplemented!()
     }
-
-    pub fn for_mysql_sharded() -> Self {
-        fb_unimplemented!()
-    }
 }
 
 pub fn create_myrouter_connections(
@@ -47,22 +43,62 @@ pub fn create_myrouter_connections(
     fb_unimplemented!()
 }
 
-pub fn create_mysql_pool_unsharded(
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct PoolConfig;
+
+impl PoolConfig {
+    pub fn new(
+        _size: usize,
+        _threads_num: i32,
+        _per_key_limit: u64,
+        _conn_age_timeout_ms: u64,
+        _conn_idle_timeout_ms: u64,
+        _conn_open_timeout_ms: u64,
+    ) -> Self {
+        Self
+    }
+
+    pub fn default() -> Self {
+        Self
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct SharedConnectionPool;
+impl SharedConnectionPool {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+pub fn create_mysql_connections_unsharded(
     _fb: FacebookInit,
+    _connection_pool: SharedConnectionPool,
+    _pool_config: PoolConfig,
     _tier: String,
     _read_con_type: ReadConnectionType,
-    _pool_size_config: PoolSizeConfig,
     _readonly: bool,
 ) -> Result<SqlConnections, Error> {
     fb_unimplemented!()
 }
 
-pub fn create_mysql_pool_sharded<S>(
+pub fn deprecated_create_mysql_pool_unsharded(
     _fb: FacebookInit,
+    _tier: String,
+    _read_con_type: ReadConnectionType,
+    _pool_size_config: PoolSizeConfig,
+    _readonly: bool,
+) -> Result<SqlConnections> {
+    fb_unimplemented!()
+}
+
+pub fn create_mysql_connections_sharded<S>(
+    _fb: FacebookInit,
+    _connection_pool: SharedConnectionPool,
+    _pool_config: PoolConfig,
     _shardmap: String,
     _shards: S,
     _read_con_type: ReadConnectionType,
-    _pool_size_config: PoolSizeConfig,
     _readonly: bool,
 ) -> Result<SqlShardedConnections, Error>
 where

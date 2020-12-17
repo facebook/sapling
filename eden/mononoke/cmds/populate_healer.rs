@@ -400,7 +400,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let blobstore = make_key_source(fb, &config.blobstore_args);
     match blobstore {
         Ok(blobstore) => {
-            let queue: Arc<dyn BlobstoreSyncQueue> = match config.connection_type {
+            let queue: Arc<dyn BlobstoreSyncQueue> = match config.connection_type.clone() {
                 MysqlConnectionType::Myrouter(myrouter_port) => {
                     Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
                         config.db_address.clone(),
@@ -409,10 +409,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         config.readonly_storage,
                     ))
                 }
-                MysqlConnectionType::Mysql => {
+                MysqlConnectionType::Mysql(pool, pool_config) => {
                     let queue = SqlBlobstoreSyncQueue::with_mysql(
                         fb,
                         config.db_address.clone(),
+                        pool,
+                        pool_config,
                         ReadConnectionType::Replica,
                         config.readonly_storage,
                     )?;

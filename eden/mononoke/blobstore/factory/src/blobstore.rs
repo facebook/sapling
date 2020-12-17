@@ -134,7 +134,7 @@ pub async fn make_sql_blobstore<'a>(
         Mysql { remote } => match remote {
             ShardableRemoteDatabaseConfig::Unsharded(config) => {
                 let read_conn_type = mysql_options.read_connection_type();
-                match mysql_options.connection_type {
+                match mysql_options.connection_type.clone() {
                     MysqlConnectionType::Myrouter(myrouter_port) => {
                         Sqlblob::with_myrouter_unsharded(
                             fb,
@@ -148,10 +148,12 @@ pub async fn make_sql_blobstore<'a>(
                         .compat()
                         .await
                     }
-                    MysqlConnectionType::Mysql => {
+                    MysqlConnectionType::Mysql(pool, pool_config) => {
                         Sqlblob::with_mysql_unsharded(
                             fb,
                             config.db_address,
+                            pool,
+                            pool_config,
                             read_conn_type,
                             readonly_storage.0,
                             blobstore_options.put_behaviour,
@@ -176,7 +178,7 @@ pub async fn make_sql_blobstore<'a>(
             }
             ShardableRemoteDatabaseConfig::Sharded(config) => {
                 let read_conn_type = mysql_options.read_connection_type();
-                match mysql_options.connection_type {
+                match mysql_options.connection_type.clone() {
                     MysqlConnectionType::Myrouter(myrouter_port) => {
                         Sqlblob::with_myrouter(
                             fb,
@@ -191,11 +193,13 @@ pub async fn make_sql_blobstore<'a>(
                         .compat()
                         .await
                     }
-                    MysqlConnectionType::Mysql => {
+                    MysqlConnectionType::Mysql(pool, pool_config) => {
                         Sqlblob::with_mysql(
                             fb,
                             config.shard_map.clone(),
                             config.shard_num,
+                            pool,
+                            pool_config,
                             read_conn_type,
                             readonly_storage.0,
                             blobstore_options.put_behaviour,

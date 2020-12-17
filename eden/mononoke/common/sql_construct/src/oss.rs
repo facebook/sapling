@@ -8,7 +8,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
-use sql_ext::facebook::{MysqlOptions, ReadConnectionType};
+use sql_ext::facebook::{MysqlOptions, PoolConfig, ReadConnectionType, SharedConnectionPool};
 
 use crate::{SqlConstruct, SqlShardedConstruct};
 
@@ -34,7 +34,14 @@ pub trait FbSqlConstruct: SqlConstruct + Sized + Send + Sync + 'static {
         fb_unimplemented!()
     }
 
-    fn with_mysql(_: FacebookInit, _: String, _: ReadConnectionType, _: bool) -> Result<Self> {
+    fn with_mysql(
+        _: FacebookInit,
+        _: String,
+        _: SharedConnectionPool,
+        _: PoolConfig,
+        _: ReadConnectionType,
+        _: bool,
+    ) -> Result<Self> {
         fb_unimplemented!()
     }
 
@@ -71,6 +78,8 @@ pub trait FbSqlShardedConstruct: SqlShardedConstruct + Sized + Send + Sync + 'st
         _: FacebookInit,
         _: String,
         _: usize,
+        _: SharedConnectionPool,
+        _: PoolConfig,
         _: ReadConnectionType,
         _: bool,
     ) -> Result<Self> {

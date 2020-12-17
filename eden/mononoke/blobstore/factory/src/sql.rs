@@ -23,8 +23,9 @@ use sql_construct::{
 };
 use sql_ext::{
     facebook::{
-        create_myrouter_connections, create_mysql_pool_unsharded, create_raw_xdb_connections,
-        myrouter_ready, MysqlConnectionType, MysqlOptions, PoolSizeConfig,
+        create_myrouter_connections, create_mysql_connections_unsharded,
+        create_raw_xdb_connections, myrouter_ready, MysqlConnectionType, MysqlOptions,
+        PoolSizeConfig,
     },
     open_sqlite_path, SqlConnections,
 };
@@ -104,12 +105,12 @@ impl MetadataSqlFactory {
                     .map(|conn| SqlConnections::new_single(Connection::with_sqlite(conn)))
                     .boxify()
             }
-            MetadataDatabaseConfig::Remote(config) => match self.mysql_options.connection_type {
+            MetadataDatabaseConfig::Remote(config) => match &self.mysql_options.connection_type {
                 MysqlConnectionType::Myrouter(myrouter_port) => {
                     future::ok(create_myrouter_connections(
                         config.primary.db_address.clone(),
                         None,
-                        myrouter_port,
+                        *myrouter_port,
                         self.mysql_options.read_connection_type(),
                         PoolSizeConfig::for_regular_connection(),
                         label,
@@ -117,15 +118,18 @@ impl MetadataSqlFactory {
                     ))
                     .boxify()
                 }
-                MysqlConnectionType::Mysql => create_mysql_pool_unsharded(
-                    self.fb,
-                    config.primary.db_address.clone(),
-                    self.mysql_options.read_connection_type(),
-                    PoolSizeConfig::for_regular_connection(),
-                    self.readonly.0,
-                )
-                .into_future()
-                .boxify(),
+                MysqlConnectionType::Mysql(global_connection_pool, pool_config) => {
+                    create_mysql_connections_unsharded(
+                        self.fb,
+                        global_connection_pool.clone(),
+                        pool_config.clone(),
+                        config.primary.db_address.clone(),
+                        self.mysql_options.read_connection_type(),
+                        self.readonly.0,
+                    )
+                    .into_future()
+                    .boxify()
+                }
                 MysqlConnectionType::RawXDB => create_raw_xdb_connections(
                     self.fb,
                     config.primary.db_address.clone(),

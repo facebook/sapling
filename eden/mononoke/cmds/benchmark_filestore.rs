@@ -217,11 +217,13 @@ async fn get_blob<'a>(
                     .compat()
                     .await?
                 }
-                MysqlConnectionType::Mysql => {
+                MysqlConnectionType::Mysql(pool, config) => {
                     Sqlblob::with_mysql(
                         fb,
                         shardmap,
                         shard_count,
+                        pool,
+                        config,
                         ReadConnectionType::Replica,
                         false,
                         put_behaviour,

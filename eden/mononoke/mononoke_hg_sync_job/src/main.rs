@@ -223,7 +223,7 @@ fn get_read_write_fetcher(
                 let path = Path::new(repo_lock_db_addr);
                 SqlRepoReadWriteStatus::with_sqlite_path(path, readonly_storage)
             } else {
-                match mysql_options.connection_type {
+                match mysql_options.connection_type.clone() {
                     MysqlConnectionType::Myrouter(port) => {
                         Ok(SqlRepoReadWriteStatus::with_myrouter(
                             repo_lock_db_addr.to_string(),
@@ -232,9 +232,11 @@ fn get_read_write_fetcher(
                             readonly_storage,
                         ))
                     }
-                    MysqlConnectionType::Mysql => SqlRepoReadWriteStatus::with_mysql(
+                    MysqlConnectionType::Mysql(pool, config) => SqlRepoReadWriteStatus::with_mysql(
                         fb,
                         repo_lock_db_addr.to_string(),
+                        pool,
+                        config,
                         mysql_options.read_connection_type(),
                         readonly_storage,
                     ),
