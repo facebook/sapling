@@ -5,13 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
+use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{future, TryFutureExt, TryStreamExt};
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
-use futures_old::{Future as Future01, Stream as Stream01};
 
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
@@ -22,63 +21,63 @@ use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::ChangesetId;
 use phases::Phases;
 use std::str::FromStr;
-use std::sync::Arc;
-use tokio_compat::runtime::Runtime;
 
-fn delete_all_publishing_bookmarks(rt: &mut Runtime, ctx: CoreContext, repo: BlobRepo) {
-    let bookmarks = rt
-        .block_on(
-            repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-                .compat()
-                .collect(),
-        )
-        .unwrap();
+async fn delete_all_publishing_bookmarks(ctx: &CoreContext, repo: &BlobRepo) -> Result<(), Error> {
+    let bookmarks = repo
+        .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+        .try_collect::<Vec<_>>()
+        .await?;
 
-    let mut txn = repo.update_bookmark_transaction(ctx);
+    let mut txn = repo.update_bookmark_transaction(ctx.clone());
 
     for (bookmark, _) in bookmarks {
         txn.force_delete(bookmark.name(), BookmarkUpdateReason::TestMove, None)
             .unwrap();
     }
 
-    assert!(rt.block_on(txn.commit().compat()).unwrap());
+    let ok = txn.commit().await?;
+    if !ok {
+        return Err(Error::msg("Deletion did not commit"));
+    }
+
+    Ok(())
 }
 
-fn set_bookmark(
-    rt: &mut Runtime,
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn set_bookmark(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     book: &BookmarkName,
     cs_id: &str,
-) {
-    let head = rt
-        .block_on_std(repo.get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(cs_id).unwrap()))
-        .unwrap()
-        .unwrap();
-    let mut txn = repo.update_bookmark_transaction(ctx);
-    txn.force_set(&book, head, BookmarkUpdateReason::TestMove, None)
-        .unwrap();
+) -> Result<(), Error> {
+    let head = repo
+        .get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(cs_id)?)
+        .await?
+        .ok_or_else(|| Error::msg("cs does not exit"))?;
 
-    assert!(rt.block_on(txn.commit().compat()).unwrap());
+    let mut txn = repo.update_bookmark_transaction(ctx.clone());
+    txn.force_set(&book, head, BookmarkUpdateReason::TestMove, None)?;
+
+
+    let ok = txn.commit().await?;
+    if !ok {
+        return Err(Error::msg("Deletion did not commit"));
+    }
+
+    Ok(())
 }
 
-fn is_public(
-    phases: &Arc<dyn Phases>,
-    ctx: CoreContext,
+async fn is_public(
+    phases: &impl Phases,
+    ctx: &CoreContext,
     csid: ChangesetId,
-) -> BoxFuture01<bool, Error> {
-    phases
-        .get_public(ctx, vec![csid], false)
-        .compat()
-        .map(move |public| public.contains(&csid))
-        .boxify()
+) -> Result<bool, Error> {
+    let public = phases.get_public(ctx.clone(), vec![csid], false).await?;
+    Ok(public.contains(&csid))
 }
 
-#[fbinit::test]
-fn get_phase_hint_test(fb: FacebookInit) {
-    let mut rt = Runtime::new().unwrap();
-
-    let repo = rt.block_on_std(linear::getrepo(fb));
+#[fbinit::compat_test]
+async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
+    let repo = linear::getrepo(fb).await;
     //  @  79a13814c5ce7330173ec04d279bf95ab3f652fb
     //  |
     //  o  a5ffa77602a066db7d5cfb9fb5823a0895717c5a
@@ -103,110 +102,105 @@ fn get_phase_hint_test(fb: FacebookInit) {
 
     let ctx = CoreContext::test_mock(fb);
 
-    delete_all_publishing_bookmarks(&mut rt, ctx.clone(), repo.clone());
+    delete_all_publishing_bookmarks(&ctx, &repo).await?;
 
     // create a new master bookmark
     set_bookmark(
-        &mut rt,
-        ctx.clone(),
-        repo.clone(),
+        &ctx,
+        &repo,
         &BookmarkName::new("master").unwrap(),
         "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
-    );
+    )
+    .await?;
 
-    let public_commit = rt
-        .block_on_std(repo.get_bonsai_from_hg(
+    let public_commit = repo
+        .get_bonsai_from_hg(
             ctx.clone(),
-            HgChangesetId::from_str("d0a361e9022d226ae52f689667bd7d212a19cfe0").unwrap(),
-        ))
-        .unwrap()
-        .unwrap();
+            HgChangesetId::from_str("d0a361e9022d226ae52f689667bd7d212a19cfe0")?,
+        )
+        .await?
+        .ok_or_else(|| Error::msg("Invalid cs: public_commit"))?;
 
-    let other_public_commit = rt
-        .block_on_std(repo.get_bonsai_from_hg(
+    let other_public_commit = repo
+        .get_bonsai_from_hg(
             ctx.clone(),
-            HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap(),
-        ))
-        .unwrap()
-        .unwrap();
+            HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
+        )
+        .await?
+        .ok_or_else(|| Error::msg("Invalid cs: other_public_commit"))?;
 
-    let draft_commit = rt
-        .block_on_std(repo.get_bonsai_from_hg(
+    let draft_commit = repo
+        .get_bonsai_from_hg(
             ctx.clone(),
-            HgChangesetId::from_str("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").unwrap(),
-        ))
-        .unwrap()
-        .unwrap();
+            HgChangesetId::from_str("a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157")?,
+        )
+        .await?
+        .ok_or_else(|| Error::msg("Invalid cs: draft_commit"))?;
 
-    let other_draft_commit = rt
-        .block_on_std(repo.get_bonsai_from_hg(
-            ctx.clone(),
-            HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a").unwrap(),
-        ))
-        .unwrap()
-        .unwrap();
 
-    let public_bookmark_commit = rt
-        .block_on_std(repo.get_bonsai_from_hg(
+    let other_draft_commit = repo
+        .get_bonsai_from_hg(
             ctx.clone(),
-            HgChangesetId::from_str("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").unwrap(),
-        ))
-        .unwrap()
-        .unwrap();
+            HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?,
+        )
+        .await?
+        .ok_or_else(|| Error::msg("Invalid cs: other_draft_commit"))?;
+
+    let public_bookmark_commit = repo
+        .get_bonsai_from_hg(
+            ctx.clone(),
+            HgChangesetId::from_str("eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b")?,
+        )
+        .await?
+        .ok_or_else(|| Error::msg("Invalid cs: public_bookmark_commit"))?;
 
     let phases = repo.get_phases();
 
     assert_eq!(
-        rt.block_on(is_public(&phases, ctx.clone(), public_bookmark_commit))
-            .unwrap(),
+        is_public(&phases, &ctx, public_bookmark_commit).await?,
         true,
         "slow path: get phase for a Public commit which is also a public bookmark"
     );
 
     assert_eq!(
-        rt.block_on(is_public(&phases, ctx.clone(), public_commit))
-            .unwrap(),
+        is_public(&phases, &ctx, public_commit).await?,
         true,
         "slow path: get phase for a Public commit"
     );
 
     assert_eq!(
-        rt.block_on(is_public(&phases, ctx.clone(), other_public_commit))
-            .unwrap(),
+        is_public(&phases, &ctx, other_public_commit).await?,
         true,
         "slow path: get phase for other Public commit"
     );
 
     assert_eq!(
-        rt.block_on(is_public(&phases, ctx.clone(), draft_commit))
-            .unwrap(),
+        is_public(&phases, &ctx, draft_commit).await?,
         false,
         "slow path: get phase for a Draft commit"
     );
 
     assert_eq!(
-        rt.block_on(is_public(&phases, ctx.clone(), other_draft_commit))
-            .unwrap(),
+        is_public(&phases, &ctx, other_draft_commit).await?,
         false,
         "slow path: get phase for other Draft commit"
     );
 
-    assert_eq!(
-        rt.block_on(
-            phases
-                .get_public(
-                    ctx.clone(),
-                    vec![
-                        public_commit,
-                        other_public_commit,
-                        draft_commit,
-                        other_draft_commit
-                    ],
-                    false
-                )
-                .compat()
+    let public = phases
+        .get_public(
+            ctx.clone(),
+            vec![
+                public_commit,
+                other_public_commit,
+                draft_commit,
+                other_draft_commit,
+            ],
+            false,
         )
-        .unwrap(),
+        .await?;
+
+    assert_eq!(
+        public,
         hashset! {
             public_commit,
             other_public_commit,
@@ -215,25 +209,23 @@ fn get_phase_hint_test(fb: FacebookInit) {
     );
 
     assert_eq!(
-        rt.block_on(is_public(&phases, ctx.clone(), public_commit))
-            .expect("Get phase failed"),
+        is_public(&phases, &ctx, public_commit).await?,
         true,
         "sql: make sure that phase was written to the db for public commit"
     );
 
     assert_eq!(
-        rt.block_on(is_public(&phases, ctx.clone(), draft_commit))
-            .expect("Get phase failed"),
+        is_public(&phases, &ctx, draft_commit).await?,
         false,
         "sql: make sure that phase was not written to the db for draft commit"
     );
+
+    Ok(())
 }
 
-#[fbinit::test]
-fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
-    let mut rt = Runtime::new()?;
-
-    let repo = rt.block_on_std(fixtures::branch_even::getrepo(fb));
+#[fbinit::compat_test]
+async fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
+    let repo = fixtures::branch_even::getrepo(fb).await;
     // @  4f7f3fd428bec1a48f9314414b063c706d9c1aed (6)
     // |
     // o  b65231269f651cfe784fd1d97ef02a049a37b8a0 (5)
@@ -259,20 +251,26 @@ fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
     ];
     let ctx = CoreContext::test_mock(fb);
 
-    delete_all_publishing_bookmarks(&mut rt, ctx.clone(), repo.clone());
+    borrowed!(ctx, repo);
+
+    delete_all_publishing_bookmarks(&ctx, &repo).await?;
 
     // resolve bonsai
-    let bcss = rt
-        .block_on_std(future::try_join_all(
-            hgcss
-                .iter()
-                .map(|hgcs| {
-                    repo.get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(hgcs).unwrap())
-                        .map_ok(|bcs| bcs.unwrap())
-                })
-                .collect::<Vec<_>>(),
-        ))
-        .unwrap();
+    let bcss = future::try_join_all(
+        hgcss
+            .iter()
+            .map({
+                |hgcs| async move {
+                    let bcs = repo
+                        .get_bonsai_from_hg(ctx.clone(), HgChangesetId::from_str(hgcs)?)
+                        .await?
+                        .ok_or_else(|| format_err!("Invalid hgcs: {}", hgcs))?;
+                    Result::<_, Error>::Ok(bcs)
+                }
+            })
+            .collect::<Vec<_>>(),
+    )
+    .await?;
 
     let phases = repo.get_phases();
     // get phases mapping for all `bcss` in the same order
@@ -288,17 +286,21 @@ fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
     };
 
     // all phases are draft
-    assert_eq!(rt.block_on_std(get_phases_map())?, [false; 7]);
+    assert_eq!(get_phases_map().await?, [false; 7]);
 
-    rt.block_on_std(phases.add_reachable_as_public(ctx.clone(), vec![bcss[1]]))?;
+    phases
+        .add_reachable_as_public(ctx.clone(), vec![bcss[1]])
+        .await?;
     assert_eq!(
-        rt.block_on_std(get_phases_map())?,
+        get_phases_map().await?,
         [true, true, false, false, false, false, false],
     );
 
-    rt.block_on_std(phases.add_reachable_as_public(ctx.clone(), vec![bcss[2], bcss[5]]))?;
+    phases
+        .add_reachable_as_public(ctx.clone(), vec![bcss[2], bcss[5]])
+        .await?;
     assert_eq!(
-        rt.block_on_std(get_phases_map())?,
+        get_phases_map().await?,
         [true, true, true, false, true, true, false],
     );
 

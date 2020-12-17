@@ -15,6 +15,7 @@ pub use sql_store::SqlPhasesStore;
 use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
 use ascii::AsciiString;
+use auto_impl::auto_impl;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use futures::future::{try_join, BoxFuture, FutureExt};
@@ -124,6 +125,7 @@ impl ConvIr<Phase> for Phase {
 }
 
 /// This is the primary interface for clients to interact with Phases
+#[auto_impl(&, Arc, Box)]
 pub trait Phases: Send + Sync {
     /// mark all commits reachable from heads as public
     fn add_reachable_as_public(
