@@ -18,11 +18,8 @@ use chrono::Utc;
 use context::CoreContext;
 use derived_data::{BonsaiDerivable, BonsaiDerived};
 use futures::compat::Stream01CompatExt;
+use futures::future::{self, try_join};
 use futures::stream::{self, StreamExt, TryStreamExt};
-use futures::{
-    future::{self, try_join},
-    stream::FuturesUnordered,
-};
 use hooks::{CrossRepoPushSource, HookManager};
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
@@ -550,9 +547,9 @@ pub async fn log_commits_to_scribe(
     let bookmark = bookmark.map(|bm| bm.as_str());
     let received_timestamp = Utc::now();
 
-    let futs: FuturesUnordered<_> = changesets_and_changed_files_count
-        .into_iter()
-        .map(|(changeset_id, changed_files_count)| {
+    let res = stream::iter(changesets_and_changed_files_count)
+        .map(Ok)
+        .map_ok(|(changeset_id, changed_files_count)| {
             let queue = &queue;
             async move {
                 let get_generation = async {
@@ -585,8 +582,8 @@ pub async fn log_commits_to_scribe(
                 queue.queue_commit(&ci)
             }
         })
-        .collect();
-    let res = futs.try_for_each(|()| async { Ok(()) }).await;
+        .try_for_each_concurrent(100, |f| f)
+        .await;
     if let Err(err) = res {
         ctx.scuba()
             .clone()
