@@ -22,7 +22,6 @@ use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
-use futures::compat::Future01CompatExt;
 use openssl::ssl::SslAcceptor;
 use scribe_ext::Scribe;
 use slog::{debug, Logger};
@@ -35,12 +34,12 @@ use metaconfig_types::{CommonConfig, RepoConfig};
 use crate::connection_acceptor::connection_acceptor;
 use crate::repo_handlers::repo_handlers;
 
-pub async fn create_repo_listeners(
+pub async fn create_repo_listeners<'a>(
     fb: FacebookInit,
     test_instance: bool,
     common_config: CommonConfig,
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
-    mysql_options: MysqlOptions,
+    mysql_options: &'a MysqlOptions,
     caching: Caching,
     disabled_hooks: HashMap<String, HashSet<String>>,
     root_log: Logger,
@@ -48,7 +47,7 @@ pub async fn create_repo_listeners(
     tls_acceptor: SslAcceptor,
     service: ReadyFlagService,
     terminate_process: oneshot::Receiver<()>,
-    config_store: &'static ConfigStore,
+    config_store: &'a ConfigStore,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
     scribe: Scribe,
@@ -65,7 +64,6 @@ pub async fn create_repo_listeners(
         &root_log,
         config_store,
     )
-    .compat()
     .await?;
 
     debug!(root_log, "Mononoke server is listening on {}", sockname);

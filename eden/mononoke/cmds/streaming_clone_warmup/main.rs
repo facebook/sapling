@@ -103,7 +103,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     // wait for myrouter
     myrouter_ready(
         Some("xdb.mononoke_production".to_string()),
-        mysql_options,
+        &mysql_options,
         ctx.logger().clone(),
     )
     .compat()
@@ -119,7 +119,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             ctx.clone(),
             reponame,
             config,
-            mysql_options,
+            &mysql_options,
             blobstore_options.clone(),
             config_store,
         )
@@ -154,7 +154,7 @@ impl StreamingCloneWarmup {
         ctx: CoreContext,
         reponame: String,
         config: &RepoConfig,
-        mysql_options: MysqlOptions,
+        mysql_options: &MysqlOptions,
         blobstore_options: BlobstoreOptions,
         config_store: &ConfigStore,
     ) -> Result<Self, Error> {

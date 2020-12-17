@@ -993,7 +993,7 @@ pub fn setup_common<'a>(
         // Open the blobstore explicitly so we can do things like run on one side of a multiplex
         let blobstore = blobstore::open_blobstore(
             fb,
-            mysql_options,
+            mysql_options.clone(),
             storage_config.blobstore,
             inner_blobstore_id,
             None,

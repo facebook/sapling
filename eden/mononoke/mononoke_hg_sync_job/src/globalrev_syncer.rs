@@ -53,7 +53,7 @@ impl GlobalrevSyncer {
         repo: BlobRepo,
         use_sqlite: bool,
         hgsql_db_addr: Option<&str>,
-        mysql_options: MysqlOptions,
+        mysql_options: &MysqlOptions,
         readonly: bool,
         hgsql_name: HgsqlGlobalrevsName,
     ) -> Result<Self, Error> {
@@ -65,7 +65,7 @@ impl GlobalrevSyncer {
         let hgsql = if use_sqlite {
             HgsqlConnection::with_sqlite_path(Path::new(hgsql_db_addr), readonly)?
         } else {
-            HgsqlConnection::with_xdb(fb, hgsql_db_addr.to_string(), mysql_options, readonly)
+            HgsqlConnection::with_xdb(fb, hgsql_db_addr.to_string(), &mysql_options, readonly)
                 .await?
         };
 

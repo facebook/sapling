@@ -8,9 +8,10 @@
 #[deny(warnings)]
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::TryFutureExt;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{FutureExt, TryFutureExt};
+use futures_ext::{BoxFuture, FutureExt as FutureExt01};
 use futures_old::future::Future;
 use getbundle_response::SessionLfsParams;
 use hooks::HookManager;
@@ -230,18 +231,22 @@ pub fn streaming_clone(
     fb: FacebookInit,
     blobrepo: BlobRepo,
     db_address: String,
-    mysql_options: MysqlOptions,
+    mysql_options: &MysqlOptions,
     repoid: RepositoryId,
     readonly_storage: bool,
 ) -> BoxFuture<SqlStreamingCloneConfig, Error> {
-    SqlStreamingChunksFetcher::with_xdb(fb, db_address, mysql_options, readonly_storage)
-        .compat()
-        .map(move |fetcher| SqlStreamingCloneConfig {
-            fetcher,
-            blobstore: blobrepo.get_blobstore(),
-            repoid,
-        })
-        .boxify()
+    cloned!(mysql_options);
+    async move {
+        SqlStreamingChunksFetcher::with_xdb(fb, db_address, &mysql_options, readonly_storage).await
+    }
+    .boxed()
+    .compat()
+    .map(move |fetcher| SqlStreamingCloneConfig {
+        fetcher,
+        blobstore: blobrepo.get_blobstore(),
+        repoid,
+    })
+    .boxify()
 }
 
 impl Debug for MononokeRepo {

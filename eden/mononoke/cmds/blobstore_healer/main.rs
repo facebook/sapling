@@ -60,7 +60,7 @@ async fn maybe_schedule_healer_for_storage(
     blobstore_sync_queue_limit: usize,
     heal_concurrency: usize,
     storage_config: StorageConfig,
-    mysql_options: MysqlOptions,
+    mysql_options: &MysqlOptions,
     source_blobstore_key: Option<String>,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &BlobstoreOptions,
@@ -80,7 +80,7 @@ async fn maybe_schedule_healer_for_storage(
 
     myrouter_ready(
         queue_db.remote_address(),
-        mysql_options,
+        &mysql_options,
         ctx.logger().clone(),
     )
     .compat()
@@ -307,7 +307,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         blobstore_sync_queue_limit,
         heal_concurrency,
         storage_config,
-        mysql_options,
+        &mysql_options,
         source_blobstore_key.map(|s| s.to_string()),
         readonly_storage,
         &blobstore_options,

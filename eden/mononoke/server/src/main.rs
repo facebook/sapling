@@ -74,30 +74,40 @@ fn main(fb: FacebookInit) -> Result<()> {
     let service = ReadyFlagService::new();
     let (terminate_sender, terminate_receiver) = oneshot::channel::<()>();
 
-    let repo_listeners = {
-        cloned!(root_log);
+    let mysql_options = cmdlib::args::parse_mysql_options(&matches);
+    let disabled_hooks = cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?;
+    let scribe = cmdlib::args::get_scribe(fb, &matches)?;
+    let is_test = cmdlib::args::is_test_instance(&matches);
+    let host_port = matches
+        .value_of("listening-host-port")
+        .expect("listening path must be specified")
+        .to_string();
+    let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
+    let blobstore_options = cmdlib::args::parse_blobstore_options(&matches);
 
-        repo_listener::create_repo_listeners(
-            fb,
-            cmdlib::args::is_test_instance(&matches),
-            config.common,
-            config.repos.into_iter(),
-            cmdlib::args::parse_mysql_options(&matches),
-            caching,
-            cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?,
-            root_log,
-            matches
-                .value_of("listening-host-port")
-                .expect("listening path must be specified")
-                .to_string(),
-            acceptor,
-            service.clone(),
-            terminate_receiver,
-            config_source,
-            cmdlib::args::parse_readonly_storage(&matches),
-            cmdlib::args::parse_blobstore_options(&matches),
-            cmdlib::args::get_scribe(fb, &matches)?,
-        )
+    let repo_listeners = {
+        cloned!(root_log, service);
+        async move {
+            repo_listener::create_repo_listeners(
+                fb,
+                is_test,
+                config.common,
+                config.repos.into_iter(),
+                &mysql_options,
+                caching,
+                disabled_hooks,
+                root_log,
+                host_port,
+                acceptor,
+                service,
+                terminate_receiver,
+                config_source,
+                readonly_storage,
+                blobstore_options,
+                scribe,
+            )
+            .await
+        }
     };
 
     #[cfg(fbcode_build)]

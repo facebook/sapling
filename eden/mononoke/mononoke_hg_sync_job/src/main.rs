@@ -210,7 +210,7 @@ where
 
 fn get_read_write_fetcher(
     fb: FacebookInit,
-    mysql_options: MysqlOptions,
+    mysql_options: &MysqlOptions,
     repo_lock_db_addr: Option<&str>,
     hgsql_name: HgsqlName,
     lock_on_failure: bool,
@@ -712,7 +712,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 repo.clone(),
                 hgsql_use_sqlite,
                 hgsql_db_addr.as_ref().map(|a| a.as_ref()),
-                mysql_options,
+                &mysql_options,
                 readonly_storage.0,
                 hgsql_globalrevs_name,
             )
@@ -742,7 +742,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             // connection goes via Myrouter
             myrouter_ready(
                 repo_config.primary_metadata_db_address(),
-                mysql_options,
+                &mysql_options,
                 ctx.logger().clone(),
             )
             .compat()
@@ -761,7 +761,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
     let (lock_via, unlock_via) = get_read_write_fetcher(
         ctx.fb,
-        mysql_options,
+        &mysql_options,
         get_repo_sqldb_address(&ctx, &matches, &repo_config.hgsql_name)?.as_deref(),
         repo_config.hgsql_name.clone(),
         matches.is_present("lock-on-failure"),

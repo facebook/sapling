@@ -1439,7 +1439,7 @@ async fn open_repo_internal_with_repo_id(
         fb,
         reponame,
         &config,
-        mysql_options,
+        &mysql_options,
         caching,
         common_config.censored_scuba_params,
         readonly_storage,

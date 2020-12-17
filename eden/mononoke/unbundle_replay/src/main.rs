@@ -406,7 +406,7 @@ async fn do_main(
         fb,
         repo_name,
         &repo_config,
-        mysql_options,
+        &mysql_options,
         caching,
         // We don't need to log redacted access from here
         CensoredScubaParams {

@@ -73,7 +73,7 @@ where
 
 pub fn myrouter_ready(
     db_addr_opt: Option<String>,
-    mysql_options: MysqlOptions,
+    mysql_options: &MysqlOptions,
     _: Logger,
 ) -> BoxFuture<(), Error> {
     if db_addr_opt.is_none() {

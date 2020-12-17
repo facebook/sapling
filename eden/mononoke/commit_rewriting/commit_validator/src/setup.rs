@@ -64,7 +64,7 @@ pub async fn get_validation_helpers<'a>(
     let mapping = SqlSyncedCommitMapping::with_metadata_database_config(
         fb,
         &repo_config.storage_config.metadata,
-        mysql_options,
+        &mysql_options,
         readonly_storage.0,
     )
     .await?;

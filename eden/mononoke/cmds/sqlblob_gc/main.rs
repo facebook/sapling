@@ -171,7 +171,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         let blobstore = make_sql_blobstore(
             fb,
             blobstore_config,
-            mysql_options,
+            &mysql_options,
             blobstore_factory::ReadOnlyStorage(false),
             &blobstore_options,
             &config_store,

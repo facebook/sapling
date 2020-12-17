@@ -113,7 +113,7 @@ fn main(fb: fbinit::FacebookInit) {
         let blobstore = make_blobstore(
             fb,
             storage_config.blobstore.clone(),
-            mysql_options.clone(),
+            &mysql_options,
             blobstore_factory::ReadOnlyStorage(false),
             &blobstore_options,
             &logger,

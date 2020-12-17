@@ -147,7 +147,7 @@ async fn get_blobstore(
     make_blobstore(
         fb,
         blobconfig,
-        mysql_options,
+        &mysql_options,
         readonly_storage,
         &blobstore_options,
         &logger,

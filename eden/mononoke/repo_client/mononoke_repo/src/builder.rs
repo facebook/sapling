@@ -38,7 +38,7 @@ impl MononokeRepoBuilder {
         ctx: CoreContext,
         name: String,
         config: RepoConfig,
-        mysql_options: MysqlOptions,
+        mysql_options: &MysqlOptions,
         caching: Caching,
         censored_scuba_params: CensoredScubaParams,
         readonly_storage: ReadOnlyStorage,
@@ -64,7 +64,7 @@ impl MononokeRepoBuilder {
             ctx,
             repo,
             config,
-            mysql_options,
+            mysql_options: mysql_options.clone(),
             readonly_storage,
             record_infinitepush_writes,
         })
@@ -103,7 +103,7 @@ impl MononokeRepoBuilder {
                     ctx.fb,
                     repo.clone(),
                     db_address,
-                    mysql_options,
+                    &mysql_options,
                     repoid,
                     readonly_storage.0,
                 )
@@ -120,7 +120,7 @@ impl MononokeRepoBuilder {
                 let reverse_filler_queue = SqlReverseFillerQueue::with_metadata_database_config(
                     ctx.fb,
                     &storage_config.metadata,
-                    mysql_options,
+                    &mysql_options,
                     readonly_storage.0,
                 )
                 .await?;
@@ -138,7 +138,7 @@ impl MononokeRepoBuilder {
                 let r = SqlRepoReadWriteStatus::with_xdb(
                     ctx.fb,
                     addr,
-                    mysql_options,
+                    &mysql_options,
                     readonly_storage.0,
                 )
                 .await?;
@@ -151,7 +151,7 @@ impl MononokeRepoBuilder {
         let mutable_counters = SqlMutableCounters::with_metadata_database_config(
             ctx.fb,
             &storage_config.metadata,
-            mysql_options,
+            &mysql_options,
             readonly_storage.0,
         );
 

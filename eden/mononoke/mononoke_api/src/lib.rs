@@ -93,6 +93,8 @@ impl Mononoke {
                 .filter(move |&(_, ref config)| config.enabled)
                 .map({
                     move |(name, config)| {
+                        let mysql_options = mysql_options.clone();
+
                         let disabled_hooks = disabled_hooks.get(&name).cloned().unwrap_or_default();
                         cloned!(logger, common_config, blobstore_options, config_store);
                         async move {

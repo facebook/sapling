@@ -138,7 +138,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         let sql_factory = make_metadata_sql_factory(
             ctx.fb,
             storage_config.metadata,
-            mysql_options,
+            mysql_options.clone(),
             readonly_storage,
             ctx.logger().clone(),
         )

@@ -96,7 +96,7 @@ pub mod facebook {
         Mysql,
     }
 
-    #[derive(Copy, Clone, Debug)]
+    #[derive(Debug, Clone)]
     pub struct MysqlOptions {
         pub connection_type: MysqlConnectionType,
         pub master_only: bool,

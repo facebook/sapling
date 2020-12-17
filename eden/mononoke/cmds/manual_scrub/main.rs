@@ -131,7 +131,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         let blobstore = open_blobstore(
             fb,
             storage_config,
-            mysql_options,
+            &mysql_options,
             &blobstore_options,
             &logger,
             config_store,

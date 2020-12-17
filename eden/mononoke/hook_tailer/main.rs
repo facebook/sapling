@@ -132,11 +132,12 @@ async fn run_hook_tailer<'a>(
 
     let caching = cmdlib::args::init_cachelib(fb, matches);
     let readonly_storage = cmdlib::args::parse_readonly_storage(matches);
+    let mysql_options = cmdlib::args::parse_mysql_options(matches);
     let builder = BlobrepoBuilder::new(
         fb,
         repo_name.into(),
         &config,
-        cmdlib::args::parse_mysql_options(matches),
+        &mysql_options,
         caching,
         common_config.censored_scuba_params,
         readonly_storage,

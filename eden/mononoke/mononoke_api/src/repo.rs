@@ -123,14 +123,14 @@ impl fmt::Debug for RepoContext {
 pub async fn open_synced_commit_mapping(
     fb: FacebookInit,
     config: RepoConfig,
-    mysql_options: MysqlOptions,
+    mysql_options: &MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     logger: &Logger,
 ) -> Result<Arc<SqlSyncedCommitMapping>, Error> {
     let sql_factory = make_metadata_sql_factory(
         fb,
         config.storage_config.metadata,
-        mysql_options,
+        mysql_options.clone(),
         readonly_storage,
         logger.clone(),
     )
@@ -164,7 +164,7 @@ impl Repo {
         let synced_commit_mapping = open_synced_commit_mapping(
             fb,
             config.clone(),
-            mysql_options,
+            &mysql_options,
             readonly_storage,
             &logger,
         )
@@ -177,7 +177,7 @@ impl Repo {
             fb,
             name.clone(),
             &config,
-            mysql_options,
+            &mysql_options,
             with_cachelib,
             common_config.censored_scuba_params,
             readonly_storage,
@@ -227,7 +227,7 @@ impl Repo {
             let mutable_counters = SqlMutableCounters::with_metadata_database_config(
                 fb,
                 db_config,
-                mysql_options,
+                &mysql_options,
                 readonly_storage.0,
             )
             .await?;
@@ -240,7 +240,7 @@ impl Repo {
                 let r = SqlRepoReadWriteStatus::with_xdb(
                     fb,
                     addr.clone(),
-                    mysql_options,
+                    &mysql_options,
                     readonly_storage.0,
                 )
                 .await?;

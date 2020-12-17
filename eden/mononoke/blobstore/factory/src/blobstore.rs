@@ -89,7 +89,7 @@ impl Default for BlobstoreOptions {
 pub fn make_blobstore<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
-    mysql_options: MysqlOptions,
+    mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
@@ -116,7 +116,7 @@ pub fn make_blobstore<'a>(
 pub async fn make_sql_blobstore<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
-    mysql_options: MysqlOptions,
+    mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
     config_store: &'a ConfigStore,
@@ -229,7 +229,7 @@ pub async fn make_sql_blobstore<'a>(
 pub fn make_blobstore_put_ops<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
-    mysql_options: MysqlOptions,
+    mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
@@ -466,7 +466,7 @@ pub async fn make_blobstore_multiplexed<'a>(
     inner_config: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
     minimum_successful_writes: NonZeroUsize,
     scrub_args: Option<(Arc<dyn ScrubHandler>, ScrubAction)>,
-    mysql_options: MysqlOptions,
+    mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,

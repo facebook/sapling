@@ -20,7 +20,7 @@ use sql_ext::facebook::MysqlOptions;
 pub async fn open_blobstore(
     fb: FacebookInit,
     mut storage_config: StorageConfig,
-    mysql_options: MysqlOptions,
+    mysql_options: &MysqlOptions,
     blobstore_options: &BlobstoreOptions,
     logger: &Logger,
     config_store: &ConfigStore,

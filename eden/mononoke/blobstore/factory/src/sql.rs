@@ -49,7 +49,7 @@ impl MetadataSqlFactory {
             T::with_metadata_database_config(
                 factory.fb,
                 &factory.dbconfig,
-                factory.mysql_options,
+                &factory.mysql_options,
                 factory.readonly.0,
             )
             .await
@@ -68,7 +68,7 @@ impl MetadataSqlFactory {
             T::with_metadata_database_config(
                 factory.fb,
                 &factory.dbconfig,
-                factory.mysql_options,
+                &factory.mysql_options,
                 factory.readonly.0,
             )
             .await
@@ -146,7 +146,7 @@ pub fn make_metadata_sql_factory(
     logger: Logger,
 ) -> impl Future<Item = MetadataSqlFactory, Error = Error> {
     let ready = match dbconfig.primary_address() {
-        Some(dbaddress) => myrouter_ready(Some(dbaddress), mysql_options, logger).left_future(),
+        Some(dbaddress) => myrouter_ready(Some(dbaddress), &mysql_options, logger).left_future(),
         None => future::ok(()).right_future(),
     };
     ready.map(move |()| MetadataSqlFactory {

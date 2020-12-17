@@ -38,7 +38,12 @@ pub trait FbSqlConstruct: SqlConstruct + Sized + Send + Sync + 'static {
         fb_unimplemented!()
     }
 
-    async fn with_xdb(_: FacebookInit, _: String, _: MysqlOptions, _: bool) -> Result<Self> {
+    async fn with_xdb<'a>(
+        _: FacebookInit,
+        _: String,
+        _: &'a MysqlOptions,
+        _: bool,
+    ) -> Result<Self> {
         fb_unimplemented!()
     }
 }
@@ -76,7 +81,7 @@ pub trait FbSqlShardedConstruct: SqlShardedConstruct + Sized + Send + Sync + 'st
         _: FacebookInit,
         _: String,
         _: usize,
-        _: MysqlOptions,
+        _: &MysqlOptions,
         _: bool,
     ) -> Result<Self> {
         fb_unimplemented!()

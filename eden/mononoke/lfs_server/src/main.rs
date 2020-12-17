@@ -273,13 +273,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .filter(|(_name, config)| config.enabled)
         .map(|(name, config)| {
             let censored_scuba_params = common.censored_scuba_params.clone();
-            cloned!(blobstore_options, test_acl_checker, logger);
+            cloned!(blobstore_options, test_acl_checker, logger, mysql_options);
             async move {
                 let builder = BlobrepoBuilder::new(
                     fb,
                     name.clone(),
                     &config,
-                    mysql_options,
+                    &mysql_options,
                     caching,
                     censored_scuba_params,
                     readonly_storage,

@@ -84,7 +84,7 @@ pub struct BlobrepoBuilder<'a> {
     reponame: String,
     storage_config: StorageConfig,
     repoid: RepositoryId,
-    mysql_options: MysqlOptions,
+    mysql_options: &'a MysqlOptions,
     caching: Caching,
     bookmarks_cache_ttl: Option<Duration>,
     redaction: Redaction,
@@ -103,7 +103,7 @@ impl<'a> BlobrepoBuilder<'a> {
         fb: FacebookInit,
         reponame: String,
         config: &RepoConfig,
-        mysql_options: MysqlOptions,
+        mysql_options: &'a MysqlOptions,
         caching: Caching,
         censored_scuba_params: CensoredScubaParams,
         readonly_storage: ReadOnlyStorage,
@@ -164,7 +164,7 @@ impl<'a> BlobrepoBuilder<'a> {
         let sql_factory = make_metadata_sql_factory(
             fb,
             storage_config.metadata,
-            mysql_options,
+            mysql_options.clone(),
             readonly_storage,
             // FIXME: remove clone when make_metadata_sql_factory is async-await
             logger.clone(),
@@ -174,7 +174,7 @@ impl<'a> BlobrepoBuilder<'a> {
         let blobstore = make_blobstore(
             fb,
             storage_config.blobstore,
-            mysql_options,
+            &mysql_options,
             readonly_storage,
             &blobstore_options,
             &logger,

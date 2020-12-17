@@ -23,7 +23,7 @@ pub trait SqlConstructFromDatabaseConfig: FbSqlConstruct + SqlConstruct {
     async fn with_database_config(
         fb: FacebookInit,
         database_config: &DatabaseConfig,
-        mysql_options: MysqlOptions,
+        mysql_options: &MysqlOptions,
         readonly: bool,
     ) -> Result<Self> {
         match database_config {
@@ -51,7 +51,7 @@ pub trait SqlConstructFromMetadataDatabaseConfig: FbSqlConstruct + SqlConstruct 
     async fn with_metadata_database_config(
         fb: FacebookInit,
         metadata_database_config: &MetadataDatabaseConfig,
-        mysql_options: MysqlOptions,
+        mysql_options: &MysqlOptions,
         readonly: bool,
     ) -> Result<Self> {
         match metadata_database_config {
@@ -83,7 +83,7 @@ pub trait SqlShardableConstructFromMetadataDatabaseConfig:
     async fn with_metadata_database_config(
         fb: FacebookInit,
         metadata_database_config: &MetadataDatabaseConfig,
-        mysql_options: MysqlOptions,
+        mysql_options: &MysqlOptions,
         readonly: bool,
     ) -> Result<Self> {
         match metadata_database_config {

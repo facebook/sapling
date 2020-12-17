@@ -19,12 +19,6 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerivable;
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt as _, TryFutureExt},
-};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use futures_old::{future, Future};
 use hook_manager_factory::make_hook_manager;
 use maplit::hashset;
 use mercurial_derived_data::MappedHgChangesetId;
@@ -147,241 +141,227 @@ pub struct RepoHandler {
     pub repo_client_knobs: RepoClientKnobs,
 }
 
-pub fn repo_handlers(
+pub async fn repo_handlers<'a>(
     fb: FacebookInit,
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
-    mysql_options: MysqlOptions,
+    mysql_options: &'a MysqlOptions,
     caching: Caching,
     mut disabled_hooks: HashMap<String, HashSet<String>>,
     censored_scuba_params: CensoredScubaParams,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
     root_log: &Logger,
-    config_store: &'static ConfigStore,
-) -> BoxFuture<HashMap<String, RepoHandler>, Error> {
+    config_store: &'a ConfigStore,
+) -> Result<HashMap<String, RepoHandler>, Error> {
     // compute eagerly to avoid lifetime issues
-    let repo_futs: Vec<BoxFuture<(String, IncompleteRepoHandler), Error>> = repos
-        .into_iter()
-        .filter(|(reponame, config)| {
-            if !config.enabled {
-                info!(root_log, "Repo {} not enabled", reponame)
-            };
-            config.enabled
-        })
-        .map(|(reponame, config)| {
-            let root_log = root_log.clone();
-            let logger = root_log.new(o!("repo" => reponame.clone()));
-            let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let mut tuples: Vec<(String, IncompleteRepoHandler)> = Vec::new();
 
-            let disabled_hooks = disabled_hooks.remove(&reponame).unwrap_or_default();
+    for (reponame, config) in repos.into_iter().filter(|(reponame, config)| {
+        if !config.enabled {
+            info!(root_log, "Repo {} not enabled", reponame)
+        };
+        config.enabled
+    }) {
+        let root_log = root_log.clone();
+        let logger = root_log.new(o!("repo" => reponame.clone()));
+        let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-            // Clone the few things we're going to need later in our bootstrap.
-            let cache_warmup_params = config.cache_warmup.clone();
-            let scuba_table = config.scuba_table.clone();
-            let scuba_local_path = config.scuba_local_path.clone();
-            let db_config = config.storage_config.metadata.clone();
-            let preserve_raw_bundle2 = config.bundle2_replay_params.preserve_raw_bundle2.clone();
-            let wireproto_logging = config.wireproto_logging.clone();
-            let commit_sync_config = config.commit_sync_config.clone();
-            let record_infinitepush_writes: bool =
-                config.infinitepush.populate_reverse_filler_queue
-                    && config.infinitepush.allow_writes;
-            let repo_client_use_warm_bookmarks_cache = config.repo_client_use_warm_bookmarks_cache;
-            let warm_bookmark_cache_check_blobimport = config.warm_bookmark_cache_check_blobimport;
-            let repo_client_knobs = config.repo_client_knobs.clone();
+        let disabled_hooks = disabled_hooks.remove(&reponame).unwrap_or_default();
 
-            // TODO: Don't require ownership of config in load_hooks so we can avoid cloning the entire
-            // config here, and instead just pass a reference.
-            let hook_config = config.clone();
+        // Clone the few things we're going to need later in our bootstrap.
+        let cache_warmup_params = config.cache_warmup.clone();
+        let scuba_table = config.scuba_table.clone();
+        let scuba_local_path = config.scuba_local_path.clone();
+        let db_config = config.storage_config.metadata.clone();
+        let preserve_raw_bundle2 = config.bundle2_replay_params.preserve_raw_bundle2.clone();
+        let wireproto_logging = config.wireproto_logging.clone();
+        let commit_sync_config = config.commit_sync_config.clone();
+        let record_infinitepush_writes: bool =
+            config.infinitepush.populate_reverse_filler_queue && config.infinitepush.allow_writes;
+        let repo_client_use_warm_bookmarks_cache = config.repo_client_use_warm_bookmarks_cache;
+        let warm_bookmark_cache_check_blobimport = config.warm_bookmark_cache_check_blobimport;
+        let repo_client_knobs = config.repo_client_knobs.clone();
 
-            // And clone a few things of which we only have one but which we're going to need one
-            // per repo.
-            let blobstore_options = blobstore_options.clone();
-            let censored_scuba_params = censored_scuba_params.clone();
+        // TODO: Don't require ownership of config in load_hooks so we can avoid cloning the entire
+        // config here, and instead just pass a reference.
+        let hook_config = config.clone();
 
-            let fut = async move {
-                info!(logger, "Opening blobrepo");
-                let builder = MononokeRepoBuilder::prepare(
-                    ctx.clone(),
-                    reponame.clone(),
-                    config,
-                    mysql_options,
-                    caching,
-                    censored_scuba_params.clone(),
-                    readonly_storage,
-                    blobstore_options,
-                    record_infinitepush_writes,
-                    config_store,
-                )
-                .await?;
+        // And clone a few things of which we only have one but which we're going to need one
+        // per repo.
+        let blobstore_options = blobstore_options.clone();
+        let censored_scuba_params = censored_scuba_params.clone();
 
-                let blobrepo = builder.blobrepo().clone();
+        info!(logger, "Opening blobrepo");
+        let builder = MononokeRepoBuilder::prepare(
+            ctx.clone(),
+            reponame.clone(),
+            config,
+            mysql_options,
+            caching,
+            censored_scuba_params.clone(),
+            readonly_storage,
+            blobstore_options,
+            record_infinitepush_writes,
+            config_store,
+        )
+        .await?;
 
-                info!(logger, "Warming up cache");
-                let initial_warmup = tokio::task::spawn({
-                    cloned!(ctx, blobrepo, reponame);
-                    async move {
-                        cache_warmup(&ctx, &blobrepo, cache_warmup_params)
-                            .await
-                            .with_context(|| {
-                                format!("while warming up cache for repo: {}", reponame)
-                            })
-                    }
-                });
+        let blobrepo = builder.blobrepo().clone();
 
-                let mut scuba_logger = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table);
-                scuba_logger.add_common_server_data();
-                if let Some(scuba_local_path) = scuba_local_path {
-                    scuba_logger = scuba_logger.with_log_file(scuba_local_path)?;
-                }
+        info!(logger, "Warming up cache");
+        let initial_warmup = tokio::task::spawn({
+            cloned!(ctx, blobrepo, reponame);
+            async move {
+                cache_warmup(&ctx, &blobrepo, cache_warmup_params)
+                    .await
+                    .with_context(|| format!("while warming up cache for repo: {}", reponame))
+            }
+        });
 
-                info!(logger, "Creating HookManager and loading hooks");
-                let hook_manager = make_hook_manager(
-                    &ctx,
-                    &blobrepo,
-                    hook_config,
-                    reponame.as_str(),
-                    &disabled_hooks,
-                )
-                .await?;
+        let mut scuba_logger = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table);
+        scuba_logger.add_common_server_data();
+        if let Some(scuba_local_path) = scuba_local_path {
+            scuba_logger = scuba_logger.with_log_file(scuba_local_path)?;
+        }
 
-                let repo = builder.finalize(Arc::new(hook_manager));
+        info!(logger, "Creating HookManager and loading hooks");
+        let hook_manager = make_hook_manager(
+            &ctx,
+            &blobrepo,
+            hook_config,
+            reponame.as_str(),
+            &disabled_hooks,
+        )
+        .await?;
 
-                let sql_commit_sync_mapping = SqlSyncedCommitMapping::with_metadata_database_config(
-                    fb,
-                    &db_config,
-                    mysql_options,
-                    readonly_storage.0,
-                );
+        let repo = builder.finalize(Arc::new(hook_manager));
 
-                let wireproto_logging = create_wireproto_logging(
-                    fb,
-                    reponame.clone(),
-                    mysql_options,
-                    readonly_storage,
-                    wireproto_logging,
-                    logger.clone(),
-                    config_store,
-                )
-                .compat();
+        let sql_commit_sync_mapping = SqlSyncedCommitMapping::with_metadata_database_config(
+            fb,
+            &db_config,
+            mysql_options,
+            readonly_storage.0,
+        );
 
-                let backsyncer_dbs = open_backsyncer_dbs(
-                    ctx.clone(),
-                    blobrepo.clone(),
-                    db_config.clone(),
-                    mysql_options,
-                    readonly_storage,
-                );
-                let maybe_warm_bookmarks_cache = async {
-                    if repo_client_use_warm_bookmarks_cache {
-                        info!(
-                            ctx.logger(),
-                            "Starting Warm bookmarks cache for {}",
-                            blobrepo.name()
-                        );
-                        let mut warm_bookmarks_cache_builder =
-                            WarmBookmarksCacheBuilder::new(&ctx, &blobrepo);
-                        warm_bookmarks_cache_builder.add_derived_data_warmers(
-                            &hashset! { MappedHgChangesetId::NAME.to_string() },
-                        )?;
-                        if warm_bookmark_cache_check_blobimport {
-                            let mutable_counters =
-                                SqlMutableCounters::with_metadata_database_config(
-                                    fb,
-                                    &db_config,
-                                    mysql_options,
-                                    readonly_storage.0,
-                                )
-                                .await?;
-                            warm_bookmarks_cache_builder
-                                .add_blobimport_warmer(Arc::new(mutable_counters));
-                        }
-                        let warm_bookmarks_cache = warm_bookmarks_cache_builder
-                            .build(BookmarkUpdateDelay::Disallow)
-                            .await?;
+        let wireproto_logging = create_wireproto_logging(
+            fb,
+            reponame.clone(),
+            mysql_options,
+            readonly_storage,
+            wireproto_logging,
+            logger.clone(),
+            config_store,
+        );
 
-                        Ok(Some(Arc::new(warm_bookmarks_cache)))
-                    } else {
-                        Ok(None)
-                    }
-                };
-
+        let backsyncer_dbs = open_backsyncer_dbs(
+            ctx.clone(),
+            blobrepo.clone(),
+            db_config.clone(),
+            mysql_options.clone(),
+            readonly_storage,
+        );
+        let maybe_warm_bookmarks_cache = async {
+            if repo_client_use_warm_bookmarks_cache {
                 info!(
-                    logger,
-                    "Creating MononokeRepo, CommitSyncMapping, WireprotoLogging, TargetRepoDbs, \
-                    WarmBookmarksCache"
+                    ctx.logger(),
+                    "Starting Warm bookmarks cache for {}",
+                    blobrepo.name()
                 );
-                let (
-                    repo,
-                    sql_commit_sync_mapping,
-                    wireproto_logging,
-                    backsyncer_dbs,
-                    maybe_warm_bookmarks_cache,
-                ) = futures::future::try_join5(
-                    repo,
-                    sql_commit_sync_mapping,
-                    wireproto_logging,
-                    backsyncer_dbs,
-                    maybe_warm_bookmarks_cache,
-                )
-                .await?;
+                let mut warm_bookmarks_cache_builder =
+                    WarmBookmarksCacheBuilder::new(&ctx, &blobrepo);
+                warm_bookmarks_cache_builder.add_derived_data_warmers(
+                    &hashset! { MappedHgChangesetId::NAME.to_string() },
+                )?;
+                if warm_bookmark_cache_check_blobimport {
+                    let mutable_counters = SqlMutableCounters::with_metadata_database_config(
+                        fb,
+                        &db_config,
+                        mysql_options,
+                        readonly_storage.0,
+                    )
+                    .await?;
+                    warm_bookmarks_cache_builder.add_blobimport_warmer(Arc::new(mutable_counters));
+                }
+                let warm_bookmarks_cache = warm_bookmarks_cache_builder
+                    .build(BookmarkUpdateDelay::Disallow)
+                    .await?;
 
-                let maybe_incomplete_push_redirector_args = commit_sync_config.and_then({
-                    cloned!(logger);
-                    move |commit_sync_config| {
-                        if commit_sync_config.large_repo_id == blobrepo.get_repoid() {
-                            debug!(
-                                logger,
-                                "Not constructing push redirection args: {:?}",
-                                blobrepo.get_repoid()
-                            );
-                            None
-                        } else {
-                            debug!(
-                                logger,
-                                "Constructing incomplete push redirection args: {:?}",
-                                blobrepo.get_repoid()
-                            );
-                            Some(IncompletePushRedirectorArgs {
-                                commit_sync_config,
-                                synced_commit_mapping: sql_commit_sync_mapping,
-                                target_repo_dbs: backsyncer_dbs,
-                                source_blobrepo: blobrepo,
-                            })
-                        }
-                    }
-                });
+                Ok(Some(Arc::new(warm_bookmarks_cache)))
+            } else {
+                Ok(None)
+            }
+        };
 
-                initial_warmup.await??;
+        info!(
+            logger,
+            "Creating MononokeRepo, CommitSyncMapping, WireprotoLogging, TargetRepoDbs, \
+                WarmBookmarksCache"
+        );
+        let (
+            repo,
+            sql_commit_sync_mapping,
+            wireproto_logging,
+            backsyncer_dbs,
+            maybe_warm_bookmarks_cache,
+        ) = futures::future::try_join5(
+            repo,
+            sql_commit_sync_mapping,
+            wireproto_logging,
+            backsyncer_dbs,
+            maybe_warm_bookmarks_cache,
+        )
+        .await?;
 
-                info!(logger, "Repository is ready");
-                Ok((
-                    reponame,
-                    IncompleteRepoHandler {
+        let maybe_incomplete_push_redirector_args = commit_sync_config.and_then({
+            cloned!(logger);
+            move |commit_sync_config| {
+                if commit_sync_config.large_repo_id == blobrepo.get_repoid() {
+                    debug!(
                         logger,
-                        scuba: scuba_logger,
-                        wireproto_logging: Arc::new(wireproto_logging),
-                        repo,
-                        preserve_raw_bundle2,
-                        maybe_incomplete_push_redirector_args,
-                        maybe_warm_bookmarks_cache,
-                        repo_client_knobs,
-                    },
-                ))
-            };
+                        "Not constructing push redirection args: {:?}",
+                        blobrepo.get_repoid()
+                    );
+                    None
+                } else {
+                    debug!(
+                        logger,
+                        "Constructing incomplete push redirection args: {:?}",
+                        blobrepo.get_repoid()
+                    );
+                    Some(IncompletePushRedirectorArgs {
+                        commit_sync_config,
+                        synced_commit_mapping: sql_commit_sync_mapping,
+                        target_repo_dbs: backsyncer_dbs,
+                        source_blobrepo: blobrepo,
+                    })
+                }
+            }
+        });
 
-            fut.boxed().compat().boxify()
-        })
-        .collect();
+        initial_warmup.await??;
 
-    future::join_all(repo_futs)
-        .and_then(build_repo_handlers)
-        .boxify()
+        info!(logger, "Repository is ready");
+        tuples.push((
+            reponame,
+            IncompleteRepoHandler {
+                logger,
+                scuba: scuba_logger,
+                wireproto_logging: Arc::new(wireproto_logging),
+                repo,
+                preserve_raw_bundle2,
+                maybe_incomplete_push_redirector_args,
+                maybe_warm_bookmarks_cache,
+                repo_client_knobs,
+            },
+        ));
+    }
+
+    build_repo_handlers(tuples).await
 }
 
-fn build_repo_handlers(
+async fn build_repo_handlers(
     tuples: Vec<(String, IncompleteRepoHandler)>,
-) -> impl Future<Item = HashMap<String, RepoHandler>, Error = Error> {
+) -> Result<HashMap<String, RepoHandler>, Error> {
     let lookup_table: HashMap<RepositoryId, IncompleteRepoHandler> = tuples
         .iter()
         .map(|(_, incomplete_repo_handler)| {
@@ -392,72 +372,57 @@ fn build_repo_handlers(
         })
         .collect();
 
-    future::join_all({
-        cloned!(lookup_table);
-        tuples
-            .into_iter()
-            .map(move |(reponame, incomplete_repo_handler)| {
-                let repo_handler =
-                    try_boxfuture!(incomplete_repo_handler.try_into_repo_handler(&lookup_table));
-                future::ok((reponame, repo_handler)).boxify()
-            })
-    })
-    .map(|v| v.into_iter().collect())
+    let mut res = HashMap::new();
+    for (reponame, incomplete_repo_handler) in tuples {
+        let repo_handler = incomplete_repo_handler.try_into_repo_handler(&lookup_table)?;
+        res.insert(reponame, repo_handler);
+    }
+    Ok(res)
 }
 
-fn create_wireproto_logging(
+async fn create_wireproto_logging<'a>(
     fb: FacebookInit,
     reponame: String,
-    mysql_options: MysqlOptions,
+    mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     wireproto_logging_config: WireprotoLoggingConfig,
     logger: Logger,
-    config_store: &'static ConfigStore,
-) -> impl Future<Item = WireprotoLogging, Error = Error> {
+    config_store: &'a ConfigStore,
+) -> Result<WireprotoLogging, Error> {
     let WireprotoLoggingConfig {
         storage_config_and_threshold,
         scribe_category,
         local_path,
     } = wireproto_logging_config;
-    let blobstore_fut = match storage_config_and_threshold {
+    let blobstore_and_threshold = match storage_config_and_threshold {
         Some((storage_config, threshold)) => {
             if readonly_storage.0 {
-                return future::err(format_err!(
+                return Err(format_err!(
                     "failed to create blobstore for wireproto logging because storage is readonly",
-                ))
-                .right_future();
+                ));
             }
 
-            async move {
-                let blobstore = make_blobstore(
-                    fb,
-                    storage_config.blobstore,
-                    mysql_options,
-                    readonly_storage,
-                    &Default::default(),
-                    &logger,
-                    config_store,
-                )
-                .await?;
+            let blobstore = make_blobstore(
+                fb,
+                storage_config.blobstore,
+                mysql_options,
+                readonly_storage,
+                &Default::default(),
+                &logger,
+                config_store,
+            )
+            .await?;
 
-                Ok(Some((blobstore, threshold)))
-            }
-            .boxed()
-            .compat()
-            .left_future()
+            Some((blobstore, threshold))
         }
-        None => future::ok(None).right_future(),
+        None => None,
     };
 
-    blobstore_fut
-        .and_then(move |blobstore_and_threshold| {
-            WireprotoLogging::new(
-                fb,
-                reponame,
-                scribe_category,
-                blobstore_and_threshold,
-                local_path.as_ref().map(|p| p.as_ref()),
-            )
-        })
-        .left_future()
+    WireprotoLogging::new(
+        fb,
+        reponame,
+        scribe_category,
+        blobstore_and_threshold,
+        local_path.as_ref().map(|p| p.as_ref()),
+    )
 }

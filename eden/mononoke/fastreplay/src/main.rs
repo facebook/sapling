@@ -254,6 +254,7 @@ async fn bootstrap_repositories<'a>(
     let repos = future::try_join_all(config.repos.into_iter().map(|(name, mut config)| {
         let noop_hook_manager = &noop_hook_manager;
         let blobstore_options = &blobstore_options;
+        let mysql_options = &mysql_options;
 
         let logger = logger.new(o!("repo" => name.clone()));
 

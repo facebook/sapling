@@ -161,7 +161,7 @@ where
 {
     Box::pin(async move {
         // FIXME: remove pinning when this crate is migrated to new futures
-        T::with_metadata_database_config(fb, &dbconfig, mysql_options, readonly_storage.0).await
+        T::with_metadata_database_config(fb, &dbconfig, &mysql_options, readonly_storage.0).await
     })
     .compat()
     .boxify()

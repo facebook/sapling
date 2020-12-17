@@ -104,7 +104,12 @@ async fn do_main<'a>(
     let futs = repos
         .into_iter()
         .map(|(name, config)| {
-            cloned!(blobstore_options, censored_scuba_params, mut scuba);
+            cloned!(
+                blobstore_options,
+                censored_scuba_params,
+                mysql_options,
+                mut scuba
+            );
 
             async move {
                 let logger = logger.new(o!("repo" => name.clone()));
@@ -124,7 +129,7 @@ async fn do_main<'a>(
                         fb,
                         name,
                         &config,
-                        mysql_options,
+                        &mysql_options,
                         caching,
                         censored_scuba_params,
                         readonly_storage,
