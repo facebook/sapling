@@ -13,14 +13,7 @@
 # Start a LFS server for this repository (no upstream, but we --always-wait-for-upstream to get logging consistency)
   $ SCUBA="$TESTTMP/scuba.json"
   $ lfs_log="$TESTTMP/lfs.log"
-  $ lfs_root="$(
-  > SMC_TIERS=foo.bar \
-  > TW_TASK_ID=123 \
-  > TW_CANARY_ID=canary \
-  > TW_JOB_CLUSTER=foo \
-  > TW_JOB_USER=bar \
-  > TW_JOB_NAME=qux \
-  > lfs_server --log "$lfs_log" --always-wait-for-upstream --scuba-log-file "$SCUBA")"
+  $ lfs_root="$(lfs_server --log "$lfs_log" --always-wait-for-upstream --scuba-log-file "$SCUBA")"
 
 # Send some data
   $ yes A 2>/dev/null | head -c 2KiB | hg --config extensions.lfs= debuglfssend "${lfs_root}/lfs1"
@@ -35,7 +28,7 @@
 
 # Check that Scuba logs are present
   $ wait_for_json_record_count "$SCUBA" 5
-  $ jq -S . < "$SCUBA"
+  $ format_single_scuba_sample < "$SCUBA"
   {
     "int": {
       "BlobGets": 1,
@@ -70,8 +63,6 @@
       "time": * (glob)
     },
     "normal": {
-      "build_revision": *, (glob)
-      "build_rule": "*/mononoke/lfs_server:lfs_server", (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": "*", (glob)
@@ -80,12 +71,7 @@
       "http_user_agent": "mercurial/* git/*", (glob)
       "method": "batch",
       "repository": "lfs1",
-      "request_id": "*", (glob)
-      "server_hostname": "*", (glob)
-      "server_tier": "foo.bar",
-      "tw_canary_id": "canary",
-      "tw_handle": "foo/bar/qux",
-      "tw_task_id": "123"
+      "request_id": "*" (glob)
     }
   }
   {
@@ -118,8 +104,6 @@
       "time": * (glob)
     },
     "normal": {
-      "build_revision": *, (glob)
-      "build_rule": "*/mononoke/lfs_server:lfs_server", (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": "*", (glob)
@@ -128,12 +112,7 @@
       "http_user_agent": "mercurial/* git/*", (glob)
       "method": "upload",
       "repository": "lfs1",
-      "request_id": "*", (glob)
-      "server_hostname": "*", (glob)
-      "server_tier": "foo.bar",
-      "tw_canary_id": "canary",
-      "tw_handle": "foo/bar/qux",
-      "tw_task_id": "123"
+      "request_id": "*" (glob)
     }
   }
   {
@@ -171,8 +150,6 @@
     },
     "normal": {
       "batch_order": "*", (glob)
-      "build_revision": *, (glob)
-      "build_rule": "*/mononoke/lfs_server:lfs_server", (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": "*", (glob)
@@ -181,12 +158,7 @@
       "http_user_agent": "mercurial/* git/*", (glob)
       "method": "batch",
       "repository": "lfs1",
-      "request_id": "*", (glob)
-      "server_hostname": "*", (glob)
-      "server_tier": "foo.bar",
-      "tw_canary_id": "canary",
-      "tw_handle": "foo/bar/qux",
-      "tw_task_id": "123"
+      "request_id": "*" (glob)
     },
     "normvector": {
       "batch_internal_missing_blobs": []
@@ -221,8 +193,6 @@
       "time": * (glob)
     },
     "normal": {
-      "build_revision": *, (glob)
-      "build_rule": "*/mononoke/lfs_server:lfs_server", (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": "*", (glob)
@@ -231,12 +201,7 @@
       "http_user_agent": "mercurial/* git/*", (glob)
       "method": "download",
       "repository": "lfs1",
-      "request_id": "*", (glob)
-      "server_hostname": "*", (glob)
-      "server_tier": "foo.bar",
-      "tw_canary_id": "canary",
-      "tw_handle": "foo/bar/qux",
-      "tw_task_id": "123"
+      "request_id": "*" (glob)
     }
   }
   {
@@ -265,8 +230,6 @@
       "time": * (glob)
     },
     "normal": {
-      "build_revision": *, (glob)
-      "build_rule": "*/mononoke/lfs_server:lfs_server", (glob)
       "client_hostname": "localhost",
       "client_ip": "$LOCALIP",
       "http_host": *, (glob)
@@ -274,11 +237,6 @@
       "http_path": "/config",
       "http_query": "foo=bar",
       "http_user_agent": "curl/*", (glob)
-      "request_id": *, (glob)
-      "server_hostname": *, (glob)
-      "server_tier": "foo.bar",
-      "tw_canary_id": "canary",
-      "tw_handle": "foo/bar/qux",
-      "tw_task_id": "123"
+      "request_id": * (glob)
     }
   }

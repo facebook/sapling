@@ -128,19 +128,25 @@ def maybe_use_local_test_paths(manifest_env: ManifestEnv):
     if int(os.environ.get("NO_LOCAL_PATHS", 0)):
         return
 
+    is_oss_build = facebook_test_root(manifest_env) is None
+
     fbsource = subprocess.check_output(["hg", "root"], encoding="utf-8").strip()
     fbcode = os.path.join(fbsource, "fbcode")
     tests = os.path.join(fbcode, "eden/mononoke/tests/integration")
 
-    manifest_env.update(
-        {
-            "TEST_CERTS": os.path.join(tests, "certs/facebook"),
-            "TEST_ROOT_PUBLIC": tests,
-            "TEST_ROOT_FACEBOOK": os.path.join(tests, "facebook"),
-            "TEST_FIXTURES": tests,
-            "RUN_TESTS_LIBRARY": os.path.join(fbcode, "eden/scm/tests"),
-        }
-    )
+    updates_to_apply = {
+        "TEST_ROOT_PUBLIC": tests,
+        "TEST_FIXTURES": tests,
+        "RUN_TESTS_LIBRARY": os.path.join(fbcode, "eden/scm/tests"),
+    }
+
+    if is_oss_build:
+        updates_to_apply["TEST_CERTS"] = os.path.join(tests, "certs")
+    else:
+        updates_to_apply["TEST_CERTS"] = os.path.join(tests, "certs/facebook")
+        updates_to_apply["TEST_ROOT_FACEBOOK"] = os.path.join(tests, "facebook")
+
+    manifest_env.update(updates_to_apply)
 
 
 def _hg_runner(

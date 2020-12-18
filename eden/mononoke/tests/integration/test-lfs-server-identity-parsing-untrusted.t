@@ -27,17 +27,11 @@
 
 # Check for identities from header
   $ wait_for_json_record_count "$SCUBA" 2
-  $ jq -S .normvector.client_identities < "$SCUBA"
-  [
-    "MACHINE:devvm000.lla0.facebook.com",
-    "MACHINE_TIER:devvm",
-    "USER:myusername0"
-  ]
-  [
-    "MACHINE:devvm000.lla0.facebook.com",
-    "MACHINE_TIER:devvm",
-    "USER:myusername0"
-  ]
+  $ diff <(
+  >   jq -S .normvector.client_identities "$SCUBA"
+  > ) <(
+  >   printf "$JSON_CLIENT_ID\n$JSON_CLIENT_ID" | jq -S .
+  > )
 
 # Make a request with a valid encoded client identity header, but without being
 # the trusted proxy ident. This means that the LFS server should parse our
@@ -47,9 +41,8 @@
   200
 
   $ wait_for_json_record_count "$SCUBA" 1
-  $ jq -S .normvector.client_identities < "$SCUBA"
-  [
-    "MACHINE:devvm000.lla0.facebook.com",
-    "MACHINE_TIER:devvm",
-    "USER:myusername0"
-  ]
+  $ diff <(
+  >   jq -S .normvector.client_identities "$SCUBA"
+  > ) <(
+  >   printf "$JSON_CLIENT_ID" | jq -S .
+  > )

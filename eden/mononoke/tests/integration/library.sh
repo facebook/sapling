@@ -6,9 +6,9 @@
 
 # Library routines and initial setup for Mononoke-related tests.
 
-if [ -f "$TEST_FIXTURES/facebook/fb_library.sh" ]; then
+if [ -n "$FB_TEST_FIXTURES" ] && [ -f "$FB_TEST_FIXTURES/fb_library.sh" ]; then
   # shellcheck source=fbcode/eden/mononoke/tests/integration/facebook/fb_library.sh
-  . "$TEST_FIXTURES/facebook/fb_library.sh"
+  . "$FB_TEST_FIXTURES/fb_library.sh"
 fi
 
 ALLOWED_IDENTITY_TYPE="${FB_ALLOWED_IDENTITY_TYPE:-X509_SUBJECT_NAME}"

@@ -18,4 +18,4 @@ sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = 
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 async-trait = "0.1.29"
-futures-util = "0.3"
+futures-util = "0.3.7"

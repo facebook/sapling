@@ -15,4 +15,4 @@ live_commit_sync_config = { path = "../../commit_rewriting/live_commit_sync_conf
 synced_commit_mapping = { path = "../../commit_rewriting/synced_commit_mapping" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-util = "0.3"
+futures-util = "0.3.7"

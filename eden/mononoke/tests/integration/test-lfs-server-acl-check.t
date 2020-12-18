@@ -62,8 +62,11 @@
 
 # Make a request with a valid encoded client identity header
 # NOTE: The LFS Server trusts the identity sslcurl passes as a trusted proxy
-  $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL_REPO_ENFORCE_ACL" --header "$ALLOWED_IDENT"
-  200
+  $ if [ -n "$HAS_FB" ]; then
+  > diff <(
+  >   sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL_REPO_ENFORCE_ACL" --header "$ALLOWED_IDENT"
+  > ) <( echo "200" )
+  > fi
 
 # Make a request without specifying an identity in the header
   $ sslcurl -s -o /dev/null -w "%{http_code}\n" "$DOWNLOAD_URL_REPO_ENFORCE_ACL"
