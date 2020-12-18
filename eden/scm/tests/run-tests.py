@@ -320,6 +320,16 @@ defaults = {
 }
 
 
+def s(strorbytes):
+    """Normalize to a str"""
+    if isinstance(strorbytes, str):
+        return strorbytes
+    elif isinstance(strorbytes, bytes):
+        return strorbytes.decode("utf-8")
+    else:
+        raise TypeError("%r is not str or bytes" % (strorbytes,))
+
+
 def canonpath(path):
     return os.path.realpath(os.path.expanduser(path))
 
@@ -1355,7 +1365,7 @@ class Test(unittest.TestCase):
             )
             log(
                 "\nSet up config environment by:\n"
-                "  export HGRCPATH=%s" % self._gethgrcpath()
+                "  export HGRCPATH=%s" % s(self._gethgrcpath())
             )
         else:
             shutil.rmtree(self._testtmp, True)
@@ -1899,7 +1909,7 @@ class TTest(Test):
             # This is most likely a mis-spelled feature name, or some
             # codemod that removes features from hghave without cleaning
             # up related test code. Treat it as a test failure.
-            raise AssertionError("feature unknown to hghave: %r" % reqs)
+            raise AssertionError("feature unknown to hghave: %r" % [s(r) for r in reqs])
 
         if ret != 0:
             return False, stdout
@@ -1941,7 +1951,7 @@ class TTest(Test):
                     # Commit to git.
                     script.append(
                         b"testrecord %r\n"
-                        % ("%s (line %s)" % (linecontent.strip(), line),)
+                        % ("%s (line %s)" % (s(linecontent.strip()), line),)
                     )
 
         script = []
