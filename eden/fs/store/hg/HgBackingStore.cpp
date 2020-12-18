@@ -317,30 +317,32 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
     RelativePath path,
     std::optional<Hash> commitId,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
-  return folly::via(
-             importThreadPool_.get(),
-             [path,
-              manifestNode,
-              stats = stats_,
-              &liveImportTreeWatches = liveImportTreeWatches_] {
-               Importer& importer = getThreadLocalImporter();
-               folly::stop_watch<std::chrono::milliseconds> watch;
-               RequestMetricsScope queueTracker{&liveImportTreeWatches};
+  auto fut =
+      folly::via(
+          importThreadPool_.get(),
+          [path,
+           manifestNode,
+           stats = stats_,
+           &liveImportTreeWatches = liveImportTreeWatches_] {
+            Importer& importer = getThreadLocalImporter();
+            folly::stop_watch<std::chrono::milliseconds> watch;
+            RequestMetricsScope queueTracker{&liveImportTreeWatches};
 
-               auto serializedTree = importer.fetchTree(path, manifestNode);
-               stats->getHgBackingStoreStatsForCurrentThread()
-                   .hgBackingStoreImportTree.addValue(watch.elapsed().count());
+            auto serializedTree = importer.fetchTree(path, manifestNode);
+            stats->getHgBackingStoreStatsForCurrentThread()
+                .hgBackingStoreImportTree.addValue(watch.elapsed().count());
 
-               return serializedTree;
-             })
-      .via(serverThreadPool_)
-      .thenTry([this,
-                ownedPath = std::move(path),
-                node = std::move(manifestNode),
-                treeID = std::move(edenTreeID),
-                batch = std::move(writeBatch),
-                commitId = std::move(commitId)](
-                   folly::Try<std::unique_ptr<IOBuf>> val) {
+            return serializedTree;
+          })
+          .via(serverThreadPool_);
+
+  return std::move(fut).thenTry(
+      [this,
+       ownedPath = std::move(path),
+       node = std::move(manifestNode),
+       treeID = std::move(edenTreeID),
+       batch = std::move(writeBatch),
+       commitId = std::move(commitId)](folly::Try<std::unique_ptr<IOBuf>> val) {
         // Note: the `value` call will throw if fetchTree threw an exception
         auto iobuf = std::move(val).value();
         return processTree(
