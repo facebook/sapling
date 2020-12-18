@@ -34,6 +34,7 @@ class _emptylockinfo(object):
 
 
 emptylockinfo = _emptylockinfo()
+defaultlockwaitwarntimeout = 3
 
 
 class lockinfo(object):
@@ -141,7 +142,9 @@ class lockinfo(object):
         return _("process %r on host %r") % (self.pid, self.host)
 
 
-def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
+def trylock(
+    ui, vfs, lockname, timeout, warntimeout=defaultlockwaitwarntimeout, *args, **kwargs
+):
     """return an acquired lock or raise an a LockHeld exception
 
     This function is responsible to issue warnings and or debug messages about
