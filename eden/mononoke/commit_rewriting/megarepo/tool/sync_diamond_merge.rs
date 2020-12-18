@@ -10,7 +10,7 @@
 /// NOTE - this is not a production quality tool, but rather a best effort attempt to
 /// half-automate a rare case that might occur. Tool most likely doesn't cover all the cases.
 /// USE WITH CARE!
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::convert_diff_result_into_file_change_for_diamond_merge;
@@ -33,7 +33,7 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
 use maplit::hashmap;
 use mercurial_types::{HgFileNodeId, HgManifestId};
-use metaconfig_types::RepoConfig;
+use metaconfig_types::{CommitSyncConfigVersion, RepoConfig};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::fetch_skiplist_index;
@@ -211,8 +211,34 @@ async fn create_rewritten_merge_commit(
 
     let merge_bcs = merge_bcs.into_mut();
 
-    let large_root = remap_commit(ctx.clone(), &syncers.small_to_large, small_root).await?;
-    let remapped_p2 = remap_commit(ctx.clone(), &syncers.small_to_large, p2).await?;
+    // For simplicity sake allow doing the diamond merge only if there were
+    // no changes in the mapping versions.
+    let (large_root, root_version) = remap_commit(ctx.clone(), &syncers.small_to_large, small_root)
+        .await
+        .context("error remapping small root commit")?;
+
+    let (_, version_p1) = remap_commit(ctx.clone(), &syncers.small_to_large, p1)
+        .await
+        .context("error remapping small p1 commit")?;
+    let (remapped_p2, version_p2) = remap_commit(ctx.clone(), &syncers.small_to_large, p2)
+        .await
+        .context("error remapping small p2 commit")?;
+
+    if version_p1 != version_p2 {
+        return Err(format_err!(
+            "Parents are remapped with different commit sync config versions: {} vs {}",
+            version_p1,
+            version_p2
+        ));
+    }
+
+    if root_version != version_p1 {
+        return Err(format_err!(
+            "Commit sync version of root commit is different from p1 version: {} vs {}",
+            root_version,
+            version_p1,
+        ));
+    }
 
     let remapped_parents = hashmap! {
         p1 => onto_value,
@@ -222,7 +248,7 @@ async fn create_rewritten_merge_commit(
         &ctx,
         merge_bcs,
         &remapped_parents,
-        syncers.small_to_large.get_current_mover_DEPRECATED(&ctx)?,
+        syncers.small_to_large.get_mover_by_version(&version_p1)?,
         syncers.small_to_large.get_source_repo().clone(),
     )
     .await?;
@@ -235,6 +261,7 @@ async fn create_rewritten_merge_commit(
         &large_repo,
         &syncers.large_to_small,
         onto_value,
+        &root_version,
     )
     .await?;
 
@@ -253,6 +280,7 @@ async fn generate_additional_file_changes(
     large_repo: &BlobRepo,
     large_to_small: &CommitSyncer<SqlSyncedCommitMapping>,
     onto_value: ChangesetId,
+    version: &CommitSyncConfigVersion,
 ) -> Result<BTreeMap<MPath, Option<FileChange>>, Error> {
     let bonsai_diff = find_bonsai_diff(ctx.clone(), &large_repo, root, onto_value)
         .collect()
@@ -265,7 +293,7 @@ async fn generate_additional_file_changes(
             BonsaiDiffFileChange::Changed(ref path, ..)
             | BonsaiDiffFileChange::ChangedReusedId(ref path, ..)
             | BonsaiDiffFileChange::Deleted(ref path) => {
-                let maybe_new_path = large_to_small.get_current_mover_DEPRECATED(&ctx)?(path)?;
+                let maybe_new_path = large_to_small.get_mover_by_version(&version)?(path)?;
                 if maybe_new_path.is_some() {
                     continue;
                 }
@@ -286,7 +314,7 @@ async fn remap_commit(
     ctx: CoreContext,
     small_to_large_commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
     cs_id: ChangesetId,
-) -> Result<ChangesetId, Error> {
+) -> Result<(ChangesetId, CommitSyncConfigVersion), Error> {
     let maybe_sync_outcome = small_to_large_commit_syncer
         .get_commit_sync_outcome(&ctx, cs_id)
         .await?;
@@ -298,7 +326,7 @@ async fn remap_commit(
 
     use CommitSyncOutcome::*;
     match sync_outcome {
-        RewrittenAs(ref cs_id, _) => Ok(*cs_id),
+        RewrittenAs(ref cs_id, ref version) => Ok((*cs_id, version.clone())),
         _ => Err(format_err!(
             "unexpected commit sync outcome for root, got {:?}",
             sync_outcome

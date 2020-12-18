@@ -73,14 +73,9 @@ where
         cloned!(ctx);
         async move {
             let map = HashMap::new();
-            rewrite_commit(
-                &ctx,
-                source_bcs_mut,
-                &map,
-                commit_syncer.get_current_mover_DEPRECATED(&ctx)?,
-                source_repo.clone(),
-            )
-            .await
+            let mover = commit_syncer
+                .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()))?;
+            rewrite_commit(&ctx, source_bcs_mut, &map, mover, source_repo.clone()).await
         }
     }
     .boxed()

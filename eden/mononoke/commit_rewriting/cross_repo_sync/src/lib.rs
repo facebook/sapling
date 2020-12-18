@@ -615,13 +615,6 @@ where
         )
     }
 
-    // TODO(stash): remove callers of this function
-    #[allow(non_snake_case)]
-    pub fn get_current_mover_DEPRECATED(&self, ctx: &CoreContext) -> Result<Mover, Error> {
-        let (_, _, mover) = self.get_source_target_mover(ctx)?;
-        Ok(mover)
-    }
-
     pub fn get_bookmark_renamer(&self, ctx: &CoreContext) -> Result<BookmarkRenamer, Error> {
         let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx)?;
 
