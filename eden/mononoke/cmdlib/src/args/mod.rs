@@ -1122,48 +1122,42 @@ fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long(MYSQL_POOL_LIMIT)
             .help("Size of the connection pool")
             .takes_value(true)
-            .default_value("10000")
-            .conflicts_with(MYSQL_MYROUTER_PORT),
+            .default_value("10000"),
     )
     .arg(
         Arg::with_name(MYSQL_POOL_PER_KEY_LIMIT)
             .long(MYSQL_POOL_PER_KEY_LIMIT)
             .help("Mysql connection pool per key limit")
             .takes_value(true)
-            .default_value("100")
-            .conflicts_with(MYSQL_MYROUTER_PORT),
+            .default_value("100"),
     )
     .arg(
         Arg::with_name(MYSQL_POOL_THREADS_NUM)
             .long(MYSQL_POOL_THREADS_NUM)
             .help("Number of threads in Mysql connection pool, i.e. number of real pools")
             .takes_value(true)
-            .default_value("10")
-            .conflicts_with(MYSQL_MYROUTER_PORT),
+            .default_value("10"),
     )
     .arg(
         Arg::with_name(MYSQL_POOL_AGE_TIMEOUT)
             .long(MYSQL_POOL_AGE_TIMEOUT)
             .help("Mysql connection pool age timeout in millisecs")
             .takes_value(true)
-            .default_value("60000")
-            .conflicts_with(MYSQL_MYROUTER_PORT),
+            .default_value("60000"),
     )
     .arg(
         Arg::with_name(MYSQL_POOL_IDLE_TIMEOUT)
             .long(MYSQL_POOL_IDLE_TIMEOUT)
             .help("Mysql connection pool idle timeout in millisecs")
             .takes_value(true)
-            .default_value("4000")
-            .conflicts_with(MYSQL_MYROUTER_PORT),
+            .default_value("4000"),
     )
     .arg(
         Arg::with_name(MYSQL_CONN_OPEN_TIMEOUT)
             .long(MYSQL_CONN_OPEN_TIMEOUT)
             .help("Mysql connection open timeout in millisecs")
             .takes_value(true)
-            .default_value("3000")
-            .conflicts_with(MYSQL_MYROUTER_PORT),
+            .default_value("3000"),
     )
 }
 
