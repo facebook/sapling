@@ -8,6 +8,7 @@
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::Id;
+use crate::Side;
 use bitflags::bitflags;
 use std::fmt;
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
@@ -156,14 +157,13 @@ impl Hints {
         }
     }
 
-    #[allow(clippy::vtable_address_comparisons)]
-    pub fn is_dag_compatible(&self, other: impl Into<DagSnapshot>) -> bool {
+    pub fn compatible_dag(&self, other: impl Into<DagSnapshot>) -> Side {
         let lhs = self.dag.0.clone();
         let rhs = other.into().0;
         match (lhs, rhs) {
-            (None, None) => true,
-            (Some(l), Some(r)) => l.dag_id() == r.dag_id(),
-            (None, Some(_)) | (Some(_), None) => false,
+            (None, None) => Side::all(),
+            (Some(l), Some(r)) => l.dag_version().compatible_side(r.dag_version()),
+            (None, Some(_)) | (Some(_), None) => Side::empty(),
         }
     }
 

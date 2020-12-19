@@ -20,6 +20,7 @@ use crate::nameset::NameSet;
 use crate::nameset::SyncNameSetQuery;
 use crate::IdSet;
 use crate::Result;
+use crate::VerLink;
 use std::sync::Arc;
 
 /// DAG related read-only algorithms.
@@ -165,8 +166,11 @@ pub trait DagAlgorithm: Send + Sync {
     /// This makes it easier to fight with borrowck.
     fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>>;
 
-    /// Identity of the dag. If two dags have a same id, they are considered compatible.
+    /// Identity of the dag.
     fn dag_id(&self) -> &str;
+
+    /// Version of the dag. Useful to figure out compatibility between two dags.
+    fn dag_version(&self) -> &VerLink;
 }
 
 #[async_trait::async_trait]

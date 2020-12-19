@@ -29,6 +29,7 @@ use dag::Group;
 use dag::Id;
 use dag::IdSet;
 use dag::Set;
+use dag::VerLink;
 use dag::Vertex;
 use indexedlog::lock::ScopedDirLock;
 use indexedlog::utils::atomic_write_plain;
@@ -387,6 +388,9 @@ pub struct RevlogIndex {
 
     /// Identity of the revlog.
     id: String,
+
+    /// Version of the revlog.
+    version: VerLink,
 }
 
 /// "smallvec" optimization
@@ -503,6 +507,7 @@ impl RevlogIndex {
             index_path: changelogi_path.to_path_buf(),
             nodemap_path: nodemap_path.to_path_buf(),
             id: format!("rlog:{}", &nodemap_path.display()),
+            version: VerLink::new(),
         };
         Ok(result)
     }
@@ -611,6 +616,8 @@ impl RevlogIndex {
         *self.snapshot.write() = None;
 
         self.pending_raw_data.push(raw_data);
+
+        self.version.bump();
     }
 
     fn pending_parent_map(&self) -> dag::Result<HashMap<Vec<u8>, Vec<Vec<u8>>>> {
@@ -800,6 +807,7 @@ impl RevlogIndex {
                     index_path: self.index_path.clone(),
                     nodemap_path: self.nodemap_path.clone(),
                     id: self.id.clone(),
+                    version: self.version.clone(),
                 });
                 *snapshot = Some(result.clone());
                 result
@@ -1639,6 +1647,10 @@ impl DagAlgorithm for RevlogIndex {
 
     fn dag_id(&self) -> &str {
         &self.id
+    }
+
+    fn dag_version(&self) -> &VerLink {
+        &self.version
     }
 }
 

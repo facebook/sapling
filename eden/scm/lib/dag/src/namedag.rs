@@ -39,6 +39,7 @@ use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
 use crate::spanset::SpanSet;
 use crate::Result;
+use crate::VerLink;
 use futures::future::join_all;
 use futures::future::BoxFuture;
 use nonblocking::non_blocking_result;
@@ -269,7 +270,7 @@ where
                     id: self.id.clone(),
                 };
                 let result = Arc::new(cloned);
-                *snapshot = Some(result.clone());
+                *snapshot = Some(Arc::clone(&result));
                 Ok(result)
             }
         }
@@ -300,7 +301,7 @@ where
     /// Sort a `NameSet` topologically.
     async fn sort(&self, set: &NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::TOPO_DESC)
-            && set.hints().is_dag_compatible(self.dag_snapshot()?)
+            && set.hints().compatible_dag(self.dag_snapshot()?).either()
         {
             Ok(set.clone())
         } else {
@@ -338,7 +339,7 @@ where
     /// Calculates all ancestors reachable from any name from the given set.
     async fn ancestors(&self, set: NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::ANCESTORS)
-            && set.hints().is_dag_compatible(self.dag_snapshot()?)
+            && set.hints().compatible_dag(self.dag_snapshot()?).either()
         {
             return Ok(set);
         }
@@ -384,7 +385,7 @@ where
     /// Calculates heads of the given set.
     async fn heads(&self, set: NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::ANCESTORS)
-            && set.hints().is_dag_compatible(self.dag_snapshot()?)
+            && set.hints().compatible_dag(self.dag_snapshot()?).right()
         {
             // heads_ancestors is faster.
             return self.heads_ancestors(set).await;
@@ -521,6 +522,10 @@ where
     fn dag_id(&self) -> &str {
         &self.id
     }
+
+    fn dag_version(&self) -> &VerLink {
+        &self.dag.version()
+    }
 }
 
 /// Extract the ANCESTORS flag if the set with the `hints` is bound to a
@@ -529,7 +534,7 @@ fn extract_ancestor_flag_if_compatible(
     hints: &Hints,
     dag: Arc<dyn DagAlgorithm + Send + Sync>,
 ) -> Flags {
-    if hints.is_dag_compatible(dag) {
+    if hints.compatible_dag(dag).right() {
         hints.flags() & Flags::ANCESTORS
     } else {
         Flags::empty()

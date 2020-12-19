@@ -42,6 +42,7 @@ pub use nameset::NameSet;
 pub use ops::DagAlgorithm;
 pub use segment::{FlatSegment, PreparedFlatSegments};
 pub use spanset::SpanSet;
+pub use verlink::{Side, VerLink};
 
 pub type Level = u8;
 pub type InProcessIdDag = IdDag<iddagstore::InProcessStore>;

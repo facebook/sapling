@@ -91,7 +91,7 @@ impl IntersectionSet {
         let (lhs, rhs) = if lhs.hints().contains(Flags::FULL)
             && !rhs.hints().contains(Flags::FULL)
             && !rhs.hints().contains(Flags::FILTER)
-            && lhs.hints().is_dag_compatible(rhs.hints())
+            && lhs.hints().compatible_dag(rhs.hints()).left()
         {
             (rhs, lhs)
         } else {
@@ -108,7 +108,7 @@ impl IntersectionSet {
                     | Flags::FILTER),
         );
         // Only keep the ANCESTORS flag if lhs and rhs use a compatible Dag.
-        if lhs.hints().is_dag_compatible(rhs.hints()) {
+        if lhs.hints().compatible_dag(rhs.hints()).left() {
             hints.add_flags(lhs.hints().flags() & rhs.hints().flags() & Flags::ANCESTORS);
         }
         let compatible = hints.is_id_map_compatible(rhs.hints());

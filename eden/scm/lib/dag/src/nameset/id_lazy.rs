@@ -343,7 +343,7 @@ pub(crate) mod tests {
         IdLazySet::from_iter_idmap_dag(
             ids.into_iter().map(Ok),
             Arc::new(StrIdMap::new()),
-            Arc::new(DummyDag),
+            Arc::new(DummyDag::new()),
         )
     }
 

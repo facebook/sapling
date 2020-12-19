@@ -160,7 +160,8 @@ impl NameSet {
 
     /// Calculates the subset that is only in self, not in other.
     pub fn difference(&self, other: &NameSet) -> NameSet {
-        if other.hints().contains(Flags::FULL) && other.hints().is_dag_compatible(self.hints()) {
+        if other.hints().contains(Flags::FULL) && other.hints().compatible_dag(self.hints()).left()
+        {
             tracing::debug!(
                 "difference(x={:.6?}, y={:.6?}) = () (fast path 1)",
                 self,
@@ -202,7 +203,8 @@ impl NameSet {
 
     /// Calculates the intersection of two sets.
     pub fn intersection(&self, other: &NameSet) -> NameSet {
-        if self.hints().contains(Flags::FULL) && other.hints().is_dag_compatible(self.hints()) {
+        if self.hints().contains(Flags::FULL) && other.hints().compatible_dag(self.hints()).right()
+        {
             tracing::debug!(
                 "intersection(x={:.6?}, y={:.6?}) = y (fast path 1)",
                 self,
@@ -210,7 +212,8 @@ impl NameSet {
             );
             return other.clone();
         }
-        if other.hints().contains(Flags::FULL) && other.hints().is_dag_compatible(self.hints()) {
+        if other.hints().contains(Flags::FULL) && other.hints().compatible_dag(self.hints()).left()
+        {
             tracing::debug!(
                 "intersection(x={:.6?}, y={:.6?}) = x (fast path 2)",
                 self,
@@ -255,7 +258,7 @@ impl NameSet {
 
     /// Calculates the union of two sets.
     pub fn union(&self, other: &NameSet) -> NameSet {
-        if (self.hints().contains(Flags::FULL) && self.hints().is_dag_compatible(other.hints()))
+        if (self.hints().contains(Flags::FULL) && self.hints().compatible_dag(other.hints()).left())
             || other.hints().contains(Flags::EMPTY)
         {
             tracing::debug!("union(x={:.6?}, y={:.6?}) = x (fast path 1)", self, other);
@@ -263,7 +266,7 @@ impl NameSet {
         }
         if self.hints().contains(Flags::EMPTY)
             || (other.hints().contains(Flags::FULL)
-                && self.hints().is_dag_compatible(other.hints()))
+                && self.hints().compatible_dag(other.hints()).right())
         {
             tracing::debug!("union(x={:.6?}, y={:.6?}) = y (fast path 2)", self, other);
             return other.clone();

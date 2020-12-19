@@ -17,6 +17,7 @@ use crate::spanset::SpanSet;
 use crate::Error::Programming;
 use crate::Level;
 use crate::Result;
+use crate::VerLink;
 use indexmap::set::IndexSet;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -47,6 +48,8 @@ pub struct IdDag<Store> {
     store: Store,
     max_level: Level,
     new_seg_size: usize,
+    #[serde(skip, default = "VerLink::new")]
+    version: VerLink,
 }
 
 /// Guard to make sure [`IdDag`] on-disk writes are race-free.
@@ -93,6 +96,7 @@ impl TryClone for IdDag<IndexedLogStore> {
             store,
             max_level: self.max_level,
             new_seg_size: self.new_seg_size,
+            version: self.version.clone(),
         })
     }
 }
@@ -106,6 +110,7 @@ impl IdDag<InProcessStore> {
             store,
             max_level: 0,
             new_seg_size: DEFAULT_SEG_SIZE,
+            version: VerLink::new(),
         }
     }
 }
@@ -117,6 +122,7 @@ impl<Store: IdDagStore> IdDag<Store> {
             store,
             max_level,
             new_seg_size: DEFAULT_SEG_SIZE, // see D16660078 for this default setting
+            version: VerLink::new(),
         };
         Ok(dag)
     }
@@ -154,6 +160,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         high: Id,
         parents: &[Id],
     ) -> Result<()> {
+        self.version.bump();
         self.store.insert(flags, level, low, high, parents)
     }
 
@@ -200,6 +207,10 @@ impl<Store: IdDagStore> IdDag<Store> {
         parent: Id,
     ) -> Result<impl Iterator<Item = Result<Segment>> + 'a> {
         self.store.iter_master_flat_segments_with_parent(parent)
+    }
+
+    pub(crate) fn version(&self) -> &VerLink {
+        &self.version
     }
 }
 
@@ -1316,6 +1327,8 @@ impl<Store: IdDagStore + Persist> SyncableIdDag<'_, Store> {
 
     /// Remove all non master Group identifiers from the DAG.
     pub fn remove_non_master(&mut self) -> Result<()> {
+        // Non-append-only change. Use a new incompatible version.
+        self.version = VerLink::new();
         self.store.remove_non_master()
     }
 }

@@ -8,13 +8,24 @@
 use crate::ops::DagAlgorithm;
 use crate::NameSet;
 use crate::Result;
+use crate::VerLink;
 use crate::VertexName;
 use nonblocking::non_blocking;
 use std::sync::Arc;
 
 /// The DummyDag implements a DAG that contains all vertexes with no parents.
-#[derive(Debug, Copy, Clone)]
-pub(crate) struct DummyDag;
+#[derive(Debug, Clone)]
+pub(crate) struct DummyDag {
+    version: VerLink,
+}
+
+impl DummyDag {
+    pub fn new() -> Self {
+        Self {
+            version: VerLink::new(),
+        }
+    }
+}
 
 #[async_trait::async_trait]
 impl DagAlgorithm for DummyDag {
@@ -127,10 +138,14 @@ impl DagAlgorithm for DummyDag {
 
     /// Get a snapshot of the current graph.
     fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
-        Ok(Arc::new(DummyDag))
+        Ok(Arc::new(self.clone()))
     }
 
     fn dag_id(&self) -> &str {
         "dummy_dag"
+    }
+
+    fn dag_version(&self) -> &VerLink {
+        &self.version
     }
 }

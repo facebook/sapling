@@ -27,7 +27,7 @@ pub struct UnionSet {
 impl UnionSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
         let hints = if lhs.hints().is_id_map_compatible(rhs.hints())
-            && lhs.hints().is_dag_compatible(rhs.hints())
+            && lhs.hints().compatible_dag(rhs.hints()).both()
         {
             let hints = Hints::new_inherit_idmap_dag(lhs.hints());
             if let (Some(id1), Some(id2)) = (lhs.hints().min_id(), rhs.hints().min_id()) {

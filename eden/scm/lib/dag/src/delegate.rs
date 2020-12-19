@@ -227,6 +227,9 @@ macro_rules! delegate {
             fn dag_id(&self) -> &str {
                 self.$($t)*.dag_id()
             }
+            fn dag_version(&self) -> &$crate::VerLink {
+                self.$($t)*.dag_version()
+            }
         }
     };
 
