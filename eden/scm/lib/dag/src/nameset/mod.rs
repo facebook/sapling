@@ -161,9 +161,19 @@ impl NameSet {
     /// Calculates the subset that is only in self, not in other.
     pub fn difference(&self, other: &NameSet) -> NameSet {
         if other.hints().contains(Flags::FULL) && other.hints().is_dag_compatible(self.hints()) {
+            tracing::debug!(
+                "difference(x={:.6?}, y={:.6?}) = () (fast path 1)",
+                self,
+                other
+            );
             return Self::empty();
         }
         if self.hints().contains(Flags::EMPTY) || other.hints().contains(Flags::EMPTY) {
+            tracing::debug!(
+                "difference(x={:.6?}, y={:.6?}) = x (fast path 2)",
+                self,
+                other
+            );
             return self.clone();
         }
         if let (Some(this), Some(other)) = (
@@ -177,21 +187,43 @@ impl NameSet {
                     this.map.clone(),
                     this.dag.clone(),
                 );
+                tracing::debug!(
+                    "difference(x={:.6?}, y={:.6?}) = {:.6?} (fast path 3)",
+                    self,
+                    other,
+                    &result
+                );
                 return result;
             }
         }
+        tracing::debug!("difference(x={:.6?}, y={:.6?}) (slow path)", self, other);
         Self::from_query(difference::DifferenceSet::new(self.clone(), other.clone()))
     }
 
     /// Calculates the intersection of two sets.
     pub fn intersection(&self, other: &NameSet) -> NameSet {
         if self.hints().contains(Flags::FULL) && other.hints().is_dag_compatible(self.hints()) {
+            tracing::debug!(
+                "intersection(x={:.6?}, y={:.6?}) = y (fast path 1)",
+                self,
+                other
+            );
             return other.clone();
         }
         if other.hints().contains(Flags::FULL) && other.hints().is_dag_compatible(self.hints()) {
+            tracing::debug!(
+                "intersection(x={:.6?}, y={:.6?}) = x (fast path 2)",
+                self,
+                other
+            );
             return self.clone();
         }
         if self.hints().contains(Flags::EMPTY) || other.hints().contains(Flags::EMPTY) {
+            tracing::debug!(
+                "intersection(x={:.6?}, y={:.6?}) = () (fast path 3)",
+                self,
+                other
+            );
             return Self::empty();
         }
         if let (Some(this), Some(other)) = (
@@ -205,9 +237,16 @@ impl NameSet {
                     this.map.clone(),
                     this.dag.clone(),
                 );
+                tracing::debug!(
+                    "intersection(x={:.6?}, y={:.6?}) = {:?} (IdStatic fast path)",
+                    self,
+                    other,
+                    &result
+                );
                 return result;
             }
         }
+        tracing::debug!("intersection(x={:.6?}, y={:.6?}) (slow path)", self, other,);
         Self::from_query(intersection::IntersectionSet::new(
             self.clone(),
             other.clone(),
@@ -219,12 +258,14 @@ impl NameSet {
         if (self.hints().contains(Flags::FULL) && self.hints().is_dag_compatible(other.hints()))
             || other.hints().contains(Flags::EMPTY)
         {
+            tracing::debug!("union(x={:.6?}, y={:.6?}) = x (fast path 1)", self, other);
             return self.clone();
         }
         if self.hints().contains(Flags::EMPTY)
             || (other.hints().contains(Flags::FULL)
                 && self.hints().is_dag_compatible(other.hints()))
         {
+            tracing::debug!("union(x={:.6?}, y={:.6?}) = y (fast path 2)", self, other);
             return other.clone();
         }
         if let (Some(this), Some(other)) = (
@@ -238,9 +279,16 @@ impl NameSet {
                     this.map.clone(),
                     this.dag.clone(),
                 );
+                tracing::debug!(
+                    "union(x={:.6?}, y={:.6?}) = {:.6?} (fast path 3)",
+                    self,
+                    other,
+                    &result
+                );
                 return result;
             }
         }
+        tracing::debug!("union(x={:.6?}, y={:.6?}) (slow path)", self, other);
         Self::from_query(union::UnionSet::new(self.clone(), other.clone()))
     }
 
