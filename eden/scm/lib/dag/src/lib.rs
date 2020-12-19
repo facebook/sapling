@@ -31,6 +31,7 @@ pub mod render;
 pub mod segment;
 pub mod spanset;
 pub mod utils;
+mod verlink;
 
 pub use clone::CloneData;
 pub use id::{Group, Id, VertexName};
