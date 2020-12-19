@@ -139,6 +139,12 @@ py_class!(pub class nameset |py| {
         if flags.contains(Flags::ANCESTORS) {
             result.insert("ancestors", py.True().into_object());
         }
+        if let Some(map) = hints.id_map() {
+            result.insert("mapid", map.map_id().to_py_object(py).into_object());
+        }
+        if let Some(dag) = hints.dag() {
+            result.insert("dagid", dag.dag_id().to_py_object(py).into_object());
+        }
         Ok(result)
     }
 });
