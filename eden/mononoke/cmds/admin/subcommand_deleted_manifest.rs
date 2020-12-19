@@ -22,12 +22,10 @@ use deleted_files_manifest::{find_entries, list_all_entries, RootDeletedManifest
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt, future, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future, StreamExt, TryStreamExt,
 };
-use futures_ext::FutureExt as OldFutureExt;
-use futures_old::{future::err, Future, IntoFuture, Stream};
 use manifest::{get_implicit_deletes, PathOrPrefix};
-use mercurial_types::HgManifestId;
 use mononoke_types::{ChangesetId, MPath};
 use revset::AncestorsNodeStream;
 use slog::{debug, Logger};
@@ -87,18 +85,14 @@ pub async fn subcommand_deleted_manifest<'a>(
         (COMMAND_MANIFEST, Some(matches)) => {
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
             let path = match matches.value_of(ARG_PATH).unwrap() {
-                "" => Ok(None),
-                p => MPath::new(p).map(Some),
+                "" => None,
+                p => MPath::new(p).map(Some)?,
             };
-
-            (Ok(repo), path)
-                .into_future()
-                .and_then(move |(repo, path)| {
-                    helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                        .and_then(move |cs_id| subcommand_manifest(ctx, repo, cs_id, path))
-                })
-                .from_err()
-                .boxify()
+            let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                .compat()
+                .await?;
+            subcommand_manifest(ctx, repo, cs_id, path).await?;
+            Ok(())
         }
         (COMMAND_VERIFY, Some(matches)) => {
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
@@ -107,72 +101,79 @@ pub async fn subcommand_deleted_manifest<'a>(
                 .unwrap()
                 .parse::<u64>()
                 .expect("limit must be an integer");
-
-            helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                .and_then(move |cs_id| subcommand_verify(ctx, repo, cs_id, limit))
-                .from_err()
-                .boxify()
+            let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                .compat()
+                .await?;
+            subcommand_verify(ctx, repo, cs_id, limit).await?;
+            Ok(())
         }
-        _ => err(SubcommandError::InvalidArgs).boxify(),
+        _ => Err(SubcommandError::InvalidArgs),
     }
-    .compat()
-    .await
 }
 
-fn subcommand_manifest(
+async fn subcommand_manifest(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_id: ChangesetId,
     prefix: Option<MPath>,
-) -> impl Future<Item = (), Error = Error> {
-    {
-        cloned!(ctx, repo);
-        async move { Ok(RootDeletedManifestId::derive(&ctx, &repo, cs_id).await?) }
-            .boxed()
-            .compat()
+) -> Result<(), Error> {
+    let root_manifest = RootDeletedManifestId::derive(&ctx, &repo, cs_id).await?;
+    debug!(
+        ctx.logger(),
+        "ROOT Deleted Files Manifest {:?}", root_manifest,
+    );
+    let mf_id = root_manifest.deleted_manifest_id().clone();
+    let mut entries: Vec<_> = find_entries(
+        ctx.clone(),
+        repo.get_blobstore(),
+        mf_id,
+        Some(PathOrPrefix::Prefix(prefix)),
+    )
+    .try_collect()
+    .await?;
+    entries.sort_by_key(|(path, _)| path.clone());
+    for (path, mf_id) in entries {
+        println!("{}/ {:?}", MPath::display_opt(path.as_ref()), mf_id);
     }
-    .and_then(move |root_manifest| {
-        debug!(
-            ctx.logger(),
-            "ROOT Deleted Files Manifest {:?}", root_manifest,
-        );
-
-        let mf_id = root_manifest.deleted_manifest_id().clone();
-        find_entries(
-            ctx.clone(),
-            repo.get_blobstore(),
-            mf_id,
-            Some(PathOrPrefix::Prefix(prefix)),
-        )
-        .boxed()
-        .compat()
-        .collect()
-    })
-    .map(move |mut entries: Vec<_>| {
-        entries.sort_by_key(|(path, _)| path.clone());
-        for (path, mf_id) in entries {
-            println!("{}/ {:?}", MPath::display_opt(path.as_ref()), mf_id);
-        }
-    })
+    Ok(())
 }
 
-fn subcommand_verify(
+async fn subcommand_verify(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_id: ChangesetId,
     limit: u64,
-) -> impl Future<Item = (), Error = Error> {
-    AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), cs_id)
-        .take(limit)
-        .for_each(move |cs_id| verify_single_commit(ctx.clone(), repo.clone(), cs_id))
+) -> Result<(), Error> {
+    let mut csids = AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), cs_id)
+        .compat()
+        .take(limit as usize);
+    while let Some(cs_id) = csids.try_next().await? {
+        verify_single_commit(ctx.clone(), repo.clone(), cs_id).await?
+    }
+    Ok(())
 }
 
-fn get_parents(
+async fn get_file_changes(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_id: ChangesetId,
-) -> impl Future<Item = Vec<HgManifestId>, Error = Error> {
-    async move {
+) -> Result<(Vec<MPath>, Vec<MPath>), Error> {
+    let paths_added_fut = async {
+        let bonsai = cs_id.load(&ctx, repo.blobstore()).await?;
+        let paths = bonsai
+            .into_mut()
+            .file_changes
+            .into_iter()
+            .filter_map(
+                |(path, change)| {
+                    if change.is_some() { Some(path) } else { None }
+                },
+            )
+            .collect::<Vec<_>>();
+        Ok::<_, Error>(paths)
+    };
+
+    let parent_manifests_fut = async {
         let hg_cs_id = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
             .await?;
@@ -185,101 +186,51 @@ fn get_parents(
             }
         });
         future::try_join_all(parents_futs).await
-    }
-    .boxed()
-    .compat()
-}
+    };
 
-fn get_file_changes(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    cs_id: ChangesetId,
-) -> impl Future<Item = (Vec<MPath>, Vec<MPath>), Error = Error> {
-    let paths_added_fut = {
-        cloned!(ctx);
-        let blobstore = repo.get_blobstore();
-        async move { cs_id.load(&ctx, &blobstore).await }
-    }
-    .boxed()
-    .compat()
-    .from_err()
-    .map(move |bonsai| {
-        bonsai
-            .into_mut()
-            .file_changes
-            .into_iter()
-            .filter_map(
-                |(path, change)| {
-                    if change.is_some() { Some(path) } else { None }
-                },
-            )
-            .collect()
-    });
-
-    paths_added_fut
-        .join(get_parents(ctx.clone(), repo.clone(), cs_id))
-        .and_then(
-            move |(paths_added, parent_manifests): (Vec<MPath>, Vec<HgManifestId>)| {
-                get_implicit_deletes(
-                    &ctx,
-                    repo.get_blobstore(),
-                    paths_added.clone(),
-                    parent_manifests,
-                )
-                .compat()
-                .collect()
-                .map(move |paths_deleted| (paths_added, paths_deleted))
-            },
-        )
-}
-
-fn verify_single_commit(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    cs_id: ChangesetId,
-) -> impl Future<Item = (), Error = Error> {
-    let file_changes = get_file_changes(ctx.clone(), repo.clone(), cs_id.clone());
-    let deleted_manifest_paths = {
-        cloned!(ctx, repo);
-        async move { Ok(RootDeletedManifestId::derive(&ctx, &repo, cs_id).await?) }
-            .boxed()
-            .compat()
-    }
-    .and_then({
-        cloned!(ctx, repo);
-        move |root_manifest| {
-            let mf_id = root_manifest.deleted_manifest_id().clone();
-            list_all_entries(ctx.clone(), repo.get_blobstore(), mf_id)
-                .boxed()
-                .compat()
-                .collect()
-        }
-    })
-    .map(move |entries: Vec<_>| {
-        entries
-            .into_iter()
-            .filter_map(move |(path_opt, ..)| path_opt)
-            .collect::<BTreeSet<_>>()
-    });
-
-    file_changes.join(deleted_manifest_paths).and_then(
-        move |((paths_added, paths_deleted), deleted_manifest_paths)| {
-            for path in paths_added {
-                // check that changed files are alive
-                if deleted_manifest_paths.contains(&path) {
-                    println!("Path {} is alive in changeset {:?}", path, cs_id);
-                    return Err(format_err!("Path {} is alive", path));
-                }
-            }
-            for path in paths_deleted {
-                // check that deleted files are in the manifest
-                if !deleted_manifest_paths.contains(&path) {
-                    println!("Path {} was deleted in changeset {:?}", path, cs_id);
-                    return Err(format_err!("Path {} is deleted", path));
-                }
-            }
-
-            Ok(())
-        },
+    let (paths_added, parent_manifests) =
+        futures::try_join!(paths_added_fut, parent_manifests_fut)?;
+    let paths_deleted = get_implicit_deletes(
+        &ctx,
+        repo.get_blobstore(),
+        paths_added.clone(),
+        parent_manifests,
     )
+    .try_collect()
+    .await?;
+    Ok((paths_added, paths_deleted))
+}
+
+async fn verify_single_commit(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    cs_id: ChangesetId,
+) -> Result<(), Error> {
+    let file_changes = get_file_changes(ctx.clone(), repo.clone(), cs_id.clone());
+    let deleted_manifest_paths = async move {
+        let root_manifest = RootDeletedManifestId::derive(&ctx, &repo, cs_id).await?;
+        let mf_id = root_manifest.deleted_manifest_id().clone();
+        let entries: BTreeSet<_> = list_all_entries(ctx.clone(), repo.get_blobstore(), mf_id)
+            .try_filter_map(|(path_opt, ..)| async move { Ok(path_opt) })
+            .try_collect()
+            .await?;
+        Ok(entries)
+    };
+    let ((paths_added, paths_deleted), deleted_manifest_paths) =
+        futures::try_join!(file_changes, deleted_manifest_paths)?;
+    for path in paths_added {
+        // check that changed files are alive
+        if deleted_manifest_paths.contains(&path) {
+            println!("Path {} is alive in changeset {:?}", path, cs_id);
+            return Err(format_err!("Path {} is alive", path));
+        }
+    }
+    for path in paths_deleted {
+        // check that deleted files are in the manifest
+        if !deleted_manifest_paths.contains(&path) {
+            println!("Path {} was deleted in changeset {:?}", path, cs_id);
+            return Err(format_err!("Path {} is deleted", path));
+        }
+    }
+    Ok(())
 }

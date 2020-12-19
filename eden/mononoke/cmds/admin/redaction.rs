@@ -20,10 +20,9 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, FutureExt as NewFutureExt, TryFutureExt},
+    future::{try_join, try_join_all, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
-use futures_old::future::{join_all, Future};
 use manifest::ManifestOps;
 use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
@@ -258,32 +257,22 @@ async fn get_ctx_blobrepo_redacted_blobs_cs_id<'a>(
 }
 
 /// Fetch a vector of `ContentId`s for a vector of `MPath`s
-fn content_ids_for_paths(
+async fn content_ids_for_paths(
     ctx: CoreContext,
     logger: Logger,
     blobrepo: BlobRepo,
     cs_id: HgChangesetId,
     paths: Vec<MPath>,
-) -> impl Future<Item = Vec<ContentId>, Error = Error> {
-    get_file_nodes(ctx.clone(), logger, &blobrepo, cs_id, paths)
-        .and_then({
-            move |hg_node_ids| {
-                let content_ids = hg_node_ids.into_iter().map({
-                    cloned!(blobrepo);
-                    move |hg_node_id| {
-                        cloned!(ctx, blobrepo);
-                        async move { hg_node_id.load(&ctx, blobrepo.blobstore()).await }
-                            .boxed()
-                            .compat()
-                            .from_err()
-                            .map(|env| env.content_id())
-                    }
-                });
-
-                join_all(content_ids)
-            }
-        })
-        .from_err()
+) -> Result<Vec<ContentId>, Error> {
+    let hg_node_ids = get_file_nodes(ctx.clone(), logger, &blobrepo, cs_id, paths).await?;
+    let content_ids = hg_node_ids.into_iter().map(|hg_node_id| {
+        cloned!(ctx, blobrepo);
+        async move {
+            let env = hg_node_id.load(&ctx, blobrepo.blobstore()).await?;
+            Ok(env.content_id())
+        }
+    });
+    try_join_all(content_ids).await
 }
 
 async fn redaction_add<'a, 'b>(
@@ -297,9 +286,7 @@ async fn redaction_add<'a, 'b>(
         get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m).await?;
 
     let content_ids =
-        content_ids_for_paths(ctx.clone(), logger.clone(), blobrepo.clone(), cs_id, paths)
-            .compat()
-            .await?;
+        content_ids_for_paths(ctx.clone(), logger.clone(), blobrepo.clone(), cs_id, paths).await?;
 
     let blobstore_keys: Vec<_> = content_ids
         .iter()
@@ -344,63 +331,33 @@ async fn redaction_list<'a>(
         "Listing redacted files for ChangesetId: {:?}", cs_id
     );
     info!(logger, "Please be patient.");
-    redacted_blobs
-        .get_all_redacted_blobs()
-        .join(
-            {
-                cloned!(ctx, blobrepo);
-                async move { cs_id.load(&ctx, blobrepo.blobstore()).await }
-            }
-            .boxed()
-            .compat()
-            .from_err(),
-        )
-        .and_then({
-            cloned!(logger);
-            move |(redacted_blobs, hg_cs)| {
-                async move {
-                    let redacted_keys = redacted_blobs.iter().map(|(key, _)| key).collect();
-                    let path_keys = find_files_with_given_content_id_blobstore_keys(
-                        &ctx,
-                        &blobrepo,
-                        hg_cs,
-                        redacted_keys,
-                    )
-                    .await?;
-
-                    Ok(path_keys
-                        .into_iter()
-                        .filter_map(move |(path, key)| {
-                            redacted_blobs
-                                .get(&key.blobstore_key())
-                                .cloned()
-                                .map(|redacted_meta| {
-                                    (redacted_meta.task, path, redacted_meta.log_only)
-                                })
-                        })
-                        .collect::<Vec<_>>())
-                }
-                .boxed()
-                .compat()
-                .map({
-                    cloned!(logger);
-                    move |mut res| {
-                        if res.is_empty() {
-                            info!(logger, "No files are redacted at this commit");
-                        } else {
-                            res.sort();
-                            res.into_iter().for_each(|(task_id, file_path, log_only)| {
-                                let log_only_msg = if log_only { " (log only)" } else { "" };
-                                info!(logger, "{:20}: {}{}", task_id, file_path, log_only_msg);
-                            })
-                        }
-                    }
-                })
-            }
+    let (redacted_blobs, hg_cs) = futures::try_join!(
+        redacted_blobs.get_all_redacted_blobs().compat(),
+        cs_id.load(&ctx, blobrepo.blobstore()).map_err(Error::from),
+    )?;
+    let redacted_keys = redacted_blobs.iter().map(|(key, _)| key).collect();
+    let path_keys =
+        find_files_with_given_content_id_blobstore_keys(&ctx, &blobrepo, hg_cs, redacted_keys)
+            .await?;
+    let mut res = path_keys
+        .into_iter()
+        .filter_map(move |(path, key)| {
+            redacted_blobs
+                .get(&key.blobstore_key())
+                .cloned()
+                .map(|redacted_meta| (redacted_meta.task, path, redacted_meta.log_only))
         })
-        .from_err()
-        .compat()
-        .await
+        .collect::<Vec<_>>();
+    if res.is_empty() {
+        info!(logger, "No files are redacted at this commit");
+    } else {
+        res.sort();
+        res.into_iter().for_each(|(task_id, file_path, log_only)| {
+            let log_only_msg = if log_only { " (log only)" } else { "" };
+            info!(logger, "{:20}: {}{}", task_id, file_path, log_only_msg);
+        })
+    }
+    Ok(())
 }
 
 async fn redaction_remove<'a>(
@@ -412,9 +369,7 @@ async fn redaction_remove<'a>(
     let paths = paths_parser(sub_m)?;
     let (ctx, blobrepo, redacted_blobs, cs_id) =
         get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m).await?;
-    let content_ids = content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths)
-        .compat()
-        .await?;
+    let content_ids = content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths).await?;
     let blobstore_keys: Vec<_> = content_ids
         .into_iter()
         .map(|content_id| content_id.blobstore_key())

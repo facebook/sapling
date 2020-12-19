@@ -9,17 +9,11 @@ use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
-use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::try_join;
-use futures::{FutureExt, TryFutureExt, TryStreamExt};
-use futures_ext::{FutureExt as _, StreamExt};
-use futures_old::{
-    future::{self, Future},
-    stream::Stream,
-};
+use futures::TryStreamExt;
+use futures::{compat::Future01CompatExt, try_join};
 use manifest::ManifestOps;
 use mercurial_types::{HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::{BonsaiChangeset, DateTime, Timestamp};
@@ -30,20 +24,16 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 
 pub const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
 
-pub fn fetch_bonsai_changeset(
+pub async fn fetch_bonsai_changeset(
     ctx: CoreContext,
     rev: &str,
     repo: &BlobRepo,
-) -> impl Future<Item = BonsaiChangeset, Error = Error> {
-    helpers::csid_resolve(ctx.clone(), repo.clone(), rev.to_string()).and_then({
-        cloned!(ctx, repo);
-        move |csid| {
-            async move { csid.load(&ctx, repo.blobstore()).await }
-                .boxed()
-                .compat()
-                .from_err()
-        }
-    })
+) -> Result<BonsaiChangeset, Error> {
+    let csid = helpers::csid_resolve(ctx.clone(), repo.clone(), rev.to_string())
+        .compat()
+        .await?;
+    let cs = csid.load(&ctx, repo.blobstore()).await?;
+    Ok(cs)
 }
 
 pub fn print_bonsai_changeset(bcs: &BonsaiChangeset) {
@@ -102,56 +92,43 @@ pub fn format_bookmark_log_entry(
 
 // The function retrieves the HgFileNodeId of a file, based on path and rev.
 // If the path is not valid an error is expected.
-pub fn get_file_nodes(
+pub async fn get_file_nodes(
     ctx: CoreContext,
     logger: Logger,
     repo: &BlobRepo,
     cs_id: HgChangesetId,
     paths: Vec<MPath>,
-) -> impl Future<Item = Vec<HgFileNodeId>, Error = Error> {
-    {
-        cloned!(ctx, repo);
-        async move { cs_id.load(&ctx, repo.blobstore()).await }
-    }
-    .boxed()
-    .compat()
-    .from_err()
-    .map(|cs| cs.manifestid().clone())
-    .and_then({
-        cloned!(ctx, repo);
-        move |root_mf_id| {
-            root_mf_id
-                .find_entries(ctx, repo.get_blobstore(), paths.clone())
-                .compat()
-                .filter_map(|(path, entry)| Some((path?, entry.into_leaf()?.1)))
-                .collect_to::<HashMap<_, _>>()
-                .map(move |manifest_entries| {
-                    let mut existing_hg_nodes = Vec::new();
-                    let mut non_existing_paths = Vec::new();
+) -> Result<Vec<HgFileNodeId>, Error> {
+    let cs = cs_id.load(&ctx, repo.blobstore()).await?;
+    let root_mf_id = cs.manifestid().clone();
+    let manifest_entries: HashMap<_, _> = root_mf_id
+        .find_entries(ctx, repo.get_blobstore(), paths.clone())
+        .try_filter_map(|(path, entry)| async move {
+            let result =
+                path.and_then(move |path| entry.into_leaf().map(move |leaf| (path, leaf.1)));
+            Ok(result)
+        })
+        .try_collect()
+        .await?;
 
-                    for path in paths.iter() {
-                        match manifest_entries.get(&path) {
-                            Some(hg_node) => existing_hg_nodes.push(*hg_node),
-                            None => non_existing_paths.push(path.clone()),
-                        };
-                    }
-                    (non_existing_paths, existing_hg_nodes)
-                })
+    let mut existing_hg_nodes = Vec::new();
+    let mut non_existing_paths = Vec::new();
+    for path in paths.iter() {
+        match manifest_entries.get(&path) {
+            Some(hg_node) => existing_hg_nodes.push(*hg_node),
+            None => non_existing_paths.push(path.clone()),
+        };
+    }
+    match non_existing_paths.len() {
+        0 => {
+            debug!(logger, "All the file paths are valid");
+            Ok(existing_hg_nodes)
         }
-    })
-    .and_then({
-        move |(non_existing_paths, existing_hg_nodes)| match non_existing_paths.len() {
-            0 => {
-                debug!(logger, "All the file paths are valid");
-                future::ok(existing_hg_nodes).right_future()
-            }
-            _ => future::err(format_err!(
-                "failed to identify the files associated with the file paths {:?}",
-                non_existing_paths
-            ))
-            .left_future(),
-        }
-    })
+        _ => Err(format_err!(
+            "failed to identify the files associated with the file paths {:?}",
+            non_existing_paths
+        )),
+    }
 }
 
 pub async fn get_source_target_repos_and_mapping<'a>(

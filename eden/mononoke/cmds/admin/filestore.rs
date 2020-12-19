@@ -9,17 +9,14 @@ use anyhow::{anyhow, format_err, Error, Result};
 use blobstore::Loadable;
 use bytes::BytesMut;
 use clap::{App, Arg, ArgMatches, SubCommand};
-use cloned::cloned;
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{
-    compat::Future01CompatExt,
-    future::{self, FutureExt, TryFutureExt},
+    future::{self, TryFutureExt},
     stream::TryStreamExt,
 };
-use futures_old::Future as _;
 use mononoke_types::{
     hash::{Sha1, Sha256},
     ContentId, FileContents,
@@ -105,15 +102,9 @@ pub async fn execute_command<'a>(
     match sub_matches.subcommand() {
         (COMMAND_METADATA, Some(matches)) => {
             let key = extract_fetch_key(matches)?;
-            async move { filestore::get_metadata(blobrepo.blobstore(), &ctx, &key).await }
-                .boxed()
-                .compat()
-                .inspect({
-                    cloned!(logger);
-                    move |r| info!(logger, "{:?}", r)
-                })
-                .compat()
-                .await?;
+            let result = filestore::get_metadata(blobrepo.blobstore(), &ctx, &key).await;
+            info!(logger, "{:?}", result);
+            let _ = result?;
             Ok(())
         }
         (COMMAND_STORE, Some(matches)) => {

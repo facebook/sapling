@@ -7,22 +7,12 @@
 
 use anyhow::{bail, format_err, Error};
 use clap::{App, Arg, ArgMatches, SubCommand};
-use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt as PreviewFutureExt, TryFutureExt},
-};
-use futures_ext::{try_boxfuture, FutureExt};
-use futures_old::{stream, Future, Stream};
+use futures::{stream, StreamExt, TryStreamExt};
 use std::{
     fs::File,
     io::{BufRead, BufReader, Write},
     str::FromStr,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
     time::Duration,
 };
 
@@ -131,8 +121,6 @@ pub async fn subcommand_phases<'a>(
                 .unwrap_or(16384);
 
             add_public_phases(ctx, repo, logger, path, chunk_size)
-                .from_err()
-                .compat()
                 .await
                 .map_err(SubcommandError::Error)
         }
@@ -151,63 +139,42 @@ pub async fn subcommand_phases<'a>(
     }
 }
 
-fn add_public_phases(
+async fn add_public_phases(
     ctx: CoreContext,
     repo: BlobRepo,
     logger: Logger,
     path: impl AsRef<str>,
     chunk_size: usize,
-) -> impl Future<Item = (), Error = Error> {
+) -> Result<(), Error> {
     let phases = repo.get_phases();
-    let file = try_boxfuture!(File::open(path.as_ref()).map_err(Error::from));
-    let hg_changesets = BufReader::new(file).lines().filter_map(|id_str| {
-        id_str
-            .map_err(Error::from)
-            .and_then(|v| HgChangesetId::from_str(&v))
-            .ok()
-    });
-    let entries_processed = Arc::new(AtomicUsize::new(0));
-    info!(logger, "start processing hashes");
-    stream::iter_ok(hg_changesets)
-        .chunks(chunk_size)
-        .and_then(move |chunk| {
-            let count = chunk.len();
-            {
-                cloned!(ctx, repo);
-                async move { repo.get_hg_bonsai_mapping(ctx.clone(), chunk).await }
-            }
-            .boxed()
-            .compat()
-            .and_then({
-                cloned!(ctx, phases);
-                move |changesets| {
-                    async move {
-                        phases
-                            .get_sql_phases()
-                            .add_public_raw(
-                                &ctx,
-                                changesets.into_iter().map(|(_, cs)| cs).collect(),
-                            )
-                            .await
-                    }
-                    .boxed()
-                    .compat()
-                }
-            })
-            .and_then({
-                cloned!(entries_processed);
-                move |_| {
-                    print!(
-                        "\x1b[Khashes processed: {}\r",
-                        entries_processed.fetch_add(count, Ordering::SeqCst) + count,
-                    );
-                    std::io::stdout().flush().expect("flush on stdout failed");
-                    tokio_timer::sleep(Duration::from_secs(5)).map_err(Error::from)
-                }
-            })
+    let file = File::open(path.as_ref()).map_err(Error::from)?;
+    let hg_changesets = BufReader::new(file)
+        .lines()
+        .filter_map(|id_str| {
+            id_str
+                .map_err(Error::from)
+                .and_then(|v| HgChangesetId::from_str(&v))
+                .ok()
         })
-        .for_each(|_| Ok(()))
-        .boxify()
+        .map(Ok);
+    let mut entries_processed: usize = 0;
+    info!(logger, "start processing hashes");
+    let mut chunks = stream::iter(hg_changesets)
+        .chunks(chunk_size)
+        .map(|chunk| chunk.into_iter().collect::<Result<Vec<_>, Error>>());
+    while let Some(chunk) = chunks.try_next().await? {
+        let count = chunk.len();
+        let changesets = repo.get_hg_bonsai_mapping(ctx.clone(), chunk).await?;
+        phases
+            .get_sql_phases()
+            .add_public_raw(&ctx, changesets.into_iter().map(|(_, cs)| cs).collect())
+            .await?;
+        entries_processed += count;
+        print!("\x1b[Khashes processed: {}\r", entries_processed);
+        std::io::stdout().flush().expect("flush on stdout failed");
+        tokio::time::delay_for(Duration::from_secs(5)).await;
+    }
+    Ok(())
 }
 
 async fn subcommand_list_public_impl(

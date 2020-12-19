@@ -7,31 +7,23 @@
 
 use anyhow::{anyhow, Error};
 use async_trait::async_trait;
-use bulkops::fetch_all_public_changesets;
-use clap::{App, Arg, ArgMatches, SubCommand};
-use fbinit::FacebookInit;
-use fbthrift::compact_protocol;
-use futures::{
-    compat::Future01CompatExt,
-    future::{try_join, FutureExt, TryFutureExt},
-    stream, StreamExt, TryStreamExt,
-};
-use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::future::ok;
-use futures_old::prelude::*;
-use std::collections::HashMap;
-use std::sync::Arc;
-
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
+use bulkops::fetch_all_public_changesets;
 use changeset_fetcher::ChangesetFetcher;
 use changesets::{ChangesetEntry, SqlChangesets};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
+use fbinit::FacebookInit;
+use fbthrift::compact_protocol;
+use futures::{future::try_join, stream, StreamExt, TryStreamExt};
 use mononoke_types::{BlobstoreBytes, ChangesetId, Generation};
 use skiplist::{deserialize_skiplist_index, sparse, SkiplistIndex, SkiplistNodeType};
 use slog::{debug, info, Logger};
+use std::collections::HashMap;
 use std::num::NonZeroU64;
+use std::sync::Arc;
 
 use crate::error::SubcommandError;
 
@@ -149,9 +141,7 @@ pub async fn subcommand_skiplist<'a>(
             args::init_cachelib(fb, &matches);
             let ctx = CoreContext::test_mock(fb);
             let repo = args::open_repo(fb, &logger, &matches).await?;
-            let maybe_index = read_skiplist_index(ctx.clone(), repo, key, logger.clone())
-                .compat()
-                .await?;
+            let maybe_index = read_skiplist_index(ctx.clone(), repo, key, logger.clone()).await?;
             match maybe_index {
                 Some(index) => {
                     info!(
@@ -189,9 +179,7 @@ async fn build_skiplist_index<'a, S: ToString>(
     let maybe_skiplist = if force_full_rebuild {
         None
     } else {
-        read_skiplist_index(ctx.clone(), repo.clone(), key.clone(), logger.clone())
-            .compat()
-            .await?
+        read_skiplist_index(ctx.clone(), repo.clone(), key.clone(), logger.clone()).await?
     };
 
     let changeset_fetcher = repo.get_changeset_fetcher();
@@ -293,35 +281,26 @@ async fn fetch_all_public_changesets_and_build_changeset_fetcher(
     Ok(cs_fetcher)
 }
 
-fn read_skiplist_index<S: ToString>(
+async fn read_skiplist_index<S: ToString>(
     ctx: CoreContext,
     repo: BlobRepo,
     key: S,
     logger: Logger,
-) -> BoxFuture<Option<SkiplistIndex>, Error> {
-    let blobstore = repo.get_blobstore();
+) -> Result<Option<SkiplistIndex>, Error> {
     let key = key.to_string();
-    async move { blobstore.get(&ctx, &key).await }
-        .boxed()
-        .compat()
-        .and_then(move |maybebytes| {
-            match maybebytes {
-                Some(bytes) => {
-                    debug!(
-                        logger,
-                        "received {} bytes from blobstore",
-                        bytes.as_bytes().len()
-                    );
-                    let bytes = bytes.into_raw_bytes();
-                    deserialize_skiplist_index(logger.clone(), bytes)
-                        .into_future()
-                        .map(Some)
-                        .left_future()
-                }
-                None => ok(None).right_future(),
-            }
-        })
-        .boxify()
+    let maybebytes = repo.blobstore().get(&ctx, &key).await?;
+    match maybebytes {
+        Some(bytes) => {
+            debug!(
+                logger,
+                "received {} bytes from blobstore",
+                bytes.as_bytes().len()
+            );
+            let bytes = bytes.into_raw_bytes();
+            Ok(Some(deserialize_skiplist_index(logger.clone(), bytes)?))
+        }
+        None => Ok(None),
+    }
 }
 
 #[derive(Clone)]

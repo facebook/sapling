@@ -10,12 +10,10 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap::{App, ArgMatches, SubCommand};
-use cloned::cloned;
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
-use futures_old::prelude::*;
+use futures::{compat::Stream01CompatExt, TryStreamExt};
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
 use mercurial_types::{HgChangesetId, HgManifestId, MPath};
 use revset::RangeNodeStream;
@@ -66,208 +64,144 @@ pub async fn subcommand_hg_changeset<'a>(
             let left_cs = sub_m
                 .value_of("LEFT_CS")
                 .ok_or(format_err!("LEFT_CS argument expected"))
-                .and_then(HgChangesetId::from_str);
+                .and_then(HgChangesetId::from_str)?;
             let right_cs = sub_m
                 .value_of("RIGHT_CS")
                 .ok_or(format_err!("RIGHT_CS argument expected"))
-                .and_then(HgChangesetId::from_str);
+                .and_then(HgChangesetId::from_str)?;
 
             args::init_cachelib(fb, &matches);
             let repo = args::open_repo(fb, &logger, &matches).await?;
-            (left_cs, right_cs)
-                .into_future()
-                .and_then(move |(left_cs, right_cs)| {
-                    hg_changeset_diff(ctx, repo, left_cs, right_cs)
-                })
-                .and_then(|diff| {
-                    serde_json::to_writer(io::stdout(), &diff)
-                        .map(|_| ())
-                        .map_err(Error::from)
-                })
-                .compat()
-                .await
-                .map_err(SubcommandError::Error)
+            let diff = hg_changeset_diff(ctx, repo, left_cs, right_cs).await?;
+            serde_json::to_writer(io::stdout(), &diff).map_err(Error::from)?;
+            Ok(())
         }
         (HG_CHANGESET_RANGE, Some(sub_m)) => {
             let start_cs = sub_m
                 .value_of("START_CS")
                 .ok_or(format_err!("START_CS argument expected"))
-                .and_then(HgChangesetId::from_str);
+                .and_then(HgChangesetId::from_str)?;
             let stop_cs = sub_m
                 .value_of("STOP_CS")
                 .ok_or(format_err!("STOP_CS argument expected"))
-                .and_then(HgChangesetId::from_str);
+                .and_then(HgChangesetId::from_str)?;
 
             args::init_cachelib(fb, &matches);
             let repo = args::open_repo(fb, &logger, &matches).await?;
-            (start_cs, stop_cs)
-                .into_future()
-                .and_then({
-                    cloned!(ctx, repo);
-                    move |(start_cs, stop_cs)| {
-                        async move {
-                            futures::try_join!(
-                                repo.get_bonsai_from_hg(ctx.clone(), start_cs),
-                                repo.get_bonsai_from_hg(ctx, stop_cs),
-                            )
-                        }
-                        .boxed()
-                        .compat()
-                    }
-                })
-                .and_then(|(start_cs_opt, stop_cs_opt)| {
-                    (
-                        start_cs_opt.ok_or_else(|| Error::msg("failed to resolve changeset")),
-                        stop_cs_opt.ok_or_else(|| Error::msg("failed to resovle changeset")),
-                    )
-                })
-                .and_then({
-                    cloned!(repo);
-                    move |(start_cs, stop_cs)| {
-                        RangeNodeStream::new(
-                            ctx.clone(),
-                            repo.get_changeset_fetcher(),
-                            start_cs,
-                            stop_cs,
-                        )
-                        .map(move |cs| {
-                            cloned!(ctx, repo);
-                            async move { repo.get_hg_from_bonsai_changeset(ctx.clone(), cs).await }
-                                .boxed()
-                                .compat()
-                        })
-                        .buffered(100)
-                        .map(|cs| cs.to_hex().to_string())
-                        .collect()
-                    }
-                })
-                .and_then(|css| {
-                    serde_json::to_writer(io::stdout(), &css)
-                        .map(|_| ())
-                        .map_err(Error::from)
-                })
-                .compat()
-                .await
-                .map_err(SubcommandError::Error)
+            let (start_cs_opt, stop_cs_opt) = futures::try_join!(
+                repo.get_bonsai_from_hg(ctx.clone(), start_cs),
+                repo.get_bonsai_from_hg(ctx.clone(), stop_cs),
+            )?;
+            let start_cs = start_cs_opt.ok_or_else(|| Error::msg("failed to resolve changeset"))?;
+            let stop_cs = stop_cs_opt.ok_or_else(|| Error::msg("failed to resovle changeset"))?;
+            let css: Vec<_> =
+                RangeNodeStream::new(ctx.clone(), repo.get_changeset_fetcher(), start_cs, stop_cs)
+                    .compat()
+                    .map_ok(|cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs))
+                    .try_buffer_unordered(100)
+                    .map_ok(|cs| cs.to_hex().to_string())
+                    .try_collect()
+                    .await?;
+            serde_json::to_writer(io::stdout(), &css).map_err(Error::from)?;
+            Ok(())
         }
         _ => Err(SubcommandError::InvalidArgs),
     }
 }
 
-fn hg_changeset_diff(
+async fn hg_changeset_diff(
     ctx: CoreContext,
     repo: BlobRepo,
     left_id: HgChangesetId,
     right_id: HgChangesetId,
-) -> impl Future<Item = ChangesetDiff, Error = Error> {
-    (
-        {
-            cloned!(ctx, repo);
-            async move { left_id.load(&ctx, repo.blobstore()).await }
-                .boxed()
-                .compat()
-        },
-        {
-            cloned!(ctx, repo);
-            async move { right_id.load(&ctx, repo.blobstore()).await }
-                .boxed()
-                .compat()
-        },
-    )
-        .into_future()
-        .from_err()
-        .and_then({
-            cloned!(repo, left_id, right_id);
-            move |(left, right)| {
-                let mut diff = ChangesetDiff {
-                    left: left_id,
-                    right: right_id,
-                    diff: Vec::new(),
-                };
+) -> Result<ChangesetDiff, Error> {
+    let (left, right) = futures::try_join!(
+        left_id.load(&ctx, repo.blobstore()),
+        right_id.load(&ctx, repo.blobstore()),
+    )?;
 
-                if left.user() != right.user() {
-                    diff.diff.push(ChangesetAttrDiff::User(
-                        slice_to_str(left.user()),
-                        slice_to_str(right.user()),
-                    ));
-                }
+    let mut diff = ChangesetDiff {
+        left: left_id,
+        right: right_id,
+        diff: Vec::new(),
+    };
 
-                if left.message() != right.message() {
-                    diff.diff.push(ChangesetAttrDiff::Comments(
-                        slice_to_str(left.message()),
-                        slice_to_str(right.message()),
-                    ))
-                }
+    if left.user() != right.user() {
+        diff.diff.push(ChangesetAttrDiff::User(
+            slice_to_str(left.user()),
+            slice_to_str(right.user()),
+        ));
+    }
 
-                if left.files() != right.files() {
-                    diff.diff.push(ChangesetAttrDiff::Files(
-                        left.files().iter().map(mpath_to_str).collect(),
-                        right.files().iter().map(mpath_to_str).collect(),
-                    ))
-                }
+    if left.message() != right.message() {
+        diff.diff.push(ChangesetAttrDiff::Comments(
+            slice_to_str(left.message()),
+            slice_to_str(right.message()),
+        ))
+    }
 
-                if left.extra() != right.extra() {
-                    diff.diff.push(ChangesetAttrDiff::Extra(
-                        left.extra()
-                            .iter()
-                            .map(|(k, v)| (slice_to_str(k), slice_to_str(v)))
-                            .collect(),
-                        right
-                            .extra()
-                            .iter()
-                            .map(|(k, v)| (slice_to_str(k), slice_to_str(v)))
-                            .collect(),
-                    ))
-                }
+    if left.files() != right.files() {
+        diff.diff.push(ChangesetAttrDiff::Files(
+            left.files().iter().map(mpath_to_str).collect(),
+            right.files().iter().map(mpath_to_str).collect(),
+        ))
+    }
 
-                hg_manifest_diff(ctx, repo, left.manifestid(), right.manifestid()).map(
-                    move |mdiff| {
-                        diff.diff.extend(mdiff);
-                        diff
-                    },
-                )
-            }
-        })
+    if left.extra() != right.extra() {
+        diff.diff.push(ChangesetAttrDiff::Extra(
+            left.extra()
+                .iter()
+                .map(|(k, v)| (slice_to_str(k), slice_to_str(v)))
+                .collect(),
+            right
+                .extra()
+                .iter()
+                .map(|(k, v)| (slice_to_str(k), slice_to_str(v)))
+                .collect(),
+        ))
+    }
+
+    let mdiff = hg_manifest_diff(ctx, repo, left.manifestid(), right.manifestid()).await?;
+    diff.diff.extend(mdiff);
+    Ok(diff)
 }
 
-fn hg_manifest_diff(
+async fn hg_manifest_diff(
     ctx: CoreContext,
     repo: BlobRepo,
     left: HgManifestId,
     right: HgManifestId,
-) -> impl Future<Item = Option<ChangesetAttrDiff>, Error = Error> {
-    bonsai_diff(
+) -> Result<Option<ChangesetAttrDiff>, Error> {
+    let diffs: Vec<_> = bonsai_diff(
         ctx,
         repo.get_blobstore(),
         left,
         Some(right).into_iter().collect(),
     )
-    .boxed()
-    .compat()
-    .collect()
-    .map(|diffs| {
-        let diff = diffs.into_iter().fold(
-            ManifestDiff {
-                modified: Vec::new(),
-                deleted: Vec::new(),
-            },
-            |mut mdiff, diff| {
-                match diff {
-                    BonsaiDiffFileChange::Changed(path, ..)
-                    | BonsaiDiffFileChange::ChangedReusedId(path, ..) => {
-                        mdiff.modified.push(mpath_to_str(path))
-                    }
-                    BonsaiDiffFileChange::Deleted(path) => mdiff.deleted.push(mpath_to_str(path)),
-                };
-                mdiff
-            },
-        );
-        if diff.modified.is_empty() && diff.deleted.is_empty() {
-            None
-        } else {
-            Some(ChangesetAttrDiff::Manifest(diff))
-        }
-    })
+    .try_collect()
+    .await?;
+
+    let diff = diffs.into_iter().fold(
+        ManifestDiff {
+            modified: Vec::new(),
+            deleted: Vec::new(),
+        },
+        |mut mdiff, diff| {
+            match diff {
+                BonsaiDiffFileChange::Changed(path, ..)
+                | BonsaiDiffFileChange::ChangedReusedId(path, ..) => {
+                    mdiff.modified.push(mpath_to_str(path))
+                }
+                BonsaiDiffFileChange::Deleted(path) => mdiff.deleted.push(mpath_to_str(path)),
+            };
+            mdiff
+        },
+    );
+    if diff.modified.is_empty() && diff.deleted.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(ChangesetAttrDiff::Manifest(diff)))
+    }
 }
 
 fn slice_to_str(slice: &[u8]) -> String {

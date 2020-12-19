@@ -12,7 +12,6 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
-use cloned::cloned;
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,
@@ -20,9 +19,10 @@ use cmdlib::{
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
-use futures_ext::StreamExt;
-use futures_old::{Future, IntoFuture, Stream};
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    StreamExt, TryStreamExt,
+};
 use manifest::{Entry, ManifestOps, PathOrPrefix};
 
 use mononoke_types::{ChangesetId, MPath};
@@ -148,8 +148,7 @@ async fn subcommand_tree(
             repo.get_blobstore(),
             vec![PathOrPrefix::Prefix(path)],
         )
-        .compat()
-        .for_each(|(path, entry)| {
+        .try_for_each(|(path, entry)| async move {
             match entry {
                 Entry::Tree(tree_id) => {
                     println!("{}/ {:?}", MPath::display_opt(path.as_ref()), tree_id);
@@ -160,7 +159,6 @@ async fn subcommand_tree(
             }
             Ok(())
         })
-        .compat()
         .await
 }
 
@@ -171,76 +169,56 @@ async fn subcommand_verify(
     limit: u64,
 ) -> Result<(), Error> {
     AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), csid)
-        .take(limit)
-        .for_each(move |csid| single_verify(ctx.clone(), repo.clone(), csid))
         .compat()
+        .take(limit as usize)
+        .try_for_each(|csid| single_verify(&ctx, &repo, csid))
         .await
 }
 
-fn single_verify(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    csid: ChangesetId,
-) -> impl Future<Item = (), Error = Error> {
-    let hg_paths = {
-        cloned!(ctx, repo);
-        async move { repo.get_hg_from_bonsai_changeset(ctx, csid).await }
-    }
-    .boxed()
-    .compat()
-    .and_then({
-        cloned!(ctx, repo);
-        move |hg_csid| {
-            println!("CHANGESET: hg_csid:{:?} csid:{:?}", hg_csid, csid);
-            cloned!(ctx);
-            let blobstore = repo.get_blobstore();
-            async move { hg_csid.load(&ctx, &blobstore).await }
-                .boxed()
-                .compat()
-                .from_err()
-        }
-    })
-    .and_then({
-        cloned!(ctx, repo);
-        move |hg_changeset| {
-            hg_changeset
-                .manifestid()
-                .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(None)])
-                .compat()
-                .filter_map(|(path, _)| path)
-                .collect_to::<BTreeSet<_>>()
-        }
-    });
+async fn single_verify(ctx: &CoreContext, repo: &BlobRepo, csid: ChangesetId) -> Result<(), Error> {
+    let hg_paths = async move {
+        let hg_csid = repo.get_hg_from_bonsai_changeset(ctx.clone(), csid).await?;
+        println!("CHANGESET: hg_csid:{:?} csid:{:?}", hg_csid, csid);
+        let hg_changeset = hg_csid.load(ctx, repo.blobstore()).await?;
+        let paths = hg_changeset
+            .manifestid()
+            .find_entries(
+                ctx.clone(),
+                repo.get_blobstore(),
+                vec![PathOrPrefix::Prefix(None)],
+            )
+            .try_filter_map(|(path, _)| async move { Ok(path) })
+            .try_collect::<BTreeSet<_>>()
+            .await?;
+        Ok::<_, Error>(paths)
+    };
 
-    let unode_paths = {
-        cloned!(ctx, repo);
-        async move { Ok(RootUnodeManifestId::derive(&ctx, &repo, csid).await?) }
-            .boxed()
-            .compat()
-    }
-    .and_then(move |tree_id| {
-        tree_id
+    let unode_paths = async move {
+        let tree_id = RootUnodeManifestId::derive(ctx, repo, csid).await?;
+        let paths = tree_id
             .manifest_unode_id()
-            .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(None)])
-            .compat()
-            .filter_map(|(path, _)| path)
-            .collect_to::<BTreeSet<_>>()
-    });
+            .find_entries(
+                ctx.clone(),
+                repo.get_blobstore(),
+                vec![PathOrPrefix::Prefix(None)],
+            )
+            .try_filter_map(|(path, _)| async { Ok(path) })
+            .try_collect::<BTreeSet<_>>()
+            .await?;
+        Ok(paths)
+    };
 
-    (hg_paths, unode_paths)
-        .into_future()
-        .and_then(|(hg_paths, unode_paths)| {
-            if hg_paths == unode_paths {
-                Ok(())
-            } else {
-                println!("DIFFERENT: +hg -unode");
-                for path in hg_paths.difference(&unode_paths) {
-                    println!("+ {}", path);
-                }
-                for path in unode_paths.difference(&hg_paths) {
-                    println!("- {}", path);
-                }
-                bail!("failed")
-            }
-        })
+    let (hg_paths, unode_paths) = futures::try_join!(hg_paths, unode_paths)?;
+    if hg_paths == unode_paths {
+        Ok(())
+    } else {
+        println!("DIFFERENT: +hg -unode");
+        for path in hg_paths.difference(&unode_paths) {
+            println!("+ {}", path);
+        }
+        for path in unode_paths.difference(&hg_paths) {
+            println!("- {}", path);
+        }
+        bail!("failed")
+    }
 }

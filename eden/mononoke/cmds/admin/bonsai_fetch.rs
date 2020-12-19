@@ -9,7 +9,6 @@ use clap::{App, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime, FileChange};
 use serde_derive::Serialize;
 use slog::Logger;
@@ -43,9 +42,7 @@ pub async fn subcommand_bonsai_fetch<'a>(
     let json_flag = sub_m.is_present("json");
 
     let blobrepo = args::open_repo(fb, &logger, &matches).await?;
-    let bcs = fetch_bonsai_changeset(ctx, &rev, &blobrepo)
-        .compat()
-        .await?;
+    let bcs = fetch_bonsai_changeset(ctx, &rev, &blobrepo).await?;
     if json_flag {
         match serde_json::to_string(&SerializableBonsaiChangeset::from(bcs)) {
             Ok(json) => println!("{}", json),

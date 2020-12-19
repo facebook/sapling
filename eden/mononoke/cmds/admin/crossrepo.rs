@@ -23,7 +23,6 @@ use cross_repo_sync::{
 };
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, try_join};
-use futures_ext::FutureExt;
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use maplit::{btreemap, hashmap};
@@ -99,7 +98,6 @@ pub async fn subcommand_crossrepo<'a>(
                 let large_hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
                 let large_repo = commit_syncer.get_large_repo();
                 helpers::csid_resolve(ctx.clone(), large_repo.clone(), large_hash)
-                    .boxify()
                     .compat()
                     .await?
             };
@@ -916,7 +914,7 @@ mod test {
         CommitSyncDataProvider, SyncData,
     };
     use fixtures::{linear, set_bookmark};
-    use futures_old::stream::Stream;
+    use futures::{compat::Stream01CompatExt, TryStreamExt};
     use maplit::{hashmap, hashset};
     use metaconfig_types::{
         CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
@@ -926,7 +924,6 @@ mod test {
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
     use std::{collections::HashSet, sync::Arc};
-    // To support async tests
     use synced_commit_mapping::SyncedCommitMappingEntry;
 
     fn noop_book_renamer(bookmark_name: &BookmarkName) -> Option<BookmarkName> {
@@ -1072,10 +1069,10 @@ mod test {
         let maybe_master_val = small_repo.get_bonsai_bookmark(ctx.clone(), &master).await?;
 
         let master_val = maybe_master_val.ok_or(Error::msg("master not found"))?;
-        let changesets =
+        let changesets: Vec<_> =
             AncestorsNodeStream::new(ctx.clone(), &small_repo.get_changeset_fetcher(), master_val)
-                .collect()
                 .compat()
+                .try_collect()
                 .await?;
 
         let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
