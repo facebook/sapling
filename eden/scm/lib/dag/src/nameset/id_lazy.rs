@@ -333,6 +333,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::ops::PrefixLookup;
     use crate::tests::dummy_dag::DummyDag;
+    use crate::VerLink;
     use nonblocking::non_blocking_result as r;
     use std::collections::HashSet;
     use std::convert::TryInto;
@@ -356,12 +357,14 @@ pub(crate) mod tests {
 
     struct StrIdMap {
         id: String,
+        version: VerLink,
     }
 
     impl StrIdMap {
         fn new() -> Self {
             Self {
                 id: format!("str:{}", STR_ID_MAP_ID.fetch_add(1, AcqRel)),
+                version: VerLink::new(),
             }
         }
     }
@@ -401,6 +404,9 @@ pub(crate) mod tests {
         }
         fn map_id(&self) -> &str {
             &self.id
+        }
+        fn map_version(&self) -> &VerLink {
+            &self.version
         }
     }
 

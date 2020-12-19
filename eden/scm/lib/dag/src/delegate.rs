@@ -49,6 +49,9 @@ macro_rules! delegate {
             fn map_id(&self) -> &str {
                 self.$($t)*.map_id()
             }
+            fn map_version(&self) -> &$crate::VerLink {
+                self.$($t)*.map_version()
+            }
         }
     };
 

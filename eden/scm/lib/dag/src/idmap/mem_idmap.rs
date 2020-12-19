@@ -11,26 +11,30 @@ use crate::ops::IdConvert;
 use crate::ops::Persist;
 use crate::ops::PrefixLookup;
 use crate::Result;
+use crate::VerLink;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{self, AtomicU64};
 
 /// Bi-directional mapping between an integer id and a name (`[u8]`).
 ///
 /// Private. Stored in memory.
-#[derive(Default)]
 pub struct MemIdMap {
     id2name: HashMap<Id, VertexName>,
     name2id: BTreeMap<VertexName, Id>,
     cached_next_free_ids: [AtomicU64; Group::COUNT],
     map_id: String,
+    map_version: VerLink,
 }
 
 impl MemIdMap {
     /// Create an empty [`MemIdMap`].
     pub fn new() -> Self {
         Self {
+            id2name: Default::default(),
+            name2id: Default::default(),
+            cached_next_free_ids: Default::default(),
             map_id: format!("mem:{}", next_id()),
-            ..Self::default()
+            map_version: VerLink::new(),
         }
     }
 }
@@ -41,6 +45,7 @@ impl Clone for MemIdMap {
             id2name: self.id2name.clone(),
             name2id: self.name2id.clone(),
             map_id: self.map_id.clone(),
+            map_version: self.map_version.clone(),
             cached_next_free_ids: [
                 AtomicU64::new(self.cached_next_free_ids[0].load(atomic::Ordering::SeqCst)),
                 AtomicU64::new(self.cached_next_free_ids[1].load(atomic::Ordering::SeqCst)),
@@ -83,6 +88,10 @@ impl IdConvert for MemIdMap {
     fn map_id(&self) -> &str {
         &self.map_id
     }
+
+    fn map_version(&self) -> &VerLink {
+        &self.map_version
+    }
 }
 
 // TODO: Reconsider re-assign master cases. Currently they are ignored.
@@ -98,6 +107,7 @@ impl IdMapWrite for MemIdMap {
         if id.0 >= cached {
             self.cached_next_free_ids[group.0].store(id.0 + 1, atomic::Ordering::SeqCst);
         }
+        self.map_version.bump();
         Ok(())
     }
     fn next_free_id(&self, group: Group) -> Result<Id> {
@@ -106,6 +116,7 @@ impl IdMapWrite for MemIdMap {
         Ok(id)
     }
     fn remove_non_master(&mut self) -> Result<()> {
+        self.map_version = VerLink::new();
         Ok(())
     }
     fn need_rebuild_non_master(&self) -> bool {

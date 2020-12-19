@@ -982,6 +982,9 @@ impl IdConvert for RevlogIndex {
     fn map_id(&self) -> &str {
         &self.id
     }
+    fn map_version(&self) -> &VerLink {
+        &self.version
+    }
 }
 
 #[async_trait::async_trait]

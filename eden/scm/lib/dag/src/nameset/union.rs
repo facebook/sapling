@@ -26,10 +26,10 @@ pub struct UnionSet {
 
 impl UnionSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
-        let hints = if lhs.hints().is_id_map_compatible(rhs.hints())
-            && lhs.hints().compatible_dag(rhs.hints()).both()
-        {
-            let hints = Hints::new_inherit_idmap_dag(lhs.hints());
+        let side =
+            lhs.hints().compatible_id_map(rhs.hints()) & lhs.hints().compatible_dag(rhs.hints());
+        let hints = if side.either() {
+            let hints = Hints::new_inherit_idmap_dag(side.apply(&lhs, &rhs).unwrap().hints());
             if let (Some(id1), Some(id2)) = (lhs.hints().min_id(), rhs.hints().min_id()) {
                 hints.set_min_id(id1.min(id2));
             }

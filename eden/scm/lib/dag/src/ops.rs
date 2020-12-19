@@ -290,8 +290,11 @@ pub trait IdConvert: PrefixLookup + Sync {
         self.vertex_id_with_max_group(name, Group::NON_MASTER).await
     }
 
-    /// Identity of the map. If two maps have a same id, they are considered compatible.
+    /// Identity of the map.
     fn map_id(&self) -> &str;
+
+    /// Version of the map. Useful to figure out compatibility between two maps.
+    fn map_version(&self) -> &VerLink;
 }
 
 impl<T> ImportAscii for T
@@ -405,7 +408,7 @@ impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
         // Fast path: extract IdSet from IdStaticSet.
         if let Some(set) = set.as_any().downcast_ref::<IdStaticSet>() {
             let snapshot = self.id_map_snapshot()?;
-            if set.hints().is_id_map_compatible(snapshot) {
+            if set.hints().compatible_id_map(snapshot).right() {
                 return Ok(set.spans.clone());
             }
         }
@@ -413,7 +416,7 @@ impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
         // Convert IdLazySet to IdStaticSet. Bypass hash lookups.
         if let Some(set) = set.as_any().downcast_ref::<IdLazySet>() {
             let snapshot = self.id_map_snapshot()?;
-            if set.hints().is_id_map_compatible(snapshot) {
+            if set.hints().compatible_id_map(snapshot).right() {
                 let set: IdStaticSet = set.to_static()?;
                 return Ok(set.spans);
             }

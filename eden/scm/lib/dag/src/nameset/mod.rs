@@ -181,7 +181,11 @@ impl NameSet {
             self.as_any().downcast_ref::<IdStaticSet>(),
             other.as_any().downcast_ref::<IdStaticSet>(),
         ) {
-            if this.map.map_id() == other.map.map_id() {
+            let side = this
+                .map
+                .map_version()
+                .compatible_side(other.map.map_version());
+            if side.either() {
                 // Fast path for IdStaticSet
                 let result = Self::from_spans_idmap_dag(
                     this.spans.difference(&other.spans),
@@ -233,12 +237,16 @@ impl NameSet {
             self.as_any().downcast_ref::<IdStaticSet>(),
             other.as_any().downcast_ref::<IdStaticSet>(),
         ) {
-            if this.map.map_id() == other.map.map_id() {
+            let side = this
+                .map
+                .map_version()
+                .compatible_side(other.map.map_version());
+            if side.either() {
                 // Fast path for IdStaticSet
                 let result = Self::from_spans_idmap_dag(
                     this.spans.intersection(&other.spans),
-                    this.map.clone(),
-                    this.dag.clone(),
+                    side.apply(&this.map, &other.map).unwrap().clone(),
+                    side.apply(&this.dag, &other.dag).unwrap().clone(),
                 );
                 tracing::debug!(
                     "intersection(x={:.6?}, y={:.6?}) = {:?} (IdStatic fast path)",
@@ -275,12 +283,16 @@ impl NameSet {
             self.as_any().downcast_ref::<IdStaticSet>(),
             other.as_any().downcast_ref::<IdStaticSet>(),
         ) {
-            if this.map.map_id() == other.map.map_id() {
+            let side = this
+                .map
+                .map_version()
+                .compatible_side(other.map.map_version());
+            if side.either() {
                 // Fast path for IdStaticSet
                 let result = Self::from_spans_idmap_dag(
                     this.spans.union(&other.spans),
-                    this.map.clone(),
-                    this.dag.clone(),
+                    side.apply(&this.map, &other.map).unwrap().clone(),
+                    side.apply(&this.dag, &other.dag).unwrap().clone(),
                 );
                 tracing::debug!(
                     "union(x={:.6?}, y={:.6?}) = {:.6?} (fast path 3)",
@@ -862,6 +874,71 @@ pub(crate) mod tests {
                 "  Hints(FULL | ID_DESC | ANCESTORS)"
             ]
         );
+    }
+
+    #[test]
+    fn test_hints_full_subset() {
+        let mut t = crate::tests::TestDag::new();
+        let a = r(t.dag.all()).unwrap(); // [] FULL EMPTY
+        t.drawdag("X", &[]);
+        let b = r(t.dag.all()).unwrap(); // [X] FULL
+        t.drawdag("X--Y--Z", &[]);
+        let c = r(t.dag.all()).unwrap(); // [X Y Z] FULL
+        let d = r(t.dag.heads(r(t.dag.all()).unwrap())).unwrap(); // [Z]
+
+        let a = move || a.clone();
+        let b = move || b.clone();
+        let c = move || c.clone();
+        let d = move || d.clone();
+        let f = |set: NameSet| {
+            let s = format!("{:?}", &set);
+            let v = set
+                .iter()
+                .unwrap()
+                .map(|i| String::from_utf8(i.unwrap().as_ref().to_vec()).unwrap())
+                .collect::<Vec<String>>()
+                .join(" ");
+            format!("{} = [{}]", s, v)
+        };
+
+        assert_eq!(f(a()), "<spans []> = []");
+        assert_eq!(f(b()), "<spans [X+N0]> = [X]");
+        assert_eq!(f(c()), "<spans [X:Z+N0:N2]> = [Z Y X]");
+        assert_eq!(f(d()), "<spans [Z+N2]> = [Z]");
+
+        assert_eq!(f(a() - c()), "<empty> = []");
+        assert_eq!(f(a() - d()), "<spans []> = []");
+        assert_eq!(f(b() - c()), "<empty> = []");
+        assert_eq!(f(b() - d()), "<spans [X+N0]> = [X]");
+        assert_eq!(f(c() - b()), "<spans [Y:Z+N1:N2]> = [Z Y]");
+        assert_eq!(f(c() - a()), "<spans [X:Z+N0:N2]> = [Z Y X]");
+        assert_eq!(f(c() - d()), "<spans [X:Y+N0:N1]> = [Y X]");
+        assert_eq!(f(d() - a()), "<spans [Z+N2]> = [Z]");
+        assert_eq!(f(d() - b()), "<spans [Z+N2]> = [Z]");
+        assert_eq!(f(d() - c()), "<empty> = []");
+
+        assert_eq!(f(a() | c()), "<spans [X:Z+N0:N2]> = [Z Y X]");
+        assert_eq!(f(a() | b()), "<spans [X+N0]> = [X]");
+        assert_eq!(f(a() | d()), "<spans [Z+N2]> = [Z]");
+        assert_eq!(f(b() | a()), "<spans [X+N0]> = [X]");
+        assert_eq!(f(b() | c()), "<spans [X:Z+N0:N2]> = [Z Y X]");
+        assert_eq!(f(b() | d()), "<spans [Z+N2, X+N0]> = [Z X]");
+        assert_eq!(f(c() | a()), "<spans [X:Z+N0:N2]> = [Z Y X]");
+        assert_eq!(f(c() | b()), "<spans [X:Z+N0:N2]> = [Z Y X]");
+        assert_eq!(f(c() | d()), "<spans [X:Z+N0:N2]> = [Z Y X]");
+        assert_eq!(f(d() | a()), "<spans [Z+N2]> = [Z]");
+        assert_eq!(f(d() | b()), "<spans [Z+N2, X+N0]> = [Z X]");
+        assert_eq!(f(d() | c()), "<spans [X:Z+N0:N2]> = [Z Y X]");
+
+        assert_eq!(f(a() & c()), "<spans []> = []");
+        assert_eq!(f(a() & d()), "<empty> = []");
+        assert_eq!(f(b() & c()), "<spans [X+N0]> = [X]");
+        assert_eq!(f(c() & a()), "<spans []> = []");
+        assert_eq!(f(c() & b()), "<spans [X+N0]> = [X]");
+        assert_eq!(f(c() & d()), "<spans [Z+N2]> = [Z]");
+        assert_eq!(f(d() & a()), "<empty> = []");
+        assert_eq!(f(d() & b()), "<spans []> = []");
+        assert_eq!(f(d() & c()), "<spans [Z+N2]> = [Z]");
     }
 
     #[test]

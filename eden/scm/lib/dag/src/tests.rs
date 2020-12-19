@@ -19,7 +19,7 @@ use crate::Result;
 use crate::SpanSet;
 use nonblocking::non_blocking_result as r;
 use tempfile::tempdir;
-use test_dag::TestDag;
+pub use test_dag::TestDag;
 
 mod test_dag;
 
@@ -704,7 +704,7 @@ Lv1: N0-N3[1]
       N0-N1-N2-N3     7--8--9--10
                 \            \
                  -------------N4--N5
-Lv0: RH0-1[] H2-3[1] H4-6[3] 7-10[5] H11-12[6, 10] N0-N3[1] N4-N5[N3, 9]
+Lv0: RH0-1[] H2-3[1] H4-6[3] 7-10[5] H11-12[6, 10] N0-N1[1] N2-N3[N1] N4-N5[N3, 9]
 Lv1: R0-6[]"#
     );
 

@@ -111,24 +111,30 @@ impl IntersectionSet {
         if lhs.hints().compatible_dag(rhs.hints()).left() {
             hints.add_flags(lhs.hints().flags() & rhs.hints().flags() & Flags::ANCESTORS);
         }
-        let compatible = hints.is_id_map_compatible(rhs.hints());
-        match (lhs.hints().min_id(), rhs.hints().min_id(), compatible) {
-            (Some(id), None, _) | (Some(id), Some(_), false) | (None, Some(id), true) => {
+        let side = hints.compatible_id_map(rhs.hints());
+        let (rhs_min_id, rhs_max_id) = if side.left() {
+            // rhs ids are all known by lhs.
+            (rhs.hints().min_id(), rhs.hints().max_id())
+        } else {
+            (None, None)
+        };
+        match (lhs.hints().min_id(), rhs_min_id) {
+            (Some(id), None) | (None, Some(id)) => {
                 hints.set_min_id(id);
             }
-            (Some(id1), Some(id2), true) => {
+            (Some(id1), Some(id2)) => {
                 hints.set_min_id(id1.max(id2));
             }
-            (None, Some(_), false) | (None, None, _) => {}
+            (None, None) => {}
         }
-        match (lhs.hints().max_id(), rhs.hints().max_id(), compatible) {
-            (Some(id), None, _) | (Some(id), Some(_), false) | (None, Some(id), true) => {
+        match (lhs.hints().max_id(), rhs_max_id) {
+            (Some(id), None) | (None, Some(id)) => {
                 hints.set_max_id(id);
             }
-            (Some(id1), Some(id2), true) => {
+            (Some(id1), Some(id2)) => {
                 hints.set_max_id(id1.min(id2));
             }
-            (None, Some(_), false) | (None, None, _) => {}
+            (None, None) => {}
         }
         Self { lhs, rhs, hints }
     }
@@ -137,7 +143,7 @@ impl IntersectionSet {
 #[async_trait::async_trait]
 impl AsyncNameSetQuery for IntersectionSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
-        let stop_condition = if !self.lhs.hints().is_id_map_compatible(self.rhs.hints()) {
+        let stop_condition = if !self.lhs.hints().compatible_id_map(self.rhs.hints()).left() {
             None
         } else if self.lhs.hints().contains(Flags::ID_ASC) {
             if let Some(id) = self.rhs.hints().max_id() {
@@ -171,7 +177,7 @@ impl AsyncNameSetQuery for IntersectionSet {
     }
 
     async fn iter_rev(&self) -> Result<BoxVertexStream> {
-        let stop_condition = if !self.lhs.hints().is_id_map_compatible(self.rhs.hints()) {
+        let stop_condition = if !self.lhs.hints().compatible_id_map(self.rhs.hints()).left() {
             None
         } else if self.lhs.hints().contains(Flags::ID_DESC) {
             if let Some(id) = self.rhs.hints().max_id() {

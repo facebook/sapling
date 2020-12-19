@@ -146,14 +146,13 @@ impl Hints {
         self
     }
 
-    #[allow(clippy::vtable_address_comparisons)]
-    pub fn is_id_map_compatible(&self, other: impl Into<IdMapSnapshot>) -> bool {
+    pub fn compatible_id_map(&self, other: impl Into<IdMapSnapshot>) -> Side {
         let lhs = self.id_map.0.clone();
         let rhs = other.into().0;
         match (lhs, rhs) {
-            (None, None) => true,
-            (Some(l), Some(r)) => l.map_id() == r.map_id(),
-            (None, Some(_)) | (Some(_), None) => false,
+            (None, None) => Side::all(),
+            (Some(l), Some(r)) => l.map_version().compatible_side(r.map_version()),
+            (None, Some(_)) | (Some(_), None) => Side::empty(),
         }
     }
 

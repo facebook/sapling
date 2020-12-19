@@ -14,6 +14,7 @@ use crate::ops::Persist;
 use crate::ops::PrefixLookup;
 use crate::ops::TryClone;
 use crate::Result;
+use crate::VerLink;
 use byteorder::{BigEndian, ReadBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
@@ -32,6 +33,7 @@ pub struct IdMap {
     cached_next_free_ids: [AtomicU64; Group::COUNT],
     need_rebuild_non_master: bool,
     map_id: String,
+    map_version: VerLink,
 }
 
 impl IdMap {
@@ -65,6 +67,7 @@ impl TryClone for IdMap {
             cached_next_free_ids: Default::default(),
             need_rebuild_non_master: self.need_rebuild_non_master,
             map_id: self.map_id.clone(),
+            map_version: self.map_version.clone(),
         };
         Ok(result)
     }
@@ -80,6 +83,7 @@ impl IdMap {
             cached_next_free_ids: Default::default(),
             need_rebuild_non_master: false,
             map_id,
+            map_version: VerLink::new(),
         })
     }
 
@@ -229,6 +233,7 @@ impl IdMap {
         if id.0 >= *next_free_id {
             *next_free_id = id.0 + 1;
         }
+        self.map_version.bump();
         Ok(())
     }
 
@@ -336,6 +341,9 @@ impl IdConvert for IdMap {
     fn map_id(&self) -> &str {
         &self.map_id
     }
+    fn map_version(&self) -> &VerLink {
+        &self.map_version
+    }
 }
 
 impl IdMapWrite for IdMap {
@@ -347,6 +355,7 @@ impl IdMapWrite for IdMap {
     }
     fn remove_non_master(&mut self) -> Result<()> {
         self.log.append(IdMap::MAGIC_CLEAR_NON_MASTER)?;
+        self.map_version = VerLink::new();
         self.need_rebuild_non_master = false;
         // Invalidate the next free id cache.
         self.cached_next_free_ids = Default::default();

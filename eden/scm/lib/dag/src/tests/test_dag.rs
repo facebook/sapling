@@ -68,7 +68,10 @@ impl TestDag {
             .iter()
             .map(|s| Vertex::copy_from(s.as_bytes()))
             .collect::<Vec<_>>();
-        non_blocking_result(self.dag.flush(&master_heads)).unwrap();
+        let need_flush = !master_heads.is_empty();
+        if need_flush {
+            non_blocking_result(self.dag.flush(&master_heads)).unwrap();
+        }
         self.validate();
     }
 
