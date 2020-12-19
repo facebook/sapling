@@ -110,6 +110,8 @@ where
             ));
         }
 
+        self.invalidate_snapshot();
+
         // Take lock.
         //
         // Reload meta. This drops in-memory changes, which is fine because we have
@@ -133,7 +135,6 @@ where
         dag.sync()?;
         locked.sync()?;
 
-        self.invalidate_snapshot();
         Ok(())
     }
 
@@ -184,6 +185,8 @@ where
     /// assigned to the NON_MASTER group internally. The `flush` function
     /// can re-assign Ids to the MASTER group.
     async fn add_heads(&mut self, parents: &dyn Parents, heads: &[VertexName]) -> Result<()> {
+        self.invalidate_snapshot();
+
         // Assign to the NON_MASTER group unconditionally so we can avoid the
         // complexity re-assigning non-master ids.
         //
@@ -214,8 +217,6 @@ where
         self.dag
             .build_segments_volatile_from_prepared_flat_segments(&outcome)?;
 
-        self.invalidate_snapshot();
-
         Ok(())
     }
 }
@@ -245,7 +246,12 @@ where
     P: TryClone + Send + Sync,
     S: TryClone + Send + Sync,
 {
-    /// Invalidate cached content. Call this after changing the graph.
+    /// Invalidate cached content. Call this before changing the graph
+    /// so `version` in `snapshot` is dropped, and `version.bump()` might
+    /// have a faster path.
+    ///
+    /// Forgetting to call this function might hurt performance a bit, but does
+    /// not affect correctness.
     fn invalidate_snapshot(&mut self) {
         *self.snapshot.write() = None;
     }
@@ -253,13 +259,15 @@ where
     /// Attempt to get a snapshot of this graph.
     fn try_snapshot(&self) -> Result<Arc<Self>> {
         if let Some(s) = self.snapshot.read().deref() {
-            return Ok(s.clone());
+            if s.dag.version() == self.dag.version() {
+                return Ok(Arc::clone(s));
+            }
         }
 
         let mut snapshot = self.snapshot.write();
         match snapshot.deref() {
-            Some(s) => Ok(s.clone()),
-            None => {
+            Some(s) if s.dag.version() == self.dag.version() => Ok(s.clone()),
+            _ => {
                 let cloned = Self {
                     dag: self.dag.try_clone()?,
                     map: self.map.try_clone()?,
