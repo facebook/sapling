@@ -31,6 +31,7 @@ tracing = "0.1"
 
 [dev-dependencies]
 bindag = { path = "bindag" }
+dev-logger = { path = "../dev-logger" }
 mincode = { path = "../mincode" }
 minibench = { path = "../minibench" }
 once_cell = "1"
