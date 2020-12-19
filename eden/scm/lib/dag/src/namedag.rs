@@ -148,19 +148,14 @@ where
             }
         }
 
-        // Dump the pending DAG to memory so we can re-assign numbers.
-        //
-        // PERF: There could be a fast path that does not re-assign numbers.
-        // But in practice we might always want to re-assign master commits.
-        let snapshot = self.try_snapshot()?;
-        let dag_snapshot = self.dag_snapshot()?;
-        let non_master_heads = &snapshot.pending_heads;
-
+        // Constructs a new graph so we can copy pending data from the existing graph.
         let mut new_name_dag: Self = self.path.open()?;
+        let parents: &(dyn DagAlgorithm + Send + Sync) = self;
+        let non_master_heads = &self.pending_heads;
         let seg_size = self.dag.get_new_segment_size();
         new_name_dag.dag.set_new_segment_size(seg_size);
         new_name_dag
-            .add_heads_and_flush(&dag_snapshot, master_heads, non_master_heads)
+            .add_heads_and_flush(&parents, master_heads, non_master_heads)
             .await?;
         *self = new_name_dag;
         Ok(())
@@ -309,11 +304,11 @@ where
     /// Sort a `NameSet` topologically.
     async fn sort(&self, set: &NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::TOPO_DESC)
-            && set.hints().compatible_dag(self.dag_snapshot()?).either()
+            && set.hints().compatible_dag(self.dag_version()).either()
         {
             Ok(set.clone())
         } else {
-            let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
+            let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_version());
             let mut spans = SpanSet::empty();
             for name in set.iter()? {
                 let id = self.map().vertex_id(name?).await?;
@@ -347,7 +342,7 @@ where
     /// Calculates all ancestors reachable from any name from the given set.
     async fn ancestors(&self, set: NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::ANCESTORS)
-            && set.hints().compatible_dag(self.dag_snapshot()?).either()
+            && set.hints().compatible_dag(self.dag_version()).either()
         {
             return Ok(set);
         }
@@ -364,7 +359,7 @@ where
     /// to preserve order.
     async fn parents(&self, set: NameSet) -> Result<NameSet> {
         // Preserve ANCESTORS flag. If ancestors(x) == x, then ancestors(parents(x)) == parents(x).
-        let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
+        let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_version());
         let spans = self.dag().parents(self.to_id_set(&set).await?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         result.hints().add_flags(flags);
@@ -393,7 +388,7 @@ where
     /// Calculates heads of the given set.
     async fn heads(&self, set: NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::ANCESTORS)
-            && set.hints().compatible_dag(self.dag_snapshot()?).right()
+            && set.hints().compatible_dag(self.dag_version()).right()
         {
             // heads_ancestors is faster.
             return self.heads_ancestors(set).await;
@@ -416,7 +411,7 @@ where
 
     /// Calculates roots of the given set.
     async fn roots(&self, set: NameSet) -> Result<NameSet> {
-        let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_snapshot()?);
+        let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_version());
         let spans = self.dag().roots(self.to_id_set(&set).await?)?;
         let result = NameSet::from_spans_dag(spans, self)?;
         result.hints().add_flags(flags);
@@ -538,11 +533,8 @@ where
 
 /// Extract the ANCESTORS flag if the set with the `hints` is bound to a
 /// compatible DAG.
-fn extract_ancestor_flag_if_compatible(
-    hints: &Hints,
-    dag: Arc<dyn DagAlgorithm + Send + Sync>,
-) -> Flags {
-    if hints.compatible_dag(dag).right() {
+fn extract_ancestor_flag_if_compatible(hints: &Hints, dag_version: &VerLink) -> Flags {
+    if hints.compatible_dag(dag_version).right() {
         hints.flags() & Flags::ANCESTORS
     } else {
         Flags::empty()

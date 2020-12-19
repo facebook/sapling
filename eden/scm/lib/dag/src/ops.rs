@@ -186,6 +186,13 @@ impl Parents for Arc<dyn DagAlgorithm + Send + Sync> {
 }
 
 #[async_trait::async_trait]
+impl Parents for &(dyn DagAlgorithm + Send + Sync) {
+    async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+        DagAlgorithm::parent_names(*self, name).await
+    }
+}
+
+#[async_trait::async_trait]
 impl<'a> Parents for Box<dyn Fn(VertexName) -> Result<Vec<VertexName>> + Send + Sync + 'a> {
     async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
         (self)(name)
@@ -407,16 +414,14 @@ impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
     async fn to_id_set(&self, set: &NameSet) -> Result<IdSet> {
         // Fast path: extract IdSet from IdStaticSet.
         if let Some(set) = set.as_any().downcast_ref::<IdStaticSet>() {
-            let snapshot = self.id_map_snapshot()?;
-            if set.hints().compatible_id_map(snapshot).right() {
+            if set.hints().compatible_id_map(self.map_version()).right() {
                 return Ok(set.spans.clone());
             }
         }
 
         // Convert IdLazySet to IdStaticSet. Bypass hash lookups.
         if let Some(set) = set.as_any().downcast_ref::<IdLazySet>() {
-            let snapshot = self.id_map_snapshot()?;
-            if set.hints().compatible_id_map(snapshot).right() {
+            if set.hints().compatible_id_map(self.map_version()).right() {
                 let set: IdStaticSet = set.to_static()?;
                 return Ok(set.spans);
             }

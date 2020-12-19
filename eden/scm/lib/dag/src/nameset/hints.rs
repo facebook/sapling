@@ -9,6 +9,7 @@ use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::Id;
 use crate::Side;
+use crate::VerLink;
 use bitflags::bitflags;
 use std::fmt;
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
@@ -146,22 +147,22 @@ impl Hints {
         self
     }
 
-    pub fn compatible_id_map(&self, other: impl Into<IdMapSnapshot>) -> Side {
+    pub fn compatible_id_map<'a>(&'a self, other: impl Into<IdMapVersion<'a>>) -> Side {
         let lhs = self.id_map.0.clone();
         let rhs = other.into().0;
         match (lhs, rhs) {
             (None, None) => Side::all(),
-            (Some(l), Some(r)) => l.map_version().compatible_side(r.map_version()),
+            (Some(l), Some(r)) => l.map_version().compatible_side(r),
             (None, Some(_)) | (Some(_), None) => Side::empty(),
         }
     }
 
-    pub fn compatible_dag(&self, other: impl Into<DagSnapshot>) -> Side {
+    pub fn compatible_dag<'a>(&'a self, other: impl Into<DagVersion<'a>>) -> Side {
         let lhs = self.dag.0.clone();
         let rhs = other.into().0;
         match (lhs, rhs) {
             (None, None) => Side::all(),
-            (Some(l), Some(r)) => l.dag_version().compatible_side(r.dag_version()),
+            (Some(l), Some(r)) => l.dag_version().compatible_side(r),
             (None, Some(_)) | (Some(_), None) => Side::empty(),
         }
     }
@@ -202,6 +203,42 @@ impl From<&Hints> for IdMapSnapshot {
 impl From<Arc<dyn IdConvert + Send + Sync>> for IdMapSnapshot {
     fn from(dag: Arc<dyn IdConvert + Send + Sync>) -> Self {
         IdMapSnapshot(Some(dag))
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct DagVersion<'a>(Option<&'a VerLink>);
+
+impl<'a> From<&'a Hints> for DagVersion<'a> {
+    fn from(hints: &'a Hints) -> Self {
+        Self(match &hints.dag.0 {
+            Some(d) => Some(d.dag_version()),
+            None => None,
+        })
+    }
+}
+
+impl<'a> From<&'a VerLink> for DagVersion<'a> {
+    fn from(version: &'a VerLink) -> Self {
+        Self(Some(version))
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct IdMapVersion<'a>(Option<&'a VerLink>);
+
+impl<'a> From<&'a Hints> for IdMapVersion<'a> {
+    fn from(hints: &'a Hints) -> Self {
+        Self(match &hints.id_map.0 {
+            Some(m) => Some(m.map_version()),
+            None => None,
+        })
+    }
+}
+
+impl<'a> From<&'a VerLink> for IdMapVersion<'a> {
+    fn from(version: &'a VerLink) -> Self {
+        Self(Some(version))
     }
 }
 
