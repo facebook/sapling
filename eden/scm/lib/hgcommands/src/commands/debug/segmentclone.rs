@@ -92,7 +92,7 @@ pub fn run(opts: StatusOpts, _io: &mut IO, config: ConfigSet) -> Result<u8> {
 
     fs::write(
         destination.join(".hg/store/requires"),
-        b"hybridchangelog\n\
+        b"lazytextchangelog\n\
           narrowheads\n\
           visibleheads\n",
     )

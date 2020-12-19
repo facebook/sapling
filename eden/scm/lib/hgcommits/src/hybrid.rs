@@ -211,15 +211,19 @@ impl DescribeBackend for HybridCommits {
     }
 
     fn describe_backend(&self) -> String {
-        let (revlog_path, revlog_usage) = match self.revlog.as_ref() {
+        let (backend, revlog_path, revlog_usage) = match self.revlog.as_ref() {
             Some(revlog) => {
                 let path = revlog.dir.join("00changelog.{i,d,nodemap}");
-                (path.display().to_string(), "present, not used for reading")
+                (
+                    "hybrid",
+                    path.display().to_string(),
+                    "present, not used for reading",
+                )
             }
-            None => ("(not used)".to_string(), "(not used)"),
+            None => ("lazytext", "(not used)".to_string(), "(not used)"),
         };
         format!(
-            r#"Backend (hybrid):
+            r#"Backend ({}):
   Local:
     Segments + IdMap: {}
     Zstore: {}
@@ -234,6 +238,7 @@ Feature Providers:
     EdenAPI (remaining, public)
     Revlog {}
 "#,
+            backend,
             self.commits.dag_path.display(),
             self.commits.commits_path.display(),
             revlog_path,

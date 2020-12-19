@@ -99,9 +99,20 @@ class changelog(object):
 
     @classmethod
     def openhybrid(cls, repo):
+        return cls._openhybrid(repo, userevlog=True)
+
+    @classmethod
+    def openlazytext(cls, repo):
+        return cls._openhybrid(repo, userevlog=False)
+
+    @classmethod
+    def _openhybrid(cls, repo, userevlog):
         svfs = repo.svfs
         uiconfig = repo.ui.uiconfig()
-        revlogdir = svfs.join("")
+        if userevlog:
+            revlogdir = svfs.join("")
+        else:
+            revlogdir = None
         segmentsdir = svfs.join(SEGMENTS_DIR)
         hgcommitsdir = svfs.join(HGCOMMITS_DIR)
         inner = bindings.dag.commits.openhybrid(
@@ -629,6 +640,8 @@ class nodemap(object):
 
 
 def migrateto(repo, name):
+    if "lazytextchangelog" in repo.storerequirements and name != "lazytext":
+        raise error.Abort(_("cannot migrate away from lazytext backend"))
     if name == "revlog":
         migratetorevlog(repo)
     elif name == "rustrevlog":
@@ -639,6 +652,8 @@ def migrateto(repo, name):
         migratetodoublewrite(repo)
     elif name == "hybrid":
         migratetohybird(repo)
+    elif name == "lazytext":
+        migratetolazytext(repo)
     elif name == "fullsegments":
         migratetosegments(repo)
     else:
@@ -669,8 +684,29 @@ def migratetodoublewrite(repo, requirename="doublewritechangelog"):
         repo.invalidatechangelog()
 
 
+def migratetolazytext(repo):
+    """Migrate to "lazytext" backend.
+
+    The migration can only be done from hybrid or doublewrite.
+    """
+    if not any(
+        s in repo.storerequirements
+        for s in ("lazytextchangelog", "hybridchangelog", "doublewritechangelog")
+    ):
+        raise error.Abort(
+            _("lazytext backend can only be migrated from hybrid or doublewrite")
+        )
+
+    # Migration from doublewrite or hybrid backends is a no-op.
+    with repo.lock():
+        _removechangelogrequirements(repo)
+        repo.storerequirements.add("lazytextchangelog")
+        repo._writestorerequirements()
+        repo.invalidatechangelog()
+
+
 def migratetohybird(repo):
-    """Mirate to "hybrid" backend.
+    """Migrate to "hybrid" backend.
 
     The migration is similar to doublewrite.
     """
@@ -779,6 +815,7 @@ def _removechangelogrequirements(repo):
     repo.storerequirements.discard("doublewritechangelog")
     repo.storerequirements.discard("gitchangelog")
     repo.storerequirements.discard("hybridchangelog")
+    repo.storerequirements.discard("lazytextchangelog")
     repo.storerequirements.discard("pythonrevlogchangelog")
     repo.storerequirements.discard("rustrevlogchangelog")
     repo.storerequirements.discard("segmentedchangelog")

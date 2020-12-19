@@ -490,9 +490,17 @@ def debugchangelog(ui, repo, migrate=None):
 
     - fullsegments
 
-      - New segments backend for everything.
+      - Segments backend for everything.
       - Commit text will be fully migrated. Revlog is no longer necessary.
       - Migration can take tens of minutes for a large repo.
+
+    - lazytext
+
+      - Segments backend for everything. IdMap is not lazy.
+      - Commit text is lazy.
+      - Revlog is not used.
+      - Can only be migrated from doublewrite or hybrid backends.
+      - Cannot migrate away to other backends.
 
     In the future there might be lazy backends that use network for commit hashes
     or text. Right now, none of the above is lazy.
