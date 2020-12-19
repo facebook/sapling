@@ -38,11 +38,11 @@ use zstore::Zstore;
 /// Segmented Changelog + Revlog + Remote.
 ///
 /// Use segmented changelog for the commit graph algorithms and IdMap.
-/// Writes to revlog just for fallback.
+/// Optionally writes to revlog just for fallback.
 ///
 /// Use edenapi to resolve public commit messages.
 pub struct HybridCommits {
-    revlog: RevlogCommits,
+    revlog: Option<RevlogCommits>,
     commits: HgCommits,
     client: Arc<dyn EdenApi>,
     reponame: String,
@@ -50,14 +50,17 @@ pub struct HybridCommits {
 
 impl HybridCommits {
     pub fn new(
-        revlog_dir: &Path,
+        revlog_dir: Option<&Path>,
         dag_path: &Path,
         commits_path: &Path,
         client: Arc<dyn EdenApi>,
         reponame: String,
     ) -> Result<Self> {
         let commits = HgCommits::new(dag_path, commits_path)?;
-        let revlog = RevlogCommits::new(revlog_dir)?;
+        let revlog = match revlog_dir {
+            Some(revlog_dir) => Some(RevlogCommits::new(revlog_dir)?),
+            None => None,
+        };
         Ok(Self {
             revlog,
             commits,
@@ -70,19 +73,25 @@ impl HybridCommits {
 #[async_trait::async_trait]
 impl AppendCommits for HybridCommits {
     async fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()> {
-        self.revlog.add_commits(commits).await?;
+        if let Some(revlog) = self.revlog.as_mut() {
+            revlog.add_commits(commits).await?;
+        }
         self.commits.add_commits(commits).await?;
         Ok(())
     }
 
     async fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {
-        self.revlog.flush(master_heads).await?;
+        if let Some(revlog) = self.revlog.as_mut() {
+            revlog.flush(master_heads).await?;
+        }
         self.commits.flush(master_heads).await?;
         Ok(())
     }
 
     async fn flush_commit_data(&mut self) -> Result<()> {
-        self.revlog.flush_commit_data().await?;
+        if let Some(revlog) = self.revlog.as_mut() {
+            revlog.flush_commit_data().await?;
+        }
         self.commits.flush_commit_data().await?;
         Ok(())
     }
@@ -123,7 +132,9 @@ impl StreamCommitText for HybridCommits {
 #[async_trait::async_trait]
 impl StripCommits for HybridCommits {
     async fn strip_commits(&mut self, set: Set) -> Result<()> {
-        self.revlog.strip_commits(set.clone()).await?;
+        if let Some(revlog) = self.revlog.as_mut() {
+            revlog.strip_commits(set.clone()).await?;
+        }
         self.commits.strip_commits(set).await?;
         Ok(())
     }
@@ -200,6 +211,13 @@ impl DescribeBackend for HybridCommits {
     }
 
     fn describe_backend(&self) -> String {
+        let (revlog_path, revlog_usage) = match self.revlog.as_ref() {
+            Some(revlog) => {
+                let path = revlog.dir.join("00changelog.{i,d,nodemap}");
+                (path.display().to_string(), "present, not used for reading")
+            }
+            None => ("(not used)".to_string(), "(not used)"),
+        };
         format!(
             r#"Backend (hybrid):
   Local:
@@ -214,11 +232,12 @@ Feature Providers:
   Commit Data (user, message):
     Zstore (incomplete, draft)
     EdenAPI (remaining, public)
-    Revlog (present, not used for reading)
+    Revlog {}
 "#,
             self.commits.dag_path.display(),
             self.commits.commits_path.display(),
-            self.revlog.dir.join("00changelog.{i,d,nodemap}").display(),
+            revlog_path,
+            revlog_usage,
         )
     }
 

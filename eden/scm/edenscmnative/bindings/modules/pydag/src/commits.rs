@@ -211,11 +211,11 @@ py_class!(pub class commits |py| {
     /// not revlog, despite the revlog might have the data.
     @staticmethod
     def openhybrid(
-        revlogdir: &PyPath, segmentsdir: &PyPath, commitsdir: &PyPath, edenapi: PyClient, reponame: String
+        revlogdir: Option<&PyPath>, segmentsdir: &PyPath, commitsdir: &PyPath, edenapi: PyClient, reponame: String
     ) -> PyResult<Self> {
         let client = edenapi.extract_inner(py);
         let inner = HybridCommits::new(
-            revlogdir.as_path(),
+            revlogdir.map(|d| d.as_path()),
             segmentsdir.as_path(),
             commitsdir.as_path(),
             client,
