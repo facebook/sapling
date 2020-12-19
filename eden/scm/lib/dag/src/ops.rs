@@ -164,6 +164,9 @@ pub trait DagAlgorithm: Send + Sync {
     ///
     /// This makes it easier to fight with borrowck.
     fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>>;
+
+    /// Identity of the dag. If two dags have a same id, they are considered compatible.
+    fn dag_id(&self) -> &str;
 }
 
 #[async_trait::async_trait]

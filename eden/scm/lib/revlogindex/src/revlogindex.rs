@@ -1636,6 +1636,10 @@ impl DagAlgorithm for RevlogIndex {
     fn dag_snapshot(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(self.get_snapshot())
     }
+
+    fn dag_id(&self) -> &str {
+        &self.id
+    }
 }
 
 impl IdMapSnapshot for RevlogIndex {

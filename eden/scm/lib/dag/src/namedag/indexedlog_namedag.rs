@@ -58,6 +58,7 @@ impl Open for IndexedLogNameDagPath {
             snapshot: Default::default(),
             pending_heads: Default::default(),
             state,
+            id: format!("ilog:{}", self.0.display()),
         })
     }
 }

@@ -12,6 +12,7 @@ use crate::idmap::MemIdMap;
 use crate::ops::Open;
 use crate::ops::Persist;
 use crate::Result;
+use std::sync::atomic::{self, AtomicU64};
 
 /// In-memory version of [`NameDag`].
 ///
@@ -40,6 +41,7 @@ impl Open for MemNameDagPath {
             snapshot: Default::default(),
             pending_heads: Default::default(),
             state: MemNameDagState,
+            id: format!("mem:{}", next_id()),
         })
     }
 }
@@ -64,4 +66,9 @@ impl Persist for MemNameDagState {
     fn persist(&mut self, _lock: &Self::Lock) -> Result<()> {
         Ok(())
     }
+}
+
+fn next_id() -> u64 {
+    static ID: AtomicU64 = AtomicU64::new(0);
+    ID.fetch_add(1, atomic::Ordering::AcqRel)
 }

@@ -224,6 +224,9 @@ macro_rules! delegate {
             {
                 self.$($t)*.dag_snapshot()
             }
+            fn dag_id(&self) -> &str {
+                self.$($t)*.dag_id()
+            }
         }
     };
 

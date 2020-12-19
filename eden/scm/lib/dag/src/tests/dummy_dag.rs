@@ -129,4 +129,8 @@ impl DagAlgorithm for DummyDag {
     fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(Arc::new(DummyDag))
     }
+
+    fn dag_id(&self) -> &str {
+        "dummy_dag"
+    }
 }

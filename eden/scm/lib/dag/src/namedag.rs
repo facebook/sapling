@@ -78,6 +78,9 @@ where
 
     /// Extra state of the `NameDag`.
     state: S,
+
+    /// Identity of the dag. Derived from `path`.
+    id: String,
 }
 
 #[async_trait::async_trait]
@@ -263,6 +266,7 @@ where
                     pending_heads: self.pending_heads.clone(),
                     path: self.path.try_clone()?,
                     state: self.state.try_clone()?,
+                    id: self.id.clone(),
                 };
                 let result = Arc::new(cloned);
                 *snapshot = Some(result.clone());
@@ -512,6 +516,10 @@ where
     /// Get a snapshot of the current graph.
     fn dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(self.try_snapshot()? as Arc<dyn DagAlgorithm + Send + Sync>)
+    }
+
+    fn dag_id(&self) -> &str {
+        &self.id
     }
 }
 
