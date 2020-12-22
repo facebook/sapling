@@ -445,7 +445,7 @@ impl ConfigSet {
                 let mut super_index = 10000; // Dummy place holder value
                 let mut sub_value = None;
                 let mut last_value = None;
-                let mut values_copy = values.clone();
+                let values_copy = values.clone();
 
                 let mut removals = 0;
                 for (index, value) in values_copy.iter().enumerate() {
