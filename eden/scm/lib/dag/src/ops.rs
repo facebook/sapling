@@ -412,16 +412,18 @@ impl<T: Clone> TryClone for T {
 impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
     /// Converts [`NameSet`] to [`IdSet`].
     async fn to_id_set(&self, set: &NameSet) -> Result<IdSet> {
+        let version = set.hints().id_map_version();
+
         // Fast path: extract IdSet from IdStaticSet.
         if let Some(set) = set.as_any().downcast_ref::<IdStaticSet>() {
-            if set.hints().compatible_id_map(self.map_version()).right() {
+            if None < version && version <= Some(self.map_version()) {
                 return Ok(set.spans.clone());
             }
         }
 
         // Convert IdLazySet to IdStaticSet. Bypass hash lookups.
         if let Some(set) = set.as_any().downcast_ref::<IdLazySet>() {
-            if set.hints().compatible_id_map(self.map_version()).right() {
+            if None < version && version <= Some(self.map_version()) {
                 let set: IdStaticSet = set.to_static()?;
                 return Ok(set.spans);
             }

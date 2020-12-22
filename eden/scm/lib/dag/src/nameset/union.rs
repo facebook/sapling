@@ -26,21 +26,16 @@ pub struct UnionSet {
 
 impl UnionSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
-        let side =
-            lhs.hints().compatible_id_map(rhs.hints()) & lhs.hints().compatible_dag(rhs.hints());
-        let hints = if side.either() {
-            let hints = Hints::new_inherit_idmap_dag(side.apply(&lhs, &rhs).unwrap().hints());
+        let hints = Hints::union(&[lhs.hints(), rhs.hints()]);
+        if hints.id_map().is_some() {
             if let (Some(id1), Some(id2)) = (lhs.hints().min_id(), rhs.hints().min_id()) {
                 hints.set_min_id(id1.min(id2));
             }
             if let (Some(id1), Some(id2)) = (lhs.hints().max_id(), rhs.hints().max_id()) {
                 hints.set_max_id(id1.max(id2));
             }
-            hints.add_flags(lhs.hints().flags() & rhs.hints().flags() & Flags::ANCESTORS);
-            hints
-        } else {
-            Hints::default()
         };
+        hints.add_flags(lhs.hints().flags() & rhs.hints().flags() & Flags::ANCESTORS);
         if lhs.hints().contains(Flags::FILTER) || rhs.hints().contains(Flags::FILTER) {
             hints.add_flags(Flags::FILTER);
         }

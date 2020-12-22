@@ -21,6 +21,7 @@ use futures::Stream;
 use futures::StreamExt;
 use nonblocking::non_blocking;
 use std::any::Any;
+use std::cmp;
 use std::fmt;
 use std::fmt::Debug;
 use std::ops::{BitAnd, BitOr, Deref, Sub};
@@ -160,7 +161,9 @@ impl NameSet {
 
     /// Calculates the subset that is only in self, not in other.
     pub fn difference(&self, other: &NameSet) -> NameSet {
-        if other.hints().contains(Flags::FULL) && other.hints().compatible_dag(self.hints()).left()
+        if other.hints().contains(Flags::FULL)
+            && other.hints().dag_version() >= self.hints().dag_version()
+            && self.hints().dag_version() > None
         {
             tracing::debug!(
                 "difference(x={:.6?}, y={:.6?}) = () (fast path 1)",
@@ -181,11 +184,8 @@ impl NameSet {
             self.as_any().downcast_ref::<IdStaticSet>(),
             other.as_any().downcast_ref::<IdStaticSet>(),
         ) {
-            let side = this
-                .map
-                .map_version()
-                .compatible_side(other.map.map_version());
-            if side.either() {
+            let order = this.map.map_version().partial_cmp(other.map.map_version());
+            if order.is_some() {
                 // Fast path for IdStaticSet
                 let result = Self::from_spans_idmap_dag(
                     this.spans.difference(&other.spans),
@@ -207,7 +207,9 @@ impl NameSet {
 
     /// Calculates the intersection of two sets.
     pub fn intersection(&self, other: &NameSet) -> NameSet {
-        if self.hints().contains(Flags::FULL) && other.hints().compatible_dag(self.hints()).right()
+        if self.hints().contains(Flags::FULL)
+            && self.hints().dag_version() >= other.hints().dag_version()
+            && other.hints().dag_version() > None
         {
             tracing::debug!(
                 "intersection(x={:.6?}, y={:.6?}) = y (fast path 1)",
@@ -216,7 +218,9 @@ impl NameSet {
             );
             return other.clone();
         }
-        if other.hints().contains(Flags::FULL) && other.hints().compatible_dag(self.hints()).left()
+        if other.hints().contains(Flags::FULL)
+            && other.hints().dag_version() >= self.hints().dag_version()
+            && self.hints().dag_version() > None
         {
             tracing::debug!(
                 "intersection(x={:.6?}, y={:.6?}) = x (fast path 2)",
@@ -237,16 +241,13 @@ impl NameSet {
             self.as_any().downcast_ref::<IdStaticSet>(),
             other.as_any().downcast_ref::<IdStaticSet>(),
         ) {
-            let side = this
-                .map
-                .map_version()
-                .compatible_side(other.map.map_version());
-            if side.either() {
+            let order = this.map.map_version().partial_cmp(other.map.map_version());
+            if let Some(order) = order {
                 // Fast path for IdStaticSet
                 let result = Self::from_spans_idmap_dag(
                     this.spans.intersection(&other.spans),
-                    side.apply(&this.map, &other.map).unwrap().clone(),
-                    side.apply(&this.dag, &other.dag).unwrap().clone(),
+                    pick(order, &this.map, &other.map).clone(),
+                    pick(order, &this.dag, &other.dag).clone(),
                 );
                 tracing::debug!(
                     "intersection(x={:.6?}, y={:.6?}) = {:?} (IdStatic fast path)",
@@ -266,7 +267,9 @@ impl NameSet {
 
     /// Calculates the union of two sets.
     pub fn union(&self, other: &NameSet) -> NameSet {
-        if (self.hints().contains(Flags::FULL) && self.hints().compatible_dag(other.hints()).left())
+        if (self.hints().contains(Flags::FULL)
+            && self.hints().dag_version() >= other.hints().dag_version()
+            && other.hints().dag_version() > None)
             || other.hints().contains(Flags::EMPTY)
         {
             tracing::debug!("union(x={:.6?}, y={:.6?}) = x (fast path 1)", self, other);
@@ -274,7 +277,8 @@ impl NameSet {
         }
         if self.hints().contains(Flags::EMPTY)
             || (other.hints().contains(Flags::FULL)
-                && self.hints().compatible_dag(other.hints()).right())
+                && other.hints().dag_version() >= self.hints().dag_version()
+                && self.hints().dag_version() > None)
         {
             tracing::debug!("union(x={:.6?}, y={:.6?}) = y (fast path 2)", self, other);
             return other.clone();
@@ -283,16 +287,13 @@ impl NameSet {
             self.as_any().downcast_ref::<IdStaticSet>(),
             other.as_any().downcast_ref::<IdStaticSet>(),
         ) {
-            let side = this
-                .map
-                .map_version()
-                .compatible_side(other.map.map_version());
-            if side.either() {
+            let order = this.map.map_version().partial_cmp(other.map.map_version());
+            if let Some(order) = order {
                 // Fast path for IdStaticSet
                 let result = Self::from_spans_idmap_dag(
                     this.spans.union(&other.spans),
-                    side.apply(&this.map, &other.map).unwrap().clone(),
-                    side.apply(&this.dag, &other.dag).unwrap().clone(),
+                    pick(order, &this.map, &other.map).clone(),
+                    pick(order, &this.dag, &other.dag).clone(),
                 );
                 tracing::debug!(
                     "union(x={:.6?}, y={:.6?}) = {:.6?} (fast path 3)",
@@ -632,6 +633,15 @@ impl From<&VertexName> for NameSet {
     }
 }
 
+/// Pick `left` if `order` is "greater or equal".
+/// Pick `right` otherwise.
+fn pick<T>(order: cmp::Ordering, left: T, right: T) -> T {
+    match order {
+        cmp::Ordering::Greater | cmp::Ordering::Equal => left,
+        cmp::Ordering::Less => right,
+    }
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
@@ -852,15 +862,16 @@ pub(crate) mod tests {
                 "  Hints(ID_ASC)"
             ]
         );
+        // Fast paths are not used for "|" because there is no dag associated.
         assert_eq!(
             hints_ops(&partial, &full),
             [
-                "- Hints(EMPTY | ID_DESC | ID_ASC | TOPO_DESC | ANCESTORS)",
+                "- Hints(ID_ASC)",
                 "  Hints(ID_DESC)",
                 "& Hints(ID_ASC)",
                 "  Hints(ID_ASC)",
-                "| Hints(FULL | ID_DESC | ANCESTORS)",
-                "  Hints(FULL | ID_DESC | ANCESTORS)"
+                "| Hints((empty))",
+                "  Hints((empty))"
             ]
         );
         assert_eq!(
@@ -972,8 +983,8 @@ pub(crate) mod tests {
                 "  Hints(ID_ASC, 10..=40)",
                 "& Hints(ID_DESC, 20..=30)",
                 "  Hints(ID_ASC, 20..=30)",
-                "| Hints((empty), 10..=40)",
-                "  Hints((empty), 10..=40)"
+                "| Hints((empty))",
+                "  Hints((empty))"
             ]
         );
     }

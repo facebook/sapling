@@ -91,7 +91,7 @@ impl IntersectionSet {
         let (lhs, rhs) = if lhs.hints().contains(Flags::FULL)
             && !rhs.hints().contains(Flags::FULL)
             && !rhs.hints().contains(Flags::FILTER)
-            && lhs.hints().compatible_dag(rhs.hints()).left()
+            && lhs.hints().dag_version() >= rhs.hints().dag_version()
         {
             (rhs, lhs)
         } else {
@@ -108,11 +108,10 @@ impl IntersectionSet {
                     | Flags::FILTER),
         );
         // Only keep the ANCESTORS flag if lhs and rhs use a compatible Dag.
-        if lhs.hints().compatible_dag(rhs.hints()).left() {
+        if lhs.hints().dag_version() >= rhs.hints().dag_version() {
             hints.add_flags(lhs.hints().flags() & rhs.hints().flags() & Flags::ANCESTORS);
         }
-        let side = hints.compatible_id_map(rhs.hints());
-        let (rhs_min_id, rhs_max_id) = if side.left() {
+        let (rhs_min_id, rhs_max_id) = if hints.id_map_version() >= rhs.hints().id_map_version() {
             // rhs ids are all known by lhs.
             (rhs.hints().min_id(), rhs.hints().max_id())
         } else {
@@ -138,12 +137,18 @@ impl IntersectionSet {
         }
         Self { lhs, rhs, hints }
     }
+
+    fn is_rhs_id_map_comapatible(&self) -> bool {
+        let lhs_version = self.lhs.hints().id_map_version();
+        let rhs_version = self.rhs.hints().id_map_version();
+        lhs_version == rhs_version || (lhs_version > rhs_version && rhs_version > None)
+    }
 }
 
 #[async_trait::async_trait]
 impl AsyncNameSetQuery for IntersectionSet {
     async fn iter(&self) -> Result<BoxVertexStream> {
-        let stop_condition = if !self.lhs.hints().compatible_id_map(self.rhs.hints()).left() {
+        let stop_condition = if !self.is_rhs_id_map_comapatible() {
             None
         } else if self.lhs.hints().contains(Flags::ID_ASC) {
             if let Some(id) = self.rhs.hints().max_id() {
@@ -177,7 +182,7 @@ impl AsyncNameSetQuery for IntersectionSet {
     }
 
     async fn iter_rev(&self) -> Result<BoxVertexStream> {
-        let stop_condition = if !self.lhs.hints().compatible_id_map(self.rhs.hints()).left() {
+        let stop_condition = if !self.is_rhs_id_map_comapatible() {
             None
         } else if self.lhs.hints().contains(Flags::ID_DESC) {
             if let Some(id) = self.rhs.hints().max_id() {

@@ -8,9 +8,9 @@
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::Id;
-use crate::Side;
 use crate::VerLink;
 use bitflags::bitflags;
+use std::cmp;
 use std::fmt;
 use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 use std::sync::atomic::{AtomicU32, AtomicU64};
@@ -19,8 +19,6 @@ use std::sync::Arc;
 bitflags! {
     pub struct Flags: u32 {
         /// Full. A full Set & other set X with compatible Dag results in X.
-        /// Use `set_dag` to set the Dag pointer to avoid fast paths
-        /// intersecting incompatible Dags.
         const FULL = 0x1;
 
         /// Empty (also implies ID_DESC | ID_ASC | TOPO_DESC).
@@ -75,6 +73,43 @@ impl Hints {
     pub fn new_inherit_idmap_dag(hints: &Self) -> Self {
         Self::new_with_idmap_dag(hints, hints)
     }
+
+    /// Attempt to inherit properties (IdMap and Dag snapshots) from a list of
+    /// hints. The returned hints have IdMap and Dag set to be compatible with
+    /// all other hints in the list (or set to be None if that's not possible).
+    pub fn union(hints_list: &[&Self]) -> Self {
+        let default = Self::default();
+        // Find the id_map that is compatible with all other id_maps.
+        debug_assert!(default.id_map().is_none());
+        let id_map = hints_list
+            .iter()
+            .fold(&default, |a, b| {
+                match a.id_map_version().partial_cmp(&b.id_map_version()) {
+                    None => &default,
+                    Some(cmp::Ordering::Equal) | Some(cmp::Ordering::Greater) => a,
+                    Some(cmp::Ordering::Less) => b,
+                }
+            })
+            .id_map();
+        // Find the dag that is compatible with all other dags.
+        debug_assert!(default.dag().is_none());
+        let dag = hints_list
+            .iter()
+            .fold(&default, |a, b| {
+                match a.dag_version().partial_cmp(&b.dag_version()) {
+                    None => &default,
+                    Some(cmp::Ordering::Equal) | Some(cmp::Ordering::Greater) => a,
+                    Some(cmp::Ordering::Less) => b,
+                }
+            })
+            .dag();
+        Self {
+            id_map: IdMapSnapshot(id_map),
+            dag: DagSnapshot(dag),
+            ..Self::default()
+        }
+    }
+
 
     pub fn flags(&self) -> Flags {
         let flags = self.flags.load(Relaxed);
@@ -147,32 +182,22 @@ impl Hints {
         self
     }
 
-    pub fn compatible_id_map<'a>(&'a self, other: impl Into<IdMapVersion<'a>>) -> Side {
-        let lhs = self.id_map.0.clone();
-        let rhs = other.into().0;
-        match (lhs, rhs) {
-            (None, None) => Side::all(),
-            (Some(l), Some(r)) => l.map_version().compatible_side(r),
-            (None, Some(_)) | (Some(_), None) => Side::empty(),
-        }
-    }
-
-    pub fn compatible_dag<'a>(&'a self, other: impl Into<DagVersion<'a>>) -> Side {
-        let lhs = self.dag.0.clone();
-        let rhs = other.into().0;
-        match (lhs, rhs) {
-            (None, None) => Side::all(),
-            (Some(l), Some(r)) => l.dag_version().compatible_side(r),
-            (None, Some(_)) | (Some(_), None) => Side::empty(),
-        }
-    }
-
     pub fn dag(&self) -> Option<Arc<dyn DagAlgorithm + Send + Sync>> {
         self.dag.0.clone()
     }
 
     pub fn id_map(&self) -> Option<Arc<dyn IdConvert + Send + Sync>> {
         self.id_map.0.clone()
+    }
+
+    /// The `VerLink` of the Dag. `None` if there is no Dag associated.
+    pub fn dag_version(&self) -> Option<&VerLink> {
+        self.dag.0.as_ref().map(|d| d.dag_version())
+    }
+
+    /// The `VerLink` of the IdMap. `None` if there is no IdMap associated.
+    pub fn id_map_version(&self) -> Option<&VerLink> {
+        self.id_map.0.as_ref().map(|d| d.map_version())
     }
 }
 

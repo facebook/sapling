@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use bitflags::bitflags;
+use std::cmp;
 use std::fmt;
 use std::sync::atomic::{self, AtomicU32};
 use std::sync::Arc;
@@ -18,13 +18,12 @@ use std::sync::Arc;
 /// - Clones (cheaply) preserve the version.
 ///
 /// Supported operations:
-/// - `new() -> x`: Create a new version that is incompatible with other
-///   versions.
-/// - `clone(x) -> y`: Clone `x` to `y`. `x` and `y` are compatible.
-/// - `bump(x) -> y`: Bump `x` to `y`. `y` is backwards-compatible with `x`.
-///   `x` is not backwards-compatible with `y`.
-/// - `compatible(x, y) -> x | y | None`: Find the version that is
-///   backwards-compatible with both `x` and `y`.
+/// - `new() -> x`: Create a new version that is not comparable (compatible)
+///   with other versions.
+/// - `clone(x) -> y`: Clone `x` to `y`. `x == y`. `x` and `y` are compatible.
+/// - `bump(x) -> y`: Bump `x` to `y`. `y > x`. `y` is backwards-compatible with
+///   `x`. Note: `y` is not comparable (compatible) with other `bump(x)`.
+/// - `x > y`: `true` if `x` is backwards compatible with `y`.
 ///
 /// The linked list can be shared in other linked lists. So they form a tree
 /// effectively. Comparing to a DAG, there is no "merge" operation.
@@ -32,17 +31,6 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct VerLink {
     inner: Arc<Inner>,
-}
-
-bitflags! {
-    /// Side of compatibility. Return value of `VerLink::compatible_side`.
-    pub struct Side: u8 {
-        /// The left side is backwards-compatible with and right side.
-        const LEFT = 1;
-
-        /// The right side is backwards-compatible with the left side.
-        const RIGHT = 2;
-    }
 }
 
 #[derive(Clone)]
@@ -96,91 +84,40 @@ impl VerLink {
             }
         }
     }
-
-    /// Find the `VerLink` that is compatible with both `self` and `other`.
-    /// Commutative. `compatible(a, b)` is `compatible(b, a)`.
-    ///
-    /// `compatible(a, b)` is `Some(b)`, if:
-    /// - `b` is `a.clone()`, neither `a` nor `b` are `bump()`ed.
-    /// - `b` was `a.clone()`, `b` was `bump()`ed since then, `a` wasn't `bump()`ed.
-    ///
-    /// `compatible(a, b)` is `None` if:
-    /// - `b` wasn't created via `a.clone()`.
-    /// - `b` was `a.clone()`, but both `b` and `a` are `bump()`ed afterwards.
-    pub fn compatible<'a>(&'a self, other: &'a VerLink) -> Option<&'a VerLink> {
-        if self.inner.base == other.inner.base {
-            if self.inner.gen < other.inner.gen {
-                return other.compatible(self);
-            } else {
-                // self.gen >= other.gen
-                let mut cur = Some(self);
-                while let Some(this) = cur {
-                    if this.inner.gen < other.inner.gen {
-                        break;
-                    }
-                    if Arc::ptr_eq(&this.inner, &other.inner) {
-                        return Some(self);
-                    }
-                    cur = this.inner.parent.as_ref();
-                }
-            }
-        }
-        None
-    }
-
-    /// Find the "side" of compatibility.
-    /// `LEFT`: `self` is backwards-compatible with `other`.
-    /// `RIGHT`: `other` is backwards-compatible with `self`.
-    pub fn compatible_side<'a>(&'a self, other: &'a VerLink) -> Side {
-        let mut result = Side::empty();
-        let compat = self.compatible(other);
-        if compat == Some(self) {
-            result |= Side::LEFT;
-        }
-        if compat == Some(other) {
-            result |= Side::RIGHT;
-        }
-        result
-    }
 }
 
-impl Side {
-    /// Returns true if either `self.left()` or `self.right()` is true.
-    pub fn either(self) -> bool {
-        self != Self::empty()
-    }
-
-    /// Returns true if both `self.left()` and `self.right()` is true.
-    pub fn both(self) -> bool {
-        self == Self::LEFT | Self::RIGHT
-    }
-
-    /// Returns true if `self` contains `LEFT`.
-    pub fn left(self) -> bool {
-        self.contains(Self::LEFT)
-    }
-
-    /// Returns true if `self` contains `RIGHT`.
-    pub fn right(self) -> bool {
-        self.contains(Self::RIGHT)
-    }
-
-    /// Returns `left` if `self.left()` is true.
-    /// Returns `right` if `self.right()` is true.
-    /// Returns `None` otherwise.
-    pub fn apply<T>(self, left: T, right: T) -> Option<T> {
-        if self.left() {
-            Some(left)
-        } else if self.right() {
-            Some(right)
+impl PartialOrd for VerLink {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        if self.inner.base != other.inner.base {
+            // Fast path: self and other have different root nodes and are not
+            // reachable from each other.
+            return None;
+        }
+        if self.inner.gen < other.inner.gen {
+            other.partial_cmp(self).map(|o| o.reverse())
         } else {
+            debug_assert!(self.inner.gen >= other.inner.gen);
+            if Arc::ptr_eq(&self.inner, &other.inner) {
+                return Some(cmp::Ordering::Equal);
+            }
+            let mut cur = self.inner.parent.as_ref();
+            while let Some(this) = cur {
+                if this.inner.gen < other.inner.gen {
+                    // Fast path: not possible to reach other from here.
+                    return None;
+                }
+                if Arc::ptr_eq(&this.inner, &other.inner) {
+                    return Some(cmp::Ordering::Greater);
+                }
+                cur = this.inner.parent.as_ref();
+            }
             None
         }
     }
 }
 
-impl PartialEq<&VerLink> for &VerLink {
-    fn eq(&self, other: &&VerLink) -> bool {
+impl PartialEq for VerLink {
+    fn eq(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.inner, &other.inner)
     }
 }
@@ -245,6 +182,7 @@ mod tests {
         let mut c = b.clone();
         c.bump();
         assert_eq!(compatible(&a, &c), Some(&c));
+        assert_eq!(compatible(&b, &c), Some(&c));
     }
 
     #[test]
@@ -269,18 +207,39 @@ mod tests {
         assert_eq!(b.chain_len(), 2);
     }
 
+    /// Find the more compatible version.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
     fn compatible<'a>(a: &'a VerLink, b: &'a VerLink) -> Option<&'a VerLink> {
-        let result1 = a.compatible(b);
-        let result2 = b.compatible(a);
-        assert_eq!(result1, result2);
-        let side = a.compatible_side(b);
-        assert_eq!(side.contains(Side::LEFT), result1 == Some(a));
-        assert_eq!(side.contains(Side::RIGHT), result1 == Some(b));
-        assert_eq!(
-            side.apply(Side::LEFT, Side::RIGHT).unwrap_or(Side::empty()),
-            if side.both() { Side::LEFT } else { side }
-        );
-        result1
+        if a == b {
+            assert!(!(a != b));
+            assert!(!(a < b));
+            assert!(!(b < a));
+            assert!(!(a > b));
+            assert!(!(b > a));
+            Some(a)
+        } else if a < b {
+            assert!(!(a == b));
+            assert!(a != b);
+            assert!(!(b < a));
+            assert!(!(a > b));
+            assert!(b > a);
+            Some(b)
+        } else if a > b {
+            assert!(!(a == b));
+            assert!(a != b);
+            assert!(!(a < b));
+            assert!(b < a);
+            assert!(!(b > a));
+            Some(a)
+        } else {
+            assert!(!(a == b));
+            assert!(a != b);
+            assert!(!(a < b));
+            assert!(!(a > b));
+            assert!(!(b < a));
+            assert!(!(b > a));
+            None
+        }
     }
 
     impl VerLink {

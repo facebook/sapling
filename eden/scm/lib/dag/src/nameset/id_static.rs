@@ -325,7 +325,7 @@ pub(crate) mod tests {
                 assert_eq!(f(z() & a2()), "<and <static [Z]> <spans [A:G+0:6]>>");
                 assert_eq!(f(z() | a2()), "<or <static [Z]> <spans [A:G+0:6]>>");
                 assert_eq!(f(z() - a2()), "<diff <static [Z]> <spans [A:G+0:6]>>");
-                assert_eq!(f(a1() & z()), "<and <spans [A:G+0:6]> <static [Z]>>");
+                assert_eq!(f(a1() & z()), "<and <static [Z]> <spans [A:G+0:6]>>");
                 assert_eq!(f(a1() | z()), "<or <spans [A:G+0:6]> <static [Z]>>");
                 assert_eq!(f(a1() - z()), "<diff <spans [A:G+0:6]> <static [Z]>>");
 
@@ -426,12 +426,9 @@ pub(crate) mod tests {
             // Fast paths are not used if the set is not "bound" to the dag.
             assert_eq!(
                 format!("{:?}", r(dag.ancestors(bfg.clone()))?),
-                "<spans [E:G+4:6, A:B+0:1]>"
+                "<static [B, F, G]>"
             );
-            assert_eq!(
-                format!("{:?}", r(dag.heads(bfg.clone()))?),
-                "<spans [G+6, B+1]>"
-            );
+            assert_eq!(format!("{:?}", r(dag.heads(bfg.clone()))?), "<spans [G+6]>");
 
             // Binding to the Dag enables fast paths.
             let bfg = r(dag.sort(&bfg))?;

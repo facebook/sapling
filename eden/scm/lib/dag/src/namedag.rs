@@ -304,7 +304,7 @@ where
     /// Sort a `NameSet` topologically.
     async fn sort(&self, set: &NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::TOPO_DESC)
-            && set.hints().compatible_dag(self.dag_version()).either()
+            && set.hints().dag_version() <= Some(self.dag_version())
         {
             Ok(set.clone())
         } else {
@@ -342,7 +342,7 @@ where
     /// Calculates all ancestors reachable from any name from the given set.
     async fn ancestors(&self, set: NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::ANCESTORS)
-            && set.hints().compatible_dag(self.dag_version()).either()
+            && set.hints().dag_version() <= Some(self.dag_version())
         {
             return Ok(set);
         }
@@ -388,7 +388,7 @@ where
     /// Calculates heads of the given set.
     async fn heads(&self, set: NameSet) -> Result<NameSet> {
         if set.hints().contains(Flags::ANCESTORS)
-            && set.hints().compatible_dag(self.dag_version()).right()
+            && set.hints().dag_version() <= Some(self.dag_version())
         {
             // heads_ancestors is faster.
             return self.heads_ancestors(set).await;
@@ -534,7 +534,7 @@ where
 /// Extract the ANCESTORS flag if the set with the `hints` is bound to a
 /// compatible DAG.
 fn extract_ancestor_flag_if_compatible(hints: &Hints, dag_version: &VerLink) -> Flags {
-    if hints.compatible_dag(dag_version).right() {
+    if hints.dag_version() <= Some(dag_version) {
         hints.flags() & Flags::ANCESTORS
     } else {
         Flags::empty()
