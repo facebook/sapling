@@ -105,8 +105,8 @@ impl OutgoingEdge {
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[error("Could not step to {0:?} via {1}")]
-    NotTraversable(OutgoingEdge, String),
+    #[error("Could not step to {1:?} via {2} in repo {0}")]
+    NotTraversable(String, OutgoingEdge, String),
 }
 
 // Simpler visitor trait used inside each step to decide
@@ -1797,7 +1797,9 @@ where
             }
         }
     }
-    .with_context(|| ErrorKind::NotTraversable(walk_item.clone(), format!("{:?}", via)))?;
+    .with_context(|| {
+        ErrorKind::NotTraversable(repo.name().clone(), walk_item.clone(), format!("{:?}", via))
+    })?;
 
     match step_output {
         StepOutput(node_data, children) => {

@@ -320,10 +320,9 @@ pub async fn compression_benefit<'a>(
             async move |walk_output| {
                 cloned!(ctx, sizing_progress_state);
                 // Sizing doesn't use mtime, so remove it from payload
-                let walk_progress = progress_stream(quiet, &progress_state.clone(), walk_output)
-                    .map_ok(|(key, WalkPayloadMtime(_mtime, node_data), stats)| {
-                        (key, node_data, stats)
-                    });
+                let walk_progress = progress_stream(quiet, &progress_state, walk_output).map_ok(
+                    |(key, WalkPayloadMtime(_mtime, node_data), stats)| (key, node_data, stats),
+                );
 
                 let compressor = size_sampling_stream(
                     scheduled_max,
@@ -333,8 +332,7 @@ pub async fn compression_benefit<'a>(
                     },
                     sampler,
                 );
-                let report_sizing =
-                    progress_stream(quiet, &sizing_progress_state.clone(), compressor);
+                let report_sizing = progress_stream(quiet, &sizing_progress_state, compressor);
                 report_state(ctx, sizing_progress_state, report_sizing)
                     .map({
                         cloned!(progress_state);

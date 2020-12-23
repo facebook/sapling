@@ -667,8 +667,7 @@ pub async fn validate<'a>(
                     (n, s, d)
                 });
 
-            let validate_progress =
-                progress_stream(quiet, &validate_progress_state.clone(), walk_progress);
+            let validate_progress = progress_stream(quiet, &validate_progress_state, walk_progress);
 
             let one_fut = report_state(ctx, progress_state, validate_progress).map_ok({
                 cloned!(validate_progress_state);

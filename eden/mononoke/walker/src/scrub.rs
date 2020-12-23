@@ -385,7 +385,7 @@ pub async fn scrub_objects<'a>(
                     output_node_types,
                     output_format,
                 );
-                let report_sizing = progress_stream(quiet, &sizing_progress_state.clone(), loading);
+                let report_sizing = progress_stream(quiet, &sizing_progress_state, loading);
 
                 report_state(ctx, sizing_progress_state, report_sizing)
                     .map_ok({

@@ -388,10 +388,10 @@ pub async fn corpus<'a>(
             cloned!(ctx);
             async move |walk_output| {
                 cloned!(ctx, sizing_progress_state);
-                let walk_progress = progress_stream(quiet, &progress_state.clone(), walk_output);
+                let walk_progress = progress_stream(quiet, &progress_state, walk_output);
 
                 let corpus = corpus_stream(scheduled_max, output_dir, walk_progress, sampler);
-                let report_sizing = progress_stream(quiet, &sizing_progress_state.clone(), corpus);
+                let report_sizing = progress_stream(quiet, &sizing_progress_state, corpus);
                 report_state(ctx, sizing_progress_state, report_sizing)
                     .map({
                         cloned!(progress_state);
