@@ -12,10 +12,9 @@ use crate::progress::{
 };
 use crate::sampling::{SamplingWalkVisitor, WalkSampleMapping};
 use crate::setup::{
-    parse_node_types, setup_common, OutputFormat, EXCLUDE_OUTPUT_NODE_TYPE_ARG,
-    EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_OUTPUT_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG,
-    LIMIT_DATA_FETCH_ARG, OUTPUT_FORMAT_ARG, PROGRESS_INTERVAL_ARG, PROGRESS_SAMPLE_DURATION_S,
-    PROGRESS_SAMPLE_RATE, PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG, SAMPLE_RATE_ARG, SCRUB,
+    parse_node_types, parse_progress_args, parse_sampling_args, setup_common, OutputFormat,
+    EXCLUDE_OUTPUT_NODE_TYPE_ARG, INCLUDE_OUTPUT_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG,
+    OUTPUT_FORMAT_ARG, SCRUB,
 };
 use crate::sizing::SizingSample;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
@@ -343,39 +342,27 @@ pub async fn scrub_objects<'a>(
     .await?;
 
     let repo_stats_key = args::get_repo_name(config_store, &matches)?;
+    let progress_options = parse_progress_args(sub_m);
+    let sampling_options = parse_sampling_args(sub_m, 1)?;
 
-    let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(1);
-    let sample_offset = args::get_u64_opt(&sub_m, SAMPLE_OFFSET_ARG).unwrap_or(0);
-    let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);
-    let progress_sample_rate = args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG);
     let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);
-    let scheduled_max = walk_params.scheduled_max;
-    let quiet = walk_params.quiet;
-    let progress_state = walk_params.progress_state.clone();
-
-    cloned!(
-        walk_params.include_node_types,
-        walk_params.include_edge_types
-    );
-
-    let mut output_node_types = parse_node_types(
+    let output_format = sub_m
+        .value_of(OUTPUT_FORMAT_ARG)
+        .map_or(Ok(OutputFormat::PrettyDebug), OutputFormat::from_str)?;
+    let output_node_types = parse_node_types(
         sub_m,
         INCLUDE_OUTPUT_NODE_TYPE_ARG,
         EXCLUDE_OUTPUT_NODE_TYPE_ARG,
         &[],
     )?;
 
-    let output_format = sub_m
-        .value_of(OUTPUT_FORMAT_ARG)
-        .map_or(Ok(OutputFormat::PrettyDebug), OutputFormat::from_str)?;
-
-    let mut sampling_node_types = parse_node_types(
-        sub_m,
-        INCLUDE_SAMPLE_NODE_TYPE_ARG,
-        EXCLUDE_SAMPLE_NODE_TYPE_ARG,
-        &include_node_types.iter().cloned().collect::<Vec<_>>(),
-    )?;
-    sampling_node_types.retain(|i| include_node_types.contains(i));
+    cloned!(
+        walk_params.include_node_types,
+        walk_params.include_edge_types,
+        mut sampling_options,
+        mut output_node_types,
+    );
+    sampling_options.retain_or_default(&include_node_types);
 
     let sizing_progress_state =
         ProgressStateMutex::new(ProgressStateCountByType::<ScrubStats, ScrubStats>::new(
@@ -383,13 +370,18 @@ pub async fn scrub_objects<'a>(
             logger.clone(),
             SCRUB,
             repo_stats_key,
-            sampling_node_types.clone(),
-            progress_sample_rate.unwrap_or(PROGRESS_SAMPLE_RATE),
-            Duration::from_secs(progress_interval_secs.unwrap_or(PROGRESS_SAMPLE_DURATION_S)),
+            sampling_options.node_types.clone(),
+            progress_options,
         ));
 
     let make_sink = {
-        cloned!(scrub_sampler, output_node_types);
+        cloned!(
+            walk_params.quiet,
+            walk_params.progress_state,
+            walk_params.scheduled_max,
+            scrub_sampler,
+            output_node_types
+        );
         move |run: RepoWalkRun| {
             cloned!(run.ctx);
             async move |walk_output| {
@@ -425,11 +417,9 @@ pub async fn scrub_objects<'a>(
     let walk_state = Arc::new(SamplingWalkVisitor::new(
         include_node_types,
         include_edge_types,
-        sampling_node_types,
+        sampling_options,
         None,
         scrub_sampler,
-        sample_rate,
-        sample_offset,
         walk_params.enable_derive,
     ));
     walk_exact_tail::<_, _, _, _, _, EmptyRoute>(

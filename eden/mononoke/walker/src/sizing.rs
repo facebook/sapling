@@ -14,10 +14,8 @@ use crate::sampling::{
     PathTrackingRoute, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime, WalkSampleMapping,
 };
 use crate::setup::{
-    parse_node_types, setup_common, COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG,
-    EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG, PROGRESS_INTERVAL_ARG,
-    PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE, PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG,
-    SAMPLE_RATE_ARG,
+    parse_progress_args, parse_sampling_args, setup_common, COMPRESSION_BENEFIT,
+    COMPRESSION_LEVEL_ARG,
 };
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 
@@ -290,23 +288,16 @@ pub async fn compression_benefit<'a>(
 
     let repo_stats_key = args::get_repo_name(config_store, &matches)?;
 
+    let progress_options = parse_progress_args(sub_m);
+    let mut sampling_options = parse_sampling_args(&sub_m, 100)?;
     let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
-    let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
-    let sample_offset = args::get_u64_opt(&sub_m, SAMPLE_OFFSET_ARG).unwrap_or(0);
-    let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);
-    let progress_sample_rate = args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG);
 
     cloned!(
         walk_params.include_node_types,
         walk_params.include_edge_types
     );
-    let mut sampling_node_types = parse_node_types(
-        sub_m,
-        INCLUDE_SAMPLE_NODE_TYPE_ARG,
-        EXCLUDE_SAMPLE_NODE_TYPE_ARG,
-        &include_node_types.iter().cloned().collect::<Vec<_>>(),
-    )?;
-    sampling_node_types.retain(|i| include_node_types.contains(i));
+
+    sampling_options.retain_or_default(&include_node_types);
 
     let sizing_progress_state =
         ProgressStateMutex::new(ProgressStateCountByType::<SizingStats, SizingStats>::new(
@@ -314,9 +305,8 @@ pub async fn compression_benefit<'a>(
             logger.clone(),
             COMPRESSION_BENEFIT,
             repo_stats_key,
-            sampling_node_types.clone(),
-            progress_sample_rate.unwrap_or(PROGRESS_SAMPLE_RATE),
-            Duration::from_secs(progress_interval_secs.unwrap_or(PROGRESS_SAMPLE_DURATION_S)),
+            sampling_options.node_types.clone(),
+            progress_options,
         ));
 
     let make_sink = {
@@ -362,11 +352,9 @@ pub async fn compression_benefit<'a>(
     let walk_state = Arc::new(SamplingWalkVisitor::new(
         include_node_types,
         include_edge_types,
-        sampling_node_types,
+        sampling_options,
         None,
         sizing_sampler,
-        sample_rate,
-        sample_offset,
         walk_params.enable_derive,
     ));
     walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(

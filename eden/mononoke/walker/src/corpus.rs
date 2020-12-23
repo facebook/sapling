@@ -15,10 +15,8 @@ use crate::sampling::{
 };
 use crate::scrub::ScrubStats;
 use crate::setup::{
-    parse_node_types, setup_common, CORPUS, EXCLUDE_SAMPLE_NODE_TYPE_ARG,
-    INCLUDE_SAMPLE_NODE_TYPE_ARG, OUTPUT_DIR_ARG, PROGRESS_INTERVAL_ARG,
-    PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE, PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG,
-    SAMPLE_PATH_REGEX_ARG, SAMPLE_RATE_ARG,
+    parse_progress_args, parse_sampling_args, setup_common, CORPUS, OUTPUT_DIR_ARG,
+    SAMPLE_PATH_REGEX_ARG,
 };
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 
@@ -38,7 +36,7 @@ use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 use regex::Regex;
 use samplingblob::SamplingHandler;
 use slog::Logger;
-use std::{collections::HashMap, io::Write, path::PathBuf, sync::Arc, time::Duration};
+use std::{collections::HashMap, io::Write, path::PathBuf, sync::Arc};
 use tokio::fs::{self as tkfs};
 
 /// https://url.spec.whatwg.org/#fragment-percent-encode-set
@@ -351,10 +349,12 @@ pub async fn corpus<'a>(
     .await?;
 
     let repo_name = args::get_repo_name(config_store, &matches)?;
-    let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
-    let sample_offset = args::get_u64_opt(&sub_m, SAMPLE_OFFSET_ARG).unwrap_or(0);
-    let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);
-    let progress_sample_rate = args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG);
+    let progress_options = parse_progress_args(&sub_m);
+    let sampling_options = parse_sampling_args(&sub_m, 100)?;
+    let sampling_path_regex = sub_m
+        .value_of(SAMPLE_PATH_REGEX_ARG)
+        .map(|s| Regex::new(s))
+        .transpose()?;
 
     if let Some(output_dir) = &output_dir {
         if !std::path::Path::new(output_dir).exists() {
@@ -364,20 +364,10 @@ pub async fn corpus<'a>(
 
     cloned!(
         walk_params.include_node_types,
-        walk_params.include_edge_types
+        walk_params.include_edge_types,
+        mut sampling_options,
     );
-    let mut sampling_node_types = parse_node_types(
-        sub_m,
-        INCLUDE_SAMPLE_NODE_TYPE_ARG,
-        EXCLUDE_SAMPLE_NODE_TYPE_ARG,
-        &include_node_types.iter().cloned().collect::<Vec<_>>(),
-    )?;
-    sampling_node_types.retain(|i| include_node_types.contains(i));
-
-    let sampling_path_regex = sub_m
-        .value_of(SAMPLE_PATH_REGEX_ARG)
-        .map(|s| Regex::new(s))
-        .transpose()?;
+    sampling_options.retain_or_default(&include_node_types);
 
     let sizing_progress_state =
         ProgressStateMutex::new(ProgressStateCountByType::<ScrubStats, ScrubStats>::new(
@@ -385,9 +375,8 @@ pub async fn corpus<'a>(
             logger.clone(),
             CORPUS,
             repo_name,
-            sampling_node_types.clone(),
-            progress_sample_rate.unwrap_or(PROGRESS_SAMPLE_RATE),
-            Duration::from_secs(progress_interval_secs.unwrap_or(PROGRESS_SAMPLE_DURATION_S)),
+            sampling_options.node_types.clone(),
+            progress_options,
         ));
 
     let make_sink = {
@@ -422,11 +411,9 @@ pub async fn corpus<'a>(
     let walk_state = Arc::new(SamplingWalkVisitor::new(
         include_node_types,
         include_edge_types,
-        sampling_node_types,
+        sampling_options,
         sampling_path_regex,
         corpus_sampler,
-        sample_rate,
-        sample_offset,
         walk_params.enable_derive,
     ));
     walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(

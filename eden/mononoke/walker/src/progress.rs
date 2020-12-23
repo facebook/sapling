@@ -50,14 +50,19 @@ pub trait ProgressReporterUnprotected {
     fn report_throttled(&mut self);
 }
 
+#[derive(Clone, Copy)]
+pub struct ProgressOptions {
+    pub sample_rate: u64,
+    pub interval: Duration,
+}
+
 pub struct ProgressStateByTypeParams {
     pub fb: FacebookInit,
     pub logger: Logger,
     pub subcommand_stats_key: &'static str,
     pub repo_stats_key: String,
     pub types_sorted_by_name: Vec<NodeType>,
-    throttle_sample_rate: u64,
-    throttle_duration: Duration,
+    options: ProgressOptions,
 }
 
 pub struct ProgressStateWorkByType<SS>
@@ -135,8 +140,7 @@ where
         subcommand_stats_key: &'static str,
         repo_stats_key: String,
         included_types: HashSet<NodeType>,
-        sample_rate: u64,
-        throttle_duration: Duration,
+        options: ProgressOptions,
     ) -> Self {
         let types_by_name = sort_by_string(included_types);
 
@@ -148,8 +152,7 @@ where
                 subcommand_stats_key,
                 repo_stats_key,
                 types_sorted_by_name: types_by_name,
-                throttle_sample_rate: sample_rate,
-                throttle_duration,
+                options,
             },
             // Updated by record_step
             work_stats: ProgressStateWorkByType::<SS> {
@@ -168,10 +171,10 @@ where
 
     // Throttle by sample, then time
     pub fn should_log_throttled(self: &mut Self) -> Option<Duration> {
-        if self.work_stats.total_progress % self.params.throttle_sample_rate == 0 {
+        if self.work_stats.total_progress % self.params.options.sample_rate == 0 {
             let new_update = Instant::now();
             let delta_time = new_update.duration_since(self.reporting_stats.last_update);
-            if delta_time >= self.params.throttle_duration {
+            if delta_time >= self.params.options.interval {
                 self.reporting_stats.last_update = new_update;
                 return Some(delta_time);
             }

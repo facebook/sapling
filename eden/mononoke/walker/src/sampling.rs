@@ -22,24 +22,42 @@ pub trait SampleTrigger<K> {
     fn map_keys(&self, key: SamplingKey, walk_key: K);
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct SamplingOptions {
+    pub sample_rate: u64,
+    pub sample_offset: u64,
+    pub node_types: HashSet<NodeType>,
+    pub exclude_types: HashSet<NodeType>,
+}
+
+impl SamplingOptions {
+    pub fn retain_or_default(&mut self, walk_include: &HashSet<NodeType>) {
+        if self.node_types.is_empty() {
+            self.node_types = walk_include
+                .iter()
+                .filter(|e| !self.exclude_types.contains(e))
+                .cloned()
+                .collect();
+        } else {
+            self.node_types.retain(|i| walk_include.contains(i));
+        }
+    }
+}
+
 pub struct SamplingWalkVisitor<T> {
     inner: WalkState,
-    sample_node_types: HashSet<NodeType>,
+    options: SamplingOptions,
     sample_path_regex: Option<Regex>,
     sampler: Arc<T>,
-    sample_rate: u64,
-    sample_offset: u64,
 }
 
 impl<T> SamplingWalkVisitor<T> {
     pub fn new(
         include_node_types: HashSet<NodeType>,
         include_edge_types: HashSet<EdgeType>,
-        sample_node_types: HashSet<NodeType>,
+        options: SamplingOptions,
         sample_path_regex: Option<Regex>,
         sampler: Arc<T>,
-        sample_rate: u64,
-        sample_offset: u64,
         enable_derive: bool,
     ) -> Self {
         Self {
@@ -49,11 +67,9 @@ impl<T> SamplingWalkVisitor<T> {
                 HashSet::new(),
                 enable_derive,
             ),
-            sample_node_types,
+            options,
             sample_path_regex,
             sampler,
-            sample_rate,
-            sample_offset,
         }
     }
 }
@@ -203,7 +219,7 @@ where
         route: Option<&PathTrackingRoute>,
         step: &OutgoingEdge,
     ) -> CoreContext {
-        if self.sample_node_types.contains(&step.target.get_type()) {
+        if self.options.node_types.contains(&step.target.get_type()) {
             let repo_path = PathTrackingRoute::evolve_path(
                 route.and_then(|r| r.path.as_ref()),
                 step.path.as_ref(),
@@ -216,7 +232,7 @@ where
                     Some(repo_path) => re.is_match(&repo_path.to_string()),
                 },
             ) {
-                let should_sample = match self.sample_rate {
+                let should_sample = match self.options.sample_rate {
                     0 => false,
                     1 => true,
                     sample_rate => {
@@ -224,9 +240,10 @@ where
                             || step.target.sampling_fingerprint(),
                             |r| r.sampling_fingerprint(),
                         );
-                        sampling_fingerprint.map_or(self.sample_offset % sample_rate == 0, |fp| {
-                            (fp + self.sample_offset) % sample_rate == 0
-                        })
+                        sampling_fingerprint
+                            .map_or(self.options.sample_offset % sample_rate == 0, |fp| {
+                                (fp + self.options.sample_offset) % sample_rate == 0
+                            })
                     }
                 };
 
@@ -300,15 +317,15 @@ where
         route: Option<&EmptyRoute>,
         step: &OutgoingEdge,
     ) -> CoreContext {
-        if self.sample_node_types.contains(&step.target.get_type()) {
-            let should_sample = match self.sample_rate {
+        if self.options.node_types.contains(&step.target.get_type()) {
+            let should_sample = match self.options.sample_rate {
                 0 => false,
                 1 => true,
                 sample_rate => step
                     .target
                     .sampling_fingerprint()
-                    .map_or(self.sample_offset % sample_rate == 0, |fp| {
-                        (fp + self.sample_offset) % sample_rate == 0
+                    .map_or(self.options.sample_offset % sample_rate == 0, |fp| {
+                        (fp + self.options.sample_offset) % sample_rate == 0
                     }),
             };
 

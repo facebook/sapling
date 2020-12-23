@@ -9,8 +9,9 @@ use crate::blobstore;
 use crate::graph::{EdgeType, Node, NodeType};
 use crate::parse_node::parse_node;
 use crate::progress::{
-    sort_by_string, ProgressStateCountByType, ProgressStateMutex, ProgressSummary,
+    sort_by_string, ProgressOptions, ProgressStateCountByType, ProgressStateMutex, ProgressSummary,
 };
+use crate::sampling::SamplingOptions;
 use crate::state::StepStats;
 use crate::validate::{CheckType, REPO, WALK_TYPE};
 use crate::walk::OutgoingEdge;
@@ -93,13 +94,13 @@ pub const PROGRESS_SAMPLE_RATE_ARG: &str = "progress-sample-rate";
 pub const PROGRESS_INTERVAL_ARG: &str = "progress-interval";
 pub const LIMIT_DATA_FETCH_ARG: &str = "limit-data-fetch";
 pub const COMPRESSION_LEVEL_ARG: &str = "compression-level";
-pub const SAMPLE_RATE_ARG: &str = "sample-rate";
-pub const SAMPLE_OFFSET_ARG: &str = "sample-offset";
+const SAMPLE_RATE_ARG: &str = "sample-rate";
+const SAMPLE_OFFSET_ARG: &str = "sample-offset";
 pub const EXCLUDE_CHECK_TYPE_ARG: &str = "exclude-check-type";
 pub const INCLUDE_CHECK_TYPE_ARG: &str = "include-check-type";
 pub const SAMPLE_PATH_REGEX_ARG: &str = "sample-path-regex";
-pub const EXCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "exclude-sample-node-type";
-pub const INCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "include-sample-node-type";
+const EXCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "exclude-sample-node-type";
+const INCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "include-sample-node-type";
 pub const EXCLUDE_OUTPUT_NODE_TYPE_ARG: &str = "exclude-output-node-type";
 pub const INCLUDE_OUTPUT_NODE_TYPE_ARG: &str = "include-output-node-type";
 pub const OUTPUT_FORMAT_ARG: &str = "output-format";
@@ -409,6 +410,27 @@ fn add_sampling_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
+pub fn parse_sampling_args(
+    sub_m: &ArgMatches,
+    default_sample_rate: u64,
+) -> Result<SamplingOptions, Error> {
+    let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(default_sample_rate);
+    let sample_offset = args::get_u64_opt(&sub_m, SAMPLE_OFFSET_ARG).unwrap_or(0);
+    let node_types = parse_node_types(
+        sub_m,
+        INCLUDE_SAMPLE_NODE_TYPE_ARG,
+        EXCLUDE_SAMPLE_NODE_TYPE_ARG,
+        &[],
+    )?;
+    let exclude_types = parse_node_values(sub_m.values_of(EXCLUDE_SAMPLE_NODE_TYPE_ARG), &[])?;
+    Ok(SamplingOptions {
+        sample_rate,
+        sample_offset,
+        node_types,
+        exclude_types,
+    })
+}
+
 pub fn setup_toplevel_app<'a, 'b>(
     app_name: &str,
     cachelib_defaults: CachelibSettings,
@@ -694,6 +716,18 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
         );
 }
 
+pub fn parse_progress_args(sub_m: &ArgMatches) -> ProgressOptions {
+    let sample_rate =
+        args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG).unwrap_or(PROGRESS_SAMPLE_RATE);
+    let interval_secs =
+        args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG).unwrap_or(PROGRESS_SAMPLE_DURATION_S);
+
+    ProgressOptions {
+        sample_rate,
+        interval: Duration::from_secs(interval_secs),
+    }
+}
+
 // parse the pre-defined groups we have for default etc
 fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
     Ok(match arg {
@@ -834,8 +868,7 @@ pub async fn setup_common<'a>(
     let scheduled_max = args::get_usize_opt(&sub_m, SCHEDULED_MAX_ARG).unwrap_or(4096) as usize;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, INNER_BLOBSTORE_ID_ARG);
     let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
-    let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);
-    let progress_sample_rate = args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG);
+    let progress_options = parse_progress_args(sub_m);
 
     let enable_derive = sub_m.is_present(ENABLE_DERIVE_ARG);
 
@@ -909,23 +942,6 @@ pub async fn setup_common<'a>(
         ));
     }
 
-    info!(logger, "Walking roots {:?} ", walk_roots);
-
-    let root_node_types: HashSet<_> = walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
-
-    let (include_edge_types, include_node_types) =
-        reachable_graph_elements(include_edge_types, include_node_types, root_node_types);
-    info!(
-        logger,
-        "Walking edge types {:?}",
-        sort_by_string(&include_edge_types)
-    );
-    info!(
-        logger,
-        "Walking node types {:?}",
-        sort_by_string(&include_node_types)
-    );
-
     let readonly_storage = args::parse_readonly_storage(&matches);
 
     let error_as_data_node_types = parse_node_types(
@@ -974,11 +990,9 @@ pub async fn setup_common<'a>(
     let blobstore_options = args::parse_blobstore_options(&matches);
 
     let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
-    let repo_name = args::get_repo_name(config_store, &matches)?;
     let mut scuba_builder = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table.clone());
     scuba_builder.add_common_server_data();
     scuba_builder.add(WALK_TYPE, walk_stats_key);
-    scuba_builder.add(REPO, repo_name.clone());
 
     if let Some(scuba_log_file) = sub_m.value_of(SCUBA_LOG_FILE_ARG) {
         scuba_builder = scuba_builder.with_log_file(scuba_log_file)?;
@@ -989,6 +1003,7 @@ pub async fn setup_common<'a>(
         .map(ScrubAction::from_str)
         .transpose()?;
 
+    let repo_name = args::get_repo_name(config_store, &matches)?;
     let repo_id_to_name = HashMap::from_iter(Some((config.repoid, repo_name.clone())));
 
     // Open the blobstore explicitly so we can do things like run on one side of a multiplex
@@ -1033,6 +1048,25 @@ pub async fn setup_common<'a>(
     )
     .await?;
 
+    scuba_builder.add(REPO, repo_name.clone());
+
+    info!(logger, "Walking roots {:?} ", walk_roots);
+
+    let root_node_types: HashSet<_> = walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
+
+    let (include_edge_types, include_node_types) =
+        reachable_graph_elements(include_edge_types, include_node_types, root_node_types);
+    info!(
+        logger,
+        "Walking edge types {:?}",
+        sort_by_string(&include_edge_types)
+    );
+    info!(
+        logger,
+        "Walking node types {:?}",
+        sort_by_string(&include_node_types)
+    );
+
     let mut progress_node_types = include_node_types.clone();
     for e in &walk_roots {
         progress_node_types.insert(e.target.get_type());
@@ -1042,10 +1076,9 @@ pub async fn setup_common<'a>(
         fb,
         logger.clone(),
         walk_stats_key,
-        repo_name,
+        repo_name.clone(),
         progress_node_types,
-        progress_sample_rate.unwrap_or(PROGRESS_SAMPLE_RATE),
-        Duration::from_secs(progress_interval_secs.unwrap_or(PROGRESS_SAMPLE_DURATION_S)),
+        progress_options,
     ));
 
     Ok((
