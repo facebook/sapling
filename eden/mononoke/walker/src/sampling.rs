@@ -105,6 +105,7 @@ fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Optio
         // Hg
         NodeType::HgBonsaiMapping => None,
         NodeType::HgChangeset => None,
+        NodeType::HgChangesetViaBonsai => None,
         NodeType::HgManifest => path,
         NodeType::HgFileEnvelope => path,
         NodeType::HgFileNode => path,

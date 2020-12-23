@@ -292,6 +292,7 @@ create_graph!(
             // Hg
             HgBonsaiMapping,
             HgChangeset,
+            HgChangesetViaBonsai,
             HgManifest,
             HgFileEnvelope,
             HgFileNode,
@@ -347,8 +348,9 @@ create_graph!(
     (
         HgChangeset,
         ChangesetKey<HgChangesetId>,
-        [HgParent(HgChangeset), HgManifest]
+        [HgParent(HgChangesetViaBonsai), HgManifest]
     ),
+    (HgChangesetViaBonsai, ChangesetKey<HgChangesetId>, [HgChangeset]),
     (
         HgManifest,
         PathKey<HgManifestId>,
@@ -360,7 +362,7 @@ create_graph!(
         PathKey<HgFileNodeId>,
         [
             LinkedHgBonsaiMapping(HgBonsaiMapping),
-            LinkedHgChangeset(HgChangeset),
+            LinkedHgChangeset(HgChangesetViaBonsai),
             HgParentFileNode(HgFileNode),
             HgCopyfromFileNode(HgFileNode)
         ]
@@ -461,6 +463,7 @@ impl NodeType {
             // Hg
             NodeType::HgBonsaiMapping => Some(MappedHgChangesetId::NAME),
             NodeType::HgChangeset => Some(MappedHgChangesetId::NAME),
+            NodeType::HgChangesetViaBonsai => Some(MappedHgChangesetId::NAME),
             NodeType::HgManifest => Some(MappedHgChangesetId::NAME),
             NodeType::HgFileEnvelope => Some(MappedHgChangesetId::NAME),
             NodeType::HgFileNode => Some(FilenodesOnlyPublic::NAME),
@@ -622,6 +625,7 @@ pub enum NodeData {
     // Hg
     HgBonsaiMapping(Option<ChangesetId>),
     HgChangeset(HgBlobChangeset),
+    HgChangesetViaBonsai(HgChangesetId),
     HgManifest(HgBlobManifest),
     HgFileEnvelope(HgFileEnvelope),
     HgFileNode(Option<FilenodeInfo>),
@@ -660,6 +664,7 @@ impl Node {
             // Hg
             Node::HgBonsaiMapping(k) => k.blobstore_key(),
             Node::HgChangeset(k) => k.blobstore_key(),
+            Node::HgChangesetViaBonsai(k) => k.blobstore_key(),
             Node::HgManifest(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::HgFileEnvelope(k) => k.blobstore_key(),
             Node::HgFileNode(PathKey { id, path: _ }) => id.blobstore_key(),
@@ -698,6 +703,7 @@ impl Node {
             // Hg
             Node::HgBonsaiMapping(_) => None,
             Node::HgChangeset(_) => None,
+            Node::HgChangesetViaBonsai(_) => None,
             Node::HgManifest(PathKey { id: _, path }) => Some(&path),
             Node::HgFileEnvelope(_) => None,
             Node::HgFileNode(PathKey { id: _, path }) => Some(&path),
@@ -737,6 +743,7 @@ impl Node {
             // Hg
             Node::HgBonsaiMapping(k) => Some(k.sampling_fingerprint()),
             Node::HgChangeset(k) => Some(k.sampling_fingerprint()),
+            Node::HgChangesetViaBonsai(k) => Some(k.sampling_fingerprint()),
             Node::HgManifest(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::HgFileEnvelope(k) => Some(k.sampling_fingerprint()),
             Node::HgFileNode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),

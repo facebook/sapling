@@ -159,6 +159,7 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         // Hg
         NodeType::HgBonsaiMapping => false,
         NodeType::HgChangeset => false,
+        NodeType::HgChangesetViaBonsai => false,
         NodeType::HgManifest => false,
         NodeType::HgFileEnvelope => true,
         NodeType::HgFileNode => true,

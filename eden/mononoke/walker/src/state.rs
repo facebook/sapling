@@ -165,6 +165,7 @@ pub struct WalkState {
     visited_file: StateMap<ContentId>,
     visited_hg_cs: StateMap<InternedId<HgChangesetId>>,
     visited_hg_cs_mapping: StateMap<InternedId<HgChangesetId>>,
+    visited_hg_cs_via_bonsai: StateMap<InternedId<HgChangesetId>>,
     visited_hg_file_envelope: StateMap<InternedId<HgFileNodeId>>,
     visited_hg_filenode: StateMap<(InternedId<Option<MPathHash>>, InternedId<HgFileNodeId>)>,
     visited_hg_manifest: StateMap<(InternedId<Option<MPathHash>>, InternedId<HgManifestId>)>,
@@ -218,6 +219,7 @@ impl WalkState {
             visited_file: StateMap::with_hasher(fac.clone()),
             visited_hg_cs: StateMap::with_hasher(fac.clone()),
             visited_hg_cs_mapping: StateMap::with_hasher(fac.clone()),
+            visited_hg_cs_via_bonsai: StateMap::with_hasher(fac.clone()),
             visited_hg_file_envelope: StateMap::with_hasher(fac.clone()),
             visited_hg_filenode: StateMap::with_hasher(fac.clone()),
             visited_hg_manifest: StateMap::with_hasher(fac.clone()),
@@ -409,6 +411,10 @@ impl VisitOne for WalkState {
             Node::HgChangeset(k) => {
                 self.record(&self.visited_hg_cs, &self.hg_cs_ids.interned(&k.inner))
             }
+            Node::HgChangesetViaBonsai(k) => self.record(
+                &self.visited_hg_cs_via_bonsai,
+                &self.hg_cs_ids.interned(&k.inner),
+            ),
             Node::HgManifest(k) => self.record_with_path(
                 &self.visited_hg_manifest,
                 (&k.path, &self.hg_manifest_ids.interned(&k.id)),

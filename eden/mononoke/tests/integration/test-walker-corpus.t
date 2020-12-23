@@ -31,7 +31,7 @@ Base case, sample all in one go. Expeding WALKABLEBLOBCOUNT keys plus mappings a
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
-  * Run */s,*/s,3086,36,0s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:281,3 Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:351,3 Fsnode:822,3 FsnodeMapping:96,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
+  * Run */s,*/s,3086,36,0s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:281,3 Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:351,3 Fsnode:822,3 FsnodeMapping:96,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
   Walked/s,* (glob)
 
 Check the corpus dumped to disk agrees with the walk stats
@@ -53,21 +53,21 @@ Repeat but using the sample-offset to slice.  Offset zero will tend to be larger
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: (43, 43)
+  Final count: (46, 46)
   * Run */s,*/s,2000,17,*s; * (glob)
   Walked/s,* (glob)
   slice 1
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: (43, 43)
+  Final count: (46, 46)
   * Run */s,*/s,475,9,*s; * (glob)
   Walked/s,* (glob)
   slice 2
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: (43, 43)
+  Final count: (46, 46)
   * Run */s,*/s,611,10,*s; * (glob)
   Walked/s,* (glob)
 
@@ -109,5 +109,5 @@ Check path regex can pick out just one path
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
-  * Run */s,*/s,295,6,0s; Type:Raw,Compressed AliasContentMapping:111,3 BonsaiHgMapping:0,0 Bookmark:0,0 Changeset:0,0 FileContent:4,1 FileContentMetadata:117,1 Fsnode:0,0 FsnodeMapping:0,0 HgBonsaiMapping:0,0 HgChangeset:0,0 HgFileEnvelope:63,1 HgFileNode:0,0 HgManifest:0,0* (glob)
+  * Run */s,*/s,295,6,0s; Type:Raw,Compressed AliasContentMapping:111,3 BonsaiHgMapping:0,0 Bookmark:0,0 Changeset:0,0 FileContent:4,1 FileContentMetadata:117,1 Fsnode:0,0 FsnodeMapping:0,0 HgBonsaiMapping:0,0 HgChangeset:0,0 HgChangesetViaBonsai:0,0 HgFileEnvelope:63,1 HgFileNode:0,0 HgManifest:0,0* (glob)
   Walked/s,* (glob)

@@ -435,6 +435,8 @@ async fn bonsai_changeset_step<V: VisitOne>(
     key: &ChangesetKey<ChangesetId>,
 ) -> Result<StepOutput, Error> {
     let bcs_id = &key.inner;
+    // TODO(ahornby) check bonsai is in the chunk to be processed when chunking
+
     // Get the data, and add direct file data for this bonsai changeset
     let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
 
@@ -659,6 +661,31 @@ async fn hg_to_bonsai_mapping_step<V: VisitOne>(
     }
 }
 
+async fn hg_changeset_via_bonsai_step<V: VisitOne>(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    key: ChangesetKey<HgChangesetId>,
+) -> Result<StepOutput, Error> {
+    let _bcs_id = repo
+        .get_bonsai_from_hg(ctx, key.inner)
+        .await?
+        .ok_or_else(|| format_err!("Can't have hg without bonsai"))?;
+    // TODO(ahornby) check bonsai is in the chunk to be processed when chunking
+    let mut edges = vec![];
+    checker.add_edge(
+        &mut edges,
+        EdgeType::HgChangesetViaBonsaiToHgChangeset,
+        || Node::HgChangeset(key.clone()),
+    );
+    Ok(StepOutput(
+        checker.step_data(NodeType::HgChangesetViaBonsai, || {
+            NodeData::HgChangesetViaBonsai(key.inner)
+        }),
+        edges,
+    ))
+}
+
 async fn hg_changeset_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -674,7 +701,7 @@ async fn hg_changeset_step<V: VisitOne>(
     // Mostly 1:1, can be 1:2, with further expansion
     for p in hgchangeset.parents().into_iter() {
         checker.add_edge(&mut edges, EdgeType::HgChangesetToHgParent, || {
-            Node::HgChangeset(ChangesetKey {
+            Node::HgChangesetViaBonsai(ChangesetKey {
                 inner: HgChangesetId::new(p),
                 filenode_known_derived: key.filenode_known_derived,
             })
@@ -729,7 +756,7 @@ async fn hg_file_node_step<V: VisitOne>(
             let mut edges = vec![];
             // Validate hg link node
             checker.add_edge(&mut edges, EdgeType::HgFileNodeToLinkedHgChangeset, || {
-                Node::HgChangeset(ChangesetKey {
+                Node::HgChangesetViaBonsai(ChangesetKey {
                     inner: file_node_info.linknode,
                     filenode_known_derived: true,
                 })
@@ -1637,6 +1664,9 @@ where
             hg_to_bonsai_mapping_step(ctx.clone(), &repo, &checker, key).await
         }
         Node::HgChangeset(hg_csid) => hg_changeset_step(&ctx, &repo, &checker, hg_csid).await,
+        Node::HgChangesetViaBonsai(hg_csid) => {
+            hg_changeset_via_bonsai_step(ctx.clone(), &repo, &checker, hg_csid).await
+        }
         Node::HgFileEnvelope(hg_file_node_id) => {
             hg_file_envelope_step(
                 &ctx,

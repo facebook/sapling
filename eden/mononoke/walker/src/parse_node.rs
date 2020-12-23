@@ -228,6 +228,11 @@ mod tests {
                 node_type,
                 &parse_node(&format!("HgChangeset{}{}", NODE_SEP, SAMPLE_SHA1))?.get_type()
             ),
+            NodeType::HgChangesetViaBonsai => assert_eq!(
+                node_type,
+                &parse_node(&format!("HgChangesetViaBonsai{}{}", NODE_SEP, SAMPLE_SHA1))?
+                    .get_type()
+            ),
             NodeType::HgManifest => assert_eq!(
                 node_type,
                 &parse_node(&format!(

@@ -22,7 +22,7 @@ Base case, check can walk fine
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: (37, 37)
+  Final count: (40, 40)
   Bytes/s,* (glob)
   Walked* (glob)
 
@@ -59,7 +59,7 @@ Check counts with error-as-data-node-type
   1 Walking node types * (glob)
   1 Error as data enabled, walk results may not be complete. Errors as data enabled for node types [AliasContentMapping] edge types []
   1 Could not step to
-  1 Final count: (37, 36)
+  1 Final count: (40, 39)
   1 Bytes/s,* (glob)
   1 Walked* (glob)
 
@@ -88,6 +88,6 @@ Check error-as-data-edge-type, should get no errors as FileContentMetadataToGitS
   1 Walking node types * (glob)
   1 Error as data enabled, walk results may not be complete. Errors as data enabled for node types [AliasContentMapping] edge types [FileContentMetadataToGitSha1Alias]
   1 Could not step to
-  1 Final count: (37, 36)
+  1 Final count: (40, 39)
   1 Bytes/s,* (glob)
   1 Walked* (glob)
