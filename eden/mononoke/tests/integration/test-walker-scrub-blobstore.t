@@ -17,10 +17,20 @@ setup configuration
   $
   blobimporting
 
+setup repo2 so we can try multi-repo
+  $ hginit_treemanifest repo2-hg
+  $ cd repo2-hg
+  $ mkcommit X
+  $ hg bookmark master_bookmark -r tip
+  $ cd ..
+  $ MULTIPLEXED=1 REPOID=2 setup_mononoke_repo_config repo2 blobstore
+  $ cd ..
+  $ REPOID=2 blobimport repo2-hg/.hg repo2 --exclude-derived-data-type=filenodes
+
 Drain the healer queue
   $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "DELETE FROM blobstore_sync_queue";
 
-Base case, check can walk fine
+Base case, check can walk fine, one repo
   $ mononoke_walker scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
@@ -29,9 +39,25 @@ Base case, check can walk fine
   Bytes/s,* (glob)
   Walked* (glob)
 
+Check that multi repo runs for all repos specified
+  $ mononoke_walker --repo-name repo2 scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog | sort
+  Bytes/s,*, repo: repo (glob)
+  Bytes/s,*, repo: repo2 (glob)
+  Final count: (40, 40), repo: repo
+  Final count: (8, 8), repo: repo2
+  Walked*, repo: repo (glob)
+  Walked*, repo: repo2 (glob)
+  Walking edge types *, repo: repo (glob)
+  Walking edge types *, repo: repo2 (glob)
+  Walking node types *, repo: repo (glob)
+  Walking node types *, repo: repo2 (glob)
+  Walking repos ["repo", "repo2"]
+  Walking roots *, repo: repo (glob)
+  Walking roots *, repo: repo2 (glob)
+
 Delete all data from one side of the multiplex
   $ ls blobstore/0/blobs/* | wc -l
-  30
+  40
   $ rm blobstore/0/blobs/*
 
 Check fails on only the deleted side
@@ -161,8 +187,7 @@ Check that all is repaired by running on only the deleted side
 Check the files after restore.  The blobstore filenode_lookup representation is currently not traversed, so remains as a difference
   $ ls blobstore/0/blobs/* | wc -l
   27
-  $ diff -ur blobstore/0/blobs/ blobstore/1/blobs/
+  $ diff -ur blobstore/0/blobs/ blobstore/1/blobs/ | grep -E -v blob-repo0002
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.61585a6b75335f6ec9540101b7147908564f2699dcad59134fdf23cb086787ad
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.9915e555ad3fed014aa36a4e48549c1130fddffc7660589f42af5f0520f1118e
   Only in blobstore/1/blobs/: blob-repo0000.filenode_lookup.a0377040953a1a3762b7c59cb526797c1afd7ae6fcebb4d11e3c9186a56edb4e
-  [1]

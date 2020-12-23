@@ -46,7 +46,7 @@ use mononoke_types::{
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
-use slog::warn;
+use slog::{warn, Logger};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
@@ -1489,10 +1489,11 @@ impl<V: VisitOne> Checker<V> {
         }
     }
 }
-// Parameters that vary per repo
+// Parameters that vary per repo but can be setup in common conde
 #[derive(Clone)]
 pub struct RepoWalkParams {
     pub repo: BlobRepo,
+    pub logger: Logger,
     pub scuba_builder: MononokeScubaSampleBuilder,
     pub scheduled_max: usize,
     pub walk_roots: Vec<OutgoingEdge>,
@@ -1500,9 +1501,9 @@ pub struct RepoWalkParams {
     pub include_edge_types: HashSet<EdgeType>,
 }
 
-// These are set differently by scrub, validate etc.
+// Parameters that vary per repo but are set differently by scrub, validate etc.
 #[derive(Clone, Default)]
-pub struct TypeWalkParams {
+pub struct RepoWalkTypeParams {
     pub always_emit_edge_types: HashSet<EdgeType>,
     pub required_node_data_types: HashSet<NodeType>,
     pub keep_edge_paths: bool,
@@ -1514,7 +1515,7 @@ pub fn walk_exact<V, VOut, Route>(
     visitor: V,
     job_params: JobWalkParams,
     repo_params: RepoWalkParams,
-    type_params: TypeWalkParams,
+    type_params: RepoWalkTypeParams,
 ) -> BoxStream<'static, Result<VOut, Error>>
 where
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send + Sync,

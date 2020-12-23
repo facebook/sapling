@@ -18,12 +18,13 @@ use crate::progress::{
     ProgressRecorderUnprotected, ProgressReporter, ProgressReporterUnprotected, ProgressStateMutex,
 };
 use crate::setup::{
-    parse_progress_args, setup_common, EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, VALIDATE,
+    parse_progress_args, setup_common, JobWalkParams, RepoSubcommandParams, EXCLUDE_CHECK_TYPE_ARG,
+    INCLUDE_CHECK_TYPE_ARG, VALIDATE,
 };
 use crate::state::{StepStats, WalkState};
 use crate::tail::walk_exact_tail;
 use crate::walk::{
-    EmptyRoute, OutgoingEdge, RepoWalkParams, StepRoute, TypeWalkParams, VisitOne, WalkVisitor,
+    EmptyRoute, OutgoingEdge, RepoWalkParams, RepoWalkTypeParams, StepRoute, VisitOne, WalkVisitor,
 };
 
 use anyhow::Error;
@@ -34,7 +35,10 @@ use cmdlib::args::MononokeMatches;
 use context::CoreContext;
 use derive_more::AddAssign;
 use fbinit::FacebookInit;
-use futures::{future::TryFutureExt, stream::TryStreamExt};
+use futures::{
+    future::{try_join_all, TryFutureExt},
+    stream::TryStreamExt,
+};
 use itertools::Itertools;
 use maplit::hashset;
 use mononoke_types::{ChangesetId, MPath};
@@ -622,6 +626,19 @@ impl ProgressReporterUnprotected for ValidateProgressState {
     }
 }
 
+#[derive(Clone)]
+struct ValidateCommand {
+    include_check_types: HashSet<CheckType>,
+    progress_options: ProgressOptions,
+}
+
+impl ValidateCommand {
+    fn apply_repo(&mut self, repo_params: &RepoWalkParams) {
+        self.include_check_types
+            .retain(|t| repo_params.include_node_types.contains(&t.node_type()));
+    }
+}
+
 // Subcommand entry point for validation of mononoke commit graph and dependent data
 pub async fn validate<'a>(
     fb: FacebookInit,
@@ -629,30 +646,45 @@ pub async fn validate<'a>(
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let (job_params, sub_params, repo_params) =
-        setup_common(VALIDATE, fb, &logger, None, matches, sub_m).await?;
+    let (job_params, per_repo) = setup_common(VALIDATE, fb, &logger, None, matches, sub_m).await?;
 
-    let progress_options = parse_progress_args(sub_m);
-    cloned!(
-        repo_params.include_node_types,
-        repo_params.include_edge_types,
-    );
+    let command = ValidateCommand {
+        include_check_types: parse_check_types(sub_m)?,
+        progress_options: parse_progress_args(&sub_m),
+    };
 
-    let mut include_check_types = parse_check_types(sub_m)?;
-    include_check_types.retain(|t| include_node_types.contains(&t.node_type()));
+    let mut all_walks = Vec::new();
+    for (sub_params, repo_params) in per_repo {
+        cloned!(mut command, job_params);
+
+        command.apply_repo(&repo_params);
+
+        let walk = run_one(fb, job_params, sub_params, repo_params, command);
+        all_walks.push(walk);
+    }
+    try_join_all(all_walks).await.map(|_| ())
+}
+
+async fn run_one(
+    fb: FacebookInit,
+    job_params: JobWalkParams,
+    sub_params: RepoSubcommandParams,
+    repo_params: RepoWalkParams,
+    command: ValidateCommand,
+) -> Result<(), Error> {
     info!(
-        logger,
+        repo_params.logger,
         "Performing check types {:?}",
-        sort_by_string(&include_check_types)
+        sort_by_string(&command.include_check_types)
     );
 
     let validate_progress_state = ProgressStateMutex::new(ValidateProgressState::new(
-        logger.clone(),
+        repo_params.logger.clone(),
         fb,
         repo_params.scuba_builder.clone(),
         repo_params.repo.name().clone(),
-        include_check_types.clone(),
-        progress_options,
+        command.include_check_types.clone(),
+        command.progress_options,
     ));
 
     cloned!(job_params.quiet, sub_params.progress_state);
@@ -685,14 +717,14 @@ pub async fn validate<'a>(
 
     let stateful_visitor = Arc::new(ValidatingVisitor::new(
         repo_params.repo.name().clone(),
-        include_node_types,
-        include_edge_types,
-        include_check_types,
+        repo_params.include_node_types.clone(),
+        repo_params.include_edge_types.clone(),
+        command.include_check_types,
         always_emit_edge_types.clone(),
         job_params.enable_derive,
     ));
 
-    let type_params = TypeWalkParams {
+    let type_params = RepoWalkTypeParams {
         required_node_data_types: hashset![NodeType::PhaseMapping],
         always_emit_edge_types,
         keep_edge_paths: false,
@@ -700,7 +732,6 @@ pub async fn validate<'a>(
 
     walk_exact_tail(
         fb,
-        logger,
         job_params,
         repo_params,
         type_params,

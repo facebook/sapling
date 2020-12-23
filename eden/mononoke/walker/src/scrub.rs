@@ -7,19 +7,19 @@
 
 use crate::graph::{FileContentData, Node, NodeData, NodeType};
 use crate::progress::{
-    progress_stream, report_state, ProgressReporter, ProgressReporterUnprotected,
+    progress_stream, report_state, ProgressOptions, ProgressReporter, ProgressReporterUnprotected,
     ProgressStateCountByType, ProgressStateMutex,
 };
-use crate::sampling::{SamplingWalkVisitor, WalkSampleMapping};
+use crate::sampling::{SamplingOptions, SamplingWalkVisitor, WalkSampleMapping};
 use crate::setup::{
-    parse_node_types, parse_progress_args, parse_sampling_args, setup_common, OutputFormat,
-    EXCLUDE_OUTPUT_NODE_TYPE_ARG, INCLUDE_OUTPUT_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG,
-    OUTPUT_FORMAT_ARG, SCRUB,
+    parse_node_types, parse_progress_args, parse_sampling_args, setup_common, JobWalkParams,
+    OutputFormat, RepoSubcommandParams, EXCLUDE_OUTPUT_NODE_TYPE_ARG, INCLUDE_OUTPUT_NODE_TYPE_ARG,
+    LIMIT_DATA_FETCH_ARG, OUTPUT_FORMAT_ARG, SCRUB,
 };
 use crate::sizing::SizingSample;
 use crate::tail::walk_exact_tail;
 use crate::validate::TOTAL;
-use crate::walk::{EmptyRoute, RepoWalkParams, TypeWalkParams};
+use crate::walk::{EmptyRoute, RepoWalkParams, RepoWalkTypeParams};
 
 use anyhow::{format_err, Error};
 use clap::ArgMatches;
@@ -29,7 +29,7 @@ use context::CoreContext;
 use derive_more::{Add, Div, Mul, Sub};
 use fbinit::FacebookInit;
 use futures::{
-    future::{self, FutureExt},
+    future::{self, try_join_all, FutureExt},
     stream::{Stream, TryStreamExt},
     TryFutureExt,
 };
@@ -321,6 +321,23 @@ impl ProgressReporterUnprotected for ProgressStateCountByType<ScrubStats, ScrubS
     }
 }
 
+#[derive(Clone)]
+struct ScrubCommand {
+    limit_data_fetch: bool,
+    output_format: OutputFormat,
+    output_node_types: HashSet<NodeType>,
+    progress_options: ProgressOptions,
+    sampling_options: SamplingOptions,
+    sampler: Arc<WalkSampleMapping<Node, ScrubSample>>,
+}
+
+impl ScrubCommand {
+    fn apply_repo(&mut self, repo_params: &RepoWalkParams) {
+        self.sampling_options
+            .retain_or_default(&repo_params.include_node_types);
+    }
+}
+
 // Starts from the graph, (as opposed to walking from blobstore enumeration)
 pub async fn scrub_objects<'a>(
     fb: FacebookInit,
@@ -330,13 +347,9 @@ pub async fn scrub_objects<'a>(
 ) -> Result<(), Error> {
     let sampler = Arc::new(WalkSampleMapping::<Node, ScrubSample>::new());
 
-    let (job_params, sub_params, repo_params) =
+    let (job_params, per_repo) =
         setup_common(SCRUB, fb, &logger, Some(sampler.clone()), matches, sub_m).await?;
 
-    let progress_options = parse_progress_args(sub_m);
-    let sampling_options = parse_sampling_args(sub_m, 1)?;
-
-    let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);
     let output_format = sub_m
         .value_of(OUTPUT_FORMAT_ARG)
         .map_or(Ok(OutputFormat::PrettyDebug), OutputFormat::from_str)?;
@@ -347,43 +360,62 @@ pub async fn scrub_objects<'a>(
         &[],
     )?;
 
-    cloned!(
-        repo_params.include_node_types,
-        repo_params.include_edge_types,
-        mut output_node_types,
-        mut sampling_options,
-    );
-    sampling_options.retain_or_default(&include_node_types);
+    let command = ScrubCommand {
+        limit_data_fetch: sub_m.is_present(LIMIT_DATA_FETCH_ARG),
+        output_format,
+        output_node_types,
+        progress_options: parse_progress_args(&sub_m),
+        sampling_options: parse_sampling_args(&sub_m, 1)?,
+        sampler,
+    };
 
+    let mut all_walks = Vec::new();
+    for (sub_params, repo_params) in per_repo {
+        cloned!(mut command, job_params);
+
+        command.apply_repo(&repo_params);
+
+        let walk = run_one(fb, job_params, sub_params, repo_params, command);
+        all_walks.push(walk);
+    }
+    try_join_all(all_walks).await.map(|_| ())
+}
+
+async fn run_one(
+    fb: FacebookInit,
+    job_params: JobWalkParams,
+    sub_params: RepoSubcommandParams,
+    repo_params: RepoWalkParams,
+    command: ScrubCommand,
+) -> Result<(), Error> {
     let sizing_progress_state =
         ProgressStateMutex::new(ProgressStateCountByType::<ScrubStats, ScrubStats>::new(
             fb,
-            logger.clone(),
+            repo_params.logger.clone(),
             SCRUB,
             repo_params.repo.name().clone(),
-            sampling_options.node_types.clone(),
-            progress_options,
+            command.sampling_options.node_types.clone(),
+            command.progress_options,
         ));
 
     let make_sink = {
         cloned!(
-            sampler,
-            output_node_types,
+            command,
+            job_params.quiet,
             sub_params.progress_state,
             repo_params.scheduled_max,
-            job_params.quiet
         );
         move |ctx: &CoreContext, _repo_params: &RepoWalkParams| {
             cloned!(ctx);
             async move |walk_output| {
                 let walk_progress = progress_stream(quiet, &progress_state, walk_output);
                 let loading = loading_stream(
-                    limit_data_fetch,
+                    command.limit_data_fetch,
                     scheduled_max,
                     walk_progress,
-                    sampler,
-                    output_node_types,
-                    output_format,
+                    command.sampler,
+                    command.output_node_types,
+                    command.output_format,
                 );
                 let report_sizing = progress_stream(quiet, &sizing_progress_state, loading);
 
@@ -400,21 +432,22 @@ pub async fn scrub_objects<'a>(
         }
     };
 
-    if !limit_data_fetch {
+    cloned!(mut command.output_node_types);
+    if !command.limit_data_fetch {
         output_node_types.insert(NodeType::FileContent);
     }
     let required_node_data_types: HashSet<NodeType> = output_node_types.into_iter().collect();
 
     let walk_state = Arc::new(SamplingWalkVisitor::new(
-        include_node_types,
-        include_edge_types,
-        sampling_options,
+        repo_params.include_node_types.clone(),
+        repo_params.include_edge_types.clone(),
+        command.sampling_options,
         None,
-        sampler,
+        command.sampler,
         job_params.enable_derive,
     ));
 
-    let type_params = TypeWalkParams {
+    let type_params = RepoWalkTypeParams {
         required_node_data_types,
         always_emit_edge_types: HashSet::new(),
         keep_edge_paths: false,
@@ -422,7 +455,6 @@ pub async fn scrub_objects<'a>(
 
     walk_exact_tail::<_, _, _, _, _, EmptyRoute>(
         fb,
-        logger,
         job_params,
         repo_params,
         type_params,

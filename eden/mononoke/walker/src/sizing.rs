@@ -7,18 +7,19 @@
 
 use crate::graph::{FileContentData, Node, NodeData, NodeType};
 use crate::progress::{
-    progress_stream, report_state, ProgressReporter, ProgressReporterUnprotected,
+    progress_stream, report_state, ProgressOptions, ProgressReporter, ProgressReporterUnprotected,
     ProgressStateCountByType, ProgressStateMutex,
 };
 use crate::sampling::{
-    PathTrackingRoute, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime, WalkSampleMapping,
+    PathTrackingRoute, SamplingOptions, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime,
+    WalkSampleMapping,
 };
 use crate::setup::{
-    parse_progress_args, parse_sampling_args, setup_common, COMPRESSION_BENEFIT,
-    COMPRESSION_LEVEL_ARG,
+    parse_progress_args, parse_sampling_args, setup_common, JobWalkParams, RepoSubcommandParams,
+    COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG,
 };
 use crate::tail::walk_exact_tail;
-use crate::walk::{RepoWalkParams, TypeWalkParams};
+use crate::walk::{RepoWalkParams, RepoWalkTypeParams};
 
 use anyhow::Error;
 use async_compression::{metered::MeteredWrite, Compressor, CompressorType};
@@ -30,7 +31,7 @@ use context::CoreContext;
 use derive_more::{Add, Div, Mul, Sub};
 use fbinit::FacebookInit;
 use futures::{
-    future::{self, FutureExt, TryFutureExt},
+    future::{self, try_join_all, FutureExt, TryFutureExt},
     stream::{Stream, TryStreamExt},
 };
 use maplit::hashset;
@@ -268,6 +269,21 @@ impl SamplingHandler for WalkSampleMapping<Node, SizingSample> {
     }
 }
 
+#[derive(Clone)]
+struct SizingCommand {
+    compression_level: i32,
+    progress_options: ProgressOptions,
+    sampling_options: SamplingOptions,
+    sampler: Arc<WalkSampleMapping<Node, SizingSample>>,
+}
+
+impl SizingCommand {
+    fn apply_repo(&mut self, repo_params: &RepoWalkParams) {
+        self.sampling_options
+            .retain_or_default(&repo_params.include_node_types);
+    }
+}
+
 // Subcommand entry point for estimate of file compression benefit
 pub async fn compression_benefit<'a>(
     fb: FacebookInit,
@@ -277,7 +293,7 @@ pub async fn compression_benefit<'a>(
 ) -> Result<(), Error> {
     let sampler = Arc::new(WalkSampleMapping::<Node, SizingSample>::new());
 
-    let (job_params, sub_params, repo_params) = setup_common(
+    let (job_params, per_repo) = setup_common(
         COMPRESSION_BENEFIT,
         fb,
         &logger,
@@ -287,33 +303,48 @@ pub async fn compression_benefit<'a>(
     )
     .await?;
 
-    let progress_options = parse_progress_args(sub_m);
-    let mut sampling_options = parse_sampling_args(&sub_m, 100)?;
-    let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
+    let command = SizingCommand {
+        compression_level: args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3),
+        progress_options: parse_progress_args(&sub_m),
+        sampling_options: parse_sampling_args(&sub_m, 100)?,
+        sampler,
+    };
 
-    cloned!(
-        repo_params.include_node_types,
-        repo_params.include_edge_types
-    );
+    let mut all_walks = Vec::new();
+    for (sub_params, repo_params) in per_repo {
+        cloned!(mut command, job_params);
 
-    sampling_options.retain_or_default(&include_node_types);
+        command.apply_repo(&repo_params);
 
+        let walk = run_one(fb, job_params, sub_params, repo_params, command);
+        all_walks.push(walk);
+    }
+    try_join_all(all_walks).await.map(|_| ())
+}
+
+async fn run_one(
+    fb: FacebookInit,
+    job_params: JobWalkParams,
+    sub_params: RepoSubcommandParams,
+    repo_params: RepoWalkParams,
+    command: SizingCommand,
+) -> Result<(), Error> {
     let sizing_progress_state =
         ProgressStateMutex::new(ProgressStateCountByType::<SizingStats, SizingStats>::new(
             fb,
-            logger.clone(),
+            repo_params.logger.clone(),
             COMPRESSION_BENEFIT,
             repo_params.repo.name().clone(),
-            sampling_options.node_types.clone(),
-            progress_options,
+            command.sampling_options.node_types.clone(),
+            command.progress_options,
         ));
 
     let make_sink = {
         cloned!(
+            command,
             job_params.quiet,
             repo_params.scheduled_max,
             sub_params.progress_state,
-            sampler
         );
         move |ctx: &CoreContext, _repo_params: &RepoWalkParams| {
             cloned!(ctx);
@@ -328,9 +359,9 @@ pub async fn compression_benefit<'a>(
                     scheduled_max,
                     walk_progress,
                     CompressorType::Zstd {
-                        level: compression_level,
+                        level: command.compression_level,
                     },
-                    sampler,
+                    command.sampler,
                 );
                 let report_sizing = progress_stream(quiet, &sizing_progress_state, compressor);
                 report_state(ctx, sizing_progress_state, report_sizing)
@@ -347,15 +378,15 @@ pub async fn compression_benefit<'a>(
     };
 
     let walk_state = Arc::new(SamplingWalkVisitor::new(
-        include_node_types,
-        include_edge_types,
-        sampling_options,
+        repo_params.include_node_types.clone(),
+        repo_params.include_edge_types.clone(),
+        command.sampling_options,
         None,
-        sampler,
+        command.sampler,
         job_params.enable_derive,
     ));
 
-    let type_params = TypeWalkParams {
+    let type_params = RepoWalkTypeParams {
         required_node_data_types: hashset![NodeType::FileContent],
         always_emit_edge_types: HashSet::new(),
         keep_edge_paths: true,
@@ -363,7 +394,6 @@ pub async fn compression_benefit<'a>(
 
     walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(
         fb,
-        logger,
         job_params,
         repo_params,
         type_params,

@@ -16,24 +16,29 @@ use crate::state::StepStats;
 use crate::validate::{CheckType, REPO, WALK_TYPE};
 use crate::walk::{OutgoingEdge, RepoWalkParams};
 
+use ::blobstore::Blobstore;
 use anyhow::{format_err, Context, Error};
-use blobrepo_factory::{open_blobrepo_given_datasources, ReadOnlyStorage};
-use blobstore_factory::make_metadata_sql_factory;
+use blobrepo_factory::{open_blobrepo_given_datasources, Caching, ReadOnlyStorage};
+use blobstore_factory::{make_metadata_sql_factory, CachelibBlobstoreOptions, MetadataSqlFactory};
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
-use cmdlib::args::{self, CachelibSettings, MononokeClapApp, MononokeMatches};
+use cmdlib::args::{
+    self, CachelibSettings, MononokeClapApp, MononokeMatches, RepoRequirement, ResolvedRepo,
+};
 use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future};
+use futures::compat::Future01CompatExt;
 use itertools::{process_results, Itertools};
 use maplit::hashset;
 use mercurial_derived_data::MappedHgChangesetId;
-use metaconfig_types::{Redaction, ScrubAction};
+use metaconfig_types::{
+    BlobConfig, CensoredScubaParams, MetadataDatabaseConfig, Redaction, ScrubAction,
+};
 use once_cell::sync::Lazy;
 use samplingblob::SamplingHandler;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{info, warn, Logger};
+use slog::{info, o, warn, Logger};
 use std::{
     borrow::Borrow,
     collections::{HashMap, HashSet},
@@ -59,6 +64,7 @@ pub struct JobWalkParams {
     pub quiet: bool,
     pub error_as_data_node_types: HashSet<NodeType>,
     pub error_as_data_edge_types: HashSet<EdgeType>,
+    pub repo_count: usize,
 }
 
 const PROGRESS_SAMPLE_RATE: u64 = 1000;
@@ -435,6 +441,7 @@ pub fn setup_toplevel_app<'a, 'b>(
         .with_blobstore_cachelib_attempt_zstd_default(false)
         .with_blobstore_read_qps_default(NonZeroU32::new(20000))
         .with_readonly_storage_default(ReadOnlyStorage(true))
+        .with_repo_required(RepoRequirement::AtLeastOne)
         .with_fb303_args()
         .with_cachelib_settings(cachelib_defaults);
 
@@ -818,7 +825,7 @@ fn parse_edge_types<'a>(
 fn reachable_graph_elements(
     mut include_edge_types: HashSet<EdgeType>,
     mut include_node_types: HashSet<NodeType>,
-    root_node_types: HashSet<NodeType>,
+    root_node_types: &HashSet<NodeType>,
 ) -> (HashSet<EdgeType>, HashSet<NodeType>) {
     // This stops us logging that we're walking unreachable edge/node types
     let mut param_count = &include_edge_types.len() + &include_node_types.len();
@@ -856,9 +863,9 @@ pub async fn setup_common<'a>(
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
-) -> Result<(JobWalkParams, RepoSubcommandParams, RepoWalkParams), Error> {
+) -> Result<(JobWalkParams, Vec<(RepoSubcommandParams, RepoWalkParams)>), Error> {
     let config_store = args::init_config_store(fb, logger, matches)?;
-    let (_, config) = args::get_config(config_store, &matches)?;
+
     let quiet = sub_m.is_present(QUIET_ARG);
     let common_config = cmdlib::args::load_common_config(config_store, &matches)?;
     let scheduled_max = args::get_usize_opt(&sub_m, SCHEDULED_MAX_ARG).unwrap_or(4096) as usize;
@@ -867,12 +874,6 @@ pub async fn setup_common<'a>(
     let progress_options = parse_progress_args(sub_m);
 
     let enable_derive = sub_m.is_present(ENABLE_DERIVE_ARG);
-
-    let redaction = if sub_m.is_present(ENABLE_REDACTION_ARG) {
-        config.redaction
-    } else {
-        Redaction::Disabled
-    };
 
     let caching = matches.parse_and_init_cachelib(fb);
 
@@ -883,21 +884,12 @@ pub async fn setup_common<'a>(
         DEEP_INCLUDE_EDGE_TYPES,
     )?;
 
-    let mut include_node_types = parse_node_types(
+    let include_node_types = parse_node_types(
         sub_m,
         INCLUDE_NODE_TYPE_ARG,
         EXCLUDE_NODE_TYPE_ARG,
         DEFAULT_INCLUDE_NODE_TYPES,
     )?;
-
-    // Only walk derived node types that the repo is configured to contain
-    include_node_types.retain(|t| {
-        if let Some(t) = t.derived_data_name() {
-            config.derived_data_config.is_enabled(t)
-        } else {
-            true
-        }
-    });
 
     let mut walk_roots: Vec<OutgoingEdge> = vec![];
 
@@ -967,91 +959,193 @@ pub async fn setup_common<'a>(
     }
 
     let mysql_options = args::parse_mysql_options(&matches);
-
-    let storage_id = matches.value_of(STORAGE_ID_ARG);
-    let storage_config = match storage_id {
-        Some(storage_id) => {
-            let mut configs = args::load_storage_configs(config_store, &matches)?;
-            configs.storage.remove(storage_id).ok_or_else(|| {
-                format_err!(
-                    "Storage id `{}` not found in {:?}",
-                    storage_id,
-                    configs.storage.keys()
-                )
-            })?
-        }
-        None => config.storage_config.clone(),
-    };
-
     let blobstore_options = args::parse_blobstore_options(&matches);
-
-    let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
-    let mut scuba_builder = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table.clone());
-    scuba_builder.add_common_server_data();
-    scuba_builder.add(WALK_TYPE, walk_stats_key);
-
-    if let Some(scuba_log_file) = sub_m.value_of(SCUBA_LOG_FILE_ARG) {
-        scuba_builder = scuba_builder.with_log_file(scuba_log_file)?;
-    }
-
+    let storage_id = matches.value_of(STORAGE_ID_ARG);
     let scrub_action = sub_m
         .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
         .map(ScrubAction::from_str)
         .transpose()?;
+    let enable_redaction = sub_m.is_present(ENABLE_REDACTION_ARG);
 
-    let repo_name = args::get_repo_name(config_store, &matches)?;
-    let repo_id_to_name = HashMap::from_iter(Some((config.repoid, repo_name.clone())));
+    // Setup scuba
+    let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
+    let mut scuba_builder = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table);
+    scuba_builder.add_common_server_data();
+    scuba_builder.add(WALK_TYPE, walk_stats_key);
+    if let Some(scuba_log_file) = sub_m.value_of(SCUBA_LOG_FILE_ARG) {
+        scuba_builder = scuba_builder.with_log_file(scuba_log_file)?;
+    }
 
-    // Open the blobstore explicitly so we can do things like run on one side of a multiplex
-    let blobstore = blobstore::open_blobstore(
-        fb,
-        &mysql_options,
-        storage_config.blobstore,
-        inner_blobstore_id,
-        readonly_storage,
-        scrub_action,
-        blobstore_sampler,
-        scuba_builder.clone(),
-        walk_stats_key,
-        repo_id_to_name,
-        &blobstore_options,
-        &logger,
-        config_store,
-    );
+    // Resolve repo ids and names
+    let repos = args::resolve_repos(config_store, &matches)?;
+    let repo_count = repos.len();
+    if repo_count > 1 {
+        info!(
+            logger,
+            "Walking repos {:?}",
+            repos.iter().map(|e| &e.name).collect::<Vec<_>>()
+        );
+    }
+    let mut repo_id_to_name = HashMap::new();
+    for repo in &repos {
+        repo_id_to_name.insert(repo.id, repo.name.clone());
+    }
 
-    let sql_factory = make_metadata_sql_factory(
-        fb,
-        storage_config.metadata,
-        mysql_options.clone(),
-        readonly_storage,
-        logger.clone(),
-    )
-    .compat();
+    let storage_override = if let Some(storage_id) = storage_id {
+        let mut configs = args::load_storage_configs(config_store, &matches)?;
+        let storage_config = configs.storage.remove(storage_id).ok_or_else(|| {
+            format_err!(
+                "Storage id `{}` not found in {:?}",
+                storage_id,
+                configs.storage.keys()
+            )
+        })?;
+        Some(storage_config)
+    } else {
+        None
+    };
 
-    let (blobstore, sql_factory) = future::try_join(blobstore, sql_factory).await?;
+    let mut metadatadb_config_to_blob_config =
+        HashMap::<MetadataDatabaseConfig, HashSet<BlobConfig>>::new();
+    let mut blob_config_to_repos = HashMap::<BlobConfig, Vec<ResolvedRepo>>::new();
+    for repo in repos {
+        let storage_config = storage_override
+            .clone()
+            .unwrap_or_else(|| repo.config.storage_config.clone());
+        metadatadb_config_to_blob_config
+            .entry(storage_config.metadata)
+            .or_default()
+            .insert(storage_config.blobstore.clone());
+        blob_config_to_repos
+            .entry(storage_config.blobstore)
+            .or_default()
+            .push(repo);
+    }
 
-    let repo = open_blobrepo_given_datasources(
-        fb,
-        blobstore,
-        &sql_factory,
-        &config,
-        caching,
-        redaction,
-        common_config.censored_scuba_params,
-        readonly_storage,
-        repo_name.clone(),
-        blobstore_options.cachelib_options.clone(),
-    )
-    .await?;
+    let mut per_repo = Vec::new();
 
-    scuba_builder.add(REPO, repo_name.clone());
+    // First setup SQL config
+    for (metadatadb_config, blobconfigs) in metadatadb_config_to_blob_config {
+        let sql_factory = make_metadata_sql_factory(
+            fb,
+            metadatadb_config,
+            mysql_options.clone(),
+            readonly_storage,
+            logger.clone(),
+        )
+        .compat()
+        .await?;
 
+        // Share the sql factory with the blobstores associated with it
+        for blobconfig in blobconfigs {
+            let repos = blob_config_to_repos.get(&blobconfig);
+
+            // Open the blobstore explicitly so we can do things like run on one side of a multiplex
+            let blobstore = Arc::new(
+                blobstore::open_blobstore(
+                    fb,
+                    &mysql_options,
+                    blobconfig,
+                    inner_blobstore_id,
+                    readonly_storage,
+                    scrub_action,
+                    blobstore_sampler.clone(),
+                    scuba_builder.clone(),
+                    walk_stats_key,
+                    repo_id_to_name.clone(),
+                    &blobstore_options,
+                    &logger,
+                    config_store,
+                )
+                .await?,
+            );
+
+            // Build the per-repo structures sharing common blobstore
+            for repo in repos.into_iter().flatten() {
+                let one_repo = setup_repo(
+                    walk_stats_key,
+                    fb,
+                    logger,
+                    scuba_builder.clone(),
+                    blobstore.clone(),
+                    &sql_factory,
+                    readonly_storage,
+                    caching,
+                    blobstore_options.cachelib_options.clone(),
+                    enable_redaction,
+                    common_config.censored_scuba_params.clone(),
+                    scheduled_max,
+                    repo_count,
+                    repo,
+                    walk_roots.clone(),
+                    include_edge_types.clone(),
+                    include_node_types.clone(),
+                    progress_options,
+                )
+                .await?;
+                per_repo.push(one_repo);
+            }
+        }
+    }
+
+    Ok((
+        JobWalkParams {
+            enable_derive,
+            tail_secs,
+            quiet,
+            error_as_data_node_types,
+            error_as_data_edge_types,
+            repo_count,
+        },
+        per_repo,
+    ))
+}
+
+// Setup for just one repo. Try and keep clap parsing out of here, should be done beforehand
+async fn setup_repo<'a>(
+    walk_stats_key: &'static str,
+    fb: FacebookInit,
+    logger: &'a Logger,
+    mut scuba_builder: MononokeScubaSampleBuilder,
+    blobstore: Arc<dyn Blobstore>,
+    sql_factory: &'a MetadataSqlFactory,
+    readonly_storage: ReadOnlyStorage,
+    caching: Caching,
+    cachelib_blobstore_options: CachelibBlobstoreOptions,
+    enable_redaction: bool,
+    redaction_scuba_params: CensoredScubaParams,
+    scheduled_max: usize,
+    repo_count: usize,
+    resolved: &'a ResolvedRepo,
+    walk_roots: Vec<OutgoingEdge>,
+    include_edge_types: HashSet<EdgeType>,
+    mut include_node_types: HashSet<NodeType>,
+    progress_options: ProgressOptions,
+) -> Result<(RepoSubcommandParams, RepoWalkParams), Error> {
+    let logger = if repo_count > 1 {
+        logger.new(o!("repo" => resolved.name.clone()))
+    } else {
+        logger.clone()
+    };
+
+    let scheduled_max = scheduled_max / repo_count;
+    scuba_builder.add(REPO, resolved.name.clone());
+
+    // Only walk derived node types that the repo is configured to contain
     info!(logger, "Walking roots {:?} ", walk_roots);
+    // Only walk derived node types that the repo is configured to contain
+    include_node_types.retain(|t| {
+        if let Some(t) = t.derived_data_name() {
+            resolved.config.derived_data_config.is_enabled(t)
+        } else {
+            true
+        }
+    });
 
     let root_node_types: HashSet<_> = walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
 
     let (include_edge_types, include_node_types) =
-        reachable_graph_elements(include_edge_types, include_node_types, root_node_types);
+        reachable_graph_elements(include_edge_types, include_node_types, &root_node_types);
     info!(
         logger,
         "Walking edge types {:?}",
@@ -1063,6 +1157,27 @@ pub async fn setup_common<'a>(
         sort_by_string(&include_node_types)
     );
 
+    let redaction = if enable_redaction {
+        resolved.config.redaction
+    } else {
+        Redaction::Disabled
+    };
+
+    let repo = open_blobrepo_given_datasources(
+        fb,
+        blobstore,
+        &sql_factory,
+        &resolved.config,
+        caching,
+        redaction,
+        redaction_scuba_params,
+        readonly_storage,
+        resolved.name.clone(),
+        cachelib_blobstore_options,
+    );
+
+    scuba_builder.add(REPO, resolved.name.clone());
+
     let mut progress_node_types = include_node_types.clone();
     for e in &walk_roots {
         progress_node_types.insert(e.target.get_type());
@@ -1072,22 +1187,16 @@ pub async fn setup_common<'a>(
         fb,
         logger.clone(),
         walk_stats_key,
-        repo_name.clone(),
+        resolved.name.clone(),
         progress_node_types,
         progress_options,
     ));
 
     Ok((
-        JobWalkParams {
-            enable_derive,
-            tail_secs,
-            quiet,
-            error_as_data_node_types,
-            error_as_data_edge_types,
-        },
         RepoSubcommandParams { progress_state },
         RepoWalkParams {
-            repo,
+            repo: repo.await?,
+            logger: logger.clone(),
             scheduled_max,
             walk_roots,
             include_node_types,

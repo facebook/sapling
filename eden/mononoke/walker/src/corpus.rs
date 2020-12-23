@@ -7,19 +7,20 @@
 
 use crate::graph::{FileContentData, Node, NodeData, NodeType, WrappedPath};
 use crate::progress::{
-    progress_stream, report_state, ProgressReporter, ProgressStateCountByType, ProgressStateMutex,
+    progress_stream, report_state, ProgressOptions, ProgressReporter, ProgressStateCountByType,
+    ProgressStateMutex,
 };
 use crate::sampling::{
-    PathTrackingRoute, SampleTrigger, SamplingWalkVisitor, WalkKeyOptPath, WalkPayloadMtime,
-    WalkSampleMapping,
+    PathTrackingRoute, SampleTrigger, SamplingOptions, SamplingWalkVisitor, WalkKeyOptPath,
+    WalkPayloadMtime, WalkSampleMapping,
 };
 use crate::scrub::ScrubStats;
 use crate::setup::{
-    parse_progress_args, parse_sampling_args, setup_common, CORPUS, OUTPUT_DIR_ARG,
-    SAMPLE_PATH_REGEX_ARG,
+    parse_progress_args, parse_sampling_args, setup_common, JobWalkParams, RepoSubcommandParams,
+    CORPUS, OUTPUT_DIR_ARG, SAMPLE_PATH_REGEX_ARG,
 };
 use crate::tail::walk_exact_tail;
-use crate::walk::{RepoWalkParams, TypeWalkParams};
+use crate::walk::{RepoWalkParams, RepoWalkTypeParams};
 
 use anyhow::Error;
 use clap::ArgMatches;
@@ -29,7 +30,7 @@ use context::{CoreContext, SamplingKey};
 use fbinit::FacebookInit;
 use filetime::{self, FileTime};
 use futures::{
-    future::{self, FutureExt, TryFutureExt},
+    future::{self, try_join_all, FutureExt, TryFutureExt},
     stream::{Stream, TryStreamExt},
 };
 use maplit::hashset;
@@ -332,6 +333,22 @@ impl SamplingHandler for CorpusSamplingHandler<CorpusSample> {
     }
 }
 
+#[derive(Clone)]
+struct CorpusCommand {
+    output_dir: Option<String>,
+    progress_options: ProgressOptions,
+    sampling_options: SamplingOptions,
+    sampling_path_regex: Option<Regex>,
+    sampler: Arc<CorpusSamplingHandler<CorpusSample>>,
+}
+
+impl CorpusCommand {
+    fn apply_repo(&mut self, repo_params: &RepoWalkParams) {
+        self.sampling_options
+            .retain_or_default(&repo_params.include_node_types);
+    }
+}
+
 // Subcommand entry point for dumping a corpus of blobs to disk
 pub async fn corpus<'a>(
     fb: FacebookInit,
@@ -344,11 +361,9 @@ pub async fn corpus<'a>(
         output_dir.clone(),
     ));
 
-    let (job_params, sub_params, repo_params) =
+    let (job_params, per_repo) =
         setup_common(CORPUS, fb, &logger, Some(sampler.clone()), matches, sub_m).await?;
 
-    let progress_options = parse_progress_args(&sub_m);
-    let sampling_options = parse_sampling_args(&sub_m, 100)?;
     let sampling_path_regex = sub_m
         .value_of(SAMPLE_PATH_REGEX_ARG)
         .map(|s| Regex::new(s))
@@ -360,29 +375,49 @@ pub async fn corpus<'a>(
         }
     }
 
-    cloned!(
-        repo_params.include_node_types,
-        repo_params.include_edge_types,
-        mut sampling_options,
-    );
-    sampling_options.retain_or_default(&include_node_types);
+    let command = CorpusCommand {
+        output_dir,
+        progress_options: parse_progress_args(&sub_m),
+        sampling_options: parse_sampling_args(&sub_m, 100)?,
+        sampling_path_regex,
+        sampler,
+    };
 
+    let mut all_walks = Vec::new();
+    for (sub_params, repo_params) in per_repo {
+        cloned!(mut command, job_params);
+
+        command.apply_repo(&repo_params);
+
+        let walk = run_one(fb, job_params, sub_params, repo_params, command);
+        all_walks.push(walk);
+    }
+    try_join_all(all_walks).await.map(|_| ())
+}
+
+async fn run_one(
+    fb: FacebookInit,
+    job_params: JobWalkParams,
+    sub_params: RepoSubcommandParams,
+    repo_params: RepoWalkParams,
+    command: CorpusCommand,
+) -> Result<(), Error> {
     let sizing_progress_state =
         ProgressStateMutex::new(ProgressStateCountByType::<ScrubStats, ScrubStats>::new(
             fb,
-            logger.clone(),
+            repo_params.logger.clone(),
             CORPUS,
             repo_params.repo.name().clone(),
-            sampling_options.node_types.clone(),
-            progress_options,
+            command.sampling_options.node_types.clone(),
+            command.progress_options,
         ));
 
     let make_sink = {
         cloned!(
-            sub_params.progress_state,
+            command,
             job_params.quiet,
+            sub_params.progress_state,
             repo_params.scheduled_max,
-            sampler
         );
         move |ctx: &CoreContext, _repo_params: &RepoWalkParams| {
             cloned!(ctx);
@@ -390,7 +425,12 @@ pub async fn corpus<'a>(
                 cloned!(ctx, sizing_progress_state);
                 let walk_progress = progress_stream(quiet, &progress_state, walk_output);
 
-                let corpus = corpus_stream(scheduled_max, output_dir, walk_progress, sampler);
+                let corpus = corpus_stream(
+                    scheduled_max,
+                    command.output_dir,
+                    walk_progress,
+                    command.sampler,
+                );
                 let report_sizing = progress_stream(quiet, &sizing_progress_state, corpus);
                 report_state(ctx, sizing_progress_state, report_sizing)
                     .map({
@@ -406,15 +446,15 @@ pub async fn corpus<'a>(
     };
 
     let walk_state = Arc::new(SamplingWalkVisitor::new(
-        include_node_types,
-        include_edge_types,
-        sampling_options,
-        sampling_path_regex,
-        sampler,
+        repo_params.include_node_types.clone(),
+        repo_params.include_edge_types.clone(),
+        command.sampling_options,
+        command.sampling_path_regex,
+        command.sampler,
         job_params.enable_derive,
     ));
 
-    let type_params = TypeWalkParams {
+    let type_params = RepoWalkTypeParams {
         required_node_data_types: hashset![NodeType::FileContent],
         always_emit_edge_types: HashSet::new(),
         keep_edge_paths: true,
@@ -422,7 +462,6 @@ pub async fn corpus<'a>(
 
     walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(
         fb,
-        logger,
         job_params,
         repo_params,
         type_params,

@@ -6,22 +6,20 @@
  */
 
 use crate::setup::JobWalkParams;
-use crate::walk::{walk_exact, RepoWalkParams, StepRoute, TypeWalkParams, WalkVisitor};
+use crate::walk::{walk_exact, RepoWalkParams, RepoWalkTypeParams, StepRoute, WalkVisitor};
 
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{future::Future, stream::BoxStream};
-use slog::Logger;
 use tokio::time::{Duration, Instant};
 
 pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, V, VOut, Route>(
     fb: FacebookInit,
-    logger: Logger,
     job_params: JobWalkParams,
     mut repo_params: RepoWalkParams,
-    type_params: TypeWalkParams,
+    type_params: RepoWalkTypeParams,
     visitor: V,
     make_run: RunFac,
 ) -> Result<(), Error>
@@ -37,7 +35,7 @@ where
         cloned!(job_params, type_params, make_run, visitor);
         let tail_secs = job_params.tail_secs;
         // Each loop get new ctx and thus session id so we can distinguish runs
-        let ctx = CoreContext::new_with_logger(fb, logger.clone());
+        let ctx = CoreContext::new_with_logger(fb, repo_params.logger.clone());
         let session_text = ctx.session().metadata().session_id().to_string();
         repo_params.scuba_builder.add("session", session_text);
 
