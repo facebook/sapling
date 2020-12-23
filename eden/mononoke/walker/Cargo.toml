@@ -33,7 +33,6 @@ mononoke_types = { path = "../mononoke_types" }
 multiplexedblob = { path = "../blobstore/multiplexedblob" }
 newfilenodes = { path = "../newfilenodes" }
 phases = { path = "../phases" }
-prefixblob = { path = "../blobstore/prefixblob" }
 samplingblob = { path = "../blobstore/samplingblob" }
 scuba_ext = { path = "../common/scuba_ext" }
 skeleton_manifest = { path = "../derived_data/skeleton_manifest" }
@@ -61,7 +60,6 @@ filetime = "0.2.9"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 hex = "0.4"
-inlinable_string = "0.1"
 internment = {version = "0.4.1", features = ["serde"]}
 itertools = "0.8"
 once_cell = "1.4"

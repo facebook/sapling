@@ -994,19 +994,20 @@ pub fn setup_common<'a>(
             .map(ScrubAction::from_str)
             .transpose()?;
 
+        let repo_id_to_name = HashMap::from_iter(Some((config.repoid, repo_name.clone())));
+
         // Open the blobstore explicitly so we can do things like run on one side of a multiplex
         let blobstore = blobstore::open_blobstore(
             fb,
             mysql_options.clone(),
             storage_config.blobstore,
             inner_blobstore_id,
-            None,
             readonly_storage,
             scrub_action,
             blobstore_sampler,
             scuba_builder.clone(),
             walk_stats_key,
-            repo_name.clone(),
+            repo_id_to_name,
             blobstore_options.clone(),
             logger.clone(),
             config_store,
