@@ -41,8 +41,8 @@ use memblob::Memblob;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_mutation::{HgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
-    self, CensoredScubaParams, DerivedDataConfig, DerivedDataTypesConfig, FilestoreParams,
-    Redaction, RepoConfig, SegmentedChangelogConfig, StorageConfig, UnodeVersion,
+    self, CensoredScubaParams, DerivedDataConfig, DerivedDataTypesConfig, Redaction, RepoConfig,
+    SegmentedChangelogConfig, StorageConfig, UnodeVersion,
 };
 use mononoke_types::RepositoryId;
 use newfilenodes::NewFilenodesBuilder;
@@ -83,18 +83,14 @@ pub struct BlobrepoBuilder<'a> {
     fb: FacebookInit,
     reponame: String,
     storage_config: StorageConfig,
-    repoid: RepositoryId,
     mysql_options: &'a MysqlOptions,
     caching: Caching,
-    bookmarks_cache_ttl: Option<Duration>,
     redaction: Redaction,
     censored_scuba_params: CensoredScubaParams,
-    filestore_params: Option<FilestoreParams>,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
     logger: &'a Logger,
-    derived_data_config: DerivedDataConfig,
-    segmented_changelog_config: SegmentedChangelogConfig,
+    repo_config: RepoConfig,
     config_store: &'a ConfigStore,
 }
 
@@ -115,18 +111,14 @@ impl<'a> BlobrepoBuilder<'a> {
             fb,
             reponame,
             storage_config: config.storage_config.clone(),
-            repoid: config.repoid,
             mysql_options,
             caching,
-            bookmarks_cache_ttl: config.bookmarks_cache_ttl.clone(),
             redaction: config.redaction.clone(),
             censored_scuba_params,
-            filestore_params: config.filestore.clone(),
             readonly_storage,
             blobstore_options,
             logger,
-            derived_data_config: config.derived_data_config.clone(),
-            segmented_changelog_config: config.segmented_changelog_config.clone(),
+            repo_config: config.clone(),
             config_store,
         }
     }
@@ -142,81 +134,54 @@ impl<'a> BlobrepoBuilder<'a> {
     /// configure a local blobstore with a remote db, or vice versa. There's no error checking
     /// at this level (aside from disallowing a multiplexed blobstore with a local db).
     pub async fn build(self) -> Result<BlobRepo, Error> {
-        let BlobrepoBuilder {
-            fb,
-            reponame,
-            storage_config,
-            repoid,
-            mysql_options,
-            caching,
-            bookmarks_cache_ttl,
-            redaction,
-            censored_scuba_params,
-            filestore_params,
-            readonly_storage,
-            blobstore_options,
-            logger,
-            derived_data_config,
-            segmented_changelog_config,
-            config_store,
-        } = self;
-
         let sql_factory = make_metadata_sql_factory(
-            fb,
-            storage_config.metadata,
-            mysql_options.clone(),
-            readonly_storage,
+            self.fb,
+            self.storage_config.metadata,
+            self.mysql_options.clone(),
+            self.readonly_storage,
             // FIXME: remove clone when make_metadata_sql_factory is async-await
-            logger.clone(),
+            self.logger.clone(),
         )
         .compat();
 
         let blobstore = make_blobstore(
-            fb,
-            storage_config.blobstore,
-            &mysql_options,
-            readonly_storage,
-            &blobstore_options,
-            &logger,
-            config_store,
+            self.fb,
+            self.storage_config.blobstore,
+            &self.mysql_options,
+            self.readonly_storage,
+            &self.blobstore_options,
+            &self.logger,
+            self.config_store,
         );
 
         let (sql_factory, blobstore) = future::try_join(sql_factory, blobstore).await?;
 
         open_blobrepo_given_datasources(
-            fb,
+            self.fb,
             blobstore,
-            sql_factory,
-            repoid,
-            caching,
-            bookmarks_cache_ttl,
-            redaction,
-            censored_scuba_params,
-            filestore_params,
-            readonly_storage,
-            derived_data_config,
-            segmented_changelog_config,
-            reponame,
-            blobstore_options.cachelib_options,
+            &sql_factory,
+            &self.repo_config,
+            self.caching,
+            self.redaction,
+            self.censored_scuba_params,
+            self.readonly_storage,
+            self.reponame,
+            self.blobstore_options.cachelib_options,
         )
         .await
     }
 }
 
 /// Expose for graph walker that has storage open already
-pub async fn open_blobrepo_given_datasources(
+pub async fn open_blobrepo_given_datasources<'a>(
     fb: FacebookInit,
     blobstore: Arc<dyn Blobstore>,
-    sql_factory: MetadataSqlFactory,
-    repoid: RepositoryId,
+    sql_factory: &'a MetadataSqlFactory,
+    repo_config: &'a RepoConfig,
     caching: Caching,
-    bookmarks_cache_ttl: Option<Duration>,
     redaction: Redaction,
     censored_scuba_params: CensoredScubaParams,
-    filestore_params: Option<FilestoreParams>,
     readonly_storage: ReadOnlyStorage,
-    derived_data_config: DerivedDataConfig,
-    segmented_chagelog_config: SegmentedChangelogConfig,
     reponame: String,
     cachelib_options: CachelibBlobstoreOptions,
 ) -> Result<BlobRepo, Error> {
@@ -234,17 +199,12 @@ pub async fn open_blobrepo_given_datasources(
         Redaction::Disabled => None,
     };
 
-    let filestore_config = filestore_params
-        .map(|params| {
-            let FilestoreParams {
-                chunk_size,
-                concurrency,
-            } = params;
-
-            FilestoreConfig {
-                chunk_size: Some(chunk_size),
-                concurrency,
-            }
+    let filestore_config = repo_config
+        .filestore
+        .as_ref()
+        .map(|p| FilestoreConfig {
+            chunk_size: Some(p.chunk_size),
+            concurrency: p.concurrency,
         })
         .unwrap_or_default();
 
@@ -262,11 +222,11 @@ pub async fn open_blobrepo_given_datasources(
                 blobstore,
                 redacted_blobs,
                 censored_scuba_params,
-                repoid,
+                repo_config.repoid,
                 filestore_config,
-                bookmarks_cache_ttl,
-                derived_data_config,
-                segmented_chagelog_config,
+                repo_config.bookmarks_cache_ttl,
+                repo_config.derived_data_config.clone(),
+                repo_config.segmented_changelog_config.clone(),
                 reponame,
             )
             .await?
@@ -281,12 +241,12 @@ pub async fn open_blobrepo_given_datasources(
                 blobstore,
                 redacted_blobs,
                 censored_scuba_params,
-                repoid,
-                bookmarks_cache_ttl,
+                repo_config.repoid,
+                repo_config.bookmarks_cache_ttl,
                 filestore_config,
                 readonly_storage,
-                derived_data_config,
-                segmented_chagelog_config,
+                repo_config.derived_data_config.clone(),
+                repo_config.segmented_changelog_config.clone(),
                 reponame,
             )
             .await?

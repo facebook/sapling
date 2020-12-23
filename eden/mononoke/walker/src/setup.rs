@@ -1022,16 +1022,12 @@ pub async fn setup_common<'a>(
     let blobrepo = open_blobrepo_given_datasources(
         fb,
         blobstore,
-        sql_factory,
-        config.repoid,
+        &sql_factory,
+        &config,
         caching,
-        config.bookmarks_cache_ttl,
         redaction,
         common_config.censored_scuba_params,
-        config.filestore,
         readonly_storage,
-        config.derived_data_config,
-        config.segmented_changelog_config,
         repo_name.clone(),
         blobstore_options.cachelib_options.clone(),
     )
