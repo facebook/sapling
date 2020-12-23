@@ -39,7 +39,7 @@ Check fails on only the deleted side
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Execution error: Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)))* (glob)
+  Execution error: Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false })* (glob)
   * (glob)
   Caused by:
       Blob is missing: changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd

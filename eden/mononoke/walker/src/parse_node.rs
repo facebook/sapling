@@ -6,8 +6,8 @@
  */
 
 use crate::graph::{
-    AliasKey, AliasType, FastlogKey, Node, NodeType, PathKey, UnitKey, UnodeFlags, UnodeKey,
-    WrappedPath,
+    AliasKey, AliasType, ChangesetKey, FastlogKey, Node, NodeType, PathKey, UnitKey, UnodeFlags,
+    UnodeKey, WrappedPath,
 };
 
 use anyhow::{format_err, Error};
@@ -64,6 +64,20 @@ impl FromStr for PathKey<HgFileNodeId> {
         let path = check_and_build_path(NodeType::HgFileNode, &parts)?;
         let id = HgFileNodeId::from_str(parts[0])?;
         Ok(Self { id, path })
+    }
+}
+
+impl<T> FromStr for ChangesetKey<T>
+where
+    T: FromStr,
+{
+    type Err = <T as FromStr>::Err;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let inner = T::from_str(s)?;
+        Ok(ChangesetKey {
+            inner,
+            filenode_known_derived: false,
+        })
     }
 }
 

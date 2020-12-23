@@ -45,7 +45,7 @@ Check scuba data is logged for error on step and that it contains message and ro
   $ wc -l < scuba-error.json
   1
   $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .node_type, .repo, .src_node_type, .via_node_type, .walk_type, .error_msg ] | @csv' < scuba-error.json
-  1,"step","changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd","Changeset","repo","Bookmark",,"validate","Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd))), path: None }, due to Blobstore error
+  1,"step","changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd","Changeset","repo","Bookmark",,"validate","Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false }), path: None }, due to Blobstore error
   * (glob)
   Caused by:
       Injected failure in get to ChaosBlobstore for key repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd, via Some(ValidateRoute { src_node: Bookmark(BookmarkName { bookmark: ""master_bookmark"" }), via: [] })"

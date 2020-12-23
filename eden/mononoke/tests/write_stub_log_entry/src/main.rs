@@ -15,6 +15,7 @@ use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use mononoke_types::ChangesetId;
+use std::str::FromStr;
 
 const CREATE: &'static str = "create";
 const UPDATE: &'static str = "update";

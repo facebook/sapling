@@ -190,6 +190,33 @@ impl<T: fmt::Debug + Clone + PartialEq + Eq + Hash> PathKey<T> {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AliasKey(pub Alias);
 
+/// Used for both Bonsai and HgChangesets to track if filenode data is present
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct ChangesetKey<T> {
+    pub inner: T,
+    pub filenode_known_derived: bool,
+}
+
+impl ChangesetKey<ChangesetId> {
+    fn blobstore_key(&self) -> String {
+        self.inner.blobstore_key()
+    }
+
+    fn sampling_fingerprint(&self) -> u64 {
+        self.inner.sampling_fingerprint()
+    }
+}
+
+impl ChangesetKey<HgChangesetId> {
+    fn blobstore_key(&self) -> String {
+        self.inner.blobstore_key()
+    }
+
+    fn sampling_fingerprint(&self) -> u64 {
+        self.inner.sampling_fingerprint()
+    }
+}
+
 bitflags! {
     /// Some derived data needs unodes as precondition, flags represent what is available in a compact way
     #[derive(Default)]
@@ -294,7 +321,7 @@ create_graph!(
     (Bookmark, BookmarkName, [Changeset, BonsaiHgMapping]),
     (
         Changeset,
-        ChangesetId,
+        ChangesetKey<ChangesetId>,
         [
             FileContent,
             BonsaiParent(Changeset),
@@ -308,7 +335,7 @@ create_graph!(
             UnodeMapping
         ]
     ),
-    (BonsaiHgMapping, ChangesetId, [HgChangeset]),
+    (BonsaiHgMapping, ChangesetKey<ChangesetId>, [HgChangeset]),
     (PhaseMapping, ChangesetId, []),
     (
         PublishedBookmarks,
@@ -316,10 +343,10 @@ create_graph!(
         [Changeset, BonsaiHgMapping]
     ),
     // Hg
-    (HgBonsaiMapping, HgChangesetId, [Changeset]),
+    (HgBonsaiMapping, ChangesetKey<HgChangesetId>, [Changeset]),
     (
         HgChangeset,
-        HgChangesetId,
+        ChangesetKey<HgChangesetId>,
         [HgParent(HgChangeset), HgManifest]
     ),
     (

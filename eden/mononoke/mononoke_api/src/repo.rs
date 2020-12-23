@@ -1364,6 +1364,7 @@ impl RepoContext {
 mod tests {
     use super::*;
     use fixtures::{linear, merge_even};
+    use std::str::FromStr;
 
     #[fbinit::compat_test]
     async fn test_try_find_child(fb: FacebookInit) -> Result<(), Error> {

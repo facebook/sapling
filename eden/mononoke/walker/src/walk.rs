@@ -6,8 +6,8 @@
  */
 
 use crate::graph::{
-    AliasKey, EdgeType, FastlogKey, FileContentData, Node, NodeData, NodeType, PathKey, UnodeFlags,
-    UnodeKey, UnodeManifestEntry, WrappedPath,
+    AliasKey, ChangesetKey, EdgeType, FastlogKey, FileContentData, Node, NodeData, NodeType,
+    PathKey, UnodeFlags, UnodeKey, UnodeManifestEntry, WrappedPath,
 };
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE, ERROR_MSG};
 
@@ -165,10 +165,16 @@ async fn bookmark_step<V: VisitOne>(
         Some(bcs_id) => {
             let mut edges = vec![];
             checker.add_edge(&mut edges, EdgeType::BookmarkToChangeset, || {
-                Node::Changeset(bcs_id)
+                Node::Changeset(ChangesetKey {
+                    inner: bcs_id,
+                    filenode_known_derived: false, /* from bookmark we don't know if hg fully derived */
+                })
             });
             checker.add_edge(&mut edges, EdgeType::BookmarkToBonsaiHgMapping, || {
-                Node::BonsaiHgMapping(bcs_id)
+                Node::BonsaiHgMapping(ChangesetKey {
+                    inner: bcs_id,
+                    filenode_known_derived: false, /* from bookmark we don't know if hg fully derived */
+                })
             });
             Ok(StepOutput(
                 checker.step_data(NodeType::Bookmark, || NodeData::Bookmark(bcs_id)),
@@ -186,12 +192,20 @@ async fn published_bookmarks_step<V: VisitOne>(
     let mut edges = vec![];
     for (_, bcs_id) in published_bookmarks.iter() {
         checker.add_edge(&mut edges, EdgeType::PublishedBookmarksToChangeset, || {
-            Node::Changeset(bcs_id.clone())
+            Node::Changeset(ChangesetKey {
+                inner: bcs_id.clone(),
+                filenode_known_derived: false, /* from bookmark we don't know if hg fully derived */
+            })
         });
         checker.add_edge(
             &mut edges,
             EdgeType::PublishedBookmarksToBonsaiHgMapping,
-            || Node::BonsaiHgMapping(bcs_id.clone()),
+            || {
+                Node::BonsaiHgMapping(ChangesetKey {
+                    inner: bcs_id.clone(),
+                    filenode_known_derived: false, /* from bookmark we don't know if hg fully derived */
+                })
+            },
         );
     }
     Ok(StepOutput(
@@ -232,7 +246,10 @@ async fn blame_step<V: VisitOne>(
     if let BlameMaybeRejected::Blame(blame) = blame {
         for r in blame.ranges() {
             checker.add_edge(&mut edges, EdgeType::BlameToChangeset, || {
-                Node::Changeset(r.csid)
+                Node::Changeset(ChangesetKey {
+                    inner: r.csid,
+                    filenode_known_derived: false, /* from blame we don't know if hg is fully derived */
+                })
             });
         }
         Ok(StepOutput(
@@ -258,7 +275,10 @@ async fn fastlog_batch_step<V: VisitOne>(
     let mut edges = vec![];
     for (cs_id, _offsets) in log.latest() {
         checker.add_edge(&mut edges, EdgeType::FastlogBatchToChangeset, || {
-            Node::Changeset(*cs_id)
+            Node::Changeset(ChangesetKey {
+                inner: *cs_id,
+                filenode_known_derived: false, /* from log we don't know if hg is fully derived */
+            })
         });
     }
     for id in log.previous_batches() {
@@ -289,7 +309,10 @@ async fn fastlog_dir_step<V: VisitOne>(
     if let Some(log) = &log {
         for (cs_id, _offsets) in log.latest() {
             checker.add_edge(&mut edges, EdgeType::FastlogDirToChangeset, || {
-                Node::Changeset(*cs_id)
+                Node::Changeset(ChangesetKey {
+                    inner: *cs_id,
+                    filenode_known_derived: false, /* from log we don't know if hg is fully derived */
+                })
             });
         }
         for id in log.previous_batches() {
@@ -322,7 +345,10 @@ async fn fastlog_file_step<V: VisitOne>(
     if let Some(log) = &log {
         for (cs_id, _offsets) in log.latest() {
             checker.add_edge(&mut edges, EdgeType::FastlogFileToChangeset, || {
-                Node::Changeset(*cs_id)
+                Node::Changeset(ChangesetKey {
+                    inner: *cs_id,
+                    filenode_known_derived: false, /* from log we don't know if hg is fully derived */
+                })
             });
         }
         for id in log.previous_batches() {
@@ -406,8 +432,9 @@ async fn bonsai_changeset_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
-    bcs_id: &ChangesetId,
+    key: &ChangesetKey<ChangesetId>,
 ) -> Result<StepOutput, Error> {
+    let bcs_id = &key.inner;
     // Get the data, and add direct file data for this bonsai changeset
     let bcs = bcs_id.load(ctx, repo.blobstore()).await?;
 
@@ -422,7 +449,10 @@ async fn bonsai_changeset_step<V: VisitOne>(
     // Parents expand 1:[0|1|2] and then the same as all below
     for parent_id in bcs.parents() {
         checker.add_edge(&mut edges, EdgeType::ChangesetToBonsaiParent, || {
-            Node::Changeset(parent_id)
+            Node::Changeset(ChangesetKey {
+                inner: parent_id,
+                filenode_known_derived: key.filenode_known_derived, /* if this has hg derived, so does parent */
+            })
         });
     }
     // Unode mapping is 1:1 but from their expands considerably
@@ -447,7 +477,10 @@ async fn bonsai_changeset_step<V: VisitOne>(
     );
     // Allow Hg based lookup which is 1:[1|0], may expand a lot from that
     checker.add_edge(&mut edges, EdgeType::ChangesetToBonsaiHgMapping, || {
-        Node::BonsaiHgMapping(*bcs_id)
+        Node::BonsaiHgMapping(ChangesetKey {
+            inner: *bcs_id,
+            filenode_known_derived: key.filenode_known_derived,
+        })
     });
     // File content expands just to meta+aliases 1:~5, with no further steps
     for (mpath, fc) in bcs.file_changes() {
@@ -536,27 +569,33 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     checker: &'a Checker<V>,
-    bcs_id: ChangesetId,
+    key: ChangesetKey<ChangesetId>,
     enable_derive: bool,
 ) -> Result<StepOutput, Error> {
-    let has_filenode = if enable_derive {
-        if checker.is_public(ctx, &bcs_id).await? {
-            let _ = FilenodesOnlyPublic::derive(ctx, repo, bcs_id).await?;
-            Some(true)
+    let bcs_id = key.inner;
+
+    let mut filenode_known_derived = key.filenode_known_derived;
+
+    if checker.with_filenodes && !filenode_known_derived {
+        let derived_filenode = if enable_derive {
+            if checker.is_public(ctx, &bcs_id).await? {
+                let _ = FilenodesOnlyPublic::derive(ctx, repo, bcs_id).await?;
+                Some(true)
+            } else {
+                None
+            }
         } else {
             None
-        }
-    } else {
-        None
-    };
+        };
 
-    // We only want to walk to Hg step if filenode is present
-    let has_filenode = match has_filenode {
-        Some(v) => v,
-        None => FilenodesOnlyPublic::is_derived(&ctx, &repo, &bcs_id).await?,
-    };
+        // We only want to walk to Hg step if filenode is present
+        filenode_known_derived = match derived_filenode {
+            Some(v) => v,
+            None => FilenodesOnlyPublic::is_derived(&ctx, &repo, &bcs_id).await?,
+        };
+    }
 
-    let maybe_hg_cs_id = if has_filenode {
+    let maybe_hg_cs_id = if filenode_known_derived || !checker.with_filenodes {
         maybe_derived::<MappedHgChangesetId>(ctx, repo, bcs_id, enable_derive).await?
     } else {
         None
@@ -567,7 +606,10 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
             let hg_cs_id = hg_cs_id.0;
             let mut edges = vec![];
             checker.add_edge(&mut edges, EdgeType::BonsaiHgMappingToHgChangeset, || {
-                Node::HgChangeset(hg_cs_id)
+                Node::HgChangeset(ChangesetKey {
+                    inner: hg_cs_id,
+                    filenode_known_derived,
+                })
             });
             StepOutput(
                 checker.step_data(NodeType::BonsaiHgMapping, || {
@@ -589,14 +631,17 @@ async fn hg_to_bonsai_mapping_step<V: VisitOne>(
     ctx: CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
-    id: HgChangesetId,
+    key: ChangesetKey<HgChangesetId>,
 ) -> Result<StepOutput, Error> {
-    let maybe_bcs_id = repo.get_bonsai_from_hg(ctx, id).await?;
+    let maybe_bcs_id = repo.get_bonsai_from_hg(ctx, key.inner).await?;
     match maybe_bcs_id {
         Some(bcs_id) => {
             let mut edges = vec![];
             checker.add_edge(&mut edges, EdgeType::HgBonsaiMappingToChangeset, || {
-                Node::Changeset(bcs_id)
+                Node::Changeset(ChangesetKey {
+                    inner: bcs_id,
+                    filenode_known_derived: key.filenode_known_derived,
+                })
             });
             Ok(StepOutput(
                 checker.step_data(NodeType::HgBonsaiMapping, || {
@@ -618,9 +663,9 @@ async fn hg_changeset_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
-    id: HgChangesetId,
+    key: ChangesetKey<HgChangesetId>,
 ) -> Result<StepOutput, Error> {
-    let hgchangeset = id.load(ctx, repo.blobstore()).await?;
+    let hgchangeset = key.inner.load(ctx, repo.blobstore()).await?;
     let mut edges = vec![];
     // 1:1 but will then expand a lot, usually
     checker.add_edge(&mut edges, EdgeType::HgChangesetToHgManifest, || {
@@ -629,7 +674,10 @@ async fn hg_changeset_step<V: VisitOne>(
     // Mostly 1:1, can be 1:2, with further expansion
     for p in hgchangeset.parents().into_iter() {
         checker.add_edge(&mut edges, EdgeType::HgChangesetToHgParent, || {
-            Node::HgChangeset(HgChangesetId::new(p))
+            Node::HgChangeset(ChangesetKey {
+                inner: HgChangesetId::new(p),
+                filenode_known_derived: key.filenode_known_derived,
+            })
         });
     }
     Ok(StepOutput(
@@ -681,7 +729,10 @@ async fn hg_file_node_step<V: VisitOne>(
             let mut edges = vec![];
             // Validate hg link node
             checker.add_edge(&mut edges, EdgeType::HgFileNodeToLinkedHgChangeset, || {
-                Node::HgChangeset(file_node_info.linknode)
+                Node::HgChangeset(ChangesetKey {
+                    inner: file_node_info.linknode,
+                    filenode_known_derived: true,
+                })
             });
 
             // Following linknode bonsai increases parallelism of walk.
@@ -690,7 +741,12 @@ async fn hg_file_node_step<V: VisitOne>(
             checker.add_edge(
                 &mut edges,
                 EdgeType::HgFileNodeToLinkedHgBonsaiMapping,
-                || Node::HgBonsaiMapping(file_node_info.linknode),
+                || {
+                    Node::HgBonsaiMapping(ChangesetKey {
+                        inner: file_node_info.linknode,
+                        filenode_known_derived: true,
+                    })
+                },
             );
 
             // Parents
@@ -1016,7 +1072,10 @@ async fn unode_file_step<V: VisitOne>(
     }
 
     checker.add_edge(&mut edges, EdgeType::UnodeFileToLinkedChangeset, || {
-        Node::Changeset(linked_cs_id)
+        Node::Changeset(ChangesetKey {
+            inner: linked_cs_id,
+            filenode_known_derived: false, /* unode does not imply hg is fully derived */
+        })
     });
 
     for p in unode_file.parents() {
@@ -1054,7 +1113,10 @@ async fn unode_manifest_step<V: VisitOne>(
     let mut edges = vec![];
 
     checker.add_edge(&mut edges, EdgeType::UnodeManifestToLinkedChangeset, || {
-        Node::Changeset(linked_cs_id)
+        Node::Changeset(ChangesetKey {
+            inner: linked_cs_id,
+            filenode_known_derived: false, /* unode does not imply hg is fully derived */
+        })
     });
 
     // Check if we stepped from unode for non-public commit to unode for public, so can enable blame if required
@@ -1144,7 +1206,10 @@ async fn deleted_manifest_step<V: VisitOne>(
 
     if let Some(linked_cs_id) = linked_cs_id {
         checker.add_edge(&mut edges, EdgeType::DeletedManifestToLinkedChangeset, || {
-            Node::Changeset(linked_cs_id)
+            Node::Changeset(ChangesetKey {
+                inner: linked_cs_id,
+                filenode_known_derived: false, /* dfm does not imply hg is fully derived */
+            })
         });
     }
 
@@ -1308,6 +1373,7 @@ struct Checker<V: VisitOne> {
     phases_store: Arc<dyn Phases>,
     with_blame: bool,
     with_fastlog: bool,
+    with_filenodes: bool,
 }
 
 impl<V: VisitOne> Checker<V> {
@@ -1460,6 +1526,9 @@ where
                 with_fastlog: include_edge_types
                     .iter()
                     .any(|e| e.outgoing_type().derived_data_name() == Some(RootFastlog::NAME)),
+                with_filenodes: include_edge_types
+                    .iter()
+                    .any(|e| e.outgoing_type() == NodeType::HgFileNode),
                 include_edge_types,
                 always_emit_edge_types,
                 keep_edge_paths,
@@ -1555,7 +1624,7 @@ where
             )
             .await
         }
-        Node::Changeset(bcs_id) => bonsai_changeset_step(&ctx, &repo, &checker, &bcs_id).await,
+        Node::Changeset(key) => bonsai_changeset_step(&ctx, &repo, &checker, &key).await,
         Node::BonsaiHgMapping(bcs_id) => {
             bonsai_to_hg_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
@@ -1564,8 +1633,8 @@ where
             published_bookmarks_step(published_bookmarks.clone(), &checker).await
         }
         // Hg
-        Node::HgBonsaiMapping(hg_csid) => {
-            hg_to_bonsai_mapping_step(ctx.clone(), &repo, &checker, hg_csid).await
+        Node::HgBonsaiMapping(key) => {
+            hg_to_bonsai_mapping_step(ctx.clone(), &repo, &checker, key).await
         }
         Node::HgChangeset(hg_csid) => hg_changeset_step(&ctx, &repo, &checker, hg_csid).await,
         Node::HgFileEnvelope(hg_file_node_id) => {

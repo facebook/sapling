@@ -14,6 +14,7 @@ use bytes::Bytes;
 use chrono::{FixedOffset, TimeZone};
 use fbinit::FacebookInit;
 use fixtures::{linear, many_files_dirs};
+use std::str::FromStr;
 
 use crate::{
     ChangesetContext, ChangesetId, CoreContext, CreateChange, FileType, Mononoke, MononokeError,

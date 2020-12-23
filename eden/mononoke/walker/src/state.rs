@@ -283,8 +283,8 @@ impl WalkState {
                 self.public_not_visited.remove(&id);
             }
             // Hg
-            (Node::BonsaiHgMapping(bcs_id), Some(NodeData::BonsaiHgMapping(Some(_)))) => {
-                self.record(&self.visited_bcs_mapping, &self.bcs_ids.interned(bcs_id));
+            (Node::BonsaiHgMapping(k), Some(NodeData::BonsaiHgMapping(Some(_)))) => {
+                self.record(&self.visited_bcs_mapping, &self.bcs_ids.interned(&k.inner));
             }
             // Derived
             (Node::ChangesetInfoMapping(bcs_id), Some(NodeData::ChangesetInfoMapping(Some(_)))) => {
@@ -384,11 +384,9 @@ impl VisitOne for WalkState {
             Node::Bookmark(_) => true,
             Node::PublishedBookmarks(_) => true,
             // Bonsai
-            Node::Changeset(bcs_id) => {
-                self.record(&self.visited_bcs, &self.bcs_ids.interned(bcs_id))
-            }
-            Node::BonsaiHgMapping(bcs_id) => {
-                if let Some(id) = self.bcs_ids.get(bcs_id) {
+            Node::Changeset(k) => self.record(&self.visited_bcs, &self.bcs_ids.interned(&k.inner)),
+            Node::BonsaiHgMapping(k) => {
+                if let Some(id) = self.bcs_ids.get(&k.inner) {
                     // Does not insert, see record_resolved_visit
                     !self.visited_bcs_mapping.contains_key(&id)
                 } else {
@@ -404,12 +402,12 @@ impl VisitOne for WalkState {
                 }
             }
             // Hg
-            Node::HgBonsaiMapping(hg_cs_id) => self.record(
+            Node::HgBonsaiMapping(k) => self.record(
                 &self.visited_hg_cs_mapping,
-                &self.hg_cs_ids.interned(hg_cs_id),
+                &self.hg_cs_ids.interned(&k.inner),
             ),
-            Node::HgChangeset(hg_cs_id) => {
-                self.record(&self.visited_hg_cs, &self.hg_cs_ids.interned(hg_cs_id))
+            Node::HgChangeset(k) => {
+                self.record(&self.visited_hg_cs, &self.hg_cs_ids.interned(&k.inner))
             }
             Node::HgManifest(k) => self.record_with_path(
                 &self.visited_hg_manifest,

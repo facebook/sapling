@@ -12,6 +12,7 @@
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::str::FromStr;
 
 use anyhow::Result;
 use bookmarks::{BundleReplay, RawBundleReplayData};

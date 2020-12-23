@@ -210,9 +210,9 @@ fn check_bonsai_phase_is_public(
                 for n in r.via.iter().rev() {
                     match n {
                         Node::HgChangeset(_via_hg_cs_id) => return Some(n.clone()),
-                        Node::Changeset(via_cs_id) => {
+                        Node::Changeset(k) => {
                             // Check for most recent non-identical changesethg
-                            if via_cs_id != non_public_cs_id {
+                            if &k.inner != non_public_cs_id {
                                 return Some(n.clone());
                             }
                         }

@@ -9,7 +9,7 @@ use std::fmt::{self, Display};
 use std::{result, str::FromStr};
 
 use abomonation_derive::Abomonation;
-use anyhow::{bail, Result};
+use anyhow::{bail, Error, Result};
 use ascii::{AsciiStr, AsciiString};
 use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
@@ -176,11 +176,6 @@ macro_rules! impl_typed_hash_no_context {
             }
 
             #[inline]
-            pub fn from_str(s: &str) -> Result<Self> {
-                Blake2::from_str(s).map(Self::new)
-            }
-
-            #[inline]
             pub fn from_ascii_str(s: &AsciiStr) -> Result<Self> {
                 Blake2::from_ascii_str(s).map(Self::new)
             }
@@ -201,6 +196,14 @@ macro_rules! impl_typed_hash_no_context {
             // (this is public because downstream code wants to be able to serialize these nodes)
             pub fn into_thrift(self) -> thrift::$typed {
                 thrift::$typed(thrift::IdType::Blake2(self.0.into_thrift()))
+            }
+        }
+
+        impl FromStr for $typed {
+            type Err = Error;
+            #[inline]
+            fn from_str(s: &str) -> Result<Self> {
+                Blake2::from_str(s).map(Self::new)
             }
         }
 
