@@ -14,10 +14,9 @@ use crate::progress::{
 use crate::sampling::SamplingOptions;
 use crate::state::StepStats;
 use crate::validate::{CheckType, REPO, WALK_TYPE};
-use crate::walk::OutgoingEdge;
+use crate::walk::{OutgoingEdge, RepoWalkParams};
 
 use anyhow::{format_err, Context, Error};
-use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo_given_datasources, ReadOnlyStorage};
 use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::BookmarkName;
@@ -28,6 +27,7 @@ use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, future};
 use itertools::{process_results, Itertools};
+use maplit::hashset;
 use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::{Redaction, ScrubAction};
 use once_cell::sync::Lazy;
@@ -46,27 +46,23 @@ use std::{
 use strum::{IntoEnumIterator, VariantNames};
 use strum_macros::{AsRefStr, EnumString, EnumVariantNames};
 
-pub struct RepoWalkDatasources {
-    pub blobrepo: BlobRepo,
-    pub scuba_builder: MononokeScubaSampleBuilder,
+// Per repo things we don't pass into the walk
+pub struct RepoSubcommandParams {
+    pub progress_state: ProgressStateMutex<ProgressStateCountByType<StepStats, ProgressSummary>>,
 }
 
+// These don't vary per repo
 #[derive(Clone)]
-pub struct RepoWalkParams {
+pub struct JobWalkParams {
     pub enable_derive: bool,
-    pub scheduled_max: usize,
-    pub walk_roots: Vec<OutgoingEdge>,
-    pub include_node_types: HashSet<NodeType>,
-    pub include_edge_types: HashSet<EdgeType>,
     pub tail_secs: Option<u64>,
     pub quiet: bool,
-    pub progress_state: ProgressStateMutex<ProgressStateCountByType<StepStats, ProgressSummary>>,
     pub error_as_data_node_types: HashSet<NodeType>,
     pub error_as_data_edge_types: HashSet<EdgeType>,
 }
 
-pub const PROGRESS_SAMPLE_RATE: u64 = 1000;
-pub const PROGRESS_SAMPLE_DURATION_S: u64 = 5;
+const PROGRESS_SAMPLE_RATE: u64 = 1000;
+const PROGRESS_SAMPLE_DURATION_S: u64 = 5;
 
 // Sub commands
 pub const SCRUB: &str = "scrub";
@@ -90,8 +86,8 @@ const WALK_ROOT_ARG: &str = "walk-root";
 const INNER_BLOBSTORE_ID_ARG: &str = "inner-blobstore-id";
 const SCRUB_BLOBSTORE_ACTION_ARG: &str = "scrub-blobstore-action";
 const ENABLE_DERIVE_ARG: &str = "enable-derive";
-pub const PROGRESS_SAMPLE_RATE_ARG: &str = "progress-sample-rate";
-pub const PROGRESS_INTERVAL_ARG: &str = "progress-interval";
+const PROGRESS_SAMPLE_RATE_ARG: &str = "progress-sample-rate";
+const PROGRESS_INTERVAL_ARG: &str = "progress-interval";
 pub const LIMIT_DATA_FETCH_ARG: &str = "limit-data-fetch";
 pub const COMPRESSION_LEVEL_ARG: &str = "compression-level";
 const SAMPLE_RATE_ARG: &str = "sample-rate";
@@ -750,7 +746,7 @@ fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
                 HashSet::from_iter(v.iter().cloned())
             } else {
                 NodeType::from_str(arg)
-                    .map(|e| HashSet::from_iter(Some(e)))
+                    .map(|e| hashset![e])
                     .with_context(|| format_err!("Unknown NodeType {}", arg))?
             }
         }
@@ -791,7 +787,7 @@ fn parse_edge_value(arg: &str) -> Result<HashSet<EdgeType>, Error> {
         HG_VALUE_ARG => HashSet::from_iter(HG_EDGE_TYPES.iter().cloned()),
         SHALLOW_VALUE_ARG => HashSet::from_iter(SHALLOW_INCLUDE_EDGE_TYPES.iter().cloned()),
         _ => EdgeType::from_str(arg)
-            .map(|e| HashSet::from_iter(Some(e)))
+            .map(|e| hashset![e])
             .with_context(|| format_err!("Unknown EdgeType {}", arg))?,
     })
 }
@@ -860,7 +856,7 @@ pub async fn setup_common<'a>(
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
-) -> Result<(RepoWalkDatasources, RepoWalkParams), Error> {
+) -> Result<(JobWalkParams, RepoSubcommandParams, RepoWalkParams), Error> {
     let config_store = args::init_config_store(fb, logger, matches)?;
     let (_, config) = args::get_config(config_store, &matches)?;
     let quiet = sub_m.is_present(QUIET_ARG);
@@ -1034,7 +1030,7 @@ pub async fn setup_common<'a>(
 
     let (blobstore, sql_factory) = future::try_join(blobstore, sql_factory).await?;
 
-    let blobrepo = open_blobrepo_given_datasources(
+    let repo = open_blobrepo_given_datasources(
         fb,
         blobstore,
         &sql_factory,
@@ -1082,21 +1078,21 @@ pub async fn setup_common<'a>(
     ));
 
     Ok((
-        RepoWalkDatasources {
-            blobrepo,
-            scuba_builder,
-        },
-        RepoWalkParams {
+        JobWalkParams {
             enable_derive,
+            tail_secs,
+            quiet,
+            error_as_data_node_types,
+            error_as_data_edge_types,
+        },
+        RepoSubcommandParams { progress_state },
+        RepoWalkParams {
+            repo,
             scheduled_max,
             walk_roots,
             include_node_types,
             include_edge_types,
-            tail_secs,
-            quiet,
-            progress_state,
-            error_as_data_node_types,
-            error_as_data_edge_types,
+            scuba_builder,
         },
     ))
 }

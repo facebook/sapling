@@ -17,14 +17,14 @@ use crate::setup::{
     OUTPUT_FORMAT_ARG, SCRUB,
 };
 use crate::sizing::SizingSample;
-use crate::tail::{walk_exact_tail, RepoWalkRun};
+use crate::tail::walk_exact_tail;
 use crate::validate::TOTAL;
-use crate::walk::EmptyRoute;
+use crate::walk::{EmptyRoute, RepoWalkParams, TypeWalkParams};
 
 use anyhow::{format_err, Error};
 use clap::ArgMatches;
 use cloned::cloned;
-use cmdlib::args::{self, MononokeMatches};
+use cmdlib::args::MononokeMatches;
 use context::CoreContext;
 use derive_more::{Add, Div, Mul, Sub};
 use fbinit::FacebookInit;
@@ -328,20 +328,11 @@ pub async fn scrub_objects<'a>(
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let scrub_sampler = Arc::new(WalkSampleMapping::<Node, ScrubSample>::new());
-    let config_store = args::init_config_store(fb, &logger, matches)?;
+    let sampler = Arc::new(WalkSampleMapping::<Node, ScrubSample>::new());
 
-    let (datasources, walk_params) = setup_common(
-        SCRUB,
-        fb,
-        &logger,
-        Some(scrub_sampler.clone()),
-        matches,
-        sub_m,
-    )
-    .await?;
+    let (job_params, sub_params, repo_params) =
+        setup_common(SCRUB, fb, &logger, Some(sampler.clone()), matches, sub_m).await?;
 
-    let repo_stats_key = args::get_repo_name(config_store, &matches)?;
     let progress_options = parse_progress_args(sub_m);
     let sampling_options = parse_sampling_args(sub_m, 1)?;
 
@@ -357,10 +348,10 @@ pub async fn scrub_objects<'a>(
     )?;
 
     cloned!(
-        walk_params.include_node_types,
-        walk_params.include_edge_types,
-        mut sampling_options,
+        repo_params.include_node_types,
+        repo_params.include_edge_types,
         mut output_node_types,
+        mut sampling_options,
     );
     sampling_options.retain_or_default(&include_node_types);
 
@@ -369,28 +360,28 @@ pub async fn scrub_objects<'a>(
             fb,
             logger.clone(),
             SCRUB,
-            repo_stats_key,
+            repo_params.repo.name().clone(),
             sampling_options.node_types.clone(),
             progress_options,
         ));
 
     let make_sink = {
         cloned!(
-            walk_params.quiet,
-            walk_params.progress_state,
-            walk_params.scheduled_max,
-            scrub_sampler,
-            output_node_types
+            sampler,
+            output_node_types,
+            sub_params.progress_state,
+            repo_params.scheduled_max,
+            job_params.quiet
         );
-        move |run: RepoWalkRun| {
-            cloned!(run.ctx);
+        move |ctx: &CoreContext, _repo_params: &RepoWalkParams| {
+            cloned!(ctx);
             async move |walk_output| {
                 let walk_progress = progress_stream(quiet, &progress_state, walk_output);
                 let loading = loading_stream(
                     limit_data_fetch,
                     scheduled_max,
                     walk_progress,
-                    scrub_sampler,
+                    sampler,
                     output_node_types,
                     output_format,
                 );
@@ -412,26 +403,31 @@ pub async fn scrub_objects<'a>(
     if !limit_data_fetch {
         output_node_types.insert(NodeType::FileContent);
     }
-    let always_emit_types: Vec<NodeType> = output_node_types.into_iter().collect();
+    let required_node_data_types: HashSet<NodeType> = output_node_types.into_iter().collect();
 
     let walk_state = Arc::new(SamplingWalkVisitor::new(
         include_node_types,
         include_edge_types,
         sampling_options,
         None,
-        scrub_sampler,
-        walk_params.enable_derive,
+        sampler,
+        job_params.enable_derive,
     ));
+
+    let type_params = TypeWalkParams {
+        required_node_data_types,
+        always_emit_edge_types: HashSet::new(),
+        keep_edge_paths: false,
+    };
+
     walk_exact_tail::<_, _, _, _, _, EmptyRoute>(
         fb,
         logger,
-        datasources,
-        walk_params,
-        &always_emit_types,
-        None,
+        job_params,
+        repo_params,
+        type_params,
         walk_state,
         make_sink,
-        false,
     )
     .await
 }

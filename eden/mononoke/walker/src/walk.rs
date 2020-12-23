@@ -9,6 +9,7 @@ use crate::graph::{
     AliasKey, ChangesetKey, EdgeType, FastlogKey, FileContentData, Node, NodeData, NodeType,
     PathKey, UnodeFlags, UnodeKey, UnodeManifestEntry, WrappedPath,
 };
+use crate::setup::JobWalkParams;
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE, ERROR_MSG};
 
 use anyhow::{format_err, Context, Error};
@@ -1488,22 +1489,32 @@ impl<V: VisitOne> Checker<V> {
         }
     }
 }
+// Parameters that vary per repo
+#[derive(Clone)]
+pub struct RepoWalkParams {
+    pub repo: BlobRepo,
+    pub scuba_builder: MononokeScubaSampleBuilder,
+    pub scheduled_max: usize,
+    pub walk_roots: Vec<OutgoingEdge>,
+    pub include_node_types: HashSet<NodeType>,
+    pub include_edge_types: HashSet<EdgeType>,
+}
+
+// These are set differently by scrub, validate etc.
+#[derive(Clone, Default)]
+pub struct TypeWalkParams {
+    pub always_emit_edge_types: HashSet<EdgeType>,
+    pub required_node_data_types: HashSet<NodeType>,
+    pub keep_edge_paths: bool,
+}
 
 /// Walk the graph from one or more starting points,  providing stream of data for later reduction
 pub fn walk_exact<V, VOut, Route>(
     ctx: CoreContext,
-    repo: BlobRepo,
-    enable_derive: bool,
-    walk_roots: Vec<OutgoingEdge>,
     visitor: V,
-    scheduled_max: usize,
-    error_as_data_node_types: HashSet<NodeType>,
-    error_as_data_edge_types: HashSet<EdgeType>,
-    include_edge_types: HashSet<EdgeType>,
-    always_emit_edge_types: HashSet<EdgeType>,
-    required_node_data_types: HashSet<NodeType>,
-    scuba: MononokeScubaSampleBuilder,
-    keep_edge_paths: bool,
+    job_params: JobWalkParams,
+    repo_params: RepoWalkParams,
+    type_params: TypeWalkParams,
 ) -> BoxStream<'static, Result<VOut, Error>>
 where
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send + Sync,
@@ -1511,7 +1522,8 @@ where
     Route: 'static + Send + Clone + StepRoute,
 {
     // Build lookups
-    let published_bookmarks = repo
+    let published_bookmarks = repo_params
+        .repo
         .bookmarks()
         .list(
             ctx.clone(),
@@ -1525,8 +1537,11 @@ where
         .try_collect::<HashMap<_, _>>();
 
     // Roots were not stepped to from elsewhere, so their Option<Route> is None.
-    let walk_roots: Vec<(Option<Route>, OutgoingEdge)> =
-        walk_roots.into_iter().map(|e| (None, e)).collect();
+    let walk_roots: Vec<(Option<Route>, OutgoingEdge)> = repo_params
+        .walk_roots
+        .iter()
+        .map(|e| (None, e.clone()))
+        .collect();
 
     published_bookmarks
         .map_ok(move |published_bookmarks| {
@@ -1546,21 +1561,25 @@ where
                 }
             });
 
+            cloned!(
+                repo_params.repo,
+                repo_params.include_edge_types,
+                repo_params.include_node_types
+            );
+
             let checker = Arc::new(Checker {
-                with_blame: include_edge_types
+                with_blame: repo_params.include_node_types.contains(&NodeType::Blame),
+                with_fastlog: include_node_types
                     .iter()
-                    .any(|e| e.outgoing_type() == NodeType::Blame),
-                with_fastlog: include_edge_types
-                    .iter()
-                    .any(|e| e.outgoing_type().derived_data_name() == Some(RootFastlog::NAME)),
+                    .any(|n| n.derived_data_name() == Some(RootFastlog::NAME)),
                 with_filenodes: include_edge_types
                     .iter()
                     .any(|e| e.outgoing_type() == NodeType::HgFileNode),
                 include_edge_types,
-                always_emit_edge_types,
-                keep_edge_paths,
+                always_emit_edge_types: type_params.always_emit_edge_types,
+                keep_edge_paths: type_params.keep_edge_paths,
                 visitor: visitor.clone(),
-                required_node_data_types,
+                required_node_data_types: type_params.required_node_data_types,
                 phases_store: repo.get_phases_factory().get_phases(
                     repo.get_repoid(),
                     repo.get_changeset_fetcher(),
@@ -1568,15 +1587,16 @@ where
                 ),
             });
 
-            bounded_traversal_stream(scheduled_max, walk_roots, {
+            bounded_traversal_stream(repo_params.scheduled_max, walk_roots, {
                 move |(via, walk_item): (Option<Route>, OutgoingEdge)| {
                     let ctx = visitor.start_step(ctx.clone(), via.as_ref(), &walk_item);
                     cloned!(
-                        error_as_data_node_types,
-                        error_as_data_edge_types,
+                        job_params.error_as_data_node_types,
+                        job_params.error_as_data_edge_types,
+                        job_params.enable_derive,
                         published_bookmarks,
-                        repo,
-                        scuba,
+                        repo_params.repo,
+                        repo_params.scuba_builder,
                         visitor,
                         checker,
                     );
@@ -1591,7 +1611,7 @@ where
                             visitor,
                             error_as_data_node_types,
                             error_as_data_edge_types,
-                            scuba,
+                            scuba_builder,
                             published_bookmarks,
                             checker,
                         );

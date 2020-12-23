@@ -14,27 +14,29 @@
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType};
 use crate::progress::{
-    progress_stream, report_state, sort_by_string, ProgressRecorder, ProgressRecorderUnprotected,
-    ProgressReporter, ProgressReporterUnprotected, ProgressStateMutex,
+    progress_stream, report_state, sort_by_string, ProgressOptions, ProgressRecorder,
+    ProgressRecorderUnprotected, ProgressReporter, ProgressReporterUnprotected, ProgressStateMutex,
 };
 use crate::setup::{
-    setup_common, EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, PROGRESS_SAMPLE_DURATION_S,
-    PROGRESS_SAMPLE_RATE, VALIDATE,
+    parse_progress_args, setup_common, EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, VALIDATE,
 };
 use crate::state::{StepStats, WalkState};
-use crate::tail::{walk_exact_tail, RepoWalkRun};
-use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, VisitOne, WalkVisitor};
+use crate::tail::walk_exact_tail;
+use crate::walk::{
+    EmptyRoute, OutgoingEdge, RepoWalkParams, StepRoute, TypeWalkParams, VisitOne, WalkVisitor,
+};
 
 use anyhow::Error;
 use async_trait::async_trait;
 use clap::ArgMatches;
 use cloned::cloned;
-use cmdlib::args::{self, MononokeMatches};
+use cmdlib::args::MononokeMatches;
 use context::CoreContext;
 use derive_more::AddAssign;
 use fbinit::FacebookInit;
 use futures::{future::TryFutureExt, stream::TryStreamExt};
 use itertools::Itertools;
+use maplit::hashset;
 use mononoke_types::{ChangesetId, MPath};
 use phases::{Phase, Phases};
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -48,7 +50,7 @@ use std::{
     result::Result,
     str::FromStr,
     sync::Arc,
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 pub const NODES: &str = "nodes";
@@ -424,8 +426,7 @@ struct ValidateProgressState {
     checked_nodes: u64,
     passed_nodes: u64,
     failed_nodes: u64,
-    throttle_reporting_rate: u64,
-    throttle_duration: Duration,
+    throttle_options: ProgressOptions,
     last_update: Instant,
 }
 
@@ -436,8 +437,7 @@ impl ValidateProgressState {
         scuba_builder: MononokeScubaSampleBuilder,
         repo_stats_key: String,
         included_types: HashSet<CheckType>,
-        sample_rate: u64,
-        throttle_duration: Duration,
+        throttle_options: ProgressOptions,
     ) -> Self {
         let types_sorted_by_name = sort_by_string(included_types);
         let now = Instant::now();
@@ -452,8 +452,7 @@ impl ValidateProgressState {
             checked_nodes: 0,
             passed_nodes: 0,
             failed_nodes: 0,
-            throttle_reporting_rate: sample_rate,
-            throttle_duration,
+            throttle_options,
             last_update: now,
         }
     }
@@ -544,11 +543,11 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
         self.scuba_builder = s;
     }
 
-    fn record_step(self: &mut Self, n: &Node, opt: Option<&CheckData>) {
+    fn record_step(&mut self, n: &Node, checkdata: Option<&CheckData>) {
         self.checked_nodes += 1;
         let mut had_pass = false;
         let mut had_fail = false;
-        opt.map(|checkdata| {
+        if let Some(checkdata) = checkdata {
             // By node. One fail is enough for a Node to be failed.
             if checkdata.stats.fail > 0 {
                 had_fail = true;
@@ -592,7 +591,7 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
                     }
                 }
             }
-        });
+        }
 
         if had_pass {
             self.passed_nodes += 1;
@@ -612,10 +611,10 @@ impl ProgressReporterUnprotected for ValidateProgressState {
     }
 
     fn report_throttled(self: &mut Self) {
-        if self.checked_nodes % self.throttle_reporting_rate == 0 {
+        if self.checked_nodes % self.throttle_options.sample_rate == 0 {
             let new_update = Instant::now();
             let delta_time = new_update.duration_since(self.last_update);
-            if delta_time >= self.throttle_duration {
+            if delta_time >= self.throttle_options.interval {
                 self.report_progress_log();
                 self.last_update = new_update;
             }
@@ -630,17 +629,17 @@ pub async fn validate<'a>(
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(fb, &logger, matches)?;
-    let (datasources, walk_params) =
+    let (job_params, sub_params, repo_params) =
         setup_common(VALIDATE, fb, &logger, None, matches, sub_m).await?;
-    let repo_stats_key = args::get_repo_name(config_store, &matches)?;
-    let mut include_check_types = parse_check_types(sub_m)?;
-    include_check_types.retain(|t| walk_params.include_node_types.contains(&t.node_type()));
 
+    let progress_options = parse_progress_args(sub_m);
     cloned!(
-        walk_params.include_node_types,
-        walk_params.include_edge_types,
+        repo_params.include_node_types,
+        repo_params.include_edge_types,
     );
+
+    let mut include_check_types = parse_check_types(sub_m)?;
+    include_check_types.retain(|t| include_node_types.contains(&t.node_type()));
     info!(
         logger,
         "Performing check types {:?}",
@@ -650,21 +649,20 @@ pub async fn validate<'a>(
     let validate_progress_state = ProgressStateMutex::new(ValidateProgressState::new(
         logger.clone(),
         fb,
-        datasources.scuba_builder.clone(),
-        repo_stats_key.clone(),
+        repo_params.scuba_builder.clone(),
+        repo_params.repo.name().clone(),
         include_check_types.clone(),
-        PROGRESS_SAMPLE_RATE,
-        Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
+        progress_options,
     ));
 
-    cloned!(walk_params.progress_state, walk_params.quiet);
-    let make_sink = move |run: RepoWalkRun| {
-        cloned!(run.ctx);
-        validate_progress_state.set_sample_builder(run.scuba_builder);
+    cloned!(job_params.quiet, sub_params.progress_state);
+    let make_sink = move |ctx: &CoreContext, repo_params: &RepoWalkParams| {
+        cloned!(ctx);
+        validate_progress_state.set_sample_builder(repo_params.scuba_builder.clone());
         async move |walk_output| {
             cloned!(ctx, progress_state, validate_progress_state);
-            let walk_progress = progress_stream(quiet, &progress_state.clone(), walk_output)
-                .map_ok(|(n, d, s)| {
+            let walk_progress =
+                progress_stream(quiet, &progress_state, walk_output).map_ok(|(n, d, s)| {
                     // swap stats and data round
                     (n, s, d)
                 });
@@ -672,7 +670,7 @@ pub async fn validate<'a>(
             let validate_progress =
                 progress_stream(quiet, &validate_progress_state.clone(), walk_progress);
 
-            let one_fut = report_state(ctx.clone(), progress_state, validate_progress).map_ok({
+            let one_fut = report_state(ctx, progress_state, validate_progress).map_ok({
                 cloned!(validate_progress_state);
                 move |d| {
                     validate_progress_state.report_progress();
@@ -687,24 +685,28 @@ pub async fn validate<'a>(
         HashSet::from_iter(vec![EdgeType::HgFileNodeToLinkedHgChangeset].into_iter());
 
     let stateful_visitor = Arc::new(ValidatingVisitor::new(
-        repo_stats_key,
+        repo_params.repo.name().clone(),
         include_node_types,
         include_edge_types,
         include_check_types,
         always_emit_edge_types.clone(),
-        walk_params.enable_derive,
+        job_params.enable_derive,
     ));
+
+    let type_params = TypeWalkParams {
+        required_node_data_types: hashset![NodeType::PhaseMapping],
+        always_emit_edge_types,
+        keep_edge_paths: false,
+    };
 
     walk_exact_tail(
         fb,
         logger,
-        datasources,
-        walk_params,
-        &[NodeType::PhaseMapping],
-        Some(always_emit_edge_types),
+        job_params,
+        repo_params,
+        type_params,
         stateful_visitor,
         make_sink,
-        false,
     )
     .await
 }

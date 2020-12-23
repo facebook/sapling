@@ -5,83 +5,48 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{EdgeType, NodeType};
-use crate::setup::{RepoWalkDatasources, RepoWalkParams};
-use crate::walk::{walk_exact, StepRoute, WalkVisitor};
+use crate::setup::JobWalkParams;
+use crate::walk::{walk_exact, RepoWalkParams, StepRoute, TypeWalkParams, WalkVisitor};
 
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{future::Future, stream::BoxStream};
-use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
-use std::{collections::HashSet, iter::FromIterator};
 use tokio::time::{Duration, Instant};
-
-#[derive(Clone)]
-pub struct RepoWalkRun {
-    pub ctx: CoreContext,
-    pub scuba_builder: MononokeScubaSampleBuilder,
-}
 
 pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, V, VOut, Route>(
     fb: FacebookInit,
     logger: Logger,
-    datasources: RepoWalkDatasources,
-    walk_params: RepoWalkParams,
-    required_node_data_types: &[NodeType],
-    always_emit_edge_types: Option<HashSet<EdgeType>>,
+    job_params: JobWalkParams,
+    mut repo_params: RepoWalkParams,
+    type_params: TypeWalkParams,
     visitor: V,
     make_run: RunFac,
-    keep_edge_paths: bool,
 ) -> Result<(), Error>
 where
-    RunFac: 'static + Clone + Send + Sync + FnOnce(RepoWalkRun) -> SinkFac,
+    RunFac: 'static + Clone + Send + Sync + FnOnce(&CoreContext, &RepoWalkParams) -> SinkFac,
     SinkFac: 'static + FnOnce(BoxStream<'static, Result<VOut, Error>>) -> SinkOut + Clone + Send,
     SinkOut: Future<Output = Result<(), Error>> + 'static + Send,
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send + Sync,
     VOut: 'static + Send,
     Route: 'static + Send + Clone + StepRoute,
 {
-    let scuba_builder = datasources.scuba_builder;
-    let repo = datasources.blobrepo;
-    let tail_secs = walk_params.tail_secs.clone();
-    let always_emit_edge_types = if let Some(always_emit_edge_types) = always_emit_edge_types {
-        always_emit_edge_types
-    } else {
-        HashSet::new()
-    };
-    let required_node_data_types =
-        HashSet::from_iter(required_node_data_types.into_iter().cloned());
-
     loop {
-        cloned!(make_run, repo, mut scuba_builder, visitor,);
-
+        cloned!(job_params, type_params, make_run, visitor);
+        let tail_secs = job_params.tail_secs;
+        // Each loop get new ctx and thus session id so we can distinguish runs
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
-        scuba_builder.add("session", ctx.session().metadata().session_id().to_string());
-        let walk_run = RepoWalkRun {
-            ctx: ctx.clone(),
-            scuba_builder: scuba_builder.clone(),
+        let session_text = ctx.session().metadata().session_id().to_string();
+        repo_params.scuba_builder.add("session", session_text);
+
+        let walk_output = {
+            cloned!(ctx, repo_params);
+            walk_exact(ctx, visitor, job_params, repo_params, type_params)
         };
 
-        let walk_output = walk_exact(
-            ctx,
-            repo,
-            walk_params.enable_derive,
-            walk_params.walk_roots.clone(),
-            visitor,
-            walk_params.scheduled_max,
-            walk_params.error_as_data_node_types.clone(),
-            walk_params.error_as_data_edge_types.clone(),
-            walk_params.include_edge_types.clone(),
-            always_emit_edge_types.clone(),
-            required_node_data_types.clone(),
-            scuba_builder,
-            keep_edge_paths,
-        );
-
-        let make_sink = make_run(walk_run);
+        let make_sink = make_run(&ctx, &repo_params);
         make_sink(walk_output).await?;
 
         match tail_secs {

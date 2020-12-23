@@ -17,7 +17,8 @@ use crate::setup::{
     parse_progress_args, parse_sampling_args, setup_common, COMPRESSION_BENEFIT,
     COMPRESSION_LEVEL_ARG,
 };
-use crate::tail::{walk_exact_tail, RepoWalkRun};
+use crate::tail::walk_exact_tail;
+use crate::walk::{RepoWalkParams, TypeWalkParams};
 
 use anyhow::Error;
 use async_compression::{metered::MeteredWrite, Compressor, CompressorType};
@@ -32,12 +33,13 @@ use futures::{
     future::{self, FutureExt, TryFutureExt},
     stream::{Stream, TryStreamExt},
 };
+use maplit::hashset;
 use mononoke_types::BlobstoreBytes;
 use samplingblob::SamplingHandler;
 use slog::{info, Logger};
 use std::{
     cmp::min,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt,
     io::{Cursor, Write},
     sync::Arc,
@@ -273,28 +275,25 @@ pub async fn compression_benefit<'a>(
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let sizing_sampler = Arc::new(WalkSampleMapping::<Node, SizingSample>::new());
-    let config_store = args::init_config_store(fb, &logger, matches)?;
+    let sampler = Arc::new(WalkSampleMapping::<Node, SizingSample>::new());
 
-    let (datasources, walk_params) = setup_common(
+    let (job_params, sub_params, repo_params) = setup_common(
         COMPRESSION_BENEFIT,
         fb,
         &logger,
-        Some(sizing_sampler.clone()),
+        Some(sampler.clone()),
         matches,
         sub_m,
     )
     .await?;
-
-    let repo_stats_key = args::get_repo_name(config_store, &matches)?;
 
     let progress_options = parse_progress_args(sub_m);
     let mut sampling_options = parse_sampling_args(&sub_m, 100)?;
     let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
 
     cloned!(
-        walk_params.include_node_types,
-        walk_params.include_edge_types
+        repo_params.include_node_types,
+        repo_params.include_edge_types
     );
 
     sampling_options.retain_or_default(&include_node_types);
@@ -304,20 +303,20 @@ pub async fn compression_benefit<'a>(
             fb,
             logger.clone(),
             COMPRESSION_BENEFIT,
-            repo_stats_key,
+            repo_params.repo.name().clone(),
             sampling_options.node_types.clone(),
             progress_options,
         ));
 
     let make_sink = {
         cloned!(
-            walk_params.progress_state,
-            walk_params.quiet,
-            walk_params.scheduled_max,
-            sizing_sampler
+            job_params.quiet,
+            repo_params.scheduled_max,
+            sub_params.progress_state,
+            sampler
         );
-        move |run: RepoWalkRun| {
-            cloned!(run.ctx);
+        move |ctx: &CoreContext, _repo_params: &RepoWalkParams| {
+            cloned!(ctx);
             async move |walk_output| {
                 cloned!(ctx, sizing_progress_state);
                 // Sizing doesn't use mtime, so remove it from payload
@@ -332,7 +331,7 @@ pub async fn compression_benefit<'a>(
                     CompressorType::Zstd {
                         level: compression_level,
                     },
-                    sizing_sampler,
+                    sampler,
                 );
                 let report_sizing =
                     progress_stream(quiet, &sizing_progress_state.clone(), compressor);
@@ -354,19 +353,24 @@ pub async fn compression_benefit<'a>(
         include_edge_types,
         sampling_options,
         None,
-        sizing_sampler,
-        walk_params.enable_derive,
+        sampler,
+        job_params.enable_derive,
     ));
+
+    let type_params = TypeWalkParams {
+        required_node_data_types: hashset![NodeType::FileContent],
+        always_emit_edge_types: HashSet::new(),
+        keep_edge_paths: true,
+    };
+
     walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(
         fb,
         logger,
-        datasources,
-        walk_params,
-        &[NodeType::FileContent],
-        None,
+        job_params,
+        repo_params,
+        type_params,
         walk_state,
         make_sink,
-        true,
     )
     .await
 }

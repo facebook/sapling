@@ -18,12 +18,13 @@ use crate::setup::{
     parse_progress_args, parse_sampling_args, setup_common, CORPUS, OUTPUT_DIR_ARG,
     SAMPLE_PATH_REGEX_ARG,
 };
-use crate::tail::{walk_exact_tail, RepoWalkRun};
+use crate::tail::walk_exact_tail;
+use crate::walk::{RepoWalkParams, TypeWalkParams};
 
 use anyhow::Error;
 use clap::ArgMatches;
 use cloned::cloned;
-use cmdlib::args::{self, MononokeMatches};
+use cmdlib::args::MononokeMatches;
 use context::{CoreContext, SamplingKey};
 use fbinit::FacebookInit;
 use filetime::{self, FileTime};
@@ -31,12 +32,18 @@ use futures::{
     future::{self, FutureExt, TryFutureExt},
     stream::{Stream, TryStreamExt},
 };
+use maplit::hashset;
 use mononoke_types::{datetime::DateTime, BlobstoreBytes};
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 use regex::Regex;
 use samplingblob::SamplingHandler;
 use slog::Logger;
-use std::{collections::HashMap, io::Write, path::PathBuf, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    io::Write,
+    path::PathBuf,
+    sync::Arc,
+};
 use tokio::fs::{self as tkfs};
 
 /// https://url.spec.whatwg.org/#fragment-percent-encode-set
@@ -332,23 +339,14 @@ pub async fn corpus<'a>(
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(fb, &logger, &matches)?;
     let output_dir = sub_m.value_of(OUTPUT_DIR_ARG).map(|s| s.to_string());
-    let corpus_sampler = Arc::new(CorpusSamplingHandler::<CorpusSample>::new(
+    let sampler = Arc::new(CorpusSamplingHandler::<CorpusSample>::new(
         output_dir.clone(),
     ));
 
-    let (datasources, walk_params) = setup_common(
-        CORPUS,
-        fb,
-        &logger,
-        Some(corpus_sampler.clone()),
-        matches,
-        sub_m,
-    )
-    .await?;
+    let (job_params, sub_params, repo_params) =
+        setup_common(CORPUS, fb, &logger, Some(sampler.clone()), matches, sub_m).await?;
 
-    let repo_name = args::get_repo_name(config_store, &matches)?;
     let progress_options = parse_progress_args(&sub_m);
     let sampling_options = parse_sampling_args(&sub_m, 100)?;
     let sampling_path_regex = sub_m
@@ -363,8 +361,8 @@ pub async fn corpus<'a>(
     }
 
     cloned!(
-        walk_params.include_node_types,
-        walk_params.include_edge_types,
+        repo_params.include_node_types,
+        repo_params.include_edge_types,
         mut sampling_options,
     );
     sampling_options.retain_or_default(&include_node_types);
@@ -374,26 +372,25 @@ pub async fn corpus<'a>(
             fb,
             logger.clone(),
             CORPUS,
-            repo_name,
+            repo_params.repo.name().clone(),
             sampling_options.node_types.clone(),
             progress_options,
         ));
 
     let make_sink = {
         cloned!(
-            walk_params.progress_state,
-            walk_params.quiet,
-            walk_params.scheduled_max,
-            corpus_sampler
+            sub_params.progress_state,
+            job_params.quiet,
+            repo_params.scheduled_max,
+            sampler
         );
-        move |run: RepoWalkRun| {
-            cloned!(run.ctx);
+        move |ctx: &CoreContext, _repo_params: &RepoWalkParams| {
+            cloned!(ctx);
             async move |walk_output| {
                 cloned!(ctx, sizing_progress_state);
                 let walk_progress = progress_stream(quiet, &progress_state.clone(), walk_output);
 
-                let corpus =
-                    corpus_stream(scheduled_max, output_dir, walk_progress, corpus_sampler);
+                let corpus = corpus_stream(scheduled_max, output_dir, walk_progress, sampler);
                 let report_sizing = progress_stream(quiet, &sizing_progress_state.clone(), corpus);
                 report_state(ctx, sizing_progress_state, report_sizing)
                     .map({
@@ -413,19 +410,24 @@ pub async fn corpus<'a>(
         include_edge_types,
         sampling_options,
         sampling_path_regex,
-        corpus_sampler,
-        walk_params.enable_derive,
+        sampler,
+        job_params.enable_derive,
     ));
+
+    let type_params = TypeWalkParams {
+        required_node_data_types: hashset![NodeType::FileContent],
+        always_emit_edge_types: HashSet::new(),
+        keep_edge_paths: true,
+    };
+
     walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(
         fb,
         logger,
-        datasources,
-        walk_params,
-        &[NodeType::FileContent],
-        None,
+        job_params,
+        repo_params,
+        type_params,
         walk_state,
         make_sink,
-        true,
     )
     .await
 }
