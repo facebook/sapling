@@ -157,9 +157,9 @@ fn get_blobconfig(
     }
 }
 
-pub async fn open_blobstore(
+pub async fn open_blobstore<'a>(
     fb: FacebookInit,
-    mysql_options: MysqlOptions,
+    mysql_options: &'a MysqlOptions,
     blob_config: BlobConfig,
     inner_blobstore_id: Option<u64>,
     readonly_storage: ReadOnlyStorage,
@@ -168,9 +168,9 @@ pub async fn open_blobstore(
     scuba_builder: MononokeScubaSampleBuilder,
     walk_stats_key: &'static str,
     repo_id_to_name: HashMap<RepositoryId, String>,
-    blobstore_options: BlobstoreOptions,
-    logger: Logger,
-    config_store: &ConfigStore,
+    blobstore_options: &'a BlobstoreOptions,
+    logger: &'a Logger,
+    config_store: &'a ConfigStore,
 ) -> Result<Arc<dyn Blobstore>, Error> {
     let mut blobconfig = get_blobconfig(blob_config, inner_blobstore_id)?;
     let scrub_handler = scrub_action.map(|scrub_action| {
@@ -216,10 +216,10 @@ pub async fn open_blobstore(
                 blobstores,
                 minimum_successful_writes,
                 Some((scrub_handler, scrub_action)),
-                &mysql_options,
+                mysql_options,
                 readonly_storage,
-                &blobstore_options,
-                &logger,
+                blobstore_options,
+                logger,
                 config_store,
             )
             .await?
@@ -244,10 +244,10 @@ pub async fn open_blobstore(
                 blobstores,
                 minimum_successful_writes,
                 None,
-                &mysql_options,
+                mysql_options,
                 readonly_storage,
-                &blobstore_options,
-                &logger,
+                blobstore_options,
+                logger,
                 config_store,
             )
             .await?
@@ -256,10 +256,10 @@ pub async fn open_blobstore(
             make_blobstore_put_ops(
                 fb,
                 blobconfig,
-                &mysql_options,
+                mysql_options,
                 readonly_storage,
-                &blobstore_options,
-                &logger,
+                blobstore_options,
+                logger,
                 config_store,
             )
             .await?

@@ -25,10 +25,7 @@ use cmdlib::args::{self, CachelibSettings, MononokeClapApp, MononokeMatches};
 use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt,
-    future::{self, Future},
-};
+use futures::{compat::Future01CompatExt, future};
 use itertools::{process_results, Itertools};
 use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::{Redaction, ScrubAction};
@@ -822,260 +819,257 @@ fn reachable_graph_elements(
     (include_edge_types, include_node_types)
 }
 
-pub fn setup_common<'a>(
+pub async fn setup_common<'a>(
     walk_stats_key: &'static str,
     fb: FacebookInit,
     logger: &'a Logger,
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
     matches: &'a MononokeMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
-) -> impl Future<Output = Result<(RepoWalkDatasources, RepoWalkParams), Error>> + 'a {
-    async move {
-        let config_store = args::init_config_store(fb, logger, matches)?;
-        let (_, config) = args::get_config(config_store, &matches)?;
-        let quiet = sub_m.is_present(QUIET_ARG);
-        let common_config = cmdlib::args::load_common_config(config_store, &matches)?;
-        let scheduled_max = args::get_usize_opt(&sub_m, SCHEDULED_MAX_ARG).unwrap_or(4096) as usize;
-        let inner_blobstore_id = args::get_u64_opt(&sub_m, INNER_BLOBSTORE_ID_ARG);
-        let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
-        let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);
-        let progress_sample_rate = args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG);
+) -> Result<(RepoWalkDatasources, RepoWalkParams), Error> {
+    let config_store = args::init_config_store(fb, logger, matches)?;
+    let (_, config) = args::get_config(config_store, &matches)?;
+    let quiet = sub_m.is_present(QUIET_ARG);
+    let common_config = cmdlib::args::load_common_config(config_store, &matches)?;
+    let scheduled_max = args::get_usize_opt(&sub_m, SCHEDULED_MAX_ARG).unwrap_or(4096) as usize;
+    let inner_blobstore_id = args::get_u64_opt(&sub_m, INNER_BLOBSTORE_ID_ARG);
+    let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
+    let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);
+    let progress_sample_rate = args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG);
 
-        let enable_derive = sub_m.is_present(ENABLE_DERIVE_ARG);
+    let enable_derive = sub_m.is_present(ENABLE_DERIVE_ARG);
 
-        let redaction = if sub_m.is_present(ENABLE_REDACTION_ARG) {
-            config.redaction
+    let redaction = if sub_m.is_present(ENABLE_REDACTION_ARG) {
+        config.redaction
+    } else {
+        Redaction::Disabled
+    };
+
+    let caching = matches.parse_and_init_cachelib(fb);
+
+    let include_edge_types = parse_edge_types(
+        sub_m,
+        INCLUDE_EDGE_TYPE_ARG,
+        EXCLUDE_EDGE_TYPE_ARG,
+        DEEP_INCLUDE_EDGE_TYPES,
+    )?;
+
+    let mut include_node_types = parse_node_types(
+        sub_m,
+        INCLUDE_NODE_TYPE_ARG,
+        EXCLUDE_NODE_TYPE_ARG,
+        DEFAULT_INCLUDE_NODE_TYPES,
+    )?;
+
+    // Only walk derived node types that the repo is configured to contain
+    include_node_types.retain(|t| {
+        if let Some(t) = t.derived_data_name() {
+            config.derived_data_config.is_enabled(t)
         } else {
-            Redaction::Disabled
+            true
+        }
+    });
+
+    let mut walk_roots: Vec<OutgoingEdge> = vec![];
+
+    if sub_m.is_present(BOOKMARK_ARG) {
+        let bookmarks: Result<Vec<BookmarkName>, Error> = match sub_m.values_of(BOOKMARK_ARG) {
+            None => Err(format_err!("No bookmark passed to --{}", BOOKMARK_ARG)),
+            Some(values) => values.map(BookmarkName::new).collect(),
         };
 
-        let caching = matches.parse_and_init_cachelib(fb);
+        let mut bookmarks = bookmarks?
+            .into_iter()
+            .map(|b| OutgoingEdge::new(EdgeType::RootToBookmark, Node::Bookmark(b)))
+            .collect();
+        walk_roots.append(&mut bookmarks);
+    }
 
-        let include_edge_types = parse_edge_types(
-            sub_m,
-            INCLUDE_EDGE_TYPE_ARG,
-            EXCLUDE_EDGE_TYPE_ARG,
-            DEEP_INCLUDE_EDGE_TYPES,
-        )?;
+    if sub_m.is_present(WALK_ROOT_ARG) {
+        let roots: Vec<_> = match sub_m.values_of(WALK_ROOT_ARG) {
+            None => Err(format_err!("No root node passed to --{}", WALK_ROOT_ARG)),
+            Some(values) => values.map(|root| parse_node(root)).collect(),
+        }?;
+        let mut roots = roots
+            .into_iter()
+            .filter_map(|node| {
+                node.get_type()
+                    .root_edge_type()
+                    .map(|et| OutgoingEdge::new(et, node))
+            })
+            .collect();
+        walk_roots.append(&mut roots);
+    }
 
-        let mut include_node_types = parse_node_types(
-            sub_m,
-            INCLUDE_NODE_TYPE_ARG,
-            EXCLUDE_NODE_TYPE_ARG,
-            DEFAULT_INCLUDE_NODE_TYPES,
-        )?;
+    if walk_roots.is_empty() {
+        return Err(format_err!(
+            "No walk roots provided, pass with --{} or --{}",
+            BOOKMARK_ARG,
+            WALK_ROOT_ARG,
+        ));
+    }
 
-        // Only walk derived node types that the repo is configured to contain
-        include_node_types.retain(|t| {
-            if let Some(t) = t.derived_data_name() {
-                config.derived_data_config.is_enabled(t)
-            } else {
-                true
-            }
-        });
+    info!(logger, "Walking roots {:?} ", walk_roots);
 
-        let mut walk_roots: Vec<OutgoingEdge> = vec![];
+    let root_node_types: HashSet<_> = walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
 
-        if sub_m.is_present(BOOKMARK_ARG) {
-            let bookmarks: Result<Vec<BookmarkName>, Error> = match sub_m.values_of(BOOKMARK_ARG) {
-                None => Err(format_err!("No bookmark passed to --{}", BOOKMARK_ARG)),
-                Some(values) => values.map(BookmarkName::new).collect(),
-            };
+    let (include_edge_types, include_node_types) =
+        reachable_graph_elements(include_edge_types, include_node_types, root_node_types);
+    info!(
+        logger,
+        "Walking edge types {:?}",
+        sort_by_string(&include_edge_types)
+    );
+    info!(
+        logger,
+        "Walking node types {:?}",
+        sort_by_string(&include_node_types)
+    );
 
-            let mut bookmarks = bookmarks?
-                .into_iter()
-                .map(|b| OutgoingEdge::new(EdgeType::RootToBookmark, Node::Bookmark(b)))
-                .collect();
-            walk_roots.append(&mut bookmarks);
-        }
+    let readonly_storage = args::parse_readonly_storage(&matches);
 
-        if sub_m.is_present(WALK_ROOT_ARG) {
-            let roots: Vec<_> = match sub_m.values_of(WALK_ROOT_ARG) {
-                None => Err(format_err!("No root node passed to --{}", WALK_ROOT_ARG)),
-                Some(values) => values.map(|root| parse_node(root)).collect(),
-            }?;
-            let mut roots = roots
-                .into_iter()
-                .filter_map(|node| {
-                    node.get_type()
-                        .root_edge_type()
-                        .map(|et| OutgoingEdge::new(et, node))
-                })
-                .collect();
-            walk_roots.append(&mut roots);
-        }
-
-        if walk_roots.is_empty() {
+    let error_as_data_node_types = parse_node_types(
+        sub_m,
+        ERROR_AS_DATA_NODE_TYPE_ARG,
+        EXCLUDE_NODE_TYPE_ARG,
+        &[],
+    )?;
+    let error_as_data_edge_types = parse_edge_types(
+        sub_m,
+        ERROR_AS_DATA_EDGE_TYPE_ARG,
+        EXCLUDE_EDGE_TYPE_ARG,
+        &[],
+    )?;
+    if !error_as_data_node_types.is_empty() || !error_as_data_edge_types.is_empty() {
+        if !readonly_storage.0 {
             return Err(format_err!(
-                "No walk roots provided, pass with --{} or --{}",
-                BOOKMARK_ARG,
-                WALK_ROOT_ARG,
+                "Error as data could mean internal state is invalid, run with --with-readonly-storage=true to ensure no risk of persisting it"
             ));
         }
-
-        info!(logger, "Walking roots {:?} ", walk_roots);
-
-        let root_node_types: HashSet<_> =
-            walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
-
-        let (include_edge_types, include_node_types) =
-            reachable_graph_elements(include_edge_types, include_node_types, root_node_types);
-        info!(
+        warn!(
             logger,
-            "Walking edge types {:?}",
-            sort_by_string(&include_edge_types)
+            "Error as data enabled, walk results may not be complete. Errors as data enabled for node types {:?} edge types {:?}",
+            sort_by_string(&error_as_data_node_types),
+            sort_by_string(&error_as_data_edge_types)
         );
-        info!(
-            logger,
-            "Walking node types {:?}",
-            sort_by_string(&include_node_types)
-        );
-
-        let readonly_storage = args::parse_readonly_storage(&matches);
-
-        let error_as_data_node_types = parse_node_types(
-            sub_m,
-            ERROR_AS_DATA_NODE_TYPE_ARG,
-            EXCLUDE_NODE_TYPE_ARG,
-            &[],
-        )?;
-        let error_as_data_edge_types = parse_edge_types(
-            sub_m,
-            ERROR_AS_DATA_EDGE_TYPE_ARG,
-            EXCLUDE_EDGE_TYPE_ARG,
-            &[],
-        )?;
-        if !error_as_data_node_types.is_empty() || !error_as_data_edge_types.is_empty() {
-            if !readonly_storage.0 {
-                return Err(format_err!(
-                    "Error as data could mean internal state is invalid, run with --with-readonly-storage=true to ensure no risk of persisting it"
-                ));
-            }
-            warn!(
-                logger,
-                "Error as data enabled, walk results may not be complete. Errors as data enabled for node types {:?} edge types {:?}",
-                sort_by_string(&error_as_data_node_types),
-                sort_by_string(&error_as_data_edge_types)
-            );
-        }
-
-        let mysql_options = args::parse_mysql_options(&matches);
-
-        let storage_id = matches.value_of(STORAGE_ID_ARG);
-        let storage_config = match storage_id {
-            Some(storage_id) => {
-                let mut configs = args::load_storage_configs(config_store, &matches)?;
-                configs.storage.remove(storage_id).ok_or_else(|| {
-                    format_err!(
-                        "Storage id `{}` not found in {:?}",
-                        storage_id,
-                        configs.storage.keys()
-                    )
-                })?
-            }
-            None => config.storage_config.clone(),
-        };
-
-        let blobstore_options = args::parse_blobstore_options(&matches);
-
-        let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
-        let repo_name = args::get_repo_name(config_store, &matches)?;
-        let mut scuba_builder = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table.clone());
-        scuba_builder.add_common_server_data();
-        scuba_builder.add(WALK_TYPE, walk_stats_key);
-        scuba_builder.add(REPO, repo_name.clone());
-
-        if let Some(scuba_log_file) = sub_m.value_of(SCUBA_LOG_FILE_ARG) {
-            scuba_builder = scuba_builder.with_log_file(scuba_log_file)?;
-        }
-
-        let scrub_action = sub_m
-            .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
-            .map(ScrubAction::from_str)
-            .transpose()?;
-
-        let repo_id_to_name = HashMap::from_iter(Some((config.repoid, repo_name.clone())));
-
-        // Open the blobstore explicitly so we can do things like run on one side of a multiplex
-        let blobstore = blobstore::open_blobstore(
-            fb,
-            mysql_options.clone(),
-            storage_config.blobstore,
-            inner_blobstore_id,
-            readonly_storage,
-            scrub_action,
-            blobstore_sampler,
-            scuba_builder.clone(),
-            walk_stats_key,
-            repo_id_to_name,
-            blobstore_options.clone(),
-            logger.clone(),
-            config_store,
-        );
-
-        let sql_factory = make_metadata_sql_factory(
-            fb,
-            storage_config.metadata,
-            mysql_options,
-            readonly_storage,
-            logger.clone(),
-        )
-        .compat();
-
-        let (blobstore, sql_factory) = future::try_join(blobstore, sql_factory).await?;
-
-        let blobrepo = open_blobrepo_given_datasources(
-            fb,
-            blobstore,
-            sql_factory,
-            config.repoid,
-            caching,
-            config.bookmarks_cache_ttl,
-            redaction,
-            common_config.censored_scuba_params,
-            config.filestore,
-            readonly_storage,
-            config.derived_data_config,
-            config.segmented_changelog_config,
-            repo_name.clone(),
-            blobstore_options.cachelib_options.clone(),
-        )
-        .await?;
-
-        let mut progress_node_types = include_node_types.clone();
-        for e in &walk_roots {
-            progress_node_types.insert(e.target.get_type());
-        }
-
-        let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
-            fb,
-            logger.clone(),
-            walk_stats_key,
-            repo_name,
-            progress_node_types,
-            progress_sample_rate.unwrap_or(PROGRESS_SAMPLE_RATE),
-            Duration::from_secs(progress_interval_secs.unwrap_or(PROGRESS_SAMPLE_DURATION_S)),
-        ));
-
-        Ok((
-            RepoWalkDatasources {
-                blobrepo,
-                scuba_builder,
-            },
-            RepoWalkParams {
-                enable_derive,
-                scheduled_max,
-                walk_roots,
-                include_node_types,
-                include_edge_types,
-                tail_secs,
-                quiet,
-                progress_state,
-                error_as_data_node_types,
-                error_as_data_edge_types,
-            },
-        ))
     }
+
+    let mysql_options = args::parse_mysql_options(&matches);
+
+    let storage_id = matches.value_of(STORAGE_ID_ARG);
+    let storage_config = match storage_id {
+        Some(storage_id) => {
+            let mut configs = args::load_storage_configs(config_store, &matches)?;
+            configs.storage.remove(storage_id).ok_or_else(|| {
+                format_err!(
+                    "Storage id `{}` not found in {:?}",
+                    storage_id,
+                    configs.storage.keys()
+                )
+            })?
+        }
+        None => config.storage_config.clone(),
+    };
+
+    let blobstore_options = args::parse_blobstore_options(&matches);
+
+    let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
+    let repo_name = args::get_repo_name(config_store, &matches)?;
+    let mut scuba_builder = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table.clone());
+    scuba_builder.add_common_server_data();
+    scuba_builder.add(WALK_TYPE, walk_stats_key);
+    scuba_builder.add(REPO, repo_name.clone());
+
+    if let Some(scuba_log_file) = sub_m.value_of(SCUBA_LOG_FILE_ARG) {
+        scuba_builder = scuba_builder.with_log_file(scuba_log_file)?;
+    }
+
+    let scrub_action = sub_m
+        .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
+        .map(ScrubAction::from_str)
+        .transpose()?;
+
+    let repo_id_to_name = HashMap::from_iter(Some((config.repoid, repo_name.clone())));
+
+    // Open the blobstore explicitly so we can do things like run on one side of a multiplex
+    let blobstore = blobstore::open_blobstore(
+        fb,
+        &mysql_options,
+        storage_config.blobstore,
+        inner_blobstore_id,
+        readonly_storage,
+        scrub_action,
+        blobstore_sampler,
+        scuba_builder.clone(),
+        walk_stats_key,
+        repo_id_to_name,
+        &blobstore_options,
+        &logger,
+        config_store,
+    );
+
+    let sql_factory = make_metadata_sql_factory(
+        fb,
+        storage_config.metadata,
+        mysql_options.clone(),
+        readonly_storage,
+        logger.clone(),
+    )
+    .compat();
+
+    let (blobstore, sql_factory) = future::try_join(blobstore, sql_factory).await?;
+
+    let blobrepo = open_blobrepo_given_datasources(
+        fb,
+        blobstore,
+        sql_factory,
+        config.repoid,
+        caching,
+        config.bookmarks_cache_ttl,
+        redaction,
+        common_config.censored_scuba_params,
+        config.filestore,
+        readonly_storage,
+        config.derived_data_config,
+        config.segmented_changelog_config,
+        repo_name.clone(),
+        blobstore_options.cachelib_options.clone(),
+    )
+    .await?;
+
+    let mut progress_node_types = include_node_types.clone();
+    for e in &walk_roots {
+        progress_node_types.insert(e.target.get_type());
+    }
+
+    let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
+        fb,
+        logger.clone(),
+        walk_stats_key,
+        repo_name,
+        progress_node_types,
+        progress_sample_rate.unwrap_or(PROGRESS_SAMPLE_RATE),
+        Duration::from_secs(progress_interval_secs.unwrap_or(PROGRESS_SAMPLE_DURATION_S)),
+    ));
+
+    Ok((
+        RepoWalkDatasources {
+            blobrepo,
+            scuba_builder,
+        },
+        RepoWalkParams {
+            enable_derive,
+            scheduled_max,
+            walk_roots,
+            include_node_types,
+            include_edge_types,
+            tail_secs,
+            quiet,
+            progress_state,
+            error_as_data_node_types,
+            error_as_data_edge_types,
+        },
+    ))
 }
 
 #[cfg(test)]
