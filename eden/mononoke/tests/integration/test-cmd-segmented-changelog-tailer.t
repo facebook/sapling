@@ -40,7 +40,7 @@ Setup repository
 
 Run Segmented Changelog Tailer. Error because there was no seeding.
 
-  $ segmented_changelog_tailer --repo repo --track-bookmark=master_bookmark --once &>"$TESTTMP/error.log"
+  $ segmented_changelog_tailer --repo repo --track-bookmark=master_bookmark &>"$TESTTMP/error.log"
   [1]
   $ grep seeded "$TESTTMP/error.log"
   * maybe repo is not seeded (glob)
@@ -50,7 +50,7 @@ Seed repository.
 
 Actually run Segmented Changelog Tailer.
 
-  $ quiet segmented_changelog_tailer --repo repo --track-bookmark=master_bookmark --once
+  $ quiet segmented_changelog_tailer --repo repo --track-bookmark=master_bookmark
   $ grep segmented_changelog "$TESTTMP/quiet.last.log"
   * repo name 'repo' translates to id 0 (glob)
   * repo 0: SegmentedChangelogTailer initialized (glob)
@@ -64,7 +64,7 @@ Actually run Segmented Changelog Tailer.
 
 Run Segmented Changelog Tailer. Nothing to do.
 
-  $ quiet segmented_changelog_tailer --repo repo --track-bookmark=master_bookmark --once
+  $ quiet segmented_changelog_tailer --repo repo --track-bookmark=master_bookmark
   $ grep segmented_changelog "$TESTTMP/quiet.last.log"
   * repo name 'repo' translates to id 0 (glob)
   * repo 0: SegmentedChangelogTailer initialized (glob)

@@ -1769,6 +1769,7 @@ function segmented_changelog_tailer() {
   "$MONONOKE_SEGMENTED_CHANGELOG_TAILER" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --once \
     "$@"
 }
 
