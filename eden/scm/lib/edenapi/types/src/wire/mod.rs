@@ -429,7 +429,8 @@ impl ToApi for u32 {
     }
 }
 
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Serialize, Deserialize)]
 pub struct WireDagId(u64);
 
 impl ToWire for dag::Id {

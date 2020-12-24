@@ -469,7 +469,9 @@ fn cmd_full_idmap_clone(args: CloneArgs) -> Result<()> {
     println!("]");
     let mut idmap_entries = deserializer
         .into_iter::<WireIdMapEntry>()
-        .collect::<Result<Vec<_>, _>>()?
+        .collect::<Result<Vec<_>, _>>()?;
+    idmap_entries.sort_by(|x, y| x.dag_id.cmp(&y.dag_id));
+    let idmap_entries = idmap_entries
         .into_iter()
         .map(|e| {
             Ok(format!(
@@ -479,7 +481,6 @@ fn cmd_full_idmap_clone(args: CloneArgs) -> Result<()> {
             ))
         })
         .collect::<Result<Vec<_>>>()?;
-    idmap_entries.sort();
     println!("idmap: {{\n{}}}", idmap_entries.join(""));
     Ok(())
 }
