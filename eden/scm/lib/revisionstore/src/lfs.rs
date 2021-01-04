@@ -1749,7 +1749,9 @@ fn should_retry_http_status(status: StatusCode) -> bool {
 
 fn should_retry_http_error(error: &HttpClientError) -> bool {
     match error {
-        HttpClientError::Curl(e) => e.is_operation_timedout(),
+        HttpClientError::Curl(e) => {
+            e.is_operation_timedout() || e.is_send_error() || e.is_recv_error()
+        }
         _ => false,
     }
 }
