@@ -99,6 +99,11 @@ struct HttpLfsRemote {
     backoff_times: Vec<f32>,
     request_timeout: Duration,
     client: HttpClient,
+    http_options: HttpOptions,
+}
+
+#[derive(Copy, Clone)]
+struct HttpOptions {
     accept_zstd: bool,
     http_version: HttpVersion,
 }
@@ -958,8 +963,7 @@ impl LfsRemoteInner {
         backoff_times: Vec<f32>,
         request_timeout: Duration,
         add_extra: impl Fn(Request) -> Request,
-        accept_zstd: bool,
-        http_version: HttpVersion,
+        http_options: HttpOptions,
     ) -> Result<Option<Bytes>> {
         let mut backoff = backoff_times.into_iter();
         let mut rng = thread_rng();
@@ -973,9 +977,9 @@ impl LfsRemoteInner {
                 .header("Content-Type", "application/vnd.git-lfs+json")
                 .header("User-Agent", &user_agent)
                 .header("X-Attempt", attempt.to_string())
-                .http_version(http_version);
+                .http_version(http_options.http_version);
 
-            if accept_zstd {
+            if http_options.accept_zstd {
                 req = req.header("Accept-Encoding", "zstd");
             }
 
@@ -1104,8 +1108,7 @@ impl LfsRemoteInner {
                 http.backoff_times.clone(),
                 http.request_timeout,
                 move |builder| builder.body(batch_json.clone()),
-                http.accept_zstd,
-                http.http_version,
+                http.http_options,
             )
             .await
         };
@@ -1130,8 +1133,7 @@ impl LfsRemoteInner {
         oid: Sha256,
         read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + 'static,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + 'static,
-        accept_zstd: bool,
-        http_version: HttpVersion,
+        http_options: HttpOptions,
     ) -> Result<()> {
         let body = if op == Operation::Upload {
             spawn_blocking(move || read_from_store(oid)).await??
@@ -1166,8 +1168,7 @@ impl LfsRemoteInner {
                     builder.header("Content-Length", 0)
                 }
             },
-            accept_zstd,
-            http_version,
+            http_options,
         )
         .await;
 
@@ -1244,8 +1245,7 @@ impl LfsRemoteInner {
                         oid,
                         read_from_store,
                         write_to_store,
-                        http.accept_zstd,
-                        http.http_version,
+                        http.http_options,
                     )
                 };
 
@@ -1365,8 +1365,10 @@ impl LfsRemote {
                     backoff_times,
                     request_timeout,
                     client,
-                    accept_zstd,
-                    http_version,
+                    http_options: HttpOptions {
+                        accept_zstd,
+                        http_version,
+                    },
                 }),
             })
         }
