@@ -24,7 +24,10 @@ class TraceHgCommand(Subcmd):
         )
 
     async def run(self, args: argparse.Namespace) -> int:
-        from eden.fs.service.streamingeden.types import HgEventType, HgResourceType
+        from eden.fs.service.streamingeden.types import (  # @manual
+            HgEventType,
+            HgResourceType,
+        )
 
         instance, checkout, _rel_path = require_checkout(args, args.checkout)
         async with await instance.get_thrift_client() as client:
