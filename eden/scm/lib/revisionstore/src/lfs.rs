@@ -44,7 +44,7 @@ use configparser::{
     hg::{ByteCount, ConfigSetHgExt},
 };
 use hg_http::http_client;
-use http_client::{HttpClient, HttpVersion, Method, MinTransferSpeed, Request};
+use http_client::{HttpClient, HttpClientError, HttpVersion, Method, MinTransferSpeed, Request};
 use indexedlog::{log::IndexOutput, rotate, DefaultOpenOptions, Repair};
 use lfs_protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
@@ -1085,7 +1085,7 @@ impl LfsRemoteInner {
 
             let retry = match &error {
                 TransferError::HttpStatus(status) => should_retry_http_status(*status),
-                TransferError::HttpClientError(..) => false,
+                TransferError::HttpClientError(http_error) => should_retry_http_error(&http_error),
                 TransferError::EndOfStream => false,
                 TransferError::Timeout(..) => false,
                 TransferError::ChunkTimeout { .. } => false,
@@ -1745,6 +1745,13 @@ fn should_retry_http_status(status: StatusCode) -> bool {
     }
 
     false
+}
+
+fn should_retry_http_error(error: &HttpClientError) -> bool {
+    match error {
+        HttpClientError::Curl(e) => e.is_operation_timedout(),
+        _ => false,
+    }
 }
 
 #[cfg(test)]
