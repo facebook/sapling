@@ -195,9 +195,11 @@ class mononokepeer(stdiopeer.stdiopeer):
 
         authdata = httpconnection.readauthforuri(self._ui, path, self._user)
         if not authdata:
+            helptext = ui.config("help", "tlsauthhelp")
             self._abort(
-                error.RepoError(
-                    _("missing auth configuration for connecting to mononoke")
+                error.ConfigError(
+                    _("No certificates have been found to connect to Mononoke\n\n")
+                    + helptext
                 )
             )
 
@@ -216,12 +218,32 @@ class mononokepeer(stdiopeer.stdiopeer):
         ), progress.suspend(), util.traced("mononoke_setup", cat="blocked"):
             self._validaterepo()
 
+    def _connectionerror(self, ex, tlserror=False):
+        msg = ""
+
+        msg += _("failed to connect to ")
+        msg += "%s:%s\n" % (self._host, self._port)
+        msg += " reason: %s\n" % ex
+        msg += " cn:     %s\n" % self._cn
+        msg += " cert:   %s\n" % self._cert
+        msg += " key:    %s\n" % self._key
+
+        if tlserror:
+            msg += "\n"
+            msg += self.ui.config("help", "tlsauthhelp")
+
+        self._abort(error.BadResponseError(msg))
+
     def _validaterepo(self):
         # cleanup up previous run
         self._cleanup()
 
         try:
             self.sock = socket.create_connection((self._host, self._port))
+        except IOError as ex:
+            self._connectionerror(ex)
+
+        try:
             self.sock = sslutil.wrapsocket(
                 self.sock,
                 self._key,
@@ -231,6 +253,10 @@ class mononokepeer(stdiopeer.stdiopeer):
             )
             sslutil.validatesocket(self.sock)
 
+        except IOError as ex:
+            self._connectionerror(ex, tlserror=True)
+
+        try:
             headers = [
                 encodeutf8("GET /{} HTTP/1.1".format(self._path)),
                 encodeutf8("Host: {}".format(self._host)),
@@ -267,13 +293,7 @@ class mononokepeer(stdiopeer.stdiopeer):
                 line = self.handle.readline(1024).strip()
 
         except IOError as ex:
-            msg = _("failed to connect to ")
-            msg += "%s:%s\n" % (self._host, self._port)
-            msg += " reason: %s\n" % ex
-            msg += " cn:     %s\n" % self._cn
-            msg += " cert:   %s\n" % self._cert
-            msg += " key:    %s\n" % self._key
-            self._abort(error.BadResponseError(msg))
+            self._connectionerror(ex)
 
         self._pipei = mononokepipe(self.ui, self.handle)
         self._pipeo = mononokepipe(self.ui, self.handle)
