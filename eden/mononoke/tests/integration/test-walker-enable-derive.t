@@ -89,7 +89,7 @@ Do a walk again, with --enable-derive, should succeed with the full count
   Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadata, Fsnode, FsnodeMapping, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping]
   Final count: (49, 49)
   Bytes/s,* (glob)
-  * HgBonsaiMapping:3,3,0 HgChangeset:3,* HgChangesetViaBonsai:3,* HgFileEnvelope:3,*,0 HgFileNode:3,*,6 HgManifest:3,3,6 PhaseMapping:3,* (glob)
+  * HgBonsaiMapping:3,3,0 HgChangeset:3,* HgChangesetViaBonsai:3,* HgFileEnvelope:3,*,0 HgFileNode:3,*,* HgManifest:3,3,* PhaseMapping:3,* (glob)
 
 check the blobs were re-derived
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"
