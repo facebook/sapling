@@ -59,7 +59,7 @@ use crate::{
         strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
         HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
     },
-    error::FetchError,
+    error::{FetchError, TransferError},
     historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::LocalStore,
@@ -1000,47 +1000,50 @@ impl LfsRemoteInner {
                 }
             }
 
-            let req = add_extra(req);
+            let res = async {
+                let req = add_extra(req);
 
-            let (mut stream, _) = client.send_async(vec![req])?;
+                let (mut stream, _) = client.send_async(vec![req])?;
 
-            let reply = timeout(request_timeout, stream.next())
-                .await
-                .with_context(|| {
-                    format!("Timed out after waiting {:?} from {}", request_timeout, url)
-                })?;
+                let reply = timeout(request_timeout, stream.next())
+                    .await
+                    .map_err(|_| TransferError::Timeout(request_timeout))?;
 
-            let reply = match reply {
-                Some(r) => r?,
-                None => return Err(FetchError::EndOfStream(url, method).into()),
-            };
+                let reply = match reply {
+                    Some(r) => r?,
+                    None => {
+                        return Err(TransferError::EndOfStream);
+                    }
+                };
 
-            let status = reply.status;
-            let headers = reply.headers;
+                let status = reply.status;
+                let headers = reply.headers;
 
-            if status.is_success() {
+                if !status.is_success() {
+                    return Err(TransferError::HttpStatus(status));
+                }
+
                 let start = Instant::now();
                 let mut body = reply.body;
                 let mut chunks: Vec<Vec<u8>> = vec![];
                 while let Some(res) = timeout(request_timeout, body.next()).await.transpose() {
-                    let chunk = res.with_context(|| {
+                    let chunk = res.map_err(|_| {
                         let request_id = headers
                             .get("x-request-id")
                             .and_then(|c| std::str::from_utf8(c.as_bytes()).ok())
-                            .unwrap_or("?");
-                        let received = chunks.iter().fold(0, |acc, c| acc + c.len());
-                        format!(
-                            "Timed out after waiting {:?} for a chunk from {}, \
-                            after having received {} bytes over {}ms. \
-                            Request ID: {}",
-                            request_timeout,
-                            url,
-                            received,
-                            start.elapsed().as_millis(),
-                            request_id
-                        )
-                    })?;
-                    chunks.push(chunk?);
+                            .unwrap_or("?")
+                            .into();
+                        let bytes = chunks.iter().fold(0, |acc, c| acc + c.len());
+                        let elapsed = start.elapsed().as_millis();
+                        TransferError::ChunkTimeout {
+                            timeout: request_timeout,
+                            bytes,
+                            elapsed,
+                            request_id,
+                        }
+                    })??;
+
+                    chunks.push(chunk);
                 }
 
                 let mut result = BytesMut::with_capacity(chunks.iter().map(|c| c.len()).sum());
@@ -1054,19 +1057,42 @@ impl LfsRemoteInner {
                 let result = match content_encoding
                     .map(|c| std::str::from_utf8(c.as_bytes()))
                     .transpose()
-                    .with_context(|| format!("Invalid Content-Encoding: {:?}", content_encoding))?
+                    .with_context(|| format!("Invalid Content-Encoding: {:?}", content_encoding))
+                    .map_err(TransferError::InvalidResponse)?
                 {
                     Some("identity") | None => result,
-                    Some("zstd") => Bytes::from(zstd::stream::decode_all(Cursor::new(&result))?),
+                    Some("zstd") => Bytes::from(
+                        zstd::stream::decode_all(Cursor::new(&result))
+                            .context("Error decoding zstd stream")
+                            .map_err(TransferError::InvalidResponse)?,
+                    ),
                     Some(other) => {
-                        return Err(format_err!("Unsupported Content-Encoding: {}", other));
+                        return Err(TransferError::InvalidResponse(format_err!(
+                            "Unsupported Content-Encoding: {}",
+                            other
+                        )));
                     }
                 };
 
-                return Ok(Some(result));
+                Result::<_, TransferError>::Ok(Some(result))
             }
+            .await;
 
-            if should_retry(status) {
+            let error = match res {
+                Ok(res) => return Ok(res),
+                Err(error) => error,
+            };
+
+            let retry = match &error {
+                TransferError::HttpStatus(status) => should_retry_http_status(*status),
+                TransferError::HttpClientError(..) => false,
+                TransferError::EndOfStream => false,
+                TransferError::Timeout(..) => false,
+                TransferError::ChunkTimeout { .. } => false,
+                TransferError::InvalidResponse(..) => false,
+            };
+
+            if retry {
                 if let Some(backoff_time) = backoff.next() {
                     let sleep_time = Duration::from_secs_f32(rng.gen_range(0.0, backoff_time));
                     delay_for(sleep_time).await;
@@ -1074,7 +1100,7 @@ impl LfsRemoteInner {
                 }
             }
 
-            return Err(FetchError::Http(status, url, method).into());
+            return Err(FetchError { url, method, error }.into());
         }
     }
 
@@ -1182,8 +1208,8 @@ impl LfsRemoteInner {
                 Ok(data) => data,
                 Err(err) => match err.downcast_ref::<FetchError>() {
                     None => return Err(err),
-                    Some(fetch_error) => match fetch_error {
-                        FetchError::Http(http::StatusCode::GONE, _, _) => {
+                    Some(fetch_error) => match fetch_error.error {
+                        TransferError::HttpStatus(http::StatusCode::GONE) => {
                             Some(redacted::REDACTED_CONTENT.clone())
                         }
                         _ => return Err(err),
@@ -1705,7 +1731,7 @@ impl LocalStore for LfsFallbackRemoteStore {
     }
 }
 
-fn should_retry(status: StatusCode) -> bool {
+fn should_retry_http_status(status: StatusCode) -> bool {
     if status == StatusCode::SERVICE_UNAVAILABLE {
         return false;
     }
@@ -2872,16 +2898,16 @@ mod tests {
 
     #[test]
     fn test_should_retry() {
-        assert!(!should_retry(StatusCode::CONTINUE));
-        assert!(!should_retry(StatusCode::OK));
-        assert!(!should_retry(StatusCode::MOVED_PERMANENTLY));
-        assert!(!should_retry(StatusCode::BAD_REQUEST));
-        assert!(!should_retry(StatusCode::NOT_ACCEPTABLE));
-        assert!(!should_retry(StatusCode::SERVICE_UNAVAILABLE));
+        assert!(!should_retry_http_status(StatusCode::CONTINUE));
+        assert!(!should_retry_http_status(StatusCode::OK));
+        assert!(!should_retry_http_status(StatusCode::MOVED_PERMANENTLY));
+        assert!(!should_retry_http_status(StatusCode::BAD_REQUEST));
+        assert!(!should_retry_http_status(StatusCode::NOT_ACCEPTABLE));
+        assert!(!should_retry_http_status(StatusCode::SERVICE_UNAVAILABLE));
 
-        assert!(should_retry(StatusCode::INTERNAL_SERVER_ERROR));
-        assert!(should_retry(StatusCode::BAD_GATEWAY));
+        assert!(should_retry_http_status(StatusCode::INTERNAL_SERVER_ERROR));
+        assert!(should_retry_http_status(StatusCode::BAD_GATEWAY));
 
-        assert!(should_retry(StatusCode::TOO_MANY_REQUESTS));
+        assert!(should_retry_http_status(StatusCode::TOO_MANY_REQUESTS));
     }
 }
