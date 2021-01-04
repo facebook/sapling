@@ -44,7 +44,7 @@ use configparser::{
     hg::{ByteCount, ConfigSetHgExt},
 };
 use hg_http::http_client;
-use http_client::{HttpClient, HttpVersion, Method, Request};
+use http_client::{HttpClient, HttpVersion, Method, MinTransferSpeed, Request};
 use indexedlog::{log::IndexOutput, rotate, DefaultOpenOptions, Repair};
 use lfs_protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
@@ -106,6 +106,7 @@ struct HttpLfsRemote {
 struct HttpOptions {
     accept_zstd: bool,
     http_version: HttpVersion,
+    min_transfer_speed: Option<MinTransferSpeed>,
 }
 
 enum LfsRemoteInner {
@@ -983,6 +984,10 @@ impl LfsRemoteInner {
                 req = req.header("Accept-Encoding", "zstd");
             }
 
+            if let Some(mts) = http_options.min_transfer_speed {
+                req = req.min_transfer_speed(mts);
+            }
+
             if let Some(auth) = &auth {
                 if let Some(cert) = &auth.cert {
                     req = req.cert(cert);
@@ -1351,6 +1356,16 @@ impl LfsRemote {
                 x => bail!("Unsupported http_version: {}", x),
             };
 
+            let low_speed_grace_period =
+                Duration::from_millis(config.get_or("lfs", "low-speed-grace-period", || 10_000)?);
+            let low_speed_min_bytes_per_second =
+                config.get_opt::<u32>("lfs", "low-speed-min-bytes-per-second")?;
+            let min_transfer_speed =
+                low_speed_min_bytes_per_second.map(|min_bytes_per_second| MinTransferSpeed {
+                    min_bytes_per_second,
+                    grace_period: low_speed_grace_period,
+                });
+
             let client = http_client("lfs");
 
             Ok(Self {
@@ -1368,6 +1383,7 @@ impl LfsRemote {
                     http_options: HttpOptions {
                         accept_zstd,
                         http_version,
+                        min_transfer_speed,
                     },
                 }),
             })

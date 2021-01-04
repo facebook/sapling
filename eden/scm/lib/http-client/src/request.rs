@@ -32,6 +32,12 @@ pub enum Method {
     Put,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct MinTransferSpeed {
+    pub min_bytes_per_second: u32,
+    pub grace_period: Duration,
+}
+
 impl fmt::Display for Method {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -60,6 +66,7 @@ pub struct Request {
     cainfo: Option<PathBuf>,
     timeout: Option<Duration>,
     http_version: HttpVersion,
+    min_transfer_speed: Option<MinTransferSpeed>,
 }
 
 impl Request {
@@ -78,6 +85,7 @@ impl Request {
             // Attempt to use HTTP/2 by default. Will fall back to HTTP/1.1
             // if version negotiation with the server fails.
             http_version: HttpVersion::V2,
+            min_transfer_speed: None,
         }
     }
 
@@ -113,6 +121,14 @@ impl Request {
     pub fn http_version(self, http_version: HttpVersion) -> Self {
         Self {
             http_version,
+            ..self
+        }
+    }
+
+    /// Set transfer speed options for this request.
+    pub fn min_transfer_speed(self, min_transfer_speed: MinTransferSpeed) -> Self {
+        Self {
+            min_transfer_speed: Some(min_transfer_speed),
             ..self
         }
     }
@@ -280,6 +296,11 @@ impl Request {
         }
 
         easy.http_version(self.http_version)?;
+
+        if let Some(mts) = self.min_transfer_speed {
+            easy.low_speed_limit(mts.min_bytes_per_second)?;
+            easy.low_speed_time(mts.grace_period)?;
+        }
 
         // Tell libcurl to report progress to the handler.
         easy.progress(true)?;
