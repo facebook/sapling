@@ -546,13 +546,20 @@ Do you want to run `eden mount %s` instead?"""
         clone_success_path.touch()
 
         if checkout.get_config().scm_type == "hg":
+            env = os.environ.copy()
+            # These are set by the par machinery and interfere with Mercurial's
+            # own dynamic library loading.
+            env.pop("DYLD_INSERT_LIBRARIES", None)
+            env.pop("DYLD_LIBRARY_PATH", None)
+
             subprocess.check_call(
                 [
                     os.environ.get("EDEN_HG_BINARY", "hg"),
                     "debugedenrunpostupdatehook",
                     "-R",
                     str(checkout.path),
-                ]
+                ],
+                env=env,
             )
 
     def mount(self, path: Union[Path, str], read_only: bool) -> int:

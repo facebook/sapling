@@ -120,6 +120,11 @@ HgImporter::HgImporter(
     opts.environment().set("PYTHONPATH", FLAGS_hgPythonPath);
   }
 
+  // These come from the par file machinery (I think) and can interfere
+  // with Mercurial's ability to load dynamic libraries.
+  opts.environment().unset("DYLD_LIBRARY_PATH");
+  opts.environment().unset("DYLD_INSERT_LIBRARIES");
+
   // Eden does not control the backing repo's configuration, if it has
   // fsmonitor enabled, it might try to run Watchman, which might
   // cause Watchman to spawn a daemon instance, which might attempt to

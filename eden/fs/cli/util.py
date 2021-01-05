@@ -338,6 +338,11 @@ class HgRepo(Repo):
         self._env = os.environ.copy()
         self._env["HGPLAIN"] = "1"
 
+        # These are set by the par machinery and interfere with Mercurial's
+        # own dynamic library loading.
+        self._env.pop("DYLD_INSERT_LIBRARIES", None)
+        self._env.pop("DYLD_LIBRARY_PATH", None)
+
         # Find the path to hg.
         # The EDEN_HG_BINARY environment variable is normally set when running
         # Eden's integration tests.  Just find 'hg' from the path when it is
