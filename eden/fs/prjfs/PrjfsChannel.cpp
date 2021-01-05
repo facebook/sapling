@@ -589,49 +589,117 @@ typedef folly::Future<folly::Unit> (Dispatcher::*NotificationHandler)(
     bool isDirectory,
     ObjectFetchContext& context);
 
+typedef std::string (*NotificationArgRenderer)(
+    RelativePathPiece relPath,
+    RelativePathPiece destPath,
+    bool isDirectory);
+
 struct NotificationHandlerEntry {
-  constexpr NotificationHandlerEntry() = default;
   constexpr NotificationHandlerEntry(
       NotificationHandler h,
+      NotificationArgRenderer r,
       ChannelThreadStats::HistogramPtr hist)
-      : handler{h}, histogram{hist} {}
+      : handler{h}, renderer{r}, histogram{hist} {}
 
-  NotificationHandler handler = nullptr;
-  ChannelThreadStats::HistogramPtr histogram = nullptr;
+  NotificationHandler handler;
+  NotificationArgRenderer renderer;
+  ChannelThreadStats::HistogramPtr histogram;
 };
+
+std::string newFileCreatedRenderer(
+    RelativePathPiece relPath,
+    RelativePathPiece /*destPath*/,
+    bool isDirectory) {
+  return fmt::format(
+      FMT_STRING("{}({})"), isDirectory ? "mkdir" : "mknod", relPath);
+}
+
+std::string fileOverwrittenRenderer(
+    RelativePathPiece relPath,
+    RelativePathPiece /*destPath*/,
+    bool /*isDirectory*/) {
+  return fmt::format(FMT_STRING("overwrite({})"), relPath);
+}
+
+std::string fileHandleClosedFileModifiedRenderer(
+    RelativePathPiece relPath,
+    RelativePathPiece /*destPath*/,
+    bool /*isDirectory*/) {
+  return fmt::format(FMT_STRING("modified({})"), relPath);
+}
+
+std::string fileRenamedRenderer(
+    RelativePathPiece oldPath,
+    RelativePathPiece newPath,
+    bool /*isDirectory*/) {
+  return fmt::format(FMT_STRING("rename({} -> {})"), oldPath, newPath);
+}
+
+std::string preRenamedRenderer(
+    RelativePathPiece oldPath,
+    RelativePathPiece newPath,
+    bool /*isDirectory*/) {
+  return fmt::format(FMT_STRING("prerename({} -> {})"), oldPath, newPath);
+}
+
+std::string fileHandleClosedFileDeletedRenderer(
+    RelativePathPiece relPath,
+    RelativePathPiece /*destPath*/,
+    bool isDirectory) {
+  return fmt::format(
+      FMT_STRING("{}({})"), isDirectory ? "rmdir" : "unlink", relPath);
+}
+
+std::string preSetHardlinkRenderer(
+    RelativePathPiece oldPath,
+    RelativePathPiece newPath,
+    bool /*isDirectory*/) {
+  return fmt::format(FMT_STRING("link({} -> {})"), oldPath, newPath);
+}
 
 const std::unordered_map<PRJ_NOTIFICATION, NotificationHandlerEntry>
     notificationHandlerMap = {
         {
             PRJ_NOTIFICATION_NEW_FILE_CREATED,
-            {&Dispatcher::newFileCreated, &ChannelThreadStats::newFileCreated},
+            {&Dispatcher::newFileCreated,
+             newFileCreatedRenderer,
+             &ChannelThreadStats::newFileCreated},
         },
         {
             PRJ_NOTIFICATION_FILE_OVERWRITTEN,
             {&Dispatcher::fileOverwritten,
+             fileOverwrittenRenderer,
              &ChannelThreadStats::fileOverwritten},
         },
         {
             PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
             {&Dispatcher::fileHandleClosedFileModified,
+             fileHandleClosedFileModifiedRenderer,
              &ChannelThreadStats::fileHandleClosedFileModified},
         },
         {
             PRJ_NOTIFICATION_FILE_RENAMED,
-            {&Dispatcher::fileRenamed, &ChannelThreadStats::fileRenamed},
+            {&Dispatcher::fileRenamed,
+             fileRenamedRenderer,
+             &ChannelThreadStats::fileRenamed},
         },
         {
             PRJ_NOTIFICATION_PRE_RENAME,
-            {&Dispatcher::preRename, &ChannelThreadStats::preRenamed},
+            {&Dispatcher::preRename,
+             preRenamedRenderer,
+             &ChannelThreadStats::preRenamed},
         },
         {
             PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
             {&Dispatcher::fileHandleClosedFileDeleted,
+             fileHandleClosedFileDeletedRenderer,
              &ChannelThreadStats::fileHandleClosedFileDeleted},
         },
         {
             PRJ_NOTIFICATION_PRE_SET_HARDLINK,
-            {&Dispatcher::preSetHardlink, &ChannelThreadStats::preSetHardlink},
+            {&Dispatcher::preSetHardlink,
+             preSetHardlinkRenderer,
+             &ChannelThreadStats::preSetHardlink},
         },
 };
 } // namespace
@@ -650,14 +718,16 @@ HRESULT PrjfsChannelInner::notification(
   } else {
     auto histogram = it->second.histogram;
     auto handler = it->second.handler;
+    auto renderer = it->second.renderer;
 
     auto relPath = RelativePath(callbackData->FilePathName);
     auto destPath = RelativePath(destinationFileName);
 
     auto fut = folly::makeFutureWith([this,
                                       context,
-                                      handler = handler,
                                       histogram = histogram,
+                                      handler = handler,
+                                      renderer = renderer,
                                       relPath = std::move(relPath),
                                       destPath = std::move(destPath),
                                       isDirectory]() mutable {
@@ -665,6 +735,7 @@ HRESULT PrjfsChannelInner::notification(
           std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
       context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
 
+      FB_LOG(getStraceLogger(), DBG7, renderer(relPath, destPath, isDirectory));
       return (dispatcher_->*handler)(
                  std::move(relPath), std::move(destPath), isDirectory, *context)
           .thenValue([context = std::move(context)](auto&&) {

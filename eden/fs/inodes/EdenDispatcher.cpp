@@ -711,13 +711,6 @@ folly::Future<folly::Unit> EdenDispatcher::newFileCreated(
     RelativePath /*destPath*/,
     bool isDirectory,
     ObjectFetchContext& context) {
-  // TODO: Move this Windows-specific call logging into PrjfsChannel.
-  FB_LOGF(
-      mount_->getStraceLogger(),
-      DBG7,
-      "{}({})",
-      isDirectory ? "mkdir" : "mknod",
-      relPath);
   return createFile(*mount_, relPath, isDirectory, context);
 }
 
@@ -726,8 +719,6 @@ folly::Future<folly::Unit> EdenDispatcher::fileOverwritten(
     RelativePath /*destPath*/,
     bool /*isDirectory*/,
     ObjectFetchContext& context) {
-  // TODO: Move this Windows-specific call logging into PrjfsChannel.
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "overwrite({})", relPath);
   return materializeFile(*mount_, relPath, context);
 }
 
@@ -736,8 +727,6 @@ folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileModified(
     RelativePath /*destPath*/,
     bool /*isDirectory*/,
     ObjectFetchContext& context) {
-  // TODO: Move this Windows-specific call logging into PrjfsChannel.
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "modified({})", relPath);
   return materializeFile(*mount_, relPath, context);
 }
 
@@ -746,10 +735,6 @@ folly::Future<folly::Unit> EdenDispatcher::fileRenamed(
     RelativePath newPath,
     bool isDirectory,
     ObjectFetchContext& context) {
-  // TODO: Move this Windows-specific call logging into PrjfsChannel.
-  FB_LOGF(
-      mount_->getStraceLogger(), DBG7, "rename({} -> {})", oldPath, newPath);
-
   // When files are moved in and out of the repo, the rename paths are
   // empty, handle these like creation/removal of files.
   if (oldPath.empty()) {
@@ -766,9 +751,6 @@ folly::Future<folly::Unit> EdenDispatcher::preRename(
     RelativePath newPath,
     bool /*isDirectory*/,
     ObjectFetchContext& /*context*/) {
-  // TODO: Move this Windows-specific call logging into PrjfsChannel.
-  FB_LOGF(
-      mount_->getStraceLogger(), DBG7, "prerename({} -> {})", oldPath, newPath);
   return folly::unit;
 }
 
@@ -777,13 +759,6 @@ folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileDeleted(
     RelativePath /*destPath*/,
     bool isDirectory,
     ObjectFetchContext& context) {
-  // TODO: Move this Windows-specific call logging into PrjfsChannel.
-  FB_LOGF(
-      mount_->getStraceLogger(),
-      DBG7,
-      "{}({})",
-      isDirectory ? "rmdir" : "unlink",
-      oldPath);
   return removeFile(*mount_, oldPath, isDirectory, context);
 }
 
@@ -792,8 +767,6 @@ folly::Future<folly::Unit> EdenDispatcher::preSetHardlink(
     RelativePath /*destPath*/,
     bool /*isDirectory*/,
     ObjectFetchContext& /*context*/) {
-  // TODO: Move this Windows-specific call logging into PrjfsChannel.
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "link({})", relPath);
   return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
       HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
       fmt::format(FMT_STRING("Hardlinks are not supported: {}"), relPath)));
