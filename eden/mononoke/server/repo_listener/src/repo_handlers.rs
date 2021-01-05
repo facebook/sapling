@@ -27,6 +27,7 @@ use metaconfig_types::{
 };
 use mononoke_types::RepositoryId;
 use mutable_counters::SqlMutableCounters;
+use observability::ObservabilityContext;
 use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirectorArgs, WireprotoLogging};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o, Logger};
@@ -151,6 +152,7 @@ pub async fn repo_handlers<'a>(
     blobstore_options: BlobstoreOptions,
     root_log: &Logger,
     config_store: &'a ConfigStore,
+    observability_context: &'a ObservabilityContext,
 ) -> Result<HashMap<String, RepoHandler>, Error> {
     // compute eagerly to avoid lifetime issues
     let mut tuples: Vec<(String, IncompleteRepoHandler)> = Vec::new();
@@ -217,7 +219,8 @@ pub async fn repo_handlers<'a>(
             }
         });
 
-        let mut scuba_logger = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table);
+        let mut scuba_logger = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table)
+            .with_observability_context(observability_context.clone());
         scuba_logger.add_common_server_data();
         if let Some(scuba_local_path) = scuba_local_path {
             scuba_logger = scuba_logger.with_log_file(scuba_local_path)?;

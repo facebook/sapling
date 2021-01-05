@@ -50,6 +50,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let (caching, root_log, runtime) = cmdlib::args::init_mononoke(fb, &matches)?;
     let config_source = cmdlib::args::init_config_store(fb, &root_log, &matches)?;
+    let observability_context = cmdlib::args::init_observability_context(fb, &matches, &root_log)?;
 
     info!(root_log, "Starting up");
 
@@ -105,6 +106,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 readonly_storage,
                 blobstore_options,
                 scribe,
+                &observability_context,
             )
             .await
         }

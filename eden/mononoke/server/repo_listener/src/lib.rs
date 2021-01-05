@@ -30,6 +30,7 @@ use std::collections::{HashMap, HashSet};
 
 use cmdlib::monitoring::ReadyFlagService;
 use metaconfig_types::{CommonConfig, RepoConfig};
+use observability::ObservabilityContext;
 
 use crate::connection_acceptor::connection_acceptor;
 use crate::repo_handlers::repo_handlers;
@@ -51,6 +52,7 @@ pub async fn create_repo_listeners<'a>(
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
     scribe: Scribe,
+    observability_context: &'static ObservabilityContext,
 ) -> Result<()> {
     let handlers = repo_handlers(
         fb,
@@ -63,6 +65,7 @@ pub async fn create_repo_listeners<'a>(
         blobstore_options,
         &root_log,
         config_store,
+        observability_context,
     )
     .await?;
 

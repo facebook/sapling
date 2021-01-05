@@ -11,6 +11,8 @@ use observability_config::types::{ObservabilityConfig, SlogLoggingLevel as CfgrL
 use slog::Level;
 use std::sync::{Arc, Mutex};
 
+use crate::scuba::{should_log_scuba_sample, ScubaLoggingDecisionFields, ScubaVerbosityLevel};
+
 const CONFIGERATOR_OBSERVABILITY_CONFIG: &str = "scm/mononoke/observability/observability_config";
 
 fn cfgr_to_slog_level(level: CfgrLoggingLevel) -> Level {
@@ -42,6 +44,16 @@ impl CfgrObservabilityContextInner {
         let cfgr_level = config.slog_config.level;
         cfgr_to_slog_level(cfgr_level)
     }
+
+    fn should_log_scuba_sample(
+        &self,
+        verbosity_level: ScubaVerbosityLevel,
+        logging_decision_fields: ScubaLoggingDecisionFields,
+    ) -> bool {
+        let config = self.config_handle.get();
+        let scuba_config = &config.scuba_config;
+        should_log_scuba_sample(verbosity_level, scuba_config, logging_decision_fields)
+    }
 }
 
 /// A modifiable struct to be used in
@@ -62,6 +74,14 @@ impl TestObservabilityContextInner {
     fn get_logging_level(&self) -> Level {
         self.level
     }
+
+    fn should_log_scuba_sample(
+        &self,
+        _verbosity_level: ScubaVerbosityLevel,
+        _logging_decision_fields: ScubaLoggingDecisionFields,
+    ) -> bool {
+        true
+    }
 }
 
 /// A static `ObservabilityContext` to represent
@@ -78,6 +98,14 @@ impl StaticObservabilityContextInner {
 
     fn get_logging_level(&self) -> Level {
         self.level
+    }
+
+    fn should_log_scuba_sample(
+        &self,
+        verbosity_level: ScubaVerbosityLevel,
+        _logging_decision_fields: ScubaLoggingDecisionFields,
+    ) -> bool {
+        verbosity_level == ScubaVerbosityLevel::Normal
     }
 }
 
@@ -110,6 +138,25 @@ impl ObservabilityContextInner {
             Self::Static(octx) => octx.get_logging_level(),
         }
     }
+
+    pub fn should_log_scuba_sample(
+        &self,
+        verbosity_level: ScubaVerbosityLevel,
+        logging_decision_fields: ScubaLoggingDecisionFields,
+    ) -> bool {
+        match self {
+            Self::Dynamic(octx) => {
+                octx.should_log_scuba_sample(verbosity_level, logging_decision_fields)
+            }
+            Self::Static(octx) => {
+                octx.should_log_scuba_sample(verbosity_level, logging_decision_fields)
+            }
+            Self::Test(octx) => octx
+                .lock()
+                .expect("poiosoned lock")
+                .should_log_scuba_sample(verbosity_level, logging_decision_fields),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -138,5 +185,14 @@ impl ObservabilityContext {
 
     pub fn get_logging_level(&self) -> Level {
         self.inner.get_logging_level()
+    }
+
+    pub fn should_log_scuba_sample(
+        &self,
+        verbosity_level: ScubaVerbosityLevel,
+        logging_decision_fields: ScubaLoggingDecisionFields,
+    ) -> bool {
+        self.inner
+            .should_log_scuba_sample(verbosity_level, logging_decision_fields)
     }
 }

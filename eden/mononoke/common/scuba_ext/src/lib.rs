@@ -11,6 +11,7 @@ use fbinit::FacebookInit;
 use futures_ext::BoxFuture;
 use futures_stats::{FutureStats, StreamStats};
 use itertools::join;
+use observability::{ObservabilityContext, ScubaLoggingDecisionFields, ScubaVerbosityLevel};
 pub use scuba::ScubaValue;
 use scuba::{builder::ServerData, Sampling, ScubaSample, ScubaSampleBuilder};
 use sshrelay::{Metadata, Preamble};
@@ -30,21 +31,30 @@ mod facebook;
 pub use scribe_ext::ScribeClientImplementation;
 
 /// An extensible wrapper struct around `ScubaSampleBuilder`
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct MononokeScubaSampleBuilder {
     inner: ScubaSampleBuilder,
+    maybe_observability_context: Option<ObservabilityContext>,
+}
+
+impl std::fmt::Debug for MononokeScubaSampleBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MononokeScubaSampleBuilder({:?})", self.inner)
+    }
 }
 
 impl MononokeScubaSampleBuilder {
     pub fn new(fb: FacebookInit, scuba_table: &str) -> Self {
         Self {
             inner: ScubaSampleBuilder::new(fb, scuba_table),
+            maybe_observability_context: None,
         }
     }
 
     pub fn with_discard() -> Self {
         Self {
             inner: ScubaSampleBuilder::with_discard(),
+            maybe_observability_context: None,
         }
     }
 
@@ -52,6 +62,33 @@ impl MononokeScubaSampleBuilder {
         match scuba_table {
             None => Self::with_discard(),
             Some(scuba_table) => Self::new(fb, &scuba_table),
+        }
+    }
+
+    pub fn with_observability_context(self, octx: ObservabilityContext) -> Self {
+        Self {
+            maybe_observability_context: Some(octx),
+            ..self
+        }
+    }
+
+    fn get_logging_decision_fields(&self) -> ScubaLoggingDecisionFields {
+        ScubaLoggingDecisionFields {
+            maybe_session_id: self.get("session_uuid"),
+            maybe_unix_username: self.get("unix_username"),
+            maybe_source_hostname: self.get("source_hostname"),
+        }
+    }
+
+    fn should_log_with_level(&self, level: ScubaVerbosityLevel) -> bool {
+        match level {
+            ScubaVerbosityLevel::Normal => true,
+            ScubaVerbosityLevel::Verbose => self
+                .maybe_observability_context
+                .as_ref()
+                .map_or(false, |octx| {
+                    octx.should_log_scuba_sample(level, self.get_logging_decision_fields())
+                }),
         }
     }
 
@@ -104,6 +141,16 @@ impl MononokeScubaSampleBuilder {
             self.inner.add("msg", msg);
         }
         self.inner.log();
+    }
+
+    /// Same as `log_with_msg`, but sample is assumed to be verbose and is only logged
+    /// if verbose logging conditions are met
+    pub fn log_with_msg_verbose<S: Into<Option<String>>>(&mut self, log_tag: &str, msg: S) {
+        if !self.should_log_with_level(ScubaVerbosityLevel::Verbose) {
+            return;
+        }
+
+        self.log_with_msg(log_tag, msg)
     }
 
     pub fn add_stream_stats(&mut self, stats: &StreamStats) -> &mut Self {
@@ -162,6 +209,19 @@ impl MononokeScubaSampleBuilder {
         self.inner.log()
     }
 
+    /// Same as `log`, but sample is assumed to be verbose and is only logged
+    /// if verbose logging conditions are met
+    pub fn log_verbose(&mut self) -> bool {
+        if !self.should_log_with_level(ScubaVerbosityLevel::Verbose) {
+            // Return value of the `log` function indicates whether
+            // the sample passed sampling. If it's too verbose, let's
+            // return false
+            return false;
+        }
+
+        self.log()
+    }
+
     pub fn add_common_server_data(&mut self) -> &mut Self {
         self.inner.add_common_server_data();
         self
@@ -212,5 +272,9 @@ impl MononokeScubaSampleBuilder {
     ) -> &mut Self {
         self.inner.add_opt(key, value);
         self
+    }
+
+    pub fn get<K: Into<String>>(&self, key: K) -> Option<&ScubaValue> {
+        self.inner.get(key)
     }
 }
