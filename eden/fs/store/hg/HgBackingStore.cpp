@@ -375,14 +375,13 @@ struct ManifestEntry {
       throw std::domain_error("invalid manifest entry");
     }
 
-    auto name = PathComponent(
-        StringPiece{*start, folly::to_unsigned(nameend - *start)});
+    auto namePiece = StringPiece{*start, folly::to_unsigned(nameend - *start)};
 
     if (nameend + kNodeHexLen + 1 >= end) {
       throw std::domain_error(fmt::format(
           FMT_STRING(
               "invalid manifest entry for {}: 40-bytes hash is too short: only {}-bytes available"),
-          name,
+          namePiece,
           nameend - end));
     }
 
@@ -411,11 +410,11 @@ struct ManifestEntry {
         throw std::domain_error(fmt::format(
             FMT_STRING(
                 "invalid manifest entry for {}: unsupported file flags: {}"),
-            name,
+            namePiece,
             *flagsPtr));
     }
 
-    return ManifestEntry{node, std::move(name), type};
+    return ManifestEntry{node, PathComponent{namePiece}, type};
   }
 };
 
@@ -428,8 +427,12 @@ class Manifest {
     const auto end = reinterpret_cast<const char*>(raw->tail());
 
     while (start < end) {
-      auto entry = ManifestEntry::parse(&start, end);
-      entries_.push_back(std::move(entry));
+      try {
+        auto entry = ManifestEntry::parse(&start, end);
+        entries_.push_back(std::move(entry));
+      } catch (const PathComponentContainsDirectorySeparator& ex) {
+        XLOG(WARN) << "Ignoring directory entry: " << ex.what();
+      }
     }
   }
 

@@ -151,6 +151,25 @@ class AbsolutePathBase;
 
 } // namespace detail
 
+/**
+ * Thrown when a PathComponent cannot be sanity checked.
+ */
+class PathComponentValidationError : public std::domain_error {
+ public:
+  explicit PathComponentValidationError(const std::string& s)
+      : std::domain_error(s) {}
+};
+
+/**
+ * Thrown when a PathComponent contains a directory separator.
+ */
+class PathComponentContainsDirectorySeparator
+    : public PathComponentValidationError {
+ public:
+  explicit PathComponentContainsDirectorySeparator(const std::string& s)
+      : PathComponentValidationError(s) {}
+};
+
 // Intentionally use folly::fbstring because Dir entries are keyed on
 // PathComponent and the fact that folly::fbstring is 24 bytes and std::string
 // is 32 bytes adds up.
@@ -436,14 +455,14 @@ struct PathComponentSanityCheck {
   constexpr void operator()(folly::StringPiece val) const {
     for (auto c : val) {
       if (isDirSeparator(c)) {
-        throw std::domain_error(folly::to<std::string>(
+        throw PathComponentContainsDirectorySeparator(folly::to<std::string>(
             "attempt to construct a PathComponent from a string containing a "
             "directory separator: ",
             val));
       }
 
       if (c == '\0') {
-        throw std::domain_error(folly::to<std::string>(
+        throw PathComponentValidationError(folly::to<std::string>(
             "attempt to construct a PathComponent from a string containing a "
             "nul byte: ",
             val));
@@ -452,15 +471,16 @@ struct PathComponentSanityCheck {
 
     switch (val.size()) {
       case 0:
-        throw std::domain_error("cannot have an empty PathComponent");
+        throw PathComponentValidationError(
+            "cannot have an empty PathComponent");
       case 1:
         if ('.' == val[0]) {
-          throw std::domain_error("PathComponent must not be .");
+          throw PathComponentValidationError("PathComponent must not be .");
         }
         break;
       case 2:
         if ('.' == val[0] && '.' == val[1]) {
-          throw std::domain_error("PathComponent must not be ..");
+          throw PathComponentValidationError("PathComponent must not be ..");
         }
         break;
     }

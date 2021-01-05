@@ -55,17 +55,20 @@ TreeEntry fromRawTreeEntry(
     contentSha1 = Hash{*entry.content_sha1};
   }
 
-  auto name = folly::StringPiece{entry.name.asByteRange()};
+  auto name = PathComponent(folly::StringPiece{entry.name.asByteRange()});
   auto hash = Hash{entry.hash};
 
-  auto fullPath = path + RelativePathPiece(name);
+  auto fullPath = path + name;
   auto proxyHash = HgProxyHash::store(fullPath, hash, writeBatch);
   if (commitHash) {
     ScsProxyHash::store(proxyHash, fullPath, commitHash.value(), writeBatch);
   }
 
-  return TreeEntry{
-      proxyHash, name, fromRawTreeEntryType(entry.ttype), size, contentSha1};
+  return TreeEntry{proxyHash,
+                   std::move(name),
+                   fromRawTreeEntryType(entry.ttype),
+                   size,
+                   contentSha1};
 }
 
 FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
@@ -77,9 +80,13 @@ FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
   std::vector<TreeEntry> entries;
 
   for (uintptr_t i = 0; i < tree->length; i++) {
-    auto entry =
-        fromRawTreeEntry(tree->entries[i], path, writeBatch, commitHash);
-    entries.push_back(entry);
+    try {
+      auto entry =
+          fromRawTreeEntry(tree->entries[i], path, writeBatch, commitHash);
+      entries.push_back(entry);
+    } catch (const PathComponentContainsDirectorySeparator& ex) {
+      XLOG(WARN) << "Ignoring directory entry: " << ex.what();
+    }
   }
 
   auto edenTree = std::make_unique<Tree>(std::move(entries), edenTreeId);

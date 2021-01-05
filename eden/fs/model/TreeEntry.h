@@ -56,13 +56,13 @@ class TreeEntry {
 
   explicit TreeEntry(
       const Hash& hash,
-      folly::StringPiece name,
+      PathComponent name,
       TreeEntryType type,
       std::optional<uint64_t> size,
       std::optional<Hash> contentSha1)
       : type_(type),
         hash_(hash),
-        name_(PathComponentPiece(name)),
+        name_(std::move(name)),
         size_(size),
         contentSha1_(contentSha1) {}
 
