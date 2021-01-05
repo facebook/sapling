@@ -46,6 +46,7 @@ use synced_commit_mapping::{
 };
 use thiserror::Error;
 use topo_sort::sort_topological;
+use tunables::tunables;
 
 use merge_utils::get_version_for_merge;
 use pushrebase_hook::CrossRepoSyncPushrebaseHook;
@@ -90,6 +91,8 @@ pub enum ErrorKind {
         actual_version: CommitSyncConfigVersion,
         cs_id: ChangesetId,
     },
+    #[error("X-repo sync is temporarily disabled, contact source control oncall")]
+    XRepoSyncDisabled,
 }
 
 async fn identity<T>(res: T) -> Result<T, Error> {
@@ -1554,6 +1557,10 @@ where
         maybe_target_bcs_id: Option<ChangesetId>,
         version_name: CommitSyncConfigVersion,
     ) -> Result<(), Error> {
+        if tunables().get_xrepo_sync_disable_all_syncs() {
+            return Err(ErrorKind::XRepoSyncDisabled.into());
+        }
+
         let CommitSyncer { repos, mapping, .. } = self.clone();
         let (source_repo, target_repo, source_is_large) = match repos {
             CommitSyncRepos::LargeToSmall {
@@ -1683,6 +1690,10 @@ pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 's
     syncer: &'a CommitSyncer<M>,
     version_name: &CommitSyncConfigVersion,
 ) -> Result<(), Error> {
+    if tunables().get_xrepo_sync_disable_all_syncs() {
+        return Err(ErrorKind::XRepoSyncDisabled.into());
+    }
+
     let entries: Vec<_> = mapped
         .into_iter()
         .map(|(from, to)| {

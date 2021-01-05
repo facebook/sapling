@@ -58,6 +58,7 @@ sql_ext = { path = "../../common/rust/sql_ext" }
 tests_utils = { path = "../../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 ascii = "1.0"
+assert_matches = "1.3"
 bytes = { version = "0.5", features = ["serde"] }
 tokio = { version = "=0.2.13", features = ["full"] }
 tokio-compat = "0.1"

@@ -116,6 +116,7 @@ pub struct MononokeTunables {
     backfill_read_qps: AtomicI64,
     backfill_write_qps: AtomicI64,
     disable_commit_scribe_logging_scs: AtomicBool,
+    xrepo_sync_disable_all_syncs: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

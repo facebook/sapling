@@ -11,6 +11,7 @@
 
 use anyhow::{anyhow, bail, Error};
 use ascii::AsciiString;
+use assert_matches::assert_matches;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use std::collections::{BTreeMap, HashMap};
@@ -26,11 +27,11 @@ use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
     update_mapping_with_version, validation::verify_working_copy, CommitSyncContext,
-    CommitSyncDataProvider, CommitSyncOutcome, SyncData,
+    CommitSyncDataProvider, CommitSyncOutcome, ErrorKind, SyncData,
 };
 use cross_repo_sync_test_utils::rebase_root_on_master;
 use fixtures::{linear, many_files_dirs};
-use futures::{compat::Future01CompatExt, future::join_all, TryStreamExt};
+use futures::{compat::Future01CompatExt, future::join_all, FutureExt, TryStreamExt};
 use live_commit_sync_config::{TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource};
 use manifest::ManifestOps;
 use maplit::{btreemap, hashmap};
@@ -43,6 +44,7 @@ use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath, RepositoryId,
 };
+use pushrebase::PushrebaseError;
 use reachabilityindex::LeastCommonAncestorsHint;
 use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
@@ -51,6 +53,7 @@ use synced_commit_mapping::{
     SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
 };
 use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
+use tunables::{with_tunables_async, MononokeTunables};
 
 use cross_repo_sync::{
     get_plural_commit_sync_outcome,
@@ -1686,6 +1689,145 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
         }
     }
     Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let (_, _, large_to_small_syncer) = prepare_commit_syncer_with_mapping_change(fb).await?;
+    let megarepo = large_to_small_syncer.get_source_repo();
+
+    let new_mapping_large_cs_id = resolve_cs_id(&ctx, &megarepo, "new_mapping").await?;
+    // Create a new commit on top of commit with new mapping.
+    let new_mapping_cs_id =
+        CreateCommitContext::new(&ctx, &megarepo, vec![new_mapping_large_cs_id])
+            .add_file("tools/newtool", "1")
+            .commit()
+            .await?;
+
+
+    let tunables = MononokeTunables::default();
+    tunables.update_bools(&hashmap! {"xrepo_sync_disable_all_syncs".to_string() => true});
+
+    // Disable sync - make sure it fails
+    let res = with_tunables_async(
+        tunables,
+        async {
+            large_to_small_syncer
+                .sync_commit(
+                    &ctx,
+                    new_mapping_cs_id,
+                    CandidateSelectionHint::Only,
+                    CommitSyncContext::Tests,
+                )
+                .await
+        }
+        .boxed(),
+    )
+    .await;
+
+    match res {
+        Ok(_) => Err(anyhow!("unexpected success")),
+        Err(err) => {
+            check_x_repo_sync_disabled(&err);
+            Ok(())
+        }
+    }
+}
+
+#[fbinit::compat_test]
+async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
+    linear::initrepo(fb, &small_repo).await;
+    let small_to_large_syncer = create_small_to_large_commit_syncer(
+        &ctx,
+        small_repo.clone(),
+        megarepo.clone(),
+        "prefix",
+        mapping.clone(),
+    )?;
+
+    create_initial_commit(ctx.clone(), &megarepo).await;
+
+    let megarepo_lca_hint: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
+    let megarepo_master_cs_id = get_bookmark(&ctx, &megarepo, "master").await;
+    let small_repo_master_cs_id = get_bookmark(&ctx, &small_repo, "master").await;
+    // Masters map to each other before we even do any syncs
+    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    mapping
+        .add(
+            ctx.clone(),
+            SyncedCommitMappingEntry::new(
+                megarepo.get_repoid(),
+                megarepo_master_cs_id,
+                small_repo.get_repoid(),
+                small_repo_master_cs_id,
+                current_version.clone(),
+            ),
+        )
+        .compat()
+        .await?;
+
+    // 2. Create a small repo commit and sync it onto both branches
+    let small_repo_master_cs_id = create_commit_from_parent_and_changes(
+        &ctx,
+        &small_repo,
+        small_repo_master_cs_id,
+        btreemap! {"small_repo_file" => Some("content")},
+    )
+    .await;
+    move_bookmark(&ctx, &small_repo, "master", small_repo_master_cs_id).await;
+
+    let small_cs = small_repo_master_cs_id
+        .load(&ctx, small_repo.blobstore())
+        .await?;
+
+
+    let tunables = MononokeTunables::default();
+    tunables.update_bools(&hashmap! {"xrepo_sync_disable_all_syncs".to_string() => true});
+
+    // Disable sync - make sure it fails
+    let res = with_tunables_async(
+        tunables,
+        async {
+            small_to_large_syncer
+                .unsafe_sync_commit_pushrebase(
+                    &ctx,
+                    small_cs.clone(),
+                    BookmarkName::new("master").unwrap(),
+                    Target(megarepo_lca_hint.clone()),
+                    CommitSyncContext::Tests,
+                )
+                .await
+        }
+        .boxed(),
+    )
+    .await;
+
+    match res {
+        Ok(_) => Err(anyhow!("unexpected success")),
+        Err(err) => match err.downcast_ref::<ErrorKind>() {
+            Some(error_kind) => match error_kind {
+                ErrorKind::PushrebaseFailure(error) => match error {
+                    PushrebaseError::Error(err) => {
+                        check_x_repo_sync_disabled(err);
+                        Ok(())
+                    }
+                    _ => Err(anyhow!("unexpected pushrebase error: {}", error)),
+                },
+                _ => Err(anyhow!("unexpected ErrorKind: {}", error_kind)),
+            },
+            None => Err(anyhow!("unexpected error - not ErrorKind")),
+        },
+    }
+}
+
+fn check_x_repo_sync_disabled(err: &Error) {
+    assert_matches!(
+        err.downcast_ref::<ErrorKind>(),
+        Some(ErrorKind::XRepoSyncDisabled)
+    );
 }
 
 async fn prepare_commit_syncer_with_mapping_change(
