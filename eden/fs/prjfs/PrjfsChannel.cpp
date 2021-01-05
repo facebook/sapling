@@ -40,11 +40,11 @@ detail::RcuLockedPtr getChannel(
   return channel->getInner();
 }
 
-HRESULT startEnumeration(
+template <class Method, class... Args>
+HRESULT runCallback(
+    Method method,
     const PRJ_CALLBACK_DATA* callbackData,
-    const GUID* enumerationId) noexcept {
-  BAIL_ON_RECURSIVE_CALL(callbackData);
-
+    Args&&... args) noexcept {
   try {
     auto channel = getChannel(callbackData);
     if (!channel) {
@@ -54,32 +54,27 @@ HRESULT startEnumeration(
     auto channelPtr = channel.get();
     auto context = std::make_shared<PrjfsRequestContext>(
         std::move(channel), *callbackData);
-    return channelPtr->startEnumeration(
-        std::move(context), callbackData, enumerationId);
+    return (channelPtr->*method)(
+        std::move(context), callbackData, std::forward<Args>(args)...);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }
+}
+
+HRESULT startEnumeration(
+    const PRJ_CALLBACK_DATA* callbackData,
+    const GUID* enumerationId) noexcept {
+  BAIL_ON_RECURSIVE_CALL(callbackData);
+  return runCallback(
+      &PrjfsChannelInner::startEnumeration, callbackData, enumerationId);
 }
 
 HRESULT endEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-
-  try {
-    auto channel = getChannel(callbackData);
-    if (!channel) {
-      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
-    }
-
-    auto channelPtr = channel.get();
-    auto context = std::make_shared<PrjfsRequestContext>(
-        std::move(channel), *callbackData);
-    return channelPtr->endEnumeration(
-        std::move(context), callbackData, enumerationId);
-  } catch (const std::exception& ex) {
-    return exceptionToHResult(ex);
-  }
+  return runCallback(
+      &PrjfsChannelInner::endEnumeration, callbackData, enumerationId);
 }
 
 HRESULT getEnumerationData(
@@ -88,61 +83,22 @@ HRESULT getEnumerationData(
     PCWSTR searchExpression,
     PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-
-  try {
-    auto channel = getChannel(callbackData);
-    if (!channel) {
-      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
-    }
-
-    auto channelPtr = channel.get();
-    auto context = std::make_shared<PrjfsRequestContext>(
-        std::move(channel), *callbackData);
-    return channelPtr->getEnumerationData(
-        std::move(context),
-        callbackData,
-        enumerationId,
-        searchExpression,
-        dirEntryBufferHandle);
-  } catch (const std::exception& ex) {
-    return exceptionToHResult(ex);
-  }
+  return runCallback(
+      &PrjfsChannelInner::getEnumerationData,
+      callbackData,
+      enumerationId,
+      searchExpression,
+      dirEntryBufferHandle);
 }
 
 HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-
-  try {
-    auto channel = getChannel(callbackData);
-    if (!channel) {
-      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
-    }
-
-    auto channelPtr = channel.get();
-    auto context = std::make_shared<PrjfsRequestContext>(
-        std::move(channel), *callbackData);
-    return channelPtr->getPlaceholderInfo(std::move(context), callbackData);
-  } catch (const std::exception& ex) {
-    return exceptionToHResult(ex);
-  }
+  return runCallback(&PrjfsChannelInner::getPlaceholderInfo, callbackData);
 }
 
 HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-
-  try {
-    auto channel = getChannel(callbackData);
-    if (!channel) {
-      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
-    }
-
-    auto channelPtr = channel.get();
-    auto context = std::make_shared<PrjfsRequestContext>(
-        std::move(channel), *callbackData);
-    return channelPtr->queryFileName(std::move(context), callbackData);
-  } catch (const std::exception& ex) {
-    return exceptionToHResult(ex);
-  }
+  return runCallback(&PrjfsChannelInner::queryFileName, callbackData);
 }
 
 HRESULT getFileData(
@@ -150,21 +106,8 @@ HRESULT getFileData(
     UINT64 byteOffset,
     UINT32 length) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-
-  try {
-    auto channel = getChannel(callbackData);
-    if (!channel) {
-      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
-    }
-
-    auto channelPtr = channel.get();
-    auto context = std::make_shared<PrjfsRequestContext>(
-        std::move(channel), *callbackData);
-    return channelPtr->getFileData(
-        std::move(context), callbackData, byteOffset, length);
-  } catch (const std::exception& ex) {
-    return exceptionToHResult(ex);
-  }
+  return runCallback(
+      &PrjfsChannelInner::getFileData, callbackData, byteOffset, length);
 }
 
 void cancelCommand(const PRJ_CALLBACK_DATA* /*callbackData*/) noexcept {
@@ -189,6 +132,7 @@ HRESULT notification(
       // should be and what it actually is. To solve this, we will need to scan
       // the working copy at mount time to find these files and fixup EdenFS
       // inodes.
+      // Once the above is done, refactor this code to use runCallback.
       EDEN_BUG() << "A notification was received while unmounting";
     }
 
