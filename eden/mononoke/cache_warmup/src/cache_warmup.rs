@@ -163,7 +163,16 @@ async fn changesets_warmup(
     AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id)
         .compat()
         .take(cs_limit)
-        .try_for_each(|_: ChangesetId| future::ready(Ok(())))
+        .try_for_each({
+            let mut i = 0;
+            move |_: ChangesetId| {
+                i += 1;
+                if i % 10000 == 0 {
+                    debug!(ctx.logger(), "changesets warmup: fetched {}th entry", i);
+                }
+                future::ready(Ok(()))
+            }
+        })
         .await?;
 
     debug!(ctx.logger(), "finished changesets warmup");
