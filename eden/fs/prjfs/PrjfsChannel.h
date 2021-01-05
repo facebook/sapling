@@ -7,20 +7,29 @@
 
 #pragma once
 
-#include "folly/portability/Windows.h"
+#include <folly/portability/Windows.h>
+
+#include <folly/futures/Future.h>
 
 #include <ProjectedFSLib.h> // @manual
 #include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
-#include "folly/futures/Future.h"
+#include "eden/fs/utils/Rcu.h"
 
 namespace facebook {
 namespace eden {
 class EdenMount;
 class Dispatcher;
 class Notifications;
+class PrjfsChannelInner;
+class PrjfsRequestContext;
+
+namespace detail {
+struct RcuTag;
+using RcuLockedPtr = RcuPtr<PrjfsChannelInner, RcuTag>::RcuLockedPtr;
+} // namespace detail
 
 class PrjfsChannelInner {
  public:
@@ -29,39 +38,82 @@ class PrjfsChannelInner {
       const folly::Logger* straceLogger,
       ProcessAccessLog& processAccessLog,
       folly::Duration requestTimeout,
-      Notifications* notifications,
-      folly::Promise<folly::Unit> deletedPromise);
+      Notifications* notifications);
 
-  ~PrjfsChannelInner();
+  ~PrjfsChannelInner() = default;
 
   explicit PrjfsChannelInner() = delete;
   PrjfsChannelInner(const PrjfsChannelInner&) = delete;
   PrjfsChannelInner& operator=(const PrjfsChannelInner&) = delete;
 
+  /**
+   * Start a directory listing.
+   *
+   * May spawn futures which will extend the lifetime of self.
+   */
   HRESULT startEnumeration(
+      std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
       const GUID* enumerationId);
 
+  /**
+   * Terminate a directory listing.
+   *
+   * May spawn futures which will extend the lifetime of self.
+   */
   HRESULT endEnumeration(
+      std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
       const GUID* enumerationId);
 
+  /**
+   * Populate as many directory entries that dirEntryBufferHandle can take.
+   *
+   * May spawn futures which will extend the lifetime of self.
+   */
   HRESULT getEnumerationData(
+      std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
       const GUID* enumerationId,
       PCWSTR searchExpression,
       PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle);
 
-  HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData);
+  /**
+   * Obtain the metadata for a given file.
+   *
+   * May spawn futures which will extend the lifetime of self.
+   */
+  HRESULT getPlaceholderInfo(
+      std::shared_ptr<PrjfsRequestContext> context,
+      const PRJ_CALLBACK_DATA* callbackData);
 
-  HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData);
+  /**
+   * Test whether a given file exist in the repository.
+   *
+   * May spawn futures which will extend the lifetime of self.
+   */
+  HRESULT queryFileName(
+      std::shared_ptr<PrjfsRequestContext> context,
+      const PRJ_CALLBACK_DATA* callbackData);
 
+  /**
+   * Read the content of the given file.
+   *
+   * May spawn futures which will extend the lifetime of self.
+   */
   HRESULT getFileData(
+      std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
       UINT64 byteOffset,
       UINT32 length);
 
+  /**
+   * Notifies of state change for the given file.
+   *
+   * May spawn futures which will extend the lifetime of self.
+   */
   HRESULT notification(
+      std::shared_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA* callbackData,
       BOOLEAN isDirectory,
       PRJ_NOTIFICATION notificationType,
@@ -126,9 +178,6 @@ class PrjfsChannelInner {
   // Set of currently active directory enumerations.
   folly::Synchronized<folly::F14FastMap<Guid, std::shared_ptr<Enumerator>>>
       enumSessions_;
-
-  // Set when the destructor is called.
-  folly::Promise<folly::Unit> deletedPromise_;
 };
 
 class PrjfsChannel {
@@ -196,8 +245,8 @@ class PrjfsChannel {
    * As long as the returned value is alive, the mount cannot be unmounted.
    * When an unmount is pending, the shared_ptr will be NULL.
    */
-  std::shared_ptr<PrjfsChannelInner> getInner() {
-    return *inner_.rlock();
+  detail::RcuLockedPtr getInner() {
+    return inner_.rlock();
   }
 
  private:
@@ -208,8 +257,7 @@ class PrjfsChannel {
 
   ProcessAccessLog processAccessLog_;
 
-  folly::SemiFuture<folly::Unit> innerDeleted_;
-  folly::Synchronized<std::shared_ptr<PrjfsChannelInner>> inner_;
+  RcuPtr<PrjfsChannelInner, detail::RcuTag> inner_;
 
   // Internal ProjectedFS channel used to communicate with ProjectedFS.
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};

@@ -23,10 +23,10 @@ class PrjfsRequestContext : public RequestContext {
   PrjfsRequestContext& operator=(PrjfsRequestContext&&) = delete;
 
   explicit PrjfsRequestContext(
-      PrjfsChannelInner* channel,
+      detail::RcuLockedPtr channel,
       const PRJ_CALLBACK_DATA& prjfsData)
       : RequestContext(channel->getProcessAccessLog()),
-        channel_(channel),
+        channel_(std::move(channel)),
         commandId_(prjfsData.CommandId),
         clientPid_(prjfsData.TriggeringProcessId) {}
 
@@ -75,7 +75,7 @@ class PrjfsRequestContext : public RequestContext {
       folly::Try<folly::Unit> try_,
       Notifications* FOLLY_NULLABLE notifications) const;
 
-  PrjfsChannelInner* channel_;
+  detail::RcuLockedPtr channel_;
   int32_t commandId_;
   pid_t clientPid_;
 };

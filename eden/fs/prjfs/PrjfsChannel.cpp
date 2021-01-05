@@ -32,7 +32,7 @@ namespace {
     }                                                                      \
   } while (false)
 
-std::shared_ptr<PrjfsChannelInner> getChannel(
+detail::RcuLockedPtr getChannel(
     const PRJ_CALLBACK_DATA* callbackData) noexcept {
   XDCHECK(callbackData);
   auto* channel = static_cast<PrjfsChannel*>(callbackData->InstanceContext);
@@ -51,7 +51,11 @@ HRESULT startEnumeration(
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
-    return channel->startEnumeration(callbackData, enumerationId);
+    auto channelPtr = channel.get();
+    auto context = std::make_shared<PrjfsRequestContext>(
+        std::move(channel), *callbackData);
+    return channelPtr->startEnumeration(
+        std::move(context), callbackData, enumerationId);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }
@@ -68,7 +72,11 @@ HRESULT endEnumeration(
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
-    return channel->endEnumeration(callbackData, enumerationId);
+    auto channelPtr = channel.get();
+    auto context = std::make_shared<PrjfsRequestContext>(
+        std::move(channel), *callbackData);
+    return channelPtr->endEnumeration(
+        std::move(context), callbackData, enumerationId);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }
@@ -87,8 +95,15 @@ HRESULT getEnumerationData(
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
-    return channel->getEnumerationData(
-        callbackData, enumerationId, searchExpression, dirEntryBufferHandle);
+    auto channelPtr = channel.get();
+    auto context = std::make_shared<PrjfsRequestContext>(
+        std::move(channel), *callbackData);
+    return channelPtr->getEnumerationData(
+        std::move(context),
+        callbackData,
+        enumerationId,
+        searchExpression,
+        dirEntryBufferHandle);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }
@@ -103,7 +118,10 @@ HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
-    return channel->getPlaceholderInfo(callbackData);
+    auto channelPtr = channel.get();
+    auto context = std::make_shared<PrjfsRequestContext>(
+        std::move(channel), *callbackData);
+    return channelPtr->getPlaceholderInfo(std::move(context), callbackData);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }
@@ -118,7 +136,10 @@ HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
-    return channel->queryFileName(callbackData);
+    auto channelPtr = channel.get();
+    auto context = std::make_shared<PrjfsRequestContext>(
+        std::move(channel), *callbackData);
+    return channelPtr->queryFileName(std::move(context), callbackData);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }
@@ -136,7 +157,11 @@ HRESULT getFileData(
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
-    return channel->getFileData(callbackData, byteOffset, length);
+    auto channelPtr = channel.get();
+    auto context = std::make_shared<PrjfsRequestContext>(
+        std::move(channel), *callbackData);
+    return channelPtr->getFileData(
+        std::move(context), callbackData, byteOffset, length);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }
@@ -167,7 +192,11 @@ HRESULT notification(
       EDEN_BUG() << "A notification was received while unmounting";
     }
 
-    return channel->notification(
+    auto channelPtr = channel.get();
+    auto context = std::make_shared<PrjfsRequestContext>(
+        std::move(channel), *callbackData);
+    return channelPtr->notification(
+        std::move(context),
         callbackData,
         isDirectory,
         notificationType,
@@ -185,53 +214,50 @@ PrjfsChannelInner::PrjfsChannelInner(
     const folly::Logger* straceLogger,
     ProcessAccessLog& processAccessLog,
     folly::Duration requestTimeout,
-    Notifications* notifications,
-    folly::Promise<folly::Unit> deletedPromise)
+    Notifications* notifications)
     : dispatcher_(dispatcher),
       straceLogger_(straceLogger),
       processAccessLog_(processAccessLog),
       requestTimeout_(requestTimeout),
-      notifications_(notifications),
-      deletedPromise_(std::move(deletedPromise)) {}
-
-PrjfsChannelInner::~PrjfsChannelInner() {
-  deletedPromise_.setValue(folly::unit);
-}
+      notifications_(notifications) {}
 
 HRESULT PrjfsChannelInner::startEnumeration(
+    std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) {
   auto guid = Guid(*enumerationId);
-  auto context = std::make_shared<PrjfsRequestContext>(this, *callbackData);
   auto path = RelativePath(callbackData->FilePathName);
 
   auto fut =
-      folly::makeFutureWith([context,
-                             this,
-                             dispatcher = dispatcher_,
+      folly::makeFutureWith([this,
+                             context,
                              guid = std::move(guid),
-                             path = std::move(path)] {
+                             path = std::move(path)]() mutable {
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
         auto histogram = &ChannelThreadStats::openDir;
-        context->startRequest(dispatcher->getStats(), histogram, requestWatch);
+        context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
 
         FB_LOGF(getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
-        return dispatcher->opendir(path, *context)
-            .thenValue([context, guid = std::move(guid), this](auto&& dirents) {
+        return dispatcher_->opendir(path, *context)
+            .thenValue([this,
+                        context = std::move(context),
+                        guid = std::move(guid)](auto&& dirents) {
               addDirectoryEnumeration(std::move(guid), std::move(dirents));
               context->sendSuccess();
             });
       })
           .within(requestTimeout_);
 
-  context->catchErrors(std::move(fut), notifications_).ensure([context] {});
+  context->catchErrors(std::move(fut), notifications_)
+      .ensure([context = std::move(context)] {});
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
 
 HRESULT PrjfsChannelInner::endEnumeration(
+    std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* /*callbackData*/,
     const GUID* enumerationId) {
   auto guid = Guid(*enumerationId);
@@ -243,6 +269,7 @@ HRESULT PrjfsChannelInner::endEnumeration(
 }
 
 HRESULT PrjfsChannelInner::getEnumerationData(
+    std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId,
     PCWSTR searchExpression,
@@ -279,16 +306,14 @@ HRESULT PrjfsChannelInner::getEnumerationData(
     enumerator->restart();
   }
 
-  auto context = std::make_shared<PrjfsRequestContext>(this, *callbackData);
-  auto fut = folly::makeFutureWith([context,
-                                    timeout = requestTimeout_,
-                                    dispatcher = dispatcher_,
+  auto fut = folly::makeFutureWith([this,
+                                    context,
                                     enumerator = std::move(enumerator),
                                     buffer = dirEntryBufferHandle] {
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
     auto histogram = &ChannelThreadStats::readDir;
-    context->startRequest(dispatcher->getStats(), histogram, requestWatch);
+    context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
 
     bool added = false;
     for (FileMetadata* entry; (entry = enumerator->current());
@@ -296,7 +321,7 @@ HRESULT PrjfsChannelInner::getEnumerationData(
       auto fileInfo = PRJ_FILE_BASIC_INFO();
 
       fileInfo.IsDirectory = entry->isDirectory;
-      fileInfo.FileSize = entry->getSize().get(timeout);
+      fileInfo.FileSize = entry->getSize().get(requestTimeout_);
 
       XLOGF(
           DBG6,
@@ -328,33 +353,33 @@ HRESULT PrjfsChannelInner::getEnumerationData(
     return folly::makeFuture(folly::unit);
   });
 
-  context->catchErrors(std::move(fut), notifications_).ensure([context] {});
+  context->catchErrors(std::move(fut), notifications_)
+      .ensure([context = std::move(context)] {});
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
 
 HRESULT PrjfsChannelInner::getPlaceholderInfo(
+    std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData) {
-  auto context = std::make_shared<PrjfsRequestContext>(this, *callbackData);
-
   auto path = RelativePath(callbackData->FilePathName);
   auto virtualizationContext = callbackData->NamespaceVirtualizationContext;
 
   auto fut =
-      folly::makeFutureWith([context,
-                             this,
-                             dispatcher = dispatcher_,
+      folly::makeFutureWith([this,
+                             context,
                              path = std::move(path),
-                             virtualizationContext] {
+                             virtualizationContext]() mutable {
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
         auto histogram = &ChannelThreadStats::lookup;
-        context->startRequest(dispatcher->getStats(), histogram, requestWatch);
+        context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
 
         FB_LOGF(getStraceLogger(), DBG7, "lookup({})", path);
-        return dispatcher->lookup(std::move(path), *context)
-            .thenValue([context, virtualizationContext = virtualizationContext](
+        return dispatcher_->lookup(std::move(path), *context)
+            .thenValue([context = std::move(context),
+                        virtualizationContext = virtualizationContext](
                            std::optional<LookupResult>&& optLookupResult) {
               if (!optLookupResult) {
                 context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
@@ -391,30 +416,27 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
       })
           .within(requestTimeout_);
 
-  context->catchErrors(std::move(fut), notifications_).ensure([context] {});
+  context->catchErrors(std::move(fut), notifications_)
+      .ensure([context = std::move(context)] {});
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
 
 HRESULT PrjfsChannelInner::queryFileName(
+    std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData) {
-  auto context = std::make_shared<PrjfsRequestContext>(this, *callbackData);
-
   auto path = RelativePath(callbackData->FilePathName);
 
   auto fut =
-      folly::makeFutureWith([context,
-                             this,
-                             dispatcher = dispatcher_,
-                             path = std::move(path)] {
+      folly::makeFutureWith([this, context, path = std::move(path)]() mutable {
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
         auto histogram = &ChannelThreadStats::access;
-        context->startRequest(dispatcher->getStats(), histogram, requestWatch);
+        context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
         FB_LOGF(getStraceLogger(), DBG7, "access({})", path);
-        return dispatcher->access(std::move(path), *context)
-            .thenValue([context](bool present) {
+        return dispatcher_->access(std::move(path), *context)
+            .thenValue([context = std::move(context)](bool present) {
               if (present) {
                 context->sendSuccess();
               } else {
@@ -424,7 +446,8 @@ HRESULT PrjfsChannelInner::queryFileName(
       })
           .within(requestTimeout_);
 
-  context->catchErrors(std::move(fut), notifications_).ensure([context] {});
+  context->catchErrors(std::move(fut), notifications_)
+      .ensure([context = std::move(context)] {});
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -511,26 +534,24 @@ constexpr uint32_t kMaxChunkSize = 5 * 1024 * 1024; // 5 MiB
 } // namespace
 
 HRESULT PrjfsChannelInner::getFileData(
+    std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
     UINT64 byteOffset,
     UINT32 length) {
-  auto context = std::make_shared<PrjfsRequestContext>(this, *callbackData);
-
   auto fut =
-      folly::makeFutureWith([context,
-                             this,
-                             dispatcher = dispatcher_,
+      folly::makeFutureWith([this,
+                             context,
                              path = RelativePath(callbackData->FilePathName),
                              virtualizationContext =
                                  callbackData->NamespaceVirtualizationContext,
                              dataStreamId = Guid(callbackData->DataStreamId),
                              byteOffset,
-                             length] {
+                             length]() mutable {
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
         auto histogram = &ChannelThreadStats::read;
-        context->startRequest(dispatcher->getStats(), histogram, requestWatch);
+        context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
 
         FB_LOGF(
             getStraceLogger(),
@@ -539,8 +560,8 @@ HRESULT PrjfsChannelInner::getFileData(
             path,
             byteOffset,
             length);
-        return dispatcher->read(std::move(path), *context)
-            .thenValue([context,
+        return dispatcher_->read(std::move(path), *context)
+            .thenValue([context = std::move(context),
                         virtualizationContext = virtualizationContext,
                         dataStreamId = std::move(dataStreamId),
                         byteOffset = byteOffset,
@@ -611,7 +632,8 @@ HRESULT PrjfsChannelInner::getFileData(
       })
           .within(requestTimeout_);
 
-  context->catchErrors(std::move(fut), notifications_).ensure([context] {});
+  context->catchErrors(std::move(fut), notifications_)
+      .ensure([context = std::move(context)] {});
 
   return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
 }
@@ -671,6 +693,7 @@ const std::unordered_map<PRJ_NOTIFICATION, NotificationHandlerEntry>
 } // namespace
 
 HRESULT PrjfsChannelInner::notification(
+    std::shared_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA* callbackData,
     BOOLEAN isDirectory,
     PRJ_NOTIFICATION notificationType,
@@ -681,30 +704,32 @@ HRESULT PrjfsChannelInner::notification(
     XLOG(WARN) << "Unrecognized notification: " << notificationType;
     return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
   } else {
-    auto context = std::make_shared<PrjfsRequestContext>(this, *callbackData);
     auto histogram = it->second.histogram;
     auto handler = it->second.handler;
 
     auto relPath = RelativePath(callbackData->FilePathName);
     auto destPath = RelativePath(destinationFileName);
 
-    auto fut = folly::makeFutureWith([context,
+    auto fut = folly::makeFutureWith([this,
+                                      context,
                                       handler = handler,
                                       histogram = histogram,
-                                      dispatcher = dispatcher_,
                                       relPath = std::move(relPath),
                                       destPath = std::move(destPath),
-                                      isDirectory] {
+                                      isDirectory]() mutable {
       auto requestWatch =
           std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
-      context->startRequest(dispatcher->getStats(), histogram, requestWatch);
+      context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
 
-      return (dispatcher->*handler)(
+      return (dispatcher_->*handler)(
                  std::move(relPath), std::move(destPath), isDirectory, *context)
-          .thenValue([context](auto&&) { context->sendNotificationSuccess(); });
+          .thenValue([context = std::move(context)](auto&&) {
+            context->sendNotificationSuccess();
+          });
     });
 
-    context->catchErrors(std::move(fut), notifications_).ensure([context] {});
+    context->catchErrors(std::move(fut), notifications_)
+        .ensure([context = std::move(context)] {});
 
     return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   }
@@ -734,6 +759,10 @@ void PrjfsChannelInner::sendError(int32_t commandId, HRESULT result) {
   sendReply(mountChannel_, commandId, result, nullptr);
 }
 
+namespace {
+folly::Indestructible<folly::rcu_domain<detail::RcuTag>> prjfsRcuDomain;
+}
+
 PrjfsChannel::PrjfsChannel(
     AbsolutePathPiece mountPath,
     Dispatcher* const dispatcher,
@@ -744,18 +773,14 @@ PrjfsChannel::PrjfsChannel(
     Guid guid)
     : mountPath_(mountPath),
       mountId_(std::move(guid)),
-      processAccessLog_(std::move(processNameCache)) {
-  auto [innerDeletedPromise, innerDeletedFuture] =
-      folly::makePromiseContract<folly::Unit>();
-  innerDeleted_ = std::move(innerDeletedFuture);
-  *inner_.wlock() = std::make_shared<PrjfsChannelInner>(
-      dispatcher,
-      straceLogger,
-      processAccessLog_,
-      requestTimeout,
-      notifications,
-      std::move(innerDeletedPromise));
-}
+      processAccessLog_(std::move(processNameCache)),
+      inner_(
+          *prjfsRcuDomain,
+          dispatcher,
+          straceLogger,
+          processAccessLog_,
+          requestTimeout,
+          notifications) {}
 
 PrjfsChannel::~PrjfsChannel() {
   XCHECK(stopPromise_.isFulfilled())
@@ -822,7 +847,7 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
     throw makeHResultErrorExplicit(result, "Failed to start the mount point");
   }
 
-  (*inner_.wlock())->setMountChannel(mountChannel_);
+  inner_.rlock()->setMountChannel(mountChannel_);
 
   XLOG(INFO) << "Started PrjfsChannel for: " << mountPath_;
 }
@@ -833,8 +858,9 @@ folly::SemiFuture<folly::Unit> PrjfsChannel::stop() {
   PrjStopVirtualizing(mountChannel_);
   mountChannel_ = nullptr;
 
-  inner_.wlock()->reset();
-  return std::move(innerDeleted_).deferValue([this](auto&&) {
+  return folly::makeSemiFutureWith([this] {
+    inner_.reset();
+    inner_.synchronize();
     stopPromise_.setValue(StopData{});
   });
 }
