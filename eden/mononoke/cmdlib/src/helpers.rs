@@ -235,8 +235,19 @@ where
     // Now wait for the termination signal, or a server exit.
     let server_result: Result<(), Error> = match future::select(server_handle, signalled).await {
         Either::Left((join_handle_res, _)) => {
-            error!(&logger, "Server has exited! Starting shutdown...");
-            join_handle_res.map_err(Error::from).and_then(|res| res)
+            let res = join_handle_res.map_err(Error::from).and_then(|res| res);
+            match res.as_ref() {
+                Ok(()) => {
+                    error!(&logger, "Server has exited! Starting shutdown...");
+                }
+                Err(e) => {
+                    error!(
+                        &logger,
+                        "Server exited with an error! Starting shutdown... Error: {:?}", e
+                    );
+                }
+            }
+            res
         }
         Either::Right(..) => {
             info!(&logger, "Signalled! Starting shutdown...");
