@@ -122,6 +122,12 @@ std::pair<int, int> determineMacOsVersion() {
 
 std::string computeOSXFuseKextPath() {
   auto version = determineMacOsVersion();
+  // Starting from Big Sur (macOS 11), we no longer need to look for the second
+  // number since it is now a _real_ minor version number.
+  if (version.first >= 11) {
+    return folly::to<std::string>(
+        OSXFUSE_EXTENSIONS_PATH, "/", version.first, "/", OSXFUSE_KEXT_NAME);
+  }
   return folly::to<std::string>(
       OSXFUSE_EXTENSIONS_PATH,
       "/",
