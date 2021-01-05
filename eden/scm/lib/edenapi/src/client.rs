@@ -196,34 +196,15 @@ impl Client {
         T: ToApi + Send + DeserializeOwned + 'static,
         <T as ToApi>::Api: Send + 'static,
     {
-        let progress = progress.unwrap_or_else(|| Box::new(|_| ()));
-        let requests = requests.into_iter().collect::<Vec<_>>();
-        let n_requests = requests.len();
+        let Fetch {
+            meta,
+            entries,
+            stats,
+        } = self.fetch_raw::<T>(requests, progress).await?;
 
-        let (mut responses, stats) = self.client.send_async_with_progress(requests, progress)?;
-
-        let mut meta = Vec::with_capacity(n_requests);
-        let mut streams = Vec::with_capacity(n_requests);
-
-        while let Some(res) = responses.try_next().await? {
-            let res = raise_for_status(res).await?;
-
-            let response_meta = ResponseMeta::from(&res);
-            tracing::debug!("{:?}", &response_meta);
-            meta.push(response_meta);
-
-            let entries = res
-                .into_cbor_stream::<T>()
-                .map(|r| {
-                    r.map_err(|e| EdenApiError::from(e))
-                        .and_then(|v| v.to_api().map_err(|e| EdenApiError::from(e.into())))
-                })
-                .boxed();
-            streams.push(entries);
-        }
-
-        let entries = stream::select_all(streams).boxed();
-        let stats = stats.err_into().boxed();
+        let entries = entries
+            .and_then(|v| future::ready(v.to_api().map_err(|e| EdenApiError::from(e.into()))))
+            .boxed();
 
         Ok(Fetch {
             meta,
