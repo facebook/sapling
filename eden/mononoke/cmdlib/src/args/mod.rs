@@ -731,8 +731,6 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Logg
 
     let stdlog_env = "RUST_LOG";
 
-    let level = get_log_level(matches);
-
     let glog_drain = Arc::new(glog_drain());
     let root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> = match matches
         .value_of("logview-category")
@@ -762,7 +760,6 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Logg
     let stdlog_level =
         log::init_stdlog_once(Logger::root(root_log_drain.clone(), o![]), stdlog_env);
 
-    let root_log_drain = root_log_drain.filter_level(level).ignore_res();
     let root_log_drain = dynamic_level_drain(fb, matches, root_log_drain)
         .expect("Failed to initialize DynamicLevelDrain")
         .ignore_res();
