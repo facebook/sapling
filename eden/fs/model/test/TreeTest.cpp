@@ -14,6 +14,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 using facebook::eden::Hash;
+using facebook::eden::PathComponent;
 using facebook::eden::PathComponentPiece;
 using facebook::eden::Tree;
 using facebook::eden::TreeEntry;
@@ -34,7 +35,8 @@ Hash testHash(testHashHex);
 
 TEST(Tree, testGetEntryPtr) {
   vector<TreeEntry> entries;
-  entries.emplace_back(testHash, "a_file", TreeEntryType::REGULAR_FILE);
+  entries.emplace_back(
+      testHash, PathComponent{"a_file"}, TreeEntryType::REGULAR_FILE);
   Tree tree(std::move(entries));
 
   // Verify existent path.

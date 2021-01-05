@@ -95,7 +95,8 @@ TEST_P(LocalStoreTest, putTreeMetadata) {
   auto treeMetadata = TreeMetadata{entryMetadata};
 
   std::vector<TreeEntry> entries;
-  entries.emplace_back(childHash, childContents, TreeEntryType::REGULAR_FILE);
+  entries.emplace_back(
+      childHash, PathComponent{childContents}, TreeEntryType::REGULAR_FILE);
   Tree tree{std::move(entries), hash};
 
   store_->putTreeMetadata(treeMetadata, tree);

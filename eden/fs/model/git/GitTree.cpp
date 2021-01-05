@@ -93,7 +93,8 @@ std::unique_ptr<Tree> deserializeGitTree(
           "Unrecognized mode: {:o} in object {}", mode, hash.toString()));
     }
 
-    entries.emplace_back(Hash(hashBytes), std::move(name), fileType);
+    entries.emplace_back(
+        Hash(hashBytes), PathComponent{std::move(name)}, fileType);
   }
 
   return std::make_unique<Tree>(std::move(entries), hash);

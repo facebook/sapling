@@ -173,23 +173,27 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const Blob& blob,
     FakeBlobType type)
-    : entry{blob.getHash(), name, treeEntryTypeFromBlobType(type)} {}
+    : entry{blob.getHash(),
+            PathComponent{name},
+            treeEntryTypeFromBlobType(type)} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const StoredBlob* blob,
     FakeBlobType type)
-    : entry{blob->get().getHash(), name, treeEntryTypeFromBlobType(type)} {}
+    : entry{blob->get().getHash(),
+            PathComponent{name},
+            treeEntryTypeFromBlobType(type)} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const Tree& tree)
-    : entry{tree.getHash(), name, TreeEntryType::TREE} {}
+    : entry{tree.getHash(), PathComponent{name}, TreeEntryType::TREE} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const StoredTree* tree)
-    : entry{tree->get().getHash(), name, TreeEntryType::TREE} {}
+    : entry{tree->get().getHash(), PathComponent{name}, TreeEntryType::TREE} {}
 
 StoredTree* FakeBackingStore::putTree(
     const std::initializer_list<TreeEntryData>& entryArgs) {

@@ -224,23 +224,23 @@ TEST(GitTree, serializeTree) {
   GitTreeSerializer serializer;
   serializer.addEntry(TreeEntry(
       Hash("c66788d87933862e2111a86304b705dd90bbd427"),
-      "README.md",
+      PathComponent{"README.md"},
       TreeEntryType::REGULAR_FILE));
   serializer.addEntry(TreeEntry(
       Hash("a3c8e5c25e5523322f0ea490173dbdc1d844aefb"),
-      "run-tests.sh",
+      PathComponent{"run-tests.sh"},
       TreeEntryType::EXECUTABLE_FILE));
   serializer.addEntry(TreeEntry(
       Hash("de0b8287939193ed239834991be65b96cbfc4508"),
-      "build-instructions",
+      PathComponent{"build-instructions"},
       TreeEntryType::TREE));
   serializer.addEntry(TreeEntry(
       Hash("4576635ff317960be244b1c4adfe2a6eb2eb024d"),
-      "contributing-to-packages.md",
+      PathComponent{"contributing-to-packages.md"},
       TreeEntryType::REGULAR_FILE));
   serializer.addEntry(TreeEntry(
       Hash("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"),
-      "contributing.md",
+      PathComponent{"contributing.md"},
       TreeEntryType::SYMLINK));
 
   auto buf = serializer.finalize();
@@ -270,7 +270,7 @@ TEST(GitTree, moveSerializer) {
     GitTreeSerializer serializer1;
     serializer1.addEntry(TreeEntry(
         Hash("3b18e512dba79e4c8300dd08aeb37f8e728b8dad"),
-        "README.md",
+        PathComponent{"README.md"},
         TreeEntryType::REGULAR_FILE));
 
     serializer2 = std::move(serializer1);
@@ -278,7 +278,7 @@ TEST(GitTree, moveSerializer) {
 
   serializer2.addEntry(TreeEntry(
       Hash("43b71c903ff52b9885bd36f3866324ef60e27b9b"),
-      "eden",
+      PathComponent{"eden"},
       TreeEntryType::TREE));
 
   // Make sure the tree hash is what we expect

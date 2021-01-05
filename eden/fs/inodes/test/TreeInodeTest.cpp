@@ -35,7 +35,7 @@ static DirEntry makeDirEntry() {
 }
 
 static TreeEntry makeTreeEntry(folly::StringPiece name) {
-  return TreeEntry{Hash{}, name, TreeEntryType::REGULAR_FILE};
+  return TreeEntry{Hash{}, PathComponent{name}, TreeEntryType::REGULAR_FILE};
 }
 
 TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {

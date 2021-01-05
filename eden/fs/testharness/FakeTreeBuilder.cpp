@@ -293,7 +293,7 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
       auto* storedBlob = entryInfo.finalizeBlob(builder, setReady);
       hash = storedBlob->get().getHash();
     }
-    treeEntries.emplace_back(hash, e.first.stringPiece(), entryInfo.type);
+    treeEntries.emplace_back(hash, e.first, entryInfo.type);
   }
 
   auto* storedTree = builder->store_->maybePutTree(treeEntries).first;
