@@ -1444,7 +1444,7 @@ where
         rewritten: BonsaiChangesetMut,
         version: CommitSyncConfigVersion,
     ) -> Result<ChangesetId, Error> {
-        let (source_repo, target_repo, _) = self.get_source_target_mover(&ctx)?;
+        let (source_repo, target_repo) = self.get_source_target();
 
         let frozen = rewritten.freeze()?;
         let target_cs_id = frozen.get_changeset_id();
@@ -1494,20 +1494,6 @@ where
         }
 
         Ok(source_cs)
-    }
-
-    fn get_source_target_mover(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<(BlobRepo, BlobRepo, Mover), Error> {
-        let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx)?;
-        let mover = self.commit_sync_data_provider.get_mover(
-            &version_name,
-            source_repo.get_repoid(),
-            target_repo.get_repoid(),
-        )?;
-
-        Ok((source_repo, target_repo, mover))
     }
 
     fn get_source_target_version(
