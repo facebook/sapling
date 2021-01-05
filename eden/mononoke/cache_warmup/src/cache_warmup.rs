@@ -236,7 +236,7 @@ async fn microwave_preload(ctx: &CoreContext, repo: &BlobRepo, req: &CacheWarmup
     if req.microwave_preload {
         match microwave::prime_cache(&ctx, &repo, SnapshotLocation::Blobstore).await {
             Ok(_) => {
-                warn!(ctx.logger(), "microwave: successfully primed cached");
+                warn!(ctx.logger(), "microwave: successfully primed cache");
             }
             Err(e) => {
                 warn!(ctx.logger(), "microwave: cache warmup failed: {:#?}", e);
