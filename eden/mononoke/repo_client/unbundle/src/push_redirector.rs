@@ -38,8 +38,7 @@ use futures::{
     try_join,
 };
 use hooks::{CrossRepoPushSource, HookRejection};
-use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
-use metaconfig_types::CommitSyncConfig;
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use mononoke_repo::MononokeRepo;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use pushrebase::PushrebaseChangesetPair;
@@ -56,7 +55,6 @@ use topo_sort::sort_topological;
 /// request.
 #[derive(Clone)]
 pub struct PushRedirectorArgs {
-    commit_sync_config: CommitSyncConfig,
     target_repo: MononokeRepo,
     source_blobrepo: BlobRepo,
     synced_commit_mapping: SqlSyncedCommitMapping,
@@ -65,14 +63,12 @@ pub struct PushRedirectorArgs {
 
 impl PushRedirectorArgs {
     pub fn new(
-        commit_sync_config: CommitSyncConfig,
         target_repo: MononokeRepo,
         source_blobrepo: BlobRepo,
         synced_commit_mapping: SqlSyncedCommitMapping,
         target_repo_dbs: TargetRepoDbs,
     ) -> Self {
         Self {
-            commit_sync_config,
             target_repo,
             source_blobrepo,
             synced_commit_mapping,
@@ -97,9 +93,6 @@ impl PushRedirectorArgs {
             ..
         } = self;
 
-        let commit_sync_config = live_commit_sync_config
-            .get_current_commit_sync_config(&ctx, source_blobrepo.get_repoid())?;
-
         let small_repo = source_blobrepo;
         let large_repo = target_repo.blobrepo().clone();
         let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(synced_commit_mapping);
@@ -120,7 +113,6 @@ impl PushRedirectorArgs {
             small_to_large_commit_syncer,
             large_to_small_commit_syncer,
             target_repo_dbs,
-            commit_sync_config,
         })
     }
 }
@@ -138,8 +130,6 @@ pub struct PushRedirector {
     pub large_to_small_commit_syncer: CommitSyncer<Arc<dyn SyncedCommitMapping>>,
     // A struct, needed to backsync commits
     pub target_repo_dbs: TargetRepoDbs,
-    // Config for commit sync functionality
-    pub commit_sync_config: CommitSyncConfig,
 }
 
 impl PushRedirector {
@@ -728,8 +718,8 @@ impl PushRedirector {
         } = orig;
 
         if self
-            .commit_sync_config
-            .common_pushrebase_bookmarks
+            .small_to_large_commit_syncer
+            .get_common_pushrebase_bookmarks(ctx)?
             .contains(&name)
         {
             return Err(format_err!(

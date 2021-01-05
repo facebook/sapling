@@ -84,7 +84,6 @@ impl IncompletePushRedirectorArgs {
             .clone();
 
         Ok(PushRedirectorArgs::new(
-            commit_sync_config,
             target_repo,
             source_blobrepo,
             synced_commit_mapping,
