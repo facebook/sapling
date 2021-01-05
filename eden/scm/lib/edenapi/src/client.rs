@@ -28,7 +28,7 @@ use edenapi_types::{
     TreeRequest,
 };
 use hg_http::http_client;
-use http_client::{HttpClient, HttpClientError, Request};
+use http_client::{AsyncResponse, HttpClient, HttpClientError, Request};
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::api::{EdenApi, ProgressCallback};
@@ -159,6 +159,8 @@ impl Client {
         let mut streams = Vec::with_capacity(n_requests);
 
         while let Some(res) = responses.try_next().await? {
+            let res = raise_for_status(res).await?;
+
             let response_meta = ResponseMeta::from(&res);
             tracing::debug!("{:?}", &response_meta);
             meta.push(response_meta);
@@ -204,6 +206,8 @@ impl Client {
         let mut streams = Vec::with_capacity(n_requests);
 
         while let Some(res) = responses.try_next().await? {
+            let res = raise_for_status(res).await?;
+
             let response_meta = ResponseMeta::from(&res);
             tracing::debug!("{:?}", &response_meta);
             meta.push(response_meta);
@@ -480,6 +484,19 @@ fn split_into_batches(
             .collect(),
         None => vec![keys.into_iter().collect()],
     }
+}
+
+async fn raise_for_status(res: AsyncResponse) -> Result<AsyncResponse, EdenApiError> {
+    if res.status.as_u16() < 400 {
+        return Ok(res);
+    }
+
+    let body = res.body.try_concat().await?;
+    let message = String::from_utf8_lossy(&body).into_owned();
+    Err(EdenApiError::HttpError {
+        status: res.status,
+        message,
+    })
 }
 
 #[cfg(test)]

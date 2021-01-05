@@ -9,6 +9,7 @@ use thiserror::Error;
 
 use auth::X509Error;
 use edenapi_types::wire::WireToApiConversionError;
+use http::status::StatusCode;
 use http_client::HttpClientError;
 
 #[derive(Debug, Error)]
@@ -21,6 +22,8 @@ pub enum EdenApiError {
     BadCertificate(#[from] X509Error),
     #[error(transparent)]
     Http(#[from] HttpClientError),
+    #[error("Server reported an error ({status}): {message}")]
+    HttpError { status: StatusCode, message: String },
     #[error(transparent)]
     InvalidUrl(#[from] url::ParseError),
     #[error(transparent)]
