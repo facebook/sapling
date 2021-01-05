@@ -996,6 +996,7 @@ mod test {
                     reverse_bookmark_renamer: reverse_bookmark_renamer,
                 }
             },
+            vec![BookmarkName::new("master")?],
         );
 
         Ok(CommitSyncer::new_with_provider(

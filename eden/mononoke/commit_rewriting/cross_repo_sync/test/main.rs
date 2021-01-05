@@ -790,6 +790,7 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
                 reverse_bookmark_renamer: Arc::new(identity_renamer),
             }
         },
+        vec![BookmarkName::new("master")?],
     );
     fail_config.commit_sync_data_provider = commit_sync_data_provider;
 
@@ -836,6 +837,7 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
                 reverse_bookmark_renamer: Arc::new(identity_renamer),
             }
         },
+        vec![BookmarkName::new("master")?],
     );
     copyfrom_fail_config.commit_sync_data_provider = commit_sync_data_provider;
     copyfrom_fail_config.repos = copyfrom_fail_repos;
@@ -946,6 +948,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
                 reverse_bookmark_renamer: Arc::new(identity_renamer),
             }
         },
+        vec![BookmarkName::new("master")?],
     );
     commit_syncer.commit_sync_data_provider = commit_sync_data_provider;
     commit_syncer.repos = commit_sync_repos;
@@ -1837,6 +1840,7 @@ fn get_merge_sync_data_provider(
                 reverse_bookmark_renamer: idrn,
             }
         },
+        vec![BookmarkName::new("master").unwrap()],
     )
 }
 
@@ -2140,6 +2144,7 @@ async fn test_no_accidental_preserved_roots(
                     reverse_bookmark_renamer: Arc::new(identity_renamer),
                 }
             },
+            vec![BookmarkName::new("master")?],
         );
         commit_syncer.commit_sync_data_provider = commit_sync_data_provider;
         commit_syncer.repos = commit_sync_repos.clone();

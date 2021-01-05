@@ -1116,6 +1116,7 @@ mod test {
                     reverse_bookmark_renamer: Arc::new(noop_book_renamer),
                 }
             },
+            vec![BookmarkName::new("master")?],
         );
         Ok(CommitSyncer::new_with_provider(
             &ctx,

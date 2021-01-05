@@ -173,6 +173,7 @@ pub async fn init_small_large_repo(
                 reverse_bookmark_renamer: Arc::new(identity_renamer),
             }
         },
+        vec![BookmarkName::new("master")?],
     );
 
     let small_to_large_commit_syncer = CommitSyncer::new_with_provider(
@@ -205,6 +206,7 @@ pub async fn init_small_large_repo(
                 reverse_bookmark_renamer: Arc::new(identity_renamer),
             }
         },
+        vec![BookmarkName::new("master")?],
     );
 
     let large_to_small_commit_syncer = CommitSyncer::new_with_provider(

@@ -7,6 +7,7 @@
 
 use anyhow::{anyhow, Error};
 use bookmark_renaming::{get_bookmark_renamers, BookmarkRenamer, BookmarkRenamers};
+use bookmarks::BookmarkName;
 use context::CoreContext;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection};
@@ -25,6 +26,7 @@ pub enum CommitSyncDataProvider {
         map: HashMap<CommitSyncConfigVersion, SyncData>,
         source_repo_id: RepositoryId,
         target_repo_id: RepositoryId,
+        common_pushrebase_bookmarks: Vec<BookmarkName>,
     },
 }
 
@@ -60,12 +62,14 @@ impl CommitSyncDataProvider {
         source_repo_id: Source<RepositoryId>,
         target_repo_id: Target<RepositoryId>,
         map: HashMap<CommitSyncConfigVersion, SyncData>,
+        common_pushrebase_bookmarks: Vec<BookmarkName>,
     ) -> Self {
         Self::Test {
             current_version: Arc::new(Mutex::new(current_version)),
             map,
             source_repo_id: source_repo_id.0,
             target_repo_id: target_repo_id.0,
+            common_pushrebase_bookmarks,
         }
     }
 
@@ -258,6 +262,26 @@ impl CommitSyncDataProvider {
                 Ok(versions.contains_key(version))
             }
             Self::Test { map, .. } => Ok(map.contains_key(version)),
+        }
+    }
+
+    pub fn get_common_pushrebase_bookmarks(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<Vec<BookmarkName>, Error> {
+        use CommitSyncDataProvider::*;
+
+        match self {
+            Live(live_commit_sync_config) => {
+                let commit_sync_config =
+                    live_commit_sync_config.get_current_commit_sync_config(ctx, repo_id)?;
+                Ok(commit_sync_config.common_pushrebase_bookmarks)
+            }
+            Test {
+                common_pushrebase_bookmarks,
+                ..
+            } => Ok(common_pushrebase_bookmarks.clone()),
         }
     }
 }

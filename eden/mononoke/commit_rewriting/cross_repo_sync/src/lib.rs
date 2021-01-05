@@ -1029,6 +1029,14 @@ where
         res
     }
 
+    pub fn get_common_pushrebase_bookmarks(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<Vec<BookmarkName>, Error> {
+        self.commit_sync_data_provider
+            .get_common_pushrebase_bookmarks(ctx, self.get_small_repo().get_repoid())
+    }
+
     async fn unsafe_sync_commit_pushrebase_impl<'a>(
         &'a self,
         ctx: &'a CoreContext,

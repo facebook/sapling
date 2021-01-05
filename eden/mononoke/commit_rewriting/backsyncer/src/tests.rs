@@ -931,6 +931,7 @@ async fn init_repos(
                 reverse_bookmark_renamer: bookmark_renamer_type.get_reverse_bookmark_renamer(),
             }
         },
+        vec![BookmarkName::new("master")?],
     );
     let commit_syncer =
         CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider);
@@ -1235,6 +1236,7 @@ async fn init_merged_repos(
                     reverse_bookmark_renamer: reverse_bookmark_renamer,
                 }
             },
+            vec![BookmarkName::new("master")?],
         );
 
         let commit_syncer = CommitSyncer::new_with_provider(
@@ -1500,6 +1502,7 @@ async fn preserve_premerge_commit(
                     reverse_bookmark_renamer: bookmark_renamer.clone(),
                 }
             },
+            vec![BookmarkName::new("master")?],
         );
         CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider)
     };
