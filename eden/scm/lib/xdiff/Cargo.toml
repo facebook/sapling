@@ -14,4 +14,4 @@ path = "src/bin/diff.rs"
 
 [dependencies]
 xdiff-sys = { path = "../xdiff-sys" }
-structopt = "0.3.7"
+structopt = "0.3.21"
