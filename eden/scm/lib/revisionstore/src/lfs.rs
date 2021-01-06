@@ -1355,7 +1355,7 @@ impl LfsRemote {
             }
 
             let auth = if config.get_or("lfs", "use-client-certs", || true)? {
-                AuthConfig::new(&config).auth_for_url(&url)?
+                AuthConfig::new(&config).auth_for_url(&url)
             } else {
                 None
             };

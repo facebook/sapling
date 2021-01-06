@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::path::PathBuf;
+
 use thiserror::Error;
 
-use auth::X509Error;
 use edenapi_types::wire::WireToApiConversionError;
 use http::status::StatusCode;
 use http_client::HttpClientError;
@@ -18,8 +19,6 @@ pub enum EdenApiError {
     RequestSerializationFailed(#[source] serde_cbor::Error),
     #[error(transparent)]
     BadConfig(#[from] ConfigError),
-    #[error(transparent)]
-    BadCertificate(#[from] X509Error),
     #[error(transparent)]
     Http(#[from] HttpClientError),
     #[error("Server reported an error ({status}): {message}")]
@@ -36,6 +35,8 @@ pub enum EdenApiError {
 pub enum ConfigError {
     #[error("No server URL specified")]
     MissingUrl,
+    #[error("TLS certificate or key is missing or invalid: {0:?}")]
+    BadCertOrKey(PathBuf),
     #[error("Invalid server URL: {0}")]
     InvalidUrl(#[source] url::ParseError),
     #[error("Config field '{0}' is malformed")]
