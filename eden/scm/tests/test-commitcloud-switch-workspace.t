@@ -87,30 +87,14 @@ Switch workspace to the same workspace
   commitcloud: commits synchronized
   finished in * (glob)
 
-Switch workspace from a draft commit
+Switch workspace from a draft commit that is an ancestor of a main bookmark
   $ hg cloud join --switch -w w2
   commitcloud: synchronizing 'server' with 'user/test/w1'
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/w1' to the 'user/test/w2' workspace
-  abort: this repository can not be switched to the 'user/test/w2' workspace
-  please update your location to a public commit first
-  [255]
-  $ showgraph
-  @  B (W1): draft
-  │
-  o  A (W1): draft
-  │
-  o  base: public  remote/master
-  
-Switch workspace from a public commit 
-  $ hg up d20a80d4def3
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg cloud join --switch -w w2
-  commitcloud: synchronizing 'server' with 'user/test/w1'
-  commitcloud: commits synchronized
-  finished in * (glob)
-  commitcloud: now this repository will be switched from the 'user/test/w1' to the 'user/test/w2' workspace
+  working directory now at d20a80d4def3
   commitcloud: this repository is now connected to the 'user/test/w2' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w2'
   pulling dff058cfb955 from ssh://user@dummy/server
@@ -319,7 +303,7 @@ Try to switch with uncommitted changes
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/3' to the 'user/test/w1' workspace
-  abort: this repository can not be switched to the 'user/test/w1' workspace due to uncommitted changes
+  abort: uncommitted changes
   [255]
 
 Commit changes to be able to switch

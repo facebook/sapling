@@ -15,6 +15,7 @@ from edenscm.mercurial import (
     cmdutil,
     error,
     extensions,
+    hg,
     hintutil,
     lock as lockmod,
     node as nodemod,
@@ -234,23 +235,38 @@ def cloudjoin(ui, repo, **opts):
             with backuplock.lock(repo), repo.wlock(), repo.lock(), repo.transaction(
                 "commit cloud switch workspace clean up transaction"
             ) as tr:
-                # check uncommitted changes
-                if any(repo.status()):
-                    raise error.Abort(
-                        _(
-                            "this repository can not be switched to the '%s' workspace due to uncommitted changes"
-                        )
-                        % workspacename
-                    )
+                # enforce the precondition that working directory must be clean
+                cmdutil.bailifchanged(repo)
+
                 # check that the current location is a public commit
                 if repo["."].mutable():
-                    raise error.Abort(
-                        _(
-                            "this repository can not be switched to the '%s' workspace\n"
-                            "please update your location to a public commit first"
+                    # * get the public root of the current commit
+                    # * get the "main" bookmark that represents the main commit history
+                    # * if the root is an ancestor of that bookmark, then update to it (the commit will be public in dst workspace)
+                    currentnode = repo["."]
+                    newnode = currentnode
+                    while newnode.mutable():
+                        newnode = newnode.parents()[0]
+
+                    publicroot = newnode
+                    mainbookmark = bookmarksmod.mainbookmark(repo)
+                    mainbookmarknode = repo[mainbookmark]
+                    if repo.changelog.isancestor(
+                        publicroot.node(), mainbookmarknode.node()
+                    ):
+                        hg.update(repo, newnode, False)
+                        ui.status(
+                            _("working directory now at %s\n")
+                            % ui.label(str(publicroot), "node")
                         )
-                        % workspacename
-                    )
+                    else:
+                        raise error.Abort(
+                            _(
+                                "this repository can not be switched to the '%s' workspace\n"
+                                "please update your location to a public commit first like `hg up %s`"
+                            )
+                            % (workspacename, mainbookmark)
+                        )
                 # remove heads and bookmarks before connecting to a new workspace
                 visibility.setvisibleheads(repo, [])
                 # remove all local bookmarks
