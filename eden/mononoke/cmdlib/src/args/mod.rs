@@ -57,7 +57,8 @@ use crate::helpers::{
 };
 use crate::log;
 
-use self::cache::{add_cachelib_args, parse_and_init_cachelib, parse_caching};
+pub use self::cache::parse_caching;
+use self::cache::{add_cachelib_args, parse_and_init_cachelib};
 
 const CONFIG_PATH: &str = "mononoke-config-path";
 const REPO_ID: &str = "repo-id";

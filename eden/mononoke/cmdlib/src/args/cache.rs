@@ -151,7 +151,7 @@ pub(crate) fn parse_cachelib_shards<'a>(matches: &ArgMatches<'a>) -> usize {
     }
 }
 
-pub(crate) fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
+pub fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
     if matches.is_present(SKIP_CACHING) {
         Caching::Disabled
     } else if matches.is_present(CACHELIB_ONLY_BLOBSTORE_OLD) {
