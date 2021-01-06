@@ -9,12 +9,17 @@
 
 use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
+use async_trait::async_trait;
+use auto_impl::auto_impl;
 use bytes::Bytes;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use fbthrift::compact_protocol;
-use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_old::{future::ok, stream, Future, IntoFuture};
+use futures::{
+    compat::Future01CompatExt,
+    stream::{self, BoxStream, StreamExt},
+    TryFutureExt,
+};
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };
@@ -29,7 +34,6 @@ mod caching;
 mod errors;
 #[cfg(test)]
 mod test;
-mod wrappers;
 
 pub use caching::{get_cache_key, CachingChangesets};
 pub use errors::ErrorKind;
@@ -98,13 +102,11 @@ pub fn deserialize_cs_entries(blob: &Bytes) -> Result<Vec<ChangesetEntry>> {
         compact_protocol::deserialize(blob)?;
     let mut entries = vec![];
     for thrift_entry in thrift_entries {
-        let parents: Result<Vec<_>> = thrift_entry
+        let parents = thrift_entry
             .parents
             .into_iter()
             .map(ChangesetId::from_thrift)
-            .collect();
-
-        let parents = parents?;
+            .collect::<Result<Vec<_>>>()?;
         let entry = ChangesetEntry {
             repo_id: RepositoryId::new(thrift_entry.repo_id.0),
             cs_id: ChangesetId::from_thrift(thrift_entry.cs_id)?,
@@ -113,7 +115,6 @@ pub fn deserialize_cs_entries(blob: &Bytes) -> Result<Vec<ChangesetEntry>> {
         };
         entries.push(entry);
     }
-
     Ok(entries)
 }
 
@@ -125,35 +126,37 @@ pub struct ChangesetInsert {
 }
 
 /// Interface to storage of changesets that have been completely stored in Mononoke.
+#[async_trait]
+#[auto_impl(&, Arc)]
 pub trait Changesets: Send + Sync {
     /// Add a new entry to the changesets table. Returns true if new changeset was inserted,
     /// returns false if the same changeset has already existed.
-    fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error>;
+    async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error>;
 
     /// Retrieve the row specified by this commit, if available.
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Option<ChangesetEntry>, Error>;
+    ) -> Result<Option<ChangesetEntry>, Error>;
 
     /// Retrieve the rows for all the commits if available
-    fn get_many(
+    async fn get_many(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
-    ) -> BoxFuture<Vec<ChangesetEntry>, Error>;
+    ) -> Result<Vec<ChangesetEntry>, Error>;
 
     /// Retrieve the rows for all the commits with the given prefix up to the given limit
-    fn get_many_by_prefix(
+    async fn get_many_by_prefix(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
-    ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error>;
+    ) -> Result<ChangesetIdsResolvedFromPrefix, Error>;
 
     fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]);
 
@@ -263,154 +266,125 @@ impl SqlConstruct for SqlChangesets {
 
 impl SqlConstructFromMetadataDatabaseConfig for SqlChangesets {}
 
+#[async_trait]
 impl Changesets for SqlChangesets {
-    fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
+    async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
         STATS::adds.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
 
-        cloned!(self.write_connection);
-
         let parent_rows = {
             if cs.parents.is_empty() {
-                Ok(Vec::new()).into_future().boxify()
+                Vec::new()
             } else {
-                SelectChangesets::query(&write_connection, &cs.repo_id, &cs.parents[..]).boxify()
+                SelectChangesets::query(&self.write_connection, &cs.repo_id, &cs.parents[..])
+                    .compat()
+                    .await?
             }
         };
+        check_missing_rows(&cs.parents, &parent_rows)?;
+        let gen = parent_rows.iter().map(|row| row.2).max().unwrap_or(0) + 1;
+        let transaction = self.write_connection.start_transaction().compat().await?;
+        let (transaction, result) =
+            InsertChangeset::query_with_transaction(transaction, &[(&cs.repo_id, &cs.cs_id, &gen)])
+                .compat()
+                .await?;
 
-        parent_rows
-            .and_then(move |parent_rows| {
-                try_boxfuture!(check_missing_rows(&cs.parents, &parent_rows));
-                let gen = parent_rows.iter().map(|row| row.2).max().unwrap_or(0) + 1;
-                write_connection
-                    .start_transaction()
-                    .and_then({
-                        cloned!(cs);
-                        move |transaction| {
-                            InsertChangeset::query_with_transaction(
-                                transaction,
-                                &[(&cs.repo_id, &cs.cs_id, &gen)],
-                            )
-                        }
-                    })
-                    .and_then(move |(transaction, result)| {
-                        if result.affected_rows() == 1 && result.last_insert_id().is_some() {
-                            insert_parents(
-                                transaction,
-                                result.last_insert_id().unwrap(),
-                                cs,
-                                parent_rows,
-                            )
-                            .map(|()| true)
-                            .left_future()
-                        } else {
-                            transaction
-                                .rollback()
-                                .and_then(move |()| check_changeset_matches(&write_connection, cs))
-                                .map(|()| false)
-                                .right_future()
-                        }
-                    })
-                    .boxify()
-            })
-            .boxify()
+        if result.affected_rows() == 1 && result.last_insert_id().is_some() {
+            insert_parents(
+                transaction,
+                result.last_insert_id().unwrap(),
+                cs,
+                parent_rows,
+            )
+            .await?;
+            Ok(true)
+        } else {
+            transaction.rollback().compat().await?;
+            check_changeset_matches(&self.write_connection, cs).await?;
+            Ok(false)
+        }
     }
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Option<ChangesetEntry>, Error> {
+    ) -> Result<Option<ChangesetEntry>, Error> {
         STATS::gets.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        cloned!(self.read_master_connection);
-
-        select_changeset(&self.read_connection, repo_id, cs_id)
-            .and_then(move |maybe_mapping| {
-                match maybe_mapping {
-                    Some(mapping) => Ok(Some(mapping)).into_future().boxify(),
-                    None => {
-                        STATS::gets_master.add_value(1);
-                        ctx.perf_counters()
-                            .increment_counter(PerfCounterType::SqlReadsMaster);
-                        select_changeset(&read_master_connection, repo_id, cs_id)
-                    }
-                }
-            })
-            .boxify()
+        let maybe_mapping = select_changeset(&self.read_connection, repo_id, cs_id).await?;
+        match maybe_mapping {
+            Some(mapping) => Ok(Some(mapping)),
+            None => {
+                STATS::gets_master.add_value(1);
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlReadsMaster);
+                select_changeset(&self.read_master_connection, repo_id, cs_id).await
+            }
+        }
     }
 
-    fn get_many(
+    async fn get_many(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
-    ) -> BoxFuture<Vec<ChangesetEntry>, Error> {
-        cloned!(self.read_master_connection);
-
+    ) -> Result<Vec<ChangesetEntry>, Error> {
         if cs_ids.is_empty() {
-            ok(vec![]).boxify()
+            return Ok(vec![]);
+        }
+        STATS::get_many.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
+        let fetched_cs = select_many_changesets(&self.read_connection, repo_id, &cs_ids).await?;
+        let fetched_set: HashSet<_> = fetched_cs
+            .clone()
+            .into_iter()
+            .map(|cs_entry| cs_entry.cs_id)
+            .collect();
+
+        let notfetched_cs_ids: Vec<_> = cs_ids
+            .into_iter()
+            .filter(|cs_id| !fetched_set.contains(cs_id))
+            .collect();
+        if notfetched_cs_ids.is_empty() {
+            Ok(fetched_cs)
         } else {
             STATS::get_many.add_value(1);
             ctx.perf_counters()
-                .increment_counter(PerfCounterType::SqlReadsReplica);
-
-            select_many_changesets(&self.read_connection, repo_id, &cs_ids)
-                .and_then(move |fetched_cs| {
-                    let fetched_set: HashSet<_> = fetched_cs
-                        .clone()
-                        .into_iter()
-                        .map(|cs_entry| cs_entry.cs_id)
-                        .collect();
-
-                    let notfetched_cs_ids: Vec<_> = cs_ids
-                        .into_iter()
-                        .filter(|cs_id| !fetched_set.contains(cs_id))
-                        .collect();
-                    if notfetched_cs_ids.is_empty() {
-                        ok(fetched_cs).left_future()
-                    } else {
-                        STATS::get_many.add_value(1);
-                        ctx.perf_counters()
-                            .increment_counter(PerfCounterType::SqlReadsMaster);
-                        select_many_changesets(&read_master_connection, repo_id, &notfetched_cs_ids)
-                            .map(move |mut master_fetched_cs| {
-                                master_fetched_cs.extend(fetched_cs);
-                                master_fetched_cs
-                            })
-                            .right_future()
-                    }
-                })
-                .boxify()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
+            let mut master_fetched_cs =
+                select_many_changesets(&self.read_master_connection, repo_id, &notfetched_cs_ids)
+                    .await?;
+            master_fetched_cs.extend(fetched_cs);
+            Ok(master_fetched_cs)
         }
     }
 
-    fn get_many_by_prefix(
+    async fn get_many_by_prefix(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
-    ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
+    ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
         STATS::get_many_by_prefix.add_value(1);
-        cloned!(self.read_master_connection);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        fetch_many_by_prefix(&self.read_connection, repo_id, &cs_prefix, limit)
-            .and_then(move |resolved_cs| {
-                match resolved_cs {
-                    ChangesetIdsResolvedFromPrefix::NoMatch => {
-                        ctx.perf_counters()
-                            .increment_counter(PerfCounterType::SqlReadsMaster);
-                        fetch_many_by_prefix(&read_master_connection, repo_id, &cs_prefix, limit)
-                    }
-                    _ => ok(resolved_cs).boxify(),
-                }
-            })
-            .boxify()
+        let resolved_cs =
+            fetch_many_by_prefix(&self.read_connection, repo_id, &cs_prefix, limit).await?;
+        match resolved_cs {
+            ChangesetIdsResolvedFromPrefix::NoMatch => {
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlReadsMaster);
+                fetch_many_by_prefix(&self.read_master_connection, repo_id, &cs_prefix, limit).await
+            }
+            _ => Ok(resolved_cs),
+        }
     }
 
     fn prime_cache(&self, _ctx: &CoreContext, _changesets: &[ChangesetEntry]) {
@@ -422,32 +396,32 @@ impl Changesets for SqlChangesets {
     }
 }
 
-fn fetch_many_by_prefix(
+async fn fetch_many_by_prefix(
     connection: &Connection,
     repo_id: RepositoryId,
     cs_prefix: &ChangesetIdPrefix,
     limit: usize,
-) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
-    SelectChangesetsRange::query(
+) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
+    let rows = SelectChangesetsRange::query(
         &connection,
         &repo_id,
         &cs_prefix.min_as_ref(),
         &cs_prefix.max_as_ref(),
         &(limit + 1),
     )
-    .map(move |rows| {
-        let mut fetched_cs: Vec<ChangesetId> = rows.into_iter().map(|row| row.0).collect();
-        match fetched_cs.len() {
-            0 => ChangesetIdsResolvedFromPrefix::NoMatch,
-            1 => ChangesetIdsResolvedFromPrefix::Single(fetched_cs[0].clone()),
-            l if l <= limit => ChangesetIdsResolvedFromPrefix::Multiple(fetched_cs),
-            _ => ChangesetIdsResolvedFromPrefix::TooMany({
-                fetched_cs.pop();
-                fetched_cs
-            }),
-        }
-    })
-    .boxify()
+    .compat()
+    .await?;
+    let mut fetched_cs: Vec<ChangesetId> = rows.into_iter().map(|row| row.0).collect();
+    let result = match fetched_cs.len() {
+        0 => ChangesetIdsResolvedFromPrefix::NoMatch,
+        1 => ChangesetIdsResolvedFromPrefix::Single(fetched_cs[0].clone()),
+        l if l <= limit => ChangesetIdsResolvedFromPrefix::Multiple(fetched_cs),
+        _ => ChangesetIdsResolvedFromPrefix::TooMany({
+            fetched_cs.pop();
+            fetched_cs
+        }),
+    };
+    Ok(result)
 }
 
 impl SqlChangesets {
@@ -456,37 +430,42 @@ impl SqlChangesets {
         repo_id: RepositoryId,
         min_id: u64,
         max_id: u64,
-    ) -> BoxStream<ChangesetId, Error> {
+    ) -> BoxStream<'_, Result<ChangesetId, Error>> {
         // [min_id, max_id)
-        cloned!(self.read_master_connection);
         // As SQL request is BETWEEN, both bounds including
         let max_id = max_id - 1;
 
-        SelectAllChangesetsIdsInRange::query(&read_master_connection, &repo_id, &min_id, &max_id)
-            .map(move |rows| {
-                let changesets_ids = rows.into_iter().map(|row| row.0);
-                stream::iter_ok(changesets_ids).boxify()
-            })
-            .from_err()
-            .flatten_stream()
-            .boxify()
+        cloned!(self.read_master_connection);
+        async move {
+            SelectAllChangesetsIdsInRange::query(
+                &read_master_connection,
+                &repo_id,
+                &min_id,
+                &max_id,
+            )
+            .compat()
+            .await
+        }
+        .map_ok(move |rows| {
+            let changesets_ids = rows.into_iter().map(|row| Ok(row.0));
+            stream::iter(changesets_ids)
+        })
+        .try_flatten_stream()
+        .boxed()
     }
 
-    pub fn get_changesets_ids_bounds(
+    pub async fn get_changesets_ids_bounds(
         &self,
         repo_id: RepositoryId,
-    ) -> BoxFuture<(Option<u64>, Option<u64>), Error> {
-        cloned!(self.read_master_connection);
-
-        SelectChangesetsIdsBounds::query(&read_master_connection, &repo_id)
-            .map(move |rows| {
-                if rows.is_empty() {
-                    (None, None)
-                } else {
-                    (Some(rows[0].0), Some(rows[0].1))
-                }
-            })
-            .boxify()
+    ) -> Result<(Option<u64>, Option<u64>), Error> {
+        let rows = SelectChangesetsIdsBounds::query(&self.read_master_connection, &repo_id)
+            .compat()
+            .await?;
+        if rows.is_empty() {
+            Ok((None, None))
+        } else {
+            Ok((Some(rows[0].0), Some(rows[0].1)))
+        }
     }
 }
 
@@ -508,12 +487,12 @@ fn check_missing_rows(
     }
 }
 
-fn insert_parents(
+async fn insert_parents(
     transaction: Transaction,
     new_cs_id: u64,
     cs: ChangesetInsert,
     parent_rows: Vec<(u64, ChangesetId, u64)>,
-) -> impl Future<Item = (), Error = Error> {
+) -> Result<(), Error> {
     // parent_rows might not be in the same order as cs.parents.
     let parent_map: HashMap<_, _> = parent_rows.into_iter().map(|row| (row.1, row.0)).collect();
 
@@ -537,76 +516,77 @@ fn insert_parents(
         .map(|row| (&row.0, &row.1, &row.2))
         .collect();
 
-    InsertParents::query_with_transaction(transaction, &ref_parent_inserts[..])
-        .and_then(|(transaction, _)| transaction.commit())
+    let (transaction, _) =
+        InsertParents::query_with_transaction(transaction, &ref_parent_inserts[..])
+            .compat()
+            .await?;
+    transaction.commit().compat().await?;
+    Ok(())
 }
 
-fn check_changeset_matches(
+async fn check_changeset_matches(
     connection: &Connection,
     cs: ChangesetInsert,
-) -> impl Future<Item = (), Error = Error> {
-    select_changeset(&connection, cs.repo_id, cs.cs_id).and_then(move |stored_cs| {
-        let stored_parents = stored_cs.map(|cs| cs.parents);
-        if Some(&cs.parents) == stored_parents.as_ref() {
-            Ok(())
-        } else {
-            Err(ErrorKind::DuplicateInsertionInconsistency(
-                cs.cs_id,
-                stored_parents.unwrap_or(Vec::new()),
-                cs.parents,
-            )
-            .into())
-        }
-    })
+) -> Result<(), Error> {
+    let stored_parents = select_changeset(&connection, cs.repo_id, cs.cs_id)
+        .await?
+        .map(|cs| cs.parents);
+    if Some(&cs.parents) == stored_parents.as_ref() {
+        Ok(())
+    } else {
+        Err(ErrorKind::DuplicateInsertionInconsistency(
+            cs.cs_id,
+            stored_parents.unwrap_or_default(),
+            cs.parents,
+        )
+        .into())
+    }
 }
 
-fn select_changeset(
+async fn select_changeset(
     connection: &Connection,
     repo_id: RepositoryId,
     cs_id: ChangesetId,
-) -> BoxFuture<Option<ChangesetEntry>, Error> {
-    cloned!(repo_id, cs_id);
-
-    SelectChangeset::query(&connection, &repo_id, &cs_id)
-        .map(move |rows| {
-            if rows.is_empty() {
-                None
-            } else {
-                let gen = rows[0].0;
-                Some(ChangesetEntry {
-                    repo_id,
-                    cs_id,
-                    parents: rows.into_iter().filter_map(|row| row.1).collect(),
-                    gen,
-                })
-            }
+) -> Result<Option<ChangesetEntry>, Error> {
+    let rows = SelectChangeset::query(&connection, &repo_id, &cs_id)
+        .compat()
+        .await?;
+    let result = if rows.is_empty() {
+        None
+    } else {
+        let gen = rows[0].0;
+        Some(ChangesetEntry {
+            repo_id,
+            cs_id,
+            parents: rows.into_iter().filter_map(|row| row.1).collect(),
+            gen,
         })
-        .boxify()
+    };
+    Ok(result)
 }
 
-fn select_many_changesets(
+async fn select_many_changesets(
     connection: &Connection,
     repo_id: RepositoryId,
     cs_ids: &Vec<ChangesetId>,
-) -> impl Future<Item = Vec<ChangesetEntry>, Error = Error> {
-    SelectManyChangesets::query(&connection, &repo_id, &cs_ids[..]).map(move |fetched_changesets| {
-        let mut cs_id_to_cs_entry = HashMap::new();
-
-        for (cs_id, gen, maybe_parent, _) in fetched_changesets {
-            cs_id_to_cs_entry
-                .entry(cs_id)
-                .or_insert(ChangesetEntry {
-                    repo_id,
-                    cs_id,
-                    parents: vec![],
-                    gen,
-                })
-                .parents
-                .extend(maybe_parent.into_iter());
-        }
-
-        cs_id_to_cs_entry.values().cloned().collect()
-    })
+) -> Result<Vec<ChangesetEntry>, Error> {
+    let fetched_changesets = SelectManyChangesets::query(&connection, &repo_id, &cs_ids[..])
+        .compat()
+        .await?;
+    let mut cs_id_to_cs_entry = HashMap::new();
+    for (cs_id, gen, maybe_parent, _) in fetched_changesets {
+        cs_id_to_cs_entry
+            .entry(cs_id)
+            .or_insert(ChangesetEntry {
+                repo_id,
+                cs_id,
+                parents: vec![],
+                gen,
+            })
+            .parents
+            .extend(maybe_parent.into_iter());
+    }
+    Ok(cs_id_to_cs_entry.values().cloned().collect())
 }
 
 #[cfg(test)]

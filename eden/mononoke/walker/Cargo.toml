@@ -42,7 +42,6 @@ async_compression = { git = "https://github.com/facebookexperimental/rust-shed.g
 cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 hash_memo = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -58,7 +57,6 @@ dashmap = "3.11.10"
 derive_more = "0.99.3"
 filetime = "0.2.9"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
 hex = "0.4"
 internment = {version = "0.4.1", features = ["serde"]}
 itertools = "0.8"

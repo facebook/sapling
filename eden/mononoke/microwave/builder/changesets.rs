@@ -6,16 +6,11 @@
  */
 
 use anyhow::Error;
+use async_trait::async_trait;
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    channel::mpsc::Sender,
-    compat::Future01CompatExt,
-    future::{FutureExt as _, TryFutureExt},
-    sink::SinkExt,
-};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{channel::mpsc::Sender, sink::SinkExt};
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };
@@ -42,45 +37,40 @@ impl MicrowaveChangesets {
     }
 }
 
+#[async_trait]
 impl Changesets for MicrowaveChangesets {
-    fn add(&self, _ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
+    async fn add(&self, _ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
         // See rationale in filenodes.rs for why we error out on unexpected calls under
         // MicrowaveFilenodes.
         unimplemented!("MicrowaveChangesets: unexpected add in repo {}", cs.repo_id)
     }
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Option<ChangesetEntry>, Error> {
+    ) -> Result<Option<ChangesetEntry>, Error> {
         cloned!(self.inner, mut self.recorder);
 
         // NOTE: See MicrowaveFilenodes for context on this.
         assert_eq!(repo_id, self.repo_id);
+        let entry = inner.get(ctx, repo_id, cs_id).await?;
 
-        async move {
-            let entry = inner.get(ctx, repo_id, cs_id).compat().await?;
-
-            if let Some(ref entry) = entry {
-                assert_eq!(entry.repo_id, repo_id); // Same as above
-                recorder.send(entry.clone()).await?;
-            }
-
-            Ok(entry)
+        if let Some(ref entry) = entry {
+            assert_eq!(entry.repo_id, repo_id); // Same as above
+            recorder.send(entry.clone()).await?;
         }
-        .boxed()
-        .compat()
-        .boxify()
+
+        Ok(entry)
     }
 
-    fn get_many(
+    async fn get_many(
         &self,
         _ctx: CoreContext,
         repo_id: RepositoryId,
         _cs_ids: Vec<ChangesetId>,
-    ) -> BoxFuture<Vec<ChangesetEntry>, Error> {
+    ) -> Result<Vec<ChangesetEntry>, Error> {
         // Same as above
         unimplemented!(
             "MicrowaveChangesets: unexpected get_many in repo {}",
@@ -88,13 +78,13 @@ impl Changesets for MicrowaveChangesets {
         )
     }
 
-    fn get_many_by_prefix(
+    async fn get_many_by_prefix(
         &self,
         _ctx: CoreContext,
         repo_id: RepositoryId,
         _cs_prefix: ChangesetIdPrefix,
         _limit: usize,
-    ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
+    ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
         // Same as above
         unimplemented!(
             "MicrowaveChangesets: unexpected get_many_by_prefix in repo {}",

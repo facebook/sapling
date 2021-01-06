@@ -10,7 +10,6 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use changesets::Changesets;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use mononoke_types::{ChangesetId, Generation, RepositoryId};
 use std::{any::Any, collections::HashMap, sync::Arc};
 
@@ -61,7 +60,6 @@ impl ChangesetFetcher for SimpleChangesetFetcher {
         let maybe_cs = self
             .changesets
             .get(ctx, self.repo_id.clone(), cs_id.clone())
-            .compat()
             .await?;
         let cs = maybe_cs.ok_or_else(|| format_err!("{} not found", cs_id))?;
         Ok(Generation::new(cs.gen))
@@ -75,7 +73,6 @@ impl ChangesetFetcher for SimpleChangesetFetcher {
         let maybe_cs = self
             .changesets
             .get(ctx, self.repo_id.clone(), cs_id.clone())
-            .compat()
             .await?;
         let cs = maybe_cs.ok_or_else(|| format_err!("{} not found", cs_id))?;
         Ok(cs.parents)

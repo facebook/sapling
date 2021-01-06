@@ -21,7 +21,6 @@ use cloned::cloned;
 use context::CoreContext;
 use filestore::FilestoreConfig;
 use futures::{
-    compat::Future01CompatExt,
     future::{try_join, BoxFuture},
     stream::FuturesUnordered,
     FutureExt, Stream, TryStreamExt,
@@ -199,7 +198,6 @@ impl BlobRepo {
             .inner
             .changesets
             .get(ctx, self.get_repoid(), changesetid)
-            .compat()
             .await?;
         Ok(changeset.is_some())
     }
@@ -214,7 +212,6 @@ impl BlobRepo {
             .inner
             .changesets
             .get(ctx, self.get_repoid(), changesetid)
-            .compat()
             .await?;
         let parents = changeset
             .ok_or_else(|| format_err!("Commit {} does not exist in the repo", changesetid))?
@@ -334,7 +331,6 @@ impl BlobRepo {
             .inner
             .changesets
             .get(ctx, self.get_repoid(), cs)
-            .compat()
             .await?;
         Ok(result.map(|res| Generation::new(res.gen)))
     }
@@ -475,14 +471,7 @@ pub async fn save_bonsai_changesets(
                 cs_id: bcs_id,
                 parents: bcs.parents().into_iter().collect(),
             };
-
-            cloned!(ctx, complete_changesets);
-            bonsai_complete_futs.push(async move {
-                complete_changesets
-                    .add(ctx, completion_record)
-                    .compat()
-                    .await
-            });
+            bonsai_complete_futs.push(complete_changesets.add(ctx.clone(), completion_record));
         }
     }
 

@@ -11,13 +11,11 @@ blobstore = { path = "../blobstore" }
 context = { path = "../server/context" }
 mononoke_types = { path = "../mononoke_types" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
 digest = "0.8"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
 itertools = "0.8"
 pin-project = "0.4"
 sha-1 = "0.8"

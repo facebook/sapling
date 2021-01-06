@@ -223,7 +223,6 @@ impl BlobRepoHg for BlobRepo {
                 let existing: HashSet<_> = self
                     .get_changesets_object()
                     .get_many(ctx.clone(), self.get_repoid(), notfound.clone())
-                    .compat()
                     .await?
                     .into_iter()
                     .map(|entry| entry.cs_id)
@@ -281,7 +280,6 @@ impl BlobRepoHg for BlobRepo {
                 let res = self
                     .get_changesets_object()
                     .get(ctx, self.get_repoid(), bonsai)
-                    .compat()
                     .await?;
                 Ok(res.is_some())
             }
@@ -304,7 +302,6 @@ impl BlobRepoHg for BlobRepo {
         let parents = self
             .get_changesets_object()
             .get(ctx.clone(), self.get_repoid(), csid)
-            .compat()
             .await?
             .ok_or(ErrorKind::BonsaiNotFound(csid))?
             .parents

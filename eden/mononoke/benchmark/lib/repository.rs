@@ -291,42 +291,44 @@ impl<C> DelayedChangesets<C> {
     }
 }
 
+#[async_trait]
 impl<C: Changesets> Changesets for DelayedChangesets<C> {
-    fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
-        delay(self.put_dist, self.inner.add(ctx, cs)).boxify()
+    async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
+        delay_v2(self.put_dist).await;
+        self.inner.add(ctx, cs).await
     }
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Option<ChangesetEntry>, Error> {
-        delay(self.get_dist, self.inner.get(ctx, repo_id, cs_id)).boxify()
+    ) -> Result<Option<ChangesetEntry>, Error> {
+        delay_v2(self.get_dist).await;
+        self.inner.get(ctx, repo_id, cs_id).await
     }
 
-    fn get_many(
+    async fn get_many(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
-    ) -> BoxFuture<Vec<ChangesetEntry>, Error> {
-        delay(self.get_dist, self.inner.get_many(ctx, repo_id, cs_ids)).boxify()
+    ) -> Result<Vec<ChangesetEntry>, Error> {
+        delay_v2(self.get_dist).await;
+        self.inner.get_many(ctx, repo_id, cs_ids).await
     }
 
-    fn get_many_by_prefix(
+    async fn get_many_by_prefix(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
-    ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
-        delay(
-            self.get_dist,
-            self.inner
-                .get_many_by_prefix(ctx, repo_id, cs_prefix, limit),
-        )
-        .boxify()
+    ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
+        delay_v2(self.get_dist).await;
+        self.inner
+            .get_many_by_prefix(ctx, repo_id, cs_prefix, limit)
+            .await
     }
 
     fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]) {

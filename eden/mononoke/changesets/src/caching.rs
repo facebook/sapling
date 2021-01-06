@@ -17,20 +17,15 @@ use changeset_entry_thrift as thrift;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
-};
-use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::Future;
 use maplit::hashset;
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };
-use std::collections::HashMap;
-use std::collections::HashSet;
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 #[cfg(test)]
 use caching_ext::MockStoreStats;
@@ -113,74 +108,56 @@ impl CachingChangesets {
     }
 }
 
+#[async_trait]
 impl Changesets for CachingChangesets {
-    fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
-        self.changesets.add(ctx, cs)
+    async fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> Result<bool, Error> {
+        self.changesets.add(ctx, cs).await
     }
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
-    ) -> BoxFuture<Option<ChangesetEntry>, Error> {
-        let this = (*self).clone();
-
-        async move {
-            let ctx = (&ctx, repo_id, &this);
-            let mut map = get_or_fill(ctx, hashset![cs_id]).await?;
-            Ok(map.remove(&cs_id))
-        }
-        .boxed()
-        .compat()
-        .boxify()
+    ) -> Result<Option<ChangesetEntry>, Error> {
+        let ctx = (&ctx, repo_id, self);
+        let mut map = get_or_fill(ctx, hashset![cs_id]).await?;
+        Ok(map.remove(&cs_id))
     }
 
-    fn get_many(
+    async fn get_many(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_ids: Vec<ChangesetId>,
-    ) -> BoxFuture<Vec<ChangesetEntry>, Error> {
-        let this = (*self).clone();
-
-        async move {
-            let ctx = (&ctx, repo_id, &this);
-
-            let res = get_or_fill(ctx, cs_ids.into_iter().collect())
-                .await?
-                .into_iter()
-                .map(|(_, val)| val)
-                .collect();
-            Ok(res)
-        }
-        .boxed()
-        .compat()
-        .boxify()
+    ) -> Result<Vec<ChangesetEntry>, Error> {
+        let ctx = (&ctx, repo_id, self);
+        let res = get_or_fill(ctx, cs_ids.into_iter().collect())
+            .await?
+            .into_iter()
+            .map(|(_, val)| val)
+            .collect();
+        Ok(res)
     }
 
     /// Use caching for the full changeset ids and slower path otherwise.
-    fn get_many_by_prefix(
+    async fn get_many_by_prefix(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
-    ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
+    ) -> Result<ChangesetIdsResolvedFromPrefix, Error> {
         if let Some(id) = cs_prefix.into_changeset_id() {
-            return self
-                .get(ctx, repo_id, id)
-                .map(move |res| {
-                    match res {
-                        Some(_) if limit > 0 => ChangesetIdsResolvedFromPrefix::Single(id),
-                        _ => ChangesetIdsResolvedFromPrefix::NoMatch,
-                    }
-                })
-                .boxify();
+            let res = self.get(ctx, repo_id, id).await?;
+            return match res {
+                Some(_) if limit > 0 => Ok(ChangesetIdsResolvedFromPrefix::Single(id)),
+                _ => Ok(ChangesetIdsResolvedFromPrefix::NoMatch),
+            };
         }
         self.changesets
             .get_many_by_prefix(ctx, repo_id, cs_prefix, limit)
-            .boxify()
+            .await
     }
 
     fn prime_cache(&self, _ctx: &CoreContext, changesets: &[ChangesetEntry]) {
@@ -258,7 +235,6 @@ impl KeyedEntityStore<ChangesetId, ChangesetEntry> for CacheRequest<'_> {
         let res = mapping
             .changesets
             .get_many((*ctx).clone(), *repo_id, keys.into_iter().collect())
-            .compat()
             .await?;
 
         Result::<_, Error>::Ok(res.into_iter().map(|e| (e.cs_id, e)).collect())

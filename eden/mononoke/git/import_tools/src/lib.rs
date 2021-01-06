@@ -24,7 +24,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use filestore::{self, Alias, FetchKey, FilestoreConfig, StoreRequest};
-use futures::{compat::Future01CompatExt, future, stream, Stream, StreamExt, TryStreamExt};
+use futures::{future, stream, Stream, StreamExt, TryStreamExt};
 use git2::{Oid, Repository, Sort};
 use git_types::TreeHandle;
 use linked_hash_map::LinkedHashMap;
@@ -260,7 +260,6 @@ pub async fn gitimport(
                                 parents: bcs.parents().collect(),
                             },
                         )
-                        .compat()
                         .await?;
 
                     if bonsai_git_mapping {

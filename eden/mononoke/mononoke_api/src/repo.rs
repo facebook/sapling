@@ -816,7 +816,6 @@ impl RepoContext {
                         prefix,
                         MAX_LIMIT_AMBIGUOUS_IDS,
                     )
-                    .compat()
                     .await?,
             ),
             ChangesetPrefixSpecifier::Globalrev(prefix) => {
@@ -1012,7 +1011,6 @@ impl RepoContext {
                     self.blob_repo().get_repoid(),
                     queue.clone(),
                 )
-                .compat()
                 .await?
                 .into_iter()
                 .map(|cs_entry| cs_entry.parents)

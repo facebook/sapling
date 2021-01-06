@@ -15,7 +15,6 @@ use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
     future::{try_join, TryFutureExt},
     stream::{self, BoxStream, StreamExt, TryStreamExt},
     Stream,
@@ -69,7 +68,6 @@ pub fn fetch_all_public_changesets<'a>(
     async move {
         let (start, stop) = changesets
             .get_changesets_ids_bounds(repo_id.clone())
-            .compat()
             .await?;
 
         let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
@@ -81,13 +79,10 @@ pub fn fetch_all_public_changesets<'a>(
     .and_then(move |(lower_bound, upper_bound)| async move {
         let ids: Vec<_> = changesets
             .get_list_bs_cs_id_in_range_exclusive(repo_id, lower_bound, upper_bound)
-            .compat()
             .try_collect()
             .await?;
         let (entries, public) = try_join(
-            changesets
-                .get_many(ctx.clone(), repo_id, ids.clone())
-                .compat(),
+            changesets.get_many(ctx.clone(), repo_id, ids.clone()),
             phases.get_public_raw(ctx, &ids),
         )
         .await?;

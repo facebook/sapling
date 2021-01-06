@@ -17,7 +17,6 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{
     channel::oneshot,
-    compat::Future01CompatExt,
     future::{self, BoxFuture, FutureExt, TryFutureExt},
     stream::BoxStream,
 };
@@ -288,7 +287,6 @@ impl CreateChangeset {
             };
             complete_changesets
                 .add(ctx.clone(), completion_record)
-                .compat()
                 .await
                 .context("While inserting into changeset table")?;
 

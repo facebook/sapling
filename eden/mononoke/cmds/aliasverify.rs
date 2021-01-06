@@ -17,7 +17,6 @@ use anyhow::{format_err, Error, Result};
 use bytes::Bytes;
 use clap::Arg;
 use fbinit::FacebookInit;
-use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::future::TryFutureExt;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::try_join;
@@ -222,10 +221,9 @@ impl AliasVerification {
             "Process Changesets with ids: [{:?}, {:?})", min_id, max_id
         );
 
-        let bcs_ids = self
-            .sqlchangesets
-            .get_list_bs_cs_id_in_range_exclusive(self.repoid, min_id, max_id)
-            .compat();
+        let bcs_ids =
+            self.sqlchangesets
+                .get_list_bs_cs_id_in_range_exclusive(self.repoid, min_id, max_id);
 
         bcs_ids
             .and_then(move |bcs_id| async move {
@@ -256,7 +254,6 @@ impl AliasVerification {
         let (min_id, max_id) = self
             .sqlchangesets
             .get_changesets_ids_bounds(self.repoid)
-            .compat()
             .await?;
 
         let mut bounds = vec![];
