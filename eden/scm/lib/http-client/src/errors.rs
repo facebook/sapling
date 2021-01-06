@@ -25,6 +25,8 @@ pub enum HttpClientError {
     #[error(transparent)]
     CborError(#[from] serde_cbor::Error),
     #[error(transparent)]
+    CborStreamError(#[from] crate::stream::CborStreamError),
+    #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
 

@@ -17,6 +17,16 @@ use futures::{
 use pin_project::pin_project;
 use serde::de::DeserializeOwned;
 use serde_cbor::Deserializer;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum CborStreamError {
+    #[error(transparent)]
+    CborError(serde_cbor::Error),
+
+    #[error("Unexpected trailing data found at end of CBOR stream ({0} bytes)")]
+    TrailingData(usize),
+}
 
 const DEFAULT_BUFFER_SIZE: usize = 1024 * 1024;
 
@@ -58,7 +68,7 @@ where
     T: DeserializeOwned,
     S: Stream<Item = Result<B, E>> + Send + 'static,
     B: AsRef<[u8]>,
-    E: From<serde_cbor::Error>,
+    E: From<CborStreamError>,
 {
     type Item = Result<T, E>;
 
@@ -79,6 +89,7 @@ where
                 }
                 Err(e) if !e.is_eof() => {
                     *this.terminated = true;
+                    let e = CborStreamError::CborError(e);
                     return Poll::Ready(Some(Err(E::from(e))));
                 }
                 _ => {}
@@ -103,6 +114,13 @@ where
                     return Poll::Ready(Some(Err(e)));
                 }
                 None => {
+                    // At this point the stream is complete, so we expect to have read everything.
+                    // If we haven't, then something went wrong during the transfer and the data
+                    // we're handling seems corrupted: raise an error in that case.
+                    if !this.buffer.is_empty() {
+                        let e = CborStreamError::TrailingData(this.buffer.len());
+                        return Poll::Ready(Some(Err(E::from(e))));
+                    }
                     return Poll::Ready(None);
                 }
             }
@@ -303,6 +321,28 @@ mod tests {
 
         let res: Vec<TestItem> = cbor_stream.try_collect().await?;
         assert_eq!(res, items);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_truncated_data() -> Result<()> {
+        // Add a valid chunk, but truncate it, though in practice, the truncated data could be
+        // stuff that looks like it could be CBOR but doesn't decode properly (like an error
+        // string).
+        let mut chunk = serde_cbor::to_vec(&TestItem::new("test1"))?;
+        chunk.pop();
+        let len = chunk.len();
+
+        let chunks: Vec<Result<Vec<u8>, CborStreamError>> = vec![Ok(chunk)];
+        let mut cbor_stream = Box::pin(CborStream::new(stream::iter(chunks)));
+
+        let res1: Result<Option<TestItem>, _> = cbor_stream.try_next().await;
+
+        match res1 {
+            Err(CborStreamError::TrailingData(l)) if l == len => {}
+            other => panic!("Unexpected result on trailing data: {:?}", other),
+        };
 
         Ok(())
     }
