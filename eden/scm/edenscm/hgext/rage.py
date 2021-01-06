@@ -131,10 +131,13 @@ def localconfig(ui):
 
 def allconfig(ui):
     result = []
-    for section, name, value in ui.walkconfig():
-        source = ui.configsource(section, name)
-        if source.find("builtin") == -1:
-            result.append("%s.%s=%s  # %s" % (section, name, value, source))
+    with ui.configoverride(
+        {("configs", "legacylist"): "", ("configs", "remote_allowlist"): ""}
+    ):
+        for section, name, value in ui.walkconfig():
+            source = ui.configsource(section, name)
+            if source.find("builtin") == -1:
+                result.append("%s.%s=%s  # %s" % (section, name, value, source))
     return result
 
 
