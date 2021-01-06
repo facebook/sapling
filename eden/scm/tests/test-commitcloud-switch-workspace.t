@@ -278,11 +278,6 @@ Make the third clone of the server
   $ hg cloud leave
   commitcloud: this repository is now disconnected from the 'user/test/default' workspace
 
-Try to switch without joining to any workspace first
-  $ hg cloud join -w w1 --switch
-  commitcloud: this repository can not be switched to the 'user/test/w1' workspace because not joined to any workspace, run `hg cloud join --help`
-  [1]
-
 Try to provide switch and merge options together
   $ hg cloud join -w w1 --switch --merge
   commitcloud: 'switch' and 'merge' options can not be provided together, please choose one over another
@@ -494,6 +489,39 @@ Test switch back to the default workpsace using a shorter `switch` command
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/brand_new_empty' to the 'user/test/default' workspace
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+
+Switch to another brand new workspace
+  $ hg cloud switch -w brand_new_empty2 --create -q
+
+Leave commit cloud
+  $ hg cloud leave
+  commitcloud: this repository is now disconnected from the 'user/test/brand_new_empty2' workspace
+
+Try to switch without joining to any workspace first
+  $ mkcommit "new"
+  $ hg cloud switch -w default
+  commitcloud: this repository can not be switched to the 'user/test/default' workspace
+  the repository is not connected to any workspace yet and contains local commits or bookmarks
+
+Clean the repository and try again. Disconnected but clean repo should be allowed to switch.
+  $ showgraph
+  @  new: draft
+  │
+  │ o  M: public  remote/master
+  ├─╯
+  o  base: public
+  
+  $ hg hide -r 'draft()'
+  hiding commit 9adefff464dc "new"
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  working directory now at d20a80d4def3
+  1 changeset hidden
+  $ hg cloud switch -w default
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized

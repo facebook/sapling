@@ -310,10 +310,11 @@ def cloudjoin(ui, repo, **opts):
             # clear workspace
             workspace.clearworkspace(repo)
     else:
-        if switch:
+        if switch and not sync._iscleanrepo(repo):
             ui.status(
                 _(
-                    "this repository can not be switched to the '%s' workspace because not joined to any workspace, run `hg cloud join --help`\n"
+                    "this repository can not be switched to the '%s' workspace\n"
+                    "the repository is not connected to any workspace yet and contains local commits or bookmarks\n"
                 )
                 % workspacename,
                 component="commitcloud",

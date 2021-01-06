@@ -73,6 +73,13 @@ def _getbookmarks(repo):
     return {n: nodemod.hex(v) for n, v in repo._bookmarks.items()}
 
 
+def _getprotectedremotebookmarks(repo):
+    """Returns set of initial remote bookmarks"""
+    return set(
+        bookmarks.selectivepullbookmarknames(repo, remote=None, includeaccessed=False)
+    )
+
+
 def _getremotebookmarks(repo):
     if not _isremotebookmarkssyncenabled(repo.ui):
         return {}
@@ -86,6 +93,18 @@ def _getremotebookmarks(repo):
             if nodes:
                 remotebookmarks[book] = nodemod.hex(nodes[0])
     return remotebookmarks
+
+
+def _iscleanrepo(repo):
+    """Check if there are any local changes relevant for commit cloud in the repo"""
+    return (
+        not _getheads(repo)
+        and not _getbookmarks(repo)
+        and {
+            bookmarks.splitremotename(remotename)[1]
+            for remotename in _getremotebookmarks(repo).keys()
+        }.issubset(_getprotectedremotebookmarks(repo))
+    )
 
 
 def _getsnapshots(repo, lastsyncstate):
@@ -733,7 +752,7 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
 def _updateremotebookmarks(repo, tr, updates):
     """updates the remote bookmarks to point their new nodes"""
     oldremotebookmarks = _getremotebookmarks(repo)
-    protectednames = set(repo.ui.configlist("remotenames", "selectivepulldefault"))
+    protectednames = _getprotectedremotebookmarks(repo)
     newremotebookmarks = {}
     omittedremotebookmarks = []
     unfi = repo
