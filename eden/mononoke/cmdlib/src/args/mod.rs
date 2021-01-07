@@ -238,6 +238,13 @@ impl<'a, 'b> MononokeClapApp<'a, 'b> {
         }
     }
 
+    pub fn group(self, group: ArgGroup<'a>) -> Self {
+        Self {
+            clap: self.clap.group(group),
+            app_data: self.app_data,
+        }
+    }
+
     pub fn get_matches(self) -> MononokeMatches<'a> {
         MononokeMatches {
             matches: MaybeOwned::from(self.clap.get_matches()),
