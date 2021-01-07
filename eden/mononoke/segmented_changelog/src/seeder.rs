@@ -14,7 +14,7 @@ use slog::info;
 use dag::{self, Id as Vertex, InProcessIdDag};
 use stats::prelude::*;
 
-use bulkops::ChangesetBulkFetch;
+use bulkops::PublicChangesetBulkFetch;
 use changesets::ChangesetEntry;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
@@ -32,7 +32,7 @@ define_stats! {
 pub struct SegmentedChangelogSeeder {
     idmap_version: IdMapVersion,
     idmap_version_store: SqlIdMapVersionStore,
-    changeset_bulk_fetch: Arc<dyn ChangesetBulkFetch>,
+    changeset_bulk_fetch: Arc<PublicChangesetBulkFetch>,
     manager: SegmentedChangelogManager,
 }
 
@@ -40,7 +40,7 @@ impl SegmentedChangelogSeeder {
     pub fn new(
         idmap_version: IdMapVersion,
         idmap_version_store: SqlIdMapVersionStore,
-        changeset_bulk_fetch: Arc<dyn ChangesetBulkFetch>,
+        changeset_bulk_fetch: Arc<PublicChangesetBulkFetch>,
         manager: SegmentedChangelogManager,
     ) -> Self {
         Self {

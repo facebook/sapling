@@ -11,7 +11,6 @@ use anyhow::{format_err, Context, Result};
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use bookmarks::{BookmarkName, Bookmarks};
-use bulkops::ChangesetBulkFetch;
 use bulkops::PublicChangesetBulkFetch;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
@@ -47,7 +46,7 @@ pub struct SegmentedChangelogBuilder {
     idmap_version: Option<IdMapVersion>,
     replica_lag_monitor: Option<Arc<dyn ReplicaLagMonitor>>,
     changeset_fetcher: Option<Arc<dyn ChangesetFetcher>>,
-    changeset_bulk_fetch: Option<Arc<dyn ChangesetBulkFetch>>,
+    changeset_bulk_fetch: Option<Arc<PublicChangesetBulkFetch>>,
     blobstore: Option<Arc<dyn Blobstore>>,
     bookmarks: Option<Arc<dyn Bookmarks>>,
     bookmark_name: Option<BookmarkName>,
@@ -110,7 +109,7 @@ impl SegmentedChangelogBuilder {
 
     pub fn with_changeset_bulk_fetch(
         mut self,
-        changeset_bulk_fetch: Arc<dyn ChangesetBulkFetch>,
+        changeset_bulk_fetch: Arc<PublicChangesetBulkFetch>,
     ) -> Self {
         self.changeset_bulk_fetch = Some(changeset_bulk_fetch);
         self
@@ -275,7 +274,7 @@ impl SegmentedChangelogBuilder {
         })
     }
 
-    fn changeset_bulk_fetch(&mut self) -> Result<Arc<dyn ChangesetBulkFetch>> {
+    fn changeset_bulk_fetch(&mut self) -> Result<Arc<PublicChangesetBulkFetch>> {
         self.changeset_bulk_fetch.take().ok_or_else(|| {
             format_err!(
                 "SegmentedChangelog cannot be built without ChangesetBulkFetch being specified."
