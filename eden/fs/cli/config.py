@@ -677,8 +677,7 @@ Do you want to run `eden mount %s` instead?"""
             errors = []
 
             def collect_errors(_f, path, ex):
-                if Path(path).is_file():
-                    errors.append((path, ex[1]))
+                errors.append((path, ex[1]))
 
             shutil.rmtree(path, onerror=collect_errors)
             if not path.exists():
