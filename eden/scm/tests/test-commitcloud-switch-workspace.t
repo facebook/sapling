@@ -290,14 +290,19 @@ Join a new workspace
   commitcloud: commits synchronized
   finished in * (glob)
 
-Try to switch with uncommitted changes
+Try to switch with uncommitted changes from a draft commit. So the uncommitted changes doesn't allow to update to the public root.
   $ echo 'hello' > hello.txt
   $ hg add hello.txt
+  $ hg commit -m "new file"
+  $ echo 'goodbye' > hello.txt
   $ hg cloud join -w w1 --switch
   commitcloud: synchronizing 'server' with 'user/test/3'
+  backing up stack rooted at dfa54c832678
   commitcloud: commits synchronized
   finished in * (glob)
   commitcloud: now this repository will be switched from the 'user/test/3' to the 'user/test/w1' workspace
+  remote: pushing 1 commit:
+  remote:     dfa54c832678  new file
   abort: uncommitted changes
   [255]
 
@@ -319,8 +324,9 @@ Commit changes to be able to switch
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  remote: pushing 1 commit:
+  remote: pushing 2 commits:
   remote:     dfa54c832678  new file
+  remote:     5fe2dc2fae70  new file
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph

@@ -235,9 +235,6 @@ def cloudjoin(ui, repo, **opts):
             with backuplock.lock(repo), repo.wlock(), repo.lock(), repo.transaction(
                 "commit cloud switch workspace clean up transaction"
             ) as tr:
-                # enforce the precondition that working directory must be clean
-                cmdutil.bailifchanged(repo)
-
                 # check that the current location is a public commit
                 if repo["."].mutable():
                     # * get the public root of the current commit
@@ -254,6 +251,8 @@ def cloudjoin(ui, repo, **opts):
                     if repo.changelog.isancestor(
                         publicroot.node(), mainbookmarknode.node()
                     ):
+                        # enforce the precondition that working directory must be clean
+                        cmdutil.bailifchanged(repo)
                         hg.update(repo, newnode, False)
                         ui.status(
                             _("working directory now at %s\n")
