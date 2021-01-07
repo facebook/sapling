@@ -11,7 +11,7 @@ setting up an ephemeral MySQL shard.
 Use:
 
 ```sh
-buck run //eden/mononoke/tests/integration:integration_runner -- TEST
+buck run //eden/mononoke/tests/integration/facebook:integration_runner -- TEST
 ```
 
 But! Keep reading: there are faster ways to run the tests if you're going to be
@@ -38,7 +38,7 @@ integration runner relies on a manifest to find all the binaries it needs to run
 
 ```
 ~/fbcode/buck-out/dev/gen/eden/mononoke/tests/integration/integration_runner_real.par \
-  ~/fbcode/buck-out/gen/eden/mononoke/tests/integration/manifest/manifest.json \
+  ~/fbcode/buck-out/gen/eden/mononoke/tests/integration/facebook/manifest/manifest.json \
   test1.t test2.t test3.t
 ```
 
