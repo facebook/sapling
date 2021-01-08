@@ -19,7 +19,8 @@ use dag::ops::DagPersistent;
 use dag::ops::Open;
 use dag::CloneData;
 use dag::VertexName;
-use edenapi::EdenApiBlocking;
+use edenapi::{EdenApiBlocking, Progress};
+use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -45,12 +46,24 @@ pub fn run(opts: StatusOpts, _io: &mut IO, config: ConfigSet) -> Result<u8> {
 
     let edenapi_client = edenapi::Builder::from_config(&config)?.build()?;
 
-    // TODO: add progress bar
-    let progress_callback = None;
+    // TODO: better integration between IO and progress bars
+    let template = "Downloading: {decimal_bytes} ({bytes_per_sec}). Elapsed: {elapsed_precise}.";
+    let style = ProgressStyle::default_spinner().template(template);
+    let bar = ProgressBar::new_spinner().with_style(style);
+    let progress_callback = Box::new({
+        let bar = bar.clone();
+        move |prog: Progress| bar.set_position(prog.total_downloaded as u64)
+    });
     let clone_data = edenapi_client
-        .full_idmap_clone_data_blocking(reponame.clone(), progress_callback)
+        .full_idmap_clone_data_blocking(reponame.clone(), Some(progress_callback))
         .context("error cloning segmented changelog")?;
+    bar.finish_at_current_pos();
 
+    let template = "Building local repository. Elapsed: {elapsed_precise}.";
+    let style = ProgressStyle::default_spinner().template(template);
+    let bar = ProgressBar::new_spinner().with_style(style);
+    // we don't register any progress in this section we need something to poke the progress bar
+    bar.enable_steady_tick(500);
     let namedag_path = IndexedLogNameDagPath(destination.join(".hg/store/segments/v1"));
     let mut namedag = namedag_path
         .open()
@@ -115,6 +128,7 @@ pub fn run(opts: StatusOpts, _io: &mut IO, config: ConfigSet) -> Result<u8> {
         format!("{} bookmarks remote/master\n", master.to_hex()).as_bytes(),
     )
     .context("error writing to hg store requires")?;
+    bar.finish_at_current_pos();
 
     Ok(0)
 }
