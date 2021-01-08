@@ -25,7 +25,7 @@ use std::{
 
 use anyhow::{bail, ensure, format_err, Context, Result};
 use bytes::{Bytes, BytesMut};
-use futures::stream::{iter, StreamExt};
+use futures::stream::{iter, StreamExt, TryStreamExt};
 use http::status::StatusCode;
 use parking_lot::{Mutex, RwLock};
 use rand::{thread_rng, Rng};
@@ -1264,35 +1264,26 @@ impl LfsRemoteInner {
                 let oid = Sha256::from(oid.0);
                 let read_from_store = read_from_store.clone();
                 let write_to_store = write_to_store.clone();
-                let fut = async move {
-                    LfsRemoteInner::process_action(
-                        &http.client,
-                        http.auth.as_ref(),
-                        &http.user_agent,
-                        backoff_times,
-                        request_timeout,
-                        op,
-                        action,
-                        oid,
-                        read_from_store,
-                        write_to_store,
-                        http.http_options,
-                    )
-                };
+                let fut = LfsRemoteInner::process_action(
+                    &http.client,
+                    http.auth.as_ref(),
+                    &http.user_agent,
+                    backoff_times,
+                    request_timeout,
+                    op,
+                    action,
+                    oid,
+                    read_from_store,
+                    write_to_store,
+                    http.http_options,
+                );
 
-                futures.push(fut);
+                futures.push(Ok(fut));
             }
         }
 
         // Request a couple of blobs concurrently.
-        let mut stream = iter(futures).buffer_unordered(http.concurrent_fetches);
-        block_on_future(async {
-            while let Some(next) = stream.next().await {
-                next.await?
-            }
-
-            Ok(())
-        })
+        block_on_future(iter(futures).try_for_each_concurrent(http.concurrent_fetches, |fut| fut))
     }
 
     /// Fetch files from the filesystem.
