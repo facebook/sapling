@@ -1099,6 +1099,25 @@ function scsc {
 }
 
 function start_edenapi_server {
+  local tls_args
+
+  tls_args=(--tls-ca "$TEST_CERTDIR/root-ca.crt"
+    --tls-private-key "$TEST_CERTDIR/localhost.key"
+    --tls-certificate "$TEST_CERTDIR/localhost.crt"
+    --tls-ticket-seeds "$TEST_CERTDIR/server.pem.seeds"
+    --trusted-proxy-identity USER:myusername0)
+
+  _start_edenapi_server_impl "https" "${tls_args[@]}" "$@"
+}
+
+function start_edenapi_server_no_tls {
+  _start_edenapi_server_impl "http" "$@"
+}
+
+function _start_edenapi_server_impl {
+  scheme="$1"
+  shift
+
   local port log attempts timeout
   port=$(get_free_socket)
   log="$TESTTMP/edenapi_server.out"
@@ -1112,11 +1131,6 @@ function start_edenapi_server {
     --listen-port "$port" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --local-configerator-path="$TESTTMP/configerator" \
-    --tls-ca "$TEST_CERTDIR/root-ca.crt" \
-    --tls-private-key "$TEST_CERTDIR/localhost.key" \
-    --tls-certificate "$TEST_CERTDIR/localhost.crt" \
-    --tls-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
-    --trusted-proxy-identity USER:myusername0 \
     "${COMMON_ARGS[@]}" >> "$log" 2>&1 &
 
   # Record the PID of the spawned process so the test framework
@@ -1124,7 +1138,9 @@ function start_edenapi_server {
   echo "$!" >> "$DAEMON_PIDS"
 
   # Export the URI that tests will use to connect to the server.
-  export EDENAPI_URI="https://localhost:$port"
+  export EDENAPI_PORT="${port}"
+  export EDENAPI_PREFIX="localhost:${port}"
+  export EDENAPI_URI="${scheme}://localhost:${port}"
 
   # Wait for the server to start listening for HTTP requests.
   timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
@@ -1139,8 +1155,9 @@ function start_edenapi_server {
 
   echo "EdenAPI server failed to start" >&2
   cat "$log" >&2
-  return 1
+  exit 1
 }
+
 
 function edenapi_make_req {
   "$EDENAPI_MAKE_REQ" "$@"
@@ -1246,6 +1263,10 @@ function hgmn {
   else
     hg --config paths.default="mononoke://$(mononoke_address)/$REPONAME" "$@"
   fi
+}
+
+function hgedenapi {
+  hg --config "edenapi.url=${EDENAPI_URI}" --config "auth.edenapi.prefix=${EDENAPI_PREFIX}" --config "remotefilelog.http=true" "$@"
 }
 
 function hgmn_local {
@@ -1771,6 +1792,19 @@ function segmented_changelog_tailer() {
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     --once \
     "$@"
+}
+
+function background_segmented_changelog_tailer() {
+  out_file=$1
+  shift
+  # short delay here - we don't want to wait too much during tests
+  "$MONONOKE_SEGMENTED_CHANGELOG_TAILER" \
+    "${COMMON_ARGS[@]}" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --delay 1 \
+    "$@" >> "$TESTTMP/$out_file" 2>&1 &
+  pid=$!
+  echo "$pid" >> "$DAEMON_PIDS"
 }
 
 function fastreplay() {
