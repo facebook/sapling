@@ -112,7 +112,7 @@ On processs waiting on another, warning after a long time (debug output on)
   locker is still running (full unique id: '*') (glob)
   waiting for lock on working directory of b held by process '*' on host * (glob)
   (hint: run * to see related processes) (glob)
-  got lock after 1 seconds
+  got lock after * seconds (glob)
   $ cat stdout
   adding e
 
@@ -131,7 +131,7 @@ On processs waiting on another, warning disabled, (debug output on)
   locker is still running (full unique id: '*') (glob)
   waiting for lock on working directory of b held by process '*' on host * (glob)
   (hint: run * to see related processes) (glob)
-  got lock after 1 seconds
+  got lock after * seconds (glob)
   $ cat stdout
   adding f
 
