@@ -35,10 +35,6 @@ Set up the base repo, and a fake source repo
 
 Do the import, cross-check that the mapping is preserved
   $ blobimport repo-hg/.hg repo --source-repo-id 65535
-  $ mononoke_admin_sourcerepo --target-repo-id 65535 crossrepo map 59695d47bd01807288e7a7d14aae5e93507c8b4e2b48b8cc4947b18c0e8bf471
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
-  * using repo "repo" repoid RepositoryId(0) (glob)
-  * using repo "megarepo" repoid RepositoryId(65535) (glob)
-  * changeset resolved as: ChangesetId(Blake2(59695d47bd01807288e7a7d14aae5e93507c8b4e2b48b8cc4947b18c0e8bf471)) (glob)
-  Hash 59695d47bd01807288e7a7d14aae5e93507c8b4e2b48b8cc4947b18c0e8bf471 maps to 59695d47bd01807288e7a7d14aae5e93507c8b4e2b48b8cc4947b18c0e8bf471
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select large_repo_id, hex(large_bcs_id), small_repo_id, hex(small_bcs_id) from synced_commit_mapping;"
+  0|73D11CCF7D3515BFD96DC1F43FF5A2E51636F4D9ECC299E3246C7C46ED55E874|65535|73D11CCF7D3515BFD96DC1F43FF5A2E51636F4D9ECC299E3246C7C46ED55E874
+  0|59695D47BD01807288E7A7D14AAE5E93507C8B4E2B48B8CC4947B18C0E8BF471|65535|59695D47BD01807288E7A7D14AAE5E93507C8B4E2B48B8CC4947B18C0E8BF471

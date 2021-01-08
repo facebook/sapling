@@ -219,7 +219,7 @@ Now sync with the tool
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(f38496fbd160eaf1bf6ebad1f317635ea818000bb3d634bba6eefa2c80b9666a)) (glob)
-  Hash f38496fbd160eaf1bf6ebad1f317635ea818000bb3d634bba6eefa2c80b9666a maps to 46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d, used CommitSyncConfigVersion("TEST_VERSION_NAME")
+  RewrittenAs([(ChangesetId(Blake2(46c0f70c6300f4168cb70321839ac0079c74b6d3295adb81eeb1932be4f80e9d)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 
 Pull from megarepo
@@ -257,7 +257,7 @@ Merge with preserved ancestors
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4)) (glob)
-  Hash d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4 maps to d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4, used CommitSyncConfigVersion("TEST_VERSION_NAME")
+  RewrittenAs([(ChangesetId(Blake2(d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 -- create a p2, based on a pre-merge commit
   $ REPONAME=with_merge_mon hgmn up with_merge_pre_big_merge -q
@@ -303,7 +303,7 @@ Merge with preserved ancestors
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d)) (glob)
-  Hash 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d maps to 283f929b3e2c7d299920a8ee18b0928191fb3f5d9cc530f9fb7c0eb578e45d70, used CommitSyncConfigVersion("TEST_VERSION_NAME")
+  RewrittenAs([(ChangesetId(Blake2(283f929b3e2c7d299920a8ee18b0928191fb3f5d9cc530f9fb7c0eb578e45d70)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 -- sync the merge
   $ cd "$TESTTMP"
@@ -327,7 +327,7 @@ Merge with preserved ancestors
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d)) (glob)
-  Hash 89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d maps to 89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d, used CommitSyncConfigVersion("TEST_VERSION_NAME")
+  RewrittenAs([(ChangesetId(Blake2(89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 -- check that merge was synced
   $ mononoke_admin_source_target 1 0 crossrepo map with_merge_master
@@ -336,7 +336,7 @@ Merge with preserved ancestors
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c)) (glob)
-  Hash 3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c maps to a530e2a1eb7ed81c57328f1c0b8fb20656190c5c272d94f7bf768a689c83670d, used CommitSyncConfigVersion("TEST_VERSION_NAME")
+  RewrittenAs([(ChangesetId(Blake2(a530e2a1eb7ed81c57328f1c0b8fb20656190c5c272d94f7bf768a689c83670d)), CommitSyncConfigVersion("TEST_VERSION_NAME"))])
 
 --verify the working copy
   $ mononoke_admin_source_target 1 0 crossrepo verify-wc master_bookmark

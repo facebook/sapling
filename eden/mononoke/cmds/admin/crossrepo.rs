@@ -77,8 +77,16 @@ pub async fn subcommand_crossrepo<'a>(
             let (source_repo, target_repo, mapping) =
                 get_source_target_repos_and_mapping(fb, logger, matches).await?;
 
+            let commit_sync_config = live_commit_sync_config
+                .get_current_commit_sync_config(&ctx, source_repo.get_repoid())?;
+            let commit_sync_repos =
+                CommitSyncRepos::new(source_repo, target_repo, &commit_sync_config)?;
+            let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
+                Arc::new(live_commit_sync_config);
+            let commit_syncer =
+                CommitSyncer::new(&ctx, mapping, commit_sync_repos, live_commit_sync_config);
             let hash = sub_sub_m.value_of(HASH_ARG).unwrap().to_owned();
-            subcommand_map(ctx, source_repo, target_repo, mapping, hash).await
+            subcommand_map(ctx, commit_syncer, hash).await
         }
         (VERIFY_WC_SUBCOMMAND, Some(sub_sub_m)) => {
             let (source_repo, target_repo, mapping) =
@@ -513,48 +521,23 @@ async fn subcommand_by_version<'a, L: LiveCommitSyncConfig>(
 
 async fn subcommand_map(
     ctx: CoreContext,
-    source_repo: BlobRepo,
-    target_repo: BlobRepo,
-    mapping: SqlSyncedCommitMapping,
+    commit_syncer: CommitSyncer<SqlSyncedCommitMapping>,
     hash: String,
 ) -> Result<(), SubcommandError> {
-    let source_repo_id = source_repo.get_repoid();
-    let target_repo_id = target_repo.get_repoid();
-    let source_hash = helpers::csid_resolve(ctx.clone(), source_repo, hash)
+    let source_repo = commit_syncer.get_source_repo();
+    let source_cs_id = helpers::csid_resolve(ctx.clone(), source_repo.clone(), &hash)
         .compat()
         .await?;
 
-    let mappings = mapping
-        .get(ctx.clone(), source_repo_id, source_hash, target_repo_id)
-        .compat()
+    let plural_commit_sync_outcome = commit_syncer
+        .get_plural_commit_sync_outcome(&ctx, source_cs_id)
         .await?;
-
-    if mappings.is_empty() {
-        let exists = target_repo
-            .changeset_exists_by_bonsai(ctx, source_hash.clone())
-            .await?;
-
-        if exists {
-            println!(
-                "Hash {} not currently remapped (but present in target as-is)",
-                source_hash
-            );
-        } else {
-            println!("Hash {} not currently remapped", source_hash);
+    match plural_commit_sync_outcome {
+        Some(plural_commit_sync_outcome) => {
+            println!("{:?}", plural_commit_sync_outcome);
         }
-    } else {
-        for (target_hash, maybe_version_name) in mappings {
-            match maybe_version_name {
-                Some(version_name) => {
-                    println!(
-                        "Hash {} maps to {}, used {:?}",
-                        source_hash, target_hash, version_name
-                    );
-                }
-                None => {
-                    println!("Hash {} maps to {}", source_hash, target_hash);
-                }
-            }
+        None => {
+            println!("{} is not remapped", hash);
         }
     }
 
