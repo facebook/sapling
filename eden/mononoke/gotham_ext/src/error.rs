@@ -74,6 +74,13 @@ impl HttpError {
         }
     }
 
+    /// Get this error formatted as a String
+    pub fn message(&self) -> String {
+        iter::once(self.error.to_string())
+            .chain(self.error.chain().skip(1).map(|c| c.to_string()))
+            .join(": ")
+    }
+
     /// Turn this error into a type corresponding to the return type
     /// of a Gotham handler, so that it may be directly returned from
     /// a handler function.
@@ -82,9 +89,7 @@ impl HttpError {
         state: State,
     ) -> Result<(State, Response<Body>), (State, HandlerError)> {
         // Concatenate all chained errors into a single string.
-        let message = iter::once(self.error.to_string())
-            .chain(self.error.chain().skip(1).map(|c| c.to_string()))
-            .join(": ");
+        let message = self.message();
 
         // Package the error message into a JSON response.
         let res = JsonError {

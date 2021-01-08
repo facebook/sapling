@@ -18,6 +18,7 @@ pub enum EdenApiScubaKey {
     Repo,
     Method,
     User,
+    HandlerError,
 }
 
 impl AsRef<str> for EdenApiScubaKey {
@@ -26,6 +27,7 @@ impl AsRef<str> for EdenApiScubaKey {
             Self::Repo => "repo",
             Self::Method => "method",
             Self::User => "user",
+            Self::HandlerError => "handler_error",
         }
     }
 }
@@ -65,6 +67,7 @@ impl ScubaHandler for EdenApiScubaHandler {
 
         if let Some(ctx) = self.request_context {
             ctx.ctx.perf_counters().insert_perf_counters(scuba);
+            scuba.add_opt(EdenApiScubaKey::HandlerError, ctx.handler_error_msg);
         }
     }
 }

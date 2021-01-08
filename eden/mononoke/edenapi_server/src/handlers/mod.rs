@@ -24,6 +24,7 @@ use gotham_derive::StateData;
 use gotham_ext::response::build_response;
 
 use crate::context::ServerContext;
+use crate::middleware::RequestContext;
 
 mod clone;
 mod commit;
@@ -98,6 +99,13 @@ macro_rules! define_handler {
         fn $name(mut state: State) -> Pin<Box<HandlerFuture>> {
             async move {
                 let res = $func(&mut state).await;
+
+                if let Err(e) = res.as_ref() {
+                    if let Some(log_ctx) = state.try_borrow_mut::<RequestContext>() {
+                        log_ctx.handler_error_msg = Some(e.message());
+                    }
+                }
+
                 build_response(res, state)
             }
             .boxed()
