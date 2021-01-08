@@ -27,7 +27,7 @@ use edenapi_types::{
     TreeRequest,
 };
 use hg_http::http_client;
-use http_client::{AsyncResponse, HttpClient, HttpClientError, Request};
+use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::api::{EdenApi, ProgressCallback};
@@ -408,7 +408,7 @@ impl EdenApi for Client {
     async fn full_idmap_clone_data(
         &self,
         repo: String,
-        _progress: Option<ProgressCallback>,
+        mut progress: Option<ProgressCallback>,
     ) -> Result<CloneData<HgId>, EdenApiError> {
         let msg = format!(
             "Requesting full idmap clone data for the '{}' repository",
@@ -425,6 +425,10 @@ impl EdenApi for Client {
         let response_bytes = async_response
             .body
             .try_fold(Vec::new(), |mut acc, v| {
+                if let Some(callback) = &mut progress {
+                    // strictly speaking not correct because it does not count overhead
+                    callback(Progress::new(v.len(), acc.len() + v.len(), 0, 0));
+                }
                 acc.extend(v);
                 future::ok(acc)
             })
