@@ -261,6 +261,7 @@ fn wireprotocaps() -> Vec<String> {
         "known".to_string(),
         "getbundle".to_string(),
         "unbundle=HG10GZ,HG10BZ,HG10UN".to_string(),
+        "unbundlereplay".to_string(),
         "gettreepack".to_string(),
         "remotefilelog".to_string(),
         "pushkey".to_string(),
@@ -1596,6 +1597,7 @@ impl HgCommands for RepoClient {
         _heads: Vec<String>,
         stream: BoxStream<Bundle2Item<'static>, Error>,
         maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
+        respondlightly: Option<bool>,
     ) -> HgCommandRes<BytesOld> {
         let reponame = self.repo.reponame().clone();
         cloned!(
@@ -1708,7 +1710,6 @@ impl HgCommands for RepoClient {
                                             .await
                                         }
                                     };
-
                                     let response = response?
                                         .generate_bytes(
                                             &ctx,
@@ -1717,6 +1718,7 @@ impl HgCommands for RepoClient {
                                             pushrebase_params,
                                             &lca_hint,
                                             &lfs_params,
+                                            respondlightly,
                                         )
                                         .await?;
 

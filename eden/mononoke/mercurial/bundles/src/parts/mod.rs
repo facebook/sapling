@@ -32,6 +32,7 @@ use mercurial_types::{
 };
 use mononoke_types::DateTime;
 use phases::Phase;
+use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
 
@@ -444,5 +445,13 @@ where
     let mut builder = PartEncodeBuilder::advisory(PartHeaderType::B2xInfinitepushMutation)?;
     let data = entries.and_then(infinitepush_mutation_packer);
     builder.set_data_future(data);
+    Ok(builder)
+}
+
+pub fn pushvars_part(push_vars: HashMap<String, BytesNew>) -> Result<PartEncodeBuilder> {
+    let mut builder = PartEncodeBuilder::advisory(PartHeaderType::Pushvars)?;
+    for (var, bytes) in push_vars {
+        builder.add_aparam(var, bytes)?;
+    }
     Ok(builder)
 }

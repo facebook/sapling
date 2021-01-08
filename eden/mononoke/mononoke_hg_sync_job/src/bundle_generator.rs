@@ -46,6 +46,7 @@ pub fn create_bundle(
     hg_server_heads: Vec<ChangesetId>,
     lfs_params: SessionLfsParams,
     filenode_verifier: FilenodeVerifier,
+    push_vars: Option<HashMap<String, Bytes>>,
 ) -> impl Future<Item = (BytesOld, HashMap<HgChangesetId, Timestamp>), Error = Error> {
     let commits_to_push = find_commits_to_push(
         ctx.clone(),
@@ -77,6 +78,7 @@ pub fn create_bundle(
                     commits_to_push.clone(),
                     lfs_params,
                     filenode_verifier,
+                    push_vars,
                 );
                 let timestamps = fetch_timestamps(ctx, repo, commits_to_push)
                     .boxed()
@@ -206,6 +208,7 @@ fn create_bundle_impl(
     commits_to_push: Vec<HgChangesetId>,
     session_lfs_params: SessionLfsParams,
     filenode_verifier: FilenodeVerifier,
+    push_vars: Option<HashMap<String, Bytes>>,
 ) -> impl Future<Item = BytesOld, Error = Error> {
     let changelog_entries = stream_old::iter_ok(commits_to_push.clone())
         .map({
@@ -258,6 +261,13 @@ fn create_bundle_impl(
             move |((manifests, prepared_filenode_entries), maybe_from, maybe_to)| {
                 let mut bundle2_parts =
                     vec![try_boxfuture!(parts::replycaps_part(create_capabilities()))];
+
+                match push_vars {
+                    Some(push_vars) if !push_vars.is_empty() => {
+                        bundle2_parts.push(try_boxfuture!(parts::pushvars_part(push_vars)))
+                    }
+                    _ => {}
+                }
 
                 debug!(
                     ctx.logger(),

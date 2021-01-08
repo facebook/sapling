@@ -414,8 +414,8 @@ async fn resolve_push<'r>(
         .as_ref()
         .and_then(|cg_push| cg_push.infinitepush_payload.as_ref())
         .and_then(|ip_payload| ip_payload.bookmark_push.as_ref());
-    let maybe_hg_bookmark_push =
-        try_collect_all_bookmark_pushes(pushkeys, infinitepush_bp.cloned())?;
+
+    let infinitepush_bp = infinitepush_bp.cloned();
 
     let (mutations, bundle2) = resolver
         .maybe_resolve_infinitepush_mutation(bundle2)
@@ -431,6 +431,17 @@ async fn resolve_push<'r>(
     } else {
         (None, bundle2)
     };
+    // At the moment pushkey part may appear in two places: after Changegroup
+    // and after Treegroup.
+    let (pushkeys, bundle2) = if pushkeys.is_empty() {
+        resolver
+            .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
+            .await
+            .context("While resolving Pushkey")?
+    } else {
+        (pushkeys, bundle2)
+    };
+    let maybe_hg_bookmark_push = try_collect_all_bookmark_pushes(pushkeys, infinitepush_bp)?;
 
     let (changegroup_id, uploaded_bonsais, uploaded_hg_changeset_ids) =
         if let Some((cg_push, manifests)) = cg_and_manifests {

@@ -620,6 +620,11 @@ fn parse_with_params(
         | command!("unbundle", Unbundle, parse_params, {
               heads => stringlist,
           })
+        | command!("unbundlereplay", UnbundleReplay, parse_params, {
+              heads => stringlist,
+              replaydata => utf8_string_complete,
+              respondlightly => boolean,
+          })
         | call!(parse_command, "gettreepack", parse_params, 0+1,
             |kv| Ok(Gettreepack(GettreepackArgs {
                 rootdir: parseval(&kv, "rootdir", path_complete)?,

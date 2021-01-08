@@ -128,6 +128,23 @@ function mononoke_hg_sync {
      ssh://user@dummy/"$HG_REPO" "$@" sync-once --start-id "$START_ID"
 }
 
+function mononoke_backup_sync {
+  HG_REPO="$1"
+  SYNC_MODE="$2"
+  START_ID="$3"
+  shift
+  shift
+  shift
+
+  GLOG_minloglevel=5 "$MONONOKE_HG_SYNC" \
+    "${COMMON_ARGS[@]}" \
+    --retry-num 1 \
+    --repo-id $REPOID \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --verify-server-bookmark-on-failure \
+    "mononoke://$(mononoke_address)/$HG_REPO" "$@" "$SYNC_MODE" --start-id "$START_ID"
+}
+
 function megarepo_tool {
   GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
     "${COMMON_ARGS[@]}" \

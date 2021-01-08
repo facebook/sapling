@@ -82,6 +82,11 @@ pub enum SingleRequest {
     Unbundle {
         heads: Vec<String>,
     },
+    UnbundleReplay {
+        heads: Vec<String>,
+        replaydata: String,
+        respondlightly: bool,
+    },
     Gettreepack(GettreepackArgs),
     StreamOutShallow,
     GetpackV1,
@@ -107,6 +112,7 @@ impl SingleRequest {
             &SingleRequest::Known { .. } => "known",
             &SingleRequest::Knownnodes { .. } => "knownnodes",
             &SingleRequest::Unbundle { .. } => "unbundle",
+            &SingleRequest::UnbundleReplay { .. } => "unbundlereplay",
             &SingleRequest::Gettreepack(_) => "gettreepack",
             &SingleRequest::StreamOutShallow => "stream_out_shallow",
             &SingleRequest::GetpackV1 => "getpackv1",

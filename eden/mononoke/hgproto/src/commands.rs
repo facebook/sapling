@@ -166,61 +166,14 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     .boxify(),
                 ok(instream).boxify(),
             ),
-            SingleRequest::Unbundle { heads } => {
-                let dechunker = Dechunker::new(instream);
-                let (dechunker, maybe_full_content) = if hgcmds.should_preserve_raw_bundle2() {
-                    let full_bundle2_content = Arc::new(Mutex::new(Bytes::new()));
-                    (
-                        dechunker.with_full_content(full_bundle2_content.clone()),
-                        Some(full_bundle2_content),
-                    )
-                } else {
-                    (dechunker, None)
-                };
-
-                let bundle2stream =
-                    Bundle2Stream::new(self.logger.clone(), LimitedAsyncRead::new(dechunker));
-                let (bundle2stream, remainder) = extract_remainder_from_bundle2(bundle2stream);
-
-                let remainder = remainder
-                    .then(|rest| {
-                        let (bytes, remainder) = match rest {
-                            Err(e) => return Either::A(err(e)),
-                            Ok(rest) => rest,
-                        };
-                        if !bytes.is_empty() {
-                            Either::A(err(ErrorKind::UnconsumedData(
-                                String::from_utf8_lossy(bytes.as_ref()).into_owned(),
-                            )
-                            .into()))
-                        } else {
-                            Either::B(remainder.into_inner().check_is_done().from_err())
-                        }
-                    })
-                    .then(
-                        |check_is_done: Result<(bool, Dechunker<_>)>| match check_is_done {
-                            Ok((true, remainder)) => ok(remainder.into_inner()),
-                            Ok((false, mut remainder)) => match remainder.fill_buf() {
-                                Err(e) => err(e.into()),
-                                Ok(buf) => err(ErrorKind::UnconsumedData(
-                                    String::from_utf8_lossy(buf).into_owned(),
-                                )
-                                .into()),
-                            },
-                            Err(e) => err(e.into()),
-                        },
-                    )
-                    .boxify();
-
-                let resps = futures_ordered(vec![
-                    Either::A(ok(SingleResponse::ReadyForStream)),
-                    Either::B(
-                        hgcmds
-                            .unbundle(heads, bundle2stream, maybe_full_content)
-                            .map(|bytes| SingleResponse::Unbundle(bytes)),
-                    ),
-                ]);
-                (resps.boxify(), remainder)
+            SingleRequest::Unbundle { heads } => self.handle_unbundle(instream, heads, None),
+            SingleRequest::UnbundleReplay {
+                heads,
+                replaydata: _,
+                respondlightly,
+            } => {
+                let (resp, instream) = self.handle_unbundle(instream, heads, Some(respondlightly));
+                (resp, instream)
             }
             SingleRequest::Gettreepack(args) => (
                 hgcmds
@@ -266,6 +219,75 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                 ok(instream).boxify(),
             ),
         }
+    }
+
+    fn handle_unbundle<S>(
+        &self,
+        instream: BytesStream<S>,
+        heads: Vec<String>,
+        respondlightly: Option<bool>,
+    ) -> (
+        BoxStream<SingleResponse, Error>,
+        BoxFuture<BytesStream<S>, Error>,
+    )
+    where
+        S: Stream<Item = Bytes, Error = io::Error> + Send + 'static,
+    {
+        let hgcmds = &self.commands;
+        let dechunker = Dechunker::new(instream);
+        let (dechunker, maybe_full_content) = if hgcmds.should_preserve_raw_bundle2() {
+            let full_bundle2_content = Arc::new(Mutex::new(Bytes::new()));
+            (
+                dechunker.with_full_content(full_bundle2_content.clone()),
+                Some(full_bundle2_content),
+            )
+        } else {
+            (dechunker, None)
+        };
+
+        let bundle2stream =
+            Bundle2Stream::new(self.logger.clone(), LimitedAsyncRead::new(dechunker));
+        let (bundle2stream, remainder) = extract_remainder_from_bundle2(bundle2stream);
+
+        let remainder = remainder
+            .then(|rest| {
+                let (bytes, remainder) = match rest {
+                    Err(e) => return Either::A(err(e)),
+                    Ok(rest) => rest,
+                };
+                if !bytes.is_empty() {
+                    Either::A(err(ErrorKind::UnconsumedData(
+                        String::from_utf8_lossy(bytes.as_ref()).into_owned(),
+                    )
+                    .into()))
+                } else {
+                    Either::B(remainder.into_inner().check_is_done().from_err())
+                }
+            })
+            .then(
+                |check_is_done: Result<(bool, Dechunker<_>)>| match check_is_done {
+                    Ok((true, remainder)) => ok(remainder.into_inner()),
+                    Ok((false, mut remainder)) => match remainder.fill_buf() {
+                        Err(e) => err(e.into()),
+                        Ok(buf) => err(ErrorKind::UnconsumedData(
+                            String::from_utf8_lossy(buf).into_owned(),
+                        )
+                        .into()),
+                    },
+                    Err(e) => err(e),
+                },
+            )
+            .boxify();
+
+        let resps = futures_ordered(vec![
+            Either::A(ok(SingleResponse::ReadyForStream)),
+            Either::B({
+                hgcmds
+                    .unbundle(heads, bundle2stream, maybe_full_content, respondlightly)
+                    .map(SingleResponse::Unbundle)
+            }),
+        ]);
+        (resps.boxify(), remainder)
     }
 
     // @wireprotocommand('debugwireargs', 'one two *')
@@ -629,6 +651,7 @@ pub trait HgCommands {
         _heads: Vec<String>,
         _stream: BoxStream<Bundle2Item<'static>, Error>,
         _maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+        _respondlightly: Option<bool>,
     ) -> HgCommandRes<Bytes> {
         unimplemented("unbundle")
     }

@@ -20,6 +20,7 @@ use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshne
 use borrowed::borrowed;
 use bundle_generator::FilenodeVerifier;
 use bundle_preparer::BundlePreparer;
+use bytes::Bytes;
 use clap::{Arg, SubCommand};
 use cloned::cloned;
 use cmdlib::{
@@ -39,6 +40,7 @@ use futures::{
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
 use http::Uri;
 use lfs_verifier::LfsVerifier;
+use maplit::hashmap;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::HgsqlName;
 use metaconfig_types::RepoReadOnly;
@@ -74,6 +76,7 @@ use hgrepo::{list_hg_server_bookmarks, HgRepo};
 use hgserver_config::ServerConfig;
 
 const ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS: &str = "bookmark-regex-force-generate-lfs";
+const ARG_BOOKMARK_MOVE_ANY_DIRECTION: &str = "bookmark-move-any-direction";
 const ARG_USE_HG_SERVER_BOOKMARK_VALUE_IF_MISMATCH: &str =
     "use-hg-server-bookmark-value-if-mismatch";
 const GENERATE_BUNDLES: &str = "generate-bundles";
@@ -629,6 +632,13 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         .value_of(ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS)
         .map(Regex::new)
         .transpose()?;
+    let push_vars = {
+        if matches.is_present(ARG_BOOKMARK_MOVE_ANY_DIRECTION) {
+            Some(hashmap! { "NON_FAST_FORWARD".to_string() => Bytes::from("true")})
+        } else {
+            None
+        }
+    };
 
     let lfs_params = repo_config.lfs.clone();
 
@@ -689,13 +699,19 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                     filenode_verifier,
                     bookmark_regex_force_lfs,
                     use_hg_server_bookmark_value_if_mismatch,
+                    push_vars,
                 )
                 .map_ok(Arc::new)
                 .await
             } else {
-                BundlePreparer::new_use_existing(repo.clone(), base_retry_delay_ms, retry_num)
-                    .map_ok(Arc::new)
-                    .await
+                BundlePreparer::new_use_existing(
+                    repo.clone(),
+                    base_retry_delay_ms,
+                    retry_num,
+                    push_vars,
+                )
+                .map_ok(Arc::new)
+                .await
             }
         };
 
@@ -1117,6 +1133,15 @@ fn main(fb: FacebookInit) -> Result<()> {
                 While usually it's a sign of problem in some cases it's an expected behaviour. \
                 If this option is set let's allow sync job to take previous value of bookmark \
                 from the server"),
+        )
+        .arg(
+            Arg::with_name(ARG_BOOKMARK_MOVE_ANY_DIRECTION)
+                .long(ARG_BOOKMARK_MOVE_ANY_DIRECTION)
+                .takes_value(false)
+                .required(false)
+                .help("This flag controls whether we tell the server to allow \
+                the bookmark movement in any direction (adding pushvar NON_FAST_FORWARD=true). \
+                However, the server checks its per bookmark configuration before move."),
         )
         .about(
             "Special job that takes bundles that were sent to Mononoke and \

@@ -15,6 +15,7 @@ use anyhow::Error;
 use blobrepo::{BlobRepo, ChangesetFetcher};
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, BookmarkUpdateReason, RawBundleReplayData};
+use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
@@ -53,6 +54,7 @@ pub struct BundlePreparer {
     base_retry_delay_ms: u64,
     retry_num: usize,
     ty: BundleType,
+    push_vars: Option<HashMap<String, Bytes>>,
 }
 
 #[derive(Clone)]
@@ -86,12 +88,14 @@ impl BundlePreparer {
         repo: BlobRepo,
         base_retry_delay_ms: u64,
         retry_num: usize,
+        push_vars: Option<HashMap<String, Bytes>>,
     ) -> Result<BundlePreparer, Error> {
         Ok(BundlePreparer {
             repo,
             base_retry_delay_ms,
             retry_num,
             ty: BundleType::UseExisting,
+            push_vars,
         })
     }
 
@@ -105,6 +109,7 @@ impl BundlePreparer {
         filenode_verifier: FilenodeVerifier,
         bookmark_regex_force_lfs: Option<Regex>,
         use_hg_server_bookmark_value_if_mismatch: bool,
+        push_vars: Option<HashMap<String, Bytes>>,
     ) -> Result<BundlePreparer, Error> {
         let blobstore = repo.get_blobstore().boxed();
         let skiplist =
@@ -122,6 +127,7 @@ impl BundlePreparer {
                 bookmark_regex_force_lfs,
                 use_hg_server_bookmark_value_if_mismatch,
             },
+            push_vars,
         })
     }
 
@@ -161,6 +167,7 @@ impl BundlePreparer {
         overlay: &mut crate::BookmarkOverlay,
     ) -> impl Future<Output = Result<Vec<CombinedBookmarkUpdateLogEntry>, PipelineError>> {
         let mut futs = vec![];
+        let push_vars = self.push_vars.clone();
 
         match &self.ty {
             BundleType::GenerateNew {
@@ -189,6 +196,7 @@ impl BundlePreparer {
                         overlay,
                         prepare_type,
                         *use_hg_server_bookmark_value_if_mismatch,
+                        push_vars.clone(),
                     );
                     futs.push((f, entries));
                 }
@@ -218,6 +226,7 @@ impl BundlePreparer {
                             // use-hg-server-bookmark-value-if-mismatch is never enabled
                             // in UseExisting mode
                             false, /* use-hg-server-bookmark-value-if-mismatch */
+                            push_vars.clone(),
                         );
                         futs.push((f, entries));
                     }
@@ -250,6 +259,7 @@ impl BundlePreparer {
         overlay: &mut crate::BookmarkOverlay,
         prepare_type: PrepareType,
         use_hg_server_bookmark_value_if_mismatch: bool,
+        push_vars: Option<HashMap<String, Bytes>>,
     ) -> BoxFuture<'static, Result<CombinedBookmarkUpdateLogEntry, Error>> {
         cloned!(self.repo);
 
@@ -312,6 +322,7 @@ impl BundlePreparer {
                             &book_values,
                             &bookmark_change,
                             &batch.bookmark_name,
+                            push_vars.clone(),
                         )
                     }
                 },
@@ -358,6 +369,7 @@ impl BundlePreparer {
         hg_server_heads: &'a [ChangesetId],
         bookmark_change: &'a BookmarkChange,
         bookmark_name: &'a BookmarkName,
+        push_vars: Option<HashMap<String, Bytes>>,
     ) -> Result<(NamedTempFile, NamedTempFile), Error> {
         let blobstore = repo.get_blobstore();
 
@@ -376,6 +388,7 @@ impl BundlePreparer {
                     hg_server_heads.to_vec(),
                     lfs_params,
                     filenode_verifier.clone(),
+                    push_vars,
                 )
                 .compat()
                 .await?;

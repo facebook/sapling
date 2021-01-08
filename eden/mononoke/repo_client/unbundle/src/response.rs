@@ -236,7 +236,13 @@ impl UnbundleResponse {
         pushrebase_params: PushrebaseParams,
         lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
         lfs_params: &SessionLfsParams,
+        respondlightly: Option<bool>,
     ) -> Result<Bytes> {
+        if let Some(true) = respondlightly {
+            let bundle = Self::get_bundle_builder();
+            let cursor = bundle.build().compat().await?;
+            return Ok(Bytes::from(cursor.into_inner()));
+        }
         match self {
             UnbundleResponse::Push(data) => Self::generate_push_response_bytes(ctx, data).await,
             UnbundleResponse::InfinitePush(data) => {
