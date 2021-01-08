@@ -79,8 +79,10 @@ impl<'a> Iterator for BfsIter<'a> {
         for (component, link) in children.iter() {
             let mut child_path = path.clone();
             child_path.push(component.as_ref());
-            if link.matches(&self.matcher, &child_path) {
-                self.queue.push_back((child_path, &link));
+            match link.matches(&self.matcher, &child_path) {
+                Ok(true) => self.queue.push_back((child_path, &link)),
+                Ok(false) => {}
+                Err(e) => return Some(Err(e)),
             }
         }
         Some(Ok((path, FsNodeMetadata::Directory(hgid))))

@@ -11,6 +11,8 @@ mod utils;
 
 use std::ops::Deref;
 
+use anyhow::Result;
+
 use types::RepoPath;
 
 /// Limits the set of files to be operated on.
@@ -19,11 +21,11 @@ pub trait Matcher {
     /// It allows for fast paths where whole subtrees are skipped.
     /// It should be noted that the DirectoryMatch::ShouldTraverse return value is always correct.
     /// Other values enable fast code paths only (performance).
-    fn matches_directory(&self, path: &RepoPath) -> DirectoryMatch;
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch>;
 
     /// Returns true when the file path should be kept in the file set and returns false when
     /// it has to be removed.
-    fn matches_file(&self, path: &RepoPath) -> bool;
+    fn matches_file(&self, path: &RepoPath) -> Result<bool>;
 }
 
 /// Allows for fast code paths when dealing with patterns selecting directories.
@@ -41,11 +43,11 @@ pub enum DirectoryMatch {
 }
 
 impl<T: Matcher + ?Sized, U: Deref<Target = T>> Matcher for U {
-    fn matches_directory(&self, path: &RepoPath) -> DirectoryMatch {
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
         T::matches_directory(self, path)
     }
 
-    fn matches_file(&self, path: &RepoPath) -> bool {
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
         T::matches_file(self, path)
     }
 }
@@ -59,11 +61,11 @@ impl AlwaysMatcher {
 }
 
 impl Matcher for AlwaysMatcher {
-    fn matches_directory(&self, _path: &RepoPath) -> DirectoryMatch {
-        DirectoryMatch::Everything
+    fn matches_directory(&self, _path: &RepoPath) -> Result<DirectoryMatch> {
+        Ok(DirectoryMatch::Everything)
     }
-    fn matches_file(&self, _path: &RepoPath) -> bool {
-        true
+    fn matches_file(&self, _path: &RepoPath) -> Result<bool> {
+        Ok(true)
     }
 }
 
@@ -76,11 +78,11 @@ impl NeverMatcher {
 }
 
 impl Matcher for NeverMatcher {
-    fn matches_directory(&self, _path: &RepoPath) -> DirectoryMatch {
-        DirectoryMatch::Nothing
+    fn matches_directory(&self, _path: &RepoPath) -> Result<DirectoryMatch> {
+        Ok(DirectoryMatch::Nothing)
     }
-    fn matches_file(&self, _path: &RepoPath) -> bool {
-        false
+    fn matches_file(&self, _path: &RepoPath) -> Result<bool> {
+        Ok(false)
     }
 }
 

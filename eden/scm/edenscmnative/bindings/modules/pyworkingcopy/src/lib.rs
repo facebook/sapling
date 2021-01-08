@@ -42,7 +42,9 @@ py_class!(class physicalfilesystem |py| {
         let fs = self.filesystem(py);
         let treestate = pytreestate.get_state(py);
         let last_write = last_write.into();
-        let pending = fs.borrow().pending_changes(treestate, matcher, include_directories, last_write);
+        let pending = fs.borrow()
+            .pending_changes(treestate, matcher, include_directories, last_write)
+            .map_pyerr(py)?;
         pendingchanges::create_instance(py, RefCell::new(pending))
     }
 });
@@ -80,7 +82,8 @@ py_class!(class walker |py| {
     data _errors: RefCell<Vec<Error>>;
     def __new__(_cls, root: PyPathBuf, pymatcher: PyObject, include_directories: bool) -> PyResult<walker> {
         let matcher = UnsafePythonMatcher::new(pymatcher);
-        walker::create_instance(py, RefCell::new(Walker::new(root.to_path_buf(), matcher, include_directories)), RefCell::new(Vec::new()))
+        let walker = Walker::new(root.to_path_buf(), matcher, include_directories).map_pyerr(py)?;
+        walker::create_instance(py, RefCell::new(walker), RefCell::new(Vec::new()))
     }
 
     def __iter__(&self) -> PyResult<Self> {

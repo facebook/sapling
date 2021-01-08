@@ -94,11 +94,11 @@ impl Link {
         }
     }
 
-    pub fn matches(&self, matcher: &impl Matcher, path: &RepoPath) -> bool {
+    pub fn matches(&self, matcher: &impl Matcher, path: &RepoPath) -> Result<bool> {
         match self {
             Link::Leaf(_) => matcher.matches_file(path),
             Link::Durable(_) | Link::Ephemeral(_) => {
-                matcher.matches_directory(path) != DirectoryMatch::Nothing
+                Ok(matcher.matches_directory(path)? != DirectoryMatch::Nothing)
             }
         }
     }

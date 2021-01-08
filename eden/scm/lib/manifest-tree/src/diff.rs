@@ -206,21 +206,21 @@ fn diff_single<'a>(
 ) -> Result<Vec<DiffEntry>> {
     let (files, dirs) = dir.list(store)?;
 
-    let items = dirs
-        .into_iter()
-        .filter(|d| matcher.matches_directory(&d.path) != DirectoryMatch::Nothing)
-        .map(|d| DiffItem::Single(d, side));
-    next.extend(items);
-
-    let entries = files
-        .into_iter()
-        .filter(|f| matcher.matches_file(&f.path))
-        .map(|f| match side {
-            Side::Left => DiffEntry::left(f),
-            Side::Right => DiffEntry::right(f),
-        })
-        .collect();
-
+    for d in dirs.into_iter() {
+        if matcher.matches_directory(&d.path)? != DirectoryMatch::Nothing {
+            next.push_back(DiffItem::Single(d, side));
+        }
+    }
+    let mut entries = Vec::new();
+    for f in files.into_iter() {
+        if matcher.matches_file(&f.path)? {
+            let entry = match side {
+                Side::Left => DiffEntry::left(f),
+                Side::Right => DiffEntry::right(f),
+            };
+            entries.push(entry);
+        }
+    }
     Ok(entries)
 }
 
@@ -239,8 +239,8 @@ fn diff<'a>(
 ) -> Result<Vec<DiffEntry>> {
     let (lfiles, ldirs) = left.list(lstore)?;
     let (rfiles, rdirs) = right.list(rstore)?;
-    next.extend(diff_dirs(ldirs, rdirs, matcher));
-    Ok(diff_files(lfiles, rfiles, matcher))
+    next.extend(diff_dirs(ldirs, rdirs, matcher)?);
+    diff_files(lfiles, rfiles, matcher)
 }
 
 /// Given two sorted file lists, return diff entries for non-matching files.
@@ -248,13 +248,14 @@ fn diff_files<'a>(
     lfiles: Vec<File>,
     rfiles: Vec<File>,
     matcher: &'a dyn Matcher,
-) -> Vec<DiffEntry> {
+) -> Result<Vec<DiffEntry>> {
     let mut output = Vec::new();
 
-    let mut add_to_output = |entry: DiffEntry| {
-        if matcher.matches_file(&entry.path) {
+    let mut add_to_output = |entry: DiffEntry| -> Result<()> {
+        if matcher.matches_file(&entry.path)? {
             output.push(entry);
         }
+        Ok(())
     };
 
     debug_assert!(is_sorted(&lfiles));
@@ -269,30 +270,30 @@ fn diff_files<'a>(
         match (lfile, rfile) {
             (Some(l), Some(r)) => match l.path.cmp(&r.path) {
                 Ordering::Less => {
-                    add_to_output(DiffEntry::left(l));
+                    add_to_output(DiffEntry::left(l))?;
                     lfile = lfiles.next();
                     rfile = Some(r);
                 }
                 Ordering::Greater => {
-                    add_to_output(DiffEntry::right(r));
+                    add_to_output(DiffEntry::right(r))?;
                     lfile = Some(l);
                     rfile = rfiles.next();
                 }
                 Ordering::Equal => {
                     if l.meta != r.meta {
-                        add_to_output(DiffEntry::changed(l, r));
+                        add_to_output(DiffEntry::changed(l, r))?;
                     }
                     lfile = lfiles.next();
                     rfile = rfiles.next();
                 }
             },
             (Some(l), None) => {
-                add_to_output(DiffEntry::left(l));
+                add_to_output(DiffEntry::left(l))?;
                 lfile = lfiles.next();
                 rfile = None;
             }
             (None, Some(r)) => {
-                add_to_output(DiffEntry::right(r));
+                add_to_output(DiffEntry::right(r))?;
                 lfile = None;
                 rfile = rfiles.next();
             }
@@ -300,7 +301,7 @@ fn diff_files<'a>(
         }
     }
 
-    output
+    Ok(output)
 }
 
 /// Given two sorted directory lists, return diff items for non-matching directories.
@@ -308,13 +309,14 @@ fn diff_dirs<'a>(
     ldirs: Vec<DirLink<'a>>,
     rdirs: Vec<DirLink<'a>>,
     matcher: &'a dyn Matcher,
-) -> Vec<DiffItem<'a>> {
+) -> Result<Vec<DiffItem<'a>>> {
     let mut output = Vec::new();
 
-    let mut add_to_output = |item: DiffItem<'a>| {
-        if matcher.matches_directory(item.path()) != DirectoryMatch::Nothing {
+    let mut add_to_output = |item: DiffItem<'a>| -> Result<()> {
+        if matcher.matches_directory(item.path())? != DirectoryMatch::Nothing {
             output.push(item);
         }
+        Ok(())
     };
 
     debug_assert!(is_sorted(&ldirs));
@@ -329,12 +331,12 @@ fn diff_dirs<'a>(
         match (ldir, rdir) {
             (Some(l), Some(r)) => match l.path.cmp(&r.path) {
                 Ordering::Less => {
-                    add_to_output(DiffItem::left(l));
+                    add_to_output(DiffItem::left(l))?;
                     ldir = ldirs.next();
                     rdir = Some(r);
                 }
                 Ordering::Greater => {
-                    add_to_output(DiffItem::right(r));
+                    add_to_output(DiffItem::right(r))?;
                     ldir = Some(l);
                     rdir = rdirs.next();
                 }
@@ -344,19 +346,19 @@ fn diff_dirs<'a>(
                     // have not yet been persisted), in which case we must manually compare
                     // all of the entries since we can't tell if they are the same.
                     if l.hgid() != r.hgid() || l.hgid().is_none() {
-                        add_to_output(DiffItem::Changed(l, r));
+                        add_to_output(DiffItem::Changed(l, r))?;
                     }
                     ldir = ldirs.next();
                     rdir = rdirs.next();
                 }
             },
             (Some(l), None) => {
-                add_to_output(DiffItem::left(l));
+                add_to_output(DiffItem::left(l))?;
                 ldir = ldirs.next();
                 rdir = None;
             }
             (None, Some(r)) => {
-                add_to_output(DiffItem::right(r));
+                add_to_output(DiffItem::right(r))?;
                 ldir = None;
                 rdir = rdirs.next();
             }
@@ -364,7 +366,7 @@ fn diff_dirs<'a>(
         }
     }
 
-    output
+    Ok(output)
 }
 
 fn is_sorted<T: Ord>(iter: impl IntoIterator<Item = T>) -> bool {
@@ -478,7 +480,7 @@ mod tests {
         ];
 
         let matcher = AlwaysMatcher::new();
-        let entries = diff_files(lfiles, rfiles, &matcher);
+        let entries = diff_files(lfiles, rfiles, &matcher).unwrap();
         let expected = vec![
             DiffEntry::new(
                 repo_path_buf("b"),

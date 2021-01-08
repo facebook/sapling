@@ -77,9 +77,9 @@ impl PhysicalFileSystem {
         matcher: M,
         include_directories: bool,
         last_write: HgModifiedTime,
-    ) -> PendingChanges<M> {
-        let walker = Walker::new(self.vfs.root().to_path_buf(), matcher.clone(), false);
-        PendingChanges {
+    ) -> Result<PendingChanges<M>> {
+        let walker = Walker::new(self.vfs.root().to_path_buf(), matcher.clone(), false)?;
+        let pending_changes = PendingChanges {
             vfs: self.vfs.clone(),
             walker,
             matcher,
@@ -90,7 +90,8 @@ impl PhysicalFileSystem {
             lookups: vec![],
             tree_iter: None,
             last_write,
-        }
+        };
+        Ok(pending_changes)
     }
 }
 
@@ -253,8 +254,15 @@ impl<M: Matcher + Clone> PendingChanges<M> {
         let tracked = tracked.unwrap();
 
         for path in tracked.into_iter() {
-            if self.seen.contains(&path) || !self.matcher.matches_file(&path) {
-                continue;
+            if self.seen.contains(&path) {
+                match self.matcher.matches_file(&path) {
+                    Err(e) => {
+                        results.push(Err(e));
+                        continue;
+                    }
+                    Ok(false) => continue,
+                    Ok(true) => {}
+                }
             }
 
             // If it's behind a symlink consider it deleted.

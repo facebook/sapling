@@ -80,18 +80,19 @@ impl<M> Walker<M>
 where
     M: Matcher,
 {
-    pub fn new(root: PathBuf, matcher: M, include_directories: bool) -> Self {
+    pub fn new(root: PathBuf, matcher: M, include_directories: bool) -> Result<Self> {
         let mut dir_matches = vec![];
-        if matcher.matches_directory(&RepoPathBuf::new()) != DirectoryMatch::Nothing {
+        if matcher.matches_directory(&RepoPathBuf::new())? != DirectoryMatch::Nothing {
             dir_matches.push(RepoPathBuf::new());
         }
-        Walker {
+        let walker = Walker {
             root,
             dir_matches,
             results: Vec::new(),
             matcher,
             include_directories,
-        }
+        };
+        Ok(walker)
     }
 
     fn match_entry(&mut self, next_dir: &RepoPathBuf, entry: DirEntry) -> Result<()> {
@@ -110,7 +111,7 @@ where
         let mut candidate_path = next_dir.clone();
         candidate_path.push(filename);
         if filetype.is_file() || filetype.is_symlink() {
-            if self.matcher.matches_file(candidate_path.as_repo_path()) {
+            if self.matcher.matches_file(candidate_path.as_repo_path())? {
                 self.results
                     .push(Ok(WalkEntry::File(candidate_path, entry.metadata()?)));
             }
@@ -118,12 +119,12 @@ where
             if filename.as_str() != ".hg"
                 && self
                     .matcher
-                    .matches_directory(candidate_path.as_repo_path())
+                    .matches_directory(candidate_path.as_repo_path())?
                     != DirectoryMatch::Nothing
             {
                 self.dir_matches.push(candidate_path);
             }
-        } else if self.matcher.matches_file(candidate_path.as_repo_path()) {
+        } else if self.matcher.matches_file(candidate_path.as_repo_path())? {
             return Err(WalkError::InvalidFileType(filename.to_owned()).into());
         }
         Ok(())
@@ -202,7 +203,7 @@ mod tests {
         let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let walker = Walker::new(root_path, AlwaysMatcher::new(), false);
+        let walker = Walker::new(root_path, AlwaysMatcher::new(), false)?;
         let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
         assert_eq!(walked_files.len(), 3);
@@ -218,7 +219,7 @@ mod tests {
         let files = vec!["dirA/a.txt", "b.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let walker = Walker::new(root_path, NeverMatcher::new(), false);
+        let walker = Walker::new(root_path, NeverMatcher::new(), false)?;
         let walked_files: Vec<_> = walker.collect();
         assert!(walked_files.is_empty());
         Ok(())

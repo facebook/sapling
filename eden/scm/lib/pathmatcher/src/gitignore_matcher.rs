@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
 
+use anyhow::Result;
 use ignore::{
     self,
     gitignore::{self, Glob},
@@ -301,16 +302,17 @@ impl Explain {
 }
 
 impl Matcher for GitignoreMatcher {
-    fn matches_directory(&self, path: &RepoPath) -> DirectoryMatch {
-        match self.match_path(path.as_str(), true, self, &mut None) {
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
+        let dm = match self.match_path(path.as_str(), true, self, &mut None) {
             MatchResult::Ignored => DirectoryMatch::Everything,
             MatchResult::Included => DirectoryMatch::Nothing,
             MatchResult::Unspecified => DirectoryMatch::ShouldTraverse,
-        }
+        };
+        Ok(dm)
     }
 
-    fn matches_file(&self, path: &RepoPath) -> bool {
-        self.match_relative(path.as_str(), false)
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+        Ok(self.match_relative(path.as_str(), false))
     }
 }
 

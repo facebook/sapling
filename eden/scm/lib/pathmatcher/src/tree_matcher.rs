@@ -9,6 +9,7 @@
 //!
 //! [TreeMatcher] is the main structure.
 
+use anyhow::Result;
 use bitflags::bitflags;
 use globset::{Glob, GlobBuilder, GlobSet, GlobSetBuilder};
 use std::path::Path;
@@ -235,16 +236,17 @@ impl TreeMatcher {
 }
 
 impl Matcher for TreeMatcher {
-    fn matches_directory(&self, path: &RepoPath) -> DirectoryMatch {
-        match self.match_recursive(path.as_str()) {
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
+        let dm = match self.match_recursive(path.as_str()) {
             Some(true) => DirectoryMatch::Everything,
             Some(false) => DirectoryMatch::Nothing,
             None => DirectoryMatch::ShouldTraverse,
-        }
+        };
+        Ok(dm)
     }
 
-    fn matches_file(&self, path: &RepoPath) -> bool {
-        self.matches(path.as_str())
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+        Ok(self.matches(path.as_str()))
     }
 }
 

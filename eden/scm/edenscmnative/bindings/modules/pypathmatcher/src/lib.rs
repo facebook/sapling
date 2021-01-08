@@ -10,9 +10,10 @@
 use std::path::Path;
 
 use cpython::*;
-use cpython_ext::error::ResultPyErrExt;
+use cpython_ext::error::{AnyhowResultExt, ResultPyErrExt};
 use cpython_ext::{PyPath, PyPathBuf, Str};
 
+use anyhow::Result;
 use pathmatcher::{DirectoryMatch, GitignoreMatcher, Matcher, TreeMatcher};
 use types::RepoPath;
 
@@ -97,12 +98,12 @@ impl<'a> PythonMatcher<'a> {
 }
 
 impl<'a> Matcher for PythonMatcher<'a> {
-    fn matches_directory(&self, path: &RepoPath) -> DirectoryMatch {
-        matches_directory_impl(self.py, &self.py_matcher, &path)
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
+        matches_directory_impl(self.py, &self.py_matcher, &path).into_anyhow_result()
     }
 
-    fn matches_file(&self, path: &RepoPath) -> bool {
-        matches_file_impl(self.py, &self.py_matcher, &path)
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+        matches_file_impl(self.py, &self.py_matcher, &path).into_anyhow_result()
     }
 }
 
@@ -129,29 +130,31 @@ impl Clone for UnsafePythonMatcher {
 }
 
 impl<'a> Matcher for UnsafePythonMatcher {
-    fn matches_directory(&self, path: &RepoPath) -> DirectoryMatch {
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
         let assumed_py = unsafe { Python::assume_gil_acquired() };
-        matches_directory_impl(assumed_py, &self.py_matcher, &path)
+        matches_directory_impl(assumed_py, &self.py_matcher, &path).into_anyhow_result()
     }
 
-    fn matches_file(&self, path: &RepoPath) -> bool {
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
         let assumed_py = unsafe { Python::assume_gil_acquired() };
-        matches_file_impl(assumed_py, &self.py_matcher, &path)
+        matches_file_impl(assumed_py, &self.py_matcher, &path).into_anyhow_result()
     }
 }
 
-fn matches_directory_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> DirectoryMatch {
+fn matches_directory_impl(
+    py: Python,
+    py_matcher: &PyObject,
+    path: &RepoPath,
+) -> PyResult<DirectoryMatch> {
     let py_path = PyPathBuf::from(path);
     // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
     // it crashes the rust stuff and returns a rust exception to Python.
-    let py_value = py_matcher
-        .call_method(py, "visitdir", (py_path,), None)
-        .unwrap();
+    let py_value = py_matcher.call_method(py, "visitdir", (py_path,), None)?;
 
     let is_all = PyString::extract(py, &py_value)
         .and_then(|py_str| py_str.to_string(py).map(|s| s == "all"))
         .unwrap_or(false);
-    if is_all {
+    let matches = if is_all {
         DirectoryMatch::Everything
     } else {
         if py_value.is_true(py).unwrap() {
@@ -159,16 +162,14 @@ fn matches_directory_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) ->
         } else {
             DirectoryMatch::Nothing
         }
-    }
+    };
+    Ok(matches)
 }
 
-fn matches_file_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> bool {
+fn matches_file_impl(py: Python, py_matcher: &PyObject, path: &RepoPath) -> PyResult<bool> {
     let py_path = PyPathBuf::from(path);
     // PANICS! The interface in Rust doesn't expose exceptions. Unwrapping seems fine since
     // it crashes the rust stuff and returns a rust exception to Python.
-    py_matcher
-        .call(py, (py_path,), None)
-        .unwrap()
-        .is_true(py)
-        .unwrap()
+    let matches = py_matcher.call(py, (py_path,), None)?.is_true(py)?;
+    Ok(matches)
 }
