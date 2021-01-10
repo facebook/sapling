@@ -64,11 +64,12 @@ TreeEntry fromRawTreeEntry(
     ScsProxyHash::store(proxyHash, fullPath, commitHash.value(), writeBatch);
   }
 
-  return TreeEntry{proxyHash,
-                   std::move(name),
-                   fromRawTreeEntryType(entry.ttype),
-                   size,
-                   contentSha1};
+  return TreeEntry{
+      proxyHash,
+      std::move(name),
+      fromRawTreeEntryType(entry.ttype),
+      size,
+      contentSha1};
 }
 
 FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(

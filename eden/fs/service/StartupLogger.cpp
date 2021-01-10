@@ -366,9 +366,10 @@ void ForegroundStartupLogger::successImpl() {}
 }
 
 FileStartupLogger::FileStartupLogger(folly::StringPiece startupLogPath)
-    : logFile_{startupLogPath,
-               O_APPEND | O_CLOEXEC | O_CREAT | O_WRONLY,
-               0644} {}
+    : logFile_{
+          startupLogPath,
+          O_APPEND | O_CLOEXEC | O_CREAT | O_WRONLY,
+          0644} {}
 
 void FileStartupLogger::writeMessageImpl(
     folly::LogLevel,

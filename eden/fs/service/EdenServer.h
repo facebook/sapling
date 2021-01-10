@@ -677,17 +677,21 @@ class EdenServer : private TakeoverHandler {
    */
   folly::EventBase* mainEventBase_;
 
-  PeriodicFnTask<&EdenServer::reloadConfig> reloadConfigTask_{this,
-                                                              "reload_config"};
+  PeriodicFnTask<&EdenServer::reloadConfig> reloadConfigTask_{
+      this,
+      "reload_config"};
   PeriodicFnTask<&EdenServer::checkLockValidity> checkValidityTask_{
       this,
       "check_lock_validity"};
-  PeriodicFnTask<&EdenServer::flushStatsNow> flushStatsTask_{this,
-                                                             "flush_stats"};
-  PeriodicFnTask<&EdenServer::reportMemoryStats> memoryStatsTask_{this,
-                                                                  "mem_stats"};
-  PeriodicFnTask<&EdenServer::manageLocalStore> localStoreTask_{this,
-                                                                "local_store"};
+  PeriodicFnTask<&EdenServer::flushStatsNow> flushStatsTask_{
+      this,
+      "flush_stats"};
+  PeriodicFnTask<&EdenServer::reportMemoryStats> memoryStatsTask_{
+      this,
+      "mem_stats"};
+  PeriodicFnTask<&EdenServer::manageLocalStore> localStoreTask_{
+      this,
+      "local_store"};
 
   PeriodicFnTask<&EdenServer::refreshBackingStore> backingStoreTask_{
       this,

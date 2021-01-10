@@ -201,9 +201,10 @@ inline static linelog_result appendline(
     linelog_annotateresult* ar,
     const linelog_inst* inst,
     linelog_offset offset) {
-  linelog_lineinfo info = {.rev = inst ? inst->rev : 0,
-                           .linenum = inst ? inst->offset /* linenum */ : 0,
-                           .offset = offset};
+  linelog_lineinfo info = {
+      .rev = inst ? inst->rev : 0,
+      .linenum = inst ? inst->offset /* linenum */ : 0,
+      .offset = offset};
   returnonerror(reservelines(ar, ar->linecount + 1));
   ar->lines[ar->linecount++] = info;
   return LINELOG_RESULT_OK;
@@ -349,9 +350,10 @@ static linelog_result replacelines(
   linelog_offset a1newaddr = inst0.offset;
   appendinst(a1inst); /* [3] */
   if (!a1instisjge0) { /* [4] */
-    linelog_inst ret = {/* .opcode = */ JGE,
-                        0,
-                        /* .offset = */ a1addr + 1};
+    linelog_inst ret = {
+        /* .opcode = */ JGE,
+        0,
+        /* .offset = */ a1addr + 1};
     appendinst(ret);
   }
 #undef appendinst

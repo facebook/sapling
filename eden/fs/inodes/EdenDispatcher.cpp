@@ -502,8 +502,8 @@ folly::Future<std::optional<LookupResult>> EdenDispatcher::lookup(
                   auto incFsRefcount = [inode = std::move(inode)] {
                     inode->incFsRefcount();
                   };
-                  return LookupResult{std::move(inodeMetadata),
-                                      std::move(incFsRefcount)};
+                  return LookupResult{
+                      std::move(inodeMetadata), std::move(incFsRefcount)};
                 });
           })
       .thenError(

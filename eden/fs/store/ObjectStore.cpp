@@ -39,13 +39,14 @@ std::shared_ptr<ObjectStore> ObjectStore::create(
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<const EdenConfig> edenConfig) {
-  return std::shared_ptr<ObjectStore>{new ObjectStore{std::move(localStore),
-                                                      std::move(backingStore),
-                                                      std::move(stats),
-                                                      executor,
-                                                      processNameCache,
-                                                      structuredLogger,
-                                                      edenConfig}};
+  return std::shared_ptr<ObjectStore>{new ObjectStore{
+      std::move(localStore),
+      std::move(backingStore),
+      std::move(stats),
+      executor,
+      processNameCache,
+      structuredLogger,
+      edenConfig}};
 }
 
 ObjectStore::ObjectStore(

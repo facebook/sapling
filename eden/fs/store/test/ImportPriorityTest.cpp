@@ -23,8 +23,8 @@ TEST(ImportPriorityTest, value) {
       ImportPriority{static_cast<ImportPriorityKind>(INT16_MAX)});
 
   // The maximum possible priority
-  auto maximum = ImportPriority{static_cast<ImportPriorityKind>(INT16_MAX),
-                                0xFFFFFFFFFFFF};
+  auto maximum = ImportPriority{
+      static_cast<ImportPriorityKind>(INT16_MAX), 0xFFFFFFFFFFFF};
   EXPECT_EQ(maximum.value(), 0x7FFFFFFFFFFFFFFF);
 
   // the minimum possible priority

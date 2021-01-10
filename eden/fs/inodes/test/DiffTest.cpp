@@ -857,15 +857,16 @@ TEST(DiffTest, ignoreInSubdirectories) {
 // Test with a .gitignore in subdirectories and file exists both in mount and in
 // the Tree (so we should report the file modificiation)
 TEST(DiffTest, ignoreInSubdirectoriesInMountAndInTree) {
-  DiffTest test({{".gitignore", "**/foo/bar.txt\n"},
-                 {"foo/.gitignore", "stuff\ntest\nwhatever\n"},
-                 {"foo/foo/.gitignore", "!/bar.txt\ntest\n"},
-                 {"abc/def/.gitignore", "*.log\n"},
-                 {"abc/def/other.txt", "test\n"},
-                 {"a/.gitignore", "b/c/d.txt\n"},
-                 {"a/b/c/x.txt", "test\n"},
-                 {"b/c/x.txt", "test\n"},
-                 {"abc/def/test.log", "test\n"}});
+  DiffTest test(
+      {{".gitignore", "**/foo/bar.txt\n"},
+       {"foo/.gitignore", "stuff\ntest\nwhatever\n"},
+       {"foo/foo/.gitignore", "!/bar.txt\ntest\n"},
+       {"abc/def/.gitignore", "*.log\n"},
+       {"abc/def/other.txt", "test\n"},
+       {"a/.gitignore", "b/c/d.txt\n"},
+       {"a/b/c/x.txt", "test\n"},
+       {"b/c/x.txt", "test\n"},
+       {"abc/def/test.log", "test\n"}});
 
   // Add some untracked files, some of which match the ignore patterns
   test.getMount().addFile("foo/bar.txt", "new\n");
@@ -934,15 +935,16 @@ TEST(DiffTest, ignoreInSubdirectoriesInMountAndInTree) {
 // Test with a .gitignore in subdirectories and file exists not in mount but
 // exists in the Tree (so we should report the file deletion)
 TEST(DiffTest, ignoreInSubdirectoriesNotInMountButInTree) {
-  DiffTest test({{".gitignore", "**/foo/bar.txt\n"},
-                 {"foo/.gitignore", "stuff\ntest\nwhatever\n"},
-                 {"foo/foo/.gitignore", "!/bar.txt\ntest\n"},
-                 {"abc/def/.gitignore", "*.log\n"},
-                 {"abc/def/other.txt", "test\n"},
-                 {"a/.gitignore", "b/c/d.txt\n"},
-                 {"a/b/c/x.txt", "test\n"},
-                 {"b/c/x.txt", "test\n"},
-                 {"abc/def/test.log", "test\n"}});
+  DiffTest test(
+      {{".gitignore", "**/foo/bar.txt\n"},
+       {"foo/.gitignore", "stuff\ntest\nwhatever\n"},
+       {"foo/foo/.gitignore", "!/bar.txt\ntest\n"},
+       {"abc/def/.gitignore", "*.log\n"},
+       {"abc/def/other.txt", "test\n"},
+       {"a/.gitignore", "b/c/d.txt\n"},
+       {"a/b/c/x.txt", "test\n"},
+       {"b/c/x.txt", "test\n"},
+       {"abc/def/test.log", "test\n"}});
 
   // Add some untracked files, some of which match the ignore patterns
   test.getMount().addFile("foo/bar.txt", "new\n");

@@ -1049,11 +1049,8 @@ static PyMethodDef methods[] = {
 static const int version = 2;
 
 #ifdef IS_PY3K
-static struct PyModuleDef osutil_module = {PyModuleDef_HEAD_INIT,
-                                           "osutil",
-                                           osutil_doc,
-                                           -1,
-                                           methods};
+static struct PyModuleDef osutil_module =
+    {PyModuleDef_HEAD_INIT, "osutil", osutil_doc, -1, methods};
 
 PyMODINIT_FUNC PyInit_osutil(void) {
   PyObject* m;

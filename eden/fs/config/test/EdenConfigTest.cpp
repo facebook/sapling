@@ -427,12 +427,13 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
 
   auto userConfigPath = rootTestDir_ + "user-edenrc"_pc;
   auto getConfig = [&]() {
-    auto config = EdenConfig{"testusername"_sp,
-                             uid_t{42},
-                             AbsolutePath("/testhomedir"),
-                             userConfigPath,
-                             systemConfigDir,
-                             systemConfigDir + "system-edenrc"_pc};
+    auto config = EdenConfig{
+        "testusername"_sp,
+        uid_t{42},
+        AbsolutePath("/testhomedir"),
+        userConfigPath,
+        systemConfigDir,
+        systemConfigDir + "system-edenrc"_pc};
     config.loadUserConfig();
     return EdenConfig{config};
   };
@@ -487,12 +488,13 @@ TEST_F(EdenConfigTest, missing_config_files_never_change) {
 
   ensureDirectoryExists(systemConfigDir);
 
-  EdenConfig config{"username",
-                    42,
-                    userConfigDir,
-                    userConfigPath,
-                    systemConfigDir,
-                    systemConfigPath};
+  EdenConfig config{
+      "username",
+      42,
+      userConfigDir,
+      userConfigPath,
+      systemConfigDir,
+      systemConfigPath};
   config.loadUserConfig();
   EXPECT_EQ(FileChangeReason::NONE, config.hasUserConfigFileChanged().reason);
 }

@@ -163,11 +163,8 @@ static PyMethodDef methods[] = {
 static const int version = 1;
 
 #ifdef IS_PY3K
-static struct PyModuleDef mpatch_module = {PyModuleDef_HEAD_INIT,
-                                           "mpatch",
-                                           mpatch_doc,
-                                           -1,
-                                           methods};
+static struct PyModuleDef mpatch_module =
+    {PyModuleDef_HEAD_INIT, "mpatch", mpatch_doc, -1, methods};
 
 PyMODINIT_FUNC PyInit_mpatch(void) {
   PyObject* m;

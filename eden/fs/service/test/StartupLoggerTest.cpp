@@ -327,11 +327,12 @@ TEST_F(DaemonStartupLoggerTest, daemonClosesStandardFileDescriptors) {
   opts.pipeStdin();
   opts.pipeStdout();
   opts.pipeStderr();
-  auto process = SpawnedProcess{{{
-                                    executablePath().stringPiece().str(),
-                                    "daemonClosesStandardFileDescriptorsChild",
-                                }},
-                                std::move(opts)};
+  auto process = SpawnedProcess{
+      {{
+          executablePath().stringPiece().str(),
+          "daemonClosesStandardFileDescriptorsChild",
+      }},
+      std::move(opts)};
 
   auto stdinFd = process.stdinFd();
   auto stdoutFd = process.stdoutFd();

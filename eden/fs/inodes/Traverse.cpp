@@ -20,11 +20,12 @@ std::vector<ChildEntry> parseDirContents(const DirContents& contents) {
   std::vector<ChildEntry> results;
   results.reserve(contents.size());
   for (const auto& [name, entry] : contents) {
-    results.push_back(ChildEntry{name,
-                                 entry.getDtype(),
-                                 entry.getInodeNumber(),
-                                 entry.getOptionalHash(),
-                                 entry.getInodePtr()});
+    results.push_back(ChildEntry{
+        name,
+        entry.getDtype(),
+        entry.getInodeNumber(),
+        entry.getOptionalHash(),
+        entry.getInodePtr()});
   }
   return results;
 }

@@ -45,9 +45,7 @@ void RequestContext::finishRequest() {
   stats_ = nullptr;
 
   if (channelThreadLocalStats_) {
-    {
-      auto temp = std::move(requestMetricsScope_);
-    }
+    { auto temp = std::move(requestMetricsScope_); }
     channelThreadLocalStats_.reset();
   }
 

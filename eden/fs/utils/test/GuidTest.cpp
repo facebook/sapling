@@ -17,10 +17,11 @@ using namespace facebook::eden;
 
 TEST(GuidTest, assignedGuid) {
   // {811305DA-F51E-4E2D-9201-0D12A1E7F8D5}
-  static const GUID testGuid = {0x811305da,
-                                0xf51e,
-                                0x4e2d,
-                                {0x92, 0x1, 0xd, 0x12, 0xa1, 0xe7, 0xf8, 0xd5}};
+  static const GUID testGuid = {
+      0x811305da,
+      0xf51e,
+      0x4e2d,
+      {0x92, 0x1, 0xd, 0x12, 0xa1, 0xe7, 0xf8, 0xd5}};
 
   Guid guid{testGuid};
 
@@ -45,10 +46,11 @@ TEST(GuidTest, generatedGuid) {
 
 TEST(GuidTest, compareGuids) {
   // {811305DA-F51E-4E2D-9201-0D12A1E7F8D5}
-  static const GUID testGuid = {0x811305da,
-                                0xf51e,
-                                0x4e2d,
-                                {0x92, 0x1, 0xd, 0x12, 0xa1, 0xe7, 0xf8, 0xd5}};
+  static const GUID testGuid = {
+      0x811305da,
+      0xf51e,
+      0x4e2d,
+      {0x92, 0x1, 0xd, 0x12, 0xa1, 0xe7, 0xf8, 0xd5}};
 
   Guid guid1{testGuid};
   Guid guid2;
@@ -64,10 +66,11 @@ TEST(GuidTest, compareGuids) {
 
 TEST(GuidTest, pointerGuids) {
   // {811305DA-F51E-4E2D-9201-0D12A1E7F8D5}
-  static const GUID testGuid = {0x811305da,
-                                0xf51e,
-                                0x4e2d,
-                                {0x92, 0x1, 0xd, 0x12, 0xa1, 0xe7, 0xf8, 0xd5}};
+  static const GUID testGuid = {
+      0x811305da,
+      0xf51e,
+      0x4e2d,
+      {0x92, 0x1, 0xd, 0x12, 0xa1, 0xe7, 0xf8, 0xd5}};
 
   Guid guid1{testGuid};
   const GUID* ptrGuid1 = guid1;
@@ -82,10 +85,11 @@ TEST(GuidTest, pointerGuids) {
 }
 
 TEST(GuidTest, formatGuid) {
-  static const GUID testGuid = {0x811305da,
-                                0xf51e,
-                                0x4e2d,
-                                {0x92, 0x1, 0xd, 0x12, 0xa1, 0xe7, 0xf8, 0xd5}};
+  static const GUID testGuid = {
+      0x811305da,
+      0xf51e,
+      0x4e2d,
+      {0x92, 0x1, 0xd, 0x12, 0xa1, 0xe7, 0xf8, 0xd5}};
   Guid guid1{testGuid};
   auto s = fmt::format(FMT_STRING("{}"), guid1);
   EXPECT_EQ(s, "{811305DA-F51E-4E2D-9201-0D12A1E7F8D5}");

@@ -30,9 +30,9 @@ InodeBase::InodeBase(EdenMount* mount)
       mount_{mount},
       // The root inode always starts with an implicit reference from FUSE.
       numFsReferences_{1},
-      location_{
-          LocationInfo{nullptr,
-                       PathComponentPiece{"", detail::SkipPathSanityCheck()}}} {
+      location_{LocationInfo{
+          nullptr,
+          PathComponentPiece{"", detail::SkipPathSanityCheck()}}} {
   XLOG(DBG5) << "root inode " << this << " (" << ino_ << ") created for mount "
              << mount_->getPath();
 

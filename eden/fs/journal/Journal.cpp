@@ -260,10 +260,11 @@ std::optional<JournalDeltaInfo> Journal::getLatest() {
   } else {
     if (deltaState->isFileChangeInBack()) {
       const FileChangeJournalDelta& back = deltaState->fileChangeDeltas.back();
-      return JournalDeltaInfo{deltaState->currentHash,
-                              deltaState->currentHash,
-                              back.sequenceID,
-                              back.time};
+      return JournalDeltaInfo{
+          deltaState->currentHash,
+          deltaState->currentHash,
+          back.sequenceID,
+          back.time};
     } else {
       const HashUpdateJournalDelta& back = deltaState->hashUpdateDeltas.back();
       return JournalDeltaInfo{

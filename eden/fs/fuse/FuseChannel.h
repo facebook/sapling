@@ -58,10 +58,11 @@ struct FuseTraceEvent : TraceEventBase {
 
   static FuseTraceEvent
   start(uint64_t unique, const fuse_in_header& request, std::string arguments) {
-    return FuseTraceEvent{Type::START,
-                          unique,
-                          request,
-                          std::make_unique<std::string>(std::move(arguments))};
+    return FuseTraceEvent{
+        Type::START,
+        unique,
+        request,
+        std::make_unique<std::string>(std::move(arguments))};
   }
 
   static FuseTraceEvent finish(uint64_t unique, const fuse_in_header& request) {
@@ -367,8 +368,8 @@ class FuseChannel {
     static_assert(std::is_trivial_v<T>);
     sendReply(
         request,
-        folly::ByteRange{reinterpret_cast<const uint8_t*>(&payload),
-                         sizeof(T)});
+        folly::ByteRange{
+            reinterpret_cast<const uint8_t*>(&payload), sizeof(T)});
   }
 
   /**

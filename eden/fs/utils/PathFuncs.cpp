@@ -193,9 +193,8 @@ folly::Expected<RelativePath, int> joinAndNormalize(
   if (path.startsWith(kDirSeparator)) {
     return folly::makeUnexpected(EPERM);
   }
-  const std::string joined = base.value().empty()
-      ? path.str()
-      : path.empty() ? base.value().str()
+  const std::string joined = base.value().empty() ? path.str()
+      : path.empty()                              ? base.value().str()
                      : folly::to<std::string>(base, kDirSeparator, path);
   const CanonicalData cdata{canonicalPathData(joined)};
   const auto& parts{cdata.components};
@@ -257,10 +256,11 @@ std::pair<PathComponentPiece, RelativePathPiece> splitFirst(
   auto dirSeparator = detail::findPathSeparator(piece);
 
   if (dirSeparator != std::string::npos) {
-    return {PathComponentPiece{folly::StringPiece{
-                piece.begin(), piece.begin() + dirSeparator}},
-            RelativePathPiece{folly::StringPiece{
-                piece.begin() + dirSeparator + 1, piece.end()}}};
+    return {
+        PathComponentPiece{
+            folly::StringPiece{piece.begin(), piece.begin() + dirSeparator}},
+        RelativePathPiece{
+            folly::StringPiece{piece.begin() + dirSeparator + 1, piece.end()}}};
   } else {
     return {PathComponentPiece{piece}, RelativePathPiece{}};
   }

@@ -173,17 +173,19 @@ FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const Blob& blob,
     FakeBlobType type)
-    : entry{blob.getHash(),
-            PathComponent{name},
-            treeEntryTypeFromBlobType(type)} {}
+    : entry{
+          blob.getHash(),
+          PathComponent{name},
+          treeEntryTypeFromBlobType(type)} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
     const StoredBlob* blob,
     FakeBlobType type)
-    : entry{blob->get().getHash(),
-            PathComponent{name},
-            treeEntryTypeFromBlobType(type)} {}
+    : entry{
+          blob->get().getHash(),
+          PathComponent{name},
+          treeEntryTypeFromBlobType(type)} {}
 
 FakeBackingStore::TreeEntryData::TreeEntryData(
     folly::StringPiece name,
@@ -270,8 +272,8 @@ Hash FakeBackingStore::computeTreeHash(
   }
 
   Hash::Storage computedHashBytes;
-  digest.hash_final(folly::MutableByteRange{computedHashBytes.data(),
-                                            computedHashBytes.size()});
+  digest.hash_final(folly::MutableByteRange{
+      computedHashBytes.data(), computedHashBytes.size()});
   return Hash{computedHashBytes};
 }
 

@@ -54,11 +54,11 @@ std::vector<DirList::ExtractedEntry> DirList::extract() const {
   char* p = buf_.get();
   while (p != cur_) {
     auto entry = reinterpret_cast<fuse_dirent*>(p);
-    result.emplace_back(
-        ExtractedEntry{std::string{entry->name, entry->name + entry->namelen},
-                       entry->ino,
-                       static_cast<dtype_t>(entry->type),
-                       static_cast<off_t>(entry->off)});
+    result.emplace_back(ExtractedEntry{
+        std::string{entry->name, entry->name + entry->namelen},
+        entry->ino,
+        static_cast<dtype_t>(entry->type),
+        static_cast<off_t>(entry->off)});
 
     p += FUSE_DIRENT_ALIGN(FUSE_NAME_OFFSET + entry->namelen);
   }

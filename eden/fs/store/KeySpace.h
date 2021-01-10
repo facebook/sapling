@@ -81,31 +81,34 @@ class KeySpace {
       Ephemeral{&EdenConfig::localStoreTreeSizeLimit}};
   // Proxy hashes are required to fetch objects from hg from a hash.
   // Deleting them breaks re-importing after an inode is unloaded.
-  static constexpr KeySpaceRecord HgProxyHashFamily{3,
-                                                    "hgproxyhash",
-                                                    Persistent{}};
+  static constexpr KeySpaceRecord HgProxyHashFamily{
+      3,
+      "hgproxyhash",
+      Persistent{}};
   static constexpr KeySpaceRecord HgCommitToTreeFamily{
       4,
       "hgcommit2tree",
       Ephemeral{&EdenConfig::localStoreHgCommit2TreeSizeLimit}};
   static constexpr KeySpaceRecord BlobSizeFamily{5, "blobsize", Deprecated{}};
 
-  static constexpr KeySpaceRecord ScsProxyHashFamily{6,
-                                                     "scsproxyhash",
-                                                     Persistent{}};
+  static constexpr KeySpaceRecord ScsProxyHashFamily{
+      6,
+      "scsproxyhash",
+      Persistent{}};
   static constexpr KeySpaceRecord TreeMetaDataFamily{
       7,
       "treemeta",
       Ephemeral{&EdenConfig::localStoreTreeMetaSizeLimit}};
 
-  static constexpr const KeySpaceRecord* kAll[] = {&BlobFamily,
-                                                   &BlobMetaDataFamily,
-                                                   &TreeFamily,
-                                                   &HgProxyHashFamily,
-                                                   &HgCommitToTreeFamily,
-                                                   &BlobSizeFamily,
-                                                   &ScsProxyHashFamily,
-                                                   &TreeMetaDataFamily};
+  static constexpr const KeySpaceRecord* kAll[] = {
+      &BlobFamily,
+      &BlobMetaDataFamily,
+      &TreeFamily,
+      &HgProxyHashFamily,
+      &HgCommitToTreeFamily,
+      &BlobSizeFamily,
+      &ScsProxyHashFamily,
+      &TreeMetaDataFamily};
   static constexpr size_t kTotalCount = std::size(kAll);
 
  private:

@@ -157,8 +157,9 @@ class FileInodeTest : public ::testing::Test {
     // Set up a directory structure that we will use for most
     // of the tests below
     FakeTreeBuilder builder;
-    builder.setFiles({{"dir/a.txt", "This is a.txt.\n"},
-                      {"dir/sub/b.txt", "This is b.txt.\n"}});
+    builder.setFiles(
+        {{"dir/a.txt", "This is a.txt.\n"},
+         {"dir/sub/b.txt", "This is b.txt.\n"}});
     mount_.initialize(builder);
   }
 

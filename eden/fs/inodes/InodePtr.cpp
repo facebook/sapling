@@ -103,8 +103,8 @@ FileInode* InodePtr::asFileOrNull() const {
 }
 
 FileInodePtr InodePtr::asFilePtrOrNull() const& {
-  return FileInodePtr{dynamic_cast<FileInode*>(this->value_),
-                      FileInodePtr::NORMAL_INCREMENT};
+  return FileInodePtr{
+      dynamic_cast<FileInode*>(this->value_), FileInodePtr::NORMAL_INCREMENT};
 }
 
 FileInodePtr InodePtr::asFilePtrOrNull() && {
@@ -128,8 +128,8 @@ TreeInode* InodePtr::asTreeOrNull() const {
 }
 
 TreeInodePtr InodePtr::asTreePtrOrNull() const& {
-  return TreeInodePtr{dynamic_cast<TreeInode*>(this->value_),
-                      TreeInodePtr::NORMAL_INCREMENT};
+  return TreeInodePtr{
+      dynamic_cast<TreeInode*>(this->value_), TreeInodePtr::NORMAL_INCREMENT};
 }
 
 TreeInodePtr InodePtr::asTreePtrOrNull() && {

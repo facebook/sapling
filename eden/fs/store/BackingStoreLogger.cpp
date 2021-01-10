@@ -73,11 +73,12 @@ void BackingStoreLogger::logImport(
       break;
   }
 
-  logger_->logEvent(ServerDataFetch{std::move(cause_string),
-                                    pid,
-                                    std::move(cmdline),
-                                    std::move(importPathString),
-                                    std::move(typeString)});
+  logger_->logEvent(ServerDataFetch{
+      std::move(cause_string),
+      pid,
+      std::move(cmdline),
+      std::move(importPathString),
+      std::move(typeString)});
 }
 
 } // namespace eden

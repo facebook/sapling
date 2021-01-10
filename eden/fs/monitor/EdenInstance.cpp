@@ -106,15 +106,16 @@ class SpawnedEdenInstance::StartupStatusChecker : private AsyncTimeout {
 
  private:
   void timeoutExpired() noexcept override {
-    folly::makeFutureWith([this]() { return checkRunning(); })
-        .thenTry([this](Try<bool> result) {
-          client_.reset();
-          if (result.hasValue() && result.value()) {
-            edenRunning();
-          } else {
-            reschedule();
-          }
-        });
+    folly::makeFutureWith([this]() {
+      return checkRunning();
+    }).thenTry([this](Try<bool> result) {
+      client_.reset();
+      if (result.hasValue() && result.value()) {
+        edenRunning();
+      } else {
+        reschedule();
+      }
+    });
   }
 
   void edenRunning() {

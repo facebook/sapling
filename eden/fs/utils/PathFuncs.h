@@ -805,8 +805,8 @@ class PathComponentIterator {
 
   /// Returns the piece for the current iterator position.
   PathComponentPiece piece() const {
-    return PathComponentPiece{folly::StringPiece{start_, end_},
-                              SkipPathSanityCheck{}};
+    return PathComponentPiece{
+        folly::StringPiece{start_, end_}, SkipPathSanityCheck{}};
   }
 
   /*

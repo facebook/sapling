@@ -649,8 +649,8 @@ void EdenServer::unloadInodes() {
   {
     const auto mountPoints = mountPoints_.wlock();
     for (auto& entry : *mountPoints) {
-      roots.emplace_back(Root{std::string{entry.first},
-                              entry.second.edenMount->getRootInode()});
+      roots.emplace_back(Root{
+          std::string{entry.first}, entry.second.edenMount->getRootInode()});
     }
   }
 

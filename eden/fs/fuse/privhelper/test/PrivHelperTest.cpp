@@ -172,7 +172,7 @@ class PrivHelperTest : public ::testing::Test {
     PrivHelperConn::createConnPair(clientConn, serverConn);
 
     serverThread_ =
-        std::thread([ this, conn = std::move(serverConn) ]() mutable noexcept {
+        std::thread([this, conn = std::move(serverConn)]() mutable noexcept {
           server_.initPartial(std::move(conn), getuid(), getgid());
           server_.run();
         });

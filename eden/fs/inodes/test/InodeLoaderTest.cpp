@@ -45,11 +45,12 @@ TEST(InodeLoader, load) {
     auto results =
         collectAll(applyToInodes(
                        rootInode,
-                       std::vector<std::string>{"dir/sub/b.txt",
-                                                "dir/a.txt",
-                                                "not/exist/a",
-                                                "not/exist/b",
-                                                "dir/sub/b.txt"},
+                       std::vector<std::string>{
+                           "dir/sub/b.txt",
+                           "dir/a.txt",
+                           "not/exist/a",
+                           "not/exist/b",
+                           "dir/sub/b.txt"},
                        [](InodePtr inode) { return inode->getPath(); }))
             .get();
 

@@ -180,12 +180,14 @@ std::shared_ptr<EdenMount> EdenMount::create(
     std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal) {
-  return std::shared_ptr<EdenMount>{new EdenMount{std::move(config),
-                                                  std::move(objectStore),
-                                                  std::move(blobCache),
-                                                  std::move(serverState),
-                                                  std::move(journal)},
-                                    EdenMountDeleter{}};
+  return std::shared_ptr<EdenMount>{
+      new EdenMount{
+          std::move(config),
+          std::move(objectStore),
+          std::move(blobCache),
+          std::move(serverState),
+          std::move(journal)},
+      EdenMountDeleter{}};
 }
 
 EdenMount::EdenMount(
@@ -439,14 +441,15 @@ FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::removeBindMount(
 
 folly::SemiFuture<Unit> EdenMount::performBindMounts() {
   auto mountPath = getPath();
-  return folly::makeSemiFutureWith(
-             [argv = std::vector<std::string>{FLAGS_edenfsctlPath,
-                                              "redirect",
-                                              "fixup",
-                                              "--mount",
-                                              mountPath.c_str()}] {
-               return SpawnedProcess(argv).future_wait();
-             })
+  return folly::makeSemiFutureWith([argv =
+                                        std::vector<std::string>{
+                                            FLAGS_edenfsctlPath,
+                                            "redirect",
+                                            "fixup",
+                                            "--mount",
+                                            mountPath.c_str()}] {
+           return SpawnedProcess(argv).future_wait();
+         })
       .deferValue([mountPath](ProcessStatus returnCode) {
         if (returnCode.exitStatus() == 0) {
           return folly::unit;
@@ -637,7 +640,7 @@ folly::Future<folly::Unit> EdenMount::unmount() {
               getPath().stringPiece());
 #endif
         })
-        .thenTry([this](Try<Unit> && result) noexcept->folly::Future<Unit> {
+        .thenTry([this](Try<Unit>&& result) noexcept -> folly::Future<Unit> {
           auto mountingUnmountingState = mountingUnmountingState_.wlock();
           XDCHECK(mountingUnmountingState->channelUnmountPromise.has_value());
           folly::SharedPromise<folly::Unit>* unsafeUnmountPromise =
@@ -1516,8 +1519,8 @@ bool EdenMount::MountingUnmountingState::channelMountStarted() const noexcept {
   return channelMountPromise.has_value();
 }
 
-bool EdenMount::MountingUnmountingState::channelUnmountStarted() const
-    noexcept {
+bool EdenMount::MountingUnmountingState::channelUnmountStarted()
+    const noexcept {
   return channelUnmountPromise.has_value();
 }
 

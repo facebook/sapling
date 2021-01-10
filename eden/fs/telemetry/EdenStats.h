@@ -232,10 +232,11 @@ class HgImporterThreadStats : public EdenThreadStatsBase {
 class JournalThreadStats : public EdenThreadStatsBase {
  public:
   Timeseries truncatedReads{this, "journal.truncated_reads", fb303::SUM};
-  Timeseries filesAccumulated{this,
-                              "journal.files_accumulated",
-                              fb303::COUNT,
-                              fb303::SUM};
+  Timeseries filesAccumulated{
+      this,
+      "journal.files_accumulated",
+      fb303::COUNT,
+      fb303::SUM};
 };
 
 } // namespace eden

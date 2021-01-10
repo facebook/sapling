@@ -67,15 +67,16 @@ EdenThreadStatsBase::EdenThreadStatsBase() {}
 
 EdenThreadStatsBase::Histogram EdenThreadStatsBase::createHistogram(
     const std::string& name) {
-  return Histogram{this,
-                   name,
-                   static_cast<int64_t>(kBucketSize.count()),
-                   kMinValue.count(),
-                   kMaxValue.count(),
-                   fb303::COUNT,
-                   50,
-                   90,
-                   99};
+  return Histogram{
+      this,
+      name,
+      static_cast<int64_t>(kBucketSize.count()),
+      kMinValue.count(),
+      kMaxValue.count(),
+      fb303::COUNT,
+      50,
+      90,
+      99};
 }
 
 EdenThreadStatsBase::Timeseries EdenThreadStatsBase::createTimeseries(

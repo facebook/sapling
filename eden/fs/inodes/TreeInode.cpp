@@ -2863,9 +2863,10 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     // and TreeInode::checkoutUpdateEntry.
     contents.erase(it);
   } else {
-    entry = DirEntry{modeFromTreeEntryType(newScmEntry->getType()),
-                     getOverlay()->allocateInodeNumber(),
-                     newScmEntry->getHash()};
+    entry = DirEntry{
+        modeFromTreeEntryType(newScmEntry->getType()),
+        getOverlay()->allocateInodeNumber(),
+        newScmEntry->getHash()};
   }
 
   wasDirectoryListModified = true;
@@ -2978,7 +2979,7 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
            name = PathComponent{name},
            parentInode = inodePtrFromThis(),
            treeInode,
-           newScmEntry](auto &&) -> folly::Future<InvalidationRequired> {
+           newScmEntry](auto&&) -> folly::Future<InvalidationRequired> {
             // Make sure the treeInode was completely removed by the checkout.
             // If there were still untracked files inside of it, it won't have
             // been deleted, and we have a conflict that we cannot resolve.

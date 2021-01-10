@@ -191,8 +191,7 @@ HRESULT PrjfsChannelInner::startEnumeration(
               addDirectoryEnumeration(std::move(guid), std::move(dirents));
               context->sendSuccess();
             });
-      })
-          .within(requestTimeout_);
+      }).within(requestTimeout_);
 
   context->catchErrors(std::move(fut), notifications_)
       .ensure([context = std::move(context)] {});
@@ -357,8 +356,7 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
 
               return folly::makeFuture(folly::unit);
             });
-      })
-          .within(requestTimeout_);
+      }).within(requestTimeout_);
 
   context->catchErrors(std::move(fut), notifications_)
       .ensure([context = std::move(context)] {});
@@ -387,8 +385,7 @@ HRESULT PrjfsChannelInner::queryFileName(
                 context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
               }
             });
-      })
-          .within(requestTimeout_);
+      }).within(requestTimeout_);
 
   context->catchErrors(std::move(fut), notifications_)
       .ensure([context = std::move(context)] {});
@@ -573,8 +570,7 @@ HRESULT PrjfsChannelInner::getFileData(
                 context->sendSuccess();
               }
             });
-      })
-          .within(requestTimeout_);
+      }).within(requestTimeout_);
 
   context->catchErrors(std::move(fut), notifications_)
       .ensure([context = std::move(context)] {});

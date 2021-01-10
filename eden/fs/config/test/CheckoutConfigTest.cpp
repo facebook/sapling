@@ -182,20 +182,22 @@ TEST_F(CheckoutConfigTest, testBadSnapshot) {
       StringPiece{"eden\0\0\0\x0exyza", 12},
       "unsupported eden SNAPSHOT file format \\(version 14\\)");
   testBadSnapshot(
-      StringPiece{"eden\00\00\00\01"
-                  "\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00"
-                  "\xaa\xbb\xcc\xdd\xee\xff\xab\xcd\xef\x99"
-                  "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
-                  "\x45\x67\x89\xab\xcd\xef\x00\x11\x22",
-                  47},
+      StringPiece{
+          "eden\00\00\00\01"
+          "\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00"
+          "\xaa\xbb\xcc\xdd\xee\xff\xab\xcd\xef\x99"
+          "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
+          "\x45\x67\x89\xab\xcd\xef\x00\x11\x22",
+          47},
       "unexpected length for eden SNAPSHOT file");
   testBadSnapshot(
-      StringPiece{"eden\00\00\00\01"
-                  "\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00"
-                  "\xaa\xbb\xcc\xdd\xee\xff\xab\xcd\xef\x99"
-                  "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
-                  "\x45\x67\x89\xab\xcd\xef\x00\x11\x22\x33\x44",
-                  49},
+      StringPiece{
+          "eden\00\00\00\01"
+          "\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00"
+          "\xaa\xbb\xcc\xdd\xee\xff\xab\xcd\xef\x99"
+          "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
+          "\x45\x67\x89\xab\xcd\xef\x00\x11\x22\x33\x44",
+          49},
       "unexpected length for eden SNAPSHOT file");
 
   // The error type and message for this will probably change in the future
@@ -203,11 +205,12 @@ TEST_F(CheckoutConfigTest, testBadSnapshot) {
   // ASCII string containing the snapshot hash).
   testBadSnapshot<std::invalid_argument>("ede", "incorrect data size for Hash");
   testBadSnapshot<std::invalid_argument>(
-      StringPiece{"xden\00\00\00\01"
-                  "\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00"
-                  "\xaa\xbb\xcc\xdd\xee\xff\xab\xcd\xef\x99"
-                  "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
-                  "\x45\x67\x89\xab\xcd\xef\x00\x11\x22\x33",
-                  48},
+      StringPiece{
+          "xden\00\00\00\01"
+          "\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00"
+          "\xaa\xbb\xcc\xdd\xee\xff\xab\xcd\xef\x99"
+          "\xab\xcd\xef\x98\x76\x54\x32\x10\x01\x23"
+          "\x45\x67\x89\xab\xcd\xef\x00\x11\x22\x33",
+          48},
       "incorrect data size for Hash");
 }

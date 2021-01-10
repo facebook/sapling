@@ -178,8 +178,9 @@ IOBuf TakeoverData::serializeVersion1() {
     // blob because we know that the endianness of the target
     // machine must match the current system for a graceful
     // takeover.
-    app.push(folly::StringPiece{reinterpret_cast<const char*>(&mount.connInfo),
-                                sizeof(mount.connInfo)});
+    app.push(folly::StringPiece{
+        reinterpret_cast<const char*>(&mount.connInfo),
+        sizeof(mount.connInfo)});
     // SerializedFileHandleMap has been removed so its size is always 0.
     app.writeBE<uint32_t>(0);
 

@@ -65,9 +65,10 @@ class GlobNodeTest : public ::testing::TestWithParam<
  protected:
   void SetUp() override {
     // The file contents are coupled with AHash, BHash and WatHash below.
-    builder_.setFiles({{"dir/a.txt", "a"},
-                       {"dir/sub/b.txt", "b"},
-                       {".watchmanconfig", "wat"}});
+    builder_.setFiles(
+        {{"dir/a.txt", "a"},
+         {"dir/sub/b.txt", "b"},
+         {".watchmanconfig", "wat"}});
     mount_.initialize(builder_, /*startReady=*/GetParam().first);
     prefetchHashes_ = nullptr;
   }

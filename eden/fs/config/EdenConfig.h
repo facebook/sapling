@@ -190,17 +190,20 @@ class EdenConfig : private ConfigSettingManager {
    */
 
  public:
-  ConfigSetting<AbsolutePath> edenDir{"core:edenDirectory",
-                                      kUnspecifiedDefault,
-                                      this};
+  ConfigSetting<AbsolutePath> edenDir{
+      "core:edenDirectory",
+      kUnspecifiedDefault,
+      this};
 
-  ConfigSetting<AbsolutePath> systemIgnoreFile{"core:systemIgnoreFile",
-                                               kUnspecifiedDefault,
-                                               this};
+  ConfigSetting<AbsolutePath> systemIgnoreFile{
+      "core:systemIgnoreFile",
+      kUnspecifiedDefault,
+      this};
 
-  ConfigSetting<AbsolutePath> userIgnoreFile{"core:ignoreFile",
-                                             kUnspecifiedDefault,
-                                             this};
+  ConfigSetting<AbsolutePath> userIgnoreFile{
+      "core:ignoreFile",
+      kUnspecifiedDefault,
+      this};
 
   /**
    * How often to check the on-disk lock file to ensure it is still valid.
@@ -211,13 +214,15 @@ class EdenConfig : private ConfigSettingManager {
       std::chrono::minutes(5),
       this};
 
-  ConfigSetting<bool> allowUnixGroupRequests{"thrift:allow-unix-group-requests",
-                                             false,
-                                             this};
+  ConfigSetting<bool> allowUnixGroupRequests{
+      "thrift:allow-unix-group-requests",
+      false,
+      this};
 
-  ConfigSetting<AbsolutePath> clientCertificate{"ssl:client-certificate",
-                                                kUnspecifiedDefault,
-                                                this};
+  ConfigSetting<AbsolutePath> clientCertificate{
+      "ssl:client-certificate",
+      kUnspecifiedDefault,
+      this};
   ConfigSetting<std::vector<AbsolutePath>> clientCertificateLocations{
       "ssl:client-certificate-locations",
       std::vector<AbsolutePath>{},
@@ -228,23 +233,26 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * Which tier to use when talking to mononoke.
    */
-  ConfigSetting<std::string> mononokeTierName{"mononoke:tier",
-                                              "mononoke-apiserver",
-                                              this};
+  ConfigSetting<std::string> mononokeTierName{
+      "mononoke:tier",
+      "mononoke-apiserver",
+      this};
   ConfigSetting<std::string> mononokeHostName{"mononoke:hostname", "", this};
   ConfigSetting<uint16_t> mononokePort{"mononoke:port", 443, this};
-  ConfigSetting<std::string> mononokeConnectionType{"mononoke:connection-type",
-                                                    "http",
-                                                    this};
+  ConfigSetting<std::string> mononokeConnectionType{
+      "mononoke:connection-type",
+      "http",
+      this};
 
   /**
    * Source Control Service (scs) tier
    */
   ConfigSetting<bool> useScs{"scs:use-mononoke-scs", false, this};
 
-  ConfigSetting<std::string> scsTierName{"scs:tier",
-                                         "mononoke-scs-server",
-                                         this};
+  ConfigSetting<std::string> scsTierName{
+      "scs:tier",
+      "mononoke-scs-server",
+      this};
   ConfigSetting<bool> useManifestBasedFetching{
       "scs:use-manifest-based-fetching",
       false,
@@ -275,18 +283,20 @@ class EdenConfig : private ConfigSettingManager {
    * thresholds.
    */
 
-  ConfigSetting<uint64_t> localStoreBlobSizeLimit{"store:blob-size-limit",
-                                                  15'000'000'000,
-                                                  this};
+  ConfigSetting<uint64_t> localStoreBlobSizeLimit{
+      "store:blob-size-limit",
+      15'000'000'000,
+      this};
 
   ConfigSetting<uint64_t> localStoreBlobMetaSizeLimit{
       "store:blobmeta-size-limit",
       1'000'000'000,
       this};
 
-  ConfigSetting<uint64_t> localStoreTreeSizeLimit{"store:tree-size-limit",
-                                                  3'000'000'000,
-                                                  this};
+  ConfigSetting<uint64_t> localStoreTreeSizeLimit{
+      "store:tree-size-limit",
+      3'000'000'000,
+      this};
 
   ConfigSetting<uint64_t> localStoreTreeMetaSizeLimit{
       "store:treemeta-size-limit",
@@ -298,9 +308,10 @@ class EdenConfig : private ConfigSettingManager {
       20'000'000,
       this};
 
-  ConfigSetting<bool> useEdenNativePrefetch{"store:use-eden-native-prefetch",
-                                            false,
-                                            this};
+  ConfigSetting<bool> useEdenNativePrefetch{
+      "store:use-eden-native-prefetch",
+      false,
+      this};
 
   /**
    * The maximum time duration allowed for a fuse request. If a request exceeds
@@ -327,9 +338,10 @@ class EdenConfig : private ConfigSettingManager {
    * If the number of fetching requests of a process reaches this number,
    * a FetchHeavy event will be sent to Scuba.
    */
-  ConfigSetting<uint32_t> fetchHeavyThreshold{"store:fetch-heavy-threshold",
-                                              2000,
-                                              this};
+  ConfigSetting<uint32_t> fetchHeavyThreshold{
+      "store:fetch-heavy-threshold",
+      2000,
+      this};
 
   /**
    * The maximum time duration that the kernel should allow for a fuse request.
@@ -372,9 +384,10 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * Scribe category is the first argument passed to the scribe_cat binary.
    */
-  ConfigSetting<std::string> scribeCategory{"telemetry:scribe-category",
-                                            "",
-                                            this};
+  ConfigSetting<std::string> scribeCategory{
+      "telemetry:scribe-category",
+      "",
+      this};
 
   /**
    * Legacy to be deleted, once all running eden's are compatible with
@@ -401,9 +414,10 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * Controls whether if EdenFS caches blobs in local store.
    */
-  ConfigSetting<bool> enableBlobCaching{"experimental:enable-blob-caching",
-                                        false,
-                                        this};
+  ConfigSetting<bool> enableBlobCaching{
+      "experimental:enable-blob-caching",
+      false,
+      this};
 
   /**
    * Controls whether EdenFS uses EdenApi to import data from remote.
@@ -414,9 +428,10 @@ class EdenConfig : private ConfigSettingManager {
    * The maximum number of tree prefetch operations to allow in parallel for any
    * checkout.  Setting this to 0 will disable prefetch operations.
    */
-  ConfigSetting<uint64_t> maxTreePrefetches{"store:max-tree-prefetches",
-                                            5,
-                                            this};
+  ConfigSetting<uint64_t> maxTreePrefetches{
+      "store:max-tree-prefetches",
+      5,
+      this};
   /**
    * A command to run to warn the user of a generic problem encountered
    * while trying to process a request.

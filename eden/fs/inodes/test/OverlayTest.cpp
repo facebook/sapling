@@ -57,11 +57,12 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   // this overlay format even if we change how the overlay is saved in the
   // future.
   auto tmpdir = makeTempDir("eden_test");
-  SpawnedProcess tarProcess({"/usr/bin/tar",
-                             "-xzf",
-                             "eden/test-data/overlay-v2.tgz",
-                             "-C",
-                             tmpdir.path().string()});
+  SpawnedProcess tarProcess(
+      {"/usr/bin/tar",
+       "-xzf",
+       "eden/test-data/overlay-v2.tgz",
+       "-C",
+       tmpdir.path().string()});
   EXPECT_EQ(tarProcess.wait().str(), "exited with status 0");
 
   auto overlay = Overlay::create(
@@ -637,10 +638,12 @@ TEST_P(
   const PathNames pathNamesToTest[] = {
       // Test a few different path name variations, to ensure traversal order
       // doesn't matter.
-      PathNames{.corruptedByTruncationName = "A_corrupted_by_truncation"_pc,
-                .tempName = "B_temp"_pc},
-      PathNames{.corruptedByTruncationName = "B_corrupted_by_truncation"_pc,
-                .tempName = "A_temp"_pc},
+      PathNames{
+          .corruptedByTruncationName = "A_corrupted_by_truncation"_pc,
+          .tempName = "B_temp"_pc},
+      PathNames{
+          .corruptedByTruncationName = "B_corrupted_by_truncation"_pc,
+          .tempName = "A_temp"_pc},
   };
 
   for (auto pathNames : pathNamesToTest) {
@@ -939,7 +942,7 @@ void debugDumpOverlayInodes(
     auto& dirContents = *dir;
     out << "  Entries (" << dirContents.size() << " total):\n";
 
-    auto dtypeToString = [](dtype_t dtype) noexcept->const char* {
+    auto dtypeToString = [](dtype_t dtype) noexcept -> const char* {
       switch (dtype) {
         case dtype_t::Dir:
           return "d";

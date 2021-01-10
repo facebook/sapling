@@ -29,9 +29,10 @@ CheckoutContext::CheckoutContext(
     : checkoutMode_{checkoutMode},
       mount_{mount},
       parentsLock_(std::move(parentsLock)),
-      fetchContext_{clientPid,
-                    ObjectFetchContext::Cause::Thrift,
-                    thriftMethodName} {}
+      fetchContext_{
+          clientPid,
+          ObjectFetchContext::Cause::Thrift,
+          thriftMethodName} {}
 
 CheckoutContext::~CheckoutContext() {}
 

@@ -530,8 +530,9 @@ FileDescriptor FileDescriptor::open(
 #endif
       ((opts.readContents && opts.writeContents)
            ? O_RDWR
-           : (opts.writeContents ? O_WRONLY
-                                 : opts.readContents ? O_RDONLY : 0)) |
+           : (opts.writeContents      ? O_WRONLY
+                  : opts.readContents ? O_RDONLY
+                                      : 0)) |
       (opts.create ? O_CREAT : 0) | (opts.exclusiveCreate ? O_EXCL : 0) |
       (opts.truncate ? O_TRUNC : 0);
 
