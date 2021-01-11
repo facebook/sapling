@@ -7,7 +7,7 @@
 
 use anyhow::Context;
 use gotham::{
-    handler::{HandlerError, IntoHandlerError},
+    handler::HandlerError,
     helpers::http::response::create_response,
     state::{request_id, State},
 };
@@ -66,6 +66,6 @@ pub fn http_error_to_handler_error(
             let res = create_response(&state, status_code, git_lfs_mime(), res);
             Ok((state, res))
         }
-        Err(error) => Err((state, error.into_handler_error())),
+        Err(error) => Err((state, error.into())),
     }
 }

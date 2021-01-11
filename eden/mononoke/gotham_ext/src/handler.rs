@@ -30,7 +30,7 @@ impl<H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe> NewHandler
 {
     type Instance = MononokeHttpHandler<H>;
 
-    fn new_handler(&self) -> Result<Self::Instance, failure::Error> {
+    fn new_handler(&self) -> Result<Self::Instance, anyhow::Error> {
         Ok(self.clone())
     }
 }
@@ -221,7 +221,7 @@ mod test {
     }
 
     #[test]
-    fn test_empty() -> Result<(), failure::Error> {
+    fn test_empty() -> Result<(), anyhow::Error> {
         let handler = MononokeHttpHandler::builder().build(TestHandler);
         let server = TestServer::new(handler)?;
         let res = server.client().get("http://host/").perform()?;
@@ -230,7 +230,7 @@ mod test {
     }
 
     #[test]
-    fn test_noop() -> Result<(), failure::Error> {
+    fn test_noop() -> Result<(), anyhow::Error> {
         let handler = MononokeHttpHandler::builder()
             .add(NoopMiddleware)
             .add(NoopMiddleware)
@@ -242,7 +242,7 @@ mod test {
     }
 
     #[test]
-    fn test_chain() -> Result<(), failure::Error> {
+    fn test_chain() -> Result<(), anyhow::Error> {
         let handler = MononokeHttpHandler::builder()
             .add(MiddlewareValueMiddleware(None, 1))
             .add(MiddlewareValueMiddleware(Some(1), 2))
@@ -254,7 +254,7 @@ mod test {
     }
 
     #[test]
-    fn test_intercept_alone() -> Result<(), failure::Error> {
+    fn test_intercept_alone() -> Result<(), anyhow::Error> {
         let handler = MononokeHttpHandler::builder()
             .add(InterceptMiddleware)
             .build(TestHandler);
@@ -265,7 +265,7 @@ mod test {
     }
 
     #[test]
-    fn test_intercept_chain() -> Result<(), failure::Error> {
+    fn test_intercept_chain() -> Result<(), anyhow::Error> {
         let handler = MononokeHttpHandler::builder()
             .add(MiddlewareValueMiddleware(None, 1))
             .add(MiddlewareValueMiddleware(Some(1), 2))

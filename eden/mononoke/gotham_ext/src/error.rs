@@ -9,7 +9,7 @@ use std::iter;
 
 use anyhow::Error;
 use gotham::{
-    handler::{HandlerError, IntoHandlerError},
+    handler::HandlerError,
     helpers::http::response::create_response,
     state::{request_id, State},
 };
@@ -103,7 +103,7 @@ impl HttpError {
                 let res = create_response(&state, self.status_code, mime::APPLICATION_JSON, res);
                 Ok((state, res))
             }
-            Err(error) => Err((state, error.into_handler_error())),
+            Err(error) => Err((state, error.into())),
         }
     }
 }
