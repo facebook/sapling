@@ -65,7 +65,7 @@ Before the change
   $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL crossrepo pushredirection change-mapping-version \
   > --author author \
   > --large-repo-bookmark master_bookmark \
-  > --mapping-version new_version &> /dev/null
+  > --version-name new_version &> /dev/null
   $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL crossrepo \
   > pushredirection prepare-rollout &> /dev/null
 

@@ -209,7 +209,7 @@ Live change of the config, without Mononoke restart
   $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL1 crossrepo pushredirection change-mapping-version \
   > --author author \
   > --large-repo-bookmark master_bookmark \
-  > --mapping-version TEST_VERSION_NAME_LIVE_V2
+  > --version-name TEST_VERSION_NAME_LIVE_V2
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * using repo "large-mon" repoid RepositoryId(*) (glob)

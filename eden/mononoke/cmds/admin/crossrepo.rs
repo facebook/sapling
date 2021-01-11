@@ -51,7 +51,6 @@ const HASH_ARG: &str = "HASH";
 const LARGE_REPO_HASH_ARG: &str = "LARGE_REPO_HASH";
 const UPDATE_LARGE_REPO_BOOKMARKS: &str = "update-large-repo-bookmarks";
 const LARGE_REPO_BOOKMARK_ARG: &str = "large-repo-bookmark";
-const MAPPING_VERSION_ARG: &str = "mapping-version";
 const CHANGE_MAPPING_VERSION_SUBCOMMAND: &str = "change-mapping-version";
 
 const SUBCOMMAND_CONFIG: &str = "config";
@@ -294,8 +293,8 @@ async fn run_pushredirection_subcommand<'a>(
                 Small(get_bookmark_value(&ctx, &small_repo, &small_bookmark).await?);
 
             let mapping_version = sub_m
-                .value_of(MAPPING_VERSION_ARG)
-                .ok_or_else(|| format_err!("{} is not specified", MAPPING_VERSION_ARG))?;
+                .value_of(ARG_VERSION_NAME)
+                .ok_or_else(|| format_err!("{} is not specified", ARG_VERSION_NAME))?;
             let mapping_version = CommitSyncConfigVersion(mapping_version.to_string());
             if !commit_syncer.version_exists(&mapping_version)? {
                 return Err(format_err!("{} version does not exist", mapping_version).into());
@@ -824,8 +823,8 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .help("bookmark in the large repo"),
         )
         .arg(
-            Arg::with_name(MAPPING_VERSION_ARG)
-                .long(MAPPING_VERSION_ARG)
+            Arg::with_name(ARG_VERSION_NAME)
+                .long(ARG_VERSION_NAME)
                 .required(true)
                 .takes_value(true)
                 .help("mapping version to change to"),
