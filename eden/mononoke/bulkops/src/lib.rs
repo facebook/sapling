@@ -143,11 +143,9 @@ mod tests {
 
     use fbinit::FacebookInit;
 
-    use blobrepo::BlobRepo;
-    use blobrepo_hg::BlobRepoHg;
     use bookmarks::BookmarkName;
     use fixtures::branch_wide;
-    use mercurial_types::HgChangesetId;
+    use mononoke_types::ChangesetId;
     use phases::mark_reachable_as_public;
 
     #[test]
@@ -178,52 +176,34 @@ mod tests {
             mark_reachable_as_public(&ctx, sql_phases, &[master], false).await?;
         }
 
-        // Check a range of step sizes in lieu of varying the repo bounds
+        let expected = [
+            "56c0203d7a9a83f14a47a17d3a10e55b1d08feb106fd72f28275e603c6e59625",
+            "624aba5e7f94c9319d949bce9f0dc87f25067f01f2ca1e41b620aff0625439c8",
+            "56da5b997e27f2f9020f6ff2d87b321774369e23579bd2c4ce675efad363f4f4",
+        ]
+        .iter()
+        .map(|hex| ChangesetId::from_str(hex))
+        .collect::<Result<Vec<ChangesetId>>>()?;
+
+        // All directions
         for d in &[Direction::OldestFirst, Direction::NewestFirst] {
+            let mut expected = expected.clone();
+            if d == &Direction::NewestFirst {
+                expected.reverse();
+            }
+            // Check a range of step sizes in lieu of varying the repo bounds
             for step_size in 1..5 {
-                check_step_size(&ctx, &blobrepo, step_size as u64, *d).await?
+                let fetcher = PublicChangesetBulkFetch::new(
+                    blobrepo.get_repoid(),
+                    blobrepo.get_changesets_object(),
+                    blobrepo.get_phases(),
+                )
+                .with_step(step_size);
+                let entries: Vec<ChangesetEntry> = fetcher.fetch(&ctx, *d).try_collect().await?;
+                let public_ids: Vec<ChangesetId> = entries.into_iter().map(|e| e.cs_id).collect();
+                assert_eq!(public_ids, expected, "step {} dir {:?}", step_size, d);
             }
         }
-        Ok(())
-    }
-
-    async fn check_step_size(
-        ctx: &CoreContext,
-        blobrepo: &BlobRepo,
-        step_size: u64,
-        d: Direction,
-    ) -> Result<()> {
-        let fetcher = PublicChangesetBulkFetch::new(
-            blobrepo.get_repoid(),
-            blobrepo.get_changesets_object(),
-            blobrepo.get_phases(),
-        )
-        .with_step(step_size);
-
-        let public_changesets: Vec<ChangesetEntry> = fetcher.fetch(&ctx, d).try_collect().await?;
-
-        let mut hg_mapped = vec![];
-        for cs_entry in public_changesets {
-            let hg_cs_id = blobrepo
-                .get_hg_from_bonsai_changeset(ctx.clone(), cs_entry.cs_id)
-                .await?;
-            hg_mapped.push(hg_cs_id);
-        }
-        let mut expected = vec![
-            "ecba698fee57eeeef88ac3dcc3b623ede4af47bd",
-            "4685e9e62e4885d477ead6964a7600c750e39b03",
-            "49f53ab171171b3180e125b918bd1cf0af7e5449",
-        ];
-
-        if d == Direction::NewestFirst {
-            expected.reverse();
-        }
-
-        let expected_mapped = expected
-            .iter()
-            .map(|v| HgChangesetId::from_str(v))
-            .collect::<Result<Vec<_>>>()?;
-        assert_eq!(hg_mapped, expected_mapped, "step {} dir {:?}", step_size, d);
         Ok(())
     }
 }

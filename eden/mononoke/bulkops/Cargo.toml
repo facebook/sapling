@@ -16,10 +16,7 @@ futures = { version = "0.3.5", features = ["async-await", "compat"] }
 itertools = "0.8"
 
 [dev-dependencies]
-blobrepo = { path = "../blobrepo" }
-blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 bookmarks = { path = "../bookmarks" }
 fixtures = { path = "../tests/fixtures" }
-mercurial_types = { path = "../mercurial/types" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio-compat = "0.1"
