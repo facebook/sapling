@@ -25,7 +25,7 @@ if sys.platform.startswith("linux"):
     from .systemd import SystemdService, SystemdUserServiceManager, temp_systemd
 
     try:
-        import pystemd  # noqa: F401
+        import pystemd  # noqa: F401 # @manual
 
         _systemd_supported = True
     except ModuleNotFoundError:
