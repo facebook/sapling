@@ -4773,8 +4773,34 @@ def pull(ui, repo, source="default", **opts):
     source, branches = hg.parseurl(ui.expandpath(source))
     ui.status_err(_("pulling from %s\n") % util.hidepassword(source))
 
-    with repo.connectionpool.get(source, opts=opts) as conn:
-        with repo.wlock(), repo.lock(), repo.transaction("pull"):
+    hasselectivepull = ui.configbool("remotenames", "selectivepull")
+    if (
+        hasselectivepull
+        and ui.configbool("commands", "new-pull")
+        and not branches[0]
+        and not branches[1]
+    ):
+        # Use the new repo.pull API.
+        # - Does not support non-selectivepull.
+        # - Does not support named branches.
+        modheads, checkout = _newpull(ui, repo, source, **opts)
+    else:
+        if not hasselectivepull:
+            bookmarks._disableselectivepull(repo)
+        # The legacy pull implementation. Problems:
+        # - Remotenames:
+        #   - Inefficiency: Call listkey proto twice.
+        #   - Race condition: Because listkey is called twice, remotenames can
+        #     fail to update properly (if it has moved server-side after
+        #     pulling the commits).
+        # - Features considered as tech-debt:
+        #   - Has named branch support (and overhead listing branchmap).
+        #   - Has "pull everything" (non-selectivepull) support.
+        # - Slow algorithms:
+        #   - visibility.add the entire changeroup can be inefficient.
+        with repo.connectionpool.get(
+            source, opts=opts
+        ) as conn, repo.wlock(), repo.lock(), repo.transaction("pull"):
             other = conn.peer
             revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get("rev"))
             if revs:
@@ -4858,33 +4884,127 @@ def pull(ui, repo, source="default", **opts):
                 opargs=pullopargs,
             ).cgresult
 
-            # brev is a name, which might be a bookmark to be activated at
-            # the end of the update. In other words, it is an explicit
-            # destination of the update
-            brev = None
+    # brev is a name, which might be a bookmark to be activated at
+    # the end of the update. In other words, it is an explicit
+    # destination of the update
+    brev = None
 
-        # Run 'update' in another transaction.
-        if checkout and checkout in repo:
-            checkout = str(repo[checkout].rev())
+    # Run 'update' in another transaction.
+    if checkout and checkout in repo:
+        checkout = str(repo[checkout].rev())
 
-            # order below depends on implementation of
-            # hg.addbranchrevs(). opts['bookmark'] is ignored,
-            # because 'checkout' is determined without it.
-            if opts.get("rev"):
-                brev = opts["rev"][0]
-            else:
-                brev = branches[0]
-        repo._subtoppath = source
-        try:
-            ret = postincoming(ui, repo, modheads, opts.get("update"), checkout, brev)
+        # order below depends on implementation of
+        # hg.addbranchrevs(). opts['bookmark'] is ignored,
+        # because 'checkout' is determined without it.
+        if opts.get("rev"):
+            brev = opts["rev"][0]
+        else:
+            brev = branches[0]
+    repo._subtoppath = source
+    try:
+        ret = postincoming(ui, repo, modheads, opts.get("update"), checkout, brev)
 
-        finally:
-            del repo._subtoppath
+    finally:
+        del repo._subtoppath
 
     if ui.configbool("pull", "automigrate"):
         repo.automigratefinish()
 
     return ret
+
+
+def _newpull(ui, repo, source, **opts):
+    """Main logic of a modern pull command.
+
+    Do not use named branches.
+    Do not issue duplicated listkey commands.
+    No remotenames race conditions.
+    Requires selectivepull.
+    """
+    revs = opts.get("rev") or []
+    bmarks = opts.get("bookmark") or []
+    if revs:
+        revs = autopull.rewritepullrevs(repo, revs)
+        checkout = revs[0]
+    elif bmarks:
+        checkout = bmarks[0]
+    else:
+        checkout = "tip"
+
+    url = ui.paths.getpath(source)
+    remotename = bookmarks.remotenameforurl(ui, url.rawloc)
+    selected = bookmarks.selectivepullbookmarknames(repo, remotename)
+
+    if not bmarks:
+        # without -r or -B: Include selected -B to avoid pulling nothing.
+        # with -r without -B: Include selected -B to avoid wrong phases.
+        bmarks += selected
+
+    # De-duplicate.
+    bmarks = sorted(set(bmarks))
+
+    # Pull commits and detect changes.
+    oldlen = len(repo)
+    repo.pull(
+        source,
+        bookmarknames=bmarks,
+        headnames=revs,
+        quiet=False,
+    )
+    newlen = len(repo)
+
+    # Check that required bookmarks are pulled (repo.pull does not raise on
+    # missing bookmarks).
+    for name in opts.get("bookmark") or []:
+        fullname = "%s/%s" % (remotename, name)
+        if fullname not in repo:
+            raise error.Abort(_("remote bookmark %s not found") % name)
+
+    # Convert remote bookmark names to {name: hexnode} dict.
+    def namestonamehex(names, repo=repo, remotename=remotename):
+        result = {}
+        for name in names:
+            fullname = "%s/%s" % (remotename, name)
+            if fullname in repo:
+                result[name] = repo[fullname].hex()
+        return result
+
+    # Migrating from non-selectivepull (legacy remotenames) to
+    # selectivepull.
+    if not bookmarks._isselectivepullenabledforremote(repo, remotename):
+        namehex = namestonamehex(bmarks)  # {'master': hexnode}
+        # Keep other "selected" bookmarks. Do not delete them.
+        orignamenodes = repo._remotenames["bookmarks"]  # {'remote/master': [binnode]}
+        for name in selected:
+            if name not in namehex:
+                fullname = "%s/%s" % (remotename, name)
+                nodes = orignamenodes.get(fullname)
+                if nodes:
+                    namehex[name] = hex(nodes[0])
+        with repo.wlock(), repo.lock(), repo.transaction("selectivepull"):
+            # Delete other bookmarks if selectivepull is just enabled.
+            # This happens when migrating from legacy remotenames with all
+            # names.  It will be no longer necessary if we do not have
+            # legacy remotenames.
+            bookmarks.saveremotenames(repo, {remotename: namehex}, override=True)
+            # Update the file marking selectivepull is enabled.
+            bookmarks._enableselectivepullforremote(repo, remotename)
+
+    # Update accessed bookmarks with -B parameters.
+    if bookmarks._trackaccessedbookmarks(repo.ui):
+        accessed = namestonamehex(opts.get("bookmark") or [])
+        if accessed:
+            bookmarks.updateaccessedbookmarks(repo, remotename, accessed)
+
+    # Decide return value.
+    if oldlen == newlen:
+        # Not changed.
+        modheads = 0
+    else:
+        # Changed.
+        modheads = 1
+
+    return modheads, checkout
 
 
 @command(

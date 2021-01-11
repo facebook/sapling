@@ -162,6 +162,7 @@ coreconfigitem(
     alias=[("experimental", "updatecheck")],
 )
 coreconfigitem("commands", "update.requiredest", default=False)
+coreconfigitem("commands", "new-pull", default=True)
 coreconfigitem("commit", "description-size-limit", default=None)
 coreconfigitem("commit", "extras-size-limit", default=None)
 coreconfigitem("committemplate", ".*", default=None, generic=True)

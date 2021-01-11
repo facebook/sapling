@@ -252,12 +252,20 @@ Sync in the third repo again
   $ hg pull
   pulling from ssh://user@dummy/server
   no changes found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 1 changes to 1 files
   $ hg book --list-subs
      remote/master             9da34b1aa207
      remote/scratch/draft1     d860d2fc26c5
   $ showgraph
-  @  public1: public  remote/master
+  o  draft1: draft  remote/scratch/draft1
   │
+  o  public3: draft
+  │
+  │ @  public1: public  remote/master
+  ├─╯
   o  base: public local
   
 

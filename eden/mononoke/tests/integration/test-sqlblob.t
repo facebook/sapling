@@ -61,8 +61,6 @@ setup repo2
   $ cd repo2
   $ hg pull
   pulling from ssh://user@dummy/repo-hg
-  searching for changes
-  no changes found
 
   $ cd $TESTTMP
   $ cd repo-hg
