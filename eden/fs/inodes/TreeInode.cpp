@@ -980,10 +980,11 @@ FileInodePtr TreeInode::createImpl(
   }
 
   if (InvalidationRequired::Yes == invalidate) {
-    invalidateChannelEntryCache(*contents, name, std::nullopt).throwIfFailed();
+    invalidateChannelEntryCache(*contents, name, std::nullopt)
+        .throwUnlessValue();
     // Make sure that the directory cache is invalidated so a subsequent
     // readdir will see the added file.
-    invalidateChannelDirCache(*contents).throwIfFailed();
+    invalidateChannelDirCache(*contents).throwUnlessValue();
   }
 
   getMount()->getJournal().recordCreated(targetName);
@@ -1082,8 +1083,8 @@ TreeInodePtr TreeInode::mkdir(
 
     if (InvalidationRequired::Yes == invalidate) {
       invalidateChannelEntryCache(*contents, name, std::nullopt)
-          .throwIfFailed();
-      invalidateChannelDirCache(*contents).throwIfFailed();
+          .throwUnlessValue();
+      invalidateChannelDirCache(*contents).throwUnlessValue();
     }
 
     // Allocate an inode number
@@ -1642,16 +1643,16 @@ Future<Unit> TreeInode::doRename(
   if (InvalidationRequired::Yes == invalidate) {
     invalidateChannelEntryCache(
         locks.srcInodeState(), srcName, srcIter->second.getInodeNumber())
-        .throwIfFailed();
+        .throwUnlessValue();
     destParent
         ->invalidateChannelEntryCache(
             locks.dstInodeState(), destName, std::nullopt)
-        .throwIfFailed();
+        .throwUnlessValue();
 
-    invalidateChannelDirCache(locks.srcInodeState()).throwIfFailed();
+    invalidateChannelDirCache(locks.srcInodeState()).throwUnlessValue();
     if (destParent.get() != this) {
       destParent->invalidateChannelDirCache(locks.dstInodeState())
-          .throwIfFailed();
+          .throwUnlessValue();
     }
   }
 

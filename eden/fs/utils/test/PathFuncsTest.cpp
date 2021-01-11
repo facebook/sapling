@@ -994,7 +994,7 @@ TEST(PathFuncs, localDirCreateRemove) {
   // Create a deep directory, and write a file inside it.
   auto testPath = tmpDirPath + "foo/bar/asdf/test.txt"_relpath;
   ensureDirectoryExists(testPath.dirname());
-  writeFile(testPath, StringPiece("test\n")).throwIfFailed();
+  writeFile(testPath, StringPiece("test\n")).throwUnlessValue();
 
   // Read it back just as a sanity check
   auto contents = readFile(testPath);

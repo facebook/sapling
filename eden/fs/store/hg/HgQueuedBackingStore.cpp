@@ -305,7 +305,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
     }
     return folly::collectAll(futures).deferValue([](const auto& tries) {
       for (const auto& t : tries) {
-        t.throwIfFailed();
+        t.throwUnlessValue();
       }
     });
   }

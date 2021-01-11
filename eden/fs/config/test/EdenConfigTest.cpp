@@ -460,7 +460,7 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
       userConfigPath,
       "[core]\n"
       "ignoreFile=\"/var/user/${USER_ID}/myignore\"\n"_sp)
-      .throwIfFailed();
+      .throwUnlessValue();
   EXPECT_EQ(
       getConfig().userIgnoreFile.getValue(),
       normalizeBestEffort("/var/user/42/myignore"));
@@ -474,7 +474,7 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
       userConfigPath,
       "[core]\n"
       "ignoreFile=\"/var/user/${THRIFT_TLS_CL_CERT_PATH}/myignore\"\n"_sp)
-      .throwIfFailed();
+      .throwUnlessValue();
   EXPECT_EQ(
       getConfig().userIgnoreFile.getValue(),
       normalizeBestEffort("/var/user/edenTest/myignore"));

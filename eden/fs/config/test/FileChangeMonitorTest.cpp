@@ -100,11 +100,11 @@ class FileChangeMonitorTest : public ::testing::Test {
     rootTestDir_ = std::make_unique<TemporaryDirectory>(fcTestName_);
     auto fsPathOne = rootTestDir_->path() / "file.one";
     pathOne_ = AbsolutePath{fsPathOne.string()};
-    writeFileAtomic(pathOne_, dataOne_).throwIfFailed();
+    writeFileAtomic(pathOne_, dataOne_).throwUnlessValue();
 
     auto fsPathTwo = rootTestDir_->path() / "file.two";
     pathTwo_ = AbsolutePath{fsPathTwo.string()};
-    writeFileAtomic(pathTwo_, dataTwo_).throwIfFailed();
+    writeFileAtomic(pathTwo_, dataTwo_).throwUnlessValue();
   }
   void TearDown() override {
     rootTestDir_.reset();
@@ -175,7 +175,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileTest) {
   MockFileChangeProcessor fcp;
   auto path =
       AbsolutePath{(rootTestDir_->path() / "ModifyExistFile.txt").string()};
-  writeFileAtomic(path, dataOne_).throwIfFailed();
+  writeFileAtomic(path, dataOne_).throwUnlessValue();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
 
@@ -185,7 +185,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileTest) {
   EXPECT_EQ(fcp.getCallbackCount(), 1);
   EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  writeFileAtomic(path, dataTwo_).throwIfFailed();
+  writeFileAtomic(path, dataTwo_).throwUnlessValue();
 
   // File should have changed (there is no throttle)
   EXPECT_EQ(fcm->getFilePath(), path.value());
@@ -197,7 +197,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileTest) {
 TEST_F(FileChangeMonitorTest, fcpMoveTest) {
   MockFileChangeProcessor fcp;
   auto path = AbsolutePath{(rootTestDir_->path() / "FcpMoveTest.txt").string()};
-  writeFileAtomic(path, dataOne_).throwIfFailed();
+  writeFileAtomic(path, dataOne_).throwUnlessValue();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
 
@@ -207,7 +207,7 @@ TEST_F(FileChangeMonitorTest, fcpMoveTest) {
   EXPECT_EQ(fcp.getCallbackCount(), 1);
   EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  writeFileAtomic(path, dataTwo_).throwIfFailed();
+  writeFileAtomic(path, dataTwo_).throwUnlessValue();
 
   auto otherFcm = std::move(fcm);
   MockFileChangeProcessor otherFcp;
@@ -223,7 +223,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileThrottleExpiresTest) {
   MockFileChangeProcessor fcp;
   auto path = AbsolutePath{
       (rootTestDir_->path() / "ModifyExistThrottleExpiresTest.txt").string()};
-  writeFileAtomic(path, dataOne_).throwIfFailed();
+  writeFileAtomic(path, dataOne_).throwUnlessValue();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 10ms);
 
@@ -233,7 +233,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileThrottleExpiresTest) {
   EXPECT_EQ(fcp.getCallbackCount(), 1);
   EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  writeFileAtomic(path, dataTwo_).throwIfFailed();
+  writeFileAtomic(path, dataTwo_).throwUnlessValue();
 
   auto rslt = fcm->invokeIfUpdated(std::ref(fcp));
   if (!rslt) {
@@ -256,7 +256,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileThrottleActiveTest) {
   MockFileChangeProcessor fcp;
   auto path = AbsolutePath{
       (rootTestDir_->path() / "ModifyExistFileThrottleActive.txt").string()};
-  writeFileAtomic(path, dataOne_).throwIfFailed();
+  writeFileAtomic(path, dataOne_).throwUnlessValue();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 10s);
 
@@ -266,7 +266,7 @@ TEST_F(FileChangeMonitorTest, modifyExistFileThrottleActiveTest) {
   EXPECT_EQ(fcp.getCallbackCount(), 1);
   EXPECT_EQ(fcp.getFileContents(), dataOne_);
 
-  writeFileAtomic(path, dataTwo_).throwIfFailed();
+  writeFileAtomic(path, dataTwo_).throwUnlessValue();
 
   // File change throttled
   auto rslt = fcm->invokeIfUpdated(std::ref(fcp));
@@ -314,7 +314,7 @@ TEST_F(FileChangeMonitorTest, rmFileTest) {
   MockFileChangeProcessor fcp;
   auto path =
       AbsolutePath{(rootTestDir_->path() / "ExistToNonExist.txt").string()};
-  writeFileAtomic(path, dataOne_).throwIfFailed();
+  writeFileAtomic(path, dataOne_).throwUnlessValue();
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
 
@@ -364,7 +364,7 @@ TEST_F(FileChangeMonitorTest, createFileTest) {
   EXPECT_EQ(fcp.getErrorNum(), ENOENT);
 
   // Create the file
-  writeFileAtomic(path, dataOne_).throwIfFailed();
+  writeFileAtomic(path, dataOne_).throwUnlessValue();
 
   // File should have changed
   EXPECT_TRUE(fcm->invokeIfUpdated(std::ref(fcp)));
@@ -383,7 +383,7 @@ TEST_F(FileChangeMonitorTest, openFailTest) {
       AbsolutePath{(rootTestDir_->path() / "OpenFailTest.txt").string()};
 
   // Create the file
-  writeFileAtomic(path, dataOne_).throwIfFailed();
+  writeFileAtomic(path, dataOne_).throwUnlessValue();
   chmod(path.c_str(), S_IEXEC);
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);
@@ -397,7 +397,7 @@ TEST_F(FileChangeMonitorTest, openFailTest) {
   EXPECT_FALSE(fcm->invokeIfUpdated(std::ref(fcp)));
 
   // Update file - keep permissions same (inaccessible)
-  writeFileAtomic(path, dataTwo_).throwIfFailed();
+  writeFileAtomic(path, dataTwo_).throwUnlessValue();
   EXPECT_EQ(chmod(path.c_str(), S_IEXEC), 0);
 
   // FileChangeMonitor will not notify if the file has changed AND there is
@@ -418,7 +418,7 @@ TEST_F(FileChangeMonitorTest, openFailFixTest) {
       AbsolutePath{(rootTestDir_->path() / "OpenFailFixTest.txt").string()};
 
   // Create the file
-  writeFileAtomic(path, dataOne_).throwIfFailed();
+  writeFileAtomic(path, dataOne_).throwUnlessValue();
   EXPECT_EQ(chmod(path.c_str(), S_IEXEC), 0);
 
   auto fcm = std::make_shared<FileChangeMonitor>(path, 0s);

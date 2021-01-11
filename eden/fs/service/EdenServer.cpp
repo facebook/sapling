@@ -518,7 +518,7 @@ Future<Unit> EdenServer::unmountAll() {
   return folly::collectAll(futures).toUnsafeFuture().thenValue(
       [](std::vector<folly::Try<Unit>> results) {
         for (const auto& result : results) {
-          result.throwIfFailed();
+          result.throwUnlessValue();
         }
       });
 }
@@ -1117,7 +1117,7 @@ bool EdenServer::performCleanup() {
   closeStorage();
   // Stop the privhelper process.
   shutdownPrivhelper();
-  shutdownResult.throwIfFailed();
+  shutdownResult.throwUnlessValue();
 
   return true;
 }
@@ -1483,7 +1483,7 @@ void EdenServer::mountFinished(
         }
         unmountPromise.setTry(
             folly::makeTryWith([result = std::move(result)]() {
-              result.throwIfFailed();
+              result.throwUnlessValue();
               return Unit{};
             }));
       })
@@ -1803,7 +1803,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
                    auto&& t) mutable {
         if (t.hasException()) {
           takeoverPromise.setException(t.exception());
-          t.throwIfFailed();
+          t.throwUnlessValue();
         }
         return stopMountsForTakeover(std::move(takeoverPromise));
       })

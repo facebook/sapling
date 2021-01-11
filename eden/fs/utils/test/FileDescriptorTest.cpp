@@ -114,7 +114,7 @@ TEST(FileDescriptor, readFullFile) {
 
   {
     auto f = FileDescriptor::open(fileName, OpenFileHandleOptions::writeFile());
-    f.writeFull(expect.data(), expect.size()).throwIfFailed();
+    f.writeFull(expect.data(), expect.size()).throwUnlessValue();
   }
 
   {
@@ -122,7 +122,7 @@ TEST(FileDescriptor, readFullFile) {
     std::vector<uint8_t> got;
     got.resize(expect.size());
 
-    f.readFull(got.data(), got.size()).throwIfFailed();
+    f.readFull(got.data(), got.size()).throwUnlessValue();
 
     EXPECT_EQ(got, expect);
   }
@@ -146,13 +146,13 @@ TEST(FileDescriptor, readFullPipe) {
   std::thread writer([f = std::move(p.write), &expect]() {
     constexpr size_t kChunkSize = 4096;
     for (size_t i = 0; i < expect.size(); i += kChunkSize) {
-      f.writeFull(expect.data() + i, kChunkSize).throwIfFailed();
+      f.writeFull(expect.data() + i, kChunkSize).throwUnlessValue();
     }
   });
 
   std::vector<uint8_t> got;
   got.resize(expect.size());
-  p.read.readFull(got.data(), got.size()).throwIfFailed();
+  p.read.readFull(got.data(), got.size()).throwUnlessValue();
 
   EXPECT_EQ(got, expect);
 

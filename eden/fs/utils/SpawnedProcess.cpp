@@ -1106,7 +1106,7 @@ folly::Future<std::string> SpawnedProcess::readPipe(int fd) {
       while (true) {
         char buf[4096];
         auto readResult = pipe.read(buf, sizeof(buf));
-        readResult.throwIfFailed();
+        readResult.throwUnlessValue();
         auto len = readResult.value();
         if (len == 0) {
           // all done

@@ -409,7 +409,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
           vector<folly::Try<vector<GlobNode::GlobResult>>>&&
               matchVector) mutable {
         for (auto& matches : matchVector) {
-          matches.throwIfFailed();
+          matches.throwUnlessValue();
           shadowResults.insert(
               shadowResults.end(),
               std::make_move_iterator(matches->begin()),
@@ -578,7 +578,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
           vector<folly::Try<vector<GlobResult>>>&& matchVector) mutable {
         for (auto& matches : matchVector) {
           // Rethrow the exception if any of the results failed
-          matches.throwIfFailed();
+          matches.throwUnlessValue();
           shadowResults.insert(
               shadowResults.end(),
               std::make_move_iterator(matches->begin()),

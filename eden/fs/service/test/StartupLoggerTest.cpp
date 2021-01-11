@@ -447,7 +447,7 @@ TEST_F(FileStartupLoggerTest, loggingWritesMessagesToFile) {
 }
 
 TEST_F(FileStartupLoggerTest, loggingAppendsToFileIfItAlreadyExists) {
-  writeFile(logPath(), "existing line\n"_sp).throwIfFailed();
+  writeFile(logPath(), "existing line\n"_sp).throwUnlessValue();
   auto logger = FileStartupLogger{logPath().stringPiece()};
   logger.log("new line");
   EXPECT_EQ("existing line\nnew line\n", readLogContents());
@@ -549,7 +549,7 @@ bool isReadablePipeBroken(FileDescriptor& fd) {
   while (true) {
     char buffer[PIPE_BUF];
     auto result = fd.readNoInt(buffer, sizeof(buffer));
-    result.throwIfFailed();
+    result.throwUnlessValue();
     if (result.value() == 0) {
       return true;
     }
@@ -562,7 +562,7 @@ bool isWritablePipeBroken(FileDescriptor& fd) {
   if (auto exc = result.tryGetExceptionObject<std::system_error>()) {
     return exc->code() == std::error_code(EPIPE, std::generic_category());
   }
-  result.throwIfFailed();
+  result.throwUnlessValue();
   return false;
 }
 

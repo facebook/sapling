@@ -634,7 +634,7 @@ void FsOverlay::writeNextInodeNumber(InodeNumber nextInodeNumber) {
       ByteRange(
           reinterpret_cast<const uint8_t*>(&nextInodeNumber),
           reinterpret_cast<const uint8_t*>(&nextInodeNumber + 1)))
-      .throwIfFailed();
+      .throwUnlessValue();
 }
 
 bool FsOverlay::hasOverlayData(InodeNumber inodeNumber) {
