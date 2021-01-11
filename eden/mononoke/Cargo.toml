@@ -252,6 +252,7 @@ members = [
     "bookmarks/dbbookmarks",
     "bookmarks/warm_bookmarks_cache",
     "bulkops",
+    "bulkops/bench",
     "cache_warmup",
     "changesets",
     "changesets/if",

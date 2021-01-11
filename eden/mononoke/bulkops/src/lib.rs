@@ -56,6 +56,8 @@ impl PublicChangesetBulkFetch {
 
 // This function is not optimal since it could be made faster by doing more processing
 // on XDB side, but for the puprpose of this binary it is good enough
+pub const MAX_FETCH_STEP: u64 = 65536;
+
 fn fetch_all_public_changesets<'a>(
     ctx: &'a CoreContext,
     repo_id: RepositoryId,
@@ -69,7 +71,7 @@ fn fetch_all_public_changesets<'a>(
 
         let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
         let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))? + 1;
-        let step = 65536;
+        let step = MAX_FETCH_STEP;
         Ok(stream::iter(windows(start, stop, step)).map(Ok))
     }
     .try_flatten_stream()
