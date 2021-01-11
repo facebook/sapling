@@ -56,7 +56,7 @@ impl PublicChangesetBulkFetch {
 
 // This function is not optimal since it could be made faster by doing more processing
 // on XDB side, but for the puprpose of this binary it is good enough
-pub fn fetch_all_public_changesets<'a>(
+fn fetch_all_public_changesets<'a>(
     ctx: &'a CoreContext,
     repo_id: RepositoryId,
     changesets: &'a SqlChangesets,
@@ -120,25 +120,26 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let blobrepo = branch_wide::getrepo(fb).await;
 
-        let phases = blobrepo.get_phases();
-        let sql_phases = phases.get_sql_phases();
-        let changesets = blobrepo.get_changesets_object();
-        let sql_changesets = changesets.get_sql_changesets();
-        let repo_id = blobrepo.get_repoid();
-
         // our function avoids derivation so we need to explicitly do the derivation for
         // phases to have any data
-        let master = BookmarkName::new("master")?;
-        let master = blobrepo
-            .get_bonsai_bookmark(ctx.clone(), &master)
-            .await?
-            .unwrap();
-        mark_reachable_as_public(&ctx, sql_phases, &[master], false).await?;
+        let phases = blobrepo.get_phases();
+        {
+            let sql_phases = phases.get_sql_phases();
+            let master = BookmarkName::new("master")?;
+            let master = blobrepo
+                .get_bonsai_bookmark(ctx.clone(), &master)
+                .await?
+                .unwrap();
+            mark_reachable_as_public(&ctx, sql_phases, &[master], false).await?;
+        }
 
-        let public_changesets: Vec<ChangesetEntry> =
-            fetch_all_public_changesets(&ctx, repo_id, sql_changesets, sql_phases)
-                .try_collect()
-                .await?;
+        let fetcher = PublicChangesetBulkFetch::new(
+            blobrepo.get_repoid(),
+            blobrepo.get_changesets_object(),
+            phases,
+        );
+
+        let public_changesets: Vec<ChangesetEntry> = fetcher.fetch(&ctx).try_collect().await?;
 
         let mut hg_mapped = vec![];
         for cs_entry in public_changesets {

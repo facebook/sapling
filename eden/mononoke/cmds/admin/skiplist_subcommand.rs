@@ -9,9 +9,9 @@ use anyhow::{anyhow, Error};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
-use bulkops::fetch_all_public_changesets;
+use bulkops::PublicChangesetBulkFetch;
 use changeset_fetcher::ChangesetFetcher;
-use changesets::{ChangesetEntry, SqlChangesets};
+use changesets::ChangesetEntry;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
@@ -114,23 +114,11 @@ pub async fn subcommand_skiplist<'a>(
                 .map_err(Error::from)?;
 
             args::init_cachelib(fb, &matches);
-            let config_store = args::init_config_store(fb, &logger, matches)?;
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
-            let sql_changesets = args::open_sql::<SqlChangesets>(fb, config_store, &matches);
-            let repo = args::open_repo(fb, &logger, &matches);
-            let (repo, sql_changesets) = try_join(repo, sql_changesets).await?;
-            build_skiplist_index(
-                &ctx,
-                &repo,
-                key,
-                &logger,
-                &sql_changesets,
-                rebuild,
-                skiplist_ty,
-                exponent,
-            )
-            .await
-            .map_err(SubcommandError::Error)
+            let repo = args::open_repo(fb, &logger, &matches).await?;
+            build_skiplist_index(&ctx, &repo, key, &logger, rebuild, skiplist_ty, exponent)
+                .await
+                .map_err(SubcommandError::Error)
         }
         (SKIPLIST_READ, Some(sub_m)) => {
             let key = sub_m
@@ -165,7 +153,6 @@ async fn build_skiplist_index<'a, S: ToString>(
     repo: &'a BlobRepo,
     key: S,
     logger: &'a Logger,
-    sql_changesets: &'a SqlChangesets,
     force_full_rebuild: bool,
     skiplist_ty: SkiplistType,
     exponent: u32,
@@ -196,12 +183,8 @@ async fn build_skiplist_index<'a, S: ToString>(
             None => {
                 info!(logger, "creating a skiplist from scratch");
                 let skiplist_index = SkiplistIndex::with_skip_edge_count(skiplist_depth);
-                let cs_fetcher = fetch_all_public_changesets_and_build_changeset_fetcher(
-                    ctx,
-                    repo,
-                    sql_changesets,
-                )
-                .await?;
+                let cs_fetcher =
+                    fetch_all_public_changesets_and_build_changeset_fetcher(ctx, repo).await?;
                 Ok((cs_fetcher, skiplist_index))
             }
         }
@@ -258,16 +241,13 @@ async fn build_skiplist_index<'a, S: ToString>(
 async fn fetch_all_public_changesets_and_build_changeset_fetcher(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    sql_changesets: &SqlChangesets,
 ) -> Result<Arc<dyn ChangesetFetcher>, Error> {
-    let fetched_changesets = fetch_all_public_changesets(
-        &ctx,
+    let fetcher = PublicChangesetBulkFetch::new(
         repo.get_repoid(),
-        &sql_changesets,
-        repo.get_phases().get_sql_phases(),
-    )
-    .try_collect::<Vec<_>>()
-    .await?;
+        repo.get_changesets_object(),
+        repo.get_phases(),
+    );
+    let fetched_changesets = fetcher.fetch(&ctx).try_collect::<Vec<_>>().await?;
 
     let fetched_changesets: HashMap<_, _> = fetched_changesets
         .into_iter()

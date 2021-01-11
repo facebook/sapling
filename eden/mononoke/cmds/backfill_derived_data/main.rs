@@ -14,10 +14,10 @@ use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use bookmarks::{BookmarkKind, BookmarkPagination, BookmarkPrefix, Freshness};
-use bulkops::fetch_all_public_changesets;
+use bulkops::PublicChangesetBulkFetch;
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, InProcessLease, LeaseOps};
-use changesets::{deserialize_cs_entries, serialize_cs_entries, ChangesetEntry, SqlChangesets};
+use changesets::{deserialize_cs_entries, serialize_cs_entries, ChangesetEntry};
 use clap::{Arg, SubCommand};
 use cloned::cloned;
 use cmdlib::{
@@ -518,23 +518,20 @@ async fn run_subcmd<'a>(
             .await
         }
         (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
-            let config_store = args::init_config_store(fb, logger, &matches)?;
             let out_filename = sub_m
                 .value_of(ARG_OUT_FILENAME)
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_OUT_FILENAME))?
                 .to_string();
 
-            let (repo, changesets) = try_join(
-                args::open_repo(fb, &logger, &matches),
-                args::open_sql::<SqlChangesets>(fb, config_store, &matches),
-            )
-            .await?;
-            let phases = repo.get_phases();
-            let sql_phases = phases.get_sql_phases();
-            let css =
-                fetch_all_public_changesets(&ctx, repo.get_repoid(), &changesets, &sql_phases)
-                    .try_collect()
-                    .await?;
+            let repo = args::open_repo(fb, &logger, &matches).await?;
+
+            let fetcher = PublicChangesetBulkFetch::new(
+                repo.get_repoid(),
+                repo.get_changesets_object(),
+                repo.get_phases(),
+            );
+
+            let css = fetcher.fetch(&ctx).try_collect().await?;
 
             let serialized = serialize_cs_entries(css);
             Ok(fs::write(out_filename, serialized)?)
