@@ -17,7 +17,7 @@ use futures::{
 };
 use tokio_compat::runtime::Runtime;
 
-use bulkops::{PublicChangesetBulkFetch, MAX_FETCH_STEP};
+use bulkops::{Direction, PublicChangesetBulkFetch, MAX_FETCH_STEP};
 use cmdlib::args;
 use context::CoreContext;
 
@@ -145,7 +145,7 @@ fn main(fb: fbinit::FacebookInit) {
             repo, ":PublicChangesetBulkFetch::fetch_best_oldest_first"
         ),
         &fetcher,
-        |ctx, fetcher| fetcher.fetch(ctx),
+        |ctx, fetcher| fetcher.fetch(ctx, Direction::OldestFirst),
     );
 
     criterion.final_summary();

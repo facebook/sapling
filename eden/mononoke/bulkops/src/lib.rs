@@ -20,11 +20,18 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
     Stream,
 };
+use itertools::Either;
 
 use changesets::{ChangesetEntry, Changesets, SqlChangesets};
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 use phases::{Phases, SqlPhases};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Direction {
+    NewestFirst,
+    OldestFirst,
+}
 
 pub struct PublicChangesetBulkFetch {
     repo_id: RepositoryId,
@@ -54,10 +61,11 @@ impl PublicChangesetBulkFetch {
     pub fn fetch<'a>(
         &'a self,
         ctx: &'a CoreContext,
+        direction: Direction,
     ) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
         let changesets = self.changesets.get_sql_changesets();
         let phases = self.phases.get_sql_phases();
-        fetch_all_public_changesets(ctx, self.repo_id, changesets, phases, self.step)
+        fetch_all_public_changesets(ctx, self.repo_id, changesets, phases, self.step, direction)
     }
 }
 
@@ -71,6 +79,7 @@ fn fetch_all_public_changesets<'a>(
     changesets: &'a SqlChangesets,
     phases: &'a SqlPhases,
     step: u64,
+    direction: Direction,
 ) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
     async move {
         if step > MAX_FETCH_STEP {
@@ -84,14 +93,17 @@ fn fetch_all_public_changesets<'a>(
 
         let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
         let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))? + 1;
-        Ok(stream::iter(windows((start, stop), step)).map(Ok))
+        Ok(stream::iter(windows((start, stop), step, direction)).map(Ok))
     }
     .try_flatten_stream()
     .and_then(move |(lower_bound, upper_bound)| async move {
-        let ids: Vec<_> = changesets
+        let mut ids: Vec<_> = changesets
             .get_list_bs_cs_id_in_range_exclusive(repo_id, lower_bound, upper_bound)
             .try_collect()
             .await?;
+        if direction == Direction::NewestFirst {
+            ids.reverse();
+        }
         let (entries, public) = try_join(
             changesets.get_many(ctx.clone(), repo_id, ids.clone()),
             phases.get_public_raw(ctx, &ids),
@@ -108,10 +120,19 @@ fn fetch_all_public_changesets<'a>(
     .try_flatten()
 }
 
-fn windows(repo_bounds: (u64, u64), step: u64) -> impl Iterator<Item = (u64, u64)> {
+fn windows(
+    repo_bounds: (u64, u64),
+    step: u64,
+    direction: Direction,
+) -> impl Iterator<Item = (u64, u64)> {
     let (start, stop) = repo_bounds;
-    let steps = (start..stop).step_by(step as usize);
-    steps.map(move |i| (i, i + min(step, stop - i)))
+    if direction == Direction::NewestFirst {
+        let steps = (start..stop).rev().step_by(step as usize);
+        Either::Left(steps.map(move |i| (i - min(step - 1, i - start), i + 1)))
+    } else {
+        let steps = (start..stop).step_by(step as usize);
+        Either::Right(steps.map(move |i| (i, i + min(step, stop - i))))
+    }
 }
 
 #[cfg(test)]
@@ -131,8 +152,11 @@ mod tests {
 
     #[test]
     fn test_windows() -> Result<()> {
-        let by_oldest: Vec<(u64, u64)> = windows((0, 13), 5).collect();
+        let by_oldest: Vec<(u64, u64)> = windows((0, 13), 5, Direction::OldestFirst).collect();
         assert_eq!(by_oldest, vec![(0, 5), (5, 10), (10, 13)]);
+
+        let by_newest: Vec<(u64, u64)> = windows((0, 13), 5, Direction::NewestFirst).collect();
+        assert_eq!(by_newest, vec![(8, 13), (3, 8), (0, 3)]);
         Ok(())
     }
 
@@ -155,13 +179,20 @@ mod tests {
         }
 
         // Check a range of step sizes in lieu of varying the repo bounds
-        for step_size in 1..5 {
-            check_step_size(&ctx, &blobrepo, step_size as u64).await?
+        for d in &[Direction::OldestFirst, Direction::NewestFirst] {
+            for step_size in 1..5 {
+                check_step_size(&ctx, &blobrepo, step_size as u64, *d).await?
+            }
         }
         Ok(())
     }
 
-    async fn check_step_size(ctx: &CoreContext, blobrepo: &BlobRepo, step_size: u64) -> Result<()> {
+    async fn check_step_size(
+        ctx: &CoreContext,
+        blobrepo: &BlobRepo,
+        step_size: u64,
+        d: Direction,
+    ) -> Result<()> {
         let fetcher = PublicChangesetBulkFetch::new(
             blobrepo.get_repoid(),
             blobrepo.get_changesets_object(),
@@ -169,7 +200,7 @@ mod tests {
         )
         .with_step(step_size);
 
-        let public_changesets: Vec<ChangesetEntry> = fetcher.fetch(&ctx).try_collect().await?;
+        let public_changesets: Vec<ChangesetEntry> = fetcher.fetch(&ctx, d).try_collect().await?;
 
         let mut hg_mapped = vec![];
         for cs_entry in public_changesets {
@@ -178,16 +209,21 @@ mod tests {
                 .await?;
             hg_mapped.push(hg_cs_id);
         }
-        let expected = vec![
+        let mut expected = vec![
             "ecba698fee57eeeef88ac3dcc3b623ede4af47bd",
             "4685e9e62e4885d477ead6964a7600c750e39b03",
             "49f53ab171171b3180e125b918bd1cf0af7e5449",
         ];
+
+        if d == Direction::NewestFirst {
+            expected.reverse();
+        }
+
         let expected_mapped = expected
             .iter()
             .map(|v| HgChangesetId::from_str(v))
             .collect::<Result<Vec<_>>>()?;
-        assert_eq!(hg_mapped, expected_mapped);
+        assert_eq!(hg_mapped, expected_mapped, "step {} dir {:?}", step_size, d);
         Ok(())
     }
 }

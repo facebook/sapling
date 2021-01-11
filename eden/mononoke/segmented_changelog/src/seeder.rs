@@ -14,7 +14,7 @@ use slog::info;
 use dag::{self, Id as Vertex, InProcessIdDag};
 use stats::prelude::*;
 
-use bulkops::PublicChangesetBulkFetch;
+use bulkops::{Direction, PublicChangesetBulkFetch};
 use changesets::ChangesetEntry;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
@@ -86,8 +86,11 @@ impl SegmentedChangelogSeeder {
     ) -> Result<(Dag, Vertex)> {
         STATS::build_all_graph.add_value(1);
 
-        let changeset_entries: Vec<ChangesetEntry> =
-            self.changeset_bulk_fetch.fetch(ctx).try_collect().await?;
+        let changeset_entries: Vec<ChangesetEntry> = self
+            .changeset_bulk_fetch
+            .fetch(ctx, Direction::OldestFirst)
+            .try_collect()
+            .await?;
         info!(
             ctx.logger(),
             "loaded {} changesets",

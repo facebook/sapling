@@ -9,7 +9,7 @@ use anyhow::{anyhow, Error};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
-use bulkops::PublicChangesetBulkFetch;
+use bulkops::{Direction, PublicChangesetBulkFetch};
 use changeset_fetcher::ChangesetFetcher;
 use changesets::ChangesetEntry;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -247,7 +247,10 @@ async fn fetch_all_public_changesets_and_build_changeset_fetcher(
         repo.get_changesets_object(),
         repo.get_phases(),
     );
-    let fetched_changesets = fetcher.fetch(&ctx).try_collect::<Vec<_>>().await?;
+    let fetched_changesets = fetcher
+        .fetch(&ctx, Direction::OldestFirst)
+        .try_collect::<Vec<_>>()
+        .await?;
 
     let fetched_changesets: HashMap<_, _> = fetched_changesets
         .into_iter()

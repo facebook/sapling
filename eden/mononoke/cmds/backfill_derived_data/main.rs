@@ -14,7 +14,7 @@ use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use bookmarks::{BookmarkKind, BookmarkPagination, BookmarkPrefix, Freshness};
-use bulkops::PublicChangesetBulkFetch;
+use bulkops::{Direction, PublicChangesetBulkFetch};
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, InProcessLease, LeaseOps};
 use changesets::{deserialize_cs_entries, serialize_cs_entries, ChangesetEntry};
@@ -531,7 +531,10 @@ async fn run_subcmd<'a>(
                 repo.get_phases(),
             );
 
-            let css = fetcher.fetch(&ctx).try_collect().await?;
+            let css = fetcher
+                .fetch(&ctx, Direction::OldestFirst)
+                .try_collect()
+                .await?;
 
             let serialized = serialize_cs_entries(css);
             Ok(fs::write(out_filename, serialized)?)

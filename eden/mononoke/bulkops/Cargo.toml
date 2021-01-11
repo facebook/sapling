@@ -13,6 +13,7 @@ mononoke_types = { path = "../mononoke_types" }
 phases = { path = "../phases" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
+itertools = "0.8"
 
 [dev-dependencies]
 blobrepo = { path = "../blobrepo" }
