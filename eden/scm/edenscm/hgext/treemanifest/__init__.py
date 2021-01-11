@@ -199,6 +199,7 @@ from edenscm.mercurial.i18n import _, _n
 from edenscm.mercurial.node import bin, hex, nullid, short
 from edenscm.mercurial.pycompat import decodeutf8, range
 
+from .. import clienttelemetry
 from ..extutil import flock
 from ..remotefilelog import (
     cmdtable as remotefilelogcmdtable,
@@ -1039,6 +1040,7 @@ class basetreemanifestlog(object):
 
     def makeruststore(self):
         remotestore = revisionstore.pyremotestore(remotetreestore(self._repo))
+        correlator = clienttelemetry.correlator(self._repo.ui)
 
         mask = os.umask(0o002)
         try:
@@ -1049,6 +1051,7 @@ class basetreemanifestlog(object):
                 None,
                 None,
                 "manifests",
+                correlator=correlator,
             )
             self.historystore = revisionstore.metadatastore(
                 self._repo.svfs.vfs.base,

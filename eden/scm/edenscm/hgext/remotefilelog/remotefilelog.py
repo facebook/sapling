@@ -15,6 +15,7 @@ from edenscm.mercurial import ancestor, error, filelog, mdiff, pycompat, revlog,
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, nullid
 
+from .. import clienttelemetry
 from . import constants, fileserverclient, shallowutil
 from .repack import fulllocaldatarepack
 
@@ -545,6 +546,8 @@ class remotefileslog(filelog.fileslog):
         memcachestore = self.memcachestore(repo)
         edenapistore = self.edenapistore(repo)
 
+        correlator = clienttelemetry.correlator(repo.ui)
+
         mask = os.umask(0o002)
         try:
             sharedonlycontentstore = revisionstore.contentstore(
@@ -553,6 +556,7 @@ class remotefileslog(filelog.fileslog):
                 sharedonlyremotestore,
                 memcachestore,
                 edenapistore,
+                correlator=correlator,
             )
             sharedonlymetadatastore = revisionstore.metadatastore(
                 None,
@@ -572,6 +576,8 @@ class remotefileslog(filelog.fileslog):
         memcachestore = self.memcachestore(repo)
         edenapistore = self.edenapistore(repo)
 
+        correlator = clienttelemetry.correlator(repo.ui)
+
         mask = os.umask(0o002)
         try:
             self.contentstore = revisionstore.contentstore(
@@ -580,6 +586,7 @@ class remotefileslog(filelog.fileslog):
                 remotestore,
                 memcachestore,
                 edenapistore,
+                correlator=correlator,
             )
             self.metadatastore = revisionstore.metadatastore(
                 repo.svfs.vfs.base,

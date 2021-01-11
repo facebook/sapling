@@ -904,12 +904,13 @@ py_class!(pub class contentstore |py| {
         remote: pyremotestore,
         memcache: Option<memcachestore>,
         edenapi: Option<edenapifilestore> = None,
-        suffix: Option<String> = None
+        suffix: Option<String> = None,
+        correlator: Option<String> = None
     ) -> PyResult<contentstore> {
         let remotestore = remote.extract_inner(py);
         let config = config.get_cfg(py);
 
-        let mut builder = ContentStoreBuilder::new(&config);
+        let mut builder = ContentStoreBuilder::new(&config).correlator(correlator);
 
         builder = if let Some(edenapi) = edenapi {
             builder.remotestore(edenapi.extract_inner(py))

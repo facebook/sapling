@@ -102,11 +102,11 @@ struct HttpLfsRemote {
     http_options: HttpOptions,
 }
 
-#[derive(Copy, Clone)]
 struct HttpOptions {
     accept_zstd: bool,
     http_version: HttpVersion,
     min_transfer_speed: Option<MinTransferSpeed>,
+    correlator: Option<String>,
 }
 
 enum LfsRemoteInner {
@@ -964,7 +964,7 @@ impl LfsRemoteInner {
         backoff_times: Vec<f32>,
         request_timeout: Duration,
         add_extra: impl Fn(Request) -> Request,
-        http_options: HttpOptions,
+        http_options: &HttpOptions,
     ) -> Result<Option<Bytes>> {
         let mut backoff = backoff_times.into_iter();
         let mut rng = thread_rng();
@@ -979,6 +979,10 @@ impl LfsRemoteInner {
                 .header("User-Agent", &user_agent)
                 .header("X-Attempt", attempt.to_string())
                 .http_version(http_options.http_version);
+
+            if let Some(ref correlator) = http_options.correlator {
+                req = req.header("X-Client-Correlator", correlator.clone());
+            }
 
             if http_options.accept_zstd {
                 req = req.header("Accept-Encoding", "zstd");
@@ -1139,7 +1143,7 @@ impl LfsRemoteInner {
                 http.backoff_times.clone(),
                 http.request_timeout,
                 move |builder| builder.body(batch_json.clone()),
-                http.http_options,
+                &http.http_options,
             )
             .await
         };
@@ -1164,7 +1168,7 @@ impl LfsRemoteInner {
         oid: Sha256,
         read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + 'static,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + 'static,
-        http_options: HttpOptions,
+        http_options: &HttpOptions,
     ) -> Result<()> {
         let body = if op == Operation::Upload {
             spawn_blocking(move || read_from_store(oid)).await??
@@ -1275,7 +1279,7 @@ impl LfsRemoteInner {
                     oid,
                     read_from_store,
                     write_to_store,
-                    http.http_options,
+                    &http.http_options,
                 );
 
                 futures.push(Ok(fut));
@@ -1321,6 +1325,7 @@ impl LfsRemote {
         shared: Arc<LfsStore>,
         local: Option<Arc<LfsStore>>,
         config: &ConfigSet,
+        correlator: Option<String>,
     ) -> Result<Self> {
         let mut url = get_str_config(config, "lfs", "url")?;
         // A trailing '/' needs to be present so that `Url::join` doesn't remove the reponame
@@ -1401,6 +1406,7 @@ impl LfsRemote {
                         accept_zstd,
                         http_version,
                         min_transfer_speed,
+                        correlator,
                     },
                 }),
             })
@@ -2343,7 +2349,7 @@ mod tests {
             let config = make_lfs_config(&cachedir);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsRemote::new(lfs, None, &config, None)?;
 
             let blob = (
                 Sha256::from_str(
@@ -2376,7 +2382,7 @@ mod tests {
             set_var("https_proxy", "fwdproxy:8082");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsRemote::new(lfs, None, &config, None)?;
 
             let blob = (
                 Sha256::from_str(
@@ -2407,7 +2413,7 @@ mod tests {
             set_var("https_proxy", "http://fwdproxy:8082");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsRemote::new(lfs, None, &config, None)?;
 
             let blob = (
                 Sha256::from_str(
@@ -2439,7 +2445,7 @@ mod tests {
             );
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsRemote::new(lfs, None, &config, None)?;
 
             let blob = (
                 Sha256::from_str(
@@ -2472,7 +2478,7 @@ mod tests {
             set_var("NO_PROXY", ".facebook.com,.tfbnw.net");
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsRemote::new(lfs, None, &config, None)?;
 
             let blob = (
                 Sha256::from_str(
@@ -2509,7 +2515,7 @@ mod tests {
                 );
 
                 let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-                let remote = LfsRemote::new(lfs, None, &config)?;
+                let remote = LfsRemote::new(lfs, None, &config, None)?;
 
                 let blob1 = (
                     Sha256::from_str(
@@ -2559,7 +2565,7 @@ mod tests {
             config.set("lfs", "http-version", Some("3"), &Default::default());
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config).unwrap());
-            let result = LfsRemote::new(lfs, None, &config);
+            let result = LfsRemote::new(lfs, None, &config, None);
 
             assert!(result.is_err());
 
@@ -2577,7 +2583,7 @@ mod tests {
             config.set("lfs", "requesttimeout", Some("0"), &Default::default());
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsRemote::new(lfs, None, &config, None)?;
 
             let blob = (
                 Sha256::from_str(
@@ -2603,7 +2609,7 @@ mod tests {
             let config = make_lfs_config(&cachedir);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = Arc::new(LfsRemote::new(lfs.clone(), None, &config)?);
+            let remote = Arc::new(LfsRemote::new(lfs.clone(), None, &config, None)?);
 
             let key = key("a/b", "1234");
 
@@ -2658,7 +2664,7 @@ mod tests {
             );
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let remote = LfsRemote::new(lfs, None, &config, None)?;
 
             let blob = (
                 Sha256::from_str(
@@ -2708,7 +2714,7 @@ mod tests {
         let url = Url::from_file_path(&remote).unwrap();
         config.set("lfs", "url", Some(url.as_str()), &Default::default());
 
-        let remote = LfsRemote::new(lfs, None, &config)?;
+        let remote = LfsRemote::new(lfs, None, &config, None)?;
 
         let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
             .iter()
@@ -2764,7 +2770,7 @@ mod tests {
         let url = Url::from_file_path(&remote_dir).unwrap();
         config.set("lfs", "url", Some(url.as_str()), &Default::default());
 
-        let remote = LfsRemote::new(shared_lfs, Some(local_lfs.clone()), &config)?;
+        let remote = LfsRemote::new(shared_lfs, Some(local_lfs.clone()), &config, None)?;
 
         let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
             .iter()
@@ -2806,6 +2812,7 @@ mod tests {
             shared_lfs.clone(),
             Some(local_lfs.clone()),
             &config,
+            None,
         )?);
         let remote = remote.datastore(shared_lfs.clone());
         let k = StoreKey::hgid(k1.clone());
@@ -2888,7 +2895,7 @@ mod tests {
         config.set("lfs", "url", Some("http://192.0.2.0/"), &Default::default());
 
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-        let remote = Arc::new(LfsRemote::new(lfs, None, &config)?);
+        let remote = Arc::new(LfsRemote::new(lfs, None, &config, None)?);
 
         let resp = remote.datastore(store).prefetch(&[]);
         assert!(resp.is_ok());

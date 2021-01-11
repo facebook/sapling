@@ -1,8 +1,13 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # An extension to make identifiers from util.makerandomidentifier into a stable
 # incrementing sequence.
 import os
 
-from edenscm.hgext import extutil
+from edenscm.hgext import extutil, clienttelemetry
 from edenscm.mercurial import extensions, util
 
 
@@ -21,3 +26,4 @@ def makestableidentifier(orig, length=16):
 
 def uisetup(ui):
     extensions.wrapfunction(util, "makerandomidentifier", makestableidentifier)
+    clienttelemetry._correlator = "stableidentifiers:correlator"

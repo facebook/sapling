@@ -250,6 +250,7 @@ pub struct ContentStoreBuilder<'a> {
     remotestore: Option<Arc<dyn HgIdRemoteStore>>,
     suffix: Option<PathBuf>,
     memcachestore: Option<Arc<MemcacheStore>>,
+    correlator: Option<String>,
 }
 
 impl<'a> ContentStoreBuilder<'a> {
@@ -261,6 +262,7 @@ impl<'a> ContentStoreBuilder<'a> {
             remotestore: None,
             memcachestore: None,
             suffix: None,
+            correlator: None,
         }
     }
 
@@ -291,6 +293,11 @@ impl<'a> ContentStoreBuilder<'a> {
 
     pub fn suffix(mut self, suffix: impl AsRef<Path>) -> Self {
         self.suffix = Some(suffix.as_ref().to_path_buf());
+        self
+    }
+
+    pub fn correlator(mut self, correlator: Option<impl ToString>) -> Self {
+        self.correlator = correlator.map(|s| s.to_string());
         self
     }
 
@@ -490,6 +497,7 @@ impl<'a> ContentStoreBuilder<'a> {
                     shared_lfs_store,
                     local_lfs_store,
                     self.config,
+                    self.correlator,
                 )?);
                 remotestores.add(lfs_remote_store.datastore(shared_store.clone()));
 
