@@ -150,6 +150,7 @@ def crdump(ui, repo, *revs, **opts):
                 "user": encoding.fromlocal(ctx.user()),
                 "bookmarks": list(map(encoding.fromlocal, ctx.bookmarks())),
                 "commit_cloud": False if ctx.node() in notbackedup else True,
+                "manifest_node": hex(ctx.manifestnode()),
             }
             if ctx.parents()[0].phase() != phases.public:
                 # we need this only if parent is in the same draft stack

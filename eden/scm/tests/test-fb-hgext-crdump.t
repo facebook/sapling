@@ -74,6 +74,7 @@ Test obsolete markers
                   "bin1",
                   "bin2"
               ],
+              "manifest_node": "26a5003fbb1c1f8a249c3d8276787d33d2d2bb13",
               "node": "9e6c8a14e241d3140575d17288d4a91bd8c9a3c8",
               "p1": {
                   "node": "65d913976cc18347138f7b9f5186010d39b39b0f"
@@ -129,6 +130,7 @@ Test basic dump of two commits
                   "a",
                   "bin1"
               ],
+              "manifest_node": "08008b9e8e41209ef9312333a21a7aff8cce126b",
               "node": "65d913976cc18347138f7b9f5186010d39b39b0f",
               "p1": {
                   "node": "0000000000000000000000000000000000000000"
@@ -165,6 +167,7 @@ Test basic dump of two commits
                   "bin1",
                   "bin2"
               ],
+              "manifest_node": "26a5003fbb1c1f8a249c3d8276787d33d2d2bb13",
               "node": "9e6c8a14e241d3140575d17288d4a91bd8c9a3c8",
               "p1": {
                   "node": "65d913976cc18347138f7b9f5186010d39b39b0f"
@@ -204,6 +207,7 @@ Test basic dump of two commits
                   "bin2",
                   "c"
               ],
+              "manifest_node": "218d3347f4e18d50a39fdafa305daaeff0e120bc",
               "node": "e3a67aeeade9ad9e292f1762f8f075a8322042b7",
               "p1": {
                   "differential_revision": "123",
@@ -373,6 +377,7 @@ Test non-ASCII characters
               "files": [
                   "X"
               ],
+              "manifest_node": "7083bb0a52b5998e73c5a9b05ee66e4991cf53a2",
               "node": "4d5bdcf868416c46f75e4a118b69d8022325bcda",
               "p1": {
                   "differential_revision": "",
@@ -405,6 +410,7 @@ Test non-ASCII characters
               "files": [
                   "X"
               ],
+              "manifest_node": "7083bb0a52b5998e73c5a9b05ee66e4991cf53a2",
               "node": "4d5bdcf868416c46f75e4a118b69d8022325bcda",
               "p1": {
                   "differential_revision": "",
@@ -437,6 +443,7 @@ Test non-ASCII characters
               "files": [
                   "X"
               ],
+              "manifest_node": "7083bb0a52b5998e73c5a9b05ee66e4991cf53a2",
               "node": "4d5bdcf868416c46f75e4a118b69d8022325bcda",
               "p1": {
                   "differential_revision": "",
@@ -469,6 +476,7 @@ Test non-ASCII characters
               "files": [
                   "X"
               ],
+              "manifest_node": "7083bb0a52b5998e73c5a9b05ee66e4991cf53a2",
               "node": "4d5bdcf868416c46f75e4a118b69d8022325bcda",
               "p1": {
                   "differential_revision": "",
