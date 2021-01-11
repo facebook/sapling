@@ -12,11 +12,12 @@
 ///! Utiltities for handling data in bulk.
 use std::cmp::min;
 use std::collections::HashMap;
+use std::iter::Iterator;
 use std::sync::Arc;
 
 use anyhow::{bail, Error, Result};
 use futures::{
-    future::{try_join, TryFutureExt},
+    future::{self, FutureExt, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
     Stream,
 };
@@ -24,7 +25,7 @@ use itertools::Either;
 
 use changesets::{ChangesetEntry, Changesets, SqlChangesets};
 use context::CoreContext;
-use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use phases::{Phases, SqlPhases};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -54,70 +55,121 @@ impl PublicChangesetBulkFetch {
         }
     }
 
-    pub fn with_step(self, step: u64) -> Self {
-        Self { step, ..self }
+    pub fn with_step(self, step: u64) -> Result<Self> {
+        if step > MAX_FETCH_STEP {
+            bail!("Step too large {}", step);
+        } else if step < MIN_FETCH_STEP {
+            bail!("Step too small {}", step);
+        }
+        Ok(Self { step, ..self })
     }
 
+    /// Fetch the ChangesetEntry, which involves actually loading the Changesets
     pub fn fetch<'a>(
         &'a self,
         ctx: &'a CoreContext,
-        direction: Direction,
+        d: Direction,
     ) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
         let changesets = self.changesets.get_sql_changesets();
         let phases = self.phases.get_sql_phases();
-        fetch_all_public_changesets(ctx, self.repo_id, changesets, phases, self.step, direction)
+        let repo_id = self.repo_id;
+        let repo_bounds = self.get_repo_bounds();
+        async move {
+            let repo_bounds = repo_bounds.await?;
+            let s = stream::iter(windows(repo_bounds, self.step, d))
+                .then(move |chunk_bounds| async move {
+                    let ids =
+                        public_ids_for_chunk(ctx, repo_id, changesets, phases, d, chunk_bounds)
+                            .await?;
+                    let entries = changesets
+                        .get_many(ctx.clone(), repo_id, ids.clone())
+                        .await?;
+                    let mut entries_map: HashMap<_, _> =
+                        entries.into_iter().map(|e| (e.cs_id, e)).collect();
+                    let result: Vec<_> = ids
+                        .into_iter()
+                        .filter_map(|id| entries_map.remove(&id))
+                        .map(Ok)
+                        .collect();
+                    Ok::<_, Error>(stream::iter(result))
+                })
+                .try_flatten();
+            Ok(s)
+        }
+        .try_flatten_stream()
+    }
+
+    /// Fetch just the ids without attempting to load the Changesets.
+    /// Each id comes with the chunk bounds it was loaded from
+    /// One can optionally specify repo bounds, or None to have it resolved for you (specifying it is useful when checkpointing)
+    pub fn fetch_ids<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        d: Direction,
+        repo_bounds: Option<(u64, u64)>,
+    ) -> impl Stream<Item = Result<(ChangesetId, (u64, u64)), Error>> + 'a {
+        let changesets = self.changesets.get_sql_changesets();
+        let phases = self.phases.get_sql_phases();
+        let repo_id = self.repo_id;
+        let repo_bounds = if let Some(repo_bounds) = repo_bounds {
+            future::ok(repo_bounds).left_future()
+        } else {
+            self.get_repo_bounds().right_future()
+        };
+
+        async move {
+            let repo_bounds = repo_bounds.await?;
+            let s = stream::iter(windows(repo_bounds, self.step, d))
+                .then(move |chunk_bounds| async move {
+                    let ids =
+                        public_ids_for_chunk(ctx, repo_id, changesets, phases, d, chunk_bounds);
+                    let res = ids.await?.into_iter().map(move |id| Ok((id, chunk_bounds)));
+                    Ok::<_, Error>(stream::iter(res))
+                })
+                .try_flatten();
+            Ok(s)
+        }
+        .try_flatten_stream()
+    }
+
+    /// Get the repo bounds as max/min observed suitable for rust ranges (hence the + 1)
+    pub async fn get_repo_bounds(&self) -> Result<(u64, u64), Error> {
+        let changesets = self.changesets.get_sql_changesets();
+        let (start, stop) = changesets.get_changesets_ids_bounds(self.repo_id).await?;
+        let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
+        let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))? + 1;
+        Ok((start, stop))
     }
 }
 
 pub const MAX_FETCH_STEP: u64 = 65536;
 pub const MIN_FETCH_STEP: u64 = 1;
 
+// Gets all changeset ids in a chunk that are public
 // This joins changeset ids to public changesets in memory. Doing it in SQL may or may not be faster
-fn fetch_all_public_changesets<'a>(
+async fn public_ids_for_chunk<'a>(
     ctx: &'a CoreContext,
     repo_id: RepositoryId,
     changesets: &'a SqlChangesets,
     phases: &'a SqlPhases,
-    step: u64,
-    direction: Direction,
-) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
-    async move {
-        if step > MAX_FETCH_STEP {
-            bail!("Step too large {}", step);
-        } else if step < MIN_FETCH_STEP {
-            bail!("Step too small {}", step);
-        }
-        let (start, stop) = changesets
-            .get_changesets_ids_bounds(repo_id.clone())
-            .await?;
-
-        let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
-        let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))? + 1;
-        Ok(stream::iter(windows((start, stop), step, direction)).map(Ok))
-    }
-    .try_flatten_stream()
-    .and_then(move |(lower_bound, upper_bound)| async move {
-        let mut ids: Vec<_> = changesets
-            .get_list_bs_cs_id_in_range_exclusive(repo_id, lower_bound, upper_bound)
-            .try_collect()
-            .await?;
-        if direction == Direction::NewestFirst {
-            ids.reverse();
-        }
-        let (entries, public) = try_join(
-            changesets.get_many(ctx.clone(), repo_id, ids.clone()),
-            phases.get_public_raw(ctx, &ids),
-        )
+    d: Direction,
+    chunk_bounds: (u64, u64),
+) -> Result<Vec<ChangesetId>> {
+    let (lower, upper) = chunk_bounds;
+    let mut ids: Vec<_> = changesets
+        .get_list_bs_cs_id_in_range_exclusive(repo_id, lower, upper)
+        .try_collect()
         .await?;
-        let mut entries_map: HashMap<_, _> = entries.into_iter().map(|e| (e.cs_id, e)).collect();
-        let result: Vec<_> = ids
-            .into_iter()
-            .filter(|id| public.contains(&id))
-            .filter_map(|id| entries_map.remove(&id))
-            .collect();
-        Ok::<_, Error>(stream::iter(result).map(Ok))
-    })
-    .try_flatten()
+    if ids.is_empty() {
+        // Most ranges are empty for small repos
+        Ok(ids)
+    } else {
+        if d == Direction::NewestFirst {
+            ids.reverse()
+        }
+        let public = phases.get_public_raw(ctx, &ids).await?;
+        Ok(ids.into_iter().filter(|id| public.contains(&id)).collect())
+    }
 }
 
 fn windows(
@@ -198,9 +250,19 @@ mod tests {
                     blobrepo.get_changesets_object(),
                     blobrepo.get_phases(),
                 )
-                .with_step(step_size);
+                .with_step(step_size)?;
                 let entries: Vec<ChangesetEntry> = fetcher.fetch(&ctx, *d).try_collect().await?;
                 let public_ids: Vec<ChangesetId> = entries.into_iter().map(|e| e.cs_id).collect();
+                let public_ids2: Vec<ChangesetId> = fetcher
+                    .fetch_ids(&ctx, *d, None)
+                    .map_ok(|(cs_id, (lower, upper))| {
+                        assert_ne!(lower, upper, "step {} dir {:?}", step_size, d);
+                        cs_id
+                    })
+                    .try_collect()
+                    .await?;
+
+                assert_eq!(public_ids, public_ids2, "step {} dir {:?}", step_size, d);
                 assert_eq!(public_ids, expected, "step {} dir {:?}", step_size, d);
             }
         }

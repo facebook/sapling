@@ -145,6 +145,18 @@ fn main(fb: fbinit::FacebookInit) {
             repo, ":PublicChangesetBulkFetch::fetch_best_oldest_first"
         ),
         &fetcher,
+        |ctx, fetcher| fetcher.fetch_ids(ctx, Direction::OldestFirst, None),
+    );
+
+    bench_stream(
+        &mut criterion,
+        &ctx,
+        &mut runtime,
+        format!(
+            "{}{}",
+            repo, ":PublicChangesetBulkFetch::fetch_entries_oldest_first"
+        ),
+        &fetcher,
         |ctx, fetcher| fetcher.fetch(ctx, Direction::OldestFirst),
     );
 
