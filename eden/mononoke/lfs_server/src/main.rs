@@ -15,11 +15,12 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{
     channel::oneshot,
-    future::{lazy, select, try_join_all},
+    future::{self, lazy, select, try_join_all},
+    stream::StreamExt,
     FutureExt, TryFutureExt,
 };
 use futures_util::try_join;
-use gotham::{bind_server, bind_server_with_socket_data};
+use gotham::ConnectedGothamService;
 use gotham_ext::{
     handler::MononokeHttpHandler,
     middleware::{
@@ -28,7 +29,7 @@ use gotham_ext::{
     },
     socket_data::TlsSocketData,
 };
-use hyper::header::HeaderValue;
+use hyper::{header::HeaderValue, server::conn::Http};
 use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
 use slog::{info, warn};
 use std::collections::HashMap;
@@ -350,7 +351,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let router = build_router(fb, ctx);
 
-    let root = MononokeHttpHandler::builder()
+    let handler = MononokeHttpHandler::builder()
         .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
         .add(ClientIdentityMiddleware::new(trusted_proxy_idents))
         .add(PostRequestMiddleware::with_config(config_handle))
@@ -375,9 +376,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     start_fb303_server(fb, SERVICE_NAME, &logger, &matches, AliveService)?;
 
-    let listener = runtime
+    let mut listener = runtime
         .block_on_std(TcpListener::bind(&addr))
         .context(Error::msg("Could not start TCP listener"))?;
+
+    let protocol = Arc::new(Http::new());
+    let handler = Arc::new(handler);
 
     let server = match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
         (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {
@@ -393,30 +397,77 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
             let capture_session_data = tls_session_data_log.is_some();
 
-            bind_server_with_socket_data(listener, root, {
-                cloned!(logger);
-                move |socket| {
-                    cloned!(acceptor, logger);
-                    async move {
-                        let ssl_socket = match tokio_openssl::accept(&acceptor, socket).await {
-                            Ok(ssl_socket) => ssl_socket,
-                            Err(e) => {
-                                warn!(&logger, "TLS handshake failed: {:?}", e);
-                                return Err(());
-                            }
+            cloned!(logger);
+
+            async move {
+                listener
+                    .incoming()
+                    .for_each(move |socket| {
+                        cloned!(acceptor, logger, protocol, handler);
+
+                        let task = async move {
+                            let socket = socket.context("Error obtaining socket")?;
+                            let addr = socket.peer_addr().context("Error reading peer_addr()")?;
+                            let ssl_socket = tokio_openssl::accept(&acceptor, socket)
+                                .await
+                                .context("Error performing TLS handshake")?;
+
+                            let socket_data =
+                                TlsSocketData::from_ssl(ssl_socket.ssl(), capture_session_data);
+
+                            let service =
+                                ConnectedGothamService::connect(handler, addr, socket_data);
+
+                            protocol
+                                .serve_connection(ssl_socket, service)
+                                .await
+                                .context("Error serving connection")?;
+
+                            Result::<_, Error>::Ok(())
                         };
 
-                        let socket_data =
-                            TlsSocketData::from_ssl(ssl_socket.ssl(), capture_session_data);
+                        tokio::spawn(task.map_err(move |e| {
+                            warn!(&logger, "HTTPS Server error: {:?}", e);
+                        }));
 
-                        Ok((socket_data, ssl_socket))
-                    }
-                }
-            })
+                        future::ready(())
+                    })
+                    .await;
+            }
             .left_future()
         }
         (None, None, None, None) => {
-            bind_server(listener, root, |socket| async move { Ok(socket) }).right_future()
+            cloned!(logger);
+
+            async move {
+                listener
+                    .incoming()
+                    .for_each(move |socket| {
+                        cloned!(logger, protocol, handler);
+
+                        let task = async move {
+                            let socket = socket.context("Error obtaining socket")?;
+                            let addr = socket.peer_addr().context("Error reading peer_addr()")?;
+
+                            let service = ConnectedGothamService::connect(handler, addr, ());
+
+                            protocol
+                                .serve_connection(socket, service)
+                                .await
+                                .context("Error serving connection")?;
+
+                            Result::<_, Error>::Ok(())
+                        };
+
+                        tokio::spawn(task.map_err(move |e| {
+                            warn!(&logger, "HTTP Server error: {:?}", e);
+                        }));
+
+                        future::ready(())
+                    })
+                    .await;
+            }
+            .right_future()
         }
         _ => bail!("TLS flags must be passed together"),
     };
@@ -426,7 +477,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     serve_forever(
         runtime,
         select(
-            server.boxed().map_err(|()| anyhow!("Unhandled error")),
+            server.map(Ok).boxed(),
             shutdown_rx.map_err(|err| anyhow!("Cancelled channel: {}", err)),
         )
         .map(|res| res.factor_first().0),
