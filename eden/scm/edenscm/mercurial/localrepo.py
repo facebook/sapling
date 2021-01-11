@@ -1002,10 +1002,19 @@ class localrepository(object):
                 bookmarks.saveremotenames(
                     self, {remotename: remotenamechanges}, override=False
                 )
+                self.invalidate(True)
 
             # Update visibleheads:
             if heads:
-                visibility.add(self, heads)
+                # Exclude obvious public heads (not all public heads for
+                # performance). Note: legacy non-narrow-heads won't be
+                # able to provide only public heads and cannot use this
+                # optimization.
+                if self.ui.configbool("experimental", "narrow-heads"):
+                    public = self.heads(includepublic=True, includedraft=False)
+                    heads = sorted(set(heads) - set(public))
+                if heads:
+                    visibility.add(self, heads)
 
     def conn(self, source="default", **opts):
         """Create a connection from the connection pool"""
