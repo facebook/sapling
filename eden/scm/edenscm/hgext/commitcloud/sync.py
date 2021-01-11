@@ -74,10 +74,7 @@ def _getbookmarks(repo):
 
 
 def _getprotectedremotebookmarks(repo):
-    """Returns set of initial remote bookmarks"""
-    return set(
-        bookmarks.selectivepullbookmarknames(repo, remote=None, includeaccessed=False)
-    )
+    return bookmarks.selectivepullinitbookmarknames(repo)
 
 
 def _getremotebookmarks(repo):

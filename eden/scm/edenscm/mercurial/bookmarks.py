@@ -1354,6 +1354,11 @@ def cleanselectivepullaccessedbookmarks(repo):
         vfs.tryunlink(_selectivepullaccessedbookmarks)
 
 
+def selectivepullinitbookmarknames(repo):
+    """Returns set of initial remote bookmarks"""
+    return set(repo.ui.configlist("remotenames", "selectivepulldefault"))
+
+
 def selectivepullbookmarknames(repo, remote=None, includeaccessed=True):
     """Returns the bookmark names that should be pulled during a pull."""
     initbooks = set(repo.ui.configlist("remotenames", "selectivepulldefault"))
