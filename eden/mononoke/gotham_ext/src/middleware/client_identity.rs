@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use dns_lookup::lookup_addr;
 use futures::Future;
 use gotham::state::{client_addr, FromState, State};
 use gotham_derive::StateData;
@@ -16,7 +15,7 @@ use percent_encoding::percent_decode;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
-use tokio::task;
+use trust_dns_resolver::TokioAsyncResolver;
 
 use super::Middleware;
 
@@ -45,17 +44,18 @@ impl ClientIdentity {
     }
 
     /// Perform a reverse DNS lookup of the client's IP address to determine
-    /// its hostname. This involves potentially expensive blocking I/O, so
-    /// the lookup is performed asynchronously in another thread.
+    /// its hostname.
     pub fn hostname(&self) -> impl Future<Output = Option<String>> + 'static {
         // XXX: Can't make this an async fn because the resulting Future would
         // have a non-'static lifetime (due to the &self argument).
+
         let address = self.address.clone();
+
         async move {
-            task::spawn_blocking(move || lookup_addr(&address?).ok())
-                .await
-                .ok()
-                .flatten()
+            let resolver = TokioAsyncResolver::tokio_from_system_conf().await.ok()?;
+            let hosts = resolver.reverse_lookup(address?).await.ok()?;
+            let host = hosts.iter().next()?;
+            Some(host.to_string().trim_end_matches('.').to_string())
         }
     }
 
