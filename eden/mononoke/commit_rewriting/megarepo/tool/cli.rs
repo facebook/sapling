@@ -55,6 +55,7 @@ pub const PRE_MERGE_DELETE: &str = "pre-merge-delete";
 pub const RUN_MOVER: &str = "run-mover";
 pub const SECOND_PARENT: &str = "second-parent";
 pub const SOURCE_CHANGESET: &str = "source-changeset";
+pub const SYNC_COMMIT_AND_ANCESTORS: &str = "sync-commit-and-ancestors";
 pub const SYNC_DIAMOND_MERGE: &str = "sync-diamond-merge";
 pub const TARGET_CHANGESET: &str = "target-changeset";
 pub const TO_MERGE_CS_ID: &str = "to-merge-cs-id";
@@ -558,6 +559,24 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(true),
         );
 
+
+    let sync_commit_and_ancestors = SubCommand::with_name(SYNC_COMMIT_AND_ANCESTORS)
+        .about(
+            "
+            Command that syncs a commit and all of its unsynced ancestors from source repo \
+            to target repo. This is similar to SCS commit_lookup_xrepo() method except that it \
+            doesn't do all the safety checks that commit_lookup_xrepo(). In particular, it allows \
+            to sync public small repo commits.
+        ",
+        )
+        .arg(
+            Arg::with_name(COMMIT_HASH)
+                .long(COMMIT_HASH)
+                .help("commit (and its ancestors) to sync")
+                .takes_value(true)
+                .required(true),
+        );
+
     args::MononokeAppBuilder::new("megarepo preparation tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
@@ -578,4 +597,5 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(check_push_redirection_prereqs_subcommand)
         .subcommand(run_mover_subcommand)
         .subcommand(backfill_noop_mapping)
+        .subcommand(sync_commit_and_ancestors)
 }

@@ -19,10 +19,11 @@ use cmdlib::{
 };
 use cmdlib_x_repo::create_commit_syncer_from_matches;
 use context::CoreContext;
-use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::{
+    find_toposorted_unsynced_ancestors,
     types::{Source, Target},
     validation::verify_working_copy_inner,
+    CandidateSelectionHint, CommitSyncContext, CommitSyncer,
 };
 use fbinit::FacebookInit;
 use futures::{
@@ -71,7 +72,8 @@ use crate::cli::{
     INPUT_FILE, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC, MAPPING_VERSION_NAME,
     MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PARENTS, PATH,
     PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER, SECOND_PARENT, SOURCE_CHANGESET,
-    SYNC_DIAMOND_MERGE, TARGET_CHANGESET, TO_MERGE_CS_ID, VERSION, WAIT_SECS,
+    SYNC_COMMIT_AND_ANCESTORS, SYNC_DIAMOND_MERGE, TARGET_CHANGESET, TO_MERGE_CS_ID, VERSION,
+    WAIT_SECS,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -844,6 +846,48 @@ async fn process_stream_and_wait_for_replication<'a>(
     Ok(())
 }
 
+async fn run_sync_commit_and_ancestors<'a>(
+    ctx: CoreContext,
+    matches: &MononokeMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
+
+    let source_commit_hash = sub_m
+        .value_of(COMMIT_HASH)
+        .ok_or_else(|| format_err!("{} not specified", COMMIT_HASH))?;
+
+    let source_cs_id = helpers::csid_resolve(
+        ctx.clone(),
+        commit_syncer.get_source_repo().clone(),
+        source_commit_hash,
+    )
+    .compat()
+    .await?;
+
+    let (unsynced_ancestors, _) =
+        find_toposorted_unsynced_ancestors(&ctx, &commit_syncer, source_cs_id).await?;
+
+    for ancestor in unsynced_ancestors {
+        commit_syncer
+            .unsafe_sync_commit(
+                &ctx,
+                ancestor,
+                CandidateSelectionHint::Only,
+                CommitSyncContext::AdminChangeMapping,
+            )
+            .await?;
+    }
+
+    let commit_sync_outcome = commit_syncer
+        .get_commit_sync_outcome(&ctx, source_cs_id)
+        .await?
+        .ok_or_else(|| format_err!("was not able to remap a commit {}", source_cs_id))?;
+    info!(ctx.logger(), "remapped to {:?}", commit_sync_outcome);
+
+    Ok(())
+}
+
 fn get_version(matches: &ArgMatches<'_>) -> Result<CommitSyncConfigVersion> {
     Ok(CommitSyncConfigVersion(
         matches
@@ -904,6 +948,9 @@ fn main(fb: FacebookInit) -> Result<()> {
                 run_move(ctx, &matches, sub_m, repo_config).await
             }
             (RUN_MOVER, Some(sub_m)) => run_mover(ctx, &matches, sub_m).await,
+            (SYNC_COMMIT_AND_ANCESTORS, Some(sub_m)) => {
+                run_sync_commit_and_ancestors(ctx, &matches, sub_m).await
+            }
             (SYNC_DIAMOND_MERGE, Some(sub_m)) => run_sync_diamond_merge(ctx, &matches, sub_m).await,
 
             // All commands relevant to gradual merge
