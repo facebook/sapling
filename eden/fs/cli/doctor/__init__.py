@@ -48,6 +48,9 @@ try:
     from .facebook import check_facebook
 except ImportError:
 
+    # pyre-fixme[3]: Return type must be annotated.
+    # pyre-fixme[2]: Parameter must be annotated.
+    # pyre-fixme[2]: Parameter must be annotated.
     def check_facebook(*_args, **_kwargs):
         pass
 
