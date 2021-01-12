@@ -391,3 +391,69 @@ function mononoke_x_repo_sync_forever() {
   export XREPOSYNC_PID=$!
   echo "$XREPOSYNC_PID" >> "$DAEMON_PIDS"
 }
+
+function init_two_small_one_large_repo() {
+  # setup configuration
+  # Disable bookmarks cache because bookmarks are modified by two separate processes
+  REPOTYPE="blob_files"
+  NO_BOOKMARKS_CACHE=1 REPOID=0 REPONAME=meg-mon setup_common_config $REPOTYPE
+  NO_BOOKMARKS_CACHE=1 REPOID=1 REPONAME=fbs-mon setup_common_config $REPOTYPE
+  NO_BOOKMARKS_CACHE=1 REPOID=2 REPONAME=ovr-mon setup_common_config $REPOTYPE
+
+  cat >> "$HGRCPATH" <<EOF
+[ui]
+ssh="$DUMMYSSH"
+[extensions]
+amend=
+pushrebase=
+remotenames=
+EOF
+
+  setup_commitsyncmap
+  setup_configerator_configs
+
+  # setup hg server repos
+
+  function createfile { mkdir -p "$(dirname  "$1")" && echo "$1" > "$1" && hg add -q "$1"; }
+  function createfile_with_content { mkdir -p "$(dirname  "$1")" && echo "$2" > "$1" && hg add -q "$1"; }
+
+  # init fbsource
+  cd "$TESTTMP" || exit 1
+  hginit_treemanifest fbs-hg-srv
+  cd fbs-hg-srv || exit 1
+  # create an initial commit, which will be the last_synced_commit
+  createfile fbcode/fbcodefile_fbsource
+  createfile arvr/arvrfile_fbsource
+  createfile otherfile_fbsource
+  hg -q ci -m "fbsource commit 1" && hg book -ir . master_bookmark
+
+  # init ovrsource
+  cd "$TESTTMP" || exit 1
+  hginit_treemanifest ovr-hg-srv
+  cd ovr-hg-srv || exit 1
+  createfile fbcode/fbcodefile_ovrsource
+  createfile arvr/arvrfile_ovrsource
+  createfile otherfile_ovrsource
+  createfile Research/researchfile_ovrsource
+  hg -q ci -m "ovrsource commit 1" && hg book -r . master_bookmark
+
+  # init megarepo - note that some paths are shifted, but content stays the same
+  cd "$TESTTMP" || exit 1
+  hginit_treemanifest meg-hg-srv
+  cd meg-hg-srv || exit 1
+  createfile fbcode/fbcodefile_fbsource
+  createfile_with_content .fbsource-rest/arvr/arvrfile_fbsource arvr/arvrfile_fbsource
+  createfile otherfile_fbsource
+  createfile_with_content .ovrsource-rest/fbcode/fbcodefile_ovrsource fbcode/fbcodefile_ovrsource
+  createfile arvr/arvrfile_ovrsource
+  createfile_with_content arvr-legacy/otherfile_ovrsource otherfile_ovrsource
+  createfile_with_content arvr-legacy/Research/researchfile_ovrsource Research/researchfile_ovrsource
+  hg -q ci -m "megarepo commit 1"
+  hg book -r . master_bookmark
+
+  # blobimport hg servers repos into Mononoke repos
+  cd "$TESTTMP"
+  REPOID=0 blobimport meg-hg-srv/.hg meg-mon
+  REPOID=1 blobimport fbs-hg-srv/.hg fbs-mon
+  REPOID=2 blobimport ovr-hg-srv/.hg ovr-mon
+}
