@@ -44,6 +44,13 @@ from .problem import (
     ProblemTracker,
 )
 
+try:
+    from .facebook import check_facebook
+except ImportError:
+
+    def check_facebook(*_args, **_kwargs):
+        pass
+
 
 # working_directory_was_stale may be set to True by the CLI main module
 # if the original working directory referred to a stale eden mount point.
@@ -226,6 +233,7 @@ class EdenDoctorChecker:
                 self.instance,
                 fs_util=self.fs_util,
             )
+            check_facebook(self.tracker)
 
         watchman_info = check_watchman.pre_check()
 
