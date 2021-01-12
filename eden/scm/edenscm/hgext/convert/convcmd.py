@@ -32,6 +32,7 @@ convert_git = git.convert_git
 mercurial_sink = hgconvert.mercurial_sink
 mercurial_source = hgconvert.mercurial_source
 p4_source = p4.p4_source
+# pyre-fixme[11]: Annotation `repo_source` is not defined as a type.
 repo_source = repo_source
 svn_sink = subversion.svn_sink
 svn_source = subversion.svn_source
