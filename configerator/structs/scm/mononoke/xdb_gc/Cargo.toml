@@ -21,6 +21,7 @@ async-trait = "0.1.29"
 const-cstr = "0.3.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 lazy_static = "1.0"
+ref-cast = "1.0.2"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = "1.0"
 thiserror = "1.0"
