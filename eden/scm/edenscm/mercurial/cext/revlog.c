@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "eden/scm/edenscm/mercurial/bitmanipulation.h"
@@ -71,8 +72,8 @@ typedef struct {
   PyObject* added; /* populated on demand */
   PyObject* headrevs; /* cache, invalidated on changes */
   nodetree* nt; /* base-16 trie */
-  unsigned ntlength; /* # nodes in use */
-  unsigned ntcapacity; /* # nodes allocated */
+  size_t ntlength; /* # nodes in use */
+  size_t ntcapacity; /* # nodes allocated */
   int ntdepth; /* maximum depth of tree */
   int ntsplits; /* # splits performed */
   int ntrev; /* last rev scanned */
@@ -950,7 +951,7 @@ nt_find(indexObject* self, const char* node, Py_ssize_t nodelen, int hex) {
 
 static int nt_new(indexObject* self) {
   if (self->ntlength == self->ntcapacity) {
-    if (self->ntcapacity >= INT_MAX / (sizeof(nodetree) * 2)) {
+    if (self->ntcapacity >= SIZE_MAX / (sizeof(nodetree) * 2)) {
       PyErr_SetString(PyExc_MemoryError, "overflow in nt_new");
       return -1;
     }
@@ -1014,11 +1015,11 @@ static int nt_insert(indexObject* self, const char* node, int rev) {
 
 static int nt_init(indexObject* self) {
   if (self->nt == NULL) {
-    if ((size_t)self->raw_length > INT_MAX / sizeof(nodetree)) {
+    if ((size_t)self->raw_length > SIZE_MAX / sizeof(nodetree)) {
       PyErr_SetString(PyExc_ValueError, "overflow in nt_init");
       return -1;
     }
-    self->ntcapacity = self->raw_length < 4 ? 4 : (int)self->raw_length / 2;
+    self->ntcapacity = self->raw_length < 4 ? 4 : (size_t)self->raw_length / 2;
 
     self->nt = calloc(self->ntcapacity, sizeof(nodetree));
     if (self->nt == NULL) {
