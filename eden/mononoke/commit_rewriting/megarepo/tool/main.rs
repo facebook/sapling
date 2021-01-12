@@ -887,35 +887,37 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let subcommand_future = async {
         match matches.subcommand() {
+            (BACKFILL_NOOP_MAPPING, Some(sub_m)) => {
+                run_backfill_noop_mapping(ctx, &matches, sub_m).await
+            }
+            (BONSAI_MERGE, Some(sub_m)) => run_bonsai_merge(ctx, &matches, sub_m).await,
+            (CHECK_PUSH_REDIRECTION_PREREQS, Some(sub_m)) => {
+                run_check_push_redirection_prereqs(ctx, &matches, sub_m).await
+            }
+            (MANUAL_COMMIT_SYNC, Some(sub_m)) => run_manual_commit_sync(ctx, &matches, sub_m).await,
+            (MARK_NOT_SYNCED_COMMAND, Some(sub_m)) => {
+                run_mark_not_synced(ctx, &matches, sub_m).await
+            }
+            (MERGE, Some(sub_m)) => run_merge(ctx, &matches, sub_m).await,
             (MOVE, Some(sub_m)) => {
                 let repo_config = get_and_verify_repo_config(config_store, &matches)?;
                 run_move(ctx, &matches, sub_m, repo_config).await
             }
-            (MERGE, Some(sub_m)) => run_merge(ctx, &matches, sub_m).await,
+            (RUN_MOVER, Some(sub_m)) => run_mover(ctx, &matches, sub_m).await,
             (SYNC_DIAMOND_MERGE, Some(sub_m)) => run_sync_diamond_merge(ctx, &matches, sub_m).await,
-            (PRE_MERGE_DELETE, Some(sub_m)) => run_pre_merge_delete(ctx, &matches, sub_m).await,
-            (BONSAI_MERGE, Some(sub_m)) => run_bonsai_merge(ctx, &matches, sub_m).await,
-            (GRADUAL_MERGE, Some(sub_m)) => run_gradual_merge(ctx, &matches, sub_m).await,
-            (GRADUAL_MERGE_PROGRESS, Some(sub_m)) => {
-                run_gradual_merge_progress(ctx, &matches, sub_m).await
-            }
-            (MANUAL_COMMIT_SYNC, Some(sub_m)) => run_manual_commit_sync(ctx, &matches, sub_m).await,
+
+            // All commands relevant to gradual merge
             (CATCHUP_DELETE_HEAD, Some(sub_m)) => {
                 run_catchup_delete_head(ctx, &matches, sub_m).await
             }
             (CATCHUP_VALIDATE_COMMAND, Some(sub_m)) => {
                 run_catchup_validate(ctx, &matches, sub_m).await
             }
-            (MARK_NOT_SYNCED_COMMAND, Some(sub_m)) => {
-                run_mark_not_synced(ctx, &matches, sub_m).await
+            (GRADUAL_MERGE, Some(sub_m)) => run_gradual_merge(ctx, &matches, sub_m).await,
+            (GRADUAL_MERGE_PROGRESS, Some(sub_m)) => {
+                run_gradual_merge_progress(ctx, &matches, sub_m).await
             }
-            (CHECK_PUSH_REDIRECTION_PREREQS, Some(sub_m)) => {
-                run_check_push_redirection_prereqs(ctx, &matches, sub_m).await
-            }
-            (RUN_MOVER, Some(sub_m)) => run_mover(ctx, &matches, sub_m).await,
-            (BACKFILL_NOOP_MAPPING, Some(sub_m)) => {
-                run_backfill_noop_mapping(ctx, &matches, sub_m).await
-            }
+            (PRE_MERGE_DELETE, Some(sub_m)) => run_pre_merge_delete(ctx, &matches, sub_m).await,
             _ => bail!("oh no, wrong arguments provided!"),
         }
     };
