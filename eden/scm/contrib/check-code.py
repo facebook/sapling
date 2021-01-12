@@ -478,7 +478,7 @@ map_file map_git_real map_hg map_hg_real matcher_opts match_opts max_cost
 max_date max_files max_noise max_offset max_width metadata_key_value min_date
 mode_state module_name msng_list name_idx nametype_idx newfile_re new_hash
 new_header new_map new_ref new_refs new_socket new_tunnel next_revs
-node_expander no_list numeric_loglevel num_lines num_pages obsstore_size
+node_expander no_list numeric_loglevel num_lines num_pages
 offset_end ok_sources ok_types old_guarded old_header old_ref old_refs old_rev
 old_sha old_unapplied orig_amend_copies orig_data orig_encoded orig_encoding
 original_series orig_paths orig_start orig_type other_bms out_file page_height
