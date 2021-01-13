@@ -282,9 +282,27 @@ async fn find_commits_to_send(
     heads = partial_result.new_heads;
     excludes = partial_result.new_excludes;
 
+    let lowest_head_gen_num = heads
+        .iter()
+        .map(|(_, gen)| gen)
+        .min()
+        .map_or(0, |gen| gen.value());
+
+    let highest_head_gen_num = heads
+        .iter()
+        .map(|(_, gen)| gen)
+        .max()
+        .map_or(0, |gen| gen.value());
+
+    ctx.scuba()
+        .clone()
+        .add("get_bundle_lowest_gen_num", lowest_head_gen_num)
+        .add("get_bundle_highest_gen_num", highest_head_gen_num)
+        .log_with_msg("Getbundle generation numbers", None);
+
     let params = Params { heads, excludes };
     let nodes_to_send = if !tunables().get_getbundle_use_low_gen_optimization()
-        || !has_low_gen_num(&params.heads)
+        || !has_low_gen_num(lowest_head_gen_num)
     {
         call_difference_of_union_of_ancestors_revset(
             &ctx,

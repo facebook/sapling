@@ -24,15 +24,9 @@ use tunables::tunables;
 
 pub const DEFAULT_TRAVERSAL_LIMIT: u64 = 20;
 
-pub(crate) fn has_low_gen_num(heads: &[(ChangesetId, Generation)]) -> bool {
-    let low_gen_num_threshold = tunables().get_getbundle_low_gen_num_threshold() as u64;
-    for (_, gen) in heads {
-        if gen.value() <= low_gen_num_threshold {
-            return true;
-        }
-    }
-
-    false
+pub(crate) fn has_low_gen_num(lowest_gen_num: u64) -> bool {
+    let threshold = tunables().get_getbundle_low_gen_num_threshold() as u64;
+    lowest_gen_num <= threshold
 }
 
 #[derive(Debug)]
