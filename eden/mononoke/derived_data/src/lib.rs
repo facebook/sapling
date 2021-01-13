@@ -107,7 +107,7 @@ pub use metaconfig_types::DerivedDataTypesConfig;
 pub enum DeriveError {
     #[error("Derivation of {0} is not enabled for repo={2} repoid={1}")]
     Disabled(&'static str, RepositoryId, String),
-    #[error("{0}")]
+    #[error(transparent)]
     Error(#[from] Error),
 }
 

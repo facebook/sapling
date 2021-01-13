@@ -41,11 +41,11 @@ define_stats! {
 pub enum FastlogError {
     #[error("Internal error: {0}")]
     InternalError(String),
-    #[error("{0}")]
+    #[error(transparent)]
     DeriveError(#[from] DeriveError),
-    #[error("{0}")]
+    #[error(transparent)]
     LoadableError(#[from] LoadableError),
-    #[error("{0}")]
+    #[error(transparent)]
     Error(#[from] Error),
 }
 

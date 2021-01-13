@@ -34,11 +34,11 @@ pub enum BlameError {
     NoSuchPath(MPath),
     #[error("Blame is not available for directories: {0}")]
     IsDirectory(MPath),
-    #[error("{0}")]
+    #[error(transparent)]
     Rejected(#[from] BlameRejected),
-    #[error("{0}")]
+    #[error(transparent)]
     DeriveError(#[from] DeriveError),
-    #[error("{0}")]
+    #[error(transparent)]
     Error(#[from] Error),
 }
 
