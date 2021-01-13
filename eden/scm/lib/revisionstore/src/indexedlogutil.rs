@@ -182,7 +182,11 @@ impl StoreOpenOptions {
     /// and `max_bytes_per_log`.
     pub fn shared(self, path: impl AsRef<Path>) -> Result<Store> {
         let opts = self.into_shared_open_options();
-        Ok(Store::Shared(opts.open(path.as_ref())?))
+        let mut rotate_log = opts.open(path.as_ref())?;
+        // Attempt to clean up old logs that might be left around. On Windows, other
+        // Mercurial processes that have the store opened might prevent their removal.
+        let _ = rotate_log.remove_old_logs();
+        Ok(Store::Shared(rotate_log))
     }
 
     /// Attempts to repair corruption in a local indexedlog store.
