@@ -1216,19 +1216,33 @@ class dirstate(object):
                 # since not updating watchman state leads to very painful
                 # performance.
                 freshinstance = False
+                nonnormalcount = 0
                 try:
                     # pyre-fixme[16]: physicalfilesystem has no attr _fsmonitorstate
                     freshinstance = self._fs._fsmonitorstate._lastisfresh
+                    nonnormalcount = self._fs._fsmonitorstate._lastnonnormalcount
                 except Exception:
                     pass
+                waitforlock = False
+                nonnormalthreshold = self._repo.ui.configint(
+                    "fsmonitor", "dirstate-nonnormal-file-threshold"
+                )
+                if (
+                    nonnormalthreshold is not None
+                    and nonnormalcount >= nonnormalthreshold
+                ):
+                    ui.debug(
+                        "poststatusfixup decides to wait for wlock since nonnormal file count %s >= %s\n"
+                        % (nonnormalcount, nonnormalthreshold)
+                    )
+                    waitforlock = True
                 if freshinstance:
+                    waitforlock = True
                     ui.debug(
                         "poststatusfixup decides to wait for wlock since watchman reported fresh instance\n"
                     )
 
-                with self._repo.disableeventreporting(), self._repo.wlock(
-                    freshinstance
-                ):
+                with self._repo.disableeventreporting(), self._repo.wlock(waitforlock):
                     identity = self._repo.dirstate.identity()
                     if identity == oldid:
                         if poststatusbefore:
@@ -1247,14 +1261,28 @@ class dirstate(object):
                         if poststatusafter:
                             for ps in poststatusafter:
                                 ps(wctx, status)
-            except error.LockError:
-                if freshinstance:
+                    elif not util.istest():
+                        # Too noisy in tests.
+                        ui.debug(
+                            "poststatusfixup did not write dirstate because identity changed %s != %s\n"
+                            % (oldid, identity)
+                        )
+
+            except error.LockError as ex:
+                if waitforlock:
                     ui.write_err(
                         _(
-                            "warning: failed to update watchman state because wlock cannot be obtained\n"
+                            "warning: failed to update watchman state because wlock cannot be obtained (%s)\n"
                         )
+                        % (ex,)
                     )
                     ui.write_err(slowstatuswarning)
+                else:
+                    ui.debug(
+                        "poststatusfixup did not write dirstate because wlock cannot be obtained (%s)\n"
+                        % (ex,)
+                    )
+
             finally:
                 # Even if the wlock couldn't be grabbed, clear out the list.
                 self._repo.clearpostdsstatus()

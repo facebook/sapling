@@ -120,6 +120,16 @@ performance might regress in some cases. (default: 200)
 ::
 
     [fsmonitor]
+    dirstate-nonnormal-file-threshold = 200
+
+Number of nonnormal files to force obtaining the wlock to update treestate.
+Usually status will skip updating treestate if it cannot obtain the wlock,
+in some cases that can cause performance issues. This setting allows
+status to wait to obtain the wlock to avoid such issues. (default: 200)
+
+::
+
+    [fsmonitor]
     warn-fresh-instance = false
 
 If set to true, warn about fresh instance cases that might slow down
@@ -214,6 +224,7 @@ configitem("fsmonitor", "mode", default="on")
 configitem("fsmonitor", "timeout", default=10)
 configitem("fsmonitor", "track-ignore-files", default=True)
 configitem("fsmonitor", "walk_on_invalidate", default=False)
+configitem("fsmonitor", "dirstate-nonnormal-file-threshold", default=200)
 configitem("fsmonitor", "watchman-changed-file-threshold", default=200)
 configitem("fsmonitor", "warn-fresh-instance", default=False)
 configitem("fsmonitor", "fallback-on-watchman-exception", default=True)
@@ -404,6 +415,7 @@ def _walk(self, match, event, span):
     event["old_clock"] = clock
     event["old_files"] = blackbox.shortlist(sorted(nonnormalset))
     span.record(oldclock=clock, oldfileslen=len(nonnormalset))
+    state.setlastnonnormalfilecount(len(nonnormalset))
 
     copymap = self.dirstate._map.copymap
     getkind = stat.S_IFMT

@@ -27,7 +27,10 @@ class state(object):
         self._rootdir = pathutil.normasprefix(repo.root)
         self._lastclock = None
         self._lastisfresh = False
+        # File count reported by watchman
         self._lastchangedfilecount = 0
+        # Non-normal file count stored in dirstate
+        self._lastnonnormalcount = 0
 
         self.mode = self._ui.config("fsmonitor", "mode")
         self.walk_on_invalidate = self._ui.configbool("fsmonitor", "walk_on_invalidate")
@@ -166,6 +169,9 @@ class state(object):
 
     def setwatchmanchangedfilecount(self, filecount):
         self._lastchangedfilecount = filecount
+
+    def setlastnonnormalfilecount(self, count):
+        self._lastnonnormalcount = count
 
     def getlastclock(self):
         return self._lastclock
