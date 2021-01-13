@@ -57,7 +57,6 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
         let pc = ctx.fork_perf_counters();
 
         let get = self.inner.get(&ctx, key);
-        let session_id = ctx.metadata().session_id().to_string();
         let (stats, result) = get.timed().await;
         record_get_stats(
             &mut scuba,
@@ -65,7 +64,7 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
             stats,
             result.as_ref(),
             key,
-            session_id,
+            ctx.metadata().session_id().as_str(),
             OperationType::Get,
             None,
         );
@@ -119,7 +118,7 @@ impl<B: BlobstorePutOps> LogBlob<B> {
             stats,
             result.as_ref(),
             &key,
-            ctx.metadata().session_id().to_string(),
+            ctx.metadata().session_id().as_str(),
             OperationType::Put,
             size,
             None,
