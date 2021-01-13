@@ -17,7 +17,6 @@ use blobstore::{
 };
 use blobstore_sync_queue::BlobstoreSyncQueue;
 use chrono::Duration as ChronoDuration;
-use cloned::cloned;
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
 use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
@@ -172,7 +171,7 @@ async fn blobstore_get(
     scrub_stores: &HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>,
     scrub_handler: &dyn ScrubHandler,
     scrub_action: ScrubAction,
-    scuba: MononokeScubaSampleBuilder,
+    scuba: &MononokeScubaSampleBuilder,
 ) -> Result<Option<BlobstoreGetData>> {
     match inner_blobstore.scrub_get(ctx, key).await {
         Ok(value) => return Ok(value),
@@ -232,7 +231,7 @@ async fn blobstore_get(
                         .map(|(id, store)| {
                             put_and_mark_repaired(
                                 ctx,
-                                &scuba,
+                                scuba,
                                 &order,
                                 id,
                                 store,
@@ -259,24 +258,15 @@ impl Blobstore for ScrubBlobstore {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        cloned!(
-            self.scrub_stores,
-            self.scrub_handler,
-            self.scuba,
-            self.scrub_action,
-            self.queue,
-        );
-        let inner_blobstore = self.inner.blobstore.clone();
-
         blobstore_get(
-            inner_blobstore.as_ref(),
+            self.inner.blobstore.as_ref(),
             ctx,
             key,
-            queue.as_ref(),
-            scrub_stores.as_ref(),
-            scrub_handler.as_ref(),
-            scrub_action,
-            scuba,
+            self.queue.as_ref(),
+            self.scrub_stores.as_ref(),
+            self.scrub_handler.as_ref(),
+            self.scrub_action,
+            &self.scuba,
         )
         .await
     }

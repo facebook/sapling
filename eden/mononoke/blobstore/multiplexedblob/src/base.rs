@@ -426,9 +426,8 @@ impl Blobstore for MultiplexedBlobstoreBase {
         // `chain` here guarantees that `main_requests` is empty before it starts
         // polling anything in `write_mostly_requests`
         let mut requests = main_requests.chain(write_mostly_requests);
-        cloned!(self.blobstores);
         let (stats, result) = {
-            let ctx = &ctx;
+            let blobstores = &self.blobstores;
             async move {
                 let mut errors = HashMap::new();
                 ctx.perf_counters()
@@ -646,15 +645,14 @@ impl fmt::Debug for MultiplexedBlobstoreBase {
 }
 
 async fn multiplexed_get_one<'a>(
-    ctx: &'a CoreContext,
-    blobstore: Arc<dyn BlobstorePutOps>,
+    mut ctx: CoreContext,
+    blobstore: &'a dyn BlobstorePutOps,
     blobstore_id: BlobstoreId,
     key: &'a str,
     operation: OperationType,
     mut scuba: MononokeScubaSampleBuilder,
 ) -> (BlobstoreId, Result<Option<BlobstoreGetData>, Error>) {
     let (pc, (stats, timeout_or_res)) = {
-        let mut ctx = ctx.clone();
         let pc = ctx.fork_perf_counters();
         let ret = timeout(REQUEST_TIMEOUT, blobstore.get(&ctx, key))
             .timed()
@@ -668,7 +666,7 @@ async fn multiplexed_get_one<'a>(
         stats,
         result.as_ref(),
         key,
-        ctx.borrow().metadata().session_id().to_string(),
+        ctx.metadata().session_id().to_string(),
         operation,
         Some(blobstore_id),
     );
@@ -685,11 +683,12 @@ fn multiplexed_get<'fut: 'iter, 'iter>(
     Item = impl Future<Output = (BlobstoreId, Result<Option<BlobstoreGetData>, Error>)> + 'fut,
 > + 'iter {
     blobstores.iter().map(move |(blobstore_id, blobstore)| {
-        cloned!(ctx, blobstore, blobstore_id, key, scuba);
+        let ctx = ctx.borrow().clone();
+        cloned!(blobstore, blobstore_id, key, scuba);
         async move {
             multiplexed_get_one(
-                ctx.borrow(),
-                blobstore,
+                ctx,
+                blobstore.as_ref(),
                 blobstore_id,
                 key.borrow(),
                 operation,
