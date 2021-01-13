@@ -478,6 +478,22 @@ impl RotateLog {
             .context(|| format!("  RotateLog.dir = {:?}", self.dir))
     }
 
+    /// Attempt to remove outdated logs.
+    ///
+    /// Does nothing if the content of the 'latest' file has changed on disk,
+    /// which indicates rotation was triggered elsewhere, or the [`RotateLog`]
+    /// is in-memory.
+    pub fn remove_old_logs(&mut self) -> crate::Result<()> {
+        if let Some(dir) = &self.dir {
+            let lock = ScopedDirLock::new(dir)?;
+            let latest = read_latest(dir)?;
+            if latest == self.latest {
+                self.try_remove_old_logs(&lock);
+            }
+        }
+        Ok(())
+    }
+
     /// Force create a new [`Log`]. Bump latest.
     ///
     /// This function requires it's protected by a directory lock, and the
@@ -939,6 +955,51 @@ mod tests {
         assert_eq!(lookup(&rotate, b"c").len(), 1);
         assert_eq!(lookup(&rotate, b"d").len(), 1);
         assert!(!dir.path().join("0").exists());
+    }
+
+    #[test]
+    fn test_manual_remove_old_logs() {
+        let dir = tempdir().unwrap();
+        let dir = &dir;
+        let open = |n: u8| -> RotateLog {
+            OpenOptions::new()
+                .create(true)
+                .max_bytes_per_log(1)
+                .max_log_count(n)
+                .open(dir)
+                .unwrap()
+        };
+        let read_all =
+            |log: &RotateLog| -> Vec<Vec<u8>> { log.iter().map(|v| v.unwrap().to_vec()).collect() };
+
+        // Create 5 logs
+        {
+            let mut rotate = open(5);
+            for i in 0..5 {
+                rotate.append(vec![i]).unwrap();
+                rotate.sync().unwrap();
+            }
+        }
+
+        // Content depends on max_log_count.
+        {
+            let rotate = open(4);
+            assert_eq!(read_all(&rotate), [[2], [3], [4]]);
+            let rotate = open(3);
+            assert_eq!(read_all(&rotate), [[3], [4]]);
+        }
+
+        // Remove old logs.
+        {
+            let mut rotate = open(3);
+            rotate.remove_old_logs().unwrap();
+        }
+
+        // Verify that [2] is removed.
+        {
+            let rotate = open(4);
+            assert_eq!(read_all(&rotate), [[3], [4]]);
+        }
     }
 
     fn test_wrapping_rotate(max_log_count: u8) {
