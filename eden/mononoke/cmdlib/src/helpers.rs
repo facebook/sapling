@@ -311,8 +311,40 @@ pub fn block_execute<F, Out, S: Fb303Service + Sync + Send + 'static>(
 where
     F: Future<Output = Result<Out, Error>>,
 {
+    let runtime = args::init_runtime(&matches)?;
+    block_execute_impl(future, fb, app_name, logger, matches, service, runtime)
+}
+
+/// Executes the future and waits for it to finish on a provided runtime.
+pub fn block_execute_on_runtime<F, Out, S: Fb303Service + Sync + Send + 'static>(
+    future: F,
+    fb: FacebookInit,
+    app_name: &str,
+    logger: &Logger,
+    matches: &MononokeMatches,
+    service: S,
+    runtime: tokio_compat::runtime::Runtime,
+) -> Result<Out, Error>
+where
+    F: Future<Output = Result<Out, Error>>,
+{
+    block_execute_impl(future, fb, app_name, logger, matches, service, runtime)
+}
+
+/// Executes the future and waits for it to finish.
+fn block_execute_impl<F, Out, S: Fb303Service + Sync + Send + 'static>(
+    future: F,
+    fb: FacebookInit,
+    app_name: &str,
+    logger: &Logger,
+    matches: &MononokeMatches,
+    service: S,
+    mut runtime: tokio_compat::runtime::Runtime,
+) -> Result<Out, Error>
+where
+    F: Future<Output = Result<Out, Error>>,
+{
     monitoring::start_fb303_server(fb, app_name, logger, matches, service)?;
-    let mut runtime = args::init_runtime(&matches)?;
 
     let result = runtime.block_on_std(async {
         #[cfg(not(test))]

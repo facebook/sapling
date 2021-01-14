@@ -323,19 +323,17 @@ fn main(fb: FacebookInit) -> Result<()> {
                 ),
         );
     let matches = app.get_matches();
-    args::init_cachelib(fb, &matches);
-
-    let logger = args::init_logging(fb, &matches)?;
-    args::init_config_store(fb, &logger, &matches)?;
+    let (_, logger, runtime) = args::init_mononoke(fb, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    helpers::block_execute(
+    helpers::block_execute_on_runtime(
         run_subcmd(fb, ctx, &logger, &matches),
         fb,
         &std::env::var("TW_JOB_NAME").unwrap_or("backfill_derived_data".to_string()),
         &logger,
         &matches,
         cmdlib::monitoring::AliveService,
+        runtime,
     )
 }
 
