@@ -93,24 +93,27 @@ impl PublicChangesetBulkFetch {
         async move {
             let s = self
                 .fetch_ids(ctx, d, None)
-                .chunks(self.step as usize)
-                .then(move |results| async move {
-                    let ids: Vec<ChangesetId> = results
-                        .into_iter()
-                        .map(|r| r.map(|(id, _bounds)| id))
-                        .collect::<Result<Vec<_>, Error>>()?;
-                    let entries = changesets
-                        .get_many(ctx.clone(), repo_id, ids.clone())
-                        .await?;
-                    let mut entries_map: HashMap<_, _> =
-                        entries.into_iter().map(|e| (e.cs_id, e)).collect();
-                    let result: Vec<_> = ids
-                        .into_iter()
-                        .filter_map(|id| entries_map.remove(&id))
-                        .map(Ok)
-                        .collect();
-                    Ok::<_, Error>(stream::iter(result))
+                .chunks(BLOBSTORE_CHUNK_SIZE)
+                .then(move |results| {
+                    future::ready(async move {
+                        let ids: Vec<ChangesetId> = results
+                            .into_iter()
+                            .map(|r| r.map(|(id, _bounds)| id))
+                            .collect::<Result<Vec<_>, Error>>()?;
+                        let entries = changesets
+                            .get_many(ctx.clone(), repo_id, ids.clone())
+                            .await?;
+                        let mut entries_map: HashMap<_, _> =
+                            entries.into_iter().map(|e| (e.cs_id, e)).collect();
+                        let result = ids
+                            .into_iter()
+                            .filter_map(move |id| entries_map.remove(&id))
+                            .map(Ok);
+                        Ok::<_, Error>(stream::iter(result))
+                    })
                 })
+                // Allow concurrent entry chunk loads
+                .buffered(2)
                 .try_flatten();
             Ok(s)
         }
@@ -224,6 +227,9 @@ impl PublicChangesetBulkFetch {
         Ok((start, stop))
     }
 }
+
+// Blobstore gets don't need batching as much as the SQL queries
+const BLOBSTORE_CHUNK_SIZE: usize = 1000;
 
 pub const MAX_FETCH_STEP: u64 = 65536;
 pub const MIN_FETCH_STEP: u64 = 1;
