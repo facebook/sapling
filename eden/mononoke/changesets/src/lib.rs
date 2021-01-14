@@ -242,6 +242,24 @@ queries! {
          ORDER BY id"
     }
 
+    read SelectAllChangesetsIdsInRangeLimitAsc(repo_id: RepositoryId, min_id: u64, max_id: u64, limit: u64) -> (ChangesetId, u64) {
+        "SELECT cs_id, id
+         FROM changesets
+         WHERE repo_id = {repo_id}
+           AND id BETWEEN {min_id} AND {max_id}
+         ORDER BY id
+         LIMIT {limit}"
+    }
+
+    read SelectAllChangesetsIdsInRangeLimitDesc(repo_id: RepositoryId, min_id: u64, max_id: u64, limit: u64) -> (ChangesetId, u64) {
+        "SELECT cs_id, id
+         FROM changesets
+         WHERE repo_id = {repo_id}
+           AND id BETWEEN {min_id} AND {max_id}
+         ORDER BY id DESC
+         LIMIT {limit}"
+    }
+
     read SelectChangesetsIdsBounds(repo_id: RepositoryId) -> (u64, u64) {
         "SELECT min(id), max(id)
          FROM changesets
@@ -424,6 +442,12 @@ async fn fetch_many_by_prefix(
     Ok(result)
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SortOrder {
+    Ascending,
+    Descending,
+}
+
 impl SqlChangesets {
     pub fn get_list_bs_cs_id_in_range_exclusive(
         &self,
@@ -453,6 +477,51 @@ impl SqlChangesets {
         .try_flatten_stream()
         .boxed()
     }
+
+    pub fn get_list_bs_cs_id_in_range_exclusive_limit(
+        &self,
+        repo_id: RepositoryId,
+        min_id: u64,
+        max_id: u64,
+        limit: u64,
+        sort_order: SortOrder,
+    ) -> BoxStream<'_, Result<(ChangesetId, u64), Error>> {
+        // [min_id, max_id)
+        cloned!(self.read_master_connection);
+        // As SQL request is BETWEEN, both bounds including
+        let max_id = max_id - 1;
+
+        async move {
+            if sort_order == SortOrder::Ascending {
+                SelectAllChangesetsIdsInRangeLimitAsc::query(
+                    &read_master_connection,
+                    &repo_id,
+                    &min_id,
+                    &max_id,
+                    &limit,
+                )
+                .compat()
+                .await
+            } else {
+                SelectAllChangesetsIdsInRangeLimitDesc::query(
+                    &read_master_connection,
+                    &repo_id,
+                    &min_id,
+                    &max_id,
+                    &limit,
+                )
+                .compat()
+                .await
+            }
+        }
+        .map_ok(|rows| {
+            let changesets_ids = rows.into_iter().map(|row| Ok((row.0, row.1)));
+            stream::iter(changesets_ids)
+        })
+        .try_flatten_stream()
+        .boxed()
+    }
+
 
     pub async fn get_changesets_ids_bounds(
         &self,
