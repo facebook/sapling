@@ -117,7 +117,7 @@ impl PublicChangesetBulkFetch {
         d: Direction,
         repo_bounds: Option<(u64, u64)>,
     ) -> impl Stream<Item = Result<(ChangesetId, (u64, u64)), Error>> + 'a {
-        let changesets = self.changesets.get_sql_changesets();
+        let changesets = self.changesets.clone();
         let phases = self.phases.get_sql_phases();
         let repo_id = self.repo_id;
         let repo_bounds = if let Some(repo_bounds) = repo_bounds {
@@ -128,53 +128,65 @@ impl PublicChangesetBulkFetch {
         let step = self.step;
 
         async move {
-            let s = bounded_traversal_stream(1, Some(repo_bounds.await?), {
+            let s = bounded_traversal_stream(
+                1,
+                Some(repo_bounds.await?),
                 // Returns ids plus next bounds to query, if any
                 move |(lower, upper): (u64, u64)| {
+                    let changesets = changesets.clone();
                     async move {
-                        let results: Vec<_> = changesets
-                            .get_list_bs_cs_id_in_range_exclusive_limit(
-                                repo_id,
-                                lower,
-                                upper,
-                                step,
-                                d.sort_order(),
-                            )
-                            .try_collect()
-                            .await?;
+                        let next = {
+                            let changesets = changesets.clone();
+                            async move {
+                                let changesets = changesets.get_sql_changesets();
+                                let results: Vec<_> = changesets
+                                    .get_list_bs_cs_id_in_range_exclusive_limit(
+                                        repo_id,
+                                        lower,
+                                        upper,
+                                        step,
+                                        d.sort_order(),
+                                    )
+                                    .try_collect()
+                                    .await?;
 
-                        let count = results.len() as u64;
-                        let mut max_id = lower;
-                        let mut min_id = upper - 1;
-                        let cs_ids: Vec<ChangesetId> = results
-                            .into_iter()
-                            .map(|(cs_id, id)| {
-                                max_id = max(max_id, id);
-                                min_id = min(min_id, id);
-                                cs_id
-                            })
-                            .collect();
+                                let count = results.len() as u64;
+                                let mut max_id = lower;
+                                let mut min_id = upper - 1;
+                                let cs_ids: Vec<ChangesetId> = results
+                                    .into_iter()
+                                    .map(|(cs_id, id)| {
+                                        max_id = max(max_id, id);
+                                        min_id = min(min_id, id);
+                                        cs_id
+                                    })
+                                    .collect();
 
-                        let (completed, new_bounds) = if d == Direction::OldestFirst {
-                            ((lower, max_id + 1), (max_id + 1, upper))
-                        } else {
-                            ((min_id, upper), (lower, min_id))
-                        };
+                                let (completed, new_bounds) = if d == Direction::OldestFirst {
+                                    ((lower, max_id + 1), (max_id + 1, upper))
+                                } else {
+                                    ((min_id, upper), (lower, min_id))
+                                };
 
-                        let (completed, new_bounds) =
-                            if count < step || new_bounds.0 == new_bounds.1 {
-                                ((lower, upper), None)
-                            } else if new_bounds.0 >= new_bounds.1 {
-                                bail!("Logic error, bad bounds {:?}", new_bounds)
-                            } else {
-                                // We have more to load
-                                (completed, Some(new_bounds))
-                            };
+                                let (completed, new_bounds) =
+                                    if count < step || new_bounds.0 == new_bounds.1 {
+                                        ((lower, upper), None)
+                                    } else if new_bounds.0 >= new_bounds.1 {
+                                        bail!("Logic error, bad bounds {:?}", new_bounds)
+                                    } else {
+                                        // We have more to load
+                                        (completed, Some(new_bounds))
+                                    };
 
-                        Ok::<_, Error>(((cs_ids, completed), new_bounds))
+                                Ok::<_, Error>(((cs_ids, completed), new_bounds))
+                            }
+                        }
+                        .boxed();
+                        let handle = tokio::task::spawn(next);
+                        handle.await?
                     }
-                }
-            })
+                },
+            )
             .and_then(move |(mut ids, completed_bounds)| async move {
                 if !ids.is_empty() {
                     let public = phases.get_public_raw(ctx, &ids).await?;
