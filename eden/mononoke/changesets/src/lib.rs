@@ -487,28 +487,21 @@ impl SqlChangesets {
         sort_order: SortOrder,
     ) -> BoxStream<'_, Result<(ChangesetId, u64), Error>> {
         // [min_id, max_id)
-        cloned!(self.read_master_connection);
         // As SQL request is BETWEEN, both bounds including
         let max_id = max_id - 1;
+
+        let conn = &self.read_master_connection;
 
         async move {
             if sort_order == SortOrder::Ascending {
                 SelectAllChangesetsIdsInRangeLimitAsc::query(
-                    &read_master_connection,
-                    &repo_id,
-                    &min_id,
-                    &max_id,
-                    &limit,
+                    &conn, &repo_id, &min_id, &max_id, &limit,
                 )
                 .compat()
                 .await
             } else {
                 SelectAllChangesetsIdsInRangeLimitDesc::query(
-                    &read_master_connection,
-                    &repo_id,
-                    &min_id,
-                    &max_id,
-                    &limit,
+                    &conn, &repo_id, &min_id, &max_id, &limit,
                 )
                 .compat()
                 .await

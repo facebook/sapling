@@ -21,13 +21,12 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
     Stream,
 };
-use itertools::Either;
 
 use bounded_traversal::bounded_traversal_stream;
-use changesets::{ChangesetEntry, Changesets, SortOrder, SqlChangesets};
+use changesets::{ChangesetEntry, Changesets, SortOrder};
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
-use phases::{Phases, SqlPhases};
+use phases::Phases;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Direction {
@@ -81,16 +80,16 @@ impl PublicChangesetBulkFetch {
         d: Direction,
     ) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
         let changesets = self.changesets.get_sql_changesets();
-        let phases = self.phases.get_sql_phases();
         let repo_id = self.repo_id;
-        let repo_bounds = self.get_repo_bounds();
         async move {
-            let repo_bounds = repo_bounds.await?;
-            let s = stream::iter(windows(repo_bounds, self.step, d))
-                .then(move |chunk_bounds| async move {
-                    let ids =
-                        public_ids_for_chunk(ctx, repo_id, changesets, phases, d, chunk_bounds)
-                            .await?;
+            let s = self
+                .fetch_ids(ctx, d, None)
+                .chunks(self.step as usize)
+                .then(move |results| async move {
+                    let ids: Vec<ChangesetId> = results
+                        .into_iter()
+                        .map(|r| r.map(|(id, _bounds)| id))
+                        .collect::<Result<Vec<_>, Error>>()?;
                     let entries = changesets
                         .get_many(ctx.clone(), repo_id, ids.clone())
                         .await?;
@@ -204,48 +203,6 @@ impl PublicChangesetBulkFetch {
 pub const MAX_FETCH_STEP: u64 = 65536;
 pub const MIN_FETCH_STEP: u64 = 1;
 
-// Gets all changeset ids in a chunk that are public
-// This joins changeset ids to public changesets in memory. Doing it in SQL may or may not be faster
-async fn public_ids_for_chunk<'a>(
-    ctx: &'a CoreContext,
-    repo_id: RepositoryId,
-    changesets: &'a SqlChangesets,
-    phases: &'a SqlPhases,
-    d: Direction,
-    chunk_bounds: (u64, u64),
-) -> Result<Vec<ChangesetId>> {
-    let (lower, upper) = chunk_bounds;
-    let mut ids: Vec<_> = changesets
-        .get_list_bs_cs_id_in_range_exclusive(repo_id, lower, upper)
-        .try_collect()
-        .await?;
-    if ids.is_empty() {
-        // Most ranges are empty for small repos
-        Ok(ids)
-    } else {
-        if d == Direction::NewestFirst {
-            ids.reverse()
-        }
-        let public = phases.get_public_raw(ctx, &ids).await?;
-        Ok(ids.into_iter().filter(|id| public.contains(&id)).collect())
-    }
-}
-
-fn windows(
-    repo_bounds: (u64, u64),
-    step: u64,
-    direction: Direction,
-) -> impl Iterator<Item = (u64, u64)> {
-    let (start, stop) = repo_bounds;
-    if direction == Direction::NewestFirst {
-        let steps = (start..stop).rev().step_by(step as usize);
-        Either::Left(steps.map(move |i| (i - min(step - 1, i - start), i + 1)))
-    } else {
-        let steps = (start..stop).step_by(step as usize);
-        Either::Right(steps.map(move |i| (i, i + min(step, stop - i))))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -259,16 +216,6 @@ mod tests {
     use fixtures::branch_wide;
     use mononoke_types::ChangesetId;
     use phases::mark_reachable_as_public;
-
-    #[test]
-    fn test_windows() -> Result<()> {
-        let by_oldest: Vec<(u64, u64)> = windows((0, 13), 5, Direction::OldestFirst).collect();
-        assert_eq!(by_oldest, vec![(0, 5), (5, 10), (10, 13)]);
-
-        let by_newest: Vec<(u64, u64)> = windows((0, 13), 5, Direction::NewestFirst).collect();
-        assert_eq!(by_newest, vec![(8, 13), (3, 8), (0, 3)]);
-        Ok(())
-    }
 
     async fn get_test_repo(ctx: &CoreContext, fb: FacebookInit) -> Result<BlobRepo, Error> {
         let blobrepo = branch_wide::getrepo(fb).await;
