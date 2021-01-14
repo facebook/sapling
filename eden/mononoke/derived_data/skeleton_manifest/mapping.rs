@@ -89,7 +89,7 @@ impl BonsaiDerivable for RootSkeletonManifestId {
         Ok(RootSkeletonManifestId(skeleton_manifest_id))
     }
 
-    async fn batch_derive<BatchMapping>(
+    async fn batch_derive_impl<BatchMapping>(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,

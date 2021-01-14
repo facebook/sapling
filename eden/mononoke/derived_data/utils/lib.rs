@@ -270,8 +270,12 @@ where
                 }
             }
 
-            // flush blobstore
-            memblobstore.persist(&ctx).await?;
+            {
+                let ctx = derived_data::override_ctx(ctx.clone());
+                // flush blobstore
+                memblobstore.persist(&ctx).await?;
+            }
+
             // flush mapping
             let futs = FuturesUnordered::new();
             {

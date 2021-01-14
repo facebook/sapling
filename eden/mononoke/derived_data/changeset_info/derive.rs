@@ -39,7 +39,7 @@ impl BonsaiDerivable for ChangesetInfo {
         Ok(ChangesetInfo::new(csid, bonsai))
     }
 
-    async fn batch_derive<BatchMapping>(
+    async fn batch_derive_impl<BatchMapping>(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,

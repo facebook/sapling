@@ -87,7 +87,7 @@ impl BonsaiDerivable for RootFsnodeId {
         Ok(RootFsnodeId(fsnode_id))
     }
 
-    async fn batch_derive<BatchMapping>(
+    async fn batch_derive_impl<BatchMapping>(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,

@@ -151,9 +151,22 @@ pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone {
         options: &Self::Options,
     ) -> Result<Self, Error>;
 
+    async fn batch_derive<Mapping>(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csids: Vec<ChangesetId>,
+        mapping: &Mapping,
+    ) -> Result<HashMap<ChangesetId, Self>, Error>
+    where
+        Mapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
+    {
+        let ctx = &override_ctx(ctx.clone());
+        Self::batch_derive_impl(ctx, repo, csids, mapping).await
+    }
+
     /// This method might be overridden by BonsaiDerivable implementors if there's a more efficient
     /// way to derive a batch of commits for a particular mapping.
-    async fn batch_derive<Mapping>(
+    async fn batch_derive_impl<Mapping>(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
@@ -266,7 +279,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone + BonsaiDerivable
     }
 }
 
-fn override_ctx(mut ctx: CoreContext) -> CoreContext {
+pub fn override_ctx(mut ctx: CoreContext) -> CoreContext {
     if tunables::tunables().get_derived_data_use_background_session_class() {
         ctx.session_mut()
             .override_session_class(SessionClass::Background);
