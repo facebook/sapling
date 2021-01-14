@@ -12,7 +12,6 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use bytes::Bytes;
-use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use fbthrift::compact_protocol;
 use futures::{
@@ -454,21 +453,18 @@ impl SqlChangesets {
         repo_id: RepositoryId,
         min_id: u64,
         max_id: u64,
+        read_from_master: bool,
     ) -> BoxStream<'_, Result<ChangesetId, Error>> {
         // [min_id, max_id)
         // As SQL request is BETWEEN, both bounds including
         let max_id = max_id - 1;
 
-        cloned!(self.read_master_connection);
+        let conn = self.read_conn(read_from_master);
+
         async move {
-            SelectAllChangesetsIdsInRange::query(
-                &read_master_connection,
-                &repo_id,
-                &min_id,
-                &max_id,
-            )
-            .compat()
-            .await
+            SelectAllChangesetsIdsInRange::query(&conn, &repo_id, &min_id, &max_id)
+                .compat()
+                .await
         }
         .map_ok(move |rows| {
             let changesets_ids = rows.into_iter().map(|row| Ok(row.0));
@@ -485,12 +481,13 @@ impl SqlChangesets {
         max_id: u64,
         limit: u64,
         sort_order: SortOrder,
+        read_from_master: bool,
     ) -> BoxStream<'_, Result<(ChangesetId, u64), Error>> {
         // [min_id, max_id)
         // As SQL request is BETWEEN, both bounds including
         let max_id = max_id - 1;
 
-        let conn = &self.read_master_connection;
+        let conn = self.read_conn(read_from_master);
 
         async move {
             if sort_order == SortOrder::Ascending {
@@ -515,18 +512,27 @@ impl SqlChangesets {
         .boxed()
     }
 
-
     pub async fn get_changesets_ids_bounds(
         &self,
         repo_id: RepositoryId,
+        read_from_master: bool,
     ) -> Result<(Option<u64>, Option<u64>), Error> {
-        let rows = SelectChangesetsIdsBounds::query(&self.read_master_connection, &repo_id)
+        let conn = self.read_conn(read_from_master);
+        let rows = SelectChangesetsIdsBounds::query(conn, &repo_id)
             .compat()
             .await?;
         if rows.is_empty() {
             Ok((None, None))
         } else {
             Ok((Some(rows[0].0), Some(rows[0].1)))
+        }
+    }
+
+    fn read_conn(&self, read_from_master: bool) -> &Connection {
+        if read_from_master {
+            &self.read_master_connection
+        } else {
+            &self.read_connection
         }
     }
 }

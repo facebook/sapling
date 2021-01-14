@@ -47,6 +47,7 @@ pub struct PublicChangesetBulkFetch {
     repo_id: RepositoryId,
     changesets: Arc<dyn Changesets>,
     phases: Arc<dyn Phases>,
+    read_from_master: bool,
     step: u64,
 }
 
@@ -60,6 +61,7 @@ impl PublicChangesetBulkFetch {
             repo_id,
             changesets,
             phases,
+            read_from_master: true,
             step: MAX_FETCH_STEP,
         }
     }
@@ -71,6 +73,13 @@ impl PublicChangesetBulkFetch {
             bail!("Step too small {}", step);
         }
         Ok(Self { step, ..self })
+    }
+
+    pub fn with_read_from_master(self, read_from_master: bool) -> Self {
+        Self {
+            read_from_master,
+            ..self
+        }
     }
 
     /// Fetch the ChangesetEntry, which involves actually loading the Changesets
@@ -126,6 +135,7 @@ impl PublicChangesetBulkFetch {
             self.get_repo_bounds().right_future()
         };
         let step = self.step;
+        let read_from_master = self.read_from_master;
 
         async move {
             let s = bounded_traversal_stream(
@@ -146,6 +156,7 @@ impl PublicChangesetBulkFetch {
                                         upper,
                                         step,
                                         d.sort_order(),
+                                        read_from_master,
                                     )
                                     .try_collect()
                                     .await?;
@@ -205,7 +216,9 @@ impl PublicChangesetBulkFetch {
     /// Get the repo bounds as max/min observed suitable for rust ranges (hence the + 1)
     pub async fn get_repo_bounds(&self) -> Result<(u64, u64), Error> {
         let changesets = self.changesets.get_sql_changesets();
-        let (start, stop) = changesets.get_changesets_ids_bounds(self.repo_id).await?;
+        let (start, stop) = changesets
+            .get_changesets_ids_bounds(self.repo_id, self.read_from_master)
+            .await?;
         let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
         let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))? + 1;
         Ok((start, stop))

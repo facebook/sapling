@@ -221,9 +221,12 @@ impl AliasVerification {
             "Process Changesets with ids: [{:?}, {:?})", min_id, max_id
         );
 
-        let bcs_ids =
-            self.sqlchangesets
-                .get_list_bs_cs_id_in_range_exclusive(self.repoid, min_id, max_id);
+        let bcs_ids = self.sqlchangesets.get_list_bs_cs_id_in_range_exclusive(
+            self.repoid,
+            min_id,
+            max_id,
+            true,
+        );
 
         bcs_ids
             .and_then(move |bcs_id| async move {
@@ -253,7 +256,7 @@ impl AliasVerification {
     ) -> Result<(), Error> {
         let (min_id, max_id) = self
             .sqlchangesets
-            .get_changesets_ids_bounds(self.repoid)
+            .get_changesets_ids_bounds(self.repoid, true)
             .await?;
 
         let mut bounds = vec![];
