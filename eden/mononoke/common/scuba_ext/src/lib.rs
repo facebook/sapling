@@ -111,13 +111,14 @@ impl MononokeScubaSampleBuilder {
         self.inner
             .add("client_identities", join(metadata.identities().iter(), ","));
 
-        if let Some(client_ip) = metadata.client_ip() {
-            self.inner.add("client_ip", client_ip.to_string());
-        }
         if let Some(client_hostname) = metadata.client_hostname() {
             // "source_hostname" to remain compatible with historical logging
             self.inner
                 .add("source_hostname", client_hostname.to_owned());
+        } else {
+            if let Some(client_ip) = metadata.client_ip() {
+                self.inner.add("client_ip", client_ip.to_string());
+            }
         }
         if let Some(unix_name) = metadata.unix_name() {
             // "unix_username" to remain compatible with historical logging
