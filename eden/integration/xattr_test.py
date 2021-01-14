@@ -58,9 +58,6 @@ class XattrTest(testcase.EdenRepoTest):
 
         filename = os.path.join(self.mount, "hello")
         xattrs = getallxattrs(filename)
-        with open(filename, "rb") as f:
-            contents = f.read()
-        expected_sha1 = sha1(contents)
         self.assertEqual({}, xattrs)
 
     def test_get_sha1_xattr_succeeds_after_querying_xattr_on_dir(self) -> None:
