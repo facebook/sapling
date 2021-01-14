@@ -28,6 +28,7 @@ mod builder;
 pub struct SessionContainer {
     fb: FacebookInit,
     inner: Arc<SessionContainerInner>,
+    session_class: SessionClass,
 }
 
 /// Represents the reason this session is running
@@ -47,7 +48,6 @@ struct SessionContainerInner {
     load_limiter: Option<BoxLoadLimiter>,
     blobstore_write_limiter: Option<AsyncLimiter>,
     blobstore_read_limiter: Option<AsyncLimiter>,
-    session_class: SessionClass,
 }
 
 impl SessionContainer {
@@ -129,6 +129,10 @@ impl SessionContainer {
     }
 
     pub fn session_class(&self) -> SessionClass {
-        self.inner.session_class
+        self.session_class
+    }
+
+    pub fn override_session_class(&mut self, session_class: SessionClass) {
+        self.session_class = session_class;
     }
 }

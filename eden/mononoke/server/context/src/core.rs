@@ -126,6 +126,10 @@ impl CoreContext {
         &self.session
     }
 
+    pub fn session_mut(&mut self) -> &mut SessionContainer {
+        &mut self.session
+    }
+
     pub fn scribe(&self) -> &Scribe {
         self.logging.scribe()
     }

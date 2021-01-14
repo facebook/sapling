@@ -20,6 +20,7 @@ use super::{SessionClass, SessionContainer, SessionContainerInner};
 pub struct SessionContainerBuilder {
     fb: FacebookInit,
     inner: SessionContainerInner,
+    session_class: SessionClass,
 }
 
 impl SessionContainerBuilder {
@@ -27,6 +28,7 @@ impl SessionContainerBuilder {
         SessionContainer {
             fb: self.fb,
             inner: Arc::new(self.inner),
+            session_class: self.session_class,
         }
     }
 
@@ -39,8 +41,8 @@ impl SessionContainerBuilder {
                 load_limiter: None,
                 blobstore_write_limiter: None,
                 blobstore_read_limiter: None,
-                session_class: SessionClass::UserWaiting,
             },
+            session_class: SessionClass::UserWaiting,
         }
     }
 
@@ -85,7 +87,7 @@ impl SessionContainerBuilder {
         self
     }
     pub fn session_class(mut self, value: SessionClass) -> Self {
-        self.inner.session_class = value;
+        self.session_class = value;
         self
     }
 }
