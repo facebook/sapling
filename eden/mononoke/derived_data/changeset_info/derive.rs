@@ -28,7 +28,7 @@ impl BonsaiDerivable for ChangesetInfo {
 
     type Options = ();
 
-    async fn derive_from_parents(
+    async fn derive_from_parents_impl(
         _ctx: CoreContext,
         _repo: BlobRepo,
         bonsai: BonsaiChangeset,

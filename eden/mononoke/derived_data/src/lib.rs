@@ -86,7 +86,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use blobrepo::BlobRepo;
-use context::CoreContext;
+use context::{CoreContext, SessionClass};
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use std::{
@@ -124,15 +124,26 @@ pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone {
     /// Type for additional options to derivation
     type Options: Send + Sync + 'static;
 
+    async fn derive_from_parents(
+        ctx: CoreContext,
+        repo: BlobRepo,
+        bonsai: BonsaiChangeset,
+        parents: Vec<Self>,
+        options: &Self::Options,
+    ) -> Result<Self, Error> {
+        let ctx = override_ctx(ctx);
+        Self::derive_from_parents_impl(ctx, repo, bonsai, parents, options).await
+    }
+
     /// Defines how to derive new representation for bonsai having derivations
     /// for parents and having a current bonsai object.
     ///
     /// Note that if any data has to be persistently stored in blobstore, mysql or any other store
-    /// then it's responsiblity of implementor of `derive_from_parents()` to save it.
+    /// then it's responsiblity of implementor of `derive_from_parents_impl()` to save it.
     /// For example, to derive HgChangesetId we also need to derive all filenodes and all manifests
     /// and then store them in blobstore. Derived data library is only responsible for
     /// updating BonsaiDerivedMapping.
-    async fn derive_from_parents(
+    async fn derive_from_parents_impl(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
@@ -252,6 +263,16 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone + BonsaiDerivable
     ) -> Result<bool, DeriveError> {
         let count = Self::count_underived(&ctx, &repo, &csid, 1).await?;
         Ok(count == 0)
+    }
+}
+
+fn override_ctx(mut ctx: CoreContext) -> CoreContext {
+    if tunables::tunables().get_derived_data_use_background_session_class() {
+        ctx.session_mut()
+            .override_session_class(SessionClass::Background);
+        ctx
+    } else {
+        ctx
     }
 }
 

@@ -57,7 +57,7 @@ impl BonsaiDerivable for BlameRoot {
 
     type Options = BlameDeriveOptions;
 
-    async fn derive_from_parents(
+    async fn derive_from_parents_impl(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,

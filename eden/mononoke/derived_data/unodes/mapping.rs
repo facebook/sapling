@@ -60,7 +60,7 @@ impl BonsaiDerivable for RootUnodeManifestId {
 
     type Options = UnodeVersion;
 
-    async fn derive_from_parents(
+    async fn derive_from_parents_impl(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,

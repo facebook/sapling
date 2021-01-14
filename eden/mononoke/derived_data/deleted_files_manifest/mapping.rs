@@ -54,7 +54,7 @@ impl BonsaiDerivable for RootDeletedManifestId {
 
     type Options = ();
 
-    async fn derive_from_parents(
+    async fn derive_from_parents_impl(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
