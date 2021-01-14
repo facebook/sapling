@@ -285,7 +285,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let storage_id = matches
         .value_of("storage-id")
         .ok_or(Error::msg("Missing storage-id"))?;
-    let logger = args::init_logging(fb, &matches);
+    let logger = args::init_logging(fb, &matches)?;
     let config_store = args::init_config_store(fb, &logger, &matches)?;
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);

@@ -109,7 +109,7 @@ fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> R
 fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
 
-    let logger = args::init_logging(fb, &matches);
+    let logger = args::init_logging(fb, &matches)?;
 
     let config_store = args::init_config_store(fb, &logger, &matches)?;
 

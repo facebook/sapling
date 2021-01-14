@@ -23,7 +23,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{bail, format_err, Context, Error, Result};
 use cached_config::{ConfigHandle, ConfigStore, TestSource};
 use clap::{App, Arg, ArgGroup, ArgMatches, Values};
 use fbinit::FacebookInit;
@@ -720,7 +720,7 @@ fn get_log_level<'a>(matches: &MononokeMatches<'a>) -> Level {
     }
 }
 
-pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Logger {
+pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Result<Logger> {
     // Set the panic handler up here. Not really relevent to logger other than it emits output
     // when things go wrong. This writes directly to stderr as coredumper expects.
     let fate = match matches
@@ -731,7 +731,7 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Logg
         "continue" => Some(Fate::Continue),
         "exit" => Some(Fate::Exit(101)),
         "abort" => Some(Fate::Abort),
-        bad => panic!("bad panic-fate {}", bad),
+        bad => bail!("bad panic-fate {}", bad),
     };
     if let Some(fate) = fate {
         panichandler::set_panichandler(fate);
@@ -769,8 +769,7 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Logg
         log::init_stdlog_once(Logger::root(root_log_drain.clone(), o![]), stdlog_env);
 
     let root_log_drain = dynamic_level_drain(fb, matches, root_log_drain)
-        .expect("Failed to initialize DynamicLevelDrain")
-        .ignore_res();
+        .with_context(|| "Failed to initialize DynamicLevelDrain")?;
 
     let kv = FacebookKV::new().expect("cannot initialize FacebookKV");
     let logger = if matches.is_present("fb303-thrift-port") {
@@ -784,7 +783,7 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Logg
         "enabled stdlog with level: {:?} (set {} to configure)", stdlog_level, stdlog_env
     );
 
-    logger
+    Ok(logger)
 }
 
 fn get_repo_id_and_name_from_values<'a>(
@@ -1825,7 +1824,7 @@ fn init_mononoke_with_cache_settings<'a>(
     matches: &'a MononokeMatches<'a>,
     cachelib_settings: CachelibSettings,
 ) -> Result<(Caching, Logger, tokio_compat::runtime::Runtime)> {
-    let logger = init_logging(fb, matches);
+    let logger = init_logging(fb, matches)?;
 
     debug!(logger, "Initialising cachelib...");
     let caching = parse_and_init_cachelib(fb, matches.as_ref(), cachelib_settings);

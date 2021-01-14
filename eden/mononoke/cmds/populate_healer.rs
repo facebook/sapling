@@ -171,7 +171,7 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         );
 
     let matches = app.get_matches();
-    let logger = args::init_logging(fb, &matches);
+    let logger = args::init_logging(fb, &matches)?;
     let config_store = args::init_config_store(fb, &logger, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo_id = args::get_repo_id(config_store, &matches)?;

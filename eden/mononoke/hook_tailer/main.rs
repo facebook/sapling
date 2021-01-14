@@ -71,7 +71,7 @@ async fn get_changesets<'a>(
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
-    let logger = cmdlib::args::init_logging(fb, &matches);
+    let logger = cmdlib::args::init_logging(fb, &matches)?;
     let config_store = cmdlib::args::init_config_store(fb, &logger, &matches)?;
     let (repo_name, config) = cmdlib::args::get_config(config_store, &matches)?;
     info!(logger, "Hook tailer is starting");

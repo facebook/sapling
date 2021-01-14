@@ -1203,7 +1203,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = app.subcommand(sync_once).subcommand(sync_loop);
 
     let matches = app.get_matches();
-    let logger = args::init_logging(fb, &matches);
+    let logger = args::init_logging(fb, &matches)?;
 
     args::init_cachelib(fb, &matches);
     args::init_config_store(fb, &logger, &matches)?;

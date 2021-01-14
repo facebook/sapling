@@ -93,7 +93,7 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
 fn main(fb: FacebookInit) -> ExitCode {
     let matches = setup_app().get_matches();
 
-    let logger = args::init_logging(fb, &matches);
+    let logger = args::init_logging(fb, &matches).expect("logging to succeed");
     let error_logger = logger.clone();
 
     args::init_tunables(fb, &matches, logger.clone()).expect("failed to initialise tunables");

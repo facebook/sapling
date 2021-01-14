@@ -65,7 +65,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         );
     let matches = app.get_matches();
 
-    let logger = args::init_logging(fb, &matches);
+    let logger = args::init_logging(fb, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     args::init_config_store(fb, &logger, &matches)?;
     helpers::block_execute(

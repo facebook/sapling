@@ -216,17 +216,17 @@ async fn run<'a>(
 fn context_and_matches<'a>(
     fb: FacebookInit,
     app: MononokeClapApp<'a, '_>,
-) -> (CoreContext, MononokeMatches<'a>) {
+) -> Result<(CoreContext, MononokeMatches<'a>), Error> {
     let matches = app.get_matches();
-    let logger = args::init_logging(fb, &matches);
+    let logger = args::init_logging(fb, &matches)?;
     args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger);
-    (ctx, matches)
+    Ok((ctx, matches))
 }
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let (ctx, matches) = context_and_matches(fb, create_app());
+    let (ctx, matches) = context_and_matches(fb, create_app())?;
     args::init_config_store(fb, ctx.logger(), &matches)?;
     block_execute(
         run(fb, ctx.clone(), &matches),
