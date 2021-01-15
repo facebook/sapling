@@ -17,7 +17,8 @@
   >   "disable_hostname_logging": false,
   >   "throttle_limits": [],
   >   "acl_check": false,
-  >   "enforce_acl_check": false
+  >   "enforce_acl_check": false,
+  >   "tasks_per_content": 1
   > }
   > EOF
 

@@ -38,7 +38,6 @@ use hyper::{client::HttpConnector, Client};
 use hyper_openssl::HttpsConnector;
 use lfs_protocol::{RequestBatch, RequestObject, ResponseBatch};
 use metaconfig_types::RepoConfig;
-use mononoke_types::hash::Sha256;
 use mononoke_types::ContentId;
 
 use crate::config::ServerConfig;
@@ -378,13 +377,13 @@ impl UriBuilder {
     pub fn consistent_download_uri(
         &self,
         content_id: &ContentId,
-        oid: Sha256,
+        routing_key: String,
     ) -> Result<Uri, Error> {
         self.server
             .self_uri
             .build(format_args!(
                 "{}/download/{}?routing={}",
-                &self.repository, content_id, oid
+                &self.repository, content_id, routing_key
             ))
             .context(ErrorKind::UriBuilderFailed("consistent_download_uri"))
             .map_err(Error::from)
@@ -646,7 +645,7 @@ mod test {
     fn test_basic_consistent_download_uri() -> Result<(), Error> {
         let b = uri_builder("http://foo.com", Some("http://bar.com"))?;
         assert_eq!(
-            b.consistent_download_uri(&content_id()?, oid()?)?
+            b.consistent_download_uri(&content_id()?, format!("{}", oid()?))?
                 .to_string(),
             format!(
                 "http://foo.com/repo123/download/{}?routing={}",

@@ -13,6 +13,7 @@ use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 use std::default::Default;
+use std::num::NonZeroU16;
 use std::str::FromStr;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,6 +78,7 @@ pub struct ServerConfig {
     pub raw_server_config: lfs_server_config::LfsServerConfig,
     throttle_limits: Vec<Limit>,
     object_popularity: Option<ObjectPopularity>,
+    tasks_per_content: NonZeroU16,
 }
 
 impl TryFrom<lfs_server_config::LfsServerConfig> for ServerConfig {
@@ -98,10 +100,19 @@ impl TryFrom<lfs_server_config::LfsServerConfig> for ServerConfig {
             .transpose()
             .with_context(|| "Invalid object popularity")?;
 
+        let tasks_per_content = value
+            .tasks_per_content
+            .try_into()
+            .with_context(|| "tasks_per_content is < 0")?;
+
+        let tasks_per_content =
+            NonZeroU16::new(tasks_per_content).with_context(|| "tasks_per_content is 0")?;
+
         Ok(Self {
             raw_server_config: value,
             throttle_limits,
             object_popularity,
+            tasks_per_content,
         })
     }
 }
@@ -138,12 +149,14 @@ impl Default for ServerConfig {
             // TODO: Remove those once they're gone from Thrift configs.
             object_popularity_category: Default::default(),
             object_popularity_threshold: Default::default(),
+            tasks_per_content: 1,
         };
 
         Self {
             raw_server_config,
             throttle_limits: vec![],
             object_popularity: None,
+            tasks_per_content: NonZeroU16::new(1).unwrap(),
         }
     }
 }
@@ -170,6 +183,9 @@ impl ServerConfig {
     #[cfg(test)]
     pub fn object_popularity_mut(&mut self) -> &mut Option<ObjectPopularity> {
         &mut self.object_popularity
+    }
+    pub fn tasks_per_content(&self) -> NonZeroU16 {
+        self.tasks_per_content
     }
 }
 

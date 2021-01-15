@@ -20,11 +20,13 @@ use gotham_ext::{
 use http::header::HeaderMap;
 use hyper::{Body, StatusCode};
 use maplit::hashmap;
+use rand::Rng;
 use redactedblobstore::has_redaction_root_cause;
 use serde::Deserialize;
 use slog::debug;
 use stats::prelude::*;
 use std::collections::HashMap;
+use std::num::NonZeroU16;
 use std::time::Instant;
 use time_ext::DurationExt;
 use time_window_counter::GlobalTimeWindowCounterBuilder;
@@ -222,6 +224,18 @@ async fn resolve_internal_object(
     Ok(None)
 }
 
+fn generate_routing_key(tasks_per_content: NonZeroU16, oid: Sha256) -> String {
+    // Randomly generate task number to send to.
+    let task_n = rand::thread_rng().gen_range(0, tasks_per_content.get());
+    // For the base task, no extension is added to routing key.
+    let mut routing_key = format!("{}", oid);
+    if task_n > 0 {
+        // All other tasks have tailing number in routing key.
+        routing_key = format!("{}-{}", routing_key, task_n);
+    }
+    routing_key
+}
+
 async fn internal_objects(
     ctx: &RepositoryRequestContext,
     objects: &[RequestObject],
@@ -252,8 +266,10 @@ async fn internal_objects(
                 Some(stored) => {
                     let uri = if allow_consistent_routing && ctx.config.enable_consistent_routing()
                     {
+                        let routing_key =
+                            generate_routing_key(ctx.config.tasks_per_content(), oid.0.into());
                         ctx.uri_builder
-                            .consistent_download_uri(&stored.id, oid.0.into())
+                            .consistent_download_uri(&stored.id, routing_key)
                     } else {
                         ctx.uri_builder.download_uri(&stored.id)
                     };
@@ -696,6 +712,25 @@ mod test {
             ],
             res
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_routing_keys() -> Result<(), Error> {
+        // allowed keys
+        let allowed_routing_key_base: String = format!("{}", ONES_SHA256);
+        let allowed_routing_key_one: String = format!("{}-1", allowed_routing_key_base);
+        // base case
+        let routing_key_base = generate_routing_key(NonZeroU16::new(1).unwrap(), ONES_SHA256);
+        assert_eq!(&routing_key_base, &allowed_routing_key_base);
+
+        // random key case
+        let allowed_routing_keys = vec![allowed_routing_key_base, allowed_routing_key_one];
+        for _ in 0..5 {
+            let routing_key = generate_routing_key(NonZeroU16::new(2).unwrap(), ONES_SHA256);
+            assert!(allowed_routing_keys.contains(&routing_key))
+        }
 
         Ok(())
     }
