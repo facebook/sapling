@@ -608,12 +608,12 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
 }
 
 impl ProgressReporterUnprotected for ValidateProgressState {
-    fn report_progress(self: &mut Self) {
+    fn report_progress(&mut self) {
         self.report_progress_log();
         self.report_progress_stats();
     }
 
-    fn report_throttled(self: &mut Self) {
+    fn report_throttled(&mut self) {
         if self.checked_nodes % self.throttle_options.sample_rate == 0 {
             let new_update = Instant::now();
             let delta_time = new_update.duration_since(self.last_update);

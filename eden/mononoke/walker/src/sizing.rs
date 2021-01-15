@@ -166,7 +166,7 @@ where
 }
 
 impl ProgressStateCountByType<SizingStats, SizingStats> {
-    pub fn report_progress_log(self: &mut Self, delta_time: Option<Duration>) {
+    pub fn report_progress_log(&mut self, delta_time: Option<Duration>) {
         let summary_by_type: HashMap<NodeType, SizingStats> = self
             .work_stats
             .stats_by_type
@@ -229,11 +229,11 @@ impl ProgressStateCountByType<SizingStats, SizingStats> {
 }
 
 impl ProgressReporterUnprotected for ProgressStateCountByType<SizingStats, SizingStats> {
-    fn report_progress(self: &mut Self) {
+    fn report_progress(&mut self) {
         self.report_progress_log(None);
     }
 
-    fn report_throttled(self: &mut Self) {
+    fn report_throttled(&mut self) {
         if let Some(delta_time) = self.should_log_throttled() {
             self.report_progress_log(Some(delta_time));
         }

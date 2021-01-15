@@ -74,7 +74,7 @@ impl<SS> ProgressStateWorkByType<SS>
 where
     SS: Add<SS, Output = SS> + Copy + Default,
 {
-    fn record_step(self: &mut Self, n: &Node, opt: Option<&SS>) {
+    fn record_step(&mut self, n: &Node, opt: Option<&SS>) {
         // Global stats
         self.total_progress += 1;
         // By type
@@ -167,7 +167,7 @@ where
     }
 
     // Throttle by sample, then time
-    pub fn should_log_throttled(self: &mut Self) -> Option<Duration> {
+    pub fn should_log_throttled(&mut self) -> Option<Duration> {
         if self.work_stats.total_progress % self.params.options.sample_rate == 0 {
             let new_update = Instant::now();
             let delta_time = new_update.duration_since(self.reporting_stats.last_update);
@@ -200,7 +200,7 @@ impl ProgressStateCountByType<StepStats, ProgressSummary> {
         );
     }
 
-    pub fn report_progress_log(self: &mut Self, delta_time: Option<Duration>) {
+    pub fn report_progress_log(&mut self, mut delta_time: Option<Duration>) {
         let summary_by_type: HashMap<NodeType, ProgressSummary> = self
             .work_stats
             .stats_by_type
@@ -239,6 +239,13 @@ impl ProgressStateCountByType<StepStats, ProgressSummary> {
             })
             .collect::<Vec<_>>()
             .join(" ");
+
+        if delta_time.is_none() {
+            // Is the last log of a run or chunk, need to know the time
+            let now = Instant::now();
+            delta_time = Some(now.duration_since(self.reporting_stats.last_update));
+            self.reporting_stats.last_update = now;
+        }
 
         let (delta_s, delta_summary_per_s) = delta_time
             .map(|delta_time| {
@@ -310,7 +317,7 @@ impl<SS, T> ProgressRecorderUnprotected<SS> for ProgressStateCountByType<SS, T>
 where
     SS: Add<SS, Output = SS> + Copy + Default,
 {
-    fn record_step(self: &mut Self, n: &Node, opt: Option<&SS>) {
+    fn record_step(&mut self, n: &Node, opt: Option<&SS>) {
         self.work_stats.record_step(n, opt);
     }
 
@@ -320,11 +327,11 @@ where
 }
 
 impl ProgressReporterUnprotected for ProgressStateCountByType<StepStats, ProgressSummary> {
-    fn report_progress(self: &mut Self) {
+    fn report_progress(&mut self) {
         self.report_progress_log(None);
     }
 
-    fn report_throttled(self: &mut Self) {
+    fn report_throttled(&mut self) {
         if let Some(delta_time) = self.should_log_throttled() {
             self.report_progress_log(Some(delta_time));
         }
