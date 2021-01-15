@@ -34,7 +34,7 @@ Base case, check can walk fine, one repo
   $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | strip_glog
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: (40, 40)
+  Seen,Loaded: 40,40
   Bytes/s,* (glob)
   Walked* (glob)
 
@@ -42,8 +42,8 @@ Check that multi repo runs for all repos specified
   $ mononoke_walker --repo-name repo2 scrub -I deep -q -b master_bookmark 2>&1 | strip_glog | sort
   Bytes/s,*, repo: repo (glob)
   Bytes/s,*, repo: repo2 (glob)
-  Final count: (40, 40), repo: repo
-  Final count: (8, 8), repo: repo2
+  Seen,Loaded: 40,40, repo: repo
+  Seen,Loaded: 8,8, repo: repo2
   Walked*, repo: repo (glob)
   Walked*, repo: repo2 (glob)
   Walking edge types *, repo: repo (glob)
@@ -67,18 +67,18 @@ Check fails on only the deleted side
 
 Check can walk fine on the only remaining side
   $ mononoke_walker -L graph scrub -q --inner-blobstore-id=1 -I deep -b master_bookmark 2>&1 | strip_glog
-  Final count: (40, 40)
+  Seen,Loaded: 40,40
   Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2168,30,0s; Run */s,*/s,2168,30,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:281,3 Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:351,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgChangesetViaBonsai:0,0 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
 
 
 Check can walk fine on the multiplex remaining side
   $ mononoke_walker -l loaded scrub -q -I deep -b master_bookmark 2>&1 | strip_glog
-  Final count: (40, 40)
+  Seen,Loaded: 40,40
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly mode, should log the scrub repairs needed
   $ mononoke_walker -l loaded scrub -q --scrub-blobstore-action=ReportOnly -I deep -b master_bookmark --scuba-log-file scuba-reportonly.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) not repaired for repo0000. (glob)
-  1 Final count: (40, 40)
+  1 Seen,Loaded: 40,40
 
 Check scuba data
 Note - we might get duplicate reports, we just expect that there should not be a lot of them
@@ -116,7 +116,7 @@ Note - we might get duplicate reports, we just expect that there should not be a
 Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode, should also log the scrub repairs done
   $ mononoke_walker -l loaded scrub -q --scrub-blobstore-action=Repair -I deep -b master_bookmark --scuba-log-file scuba-repair.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
-  1 Final count: (40, 40)
+  1 Seen,Loaded: 40,40
 
 Check scuba data
 Note - we might get duplicate repairs, we just expect that there should not be a lot of them
@@ -153,7 +153,7 @@ Note - we might get duplicate repairs, we just expect that there should not be a
 
 Check that all is repaired by running on only the deleted side
   $ mononoke_walker -l loaded scrub -q --inner-blobstore-id=0 -I deep -b master_bookmark 2>&1 | strip_glog
-  Final count: (40, 40)
+  Seen,Loaded: 40,40
 
 Check the files after restore.  The blobstore filenode_lookup representation is currently not traversed, so remains as a difference
   $ ls blobstore/0/blobs/* | wc -l

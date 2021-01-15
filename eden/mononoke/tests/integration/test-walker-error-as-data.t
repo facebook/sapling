@@ -21,7 +21,7 @@ Base case, check can walk fine
   $ mononoke_walker scrub -I deep -q -b master_bookmark 2>&1 | strip_glog
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: (40, 40)
+  Seen,Loaded: 40,40
   Bytes/s,* (glob)
   Walked* (glob)
 
@@ -51,7 +51,7 @@ Check counts with error-as-data-node-type
   $ mononoke_walker -l loaded scrub -q --error-as-data-node-type AliasContentMapping -I deep -b master_bookmark --scuba-log-file=scuba.json 2>&1 | strip_glog | sed -re 's/^(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
   1 Error as data enabled, walk results may not be complete. Errors as data enabled for node types [AliasContentMapping] edge types []
   1 Could not step to
-  1 Final count: (40, 39)
+  1 Seen,Loaded: 40,39
 
 Check scuba data
   $ wc -l < scuba.json
@@ -72,4 +72,4 @@ Check error-as-data-edge-type, should get no errors as FileContentMetadataToGitS
   $ mononoke_walker -l loaded scrub -q --error-as-data-node-type AliasContentMapping --error-as-data-edge-type FileContentMetadataToGitSha1Alias -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(Could not step to).*/\1/' | uniq -c | sed 's/^ *//'
   1 Error as data enabled, walk results may not be complete. Errors as data enabled for node types [AliasContentMapping] edge types [FileContentMetadataToGitSha1Alias]
   1 Could not step to
-  1 Final count: (40, 39)
+  1 Seen,Loaded: 40,39

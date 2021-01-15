@@ -22,7 +22,7 @@ validate, expecting all valid
   Walking edge types * (glob)
   Walking node types * (glob)
   Performing check types [HgLinkNodePopulated]
-  Final count: * (glob)
+  Seen,Loaded: * (glob)
   Walked* (glob)
   Nodes,Pass,Fail:40,3,0; EdgesChecked:9; CheckType:Pass,Fail Total:3,0 HgLinkNodePopulated:3,0
 

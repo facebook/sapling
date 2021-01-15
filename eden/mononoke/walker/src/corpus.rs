@@ -413,14 +413,9 @@ async fn run_one(
         ));
 
     let make_sink = {
-        cloned!(
-            command,
-            job_params.quiet,
-            sub_params.progress_state,
-            repo_params.scheduled_max,
-        );
-        move |ctx: &CoreContext, _repo_params: &RepoWalkParams| {
-            cloned!(ctx);
+        cloned!(command, job_params.quiet, sub_params.progress_state,);
+        move |ctx: &CoreContext, repo_params: &RepoWalkParams| {
+            cloned!(ctx, repo_params.scheduled_max);
             async move |walk_output| {
                 cloned!(ctx, sizing_progress_state);
                 let walk_progress = progress_stream(quiet, &progress_state, walk_output);
@@ -432,15 +427,10 @@ async fn run_one(
                     command.sampler,
                 );
                 let report_sizing = progress_stream(quiet, &sizing_progress_state, corpus);
-                report_state(ctx, sizing_progress_state, report_sizing)
-                    .map({
-                        cloned!(progress_state);
-                        move |d| {
-                            progress_state.report_progress();
-                            d
-                        }
-                    })
-                    .await
+                report_state(ctx, report_sizing).await?;
+                sizing_progress_state.report_progress();
+                progress_state.report_progress();
+                Ok(())
             }
         }
     };

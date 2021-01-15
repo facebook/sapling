@@ -36,10 +36,7 @@ use cmdlib::args::MononokeMatches;
 use context::CoreContext;
 use derive_more::AddAssign;
 use fbinit::FacebookInit;
-use futures::{
-    future::{try_join_all, TryFutureExt},
-    stream::TryStreamExt,
-};
+use futures::{future::try_join_all, stream::TryStreamExt};
 use itertools::Itertools;
 use maplit::hashset;
 use mononoke_types::{ChangesetId, MPath};
@@ -704,14 +701,10 @@ async fn run_one(
 
             let validate_progress = progress_stream(quiet, &validate_progress_state, walk_progress);
 
-            let one_fut = report_state(ctx, progress_state, validate_progress).map_ok({
-                cloned!(validate_progress_state);
-                move |d| {
-                    validate_progress_state.report_progress();
-                    d
-                }
-            });
-            one_fut.await
+            report_state(ctx, validate_progress).await?;
+            progress_state.report_progress();
+            validate_progress_state.report_progress();
+            Ok(())
         }
     };
 

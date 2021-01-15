@@ -52,7 +52,7 @@ Do a walk of everything, it should all be there
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I deep -I marker -i default -i derived_fsnodes 2>&1 | strip_glog
   Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangeset, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, ChangesetToFsnodeMapping, ChangesetToPhaseMapping, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeMappingToRootFsnode, FsnodeToChildFsnode, FsnodeToFileContent, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadata, Fsnode, FsnodeMapping, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping]
-  Final count: (46, 46)
+  Seen,Loaded: 46,46
   Walked/s,* (glob)
 
 check the metadata base case
@@ -75,14 +75,14 @@ Do a walk again, should succeed but not find the hg types
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I deep -I marker -i default -i derived_fsnodes 2>&1 | strip_glog
   Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangeset, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, ChangesetToFsnodeMapping, ChangesetToPhaseMapping, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeMappingToRootFsnode, FsnodeToChildFsnode, FsnodeToFileContent, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadata, Fsnode, FsnodeMapping, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping]
-  Final count: (28, 28)
+  Seen,Loaded: 28,28
   * HgBonsaiMapping:0,0,0 HgChangeset:0,0,0 HgChangesetViaBonsai:0,0,0 HgFileEnvelope:0,0,0 HgFileNode:0,0,0 HgManifest:0,0,0 PhaseMapping:3,* (glob)
 
 Do a walk again, with --enable-derive, should succeed with the full count
   $ mononoke_walker --with-readonly-storage=false -L sizing scrub -q --enable-derive -b master_bookmark -I deep -I marker -i default -i derived_fsnodes 2>&1 | strip_glog
   Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangeset, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, ChangesetToFsnodeMapping, ChangesetToPhaseMapping, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeMappingToRootFsnode, FsnodeToChildFsnode, FsnodeToFileContent, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadata, Fsnode, FsnodeMapping, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping]
-  Final count: (49, 49)
+  Seen,Loaded: 49,49
   * HgBonsaiMapping:3,3,0 HgChangeset:3,* HgChangesetViaBonsai:3,* HgFileEnvelope:3,*,0 HgFileNode:3,*,* HgManifest:3,3,* PhaseMapping:3,* (glob)
 
 check the blobs were re-derived
@@ -101,7 +101,7 @@ check the base case with all the alias types present in blobstore
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I deep -I marker -i default -i derived_fsnodes 2>&1 | strip_glog
   Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangeset, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, ChangesetToFsnodeMapping, ChangesetToPhaseMapping, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeMappingToRootFsnode, FsnodeToChildFsnode, FsnodeToFileContent, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadata, Fsnode, FsnodeMapping, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping]
-  Final count: (49, 49)
+  Seen,Loaded: 49,49
   * AliasContentMapping:9,9,0 * FileContent:3,*,0 FileContentMetadata:3,0,9 * (glob)
 
 delete the derived file metadata
@@ -114,5 +114,5 @@ do a walk again, should succeed but not find the alias or other data derived fro
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I deep -I marker -i default -i derived_fsnodes 2>&1 | strip_glog
   Walking edge types [AliasContentMappingToFileContent, BonsaiHgMappingToHgChangeset, BookmarkToChangeset, ChangesetToBonsaiHgMapping, ChangesetToBonsaiParent, ChangesetToFileContent, ChangesetToFsnodeMapping, ChangesetToPhaseMapping, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeMappingToRootFsnode, FsnodeToChildFsnode, FsnodeToFileContent, HgBonsaiMappingToChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [AliasContentMapping, BonsaiHgMapping, Bookmark, Changeset, FileContent, FileContentMetadata, Fsnode, FsnodeMapping, HgBonsaiMapping, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgFileNode, HgManifest, PhaseMapping]
-  Final count: (40, 40)
+  Seen,Loaded: 40,40
   * AliasContentMapping:0,0,0 * FileContent:3,*,0 FileContentMetadata:3,0,0 * (glob)

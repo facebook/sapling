@@ -9,14 +9,10 @@ use crate::graph::{Node, NodeType};
 use crate::log;
 use crate::state::StepStats;
 use anyhow::Error;
-use cloned::cloned;
 use context::CoreContext;
 use derive_more::{Add, Div, Mul, Sub};
 use fbinit::FacebookInit;
-use futures::{
-    future::FutureExt,
-    stream::{Stream, StreamExt, TryStreamExt},
-};
+use futures::stream::{Stream, StreamExt, TryStreamExt};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, Logger};
 use stats::prelude::*;
@@ -424,36 +420,22 @@ where
 }
 
 // Final status summary, plus count of seen nodes
-pub async fn report_state<InStream, PS, ND, SS>(
-    ctx: CoreContext,
-    progress_state: PS,
-    s: InStream,
-) -> Result<(), Error>
+pub async fn report_state<InStream, ND, SS>(ctx: CoreContext, s: InStream) -> Result<(), Error>
 where
     InStream: Stream<Item = Result<(Node, Option<ND>, Option<SS>), Error>> + 'static + Send,
-    PS: 'static + Send + Clone + ProgressReporter,
 {
-    let init_stats: (usize, usize) = (0, 0);
-    s.try_fold(init_stats, {
-        async move |(mut seen, mut loaded), (_n, nd, _ss)| {
-            let data_count = match nd {
-                None => 0,
-                _ => 1,
-            };
-            seen += 1;
-            loaded += data_count;
-            Ok((seen, loaded))
-        }
-    })
-    .map({
-        cloned!(ctx);
-        move |stats| {
-            stats.and_then(|stats| {
-                info!(ctx.logger(), #log::LOADED, "Final count: {:?}", stats);
-                progress_state.report_progress();
-                Ok(())
-            })
-        }
-    })
-    .await
+    let (seen, loaded) = s
+        .try_fold((0 as usize, 0 as usize), {
+            async move |(mut seen, mut loaded), (_n, nd, _ss)| {
+                seen += 1;
+                if nd.is_some() {
+                    loaded += 1;
+                }
+                Ok((seen, loaded))
+            }
+        })
+        .await?;
+
+    info!(ctx.logger(), #log::LOADED, "Seen,Loaded: {},{}", seen, loaded);
+    Ok(())
 }

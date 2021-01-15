@@ -29,4 +29,4 @@ Check that healer queue has successful items
 
 Check that scrub doesnt report issues despite one store being missing, as the entries needed are on the queue and less than N minutes old
   $ mononoke_walker -l loaded scrub -q --scrub-blobstore-action=ReportOnly -I deep -b master_bookmark --scuba-log-file scuba-reportonly.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
-  1 Final count: (40, 40)
+  1 Seen,Loaded: 40,40
