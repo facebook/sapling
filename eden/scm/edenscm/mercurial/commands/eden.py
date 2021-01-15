@@ -419,9 +419,10 @@ class HgServer(object):
         if missing:
             try:
                 self._fetch_tree_impl(path, manifest_node)
-            except Exception as ex:
+            except Exception:
                 logging.warning(
-                    "Fetching failed, continuing as this may be spurious: %s", ex
+                    "Fetching failed, continuing as this may be spurious",
+                    exc_info=True,
                 )
 
         try:
