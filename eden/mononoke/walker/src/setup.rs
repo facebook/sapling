@@ -838,7 +838,7 @@ fn reachable_graph_elements(
             e.incoming_type()
                 .map(|t|
                     // its an incoming_type we want
-                    include_node_types.contains(&t) &&
+                    (include_node_types.contains(&t) || root_node_types.contains(&t)) &&
                     // Another existing edge can get us to this node type
                     (root_node_types.contains(&t) || include_edge_types_stable.iter().any(|o| &o.outgoing_type() == &t)))
                 .unwrap_or(true)
