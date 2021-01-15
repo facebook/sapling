@@ -31,7 +31,7 @@ Drain the healer queue
 
 Check bookmarks
   $ mononoke_admin bookmarks log master_bookmark 2>&1 | grep master_bookmark
-  (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
+  * (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
 
   $ mononoke_admin bookmarks set another_bookmark 26805aba1e600a82e93661149f2313866a221a7b 2>/dev/null
 

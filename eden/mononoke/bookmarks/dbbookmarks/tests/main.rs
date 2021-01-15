@@ -1111,7 +1111,7 @@ fn test_list_bookmark_log_entries(fb: FacebookInit) {
                     None,
                     Freshness::MostRecent
                 )
-                .map_ok(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
+                .map_ok(|(_id, cs, rs, _ts)| (cs, rs))
                 .try_collect::<Vec<_>>()
                 .await
                 .unwrap(),
@@ -1125,7 +1125,7 @@ fn test_list_bookmark_log_entries(fb: FacebookInit) {
         assert_eq!(
             bookmarks
                 .list_bookmark_log_entries(ctx.clone(), name_1, 3, Some(1), Freshness::MostRecent)
-                .map_ok(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
+                .map_ok(|(_id, cs, rs, _ts)| (cs, rs))
                 .try_collect::<Vec<_>>()
                 .await
                 .unwrap(),

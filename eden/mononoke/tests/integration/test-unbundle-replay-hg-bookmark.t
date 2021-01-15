@@ -52,10 +52,10 @@ Check bookmark history
 
   $ mononoke_admin bookmarks log -c hg master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  (master_bookmark) ef90aeee2a47e488fc381fba57b2e20096e23dde pushrebase * (glob)
-  (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
-  (master_bookmark) cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a pushrebase * (glob)
-  (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
+  * (master_bookmark) ef90aeee2a47e488fc381fba57b2e20096e23dde pushrebase * (glob)
+  * (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
+  * (master_bookmark) cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a pushrebase * (glob)
+  * (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
 
 Export the bundles so we can replay it as it if were coming from hg, through the $BUNDLE_HELPER
 
@@ -115,7 +115,7 @@ Check history again. We're back to where we were:
 
   $ mononoke_admin bookmarks log -c hg master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  (master_bookmark) ef90aeee2a47e488fc381fba57b2e20096e23dde pushrebase * (glob)
-  (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
-  (master_bookmark) cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a pushrebase * (glob)
-  (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
+  * (master_bookmark) ef90aeee2a47e488fc381fba57b2e20096e23dde pushrebase * (glob)
+  * (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
+  * (master_bookmark) cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a pushrebase * (glob)
+  * (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)

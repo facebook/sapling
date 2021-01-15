@@ -125,7 +125,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
             None,
             Freshness::MostRecent,
         )
-        .map_ok(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
+        .map_ok(|(_id, cs, rs, _ts)| (cs, rs))
         .try_collect::<Vec<_>>()
         .await?;
     assert_eq!(

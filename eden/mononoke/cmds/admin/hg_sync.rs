@@ -348,7 +348,7 @@ async fn show(
             entry.timestamp,
             "hg",
             entry.bookmark_name,
-            Some(bundle_id),
+            Some(bundle_id as u64),
         );
 
         println!("{}", line);

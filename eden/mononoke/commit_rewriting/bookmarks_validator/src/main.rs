@@ -237,14 +237,14 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
     // maybe_large_cs_id.
     let log_entries = log_entries
         .into_iter()
-        .skip_while(|(book_val, _, _)| book_val != maybe_large_cs_id)
+        .skip_while(|(_, book_val, _, _)| book_val != maybe_large_cs_id)
         .collect::<Vec<_>>();
     if log_entries.is_empty() {
         // We can't find the value of large bookmark in bookmark update log.
         return Ok(false);
     }
 
-    if let Some((_, _, latest_timestamp)) = log_entries.get(0) {
+    if let Some((_, _, _, latest_timestamp)) = log_entries.get(0) {
         // Remap large repo commits into small repo commits
         // Note that in theory it's possible to map a small repo commit into a large repo and compare
         // only this remapped commit with the log of the large bookmark. However it doesn't work well
@@ -252,20 +252,21 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
         // much more commits than the other, then latest max_log_records in the large repo might be
         // from the more active source repo. Hence check_large_bookmark_history might return 'false'
         // for the less active repo.
-        let remapped_log_entries = log_entries
-            .iter()
-            .map(|(book_val, _, timestamp)| async move {
-                let res: Result<_, Error> = match book_val {
-                    Some(large_cs_id) => {
-                        let maybe_remapped_cs_id =
-                            remap(&ctx, &large_to_small, &large_cs_id).await?;
-                        Ok(maybe_remapped_cs_id
-                            .map(|remapped_cs_id| (Some(remapped_cs_id), timestamp)))
-                    }
-                    None => Ok(Some((None, timestamp))),
-                };
-                res
-            });
+        let remapped_log_entries =
+            log_entries
+                .iter()
+                .map(|(_, book_val, _, timestamp)| async move {
+                    let res: Result<_, Error> = match book_val {
+                        Some(large_cs_id) => {
+                            let maybe_remapped_cs_id =
+                                remap(&ctx, &large_to_small, &large_cs_id).await?;
+                            Ok(maybe_remapped_cs_id
+                                .map(|remapped_cs_id| (Some(remapped_cs_id), timestamp)))
+                        }
+                        None => Ok(Some((None, timestamp))),
+                    };
+                    res
+                });
 
         let remapped_log_entries = future::try_join_all(remapped_log_entries).await?;
 
@@ -286,7 +287,7 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
     let was_created = log_entries.len() < (max_log_records as usize);
     if was_created && maybe_small_cs_id.is_none() {
         match log_entries.last() {
-            Some((_, _, timestamp)) => Ok(timestamp.since_seconds() < max_delay_secs as i64),
+            Some((_, _, _, timestamp)) => Ok(timestamp.since_seconds() < max_delay_secs as i64),
             None => {
                 // Shouldn't happen in practive, so return false in that case
                 Ok(false)

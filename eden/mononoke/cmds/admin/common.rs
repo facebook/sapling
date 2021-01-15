@@ -65,7 +65,7 @@ pub fn format_bookmark_log_entry(
     timestamp: Timestamp,
     changeset_type: &str,
     bookmark: BookmarkName,
-    bundle_id: Option<i64>,
+    bundle_id: Option<u64>,
 ) -> String {
     let reason_str = reason.to_string();
     if json_flag {

@@ -189,9 +189,9 @@ queries! {
     }
 
     read SelectBookmarkLogs(repo_id: RepositoryId, name: BookmarkName, max_records: u32) -> (
-        Option<ChangesetId>, BookmarkUpdateReason, Timestamp
+        u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp
     ) {
-        "SELECT to_changeset_id, reason, timestamp
+        "SELECT id, to_changeset_id, reason, timestamp
          FROM bookmarks_update_log
          WHERE repo_id = {repo_id}
            AND name = {name}
@@ -200,9 +200,9 @@ queries! {
       }
 
     read SelectBookmarkLogsWithOffset(repo_id: RepositoryId, name: BookmarkName, max_records: u32, offset: u32) -> (
-        Option<ChangesetId>, BookmarkUpdateReason, Timestamp
+        u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp
     ) {
-        "SELECT to_changeset_id, reason, timestamp
+        "SELECT id, to_changeset_id, reason, timestamp
          FROM bookmarks_update_log
          WHERE repo_id = {repo_id}
            AND name = {name}
@@ -372,7 +372,8 @@ impl BookmarkUpdateLog for SqlBookmarks {
         max_rec: u32,
         offset: Option<u32>,
         freshness: Freshness,
-    ) -> BoxStream<'static, Result<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp)>> {
+    ) -> BoxStream<'static, Result<(u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp)>>
+    {
         let connection = if freshness == Freshness::MostRecent {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);

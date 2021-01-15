@@ -50,7 +50,7 @@ blobimport, succeeding, creates directory if not existing
 
 check the bookmark is there after import
   $ mononoke_admin --with-readonly-storage=true bookmarks log master_bookmark 2>&1 | grep master_bookmark
-  (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
+  * (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
 
 blobimport --no-create after successful import, should be fine as storage shared with previous good run
   $ blobimport --log repo-hg/.hg repo --no-create

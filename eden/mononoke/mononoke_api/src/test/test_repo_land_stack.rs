@@ -26,7 +26,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
         &blob_repo,
         r##"
             A-B-C-G
-             \ \ 
+             \ \
               \ F
                D-E
         "##,
@@ -123,7 +123,7 @@ async fn land_stack(fb: FacebookInit) -> Result<()> {
             None,
             Freshness::MostRecent,
         )
-        .map_ok(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
+        .map_ok(|(_id, cs, rs, _ts)| (cs, rs))
         .try_collect::<Vec<_>>()
         .await?;
     assert_eq!(

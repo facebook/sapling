@@ -285,7 +285,7 @@ impl BlobRepo {
         max_rec: u32,
         offset: Option<u32>,
         freshness: Freshness,
-    ) -> impl Stream<Item = Result<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error>>
+    ) -> impl Stream<Item = Result<(u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error>>
     {
         self.attribute_expected::<dyn BookmarkUpdateLog>()
             .list_bookmark_log_entries(ctx.clone(), name, max_rec, offset, freshness)

@@ -358,7 +358,7 @@ pub async fn find_all_underived_and_latest_derived(
 
         let log_entries_fetched = log_entries.len();
         let mut maybe_derived = stream::iter(log_entries.into_iter().map(
-            |(maybe_cs_id, _, ts)| async move {
+            |(_, maybe_cs_id, _, ts)| async move {
                 match maybe_cs_id {
                     Some(cs_id) => {
                         let derived = is_warm(ctx, repo, &cs_id, warmers).await;

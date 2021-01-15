@@ -69,7 +69,7 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
         max_rec: u32,
         offset: Option<u32>,
         freshness: Freshness,
-    ) -> BoxStream<'static, Result<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp)>>;
+    ) -> BoxStream<'static, Result<(u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp)>>;
 
     /// Count the number of BookmarkUpdateLog entries with id greater than the given value,
     /// possibly excluding a given reason.

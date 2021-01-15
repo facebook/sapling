@@ -44,8 +44,8 @@ Check bookmark history
 
   $ mononoke_admin bookmarks log -c hg master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
-  (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
+  * (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
+  * (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
 
 Export the bundle so we can replay it as it if were coming from hg, through the $BUNDLE_HELPER
 
@@ -87,8 +87,8 @@ Check history again. We're back to where we were:
 
   $ mononoke_admin bookmarks log -c hg master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
-  (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
+  * (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
+  * (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
 
   $ format_single_scuba_sample < $TESTTMP/scuba.json
   {

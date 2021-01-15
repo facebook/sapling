@@ -189,7 +189,7 @@ async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
             )
             .map_ok({
                 cloned!(ctx, repo);
-                move |(cs_id, rs, ts)| {
+                move |(entry_id, cs_id, rs, ts)| {
                     cloned!(ctx, repo);
                     async move {
                         match cs_id {
@@ -197,16 +197,16 @@ async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
                                 let cs = repo
                                     .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
                                     .await?;
-                                Ok((Some(cs), rs, ts))
+                                Ok((entry_id, Some(cs), rs, ts))
                             }
-                            None => Ok((None, rs, ts)),
+                            None => Ok((entry_id, None, rs, ts)),
                         }
                     }
                 }
             })
             .try_buffer_unordered(100)
             .map_ok(move |rows| {
-                let (cs_id, reason, timestamp) = rows;
+                let (entry_id, cs_id, reason, timestamp) = rows;
                 let cs_id_str = match cs_id {
                     None => String::new(),
                     Some(x) => x.to_string(),
@@ -218,7 +218,7 @@ async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
                     timestamp,
                     "hg",
                     bookmark.clone(),
-                    None,
+                    Some(entry_id),
                 );
                 println!("{}", output);
             })
@@ -234,7 +234,7 @@ async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
                 Freshness::MostRecent,
             )
             .map_ok(move |rows| {
-                let (cs_id, reason, timestamp) = rows;
+                let (entry_id, cs_id, reason, timestamp) = rows;
                 let cs_id_str = match cs_id {
                     None => String::new(),
                     Some(x) => x.to_string(),
@@ -246,7 +246,7 @@ async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
                     timestamp,
                     "bonsai",
                     bookmark.clone(),
-                    None,
+                    Some(entry_id),
                 );
                 println!("{}", output);
             })

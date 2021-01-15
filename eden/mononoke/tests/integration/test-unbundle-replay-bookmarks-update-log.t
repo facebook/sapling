@@ -18,8 +18,8 @@ Check bookmark history
 
   $ mononoke_admin bookmarks log -c bonsai master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  (master_bookmark) 2a82f3ca034e35c9d8a658c3d2d350d1d34399a9ef7854cda859b491e8723096 pushrebase * (glob)
-  (master_bookmark) c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd blobimport * (glob)
+  * (master_bookmark) 2a82f3ca034e35c9d8a658c3d2d350d1d34399a9ef7854cda859b491e8723096 pushrebase * (glob)
+  * (master_bookmark) c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd blobimport * (glob)
 
 Replay the push. It will fail since the bookmark is in the wrong position
 
@@ -44,10 +44,10 @@ Check history again. We're back to where we were:
 
   $ mononoke_admin bookmarks log -c bonsai master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  (master_bookmark) 2a82f3ca034e35c9d8a658c3d2d350d1d34399a9ef7854cda859b491e8723096 pushrebase * (glob)
-  (master_bookmark) c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd manualmove * (glob)
-  (master_bookmark) 2a82f3ca034e35c9d8a658c3d2d350d1d34399a9ef7854cda859b491e8723096 pushrebase * (glob)
-  (master_bookmark) c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd blobimport * (glob)
+  * (master_bookmark) 2a82f3ca034e35c9d8a658c3d2d350d1d34399a9ef7854cda859b491e8723096 pushrebase * (glob)
+  * (master_bookmark) c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd manualmove * (glob)
+  * (master_bookmark) 2a82f3ca034e35c9d8a658c3d2d350d1d34399a9ef7854cda859b491e8723096 pushrebase * (glob)
+  * (master_bookmark) c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd blobimport * (glob)
 
 Check that we did derive fielnodes
 
