@@ -5,11 +5,98 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::{bail, Error};
 use failure_ext::SlogKVErrorKey;
-use slog::{self, Drain, OwnedKVList, Record, Serializer, KV};
+use slog::{self, Drain, Never, OwnedKVList, Record, Serializer, KV};
 use slog_term::Decorator;
+use std::collections::HashSet;
 use std::str::FromStr;
 use std::{fmt, io};
+
+// Allow us to switch drain types without runtime check
+enum EitherDrain<L, R> {
+    Left(L),
+    Right(R),
+}
+
+impl<O, E, L: Drain<Ok = O, Err = E>, R: Drain<Ok = O, Err = E>> Drain for EitherDrain<L, R> {
+    type Ok = O;
+    type Err = E;
+
+    fn log(&self, record: &Record, values: &OwnedKVList) -> Result<Self::Ok, Self::Err> {
+        match self {
+            EitherDrain::Left(d) => d.log(record, values),
+            EitherDrain::Right(d) => d.log(record, values),
+        }
+    }
+}
+
+// Filter in or out log messages based on the slog::Record::tag() (which in turn is mapped from Log::Record::target())
+struct TagFilterDrain<D> {
+    inner: D,
+    include_tags: HashSet<String>,
+    exclude_tags: HashSet<String>,
+    pass_untagged: bool,
+}
+
+impl<D> TagFilterDrain<D> {
+    fn should_log(&self, tag: &str) -> bool {
+        if tag.is_empty() {
+            return self.pass_untagged;
+        }
+        if self.exclude_tags.contains(tag) {
+            return false;
+        }
+        if self.include_tags.is_empty() {
+            return true;
+        }
+        self.include_tags.contains(tag)
+    }
+}
+
+impl<D: Drain<Ok = (), Err = Never>> Drain for TagFilterDrain<D> {
+    type Ok = ();
+    type Err = Never;
+
+    fn log(&self, record: &Record, values: &OwnedKVList) -> Result<Self::Ok, Self::Err> {
+        if self.should_log(record.tag()) {
+            self.inner.log(record, values)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+pub fn make_tag_filter_drain<'a, D>(
+    inner: D,
+    include_tags: HashSet<String>,
+    exclude_tags: HashSet<String>,
+    pass_untagged: bool,
+) -> Result<impl Drain<Ok = (), Err = Never> + 'a, Error>
+where
+    D: Drain<Ok = (), Err = Never> + 'a,
+{
+    if include_tags.is_empty() && exclude_tags.is_empty() {
+        Ok(EitherDrain::Left(inner))
+    } else {
+        let intersection = include_tags
+            .intersection(&exclude_tags)
+            .collect::<HashSet<_>>();
+        if !intersection.is_empty() {
+            bail!(
+                "Following tags are in both the include and exclude sets: {:?}",
+                intersection
+            );
+        } else {
+            Ok(EitherDrain::Right(TagFilterDrain {
+                inner,
+                include_tags,
+                exclude_tags,
+                pass_untagged,
+            }))
+        }
+    }
+}
 
 /// Drain that only prints the message and newline plus error if present, nothing more
 pub struct SimpleFormatWithError<D: Decorator> {

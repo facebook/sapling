@@ -48,6 +48,7 @@ use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAction};
 use mononoke_types::RepositoryId;
 use observability::{DynamicLevelDrain, ObservabilityContext};
+use slog_ext::make_tag_filter_drain;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::{MysqlConnectionType, MysqlOptions, PoolConfig, SharedConnectionPool};
 use tunables::init_tunables_worker;
@@ -100,6 +101,8 @@ const READONLY_STORAGE_NEW_ARG: &str = "with-readonly-storage";
 
 const TEST_INSTANCE_ARG: &str = "test-instance";
 
+const LOG_INCLUDE_TAG: &str = "log-include-tag";
+const LOG_EXCLUDE_TAG: &str = "log-exclude-tag";
 // Argument, responsible for instantiation of `ObservabilityContext::Dynamic`
 const WITH_DYNAMIC_OBSERVABILITY: &str = "with-dynamic-observability";
 
@@ -695,6 +698,24 @@ fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .conflicts_with("debug"),
     )
     .arg(
+        Arg::with_name(LOG_INCLUDE_TAG)
+            .long(LOG_INCLUDE_TAG)
+            .short("l")
+            .help("include only log messages with these slog::Record::tags()/log::Record::targets")
+            .takes_value(true)
+            .multiple(true)
+            .number_of_values(1),
+    )
+    .arg(
+        Arg::with_name(LOG_EXCLUDE_TAG)
+            .long(LOG_EXCLUDE_TAG)
+            .short("L")
+            .help("exclude log messages with these slog::Record::tags()/log::Record::targets")
+            .takes_value(true)
+            .multiple(true)
+            .number_of_values(1),
+    )
+    .arg(
         Arg::with_name(WITH_DYNAMIC_OBSERVABILITY)
             .long(WITH_DYNAMIC_OBSERVABILITY)
             .help(
@@ -739,7 +760,19 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Resu
 
     let stdlog_env = "RUST_LOG";
 
-    let glog_drain = Arc::new(glog_drain());
+    let glog_drain = make_tag_filter_drain(
+        glog_drain(),
+        matches
+            .values_of(LOG_INCLUDE_TAG)
+            .map(|v| v.map(|v| v.to_string()).collect())
+            .unwrap_or_default(),
+        matches
+            .values_of(LOG_EXCLUDE_TAG)
+            .map(|v| v.map(|v| v.to_string()).collect())
+            .unwrap_or_default(),
+        true, // Log messages which have no tags
+    )?;
+
     let root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> = match matches
         .value_of("logview-category")
     {
@@ -760,10 +793,10 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) -> Resu
                 )
             }
         }
-        None => Arc::new(glog_drain.ignore_res()),
+        None => Arc::new(glog_drain),
     };
 
-    // NOTE: We pass an unfitlered Logger to init_stdlog_once. That's because we do the filtering
+    // NOTE: We pass an unfiltered Logger to init_stdlog_once. That's because we do the filtering
     // at the stdlog level there.
     let stdlog_level =
         log::init_stdlog_once(Logger::root(root_log_drain.clone(), o![]), stdlog_env);
