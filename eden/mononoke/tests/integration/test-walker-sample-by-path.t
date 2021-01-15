@@ -25,7 +25,6 @@ check blobstore numbers, walk will do some more steps for mappings
 
 Full edge base case, sample all in one go.  We are excluding BonsaiHgMapping from sampling as it has no blobstore form, was being creditted with its filenode lookups
   $ mononoke_walker compression-benefit -q --bookmark master_bookmark --sample-rate 1 --exclude-sample-node-type BonsaiHgMapping -I deep 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
@@ -34,7 +33,6 @@ Full edge base case, sample all in one go.  We are excluding BonsaiHgMapping fro
 
 Reduced edge base case, sample all in one go.  We are excluding several edges from the usual deep walk to force path tracking to work harder
   $ mononoke_walker compression-benefit -q --bookmark master_bookmark --sample-rate 1 --exclude-sample-node-type BonsaiHgMapping -I deep -X ChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
@@ -43,19 +41,16 @@ Reduced edge base case, sample all in one go.  We are excluding several edges fr
 
 Three separate cycles allowing all edges, total bytes should be the same as full edge base case
   $ for i in {0..2}; do mononoke_walker compression-benefit -q --bookmark master_bookmark -I deep --sample-rate=3 --exclude-sample-node-type BonsaiHgMapping --sample-offset=$i 2>&1; done | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
   * Run */s,*/s,1045,1016,2%,*s; * (glob)
   Walked/s,* (glob)
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
   * Run */s,*/s,364,364,0%,*s;* (glob)
   Walked/s,* (glob)
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
@@ -64,19 +59,16 @@ Three separate cycles allowing all edges, total bytes should be the same as full
 
 Reduced edge three separate cycles moving offset each time, total in each cycle should be the same as above.
   $ for i in {0..2}; do mononoke_walker compression-benefit -q --bookmark master_bookmark -I deep -X ChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent --sample-rate=3 --exclude-sample-node-type BonsaiHgMapping --sample-offset=$i 2>&1; done | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
   * Run */s,*/s,1045,1016,2%,*s; * (glob)
   Walked/s,* (glob)
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
   * Run */s,*/s,364,364,0%,*s;* (glob)
   Walked/s,* (glob)
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)

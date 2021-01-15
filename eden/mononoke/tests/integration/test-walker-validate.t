@@ -19,7 +19,6 @@ setup configuration
 
 validate, expecting all valid
   $ mononoke_walker validate -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Performing check types [HgLinkNodePopulated]
@@ -30,7 +29,6 @@ validate, expecting all valid
 
 validate, check route is logged on unexpected error (forced with chaos blob)
   $ mononoke_walker --blobstore-read-chaos-rate=1 --cachelib-only-blobstore validate -I deep -q --bookmark master_bookmark --scuba-log-file scuba-error.json 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Performing check types [HgLinkNodePopulated]
@@ -55,7 +53,6 @@ Remove all filenodes
 
 validate, expecting validation fails
   $ mononoke_walker validate -I deep -q --bookmark master_bookmark --scuba-log-file scuba.json 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Performing check types [HgLinkNodePopulated]
@@ -75,7 +72,6 @@ repair by blobimport.
 
 validate, expecting all valid, this time checking marker types as well
   $ mononoke_walker validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
@@ -88,7 +84,6 @@ Remove the phase information, linknodes already point to them
 
 validate, expect no failures on phase info, as the commits are still public, just not marked as so in the phases table
   $ mononoke_walker validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
@@ -100,7 +95,6 @@ Remove all filenodes for the last commit, validation should succeed (i.e. fileno
   $ cd "$TESTTMP"
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where HEX(linknode) like '26805aba1e600a82e93661149f2313866a221a7b'";
   $ mononoke_walker validate -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Performing check types [HgLinkNodePopulated]

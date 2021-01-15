@@ -32,7 +32,6 @@ Drain the healer queue
 
 Base case, check can walk fine, one repo
   $ mononoke_walker scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (40, 40)
@@ -52,8 +51,6 @@ Check that multi repo runs for all repos specified
   Walking node types *, repo: repo (glob)
   Walking node types *, repo: repo2 (glob)
   Walking repos ["repo", "repo2"]
-  Walking roots *, repo: repo (glob)
-  Walking roots *, repo: repo2 (glob)
 
 Delete all data from one side of the multiplex
   $ ls blobstore/0/blobs/* | wc -l
@@ -62,7 +59,6 @@ Delete all data from one side of the multiplex
 
 Check fails on only the deleted side
   $ mononoke_walker scrub --inner-blobstore-id=0 -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Execution error: Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false })* (glob)
@@ -73,7 +69,6 @@ Check fails on only the deleted side
 
 Check can walk fine on the only remaining side
   $ mononoke_walker scrub --inner-blobstore-id=1 -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (40, 40)
@@ -82,7 +77,6 @@ Check can walk fine on the only remaining side
 
 Check can walk fine on the multiplex remaining side
   $ mononoke_walker scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (40, 40)
@@ -91,7 +85,6 @@ Check can walk fine on the multiplex remaining side
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly mode, should log the scrub repairs needed
   $ mononoke_walker scrub --scrub-blobstore-action=ReportOnly -I deep -q --bookmark master_bookmark --scuba-log-file scuba-reportonly.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
-  1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
   * scrub: blobstore_id BlobstoreId(0) not repaired for repo0000. (glob)
@@ -134,7 +127,6 @@ Note - we might get duplicate reports, we just expect that there should not be a
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode, should also log the scrub repairs done
   $ mononoke_walker scrub --scrub-blobstore-action=Repair -I deep -q --bookmark master_bookmark --scuba-log-file scuba-repair.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
-  1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
@@ -177,7 +169,6 @@ Note - we might get duplicate repairs, we just expect that there should not be a
 
 Check that all is repaired by running on only the deleted side
   $ mononoke_walker scrub --inner-blobstore-id=0 -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (40, 40)

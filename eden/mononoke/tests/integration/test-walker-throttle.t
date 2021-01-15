@@ -22,7 +22,6 @@ Drain the healer queue
 
 Base case, check can walk fine
   $ mononoke_walker scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (40, 40)
@@ -32,7 +31,6 @@ Base case, check can walk fine
 Check reads throttle
   $ START_SECS=$(/bin/date "+%s")
   $ mononoke_walker --blobstore-read-qps=5 scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (40, 40)
@@ -51,7 +49,6 @@ Delete all data from one side of the multiplex
 Check writes throttle in Repair mode
   $ START_SECS=$(/bin/date "+%s")
   $ mononoke_walker --blobstore-write-qps=5 scrub --scrub-blobstore-action=Repair -I deep -q --bookmark master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
-  1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)

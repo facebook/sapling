@@ -1132,8 +1132,6 @@ async fn setup_repo<'a>(
     scuba_builder.add(REPO, resolved.name.clone());
 
     // Only walk derived node types that the repo is configured to contain
-    info!(logger, "Walking roots {:?} ", walk_roots);
-    // Only walk derived node types that the repo is configured to contain
     include_node_types.retain(|t| {
         if let Some(t) = t.derived_data_name() {
             resolved.config.derived_data_config.is_enabled(t)

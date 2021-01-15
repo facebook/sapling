@@ -25,7 +25,6 @@ check blobstore numbers, walk will do some more steps for mappings
 
 Base case, sample all in one go. Expeding WALKABLEBLOBCOUNT keys plus mappings and root.
   $ mononoke_walker scrub -q --bookmark master_bookmark --sample-rate 1 -I deep 2>&1 | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
@@ -34,19 +33,16 @@ Base case, sample all in one go. Expeding WALKABLEBLOBCOUNT keys plus mappings a
 
 Three separate cycles moving offset each time, should result in scrubing same total of bytes (728+857+583=2168) and keys (10+14+6=30)
   $ for i in {0..2}; do mononoke_walker scrub -q --bookmark master_bookmark -I deep --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
   * Run */s,*/s,728,10,*s; Type:Raw,Compressed AliasContentMapping:74,2 BonsaiHgMapping:101,1 Bookmark:0,0 Changeset:104,1 FileContent:4,1 FileContentMetadata:117,1 HgBonsaiMapping:0,0 HgChangeset:202,2 HgChangesetViaBonsai:0,0 HgFileEnvelope:126,2 HgFileNode:0,0 HgManifest:0,0* (glob)
   Walked/s,* (glob)
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
   * Run */s,*/s,857,14,*s; Type:Raw,Compressed AliasContentMapping:222,6 BonsaiHgMapping:79,1 Bookmark:0,0 Changeset:69,1 FileContent:8,2 FileContentMetadata:234,2 HgBonsaiMapping:0,0 HgChangeset:0,0 HgChangesetViaBonsai:0,0 HgFileEnvelope:0,0 HgFileNode:0,0 HgManifest:245,2* (glob)
   Walked/s,* (glob)
-  Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
