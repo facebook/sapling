@@ -21,6 +21,7 @@ mod blobstore;
 mod corpus;
 #[macro_use]
 mod graph;
+mod log;
 mod parse_node;
 mod progress;
 mod sampling;

@@ -13,6 +13,7 @@
 //  4. Add the method to the match/case in ValidatingVisitor::visit()
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType};
+use crate::log;
 use crate::progress::{
     progress_stream, report_state, sort_by_string, ProgressOptions, ProgressRecorder,
     ProgressRecorderUnprotected, ProgressReporter, ProgressReporterUnprotected, ProgressStateMutex,
@@ -474,6 +475,7 @@ impl ValidateProgressState {
             .join(" ");
         info!(
             self.logger,
+            #log::VALIDATE,
             "Nodes,Pass,Fail:{},{},{}; EdgesChecked:{}; CheckType:Pass,Fail Total:{},{} {}",
             self.checked_nodes,
             self.passed_nodes,
@@ -674,6 +676,7 @@ async fn run_one(
 ) -> Result<(), Error> {
     info!(
         repo_params.logger,
+        #log::VALIDATE,
         "Performing check types {:?}",
         sort_by_string(&command.include_check_types)
     );

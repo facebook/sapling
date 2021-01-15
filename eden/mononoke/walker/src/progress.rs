@@ -6,6 +6,7 @@
  */
 
 use crate::graph::{Node, NodeType};
+use crate::log;
 use crate::state::StepStats;
 use anyhow::Error;
 use cloned::cloned;
@@ -265,6 +266,7 @@ impl ProgressStateCountByType<StepStats, ProgressSummary> {
 
         info!(
             self.params.logger,
+            #log::GRAPH,
             "Walked/s,Children/s,Walked,Errors,Children,Time; Delta {:06}/s,{:06}/s,{},{},{},{}s; Run {:06}/s,{:06}/s,{},{},{},{}s; Type:Walked,Checks,Children {}",
             delta_summary_per_s.walked,
             delta_summary_per_s.queued,
@@ -447,7 +449,7 @@ where
         cloned!(ctx);
         move |stats| {
             stats.and_then(|stats| {
-                info!(ctx.logger(), "Final count: {:?}", stats);
+                info!(ctx.logger(), #log::LOADED, "Final count: {:?}", stats);
                 progress_state.report_progress();
                 Ok(())
             })

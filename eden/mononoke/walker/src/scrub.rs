@@ -6,6 +6,7 @@
  */
 
 use crate::graph::{FileContentData, Node, NodeData, NodeType};
+use crate::log;
 use crate::progress::{
     progress_stream, report_state, ProgressOptions, ProgressReporter, ProgressReporterUnprotected,
     ProgressStateCountByType, ProgressStateMutex,
@@ -273,6 +274,7 @@ impl ProgressStateCountByType<ScrubStats, ScrubStats> {
 
         info!(
             self.params.logger,
+            #log::SIZING,
             "Bytes/s,Keys/s,Bytes,Keys; Delta {:06}/s,{:06}/s,{},{}s; Run {:06}/s,{:06}/s,{},{}s; Type:Raw,Compressed {}",
             delta_summary_per_s.blobstore_bytes,
             delta_summary_per_s.blobstore_keys,

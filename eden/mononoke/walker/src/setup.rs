@@ -7,6 +7,7 @@
 
 use crate::blobstore;
 use crate::graph::{EdgeType, Node, NodeType};
+use crate::log;
 use crate::parse_node::parse_node;
 use crate::progress::{
     sort_by_string, ProgressOptions, ProgressStateCountByType, ProgressStateMutex, ProgressSummary,
@@ -1146,11 +1147,13 @@ async fn setup_repo<'a>(
         reachable_graph_elements(include_edge_types, include_node_types, &root_node_types);
     info!(
         logger,
+        #log::GRAPH,
         "Walking edge types {:?}",
         sort_by_string(&include_edge_types)
     );
     info!(
         logger,
+        #log::GRAPH,
         "Walking node types {:?}",
         sort_by_string(&include_node_types)
     );
