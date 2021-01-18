@@ -30,7 +30,7 @@ itertools = "0.8"
 rand = { version = "0.7", features = ["small_rng"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
-tokio = { version = "=0.2.13", features = ["full"] }
+tokio = { version = "=0.2.13", features = ["full", "test-util"] }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../blobrepo/factory" }

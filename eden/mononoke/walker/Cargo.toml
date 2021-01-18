@@ -69,4 +69,4 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 strum = "0.19"
 strum_macros = "0.19"
 thiserror = "1.0"
-tokio = { version = "=0.2.13", features = ["full"] }
+tokio = { version = "=0.2.13", features = ["full", "test-util"] }

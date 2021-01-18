@@ -38,7 +38,7 @@ clap = "2.33"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 ref-cast = "1.0.2"
 slog = { version = "2.5", features = ["max_level_debug"] }
-tokio = { version = "=0.2.13", features = ["full"] }
+tokio = { version = "=0.2.13", features = ["full", "test-util"] }
 
 [dev-dependencies]
 cross_repo_sync_test_utils = { path = "../cross_repo_sync/test_utils" }

@@ -23,7 +23,7 @@ async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 scopeguard = "1.0.0"
-tokio = { version = "=0.2.13", features = ["full"] }
+tokio = { version = "=0.2.13", features = ["full", "test-util"] }
 twox-hash = "1.5"
 
 [dev-dependencies]

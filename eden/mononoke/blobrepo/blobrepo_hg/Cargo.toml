@@ -32,5 +32,5 @@ stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch 
 anyhow = "1.0"
 async-trait = "0.1.29"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-tokio = { version = "=0.2.13", features = ["full"] }
+tokio = { version = "=0.2.13", features = ["full", "test-util"] }
 uuid = { version = "0.8.1", features = ["v4"] }
