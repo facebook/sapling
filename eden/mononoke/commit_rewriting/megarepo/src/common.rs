@@ -15,6 +15,8 @@ use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime,
 use slog::info;
 use std::collections::BTreeMap;
 
+use crate::chunking::Chunker;
+
 #[derive(Clone, Debug)]
 pub struct ChangesetArgs {
     pub author: String,
@@ -141,4 +143,47 @@ fn create_bonsai_changeset_only(
         file_changes,
     }
     .freeze()
+}
+
+pub async fn delete_files_in_chunks<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
+    parent_bcs_id: ChangesetId,
+    mpaths: Vec<MPath>,
+    chunker: Chunker<MPath>,
+    delete_commits_changeset_args_factory: impl ChangesetArgsFactory,
+    skip_last_chunk: bool,
+) -> Result<Vec<ChangesetId>, Error> {
+    info!(ctx.logger(), "Chunking mpaths");
+    let mpath_chunks: Vec<Vec<MPath>> = chunker(mpaths);
+    info!(ctx.logger(), "Done chunking working copy contents");
+
+    let mut delete_commits: Vec<ChangesetId> = Vec::new();
+    let mut parent = parent_bcs_id;
+    let chunk_num = mpath_chunks.len();
+    for (i, mpath_chunk) in mpath_chunks.into_iter().enumerate() {
+        if i == chunk_num - 1 && skip_last_chunk {
+            break;
+        }
+
+        let changeset_args = delete_commits_changeset_args_factory(StackPosition(i));
+        let file_changes: BTreeMap<MPath, _> =
+            mpath_chunk.into_iter().map(|mp| (mp, None)).collect();
+        info!(
+            ctx.logger(),
+            "Creating delete commit #{} with {:?} (deleting {} files)",
+            i,
+            changeset_args,
+            file_changes.len()
+        );
+        let delete_cs_id =
+            create_and_save_bonsai(ctx, repo, vec![parent], file_changes, changeset_args).await?;
+        info!(ctx.logger(), "Done creating delete commit #{}", i);
+        delete_commits.push(delete_cs_id);
+
+        // move one step forward
+        parent = delete_cs_id;
+    }
+
+    Ok(delete_commits)
 }
