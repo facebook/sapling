@@ -26,9 +26,3 @@ pub use crate::sql::{make_metadata_sql_factory, MetadataSqlFactory};
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct ReadOnlyStorage(pub bool);
-
-#[derive(Copy, Clone, PartialEq)]
-pub enum Scrubbing {
-    Enabled,
-    Disabled,
-}

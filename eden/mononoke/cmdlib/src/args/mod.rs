@@ -41,11 +41,11 @@ use std::panic::{RefUnwindSafe, UnwindSafe};
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, Caching, ReadOnlyStorage};
 use blobstore_factory::{
-    BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, PackOptions, PutBehaviour, Scrubbing,
+    BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, PackOptions, PutBehaviour,
     ThrottleOptions, DEFAULT_PUT_BEHAVIOUR,
 };
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
-use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAction};
+use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig};
 use mononoke_types::RepositoryId;
 use observability::{DynamicLevelDrain, ObservabilityContext};
 use slog_ext::make_tag_filter_drain;
@@ -1050,7 +1050,6 @@ pub fn create_repo<'a>(
         matches,
         true,
         parse_caching(matches.as_ref()),
-        Scrubbing::Disabled,
         None,
     )
 }
@@ -1069,7 +1068,6 @@ pub fn create_repo_unredacted<'a>(
         matches,
         true,
         parse_caching(matches.as_ref()),
-        Scrubbing::Disabled,
         Some(Redaction::Disabled),
     )
 }
@@ -1087,7 +1085,6 @@ pub fn open_repo<'a>(
         matches,
         false,
         parse_caching(matches.as_ref()),
-        Scrubbing::Disabled,
         None,
     )
 }
@@ -1106,7 +1103,6 @@ pub fn open_repo_unredacted<'a>(
         matches,
         false,
         parse_caching(matches.as_ref()),
-        Scrubbing::Disabled,
         Some(Redaction::Disabled),
     )
 }
@@ -1446,7 +1442,6 @@ async fn open_repo_internal(
     matches: &MononokeMatches<'_>,
     create: bool,
     caching: Caching,
-    scrub: Scrubbing,
     redaction_override: Option<Redaction>,
 ) -> Result<BlobRepo, Error> {
     let config_store = init_config_store(fb, logger, matches)?;
@@ -1458,7 +1453,6 @@ async fn open_repo_internal(
         matches,
         create,
         caching,
-        scrub,
         redaction_override,
     )
     .await
@@ -1471,22 +1465,11 @@ async fn open_repo_internal_with_repo_id(
     matches: &MononokeMatches<'_>,
     create: bool,
     caching: Caching,
-    scrub: Scrubbing,
     redaction_override: Option<Redaction>,
 ) -> Result<BlobRepo, Error> {
     let config_store = init_config_store(fb, logger, matches)?;
     let common_config = load_common_config(config_store, &matches)?;
-
-    let (reponame, config) = {
-        let (reponame, mut config) = get_config_by_repoid(config_store, matches, repo_id)?;
-        if let Scrubbing::Enabled = scrub {
-            config
-                .storage_config
-                .blobstore
-                .set_scrubbed(ScrubAction::ReportOnly);
-        }
-        (reponame, config)
-    };
+    let (reponame, config) = get_config_by_repoid(config_store, matches, repo_id)?;
     info!(logger, "using repo \"{}\" repoid {:?}", reponame, repo_id);
     match &config.storage_config.blobstore {
         BlobConfig::Files { path } | BlobConfig::Sqlite { path } => {
@@ -1536,7 +1519,6 @@ pub async fn open_repo_with_repo_id<'a>(
         matches,
         false,
         parse_caching(matches.as_ref()),
-        Scrubbing::Disabled,
         None,
     )
     .await
