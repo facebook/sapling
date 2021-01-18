@@ -35,6 +35,7 @@ pub const EVEN_CHUNK_SIZE: &str = "even-chunk-size";
 pub const FIRST_PARENT: &str = "first-parent";
 pub const GRADUAL_MERGE_PROGRESS: &str = "gradual-merge-progress";
 pub const GRADUAL_MERGE: &str = "gradual-merge";
+pub const GRADUAL_DELETE: &str = "gradual-delete";
 pub const HEAD_BOOKMARK: &str = "head-bookmark";
 pub const INPUT_FILE: &str = "input-file";
 pub const LAST_DELETION_COMMIT: &str = "last-deletion-commit";
@@ -267,7 +268,7 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         );
 
     let pre_merge_delete_subcommand = SubCommand::with_name(PRE_MERGE_DELETE)
-        .about("create a set of pre-merge delete commtis, as well as commits to merge into the target branch")
+        .about("create a set of pre-merge delete commits (which remove all of the files in working copy)")
         .arg(
             Arg::with_name(COMMIT_HASH)
                 .help("commit from which to start deletion")
@@ -297,6 +298,33 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .takes_value(true)
                 .required(false)
         );
+
+    // PLease don't move `add_light_resulting_commit_args` to be applied
+    // after `PATH` arg is added, as in that case `PATH` won't be the last
+    // positional argument
+    let gradual_delete_subcommand =
+        add_light_resulting_commit_args(SubCommand::with_name(GRADUAL_DELETE))
+            .about("create a set of delete commits for given paths")
+            .arg(
+                Arg::with_name(COMMIT_HASH)
+                    .help("commit from which to start deletion")
+                    .takes_value(true)
+                    .required(true),
+            )
+            .arg(
+                Arg::with_name(EVEN_CHUNK_SIZE)
+                    .help("chunk size for even chunking")
+                    .long(EVEN_CHUNK_SIZE)
+                    .takes_value(true)
+                    .required(true),
+            )
+            .arg(
+                Arg::with_name(PATH)
+                    .help("paths to delete")
+                    .takes_value(true)
+                    .required(true)
+                    .multiple(true),
+            );
 
     let bonsai_merge_subcommand = SubCommand::with_name(BONSAI_MERGE)
         .about("create a bonsai merge commit")
@@ -588,6 +616,7 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(add_light_resulting_commit_args(bonsai_merge_subcommand))
         .subcommand(add_light_resulting_commit_args(gradual_merge_subcommand))
         .subcommand(gradual_merge_progress_subcommand)
+        .subcommand(gradual_delete_subcommand)
         .subcommand(manual_commit_sync_subcommand)
         .subcommand(add_light_resulting_commit_args(
             catchup_delete_head_subcommand,

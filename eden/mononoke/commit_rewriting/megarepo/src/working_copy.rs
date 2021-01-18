@@ -76,3 +76,20 @@ pub async fn get_changed_working_copy_paths(
     paths.sort();
     Ok(paths)
 }
+
+pub async fn get_working_copy_paths_by_prefixes(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bcs_id: ChangesetId,
+    prefixes: impl IntoIterator<Item = MPath>,
+) -> Result<Vec<MPath>, Error> {
+    let unode_id = RootUnodeManifestId::derive(ctx, repo, bcs_id).await?;
+    let mut paths = unode_id
+        .manifest_unode_id()
+        .list_leaf_entries_under(ctx.clone(), repo.get_blobstore(), prefixes)
+        .map_ok(|(mpath, _)| mpath)
+        .try_collect::<Vec<MPath>>()
+        .await?;
+    paths.sort();
+    Ok(paths)
+}

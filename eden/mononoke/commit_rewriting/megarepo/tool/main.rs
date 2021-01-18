@@ -68,19 +68,20 @@ use crate::cli::{
     BACKFILL_NOOP_MAPPING, BASE_COMMIT_HASH, BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2,
     CATCHUP_DELETE_HEAD, CATCHUP_VALIDATE_COMMAND, CHANGESET, CHECK_PUSH_REDIRECTION_PREREQS,
     CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DELETION_CHUNK_SIZE, DRY_RUN,
-    EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK,
-    INPUT_FILE, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC, MAPPING_VERSION_NAME,
-    MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PARENTS, PATH,
-    PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER, SECOND_PARENT, SOURCE_CHANGESET,
-    SYNC_COMMIT_AND_ANCESTORS, SYNC_DIAMOND_MERGE, TARGET_CHANGESET, TO_MERGE_CS_ID, VERSION,
-    WAIT_SECS,
+    EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_DELETE, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS,
+    HEAD_BOOKMARK, INPUT_FILE, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC,
+    MAPPING_VERSION_NAME, MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE,
+    ORIGIN_REPO, PARENTS, PATH, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER,
+    SECOND_PARENT, SOURCE_CHANGESET, SYNC_COMMIT_AND_ANCESTORS, SYNC_DIAMOND_MERGE,
+    TARGET_CHANGESET, TO_MERGE_CS_ID, VERSION, WAIT_SECS,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
-    even_chunker_with_max_size, parse_chunking_hint, path_chunker_from_hint,
+    even_chunker_with_max_size, parse_chunking_hint, path_chunker_from_hint, Chunker,
 };
-use megarepolib::common::create_and_save_bonsai;
+use megarepolib::common::{create_and_save_bonsai, delete_files_in_chunks};
 use megarepolib::pre_merge_delete::{create_pre_merge_delete, PreMergeDelete};
+use megarepolib::working_copy::get_working_copy_paths_by_prefixes;
 use megarepolib::{common::StackPosition, perform_move, perform_stack_move};
 
 async fn run_move<'a>(
@@ -283,6 +284,66 @@ async fn run_pre_merge_delete<'a>(
         "Listing deletion commits in top-to-bottom order (first commit is a descendant of the last)"
     );
     delete_commits.reverse();
+    for delete_commit in delete_commits {
+        println!("{}", delete_commit);
+    }
+
+    Ok(())
+}
+
+async fn run_gradual_delete<'a>(
+    ctx: CoreContext,
+    matches: &MononokeMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
+
+    let delete_cs_args_factory = get_delete_commits_cs_args_factory(sub_m)?;
+
+    let chunker: Chunker<MPath> = {
+        let even_chunk_size: usize = sub_m
+            .value_of(EVEN_CHUNK_SIZE)
+            .ok_or_else(|| format_err!("{} is required", EVEN_CHUNK_SIZE))?
+            .parse::<usize>()?;
+        even_chunker_with_max_size(even_chunk_size)?
+    };
+
+    let parent_bcs_id = {
+        let hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
+        helpers::csid_resolve(ctx.clone(), repo.clone(), hash)
+            .compat()
+            .await?
+    };
+
+    let path_prefixes: Vec<_> = sub_m
+        .values_of(PATH)
+        .unwrap()
+        .map(MPath::new)
+        .collect::<Result<Vec<_>, Error>>()?;
+    info!(
+        ctx.logger(),
+        "Gathering working copy files under {:?}", path_prefixes
+    );
+    let paths =
+        get_working_copy_paths_by_prefixes(&ctx, &repo, parent_bcs_id, path_prefixes).await?;
+    info!(ctx.logger(), "{} paths to be deleted", paths.len());
+
+    info!(ctx.logger(), "Starting deletion");
+    let delete_commits = delete_files_in_chunks(
+        &ctx,
+        &repo,
+        parent_bcs_id,
+        paths,
+        chunker,
+        delete_cs_args_factory,
+        false, /* skip_last_chunk */
+    )
+    .await?;
+    info!(ctx.logger(), "Deletion finished");
+    info!(
+        ctx.logger(),
+        "Listing commits in an ancestor-descendant order"
+    );
     for delete_commit in delete_commits {
         println!("{}", delete_commit);
     }
@@ -960,6 +1021,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             (CATCHUP_VALIDATE_COMMAND, Some(sub_m)) => {
                 run_catchup_validate(ctx, &matches, sub_m).await
             }
+            (GRADUAL_DELETE, Some(sub_m)) => run_gradual_delete(ctx, &matches, sub_m).await,
             (GRADUAL_MERGE, Some(sub_m)) => run_gradual_merge(ctx, &matches, sub_m).await,
             (GRADUAL_MERGE_PROGRESS, Some(sub_m)) => {
                 run_gradual_merge_progress(ctx, &matches, sub_m).await

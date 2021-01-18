@@ -238,6 +238,39 @@ where
             .boxed()
     }
 
+    fn list_leaf_entries_under(
+        &self,
+        ctx: CoreContext,
+        store: Store,
+        prefixes: impl IntoIterator<Item = MPath>,
+    ) -> BoxStream<
+        'static,
+        Result<
+            (
+                MPath,
+                <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId,
+            ),
+            Error,
+        >,
+    > {
+        self.find_entries(
+            ctx,
+            store,
+            prefixes
+                .into_iter()
+                .map(|pref| PathOrPrefix::Prefix(Some(pref))),
+        )
+        .filter_map(|result| {
+            let maybe_leaf = match result {
+                Ok((Some(path), Entry::Leaf(filenode_id))) => Some(Ok((path, filenode_id))),
+                Err(err) => Some(Err(err)),
+                _ => None,
+            };
+            future::ready(maybe_leaf)
+        })
+        .boxed()
+    }
+
     fn list_tree_entries(
         &self,
         ctx: CoreContext,
