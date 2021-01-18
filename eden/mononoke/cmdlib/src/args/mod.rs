@@ -1111,26 +1111,6 @@ pub fn open_repo_unredacted<'a>(
     )
 }
 
-/// Open an existing `BlobRepo` -- for local instances, expect contents to already be there.
-/// If there are multiple backing blobstores, open them in scrub mode, where we check that
-/// the blobstore contents all match.
-#[inline]
-pub async fn open_scrub_repo<'a>(
-    fb: FacebookInit,
-    logger: &'a Logger,
-    matches: &'a MononokeMatches<'a>,
-) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
-    open_repo_internal(
-        fb,
-        logger,
-        matches,
-        false,
-        parse_caching(matches.as_ref()),
-        Scrubbing::Enabled,
-        None,
-    )
-}
-
 fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name(MYSQL_MYROUTER_PORT)
