@@ -131,6 +131,7 @@ pub struct Generator {
     platform: Platform,
     domain: Domain,
     hostname: String,
+    pass_all_shards: bool,
 }
 
 impl Generator {
@@ -173,6 +174,8 @@ impl Generator {
             Domain::Corp
         };
 
+        let pass_all_shards = std::env::var("HG_TEST_PASS_ALL_SHARDS").is_ok();
+
         Ok(Generator {
             repo_path,
             tiers,
@@ -184,6 +187,7 @@ impl Generator {
             platform,
             domain,
             hostname,
+            pass_all_shards,
         })
     }
 
@@ -234,16 +238,28 @@ impl Generator {
 
     #[allow(dead_code)]
     pub(crate) fn in_shard(&self, shard: u8) -> bool {
+        if self.pass_all_shards {
+            return true;
+        }
+
         self.shard < shard
     }
 
     #[allow(dead_code)]
     pub(crate) fn in_user_shard(&self, shard: u8) -> bool {
+        if self.pass_all_shards {
+            return true;
+        }
+
         self.user_shard < shard
     }
 
     #[allow(dead_code)]
     pub(crate) fn in_timeshard(&self, range: Range<HgTime>) -> Result<bool> {
+        if self.pass_all_shards {
+            return Ok(true);
+        }
+
         let now = HgTime::now()
             .ok_or_else(|| anyhow!("invalid HgTime::now()"))?
             .to_utc();
