@@ -63,7 +63,11 @@ def loadforpath(path):
             # out where we are relative to the fbsource root.
             userconfig["_arcconfig_path"] = path
             return userconfig
-        path = os.path.dirname(path)
+        parent = os.path.dirname(path)
+        if parent == path:
+            # We have reached a root (e.g. "C:\\" on Windows).
+            break
+        path = parent
 
     raise ArcConfigError("no .arcconfig found")
 
