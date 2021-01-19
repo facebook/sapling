@@ -30,6 +30,7 @@ pub const COMMIT_DATE_RFC3339: &str = "commit-date-rfc3339";
 pub const COMMIT_HASH: &str = "commit-hash";
 pub const COMMIT_MESSAGE: &str = "commit-message";
 pub const DELETION_CHUNK_SIZE: &str = "deletion-chunk-size";
+pub const DIFF_MAPPING_VERSIONS: &str = "diff-mapping-versions";
 pub const DRY_RUN: &str = "dry-run";
 pub const EVEN_CHUNK_SIZE: &str = "even-chunk-size";
 pub const FIRST_PARENT: &str = "first-parent";
@@ -605,6 +606,18 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(true),
         );
 
+
+    let diff_mapping_versions = SubCommand::with_name(DIFF_MAPPING_VERSIONS)
+        .about("Show difference between two mapping versions.")
+        .arg(
+            Arg::with_name(MAPPING_VERSION_NAME)
+                .help("list of mapping versions")
+                .takes_value(true)
+                .multiple(true)
+                .required(true),
+        );
+
+
     args::MononokeAppBuilder::new("megarepo preparation tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
@@ -627,4 +640,5 @@ pub fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(run_mover_subcommand)
         .subcommand(backfill_noop_mapping)
         .subcommand(sync_commit_and_ancestors)
+        .subcommand(diff_mapping_versions)
 }

@@ -31,7 +31,7 @@ use futures::{
     future::{try_join, try_join3, try_join_all},
     Stream, StreamExt, TryStreamExt,
 };
-use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::RepoConfig;
 use metaconfig_types::{CommitSyncConfigVersion, MetadataDatabaseConfig};
 use mononoke_types::{MPath, RepositoryId};
@@ -67,8 +67,8 @@ use crate::cli::{
     get_delete_commits_cs_args_factory, get_gradual_merge_commits_cs_args_factory, setup_app,
     BACKFILL_NOOP_MAPPING, BASE_COMMIT_HASH, BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2,
     CATCHUP_DELETE_HEAD, CATCHUP_VALIDATE_COMMAND, CHANGESET, CHECK_PUSH_REDIRECTION_PREREQS,
-    CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DELETION_CHUNK_SIZE, DRY_RUN,
-    EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_DELETE, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS,
+    CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DELETION_CHUNK_SIZE, DIFF_MAPPING_VERSIONS,
+    DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_DELETE, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS,
     HEAD_BOOKMARK, INPUT_FILE, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC,
     MAPPING_VERSION_NAME, MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE,
     ORIGIN_REPO, PARENTS, PATH, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER,
@@ -79,6 +79,7 @@ use crate::merging::perform_merge;
 use megarepolib::chunking::{
     even_chunker_with_max_size, parse_chunking_hint, path_chunker_from_hint, Chunker,
 };
+use megarepolib::commit_sync_config_utils::diff_small_repo_commit_sync_configs;
 use megarepolib::common::{create_and_save_bonsai, delete_files_in_chunks};
 use megarepolib::pre_merge_delete::{create_pre_merge_delete, PreMergeDelete};
 use megarepolib::working_copy::get_working_copy_paths_by_prefixes;
@@ -839,6 +840,115 @@ async fn run_backfill_noop_mapping<'a>(
     Ok(())
 }
 
+async fn run_diff_mapping_versions<'a>(
+    ctx: CoreContext,
+    matches: &MononokeMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+    let source_repo_id = args::get_source_repo_id(&config_store, matches)?;
+    let target_repo_id = args::get_target_repo_id(&config_store, matches)?;
+
+    let mapping_version_names = sub_m
+        .values_of(MAPPING_VERSION_NAME)
+        .ok_or_else(|| format_err!("{} is supposed to be set", MAPPING_VERSION_NAME))?;
+
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+
+    let mut commit_sync_configs = vec![];
+    for version in mapping_version_names {
+        let version = CommitSyncConfigVersion(version.to_string());
+        let config =
+            live_commit_sync_config.get_commit_sync_config_by_version(target_repo_id, &version)?;
+        commit_sync_configs.push(config);
+    }
+
+    if commit_sync_configs.len() != 2 {
+        return Err(format_err!(
+            "{} should have exactly 2 values",
+            MAPPING_VERSION_NAME
+        ));
+    }
+
+    // Validate that both versions related to the same config.
+    let from = commit_sync_configs.remove(0);
+    let to = commit_sync_configs.remove(0);
+    if from.large_repo_id != to.large_repo_id {
+        return Err(format_err!(
+            "different large repo ids: {} vs {}",
+            from.large_repo_id,
+            to.large_repo_id
+        ));
+    }
+
+    let small_repo_id = if from.large_repo_id == target_repo_id {
+        source_repo_id
+    } else {
+        target_repo_id
+    };
+
+    if !from.small_repos.contains_key(&small_repo_id) {
+        return Err(format_err!(
+            "{} doesn't have small repo id {}",
+            from.version_name,
+            small_repo_id,
+        ));
+    }
+
+    if !to.small_repos.contains_key(&small_repo_id) {
+        return Err(format_err!(
+            "{} doesn't have small repo id {}",
+            to.version_name,
+            small_repo_id,
+        ));
+    }
+
+    let from_small_commit_sync_config = from
+        .small_repos
+        .get(&small_repo_id)
+        .cloned()
+        .ok_or_else(|| format_err!("{} not found in {}", small_repo_id, from.version_name))?;
+    let to_small_commit_sync_config = to
+        .small_repos
+        .get(&small_repo_id)
+        .cloned()
+        .ok_or_else(|| format_err!("{} not found in {}", small_repo_id, to.version_name))?;
+
+    let diff = diff_small_repo_commit_sync_configs(
+        from_small_commit_sync_config,
+        to_small_commit_sync_config,
+    );
+
+    if let Some((from, to)) = diff.default_action_change {
+        println!("default action change: {:?} to {:?}", from, to);
+    }
+
+    if let Some((from, to)) = diff.bookmark_prefix_change {
+        println!("bookmark prefix change: {} to {}", from, to);
+    }
+
+    let mut mapping_added = diff.mapping_added.into_iter().collect::<Vec<_>>();
+    mapping_added.sort();
+    for (path_from, path_to) in mapping_added {
+        println!("mapping added: {} => {}", path_from, path_to);
+    }
+
+    let mut mapping_changed = diff.mapping_changed.into_iter().collect::<Vec<_>>();
+    mapping_changed.sort();
+    for (path_from, (before, after)) in mapping_changed {
+        println!("mapping changed: {} => {} vs {}", path_from, before, after);
+    }
+
+    let mut mapping_removed = diff.mapping_removed.into_iter().collect::<Vec<_>>();
+    mapping_removed.sort();
+    for (path_from, path_to) in mapping_removed {
+        println!("mapping removed: {} => {}", path_from, path_to);
+    }
+
+    Ok(())
+}
+
 async fn process_stream_and_wait_for_replication<'a>(
     ctx: &CoreContext,
     matches: &MononokeMatches<'a>,
@@ -998,6 +1108,9 @@ fn main(fb: FacebookInit) -> Result<()> {
             (BONSAI_MERGE, Some(sub_m)) => run_bonsai_merge(ctx, &matches, sub_m).await,
             (CHECK_PUSH_REDIRECTION_PREREQS, Some(sub_m)) => {
                 run_check_push_redirection_prereqs(ctx, &matches, sub_m).await
+            }
+            (DIFF_MAPPING_VERSIONS, Some(sub_m)) => {
+                run_diff_mapping_versions(ctx, &matches, sub_m).await
             }
             (MANUAL_COMMIT_SYNC, Some(sub_m)) => run_manual_commit_sync(ctx, &matches, sub_m).await,
             (MARK_NOT_SYNCED_COMMAND, Some(sub_m)) => {
