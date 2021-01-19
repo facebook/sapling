@@ -42,7 +42,11 @@ pub fn parse_netspeedtest_http_params(
     }
 }
 
-pub async fn handle_http_netspeedtest<R, W>(rx: R, tx: W, params: NetSpeedTest) -> Result<()>
+pub async fn handle_http_netspeedtest<R, W>(
+    rx: &mut R,
+    tx: &mut W,
+    params: NetSpeedTest,
+) -> Result<()>
 where
     R: AsyncRead + Unpin,
     W: AsyncWrite + Unpin,
@@ -61,7 +65,7 @@ where
     Ok(())
 }
 
-async fn download<W>(mut tx: W, byte_count: u64) -> Result<()>
+async fn download<W>(mut tx: &mut W, byte_count: u64) -> Result<()>
 where
     W: AsyncWrite + Unpin,
 {
@@ -81,7 +85,7 @@ where
     Ok(())
 }
 
-async fn upload<R, W>(rx: R, mut tx: W, byte_count: u64) -> Result<()>
+async fn upload<R, W>(rx: &mut R, tx: &mut W, byte_count: u64) -> Result<()>
 where
     R: AsyncRead + Unpin,
     W: AsyncWrite + Unpin,
@@ -94,7 +98,8 @@ where
         let bytes_read = tokio::io::copy(&mut bounded_rx, &mut sink).await?;
         byte_count -= bytes_read as usize;
     }
-    tx.write_all(b"HTTP/1.1 204 No Content\r\n\r\n").await?;
+    tx.write_all(b"HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n")
+        .await?;
 
     Ok(())
 }

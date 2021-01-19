@@ -17,6 +17,7 @@ Check Download
 Check Upload
   $ sslcurl -i --request POST https:\/\/localhost:$MONONOKE_SOCKET/netspeedtest --data-binary @output 2>/dev/null | tr -d '\r'
   HTTP/1.1 204 No Content
+  Content-Length: 0
   
 
 Check Wrong Request
@@ -32,3 +33,11 @@ Check Invalid x-netspeedtest-nbytes header value
   Content-Length: 43
   
   netspeedtest: invalid digit found in string (no-eol)
+
+Check persistent http connection with GET
+  $ sslcurl -v --header "x-netspeedtest-nbytes: 1337" -f https:\/\/localhost:$MONONOKE_SOCKET/netspeedtest https:\/\/localhost:$MONONOKE_SOCKET/netspeedtest 2>&1 | grep -o "Re-using existing connection"
+  Re-using existing connection
+
+Check persistent http connection with POST
+  $ sslcurl --request POST -v -f https:\/\/localhost:$MONONOKE_SOCKET/netspeedtest https:\/\/localhost:$MONONOKE_SOCKET/netspeedtest --data-binary @output 2>&1 | grep -o "Re-using existing connection"
+  Re-using existing connection

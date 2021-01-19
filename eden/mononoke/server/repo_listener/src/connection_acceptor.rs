@@ -266,69 +266,79 @@ async fn server_mux(
     let buf_rx = std::io::Cursor::new(peek_buf).chain(BufReader::new(rx));
 
     let (reponame, maybe_metadata, client_debug, channels) = if is_http {
-        // Max 8KB of headers is in line with common HTTP servers
-        // https://www.tutorialspoint.com/What-is-the-maximum-size-of-HTTP-header-values
-        let mut limited_reader = buf_rx.take(8192);
-        match process_http_headers(&mut limited_reader).await {
-            Ok(HttpParse::IoStream(reponame, headers)) => {
-                let websocket_key = calculate_websocket_accept(&headers);
-                let maybe_http_metadata =
-                    match try_convert_headers_to_metadata(is_trusted, &headers).await {
-                        Ok(value) => value,
-                        Err(e) => {
-                            tx.write_all(b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
-                            return Err(e);
-                        }
-                    };
-                let mut res = create_http_header(
-                    "101 Mononoke Peer Upgrade",
-                    vec![
-                        ("Connection: Upgrade", "websocket"),
-                        ("Sec-WebSocket-Accept", &websocket_key),
-                    ],
-                );
-                res.push_str("\r\n");
-                tx.write_all(res.as_bytes()).await?;
-                let conn = FramedConn::setup(limited_reader.into_inner(), tx);
-                let channels = ChannelConn::setup(conn);
-                (
-                    reponame,
-                    maybe_http_metadata,
-                    headers.contains_key(HEADER_CLIENT_DEBUG),
-                    channels,
-                )
-            }
-            Ok(HttpParse::NotFound) => {
-                tx.write_all(b"HTTP/1.1 404 Not Found\r\n\r\n").await?;
-                return Ok(MuxOutcome::Close);
-            }
-            Ok(HttpParse::BadRequest(msg)) => {
-                let len = msg.len();
-                let mut header = create_http_header(
-                    "400 Bad Request",
-                    vec![("Content-Length", &len.to_string())],
-                );
-                header.push_str("\r\n");
-                header.push_str(&msg);
-                tx.write_all(header.as_bytes()).await?;
-                return Ok(MuxOutcome::Close);
-            }
-            Ok(HttpParse::HealthCheck) => {
-                tx.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nI_AM_ALIVE")
-                    .await?;
-                return Ok(MuxOutcome::Close);
-            }
-            Ok(HttpParse::NetSpeedTest(params)) => {
-                if let Err(err) =
-                    handle_http_netspeedtest(limited_reader.into_inner(), tx, params).await
-                {
-                    error!(logger, "netspeedtest: {}", err);
+        let mut persistent_http_buf_rx = buf_rx;
+        loop {
+            // Max 8KB of headers is in line with common HTTP servers
+            // https://www.tutorialspoint.com/What-is-the-maximum-size-of-HTTP-header-values
+            let mut limited_reader = persistent_http_buf_rx.take(8192);
+            match process_http_headers(&mut limited_reader).await {
+                Ok(HttpParse::IoStream(reponame, headers)) => {
+                    let websocket_key = calculate_websocket_accept(&headers);
+                    let maybe_http_metadata =
+                        match try_convert_headers_to_metadata(is_trusted, &headers).await {
+                            Ok(value) => value,
+                            Err(e) => {
+                                tx.write_all(b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
+                                return Err(e);
+                            }
+                        };
+
+                    let mut res = create_http_header(
+                        "101 Mononoke Peer Upgrade",
+                        vec![
+                            ("Connection: Upgrade", "websocket"),
+                            ("Sec-WebSocket-Accept", &websocket_key),
+                        ],
+                    );
+                    res.push_str("\r\n");
+                    tx.write_all(res.as_bytes()).await?;
+
+                    let conn = FramedConn::setup(limited_reader.into_inner(), tx);
+                    let channels = ChannelConn::setup(conn);
+                    break (
+                        reponame,
+                        maybe_http_metadata,
+                        headers.contains_key(HEADER_CLIENT_DEBUG),
+                        channels,
+                    );
                 }
-                return Ok(MuxOutcome::Close);
-            }
-            Err(e) => {
-                tx.write_all(b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
-                return Err(e);
+                Ok(HttpParse::NotFound) => {
+                    tx.write_all(b"HTTP/1.1 404 Not Found\r\n\r\n").await?;
+                    return Ok(MuxOutcome::Close);
+                }
+                Ok(HttpParse::BadRequest(msg)) => {
+                    let len = msg.len();
+                    let mut header = create_http_header(
+                        "400 Bad Request",
+                        vec![("Content-Length", &len.to_string())],
+                    );
+                    header.push_str("\r\n");
+                    header.push_str(&msg);
+                    tx.write_all(header.as_bytes()).await?;
+                    return Ok(MuxOutcome::Close);
+                }
+                Ok(HttpParse::HealthCheck) => {
+                    tx.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nI_AM_ALIVE")
+                        .await?;
+                    return Ok(MuxOutcome::Close);
+                }
+                Ok(HttpParse::NetSpeedTest(params, headers)) => {
+                    let mut inner_rx = limited_reader.into_inner();
+                    if let Err(err) = handle_http_netspeedtest(&mut inner_rx, &mut tx, params).await
+                    {
+                        error!(logger, "netspeedtest: {}", err);
+                        return Ok(MuxOutcome::Close);
+                    }
+
+                    if headers.get("connection") == Some(&"close".to_string()) {
+                        return Ok(MuxOutcome::Close);
+                    }
+                    persistent_http_buf_rx = inner_rx;
+                }
+                Err(e) => {
+                    tx.write_all(b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
+                    return Err(e);
+                }
             }
         }
     } else {
@@ -493,7 +503,7 @@ impl ChannelConn {
 
 enum HttpParse {
     IoStream(String, HashMap<String, String>),
-    NetSpeedTest(NetSpeedTest),
+    NetSpeedTest(NetSpeedTest, HashMap<String, String>),
     NotFound,
     HealthCheck,
     BadRequest(String),
@@ -559,7 +569,7 @@ where
         if path.as_deref() == Some("/netspeedtest") {
             match parse_netspeedtest_http_params(&headers, method) {
                 Ok(params) => {
-                    return Ok(HttpParse::NetSpeedTest(params));
+                    return Ok(HttpParse::NetSpeedTest(params, headers));
                 }
                 Err(err) => {
                     return Ok(HttpParse::BadRequest(format!("netspeedtest: {}", err)));
