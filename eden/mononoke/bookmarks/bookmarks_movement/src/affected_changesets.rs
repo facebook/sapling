@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Error, Result};
+use backsyncer::CHANGE_XREPO_MAPPING_EXTRA;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
@@ -239,6 +240,17 @@ impl AffectedChangesets {
         additional_changesets: AdditionalChangesets,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<(), BookmarkMovementError> {
+        self.check_extras(
+            ctx,
+            repo,
+            lca_hint,
+            bookmark_attrs,
+            bookmark,
+            kind,
+            additional_changesets,
+        )
+        .await?;
+
         self.check_case_conflicts(
             ctx,
             repo,
@@ -277,6 +289,50 @@ impl AffectedChangesets {
             additional_changesets,
         )
         .await?;
+
+        Ok(())
+    }
+
+    async fn check_extras(
+        &mut self,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
+        bookmark_attrs: &BookmarkAttrs,
+        bookmark: &BookmarkName,
+        kind: BookmarkKind,
+        additional_changesets: AdditionalChangesets,
+    ) -> Result<(), BookmarkMovementError> {
+        if kind == BookmarkKind::Public {
+            self.load_additional_changesets(
+                ctx,
+                repo,
+                lca_hint,
+                bookmark_attrs,
+                bookmark,
+                additional_changesets,
+            )
+            .await
+            .context("Failed to load additional affected changesets")?;
+
+            for bcs in self.iter() {
+                if bcs
+                    .extra()
+                    .find(|(name, _)| name == &CHANGE_XREPO_MAPPING_EXTRA)
+                    .is_some()
+                {
+                    // This extra is used in backsyncer, and it changes how commit
+                    // is rewritten from a large repo to a small repo. This is dangerous
+                    // operation, and we don't allow landing a commit with this extra set.
+                    return Err(anyhow!(
+                        "Disallowed extra {} is set on {}.",
+                        CHANGE_XREPO_MAPPING_EXTRA,
+                        bcs.get_changeset_id()
+                    )
+                    .into());
+                }
+            }
+        }
 
         Ok(())
     }
