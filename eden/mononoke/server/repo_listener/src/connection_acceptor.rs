@@ -55,6 +55,10 @@ use crate::errors::ErrorKind;
 use crate::repo_handlers::RepoHandler;
 use crate::request_handler::{create_conn_logger, request_handler};
 
+use crate::netspeedtest::{
+    create_http_header, handle_http_netspeedtest, parse_netspeedtest_http_params, NetSpeedTest,
+};
+
 #[cfg(fbcode_build)]
 const HEADER_ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 #[cfg(fbcode_build)]
@@ -152,6 +156,7 @@ pub async fn connection_acceptor(
                             load_limiting_config,
                             maybe_live_commit_sync_config,
                             scribe,
+                            logger.clone(),
                         )
                         .await {
                             Err(err) => error!(logger, "Failed to accept connection: {}", err.to_string(); SlogKVError(Error::from(err))),
@@ -177,6 +182,7 @@ async fn accept(
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
     maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
     scribe: Scribe,
+    logger: Logger,
 ) -> Result<()> {
     let addr = sock.peer_addr()?;
 
@@ -189,9 +195,15 @@ async fn accept(
         None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
     }?;
 
-    let mux_result = server_mux(addr.ip(), ssl_socket, &security_checker, &identities)
-        .await
-        .with_context(|| format!("couldn't complete request: talking to '{}'", addr))?;
+    let mux_result = server_mux(
+        addr.ip(),
+        ssl_socket,
+        &security_checker,
+        &identities,
+        &logger,
+    )
+    .await
+    .with_context(|| format!("couldn't complete request: talking to '{}'", addr))?;
 
     match mux_result {
         MuxOutcome::Proceed(stdio, reponame, forwarding_join_handle) => {
@@ -232,22 +244,23 @@ async fn server_mux(
     s: SslStream<TcpStream>,
     security_checker: &Arc<ConnectionsSecurityChecker>,
     tls_identities: &MononokeIdentitySet,
+    logger: &Logger,
 ) -> Result<MuxOutcome> {
     let is_trusted = security_checker.check_if_trusted(&tls_identities).await?;
     let (mut rx, mut tx) = tokio::io::split(s);
 
     // Elaborate scheme to workaround lack of peek() on AsyncRead
-    let mut peek_buf = vec![0; 3];
+    let mut peek_buf = vec![0; 4];
     rx.read_exact(&mut peek_buf[..]).await?;
     let is_http = match peek_buf.as_slice() {
-        // For non-HTTP connection this can never start with GET as these
+        // For non-HTTP connection this can never start with GET or POST as these
         // are wrapped in NetString encoding and prefixed with a type, so
         // should start with:
         // <number>:\x00
         //
         // For example:
         // 7:\x00hello\n,
-        b"GET" => true,
+        b"GET " | b"POST" => true,
         _ => false,
     };
     let buf_rx = std::io::Cursor::new(peek_buf).chain(BufReader::new(rx));
@@ -267,9 +280,15 @@ async fn server_mux(
                             return Err(e);
                         }
                     };
-
-                tx.write_all(format!("HTTP/1.1 101 Mononoke Peer Upgrade\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: {}\r\n\r\n", websocket_key).as_bytes())
-                .await?;
+                let mut res = create_http_header(
+                    "101 Mononoke Peer Upgrade",
+                    vec![
+                        ("Connection: Upgrade", "websocket"),
+                        ("Sec-WebSocket-Accept", &websocket_key),
+                    ],
+                );
+                res.push_str("\r\n");
+                tx.write_all(res.as_bytes()).await?;
                 let conn = FramedConn::setup(limited_reader.into_inner(), tx);
                 let channels = ChannelConn::setup(conn);
                 (
@@ -283,9 +302,28 @@ async fn server_mux(
                 tx.write_all(b"HTTP/1.1 404 Not Found\r\n\r\n").await?;
                 return Ok(MuxOutcome::Close);
             }
+            Ok(HttpParse::BadRequest(msg)) => {
+                let len = msg.len();
+                let mut header = create_http_header(
+                    "400 Bad Request",
+                    vec![("Content-Length", &len.to_string())],
+                );
+                header.push_str("\r\n");
+                header.push_str(&msg);
+                tx.write_all(header.as_bytes()).await?;
+                return Ok(MuxOutcome::Close);
+            }
             Ok(HttpParse::HealthCheck) => {
                 tx.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nI_AM_ALIVE")
                     .await?;
+                return Ok(MuxOutcome::Close);
+            }
+            Ok(HttpParse::NetSpeedTest(params)) => {
+                if let Err(err) =
+                    handle_http_netspeedtest(limited_reader.into_inner(), tx, params).await
+                {
+                    error!(logger, "netspeedtest: {}", err);
+                }
                 return Ok(MuxOutcome::Close);
             }
             Err(e) => {
@@ -455,8 +493,10 @@ impl ChannelConn {
 
 enum HttpParse {
     IoStream(String, HashMap<String, String>),
+    NetSpeedTest(NetSpeedTest),
     NotFound,
     HealthCheck,
+    BadRequest(String),
 }
 
 async fn process_http_headers<R>(limited_reader: &mut R) -> Result<HttpParse>
@@ -504,19 +544,30 @@ where
                 .ok_or_else(|| anyhow!("missing reponame from request"))?;
 
             return Ok(HttpParse::IoStream(reponame, headers));
-        } else {
-            let mut tokens = first_line.split_ascii_whitespace();
-            let method = tokens.next().map(|s| s.to_ascii_uppercase());
-            let path = tokens.next();
+        }
 
-            if method.as_deref() == Some("GET")
-                && (path.as_deref() == Some("/") || path.as_deref() == Some("/health_check"))
-            {
-                return Ok(HttpParse::HealthCheck);
-            } else {
-                return Ok(HttpParse::NotFound);
+        let mut tokens = first_line.split_ascii_whitespace();
+        let method = tokens.next().map(|s| s.to_ascii_uppercase());
+        let path = tokens.next();
+
+        if method.as_deref() == Some("GET")
+            && (path.as_deref() == Some("/") || path.as_deref() == Some("/health_check"))
+        {
+            return Ok(HttpParse::HealthCheck);
+        }
+
+        if path.as_deref() == Some("/netspeedtest") {
+            match parse_netspeedtest_http_params(&headers, method) {
+                Ok(params) => {
+                    return Ok(HttpParse::NetSpeedTest(params));
+                }
+                Err(err) => {
+                    return Ok(HttpParse::BadRequest(format!("netspeedtest: {}", err)));
+                }
             }
         }
+
+        return Ok(HttpParse::NotFound);
     }
 
     Err(anyhow!("invalid http request"))

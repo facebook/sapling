@@ -11,6 +11,7 @@
 
 mod connection_acceptor;
 mod errors;
+mod netspeedtest;
 mod repo_handlers;
 mod request_handler;
 mod security_checker;
