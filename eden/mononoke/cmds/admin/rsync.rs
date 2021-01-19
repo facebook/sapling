@@ -37,7 +37,7 @@ pub const ARG_COMMIT_MESSAGE: &str = "commit-message";
 pub const ARG_SOURCE_CSID: &str = "source-csid";
 pub const ARG_TARGET_CSID: &str = "target-csid";
 pub const ARG_EXCLUDE_FILE_REGEX: &str = "exclude-file-regex";
-pub const ARG_FILE_NUM_LIMIT: &str = "file-num-limit";
+pub const ARG_TOTAL_FILE_NUM_LIMIT: &str = "total-file-num-limit";
 pub const ARG_TOTAL_SIZE_LIMIT: &str = "total-size-limit";
 pub const ARG_FROM_DIR: &str = "from-dir";
 pub const ARG_LFS_THRESHOLD: &str = "lfs-threshold";
@@ -62,7 +62,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             .arg(
                 Arg::with_name(ARG_TOTAL_SIZE_LIMIT)
                     .long(ARG_TOTAL_SIZE_LIMIT)
-                    .help("total size of all files in a commit")
+                    .help("total size of all files in all commits")
                     .takes_value(true)
                     .required(false),
             )
@@ -126,9 +126,9 @@ pub fn add_common_args<'a, 'b>(sub_m: App<'a, 'b>) -> App<'a, 'b> {
                 .required(true),
         )
         .arg(
-            Arg::with_name(ARG_FILE_NUM_LIMIT)
-                .long(ARG_FILE_NUM_LIMIT)
-                .help("limit the number of files moved in a commit")
+            Arg::with_name(ARG_TOTAL_FILE_NUM_LIMIT)
+                .long(ARG_TOTAL_FILE_NUM_LIMIT)
+                .help("limit the number of files moved in all commits")
                 .takes_value(true)
                 .required(false),
         )
@@ -249,8 +249,8 @@ pub async fn subcommand_rsync<'a>(
             let (source_cs_id, target_cs_id, from_dir, to_dir, author, msg) =
                 parse_common_args(&ctx, sub_matches, &source_repo, &target_repo).await?;
 
-            let maybe_file_num_limit: Option<NonZeroU64> =
-                args::get_and_parse_opt(sub_matches, ARG_FILE_NUM_LIMIT);
+            let maybe_total_file_num_limit: Option<NonZeroU64> =
+                args::get_and_parse_opt(sub_matches, ARG_TOTAL_FILE_NUM_LIMIT);
 
             let result_cs_id = remove_excessive_files(
                 &ctx,
@@ -262,7 +262,7 @@ pub async fn subcommand_rsync<'a>(
                 to_dir,
                 author,
                 msg,
-                maybe_file_num_limit,
+                maybe_total_file_num_limit,
             )
             .await?;
 
@@ -276,22 +276,22 @@ pub async fn subcommand_rsync<'a>(
 
 #[derive(Copy, Clone, Debug, Default)]
 struct Limits {
-    file_num_limit: Option<NonZeroU64>,
+    total_file_num_limit: Option<NonZeroU64>,
     total_size_limit: Option<NonZeroU64>,
     lfs_threshold: Option<NonZeroU64>,
 }
 
 impl Limits {
     pub fn new(sub_m: &ArgMatches<'_>) -> Self {
-        let maybe_file_num_limit: Option<NonZeroU64> =
-            args::get_and_parse_opt(sub_m, ARG_FILE_NUM_LIMIT);
+        let maybe_total_file_num_limit: Option<NonZeroU64> =
+            args::get_and_parse_opt(sub_m, ARG_TOTAL_FILE_NUM_LIMIT);
         let maybe_total_size_limit: Option<NonZeroU64> =
             args::get_and_parse_opt(sub_m, ARG_TOTAL_SIZE_LIMIT);
         let maybe_lfs_threshold: Option<NonZeroU64> =
             args::get_and_parse_opt(sub_m, ARG_LFS_THRESHOLD);
 
         Self {
-            file_num_limit: maybe_file_num_limit,
+            total_file_num_limit: maybe_total_file_num_limit,
             total_size_limit: maybe_total_size_limit,
             lfs_threshold: maybe_lfs_threshold,
         }
@@ -398,7 +398,7 @@ async fn copy(
             total_file_size += fsnode_file.size();
         }
 
-        if let Some(limit) = limits.file_num_limit {
+        if let Some(limit) = limits.total_file_num_limit {
             if file_changes.len() as u64 >= limit.get() {
                 break;
             }
@@ -495,7 +495,7 @@ async fn remove_excessive_files(
     to_dir: MPath,
     author: String,
     msg: String,
-    maybe_file_num_limit: Option<NonZeroU64>,
+    maybe_total_file_num_limit: Option<NonZeroU64>,
 ) -> Result<ChangesetId, Error> {
     let (from_entries, to_entries) = try_join(
         list_directory(&ctx, &source_repo, source_cs_id, &from_dir),
@@ -510,7 +510,7 @@ async fn remove_excessive_files(
         if !from_entries.contains_key(to_suffix) {
             let to_path = to_dir.join(to_suffix);
             to_delete.insert(to_path, None);
-            if let Some(limit) = maybe_file_num_limit {
+            if let Some(limit) = maybe_total_file_num_limit {
                 if to_delete.len() as u64 >= limit.get() {
                     break;
                 }
@@ -681,7 +681,7 @@ mod test {
             .await?;
 
         let limit = Limits {
-            file_num_limit: NonZeroU64::new(1),
+            total_file_num_limit: NonZeroU64::new(1),
             total_size_limit: None,
             lfs_threshold: None,
         };
@@ -819,7 +819,7 @@ mod test {
             "author".to_string(),
             "msg".to_string(),
             Limits {
-                file_num_limit: None,
+                total_file_num_limit: None,
                 total_size_limit: NonZeroU64::new(5),
                 lfs_threshold: None,
             },
@@ -851,7 +851,7 @@ mod test {
             "author".to_string(),
             "msg".to_string(),
             Limits {
-                file_num_limit: None,
+                total_file_num_limit: None,
                 total_size_limit: NonZeroU64::new(5),
                 lfs_threshold: None,
             },
@@ -901,7 +901,7 @@ mod test {
             "author".to_string(),
             "msg".to_string(),
             Limits {
-                file_num_limit: None,
+                total_file_num_limit: None,
                 total_size_limit: NonZeroU64::new(5),
                 lfs_threshold: NonZeroU64::new(2),
             },
