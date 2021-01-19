@@ -31,6 +31,7 @@ const SESSION_ID: &str = "session_id";
 pub enum CommitSyncContext {
     AdminChangeMapping,
     Backsyncer,
+    BacksyncerChangeMapping,
     ManualCommitSync,
     PushRedirector,
     RepoImport,
@@ -46,6 +47,7 @@ impl fmt::Display for CommitSyncContext {
         match self {
             Self::AdminChangeMapping => write!(f, "admin-change-mapping"),
             Self::Backsyncer => write!(f, "backsyncer"),
+            Self::BacksyncerChangeMapping => write!(f, "backsyncer-change-mapping"),
             Self::ManualCommitSync => write!(f, "manual-commit-sync"),
             Self::PushRedirector => write!(f, "push-redirector"),
             Self::RepoImport => write!(f, "repo-import"),

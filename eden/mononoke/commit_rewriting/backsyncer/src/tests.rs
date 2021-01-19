@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
+use assert_matches::assert_matches;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_factory::new_memblob_empty_with_id;
 use blobrepo_hg::BlobRepoHg;
@@ -46,12 +47,16 @@ use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
     SyncedCommitMappingEntry,
 };
-use tests_utils::{create_commit, store_files, store_rename, CreateCommitContext};
+use tests_utils::{bookmark, create_commit, store_files, store_rename, CreateCommitContext};
 use tokio_compat::runtime::Runtime;
+use tunables::with_tunables_async;
 
 use pretty_assertions::assert_eq;
 
-use crate::{backsync_latest, format_counter, sync_entries, BacksyncLimit, TargetRepoDbs};
+use crate::{
+    backsync_latest, format_counter, sync_entries, BacksyncLimit, TargetRepoDbs,
+    CHANGE_XREPO_MAPPING_EXTRA,
+};
 
 const REPOMERGE_FOLDER: &str = "repomerge";
 const REPOMERGE_FILE: &str = "repomergefile";
@@ -409,6 +414,112 @@ fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
 
         Ok(())
     })
+}
+
+#[fbinit::compat_test]
+async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
+    // Initialize source and target repos
+    let ctx = CoreContext::test_mock(fb);
+    let source_repo_id = RepositoryId::new(1);
+    let source_repo = new_memblob_empty_with_id(None, source_repo_id)?;
+
+    let target_repo_id = RepositoryId::new(2);
+    let target_repo = new_memblob_empty_with_id(None, target_repo_id)?;
+
+    // Create commit syncer with two version - current and new
+    let (target_repo, target_repo_dbs) =
+        init_target_repo(&ctx, source_repo_id, &target_repo).await?;
+
+    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+
+    let repos = CommitSyncRepos::LargeToSmall {
+        large_repo: source_repo.clone(),
+        small_repo: target_repo.clone(),
+    };
+
+    let current_version = CommitSyncConfigVersion("current_version".to_string());
+    let current_mover_type = MoverType::Prefix("current_prefix".to_string());
+
+    let new_version = CommitSyncConfigVersion("new_version".to_string());
+    let new_mover_type = MoverType::Prefix("new_prefix".to_string());
+
+    let bookmark_renamer_type = BookmarkRenamerType::Noop;
+    let commit_sync_data_provider = CommitSyncDataProvider::test_new(
+        current_version.clone(),
+        Source(source_repo.get_repoid()),
+        Target(target_repo.get_repoid()),
+        hashmap! {
+            current_version.clone() => SyncData {
+                mover: current_mover_type.get_mover(),
+                reverse_mover: current_mover_type.get_reverse_mover(),
+                bookmark_renamer: bookmark_renamer_type.get_bookmark_renamer(),
+                reverse_bookmark_renamer: bookmark_renamer_type.get_reverse_bookmark_renamer(),
+            },
+            new_version.clone() => SyncData{
+                mover: new_mover_type.get_mover(),
+                reverse_mover: new_mover_type.get_reverse_mover(),
+                bookmark_renamer: bookmark_renamer_type.get_bookmark_renamer(),
+                reverse_bookmark_renamer: bookmark_renamer_type.get_reverse_bookmark_renamer(),
+            }
+        },
+        vec![BookmarkName::new("master")?],
+    );
+    let commit_syncer =
+        CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider);
+
+    // Rewrite root commit with current version
+    let root_cs_id = CreateCommitContext::new_root(&ctx, &source_repo)
+        .commit()
+        .await?;
+
+    commit_syncer
+        .unsafe_always_rewrite_sync_commit(
+            &ctx,
+            root_cs_id,
+            None,
+            &current_version,
+            CommitSyncContext::Tests,
+        )
+        .await?;
+
+    // Now create a commit with a special extra that changes the mapping
+    // to new version while backsyncing
+    let change_mapping_commit = CreateCommitContext::new(&ctx, &source_repo, vec![root_cs_id])
+        .add_extra(
+            CHANGE_XREPO_MAPPING_EXTRA.to_string(),
+            new_version.clone().0.into_bytes(),
+        )
+        .commit()
+        .await?;
+
+    bookmark(&ctx, &source_repo, "head")
+        .set_to(change_mapping_commit)
+        .await?;
+
+    // Do the backsync, and check the version
+    let tunables = tunables::MononokeTunables::default();
+    tunables.update_bools(&hashmap! {
+        "backsyncer_allow_change_xrepo_mapping_extra".to_string() => true,
+    });
+
+    let f = backsync_latest(
+        ctx.clone(),
+        commit_syncer.clone(),
+        target_repo_dbs.clone(),
+        BacksyncLimit::NoLimit,
+    );
+    with_tunables_async(tunables, f.boxed()).await?;
+
+    let commit_sync_outcome = commit_syncer
+        .get_commit_sync_outcome(&ctx, change_mapping_commit)
+        .await?
+        .ok_or_else(|| anyhow!("unexpected missing commit sync outcome"))?;
+
+    assert_matches!(commit_sync_outcome, CommitSyncOutcome::RewrittenAs(_, version) => {
+        assert_eq!(new_version, version);
+    });
+
+    Ok(())
 }
 
 async fn build_unrelated_branch(ctx: CoreContext, source_repo: &BlobRepo) -> ChangesetId {
@@ -880,26 +991,10 @@ async fn init_repos(
     linear::initrepo(fb, &source_repo).await;
 
     let target_repo_id = RepositoryId::new(2);
-    let target_repo_dbs = init_dbs(target_repo_id)?;
     let target_repo = new_memblob_empty_with_id(None, target_repo_id)?;
-    let bookmarks = target_repo_dbs.bookmarks.clone();
-    let bookmark_update_log = target_repo_dbs.bookmark_update_log.clone();
-    let target_repo = target_repo
-        .dangerous_override(|_| bookmarks)
-        .dangerous_override(|_| bookmark_update_log);
 
-    // Init counters
-    target_repo_dbs
-        .counters
-        .set_counter(
-            ctx.clone(),
-            target_repo_id,
-            &format_counter(&source_repo_id),
-            0,
-            None,
-        )
-        .compat()
-        .await?;
+    let (target_repo, target_repo_dbs) =
+        init_target_repo(&ctx, source_repo_id, &target_repo).await?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
 
@@ -1135,6 +1230,35 @@ async fn init_repos(
     .await?;
 
     Ok((commit_syncer, target_repo_dbs))
+}
+
+async fn init_target_repo(
+    ctx: &CoreContext,
+    source_repo_id: RepositoryId,
+    target_repo: &BlobRepo,
+) -> Result<(BlobRepo, TargetRepoDbs), Error> {
+    let target_repo_id = target_repo.get_repoid();
+    let target_repo_dbs = init_dbs(target_repo_id)?;
+    let bookmarks = target_repo_dbs.bookmarks.clone();
+    let bookmark_update_log = target_repo_dbs.bookmark_update_log.clone();
+    let target_repo = target_repo
+        .dangerous_override(|_| bookmarks)
+        .dangerous_override(|_| bookmark_update_log);
+
+    // Init counters
+    target_repo_dbs
+        .counters
+        .set_counter(
+            ctx.clone(),
+            target_repo_id,
+            &format_counter(&source_repo_id),
+            0,
+            None,
+        )
+        .compat()
+        .await?;
+
+    Ok((target_repo, target_repo_dbs))
 }
 
 async fn init_merged_repos(

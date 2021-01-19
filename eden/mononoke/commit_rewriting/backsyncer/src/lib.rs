@@ -27,6 +27,7 @@
 use anyhow::{bail, format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
+use blobstore::Loadable;
 use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::{
     BookmarkTransactionError, BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason,
@@ -38,9 +39,11 @@ use cross_repo_sync::{
     find_toposorted_unsynced_ancestors, CandidateSelectionHint, CommitSyncContext,
     CommitSyncOutcome, CommitSyncer,
 };
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
+use futures::{
+    compat::Future01CompatExt, stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
+};
 use futures_old::future::Future;
-use metaconfig_types::MetadataDatabaseConfig;
+use metaconfig_types::{CommitSyncConfigVersion, MetadataDatabaseConfig};
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use slog::{debug, warn};
@@ -54,6 +57,10 @@ use thiserror::Error;
 
 #[cfg(test)]
 mod tests;
+
+/// Name of the commit extra. This extra forces a commit to
+/// be rewritten with a particular commit sync config version.
+pub const CHANGE_XREPO_MAPPING_EXTRA: &str = "change-xrepo-mapping-to-version";
 
 #[derive(Debug, Error)]
 pub enum BacksyncError {
@@ -191,7 +198,50 @@ where
                     )
                 })?;
 
-            for cs_id in cs_ids {
+            let cs_ids_and_bcss = stream::iter(cs_ids)
+                .map({
+                    let ctx = &ctx;
+                    move |cs_id| async move {
+                        let bcs = cs_id
+                            .load(&ctx, &commit_syncer.get_source_repo().get_blobstore())
+                            .await?;
+                        Result::<_, Error>::Ok((cs_id, bcs))
+                    }
+                })
+                .buffered(100)
+                .try_collect::<Vec<_>>()
+                .await?;
+
+            for (cs_id, bcs) in cs_ids_and_bcss {
+                if tunables::tunables().get_backsyncer_allow_change_xrepo_mapping_extra() {
+                    let maybe_mapping = bcs
+                        .extra()
+                        .find(|(name, _)| name == &CHANGE_XREPO_MAPPING_EXTRA);
+                    if let Some((_, version)) = maybe_mapping {
+                        let version = String::from_utf8(version.to_vec())
+                            .with_context(|| format!("non-utf8 version is set in {}", cs_id))?;
+
+                        let version = CommitSyncConfigVersion(version);
+                        // Force use of a specific mapping
+                        commit_syncer
+                            .unsafe_always_rewrite_sync_commit(
+                                &ctx,
+                                cs_id,
+                                None, // maybe_parents,
+                                &version,
+                                CommitSyncContext::BacksyncerChangeMapping,
+                            )
+                            .await
+                            .with_context(|| {
+                                format!(
+                                    "cannot rewrite {} with version {} from extras",
+                                    cs_id, version
+                                )
+                            })?;
+                        continue;
+                    }
+                }
+
                 // Backsyncer is always used in the large-to-small direction,
                 // therefore there can be at most one remapped candidate,
                 // so `CandidateSelectionHint::Only` is a safe choice
