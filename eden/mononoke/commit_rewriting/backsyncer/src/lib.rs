@@ -46,7 +46,7 @@ use futures_old::future::Future;
 use metaconfig_types::{CommitSyncConfigVersion, MetadataDatabaseConfig};
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
-use slog::{debug, warn};
+use slog::{debug, info, warn};
 use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
@@ -221,6 +221,7 @@ where
                         let version = String::from_utf8(version.to_vec())
                             .with_context(|| format!("non-utf8 version is set in {}", cs_id))?;
 
+                        info!(ctx.logger(), "force using mapping {}", version);
                         let version = CommitSyncConfigVersion(version);
                         // Force use of a specific mapping
                         commit_syncer

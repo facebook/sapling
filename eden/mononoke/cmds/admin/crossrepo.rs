@@ -6,10 +6,12 @@
  */
 
 use anyhow::{anyhow, format_err, Context, Error};
-use backsyncer::format_counter as format_backsyncer_counter;
+use backsyncer::{format_counter as format_backsyncer_counter, CHANGE_XREPO_MAPPING_EXTRA};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
+use blobstore::Loadable;
 use bookmark_renaming::get_small_to_large_renamer;
 use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
+use cached_config::ConfigStore;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::{
     args::{self, MononokeMatches},
@@ -22,16 +24,17 @@ use cross_repo_sync::{
     CommitSyncContext, CommitSyncRepos, CommitSyncer,
 };
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, try_join};
+use futures::{compat::Future01CompatExt, try_join, TryFutureExt};
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use maplit::hashset;
 use maplit::{btreemap, hashmap};
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::{CommitSyncConfig, RepoConfig};
 use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, RepositoryId};
 use mutable_counters::MutableCounters;
 use mutable_counters::SqlMutableCounters;
-use pushrebase::FAILUPUSHREBASE_EXTRA;
+use pushrebase::{do_pushrebase_bonsai, FAILUPUSHREBASE_EXTRA};
 use slog::{info, warn, Logger};
 use std::convert::TryInto;
 use std::sync::Arc;
@@ -39,6 +42,7 @@ use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
     SyncedCommitMappingEntry,
 };
+use unbundle::get_pushrebase_hooks;
 
 use crate::common::get_source_target_repos_and_mapping;
 use crate::error::SubcommandError;
@@ -61,6 +65,7 @@ const EQUIVALENT_WORKING_COPY_SUBCOMMAND: &str = "equivalent-working-copy";
 const NOT_SYNC_CANDIDATE_SUBCOMMAND: &str = "not-sync-candidate";
 const SOURCE_HASH_ARG: &str = "source-hash";
 const TARGET_HASH_ARG: &str = "target-hash";
+const VIA_EXTRAS_ARG: &str = "via-extra";
 
 const SUBCOMMAND_CONFIG: &str = "config";
 const SUBCOMMAND_BY_VERSION: &str = "by-version";
@@ -149,8 +154,15 @@ pub async fn subcommand_crossrepo<'a>(
             run_config_sub_subcommand(ctx, matches, sub_sub_m, live_commit_sync_config).await
         }
         (PUSHREDIRECTION_SUBCOMMAND, Some(sub_sub_m)) => {
-            run_pushredirection_subcommand(fb, ctx, matches, sub_sub_m, live_commit_sync_config)
-                .await
+            run_pushredirection_subcommand(
+                fb,
+                ctx,
+                matches,
+                sub_sub_m,
+                &config_store,
+                live_commit_sync_config,
+            )
+            .await
         }
         (INSERT_SUBCOMMAND, Some(sub_sub_m)) => {
             run_insert_subcommand(ctx, matches, sub_sub_m, live_commit_sync_config).await
@@ -197,10 +209,9 @@ async fn run_pushredirection_subcommand<'a>(
     ctx: CoreContext,
     matches: &'a MononokeMatches<'_>,
     config_subcommand_matches: &'a ArgMatches<'a>,
+    config_store: &ConfigStore,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(), SubcommandError> {
-    let config_store = args::init_config_store(fb, ctx.logger(), matches)?;
-
     let (source_repo, target_repo, mapping) =
         get_source_target_repos_and_mapping(fb, ctx.logger().clone(), matches).await?;
 
@@ -274,6 +285,19 @@ async fn run_pushredirection_subcommand<'a>(
                 mapping,
             )?;
 
+            if sub_m.is_present(VIA_EXTRAS_ARG) {
+                change_mapping_via_extras(
+                    &ctx,
+                    matches,
+                    sub_m,
+                    &commit_syncer,
+                    config_store,
+                    &live_commit_sync_config,
+                )
+                .await?;
+                return Ok(());
+            }
+
             if live_commit_sync_config
                 .push_redirector_enabled_for_public(commit_syncer.get_small_repo().get_repoid())
             {
@@ -319,6 +343,7 @@ async fn run_pushredirection_subcommand<'a>(
                 &small_repo,
                 &large_bookmark_value,
                 &mapping_version,
+                false, /* add_mapping_change_extra */
             )
             .await?;
 
@@ -360,6 +385,83 @@ async fn run_pushredirection_subcommand<'a>(
         }
         _ => Err(SubcommandError::InvalidArgs),
     }
+}
+
+async fn change_mapping_via_extras<'a>(
+    ctx: &CoreContext,
+    matches: &'a MononokeMatches<'a>,
+    sub_m: &'a ArgMatches<'a>,
+    commit_syncer: &'a CommitSyncer<SqlSyncedCommitMapping>,
+    config_store: &ConfigStore,
+    live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
+) -> Result<(), Error> {
+    if !live_commit_sync_config
+        .push_redirector_enabled_for_public(commit_syncer.get_small_repo().get_repoid())
+    {
+        return Err(format_err!(
+            "not allowed to run {} if pushredirection is not enabled",
+            CHANGE_MAPPING_VERSION_SUBCOMMAND
+        )
+        .into());
+    }
+
+    let small_repo = commit_syncer.get_small_repo();
+    let large_repo = commit_syncer.get_large_repo();
+
+    let (_, repo_config) =
+        args::get_config_by_repoid(config_store, matches, large_repo.get_repoid())?;
+
+    let large_bookmark = Large(
+        sub_m
+            .value_of(LARGE_REPO_BOOKMARK_ARG)
+            .map(BookmarkName::new)
+            .transpose()?
+            .ok_or_else(|| format_err!("{} is not specified", LARGE_REPO_BOOKMARK_ARG))?,
+    );
+    let large_bookmark_value = Large(get_bookmark_value(&ctx, &large_repo, &large_bookmark).await?);
+
+    let mapping_version = sub_m
+        .value_of(ARG_VERSION_NAME)
+        .ok_or_else(|| format_err!("{} is not specified", ARG_VERSION_NAME))?;
+    let mapping_version = CommitSyncConfigVersion(mapping_version.to_string());
+    if !commit_syncer.version_exists(&mapping_version)? {
+        return Err(format_err!("{} version does not exist", mapping_version).into());
+    }
+
+    let large_cs_id = create_empty_commit_for_mapping_change(
+        &ctx,
+        sub_m,
+        &Large(large_repo),
+        &Small(small_repo),
+        &large_bookmark_value,
+        &mapping_version,
+        true, /* add_mapping_change_extra */
+    )
+    .await?;
+
+
+    let pushrebase_flags = repo_config.pushrebase.flags;
+    let pushrebase_hooks = get_pushrebase_hooks(ctx.clone(), &large_repo, &repo_config.pushrebase);
+
+    let bcs = large_cs_id
+        .load(&ctx, &large_repo.get_blobstore())
+        .map_err(Error::from)
+        .await?;
+    let pushrebase_res = do_pushrebase_bonsai(
+        &ctx,
+        &large_repo,
+        &pushrebase_flags,
+        &large_bookmark,
+        &hashset![bcs],
+        None,
+        &pushrebase_hooks,
+    )
+    .map_err(Error::from)
+    .await?;
+
+    println!("{}", pushrebase_res.head);
+
+    Ok(())
 }
 
 async fn run_insert_subcommand<'a>(
@@ -549,6 +651,7 @@ async fn create_empty_commit_for_mapping_change(
     small_repo: &Small<&BlobRepo>,
     parent: &Large<ChangesetId>,
     mapping_version: &CommitSyncConfigVersion,
+    add_mapping_change_extra: bool,
 ) -> Result<Large<ChangesetId>, Error> {
     let author = sub_m
         .value_of(AUTHOR_ARG)
@@ -560,6 +663,16 @@ async fn create_empty_commit_for_mapping_change(
         large_repo.name(),
         small_repo.name(),
     );
+
+    let mut extras = btreemap! {
+        FAILUPUSHREBASE_EXTRA.to_string() => b"1".to_vec(),
+    };
+    if add_mapping_change_extra {
+        extras.insert(
+            CHANGE_XREPO_MAPPING_EXTRA.to_string(),
+            mapping_version.0.clone().into_bytes(),
+        );
+    }
     // Create an empty commit on top of large bookmark
     let bcs = BonsaiChangesetMut {
         parents: vec![parent.0.clone()],
@@ -568,9 +681,7 @@ async fn create_empty_commit_for_mapping_change(
         committer: None,
         committer_date: None,
         message: commit_msg,
-        extra: btreemap! {
-            FAILUPUSHREBASE_EXTRA.to_string() => b"1".to_vec(),
-        },
+        extra: extras,
         file_changes: btreemap! {},
     }
     .freeze()?;
@@ -1020,6 +1131,14 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .required(true)
                 .takes_value(true)
                 .help("mapping version to change to"),
+        )
+        .arg(
+            Arg::with_name(VIA_EXTRAS_ARG)
+                .long(VIA_EXTRAS_ARG)
+                .required(false)
+                .takes_value(false)
+                .help("change mapping via pushing a commit with a special extra set. \
+                This should become a default method, but for now let's hide behind this arg")
         );
 
     let pushredirection_subcommand = SubCommand::with_name(PUSHREDIRECTION_SUBCOMMAND)

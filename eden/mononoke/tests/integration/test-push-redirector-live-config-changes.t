@@ -11,6 +11,14 @@ setup configuration
   $ REPOTYPE="blob_files"
   $ REPOID=0 REPONAME=large-mon setup_common_config $REPOTYPE
   $ REPOID=1 REPONAME=small-mon-1 setup_common_config $REPOTYPE
+  $ cat > $TESTTMP/mononoke_tunables.json <<EOF
+  > {
+  >   "killswitches": {
+  >     "backsyncer_allow_change_xrepo_mapping_extra": true
+  >   }
+  > }
+  > EOF
+
   $ cat >> "$TESTTMP/mononoke-config/common/commitsyncmap.toml" <<EOF
   > [megarepo_test]
   > large_repo_id = 0
@@ -193,86 +201,23 @@ Live change of the config, without Mononoke restart
   $ hg commit --amend
   $ REPONAME=small-mon-1  hgmn push -r . --to master_bookmark -q
 
--- wait a second to give backsyncer some time to catch up
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": false
-  >    }
-  >   }
-  > }
-  > EOF
--- Wait until changes pushredirectionis disabled
-  $ sleep 2
   $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL1 crossrepo pushredirection change-mapping-version \
   > --author author \
   > --large-repo-bookmark master_bookmark \
-  > --version-name TEST_VERSION_NAME_LIVE_V2
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
-  * using repo "large-mon" repoid RepositoryId(*) (glob)
-  * using repo "small-mon-1" repoid RepositoryId(*) (glob)
-  * moving master_bookmark to * in * (glob)
-  * moving master_bookmark to * in * (glob)
-  $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL1 crossrepo pushredirection prepare-rollout
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
-  * using repo "large-mon" repoid RepositoryId(*) (glob)
-  * using repo "small-mon-1" repoid RepositoryId(*) (glob)
-  * setting value 7 to counter backsync_from_0 for repo 1 (glob)
-  * successfully updated the counter (glob)
-  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
-  > {
-  > "per_repo": {
-  >   "1": {
-  >      "draft_push": false,
-  >      "public_push": true
-  >    }
-  >   }
-  > }
-  > EOF
+  > --version-name TEST_VERSION_NAME_LIVE_V2 \
+  > --via-extra &>/dev/null
+  $ export REPOIDLARGE=0
+  $ export REPOIDSMALL=1
+  $ backsync_large_to_small 2>&1 | grep "force using"
+  * force using mapping TEST_VERSION_NAME_LIVE_V2 (glob)
 
-$ LARGE_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDLARGE master_bookmark)
-$ SMALL_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL1 master_bookmark)
-$ update_mapping_version "$REPOIDSMALL1" "$SMALL_MASTER_BONSAI" "$REPOIDLARGE" "$LARGE_MASTER_BONSAI" "TEST_VERSION_NAME_LIVE_V2"
-
--- sleep to ensure live_commit_sync_config had a chance to refresh
-  $ sleep 1
-
+-- wait until it backsyncs to a small repo
+  $ sleep 2
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT small_repo_id, large_repo_id, sync_map_version_name FROM synced_commit_mapping";
   1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V2
-
-Do a push it should fail because we disallow pushing over a changeset that changes the mapping
-  $ mkdir -p special
-  $ echo f > special/f && hg ci -Aqm post_config_change_commit
-  $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark 
-  pushing rev * to destination ssh://user@dummy/small-mon-1 bookmark master_bookmark (glob)
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     Pushrebase failed: Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is *) (glob)
-  remote: 
-  remote:   Root cause:
-  remote:     Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is *) (glob)
-  remote: 
-  remote:   Caused by:
-  remote:     Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is *) (glob)
-  remote: 
-  remote:   Debug context:
-  remote:     PushrebaseError(
-  remote:         ForceFailPushrebase(
-  remote:             ChangesetId(
-  remote:                 Blake2(*), (glob)
-  remote:             ),
-  remote:         ),
-  remote:     )
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [255]
 
 Again, normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
@@ -303,5 +248,4 @@ Again, normal pushrebase with one commit
   1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V2
-  1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V2
