@@ -112,6 +112,8 @@ class TestFlags(NamedTuple):
             else:
                 r["disable_all_network_access"] = True
 
+        r["chg"] = not self.debug
+
         return r
 
 
@@ -157,6 +159,7 @@ def _hg_runner(
     extra_args: Args,
     extra_env: Env,
     disable_all_network_access: bool = False,
+    chg: bool = False,
     interactive: bool = False,
     quiet: bool = False,
 ):
@@ -175,7 +178,6 @@ def _hg_runner(
             "--with-hg",
             manifest_env["BINARY_HG"],
             "--allow-slow-tests",
-            "--chg",
             "--outputdir",
             output_dir,
             # The eden/scm/test/features.py lists tests by name and doesn't
@@ -185,6 +187,9 @@ def _hg_runner(
             "--nofeatures",
             *extra_args,
         ]
+
+        if chg:
+            args.append("--chg")
 
         if disable_all_network_access:
             args.insert(0, manifest_env["DISABLE_ALL_NETWORK_ACCESS"])
@@ -345,7 +350,8 @@ def run_tests(
     default=False,
     is_flag=True,
     help="debug mode: write output of test scripts to console rather than "
-    "capturing and diffing it (disables timeout)",
+    "capturing and diffing it, and disable network void and chg to ease debugging "
+    "(disables timeout)",
 )
 @click.option(
     "--keep-tmpdir",
@@ -444,8 +450,11 @@ def run(
         keep_tmpdir,
         tmpdir,
         disable_all_network_access=(
-            not is_mysql and "DISABLE_ALL_NETWORK_ACCESS" in manifest_env
-        ),  # NOTE: We need network to talk to MySQL
+            # NOTE: We need network to talk to MySQL
+            not debug
+            and not is_mysql
+            and "DISABLE_ALL_NETWORK_ACCESS" in manifest_env
+        ),
     )
 
     selected_tests: List[str] = []
