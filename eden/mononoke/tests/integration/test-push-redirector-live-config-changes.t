@@ -219,6 +219,33 @@ Live change of the config, without Mononoke restart
   1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V2
 
+Do a push it should fail because we disallow pushing over a changeset that changes the mapping
+  $ mkdir -p special
+  $ echo f > special/f && hg ci -Aqm post_config_change_commit
+  $ REPONAME=small-mon-1 hgmn push -r . --to master_bookmark
+  pushing rev * to destination ssh://user@dummy/small-mon-1 bookmark master_bookmark (glob)
+  searching for changes
+  remote: Command failed
+  remote:   Error:
+  remote:     Pushrebase failed: Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is *) (glob)
+  remote: 
+  remote:   Root cause:
+  remote:     Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is *) (glob)
+  remote: 
+  remote:   Caused by:
+  remote:     Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is *) (glob)
+  remote: 
+  remote:   Debug context:
+  remote:     PushrebaseError(
+  remote:         ForceFailPushrebase(
+  remote:             ChangesetId(
+  remote:                 Blake2(*), (glob)
+  remote:             ),
+  remote:         ),
+  remote:     )
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
+  [255]
+
 Again, normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
   $ hg st
@@ -248,4 +275,5 @@ Again, normal pushrebase with one commit
   1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V2
+  1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V2
