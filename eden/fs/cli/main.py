@@ -537,6 +537,7 @@ class ListMountInfo(typing.NamedTuple):
     data_dir: Path
     state: Optional[MountState]
     configured: bool
+    backing_repo: Optional[Path]
 
     def to_json_dict(self) -> Dict[str, Any]:
         return {
@@ -545,6 +546,9 @@ class ListMountInfo(typing.NamedTuple):
             if self.state is not None
             else "NOT_RUNNING",
             "configured": self.configured,
+            "backing_repo": str(self.backing_repo)
+            if self.backing_repo is not None
+            else None,
         }
 
 
@@ -596,8 +600,21 @@ class ListCmd(Subcmd):
                 else MountState.RUNNING
             )
             data_dir = Path(os.fsdecode(thrift_mount.edenClientPath))
+
+            # this line is for pyre :(
+            raw_backing_repo = thrift_mount.backingRepoPath
+            backing_repo = (
+                Path(os.fsdecode(raw_backing_repo))
+                if raw_backing_repo is not None
+                else None
+            )
+
             mount_points[path] = ListMountInfo(
-                path=path, data_dir=data_dir, state=state, configured=False
+                path=path,
+                data_dir=data_dir,
+                state=state,
+                configured=False,
+                backing_repo=backing_repo,
             )
 
         # Add all mount points listed in the config that were not reported
@@ -605,6 +622,10 @@ class ListCmd(Subcmd):
         for checkout in config_checkouts:
             mount_info = mount_points.get(checkout.path, None)
             if mount_info is not None:
+                if mount_info.backing_repo is None:
+                    mount_info = mount_info._replace(
+                        backing_repo=checkout.get_config().backing_repo
+                    )
                 mount_points[checkout.path] = mount_info._replace(configured=True)
             else:
                 mount_points[checkout.path] = ListMountInfo(
@@ -612,6 +633,7 @@ class ListCmd(Subcmd):
                     data_dir=checkout.state_dir,
                     state=None,
                     configured=True,
+                    backing_repo=checkout.get_config().backing_repo,
                 )
 
         return mount_points

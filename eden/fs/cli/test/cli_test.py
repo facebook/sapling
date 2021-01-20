@@ -8,7 +8,12 @@ import unittest
 from pathlib import Path
 
 from eden.fs.cli import main as main_mod
-from eden.fs.cli.config import EdenCheckout, EdenInstance
+from eden.fs.cli.config import (
+    EdenCheckout,
+    EdenInstance,
+    CheckoutConfig,
+    DEFAULT_REVISION,
+)
 from facebook.eden.ttypes import MountInfo, MountState
 
 from .lib.output import TestOutput
@@ -21,7 +26,7 @@ class ListTest(unittest.TestCase):
         main_mod.ListCmd.print_mounts(out, mounts)
         self.assertEqual(out.getvalue(), "")
 
-    def test_list_mounts(self):
+    def test_list_mounts_no_backing_repos(self):
         self.maxDiff = None
 
         thrift_mounts = [
@@ -61,32 +66,88 @@ class ListTest(unittest.TestCase):
             etc_eden_dir="/etc/eden",
             home_dir="/home/johndoe",
         )
+
+        checkout1 = EdenCheckout(
+            instance,
+            Path("/data/users/johndoe/mercurial"),
+            Path("/home/johndoe/.eden/clients/mercurial"),
+        )
+        checkout1.set_config(
+            CheckoutConfig(
+                backing_repo=Path("/home/johndoe/eden-repos/mercurial"),
+                scm_type="hg",
+                default_revision=DEFAULT_REVISION["hg"],
+                redirections={},
+                active_prefetch_profiles=[],
+            )
+        )
+
+        checkout2 = EdenCheckout(
+            instance,
+            Path("/data/users/johndoe/git"),
+            Path("/home/johndoe/.eden/clients/git"),
+        )
+        checkout2.set_config(
+            CheckoutConfig(
+                backing_repo=Path("/home/johndoe/eden-repos/git"),
+                scm_type="git",
+                default_revision=DEFAULT_REVISION["git"],
+                redirections={},
+                active_prefetch_profiles=[],
+            )
+        )
+
+        checkout3 = EdenCheckout(
+            instance,
+            Path("/data/users/johndoe/repos/linux"),
+            Path("/home/johndoe/.eden/clients/linux"),
+        )
+        checkout3.set_config(
+            CheckoutConfig(
+                backing_repo=Path("/home/johndoe/eden-repos/linux"),
+                scm_type="git",
+                default_revision=DEFAULT_REVISION["git"],
+                redirections={},
+                active_prefetch_profiles=[],
+            )
+        )
+
+        checkout4 = EdenCheckout(
+            instance,
+            Path("/data/users/johndoe/other_repos/linux"),
+            Path("/home/johndoe/.eden/clients/linux2"),
+        )
+        checkout4.set_config(
+            CheckoutConfig(
+                backing_repo=Path("/home/johndoe/eden-repos/linux"),
+                scm_type="git",
+                default_revision=DEFAULT_REVISION["git"],
+                redirections={},
+                active_prefetch_profiles=[],
+            )
+        )
+
+        checkout5 = EdenCheckout(
+            instance,
+            Path("/data/users/johndoe/www"),
+            Path("/home/johndoe/.eden/clients/www"),
+        )
+        checkout5.set_config(
+            CheckoutConfig(
+                backing_repo=Path("/home/johndoe/eden-repos/www"),
+                scm_type="hg",
+                default_revision=DEFAULT_REVISION["hg"],
+                redirections={},
+                active_prefetch_profiles=[],
+            )
+        )
+
         config_checkouts = [
-            EdenCheckout(
-                instance,
-                Path("/data/users/johndoe/mercurial"),
-                Path("/home/johndoe/.eden/clients/mercurial"),
-            ),
-            EdenCheckout(
-                instance,
-                Path("/data/users/johndoe/git"),
-                Path("/home/johndoe/.eden/clients/git"),
-            ),
-            EdenCheckout(
-                instance,
-                Path("/data/users/johndoe/repos/linux"),
-                Path("/home/johndoe/.eden/clients/linux"),
-            ),
-            EdenCheckout(
-                instance,
-                Path("/data/users/johndoe/other_repos/linux"),
-                Path("/home/johndoe/.eden/clients/linux2"),
-            ),
-            EdenCheckout(
-                instance,
-                Path("/data/users/johndoe/www"),
-                Path("/home/johndoe/.eden/clients/www"),
-            ),
+            checkout1,
+            checkout2,
+            checkout3,
+            checkout4,
+            checkout5,
         ]
 
         mounts = main_mod.ListCmd.combine_mount_info(thrift_mounts, config_checkouts)
@@ -112,36 +173,43 @@ class ListTest(unittest.TestCase):
             """\
 {
   "/data/users/johndoe/apache": {
+    "backing_repo": null,
     "configured": false,
     "data_dir": "/home/johndoe/.eden/clients/apache",
     "state": "RUNNING"
   },
   "/data/users/johndoe/configs": {
+    "backing_repo": null,
     "configured": false,
     "data_dir": "/home/johndoe/.eden/clients/configs",
     "state": "INITIALIZING"
   },
   "/data/users/johndoe/git": {
+    "backing_repo": "/home/johndoe/eden-repos/git",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/git",
     "state": "SHUTTING_DOWN"
   },
   "/data/users/johndoe/mercurial": {
+    "backing_repo": "/home/johndoe/eden-repos/mercurial",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/mercurial",
     "state": "RUNNING"
   },
   "/data/users/johndoe/other_repos/linux": {
+    "backing_repo": "/home/johndoe/eden-repos/linux",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/linux2",
     "state": "RUNNING"
   },
   "/data/users/johndoe/repos/linux": {
+    "backing_repo": "/home/johndoe/eden-repos/linux",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/linux",
     "state": "RUNNING"
   },
   "/data/users/johndoe/www": {
+    "backing_repo": "/home/johndoe/eden-repos/www",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/www",
     "state": "NOT_RUNNING"
@@ -151,7 +219,7 @@ class ListTest(unittest.TestCase):
             json_out.getvalue(),
         )
 
-    def test_list_mounts_old_thrift(self):
+    def test_list_mounts_no_state(self):
         self.maxDiff = None
 
         # Simulate an older edenfs daemon that does not send the "state" field
@@ -174,22 +242,59 @@ class ListTest(unittest.TestCase):
             etc_eden_dir="/etc/eden",
             home_dir="/home/johndoe",
         )
+
+        checkout1 = EdenCheckout(
+            instance,
+            Path("/data/users/johndoe/mercurial"),
+            Path("/home/johndoe/.eden/clients/mercurial"),
+        )
+        checkout1.set_config(
+            CheckoutConfig(
+                backing_repo=Path("/home/johndoe/eden-repos/mercurial"),
+                scm_type="hg",
+                guid="789",
+                default_revision=DEFAULT_REVISION["hg"],
+                redirections={},
+                active_prefetch_profiles=[],
+            )
+        )
+
+        checkout2 = EdenCheckout(
+            instance,
+            Path("/data/users/johndoe/git"),
+            Path("/home/johndoe/.eden/clients/git"),
+        )
+        checkout2.set_config(
+            CheckoutConfig(
+                backing_repo=Path("/home/johndoe/eden-repos/git"),
+                scm_type="git",
+                guid="321",
+                default_revision=DEFAULT_REVISION["git"],
+                redirections={},
+                active_prefetch_profiles=[],
+            )
+        )
+
+        checkout3 = EdenCheckout(
+            instance,
+            Path("/data/users/johndoe/www"),
+            Path("/home/johndoe/.eden/clients/www"),
+        )
+        checkout3.set_config(
+            CheckoutConfig(
+                backing_repo=Path("/home/johndoe/eden-repos/www"),
+                scm_type="hg",
+                guid="654",
+                default_revision=DEFAULT_REVISION["hg"],
+                redirections={},
+                active_prefetch_profiles=[],
+            )
+        )
+
         config_checkouts = [
-            EdenCheckout(
-                instance,
-                Path("/data/users/johndoe/mercurial"),
-                Path("/home/johndoe/.eden/clients/mercurial"),
-            ),
-            EdenCheckout(
-                instance,
-                Path("/data/users/johndoe/git"),
-                Path("/home/johndoe/.eden/clients/git"),
-            ),
-            EdenCheckout(
-                instance,
-                Path("/data/users/johndoe/www"),
-                Path("/home/johndoe/.eden/clients/www"),
-            ),
+            checkout1,
+            checkout2,
+            checkout3,
         ]
 
         mounts = main_mod.ListCmd.combine_mount_info(thrift_mounts, config_checkouts)
@@ -212,24 +317,151 @@ class ListTest(unittest.TestCase):
             """\
 {
   "/data/users/johndoe/configs": {
+    "backing_repo": null,
     "configured": false,
     "data_dir": "/home/johndoe/.eden/clients/configs",
     "state": "RUNNING"
   },
   "/data/users/johndoe/git": {
+    "backing_repo": "/home/johndoe/eden-repos/git",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/git",
     "state": "RUNNING"
   },
   "/data/users/johndoe/mercurial": {
+    "backing_repo": "/home/johndoe/eden-repos/mercurial",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/mercurial",
     "state": "RUNNING"
   },
   "/data/users/johndoe/www": {
+    "backing_repo": "/home/johndoe/eden-repos/www",
     "configured": true,
     "data_dir": "/home/johndoe/.eden/clients/www",
     "state": "NOT_RUNNING"
+  }
+}
+""",
+            json_out.getvalue(),
+        )
+
+    def test_list_mounts_no_backing_repos(self):
+        self.maxDiff = None
+
+        thrift_mounts = [
+            MountInfo(
+                mountPoint=b"/data/users/johndoe/mercurial",
+                edenClientPath=b"/home/johndoe/.eden/clients/mercurial",
+                state=MountState.RUNNING,
+                backingRepoPath=b"/home/johndoe/eden-repos/mercurial",
+            ),
+            MountInfo(
+                mountPoint=b"/data/users/johndoe/git",
+                edenClientPath=b"/home/johndoe/.eden/clients/git",
+                state=MountState.SHUTTING_DOWN,
+                backingRepoPath=None,
+            ),
+            MountInfo(
+                mountPoint=b"/data/users/johndoe/apache",
+                edenClientPath=b"/home/johndoe/.eden/clients/apache",
+                state=MountState.RUNNING,
+                backingRepoPath=b"/home/johndoe/eden-repos/apache",
+            ),
+            MountInfo(
+                mountPoint=b"/data/users/johndoe/configs",
+                edenClientPath=b"/home/johndoe/.eden/clients/configs",
+                state=MountState.INITIALIZING,
+            ),
+        ]
+        instance = EdenInstance(
+            config_dir="/home/johndoe/.eden",
+            etc_eden_dir="/etc/eden",
+            home_dir="/home/johndoe",
+        )
+
+        checkout1 = EdenCheckout(
+            instance,
+            Path("/data/users/johndoe/mercurial"),
+            Path("/home/johndoe/.eden/clients/mercurial"),
+        )
+        checkout1.set_config(
+            CheckoutConfig(
+                # note the backing repo is never expected to be different in the
+                # daemon and client, but for the sake of testing that the
+                # backing repo will be taken from the daemon we make them
+                # different
+                backing_repo=Path("/home/johndoe/eden-repos/mercurial1"),
+                scm_type="hg",
+                guid="123",
+                default_revision=DEFAULT_REVISION["hg"],
+                redirections={},
+                active_prefetch_profiles=[],
+            )
+        )
+
+        checkout2 = EdenCheckout(
+            instance,
+            Path("/data/users/johndoe/git"),
+            Path("/home/johndoe/.eden/clients/git"),
+        )
+        checkout2.set_config(
+            CheckoutConfig(
+                backing_repo=Path("/home/johndoe/eden-repos/git"),
+                scm_type="git",
+                guid="456",
+                default_revision=DEFAULT_REVISION["git"],
+                redirections={},
+                active_prefetch_profiles=[],
+            )
+        )
+
+        config_checkouts = [
+            checkout1,
+            checkout2,
+        ]
+
+        mounts = main_mod.ListCmd.combine_mount_info(thrift_mounts, config_checkouts)
+
+        normal_out = TestOutput()
+        main_mod.ListCmd.print_mounts(normal_out, mounts)
+        self.assertEqual(
+            """\
+/data/users/johndoe/apache (unconfigured)
+/data/users/johndoe/configs (INITIALIZING) (unconfigured)
+/data/users/johndoe/git (SHUTTING_DOWN)
+/data/users/johndoe/mercurial
+""",
+            normal_out.getvalue(),
+        )
+
+        json_out = TestOutput()
+        main_mod.ListCmd.print_mounts_json(json_out, mounts)
+        self.assertEqual(
+            """\
+{
+  "/data/users/johndoe/apache": {
+    "backing_repo": "/home/johndoe/eden-repos/apache",
+    "configured": false,
+    "data_dir": "/home/johndoe/.eden/clients/apache",
+    "state": "RUNNING"
+  },
+  "/data/users/johndoe/configs": {
+    "backing_repo": null,
+    "configured": false,
+    "data_dir": "/home/johndoe/.eden/clients/configs",
+    "state": "INITIALIZING"
+  },
+  "/data/users/johndoe/git": {
+    "backing_repo": "/home/johndoe/eden-repos/git",
+    "configured": true,
+    "data_dir": "/home/johndoe/.eden/clients/git",
+    "state": "SHUTTING_DOWN"
+  },
+  "/data/users/johndoe/mercurial": {
+    "backing_repo": "/home/johndoe/eden-repos/mercurial",
+    "configured": true,
+    "data_dir": "/home/johndoe/.eden/clients/mercurial",
+    "state": "RUNNING"
   }
 }
 """,

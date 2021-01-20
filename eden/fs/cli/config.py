@@ -892,6 +892,11 @@ class EdenCheckout:
             path_parts.append(curdir.name)
             curdir = curdir.parent
 
+    # only for use in unit tests, in production the config should always be read
+    # from disk
+    def set_config(self, config: CheckoutConfig) -> None:
+        self._config = config
+
     def get_config(self) -> CheckoutConfig:
         config = self._config
         if config is None:
