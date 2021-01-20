@@ -98,18 +98,32 @@ fn main(fb: FacebookInit) {
         tokio::runtime::Runtime::new()
             .map_err(Error::from)
             .and_then(|mut runtime| {
-                // NOTE: We shutdown immediately here. This is a bit unfortunate, but it's due to
-                // the fact that we use Stdin / Stdout and Stderr from Tokio, and those things
-                // spawn blocking threads, which will prevent the runtime from shutting down. This
-                // would normally be OK, but hgcli is a bit special in the sense that the client
-                // does not close stdin, so stdin will usually be blocked waiting for input. Note
-                // that if serve has exited, there is nothing left to do, since it means
-                // - The client may have closed stdin, in which case we don't really have anything
-                // to say to them anymore.
-                // - The server may have closed the connection, in which case reading from stdin
-                // doesn't make any sense.
                 let result = runtime.block_on(serve::cmd(fb, &matches, subcmd));
-                runtime.shutdown_timeout(Duration::from_nanos(0));
+
+                // NOTE: We leak the runtime, and all its tasks here. This is very unfortunate, but
+                // it's due to the fact that we use Stdin / Stdout and Stderr from Tokio, and those
+                // things spawn blocking threads, which will prevent the runtime from shutting down
+                // if they are busy (P163996251 for what this looks like).
+                //
+                // This would normally be OK for most apps, but hgcli is a bit special in the sense
+                // that its client does not close stdin, so stdin will be blocked waiting for input
+                // when we get here.
+                //
+                // However, at this point, there is no use waiting on further input, since by the
+                // point we return from serve::cmd, we have successfully flushed stdout & stderr,
+                // and expect no further input on stdin (and even if we had any, we wouldn't do
+                // anything with it).
+                //
+                // We have two ways of doing this. We could std::mem::forget about the runtime, but
+                // then if we have anything on the runtime that *isn't* a read from stdin, we could
+                // block the fbinit destructors from running. So, what we do is we drop the runtime
+                // on a separate thread. If it blocks fbinit then we'll implicitly wait until it
+                // shuts down "enough", and if it doesn't we'll just let the runtime leak, which
+                // doesn't matter, because at this point we are done and we just REALLY WOULD LIKE
+                // THIS PROGRAM TO JUST EXIT.
+
+                let _ = std::thread::spawn(|| runtime.shutdown_timeout(Duration::from_nanos(0)));
+
                 result
             })
     } else {
