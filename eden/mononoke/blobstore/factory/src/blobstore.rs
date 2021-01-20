@@ -24,7 +24,9 @@ use metaconfig_types::{
     BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, MultiplexedStoreType, ScrubAction,
     ShardableRemoteDatabaseConfig,
 };
-use multiplexedblob::{LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler};
+use multiplexedblob::{
+    LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler, ScrubOptions,
+};
 use packblob::{PackBlob, PackOptions};
 use readonlyblob::ReadOnlyBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -552,7 +554,7 @@ pub async fn make_blobstore_multiplexed<'a>(
             }),
             scuba_sample_rate,
             scrub_handler,
-            scrub_action,
+            ScrubOptions { scrub_action },
         )) as Arc<dyn BlobstorePutOps>,
         None => Arc::new(MultiplexedBlobstore::new(
             multiplex_id,

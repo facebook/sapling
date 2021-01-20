@@ -15,7 +15,7 @@ use std::{
 
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use crate::queue::MultiplexedBlobstore;
-use crate::scrub::{LoggingScrubHandler, ScrubBlobstore, ScrubHandler};
+use crate::scrub::{LoggingScrubHandler, ScrubBlobstore, ScrubHandler, ScrubOptions};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
@@ -246,7 +246,9 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
         scrub_handler.clone(),
-        ScrubAction::ReportOnly,
+        ScrubOptions {
+            scrub_action: ScrubAction::ReportOnly,
+        },
     );
 
     let mut fut = bs.get(ctx, "key");
@@ -568,7 +570,9 @@ async fn scrubbed(fb: FacebookInit) {
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
         scrub_handler.clone(),
-        ScrubAction::ReportOnly,
+        ScrubOptions {
+            scrub_action: ScrubAction::ReportOnly,
+        },
     );
 
     // non-existing key when one blobstore failing
@@ -638,7 +642,9 @@ async fn scrubbed(fb: FacebookInit) {
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
         scrub_handler,
-        ScrubAction::Repair,
+        ScrubOptions {
+            scrub_action: ScrubAction::Repair,
+        },
     );
 
     // Non-existing key in both blobstores, new blobstore failing
