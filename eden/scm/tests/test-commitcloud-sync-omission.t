@@ -34,7 +34,6 @@ Make shared part of config
   > servicelocation = $TESTTMP
   > token_enforced = False
   > education_page = https://someurl.com/wiki/CommitCloud
-  > owner_team = The Test Team @ FB
   > EOF
 
 Utility script to dump commit cloud metadata

@@ -55,7 +55,6 @@ Make shared part of config
   > user_token_path = $TESTTMP
   > auth_help = visit https://localhost/oauth to generate a registration token
   > education_page = https://someurl.com/wiki/CommitCloud
-  > owner_team = The Test Team @ FB
   > EOF
 
 Make the first clone of the server
@@ -68,7 +67,7 @@ Test registration with the different settings
   abort: commitcloud: registration error: authentication with commit cloud required
   authentication instructions:
   visit https://localhost/oauth to generate a registration token
-  (please contact The Test Team @ FB if you are unable to authenticate)
+  (please contact the Source Control Team if you are unable to authenticate)
   [255]
   $ hg cloud auth -t xxxxxx
   setting authentication token

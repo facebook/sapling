@@ -427,13 +427,13 @@ def cloudleave(ui, repo, **opts):
             ),
             component="commitcloud",
         )
-        ownerteam = ui.config("commitcloud", "owner_team")
-        if ownerteam:
+        supportcontact = ui.config("ui", "supportcontact")
+        if supportcontact:
             ui.status(
                 _(
                     "help us to make your experience better by sharing your feedback with %s\n"
                 )
-                % ownerteam,
+                % supportcontact,
                 component="commitcloud",
             )
         educationpage = ui.config("commitcloud", "education_page")

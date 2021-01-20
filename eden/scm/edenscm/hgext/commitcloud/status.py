@@ -89,4 +89,6 @@ def summary(repo):
             ui.warn(_("(run 'hg cloud sync' to synchronize your workspace)\n"))
         else:
             ui.warn(_("(run 'hg cloud backup' to perform a backup)\n"))
-        ui.warn(_("(if this fails, please report to %s)\n") % ccerror.getownerteam(ui))
+        ui.warn(
+            _("(if this fails, please report to %s)\n") % ccerror.getsupportcontact(ui)
+        )

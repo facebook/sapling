@@ -94,7 +94,7 @@ def _warn_service_not_running(ui):
             "(run 'hg cloud sync' manually if your workspace is not synchronized)\n"
             "(please contact %s if this warning persists)\n"
         )
-        % ccerror.getownerteam(ui),
+        % ccerror.getsupportcontact(ui),
         component="commitcloud",
     )
 

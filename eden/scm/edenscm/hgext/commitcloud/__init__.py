@@ -60,9 +60,6 @@ Configs::
     # the path should exist
     user_token_path = /tmp
 
-    # owner team, used for help messages
-    owner_team = "The Source Control Team"
-
     # education page
     education_page = https://someurl.com/wiki/CommitCloud
 

@@ -97,7 +97,6 @@ Check that backup doesn't interfere with commit cloud
   > servicelocation = $TESTTMP
   > token_enforced = False
   > education_page = https://someurl.com/wiki/CommitCloud
-  > owner_team = The Test Team @ FB
   > EOF
 
   $ cd shallow

@@ -38,7 +38,6 @@ Make shared part of config
   > servicetype = local
   > servicelocation = $TESTTMP
   > token_enforced = False
-  > owner_team = The Test Team @ FB
   > EOF
 
 Make the first clone of the server

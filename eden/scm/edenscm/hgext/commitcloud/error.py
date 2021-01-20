@@ -13,9 +13,9 @@ from edenscm.mercurial import error
 from edenscm.mercurial.i18n import _
 
 
-def getownerteam(ui):
+def getsupportcontact(ui):
     return ui.label(
-        ui.config("commitcloud", "owner_team", "the Source Control Team"),
+        ui.config("ui", "supportcontact", "the Source Control Team"),
         "commitcloud.team",
     )
 
@@ -23,7 +23,7 @@ def getownerteam(ui):
 class UnexpectedError(error.Abort):
     def __init__(self, ui, message, *args):
         details = traceback.format_exc()  # last part of traceback
-        contact = _("(please contact %s to report the error)") % getownerteam(ui)
+        contact = _("(please contact %s to report the error)") % getsupportcontact(ui)
         message = "unexpected error: %s\n%s\n%s" % (message, details, contact)
         ui.log("commitcloud_error", commitcloud_sync_error="unexpected error")
         super(UnexpectedError, self).__init__(message, *args, component="commitcloud")
@@ -39,7 +39,7 @@ class RegistrationError(error.Abort):
             )
         contact = _(
             "(please contact %s if you are unable to authenticate)"
-        ) % getownerteam(ui)
+        ) % getsupportcontact(ui)
         message = "registration error: %s\n%s\n%s" % (message, details, contact)
         ui.log("commitcloud_error", commitcloud_sync_error="registration error")
         super(RegistrationError, self).__init__(
@@ -90,7 +90,7 @@ class ServiceError(error.Abort):
     def __init__(self, ui, message, *args):
         helptext = _(
             "(retry might help, please contact %s if this error persists)"
-        ) % getownerteam(ui)
+        ) % getsupportcontact(ui)
         message = "service error: %s\n%s" % (message, helptext)
         ui.log("commitcloud_error", commitcloud_sync_error="service error")
         super(ServiceError, self).__init__(message, *args, component="commitcloud")
@@ -109,7 +109,9 @@ class InvalidWorkspaceDataError(error.Abort):
 class SynchronizationError(error.Abort):
     def __init__(self, ui, message, *args):
         details = _("(please retry 'hg cloud sync')")
-        contact = _("(please contact %s if this error persists)") % getownerteam(ui)
+        contact = _("(please contact %s if this error persists)") % getsupportcontact(
+            ui
+        )
         message = "failed to synchronize commits: '%s'\n%s\n%s" % (
             message,
             details,
@@ -124,7 +126,7 @@ class SynchronizationError(error.Abort):
 class SubprocessError(error.Abort):
     def __init__(self, ui, rc, stderrdata, *args):
         message = _("process exited with status %d") % rc
-        contact = _("(please contact %s to report the error)") % getownerteam(ui)
+        contact = _("(please contact %s to report the error)") % getsupportcontact(ui)
         message = "subprocess error: '%s'\n%s\n%s" % (
             message,
             stderrdata.strip(),
@@ -136,7 +138,9 @@ class SubprocessError(error.Abort):
 
 class KeychainAccessError(error.Abort):
     def __init__(self, ui, reason, solution, *args):
-        contact = _("(please contact %s if this error persists)") % getownerteam(ui)
+        contact = _("(please contact %s if this error persists)") % getsupportcontact(
+            ui
+        )
         message = "keychain access error: '%s'\n%s\n%s" % (reason, solution, contact)
         ui.log("commitcloud_error", commitcloud_sync_error="keychain access error")
         super(KeychainAccessError, self).__init__(
@@ -148,7 +152,9 @@ class TLSAccessError(error.Abort):
     def __init__(self, ui, reason, *args):
         # internal config: help.tlshelp
         helptext = ui.config("help", "tlshelp")
-        contact = _("(please contact %s if this error persists)") % getownerteam(ui)
+        contact = _("(please contact %s if this error persists)") % getsupportcontact(
+            ui
+        )
         message = "TLS error: '%s'\n" % reason
         if helptext:
             message += "\n" + helptext

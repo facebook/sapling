@@ -39,7 +39,6 @@ servicetype = local
 servicelocation = $TESTTMP
 token_enforced = False
 education_page = https://someurl.com/wiki/CommitCloud
-owner_team = The Test Team @ FB
 """ >> "shared.rc"
 
 # Make a clone of the server
