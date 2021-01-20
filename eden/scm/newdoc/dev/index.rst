@@ -29,6 +29,7 @@ Contents:
    internals/Mutation
    internals/RequiresFile
    internals/RevlogNG
+   internals/SegmentedChangelog
    internals/UnlinkingFilesOnWindows
    internals/Visibility
    internals/WhatGoesWhere
