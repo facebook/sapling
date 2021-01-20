@@ -339,6 +339,10 @@ def _makerage(ui, repo, **opts):
                 "debugmutation", rev=["draft() & date(-4)"], time_range=["since 4d ago"]
             ),
         ),
+        (
+            "hg bookmarks --list-subscriptions",
+            lambda: hgcmd("bookmarks", list_subscriptions=True),
+        ),
         ("sigtrace", lambda: readsigtraces(repo)),
         (
             "hg blackbox",
