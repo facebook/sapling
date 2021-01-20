@@ -15,7 +15,7 @@ use blobstore_factory::{
 use cached_config::ConfigStore;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use metaconfig_types::{BlobConfig, BlobstoreId, ScrubAction};
+use metaconfig_types::{BlobConfig, BlobstoreId};
 use mononoke_types::{repo::REPO_PREFIX_REGEX, RepositoryId};
 use multiplexedblob::{LoggingScrubHandler, ScrubHandler};
 use samplingblob::{SamplingBlobstore, SamplingHandler};
@@ -24,7 +24,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
-use std::{collections::HashMap, convert::From, str::FromStr, sync::Arc};
+use std::{collections::HashMap, convert::From, fmt, str::FromStr, sync::Arc};
 
 define_stats! {
     prefix = "mononoke.walker";
@@ -54,6 +54,15 @@ impl StatsScrubHandler {
             inner: LoggingScrubHandler::new(quiet),
             repo_id_to_name,
         }
+    }
+}
+
+impl fmt::Debug for StatsScrubHandler {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StatsScrubHandler")
+            .field("subcommand_stats_key", &self.subcommand_stats_key)
+            .field("inner", &self.inner)
+            .finish()
     }
 }
 
@@ -163,69 +172,18 @@ pub async fn open_blobstore<'a>(
     blob_config: BlobConfig,
     inner_blobstore_id: Option<u64>,
     readonly_storage: ReadOnlyStorage,
-    scrub_action: Option<ScrubAction>,
     blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
-    scuba_builder: MononokeScubaSampleBuilder,
     walk_stats_key: &'static str,
     repo_id_to_name: HashMap<RepositoryId, String>,
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
     config_store: &'a ConfigStore,
 ) -> Result<Arc<dyn Blobstore>, Error> {
-    let mut blobconfig = get_blobconfig(blob_config, inner_blobstore_id)?;
-    let scrub_handler = scrub_action.map(|scrub_action| {
-        blobconfig.set_scrubbed(scrub_action);
-        Arc::new(StatsScrubHandler::new(
-            false,
-            scuba_builder.clone(),
-            walk_stats_key,
-            repo_id_to_name.clone(),
-        )) as Arc<dyn ScrubHandler>
-    });
+    let blobconfig = get_blobconfig(blob_config, inner_blobstore_id)?;
 
-    let blobstore = match (scrub_handler, blobconfig) {
+    let blobstore = match (&blobstore_options.scrub_options, blobconfig) {
         (
-            Some(scrub_handler),
-            BlobConfig::Scrub {
-                multiplex_id,
-                scuba_table,
-                scuba_sample_rate,
-                blobstores,
-                minimum_successful_writes,
-                scrub_action,
-                queue_db,
-            },
-        ) => {
-            // Make sure the repair stats are set to zero for each store.
-            // Without this the new stats only show up when a repair is needed (i.e. as they get incremented),
-            // which makes them harder to monitor on (no datapoints rather than a zero datapoint at start).
-            for name in repo_id_to_name.values() {
-                for s in &[STATS::scrub_repaired, STATS::scrub_repair_required] {
-                    for (id, _ty, _config) in &blobstores {
-                        s.add_value(0, (walk_stats_key, id.to_string(), name.clone()));
-                    }
-                }
-            }
-
-            make_blobstore_multiplexed(
-                fb,
-                multiplex_id,
-                queue_db,
-                scuba_table,
-                scuba_sample_rate,
-                blobstores,
-                minimum_successful_writes,
-                Some((scrub_handler, scrub_action)),
-                mysql_options,
-                readonly_storage,
-                blobstore_options,
-                logger,
-                config_store,
-            )
-            .await?
-        }
-        (
-            None,
+            scrub_options,
             BlobConfig::Multiplexed {
                 multiplex_id,
                 scuba_table,
@@ -235,6 +193,18 @@ pub async fn open_blobstore<'a>(
                 queue_db,
             },
         ) => {
+            if scrub_options.is_some() {
+                // Make sure the repair stats are set to zero for each store.
+                // Without this the new stats only show up when a repair is needed (i.e. as they get incremented),
+                // which makes them harder to monitor on (no datapoints rather than a zero datapoint at start).
+                for name in repo_id_to_name.values() {
+                    for s in &[STATS::scrub_repaired, STATS::scrub_repair_required] {
+                        for (id, _ty, _config) in &blobstores {
+                            s.add_value(0, (walk_stats_key, id.to_string(), name.clone()));
+                        }
+                    }
+                }
+            }
             make_blobstore_multiplexed(
                 fb,
                 multiplex_id,
@@ -243,7 +213,6 @@ pub async fn open_blobstore<'a>(
                 scuba_sample_rate,
                 blobstores,
                 minimum_successful_writes,
-                None,
                 mysql_options,
                 readonly_storage,
                 blobstore_options,
@@ -265,7 +234,9 @@ pub async fn open_blobstore<'a>(
             .await?
         }
         (Some(_), _) => {
-            return Err(format_err!("Scrub action passed for non-scrubbable store"));
+            return Err(format_err!(
+                "Scrub requested passed for non-scrubbable store"
+            ));
         }
     };
 

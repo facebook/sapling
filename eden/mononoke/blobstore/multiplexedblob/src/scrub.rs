@@ -35,9 +35,19 @@ static HEAL_MAX_BACKLOG: OnceCell<ChronoDuration> = OnceCell::new();
 #[derive(Clone, Debug)]
 pub struct ScrubOptions {
     pub scrub_action: ScrubAction,
+    pub scrub_handler: Arc<dyn ScrubHandler>,
 }
 
-pub trait ScrubHandler: Send + Sync {
+impl Default for ScrubOptions {
+    fn default() -> Self {
+        Self {
+            scrub_action: ScrubAction::ReportOnly,
+            scrub_handler: Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
+        }
+    }
+}
+
+pub trait ScrubHandler: Send + Sync + fmt::Debug {
     /// Called when one of the inner stores required repair.
     fn on_repair(
         &self,
@@ -49,6 +59,7 @@ pub trait ScrubHandler: Send + Sync {
     );
 }
 
+#[derive(Debug)]
 pub struct LoggingScrubHandler {
     quiet: bool,
 }
@@ -87,7 +98,6 @@ impl ScrubHandler for LoggingScrubHandler {
 #[derive(Clone)]
 pub struct ScrubBlobstore {
     inner: MultiplexedBlobstore,
-    scrub_handler: Arc<dyn ScrubHandler>,
     scrub_options: ScrubOptions,
     scuba: MononokeScubaSampleBuilder,
     scrub_stores: Arc<HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>>,
@@ -103,7 +113,6 @@ impl ScrubBlobstore {
         queue: Arc<dyn BlobstoreSyncQueue>,
         scuba: MononokeScubaSampleBuilder,
         scuba_sample_rate: NonZeroU64,
-        scrub_handler: Arc<dyn ScrubHandler>,
         scrub_options: ScrubOptions,
     ) -> Self {
         let inner = MultiplexedBlobstore::new(
@@ -117,7 +126,6 @@ impl ScrubBlobstore {
         );
         Self {
             inner,
-            scrub_handler,
             scrub_options,
             scuba,
             scrub_stores: Arc::new(
@@ -174,7 +182,6 @@ async fn blobstore_get(
     key: &str,
     queue: &dyn BlobstoreSyncQueue,
     scrub_stores: &HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>,
-    scrub_handler: &dyn ScrubHandler,
     scrub_options: &ScrubOptions,
     scuba: &MononokeScubaSampleBuilder,
 ) -> Result<Option<BlobstoreGetData>> {
@@ -226,7 +233,13 @@ async fn blobstore_get(
                 }
                 if scrub_options.scrub_action == ScrubAction::ReportOnly {
                     for id in needs_repair.keys() {
-                        scrub_handler.on_repair(&ctx, *id, key, false, value.as_meta());
+                        scrub_options.scrub_handler.on_repair(
+                            &ctx,
+                            *id,
+                            key,
+                            false,
+                            value.as_meta(),
+                        );
                     }
                 } else {
                     // inner_put to the stores that need it.
@@ -242,7 +255,7 @@ async fn blobstore_get(
                                 store,
                                 key,
                                 &value,
-                                scrub_handler,
+                                scrub_options.scrub_handler.as_ref(),
                             )
                         })
                         .collect();
@@ -269,7 +282,6 @@ impl Blobstore for ScrubBlobstore {
             key,
             self.queue.as_ref(),
             self.scrub_stores.as_ref(),
-            self.scrub_handler.as_ref(),
             &self.scrub_options,
             &self.scuba,
         )

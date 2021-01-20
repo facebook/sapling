@@ -14,7 +14,7 @@
 use anyhow::{anyhow, Error, Result};
 use std::{
     collections::{HashMap, HashSet},
-    fmt, mem,
+    fmt,
     num::{NonZeroU64, NonZeroUsize},
     ops::Deref,
     path::PathBuf,
@@ -802,23 +802,6 @@ pub enum BlobConfig {
         /// DB config to use for the sync queue
         queue_db: DatabaseConfig,
     },
-    /// Multiplex across multiple blobstores scrubbing for errors
-    Scrub {
-        /// A unique ID that identifies this multiplex configuration
-        multiplex_id: MultiplexId,
-        /// A scuba table I guess
-        scuba_table: Option<String>,
-        /// Set of blobstores being multiplexed over
-        blobstores: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
-        /// The number of writes that must succeed for a `put` to the multiplex to succeed
-        minimum_successful_writes: NonZeroUsize,
-        /// Whether to attempt repair
-        scrub_action: ScrubAction,
-        /// 1 in scuba_sample_rate samples will be logged.
-        scuba_sample_rate: NonZeroU64,
-        /// DB config to use for the sync queue
-        queue_db: DatabaseConfig,
-    },
     /// Store in a manifold bucket, but every object will have an expiration
     ManifoldWithTtl {
         /// Bucket of the backing Manifold blobstore to connect to
@@ -864,44 +847,12 @@ impl BlobConfig {
         match self {
             Disabled | Files { .. } | Sqlite { .. } => true,
             Manifold { .. } | Mysql { .. } | ManifoldWithTtl { .. } | S3 { .. } => false,
-            Multiplexed { blobstores, .. } | Scrub { blobstores, .. } => blobstores
+            Multiplexed { blobstores, .. } => blobstores
                 .iter()
                 .map(|(_, _, config)| config)
                 .all(BlobConfig::is_local),
             Logging { blobconfig, .. } => blobconfig.is_local(),
             Pack { blobconfig, .. } => blobconfig.is_local(),
-        }
-    }
-
-    /// Change all internal blobstores to scrub themselves for errors where possible.
-    /// This maximises error rates, and asks blobstores to silently fix errors when they are able
-    /// to do so - ideal for repository checkers.
-    pub fn set_scrubbed(&mut self, scrub_action: ScrubAction) {
-        use BlobConfig::{Multiplexed, Scrub};
-
-        if let Multiplexed {
-            multiplex_id,
-            scuba_table,
-            scuba_sample_rate,
-            blobstores,
-            minimum_successful_writes,
-            queue_db,
-        } = self
-        {
-            let scuba_table = mem::replace(scuba_table, None);
-            let mut blobstores = mem::replace(blobstores, Vec::new());
-            for (_, _, store) in blobstores.iter_mut() {
-                store.set_scrubbed(scrub_action);
-            }
-            *self = Scrub {
-                multiplex_id: *multiplex_id,
-                scuba_table,
-                scuba_sample_rate: *scuba_sample_rate,
-                blobstores,
-                minimum_successful_writes: *minimum_successful_writes,
-                scrub_action,
-                queue_db: queue_db.clone(),
-            };
         }
     }
 }

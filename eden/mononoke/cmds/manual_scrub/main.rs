@@ -18,13 +18,14 @@ use tokio::{
     io::{stdin, AsyncBufReadExt, AsyncWriteExt, BufReader},
 };
 
+use blobstore_factory::make_blobstore;
 use cmdlib::args;
 use context::CoreContext;
+use metaconfig_types::ScrubAction;
 
-mod blobstore;
 mod scrub;
 
-use crate::{blobstore::open_blobstore, scrub::scrub};
+use crate::scrub::scrub;
 
 const ARG_STORAGE_CONFIG_NAME: &str = "storage-config-name";
 const ARG_SCHEDULED_MAX: &str = "scheduled-max";
@@ -114,7 +115,8 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         .context("Requested storage config not found")?;
 
     let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches);
+    let blobstore_options =
+        args::parse_blobstore_options(&matches).with_scrub_action(Some(ScrubAction::Repair));
     let ctx = CoreContext::new_bulk_with_logger(fb, logger.clone());
 
     let success_file_name = matches
@@ -128,10 +130,11 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         .context("No errored keys output file")?;
 
     let scrub = async move {
-        let blobstore = open_blobstore(
+        let blobstore = make_blobstore(
             fb,
-            storage_config,
+            storage_config.blobstore,
             &mysql_options,
+            blobstore_factory::ReadOnlyStorage(false),
             &blobstore_options,
             &logger,
             config_store,

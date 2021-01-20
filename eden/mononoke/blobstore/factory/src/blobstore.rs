@@ -24,9 +24,7 @@ use metaconfig_types::{
     BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, MultiplexedStoreType, ScrubAction,
     ShardableRemoteDatabaseConfig,
 };
-use multiplexedblob::{
-    LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler, ScrubOptions,
-};
+use multiplexedblob::{MultiplexedBlobstore, ScrubBlobstore, ScrubOptions};
 use packblob::{PackBlob, PackOptions};
 use readonlyblob::ReadOnlyBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -48,6 +46,7 @@ pub struct BlobstoreOptions {
     pub pack_options: PackOptions,
     pub cachelib_options: CachelibBlobstoreOptions,
     pub put_behaviour: PutBehaviour,
+    pub scrub_options: Option<ScrubOptions>,
 }
 
 impl BlobstoreOptions {
@@ -58,6 +57,7 @@ impl BlobstoreOptions {
         pack_options: PackOptions,
         cachelib_options: CachelibBlobstoreOptions,
         put_behaviour: Option<PutBehaviour>,
+        scrub_options: Option<ScrubOptions>,
     ) -> Self {
         Self {
             chaos_options,
@@ -67,6 +67,20 @@ impl BlobstoreOptions {
             cachelib_options,
             // If not specified, maintain status quo, which is overwrite
             put_behaviour: put_behaviour.unwrap_or(DEFAULT_PUT_BEHAVIOUR),
+            scrub_options,
+        }
+    }
+
+    pub fn with_scrub_action(self, scrub_action: Option<ScrubAction>) -> Self {
+        if let Some(scrub_action) = scrub_action {
+            let mut scrub_options = self.scrub_options.unwrap_or_default();
+            scrub_options.scrub_action = scrub_action;
+            Self {
+                scrub_options: Some(scrub_options),
+                ..self
+            }
+        } else {
+            self
         }
     }
 }
@@ -79,6 +93,7 @@ impl Default for BlobstoreOptions {
             None,
             PackOptions::default(),
             CachelibBlobstoreOptions::default(),
+            None,
             None,
         )
     }
@@ -275,37 +290,6 @@ pub fn make_blobstore_put_ops<'a>(
                     scuba_sample_rate,
                     blobstores,
                     minimum_successful_writes,
-                    None,
-                    mysql_options,
-                    readonly_storage,
-                    blobstore_options,
-                    logger,
-                    config_store,
-                )
-                .await?
-            }
-            Scrub {
-                multiplex_id,
-                scuba_table,
-                scuba_sample_rate,
-                blobstores,
-                minimum_successful_writes,
-                scrub_action,
-                queue_db,
-            } => {
-                has_components = true;
-                make_blobstore_multiplexed(
-                    fb,
-                    multiplex_id,
-                    queue_db,
-                    scuba_table,
-                    scuba_sample_rate,
-                    blobstores,
-                    minimum_successful_writes,
-                    Some((
-                        Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
-                        scrub_action,
-                    )),
                     mysql_options,
                     readonly_storage,
                     blobstore_options,
@@ -471,18 +455,18 @@ pub async fn make_blobstore_multiplexed<'a>(
     scuba_sample_rate: NonZeroU64,
     inner_config: Vec<(BlobstoreId, MultiplexedStoreType, BlobConfig)>,
     minimum_successful_writes: NonZeroUsize,
-    scrub_args: Option<(Arc<dyn ScrubHandler>, ScrubAction)>,
     mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
     config_store: &'a ConfigStore,
 ) -> Result<Arc<dyn BlobstorePutOps>, Error> {
-    let component_readonly = match &scrub_args {
-        // Need to write to components to repair them.
-        Some((_, ScrubAction::Repair)) => ReadOnlyStorage(false),
-        _ => readonly_storage,
-    };
+    let component_readonly = blobstore_options
+        .scrub_options
+        .as_ref()
+        .map_or(ReadOnlyStorage(false), |v| {
+            ReadOnlyStorage(v.scrub_action != ScrubAction::Repair)
+        });
 
     let mut applied_chaos = false;
 
@@ -542,8 +526,8 @@ pub async fn make_blobstore_multiplexed<'a>(
         (normal_components, write_mostly_components)
     };
 
-    let blobstore = match scrub_args {
-        Some((scrub_handler, scrub_action)) => Arc::new(ScrubBlobstore::new(
+    let blobstore = match &blobstore_options.scrub_options {
+        Some(scrub_options) => Arc::new(ScrubBlobstore::new(
             multiplex_id,
             normal_components,
             write_mostly_components,
@@ -553,8 +537,7 @@ pub async fn make_blobstore_multiplexed<'a>(
                 MononokeScubaSampleBuilder::new(fb, &table)
             }),
             scuba_sample_rate,
-            scrub_handler,
-            ScrubOptions { scrub_action },
+            scrub_options.clone(),
         )) as Arc<dyn BlobstorePutOps>,
         None => Arc::new(MultiplexedBlobstore::new(
             multiplex_id,

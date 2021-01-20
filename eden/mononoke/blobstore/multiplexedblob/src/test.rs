@@ -233,7 +233,6 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
     let bs1 = Arc::new(Tickable::new());
 
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
-    let scrub_handler = Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>;
 
     let ctx = CoreContext::test_mock(fb);
     borrowed!(ctx);
@@ -245,9 +244,9 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
-        scrub_handler.clone(),
         ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
+            scrub_handler: Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
         },
     );
 
@@ -569,9 +568,9 @@ async fn scrubbed(fb: FacebookInit) {
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
-        scrub_handler.clone(),
         ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
+            scrub_handler: scrub_handler.clone(),
         },
     );
 
@@ -641,9 +640,9 @@ async fn scrubbed(fb: FacebookInit) {
         queue.clone(),
         MononokeScubaSampleBuilder::with_discard(),
         nonzero!(1u64),
-        scrub_handler,
         ScrubOptions {
             scrub_action: ScrubAction::Repair,
+            scrub_handler,
         },
     );
 

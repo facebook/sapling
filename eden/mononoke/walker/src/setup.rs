@@ -36,6 +36,7 @@ use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::{
     BlobConfig, CensoredScubaParams, MetadataDatabaseConfig, Redaction, ScrubAction,
 };
+use multiplexedblob::{ScrubHandler, ScrubOptions};
 use once_cell::sync::Lazy;
 use samplingblob::SamplingHandler;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -960,12 +961,13 @@ pub async fn setup_common<'a>(
     }
 
     let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches);
+    let mut blobstore_options = args::parse_blobstore_options(&matches);
     let storage_id = matches.value_of(STORAGE_ID_ARG);
     let scrub_action = sub_m
         .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
         .map(ScrubAction::from_str)
         .transpose()?;
+
     let enable_redaction = sub_m.is_present(ENABLE_REDACTION_ARG);
 
     // Setup scuba
@@ -990,6 +992,18 @@ pub async fn setup_common<'a>(
     let mut repo_id_to_name = HashMap::new();
     for repo in &repos {
         repo_id_to_name.insert(repo.id, repo.name.clone());
+    }
+
+    if let Some(scrub_action) = scrub_action {
+        blobstore_options.scrub_options = Some(ScrubOptions {
+            scrub_action,
+            scrub_handler: Arc::new(blobstore::StatsScrubHandler::new(
+                false,
+                scuba_builder.clone(),
+                walk_stats_key,
+                repo_id_to_name.clone(),
+            )) as Arc<dyn ScrubHandler>,
+        });
     }
 
     let storage_override = if let Some(storage_id) = storage_id {
@@ -1049,9 +1063,7 @@ pub async fn setup_common<'a>(
                     blobconfig,
                     inner_blobstore_id,
                     readonly_storage,
-                    scrub_action,
                     blobstore_sampler.clone(),
-                    scuba_builder.clone(),
                     walk_stats_key,
                     repo_id_to_name.clone(),
                     &blobstore_options,

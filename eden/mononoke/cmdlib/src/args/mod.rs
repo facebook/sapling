@@ -1662,6 +1662,7 @@ pub fn parse_blobstore_options<'a>(matches: &MononokeMatches<'a>) -> BlobstoreOp
         PackOptions::new(write_zstd_level),
         CachelibBlobstoreOptions::new_lazy(Some(attempt_zstd)),
         blobstore_put_behaviour,
+        None, // no top level ScrubOptions yet
     )
 }
 

@@ -96,11 +96,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-fn get_blobconfig(
-    blob_config: BlobConfig,
-    inner_blobstore_id: Option<u64>,
-    scrub_action: Option<ScrubAction>,
-) -> Result<BlobConfig> {
+fn get_blobconfig(blob_config: BlobConfig, inner_blobstore_id: Option<u64>) -> Result<BlobConfig> {
     match inner_blobstore_id {
         None => Ok(blob_config),
         Some(inner_blobstore_id) => match blob_config {
@@ -125,24 +121,19 @@ fn get_blobconfig(
             )),
         },
     }
-    .map(|mut config| {
-        scrub_action.map(|action| config.set_scrubbed(action));
-        config
-    })
 }
 
 async fn get_blobstore(
     fb: FacebookInit,
     storage_config: StorageConfig,
     inner_blobstore_id: Option<u64>,
-    scrub_action: Option<ScrubAction>,
     mysql_options: MysqlOptions,
     logger: Logger,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
     config_store: &ConfigStore,
 ) -> Result<Arc<dyn Blobstore>, Error> {
-    let blobconfig = get_blobconfig(storage_config.blobstore, inner_blobstore_id, scrub_action)?;
+    let blobconfig = get_blobconfig(storage_config.blobstore, inner_blobstore_id)?;
 
     make_blobstore(
         fb,
@@ -173,13 +164,13 @@ pub async fn subcommand_blobstore_fetch<'a>(
         .map(ScrubAction::from_str)
         .transpose()?;
     let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches);
+    let blobstore_options = args::parse_blobstore_options(&matches).with_scrub_action(scrub_action);
+
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_fut = get_blobstore(
         fb,
         storage_config,
         inner_blobstore_id,
-        scrub_action,
         mysql_options,
         logger.clone(),
         readonly_storage,
