@@ -27,7 +27,7 @@ dirs = "2.0"
 env_logger = "0.7"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 http = "0.2"
-indicatif = { version = "0.14", features = ["with_rayon"] }
+indicatif = { version = "0.15", features = ["with_rayon"] }
 itertools = "0.8"
 log = { version = "0.4.8", features = ["kv_unstable"] }
 percent-encoding = "2.1"
