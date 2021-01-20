@@ -325,6 +325,8 @@ impl<'a> StdioRelay<'a> {
             connector.set_certificate(&pkcs12.cert)?;
             connector.set_private_key(&pkcs12.pkey)?;
 
+            connector.set_alpn_protos(&alpn::alpn_format(alpn::HGCLI_ALPN)?)?;
+
             // add root certificate
 
             connector

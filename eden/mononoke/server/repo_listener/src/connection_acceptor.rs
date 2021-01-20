@@ -50,14 +50,21 @@ use limits::types::MononokeThrottleLimits;
 use sshrelay::{
     IoStream, Metadata, Preamble, Priority, SshDecoder, SshEncoder, SshEnvVars, SshMsg, Stdio,
 };
+use stats::prelude::*;
 
 use crate::errors::ErrorKind;
-use crate::repo_handlers::RepoHandler;
-use crate::request_handler::{create_conn_logger, request_handler};
-
 use crate::netspeedtest::{
     create_http_header, handle_http_netspeedtest, parse_netspeedtest_http_params, NetSpeedTest,
 };
+use crate::repo_handlers::RepoHandler;
+use crate::request_handler::{create_conn_logger, request_handler};
+
+define_stats! {
+    prefix = "mononoke.connection_acceptor";
+    http_accepted: timeseries(Sum),
+    hgcli_accepted: timeseries(Sum),
+    hgcli_no_alpn_accepted: timeseries(Sum),
+}
 
 #[cfg(fbcode_build)]
 const HEADER_ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
@@ -246,22 +253,35 @@ async fn server_mux(
     tls_identities: &MononokeIdentitySet,
     logger: &Logger,
 ) -> Result<MuxOutcome> {
+    let is_hgcli = s.ssl().selected_alpn_protocol() == Some(alpn::HGCLI_ALPN.as_bytes());
+
     let is_trusted = security_checker.check_if_trusted(&tls_identities).await?;
     let (mut rx, mut tx) = tokio::io::split(s);
 
     // Elaborate scheme to workaround lack of peek() on AsyncRead
     let mut peek_buf = vec![0; 4];
     rx.read_exact(&mut peek_buf[..]).await?;
-    let is_http = match peek_buf.as_slice() {
-        // For non-HTTP connection this can never start with GET or POST as these
-        // are wrapped in NetString encoding and prefixed with a type, so
-        // should start with:
-        // <number>:\x00
-        //
-        // For example:
-        // 7:\x00hello\n,
-        b"GET " | b"POST" => true,
-        _ => false,
+    let is_http = if is_hgcli {
+        STATS::hgcli_accepted.add_value(1);
+        false
+    } else {
+        match peek_buf.as_slice() {
+            // For non-HTTP connection this can never start with GET or POST as these
+            // are wrapped in NetString encoding and prefixed with a type, so
+            // should start with:
+            // <number>:\x00
+            //
+            // For example:
+            // 7:\x00hello\n,
+            b"GET " | b"POST" => {
+                STATS::http_accepted.add_value(1);
+                true
+            }
+            _ => {
+                STATS::hgcli_no_alpn_accepted.add_value(1);
+                false
+            }
+        }
     };
     let buf_rx = std::io::Cursor::new(peek_buf).chain(BufReader::new(rx));
 

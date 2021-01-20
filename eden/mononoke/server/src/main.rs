@@ -8,15 +8,13 @@
 #![deny(warnings)]
 #![feature(never_type)]
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use cloned::cloned;
 use cmdlib::{args, monitoring::ReadyFlagService};
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
+use openssl::ssl::AlpnError;
 use slog::{error, info};
-
-#[cfg(fbcode_build)]
-use openssl as _; // suppress unused crate warning - only used outside fbcode
 
 fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
     let app = args::MononokeAppBuilder::new("mononoke server")
@@ -60,14 +58,23 @@ fn main(fb: FacebookInit) -> Result<()> {
         let private_key = matches.value_of("private_key").unwrap().to_string();
         let ca_pem = matches.value_of("ca_pem").unwrap().to_string();
 
-        secure_utils::SslConfig::new(
+        let mut builder = secure_utils::SslConfig::new(
             ca_pem,
             cert,
             private_key,
             matches.value_of("ssl-ticket-seeds"),
         )
-        .build_tls_acceptor(root_log.clone())
-        .expect("failed to build tls acceptor")
+        .tls_acceptor_builder(root_log.clone())
+        .context("Failed to instantiate TLS Acceptor builder")?;
+
+        builder.set_alpn_select_callback(|_, protos| {
+            // NOTE: Currently we do not support HTTP/2 here yet.
+            alpn::alpn_select(protos, alpn::HGCLI_ALPN)
+                .map_err(|_| AlpnError::ALERT_FATAL)?
+                .ok_or(AlpnError::NOACK)
+        });
+
+        builder.build()
     };
 
     info!(root_log, "Creating repo listeners");

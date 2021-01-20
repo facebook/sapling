@@ -7,6 +7,7 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
+alpn = { path = "../alpn" }
 cmdlib = { path = "../cmdlib" }
 monitoring = { path = "monitoring" }
 repo_listener = { path = "repo_listener" }
