@@ -1358,15 +1358,6 @@ where
             .try_collect::<Vec<_>>()
             .await?;
 
-        // If all parents are NotSyncedCandidate then this is NotSyncCandidate as well
-        if sync_outcomes
-            .iter()
-            .all(|(_, outcome)| outcome == &CommitSyncOutcome::NotSyncCandidate)
-        {
-            self.update_wc_equivalence(ctx, source_cs_id, None).await?;
-            return Ok(None);
-        }
-
         // At this point we know that there's at least one parent after big merge. However we still
         // might have a parent that's NotSyncCandidate
         //
