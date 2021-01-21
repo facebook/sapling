@@ -21,7 +21,7 @@ pub fn http_client(client_id: impl ToString) -> HttpClient {
 }
 
 fn bump_counters(client_id: &str, stats: &Stats) {
-    let n = |suffix: &'static str| -> String { format!("http/{}/{}", client_id, suffix) };
+    let n = |suffix: &'static str| -> String { format!("http.{}.{}", client_id, suffix) };
     // TODO: gauges: rx_bytes and tx_bytes; histograms: request_time_ms, response_delay_ms
     increment_counter(n("total_rx_bytes"), stats.downloaded);
     increment_counter(n("total_tx_bytes"), stats.uploaded);

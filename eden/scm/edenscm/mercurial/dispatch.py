@@ -431,7 +431,7 @@ def dispatch(req):
             # Re-arrange metrics so "a_b_c", "a_b_d", "a_c" becomes
             # {'a': {'b': {'c': ..., 'd': ...}, 'c': ...}
             metrics = {}
-            splitre = re.compile("_|/")
+            splitre = re.compile(r"_|/|\.")
             for key, value in hgmetrics.items():
                 cur = metrics
                 names = splitre.split(key)
