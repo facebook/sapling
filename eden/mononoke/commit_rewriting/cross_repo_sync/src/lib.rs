@@ -48,17 +48,17 @@ use thiserror::Error;
 use topo_sort::sort_topological;
 use tunables::tunables;
 
-use merge_utils::get_version_for_merge;
 use pushrebase_hook::CrossRepoSyncPushrebaseHook;
 use reporting::log_rewrite;
 pub use reporting::CommitSyncContext;
+use sync_config_version_utils::{get_version, get_version_for_merge};
 use types::{Source, Target};
 
 mod commit_sync_data_provider;
 pub mod commit_sync_outcome;
-mod merge_utils;
 mod pushrebase_hook;
 mod reporting;
+mod sync_config_version_utils;
 pub mod types;
 pub mod validation;
 
@@ -1081,13 +1081,18 @@ where
             (Some((sync_outcome, _)), None) => {
                 use CommitSyncOutcome::*;
 
-                match sync_outcome {
+                let version_name = match sync_outcome {
                     NotSyncCandidate => {
                         return Err(ErrorKind::ParentNotSyncCandidate(hash).into());
                     }
                     RewrittenAs(_, version_name)
                     | EquivalentWorkingCopyAncestor(_, version_name) => version_name.clone(),
-                }
+                };
+
+                let maybe_version = get_version(hash, &[version_name])?;
+                maybe_version.ok_or_else(|| {
+                    format_err!("unexpected can not find commit sync version for {}", hash)
+                })?
             }
             _ => get_version_for_merge(
                 hash,
@@ -1180,11 +1185,23 @@ where
         &'a self,
         ctx: &'a CoreContext,
         cs: BonsaiChangeset,
-        version: CommitSyncConfigVersion,
+        expected_version: CommitSyncConfigVersion,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = cs.get_changeset_id();
+        let maybe_version = get_version(source_cs_id, &[])?;
+        if let Some(version) = maybe_version {
+            if version != expected_version {
+                return Err(format_err!(
+                    "computed sync config version {} for {} not the same as expected version {}",
+                    source_cs_id,
+                    version,
+                    expected_version
+                ));
+            }
+        }
+
         let (source_repo, target_repo) = self.get_source_target();
-        let mover = self.get_mover_by_version(&version)?;
+        let mover = self.get_mover_by_version(&expected_version)?;
 
         match rewrite_commit(
             ctx,
@@ -1205,13 +1222,13 @@ where
                     ctx,
                     hashmap! { source_cs_id => frozen.get_changeset_id() },
                     &self,
-                    &version,
+                    &expected_version,
                 )
                 .await?;
                 Ok(Some(frozen.get_changeset_id()))
             }
             None => {
-                self.update_wc_equivalence_with_version(ctx, source_cs_id, None, version)
+                self.update_wc_equivalence_with_version(ctx, source_cs_id, None, expected_version)
                     .await?;
                 Ok(None)
             }
@@ -1247,6 +1264,11 @@ where
             }
             RewrittenAs(remapped_p, version)
             | EquivalentWorkingCopyAncestor(remapped_p, version) => {
+                let maybe_version = get_version(source_cs_id, &[version])?;
+                let version = maybe_version.ok_or_else(|| {
+                    format_err!("sync config version not found for {}", source_cs_id)
+                })?;
+
                 if let Some(expected_version) = expected_version {
                     if expected_version != version {
                         return Err(ErrorKind::UnexpectedVersion {

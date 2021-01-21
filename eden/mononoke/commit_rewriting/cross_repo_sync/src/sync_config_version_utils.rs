@@ -6,7 +6,6 @@
  */
 
 use anyhow::{format_err, Error};
-use iterhelpers::get_only_item;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use std::collections::HashSet;
@@ -19,42 +18,43 @@ pub fn get_version_for_merge<'a>(
     source_cs_id: ChangesetId,
     parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
 ) -> Result<CommitSyncConfigVersion, Error> {
-    let unique_versions = {
-        let mut versions = HashSet::new();
-        for parent_outcome in parent_outcomes.into_iter() {
-            use CommitSyncOutcome::*;
-            match parent_outcome {
-                NotSyncCandidate => continue,
+    use CommitSyncOutcome::*;
+    let maybe_version = get_version(
+        source_cs_id,
+        parent_outcomes
+            .into_iter()
+            .filter_map(|parent_outcome| match parent_outcome {
+                NotSyncCandidate => None,
                 RewrittenAs(_, version) | EquivalentWorkingCopyAncestor(_, version) => {
-                    versions.insert(version.clone());
+                    Some(version)
                 }
-            }
-        }
+            }),
+    )?;
 
-        versions
-    };
+    maybe_version.ok_or_else(|| {
+        format_err!(
+            "unexpected absence of rewritten parents for {}",
+            source_cs_id,
+        )
+    })
+}
 
-    let version_res: Result<_, Error> = get_only_item(
-        unique_versions,
-        || {
-            format_err!(
-                "unexpected absence of rewritten parents for {}",
-                source_cs_id,
-            )
-        },
-        |v1, v2| {
-            format_err!(
-                "too many CommitSyncConfig versions used to remap parents of {}: {}, {} (may be more)",
-                source_cs_id,
-                v1,
-                v2,
-            )
-        },
-    );
-    // Type inference cannot figure the error type on its own
-    let version = version_res?;
-
-    Ok(version)
+pub fn get_version<'a>(
+    source_cs_id: ChangesetId,
+    parent_versions: impl IntoIterator<Item = &'a CommitSyncConfigVersion>,
+) -> Result<Option<CommitSyncConfigVersion>, Error> {
+    let versions: HashSet<_> = parent_versions.into_iter().collect();
+    let mut iter = versions.into_iter();
+    match (iter.next(), iter.next()) {
+        (Some(v1), Some(v2)) => Err(format_err!(
+            "too many CommitSyncConfig versions used to remap parents of {}: {}, {} (may be more)",
+            source_cs_id,
+            v1,
+            v2,
+        )),
+        (Some(v1), None) => Ok(Some(v1.clone())),
+        (None, _) => Ok(None),
+    }
 }
 
 #[cfg(test)]

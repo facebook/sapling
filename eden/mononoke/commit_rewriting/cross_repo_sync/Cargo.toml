@@ -21,7 +21,6 @@ blobsync = { path = "../../blobrepo/blobsync" }
 bookmark_renaming = { path = "../bookmark_renaming" }
 bookmarks = { path = "../../bookmarks" }
 context = { path = "../../server/context" }
-iterhelpers = { path = "../../common/iterhelpers" }
 live_commit_sync_config = { path = "../live_commit_sync_config" }
 manifest = { path = "../../manifest" }
 mercurial_types = { path = "../../mercurial/types" }
