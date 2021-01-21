@@ -304,10 +304,11 @@ async fn server_mux(
                         };
 
                     let mut res = create_http_header(
-                        "101 Mononoke Peer Upgrade",
+                        "101 Switching Protocols",
                         vec![
-                            ("Connection: Upgrade", "websocket"),
+                            ("Upgrade", "websocket"),
                             ("Sec-WebSocket-Accept", &websocket_key),
+                            ("Connection", "Upgrade"),
                         ],
                     );
                     res.push_str("\r\n");
