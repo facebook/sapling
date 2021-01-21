@@ -25,7 +25,7 @@ pub use ctor::ctor;
 /// Initialize tracing and env_logger for adhoc logging (ex. in a library test)
 /// purpose.
 pub fn init() {
-    tracing_collector::init();
+    let _ = tracing_collector::test_init();
     let _ = env_logger::try_init();
 }
 

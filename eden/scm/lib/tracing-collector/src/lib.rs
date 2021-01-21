@@ -16,10 +16,26 @@ pub use model::TracingData;
 
 use parking_lot::Mutex;
 use std::sync::Arc;
-use tracing::{
-    span::{Attributes, Record},
-    Event, Id, Level, Metadata, Subscriber,
-};
+use tracing::span::{Attributes, Record};
+use tracing::subscriber::SetGlobalDefaultError;
+use tracing::{Event, Id, Level, Metadata, Subscriber};
+use tracing_subscriber::layer::{Context, Layer, SubscriberExt};
+use tracing_subscriber::Registry;
+
+pub fn init(data: Arc<Mutex<TracingData>>, level: Level) -> Result<(), SetGlobalDefaultError> {
+    let collector = default_collector(data, level);
+    tracing::subscriber::set_global_default(collector)
+}
+
+pub fn default_collector(data: Arc<Mutex<TracingData>>, level: Level) -> impl Subscriber {
+    let tracing_data_subscriber = TracingCollector::new(data, level);
+    Registry::default().with(tracing_data_subscriber)
+}
+
+pub fn test_init() -> Result<(), SetGlobalDefaultError> {
+    let data = Arc::new(Mutex::new(TracingData::new()));
+    init(data, Level::INFO)
+}
 
 /// A `tokio/tracing` subscriber that collects tracing data to [`TracingData`].
 /// [`TracingData`] is independent from `tokio/tracing`. See its docstring for
@@ -35,6 +51,49 @@ impl TracingCollector {
     }
 }
 
+impl<S: Subscriber> Layer<S> for TracingCollector {
+    fn enabled(&self, metadata: &Metadata<'_>, ctx: Context<'_, S>) -> bool {
+        metadata.level() <= &self.level || log::enabled(metadata)
+    }
+
+    fn new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
+        let mut data = self.data.lock();
+        let espan_id = data.new_span(attrs);
+        data.insert_id_mapping(id, espan_id);
+    }
+
+    fn on_record(&self, span_id: &Id, values: &Record<'_>, _ctx: Context<'_, S>) {
+        let mut data = self.data.lock();
+        data.record(span_id, values);
+    }
+
+    fn on_follows_from(&self, span_id: &Id, follows: &Id, _ctx: Context<'_, S>) {
+        let mut data = self.data.lock();
+        if let Some(espan_id) = data.get_espan_id_from_trace(span_id) {
+            data.record_follows_from(&espan_id.into(), follows);
+        }
+    }
+
+    fn on_event(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
+        let mut data = self.data.lock();
+        data.event(event)
+    }
+
+    fn on_enter(&self, span_id: &Id, _ctx: Context<'_, S>) {
+        let mut data = self.data.lock();
+        if let Some(espan_id) = data.get_espan_id_from_trace(span_id) {
+            data.enter(&espan_id.into());
+        }
+    }
+
+    fn on_exit(&self, span_id: &Id, _ctx: Context<'_, S>) {
+        let mut data = self.data.lock();
+        if let Some(espan_id) = data.get_espan_id_from_trace(span_id) {
+            data.exit(&espan_id.into());
+        }
+    }
+}
+
 impl Subscriber for TracingCollector {
     fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= &self.level || log::enabled(metadata)
@@ -42,7 +101,7 @@ impl Subscriber for TracingCollector {
 
     fn new_span(&self, span: &Attributes) -> Id {
         let mut data = self.data.lock();
-        data.new_span(span)
+        data.new_span(span).into()
     }
 
     fn record(&self, span: &Id, values: &Record) {
@@ -71,13 +130,6 @@ impl Subscriber for TracingCollector {
     }
 }
 
-/// Initialize tracing for adhoc logging.
-pub fn init() {
-    let data = Arc::new(Mutex::new(TracingData::new()));
-    let collector = TracingCollector::new(data, Level::INFO);
-    let _ = tracing::subscriber::set_global_default(collector);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -96,7 +148,7 @@ mod tests {
     fn test_instrument() {
         let data = TracingData::new_for_test();
         let data = Arc::new(Mutex::new(data));
-        let collector = TracingCollector::new(data.clone(), Level::INFO);
+        let collector = default_collector(data.clone(), Level::INFO);
 
         tracing::subscriber::with_default(collector, || fib(5));
 
@@ -134,19 +186,19 @@ Start Dur.ms | Name               Source
     fn test_multi_threads() {
         let data = TracingData::new_for_test();
         let data = Arc::new(Mutex::new(data));
-        let collector = TracingCollector::new(data.clone(), Level::INFO);
+        let collector = default_collector(data.clone(), Level::INFO);
 
         tracing::subscriber::with_default(collector, || fib(0));
         let cloned = data.clone();
         let thread = std::thread::spawn(|| {
-            let collector = TracingCollector::new(cloned, Level::INFO);
+            let collector = default_collector(cloned, Level::INFO);
             tracing::subscriber::with_default(collector, || fib(3));
         });
         thread.join().unwrap();
 
         let cloned = data.clone();
         let thread = std::thread::spawn(|| {
-            let collector = TracingCollector::new(cloned, Level::INFO);
+            let collector = default_collector(cloned, Level::INFO);
             tracing::subscriber::with_default(collector, || fib(2));
         });
         thread.join().unwrap();

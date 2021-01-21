@@ -41,6 +41,7 @@ taggederror = { path = "../taggederror"}
 thiserror = "1.0.5"
 tracing = "0.1"
 tracing-collector = { path = "../tracing-collector" }
+tracing-subscriber = "0.2"
 types = { path = "../types" }
 util = { path = "../util" }
 version = { path = "../version" }

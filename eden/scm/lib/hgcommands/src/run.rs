@@ -22,7 +22,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 use tracing::dispatcher::{self, Dispatch};
 use tracing::Level;
-use tracing_collector::{TracingCollector, TracingData};
+use tracing_collector::TracingData;
 
 /// Run a Rust or Python command.
 ///
@@ -44,7 +44,15 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
 
     // Setup tracing early since "log_start" will use it immediately.
     // The tracing clock starts ticking from here.
-    let (_tracing_level, tracing_data) = setup_tracing(&global_opts);
+    let (_tracing_level, tracing_data) = match setup_tracing(&global_opts) {
+        Err(_) => {
+            // With our current architecture it is common to see this path in our tests due to
+            // trying to set a global collector a second time. Ignore the error and return some
+            // dummy values. FIXME!
+            (Level::INFO, Arc::new(Mutex::new(TracingData::new())))
+        }
+        Ok(res) => res,
+    };
 
     // This is intended to be "process start". "exec/hgmain" seems to be
     // a better place for it. However, chg makes it tricky. Because if hgmain
@@ -158,7 +166,7 @@ fn current_dir(io: &mut clidispatch::io::IO) -> io::Result<PathBuf> {
     result
 }
 
-fn setup_tracing(global_opts: &Option<HgGlobalOpts>) -> (Level, Arc<Mutex<TracingData>>) {
+fn setup_tracing(global_opts: &Option<HgGlobalOpts>) -> Result<(Level, Arc<Mutex<TracingData>>)> {
     // Setup TracingData singleton (currently owned by pytracing).
     {
         let mut data = pytracing::DATA.lock();
@@ -183,10 +191,9 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>) -> (Level, Arc<Mutex<Tracin
             }
             Level::INFO
         });
-    let collector = TracingCollector::new(data.clone(), level.clone());
-    let _ = tracing::subscriber::set_global_default(collector);
+    tracing_collector::init(data.clone(), level.clone())?;
 
-    (level, data)
+    Ok((level, data))
 }
 
 fn maybe_write_trace(

@@ -31,6 +31,10 @@ pub struct TracingData {
     /// Interned strings (so they can be referred by StringId).
     strings: InternedStrings,
 
+    /// Map from base collector ids to tracing data ids.
+    // using u64 instead of tracing::span::id because the latter is not Serialize
+    id_map: HashMap<u64, EspanId>,
+
     /// Spans or Events (so they can be referred by EspanId).
     espans: Vec<Espan>,
 
@@ -168,6 +172,7 @@ impl TracingData {
             default_process_id: unsafe { libc::getpid() } as u64,
             default_thread_id: *thread_id,
             strings: Default::default(),
+            id_map: Default::default(),
             espans: Default::default(),
             eventus: Default::default(),
             espan_id_offset: next_espan_id_offset(),
@@ -255,6 +260,14 @@ impl TracingData {
             Some((id.0 - self.espan_id_offset.0) as usize)
         }
     }
+
+    pub fn insert_id_mapping(&mut self, trace_id: &tracing::span::Id, espan_id: EspanId) {
+        self.id_map.insert(trace_id.into_u64(), espan_id);
+    }
+
+    pub fn get_espan_id_from_trace(&mut self, trace_id: &tracing::span::Id) -> Option<EspanId> {
+        self.id_map.get(&trace_id.into_u64()).cloned()
+    }
 }
 
 /// Used for new TracingData
@@ -302,8 +315,8 @@ thread_local! {
 // Matches `tracing::Subscriber` APIs.
 impl TracingData {
     /// Matches `tracing::Subscriber::new_span`.
-    pub fn new_span(&mut self, attributes: &tracing::span::Attributes) -> tracing::span::Id {
-        self.push_espan(attributes).into()
+    pub fn new_span(&mut self, attributes: &tracing::span::Attributes) -> EspanId {
+        self.push_espan(attributes)
     }
 
     /// Matches `tracing::Subscriber::record`.
@@ -719,6 +732,7 @@ impl TracingData {
 
         TracingData {
             start,
+            id_map: HashMap::new(),
             strings,
             espans,
             eventus,
