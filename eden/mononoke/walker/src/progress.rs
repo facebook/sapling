@@ -243,7 +243,8 @@ impl ProgressStateCountByType<StepStats, ProgressSummary> {
         if delta_time.is_none() {
             // Is the last log of a run or chunk, need to know the time
             let now = Instant::now();
-            delta_time = Some(now.duration_since(self.reporting_stats.last_update));
+            let t = now.duration_since(self.reporting_stats.last_update);
+            delta_time = if t.as_millis() > 0 { Some(t) } else { None };
             self.reporting_stats.last_update = now;
         }
 
