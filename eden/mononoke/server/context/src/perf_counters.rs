@@ -99,6 +99,8 @@ define_perf_counters! {
         ManifoldBlobSumDelay,
         ManifoldBlobRetries,
         ManifoldBlobConflicts,
+        S3BlobRetries,
+        S3BlobSumDelay,
     }
 }
 
