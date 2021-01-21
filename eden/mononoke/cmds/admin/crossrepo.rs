@@ -6,7 +6,7 @@
  */
 
 use anyhow::{anyhow, format_err, Context, Error};
-use backsyncer::{format_counter as format_backsyncer_counter, CHANGE_XREPO_MAPPING_EXTRA};
+use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
 use bookmark_renaming::get_small_to_large_renamer;
@@ -21,7 +21,7 @@ use context::CoreContext;
 use cross_repo_sync::{
     types::{Large, Small},
     validation::{self, BookmarkDiff},
-    CommitSyncContext, CommitSyncRepos, CommitSyncer,
+    CommitSyncContext, CommitSyncRepos, CommitSyncer, CHANGE_XREPO_MAPPING_EXTRA,
 };
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, try_join, TryFutureExt};

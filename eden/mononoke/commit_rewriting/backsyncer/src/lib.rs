@@ -24,10 +24,9 @@
 /// 2) Rewrite these commits and create rewritten commits in target repo
 /// 3) In the same transaction try to update a bookmark in the source repo AND latest backsynced
 ///    log id.
-use anyhow::{bail, format_err, Context, Error};
+use anyhow::{bail, format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
-use blobstore::Loadable;
 use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::{
     BookmarkTransactionError, BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason,
@@ -39,14 +38,12 @@ use cross_repo_sync::{
     find_toposorted_unsynced_ancestors, CandidateSelectionHint, CommitSyncContext,
     CommitSyncOutcome, CommitSyncer,
 };
-use futures::{
-    compat::Future01CompatExt, stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
-};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
 use futures_old::future::Future;
-use metaconfig_types::{CommitSyncConfigVersion, MetadataDatabaseConfig};
+use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
-use slog::{debug, info, warn};
+use slog::{debug, warn};
 use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
@@ -57,10 +54,6 @@ use thiserror::Error;
 
 #[cfg(test)]
 mod tests;
-
-/// Name of the commit extra. This extra forces a commit to
-/// be rewritten with a particular commit sync config version.
-pub const CHANGE_XREPO_MAPPING_EXTRA: &str = "change-xrepo-mapping-to-version";
 
 #[derive(Debug, Error)]
 pub enum BacksyncError {
@@ -155,7 +148,7 @@ where
         let start_instant = Instant::now();
 
         if let Some(to_cs_id) = entry.to_changeset_id {
-            let (cs_ids, unsynced_ancestors_versions) =
+            let (_, unsynced_ancestors_versions) =
                 find_toposorted_unsynced_ancestors(&ctx, commit_syncer, to_cs_id).await?;
 
             if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome() {
@@ -188,88 +181,17 @@ where
                 continue;
             }
 
-            // version can be None if all ancestors are NotSyncCandidate
-            let maybe_version = unsynced_ancestors_versions
-                .get_only_version()
-                .with_context(|| {
-                    format!(
-                        "failed to backsync cs id {}, entry id {}",
-                        to_cs_id, entry.id
-                    )
-                })?;
-
-            let cs_ids_and_bcss = stream::iter(cs_ids)
-                .map({
-                    let ctx = &ctx;
-                    move |cs_id| async move {
-                        let bcs = cs_id
-                            .load(&ctx, &commit_syncer.get_source_repo().get_blobstore())
-                            .await?;
-                        Result::<_, Error>::Ok((cs_id, bcs))
-                    }
-                })
-                .buffered(100)
-                .try_collect::<Vec<_>>()
+            // Backsyncer is always used in the large-to-small direction,
+            // therefore there can be at most one remapped candidate,
+            // so `CandidateSelectionHint::Only` is a safe choice
+            commit_syncer
+                .sync_commit(
+                    &ctx,
+                    to_cs_id,
+                    CandidateSelectionHint::Only,
+                    CommitSyncContext::Backsyncer,
+                )
                 .await?;
-
-            for (cs_id, bcs) in cs_ids_and_bcss {
-                if tunables::tunables().get_backsyncer_allow_change_xrepo_mapping_extra() {
-                    let maybe_mapping = bcs
-                        .extra()
-                        .find(|(name, _)| name == &CHANGE_XREPO_MAPPING_EXTRA);
-                    if let Some((_, version)) = maybe_mapping {
-                        let version = String::from_utf8(version.to_vec())
-                            .with_context(|| format!("non-utf8 version is set in {}", cs_id))?;
-
-                        info!(ctx.logger(), "force using mapping {}", version);
-                        let version = CommitSyncConfigVersion(version);
-                        // Force use of a specific mapping
-                        commit_syncer
-                            .unsafe_always_rewrite_sync_commit(
-                                &ctx,
-                                cs_id,
-                                None, // maybe_parents,
-                                &version,
-                                CommitSyncContext::BacksyncerChangeMapping,
-                            )
-                            .await
-                            .with_context(|| {
-                                format!(
-                                    "cannot rewrite {} with version {} from extras",
-                                    cs_id, version
-                                )
-                            })?;
-                        continue;
-                    }
-                }
-
-                // Backsyncer is always used in the large-to-small direction,
-                // therefore there can be at most one remapped candidate,
-                // so `CandidateSelectionHint::Only` is a safe choice
-                match maybe_version.clone() {
-                    Some(version) => {
-                        commit_syncer
-                            .unsafe_sync_commit_with_expected_version(
-                                &ctx,
-                                cs_id,
-                                CandidateSelectionHint::Only,
-                                version,
-                                CommitSyncContext::Backsyncer,
-                            )
-                            .await?;
-                    }
-                    None => {
-                        commit_syncer
-                            .unsafe_sync_commit(
-                                &ctx,
-                                cs_id,
-                                CandidateSelectionHint::Only,
-                                CommitSyncContext::Backsyncer,
-                            )
-                            .await?;
-                    }
-                }
-            }
         }
 
         let new_counter = entry.id;

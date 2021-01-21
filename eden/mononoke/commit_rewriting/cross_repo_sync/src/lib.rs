@@ -17,7 +17,7 @@ use bookmark_renaming::BookmarkRenamer;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::try_join_all;
+use futures::future::{try_join, try_join_all};
 use futures::{
     compat::Future01CompatExt,
     future::{self, TryFutureExt},
@@ -51,7 +51,8 @@ use tunables::tunables;
 use pushrebase_hook::CrossRepoSyncPushrebaseHook;
 use reporting::log_rewrite;
 pub use reporting::CommitSyncContext;
-use sync_config_version_utils::{get_version, get_version_for_merge};
+pub use sync_config_version_utils::CHANGE_XREPO_MAPPING_EXTRA;
+use sync_config_version_utils::{get_mapping_change_version, get_version, get_version_for_merge};
 use types::{Source, Target};
 
 mod commit_sync_data_provider;
@@ -420,10 +421,15 @@ where
                 continue;
             }
             None => {
-                let parents = source_repo
-                    .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
-                    .await?;
+                let maybe_mapping_change =
+                    get_mapping_change_version(&ctx, commit_syncer.get_source_repo(), cs_id);
+                let parents = source_repo.get_changeset_parents_by_bonsai(ctx.clone(), cs_id);
+                let (maybe_mapping_change, parents) =
+                    try_join(maybe_mapping_change, parents).await?;
 
+                if let Some(version) = maybe_mapping_change {
+                    synced_ancestors_versions.versions.insert(version);
+                }
                 commits_to_backsync.insert(cs_id, parents.clone());
 
                 q.extend(parents.into_iter().filter(|p| visited.insert(*p)));
@@ -756,7 +762,7 @@ where
         source_cs_id: ChangesetId,
         ancestor_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
-        let (unsynced_ancestors, _) =
+        let (unsynced_ancestors, synced_ancestors_versions) =
             find_toposorted_unsynced_ancestors(&ctx, self, source_cs_id).await?;
 
         let source_repo = self.repos.get_source_repo();
@@ -783,8 +789,34 @@ where
         }
 
         for ancestor in unsynced_ancestors {
-            self.unsafe_sync_commit_impl(ctx, ancestor, ancestor_selection_hint.clone(), None)
+            let parents = self
+                .get_source_repo()
+                .get_changeset_fetcher()
+                .get_parents(ctx.clone(), ancestor)
                 .await?;
+            if parents.is_empty() {
+                let version = self
+                    .get_version_for_syncing_commit_with_no_parent(
+                        ctx,
+                        ancestor,
+                        &synced_ancestors_versions,
+                    )
+                    .await
+                    .with_context(|| {
+                        format_err!("failed to sync ancestor {} of {}", ancestor, source_cs_id)
+                    })?;
+
+                self.unsafe_sync_commit_impl(
+                    ctx,
+                    ancestor,
+                    ancestor_selection_hint.clone(),
+                    Some(version),
+                )
+                .await?;
+            } else {
+                self.unsafe_sync_commit_impl(ctx, ancestor, ancestor_selection_hint.clone(), None)
+                    .await?;
+            }
         }
 
         let commit_sync_outcome = self
@@ -800,6 +832,27 @@ where
             RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => Some(cs_id),
         };
         Ok(res)
+    }
+
+    // Get a version to use while syncing ancestor with no parent  of `source_cs_id`
+    // We only allow syncing such commits if we an unambiguously decide on the CommitSyncConfig version to use,
+    // and we do that by ensuring that there is exactly one unique version among the commit sync outcomes
+    // of all the already-synced ancestors of `source_cs_id`
+    async fn get_version_for_syncing_commit_with_no_parent(
+        &self,
+        ctx: &CoreContext,
+        commit_with_no_parent: ChangesetId,
+        synced_ancestors_versions: &SyncedAncestorsVersions,
+    ) -> Result<CommitSyncConfigVersion, Error> {
+        let maybe_version =
+            get_version(ctx, self.get_source_repo(), commit_with_no_parent, vec![]).await?;
+        let version = match maybe_version {
+            Some(version) => version,
+            None => synced_ancestors_versions
+                .get_only_version()?
+                .ok_or_else(|| format_err!("no versions found for {}", commit_with_no_parent))?,
+        };
+        Ok(version)
     }
 
     /// Create a changeset, equivalent to `source_cs_id` in the target repo
@@ -1089,15 +1142,21 @@ where
                     | EquivalentWorkingCopyAncestor(_, version_name) => version_name.clone(),
                 };
 
-                let maybe_version = get_version(hash, &[version_name])?;
+                let maybe_version =
+                    get_version(ctx, self.get_source_repo(), hash, &[version_name]).await?;
                 maybe_version.ok_or_else(|| {
                     format_err!("unexpected can not find commit sync version for {}", hash)
                 })?
             }
-            _ => get_version_for_merge(
-                hash,
-                remapped_parents_outcome.iter().map(|(outcome, _)| outcome),
-            )?,
+            _ => {
+                // FIXME: Had to turn it to a vector to avoid "One type is more general than the other"
+                // errors
+                let outcomes = remapped_parents_outcome
+                    .iter()
+                    .map(|(outcome, _)| outcome)
+                    .collect::<Vec<_>>();
+                get_version_for_merge(ctx, self.get_source_repo(), hash, outcomes).await?
+            }
         };
 
         let mover = self.get_mover_by_version(&version_name)?;
@@ -1188,7 +1247,7 @@ where
         expected_version: CommitSyncConfigVersion,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = cs.get_changeset_id();
-        let maybe_version = get_version(source_cs_id, &[])?;
+        let maybe_version = get_version(ctx, self.get_source_repo(), source_cs_id, &[]).await?;
         if let Some(version) = maybe_version {
             if version != expected_version {
                 return Err(format_err!(
@@ -1264,7 +1323,8 @@ where
             }
             RewrittenAs(remapped_p, version)
             | EquivalentWorkingCopyAncestor(remapped_p, version) => {
-                let maybe_version = get_version(source_cs_id, &[version])?;
+                let maybe_version =
+                    get_version(ctx, self.get_source_repo(), source_cs_id, &[version]).await?;
                 let version = maybe_version.ok_or_else(|| {
                     format_err!("sync config version not found for {}", source_cs_id)
                 })?;
@@ -1336,10 +1396,13 @@ where
     ///   parents have the same (non-None) version associated
     async fn get_mover_to_use_for_merge<'a>(
         &'a self,
+        ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
-        parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
+        parent_outcomes: Vec<&CommitSyncOutcome>,
     ) -> Result<(Mover, CommitSyncConfigVersion), Error> {
-        let version = get_version_for_merge(source_cs_id, parent_outcomes)?;
+        let version =
+            get_version_for_merge(ctx, self.get_source_repo(), source_cs_id, parent_outcomes)
+                .await?;
 
         let mover = self
             .get_mover_by_version(&version)
@@ -1412,11 +1475,15 @@ where
         let cs = self.strip_removed_parents(cs, new_parents.keys().collect())?;
 
         if !new_parents.is_empty() {
+            // FIXME: Had to turn it to a vector to avoid "One type is more general than the other"
+            // errors
+            let outcomes = sync_outcomes
+                .iter()
+                .map(|(_, outcome)| outcome)
+                .collect::<Vec<_>>();
+
             let (mover, version) = self
-                .get_mover_to_use_for_merge(
-                    source_cs_id,
-                    sync_outcomes.iter().map(|(_, outcome)| outcome),
-                )
+                .get_mover_to_use_for_merge(ctx, source_cs_id, outcomes)
                 .await
                 .context("failed getting a mover to use for merge rewriting")?;
 

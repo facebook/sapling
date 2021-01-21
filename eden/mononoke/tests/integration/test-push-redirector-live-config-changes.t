@@ -14,7 +14,7 @@ setup configuration
   $ cat > $TESTTMP/mononoke_tunables.json <<EOF
   > {
   >   "killswitches": {
-  >     "backsyncer_allow_change_xrepo_mapping_extra": true
+  >     "allow_change_xrepo_mapping_extra": true
   >   }
   > }
   > EOF
@@ -209,7 +209,7 @@ Live change of the config, without Mononoke restart
   $ export REPOIDLARGE=0
   $ export REPOIDSMALL=1
   $ backsync_large_to_small 2>&1 | grep "force using"
-  * force using mapping TEST_VERSION_NAME_LIVE_V2 (glob)
+  * force using mapping TEST_VERSION_NAME_LIVE_V2 to rewrite * (glob)
 
 -- wait until it backsyncs to a small repo
   $ sleep 2

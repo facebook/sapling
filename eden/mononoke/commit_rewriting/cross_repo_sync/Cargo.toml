@@ -20,7 +20,9 @@ blobstore = { path = "../../blobstore" }
 blobsync = { path = "../../blobrepo/blobsync" }
 bookmark_renaming = { path = "../bookmark_renaming" }
 bookmarks = { path = "../../bookmarks" }
+changeset_info = { path = "../../derived_data/changeset_info" }
 context = { path = "../../server/context" }
+derived_data = { path = "../../derived_data" }
 live_commit_sync_config = { path = "../live_commit_sync_config" }
 manifest = { path = "../../manifest" }
 mercurial_types = { path = "../../mercurial/types" }

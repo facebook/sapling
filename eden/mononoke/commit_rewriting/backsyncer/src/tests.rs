@@ -20,6 +20,7 @@ use cross_repo_sync::types::{Source, Target};
 use cross_repo_sync::{rewrite_commit, upload_commits, CommitSyncOutcome, CommitSyncer};
 use cross_repo_sync::{
     CandidateSelectionHint, CommitSyncContext, CommitSyncDataProvider, CommitSyncRepos, SyncData,
+    CHANGE_XREPO_MAPPING_EXTRA,
 };
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
@@ -47,16 +48,15 @@ use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
     SyncedCommitMappingEntry,
 };
-use tests_utils::{bookmark, create_commit, store_files, store_rename, CreateCommitContext};
+use tests_utils::{
+    bookmark, create_commit, list_working_copy_utf8, store_files, store_rename, CreateCommitContext,
+};
 use tokio_compat::runtime::Runtime;
 use tunables::with_tunables_async;
 
 use pretty_assertions::assert_eq;
 
-use crate::{
-    backsync_latest, format_counter, sync_entries, BacksyncLimit, TargetRepoDbs,
-    CHANGE_XREPO_MAPPING_EXTRA,
-};
+use crate::{backsync_latest, format_counter, sync_entries, BacksyncLimit, TargetRepoDbs};
 
 const REPOMERGE_FOLDER: &str = "repomerge";
 const REPOMERGE_FILE: &str = "repomergefile";
@@ -482,24 +482,36 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
         )
         .await?;
 
-    // Now create a commit with a special extra that changes the mapping
-    // to new version while backsyncing
-    let change_mapping_commit = CreateCommitContext::new(&ctx, &source_repo, vec![root_cs_id])
-        .add_extra(
-            CHANGE_XREPO_MAPPING_EXTRA.to_string(),
-            new_version.clone().0.into_bytes(),
-        )
+    // Add one more empty commit with old mapping
+    let before_mapping_change = CreateCommitContext::new(&ctx, &source_repo, vec![root_cs_id])
         .commit()
         .await?;
 
+    // Now create a commit with a special extra that changes the mapping
+    // to new version while backsyncing
+    let change_mapping_commit =
+        CreateCommitContext::new(&ctx, &source_repo, vec![before_mapping_change])
+            .add_extra(
+                CHANGE_XREPO_MAPPING_EXTRA.to_string(),
+                new_version.clone().0.into_bytes(),
+            )
+            .commit()
+            .await?;
+
+    let after_mapping_change_commit =
+        CreateCommitContext::new(&ctx, &source_repo, vec![change_mapping_commit])
+            .add_file("file", "content")
+            .commit()
+            .await?;
+
     bookmark(&ctx, &source_repo, "head")
-        .set_to(change_mapping_commit)
+        .set_to(after_mapping_change_commit)
         .await?;
 
     // Do the backsync, and check the version
     let tunables = tunables::MononokeTunables::default();
     tunables.update_bools(&hashmap! {
-        "backsyncer_allow_change_xrepo_mapping_extra".to_string() => true,
+        "allow_change_xrepo_mapping_extra".to_string() => true,
     });
 
     let f = backsync_latest(
@@ -510,6 +522,16 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     );
     with_tunables_async(tunables, f.boxed()).await?;
 
+
+    let commit_sync_outcome = commit_syncer
+        .get_commit_sync_outcome(&ctx, before_mapping_change)
+        .await?
+        .ok_or_else(|| anyhow!("unexpected missing commit sync outcome"))?;
+
+    assert_matches!(commit_sync_outcome, CommitSyncOutcome::RewrittenAs(_, version) => {
+        assert_eq!(current_version, version);
+    });
+
     let commit_sync_outcome = commit_syncer
         .get_commit_sync_outcome(&ctx, change_mapping_commit)
         .await?
@@ -518,6 +540,22 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     assert_matches!(commit_sync_outcome, CommitSyncOutcome::RewrittenAs(_, version) => {
         assert_eq!(new_version, version);
     });
+
+    let commit_sync_outcome = commit_syncer
+        .get_commit_sync_outcome(&ctx, after_mapping_change_commit)
+        .await?
+        .ok_or_else(|| anyhow!("unexpected missing commit sync outcome"))?;
+
+    let target_cs_id = assert_matches!(commit_sync_outcome, CommitSyncOutcome::RewrittenAs(target_cs_id, version) => {
+        assert_eq!(new_version, version);
+        target_cs_id
+    });
+
+    let map = list_working_copy_utf8(&ctx, commit_syncer.get_target_repo(), target_cs_id).await?;
+    assert_eq!(
+        map,
+        hashmap! {MPath::new("new_prefix/file")? => "content".to_string()}
+    );
 
     Ok(())
 }

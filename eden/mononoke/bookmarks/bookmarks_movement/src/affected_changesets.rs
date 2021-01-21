@@ -9,7 +9,6 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Error, Result};
-use backsyncer::CHANGE_XREPO_MAPPING_EXTRA;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkUpdateReason;
@@ -17,6 +16,7 @@ use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use chrono::Utc;
 use context::CoreContext;
+use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
 use derived_data::{BonsaiDerivable, BonsaiDerived};
 use futures::compat::Stream01CompatExt;
 use futures::future::{self, try_join};

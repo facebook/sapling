@@ -5,21 +5,47 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
+use blobrepo::BlobRepo;
+use changeset_info::ChangesetInfo;
+use context::CoreContext;
+use derived_data::BonsaiDerived;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
+use slog::info;
 use std::collections::HashSet;
 
 use crate::commit_sync_outcome::CommitSyncOutcome;
 
+/// Name of the commit extra. This extra forces a commit to
+/// be rewritten with a particular commit sync config version.
+pub const CHANGE_XREPO_MAPPING_EXTRA: &str = "change-xrepo-mapping-to-version";
+
 /// For merge commit `source_cs_is` and `parent_outcomes` for
 /// its parents, get the version to use to construct a mover
-pub fn get_version_for_merge<'a>(
+pub async fn get_version_for_merge<'a>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    source_cs_id: ChangesetId,
+    parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
+) -> Result<CommitSyncConfigVersion, Error> {
+    if let Some(version) = get_mapping_change_version(ctx, repo, source_cs_id).await? {
+        info!(
+            ctx.logger(),
+            "force using mapping {} to rewrite {}", version, source_cs_id
+        );
+        return Ok(version);
+    }
+
+    get_version_for_merge_impl(source_cs_id, parent_outcomes)
+}
+
+fn get_version_for_merge_impl<'a>(
     source_cs_id: ChangesetId,
     parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
 ) -> Result<CommitSyncConfigVersion, Error> {
     use CommitSyncOutcome::*;
-    let maybe_version = get_version(
+    let maybe_version = get_version_impl(
         source_cs_id,
         parent_outcomes
             .into_iter()
@@ -39,7 +65,24 @@ pub fn get_version_for_merge<'a>(
     })
 }
 
-pub fn get_version<'a>(
+pub async fn get_version<'a>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    source_cs_id: ChangesetId,
+    parent_versions: impl IntoIterator<Item = &'a CommitSyncConfigVersion>,
+) -> Result<Option<CommitSyncConfigVersion>, Error> {
+    if let Some(version) = get_mapping_change_version(ctx, repo, source_cs_id).await? {
+        info!(
+            ctx.logger(),
+            "force using mapping {} to rewrite {}", version, source_cs_id
+        );
+        return Ok(Some(version));
+    }
+
+    get_version_impl(source_cs_id, parent_versions)
+}
+
+fn get_version_impl<'a>(
     source_cs_id: ChangesetId,
     parent_versions: impl IntoIterator<Item = &'a CommitSyncConfigVersion>,
 ) -> Result<Option<CommitSyncConfigVersion>, Error> {
@@ -55,6 +98,32 @@ pub fn get_version<'a>(
         (Some(v1), None) => Ok(Some(v1.clone())),
         (None, _) => Ok(None),
     }
+}
+
+/// Get a mapping change version from changeset extras, if present
+/// Some changesets are used as "boundaries" to change CommmitSyncConfigVersion
+/// used in syncing. This is determined by the `CHANGE_XREPO_MAPPING_EXTRA`'s
+/// value.
+pub async fn get_mapping_change_version(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    source_cs_id: ChangesetId,
+) -> Result<Option<CommitSyncConfigVersion>, Error> {
+    if tunables::tunables().get_allow_change_xrepo_mapping_extra() {
+        let cs_info = ChangesetInfo::derive(&ctx, repo, source_cs_id).await?;
+
+        let maybe_mapping = cs_info
+            .extra()
+            .find(|(name, _)| name == &CHANGE_XREPO_MAPPING_EXTRA);
+        if let Some((_, version)) = maybe_mapping {
+            let version = String::from_utf8(version.to_vec())
+                .with_context(|| format!("non-utf8 version is set in {}", source_cs_id))?;
+
+            let version = CommitSyncConfigVersion(version);
+            return Ok(Some(version));
+        }
+    }
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -74,7 +143,7 @@ mod tests {
             RewrittenAs(bonsai::FOURS_CSID, v1.clone()),
         ];
 
-        let rv = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes).unwrap();
+        let rv = get_version_for_merge_impl(bonsai::ONES_CSID, &parent_outcomes).unwrap();
         assert_eq!(rv, v1);
     }
 
@@ -89,7 +158,7 @@ mod tests {
             RewrittenAs(bonsai::THREES_CSID, v1.clone()),
         ];
 
-        let rv = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes).unwrap();
+        let rv = get_version_for_merge_impl(bonsai::ONES_CSID, &parent_outcomes).unwrap();
         assert_eq!(rv, v1);
     }
 
@@ -105,7 +174,7 @@ mod tests {
             RewrittenAs(bonsai::THREES_CSID, v2),
         ];
 
-        let e = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
+        let e = get_version_for_merge_impl(bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
         assert!(
             format!("{}", e).contains("too many CommitSyncConfig versions used to remap parents")
         );
@@ -117,7 +186,7 @@ mod tests {
         use CommitSyncOutcome::*;
         let parent_outcomes = [NotSyncCandidate, NotSyncCandidate];
 
-        let e = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
+        let e = get_version_for_merge_impl(bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
         assert!(format!("{}", e).contains("unexpected absence of rewritten parents"));
     }
 }

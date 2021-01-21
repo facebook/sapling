@@ -122,7 +122,7 @@ pub struct MononokeTunables {
     // data to blobstore sync queue if a write was successful to the main blobstore.
     derived_data_use_background_session_class: AtomicBool,
 
-    backsyncer_allow_change_xrepo_mapping_extra: AtomicBool,
+    allow_change_xrepo_mapping_extra: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

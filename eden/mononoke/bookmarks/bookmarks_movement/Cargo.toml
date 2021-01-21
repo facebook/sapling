@@ -7,7 +7,6 @@ license = "GPLv2+"
 include = ["**/*.rs"]
 
 [dependencies]
-backsyncer = { path = "../../commit_rewriting/backsyncer" }
 blobrepo = { path = "../../blobrepo" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobstore = { path = "../../blobstore" }
@@ -15,6 +14,7 @@ bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
 bookmarks = { path = ".." }
 bookmarks_types = { path = "../bookmarks_types" }
 context = { path = "../../server/context" }
+cross_repo_sync = { path = "../../commit_rewriting/cross_repo_sync" }
 derived_data = { path = "../../derived_data" }
 git_mapping_pushrebase_hook = { path = "../../bonsai_git_mapping/git_mapping_pushrebase_hook" }
 globalrev_pushrebase_hook = { path = "../../bonsai_globalrev_mapping/globalrev_pushrebase_hook" }
