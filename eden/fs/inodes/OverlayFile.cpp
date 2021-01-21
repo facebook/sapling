@@ -105,6 +105,29 @@ folly::Expected<int, int> OverlayFile::fsync() const {
   return folly::makeExpected<int>(ret);
 }
 
+folly::Expected<int, int> OverlayFile::fallocate(off_t offset, off_t length)
+    const {
+#ifdef __linux__
+  std::shared_ptr<Overlay> overlay = overlay_.lock();
+  if (!overlay) {
+    return folly::makeUnexpected(EIO);
+  }
+  IORequest req{overlay.get()};
+
+  // Don't use posix_fallocate, because glibc may try to emulate it with writes
+  // to each chunk, and we definitely don't want that.
+  auto ret = ::fallocate(file_.fd(), 0, offset, length);
+  if (ret == -1) {
+    return folly::makeUnexpected(errno);
+  }
+  return folly::makeExpected<int>(ret);
+#else
+  (void)offset;
+  (void)length;
+  return folly::makeUnexpected(ENOSYS);
+#endif
+}
+
 folly::Expected<int, int> OverlayFile::fdatasync() const {
 #ifndef __APPLE__
   std::shared_ptr<Overlay> overlay = overlay_.lock();

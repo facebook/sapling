@@ -252,6 +252,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   void fsync(bool datasync);
 
+  void fallocate(uint64_t offset, uint64_t length);
+
 #endif // !_WIN32
 
   folly::Future<struct stat> stat(ObjectFetchContext& context) override;

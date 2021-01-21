@@ -327,6 +327,16 @@ class Dispatcher {
       uint64_t lock_owner);
 
   /**
+   * Provide an approximate implementation of fallocate(2) with mode=0 or
+   * posix_fallocate. This is not generalized to all fallocate(2) modes, but
+   * could be done so in the future if necessary.
+   *
+   * Only used on Linux.
+   */
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit>
+  fallocate(InodeNumber ino, uint64_t offset, uint64_t length);
+
+  /**
    * Ensure file content changes are flushed to disk.
    *
    * If the datasync parameter is true, then only the user data should be

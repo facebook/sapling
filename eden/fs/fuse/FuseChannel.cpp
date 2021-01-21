@@ -191,6 +191,11 @@ std::string batchforget(FuseArg arg) {
   return format("count={}", in.count);
 }
 
+std::string fallocate(FuseArg arg) {
+  auto& in = arg.read<fuse_fallocate_in>();
+  return format("mode={}, offset={}, length={}", in.mode, in.offset, in.length);
+}
+
 } // namespace argrender
 
 // These static asserts exist to make explicit the memory usage of the per-mount
@@ -445,7 +450,12 @@ constexpr auto kFuseHandlers = [] {
       &FuseChannel::fuseBatchForget,
       &argrender::batchforget,
       &ChannelThreadStats::forgetmulti};
-  handlers[FUSE_FALLOCATE] = {"FUSE_FALLOCATE", Write};
+  handlers[FUSE_FALLOCATE] = {
+      "FUSE_FALLOCATE",
+      &FuseChannel::fuseFallocate,
+      &argrender::fallocate,
+      &ChannelThreadStats::fallocate,
+      Write};
 #ifdef __linux__
   handlers[FUSE_READDIRPLUS] = {"FUSE_READDIRPLUS", Read};
   handlers[FUSE_RENAME2] = {"FUSE_RENAME2", Write};
@@ -2260,6 +2270,30 @@ folly::Future<folly::Unit> FuseChannel::fuseBatchForget(
     ++item;
   }
   return folly::unit;
+}
+
+folly::Future<folly::Unit> FuseChannel::fuseFallocate(
+    FuseRequestContext& request,
+    const fuse_in_header& header,
+    ByteRange arg) {
+  const auto* allocate = reinterpret_cast<const fuse_fallocate_in*>(arg.data());
+  XLOG(DBG7) << "FUSE_FALLOCATE";
+
+  // We only care to avoid the glibc fallback implementation for
+  // posix_fallocate, so don't even pretend to support all the fancy extra modes
+  // in Linux's fallocate(2).
+  if (allocate->mode != 0) {
+    request.replyError(ENOSYS);
+    return folly::unit;
+  }
+
+  // ... but definitely don't let glibc fall back on its posix_fallocate
+  // emulation, which writes one byte per 512 byte chunk in the entire file,
+  // which is extremely expensive in an EdenFS checkout.
+  return dispatcher_
+      ->fallocate(
+          InodeNumber{header.nodeid}, allocate->offset, allocate->length)
+      .thenValue([&request](auto) { request.replyError(0); });
 }
 
 FuseDeviceUnmountedDuringInitialization::

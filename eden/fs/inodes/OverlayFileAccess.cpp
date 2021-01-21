@@ -271,6 +271,20 @@ void OverlayFileAccess::fsync(FileInode& inode, bool datasync) {
   }
 }
 
+void OverlayFileAccess::fallocate(
+    FileInode& inode,
+    uint64_t offset,
+    uint64_t length) {
+  auto entry = getEntryForInode(inode.getNodeId());
+  auto result = entry->file.fallocate(offset, length);
+  if (result.hasError()) {
+    throw InodeError(
+        result.error(),
+        inode.inodePtrFromThis(),
+        "unable to fallocate overlay file");
+  }
+}
+
 OverlayFileAccess::EntryPtr OverlayFileAccess::getEntryForInode(
     InodeNumber ino) {
   {

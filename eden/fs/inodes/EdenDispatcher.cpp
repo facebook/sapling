@@ -241,6 +241,14 @@ Future<Unit> EdenDispatcher::flush(
   return makeFuture<Unit>(makeSystemErrorExplicit(ENOSYS, "flush"));
 }
 
+folly::Future<folly::Unit>
+EdenDispatcher::fallocate(InodeNumber ino, uint64_t offset, uint64_t length) {
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [offset, length](FileInodePtr inode) {
+        return inode->fallocate(offset, length);
+      });
+}
+
 folly::Future<folly::Unit> EdenDispatcher::fsync(
     InodeNumber ino,
     bool datasync) {

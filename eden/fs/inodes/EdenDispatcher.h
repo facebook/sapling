@@ -95,6 +95,8 @@ class EdenDispatcher : public Dispatcher {
 
   folly::Future<folly::Unit> flush(InodeNumber ino, uint64_t lock_owner)
       override;
+  folly::Future<folly::Unit>
+  fallocate(InodeNumber ino, uint64_t offset, uint64_t length) override;
   folly::Future<folly::Unit> fsync(InodeNumber ino, bool datasync) override;
   folly::Future<folly::Unit> fsyncdir(InodeNumber ino, bool datasync) override;
 

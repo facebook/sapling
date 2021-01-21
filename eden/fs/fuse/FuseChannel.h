@@ -621,6 +621,10 @@ class FuseChannel {
       FuseRequestContext& request,
       const fuse_in_header& header,
       folly::ByteRange arg);
+  folly::Future<folly::Unit> fuseFallocate(
+      FuseRequestContext& request,
+      const fuse_in_header& header,
+      folly::ByteRange arg);
 
  private:
   void setThreadSigmask();

@@ -751,6 +751,15 @@ void FileInode::fsync(bool datasync) {
     getOverlayFileAccess(state)->fsync(*this, datasync);
   }
 }
+
+void FileInode::fallocate(uint64_t offset, uint64_t length) {
+  runWhileMaterialized(
+      LockedState{this},
+      nullptr,
+      [offset, length, self = inodePtrFromThis()](LockedState&& state) {
+        self->getOverlayFileAccess(state)->fallocate(*self, offset, length);
+      });
+}
 #endif
 
 Future<string> FileInode::readAll(

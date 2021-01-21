@@ -36,6 +36,7 @@ class OverlayFile {
   pwritev(const iovec* iov, int iovcnt, off_t offset) const;
   folly::Expected<int, int> ftruncate(off_t length) const;
   folly::Expected<int, int> fsync() const;
+  folly::Expected<int, int> fallocate(off_t offset, off_t length) const;
   folly::Expected<int, int> fdatasync() const;
   folly::Expected<std::string, int> readFile() const;
 

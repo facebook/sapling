@@ -100,6 +100,11 @@ class OverlayFileAccess {
    */
   void fsync(FileInode& inode, bool datasync);
 
+  /**
+   * Call fallocate(mode=0) or posix_fallocate on the backing overlay storage.
+   */
+  void fallocate(FileInode& inode, uint64_t offset, uint64_t size);
+
  private:
   /*
    * OverlayFileAccess can be accessed concurrently. There are two types of data

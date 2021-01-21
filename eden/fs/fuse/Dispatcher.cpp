@@ -172,6 +172,11 @@ folly::Future<folly::Unit> Dispatcher::flush(InodeNumber, uint64_t) {
   FUSELL_NOT_IMPL();
 }
 
+folly::Future<folly::Unit>
+Dispatcher::fallocate(InodeNumber, uint64_t, uint64_t) {
+  FUSELL_NOT_IMPL();
+}
+
 folly::Future<folly::Unit> Dispatcher::fsync(InodeNumber, bool) {
   FUSELL_NOT_IMPL();
 }

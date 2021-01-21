@@ -142,6 +142,7 @@ class ChannelThreadStats : public EdenThreadStatsBase {
   Histogram ioctl{createHistogram("fuse.ioctl_us")};
   Histogram poll{createHistogram("fuse.poll_us")};
   Histogram forgetmulti{createHistogram("fuse.forgetmulti_us")};
+  Histogram fallocate{createHistogram("fuse.fallocate_us")};
 #else
   Timeseries outOfOrderCreate{createTimeseries("prjfs.out_of_order_create")};
 
