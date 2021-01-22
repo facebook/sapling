@@ -314,6 +314,21 @@ impl StepRoute for ValidateRoute {
 impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
     for ValidatingVisitor
 {
+    fn start_chunk(
+        &self,
+        chunk_members: &HashSet<ChangesetId>,
+    ) -> Result<HashSet<OutgoingEdge>, Error> {
+        self.inner.start_chunk(chunk_members)
+    }
+
+    fn end_chunks(&self) -> Result<(), Error> {
+        self.inner.end_chunks()
+    }
+
+    fn num_deferred(&self) -> usize {
+        self.inner.num_deferred()
+    }
+
     fn start_step(
         &self,
         ctx: CoreContext,
@@ -731,6 +746,7 @@ async fn run_one(
         job_params,
         repo_params,
         type_params,
+        sub_params.public_changeset_chunk_by,
         stateful_visitor,
         make_sink,
     )

@@ -213,6 +213,21 @@ impl<T> WalkVisitor<(WalkKeyOptPath, WalkPayloadMtime, Option<StepStats>), PathT
 where
     T: SampleTrigger<WalkKeyOptPath> + Send + Sync,
 {
+    fn start_chunk(
+        &self,
+        chunk_members: &HashSet<ChangesetId>,
+    ) -> Result<HashSet<OutgoingEdge>, Error> {
+        self.inner.start_chunk(chunk_members)
+    }
+
+    fn end_chunks(&self) -> Result<(), Error> {
+        self.inner.end_chunks()
+    }
+
+    fn num_deferred(&self) -> usize {
+        self.inner.num_deferred()
+    }
+
     fn start_step(
         &self,
         mut ctx: CoreContext,
@@ -311,6 +326,21 @@ impl<T> WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute>
 where
     T: SampleTrigger<Node> + Send + Sync,
 {
+    fn start_chunk(
+        &self,
+        chunk_members: &HashSet<ChangesetId>,
+    ) -> Result<HashSet<OutgoingEdge>, Error> {
+        self.inner.start_chunk(chunk_members)
+    }
+
+    fn end_chunks(&self) -> Result<(), Error> {
+        self.inner.end_chunks()
+    }
+
+    fn num_deferred(&self) -> usize {
+        self.inner.num_deferred()
+    }
+
     fn start_step(
         &self,
         mut ctx: CoreContext,

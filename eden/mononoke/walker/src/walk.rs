@@ -128,6 +128,15 @@ pub trait VisitOne {
 // partially derived types (it can see the node_data)
 #[auto_impl(Arc)]
 pub trait WalkVisitor<VOut, Route>: VisitOne {
+    fn start_chunk(
+        &self,
+        chunk_members: &HashSet<ChangesetId>,
+    ) -> Result<HashSet<OutgoingEdge>, Error>;
+
+    fn end_chunks(&self) -> Result<(), Error>;
+
+    fn num_deferred(&self) -> usize;
+
     // Called before the step is attempted
     fn start_step(
         &self,
@@ -436,7 +445,6 @@ async fn bonsai_changeset_step<V: VisitOne>(
     key: &ChangesetKey<ChangesetId>,
 ) -> Result<StepOutput, Error> {
     let bcs_id = &key.inner;
-    // TODO(ahornby) check bonsai is in the chunk to be processed when chunking
 
     // Get the data, and add direct file data for this bonsai changeset
     let bcs = bcs_id.load(ctx, repo.blobstore()).await?;

@@ -15,6 +15,7 @@ blobstore = { path = "../blobstore" }
 blobstore_factory = { path = "../blobstore/factory" }
 bookmarks = { path = "../bookmarks" }
 bounded_traversal = { path = "../common/bounded_traversal" }
+bulkops = { path = "../bulkops" }
 changeset_info = { path = "../derived_data/changeset_info" }
 cmdlib = { path = "../cmdlib" }
 context = { path = "../server/context" }

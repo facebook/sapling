@@ -56,6 +56,7 @@ use strum_macros::{AsRefStr, EnumString, EnumVariantNames};
 // Per repo things we don't pass into the walk
 pub struct RepoSubcommandParams {
     pub progress_state: ProgressStateMutex<ProgressStateCountByType<StepStats, ProgressSummary>>,
+    pub public_changeset_chunk_by: HashSet<NodeType>,
 }
 
 // These don't vary per repo
@@ -162,6 +163,7 @@ const CHUNK_BY_PUBLIC_NODE_TYPES: &[NodeType] = &[
     NodeType::PhaseMapping,
     NodeType::Changeset,
     NodeType::ChangesetInfo,
+    NodeType::ChangesetInfoMapping,
     NodeType::FsnodeMapping,
     NodeType::SkeletonManifestMapping,
     NodeType::UnodeMapping,
@@ -1145,6 +1147,7 @@ pub async fn setup_common<'a>(
                     repo,
                     walk_roots.clone(),
                     public_changeset_chunk_size,
+                    public_changeset_chunk_by.clone(),
                     include_edge_types.clone(),
                     include_node_types.clone(),
                     progress_options,
@@ -1187,6 +1190,7 @@ async fn setup_repo<'a>(
     resolved: &'a ResolvedRepo,
     walk_roots: Vec<OutgoingEdge>,
     public_changeset_chunk_size: Option<usize>,
+    mut public_changeset_chunk_by: HashSet<NodeType>,
     include_edge_types: HashSet<EdgeType>,
     mut include_node_types: HashSet<NodeType>,
     progress_options: ProgressOptions,
@@ -1209,10 +1213,18 @@ async fn setup_repo<'a>(
         }
     });
 
+    public_changeset_chunk_by.retain(|t| {
+        if let Some(t) = t.derived_data_name() {
+            resolved.config.derived_data_config.is_enabled(t)
+        } else {
+            true
+        }
+    });
+
     let mut root_node_types: HashSet<_> =
         walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
     if public_changeset_chunk_size.is_some() {
-        root_node_types.insert(NodeType::Changeset);
+        root_node_types.extend(public_changeset_chunk_by.iter().cloned());
     }
 
     let (include_edge_types, include_node_types) =
@@ -1266,7 +1278,10 @@ async fn setup_repo<'a>(
     ));
 
     Ok((
-        RepoSubcommandParams { progress_state },
+        RepoSubcommandParams {
+            progress_state,
+            public_changeset_chunk_by,
+        },
         RepoWalkParams {
             repo: repo.await?,
             logger: logger.clone(),

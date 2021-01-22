@@ -9,7 +9,7 @@ use crate::graph::{EdgeType, Node, NodeData, NodeType, UnodeFlags, WrappedPath};
 use crate::walk::{expand_checked_nodes, EmptyRoute, OutgoingEdge, VisitOne, WalkVisitor};
 
 use ahash::RandomState;
-use anyhow::Error;
+use anyhow::{bail, Error};
 use array_init::array_init;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -136,7 +136,9 @@ where
     }
 }
 
-type StateMap<T> = DashMap<T, (), RandomState>;
+type ValueMap<K, V> = DashMap<K, V, RandomState>;
+
+type StateMap<K> = DashMap<K, (), RandomState>;
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct UnodeInterned<T> {
     id: InternedId<T>,
@@ -158,6 +160,8 @@ pub struct WalkState {
     unode_file_ids: InternMap<FileUnodeId, InternedId<FileUnodeId>>,
     unode_manifest_ids: InternMap<ManifestUnodeId, InternedId<ManifestUnodeId>>,
     // State
+    chunk_bcs: StateMap<InternedId<ChangesetId>>,
+    deferred_bcs: ValueMap<InternedId<ChangesetId>, HashSet<OutgoingEdge>>,
     visited_bcs: StateMap<InternedId<ChangesetId>>,
     visited_bcs_mapping: StateMap<InternedId<ChangesetId>>,
     public_not_visited: StateMap<InternedId<ChangesetId>>,
@@ -212,6 +216,8 @@ impl WalkState {
             unode_file_ids: InternMap::with_hasher(fac.clone()),
             unode_manifest_ids: InternMap::with_hasher(fac.clone()),
             // State
+            chunk_bcs: StateMap::with_hasher(fac.clone()),
+            deferred_bcs: ValueMap::with_hasher(fac.clone()),
             visited_bcs: StateMap::with_hasher(fac.clone()),
             visited_bcs_mapping: StateMap::with_hasher(fac.clone()),
             public_not_visited: StateMap::with_hasher(fac.clone()),
@@ -246,12 +252,27 @@ impl WalkState {
 
     fn record<K>(&self, visited: &StateMap<K>, k: &K) -> bool
     where
-        K: Eq + Hash + Copy,
+        K: Eq + Hash + Clone,
     {
         if visited.contains_key(k) {
             false
         } else {
-            visited.insert(*k, ()).is_none()
+            visited.insert(k.clone(), ()).is_none()
+        }
+    }
+
+    fn record_multi<K, V>(&self, multi_map: &ValueMap<K, HashSet<V>>, k: K, v: &V) -> bool
+    where
+        K: Eq + Hash + Clone,
+        V: Eq + Hash + Clone,
+    {
+        let mut entry = multi_map.entry(k).or_insert_with(HashSet::default);
+        let values = entry.value_mut();
+        // No insert_with in HashSet, so do it ourselves
+        if values.contains(v) {
+            false
+        } else {
+            values.insert(v.clone())
         }
     }
 
@@ -335,6 +356,14 @@ impl WalkState {
     fn get_visit_count(&self, t: &NodeType) -> usize {
         self.visit_count[*t as usize].load(Ordering::Acquire)
     }
+
+    fn chunk_contains(&self, id: InternedId<ChangesetId>) -> bool {
+        if self.chunk_bcs.is_empty() {
+            true
+        } else {
+            self.chunk_bcs.contains_key(&id)
+        }
+    }
 }
 
 #[async_trait]
@@ -386,7 +415,17 @@ impl VisitOne for WalkState {
             Node::Bookmark(_) => true,
             Node::PublishedBookmarks(_) => true,
             // Bonsai
-            Node::Changeset(k) => self.record(&self.visited_bcs, &self.bcs_ids.interned(&k.inner)),
+            Node::Changeset(k) => {
+                let id = self.bcs_ids.interned(&k.inner);
+                if self.chunk_contains(id) {
+                    self.record(&self.visited_bcs, &id)
+                } else {
+                    if !self.visited_bcs.contains_key(&id) {
+                        self.record_multi(&self.deferred_bcs, id, outgoing);
+                    }
+                    false
+                }
+            }
             Node::BonsaiHgMapping(k) => {
                 if let Some(id) = self.bcs_ids.get(&k.inner) {
                     // Does not insert, see record_resolved_visit
@@ -505,6 +544,50 @@ impl VisitOne for WalkState {
 }
 
 impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for WalkState {
+    fn start_chunk(
+        &self,
+        new_chunk_bcs: &HashSet<ChangesetId>,
+    ) -> Result<HashSet<OutgoingEdge>, Error> {
+        // Reset self.chunk_bcs
+        let mut chunk_interned = HashSet::new();
+        for bcs_id in new_chunk_bcs {
+            let i = self.bcs_ids.interned(&bcs_id);
+            chunk_interned.insert(i);
+            self.chunk_bcs.insert(i, ());
+        }
+        self.chunk_bcs.retain(|k, _v| chunk_interned.contains(k));
+
+        // Check for items that were outside the chunk now being inside
+        let mut in_new_chunk = HashSet::new();
+        for e in self.deferred_bcs.iter() {
+            if !chunk_interned.contains(&e.key()) {
+                continue;
+            }
+            in_new_chunk.extend(e.value().iter().cloned());
+        }
+        self.deferred_bcs
+            .retain(|k, _v| !chunk_interned.contains(k));
+
+        Ok(in_new_chunk)
+    }
+
+    fn end_chunks(&self) -> Result<(), Error> {
+        if !self.deferred_bcs.is_empty() {
+            bail!(
+                "Unexpected remaining edges to walk {:?}",
+                self.deferred_bcs
+                    .iter()
+                    .map(|e| e.value().clone())
+                    .collect::<Vec<_>>()
+            );
+        }
+        Ok(())
+    }
+
+    fn num_deferred(&self) -> usize {
+        self.deferred_bcs.len()
+    }
+
     fn start_step(
         &self,
         ctx: CoreContext,

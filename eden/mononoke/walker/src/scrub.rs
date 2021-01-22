@@ -450,6 +450,7 @@ async fn run_one(
         job_params,
         repo_params,
         type_params,
+        sub_params.public_changeset_chunk_by,
         walk_state,
         make_sink,
     )
