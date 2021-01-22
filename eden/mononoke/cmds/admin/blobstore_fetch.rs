@@ -162,7 +162,8 @@ pub async fn subcommand_blobstore_fetch<'a>(
     let scrub_action = sub_m
         .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
         .map(ScrubAction::from_str)
-        .transpose()?;
+        .transpose()
+        .map_err(Error::from)?;
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches).with_scrub_action(scrub_action);
 
