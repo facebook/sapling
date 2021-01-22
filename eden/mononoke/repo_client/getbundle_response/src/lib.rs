@@ -277,28 +277,21 @@ async fn find_commits_to_send(
 
     let (mut heads, mut excludes) = try_join!(heads, excludes)?;
 
+    find_and_log_high_low_gen_nums(
+        ctx,
+        &heads,
+        "Getbundle generation numbers before partial getbundle",
+    );
     let partial_result =
         compute_partial_getbundle(ctx, &changeset_fetcher, heads, excludes).await?;
     heads = partial_result.new_heads;
     excludes = partial_result.new_excludes;
 
-    let lowest_head_gen_num = heads
-        .iter()
-        .map(|(_, gen)| gen)
-        .min()
-        .map_or(0, |gen| gen.value());
-
-    let highest_head_gen_num = heads
-        .iter()
-        .map(|(_, gen)| gen)
-        .max()
-        .map_or(0, |gen| gen.value());
-
-    ctx.scuba()
-        .clone()
-        .add("get_bundle_lowest_gen_num", lowest_head_gen_num)
-        .add("get_bundle_highest_gen_num", highest_head_gen_num)
-        .log_with_msg("Getbundle generation numbers", None);
+    let (lowest_head_gen_num, _) = find_and_log_high_low_gen_nums(
+        ctx,
+        &heads,
+        "Getbundle generation numbers after partial getbundle",
+    );
 
     let params = Params { heads, excludes };
     let nodes_to_send = if !tunables().get_getbundle_use_low_gen_optimization()
@@ -350,6 +343,32 @@ async fn find_commits_to_send(
         .chain(nodes_to_send.into_iter())
         .rev()
         .collect())
+}
+
+fn find_and_log_high_low_gen_nums(
+    ctx: &CoreContext,
+    heads: &[(ChangesetId, Generation)],
+    msg: &str,
+) -> (u64, u64) {
+    let lowest_head_gen_num = heads
+        .iter()
+        .map(|(_, gen)| gen)
+        .min()
+        .map_or(0, |gen| gen.value());
+
+    let highest_head_gen_num = heads
+        .iter()
+        .map(|(_, gen)| gen)
+        .max()
+        .map_or(0, |gen| gen.value());
+
+    ctx.scuba()
+        .clone()
+        .add("get_bundle_lowest_gen_num", lowest_head_gen_num)
+        .add("get_bundle_highest_gen_num", highest_head_gen_num)
+        .log_with_msg(msg, None);
+
+    (lowest_head_gen_num, highest_head_gen_num)
 }
 
 #[derive(Default, Clone)]
