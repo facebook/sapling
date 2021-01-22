@@ -72,6 +72,18 @@ derived deleted_manifest, chunked, deep.  No deferred as there is no parent look
   Deferred: 0
   Completed in 2 chunks of 2
 
+derived fsnodes, chunked, deep.  No deferred as there is no parent lookup in the walk
+  $ mononoke_walker -L sizing scrub -q -p FsnodeMapping --chunk-size=2 -I deep -i derived_fsnodes 2>&1 | strip_glog
+  Walking edge types [FsnodeMappingToRootFsnode, FsnodeToChildFsnode]
+  Walking node types [Fsnode, FsnodeMapping]
+  Seen,Loaded: 4,4
+  * Type:Walked,Checks,Children Fsnode:2,2,0 FsnodeMapping:2,2,4 (glob)
+  Deferred: 0
+  Seen,Loaded: 2,2
+  * Type:Walked,Checks,Children Fsnode:3,3,0 FsnodeMapping:3,3,6 (glob)
+  Deferred: 0
+  Completed in 2 chunks of 2
+
 derived skeleton_manifests, chunked, deep.  No deferred as there is no parent lookup in the walk
   $ mononoke_walker -L sizing scrub -q -p SkeletonManifestMapping --chunk-size=2 -I deep -i derived_skeleton_manifests 2>&1 | strip_glog
   Walking edge types [SkeletonManifestMappingToRootSkeletonManifest, SkeletonManifestToSkeletonManifestChild]
