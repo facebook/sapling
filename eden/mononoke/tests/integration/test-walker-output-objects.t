@@ -58,7 +58,7 @@ Output pretty debug to stdout
       ),
   )
   Seen,Loaded: 2,2
-  * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:1,1,0 (glob)
+  * Type:Walked,Checks,Children Bookmark:1,1,2 Changeset:1,1,0 (glob)
 
 Output non-pretty debug to stdout
   $ mononoke_walker -L sizing scrub -q -b master_bookmark -I shallow -i bonsai --include-output-node-type=Changeset --output-format=Debug 2>&1 | strip_glog
@@ -66,4 +66,4 @@ Output non-pretty debug to stdout
   Walking node types [Bookmark, Changeset]
   Node Changeset(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false }): NodeData: Some(Changeset(BonsaiChangeset { inner: BonsaiChangesetMut { parents: [ChangesetId(Blake2(459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66))], author: "test", author_date: DateTime(1970-01-01T00:00:00+00:00), committer: None, committer_date: None, message: "C", extra: {}, file_changes: {MPath("C"): Some(FileChange { content_id: ContentId(Blake2(896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d)), file_type: Regular, size: 1, copy_from: None })} }, id: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)) }))
   Seen,Loaded: 2,2
-  * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:1,1,0 (glob)
+  * Type:Walked,Checks,Children Bookmark:1,1,2 Changeset:1,1,0 (glob)

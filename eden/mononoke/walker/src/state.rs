@@ -526,6 +526,11 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         EmptyRoute,
         Vec<OutgoingEdge>,
     ) {
+        let queued_roots = if resolved.label.incoming_type().is_none() {
+            1
+        } else {
+            0
+        };
         if route.is_none() || !self.always_emit_edge_types.is_empty() {
             outgoing.retain(|e| {
                 if e.label.incoming_type().is_none() {
@@ -551,7 +556,7 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         self.record_resolved_visit(&resolved, node_data.as_ref());
 
         // Stats
-        let num_expanded_new = outgoing.len();
+        let num_expanded_new = outgoing.len() + queued_roots;
         let node = resolved.target;
 
         let (error_count, node_data) = match node_data {
