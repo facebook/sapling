@@ -1645,7 +1645,10 @@ pub fn parse_blobstore_options<'a>(matches: &MononokeMatches<'a>) -> BlobstoreOp
 
     BlobstoreOptions::new(
         ChaosOptions::new(read_chaos, write_chaos),
-        ThrottleOptions::new(read_qps, write_qps),
+        ThrottleOptions {
+            read_qps,
+            write_qps,
+        },
         manifold_api_key,
         PackOptions::new(write_zstd_level),
         CachelibBlobstoreOptions::new_lazy(Some(attempt_zstd)),

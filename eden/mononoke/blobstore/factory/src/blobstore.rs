@@ -89,7 +89,7 @@ impl Default for BlobstoreOptions {
     fn default() -> Self {
         Self::new(
             ChaosOptions::new(None, None),
-            ThrottleOptions::new(None, None),
+            ThrottleOptions::default(),
             None,
             PackOptions::default(),
             CachelibBlobstoreOptions::default(),

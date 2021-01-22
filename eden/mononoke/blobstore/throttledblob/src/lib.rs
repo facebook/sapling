@@ -20,20 +20,13 @@ use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, P
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ThrottleOptions {
-    read_qps: Option<NonZeroU32>,
-    write_qps: Option<NonZeroU32>,
+    pub read_qps: Option<NonZeroU32>,
+    pub write_qps: Option<NonZeroU32>,
 }
 
 impl ThrottleOptions {
-    pub fn new(read_qps: Option<NonZeroU32>, write_qps: Option<NonZeroU32>) -> Self {
-        Self {
-            read_qps,
-            write_qps,
-        }
-    }
-
     pub fn has_throttle(&self) -> bool {
         self.read_qps.is_some() || self.write_qps.is_some()
     }

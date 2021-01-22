@@ -299,7 +299,14 @@ async fn get_blob<'a>(
         .map(|v| v.parse())
         .transpose()?;
 
-    let blob = ThrottledBlob::new(blob, ThrottleOptions::new(read_qps, write_qps)).await;
+    let blob = ThrottledBlob::new(
+        blob,
+        ThrottleOptions {
+            read_qps,
+            write_qps,
+        },
+    )
+    .await;
 
     Ok(Arc::new(blob))
 }
