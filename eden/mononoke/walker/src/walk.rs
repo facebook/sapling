@@ -114,6 +114,8 @@ pub enum ErrorKind {
 #[async_trait]
 #[auto_impl(Arc)]
 pub trait VisitOne {
+    fn in_chunk(&self, bcs_id: &ChangesetId) -> bool;
+
     fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool;
 
     async fn is_public(
@@ -154,10 +156,19 @@ pub trait WalkVisitor<VOut, Route>: VisitOne {
         route: Option<Route>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (VOut, Route, Vec<OutgoingEdge>);
+
+    // For use when an edge should be visited in a later chunk
+    fn defer_visit(
+        &self,
+        bcs_id: &ChangesetId,
+        walk_item: &OutgoingEdge,
+        route: Option<Route>,
+    ) -> (VOut, Route);
 }
 
 // Data found for this node, plus next steps
 enum StepOutput {
+    Deferred(ChangesetId),
     Done(NodeData, Vec<OutgoingEdge>),
 }
 
@@ -1081,6 +1092,10 @@ async fn unode_file_step<V: VisitOne>(
 ) -> Result<StepOutput, Error> {
     let unode_file = key.inner.load(ctx, repo.blobstore()).await?;
     let linked_cs_id = *unode_file.linknode();
+    if !checker.in_chunk(&linked_cs_id) {
+        return Ok(StepOutput::Deferred(linked_cs_id));
+    }
+
     let mut edges = vec![];
 
     // Check if we stepped from unode for non-public commit to unode for public, so can enable blame if required
@@ -1147,6 +1162,9 @@ async fn unode_manifest_step<V: VisitOne>(
 ) -> Result<StepOutput, Error> {
     let unode_manifest = key.inner.load(ctx, repo.blobstore()).await?;
     let linked_cs_id = *unode_manifest.linknode();
+    if !checker.in_chunk(&linked_cs_id) {
+        return Ok(StepOutput::Deferred(linked_cs_id));
+    }
 
     let mut edges = vec![];
 
@@ -1419,6 +1437,10 @@ impl<V: VisitOne> Checker<V> {
         self.visitor
             .is_public(ctx, self.phases_store.as_ref(), bcs_id)
             .await
+    }
+
+    fn in_chunk(&self, bcs_id: &ChangesetId) -> bool {
+        self.visitor.in_chunk(bcs_id)
     }
 
     // Convience method around make_edge
@@ -1814,11 +1836,10 @@ where
     })?;
 
     let (vout, via, next) = match step_output {
-        // TODO(ahornby) - enabled in next diff
-        // StepOutput::Deferred => {
-        //     let (vout, via) = visitor.defer_visit(walk_item, via);
-        //     (vout, via, vec![])
-        // }
+        StepOutput::Deferred(bcs_id) => {
+            let (vout, via) = visitor.defer_visit(&bcs_id, &walk_item, via);
+            (vout, via, vec![])
+        }
         StepOutput::Done(node_data, children) => {
             // make sure steps are valid.  would be nice if this could be static
             for c in &children {

@@ -186,6 +186,10 @@ impl ValidatingVisitor {
 
 #[async_trait]
 impl VisitOne for ValidatingVisitor {
+    fn in_chunk(&self, bcs_id: &ChangesetId) -> bool {
+        self.inner.in_chunk(bcs_id)
+    }
+
     fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
         self.inner.needs_visit(outgoing)
     }
@@ -416,6 +420,21 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
         );
 
         (vout, ValidateRoute::next_route(route, node), outgoing)
+    }
+
+    fn defer_visit(
+        &self,
+        bcs_id: &ChangesetId,
+        walk_item: &OutgoingEdge,
+        route: Option<ValidateRoute>,
+    ) -> ((Node, Option<CheckData>, Option<StepStats>), ValidateRoute) {
+        let ((node, _node_data, stats), _route) =
+            self.inner
+                .defer_visit(bcs_id, walk_item, Some(EmptyRoute {}));
+        (
+            (node.clone(), None, stats),
+            ValidateRoute::next_route(route, node),
+        )
     }
 }
 

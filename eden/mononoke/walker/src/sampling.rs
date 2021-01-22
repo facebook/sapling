@@ -76,6 +76,9 @@ impl<T> SamplingWalkVisitor<T> {
 
 #[async_trait]
 impl<T: Send + Sync> VisitOne for SamplingWalkVisitor<T> {
+    fn in_chunk(&self, bcs_id: &ChangesetId) -> bool {
+        self.inner.in_chunk(bcs_id)
+    }
     fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
         self.inner.needs_visit(outgoing)
     }
@@ -318,6 +321,30 @@ where
             outgoing,
         )
     }
+
+    fn defer_visit(
+        &self,
+        bcs_id: &ChangesetId,
+        walk_item: &OutgoingEdge,
+        route: Option<PathTrackingRoute>,
+    ) -> (
+        (WalkKeyOptPath, WalkPayloadMtime, Option<StepStats>),
+        PathTrackingRoute,
+    ) {
+        let inner_route = route.as_ref().map(|_| EmptyRoute {});
+        let route =
+            PathTrackingRoute::evolve(route, walk_item.path.as_ref(), &walk_item.target, None);
+        let ((n, _nd, stats), _inner_route) =
+            self.inner.defer_visit(bcs_id, walk_item, inner_route);
+        (
+            (
+                WalkKeyOptPath(n, route.path.clone()),
+                WalkPayloadMtime(None, None),
+                stats,
+            ),
+            route,
+        )
+    }
 }
 
 // Super simple sampling visitor impl for scrubbing
@@ -381,6 +408,15 @@ where
         Vec<OutgoingEdge>,
     ) {
         self.inner.visit(ctx, resolved, node_data, route, outgoing)
+    }
+
+    fn defer_visit(
+        &self,
+        bcs_id: &ChangesetId,
+        walk_item: &OutgoingEdge,
+        route: Option<EmptyRoute>,
+    ) -> ((Node, Option<NodeData>, Option<StepStats>), EmptyRoute) {
+        self.inner.defer_visit(bcs_id, walk_item, route)
     }
 }
 

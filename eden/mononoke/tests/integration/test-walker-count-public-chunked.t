@@ -60,3 +60,14 @@ derived changeset_info, chunked, deep
   Deferred: 0
   Completed in 2 chunks of 2
 
+derived unodes, chunked, deep. Expect deferred as unode parent will attempt to step outside chunk
+  $ mononoke_walker -L sizing scrub -q -p UnodeMapping --chunk-size=2 -I deep -i derived_unodes 2>&1 | strip_glog
+  Walking edge types [UnodeFileToUnodeFileParent, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent, UnodeMappingToRootUnodeManifest]
+  Walking node types [UnodeFile, UnodeManifest, UnodeMapping]
+  Seen,Loaded: 8,6
+  * Type:Walked,Checks,Children UnodeFile:3,*,0 UnodeManifest:3,*,4 UnodeMapping:2,*,4 (glob)
+  Deferred: 1
+  Seen,Loaded: 3,3
+  * Type:Walked,Checks,Children UnodeFile:4,*,0 UnodeManifest:4,*,4 UnodeMapping:3,*,5 (glob)
+  Deferred: 0
+  Completed in 2 chunks of 2

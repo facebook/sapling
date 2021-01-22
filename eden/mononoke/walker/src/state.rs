@@ -368,6 +368,15 @@ impl WalkState {
 
 #[async_trait]
 impl VisitOne for WalkState {
+    fn in_chunk(&self, bcs_id: &ChangesetId) -> bool {
+        if self.chunk_bcs.is_empty() {
+            true
+        } else {
+            let id = self.bcs_ids.interned(bcs_id);
+            self.chunk_bcs.contains_key(&id)
+        }
+    }
+
     async fn is_public(
         &self,
         ctx: &CoreContext,
@@ -662,6 +671,18 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         };
 
         ((node, node_data, Some(stats)), EmptyRoute {}, outgoing)
+    }
+
+    fn defer_visit(
+        &self,
+        bcs_id: &ChangesetId,
+        walk_item: &OutgoingEdge,
+        _route: Option<EmptyRoute>,
+    ) -> ((Node, Option<NodeData>, Option<StepStats>), EmptyRoute) {
+        let target = walk_item.target.clone();
+        let i = self.bcs_ids.interned(bcs_id);
+        self.record_multi(&self.deferred_bcs, i, &walk_item);
+        ((target, None, None), EmptyRoute {})
     }
 }
 
