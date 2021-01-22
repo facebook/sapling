@@ -47,3 +47,15 @@ bonsai core data, chunked, deep. Should still visit all changesets, but no bookm
   * Type:Walked,Checks,Children Changeset:4,*,6 FileContent:3,*,0 (glob)
   Deferred: 0
   Completed in 2 chunks of 2
+
+derived changeset_info, chunked, deep
+  $ mononoke_walker -L sizing scrub -q -p ChangesetInfoMapping --chunk-size=2 -I deep -i derived_changeset_info 2>&1 | strip_glog
+  Walking edge types [ChangesetInfoMappingToChangesetInfo, ChangesetInfoToChangesetInfoParent]
+  Walking node types [ChangesetInfo, ChangesetInfoMapping]
+  Seen,Loaded: 4,4
+  * Type:Walked,Checks,Children ChangesetInfo:2,*,0 ChangesetInfoMapping:2,*,4 (glob)
+  Deferred: 1
+  Seen,Loaded: 3,3
+  * Type:Walked,Checks,Children ChangesetInfo:4,*,0 ChangesetInfoMapping:3,*,6 (glob)
+  Deferred: 0
+  Completed in 2 chunks of 2

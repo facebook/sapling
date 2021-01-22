@@ -476,7 +476,15 @@ impl VisitOne for WalkState {
                 &self.unode_file_ids.interned(k.as_ref()),
             ),
             Node::ChangesetInfo(bcs_id) => {
-                self.record(&self.visited_changeset_info, &self.bcs_ids.interned(bcs_id))
+                let id = self.bcs_ids.interned(bcs_id);
+                if self.chunk_contains(id) {
+                    self.record(&self.visited_changeset_info, &id)
+                } else {
+                    if !self.visited_changeset_info.contains_key(&id) {
+                        self.record_multi(&self.deferred_bcs, id, outgoing);
+                    }
+                    false
+                }
             }
             Node::ChangesetInfoMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
