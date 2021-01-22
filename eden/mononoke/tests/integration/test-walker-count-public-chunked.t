@@ -48,6 +48,18 @@ bonsai core data, chunked, deep. Should still visit all changesets, but no bookm
   Deferred: 0
   Completed in 2 chunks of 2
 
+hg file content, chunked, deep.  Expect deferred as hg changeset parents will point outside chunk
+  $ mononoke_walker -L sizing scrub -q -p BonsaiHgMapping --chunk-size=2 -I deep -i hg -i FileContent -x HgFileNode 2>&1 | strip_glog
+  Walking edge types [BonsaiHgMappingToHgChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgChangesetViaBonsaiToHgChangeset, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope]
+  Walking node types [BonsaiHgMapping, FileContent, HgChangeset, HgChangesetViaBonsai, HgFileEnvelope, HgManifest]
+  Seen,Loaded: 14,13
+  * Type:Walked,Checks,Children BonsaiHgMapping:2,*,4 FileContent:3,*,0 HgChangeset:2,*,4 HgChangesetViaBonsai:2,*,0 HgFileEnvelope:3,*,3 HgManifest:2,*,3 (glob)
+  Deferred: 1
+  Seen,Loaded: 4,4
+  * Type:Walked,Checks,Children BonsaiHgMapping:3,*,6 FileContent:3,*,0 HgChangeset:3,*,5 HgChangesetViaBonsai:3,*,0 HgFileEnvelope:3,*,3 HgManifest:3,*,3 (glob)
+  Deferred: 0
+  Completed in 2 chunks of 2
+
 derived changeset_info, chunked, deep
   $ mononoke_walker -L sizing scrub -q -p ChangesetInfoMapping --chunk-size=2 -I deep -i derived_changeset_info 2>&1 | strip_glog
   Walking edge types [ChangesetInfoMappingToChangesetInfo, ChangesetInfoToChangesetInfoParent]

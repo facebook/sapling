@@ -689,11 +689,15 @@ async fn hg_changeset_via_bonsai_step<V: VisitOne>(
     checker: &Checker<V>,
     key: ChangesetKey<HgChangesetId>,
 ) -> Result<StepOutput, Error> {
-    let _bcs_id = repo
+    let bcs_id = repo
         .get_bonsai_from_hg(ctx, key.inner)
         .await?
         .ok_or_else(|| format_err!("Can't have hg without bonsai"))?;
-    // TODO(ahornby) check bonsai is in the chunk to be processed when chunking
+
+    if !checker.in_chunk(&bcs_id) {
+        return Ok(StepOutput::Deferred(bcs_id));
+    }
+
     let mut edges = vec![];
     checker.add_edge(
         &mut edges,
