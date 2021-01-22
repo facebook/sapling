@@ -71,3 +71,15 @@ derived unodes, chunked, deep. Expect deferred as unode parent will attempt to s
   * Type:Walked,Checks,Children UnodeFile:4,*,0 UnodeManifest:4,*,4 UnodeMapping:3,*,5 (glob)
   Deferred: 0
   Completed in 2 chunks of 2
+
+derived unodes fastlog, chunked, deep. Expect deferred as fastlog entry will attempt to step outside chunk
+  $ mononoke_walker -L sizing scrub -q -p UnodeMapping --chunk-size=2 -I deep -i derived_unodes -i derived_fastlog -X UnodeFileToUnodeFileParent -X UnodeManifestToUnodeManifestParent 2>&1 | strip_glog
+  Walking edge types [FastlogBatchToPreviousBatch, FastlogDirToPreviousBatch, FastlogFileToPreviousBatch, UnodeFileToFastlogFile, UnodeManifestToFastlogDir, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeMappingToRootUnodeManifest]
+  Walking node types [FastlogBatch, FastlogDir, FastlogFile, UnodeFile, UnodeManifest, UnodeMapping]
+  Seen,Loaded: 11,10
+  * Type:Walked,Checks,Children FastlogBatch:0,0,0 FastlogDir:2,* FastlogFile:2,* UnodeFile:3,* UnodeManifest:2,* UnodeMapping:2,2,4 (glob)
+  Deferred: 1
+  Seen,Loaded: 5,5
+  * Type:Walked,Checks,Children FastlogBatch:0,0,0 FastlogDir:3,* FastlogFile:3,* UnodeFile:4,* UnodeManifest:3,* UnodeMapping:3,3,6 (glob)
+  Deferred: 0
+  Completed in 2 chunks of 2
