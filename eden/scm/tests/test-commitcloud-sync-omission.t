@@ -5,7 +5,6 @@
   $ enable amend commitcloud infinitepush rebase remotenames share smartlog
 
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
-  $ setconfig infinitepushbackup.enablestatus=true
   $ setconfig commitcloud.hostname=testhost commitcloud.max_sync_age=14
 
   $ setconfig remotefilelog.reponame=server

@@ -3,7 +3,6 @@
 #require symlink
 
   $ enable amend smartlog
-  $ setconfig infinitepushbackup.enablestatus=true
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
