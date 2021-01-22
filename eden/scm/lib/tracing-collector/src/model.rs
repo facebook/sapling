@@ -6,7 +6,7 @@
  */
 
 use crate::log;
-use indexmap::{IndexMap, IndexSet};
+pub use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::HashMap;
