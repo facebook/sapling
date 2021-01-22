@@ -193,10 +193,10 @@ pub struct MononokeAppBuilder {
     // Whether to default to readonly storage or not
     readonly_storage_default: ReadOnlyStorage,
 
-    // Whether to defailt to attempting to compress to cachelib for large objects
+    // Whether to default to attempting to compress to cachelib for large objects
     blobstore_cachelib_attempt_zstd_default: bool,
 
-    // Whether to defailt to limit blobstore read QPS
+    // Whether to default to limit blobstore read QPS
     blobstore_read_qps_default: Option<NonZeroU32>,
 }
 
@@ -484,7 +484,7 @@ impl MononokeAppBuilder {
 
     /// Build a MononokeClapApp around a `clap::App` for this Mononoke app, which can then be customized further.
     pub fn build<'a, 'b>(self) -> MononokeClapApp<'a, 'b> {
-        let mut app = App::new(self.name);
+        let mut app = App::new(self.name.clone());
 
         if self.arg_types.contains(&ArgType::Config) {
             app = app.arg(
@@ -605,13 +605,7 @@ impl MononokeAppBuilder {
             app = add_mysql_options_args(app);
         }
         if self.arg_types.contains(&ArgType::Blobstore) {
-            app = add_blobstore_args(
-                app,
-                self.special_put_behaviour,
-                self.readonly_storage_default,
-                self.blobstore_cachelib_attempt_zstd_default,
-                self.blobstore_read_qps_default,
-            );
+            app = self.add_blobstore_args(app);
         }
         if self.arg_types.contains(&ArgType::Cachelib) {
             app = add_cachelib_args(app, self.hide_advanced_args, self.cachelib_settings.clone());
@@ -643,6 +637,99 @@ impl MononokeAppBuilder {
                 global_mysql_connection_pool: SharedConnectionPool::new(),
             },
         }
+    }
+
+    fn add_blobstore_args<'a, 'b>(&self, app: App<'a, 'b>) -> App<'a, 'b> {
+        let mut put_arg = Arg::with_name(BLOBSTORE_PUT_BEHAVIOUR_ARG)
+            .long(BLOBSTORE_PUT_BEHAVIOUR_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Desired blobstore behaviour when a put is made to an existing key.");
+
+        if let Some(special_put_behaviour) = self.special_put_behaviour {
+            put_arg = put_arg.default_value(special_put_behaviour.into());
+        } else {
+            // Add the default here so that it shows in --help
+            put_arg = put_arg.default_value(DEFAULT_PUT_BEHAVIOUR.into());
+        }
+
+        let mut read_qps_arg = Arg::with_name(READ_QPS_ARG)
+            .long(READ_QPS_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Read QPS limit to ThrottledBlob");
+
+        if let Some(default) = self.blobstore_read_qps_default {
+            // Lazy static is nicer to LeakSanitizer than Box::leak
+            static QPS_FORMATTED: OnceCell<String> = OnceCell::new();
+            // clap needs &'static str
+            read_qps_arg =
+                read_qps_arg.default_value(&QPS_FORMATTED.get_or_init(|| format!("{}", default)));
+        }
+
+        app.arg(
+           read_qps_arg
+        )
+        .arg(
+            Arg::with_name(WRITE_QPS_ARG)
+                .long(WRITE_QPS_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Write QPS limit to ThrottledBlob"),
+        )
+        .arg(
+            Arg::with_name(READ_CHAOS_ARG)
+                .long(READ_CHAOS_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Rate of errors on reads. Pass N,  it will error randomly 1/N times. For multiplexed stores will only apply to the first store in the multiplex."),
+        )
+        .arg(
+            Arg::with_name(WRITE_CHAOS_ARG)
+                .long(WRITE_CHAOS_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Rate of errors on writes. Pass N,  it will error randomly 1/N times. For multiplexed stores will only apply to the first store in the multiplex."),
+        )
+        .arg(
+            Arg::with_name(WRITE_ZSTD_ARG)
+                .long(WRITE_ZSTD_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Set the zstd compression level to be used on writes via the packed blobstore (if configured).  Default is None."),
+        )
+        .arg(
+            Arg::with_name(MANIFOLD_API_KEY_ARG)
+                .long(MANIFOLD_API_KEY_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Manifold API key"),
+        )
+        .arg(
+            Arg::with_name(CACHELIB_ATTEMPT_ZSTD_ARG)
+                .long(CACHELIB_ATTEMPT_ZSTD_ARG)
+                .takes_value(true)
+                .possible_values(BOOL_VALUES)
+                .required(false)
+                .default_value(bool_as_str(self.blobstore_cachelib_attempt_zstd_default))
+                .help("Whether to attempt zstd compression when blobstore is putting things into cachelib over threshold size."),
+        )
+        .arg(
+          put_arg
+        )
+        .arg(
+            Arg::with_name(READONLY_STORAGE_OLD_ARG)
+                .long(READONLY_STORAGE_OLD_ARG)
+                .help("Error on any attempts to write to storage. DEPRECATED, prefer --with-readonly-storage=<true|false>"),
+        )
+        .arg(
+            Arg::with_name(READONLY_STORAGE_NEW_ARG)
+                .long(READONLY_STORAGE_NEW_ARG)
+                .takes_value(true)
+                .possible_values(BOOL_VALUES)
+                .default_value(bool_as_str(self.readonly_storage_default.0))
+                .help("Error on any attempts to write to storage if set to true"),
+        )
     }
 }
 
@@ -1179,105 +1266,6 @@ pub(crate) fn bool_as_str(v: bool) -> &'static str {
 }
 
 pub(crate) const BOOL_VALUES: &[&str] = &["false", "true"];
-
-fn add_blobstore_args<'a, 'b>(
-    app: App<'a, 'b>,
-    special_put_behaviour: Option<PutBehaviour>,
-    default_readonly: ReadOnlyStorage,
-    blobstore_cachelib_attempt_zstd_default: bool,
-    blobstore_read_qps_default: Option<NonZeroU32>,
-) -> App<'a, 'b> {
-    let mut put_arg = Arg::with_name(BLOBSTORE_PUT_BEHAVIOUR_ARG)
-        .long(BLOBSTORE_PUT_BEHAVIOUR_ARG)
-        .takes_value(true)
-        .required(false)
-        .help("Desired blobstore behaviour when a put is made to an existing key.");
-
-    if let Some(special_put_behaviour) = special_put_behaviour {
-        put_arg = put_arg.default_value(special_put_behaviour.into());
-    } else {
-        // Add the default here so that it shows in --help
-        put_arg = put_arg.default_value(DEFAULT_PUT_BEHAVIOUR.into());
-    }
-
-    let mut read_qps_arg = Arg::with_name(READ_QPS_ARG)
-        .long(READ_QPS_ARG)
-        .takes_value(true)
-        .required(false)
-        .help("Read QPS limit to ThrottledBlob");
-
-    if let Some(default) = blobstore_read_qps_default {
-        // Lazy static is nicer to LeakSanitizer than Box::leak
-        static QPS_FORMATTED: OnceCell<String> = OnceCell::new();
-        // clap needs &'static str
-        read_qps_arg =
-            read_qps_arg.default_value(&QPS_FORMATTED.get_or_init(|| format!("{}", default)));
-    }
-
-    app.arg(
-       read_qps_arg
-    )
-    .arg(
-        Arg::with_name(WRITE_QPS_ARG)
-            .long(WRITE_QPS_ARG)
-            .takes_value(true)
-            .required(false)
-            .help("Write QPS limit to ThrottledBlob"),
-    )
-    .arg(
-        Arg::with_name(READ_CHAOS_ARG)
-            .long(READ_CHAOS_ARG)
-            .takes_value(true)
-            .required(false)
-            .help("Rate of errors on reads. Pass N,  it will error randomly 1/N times. For multiplexed stores will only apply to the first store in the multiplex."),
-    )
-    .arg(
-        Arg::with_name(WRITE_CHAOS_ARG)
-            .long(WRITE_CHAOS_ARG)
-            .takes_value(true)
-            .required(false)
-            .help("Rate of errors on writes. Pass N,  it will error randomly 1/N times. For multiplexed stores will only apply to the first store in the multiplex."),
-    )
-    .arg(
-        Arg::with_name(WRITE_ZSTD_ARG)
-            .long(WRITE_ZSTD_ARG)
-            .takes_value(true)
-            .required(false)
-            .help("Set the zstd compression level to be used on writes via the packed blobstore (if configured).  Default is None."),
-    )
-    .arg(
-        Arg::with_name(MANIFOLD_API_KEY_ARG)
-            .long(MANIFOLD_API_KEY_ARG)
-            .takes_value(true)
-            .required(false)
-            .help("Manifold API key"),
-    )
-    .arg(
-        Arg::with_name(CACHELIB_ATTEMPT_ZSTD_ARG)
-            .long(CACHELIB_ATTEMPT_ZSTD_ARG)
-            .takes_value(true)
-            .possible_values(BOOL_VALUES)
-            .required(false)
-            .default_value(bool_as_str(blobstore_cachelib_attempt_zstd_default))
-            .help("Whether to attempt zstd compression when blobstore is putting things into cachelib over threshold size."),
-    )
-    .arg(
-      put_arg
-    )
-    .arg(
-        Arg::with_name(READONLY_STORAGE_OLD_ARG)
-            .long(READONLY_STORAGE_OLD_ARG)
-            .help("Error on any attempts to write to storage. DEPRECATED, prefer --with-readonly-storage=<true|false>"),
-    )
-    .arg(
-        Arg::with_name(READONLY_STORAGE_NEW_ARG)
-            .long(READONLY_STORAGE_NEW_ARG)
-            .takes_value(true)
-            .possible_values(BOOL_VALUES)
-            .default_value(bool_as_str(default_readonly.0))
-            .help("Error on any attempts to write to storage if set to true"),
-    )
-}
 
 pub fn add_mcrouter_args<'a, 'b>(app: MononokeClapApp<'a, 'b>) -> MononokeClapApp<'a, 'b> {
     app.arg(
