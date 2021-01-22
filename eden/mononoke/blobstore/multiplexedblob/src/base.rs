@@ -76,6 +76,7 @@ pub trait MultiplexedBlobstorePutHandler: Send + Sync {
         multiplex_id: MultiplexId,
         operation_key: &'out OperationKey,
         key: &'out str,
+        blob_size: Option<u64>,
     ) -> Result<()>;
 }
 
@@ -508,6 +509,7 @@ impl MultiplexedBlobstoreBase {
                         operation_key
                     );
                     async move {
+                        let blob_size = value.len() as u64;
                         let (blobstore_id, res) = inner_put(
                             &ctx,
                             scuba,
@@ -523,7 +525,14 @@ impl MultiplexedBlobstoreBase {
                         // Return the on_put handler
                         Ok(async move {
                             let res = handler
-                                .on_put(&ctx, blobstore_id, multiplex_id, &operation_key, &key)
+                                .on_put(
+                                    &ctx,
+                                    blobstore_id,
+                                    multiplex_id,
+                                    &operation_key,
+                                    &key,
+                                    Some(blob_size),
+                                )
                                 .await;
                             res.map_err(|err| (blobstore_id, err))
                         })

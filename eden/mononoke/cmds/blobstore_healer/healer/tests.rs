@@ -162,9 +162,10 @@ async fn heal_blob_missing_all_stores(fb: FacebookInit) -> Result<()> {
     let mp = MultiplexId::new(1);
 
     let op0 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0, bsize),
     ];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
     let r = heal_blob(
@@ -218,9 +219,10 @@ async fn heal_blob_where_queue_and_stores_match_on_missing(fb: FacebookInit) -> 
     let mp = MultiplexId::new(1);
 
     let op0 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0, bsize),
     ];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
     let r = heal_blob(
@@ -280,10 +282,11 @@ async fn test_heal_blob_entry_too_recent(fb: FacebookInit) -> Result<()> {
     let mp = MultiplexId::new(1);
 
     let op0 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t1, op0.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0, op0),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t1, op0.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0, op0, bsize),
     ];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
     let r = heal_blob(
@@ -315,10 +318,11 @@ async fn heal_blob_missing_none(fb: FacebookInit) -> Result<()> {
     let mp = MultiplexId::new(1);
 
     let op0 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0, op0),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0, op0, bsize),
     ];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
     let r = heal_blob(
@@ -351,12 +355,14 @@ async fn test_heal_blob_only_unknown_queue_entry(fb: FacebookInit) -> Result<()>
     let mp = MultiplexId::new(1);
 
     let op0 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![BlobstoreSyncQueueEntry::new(
         "specialk".to_string(),
         bids_from_different_config[4],
         mp,
         t0,
         op0,
+        bsize,
     )];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
     let r = heal_blob(
@@ -395,14 +401,16 @@ async fn heal_blob_some_unknown_queue_entry(fb: FacebookInit) -> Result<()> {
     let mp = MultiplexId::new(1);
 
     let op0 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone(), bsize),
         BlobstoreSyncQueueEntry::new(
             "specialk".to_string(),
             bids_from_different_config[4],
             mp,
             t0,
             op0,
+            bsize,
         ),
     ];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
@@ -464,9 +472,10 @@ async fn heal_blob_where_queue_and_stores_mismatch_on_missing(fb: FacebookInit) 
     let mp = MultiplexId::new(1);
 
     let op0 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0, op0),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0, op0, bsize),
     ];
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
     let r = heal_blob(
@@ -512,9 +521,10 @@ async fn heal_blob_where_store_and_queue_match_all_put_fails(fb: FacebookInit) -
     let mp = MultiplexId::new(1);
 
     let op0 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0, bsize),
     ];
     underlying_stores.get(&bids[2]).unwrap().fail_puts();
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
@@ -566,9 +576,10 @@ async fn heal_blob_where_store_and_queue_mismatch_some_put_fails(fb: FacebookIni
     let mp = MultiplexId::new(1);
 
     let op0 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0, bsize),
     ];
     underlying_stores.get(&bids[1]).unwrap().fail_puts();
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
@@ -621,12 +632,14 @@ async fn healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<()> {
     // Insert one entry in the queue for the blobstore that inserted successfully
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
     let op0 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![BlobstoreSyncQueueEntry::new(
         "specialk".to_string(),
         bids[0],
         mp,
         t0,
         op0,
+        bsize,
     )];
     sync_queue.add_many(&ctx, entries).await?;
 
@@ -675,9 +688,10 @@ async fn healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<()> {
 
     let op0 = OperationKey::gen();
     let op1 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0),
-        BlobstoreSyncQueueEntry::new("specialk_mp".to_string(), bids[1], old_mp, t0, op1),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0, bsize),
+        BlobstoreSyncQueueEntry::new("specialk_mp".to_string(), bids[1], old_mp, t0, op1, bsize),
     ];
 
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
@@ -709,11 +723,12 @@ async fn healer_heal_complete_batch(fb: FacebookInit) -> Result<()> {
 
     let op0 = OperationKey::gen();
     let op1 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op1.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op1),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0, bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op1.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op1, bsize),
     ];
 
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
@@ -737,11 +752,12 @@ async fn healer_heal_incomplete_batch(fb: FacebookInit) -> Result<()> {
 
     let op0 = OperationKey::gen();
     let op1 = OperationKey::gen();
+    let bsize = Some(make_value("specialv").len() as u64);
     let entries = vec![
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op1.clone()),
-        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op1),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0, bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op1.clone(), bsize),
+        BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op1, bsize),
     ];
 
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);

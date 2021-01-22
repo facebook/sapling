@@ -39,11 +39,11 @@ async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
     let op1 = OperationKey(Uuid::from_fields(0, 0, 2, &node_id)?); // for key1
     let op2 = OperationKey(Uuid::from_fields(0, 0, 3, &node_id)?); // for second put of key0
 
-    let entry0 = BlobstoreSyncQueueEntry::new(key0.clone(), bs0, mp, t0, op0.clone());
-    let entry1 = BlobstoreSyncQueueEntry::new(key0.clone(), bs1, mp, t1, op0.clone());
-    let entry2 = BlobstoreSyncQueueEntry::new(key1.clone(), bs0, mp, t1, op1.clone());
-    let entry3 = BlobstoreSyncQueueEntry::new(key0.clone(), bs0, mp, t2, op2.clone());
-    let entry4 = BlobstoreSyncQueueEntry::new(key0.clone(), bs1, mp, t2, op2);
+    let entry0 = BlobstoreSyncQueueEntry::new(key0.clone(), bs0, mp, t0, op0.clone(), None);
+    let entry1 = BlobstoreSyncQueueEntry::new(key0.clone(), bs1, mp, t1, op0.clone(), None);
+    let entry2 = BlobstoreSyncQueueEntry::new(key1.clone(), bs0, mp, t1, op1.clone(), None);
+    let entry3 = BlobstoreSyncQueueEntry::new(key0.clone(), bs0, mp, t2, op2.clone(), None);
+    let entry4 = BlobstoreSyncQueueEntry::new(key0.clone(), bs1, mp, t2, op2, None);
 
     // add
     assert!(queue.add(&ctx, entry0.clone()).await.is_ok());

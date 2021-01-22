@@ -93,6 +93,7 @@ pub struct BlobstoreSyncQueueEntry {
     pub timestamp: DateTime,
     pub id: Option<u64>,
     pub operation_key: OperationKey,
+    pub blob_size: Option<u64>,
 }
 
 impl BlobstoreSyncQueueEntry {
@@ -102,6 +103,7 @@ impl BlobstoreSyncQueueEntry {
         multiplex_id: MultiplexId,
         timestamp: DateTime,
         operation_key: OperationKey,
+        blob_size: Option<u64>,
     ) -> Self {
         Self {
             blobstore_key,
@@ -109,6 +111,7 @@ impl BlobstoreSyncQueueEntry {
             multiplex_id,
             timestamp,
             operation_key,
+            blob_size,
             id: None,
         }
     }
@@ -178,9 +181,10 @@ queries! {
         multiplex_id: MultiplexId,
         timestamp: Timestamp,
         operation_key: OperationKey,
+        blob_size: Option<u64>,
     )) {
         none,
-        "INSERT INTO blobstore_sync_queue (blobstore_key, blobstore_id, multiplex_id, add_timestamp, operation_key)
+        "INSERT INTO blobstore_sync_queue (blobstore_key, blobstore_id, multiplex_id, add_timestamp, operation_key, blob_size)
          VALUES {values}"
     }
 
@@ -196,8 +200,9 @@ queries! {
         Timestamp,
         OperationKey,
         u64,
+        Option<u64>,
     ) {
-        "SELECT blobstore_key, blobstore_id, multiplex_id, add_timestamp, blobstore_sync_queue.operation_key, id
+        "SELECT blobstore_key, blobstore_id, multiplex_id, add_timestamp, blobstore_sync_queue.operation_key, id, blob_size
          FROM blobstore_sync_queue
          JOIN (
                SELECT DISTINCT operation_key
@@ -216,8 +221,9 @@ queries! {
         Timestamp,
         OperationKey,
         u64,
+        Option<u64>,
     ) {
-        "SELECT blobstore_key, blobstore_id, multiplex_id, add_timestamp, blobstore_sync_queue.operation_key, id
+        "SELECT blobstore_key, blobstore_id, multiplex_id, add_timestamp, blobstore_sync_queue.operation_key, id, blob_size
          FROM blobstore_sync_queue
          JOIN (
                SELECT DISTINCT operation_key
@@ -236,8 +242,9 @@ queries! {
         Timestamp,
         OperationKey,
         u64,
+        Option<u64>,
     ) {
-        "SELECT blobstore_key, blobstore_id, multiplex_id, add_timestamp, operation_key, id
+        "SELECT blobstore_key, blobstore_id, multiplex_id, add_timestamp, operation_key, id, blob_size
          FROM blobstore_sync_queue
          WHERE blobstore_key = {key}"
     }
@@ -312,16 +319,24 @@ async fn insert_entries(
                 timestamp,
                 multiplex_id,
                 operation_key,
+                blob_size,
                 ..
             } = entry;
             let t: Timestamp = timestamp.into();
-            (blobstore_key, blobstore_id, multiplex_id, t, operation_key)
+            (
+                blobstore_key,
+                blobstore_id,
+                multiplex_id,
+                t,
+                operation_key,
+                blob_size,
+            )
         })
         .collect();
 
     let entries_ref: Vec<_> = entries
         .iter()
-        .map(|(b, c, d, e, f)| (b, c, d, e, f)) // &(a, b, ...) into (&a, &b, ...)
+        .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f)) // &(a, b, ...) into (&a, &b, ...)
         .collect();
 
     InsertEntry::query(write_connection, entries_ref.as_ref())
@@ -398,7 +413,17 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
         Ok(rows
             .into_iter()
             .map(
-                |(blobstore_key, blobstore_id, multiplex_id, timestamp, operation_key, id)| {
+                |
+                    (
+                        blobstore_key,
+                        blobstore_id,
+                        multiplex_id,
+                        timestamp,
+                        operation_key,
+                        id,
+                        blob_size,
+                    ),
+                | {
                     BlobstoreSyncQueueEntry {
                         blobstore_key,
                         blobstore_id,
@@ -406,6 +431,7 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
                         timestamp: timestamp.into(),
                         operation_key,
                         id: Some(id),
+                        blob_size,
                     }
                 },
             )
@@ -447,7 +473,17 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
         Ok(rows
             .into_iter()
             .map(
-                |(blobstore_key, blobstore_id, multiplex_id, timestamp, operation_key, id)| {
+                |
+                    (
+                        blobstore_key,
+                        blobstore_id,
+                        multiplex_id,
+                        timestamp,
+                        operation_key,
+                        id,
+                        blob_size,
+                    ),
+                | {
                     BlobstoreSyncQueueEntry {
                         blobstore_key,
                         blobstore_id,
@@ -455,6 +491,7 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
                         timestamp: timestamp.into(),
                         operation_key,
                         id: Some(id),
+                        blob_size,
                     }
                 },
             )

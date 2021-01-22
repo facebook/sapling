@@ -292,6 +292,7 @@ fn heal_blob<'out>(
     let num_entries: usize = entries.len();
 
     let operation_key = entries[0].operation_key.clone();
+    let blob_size = entries[0].blob_size;
 
     let (seen_blobstores, unknown_seen_blobstores): (HashSet<_>, HashSet<_>) =
         entries.iter().partition_map(|entry| {
@@ -335,6 +336,7 @@ fn heal_blob<'out>(
                         unknown_seen_blobstores,
                         multiplex_id,
                         operation_key,
+                        blob_size,
                     )
                     .await?;
                 }
@@ -439,6 +441,7 @@ fn heal_blob<'out>(
                 healed_stores,
                 multiplex_id,
                 operation_key,
+                blob_size,
             )
             .await?;
             Ok(heal_stats)
@@ -536,6 +539,7 @@ async fn requeue_partial_heal(
     source_blobstores: impl IntoIterator<Item = BlobstoreId>,
     multiplex_id: MultiplexId,
     operation_key: OperationKey,
+    blob_size: Option<u64>,
 ) -> Result<()> {
     let timestamp = DateTime::now();
     let new_entries: Vec<_> = source_blobstores
@@ -547,6 +551,7 @@ async fn requeue_partial_heal(
             timestamp,
             operation_key: operation_key.clone(),
             id: None,
+            blob_size,
         })
         .collect();
     sync_queue.add_many(ctx, new_entries).await

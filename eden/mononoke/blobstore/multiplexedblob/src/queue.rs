@@ -73,6 +73,7 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
         multiplex_id: MultiplexId,
         operation_key: &'out OperationKey,
         key: &'out str,
+        blob_size: Option<u64>,
     ) -> Result<()> {
         self.queue
             .add(
@@ -83,6 +84,7 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
                     multiplex_id,
                     DateTime::now(),
                     operation_key.clone(),
+                    blob_size,
                 ),
             )
             .await

@@ -159,6 +159,7 @@ impl MultiplexedBlobstorePutHandler for Tickable<BlobstoreId> {
         _multiplex_id: MultiplexId,
         _operation_key: &'out OperationKey,
         key: &'out str,
+        _blob_size: Option<u64>,
     ) -> Result<()> {
         let storage = self.storage.clone();
         let key = key.to_string();
@@ -194,6 +195,7 @@ impl MultiplexedBlobstorePutHandler for LogHandler {
         _multiplex_id: MultiplexId,
         _operation_key: &'out OperationKey,
         key: &'out str,
+        _blob_size: Option<u64>,
     ) -> Result<()> {
         self.log
             .with(move |log| log.push((blobstore_id, key.to_string())));
@@ -265,6 +267,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
         timestamp: DateTime::now(),
         id: None,
         operation_key: OperationKey::gen(),
+        blob_size: None,
     };
     queue.add(ctx, entry).await?;
 
@@ -543,6 +546,57 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<()> {
             [entry0, entry1] => {
                 assert_eq!(entry0.operation_key, entry1.operation_key);
                 assert!(!entry0.operation_key.is_null());
+            }
+            x => panic!(format!("two entries expected, got {:?}", x)),
+        }
+    }
+    Ok(())
+}
+
+#[fbinit::test]
+async fn multiplexed_blob_size(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    borrowed!(ctx);
+    let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
+
+    let bid0 = BlobstoreId::new(0);
+    let bs0 = Arc::new(Memblob::default());
+    let bid1 = BlobstoreId::new(1);
+    let bs1 = Arc::new(Memblob::default());
+    let bid2 = BlobstoreId::new(2);
+    // we need writes to fail there so there's something on the queue
+    let bs2 = Arc::new(ReadOnlyBlobstore::new(Memblob::default()));
+    let bs = MultiplexedBlobstore::new(
+        MultiplexId::new(1),
+        vec![
+            (bid0, bs0.clone()),
+            (bid1, bs1.clone()),
+            (bid2, bs2.clone()),
+        ],
+        vec![],
+        nonzero!(1usize),
+        queue.clone(),
+        MononokeScubaSampleBuilder::with_discard(),
+        nonzero!(1u64),
+    );
+
+    // two replicas succeed, one fails blob sizes are correct
+    {
+        let key = "key";
+        let value = make_value("value");
+
+        bs.put(ctx, key.to_owned(), value.clone()).await?;
+
+        match queue.get(ctx, key).await?.as_slice() {
+            [entry0, entry1] => {
+                assert_eq!(
+                    entry0.blob_size.expect("blob size is None"),
+                    value.len() as u64
+                );
+                assert_eq!(
+                    entry1.blob_size.expect("blob size is None"),
+                    value.len() as u64
+                );
             }
             x => panic!(format!("two entries expected, got {:?}", x)),
         }

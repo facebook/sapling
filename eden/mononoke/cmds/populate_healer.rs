@@ -360,6 +360,7 @@ async fn populate_healer_queue(
                         multiplex_id,
                         DateTime::now(),
                         OperationKey::gen(),
+                        None,
                     )
                 })
                 .collect();
