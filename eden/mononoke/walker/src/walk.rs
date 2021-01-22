@@ -1489,6 +1489,7 @@ impl<V: VisitOne> Checker<V> {
         }
     }
 }
+
 // Parameters that vary per repo but can be setup in common conde
 #[derive(Clone)]
 pub struct RepoWalkParams {

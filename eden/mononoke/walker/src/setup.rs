@@ -63,6 +63,7 @@ pub struct RepoSubcommandParams {
 pub struct JobWalkParams {
     pub enable_derive: bool,
     pub tail_secs: Option<u64>,
+    pub public_changeset_chunk_size: Option<usize>,
     pub quiet: bool,
     pub error_as_data_node_types: HashSet<NodeType>,
     pub error_as_data_edge_types: HashSet<EdgeType>,
@@ -91,6 +92,8 @@ const EXCLUDE_EDGE_TYPE_ARG: &str = "exclude-edge-type";
 const INCLUDE_EDGE_TYPE_ARG: &str = "include-edge-type";
 const BOOKMARK_ARG: &str = "bookmark";
 const WALK_ROOT_ARG: &str = "walk-root";
+const CHUNK_BY_PUBLIC_ARG: &str = "chunk-by-public";
+const CHUNK_SIZE_ARG: &str = "chunk-size";
 const INNER_BLOBSTORE_ID_ARG: &str = "inner-blobstore-id";
 const SCRUB_BLOBSTORE_ACTION_ARG: &str = "scrub-blobstore-action";
 const ENABLE_DERIVE_ARG: &str = "enable-derive";
@@ -151,6 +154,24 @@ static NODE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
     );
     v.extend(NodeType::VARIANTS.iter());
     v
+});
+
+// We can jump for ChangesetId to all of these:
+const CHUNK_BY_PUBLIC_NODE_TYPES: &[NodeType] = &[
+    NodeType::BonsaiHgMapping,
+    NodeType::PhaseMapping,
+    NodeType::Changeset,
+    NodeType::ChangesetInfo,
+    NodeType::FsnodeMapping,
+    NodeType::SkeletonManifestMapping,
+    NodeType::UnodeMapping,
+];
+
+static CHUNK_BY_PUBLIC_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
+    CHUNK_BY_PUBLIC_NODE_TYPES
+        .iter()
+        .map(|e| e.as_ref() as &'static str)
+        .collect()
 });
 
 static EDGE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
@@ -677,6 +698,29 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Root(s) to start traversal from in format <NodeType>:<node_key>, e.g. Bookmark:master or HgChangeset:7712b62acdc858689504945ac8965a303ded6626"),
         )
         .arg(
+            Arg::with_name(CHUNK_BY_PUBLIC_ARG)
+                .long(CHUNK_BY_PUBLIC_ARG)
+                // p because its chunk from public changeset id (c and C already taken)
+                .short("p")
+                .takes_value(true)
+                .required(false)
+                .multiple(false)
+                .number_of_values(1)
+                .possible_values(&CHUNK_BY_PUBLIC_POSSIBLE_VALUES)
+                .help("Traverse using chunks of public changesets as roots to the specified node type"),
+        )
+        .arg(
+            Arg::with_name(CHUNK_SIZE_ARG)
+                .long(CHUNK_SIZE_ARG)
+                .short("k")
+                .default_value("100000")
+                .takes_value(true)
+                .required(false)
+                .multiple(false)
+                .number_of_values(1)
+                .help("How many changesets to include in a chunk."),
+        )
+        .arg(
             Arg::with_name(ERROR_AS_DATA_NODE_TYPE_ARG)
                 .long(ERROR_AS_DATA_NODE_TYPE_ARG)
                 .short("e")
@@ -924,11 +968,20 @@ pub async fn setup_common<'a>(
         walk_roots.append(&mut roots);
     }
 
-    if walk_roots.is_empty() {
+    let public_changeset_chunk_by = parse_node_values(sub_m.values_of(CHUNK_BY_PUBLIC_ARG), &[])?;
+
+    let public_changeset_chunk_size = if !public_changeset_chunk_by.is_empty() {
+        args::get_usize_opt(sub_m, CHUNK_SIZE_ARG)
+    } else {
+        None
+    };
+
+    if public_changeset_chunk_by.is_empty() && walk_roots.is_empty() {
         return Err(format_err!(
-            "No walk roots provided, pass with --{} or --{}",
+            "No walk roots provided, pass with  --{}, --{} or --{}",
             BOOKMARK_ARG,
             WALK_ROOT_ARG,
+            CHUNK_BY_PUBLIC_ARG,
         ));
     }
 
@@ -1091,6 +1144,7 @@ pub async fn setup_common<'a>(
                     repo_count,
                     repo,
                     walk_roots.clone(),
+                    public_changeset_chunk_size,
                     include_edge_types.clone(),
                     include_node_types.clone(),
                     progress_options,
@@ -1105,6 +1159,7 @@ pub async fn setup_common<'a>(
         JobWalkParams {
             enable_derive,
             tail_secs,
+            public_changeset_chunk_size,
             quiet,
             error_as_data_node_types,
             error_as_data_edge_types,
@@ -1131,6 +1186,7 @@ async fn setup_repo<'a>(
     repo_count: usize,
     resolved: &'a ResolvedRepo,
     walk_roots: Vec<OutgoingEdge>,
+    public_changeset_chunk_size: Option<usize>,
     include_edge_types: HashSet<EdgeType>,
     mut include_node_types: HashSet<NodeType>,
     progress_options: ProgressOptions,
@@ -1153,7 +1209,11 @@ async fn setup_repo<'a>(
         }
     });
 
-    let root_node_types: HashSet<_> = walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
+    let mut root_node_types: HashSet<_> =
+        walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
+    if public_changeset_chunk_size.is_some() {
+        root_node_types.insert(NodeType::Changeset);
+    }
 
     let (include_edge_types, include_node_types) =
         reachable_graph_elements(include_edge_types, include_node_types, &root_node_types);
