@@ -326,6 +326,7 @@ fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
         args = AsRef::<str>::as_ref(&serde_json::to_string(&args).unwrap()),
         parent_pids = AsRef::<str>::as_ref(&serde_json::to_string(&parent_pids).unwrap()),
         parent_names = AsRef::<str>::as_ref(&serde_json::to_string(&parent_names).unwrap()),
+        version = version::VERSION,
         // Reserved for log_end.
         exit_code = 0,
         max_rss = 0,

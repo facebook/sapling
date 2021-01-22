@@ -51,6 +51,10 @@ fn extract_dev_command_timers<'a>(tables: &mut Tables, tid_spans: &TidSpans) {
                             "nice" => {
                                 row.insert("nice".into(), toint(value));
                             }
+                            "version" => {
+                                // Truncate the "version" string. This matches the old telemetry behavior.
+                                row.insert("version".into(), value[..34.min(value.len())].into());
+                            }
                             "max_rss" => {
                                 row.insert("maxrss".into(), toint(value));
                             }
