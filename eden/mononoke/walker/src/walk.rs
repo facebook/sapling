@@ -157,7 +157,9 @@ pub trait WalkVisitor<VOut, Route>: VisitOne {
 }
 
 // Data found for this node, plus next steps
-struct StepOutput(NodeData, Vec<OutgoingEdge>);
+enum StepOutput {
+    Done(NodeData, Vec<OutgoingEdge>),
+}
 
 async fn bookmark_step<V: VisitOne>(
     ctx: CoreContext,
@@ -186,7 +188,7 @@ async fn bookmark_step<V: VisitOne>(
                     filenode_known_derived: false, /* from bookmark we don't know if hg fully derived */
                 })
             });
-            Ok(StepOutput(
+            Ok(StepOutput::Done(
                 checker.step_data(NodeType::Bookmark, || NodeData::Bookmark(bcs_id)),
                 edges,
             ))
@@ -218,7 +220,7 @@ async fn published_bookmarks_step<V: VisitOne>(
             },
         );
     }
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::PublishedBookmarks, || {
             NodeData::PublishedBookmarks
         }),
@@ -236,7 +238,7 @@ async fn bonsai_phase_step<V: VisitOne>(
     } else {
         None
     };
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::PhaseMapping, || {
             NodeData::PhaseMapping(maybe_phase)
         }),
@@ -262,12 +264,12 @@ async fn blame_step<V: VisitOne>(
                 })
             });
         }
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::Blame, || NodeData::Blame(Some(blame))),
             edges,
         ))
     } else {
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::Blame, || NodeData::Blame(None)),
             edges,
         ))
@@ -299,7 +301,7 @@ async fn fastlog_batch_step<V: VisitOne>(
             || path.cloned(),
         );
     }
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::FastlogBatch, || NodeData::FastlogBatch(Some(log))),
         edges,
     ))
@@ -335,7 +337,7 @@ async fn fastlog_dir_step<V: VisitOne>(
         }
     }
 
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::FastlogDir, || NodeData::FastlogDir(log)),
         edges,
     ))
@@ -370,7 +372,7 @@ async fn fastlog_file_step<V: VisitOne>(
             );
         }
     }
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::FastlogFile, || NodeData::FastlogFile(log)),
         edges,
     ))
@@ -390,14 +392,14 @@ async fn bonsai_changeset_info_mapping_step<V: VisitOne>(
             EdgeType::ChangesetInfoMappingToChangesetInfo,
             || Node::ChangesetInfo(bcs_id),
         );
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::ChangesetInfoMapping, || {
                 NodeData::ChangesetInfoMapping(Some(bcs_id))
             }),
             edges,
         ))
     } else {
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::ChangesetInfoMapping, || {
                 NodeData::ChangesetInfoMapping(None)
             }),
@@ -424,14 +426,14 @@ async fn changeset_info_step<V: VisitOne>(
                 || Node::ChangesetInfo(parent_id),
             );
         }
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::ChangesetInfo, || {
                 NodeData::ChangesetInfo(Some(info))
             }),
             edges,
         ))
     } else {
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::ChangesetInfo, || NodeData::ChangesetInfo(None)),
             vec![],
         ))
@@ -509,7 +511,7 @@ async fn bonsai_changeset_step<V: VisitOne>(
         Node::PhaseMapping(*bcs_id)
     });
 
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::Changeset, || NodeData::Changeset(bcs)),
         edges,
     ))
@@ -523,7 +525,7 @@ fn file_content_step<V: VisitOne>(
 ) -> Result<StepOutput, Error> {
     let s = filestore::fetch_stream(repo.get_blobstore(), ctx, id).map_ok(FileBytes);
     // We don't force file loading here, content may not be needed
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::FileContent, || {
             NodeData::FileContent(FileContentData::ContentStream(Box::pin(s)))
         }),
@@ -560,14 +562,14 @@ async fn file_content_metadata_step<V: VisitOne>(
                 EdgeType::FileContentMetadataToGitSha1Alias,
                 || Node::AliasContentMapping(AliasKey(Alias::GitSha1(metadata.git_sha1.sha1()))),
             );
-            Ok(StepOutput(
+            Ok(StepOutput::Done(
                 checker.step_data(NodeType::FileContentMetadata, || {
                     NodeData::FileContentMetadata(Some(metadata))
                 }),
                 edges,
             ))
         }
-        Some(None) | None => Ok(StepOutput(
+        Some(None) | None => Ok(StepOutput::Done(
             checker.step_data(NodeType::FileContentMetadata, || {
                 NodeData::FileContentMetadata(None)
             }),
@@ -622,14 +624,14 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
                     filenode_known_derived,
                 })
             });
-            StepOutput(
+            StepOutput::Done(
                 checker.step_data(NodeType::BonsaiHgMapping, || {
                     NodeData::BonsaiHgMapping(Some(hg_cs_id))
                 }),
                 edges,
             )
         }
-        None => StepOutput(
+        None => StepOutput::Done(
             checker.step_data(NodeType::BonsaiHgMapping, || {
                 NodeData::BonsaiHgMapping(None)
             }),
@@ -654,14 +656,14 @@ async fn hg_to_bonsai_mapping_step<V: VisitOne>(
                     filenode_known_derived: key.filenode_known_derived,
                 })
             });
-            Ok(StepOutput(
+            Ok(StepOutput::Done(
                 checker.step_data(NodeType::HgBonsaiMapping, || {
                     NodeData::HgBonsaiMapping(Some(bcs_id))
                 }),
                 edges,
             ))
         }
-        None => Ok(StepOutput(
+        None => Ok(StepOutput::Done(
             checker.step_data(NodeType::HgBonsaiMapping, || {
                 NodeData::HgBonsaiMapping(None)
             }),
@@ -687,7 +689,7 @@ async fn hg_changeset_via_bonsai_step<V: VisitOne>(
         EdgeType::HgChangesetViaBonsaiToHgChangeset,
         || Node::HgChangeset(key.clone()),
     );
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::HgChangesetViaBonsai, || {
             NodeData::HgChangesetViaBonsai(key.inner)
         }),
@@ -716,7 +718,7 @@ async fn hg_changeset_step<V: VisitOne>(
             })
         });
     }
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::HgChangeset, || NodeData::HgChangeset(hgchangeset)),
         edges,
     ))
@@ -737,7 +739,7 @@ async fn hg_file_envelope_step<V: VisitOne>(
         || Node::FileContent(envelope.content_id()),
         || path.cloned(),
     );
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::HgFileEnvelope, || {
             NodeData::HgFileEnvelope(envelope)
         }),
@@ -803,14 +805,14 @@ async fn hg_file_node_step<V: VisitOne>(
                     ))
                 })
             }
-            Ok(StepOutput(
+            Ok(StepOutput::Done(
                 checker.step_data(NodeType::HgFileNode, || {
                     NodeData::HgFileNode(Some(file_node_info))
                 }),
                 edges,
             ))
         }
-        None => Ok(StepOutput(
+        None => Ok(StepOutput::Done(
             checker.step_data(NodeType::HgFileNode, || NodeData::HgFileNode(None)),
             vec![],
         )),
@@ -859,7 +861,7 @@ async fn hg_manifest_step<V: VisitOne>(
     // Envelopes expand 1:1 to file content
     edges.append(&mut envelope_edges);
 
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::HgManifest, || NodeData::HgManifest(hgmanifest)),
         edges,
     ))
@@ -876,7 +878,7 @@ async fn alias_content_mapping_step<V: VisitOne>(
     checker.add_edge(&mut edges, EdgeType::AliasContentMappingToFileContent, || {
         Node::FileContent(content_id)
     });
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::AliasContentMapping, || {
             NodeData::AliasContentMapping(content_id)
         }),
@@ -930,14 +932,14 @@ async fn bonsai_to_fsnode_mapping_step<V: VisitOne>(
             || Node::Fsnode(*root_fsnode_id.fsnode_id()),
             || Some(WrappedPath::Root),
         );
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::FsnodeMapping, || {
                 NodeData::FsnodeMapping(Some(*root_fsnode_id.fsnode_id()))
             }),
             edges,
         ))
     } else {
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::FsnodeMapping, || NodeData::FsnodeMapping(None)),
             vec![],
         ))
@@ -992,7 +994,7 @@ async fn fsnode_step<V: VisitOne>(
     // Ordering to reduce queue depth
     dir_edges.append(&mut content_edges);
 
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::Fsnode, || NodeData::Fsnode(fsnode)),
         dir_edges,
     ))
@@ -1056,14 +1058,14 @@ async fn bonsai_to_unode_mapping_step<V: VisitOne>(
             },
             || Some(WrappedPath::Root),
         );
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::UnodeMapping, || {
                 NodeData::UnodeMapping(Some(manifest_id))
             }),
             edges,
         ))
     } else {
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::UnodeMapping, || NodeData::UnodeMapping(None)),
             vec![],
         ))
@@ -1130,7 +1132,7 @@ async fn unode_file_step<V: VisitOne>(
         || path.cloned(),
     );
 
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::UnodeFile, || NodeData::UnodeFile(unode_file)),
         edges,
     ))
@@ -1220,7 +1222,7 @@ async fn unode_manifest_step<V: VisitOne>(
     // Ordering to reduce queue depth
     edges.append(&mut file_edges);
 
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::UnodeManifest, || {
             NodeData::UnodeManifest(unode_manifest)
         }),
@@ -1262,7 +1264,7 @@ async fn deleted_manifest_step<V: VisitOne>(
         );
     }
 
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::DeletedManifest, || {
             NodeData::DeletedManifest(Some(deleted_manifest))
         }),
@@ -1288,14 +1290,14 @@ async fn deleted_manifest_mapping_step<V: VisitOne>(
             || Node::DeletedManifest(*root_manifest_id.deleted_manifest_id()),
             || Some(WrappedPath::Root),
         );
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::DeletedManifestMapping, || {
                 NodeData::DeletedManifestMapping(Some(*root_manifest_id.deleted_manifest_id()))
             }),
             edges,
         ))
     } else {
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::DeletedManifestMapping, || {
                 NodeData::DeletedManifestMapping(None)
             }),
@@ -1332,7 +1334,7 @@ async fn skeleton_manifest_step<V: VisitOne>(
         }
     }
 
-    Ok(StepOutput(
+    Ok(StepOutput::Done(
         checker.step_data(NodeType::SkeletonManifest, || {
             NodeData::SkeletonManifest(Some(manifest))
         }),
@@ -1359,14 +1361,14 @@ async fn skeleton_manifest_mapping_step<V: VisitOne>(
             || Node::SkeletonManifest(*root_manifest_id.skeleton_manifest_id()),
             || Some(WrappedPath::Root),
         );
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::SkeletonManifestMapping, || {
                 NodeData::SkeletonManifestMapping(Some(*root_manifest_id.skeleton_manifest_id()))
             }),
             edges,
         ))
     } else {
-        Ok(StepOutput(
+        Ok(StepOutput::Done(
             checker.step_data(NodeType::SkeletonManifestMapping, || {
                 NodeData::SkeletonManifestMapping(None)
             }),
@@ -1795,7 +1797,7 @@ where
                     || error_as_data_edge_types.contains(&walk_item.label)
                 {
                     warn!(logger, "{}", msg);
-                    Ok(StepOutput(
+                    Ok(StepOutput::Done(
                         NodeData::ErrorAsData(walk_item.target.clone()),
                         vec![],
                     ))
@@ -1811,8 +1813,13 @@ where
         ErrorKind::NotTraversable(repo.name().clone(), walk_item.clone(), format!("{:?}", via))
     })?;
 
-    match step_output {
-        StepOutput(node_data, children) => {
+    let (vout, via, next) = match step_output {
+        // TODO(ahornby) - enabled in next diff
+        // StepOutput::Deferred => {
+        //     let (vout, via) = visitor.defer_visit(walk_item, via);
+        //     (vout, via, vec![])
+        // }
+        StepOutput::Done(node_data, children) => {
             // make sure steps are valid.  would be nice if this could be static
             for c in &children {
                 if c.label.outgoing_type() != c.target.get_type() {
@@ -1827,13 +1834,10 @@ where
             }
 
             // Allow WalkVisitor to record state and decline outgoing nodes if already visited
-            Ok(visitor.visit(&ctx, walk_item, Some(node_data), via, children)).map(
-                |(vout, via, next)| {
-                    let via = Some(via);
-                    let next = next.into_iter().map(move |e| (via.clone(), e));
-                    (vout, next)
-                },
-            )
+            visitor.visit(&ctx, walk_item, Some(node_data), via, children)
         }
-    }
+    };
+    let via = Some(via);
+    let next = next.into_iter().map(move |e| (via.clone(), e));
+    Ok((vout, next))
 }
