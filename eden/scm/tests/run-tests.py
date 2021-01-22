@@ -2581,6 +2581,7 @@ class TestResult(unittest._TextTestResult):
                     )
                 else:
                     self.stream.write("Accept this change? [n]o/yes/all ")
+                    self.stream.flush()
                     if self._options.update_output:
                         isyes = True
                     else:
