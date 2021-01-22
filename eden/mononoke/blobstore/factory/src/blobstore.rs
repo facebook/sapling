@@ -21,10 +21,10 @@ use futures::{
 };
 use logblob::LogBlob;
 use metaconfig_types::{
-    BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, MultiplexedStoreType, ScrubAction,
+    BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, MultiplexedStoreType,
     ShardableRemoteDatabaseConfig,
 };
-use multiplexedblob::{MultiplexedBlobstore, ScrubBlobstore, ScrubOptions};
+use multiplexedblob::{MultiplexedBlobstore, ScrubAction, ScrubBlobstore, ScrubOptions};
 use packblob::{PackBlob, PackOptions};
 use readonlyblob::ReadOnlyBlobstore;
 use scuba_ext::MononokeScubaSampleBuilder;

@@ -18,10 +18,9 @@ use tokio::{
     io::{stdin, AsyncBufReadExt, AsyncWriteExt, BufReader},
 };
 
-use blobstore_factory::make_blobstore;
+use blobstore_factory::{make_blobstore, ScrubAction};
 use cmdlib::args;
 use context::CoreContext;
-use metaconfig_types::ScrubAction;
 
 mod scrub;
 

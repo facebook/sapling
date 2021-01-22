@@ -10,7 +10,7 @@ use crate::{
     queue::MultiplexedBlobstore,
 };
 
-use anyhow::Result;
+use anyhow::{anyhow, Error, Result};
 use async_trait::async_trait;
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, OverwriteStatus, PutBehaviour,
@@ -19,7 +19,7 @@ use blobstore_sync_queue::BlobstoreSyncQueue;
 use chrono::Duration as ChronoDuration;
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
-use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
+use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use once_cell::sync::OnceCell;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -27,10 +27,32 @@ use slog::{info, warn};
 use std::collections::HashMap;
 use std::fmt;
 use std::num::{NonZeroU64, NonZeroUsize};
+use std::str::FromStr;
 use std::sync::{atomic::AtomicUsize, Arc};
 
 static DEFAULT_HEAL_MAX_BACKLOG_DAYS: i64 = 7;
 static HEAL_MAX_BACKLOG: OnceCell<ChronoDuration> = OnceCell::new();
+
+/// What to do when the ScrubBlobstore finds a problem
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+pub enum ScrubAction {
+    /// Log items needing repair
+    ReportOnly,
+    /// Do repairs
+    Repair,
+}
+
+impl FromStr for ScrubAction {
+    type Err = Error;
+
+    fn from_str(string: &str) -> Result<Self, Self::Err> {
+        match string {
+            "ReportOnly" => Ok(ScrubAction::ReportOnly),
+            "Repair" => Ok(ScrubAction::Repair),
+            _ => Err(anyhow!("Unable to parse {} as {}", string, "ScrubAction")),
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct ScrubOptions {

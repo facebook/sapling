@@ -15,7 +15,7 @@ use std::{
 
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use crate::queue::MultiplexedBlobstore;
-use crate::scrub::{LoggingScrubHandler, ScrubBlobstore, ScrubHandler, ScrubOptions};
+use crate::scrub::{LoggingScrubHandler, ScrubAction, ScrubBlobstore, ScrubHandler, ScrubOptions};
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
@@ -34,7 +34,7 @@ use futures::{
 };
 use lock_ext::LockExt;
 use memblob::Memblob;
-use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
+use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use nonzero_ext::nonzero;
 use readonlyblob::ReadOnlyBlobstore;

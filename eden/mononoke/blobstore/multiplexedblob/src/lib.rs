@@ -12,7 +12,9 @@ pub mod queue;
 pub mod scrub;
 
 pub use crate::queue::MultiplexedBlobstore;
-pub use crate::scrub::{LoggingScrubHandler, ScrubBlobstore, ScrubHandler, ScrubOptions};
+pub use crate::scrub::{
+    LoggingScrubHandler, ScrubAction, ScrubBlobstore, ScrubHandler, ScrubOptions,
+};
 
 #[cfg(test)]
 mod test;

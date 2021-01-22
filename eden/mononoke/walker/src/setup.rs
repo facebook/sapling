@@ -20,7 +20,9 @@ use crate::walk::{OutgoingEdge, RepoWalkParams};
 use ::blobstore::Blobstore;
 use anyhow::{format_err, Context, Error};
 use blobrepo_factory::{open_blobrepo_given_datasources, Caching, ReadOnlyStorage};
-use blobstore_factory::{make_metadata_sql_factory, CachelibBlobstoreOptions, MetadataSqlFactory};
+use blobstore_factory::{
+    make_metadata_sql_factory, CachelibBlobstoreOptions, MetadataSqlFactory, ScrubAction,
+};
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args::{
@@ -33,9 +35,7 @@ use futures::compat::Future01CompatExt;
 use itertools::{process_results, Itertools};
 use maplit::hashset;
 use mercurial_derived_data::MappedHgChangesetId;
-use metaconfig_types::{
-    BlobConfig, CensoredScubaParams, MetadataDatabaseConfig, Redaction, ScrubAction,
-};
+use metaconfig_types::{BlobConfig, CensoredScubaParams, MetadataDatabaseConfig, Redaction};
 use multiplexedblob::{ScrubHandler, ScrubOptions};
 use once_cell::sync::Lazy;
 use samplingblob::SamplingHandler;

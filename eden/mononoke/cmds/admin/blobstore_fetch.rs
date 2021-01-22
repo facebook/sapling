@@ -15,14 +15,14 @@ use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, future::try_join};
 
 use blobstore::{Blobstore, BlobstoreGetData};
-use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
+use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage, ScrubAction};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use cached_config::ConfigStore;
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use git_types::Tree as GitTree;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
-use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, ScrubAction, StorageConfig};
+use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, StorageConfig};
 use mononoke_types::{FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::{

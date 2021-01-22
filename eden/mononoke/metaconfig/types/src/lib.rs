@@ -726,27 +726,6 @@ pub struct StorageConfig {
     pub metadata: MetadataDatabaseConfig,
 }
 
-/// What to do when the ScrubBlobstore finds a problem
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize, Hash)]
-pub enum ScrubAction {
-    /// Log items needing repair
-    ReportOnly,
-    /// Do repairs
-    Repair,
-}
-
-impl FromStr for ScrubAction {
-    type Err = Error;
-
-    fn from_str(string: &str) -> Result<Self, Self::Err> {
-        match string {
-            "ReportOnly" => Ok(ScrubAction::ReportOnly),
-            "Repair" => Ok(ScrubAction::Repair),
-            _ => Err(anyhow!("Unable to parse {} as {}", string, "ScrubAction")),
-        }
-    }
-}
-
 /// Whether we should read from this blobstore normally in a Multiplex,
 /// or only read from it in Scrub or when it's our last chance to find the blob
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize, Hash)]
