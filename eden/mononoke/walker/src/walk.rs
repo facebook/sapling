@@ -1261,6 +1261,9 @@ async fn deleted_manifest_step<V: VisitOne>(
     let mut edges = vec![];
 
     if let Some(linked_cs_id) = linked_cs_id {
+        if !checker.in_chunk(&linked_cs_id) {
+            return Ok(StepOutput::Deferred(linked_cs_id));
+        }
         checker.add_edge(&mut edges, EdgeType::DeletedManifestToLinkedChangeset, || {
             Node::Changeset(ChangesetKey {
                 inner: linked_cs_id,

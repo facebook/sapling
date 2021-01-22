@@ -60,6 +60,18 @@ derived changeset_info, chunked, deep
   Deferred: 0
   Completed in 2 chunks of 2
 
+derived deleted_manifest, chunked, deep.  No deferred as there is no parent lookup in the walk
+  $ mononoke_walker -L sizing scrub -q -p DeletedManifestMapping --chunk-size=2 -I deep -i derived_deleted_manifest 2>&1 | strip_glog
+  Walking edge types [DeletedManifestMappingToRootDeletedManifest, DeletedManifestToDeletedManifestChild]
+  Walking node types [DeletedManifest, DeletedManifestMapping]
+  Seen,Loaded: 3,3
+  * Type:Walked,Checks,Children DeletedManifest:1,*,0 DeletedManifestMapping:2,*,3 (glob)
+  Deferred: 0
+  Seen,Loaded: 1,1
+  * Type:Walked,Checks,Children DeletedManifest:1,*,0 DeletedManifestMapping:3,*,4 (glob)
+  Deferred: 0
+  Completed in 2 chunks of 2
+
 derived unodes, chunked, deep. Expect deferred as unode parent will attempt to step outside chunk
   $ mononoke_walker -L sizing scrub -q -p UnodeMapping --chunk-size=2 -I deep -i derived_unodes 2>&1 | strip_glog
   Walking edge types [UnodeFileToUnodeFileParent, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent, UnodeMappingToRootUnodeManifest]

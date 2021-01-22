@@ -164,6 +164,7 @@ const CHUNK_BY_PUBLIC_NODE_TYPES: &[NodeType] = &[
     NodeType::Changeset,
     NodeType::ChangesetInfo,
     NodeType::ChangesetInfoMapping,
+    NodeType::DeletedManifestMapping,
     NodeType::FsnodeMapping,
     NodeType::SkeletonManifestMapping,
     NodeType::UnodeMapping,
