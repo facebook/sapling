@@ -19,6 +19,7 @@ use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness};
 use bounded_traversal::bounded_traversal_stream;
 use changeset_info::ChangesetInfo;
@@ -41,7 +42,7 @@ use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, Repo
 use mononoke_types::{
     blame::BlameMaybeRejected, fsnode::FsnodeEntry, skeleton_manifest::SkeletonManifestEntry,
     unode::UnodeEntry, BlameId, ChangesetId, ContentId, DeletedManifestId, FastlogBatchId,
-    FileUnodeId, FsnodeId, MPath, ManifestUnodeId, SkeletonManifestId,
+    FileUnodeId, FsnodeId, MPath, ManifestUnodeId, RepositoryId, SkeletonManifestId,
 };
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -124,6 +125,15 @@ pub trait VisitOne {
         phases_store: &dyn Phases,
         bcs_id: &ChangesetId,
     ) -> Result<bool, Error>;
+
+    /// returns ChangesetId to defer with if deferral is needed
+    async fn defer_from_hg(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        bonsai_hg_mapping: &dyn BonsaiHgMapping,
+        hg_cs_id: &HgChangesetId,
+    ) -> Result<Option<ChangesetId>, Error>;
 }
 
 // Overall trait with support for route tracking and handling
@@ -774,12 +784,20 @@ async fn hg_file_node_step<V: VisitOne>(
         WrappedPath::NonRoot(path) => RepoPath::FilePath(path.mpath().clone()),
     };
     let file_node_opt = repo
-        .get_filenode_opt(ctx, &repo_path, hg_file_node_id)
+        .get_filenode_opt(ctx.clone(), &repo_path, hg_file_node_id)
         .await?
         .do_not_handle_disabled_filenodes()?;
     match file_node_opt {
         Some(file_node_info) => {
             let mut edges = vec![];
+
+            if let Some(bcs_id) = checker
+                .defer_from_hg(&ctx, &file_node_info.linknode)
+                .await?
+            {
+                return Ok(StepOutput::Deferred(bcs_id));
+            }
+
             // Validate hg link node
             checker.add_edge(&mut edges, EdgeType::HgFileNodeToLinkedHgChangeset, || {
                 Node::HgChangesetViaBonsai(ChangesetKey {
@@ -1434,6 +1452,8 @@ struct Checker<V: VisitOne> {
     keep_edge_paths: bool,
     visitor: V,
     phases_store: Arc<dyn Phases>,
+    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    repo_id: RepositoryId,
     with_blame: bool,
     with_fastlog: bool,
     with_filenodes: bool,
@@ -1448,6 +1468,16 @@ impl<V: VisitOne> Checker<V> {
 
     fn in_chunk(&self, bcs_id: &ChangesetId) -> bool {
         self.visitor.in_chunk(bcs_id)
+    }
+
+    async fn defer_from_hg(
+        &self,
+        ctx: &CoreContext,
+        hg_cs_id: &HgChangesetId,
+    ) -> Result<Option<ChangesetId>, Error> {
+        self.visitor
+            .defer_from_hg(ctx, self.repo_id, self.bonsai_hg_mapping.as_ref(), hg_cs_id)
+            .await
     }
 
     // Convience method around make_edge
@@ -1626,6 +1656,8 @@ where
                     repo.get_changeset_fetcher(),
                     heads_fetcher,
                 ),
+                bonsai_hg_mapping: repo.get_bonsai_hg_mapping().clone(),
+                repo_id: repo.get_repoid(),
             });
 
             bounded_traversal_stream(repo_params.scheduled_max, walk_roots, {

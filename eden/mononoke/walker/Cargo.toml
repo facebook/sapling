@@ -13,6 +13,7 @@ blobrepo_factory = { path = "../blobrepo/factory" }
 blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
 blobstore = { path = "../blobstore" }
 blobstore_factory = { path = "../blobstore/factory" }
+bonsai_hg_mapping = { path = "../bonsai_hg_mapping" }
 bookmarks = { path = "../bookmarks" }
 bounded_traversal = { path = "../common/bounded_traversal" }
 bulkops = { path = "../bulkops" }

@@ -30,6 +30,7 @@ use crate::walk::{
 
 use anyhow::Error;
 use async_trait::async_trait;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args::MononokeMatches;
@@ -39,7 +40,8 @@ use fbinit::FacebookInit;
 use futures::{future::try_join_all, stream::TryStreamExt};
 use itertools::Itertools;
 use maplit::hashset;
-use mononoke_types::{ChangesetId, MPath};
+use mercurial_types::HgChangesetId;
+use mononoke_types::{ChangesetId, MPath, RepositoryId};
 use phases::{Phase, Phases};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn, Logger};
@@ -201,6 +203,18 @@ impl VisitOne for ValidatingVisitor {
         bcs_id: &ChangesetId,
     ) -> Result<bool, Error> {
         self.inner.is_public(ctx, phases_store, bcs_id).await
+    }
+
+    async fn defer_from_hg(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        bonsai_hg_mapping: &dyn BonsaiHgMapping,
+        hg_cs_id: &HgChangesetId,
+    ) -> Result<Option<ChangesetId>, Error> {
+        self.inner
+            .defer_from_hg(ctx, repo_id, bonsai_hg_mapping, hg_cs_id)
+            .await
     }
 }
 

@@ -12,13 +12,14 @@ use ahash::RandomState;
 use anyhow::{bail, Error};
 use array_init::array_init;
 use async_trait::async_trait;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use context::CoreContext;
 use dashmap::{mapref::one::Ref, DashMap};
 use futures::future::TryFutureExt;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{
     ChangesetId, ContentId, DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId, MPathHash,
-    ManifestUnodeId, SkeletonManifestId,
+    ManifestUnodeId, RepositoryId, SkeletonManifestId,
 };
 use phases::{Phase, Phases};
 use std::{
@@ -162,6 +163,7 @@ pub struct WalkState {
     // State
     chunk_bcs: StateMap<InternedId<ChangesetId>>,
     deferred_bcs: ValueMap<InternedId<ChangesetId>, HashSet<OutgoingEdge>>,
+    hg_to_bcs: ValueMap<InternedId<HgChangesetId>, ChangesetId>,
     visited_bcs: StateMap<InternedId<ChangesetId>>,
     visited_bcs_mapping: StateMap<InternedId<ChangesetId>>,
     public_not_visited: StateMap<InternedId<ChangesetId>>,
@@ -218,6 +220,7 @@ impl WalkState {
             // State
             chunk_bcs: StateMap::with_hasher(fac.clone()),
             deferred_bcs: ValueMap::with_hasher(fac.clone()),
+            hg_to_bcs: ValueMap::with_hasher(fac.clone()),
             visited_bcs: StateMap::with_hasher(fac.clone()),
             visited_bcs_mapping: StateMap::with_hasher(fac.clone()),
             public_not_visited: StateMap::with_hasher(fac.clone()),
@@ -374,6 +377,38 @@ impl VisitOne for WalkState {
         } else {
             let id = self.bcs_ids.interned(bcs_id);
             self.chunk_bcs.contains_key(&id)
+        }
+    }
+
+    async fn defer_from_hg(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        bonsai_hg_mapping: &dyn BonsaiHgMapping,
+        hg_cs_id: &HgChangesetId,
+    ) -> Result<Option<ChangesetId>, Error> {
+        if self.chunk_bcs.is_empty() {
+            return Ok(None);
+        }
+        let hg_int = self.hg_cs_ids.interned(hg_cs_id);
+        let bcs_id = if let Some(bcs_id) = self.hg_to_bcs.get(&hg_int) {
+            *bcs_id
+        } else {
+            let bcs_id = bonsai_hg_mapping
+                .get_bonsai_from_hg(ctx, repo_id, hg_cs_id.clone())
+                .await?;
+            if let Some(bcs_id) = bcs_id {
+                self.hg_to_bcs.insert(hg_int, bcs_id);
+                bcs_id
+            } else {
+                bail!("Can't have hg without bonsai for {}", hg_cs_id);
+            }
+        };
+        let id = self.bcs_ids.interned(&bcs_id);
+        if self.chunk_bcs.contains_key(&id) {
+            Ok(None)
+        } else {
+            Ok(Some(bcs_id))
         }
     }
 

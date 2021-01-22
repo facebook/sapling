@@ -56,19 +56,19 @@ hg file content, chunked, deep.  Expect deferred as hg changeset parents will po
   * Type:Walked,Checks,Children BonsaiHgMapping:2,*,4 FileContent:3,*,0 HgChangeset:2,*,4 HgChangesetViaBonsai:2,*,0 HgFileEnvelope:3,*,3 HgManifest:2,*,3 (glob)
   Deferred: 1
   Seen,Loaded: 4,4
-  * Type:Walked,Checks,Children BonsaiHgMapping:3,* FileContent:3,*,0 HgChangeset:3,*,5 HgChangesetViaBonsai:3,* HgFileEnvelope:3,*,3 HgManifest:3,*,3 (glob)
+  * Type:Walked,Checks,Children BonsaiHgMapping:3,* FileContent:3,* HgChangeset:3,* HgChangesetViaBonsai:3,* HgFileEnvelope:3,*,3 HgManifest:3,*,3 (glob)
   Deferred: 0
   Completed in 2 chunks of 2
 
-hg file node, chunked, deep.  Expect deferred as hg file node parents will point outside chunk. TODO(ahornby) however no deferred shows up.
+hg file node, chunked, deep.  Expect deferred as hg file node parents will point outside chunk
   $ mononoke_walker -L sizing scrub -q -p BonsaiHgMapping --chunk-size=2 -I deep -i hg -x HgFileEnvelope -X HgChangesetToHgParent -X HgFileNodeToLinkedHgBonsaiMapping -X HgFileNodeToLinkedHgChangeset 2>&1 | strip_glog
   Walking edge types [BonsaiHgMappingToHgChangeset, HgChangesetToHgManifest, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgManifestToChildHgManifest, HgManifestToHgFileNode]
   Walking node types [BonsaiHgMapping, HgChangeset, HgFileNode, HgManifest]
-  Seen,Loaded: 9,9
+  Seen,Loaded: 9,8
   * Type:Walked,Checks,Children BonsaiHgMapping:2,*,4 HgChangeset:2,*,2 HgFileNode:3,*,0 HgManifest:2,*,3 (glob)
-  Deferred: 0
-  Seen,Loaded: 3,3
-  * Type:Walked,Checks,Children BonsaiHgMapping:3,*,6 HgChangeset:3,*,3 HgFileNode:3,*,0 HgManifest:3,*,3 (glob)
+  Deferred: 1
+  Seen,Loaded: 4,4
+  * Type:Walked,Checks,Children BonsaiHgMapping:3,*,6 HgChangeset:3,*,3 HgFileNode:4,*,0 HgManifest:3,*,3 (glob)
   Deferred: 0
   Completed in 2 chunks of 2
 

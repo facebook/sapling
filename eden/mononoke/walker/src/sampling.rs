@@ -11,9 +11,11 @@ use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, VisitOne, WalkVisitor};
 
 use anyhow::Error;
 use async_trait::async_trait;
+use bonsai_hg_mapping::BonsaiHgMapping;
 use context::{CoreContext, SamplingKey};
 use dashmap::DashMap;
-use mononoke_types::{datetime::DateTime, ChangesetId};
+use mercurial_types::HgChangesetId;
+use mononoke_types::{datetime::DateTime, ChangesetId, RepositoryId};
 use phases::Phases;
 use regex::Regex;
 use std::{collections::HashSet, fmt, hash, sync::Arc};
@@ -89,6 +91,17 @@ impl<T: Send + Sync> VisitOne for SamplingWalkVisitor<T> {
         bcs_id: &ChangesetId,
     ) -> Result<bool, Error> {
         self.inner.is_public(ctx, phases_store, bcs_id).await
+    }
+    async fn defer_from_hg(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        bonsai_hg_mapping: &dyn BonsaiHgMapping,
+        hg_cs_id: &HgChangesetId,
+    ) -> Result<Option<ChangesetId>, Error> {
+        self.inner
+            .defer_from_hg(ctx, repo_id, bonsai_hg_mapping, hg_cs_id)
+            .await
     }
 }
 
