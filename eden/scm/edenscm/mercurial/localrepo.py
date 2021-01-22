@@ -2056,10 +2056,8 @@ class localrepository(object):
             )
         releasefn = None
         if self.ui.configbool("experimental", "metalog"):
-            # XXX: metalog.commit should ideally be only called by a transaction
-            # close. However, there are misuses across the code base, so we
-            # cannot really rely on transaction now.
-            def metalogcommit():
+
+            def metalogdirtycheck():
                 metalog = svfs.__dict__.pop("metalog", None)
                 # |<- A ->|<----------- repo lock --------->|
                 #         |<- B ->|<- transaction ->|<- C ->|
@@ -2069,7 +2067,7 @@ class localrepository(object):
                         "metalog change outside a transaction is unsupported"
                     )
 
-            releasefn = metalogcommit
+            releasefn = metalogdirtycheck
 
         l = self._lock(
             self.svfs,
