@@ -174,6 +174,8 @@ def checkspeedhttp(ui, url, opts):
         while not res.complete():
             res.read(length=BLOCK_SIZE)
         endtime = util.timer()
+        if res.status != 200:
+            raise error.Abort("downloadtest: HTTP response status code != 200")
 
         return endtime - starttime
 
@@ -185,6 +187,8 @@ def checkspeedhttp(ui, url, opts):
         while not res.complete():
             res.read(length=BLOCK_SIZE)
         endtime = util.timer()
+        if res.status != 204:
+            raise error.Abort("uploadtest: HTTP response status code != 204")
         return endtime - starttime
 
     def latencytest(n):
@@ -196,6 +200,8 @@ def checkspeedhttp(ui, url, opts):
             while not res.complete():
                 res.read(length=BLOCK_SIZE)
             endtime = util.timer()
+            if res.status != 200:
+                raise error.Abort("latencytest: HTTP response status code != 200")
             latencies.append(endtime - starttime)
             n -= 1
         return latencies
@@ -388,6 +394,8 @@ def debugnetwork(ui, repo, remote="default", **opts):
     else:
         checkspeed = checkspeedhttp
         servertype = "Mononoke"
+        if url.port is None:
+            url.port = "443"
 
     if alltests or opts.get("connection"):
         addrinfos = checkdnsresolution(ui, url)
