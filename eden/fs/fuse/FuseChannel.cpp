@@ -792,17 +792,18 @@ FuseChannel::FuseChannel(
 
   traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
       "FuseChannel request tracking", [this](const FuseTraceEvent& event) {
-        switch (event.type) {
+        switch (event.getType()) {
           case FuseTraceEvent::START: {
             auto state = telemetryState_.wlock();
             auto [iter, inserted] = state->requests.emplace(
-                event.unique, OutstandingRequest{event.unique, event.request});
+                event.getUnique(),
+                OutstandingRequest{event.getUnique(), event.getRequest()});
             XCHECK(inserted) << "duplicate fuse start event";
             break;
           }
           case FuseTraceEvent::FINISH: {
             auto state = telemetryState_.wlock();
-            auto erased = state->requests.erase(event.unique);
+            auto erased = state->requests.erase(event.getUnique());
             XCHECK(erased) << "duplicate fuse finish event";
             break;
           }
@@ -1683,8 +1684,8 @@ void FuseChannel::processSession() {
                     }).within(requestTimeout_),
                   notifications_)
               .ensure([this, request, requestId, headerCopy] {
-                traceBus_->publish(
-                    FuseTraceEvent::finish(requestId, headerCopy));
+                traceBus_->publish(FuseTraceEvent::finish(
+                    requestId, headerCopy, request->getResult()));
 
                 // We may be complete; check to see if all requests are
                 // done and whether there are any threads remaining.
@@ -2261,7 +2262,7 @@ folly::Future<folly::Unit> FuseChannel::fuseBmap(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseBatchForget(
-    FuseRequestContext& /*request*/,
+    FuseRequestContext& request,
     const fuse_in_header& /*header*/,
     ByteRange arg) {
   const auto forgets =
@@ -2274,6 +2275,7 @@ folly::Future<folly::Unit> FuseChannel::fuseBatchForget(
     dispatcher_->forget(InodeNumber{item->nodeid}, item->nlookup);
     ++item;
   }
+  request.replyNone();
   return folly::unit;
 }
 

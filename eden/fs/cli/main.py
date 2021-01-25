@@ -912,10 +912,13 @@ class StraceCmd(Subcmd):
                 unique = event.fuseRequest.unique
                 if event.type == FsEventType.START:
                     active_requests[unique] = event
-                    print("+", self.format_call(event.fuseRequest, event.arguments))
+                    print(
+                        "+",
+                        self.format_call(event.fuseRequest, arguments=event.arguments),
+                    )
                 elif event.type == FsEventType.FINISH:
                     formatted_call = self.format_call(
-                        event.fuseRequest, event.arguments
+                        event.fuseRequest, result=event.result
                     )
                     if unique in active_requests:
                         print(
@@ -950,7 +953,12 @@ class StraceCmd(Subcmd):
             return name[5:].lower()
         return name
 
-    def format_call(self, call: "FuseCall", arguments: Optional[str] = None) -> str:
+    def format_call(
+        self,
+        call: "FuseCall",
+        arguments: Optional[str] = None,
+        result: Optional[int] = None,
+    ) -> str:
         if call.processName is None:
             processName = str(call.pid)
         else:
@@ -962,7 +970,10 @@ class StraceCmd(Subcmd):
             argString = f"({call.nodeid}, {arguments})"
         else:
             argString = f"({call.nodeid})"
-        return f"{call.unique} from {processName}: {opcodeName}{argString}"
+        tail = ""
+        if result is not None:
+            tail = f" = {result}"
+        return f"{call.unique} from {processName}: {opcodeName}{argString}{tail}"
 
     def format_time(self, ns: float) -> str:
         return "{:.3f} µs".format(ns / 1000.0)

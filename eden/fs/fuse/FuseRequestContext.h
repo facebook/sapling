@@ -30,11 +30,6 @@ namespace eden {
  * from multiple threads, but only by one thread at a time.
  */
 class FuseRequestContext : public RequestContext {
-  FuseChannel* channel_;
-  fuse_in_header fuseHeader_;
-
-  fuse_in_header stealReq();
-
  public:
   FuseRequestContext(const FuseRequestContext&) = delete;
   FuseRequestContext& operator=(const FuseRequestContext&) = delete;
@@ -47,6 +42,10 @@ class FuseRequestContext : public RequestContext {
   // Override of `ObjectFetchContext`
   std::optional<pid_t> getClientPid() const override {
     return static_cast<pid_t>(fuseHeader_.pid);
+  }
+
+  std::optional<int32_t> getResult() const {
+    return error_;
   }
 
   // Returns the underlying fuse request, throwing an error if it has
@@ -97,11 +96,13 @@ class FuseRequestContext : public RequestContext {
 
   template <typename T>
   void sendReply(const T& payload) {
+    error_ = 0;
     channel_->sendReply(stealReq(), payload);
   }
 
   template <typename T>
   void sendReply(T&& payload) {
+    error_ = 0;
     channel_->sendReply(stealReq(), std::forward<T>(payload));
   }
 
@@ -110,6 +111,14 @@ class FuseRequestContext : public RequestContext {
 
   // Don't send a reply, just release req_
   void replyNone();
+
+ private:
+  fuse_in_header stealReq();
+
+  FuseChannel* channel_;
+  fuse_in_header fuseHeader_;
+
+  std::optional<int32_t> error_;
 };
 
 } // namespace eden

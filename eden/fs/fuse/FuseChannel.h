@@ -22,6 +22,7 @@
 #include <stdexcept>
 #include <thread>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include "eden/fs/fuse/FuseTypes.h"
@@ -53,54 +54,87 @@ struct FuseTraceEvent : TraceEventBase {
 
   static FuseTraceEvent start(uint64_t unique, const fuse_in_header& request) {
     return FuseTraceEvent{
-        Type::START, unique, request, std::unique_ptr<std::string>{}};
+        unique, request, StartDetails{std::unique_ptr<std::string>{}}};
   }
 
   static FuseTraceEvent
   start(uint64_t unique, const fuse_in_header& request, std::string arguments) {
     return FuseTraceEvent{
-        Type::START,
         unique,
         request,
-        std::make_unique<std::string>(std::move(arguments))};
+        StartDetails{std::make_unique<std::string>(std::move(arguments))}};
   }
 
-  static FuseTraceEvent finish(uint64_t unique, const fuse_in_header& request) {
-    return FuseTraceEvent{
-        Type::FINISH, unique, request, std::unique_ptr<std::string>{}};
+  static FuseTraceEvent finish(
+      uint64_t unique,
+      const fuse_in_header& request,
+      std::optional<int32_t> result) {
+    return FuseTraceEvent{unique, request, FinishDetails{result}};
   }
 
-  Type type;
+  Type getType() const {
+    return std::holds_alternative<StartDetails>(details_) ? Type::START
+                                                          : Type::FINISH;
+  }
+
+  uint64_t getUnique() const {
+    return unique_;
+  }
+
+  const fuse_in_header& getRequest() const {
+    return request_;
+  }
+
+  const std::unique_ptr<std::string>& getArguments() const {
+    return std::get<StartDetails>(details_).arguments;
+  }
+
+  const std::optional<int32_t> getResult() const {
+    return std::get<FinishDetails>(details_).result;
+  }
+
+ private:
+  struct StartDetails {
+    /**
+     * If detailed trace arguments have been requested, this field contains a
+     * human-readable representation of the FUSE request arguments.
+     *
+     * It is heap-allocated to reduce memory usage in the common case that
+     * detailed argument tracing is disabled.
+     *
+     * TODO: 32 bytes for an optional, immutable argument string is excessive.
+     * fbstring would be better, but we could fit this in 16 or even 8 bytes.
+     */
+    std::unique_ptr<std::string> arguments;
+  };
+
+  struct FinishDetails {
+    /**
+     * Contains the fuse_out_header::error value if a response was sent to the
+     * kernel.
+     */
+    std::optional<int32_t> result;
+  };
+
+  using Details = std::variant<StartDetails, FinishDetails>;
+
+  FuseTraceEvent(
+      uint64_t unique,
+      const fuse_in_header& request,
+      Details&& details)
+      : unique_{unique}, request_{request}, details_{std::move(details)} {}
 
   /**
    * FUSE generates its own unique ID per request, but it reuses them often, so
    * include our own permanently-unique IDs too.
    */
-  uint64_t unique;
+  uint64_t unique_;
 
-  // Not all of these fields are necessary.
-  fuse_in_header request;
+  // Not all of these fields are necessary. We could save some memory by only
+  // including the fields we use.
+  fuse_in_header request_;
 
-  /**
-   * If detailed trace arguments have been requested, this field contains a
-   * human-readable representation of the FUSE request arguments.
-   *
-   * It is heap-allocated
-   * TODO: 32 bytes for an optional, immutable argument string is excessive.
-   * fbstring would be better, but this could fit in something smaller too.
-   */
-  std::unique_ptr<std::string> arguments;
-
- private:
-  FuseTraceEvent(
-      Type type,
-      uint64_t unique,
-      const fuse_in_header& request,
-      std::unique_ptr<std::string> arguments)
-      : type{type},
-        unique{unique},
-        request{request},
-        arguments{std::move(arguments)} {}
+  Details details_;
 };
 
 class FuseChannel {

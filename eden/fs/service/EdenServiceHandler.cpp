@@ -702,7 +702,7 @@ FuseCall populateFuseCall(
  */
 bool isEventMasked(int64_t eventCategoryMask, const FuseTraceEvent& event) {
   using AccessType = ProcessAccessLog::AccessType;
-  switch (fuseOpcodeAccessType(event.request.opcode)) {
+  switch (fuseOpcodeAccessType(event.getRequest().opcode)) {
     case AccessType::FsChannelRead:
       return 0 == (eventCategoryMask & streamingeden_constants::FS_EVENT_READ_);
     case AccessType::FsChannelWrite:
@@ -787,25 +787,25 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
             te.monotonic_time_ns_ref() = *times.monotonic_time_ns_ref();
 
             te.fuseRequest_ref() = populateFuseCall(
-                event.unique,
-                event.request,
+                event.getUnique(),
+                event.getRequest(),
                 *serverState->getProcessNameCache());
 
-            switch (event.type) {
+            switch (event.getType()) {
               case FuseTraceEvent::START:
                 te.type_ref() = FsEventType::START;
+                if (auto& arguments = event.getArguments()) {
+                  te.arguments_ref() = *arguments;
+                }
                 break;
               case FuseTraceEvent::FINISH:
                 te.type_ref() = FsEventType::FINISH;
+                te.result_ref().from_optional(event.getResult());
                 break;
             }
 
-            if (event.arguments) {
-              te.arguments_ref() = *event.arguments;
-            }
-
             te.requestInfo_ref() = thriftRequestInfo(
-                event.request.pid, *serverState->getProcessNameCache());
+                event.getRequest().pid, *serverState->getProcessNameCache());
 
             owner.publisher.next(te);
           });

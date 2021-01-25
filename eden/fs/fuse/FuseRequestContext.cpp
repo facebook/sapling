@@ -49,14 +49,6 @@ const fuse_in_header& FuseRequestContext::examineReq() const {
   return fuseHeader_;
 }
 
-void FuseRequestContext::replyError(int err) {
-  channel_->replyError(stealReq(), err);
-}
-
-void FuseRequestContext::replyNone() {
-  stealReq();
-}
-
 void FuseRequestContext::systemErrorHandler(
     const std::system_error& err,
     Notifications* FOLLY_NULLABLE notifications) {
@@ -90,6 +82,16 @@ void FuseRequestContext::timeoutErrorHandler(
   if (notifications) {
     notifications->showGenericErrorNotification(err);
   }
+}
+
+void FuseRequestContext::replyError(int err) {
+  error_ = err;
+  channel_->replyError(stealReq(), err);
+}
+
+void FuseRequestContext::replyNone() {
+  error_ = 0;
+  stealReq();
 }
 
 } // namespace eden
