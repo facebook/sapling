@@ -23,6 +23,7 @@ bookmarks = { path = "../../bookmarks" }
 changeset_info = { path = "../../derived_data/changeset_info" }
 context = { path = "../../server/context" }
 derived_data = { path = "../../derived_data" }
+fsnodes = { path = "../../derived_data/fsnodes" }
 live_commit_sync_config = { path = "../live_commit_sync_config" }
 manifest = { path = "../../manifest" }
 mercurial_types = { path = "../../mercurial/types" }

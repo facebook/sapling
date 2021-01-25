@@ -7,6 +7,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry};
 use cloned::cloned;
@@ -14,16 +15,16 @@ use context::CoreContext;
 use cross_repo_sync::{
     get_commit_sync_outcome,
     types::{Large, Small, Source, Target},
-    validation::{
-        fetch_root_mf_id, list_all_filenode_ids, report_different,
-        verify_filenodes_have_same_contents,
-    },
+    validation::report_different,
     CommitSyncOutcome,
 };
-use futures::compat::{Future01CompatExt, Stream01CompatExt};
-use futures::future::try_join_all;
+use futures::compat::Stream01CompatExt;
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use futures::try_join;
+use futures::{
+    future::{self, try_join_all},
+    TryFutureExt,
+};
 use futures_stats::TimedFutureExt;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::{Diff, Entry, ManifestOps};
@@ -49,6 +50,7 @@ use crate::reporting::log_validation_result_to_scuba;
 use crate::tail::QueueSize;
 
 type LargeBookmarkName = Large<BookmarkName>;
+type PathToFileNodeIdMapping = HashMap<MPath, (FileType, HgFileNodeId)>;
 
 define_stats! {
     prefix = "mononoke.commit_validation";
@@ -522,9 +524,7 @@ impl ValidationHelpers {
         repo: &BlobRepo,
         root_mf_id: HgManifestId,
     ) -> Result<FullManifestDiff, Error> {
-        let all_files = list_all_filenode_ids(ctx, repo, root_mf_id)
-            .compat()
-            .await?;
+        let all_files = list_all_filenode_ids(ctx, repo, root_mf_id).await?;
         Ok(all_files
             .into_iter()
             .map(FilenodeDiff::from_added_file)
@@ -1394,6 +1394,114 @@ pub async fn validate_entry(
     try_join_all(small_repo_validation_futs).await?;
     info!(ctx.logger(), "Validated entry: {:?}", entry_id);
     Ok(())
+}
+
+async fn fetch_root_mf_id(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+) -> Result<HgManifestId, Error> {
+    let hg_cs_id = repo
+        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+        .await?;
+    let changeset = hg_cs_id.load(ctx, repo.blobstore()).await?;
+    Ok(changeset.manifestid())
+}
+
+async fn list_all_filenode_ids(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    mf_id: HgManifestId,
+) -> Result<PathToFileNodeIdMapping, Error> {
+    let repoid = repo.get_repoid();
+    info!(
+        ctx.logger(),
+        "fetching filenode ids for {:?} in {}", mf_id, repoid,
+    );
+    let res = mf_id
+        .list_all_entries(ctx.clone(), repo.get_blobstore())
+        .try_filter_map(move |(path, entry)| {
+            let res = match entry {
+                Entry::Leaf(leaf_payload) => {
+                    match path {
+                        Some(path) => Some((path, leaf_payload)),
+                        None => {
+                            // Leaf shouldn't normally be None
+                            None
+                        }
+                    }
+                }
+                Entry::Tree(_) => None,
+            };
+            future::ready(Ok(res))
+        })
+        .try_collect::<HashMap<_, _>>()
+        .await?;
+
+    debug!(
+        ctx.logger(),
+        "fetched {} filenode ids for {}",
+        res.len(),
+        repoid,
+    );
+    Ok(res)
+}
+
+async fn verify_filenodes_have_same_contents<
+    // item is a tuple: (MPath, large filenode id, small filenode id)
+    I: IntoIterator<Item = (MPath, Source<HgFileNodeId>, Target<HgFileNodeId>)>,
+>(
+    ctx: &CoreContext,
+    target_repo: &Target<BlobRepo>,
+    source_repo: &Source<BlobRepo>,
+    source_hash: &Source<ChangesetId>,
+    should_be_equivalent: I,
+) -> Result<(), Error> {
+    let fetched_content_ids = stream::iter(should_be_equivalent)
+        .map({
+            move |(path, source_filenode_id, target_filenode_id)| async move {
+                debug!(
+                    ctx.logger(),
+                    "checking content for different filenodes: source {} vs target {}",
+                    source_filenode_id,
+                    target_filenode_id,
+                );
+                let f1 = async move {
+                    source_filenode_id
+                        .0
+                        .load(ctx, source_repo.0.blobstore())
+                        .await
+                }
+                .map_ok(|e| Source(e.content_id()));
+                let f2 = async move {
+                    target_filenode_id
+                        .0
+                        .load(ctx, target_repo.0.blobstore())
+                        .await
+                }
+                .map_ok(|e| Target(e.content_id()));
+
+                let (c1, c2) = future::try_join(f1, f2).await?;
+                Result::<_, Error>::Ok((path, c1, c2))
+            }
+        })
+        .buffered(1000)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    let different_contents: Vec<_> = fetched_content_ids
+        .into_iter()
+        .filter(|(_mpath, c1, c2)| c1.0 != c2.0)
+        .collect();
+
+    report_different(
+        ctx,
+        different_contents,
+        source_hash,
+        "contents",
+        Source(source_repo.0.name()),
+        Target(target_repo.0.name()),
+    )
 }
 
 #[cfg(test)]

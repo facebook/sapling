@@ -6,26 +6,23 @@
  */
 
 use anyhow::{format_err, Error};
-use futures_ext::{BoxFuture, FutureExt as _, StreamExt as _};
-use futures_old::{stream as old_stream, Future, Stream};
 
 use super::{CommitSyncConfigVersion, CommitSyncOutcome, CommitSyncer};
 use crate::types::{Source, Target};
 
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
-use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use context::CoreContext;
+use derived_data::BonsaiDerived;
+use fsnodes::RootFsnodeId;
 use futures::{
-    compat::Future01CompatExt,
-    future::{self, FutureExt, TryFutureExt},
+    future::FutureExt,
     stream::{self, StreamExt},
     try_join, TryStreamExt,
 };
-use manifest::{Entry, ManifestOps};
-use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
-use mononoke_types::{ChangesetId, MPath};
+use manifest::ManifestOps;
+use mercurial_types::FileType;
+use mononoke_types::{ChangesetId, ContentId, MPath};
 use movers::Mover;
 use ref_cast::RefCast;
 use slog::{debug, error, info};
@@ -33,7 +30,6 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use synced_commit_mapping::SyncedCommitMapping;
 
-pub type PathToFileNodeIdMapping = HashMap<MPath, (FileType, HgFileNodeId)>;
 type SourceRepo = Source<BlobRepo>;
 type TargetRepo = Target<BlobRepo>;
 
@@ -74,7 +70,7 @@ pub async fn verify_working_copy_inner<'a>(
     mover: &Mover,
     reverse_mover: &Mover,
 ) -> Result<(), Error> {
-    let moved_source_repo_entries = get_maybe_moved_filenode_ids(
+    let moved_source_repo_entries = get_maybe_moved_contents_and_types(
         ctx,
         &source_repo,
         *source_hash,
@@ -85,7 +81,7 @@ pub async fn verify_working_copy_inner<'a>(
             None
         },
     );
-    let target_repo_entries = get_maybe_moved_filenode_ids(
+    let target_repo_entries = get_maybe_moved_contents_and_types(
         ctx,
         &target_repo,
         *target_hash,
@@ -95,7 +91,7 @@ pub async fn verify_working_copy_inner<'a>(
     let (moved_source_repo_entries, target_repo_entries) =
         try_join!(moved_source_repo_entries, target_repo_entries)?;
 
-    verify_filenode_mapping_equivalence(
+    verify_type_content_mapping_equivalence(
         ctx.clone(),
         source_hash,
         source_repo,
@@ -107,17 +103,17 @@ pub async fn verify_working_copy_inner<'a>(
     .await
 }
 
-/// Given two `PathToFileNodeIdMapping`s, verify that they are
+/// Given two maps of paths to (type, contentid), verify that they are
 /// equivalent, save for paths rewritten into nothingness
 /// by the `reverse_mover` (Note that the name `reverse_mover`
 /// means that it moves paths from `target_repo` to `source_repo`)
-async fn verify_filenode_mapping_equivalence<'a>(
+async fn verify_type_content_mapping_equivalence<'a>(
     ctx: CoreContext,
     source_hash: Source<ChangesetId>,
     source_repo: &'a Source<BlobRepo>,
     target_repo: &'a Target<BlobRepo>,
-    moved_source_repo_entries: &'a Source<PathToFileNodeIdMapping>,
-    target_repo_entries: &'a Target<PathToFileNodeIdMapping>,
+    moved_source_repo_entries: &'a Source<HashMap<MPath, (FileType, ContentId)>>,
+    target_repo_entries: &'a Target<HashMap<MPath, (FileType, ContentId)>>,
     reverse_mover: &'a Mover,
 ) -> Result<(), Error> {
     info!(
@@ -129,7 +125,7 @@ async fn verify_filenode_mapping_equivalence<'a>(
     // If you are wondering, why the lifetime is needed,
     // in the function signature, see
     // https://github.com/rust-lang/rust/issues/63033
-    compare_contents(
+    compare_contents_and_types(
         ctx.clone(),
         (source_repo.clone(), moved_source_repo_entries),
         (target_repo.clone(), target_repo_entries),
@@ -197,25 +193,23 @@ enum GetMaybeMovedFilenodesPolicy<'a> {
     CheckThatRewritesIntoSomeButDontMove(&'a Mover),
 }
 
-/// Get all the file filenode ids for a given commit,
+// Get all the file content and types for a given commit,
 /// potentially applying a `Mover` to all file paths
-async fn get_maybe_moved_filenode_ids<'a>(
+async fn get_maybe_moved_contents_and_types<'a>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     hash: ChangesetId,
     maybe_mover_policy: Option<GetMaybeMovedFilenodesPolicy<'a>>,
-) -> Result<PathToFileNodeIdMapping, Error> {
-    let root_mf_id = fetch_root_mf_id(ctx, repo, hash).await?;
-    let repo_entries = list_all_filenode_ids(ctx.clone(), repo, root_mf_id)
-        .compat()
-        .await?;
+) -> Result<HashMap<MPath, (FileType, ContentId)>, Error> {
+    let content_ids_and_types = list_content_ids_and_types(ctx, repo, hash).await?;
+
     match maybe_mover_policy {
-        None => Ok(repo_entries),
+        None => Ok(content_ids_and_types),
         Some(GetMaybeMovedFilenodesPolicy::ActuallyMove(mover)) => {
-            move_all_paths(&repo_entries, mover)
+            move_all_paths(&content_ids_and_types, mover)
         }
         Some(GetMaybeMovedFilenodesPolicy::CheckThatRewritesIntoSomeButDontMove(mover)) => {
-            keep_movable_paths(&repo_entries, mover)
+            keep_movable_paths(&content_ids_and_types, mover)
         }
     }
 }
@@ -300,74 +294,63 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
     Ok(diff)
 }
 
-pub fn list_all_filenode_ids(
-    ctx: CoreContext,
+async fn list_content_ids_and_types(
+    ctx: &CoreContext,
     repo: &BlobRepo,
-    mf_id: HgManifestId,
-) -> BoxFuture<PathToFileNodeIdMapping, Error> {
-    let repoid = repo.get_repoid();
+    cs_id: ChangesetId,
+) -> Result<HashMap<MPath, (FileType, ContentId)>, Error> {
     info!(
         ctx.logger(),
-        "fetching filenode ids for {:?} in {}", mf_id, repoid,
+        "fetching content ids and types for {} in {}",
+        cs_id,
+        repo.name(),
     );
-    mf_id
-        .list_all_entries(ctx.clone(), repo.get_blobstore())
-        .compat()
-        .filter_map(move |(path, entry)| {
-            match entry {
-                Entry::Leaf(leaf_payload) => {
-                    match path {
-                        Some(path) => Some((path, leaf_payload)),
-                        None => {
-                            // Leaf shouldn't normally be None
-                            None
-                        }
-                    }
-                }
-                Entry::Tree(_) => None,
-            }
-        })
-        .collect_to::<HashMap<_, _>>()
-        .inspect(move |res| {
-            debug!(
-                ctx.logger(),
-                "fetched {} filenode ids for {}",
-                res.len(),
-                repoid,
-            );
-        })
-        .boxify()
+
+    let root_fsnode_id = RootFsnodeId::derive(&ctx, repo, cs_id).await?;
+    let root_fsnode_id = root_fsnode_id.fsnode_id();
+    let content_ids_and_types = root_fsnode_id
+        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .map_ok(|(path, fsnode)| (path, (*fsnode.file_type(), *fsnode.content_id())))
+        .try_collect::<HashMap<_, _>>()
+        .await?;
+    Ok(content_ids_and_types)
 }
 
-async fn compare_contents(
+async fn compare_contents_and_types(
     ctx: CoreContext,
-    (source_repo, source_filenodes): (Source<BlobRepo>, &Source<PathToFileNodeIdMapping>),
-    (target_repo, target_filenodes): (Target<BlobRepo>, &Target<PathToFileNodeIdMapping>),
+    (source_repo, source_types_and_content_ids): (
+        Source<BlobRepo>,
+        &Source<HashMap<MPath, (FileType, ContentId)>>,
+    ),
+    (target_repo, target_types_and_content_ids): (
+        Target<BlobRepo>,
+        &Target<HashMap<MPath, (FileType, ContentId)>>,
+    ),
     source_hash: Source<ChangesetId>,
 ) -> Result<(), Error> {
     // Both of these sets have three-element tuples as their elements:
     // `(MPath, SourceThing, TargetThing)`, where `Thing` is a `FileType`
-    // or a `HgFileNodeId` for different sets
-    let mut different_filenodes = HashSet::new();
+    // or a `ContentId` for different sets
+    let mut different_content_ids = HashSet::new();
     let mut different_filetypes = HashSet::new();
     let mut exists_in_target_but_not_source = HashSet::new();
-    for (path, (target_file_type, target_filenode_id)) in &target_filenodes.0 {
-        let maybe_source_type_and_filenode_id = &source_filenodes.0.get(&path);
-        let (maybe_source_file_type, maybe_source_filenode_id) =
-            match maybe_source_type_and_filenode_id {
-                Some((source_file_type, source_filenode_id)) => {
-                    (Some(source_file_type), Some(source_filenode_id))
+    for (path, (target_file_type, target_content_id)) in &target_types_and_content_ids.0 {
+        let maybe_source_type_and_content_id = &source_types_and_content_ids.0.get(&path);
+        let (maybe_source_file_type, maybe_source_content_id) =
+            match maybe_source_type_and_content_id {
+                Some((source_file_type, source_content_id)) => {
+                    (Some(source_file_type), Some(source_content_id))
                 }
                 None => (None, None),
             };
 
-        if maybe_source_filenode_id != Some(&target_filenode_id) {
-            match maybe_source_filenode_id {
-                Some(source_filenode_id) => {
-                    different_filenodes.insert((
+        if maybe_source_content_id != Some(&target_content_id) {
+            match maybe_source_content_id {
+                Some(source_content_id) => {
+                    different_content_ids.insert((
                         path.clone(),
-                        Source(*source_filenode_id),
-                        Target(*target_filenode_id),
+                        Source(*source_content_id),
+                        Target(*target_content_id),
                     ));
                 }
                 None => {
@@ -431,80 +414,16 @@ async fn compare_contents(
         Target(target_repo.0.name()),
     )?;
 
-    info!(
-        ctx.logger(),
-        "found {} filenodes that are different, checking content...",
-        different_filenodes.len(),
-    );
-
-    verify_filenodes_have_same_contents(
-        &ctx,
-        &target_repo,
-        &source_repo,
-        &source_hash,
-        different_filenodes,
-    )
-    .await
-}
-
-pub async fn verify_filenodes_have_same_contents<
-    // item is a tuple: (MPath, large filenode id, small filenode id)
-    I: IntoIterator<Item = (MPath, Source<HgFileNodeId>, Target<HgFileNodeId>)>,
->(
-    ctx: &CoreContext,
-    target_repo: &Target<BlobRepo>,
-    source_repo: &Source<BlobRepo>,
-    source_hash: &Source<ChangesetId>,
-    should_be_equivalent: I,
-) -> Result<(), Error> {
-    let fetched_content_ids = old_stream::iter_ok(should_be_equivalent)
-        .map({
-            move |(path, source_filenode_id, target_filenode_id)| {
-                debug!(
-                    ctx.logger(),
-                    "checking content for different filenodes: source {} vs target {}",
-                    source_filenode_id,
-                    target_filenode_id,
-                );
-                let f1 = async move {
-                    source_filenode_id
-                        .0
-                        .load(ctx, source_repo.0.blobstore())
-                        .await
-                }
-                .map_ok(|e| Source(e.content_id()));
-                let f2 = async move {
-                    target_filenode_id
-                        .0
-                        .load(ctx, target_repo.0.blobstore())
-                        .await
-                }
-                .map_ok(|e| Target(e.content_id()));
-
-                future::try_join(f1, f2)
-                    .map_ok(move |(c1, c2)| (path, c1, c2))
-                    .boxed()
-                    .compat()
-            }
-        })
-        .buffered(1000)
-        .collect()
-        .compat()
-        .await?;
-
-    let different_contents: Vec<_> = fetched_content_ids
-        .into_iter()
-        .filter(|(_mpath, c1, c2)| c1.0 != c2.0)
-        .collect();
-
     report_different(
-        ctx,
-        different_contents,
-        source_hash,
+        &ctx,
+        different_content_ids,
+        &source_hash,
         "contents",
         Source(source_repo.0.name()),
         Target(target_repo.0.name()),
-    )
+    )?;
+
+    Ok(())
 }
 
 /// Given a list of differences of a given type (`T`)
@@ -620,18 +539,6 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
     }
 }
 
-pub async fn fetch_root_mf_id(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    cs_id: ChangesetId,
-) -> Result<HgManifestId, Error> {
-    let hg_cs_id = repo
-        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .await?;
-    let changeset = hg_cs_id.load(ctx, repo.blobstore()).await?;
-    Ok(changeset.manifestid())
-}
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum BookmarkDiff {
     InconsistentValue {
@@ -736,6 +643,7 @@ mod test {
     use bookmarks::BookmarkName;
     use fbinit::FacebookInit;
     use fixtures::linear;
+    use futures::compat::Future01CompatExt;
     use futures_old::stream::Stream;
     use maplit::hashmap;
     use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
