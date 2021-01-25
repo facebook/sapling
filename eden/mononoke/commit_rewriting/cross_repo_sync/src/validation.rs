@@ -568,15 +568,15 @@ pub fn report_different<
     }
 }
 
-pub fn move_all_paths(
-    filenodes: &PathToFileNodeIdMapping,
+pub fn move_all_paths<V: Clone>(
+    path_to_values: &HashMap<MPath, V>,
     mover: &Mover,
-) -> Result<PathToFileNodeIdMapping, Error> {
+) -> Result<HashMap<MPath, V>, Error> {
     let mut moved_entries = HashMap::new();
-    for (path, filenode_id) in filenodes {
+    for (path, value) in path_to_values {
         let moved_path = mover(&path)?;
         if let Some(moved_path) = moved_path {
-            moved_entries.insert(moved_path, filenode_id.clone());
+            moved_entries.insert(moved_path, value.clone());
         }
     }
 
@@ -584,14 +584,14 @@ pub fn move_all_paths(
 }
 
 // Drop all paths which `mover` rewrites into `None`
-fn keep_movable_paths(
-    filenodes: &PathToFileNodeIdMapping,
+fn keep_movable_paths<V: Clone>(
+    path_to_values: &HashMap<MPath, V>,
     mover: &Mover,
-) -> Result<PathToFileNodeIdMapping, Error> {
+) -> Result<HashMap<MPath, V>, Error> {
     let mut res = HashMap::new();
-    for (path, filenode_id) in filenodes {
+    for (path, value) in path_to_values {
         if mover(&path)?.is_some() {
-            res.insert(path.clone(), filenode_id.clone());
+            res.insert(path.clone(), value.clone());
         }
     }
 
