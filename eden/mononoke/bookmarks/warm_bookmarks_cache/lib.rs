@@ -346,6 +346,7 @@ pub async fn find_all_underived_and_latest_derived(
         // entries that were already returned on the previous call `list_bookmark_log_entries(...)`.
         // That means that the same entry might be rechecked, but that shouldn't be a big problem.
         let log_entries = repo
+            .bookmarks_log()
             .list_bookmark_log_entries(
                 ctx.clone(),
                 book.clone(),

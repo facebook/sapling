@@ -12,6 +12,8 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use context::CoreContext;
 use futures::TryStreamExt;
+use humantime::parse_duration;
+use mononoke_types::Timestamp;
 use serde_json::{json, to_string_pretty};
 use slog::{info, Logger};
 
@@ -27,6 +29,12 @@ const GET_CMD: &str = "get";
 const LOG_CMD: &str = "log";
 const LIST_CMD: &str = "list";
 const DEL_CMD: &str = "delete";
+
+const ARG_CHANGESET_TYPE: &str = "changeset-type";
+const ARG_LIMIT: &str = "limit";
+const ARG_START_TIME: &str = "start-time";
+const ARG_END_TIME: &str = "end-time";
+const ARG_KIND: &str = "kind";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let parent_subcommand = SubCommand::with_name(BOOKMARKS);
@@ -49,8 +57,8 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             "#,
         )
         .arg(
-            Arg::with_name("changeset-type")
-                .long("changeset-type")
+            Arg::with_name(ARG_CHANGESET_TYPE)
+                .long(ARG_CHANGESET_TYPE)
                 .short("cs")
                 .takes_value(true)
                 .possible_values(&["bonsai", "hg"])
@@ -67,8 +75,8 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             "#,
         )
         .arg(
-            Arg::with_name("changeset-type")
-                .long("changeset-type")
+            Arg::with_name(ARG_CHANGESET_TYPE)
+                .long(ARG_CHANGESET_TYPE)
                 .short("cs")
                 .takes_value(true)
                 .possible_values(&["bonsai", "hg"])
@@ -76,17 +84,40 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .help("What changeset type to return, either bonsai or hg. Defaults to hg."),
         )
         .arg(
-            Arg::with_name("limit")
-                .long("limit")
+            Arg::with_name(ARG_LIMIT)
+                .long(ARG_LIMIT)
                 .short("l")
                 .takes_value(true)
                 .required(false)
                 .help("Imposes the limit on number of log records in output."),
+        )
+        .arg(
+            Arg::with_name(ARG_START_TIME)
+                .long(ARG_START_TIME)
+                .short("s")
+                .takes_value(true)
+                .required(false)
+                .help(
+                    "Filter log records by timestamp lower bound. \
+                    Takes time difference in free form e.g. 1h, 10m 30s, etc.",
+                ),
+        )
+        .arg(
+            Arg::with_name(ARG_END_TIME)
+                .long(ARG_END_TIME)
+                .short("e")
+                .takes_value(true)
+                .required(false)
+                .requires(ARG_START_TIME)
+                .help(
+                    "Filter log records by timestamp upper bound. \
+                    Takes time difference in free form e.g. 1h, 10m 30s, etc.",
+                ),
         );
 
     let list = SubCommand::with_name(LIST_CMD).about("list bookmarks").arg(
-        Arg::with_name("kind")
-            .long("kind")
+        Arg::with_name(ARG_KIND)
+            .long(ARG_KIND)
             .takes_value(true)
             .possible_values(&["publishing"])
             .required(true)
@@ -142,8 +173,8 @@ fn format_output(json_flag: bool, changeset_id: String, changeset_type: &str) ->
 async fn handle_get(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> Result<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
-    let changeset_type = args.value_of("changeset-type").unwrap_or("hg");
-    let json_flag: bool = args.is_present("json");
+    let changeset_type = args.value_of(ARG_CHANGESET_TYPE).unwrap_or("hg");
+    let json_flag = args.is_present("json");
 
     match changeset_type {
         "hg" => {
@@ -168,9 +199,9 @@ async fn handle_get(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
 async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> Result<(), Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
-    let changeset_type = args.value_of("changeset-type").unwrap_or("hg");
+    let changeset_type = args.value_of(ARG_CHANGESET_TYPE).unwrap_or("hg");
     let json_flag = args.is_present("json");
-    let output_limit_as_string = args.value_of("limit").unwrap_or("25");
+    let output_limit_as_string = args.value_of(ARG_LIMIT).unwrap_or("25");
     let max_rec = match output_limit_as_string.parse::<u32>() {
         Ok(n) => n,
         Err(e) => panic!(
@@ -178,87 +209,109 @@ async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
             output_limit_as_string, e
         ),
     };
+
+    let filter_by_ts_range = args.is_present(ARG_START_TIME) || args.is_present(ARG_END_TIME);
+    let entries = if filter_by_ts_range {
+        let min_ts_diff_ns = parse_duration(args.value_of(ARG_START_TIME).ok_or_else(|| {
+            format_err!(
+                "{} is required if {} is present",
+                ARG_START_TIME,
+                ARG_END_TIME
+            )
+        })?)?
+        .as_nanos() as i64;
+        let max_ts_diff_ns =
+            parse_duration(args.value_of(ARG_END_TIME).unwrap_or("0h"))?.as_nanos() as i64;
+        if min_ts_diff_ns < max_ts_diff_ns {
+            return Err(format_err!("Start time should be earlier than end time"));
+        }
+        let current_timestamp_ns = Timestamp::now().timestamp_nanos();
+        repo.bookmarks_log().list_bookmark_log_entries_ts_in_range(
+            ctx.clone(),
+            bookmark.clone(),
+            max_rec,
+            Timestamp::from_timestamp_nanos(current_timestamp_ns - min_ts_diff_ns),
+            Timestamp::from_timestamp_nanos(current_timestamp_ns - max_ts_diff_ns),
+        )
+    } else {
+        repo.bookmarks_log().list_bookmark_log_entries(
+            ctx.clone(),
+            bookmark.clone(),
+            max_rec,
+            None,
+            Freshness::MostRecent,
+        )
+    };
+
     match changeset_type {
         "hg" => {
-            repo.list_bookmark_log_entries(
-                ctx.clone(),
-                bookmark.clone(),
-                max_rec,
-                None,
-                Freshness::MostRecent,
-            )
-            .map_ok({
-                cloned!(ctx, repo);
-                move |(entry_id, cs_id, rs, ts)| {
+            entries
+                .map_ok({
                     cloned!(ctx, repo);
-                    async move {
-                        match cs_id {
-                            Some(cs_id) => {
-                                let cs = repo
-                                    .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                                    .await?;
-                                Ok((entry_id, Some(cs), rs, ts))
+                    move |(entry_id, cs_id, rs, ts)| {
+                        cloned!(ctx, repo);
+                        async move {
+                            match cs_id {
+                                Some(cs_id) => {
+                                    let cs = repo
+                                        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+                                        .await?;
+                                    Ok((entry_id, Some(cs), rs, ts))
+                                }
+                                None => Ok((entry_id, None, rs, ts)),
                             }
-                            None => Ok((entry_id, None, rs, ts)),
                         }
                     }
-                }
-            })
-            .try_buffer_unordered(100)
-            .map_ok(move |rows| {
-                let (entry_id, cs_id, reason, timestamp) = rows;
-                let cs_id_str = match cs_id {
-                    None => String::new(),
-                    Some(x) => x.to_string(),
-                };
-                let output = format_bookmark_log_entry(
-                    json_flag,
-                    cs_id_str,
-                    reason,
-                    timestamp,
-                    "hg",
-                    bookmark.clone(),
-                    Some(entry_id),
-                );
-                println!("{}", output);
-            })
-            .try_for_each(|_| async { Ok(()) })
-            .await
+                })
+                .try_buffer_unordered(100)
+                .map_ok(move |rows| {
+                    let (entry_id, cs_id, reason, timestamp) = rows;
+                    let cs_id_str = match cs_id {
+                        None => String::new(),
+                        Some(x) => x.to_string(),
+                    };
+                    let output = format_bookmark_log_entry(
+                        json_flag,
+                        cs_id_str,
+                        reason,
+                        timestamp,
+                        "hg",
+                        bookmark.clone(),
+                        Some(entry_id),
+                    );
+                    println!("{}", output);
+                })
+                .try_for_each(|_| async { Ok(()) })
+                .await
         }
         "bonsai" => {
-            repo.list_bookmark_log_entries(
-                ctx,
-                bookmark.clone(),
-                max_rec,
-                None,
-                Freshness::MostRecent,
-            )
-            .map_ok(move |rows| {
-                let (entry_id, cs_id, reason, timestamp) = rows;
-                let cs_id_str = match cs_id {
-                    None => String::new(),
-                    Some(x) => x.to_string(),
-                };
-                let output = format_bookmark_log_entry(
-                    json_flag,
-                    cs_id_str,
-                    reason,
-                    timestamp,
-                    "bonsai",
-                    bookmark.clone(),
-                    Some(entry_id),
-                );
-                println!("{}", output);
-            })
-            .try_for_each(|_| async { Ok(()) })
-            .await
+            entries
+                .map_ok(move |rows| {
+                    let (entry_id, cs_id, reason, timestamp) = rows;
+                    let cs_id_str = match cs_id {
+                        None => String::new(),
+                        Some(x) => x.to_string(),
+                    };
+                    let output = format_bookmark_log_entry(
+                        json_flag,
+                        cs_id_str,
+                        reason,
+                        timestamp,
+                        "bonsai",
+                        bookmark.clone(),
+                        Some(entry_id),
+                    );
+                    println!("{}", output);
+                })
+                .try_for_each(|_| async { Ok(()) })
+                .await
         }
         _ => panic!("Unknown changeset-type supplied"),
     }
 }
 
 async fn handle_list(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> Result<(), Error> {
-    match args.value_of("kind") {
+    match args.value_of(ARG_KIND) {
         Some("publishing") => {
             repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
                 .try_for_each_concurrent(100, {

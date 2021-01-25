@@ -71,6 +71,16 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
         freshness: Freshness,
     ) -> BoxStream<'static, Result<(u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp)>>;
 
+    /// Read the log entry for specific bookmark with specified to changeset id. Filter by ts range.
+    fn list_bookmark_log_entries_ts_in_range(
+        &self,
+        _ctx: CoreContext,
+        name: BookmarkName,
+        max_rec: u32,
+        min_ts: Timestamp,
+        max_ts: Timestamp,
+    ) -> BoxStream<'static, Result<(u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp)>>;
+
     /// Count the number of BookmarkUpdateLog entries with id greater than the given value,
     /// possibly excluding a given reason.
     fn count_further_bookmark_log_entries(

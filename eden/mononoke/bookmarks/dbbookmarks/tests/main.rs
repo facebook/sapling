@@ -1122,6 +1122,29 @@ fn test_list_bookmark_log_entries(fb: FacebookInit) {
             ]
         );
 
+        let current_timestamp = Timestamp::now();
+        let day_old_timestamp =
+            Timestamp::from_timestamp_secs(current_timestamp.timestamp_seconds() - 86400);
+        assert_eq!(
+            bookmarks
+                .list_bookmark_log_entries_ts_in_range(
+                    ctx.clone(),
+                    name_1.clone(),
+                    3,
+                    day_old_timestamp,
+                    current_timestamp,
+                )
+                .map_ok(|(_id, cs, rs, _ts)| (cs, rs))
+                .try_collect::<Vec<_>>()
+                .await
+                .unwrap(),
+            vec![
+                (Some(FIVES_CSID), BookmarkUpdateReason::TestMove),
+                (Some(FOURS_CSID), BookmarkUpdateReason::TestMove),
+                (Some(THREES_CSID), BookmarkUpdateReason::TestMove),
+            ]
+        );
+
         assert_eq!(
             bookmarks
                 .list_bookmark_log_entries(ctx.clone(), name_1, 3, Some(1), Freshness::MostRecent)

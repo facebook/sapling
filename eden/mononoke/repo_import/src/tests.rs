@@ -18,7 +18,7 @@ mod tests {
     use blobrepo::BlobRepo;
     use blobrepo_override::DangerousOverride;
     use blobstore::Loadable;
-    use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
+    use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
     use cached_config::{ConfigStore, TestSource};
     use context::CoreContext;
     use cross_repo_sync::{create_commit_syncers, CommitSyncContext};
@@ -149,7 +149,7 @@ mod tests {
         .await?;
         // Check the bookmark moves created BookmarkLogUpdate entries
         let entries = blob_repo
-            .attribute_expected::<dyn BookmarkUpdateLog>()
+            .bookmarks_log()
             .list_bookmark_log_entries(
                 ctx.clone(),
                 BookmarkName::new("repo_import_test_repo")?,
@@ -218,7 +218,7 @@ mod tests {
         .await?;
         // Check the bookmark moves created BookmarkLogUpdate entries
         let entries = blob_repo
-            .attribute_expected::<dyn BookmarkUpdateLog>()
+            .bookmarks_log()
             .list_bookmark_log_entries(
                 ctx.clone(),
                 BookmarkName::new("repo_import_test_repo")?,

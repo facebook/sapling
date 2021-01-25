@@ -221,6 +221,7 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
     let large_repo = small_to_large.get_large_repo();
     // Log entries are sorted newest to oldest
     let log_entries: Vec<_> = large_repo
+        .bookmarks_log()
         .list_bookmark_log_entries(
             ctx.clone(),
             large_bookmark.clone(),

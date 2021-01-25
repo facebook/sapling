@@ -41,6 +41,13 @@ Check bookmarks
 
   $ mononoke_admin bookmarks delete master_bookmark 2> /dev/null
 
+  $ mononoke_admin bookmarks log master_bookmark 2>&1 --start-time 2days | grep master_bookmark
+  * (master_bookmark)  manualmove * (glob)
+  * (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
+
+  $ mononoke_admin bookmarks log master_bookmark 2>&1 --start-time 2days --end-time 1day | grep master_bookmark | wc -l
+  0
+
   $ mononoke_admin bookmarks list --kind publishing 2> /dev/null
   another_bookmark	c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd	26805aba1e600a82e93661149f2313866a221a7b
 

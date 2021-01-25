@@ -28,7 +28,6 @@ use futures::{
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, ChangesetId, Generation, Globalrev, MononokeId, RepositoryId,
-    Timestamp,
 };
 use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
@@ -278,19 +277,6 @@ impl BlobRepo {
             .collect())
     }
 
-    pub fn list_bookmark_log_entries(
-        &self,
-        ctx: CoreContext,
-        name: BookmarkName,
-        max_rec: u32,
-        offset: Option<u32>,
-        freshness: Freshness,
-    ) -> impl Stream<Item = Result<(u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error>>
-    {
-        self.attribute_expected::<dyn BookmarkUpdateLog>()
-            .list_bookmark_log_entries(ctx.clone(), name, max_rec, offset, freshness)
-    }
-
     pub fn read_next_bookmark_log_entries(
         &self,
         ctx: CoreContext,
@@ -378,6 +364,10 @@ impl BlobRepo {
 
     pub fn bookmarks(&self) -> Arc<dyn Bookmarks> {
         self.attribute_expected::<dyn Bookmarks>().clone()
+    }
+
+    pub fn bookmarks_log(&self) -> Arc<dyn BookmarkUpdateLog> {
+        self.attribute_expected::<dyn BookmarkUpdateLog>().clone()
     }
 
     pub fn get_phases_factory(&self) -> &SqlPhasesFactory {

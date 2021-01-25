@@ -197,7 +197,26 @@ queries! {
            AND name = {name}
          ORDER BY id DESC
          LIMIT {max_records}"
-      }
+    }
+
+    read SelectBookmarkLogsWithTsInRange(
+        repo_id: RepositoryId,
+        name: BookmarkName,
+        max_records: u32,
+        min_ts: Timestamp,
+        max_ts: Timestamp
+    ) -> (
+        u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp
+    ) {
+        "SELECT id, to_changeset_id, reason, timestamp
+         FROM bookmarks_update_log
+         WHERE repo_id = {repo_id}
+           AND name = {name}
+           AND timestamp >= {min_ts}
+           AND timestamp <= {max_ts}
+         ORDER BY id DESC
+         LIMIT {max_records}"
+    }
 
     read SelectBookmarkLogsWithOffset(repo_id: RepositoryId, name: BookmarkName, max_records: u32, offset: u32) -> (
         u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp
@@ -209,7 +228,7 @@ queries! {
          ORDER BY id DESC
          LIMIT {max_records}
          OFFSET {offset}"
-      }
+    }
 
     read GetLargestLogId(repo_id: RepositoryId) -> (Option<u64>) {
         "SELECT MAX(id)
@@ -402,6 +421,32 @@ impl BookmarkUpdateLog for SqlBookmarks {
                 .try_flatten_stream()
                 .boxed(),
         }
+    }
+
+    fn list_bookmark_log_entries_ts_in_range(
+        &self,
+        ctx: CoreContext,
+        name: BookmarkName,
+        max_rec: u32,
+        min_ts: Timestamp,
+        max_ts: Timestamp,
+    ) -> BoxStream<'static, Result<(u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp)>>
+    {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
+        SelectBookmarkLogsWithTsInRange::query(
+            &self.connections.read_connection,
+            &self.repo_id,
+            &name,
+            &max_rec,
+            &min_ts,
+            &max_ts,
+        )
+        .compat()
+        .map_ok(|rows| stream::iter(rows.into_iter().map(Ok)))
+        .try_flatten_stream()
+        .boxed()
     }
 
     fn count_further_bookmark_log_entries(

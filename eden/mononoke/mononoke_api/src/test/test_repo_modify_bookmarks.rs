@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use anyhow::Result;
-use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
+use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::stream::TryStreamExt;
@@ -117,7 +117,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     // Check the bookmark moves created BookmarkLogUpdate entries
     let entries = repo
         .blob_repo()
-        .attribute_expected::<dyn BookmarkUpdateLog>()
+        .bookmarks_log()
         .list_bookmark_log_entries(
             ctx.clone(),
             BookmarkName::new("trunk")?,
