@@ -277,12 +277,12 @@ async fn find_commits_to_send(
 
     let (mut heads, mut excludes) = try_join!(heads, excludes)?;
 
-    find_and_log_high_low_gen_nums(
+    let (_, highest_head_gen_num) = find_and_log_high_low_gen_nums(
         ctx,
         &heads,
         "Getbundle generation numbers before partial getbundle",
     );
-    let low_gen_num_checker = LowGenNumChecker::new_from_tunables();
+    let low_gen_num_checker = LowGenNumChecker::new_from_tunables(highest_head_gen_num);
     let partial_result = compute_partial_getbundle(
         ctx,
         &changeset_fetcher,
