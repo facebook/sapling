@@ -398,3 +398,4 @@ rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee5
 tokio-core = { git = "https://github.com/bolinfest/tokio-core", rev = "5f37aa3c627d56ee49154bc851d6930f5ab4398f" }
 toml = { git = "https://github.com/jsgf/toml-rs", branch = "dotted-table-0.5.7" }
 enumset = { git = "https://github.com/danobi/enumset", rev = "4c01c583c27a725948fededbfb3461c572a669a4" }
+cursive_buffered_backend = { git = "https://github.com/chengxiong-ruan/cursive_buffered_backend", branch = "upgrade_cursive_core_from_v0.4.1"}
