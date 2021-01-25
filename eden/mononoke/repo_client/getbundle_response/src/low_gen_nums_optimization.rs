@@ -24,9 +24,40 @@ use tunables::tunables;
 
 pub const DEFAULT_TRAVERSAL_LIMIT: u64 = 20;
 
-pub(crate) fn has_low_gen_num(lowest_gen_num: u64) -> bool {
-    let threshold = tunables().get_getbundle_low_gen_num_threshold() as u64;
-    lowest_gen_num <= threshold
+pub(crate) struct LowGenNumChecker {
+    low_gen_num_threshold: Option<u64>,
+}
+
+impl LowGenNumChecker {
+    pub(crate) fn new_from_tunables() -> Self {
+        let threshold = tunables().get_getbundle_low_gen_num_threshold();
+        let low_gen_num_threshold = if threshold > 0 {
+            Some(threshold as u64)
+        } else {
+            None
+        };
+        Self {
+            low_gen_num_threshold,
+        }
+    }
+
+    #[cfg(test)]
+    fn new(low_gen_num_threshold: Option<u64>) -> Self {
+        Self {
+            low_gen_num_threshold,
+        }
+    }
+
+    pub(crate) fn is_low_gen_num(&self, gen_num: u64) -> bool {
+        match self.low_gen_num_threshold {
+            Some(threshold) => gen_num <= threshold,
+            None => false,
+        }
+    }
+
+    fn get_threshold(&self) -> Option<u64> {
+        self.low_gen_num_threshold
+    }
 }
 
 #[derive(Debug)]
@@ -79,6 +110,7 @@ pub(crate) async fn compute_partial_getbundle(
     changeset_fetcher: &Arc<dyn ChangesetFetcher>,
     heads: Vec<(ChangesetId, Generation)>,
     excludes: Vec<(ChangesetId, Generation)>,
+    low_gen_num_checker: &LowGenNumChecker,
 ) -> Result<PartialGetBundle, Error> {
     let traversal_limit = tunables().get_getbundle_partial_getbundle_traversal_limit();
     if traversal_limit == 0 {
@@ -86,10 +118,16 @@ pub(crate) async fn compute_partial_getbundle(
         return Ok(PartialGetBundle::new_no_partial_result(heads, excludes));
     }
 
+    let gen_num_threshold = match low_gen_num_checker.get_threshold() {
+        Some(threshold) => threshold,
+        None => {
+            return Ok(PartialGetBundle::new_no_partial_result(heads, excludes));
+        }
+    };
+
     ctx.scuba()
         .clone()
         .log_with_msg("Computing partial getbundle", None);
-    let gen_num_threshold = tunables().get_getbundle_low_gen_num_threshold() as u64;
     let maybe_max_head = heads.iter().max_by_key(|node| node.1);
 
     let mut queue = VecDeque::new();
@@ -178,8 +216,14 @@ pub(crate) async fn low_gen_num_optimization(
     changeset_fetcher: &Arc<dyn ChangesetFetcher>,
     params: Params,
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
+    low_gen_num_checker: &LowGenNumChecker,
 ) -> Result<Option<Vec<ChangesetId>>> {
-    let threshold = tunables().get_getbundle_low_gen_num_threshold() as u64;
+    let threshold = match low_gen_num_checker.get_threshold() {
+        Some(threshold) => threshold,
+        None => {
+            return Ok(None);
+        }
+    };
     let split_params = match split_heads_excludes(params, threshold) {
         Some(split_params) => split_params,
         None => return Ok(None),
@@ -382,21 +426,23 @@ mod test {
         )
         .await?;
 
+        let low_gen_num_checker = LowGenNumChecker::new(None);
         // Tunable is disabled, so optimization does not kick in
         let maybe_res = low_gen_num_optimization(
             &ctx,
             &repo.get_changeset_fetcher(),
             params.clone(),
             &skiplist,
+            &low_gen_num_checker,
         )
         .await?;
         assert!(maybe_res.is_none());
 
+        let low_gen_num_checker = LowGenNumChecker::new(Some(4));
         // Now it's enabled, make sure we got the response
         let tunables = MononokeTunables::default();
         tunables.update_bools(&hashmap! {"getbundle_use_low_gen_optimization".to_string() => true});
         tunables.update_ints(&hashmap! {
-            "getbundle_low_gen_num_threshold".to_string() => 4,
             "getbundle_low_gen_optimization_max_traversal_limit".to_string() => 3,
         });
 
@@ -412,6 +458,7 @@ mod test {
                     &repo.get_changeset_fetcher(),
                     params.clone(),
                     &skiplist,
+                    &low_gen_num_checker,
                 )
                 .await?;
                 assert_eq!(maybe_res, Some(expected_result));
@@ -432,10 +479,10 @@ mod test {
         )
         .await?;
 
+        let low_gen_num_checker = LowGenNumChecker::new(Some(4));
         let tunables = MononokeTunables::default();
         tunables.update_bools(&hashmap! {"getbundle_use_low_gen_optimization".to_string() => true});
         tunables.update_ints(&hashmap! {
-            "getbundle_low_gen_num_threshold".to_string() => 4,
             "getbundle_low_gen_optimization_max_traversal_limit".to_string() => 1,
         });
 
@@ -447,6 +494,7 @@ mod test {
                     &repo.get_changeset_fetcher(),
                     params,
                     &skiplist,
+                    &low_gen_num_checker,
                 )
                 .await?;
                 assert_eq!(maybe_res, None);
@@ -475,11 +523,11 @@ mod test {
         )
         .await?;
 
+        let low_gen_num_checker = LowGenNumChecker::new(Some(5));
         // Let's it's enabled, make sure we got the response
         let tunables = MononokeTunables::default();
         tunables.update_bools(&hashmap! {"getbundle_use_low_gen_optimization".to_string() => true});
         tunables.update_ints(&hashmap! {
-            "getbundle_low_gen_num_threshold".to_string() => 5,
             "getbundle_low_gen_optimization_max_traversal_limit".to_string() => 10,
         });
 
@@ -491,6 +539,7 @@ mod test {
                     &repo.get_changeset_fetcher(),
                     params.clone(),
                     &skiplist,
+                    &low_gen_num_checker,
                 )
                 .await?;
                 assert_eq!(maybe_res.map(|v| v.len()), Some(11));
@@ -519,6 +568,7 @@ mod test {
         )
         .await?;
 
+        let low_gen_num_checker = LowGenNumChecker::new(None);
         // Partial getbundle optimization is disabled, so it should do nothing
         let (res, params) = test_compute_partial_bundle(
             &ctx,
@@ -527,6 +577,7 @@ mod test {
             hashmap! {},
             &["J".to_string()],
             &["I".to_string()],
+            &low_gen_num_checker,
         )
         .await?;
 
@@ -534,6 +585,7 @@ mod test {
         assert_eq!(res.new_heads, params.heads);
         assert_eq!(res.new_excludes, params.excludes);
 
+        let low_gen_num_checker = LowGenNumChecker::new(Some(4));
         // Now let's enable the optimization, but set very low traversal limit
         let (res, params) = test_compute_partial_bundle(
             &ctx,
@@ -541,10 +593,10 @@ mod test {
             &commit_map,
             hashmap! {
                 "getbundle_partial_getbundle_traversal_limit".to_string() => 1,
-                "getbundle_low_gen_num_threshold".to_string() => 4,
             },
             &["J".to_string()],
             &["G".to_string()],
+            &low_gen_num_checker,
         )
         .await?;
         assert_eq!(res.partial, vec![commit_map.get("J").cloned().unwrap()]);
@@ -552,6 +604,7 @@ mod test {
         assert_eq!(res.new_heads[0].0, commit_map["I"]);
         assert_eq!(res.new_excludes, params.excludes);
 
+        let low_gen_num_checker = LowGenNumChecker::new(Some(4));
         // Simplest case - it should traverse a single changeset id and return it
         let (res, params) = test_compute_partial_bundle(
             &ctx,
@@ -559,16 +612,17 @@ mod test {
             &commit_map,
             hashmap! {
                 "getbundle_partial_getbundle_traversal_limit".to_string() => 10,
-                "getbundle_low_gen_num_threshold".to_string() => 4,
             },
             &["J".to_string()],
             &["I".to_string()],
+            &low_gen_num_checker,
         )
         .await?;
         assert_eq!(res.partial, vec![commit_map.get("J").cloned().unwrap()]);
         assert!(res.new_heads.is_empty());
         assert_eq!(res.new_excludes, params.excludes);
 
+        let low_gen_num_checker = LowGenNumChecker::new(Some(0));
         // Let it traverse the whole repo
         let (res, params) = test_compute_partial_bundle(
             &ctx,
@@ -576,16 +630,17 @@ mod test {
             &commit_map,
             hashmap! {
                 "getbundle_partial_getbundle_traversal_limit".to_string() => 20,
-                "getbundle_low_gen_num_threshold".to_string() => 0,
             },
             &["J".to_string(), "I".to_string()],
             &[],
+            &low_gen_num_checker,
         )
         .await?;
         assert_eq!(res.partial.len(), 13);
         assert!(res.new_heads.is_empty());
         assert_eq!(res.new_excludes, params.excludes);
 
+        let low_gen_num_checker = LowGenNumChecker::new(Some(4));
         // Now let's enable the optimization and make it traverse up until a merge commit
         let (res, params) = test_compute_partial_bundle(
             &ctx,
@@ -593,10 +648,10 @@ mod test {
             &commit_map,
             hashmap! {
                 "getbundle_partial_getbundle_traversal_limit".to_string() => 10,
-                "getbundle_low_gen_num_threshold".to_string() => 4,
             },
             &["J".to_string()],
             &["E".to_string()],
+            &low_gen_num_checker,
         )
         .await?;
         assert_eq!(
@@ -616,6 +671,7 @@ mod test {
         );
         assert_eq!(res.new_excludes, params.excludes);
 
+        let low_gen_num_checker = LowGenNumChecker::new(Some(4));
         // Now let's add a few more heads that are ancestors of each other.
         // It shouldn't change the result
         let (res, params) = test_compute_partial_bundle(
@@ -624,10 +680,10 @@ mod test {
             &commit_map,
             hashmap! {
                 "getbundle_partial_getbundle_traversal_limit".to_string() => 10,
-                "getbundle_low_gen_num_threshold".to_string() => 4,
             },
             &["J".to_string(), "I".to_string(), "H".to_string()],
             &["E".to_string()],
+            &low_gen_num_checker,
         )
         .await?;
         assert_eq!(
@@ -647,6 +703,7 @@ mod test {
         );
         assert_eq!(res.new_excludes, params.excludes);
 
+        let low_gen_num_checker = LowGenNumChecker::new(Some(6));
         // Set higher gen num limit
         let (res, params) = test_compute_partial_bundle(
             &ctx,
@@ -654,10 +711,10 @@ mod test {
             &commit_map,
             hashmap! {
                 "getbundle_partial_getbundle_traversal_limit".to_string() => 10,
-                "getbundle_low_gen_num_threshold".to_string() => 6,
             },
             &["J".to_string()],
             &["E".to_string()],
+            &low_gen_num_checker,
         )
         .await?;
         assert_eq!(
@@ -676,6 +733,7 @@ mod test {
         );
         assert_eq!(res.new_excludes, params.excludes);
 
+        let low_gen_num_checker = LowGenNumChecker::new(Some(60));
         // Set very high gen num limit
         let (res, params) = test_compute_partial_bundle(
             &ctx,
@@ -683,10 +741,10 @@ mod test {
             &commit_map,
             hashmap! {
                 "getbundle_partial_getbundle_traversal_limit".to_string() => 10,
-                "getbundle_low_gen_num_threshold".to_string() => 60,
             },
             &["J".to_string()],
             &["E".to_string()],
+            &low_gen_num_checker,
         )
         .await?;
         assert!(res.partial.is_empty());
@@ -703,6 +761,7 @@ mod test {
         values: HashMap<String, i64>,
         heads: &[String],
         excludes: &[String],
+        low_gen_num_checker: &LowGenNumChecker,
     ) -> Result<(PartialGetBundle, Params), Error> {
         let params = generate_params(&ctx, &repo, &commit_map, &heads, &excludes).await?;
 
@@ -716,6 +775,7 @@ mod test {
                     &repo.get_changeset_fetcher(),
                     params.heads.clone(),
                     params.excludes.clone(),
+                    low_gen_num_checker,
                 )
                 .await?;
                 Result::<_, Error>::Ok(res)

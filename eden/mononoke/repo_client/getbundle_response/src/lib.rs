@@ -62,7 +62,7 @@ use tunables::tunables;
 mod errors;
 mod low_gen_nums_optimization;
 use low_gen_nums_optimization::{
-    compute_partial_getbundle, has_low_gen_num, low_gen_num_optimization,
+    compute_partial_getbundle, low_gen_num_optimization, LowGenNumChecker,
 };
 
 pub const MAX_FILENODE_BYTES_IN_MEMORY: u64 = 100_000_000;
@@ -282,8 +282,15 @@ async fn find_commits_to_send(
         &heads,
         "Getbundle generation numbers before partial getbundle",
     );
-    let partial_result =
-        compute_partial_getbundle(ctx, &changeset_fetcher, heads, excludes).await?;
+    let low_gen_num_checker = LowGenNumChecker::new_from_tunables();
+    let partial_result = compute_partial_getbundle(
+        ctx,
+        &changeset_fetcher,
+        heads,
+        excludes,
+        &low_gen_num_checker,
+    )
+    .await?;
     heads = partial_result.new_heads;
     excludes = partial_result.new_excludes;
 
@@ -294,8 +301,9 @@ async fn find_commits_to_send(
     );
 
     let params = Params { heads, excludes };
+
     let nodes_to_send = if !tunables().get_getbundle_use_low_gen_optimization()
-        || !has_low_gen_num(lowest_head_gen_num)
+        || !low_gen_num_checker.is_low_gen_num(lowest_head_gen_num)
     {
         call_difference_of_union_of_ancestors_revset(
             &ctx,
@@ -310,8 +318,14 @@ async fn find_commits_to_send(
         ctx.scuba()
             .clone()
             .log_with_msg("Using low generation getbundle optimization", None);
-        let maybe_result =
-            low_gen_num_optimization(&ctx, &changeset_fetcher, params.clone(), &lca_hint).await?;
+        let maybe_result = low_gen_num_optimization(
+            &ctx,
+            &changeset_fetcher,
+            params.clone(),
+            &lca_hint,
+            &low_gen_num_checker,
+        )
+        .await?;
         if let Some(result) = maybe_result {
             result
         } else {
