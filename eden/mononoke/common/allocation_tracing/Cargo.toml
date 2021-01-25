@@ -8,4 +8,4 @@ include = ["src/*.rs"]
 
 [dependencies]
 anyhow = "1.0"
-futures-old = { package = "futures", version = "0.1" }
+futures-old = { package = "futures", version = "0.1.30" }

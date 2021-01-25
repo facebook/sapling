@@ -29,7 +29,7 @@ fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
+futures-old = { package = "futures", version = "0.1.30" }
 rand = { version = "0.7", features = ["small_rng"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
-tokio = { version = "=0.2.13", features = ["full", "test-util"] }
+tokio = { version = "0.2.24", features = ["full", "test-util"] }

@@ -177,7 +177,7 @@ chrono = { version = "0.4", features = ["serde"] }
 clap = "2.33"
 criterion = "=0.3.1"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
+futures-old = { package = "futures", version = "0.1.30" }
 futures-util = "0.3.7"
 humantime = "1.3"
 itertools = "0.8"
@@ -191,7 +191,7 @@ serde_json = { version = "1.0", features = ["float_roundtrip"] }
 sha2 = "0.8"
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
-tokio = { version = "=0.2.13", features = ["full", "test-util"] }
+tokio = { version = "0.2.24", features = ["full", "test-util"] }
 tokio-compat = "0.1"
 tokio-timer = "0.2"
 tokio-util = { version = "0.2", features = ["codec", "udp"] }

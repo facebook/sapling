@@ -54,7 +54,7 @@ ascii = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
+futures-old = { package = "futures", version = "0.1.30" }
 hex = "0.4"
 lazy_static = "1.0"
 maplit = "1.0"
@@ -63,7 +63,7 @@ quickcheck = "0.9"
 sha2 = "0.8"
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
-tokio = { version = "=0.2.13", features = ["full", "test-util"] }
+tokio = { version = "0.2.24", features = ["full", "test-util"] }
 tokio-old = { package = "tokio", version = "0.1" }
 
 [dev-dependencies]

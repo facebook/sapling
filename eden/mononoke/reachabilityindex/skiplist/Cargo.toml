@@ -24,7 +24,7 @@ futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 maplit = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }
-tokio = { version = "=0.2.13", features = ["full", "test-util"] }
+tokio = { version = "0.2.24", features = ["full", "test-util"] }
 
 [dev-dependencies]
 blobrepo = { path = "../../blobrepo" }
@@ -38,5 +38,5 @@ async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", br
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures-old = { package = "futures", version = "0.1" }
+futures-old = { package = "futures", version = "0.1.30" }
 tokio-compat = "0.1"

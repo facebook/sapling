@@ -22,7 +22,7 @@ futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookex
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
+futures-old = { package = "futures", version = "0.1.30" }
 thiserror = "1.0"
 
 [dev-dependencies]

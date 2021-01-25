@@ -13,4 +13,4 @@ async-trait = "0.1.29"
 maplit = "1.0"
 openssl = "0.10"
 serde = { version = "1.0", features = ["derive", "rc"] }
-tokio = { version = "=0.2.13", features = ["full", "test-util"] }
+tokio = { version = "0.2.24", features = ["full", "test-util"] }

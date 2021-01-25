@@ -46,13 +46,13 @@ anyhow = "1.0"
 ascii = "1.0"
 clap = "2.33"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
+futures-old = { package = "futures", version = "0.1.30" }
 itertools = "0.8"
 maplit = "1.0"
 ref-cast = "1.0.2"
 regex = "1.4.2"
 slog = { version = "2.5", features = ["max_level_debug"] }
-tokio = { version = "=0.2.13", features = ["full", "test-util"] }
+tokio = { version = "0.2.24", features = ["full", "test-util"] }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }

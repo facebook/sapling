@@ -24,13 +24,13 @@ bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 clap = "2.33"
 dns-lookup = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
+futures-old = { package = "futures", version = "0.1.30" }
 futures-util = "0.3.7"
 libc = "0.2"
 openssl = "0.10"
 slog = { version = "2.5", features = ["max_level_debug"] }
 slog-term = "2.4.2"
-tokio = { version = "=0.2.13", features = ["full", "test-util"] }
+tokio = { version = "0.2.24", features = ["full", "test-util"] }
 tokio-openssl = "0.4"
 tokio-util = { version = "0.2", features = ["codec", "udp"] }
 users = "0.9"

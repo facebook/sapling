@@ -30,7 +30,7 @@ futures = { version = "0.3.5", features = ["async-await", "compat"] }
 sha-1 = "0.8"
 sha2 = "0.8"
 thiserror = "1.0"
-tokio = { version = "=0.2.13", features = ["full", "test-util"] }
+tokio = { version = "0.2.24", features = ["full", "test-util"] }
 
 [dev-dependencies]
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
