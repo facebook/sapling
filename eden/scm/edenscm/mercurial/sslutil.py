@@ -363,7 +363,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
                 hint=_("restore missing file or fix references " "in Mercurial config"),
             )
 
-    settings = _hostsettings(ui, serverhostname)
+    settings = _hostsettings(ui, pycompat.ensurestr(serverhostname))
 
     # We can't use ssl.create_default_context() because it calls
     # load_default_certs() unless CA arguments are passed to it. We want to

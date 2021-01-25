@@ -27,8 +27,11 @@ from edenscm.mercurial import (
     hg,
     progress,
     pycompat,
+    httpclient,
+    httpconnection,
     registrar,
     sshpeer,
+    sslutil,
     util,
 )
 from edenscm.mercurial.i18n import _
@@ -143,6 +146,72 @@ def checkhgserver(ui, repo, opts, path):
     return True
 
 
+def checkspeedhttp(ui, url, opts):
+    ui.status(_("Testing connection speed to the server\n"), component="debugnetwork")
+    download = ui.configbytes("debugnetwork", "speed-test-download-size", 10000000)
+    upload = ui.configbytes("debugnetwork", "speed-test-upload-size", 1000000)
+
+    sslvalidator = lambda x: None if opts.get("insecure") else sslutil.validatesocket
+
+    _authdata, auth = httpconnection.readauthforuri(ui, str(url), url.user)
+
+    conn = httpclient.HTTPConnection(
+        url.host,
+        int(url.port),
+        use_ssl=True,
+        ssl_wrap_socket=sslutil.wrapsocket,
+        ssl_validator=sslvalidator,
+        ui=ui,
+        certfile=auth.get("cert"),
+        keyfile=auth.get("key"),
+    )
+
+    def downloadtest(_description, bytecount):
+        headers = {"x-netspeedtest-nbytes": bytecount}
+        conn.request(b"GET", b"/netspeedtest", body=None, headers=headers)
+        starttime = util.timer()
+        res = conn.getresponse()
+        while not res.complete():
+            res.read(length=BLOCK_SIZE)
+        endtime = util.timer()
+
+        return endtime - starttime
+
+    def uploadtest(_description, bytecount):
+        body = bytecount * b"A"
+        starttime = util.timer()
+        conn.request(b"POST", b"/netspeedtest", body=body)
+        res = conn.getresponse()
+        while not res.complete():
+            res.read(length=BLOCK_SIZE)
+        endtime = util.timer()
+        return endtime - starttime
+
+    def latencytest(n):
+        latencies = []
+        while n > 0:
+            conn.request(b"GET", b"/health_check", body=None)
+            starttime = util.timer()
+            res = conn.getresponse()
+            while not res.complete():
+                res.read(length=BLOCK_SIZE)
+            endtime = util.timer()
+            latencies.append(endtime - starttime)
+            n -= 1
+        return latencies
+
+    res = drivespeedtests(
+        ui,
+        (latencytest, 5),
+        (downloadtest, "download", download),
+        (uploadtest, "upload", upload),
+    )
+
+    conn.close()
+
+    return res
+
+
 def checkhgspeed(ui, url, opts):
     speedcmd = ui.config("debugnetwork", "speed-test-command")
     if speedcmd is None:
@@ -237,7 +306,20 @@ def checkhgspeed(ui, url, opts):
             endtime = util.timer()
         return endtime - starttime
 
-    def printresult(testname, bytecount, testtime):
+    return drivespeedtests(
+        ui,
+        (latencytest, 5),
+        (downloadtest, "download", download),
+        (uploadtest, "upload", upload),
+    )
+
+
+def drivespeedtests(ui, latency, upload, download):
+    latencytest, latency_ntests = latency
+    uploadtest, testname, bytecount = upload
+    downloadtest, testname, bytecount = download
+
+    def printspeedresult(testname, bytecount, testtime):
         byterate = bytecount / testtime
         ui.status(
             _("Speed: %s %s in %s (%0.2f Mbit/s, %0.2f MiB/s)\n")
@@ -252,7 +334,7 @@ def checkhgspeed(ui, url, opts):
         )
 
     try:
-        latencies = latencytest(5)
+        latencies = latencytest(latency_ntests)
         latency = sum(latencies, 0) / len(latencies)
         ui.status(
             _("Latency: %s (average of %s round-trips)\n")
@@ -260,10 +342,7 @@ def checkhgspeed(ui, url, opts):
             component="debugnetwork",
         )
 
-        for testfunc, testname, bytecount in [
-            (downloadtest, "download", download),
-            (uploadtest, "upload", upload),
-        ]:
+        for testfunc, testname, bytecount in [upload, download]:
             warmuptime = testfunc("warming up for %s test" % testname, bytecount)
             if warmuptime < 0.2:
                 # The network is sufficiently fast that we warmed up in <200ms.
@@ -273,9 +352,9 @@ def checkhgspeed(ui, url, opts):
                 warmuptime = testfunc(
                     "warming up for large %s test" % testname, bytecount
                 )
-            printresult("(round 1) %sed" % testname, bytecount, warmuptime)
+            printspeedresult("(round 1) %sed" % testname, bytecount, warmuptime)
             testtime = testfunc(testname, bytecount)
-            printresult("(round 2) %sed" % testname, bytecount, testtime)
+            printspeedresult("(round 2) %sed" % testname, bytecount, testtime)
         return True
     except Exception as e:
         ui.warn(_("error testing speed: %s\n") % e)
@@ -302,9 +381,13 @@ def debugnetwork(ui, repo, remote="default", **opts):
     ui.status(_("Remote url: %s\n") % path, component="debugnetwork")
 
     url = util.url(path)
-    if url.scheme != "ssh":
-        ui.status(_("Not checking network as remote is not an ssh peer"))
-        return 1
+
+    if url.scheme == "ssh":
+        checkspeed = checkhgspeed
+        servertype = "Mercurial"
+    else:
+        checkspeed = checkspeedhttp
+        servertype = "Mononoke"
 
     if alltests or opts.get("connection"):
         addrinfos = checkdnsresolution(ui, url)
@@ -318,18 +401,18 @@ def debugnetwork(ui, repo, remote="default", **opts):
             ui.status(msg, component=_("debugnetwork"))
             return 3
 
-        if not checksshcommand(ui, url, opts):
+        if servertype == "Mercurial" and not checksshcommand(ui, url, opts):
             msg = _("Failed to connect to SSH on the server.\n")
             ui.status(msg, component=_("debugnetwork"))
             return 4
 
-        if not checkhgserver(ui, repo, opts, path):
+        if servertype == "Mercurial" and not checkhgserver(ui, repo, opts, path):
             msg = _("Failed to connect to Mercurial on the server.\n")
             ui.status(msg, component=_("debugnetwork"))
             return 5
 
     if alltests or opts.get("speed"):
-        if not checkhgspeed(ui, url, opts):
-            msg = _("Failed to check Mercurial server connection speed.\n")
+        if not checkspeed(ui, url, opts):
+            msg = _("Failed to check %s server connection speed.\n") % servertype
             ui.status(msg, component=_("debugnetwork"))
             return 6
