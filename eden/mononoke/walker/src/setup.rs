@@ -14,6 +14,7 @@ use crate::progress::{
 };
 use crate::sampling::SamplingOptions;
 use crate::state::StepStats;
+use crate::tail::TailParams;
 use crate::validate::{CheckType, REPO, WALK_TYPE};
 use crate::walk::{OutgoingEdge, RepoWalkParams};
 
@@ -56,15 +57,13 @@ use strum_macros::{AsRefStr, EnumString, EnumVariantNames};
 // Per repo things we don't pass into the walk
 pub struct RepoSubcommandParams {
     pub progress_state: ProgressStateMutex<ProgressStateCountByType<StepStats, ProgressSummary>>,
-    pub public_changeset_chunk_by: HashSet<NodeType>,
+    pub tail_params: TailParams,
 }
 
 // These don't vary per repo
 #[derive(Clone)]
 pub struct JobWalkParams {
     pub enable_derive: bool,
-    pub tail_secs: Option<u64>,
-    pub public_changeset_chunk_size: Option<usize>,
     pub quiet: bool,
     pub error_as_data_node_types: HashSet<NodeType>,
     pub error_as_data_edge_types: HashSet<EdgeType>,
@@ -95,6 +94,9 @@ const BOOKMARK_ARG: &str = "bookmark";
 const WALK_ROOT_ARG: &str = "walk-root";
 const CHUNK_BY_PUBLIC_ARG: &str = "chunk-by-public";
 const CHUNK_SIZE_ARG: &str = "chunk-size";
+const INCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG: &str = "include-chunk-clear-node-type";
+const EXCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG: &str = "exclude-chunk-clear-node-type";
+const CHUNK_CLEAR_SAMPLE_RATE_ARG: &str = "chunk-clear-sample-rate";
 const INNER_BLOBSTORE_ID_ARG: &str = "inner-blobstore-id";
 const SCRUB_BLOBSTORE_ACTION_ARG: &str = "scrub-blobstore-action";
 const ENABLE_DERIVE_ARG: &str = "enable-derive";
@@ -599,7 +601,6 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
         .arg(
             Arg::with_name(TAIL_INTERVAL_ARG)
                 .long(TAIL_INTERVAL_ARG)
-                .short("f")
                 .takes_value(true)
                 .required(false)
                 .help("Tail by polling the entry points at interval of TAIL seconds"),
@@ -724,6 +725,36 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("How many changesets to include in a chunk."),
         )
         .arg(
+            Arg::with_name(CHUNK_CLEAR_SAMPLE_RATE_ARG)
+                .long(CHUNK_CLEAR_SAMPLE_RATE_ARG)
+                .short("K")
+                .takes_value(true)
+                .required(false)
+                .help("Clear the saved walk state 1 in N steps."),
+        )
+        .arg(
+            Arg::with_name(INCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG)
+                .long(INCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG)
+                .short("n")
+                .takes_value(true)
+                .required(false)
+                .multiple(false)
+                .number_of_values(1)
+                .possible_values(&NODE_TYPE_POSSIBLE_VALUES)
+                .help("Include in NodeTypes to flush between chunks"),
+        )
+        .arg(
+            Arg::with_name(EXCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG)
+                .long(EXCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG)
+                .short("N")
+                .takes_value(true)
+                .required(false)
+                .multiple(false)
+                .number_of_values(1)
+                .possible_values(&NODE_TYPE_POSSIBLE_VALUES)
+                .help("Exclude from NodeTypes to flush between chunks"),
+        )
+        .arg(
             Arg::with_name(ERROR_AS_DATA_NODE_TYPE_ARG)
                 .long(ERROR_AS_DATA_NODE_TYPE_ARG)
                 .short("e")
@@ -778,6 +809,34 @@ pub fn parse_progress_args(sub_m: &ArgMatches) -> ProgressOptions {
         sample_rate,
         interval: Duration::from_secs(interval_secs),
     }
+}
+
+pub fn parse_tail_args(sub_m: &ArgMatches) -> Result<TailParams, Error> {
+    let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
+
+    let public_changeset_chunk_by = parse_node_values(sub_m.values_of(CHUNK_BY_PUBLIC_ARG), &[])?;
+    let public_changeset_chunk_size = if !public_changeset_chunk_by.is_empty() {
+        args::get_usize_opt(sub_m, CHUNK_SIZE_ARG)
+    } else {
+        None
+    };
+
+    let clear_node_types = parse_node_types(
+        sub_m,
+        INCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG,
+        EXCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG,
+        &[],
+    )?;
+
+    let clear_sample_rate = args::get_u64_opt(&sub_m, CHUNK_CLEAR_SAMPLE_RATE_ARG);
+
+    Ok(TailParams {
+        tail_secs,
+        public_changeset_chunk_size,
+        public_changeset_chunk_by,
+        clear_node_types,
+        clear_sample_rate,
+    })
 }
 
 // parse the pre-defined groups we have for default etc
@@ -919,7 +978,6 @@ pub async fn setup_common<'a>(
     let common_config = cmdlib::args::load_common_config(config_store, &matches)?;
     let scheduled_max = args::get_usize_opt(&sub_m, SCHEDULED_MAX_ARG).unwrap_or(4096) as usize;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, INNER_BLOBSTORE_ID_ARG);
-    let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
     let progress_options = parse_progress_args(sub_m);
 
     let enable_derive = sub_m.is_present(ENABLE_DERIVE_ARG);
@@ -971,15 +1029,9 @@ pub async fn setup_common<'a>(
         walk_roots.append(&mut roots);
     }
 
-    let public_changeset_chunk_by = parse_node_values(sub_m.values_of(CHUNK_BY_PUBLIC_ARG), &[])?;
+    let tail_params = parse_tail_args(sub_m)?;
 
-    let public_changeset_chunk_size = if !public_changeset_chunk_by.is_empty() {
-        args::get_usize_opt(sub_m, CHUNK_SIZE_ARG)
-    } else {
-        None
-    };
-
-    if public_changeset_chunk_by.is_empty() && walk_roots.is_empty() {
+    if tail_params.public_changeset_chunk_by.is_empty() && walk_roots.is_empty() {
         return Err(format_err!(
             "No walk roots provided, pass with  --{}, --{} or --{}",
             BOOKMARK_ARG,
@@ -1147,8 +1199,7 @@ pub async fn setup_common<'a>(
                     repo_count,
                     repo,
                     walk_roots.clone(),
-                    public_changeset_chunk_size,
-                    public_changeset_chunk_by.clone(),
+                    tail_params.clone(),
                     include_edge_types.clone(),
                     include_node_types.clone(),
                     progress_options,
@@ -1162,8 +1213,6 @@ pub async fn setup_common<'a>(
     Ok((
         JobWalkParams {
             enable_derive,
-            tail_secs,
-            public_changeset_chunk_size,
             quiet,
             error_as_data_node_types,
             error_as_data_edge_types,
@@ -1190,8 +1239,7 @@ async fn setup_repo<'a>(
     repo_count: usize,
     resolved: &'a ResolvedRepo,
     walk_roots: Vec<OutgoingEdge>,
-    public_changeset_chunk_size: Option<usize>,
-    mut public_changeset_chunk_by: HashSet<NodeType>,
+    mut tail_params: TailParams,
     include_edge_types: HashSet<EdgeType>,
     mut include_node_types: HashSet<NodeType>,
     progress_options: ProgressOptions,
@@ -1214,7 +1262,7 @@ async fn setup_repo<'a>(
         }
     });
 
-    public_changeset_chunk_by.retain(|t| {
+    tail_params.public_changeset_chunk_by.retain(|t| {
         if let Some(t) = t.derived_data_name() {
             resolved.config.derived_data_config.is_enabled(t)
         } else {
@@ -1224,8 +1272,8 @@ async fn setup_repo<'a>(
 
     let mut root_node_types: HashSet<_> =
         walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
-    if public_changeset_chunk_size.is_some() {
-        root_node_types.extend(public_changeset_chunk_by.iter().cloned());
+    if tail_params.public_changeset_chunk_size.is_some() {
+        root_node_types.extend(tail_params.public_changeset_chunk_by.iter().cloned());
     }
 
     let (include_edge_types, include_node_types) =
@@ -1281,7 +1329,7 @@ async fn setup_repo<'a>(
     Ok((
         RepoSubcommandParams {
             progress_state,
-            public_changeset_chunk_by,
+            tail_params,
         },
         RepoWalkParams {
             repo: repo.await?,

@@ -63,12 +63,21 @@ fn roots_for_chunk(
     Ok(edges)
 }
 
+#[derive(Clone, Debug)]
+pub struct TailParams {
+    pub tail_secs: Option<u64>,
+    pub public_changeset_chunk_size: Option<usize>,
+    pub public_changeset_chunk_by: HashSet<NodeType>,
+    pub clear_node_types: HashSet<NodeType>,
+    pub clear_sample_rate: Option<u64>,
+}
+
 pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, V, VOut, Route>(
     fb: FacebookInit,
     job_params: JobWalkParams,
     mut repo_params: RepoWalkParams,
     type_params: RepoWalkTypeParams,
-    public_changeset_chunk_by: HashSet<NodeType>,
+    tail_params: TailParams,
     visitor: V,
     make_run: RunFac,
 ) -> Result<(), Error>
@@ -81,14 +90,14 @@ where
     Route: 'static + Send + Clone + StepRoute,
 {
     loop {
-        cloned!(job_params, type_params, make_run, visitor);
-        let tail_secs = job_params.tail_secs;
+        cloned!(job_params, tail_params, type_params, make_run, visitor);
+        let tail_secs = tail_params.tail_secs;
         // Each loop get new ctx and thus session id so we can distinguish runs
         let ctx = CoreContext::new_with_logger(fb, repo_params.logger.clone());
         let session_text = ctx.session().metadata().session_id().to_string();
         repo_params.scuba_builder.add("session", session_text);
 
-        let chunk_params = job_params
+        let chunk_params = tail_params
             .public_changeset_chunk_size
             .map(|chunk_size| {
                 // Don't SQL fetch in really small or large chunks
@@ -131,7 +140,8 @@ where
                 let chunk_members = chunk_members?;
                 cloned!(mut repo_params);
                 let extra_roots = visitor.start_chunk(&chunk_members)?.into_iter();
-                let chunk_roots = roots_for_chunk(chunk_members, &public_changeset_chunk_by)?;
+                let chunk_roots =
+                    roots_for_chunk(chunk_members, &tail_params.public_changeset_chunk_by)?;
                 repo_params.walk_roots.extend(chunk_roots);
                 repo_params.walk_roots.extend(extra_roots);
                 Ok(repo_params)

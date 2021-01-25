@@ -779,7 +779,7 @@ async fn run_one(
         job_params,
         repo_params,
         type_params,
-        sub_params.public_changeset_chunk_by,
+        sub_params.tail_params,
         stateful_visitor,
         make_sink,
     )

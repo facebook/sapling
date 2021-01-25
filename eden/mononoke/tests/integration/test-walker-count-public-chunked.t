@@ -77,10 +77,10 @@ derived changeset_info, chunked, deep
   Walking edge types [ChangesetInfoMappingToChangesetInfo, ChangesetInfoToChangesetInfoParent]
   Walking node types [ChangesetInfo, ChangesetInfoMapping]
   Seen,Loaded: 4,4
-  * Type:Walked,Checks,Children ChangesetInfo:2,*,0 ChangesetInfoMapping:2,*,4 (glob)
+  * Type:Walked,Checks,Children ChangesetInfo:2,* ChangesetInfoMapping:2,* (glob)
   Deferred: 1
   Seen,Loaded: 3,3
-  * Type:Walked,Checks,Children ChangesetInfo:4,*,0 ChangesetInfoMapping:3,*,6 (glob)
+  * Type:Walked,Checks,Children ChangesetInfo:4,* ChangesetInfoMapping:3,* (glob)
   Deferred: 0
   Completed in 2 chunks of 2
 
