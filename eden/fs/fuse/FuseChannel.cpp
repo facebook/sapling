@@ -182,7 +182,12 @@ std::string access(FuseArg arg) {
   return format("mask={}", in.mask);
 }
 
-constexpr RenderFn create = default_render;
+std::string create(FuseArg arg) {
+  auto& in = arg.read<fuse_create_in>();
+  auto name = arg.readz();
+  return format("name={}, mode={}", name, in.mode);
+}
+
 constexpr RenderFn bmap = default_render;
 
 std::string batchforget(FuseArg arg) {
