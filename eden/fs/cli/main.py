@@ -1232,6 +1232,12 @@ class RemoveCmd(Subcmd):
             help="Do not prompt for confirmation before removing the checkouts.",
         )
         parser.add_argument(
+            "--preserve-mount-point",
+            default=False,
+            action="store_true",
+            help=argparse.SUPPRESS,
+        )
+        parser.add_argument(
             "paths", nargs="+", metavar="path", help="The Eden checkout(s) to remove"
         )
 
@@ -1300,7 +1306,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                     # ahead delete the mount from the config in this case.
 
             try:
-                instance.destroy_mount(mount)
+                instance.destroy_mount(mount, args.preserve_mount_point)
             except Exception as ex:
                 print_stderr(f"error deleting configuration for {mount}: {ex}")
                 exit_code = 1

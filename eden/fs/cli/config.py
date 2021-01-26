@@ -638,7 +638,9 @@ Do you want to run `eden mount %s` instead?"""
         with self.get_thrift_client_legacy(timeout=15) as client:
             client.unmount(os.fsencode(path))
 
-    def destroy_mount(self, path: Union[Path, str]) -> None:
+    def destroy_mount(
+        self, path: Union[Path, str], preserve_mount_point: bool = False
+    ) -> None:
         """Delete the specified mount point from the configuration file and remove
         the mount directory, if it exists.
 
@@ -662,7 +664,8 @@ Do you want to run `eden mount %s` instead?"""
             except OSError as ex:
                 if ex.errno != errno.ENOENT:
                     raise
-            path.rmdir()
+            if not preserve_mount_point:
+                path.rmdir()
         else:
             # On Windows, the mount point contains ProjectedFS placeholder and
             # files, remove all of them.
