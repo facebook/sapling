@@ -14,18 +14,19 @@
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sed 's/line [0-9]*$/_/' trace
   Process _ Thread _:
-  Start Dur.ms | Name                                       Source
-      5    ... | Run Command                                hgcommands::run _
-               | - pid = 0                                  :
-               | - uid = 0                                  :
-               | - nice = 0                                 :
-               | - args = ["hg","up","26805aba1e600a82e9... :
-               | - parent_pids = []                         :
-               | - parent_names = []                        :
-               | - exit_code = 0                            :
-               | - max_rss = 0                              :
-     10     +5  \ Initialize Python                         hgcommands::hgpython _
-     20     +5  \ import edenscm                            hgcommands::hgpython _
+  Start Dur.ms | Name                                          Source
+      5    ... | Run Command                                   hgcommands::run _
+               | - pid = 0                                     :
+               | - uid = 0                                     :
+               | - nice = 0                                    :
+               | - args = ["hg","up","26805aba1e600a82e9...    :
+               | - parent_pids = []                            :
+               | - parent_names = []                           :
+               | - version = *... : (glob)
+               | - exit_code = 0                               :
+               | - max_rss = 0                                 :
+     10     +5  \ Initialize Python                            hgcommands::hgpython _
+     20     +5  \ import edenscm                               hgcommands::hgpython _
   
   Process _ Thread _:
   Start Dur.ms | Name                             Source
