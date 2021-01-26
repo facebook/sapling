@@ -7,8 +7,8 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-mercurial_types = { path = "../../mercurial/types" }
-mononoke_types = { path = "../../mononoke_types" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 ascii = "1.0"
 bincode = "1.2"
 thiserror = "1.0"

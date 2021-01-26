@@ -7,30 +7,30 @@ license = "GPLv2+"
 include = ["schemas/**/*.sql", "src/**/*.rs"]
 
 [dependencies]
-blobrepo = { path = "../blobrepo" }
-blobrepo_factory = { path = "../blobrepo/factory" }
-blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
-blobstore = { path = "../blobstore" }
-bookmarks = { path = "../bookmarks" }
-cmdlib = { path = "../cmdlib" }
-context = { path = "../server/context" }
-hooks = { path = "../hooks" }
-hooks_content_stores = { path = "../hooks/content-stores" }
-mercurial_bundle_replay_data = { path = "../mercurial/bundle_replay_data" }
-mercurial_bundles = { path = "../mercurial/bundles" }
-mercurial_types = { path = "../mercurial/types" }
-metaconfig_types = { path = "../metaconfig/types" }
-mononoke_types = { path = "../mononoke_types" }
-pushrebase = { path = "../pushrebase" }
-scuba_ext = { path = "../common/scuba_ext" }
-sql_construct = { path = "../common/sql_construct" }
-sql_ext = { path = "../common/rust/sql_ext" }
-unbundle = { path = "../repo_client/unbundle" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../blobrepo", version = "0.1.0" }
+blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
+blobstore = { path = "../blobstore", version = "0.1.0" }
+bookmarks = { path = "../bookmarks", version = "0.1.0" }
+cmdlib = { path = "../cmdlib", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+hooks = { path = "../hooks", version = "0.1.0" }
+hooks_content_stores = { path = "../hooks/content-stores", version = "0.1.0" }
+mercurial_bundle_replay_data = { path = "../mercurial/bundle_replay_data", version = "0.1.0" }
+mercurial_bundles = { path = "../mercurial/bundles", version = "0.1.0" }
+mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
+metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+pushrebase = { path = "../pushrebase", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
+unbundle = { path = "../repo_client/unbundle", version = "0.1.0" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
@@ -42,7 +42,7 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 
 [dev-dependencies]
-mercurial_types-mocks = { path = "../mercurial/types/mocks" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+mercurial_types-mocks = { path = "../mercurial/types/mocks", version = "0.1.0" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
 maplit = "1.0"
 tokio-compat = "0.1"

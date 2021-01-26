@@ -7,16 +7,16 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobstore = { path = "../blobstore" }
-bounded_traversal = { path = "../common/bounded_traversal" }
-context = { path = "../server/context" }
-edenapi_types = { path = "../../scm/lib/edenapi/types" }
-mononoke_types-thrift = { path = "if" }
-xdiff = { path = "../../scm/lib/xdiff" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-sorted_vector_map = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobstore = { path = "../blobstore", version = "0.1.0" }
+bounded_traversal = { path = "../common/bounded_traversal", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+edenapi_types = { path = "../../scm/lib/edenapi/types", version = "0.1.0" }
+mononoke_types-thrift = { path = "if", version = "0.1.0" }
+xdiff = { path = "../../scm/lib/xdiff", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
+sorted_vector_map = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
@@ -39,8 +39,8 @@ smallvec = { version = "1.4.2", features = [ "serde", "specialization", "union" 
 thiserror = "1.0"
 
 [dev-dependencies]
-memblob = { path = "../blobstore/memblob" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+memblob = { path = "../blobstore/memblob", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 maplit = "1.0"
 pretty_assertions = "0.6"
 quickcheck_async = "0.1.1"

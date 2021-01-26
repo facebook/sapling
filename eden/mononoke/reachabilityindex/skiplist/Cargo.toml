@@ -7,15 +7,15 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobstore = { path = "../../blobstore" }
-changeset_fetcher = { path = "../../blobrepo/changeset_fetcher" }
-common = { path = "../common" }
-context = { path = "../../server/context" }
-mononoke_types = { path = "../../mononoke_types" }
-reachabilityindex = { path = ".." }
-skiplist-thrift = { path = "../if" }
-tunables = { path = "../../tunables" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+changeset_fetcher = { path = "../../blobrepo/changeset_fetcher", version = "0.1.0" }
+common = { path = "../common", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+reachabilityindex = { path = "..", version = "0.1.0" }
+skiplist-thrift = { path = "../if", version = "0.1.0" }
+tunables = { path = "../../tunables", version = "0.1.0" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
@@ -27,16 +27,16 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 
 [dev-dependencies]
-blobrepo = { path = "../../blobrepo" }
-blobrepo_factory = { path = "../../blobrepo/factory" }
-bookmarks = { path = "../../bookmarks" }
-fixtures = { path = "../../tests/fixtures" }
-revset = { path = "../../revset" }
-test-helpers = { path = "../test-helpers" }
-tests_utils = { path = "../../tests/utils" }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
+bookmarks = { path = "../../bookmarks", version = "0.1.0" }
+fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
+revset = { path = "../../revset", version = "0.1.0" }
+test-helpers = { path = "../test-helpers", version = "0.1.0" }
+tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures-old = { package = "futures", version = "0.1.30" }
 tokio-compat = "0.1"

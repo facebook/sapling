@@ -7,24 +7,24 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobstore = { path = "../../blobstore" }
-context = { path = "../../server/context" }
-edenapi_types = { path = "../../../scm/lib/edenapi/types" }
-filestore = { path = "../../filestore" }
-manifest = { path = "../../manifest" }
-mercurial-thrift = { path = "if" }
-mononoke_types = { path = "../../mononoke_types" }
-mononoke_types-thrift = { path = "../../mononoke_types/if" }
-types = { path = "../../../scm/lib/types" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sorted_vector_map = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+edenapi_types = { path = "../../../scm/lib/edenapi/types", version = "0.1.0" }
+filestore = { path = "../../filestore", version = "0.1.0" }
+manifest = { path = "../../manifest", version = "0.1.0" }
+mercurial-thrift = { path = "if", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+mononoke_types-thrift = { path = "../../mononoke_types/if", version = "0.1.0" }
+types = { path = "../../../scm/lib/types", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sorted_vector_map = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"

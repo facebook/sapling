@@ -14,29 +14,29 @@ name = "backsyncer_cmd"
 path = "src/main.rs"
 
 [dependencies]
-blobrepo = { path = "../../blobrepo" }
-blobrepo_factory = { path = "../../blobrepo/factory" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
-blobstore_factory = { path = "../../blobstore/factory" }
-bookmarks = { path = "../../bookmarks" }
-cmdlib = { path = "../../cmdlib" }
-cmdlib_x_repo = { path = "../../cmdlib/x_repo" }
-context = { path = "../../server/context" }
-cross_repo_sync = { path = "../cross_repo_sync" }
-live_commit_sync_config = { path = "../live_commit_sync_config" }
-mercurial_types = { path = "../../mercurial/types" }
-metaconfig_types = { path = "../../metaconfig/types" }
-mononoke_types = { path = "../../mononoke_types" }
-mutable_counters = { path = "../../mutable_counters" }
-scuba_ext = { path = "../../common/scuba_ext" }
-sql_construct = { path = "../../common/sql_construct" }
-sql_ext = { path = "../../common/rust/sql_ext" }
-synced_commit_mapping = { path = "../synced_commit_mapping" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
+blobstore_factory = { path = "../../blobstore/factory", version = "0.1.0" }
+bookmarks = { path = "../../bookmarks", version = "0.1.0" }
+cmdlib = { path = "../../cmdlib", version = "0.1.0" }
+cmdlib_x_repo = { path = "../../cmdlib/x_repo", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+cross_repo_sync = { path = "../cross_repo_sync", version = "0.1.0" }
+live_commit_sync_config = { path = "../live_commit_sync_config", version = "0.1.0" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+mutable_counters = { path = "../../mutable_counters", version = "0.1.0" }
+scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
+sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
+synced_commit_mapping = { path = "../synced_commit_mapping", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 clap = "2.33"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
@@ -46,18 +46,18 @@ thiserror = "1.0"
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 
 [dev-dependencies]
-blobrepo_override = { path = "../../blobrepo/override" }
-blobstore = { path = "../../blobstore" }
-bookmark_renaming = { path = "../bookmark_renaming" }
-dbbookmarks = { path = "../../bookmarks/dbbookmarks" }
-filestore = { path = "../../filestore" }
-fixtures = { path = "../../tests/fixtures" }
-manifest = { path = "../../manifest" }
-movers = { path = "../movers" }
-revset = { path = "../../revset" }
-skiplist = { path = "../../reachabilityindex/skiplist" }
-tests_utils = { path = "../../tests/utils" }
-tunables = { path = "../../tunables" }
+blobrepo_override = { path = "../../blobrepo/override", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+bookmark_renaming = { path = "../bookmark_renaming", version = "0.1.0" }
+dbbookmarks = { path = "../../bookmarks/dbbookmarks", version = "0.1.0" }
+filestore = { path = "../../filestore", version = "0.1.0" }
+fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
+manifest = { path = "../../manifest", version = "0.1.0" }
+movers = { path = "../movers", version = "0.1.0" }
+revset = { path = "../../revset", version = "0.1.0" }
+skiplist = { path = "../../reachabilityindex/skiplist", version = "0.1.0" }
+tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+tunables = { path = "../../tunables", version = "0.1.0" }
 assert_matches = "1.3"
 maplit = "1.0"
 pretty_assertions = "0.6"

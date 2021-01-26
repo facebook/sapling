@@ -7,31 +7,31 @@ license = "GPLv2+"
 include = ["**/*.rs"]
 
 [dependencies]
-blobrepo = { path = "../../blobrepo" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
-blobstore = { path = "../../blobstore" }
-bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
-bookmarks = { path = ".." }
-bookmarks_types = { path = "../bookmarks_types" }
-context = { path = "../../server/context" }
-cross_repo_sync = { path = "../../commit_rewriting/cross_repo_sync" }
-derived_data = { path = "../../derived_data" }
-git_mapping_pushrebase_hook = { path = "../../bonsai_git_mapping/git_mapping_pushrebase_hook" }
-globalrev_pushrebase_hook = { path = "../../bonsai_globalrev_mapping/globalrev_pushrebase_hook" }
-hooks = { path = "../../hooks" }
-mercurial_types = { path = "../../mercurial/types" }
-metaconfig_types = { path = "../../metaconfig/types" }
-mononoke_types = { path = "../../mononoke_types" }
-pushrebase = { path = "../../pushrebase" }
-reachabilityindex = { path = "../../reachabilityindex" }
-repo_read_write_status = { path = "../../repo_client/repo_read_write_status" }
-revset = { path = "../../revset" }
-scribe_commit_queue = { path = "../../repo_client/scribe_commit_queue" }
-skeleton_manifest = { path = "../../derived_data/skeleton_manifest" }
-tunables = { path = "../../tunables" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+bonsai_git_mapping = { path = "../../bonsai_git_mapping", version = "0.1.0" }
+bookmarks = { path = "..", version = "0.1.0" }
+bookmarks_types = { path = "../bookmarks_types", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+cross_repo_sync = { path = "../../commit_rewriting/cross_repo_sync", version = "0.1.0" }
+derived_data = { path = "../../derived_data", version = "0.1.0" }
+git_mapping_pushrebase_hook = { path = "../../bonsai_git_mapping/git_mapping_pushrebase_hook", version = "0.1.0" }
+globalrev_pushrebase_hook = { path = "../../bonsai_globalrev_mapping/globalrev_pushrebase_hook", version = "0.1.0" }
+hooks = { path = "../../hooks", version = "0.1.0" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+pushrebase = { path = "../../pushrebase", version = "0.1.0" }
+reachabilityindex = { path = "../../reachabilityindex", version = "0.1.0" }
+repo_read_write_status = { path = "../../repo_client/repo_read_write_status", version = "0.1.0" }
+revset = { path = "../../revset", version = "0.1.0" }
+scribe_commit_queue = { path = "../../repo_client/scribe_commit_queue", version = "0.1.0" }
+skeleton_manifest = { path = "../../derived_data/skeleton_manifest", version = "0.1.0" }
+tunables = { path = "../../tunables", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
@@ -42,10 +42,10 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 
 [dev-dependencies]
-blobrepo_factory = { path = "../../blobrepo/factory" }
-mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
-tests_utils = { path = "../../tests/utils" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
+mononoke_types-mocks = { path = "../../mononoke_types/mocks", version = "0.1.0" }
+tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 maplit = "1.0"
 tokio-compat = "0.1"

@@ -7,9 +7,9 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-tunables-derive = { path = "tunables-derive" }
-tunables_structs = { path = "../../../configerator/structs/scm/mononoke/tunables" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+tunables-derive = { path = "tunables-derive", version = "0.1.0" }
+tunables_structs = { path = "../../../configerator/structs/scm/mononoke/tunables", version = "0.1.0" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 arc-swap = "1.1"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
@@ -18,5 +18,5 @@ serde_json = { version = "1.0", features = ["float_roundtrip"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 
 [dev-dependencies]
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tokio-compat = "0.1"

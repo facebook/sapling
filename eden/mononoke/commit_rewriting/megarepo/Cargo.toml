@@ -14,34 +14,34 @@ name = "megarepotool"
 path = "tool/main.rs"
 
 [dependencies]
-blobrepo = { path = "../../blobrepo" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
-blobrepo_utils = { path = "../../blobrepo_utils" }
-blobstore = { path = "../../blobstore" }
-bookmarks = { path = "../../bookmarks" }
-cmdlib = { path = "../../cmdlib" }
-cmdlib_x_repo = { path = "../../cmdlib/x_repo" }
-context = { path = "../../server/context" }
-cross_repo_sync = { path = "../cross_repo_sync" }
-derived_data = { path = "../../derived_data" }
-live_commit_sync_config = { path = "../live_commit_sync_config" }
-manifest = { path = "../../manifest" }
-mercurial_types = { path = "../../mercurial/types" }
-metaconfig_types = { path = "../../metaconfig/types" }
-mononoke_types = { path = "../../mononoke_types" }
-movers = { path = "../movers" }
-pushrebase = { path = "../../pushrebase" }
-reachabilityindex = { path = "../../reachabilityindex" }
-revset = { path = "../../revset" }
-skiplist = { path = "../../reachabilityindex/skiplist" }
-sql_ext = { path = "../../common/rust/sql_ext" }
-synced_commit_mapping = { path = "../synced_commit_mapping" }
-unodes = { path = "../../derived_data/unodes" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
+blobrepo_utils = { path = "../../blobrepo_utils", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+bookmarks = { path = "../../bookmarks", version = "0.1.0" }
+cmdlib = { path = "../../cmdlib", version = "0.1.0" }
+cmdlib_x_repo = { path = "../../cmdlib/x_repo", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+cross_repo_sync = { path = "../cross_repo_sync", version = "0.1.0" }
+derived_data = { path = "../../derived_data", version = "0.1.0" }
+live_commit_sync_config = { path = "../live_commit_sync_config", version = "0.1.0" }
+manifest = { path = "../../manifest", version = "0.1.0" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+movers = { path = "../movers", version = "0.1.0" }
+pushrebase = { path = "../../pushrebase", version = "0.1.0" }
+reachabilityindex = { path = "../../reachabilityindex", version = "0.1.0" }
+revset = { path = "../../revset", version = "0.1.0" }
+skiplist = { path = "../../reachabilityindex/skiplist", version = "0.1.0" }
+sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
+synced_commit_mapping = { path = "../synced_commit_mapping", version = "0.1.0" }
+unodes = { path = "../../derived_data/unodes", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 ascii = "1.0"
 clap = "2.33"
@@ -55,9 +55,9 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 
 [dev-dependencies]
-blobrepo_factory = { path = "../../blobrepo/factory" }
-cross_repo_sync_test_utils = { path = "../cross_repo_sync/test_utils" }
-fixtures = { path = "../../tests/fixtures" }
-tests_utils = { path = "../../tests/utils" }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
+cross_repo_sync_test_utils = { path = "../cross_repo_sync/test_utils", version = "0.1.0" }
+fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
+tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tokio-compat = "0.1"

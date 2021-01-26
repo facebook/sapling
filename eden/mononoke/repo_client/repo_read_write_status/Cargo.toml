@@ -7,14 +7,14 @@ license = "GPLv2+"
 include = ["../schemas/**/*.sql", "src/**/*.rs"]
 
 [dependencies]
-metaconfig_types = { path = "../../metaconfig/types" }
-sql_construct = { path = "../../common/sql_construct" }
-sql_ext = { path = "../../common/rust/sql_ext" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
+sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 futures-old = { package = "futures", version = "0.1.30" }
 
 [dev-dependencies]
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }

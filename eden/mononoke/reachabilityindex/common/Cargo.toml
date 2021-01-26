@@ -7,9 +7,9 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-changeset_fetcher = { path = "../../blobrepo/changeset_fetcher" }
-context = { path = "../../server/context" }
-mononoke_types = { path = "../../mononoke_types" }
-reachabilityindex = { path = ".." }
+changeset_fetcher = { path = "../../blobrepo/changeset_fetcher", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+reachabilityindex = { path = "..", version = "0.1.0" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }

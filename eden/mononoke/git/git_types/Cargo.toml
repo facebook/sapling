@@ -7,17 +7,17 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobrepo = { path = "../../blobrepo" }
-blobstore = { path = "../../blobstore" }
-context = { path = "../../server/context" }
-derived_data = { path = "../../derived_data" }
-filestore = { path = "../../filestore" }
-git-types-thrift = { path = "if" }
-manifest = { path = "../../manifest" }
-mononoke_types = { path = "../../mononoke_types" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+derived_data = { path = "../../derived_data", version = "0.1.0" }
+filestore = { path = "../../filestore", version = "0.1.0" }
+git-types-thrift = { path = "if", version = "0.1.0" }
+manifest = { path = "../../manifest", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 digest = "0.8"
@@ -26,8 +26,8 @@ sha-1 = "0.8"
 thiserror = "1.0"
 
 [dev-dependencies]
-fixtures = { path = "../../tests/fixtures" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures-util = "0.3.7"
 git2 = "0.13"
 tempdir = "0.3"

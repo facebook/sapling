@@ -7,10 +7,10 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobrepo = { path = "../../blobrepo" }
-context = { path = "../../server/context" }
-hooks = { path = ".." }
-hooks_content_stores = { path = "../content-stores" }
-metaconfig_types = { path = "../../metaconfig/types" }
-scuba_ext = { path = "../../common/scuba_ext" }
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+hooks = { path = "..", version = "0.1.0" }
+hooks_content_stores = { path = "../content-stores", version = "0.1.0" }
+metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
+scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
 anyhow = "1.0"

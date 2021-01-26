@@ -7,10 +7,10 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-permission_checker = { path = "../permission_checker" }
-scuba_ext = { path = "../common/scuba_ext" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+permission_checker = { path = "../permission_checker", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-compression = { version = "0.3", features = ["all"] }
 async-trait = "0.1.29"

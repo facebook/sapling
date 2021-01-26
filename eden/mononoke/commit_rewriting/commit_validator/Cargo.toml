@@ -7,33 +7,33 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobrepo = { path = "../../blobrepo" }
-blobrepo_factory = { path = "../../blobrepo/factory" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
-blobstore = { path = "../../blobstore" }
-bookmarks = { path = "../../bookmarks" }
-cmdlib = { path = "../../cmdlib" }
-context = { path = "../../server/context" }
-cross_repo_sync = { path = "../cross_repo_sync" }
-live_commit_sync_config = { path = "../live_commit_sync_config" }
-manifest = { path = "../../manifest" }
-mercurial_types = { path = "../../mercurial/types" }
-metaconfig_types = { path = "../../metaconfig/types" }
-mononoke_types = { path = "../../mononoke_types" }
-movers = { path = "../movers" }
-mutable_counters = { path = "../../mutable_counters" }
-reachabilityindex = { path = "../../reachabilityindex" }
-revset = { path = "../../revset" }
-scuba_ext = { path = "../../common/scuba_ext" }
-skiplist = { path = "../../reachabilityindex/skiplist" }
-sql_construct = { path = "../../common/sql_construct" }
-sql_ext = { path = "../../common/rust/sql_ext" }
-synced_commit_mapping = { path = "../synced_commit_mapping" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+bookmarks = { path = "../../bookmarks", version = "0.1.0" }
+cmdlib = { path = "../../cmdlib", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+cross_repo_sync = { path = "../cross_repo_sync", version = "0.1.0" }
+live_commit_sync_config = { path = "../live_commit_sync_config", version = "0.1.0" }
+manifest = { path = "../../manifest", version = "0.1.0" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+movers = { path = "../movers", version = "0.1.0" }
+mutable_counters = { path = "../../mutable_counters", version = "0.1.0" }
+reachabilityindex = { path = "../../reachabilityindex", version = "0.1.0" }
+revset = { path = "../../revset", version = "0.1.0" }
+scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
+skiplist = { path = "../../reachabilityindex/skiplist", version = "0.1.0" }
+sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
+synced_commit_mapping = { path = "../synced_commit_mapping", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 clap = "2.33"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
@@ -42,7 +42,7 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 
 [dev-dependencies]
-cross_repo_sync_test_utils = { path = "../cross_repo_sync/test_utils" }
-tests_utils = { path = "../../tests/utils" }
+cross_repo_sync_test_utils = { path = "../cross_repo_sync/test_utils", version = "0.1.0" }
+tests_utils = { path = "../../tests/utils", version = "0.1.0" }
 maplit = "1.0"
 tokio-compat = "0.1"

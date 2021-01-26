@@ -7,11 +7,11 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-bookmarks_types = { path = "../../bookmarks/bookmarks_types" }
-metaconfig_types = { path = "../types" }
-mononoke_types = { path = "../../mononoke_types" }
-repos = { path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+bookmarks_types = { path = "../../bookmarks/bookmarks_types", version = "0.1.0" }
+metaconfig_types = { path = "../types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+repos = { path = "../../../../configerator/structs/scm/mononoke/repos/repos", version = "0.1.0" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 ascii = "1.0"
 itertools = "0.8"

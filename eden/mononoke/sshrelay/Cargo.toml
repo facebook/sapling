@@ -7,10 +7,10 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-permission_checker = { path = "../permission_checker" }
-session_id = { path = "../server/session_id" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-netstring = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+permission_checker = { path = "../permission_checker", version = "0.1.0" }
+session_id = { path = "../server/session_id", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+netstring = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }

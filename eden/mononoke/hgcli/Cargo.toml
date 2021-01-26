@@ -7,17 +7,17 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-alpn = { path = "../alpn" }
-permission_checker = { path = "../permission_checker" }
-scuba_ext = { path = "../common/scuba_ext" }
-session_id = { path = "../server/session_id" }
-sshrelay = { path = "../sshrelay" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-hostname = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+alpn = { path = "../alpn", version = "0.1.0" }
+permission_checker = { path = "../permission_checker", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+session_id = { path = "../server/session_id", version = "0.1.0" }
+sshrelay = { path = "../sshrelay", version = "0.1.0" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+hostname = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }

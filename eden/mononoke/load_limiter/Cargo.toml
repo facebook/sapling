@@ -7,9 +7,9 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-limits = { path = "../../../configerator/structs/scm/mononoke/loadshedding" }
-session_id = { path = "../server/session_id" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+limits = { path = "../../../configerator/structs/scm/mononoke/loadshedding", version = "0.1.0" }
+session_id = { path = "../server/session_id", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }

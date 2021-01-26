@@ -7,34 +7,34 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobrepo = { path = "../blobrepo" }
-blobrepo_factory = { path = "../blobrepo/factory" }
-blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
-blobstore = { path = "../blobstore" }
-blobstore_factory = { path = "../blobstore/factory" }
-bookmarks = { path = "../bookmarks" }
-context = { path = "../server/context" }
-mercurial_types = { path = "../mercurial/types" }
-metaconfig_parser = { path = "../metaconfig/parser" }
-metaconfig_types = { path = "../metaconfig/types" }
-mononoke_types = { path = "../mononoke_types" }
-observability = { path = "../observability" }
-scribe_ext = { path = "../common/scribe_ext" }
-scuba_ext = { path = "../common/scuba_ext" }
-slog_ext = { path = "../common/rust/slog_ext" }
-sql_construct = { path = "../common/sql_construct" }
-sql_ext = { path = "../common/rust/sql_ext" }
-tunables = { path = "../tunables" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-panichandler = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-services = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-slog_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../blobrepo", version = "0.1.0" }
+blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
+blobstore = { path = "../blobstore", version = "0.1.0" }
+blobstore_factory = { path = "../blobstore/factory", version = "0.1.0" }
+bookmarks = { path = "../bookmarks", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
+metaconfig_parser = { path = "../metaconfig/parser", version = "0.1.0" }
+metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+observability = { path = "../observability", version = "0.1.0" }
+scribe_ext = { path = "../common/scribe_ext", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+slog_ext = { path = "../common/rust/slog_ext", version = "0.1.0" }
+sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
+tunables = { path = "../tunables", version = "0.1.0" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+panichandler = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+services = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+slog_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 clap = "2.33"
 env_logger = "0.7"

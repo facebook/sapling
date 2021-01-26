@@ -7,13 +7,13 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-bookmarks = { path = "../../bookmarks" }
-metaconfig_types = { path = "../../metaconfig/types" }
-mononoke_types = { path = "../../mononoke_types" }
+bookmarks = { path = "../../bookmarks", version = "0.1.0" }
+metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 anyhow = "1.0"
 ascii = "1.0"
 thiserror = "1.0"
 
 [dev-dependencies]
-mercurial_types = { path = "../../mercurial/types" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
 maplit = "1.0"

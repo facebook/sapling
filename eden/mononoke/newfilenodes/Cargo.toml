@@ -7,25 +7,25 @@ license = "GPLv2+"
 include = ["schemas/**/*.sql", "src/**/*.rs"]
 
 [dependencies]
-caching_ext = { path = "../common/rust/caching_ext" }
-context = { path = "../server/context" }
-filenodes = { path = "../filenodes" }
-mercurial_types = { path = "../mercurial/types" }
-metaconfig_types = { path = "../metaconfig/types" }
-mononoke_types = { path = "../mononoke_types" }
-sql_construct = { path = "../common/sql_construct" }
-sql_ext = { path = "../common/rust/sql_ext" }
-tunables = { path = "../tunables" }
-cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+caching_ext = { path = "../common/rust/caching_ext", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+filenodes = { path = "../filenodes", version = "0.1.0" }
+mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
+metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
+tunables = { path = "../tunables", version = "0.1.0" }
+cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
@@ -39,7 +39,7 @@ thiserror = "1.0"
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 
 [dev-dependencies]
-mercurial_types-mocks = { path = "../mercurial/types/mocks" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+mercurial_types-mocks = { path = "../mercurial/types/mocks", version = "0.1.0" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
 maplit = "1.0"
 tokio-compat = "0.1"

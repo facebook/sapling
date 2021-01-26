@@ -7,18 +7,18 @@ license = "GPLv2+"
 include = ["schemas/**/*.sql", "src/**/*.rs"]
 
 [dependencies]
-caching_ext = { path = "../common/rust/caching_ext" }
-changeset-entry-thrift = { path = "if" }
-context = { path = "../server/context" }
-mononoke_types = { path = "../mononoke_types" }
-sql_construct = { path = "../common/sql_construct" }
-sql_ext = { path = "../common/rust/sql_ext" }
-cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+caching_ext = { path = "../common/rust/caching_ext", version = "0.1.0" }
+changeset-entry-thrift = { path = "if", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
+cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
+memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
@@ -30,6 +30,6 @@ maplit = "1.0"
 thiserror = "1.0"
 
 [dev-dependencies]
-mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
 assert_matches = "1.3"
 tokio-compat = "0.1"

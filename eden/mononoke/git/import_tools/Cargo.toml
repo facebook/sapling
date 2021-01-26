@@ -7,21 +7,21 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobrepo = { path = "../../blobrepo" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
-blobstore = { path = "../../blobstore" }
-bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
-changesets = { path = "../../changesets" }
-context = { path = "../../server/context" }
-derived_data = { path = "../../derived_data" }
-filestore = { path = "../../filestore" }
-git_types = { path = "../git_types" }
-manifest = { path = "../../manifest" }
-mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data" }
-mercurial_types = { path = "../../mercurial/types" }
-mononoke_types = { path = "../../mononoke_types" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+bonsai_git_mapping = { path = "../../bonsai_git_mapping", version = "0.1.0" }
+changesets = { path = "../../changesets", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+derived_data = { path = "../../derived_data", version = "0.1.0" }
+filestore = { path = "../../filestore", version = "0.1.0" }
+git_types = { path = "../git_types", version = "0.1.0" }
+manifest = { path = "../../manifest", version = "0.1.0" }
+mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data", version = "0.1.0" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }

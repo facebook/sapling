@@ -7,9 +7,9 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-mercurial_types = { path = "../../mercurial/types" }
-metaconfig_types = { path = "../../metaconfig/types" }
-mononoke_types = { path = "../../mononoke_types" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 anyhow = "1.0"
 itertools = "0.8"
 thiserror = "1.0"

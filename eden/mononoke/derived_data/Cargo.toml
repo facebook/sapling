@@ -7,21 +7,21 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobrepo = { path = "../blobrepo" }
-blobstore = { path = "../blobstore" }
-bounded_traversal = { path = "../common/bounded_traversal" }
-cacheblob = { path = "../blobstore/cacheblob" }
-context = { path = "../server/context" }
-metaconfig_types = { path = "../metaconfig/types" }
-mononoke_types = { path = "../mononoke_types" }
-scuba_ext = { path = "../common/scuba_ext" }
-topo_sort = { path = "../common/topo_sort" }
-tunables = { path = "../tunables" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../blobrepo", version = "0.1.0" }
+blobstore = { path = "../blobstore", version = "0.1.0" }
+bounded_traversal = { path = "../common/bounded_traversal", version = "0.1.0" }
+cacheblob = { path = "../blobstore/cacheblob", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+topo_sort = { path = "../common/topo_sort", version = "0.1.0" }
+tunables = { path = "../tunables", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 auto_impl = "0.4"
@@ -33,17 +33,17 @@ thiserror = "1.0"
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 
 [dev-dependencies]
-blobrepo_factory = { path = "../blobrepo/factory" }
-blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
-blobrepo_override = { path = "../blobrepo/override" }
-bookmarks = { path = "../bookmarks" }
-filestore = { path = "../filestore" }
-fixtures = { path = "../tests/fixtures" }
-mercurial_types = { path = "../mercurial/types" }
-revset = { path = "../revset" }
-tests_utils = { path = "../tests/utils" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
+blobrepo_override = { path = "../blobrepo/override", version = "0.1.0" }
+bookmarks = { path = "../bookmarks", version = "0.1.0" }
+filestore = { path = "../filestore", version = "0.1.0" }
+fixtures = { path = "../tests/fixtures", version = "0.1.0" }
+mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
+revset = { path = "../revset", version = "0.1.0" }
+tests_utils = { path = "../tests/utils", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 lazy_static = "1.0"
 maplit = "1.0"
 tokio-compat = "0.1"

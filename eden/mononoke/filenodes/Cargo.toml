@@ -7,10 +7,10 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-context = { path = "../server/context" }
-filenodes-if = { path = "if" }
-mercurial_types = { path = "../mercurial/types" }
-mononoke_types = { path = "../mononoke_types" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { path = "../server/context", version = "0.1.0" }
+filenodes-if = { path = "if", version = "0.1.0" }
+mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 quickcheck = "0.9"

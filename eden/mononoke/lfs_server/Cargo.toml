@@ -7,28 +7,28 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobrepo = { path = "../blobrepo" }
-blobrepo_factory = { path = "../blobrepo/factory" }
-blobstore = { path = "../blobstore" }
-cmdlib = { path = "../cmdlib" }
-context = { path = "../server/context" }
-filestore = { path = "../filestore" }
-gotham_ext = { path = "../gotham_ext" }
-lfs_protocol = { path = "../lfs_protocol" }
-lfs_server_config = { path = "../../../configerator/structs/scm/mononoke/lfs_server" }
-metaconfig_parser = { path = "../metaconfig/parser" }
-metaconfig_types = { path = "../metaconfig/types" }
-mononoke_types = { path = "../mononoke_types" }
-permission_checker = { path = "../permission_checker" }
-redactedblobstore = { path = "../blobstore/redactedblobstore" }
-scuba_ext = { path = "../common/scuba_ext" }
-time_window_counter = { path = "../time_window_counter" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../blobrepo", version = "0.1.0" }
+blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
+blobstore = { path = "../blobstore", version = "0.1.0" }
+cmdlib = { path = "../cmdlib", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+filestore = { path = "../filestore", version = "0.1.0" }
+gotham_ext = { path = "../gotham_ext", version = "0.1.0" }
+lfs_protocol = { path = "../lfs_protocol", version = "0.1.0" }
+lfs_server_config = { path = "../../../configerator/structs/scm/mononoke/lfs_server", version = "0.1.0" }
+metaconfig_parser = { path = "../metaconfig/parser", version = "0.1.0" }
+metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+permission_checker = { path = "../permission_checker", version = "0.1.0" }
+redactedblobstore = { path = "../blobstore/redactedblobstore", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+time_window_counter = { path = "../time_window_counter", version = "0.1.0" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
@@ -53,7 +53,7 @@ tokio = { version = "0.2.24", features = ["full", "test-util"] }
 tokio-openssl = "0.4"
 
 [dev-dependencies]
-blobrepo_override = { path = "../blobrepo/override" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+blobrepo_override = { path = "../blobrepo/override", version = "0.1.0" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
 pretty_assertions = "0.6"
 tokio-compat = "0.1"

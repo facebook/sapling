@@ -14,8 +14,8 @@ name = "blobstore_test"
 path = "test/main.rs"
 
 [dependencies]
-context = { path = "../server/context" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { path = "../server/context", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
@@ -31,13 +31,13 @@ thiserror = "1.0"
 zstd = "=0.5.3+zstd.1.4.5"
 
 [dev-dependencies]
-cacheblob = { path = "cacheblob" }
-fileblob = { path = "fileblob" }
-memblob = { path = "memblob" }
-mononoke_types = { path = "../mononoke_types" }
-sqlblob = { path = "sqlblob" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cacheblob = { path = "cacheblob", version = "0.1.0" }
+fileblob = { path = "fileblob", version = "0.1.0" }
+memblob = { path = "memblob", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+sqlblob = { path = "sqlblob", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tempdir = "0.3"
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 tokio-compat = "0.1"

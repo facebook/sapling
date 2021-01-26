@@ -10,21 +10,21 @@ include = ["**/*.rs"]
 path = "lib.rs"
 
 [dependencies]
-bonsai_git_mapping = { path = ".." }
-bookmarks = { path = "../../bookmarks" }
-context = { path = "../../server/context" }
-mononoke_types = { path = "../../mononoke_types" }
-pushrebase = { path = "../../pushrebase" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+bonsai_git_mapping = { path = "..", version = "0.1.0" }
+bookmarks = { path = "../../bookmarks", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+pushrebase = { path = "../../pushrebase", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 
 [dev-dependencies]
-blobrepo_factory = { path = "../../blobrepo/factory" }
-blobstore = { path = "../../blobstore" }
-mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
-tests_utils = { path = "../../tests/utils" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+mononoke_types-mocks = { path = "../../mononoke_types/mocks", version = "0.1.0" }
+tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 maplit = "1.0"
 tokio-compat = "0.1"

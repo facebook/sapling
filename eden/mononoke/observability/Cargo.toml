@@ -7,8 +7,8 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-observability_config = { path = "../../../configerator/structs/scm/mononoke/observability" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+observability_config = { path = "../../../configerator/structs/scm/mononoke/observability", version = "0.1.0" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }

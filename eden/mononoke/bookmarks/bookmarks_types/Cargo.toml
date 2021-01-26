@@ -7,8 +7,8 @@ license = "GPLv2+"
 include = ["**/*.rs"]
 
 [dependencies]
-ascii_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+ascii_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 ascii = "1.0"
 quickcheck = "0.9"

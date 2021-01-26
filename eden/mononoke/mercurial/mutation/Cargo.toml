@@ -14,14 +14,14 @@ name = "mercurial_mutation_test"
 path = "test/main.rs"
 
 [dependencies]
-context = { path = "../../server/context" }
-mercurial_types = { path = "../types" }
-metaconfig_types = { path = "../../metaconfig/types" }
-mononoke_types = { path = "../../mononoke_types" }
-sql_construct = { path = "../../common/sql_construct" }
-sql_ext = { path = "../../common/rust/sql_ext" }
-types = { path = "../../../scm/lib/types" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { path = "../../server/context", version = "0.1.0" }
+mercurial_types = { path = "../types", version = "0.1.0" }
+metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
+types = { path = "../../../scm/lib/types", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
@@ -30,8 +30,8 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 smallvec = { version = "1.4.2", features = [ "serde", "specialization", "union" ] }
 
 [dev-dependencies]
-mercurial_types-mocks = { path = "../types/mocks" }
-mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+mercurial_types-mocks = { path = "../types/mocks", version = "0.1.0" }
+mononoke_types-mocks = { path = "../../mononoke_types/mocks", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 maplit = "1.0"
 tokio-compat = "0.1"

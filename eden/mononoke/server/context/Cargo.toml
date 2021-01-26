@@ -15,15 +15,15 @@ path = "benchmark/main.rs"
 doc = false
 
 [dependencies]
-async_limiter = { path = "../../common/async_limiter" }
-load_limiter = { path = "../../load_limiter" }
-scribe_ext = { path = "../../common/scribe_ext" }
-scuba_ext = { path = "../../common/scuba_ext" }
-session_id = { path = "../session_id" }
-sshrelay = { path = "../../sshrelay" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+async_limiter = { path = "../../common/async_limiter", version = "0.1.0" }
+load_limiter = { path = "../../load_limiter", version = "0.1.0" }
+scribe_ext = { path = "../../common/scribe_ext", version = "0.1.0" }
+scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
+session_id = { path = "../session_id", version = "0.1.0" }
+sshrelay = { path = "../../sshrelay", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 futures = "0.1.30"

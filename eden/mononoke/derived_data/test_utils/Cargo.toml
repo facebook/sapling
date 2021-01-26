@@ -10,13 +10,13 @@ include = ["*.rs"]
 path = "lib.rs"
 
 [dependencies]
-blobrepo = { path = "../../blobrepo" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
-blobstore = { path = "../../blobstore" }
-bounded_traversal = { path = "../../common/bounded_traversal" }
-context = { path = "../../server/context" }
-manifest = { path = "../../manifest" }
-mercurial_types = { path = "../../mercurial/types" }
-mononoke_types = { path = "../../mononoke_types" }
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+bounded_traversal = { path = "../../common/bounded_traversal", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+manifest = { path = "../../manifest", version = "0.1.0" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }

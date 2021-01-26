@@ -10,10 +10,10 @@ include = ["**/*.rs"]
 path = "lib.rs"
 
 [dependencies]
-lz4-pyframe = { path = "../../../scm/lib/lz4-pyframe" }
-mercurial_types = { path = "../types" }
-mononoke_types-thrift = { path = "../../mononoke_types/if" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+lz4-pyframe = { path = "../../../scm/lib/lz4-pyframe", version = "0.1.0" }
+mercurial_types = { path = "../types", version = "0.1.0" }
+mononoke_types-thrift = { path = "../../mononoke_types/if", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 ascii = "1.0"
 bitflags = "1.2"
@@ -25,6 +25,6 @@ nom = { version = "3", features = [ "verbose-errors" ] }
 thiserror = "1.0"
 
 [dev-dependencies]
-mercurial_types-mocks = { path = "../types/mocks" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+mercurial_types-mocks = { path = "../types/mocks", version = "0.1.0" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 assert_matches = "1.3"

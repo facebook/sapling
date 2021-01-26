@@ -7,19 +7,19 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobrepo_override = { path = "../../blobrepo/override" }
-blobstore = { path = "../../blobstore" }
-bonsai_hg_mapping = { path = "../../bonsai_hg_mapping" }
-cacheblob = { path = "../../blobstore/cacheblob" }
-changesets = { path = "../../changesets" }
-cmdlib = { path = "../../cmdlib" }
-context = { path = "../../server/context" }
-import_tools = { path = "../import_tools" }
-mercurial_types = { path = "../../mercurial/types" }
-mononoke_types = { path = "../../mononoke_types" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo_override = { path = "../../blobrepo/override", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+bonsai_hg_mapping = { path = "../../bonsai_hg_mapping", version = "0.1.0" }
+cacheblob = { path = "../../blobstore/cacheblob", version = "0.1.0" }
+changesets = { path = "../../changesets", version = "0.1.0" }
+cmdlib = { path = "../../cmdlib", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+import_tools = { path = "../import_tools", version = "0.1.0" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 clap = "2.33"

@@ -7,15 +7,15 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobrepo = { path = "../../blobrepo" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
-context = { path = "../../server/context" }
-fixtures = { path = "../../tests/fixtures" }
-mercurial_types = { path = "../../mercurial/types" }
-mononoke_types = { path = "../../mononoke_types" }
-reachabilityindex = { path = ".." }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+reachabilityindex = { path = "..", version = "0.1.0" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 
 [dev-dependencies]
-common = { path = "../common" }
+common = { path = "../common", version = "0.1.0" }

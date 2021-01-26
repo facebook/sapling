@@ -7,12 +7,12 @@ license = "GPLv2+"
 include = ["src/*.rs"]
 
 [dependencies]
-blobstore = { path = "../blobstore" }
-bounded_traversal = { path = "../common/bounded_traversal" }
-context = { path = "../server/context" }
-mononoke_types = { path = "../mononoke_types" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobstore = { path = "../blobstore", version = "0.1.0" }
+bounded_traversal = { path = "../common/bounded_traversal", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-stream = "0.3"
 async-trait = "0.1.29"
@@ -22,8 +22,8 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = "1.0"
 
 [dev-dependencies]
-memblob = { path = "../blobstore/memblob" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+memblob = { path = "../blobstore/memblob", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 pretty_assertions = "0.6"
 serde_cbor = "0.11"
 tokio = { version = "0.2.24", features = ["full", "test-util"] }

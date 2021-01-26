@@ -10,7 +10,7 @@ include = ["src/**/*.rs"]
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 
 [dev-dependencies]
-lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 maplit = "1.0"
 pretty_assertions = "0.6"

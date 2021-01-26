@@ -7,9 +7,9 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-mercurial_bundles = { path = "../../mercurial/bundles" }
-mercurial_revlog = { path = "../../mercurial/revlog" }
-mercurial_types = { path = "../../mercurial/types" }
+mercurial_bundles = { path = "../../mercurial/bundles", version = "0.1.0" }
+mercurial_revlog = { path = "../../mercurial/revlog", version = "0.1.0" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
@@ -17,5 +17,5 @@ futures-old = { package = "futures", version = "0.1.30" }
 thiserror = "1.0"
 
 [dev-dependencies]
-mercurial_types-mocks = { path = "../../mercurial/types/mocks" }
+mercurial_types-mocks = { path = "../../mercurial/types/mocks", version = "0.1.0" }
 maplit = "1.0"

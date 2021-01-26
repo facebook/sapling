@@ -7,14 +7,14 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-changeset_fetcher = { path = "../blobrepo/changeset_fetcher" }
-context = { path = "../server/context" }
-mercurial_types = { path = "../mercurial/types" }
-mononoke_types = { path = "../mononoke_types" }
-reachabilityindex = { path = "../reachabilityindex" }
-uniqueheap = { path = "../common/uniqueheap" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+changeset_fetcher = { path = "../blobrepo/changeset_fetcher", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+reachabilityindex = { path = "../reachabilityindex", version = "0.1.0" }
+uniqueheap = { path = "../common/uniqueheap", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
@@ -23,14 +23,14 @@ maplit = "1.0"
 thiserror = "1.0"
 
 [dev-dependencies]
-blobrepo = { path = "../blobrepo" }
-blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
-fixtures = { path = "../tests/fixtures" }
-revset_test_helper = { path = "revset-test-helper" }
-skiplist = { path = "../reachabilityindex/skiplist" }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../blobrepo", version = "0.1.0" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
+fixtures = { path = "../tests/fixtures", version = "0.1.0" }
+revset_test_helper = { path = "revset-test-helper", version = "0.1.0" }
+skiplist = { path = "../reachabilityindex/skiplist", version = "0.1.0" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 ascii = "1.0"
 async-trait = "0.1.29"
 quickcheck = "0.9"

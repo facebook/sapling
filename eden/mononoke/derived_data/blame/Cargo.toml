@@ -10,15 +10,15 @@ include = ["*.rs"]
 path = "lib.rs"
 
 [dependencies]
-blobrepo = { path = "../../blobrepo" }
-blobstore = { path = "../../blobstore" }
-context = { path = "../../server/context" }
-derived_data = { path = ".." }
-filestore = { path = "../../filestore" }
-manifest = { path = "../../manifest" }
-mononoke_types = { path = "../../mononoke_types" }
-unodes = { path = "../unodes" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+derived_data = { path = "..", version = "0.1.0" }
+filestore = { path = "../../filestore", version = "0.1.0" }
+manifest = { path = "../../manifest", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+unodes = { path = "../unodes", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
@@ -27,11 +27,11 @@ thiserror = "1.0"
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 
 [dev-dependencies]
-blobrepo_factory = { path = "../../blobrepo/factory" }
-blobrepo_override = { path = "../../blobrepo/override" }
-metaconfig_types = { path = "../../metaconfig/types" }
-tests_utils = { path = "../../tests/utils" }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
+blobrepo_override = { path = "../../blobrepo/override", version = "0.1.0" }
+metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
+tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 maplit = "1.0"

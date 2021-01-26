@@ -7,15 +7,15 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-blobrepo = { path = ".." }
-blobstore = { path = "../../blobstore" }
-context = { path = "../../server/context" }
-filenodes = { path = "../../filenodes" }
-manifest = { path = "../../manifest" }
-mercurial_types = { path = "../../mercurial/types" }
-mononoke_types = { path = "../../mononoke_types" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "..", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+filenodes = { path = "../../filenodes", version = "0.1.0" }
+manifest = { path = "../../manifest", version = "0.1.0" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 maplit = "1.0"

@@ -10,19 +10,19 @@ include = ["*.rs"]
 path = "lib.rs"
 
 [dependencies]
-blobrepo = { path = "../../blobrepo" }
-blobstore = { path = "../../blobstore" }
-context = { path = "../../server/context" }
-deleted_files_manifest = { path = "../deleted_files_manifest" }
-derived_data = { path = ".." }
-manifest = { path = "../../manifest" }
-mononoke_types = { path = "../../mononoke_types" }
-mononoke_types-thrift = { path = "../../mononoke_types/if" }
-unodes = { path = "../unodes" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+deleted_files_manifest = { path = "../deleted_files_manifest", version = "0.1.0" }
+derived_data = { path = "..", version = "0.1.0" }
+manifest = { path = "../../manifest", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+mononoke_types-thrift = { path = "../../mononoke_types/if", version = "0.1.0" }
+unodes = { path = "../unodes", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
@@ -33,17 +33,17 @@ thiserror = "1.0"
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 
 [dev-dependencies]
-benchmark_lib = { path = "../../benchmark" }
-blobrepo_factory = { path = "../../blobrepo/factory" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
-bookmarks = { path = "../../bookmarks" }
-fixtures = { path = "../../tests/fixtures" }
-mercurial_types = { path = "../../mercurial/types" }
-mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
-revset = { path = "../../revset" }
-tests_utils = { path = "../../tests/utils" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+benchmark_lib = { path = "../../benchmark", version = "0.1.0" }
+blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
+bookmarks = { path = "../../bookmarks", version = "0.1.0" }
+fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+mononoke_types-mocks = { path = "../../mononoke_types/mocks", version = "0.1.0" }
+revset = { path = "../../revset", version = "0.1.0" }
+tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 pretty_assertions = "0.6"
 rand = { version = "0.7", features = ["small_rng"] }
 rand_xorshift = "0.2"

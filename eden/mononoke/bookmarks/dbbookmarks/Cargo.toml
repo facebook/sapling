@@ -14,21 +14,21 @@ name = "dbbookmarks_test"
 path = "tests/main.rs"
 
 [dependencies]
-bookmarks = { path = ".." }
-context = { path = "../../server/context" }
-mononoke_types = { path = "../../mononoke_types" }
-sql_construct = { path = "../../common/sql_construct" }
-sql_ext = { path = "../../common/rust/sql_ext" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+bookmarks = { path = "..", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 
 [dev-dependencies]
-mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
-ascii_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+mononoke_types-mocks = { path = "../../mononoke_types/mocks", version = "0.1.0" }
+ascii_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 ascii = "1.0"
 futures-old = { package = "futures", version = "0.1.30" }
 maplit = "1.0"

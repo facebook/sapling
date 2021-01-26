@@ -14,38 +14,38 @@ name = "mononoke_hg_sync_job"
 path = "src/main.rs"
 
 [dependencies]
-blobrepo = { path = "../blobrepo" }
-blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
-blobstore = { path = "../blobstore" }
-bookmarks = { path = "../bookmarks" }
-cmdlib = { path = "../cmdlib" }
-context = { path = "../server/context" }
-dbbookmarks = { path = "../bookmarks/dbbookmarks" }
-filestore = { path = "../filestore" }
-getbundle_response = { path = "../repo_client/getbundle_response" }
-hgserver_config = { path = "../../../configerator/structs/scm/mononoke/hgserverconf" }
-lfs_protocol = { path = "../lfs_protocol" }
-mercurial_bundle_replay_data = { path = "../mercurial/bundle_replay_data" }
-mercurial_bundles = { path = "../mercurial/bundles" }
-mercurial_revlog = { path = "../mercurial/revlog" }
-mercurial_types = { path = "../mercurial/types" }
-metaconfig_types = { path = "../metaconfig/types" }
-mononoke_types = { path = "../mononoke_types" }
-mutable_counters = { path = "../mutable_counters" }
-reachabilityindex = { path = "../reachabilityindex" }
-repo_read_write_status = { path = "../repo_client/repo_read_write_status" }
-revset = { path = "../revset" }
-scuba_ext = { path = "../common/scuba_ext" }
-skiplist = { path = "../reachabilityindex/skiplist" }
-sql_construct = { path = "../common/sql_construct" }
-sql_ext = { path = "../common/rust/sql_ext" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../blobrepo", version = "0.1.0" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
+blobstore = { path = "../blobstore", version = "0.1.0" }
+bookmarks = { path = "../bookmarks", version = "0.1.0" }
+cmdlib = { path = "../cmdlib", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+dbbookmarks = { path = "../bookmarks/dbbookmarks", version = "0.1.0" }
+filestore = { path = "../filestore", version = "0.1.0" }
+getbundle_response = { path = "../repo_client/getbundle_response", version = "0.1.0" }
+hgserver_config = { path = "../../../configerator/structs/scm/mononoke/hgserverconf", version = "0.1.0" }
+lfs_protocol = { path = "../lfs_protocol", version = "0.1.0" }
+mercurial_bundle_replay_data = { path = "../mercurial/bundle_replay_data", version = "0.1.0" }
+mercurial_bundles = { path = "../mercurial/bundles", version = "0.1.0" }
+mercurial_revlog = { path = "../mercurial/revlog", version = "0.1.0" }
+mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
+metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+mutable_counters = { path = "../mutable_counters", version = "0.1.0" }
+reachabilityindex = { path = "../reachabilityindex", version = "0.1.0" }
+repo_read_write_status = { path = "../repo_client/repo_read_write_status", version = "0.1.0" }
+revset = { path = "../revset", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+skiplist = { path = "../reachabilityindex/skiplist", version = "0.1.0" }
+sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-stream = "0.3"
 base64 = "0.11.0"
@@ -72,11 +72,11 @@ tokio-process = "0.2"
 tokio-timer = "0.2"
 
 [dev-dependencies]
-blobrepo_factory = { path = "../blobrepo/factory" }
-bonsai_globalrev_mapping = { path = "../bonsai_globalrev_mapping" }
-mercurial_types-mocks = { path = "../mercurial/types/mocks" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks" }
-tests_utils = { path = "../tests/utils" }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
+bonsai_globalrev_mapping = { path = "../bonsai_globalrev_mapping", version = "0.1.0" }
+mercurial_types-mocks = { path = "../mercurial/types/mocks", version = "0.1.0" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
+tests_utils = { path = "../tests/utils", version = "0.1.0" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 assert_matches = "1.3"
 tokio-compat = "0.1"

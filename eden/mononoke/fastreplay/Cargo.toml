@@ -7,26 +7,26 @@ license = "GPLv2+"
 include = ["src/**/*.json", "src/**/*.rs"]
 
 [dependencies]
-blobstore = { path = "../blobstore" }
-blobstore_factory = { path = "../blobstore/factory" }
-cache_warmup = { path = "../cache_warmup" }
-cmdlib = { path = "../cmdlib" }
-context = { path = "../server/context" }
-fastreplay_structs = { path = "../../../configerator/structs/scm/mononoke/fastreplay" }
-hgproto = { path = "../hgproto" }
-hooks = { path = "../hooks" }
-hooks_content_stores = { path = "../hooks/content-stores" }
-mercurial_types = { path = "../mercurial/types" }
-metaconfig_types = { path = "../metaconfig/types" }
-mononoke_types = { path = "../mononoke_types" }
-repo_client = { path = "../repo_client" }
-scuba_ext = { path = "../common/scuba_ext" }
-sshrelay = { path = "../sshrelay" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobstore = { path = "../blobstore", version = "0.1.0" }
+blobstore_factory = { path = "../blobstore/factory", version = "0.1.0" }
+cache_warmup = { path = "../cache_warmup", version = "0.1.0" }
+cmdlib = { path = "../cmdlib", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+fastreplay_structs = { path = "../../../configerator/structs/scm/mononoke/fastreplay", version = "0.1.0" }
+hgproto = { path = "../hgproto", version = "0.1.0" }
+hooks = { path = "../hooks", version = "0.1.0" }
+hooks_content_stores = { path = "../hooks/content-stores", version = "0.1.0" }
+mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
+metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+repo_client = { path = "../repo_client", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+sshrelay = { path = "../sshrelay", version = "0.1.0" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 clap = "2.33"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }

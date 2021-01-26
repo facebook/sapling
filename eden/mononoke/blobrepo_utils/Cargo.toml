@@ -14,18 +14,18 @@ name = "blobrepo_utils_test"
 path = "test/main.rs"
 
 [dependencies]
-blobrepo = { path = "../blobrepo" }
-blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
-blobrepo_override = { path = "../blobrepo/override" }
-blobstore = { path = "../blobstore" }
-cacheblob = { path = "../blobstore/cacheblob" }
-context = { path = "../server/context" }
-manifest = { path = "../manifest" }
-mercurial_derived_data = { path = "../derived_data/mercurial_derived_data" }
-mercurial_types = { path = "../mercurial/types" }
-mononoke_types = { path = "../mononoke_types" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { path = "../blobrepo", version = "0.1.0" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
+blobrepo_override = { path = "../blobrepo/override", version = "0.1.0" }
+blobstore = { path = "../blobstore", version = "0.1.0" }
+cacheblob = { path = "../blobstore/cacheblob", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+manifest = { path = "../manifest", version = "0.1.0" }
+mercurial_derived_data = { path = "../derived_data/mercurial_derived_data", version = "0.1.0" }
+mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 chashmap = "2.2"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
@@ -35,6 +35,6 @@ thiserror = "1.0"
 tokio-old = { package = "tokio", version = "0.1" }
 
 [dev-dependencies]
-fixtures = { path = "../tests/fixtures" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fixtures = { path = "../tests/fixtures", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tokio-compat = "0.1"

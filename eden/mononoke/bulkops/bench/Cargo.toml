@@ -11,10 +11,10 @@ name = "benchmark_bulkops"
 path = "main.rs"
 
 [dependencies]
-bulkops = { path = ".." }
-cmdlib = { path = "../../cmdlib" }
-context = { path = "../../server/context" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+bulkops = { path = "..", version = "0.1.0" }
+cmdlib = { path = "../../cmdlib", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 clap = "2.33"
 criterion = "=0.3.1"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
