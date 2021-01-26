@@ -137,6 +137,8 @@ std::string DefaultEdenMain::getLocalHostname() {
   return getHostname();
 }
 
+void DefaultEdenMain::didFollyInit() {}
+
 void DefaultEdenMain::prepare(const EdenServer& /*server*/) {
   fb303::registerFollyLoggingOptionHandlers();
 }
@@ -210,6 +212,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
         "eden as root.\n");
     return kExitCodeUsage;
   }
+
+  main.didFollyInit();
 
 #if EDEN_HAVE_SYSTEMD
   if (FLAGS_experimentalSystemd) {

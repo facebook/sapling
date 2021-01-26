@@ -27,6 +27,7 @@ class EdenMain {
   virtual std::string getEdenfsBuildName() = 0;
   virtual std::string getEdenfsVersion() = 0;
   virtual std::string getLocalHostname() = 0;
+  virtual void didFollyInit() = 0;
   virtual void prepare(const EdenServer& server) = 0;
   virtual MetadataImporterFactory getMetadataImporterFactory() = 0;
 
@@ -41,6 +42,7 @@ class DefaultEdenMain : public EdenMain {
   virtual std::string getEdenfsBuildName() override;
   virtual std::string getEdenfsVersion() override;
   virtual std::string getLocalHostname() override;
+  virtual void didFollyInit() override;
   virtual void prepare(const EdenServer& server) override;
   virtual MetadataImporterFactory getMetadataImporterFactory() override;
 };
