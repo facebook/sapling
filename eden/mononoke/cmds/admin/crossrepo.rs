@@ -24,20 +24,22 @@ use cross_repo_sync::{
     CommitSyncContext, CommitSyncRepos, CommitSyncer, CHANGE_XREPO_MAPPING_EXTRA,
 };
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, try_join, TryFutureExt};
+use futures::{compat::Future01CompatExt, stream, try_join, TryFutureExt};
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use maplit::hashset;
 use maplit::{btreemap, hashmap};
-use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::{CommitSyncConfig, RepoConfig};
-use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, RepositoryId};
+use metaconfig_types::{CommitSyncConfigVersion, DefaultSmallToLargeCommitSyncPathAction};
+use mononoke_types::{
+    BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath, RepositoryId,
+};
 use mutable_counters::MutableCounters;
 use mutable_counters::SqlMutableCounters;
 use pushrebase::{do_pushrebase_bonsai, FAILUPUSHREBASE_EXTRA};
 use slog::{info, warn, Logger};
-use std::convert::TryInto;
 use std::sync::Arc;
+use std::{collections::BTreeMap, convert::TryInto};
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
     SyncedCommitMappingEntry,
@@ -49,6 +51,7 @@ use crate::error::SubcommandError;
 
 pub const CROSSREPO: &str = "crossrepo";
 const AUTHOR_ARG: &str = "author";
+const DUMP_MAPPING_LARGE_REPO_PATH_ARG: &str = "dump-mapping-large-repo-path";
 const MAP_SUBCOMMAND: &str = "map";
 const PREPARE_ROLLOUT_SUBCOMMAND: &str = "prepare-rollout";
 const PUSHREDIRECTION_SUBCOMMAND: &str = "pushredirection";
@@ -336,14 +339,24 @@ async fn run_pushredirection_subcommand<'a>(
                 return Err(format_err!("{} version does not exist", mapping_version).into());
             }
 
-            let large_cs_id = create_empty_commit_for_mapping_change(
+            let dump_mapping_file = sub_m
+                .value_of(DUMP_MAPPING_LARGE_REPO_PATH_ARG)
+                .map(|path| MPath::new(path))
+                .transpose()?;
+
+            let large_cs_id = create_commit_for_mapping_change(
                 &ctx,
                 sub_m,
                 &large_repo,
                 &small_repo,
                 &large_bookmark_value,
                 &mapping_version,
-                false, /* add_mapping_change_extra */
+                MappingCommitOptions {
+                    add_mapping_change_extra: false,
+                    dump_mapping_file,
+                },
+                &commit_syncer,
+                &live_commit_sync_config,
             )
             .await?;
 
@@ -428,14 +441,23 @@ async fn change_mapping_via_extras<'a>(
         return Err(format_err!("{} version does not exist", mapping_version).into());
     }
 
-    let large_cs_id = create_empty_commit_for_mapping_change(
+    let dump_mapping_file = sub_m
+        .value_of(DUMP_MAPPING_LARGE_REPO_PATH_ARG)
+        .map(|path| MPath::new(path))
+        .transpose()?;
+    let large_cs_id = create_commit_for_mapping_change(
         &ctx,
         sub_m,
         &Large(large_repo),
         &Small(small_repo),
         &large_bookmark_value,
         &mapping_version,
-        true, /* add_mapping_change_extra */
+        MappingCommitOptions {
+            add_mapping_change_extra: true,
+            dump_mapping_file,
+        },
+        &commit_syncer,
+        live_commit_sync_config,
     )
     .await?;
 
@@ -644,14 +666,21 @@ async fn get_source_target_cs_ids_and_version(
     Ok((source_cs_id, target_cs_id, mapping_version))
 }
 
-async fn create_empty_commit_for_mapping_change(
+struct MappingCommitOptions {
+    add_mapping_change_extra: bool,
+    dump_mapping_file: Option<MPath>,
+}
+
+async fn create_commit_for_mapping_change(
     ctx: &CoreContext,
     sub_m: &ArgMatches<'_>,
     large_repo: &Large<&BlobRepo>,
     small_repo: &Small<&BlobRepo>,
     parent: &Large<ChangesetId>,
     mapping_version: &CommitSyncConfigVersion,
-    add_mapping_change_extra: bool,
+    options: MappingCommitOptions,
+    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<Large<ChangesetId>, Error> {
     let author = sub_m
         .value_of(AUTHOR_ARG)
@@ -667,12 +696,24 @@ async fn create_empty_commit_for_mapping_change(
     let mut extras = btreemap! {
         FAILUPUSHREBASE_EXTRA.to_string() => b"1".to_vec(),
     };
-    if add_mapping_change_extra {
+    if options.add_mapping_change_extra {
         extras.insert(
             CHANGE_XREPO_MAPPING_EXTRA.to_string(),
             mapping_version.0.clone().into_bytes(),
         );
     }
+
+    let file_changes = create_file_changes(
+        ctx,
+        small_repo,
+        large_repo,
+        mapping_version,
+        options,
+        commit_syncer,
+        live_commit_sync_config,
+    )
+    .await?;
+
     // Create an empty commit on top of large bookmark
     let bcs = BonsaiChangesetMut {
         parents: vec![parent.0.clone()],
@@ -682,7 +723,7 @@ async fn create_empty_commit_for_mapping_change(
         committer_date: None,
         message: commit_msg,
         extra: extras,
-        file_changes: btreemap! {},
+        file_changes,
     }
     .freeze()?;
 
@@ -690,6 +731,92 @@ async fn create_empty_commit_for_mapping_change(
     save_bonsai_changesets(vec![bcs], ctx.clone(), large_repo.0.clone()).await?;
 
     Ok(Large(large_cs_id))
+}
+
+async fn create_file_changes(
+    ctx: &CoreContext,
+    small_repo: &Small<&BlobRepo>,
+    large_repo: &Large<&BlobRepo>,
+    mapping_version: &CommitSyncConfigVersion,
+    options: MappingCommitOptions,
+    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
+) -> Result<BTreeMap<MPath, Option<FileChange>>, Error> {
+    let mut file_changes = btreemap! {};
+    if let Some(path) = options.dump_mapping_file {
+        // This "dump-mapping-file" is going to be created in the large repo,
+        // but this file needs to rewrite to a small repo as well. If it doesn't
+        // rewrite to a small repo, then the whole mapping change commit isn't
+        // going to exist in the small repo.
+
+        let mover = if commit_syncer.get_source_repo().get_repoid() == large_repo.get_repoid() {
+            commit_syncer.get_mover_by_version(&mapping_version)?
+        } else {
+            commit_syncer.get_reverse_mover_by_version(&mapping_version)?
+        };
+
+        if mover(&path)?.is_none() {
+            return Err(anyhow!(
+                "cannot dump mapping to a file because path doesn't rewrite to a small repo"
+            ));
+        }
+
+        // Now get the mapping and create json with it
+        let commit_sync_config = live_commit_sync_config
+            .get_commit_sync_config_by_version(large_repo.get_repoid(), mapping_version)?;
+
+        let small_repo_sync_config = commit_sync_config
+            .small_repos
+            .get(&small_repo.get_repoid())
+            .ok_or_else(|| {
+                format_err!(
+                    "small repo {} not found in {} mapping",
+                    small_repo.get_repoid(),
+                    mapping_version
+                )
+            })?;
+
+        let default_prefix = match &small_repo_sync_config.default_action {
+            DefaultSmallToLargeCommitSyncPathAction::Preserve => String::new(),
+            DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix) => prefix.to_string(),
+        };
+
+        let mut map = serde_json::Map::new();
+        map.insert("default_prefix".to_string(), default_prefix.into());
+        let mut map_overrides = serde_json::Map::new();
+        for (key, value) in &small_repo_sync_config.map {
+            map_overrides.insert(key.to_string(), value.to_string().into());
+        }
+        map.insert("overrides".to_string(), map_overrides.into());
+
+        let content = (get_generated_string() + &serde_json::to_string(&map)?).into_bytes();
+        let content = bytes::Bytes::from(content);
+        let size = content.len() as u64;
+        let content_metadata = filestore::store(
+            large_repo.blobstore(),
+            large_repo.filestore_config(),
+            ctx,
+            &filestore::StoreRequest::new(size),
+            stream::once(async move { Ok(content) }),
+        )
+        .await?;
+
+        let file_change =
+            FileChange::new(content_metadata.content_id, FileType::Regular, size, None);
+
+        file_changes.insert(path, Some(file_change));
+    }
+
+    Ok(file_changes)
+}
+
+// Mark content as generated to discourage people from modifying it
+// manually.
+// However split this so that this source file is not marked as generated
+fn get_generated_string() -> String {
+    return "@".to_owned()
+        + "generated by the megarepo bind, reach out to \
+  Source Control @ FB with any questions\n";
 }
 
 async fn get_bookmark_value(
@@ -1139,6 +1266,13 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(false)
                 .help("change mapping via pushing a commit with a special extra set. \
                 This should become a default method, but for now let's hide behind this arg")
+        )
+        .arg(
+            Arg::with_name(DUMP_MAPPING_LARGE_REPO_PATH_ARG)
+                .long(DUMP_MAPPING_LARGE_REPO_PATH_ARG)
+                .required(false)
+                .takes_value(true)
+                .help("Path in the repo where new mapping version will be dumped.")
         );
 
     let pushredirection_subcommand = SubCommand::with_name(PUSHREDIRECTION_SUBCOMMAND)
