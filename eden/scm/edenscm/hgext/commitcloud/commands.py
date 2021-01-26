@@ -1248,8 +1248,15 @@ def cloudreclaimworkspaces(ui, repo, **opts):
     ],
 )
 def cloudlistbackups(ui, repo, dest=None, **opts):
-    """list backups that are available on the server"""
+    """list backups that are available on the server (DEPRECATED)
 
+    (This command is DEPRECATED, please use 'hg cloud list' command instead.)
+    """
+
+    ui.warn(
+        _("this command is deprecated, please use 'hg cloud list' command instead\n"),
+        component="commitcloud",
+    )
     remotepath = ccutil.getremotepath(repo, dest)
     getconnection = lambda: repo.connectionpool.get(remotepath, opts)
 
@@ -1283,7 +1290,7 @@ def cloudlistbackups(ui, repo, dest=None, **opts):
     + remoteopts,
 )
 def cloudrestorebackup(ui, repo, dest=None, **opts):
-    """restore commits that were previously backed up with 'hg cloud backup'
+    """restore commits that were previously backed up with 'hg cloud backup' (DEPRECATED)
 
     If you have only one backup for the repo on the backup server then it will be restored.
 
@@ -1292,7 +1299,16 @@ def cloudrestorebackup(ui, repo, dest=None, **opts):
     which backup to restore.
 
     Use 'hg cloud listbackups' to list available backups.
+
+    (This command is DEPRECATED, please use 'hg cloud list' and 'hg cloud switch' commands instead.)
     """
+
+    ui.warn(
+        _(
+            "this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead\n"
+        ),
+        component="commitcloud",
+    )
 
     remotepath = ccutil.getremotepath(repo, dest)
     getconnection = lambda: repo.connectionpool.get(remotepath, opts)
@@ -1368,12 +1384,21 @@ def cloudrestorebackup(ui, repo, dest=None, **opts):
     + remoteopts,
 )
 def clouddeletebackup(ui, repo, dest=None, **opts):
-    """delete a backup from the server
+    """delete a backup from the server (DEPRECATED)
 
     Removes all heads and bookmarks associated with a backup from the server.
     The commits themselves are not removed, so you can still update to them
     using 'hg update HASH'.
+
+    (This command is DEPRECATED, please use 'hg cloud list' and 'hg cloud delete' commands instead.)
     """
+
+    ui.warn(
+        _(
+            "this command is deprecated, please use 'hg cloud list' and 'hg cloud delete' commands instead\n"
+        ),
+        component="commitcloud",
+    )
 
     remotepath = ccutil.getremotepath(repo, dest)
     getconnection = lambda: repo.connectionpool.get(remotepath, opts)

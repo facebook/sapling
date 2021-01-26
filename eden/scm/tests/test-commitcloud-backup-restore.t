@@ -36,6 +36,7 @@ Create logdir
 Restore
   $ cd restored
   $ hg cloud restorebackup --config infinitepushbackup.autobackup=true
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   restoring backup for test from $TESTTMP/backupsource on testhost
   pulling from ssh://user@dummy/repo
   adding changesets
@@ -74,6 +75,7 @@ Restore with ambiguous repo root
   $ hg clone ssh://user@dummy/repo restored -q
   $ cd restored
   $ hg cloud restorebackup
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   user test has 2 available backups:
   (backups are ordered with the most recent at the top of the list)
   $TESTTMP/backupsource2 on testhost
@@ -82,6 +84,7 @@ Restore with ambiguous repo root
   (set --hostname and --reporoot to pick a backup)
   [255]
   $ hg cloud restorebackup --reporoot $TESTTMP/backupsource2
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   restoring backup for test from $TESTTMP/backupsource2 on testhost
   pulling from ssh://user@dummy/repo
   adding changesets
@@ -101,6 +104,7 @@ Check bookmarks escaping
   nothing to back up
   $ cd ../restored
   $ hg cloud restorebackup --reporoot $TESTTMP/backupsource
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   restoring backup for test from $TESTTMP/backupsource on testhost
   pulling from ssh://user@dummy/repo
   searching for changes
@@ -129,6 +133,7 @@ Create a repo with `/bookmarks/` in path
   remote:     a2a9ae518b62  commitinweirdrepo
   $ cd ../../restored
   $ hg cloud restorebackup --reporoot $TESTTMP/bookmarks/backupsource3
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   restoring backup for test from $TESTTMP/bookmarks/backupsource3 on testhost
   pulling from ssh://user@dummy/repo
   searching for changes
@@ -157,9 +162,11 @@ Check that correct path is used in pushbackup
 
 Check that correct path is used in restorebackup
   $ hg cloud restorebackup --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo --reporoot $TESTTMP/bookmarks/backupsource3
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   abort: repository $TESTTMP/restored/badpath not found!
   [255]
   $ hg cloud restorebackup --dest anotherpath --config paths.default=badpath --config paths.anotherpath=ssh://user@dummy/repo --reporoot $TESTTMP/bookmarks/backupsource3
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   restoring backup for test from $TESTTMP/bookmarks/backupsource3 on testhost
   pulling from ssh://user@dummy/repo
   no changes found
@@ -227,16 +234,19 @@ Make sure commit was pulled by checking that commit is present
 
 Test cloud listbackups command
   $ hg cloud listbackups
+  commitcloud: this command is deprecated, please use 'hg cloud list' command instead
   user test has 3 available backups:
   (backups are ordered with the most recent at the top of the list)
   \$TESTTMP/bookmarks/backupsource3 on .* (re)
   \$TESTTMP/backupsource2 on .* (re)
   \$TESTTMP/backupsource on .* (re)
   $ hg cloud listbackups --user anotheruser
+  commitcloud: this command is deprecated, please use 'hg cloud list' command instead
   user anotheruser has 1 available backups:
   (backups are ordered with the most recent at the top of the list)
   \$TESTTMP/backupsource on .* (re)
   $ hg cloud listbackups --json
+  commitcloud: this command is deprecated, please use 'hg cloud list' command instead
   {
       ".*": \[ (re)
           "$TESTTMP/bookmarks/backupsource3",* (glob)
@@ -276,6 +286,7 @@ Make a couple more backup sources
   $ cd ../backupsource
 
   $ hg cloud listbackups
+  commitcloud: this command is deprecated, please use 'hg cloud list' command instead
   user test has 6 available backups:
   (backups are ordered with the most recent at the top of the list)
   $TESTTMP/bookmarks/backupsource3 on testhost
@@ -285,6 +296,7 @@ Make a couple more backup sources
   $TESTTMP/backupsource2 on testhost
   (older backups have been hidden, run 'hg cloud listbackups --all' to see them all)
   $ hg cloud listbackups --all
+  commitcloud: this command is deprecated, please use 'hg cloud list' command instead
   user test has 6 available backups:
   (backups are ordered with the most recent at the top of the list)
   $TESTTMP/bookmarks/backupsource3 on testhost
@@ -296,6 +308,7 @@ Make a couple more backup sources
 
 Delete a backup
   $ echo y | hg cloud deletebackup --reporoot "$TESTTMP/backupsource2" --hostname testhost --config ui.interactive=true
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud delete' commands instead
   $TESTTMP/backupsource2 on testhost:
       heads:
           c1bfda8efb6e73473d6874e35125861a34a5594d
@@ -307,6 +320,7 @@ Delete a backup
   (you can still access the commits directly using their hashes)
 
   $ hg cloud listbackups
+  commitcloud: this command is deprecated, please use 'hg cloud list' command instead
   user test has 5 available backups:
   (backups are ordered with the most recent at the top of the list)
   $TESTTMP/bookmarks/backupsource3 on testhost
@@ -317,17 +331,21 @@ Delete a backup
 
 Try deleting invalid backup names
   $ hg cloud deletebackup --reporoot '%' --hostname testhost
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud delete' commands instead
   abort: repo root contains unexpected characters
   [255]
   $ hg cloud deletebackup --reporoot foo --hostname '*'
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud delete' commands instead
   abort: hostname contains unexpected characters
   [255]
   $ hg cloud deletebackup --reporoot foo --hostname bar
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud delete' commands instead
   abort: no backup found for foo on bar
   [255]
 
 Try deleting the backup for the current directory
   $ hg cloud deletebackup --reporoot "$TESTTMP/backupsource" --hostname testhost
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud delete' commands instead
   warning: this backup matches the current repo
   $TESTTMP/backupsource on testhost:
       heads:

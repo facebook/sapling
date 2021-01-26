@@ -103,6 +103,7 @@ Now try to restore it from different client. Make sure bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd secondclient
   $ hg cloud restore
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   restoring backup for test from $TESTTMP/client on * (glob)
   pulling from ssh://user@dummy/repo
   no changes found
@@ -141,6 +142,7 @@ the client doesn't receive the public commit file data during the pull.
   $ cd ../client
   $ clearcache
   $ hg cloud restore --reporoot $TESTTMP/secondclient
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   restoring backup for test from $TESTTMP/secondclient on * (glob)
   pulling from ssh://user@dummy/repo
   searching for changes

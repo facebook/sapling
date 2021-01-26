@@ -49,6 +49,7 @@ Restore the repo
   $ hg clone ssh://user@dummy/repo restored -q
   $ cd restored
   $ hg cloud restorebackup
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   restoring backup for test from $TESTTMP/backupsource on testhost
   pulling from ssh://user@dummy/repo
   adding changesets
