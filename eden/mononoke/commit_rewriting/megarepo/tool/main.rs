@@ -22,7 +22,7 @@ use context::CoreContext;
 use cross_repo_sync::{
     find_toposorted_unsynced_ancestors,
     types::{Source, Target},
-    validation::verify_working_copy_inner,
+    validation::verify_working_copy_with_version_fast_path,
     CandidateSelectionHint, CommitSyncContext, CommitSyncer,
 };
 use fbinit::FacebookInit;
@@ -36,7 +36,6 @@ use metaconfig_types::RepoConfig;
 use metaconfig_types::{CommitSyncConfigVersion, MetadataDatabaseConfig};
 use mononoke_types::{MPath, RepositoryId};
 use movers::get_small_to_large_mover;
-use ref_cast::RefCast;
 use regex::Regex;
 use skiplist::fetch_skiplist_index;
 use slog::{info, warn};
@@ -577,9 +576,6 @@ async fn run_check_push_redirection_prereqs<'a>(
             .to_string(),
     );
 
-    let mover = commit_syncer.get_mover_by_version(&version)?;
-    let reverse_mover = commit_syncer.get_reverse_mover_by_version(&version)?;
-
     info!(
         ctx.logger(),
         "Checking push-redirection prerequisites for {}({})->{}({}), {:?}",
@@ -590,14 +586,15 @@ async fn run_check_push_redirection_prereqs<'a>(
         version,
     );
 
-    verify_working_copy_inner(
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+    verify_working_copy_with_version_fast_path(
         &ctx,
-        Source::ref_cast(commit_syncer.get_source_repo()),
-        Target::ref_cast(commit_syncer.get_target_repo()),
+        &commit_syncer,
         Source(source_cs_id),
         Target(target_cs_id),
-        &mover,
-        &reverse_mover,
+        &version,
+        Arc::new(live_commit_sync_config),
     )
     .await
 }

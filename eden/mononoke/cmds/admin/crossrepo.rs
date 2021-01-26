@@ -114,7 +114,7 @@ pub async fn subcommand_crossrepo<'a>(
                 &ctx,
                 source_repo,
                 target_repo,
-                live_commit_sync_config,
+                live_commit_sync_config.clone(),
                 mapping,
             )?;
 
@@ -126,9 +126,14 @@ pub async fn subcommand_crossrepo<'a>(
                     .await?
             };
 
-            validation::verify_working_copy(ctx.clone(), commit_syncer, large_hash)
-                .await
-                .map_err(|e| e.into())
+            validation::verify_working_copy_fast_path(
+                &ctx,
+                &commit_syncer,
+                large_hash,
+                live_commit_sync_config,
+            )
+            .await
+            .map_err(|e| e.into())
         }
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
             let config_store = args::init_config_store(fb, ctx.logger(), matches)?;

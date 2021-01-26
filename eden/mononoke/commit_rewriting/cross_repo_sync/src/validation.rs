@@ -20,14 +20,17 @@ use futures::{
     stream::{self, StreamExt},
     try_join, TryStreamExt,
 };
+use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::ManifestOps;
 use mercurial_types::FileType;
+use metaconfig_types::DefaultSmallToLargeCommitSyncPathAction;
 use mononoke_types::{ChangesetId, ContentId, MPath};
 use movers::Mover;
 use ref_cast::RefCast;
 use slog::{debug, error, info};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+use std::sync::Arc;
 use synced_commit_mapping::SyncedCommitMapping;
 
 type SourceRepo = Source<BlobRepo>;
@@ -57,8 +60,125 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
         Target(target_hash),
         &commit_syncer.get_mover_by_version(&version)?,
         &commit_syncer.get_reverse_mover_by_version(&version)?,
+        PrefixesToVisit::default(),
     )
     .await
+}
+
+// This method uses CommitSyncConfig to minimize the number of manifest traversals.
+pub async fn verify_working_copy_fast_path<'a, M: SyncedCommitMapping + Clone + 'static>(
+    ctx: &'a CoreContext,
+    commit_syncer: &'a CommitSyncer<M>,
+    source_hash: ChangesetId,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+) -> Result<(), Error> {
+    let source_repo = commit_syncer.get_source_repo();
+    let target_repo = commit_syncer.get_target_repo();
+
+    let (target_hash, version) =
+        get_synced_commit(ctx.clone(), &commit_syncer, source_hash).await?;
+
+    info!(
+        ctx.logger(),
+        "target repo cs id: {}, mapping version: {}", target_hash, version
+    );
+
+    let prefixes_to_visit = get_fast_path_prefixes(
+        &source_repo,
+        commit_syncer,
+        &version,
+        live_commit_sync_config,
+    )?;
+
+    verify_working_copy_inner(
+        ctx,
+        Source::ref_cast(source_repo),
+        Target::ref_cast(target_repo),
+        Source(source_hash),
+        Target(target_hash),
+        &commit_syncer.get_mover_by_version(&version)?,
+        &commit_syncer.get_reverse_mover_by_version(&version)?,
+        prefixes_to_visit,
+    )
+    .await
+}
+
+pub async fn verify_working_copy_with_version_fast_path<
+    'a,
+    M: SyncedCommitMapping + Clone + 'static,
+>(
+    ctx: &'a CoreContext,
+    commit_syncer: &'a CommitSyncer<M>,
+    source_hash: Source<ChangesetId>,
+    target_hash: Target<ChangesetId>,
+    version: &'a CommitSyncConfigVersion,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+) -> Result<(), Error> {
+    let source_repo = commit_syncer.get_source_repo();
+    let target_repo = commit_syncer.get_target_repo();
+
+    let prefixes_to_visit =
+        get_fast_path_prefixes(source_repo, commit_syncer, version, live_commit_sync_config)?;
+
+    verify_working_copy_inner(
+        ctx,
+        Source::ref_cast(source_repo),
+        Target::ref_cast(target_repo),
+        source_hash,
+        target_hash,
+        &commit_syncer.get_mover_by_version(&version)?,
+        &commit_syncer.get_reverse_mover_by_version(&version)?,
+        prefixes_to_visit,
+    )
+    .await
+}
+
+// Returns list of prefixes that need to be visited in both large and small
+// repositories to establish working copy equivalence.
+fn get_fast_path_prefixes<M: SyncedCommitMapping + Clone + 'static>(
+    source_repo: &BlobRepo,
+    commit_syncer: &CommitSyncer<M>,
+    version: &CommitSyncConfigVersion,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+) -> Result<PrefixesToVisit, Error> {
+    let small_repo_id = commit_syncer.get_small_repo().get_repoid();
+    let config = live_commit_sync_config
+        .get_commit_sync_config_by_version(source_repo.get_repoid(), &version)?;
+
+    let small_repo_config = config.small_repos.get(&small_repo_id).ok_or_else(|| {
+        format_err!(
+            "cannot find small repo id {} in commit sync config for {}",
+            small_repo_id,
+            version
+        )
+    })?;
+
+    match &small_repo_config.default_action {
+        DefaultSmallToLargeCommitSyncPathAction::Preserve => Ok(PrefixesToVisit::default()),
+        DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix) => {
+            // Gets a list of large repo paths that small repo paths can map to.
+            // All other large repo paths don't need visiting.
+            let mut prefixes_to_visit = small_repo_config.map.values().cloned().collect::<Vec<_>>();
+            prefixes_to_visit.push(prefix.clone());
+            if small_repo_id == source_repo.get_repoid() {
+                Ok(PrefixesToVisit {
+                    source_prefixes_to_visit: None,
+                    target_prefixes_to_visit: Some(prefixes_to_visit),
+                })
+            } else {
+                Ok(PrefixesToVisit {
+                    source_prefixes_to_visit: Some(prefixes_to_visit),
+                    target_prefixes_to_visit: None,
+                })
+            }
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct PrefixesToVisit {
+    source_prefixes_to_visit: Option<Vec<MPath>>,
+    target_prefixes_to_visit: Option<Vec<MPath>>,
 }
 
 pub async fn verify_working_copy_inner<'a>(
@@ -69,7 +189,13 @@ pub async fn verify_working_copy_inner<'a>(
     target_hash: Target<ChangesetId>,
     mover: &Mover,
     reverse_mover: &Mover,
+    prefixes_to_visit: PrefixesToVisit,
 ) -> Result<(), Error> {
+    let PrefixesToVisit {
+        source_prefixes_to_visit,
+        target_prefixes_to_visit,
+    } = prefixes_to_visit;
+
     let moved_source_repo_entries = get_maybe_moved_contents_and_types(
         ctx,
         &source_repo,
@@ -80,12 +206,14 @@ pub async fn verify_working_copy_inner<'a>(
             // No need to move any paths, because this commit was preserved as is
             None
         },
+        source_prefixes_to_visit,
     );
     let target_repo_entries = get_maybe_moved_contents_and_types(
         ctx,
         &target_repo,
         *target_hash,
         Some(GetMaybeMovedFilenodesPolicy::CheckThatRewritesIntoSomeButDontMove(reverse_mover)),
+        target_prefixes_to_visit,
     );
 
     let (moved_source_repo_entries, target_repo_entries) =
@@ -200,8 +328,9 @@ async fn get_maybe_moved_contents_and_types<'a>(
     repo: &'a BlobRepo,
     hash: ChangesetId,
     maybe_mover_policy: Option<GetMaybeMovedFilenodesPolicy<'a>>,
+    prefixes: Option<Vec<MPath>>,
 ) -> Result<HashMap<MPath, (FileType, ContentId)>, Error> {
-    let content_ids_and_types = list_content_ids_and_types(ctx, repo, hash).await?;
+    let content_ids_and_types = list_content_ids_and_types(ctx, repo, hash, prefixes).await?;
 
     match maybe_mover_policy {
         None => Ok(content_ids_and_types),
@@ -298,6 +427,7 @@ async fn list_content_ids_and_types(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: ChangesetId,
+    prefixes: Option<Vec<MPath>>,
 ) -> Result<HashMap<MPath, (FileType, ContentId)>, Error> {
     info!(
         ctx.logger(),
@@ -308,8 +438,15 @@ async fn list_content_ids_and_types(
 
     let root_fsnode_id = RootFsnodeId::derive(&ctx, repo, cs_id).await?;
     let root_fsnode_id = root_fsnode_id.fsnode_id();
-    let content_ids_and_types = root_fsnode_id
-        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+    let s = match prefixes {
+        Some(prefixes) => root_fsnode_id
+            .list_leaf_entries_under(ctx.clone(), repo.get_blobstore(), prefixes)
+            .left_stream(),
+        None => root_fsnode_id
+            .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+            .right_stream(),
+    };
+    let content_ids_and_types = s
         .map_ok(|(path, fsnode)| (path, (*fsnode.file_type(), *fsnode.content_id())))
         .try_collect::<HashMap<_, _>>()
         .await?;
@@ -652,6 +789,7 @@ mod test {
     use sql_construct::SqlConstruct;
     use std::sync::Arc;
     // To support async tests
+    use cross_repo_sync_test_utils::get_live_commit_sync_config;
     use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMappingEntry};
     use tests_utils::{bookmark, CreateCommitContext};
 
@@ -821,9 +959,177 @@ mod test {
             Target(target_cs_id),
             &mover,
             &reverse_mover,
+            PrefixesToVisit::default(),
         )
         .await;
 
+        assert!(res.is_err());
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_verify_working_copy_with_prefixes(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let source = blobrepo_factory::new_memblob_empty(None)?;
+        let source_cs_id = CreateCommitContext::new_root(&ctx, &source)
+            .add_file("prefix/sub/file1", "1")
+            .add_file("prefix/sub/file2", "2")
+            .add_file("prefix/file1", "1")
+            .commit()
+            .await?;
+
+        let target = blobrepo_factory::new_memblob_empty(None)?;
+        let target_cs_id = CreateCommitContext::new_root(&ctx, &target)
+            .add_file("sub/file1", "1")
+            .add_file("sub/file2", "2")
+            .add_file("file1", "someothercontent")
+            .commit()
+            .await?;
+
+        let mover: Mover = Arc::new(reverse_prefix_mover);
+        let reverse_mover: Mover = Arc::new(prefix_mover);
+        let res = verify_working_copy_inner(
+            &ctx,
+            &Source(source.clone()),
+            &Target(target.clone()),
+            Source(source_cs_id),
+            Target(target_cs_id),
+            &mover,
+            &reverse_mover,
+            PrefixesToVisit::default(),
+        )
+        .await;
+
+        assert!(res.is_err());
+
+        // Now limit the paths we need to verify
+        verify_working_copy_inner(
+            &ctx,
+            &Source(source),
+            &Target(target),
+            Source(source_cs_id),
+            Target(target_cs_id),
+            &mover,
+            &reverse_mover,
+            PrefixesToVisit {
+                source_prefixes_to_visit: Some(vec![MPath::new("prefix/sub")?]),
+                target_prefixes_to_visit: Some(vec![MPath::new("sub")?]),
+            },
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_verify_working_copy_fast_path(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let source = blobrepo_factory::new_memblob_empty(None)?;
+        let root_source_cs_id = CreateCommitContext::new_root(&ctx, &source)
+            .add_file("prefix/sub/file1", "1")
+            .add_file("somefile", "content")
+            .commit()
+            .await?;
+        let first_source_cs_id = CreateCommitContext::new(&ctx, &source, vec![root_source_cs_id])
+            .add_file("prefix/sub/file2", "1")
+            .commit()
+            .await?;
+        let second_source_cs_id = CreateCommitContext::new(&ctx, &source, vec![first_source_cs_id])
+            .add_file("special/1", "special")
+            .commit()
+            .await?;
+
+        let target = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1))?;
+        let root_target_cs_id = CreateCommitContext::new_root(&ctx, &target)
+            .add_file("sub/file1", "1")
+            .commit()
+            .await?;
+        let first_target_cs_id = CreateCommitContext::new(&ctx, &target, vec![root_target_cs_id])
+            .add_file("sub/file2", "1")
+            .commit()
+            .await?;
+        let second_target_cs_id = CreateCommitContext::new(&ctx, &target, vec![first_target_cs_id])
+            .add_file("special/1", "special")
+            .commit()
+            .await?;
+
+        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+        let repos = CommitSyncRepos::LargeToSmall {
+            small_repo: target,
+            large_repo: source,
+        };
+
+        let live_commit_sync_config = get_live_commit_sync_config();
+        let commit_sync_data_provider =
+            CommitSyncDataProvider::Live(live_commit_sync_config.clone());
+        let commit_syncer =
+            CommitSyncer::new_with_provider(&ctx, mapping, repos, commit_sync_data_provider);
+
+        println!("checking root commit");
+        for version in &["first_version", "second_version"] {
+            println!("version: {}", version);
+            verify_working_copy_with_version_fast_path(
+                &ctx,
+                &commit_syncer,
+                Source(root_source_cs_id),
+                Target(root_target_cs_id),
+                &CommitSyncConfigVersion(version.to_string()),
+                live_commit_sync_config.clone(),
+            )
+            .await?;
+        }
+
+        println!("checking first commit");
+        for version in &["first_version", "second_version"] {
+            println!("version: {}", version);
+            verify_working_copy_with_version_fast_path(
+                &ctx,
+                &commit_syncer,
+                Source(first_source_cs_id),
+                Target(first_target_cs_id),
+                &CommitSyncConfigVersion(version.to_string()),
+                live_commit_sync_config.clone(),
+            )
+            .await?;
+        }
+
+        let version = "second_version";
+        println!("checking second commit, version: {}", version);
+        verify_working_copy_with_version_fast_path(
+            &ctx,
+            &commit_syncer,
+            Source(second_source_cs_id),
+            Target(second_target_cs_id),
+            &CommitSyncConfigVersion(version.to_string()),
+            live_commit_sync_config.clone(),
+        )
+        .await?;
+
+        let version = "first_version";
+        println!("checking second commit, version: {}", version);
+        let res = verify_working_copy_with_version_fast_path(
+            &ctx,
+            &commit_syncer,
+            Source(second_source_cs_id),
+            Target(second_target_cs_id),
+            &CommitSyncConfigVersion(version.to_string()),
+            live_commit_sync_config.clone(),
+        )
+        .await;
+        assert!(res.is_err());
+
+        let version = "second_version";
+        println!("checking first and second commit, version: {}", version);
+        let res = verify_working_copy_with_version_fast_path(
+            &ctx,
+            &commit_syncer,
+            Source(first_source_cs_id),
+            Target(second_target_cs_id),
+            &CommitSyncConfigVersion(version.to_string()),
+            live_commit_sync_config.clone(),
+        )
+        .await;
         assert!(res.is_err());
 
         Ok(())

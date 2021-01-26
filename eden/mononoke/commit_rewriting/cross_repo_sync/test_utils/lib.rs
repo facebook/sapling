@@ -23,6 +23,7 @@ use cross_repo_sync::{
     CommitSyncRepos, CommitSyncer, SyncData, Syncers,
 };
 use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use live_commit_sync_config::{LiveCommitSyncConfig, TestLiveCommitSyncConfig};
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
 use metaconfig_types::{
@@ -358,5 +359,56 @@ fn reverse_prefix_mover(v: &MPath) -> Result<Option<MPath>, Error> {
         Ok(v.remove_prefix_component(&prefix))
     } else {
         Ok(None)
+    }
+}
+
+pub fn get_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
+    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+
+    let first_version = CommitSyncConfig {
+        large_repo_id: RepositoryId::new(0),
+        common_pushrebase_bookmarks: vec![],
+        small_repos: hashmap! {
+            RepositoryId::new(1) => get_small_repo_sync_config_1(),
+        },
+        version_name: CommitSyncConfigVersion("first_version".to_string()),
+    };
+
+    let second_version = CommitSyncConfig {
+        large_repo_id: RepositoryId::new(0),
+        common_pushrebase_bookmarks: vec![],
+        small_repos: hashmap! {
+            RepositoryId::new(1) => get_small_repo_sync_config_2(),
+        },
+        version_name: CommitSyncConfigVersion("second_version".to_string()),
+    };
+
+    source.add_config(first_version);
+    source.add_config(second_version);
+
+    Arc::new(sync_config)
+}
+
+fn get_small_repo_sync_config_1() -> SmallRepoCommitSyncConfig {
+    SmallRepoCommitSyncConfig {
+        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
+            MPath::new("prefix").unwrap(),
+        ),
+        map: hashmap! {},
+        bookmark_prefix: AsciiString::from_ascii("small".to_string()).unwrap(),
+        direction: CommitSyncDirection::SmallToLarge,
+    }
+}
+
+fn get_small_repo_sync_config_2() -> SmallRepoCommitSyncConfig {
+    SmallRepoCommitSyncConfig {
+        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(
+            MPath::new("prefix").unwrap(),
+        ),
+        map: hashmap! {
+            MPath::new("special").unwrap() => MPath::new("special").unwrap(),
+        },
+        bookmark_prefix: AsciiString::from_ascii("small".to_string()).unwrap(),
+        direction: CommitSyncDirection::SmallToLarge,
     }
 }
