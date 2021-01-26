@@ -9,7 +9,6 @@ import os
 import pathlib
 import subprocess
 import sys
-import unittest
 from typing import Generator, List, Optional, Sequence
 
 from eden.fs.cli.config import EdenInstance
@@ -242,7 +241,7 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
         self.assertNotEqual(
             instance_1_health.pid,
             instance_2_health.pid,
-            f"The edenfs process should have separate process IDs",
+            "The edenfs process should have separate process IDs",
         )
 
     def test_daemon_command_arguments_should_forward_to_edenfs(self) -> None:
@@ -393,7 +392,7 @@ class StartWithSystemdTest(SystemdServiceTest, StartFakeEdenFSTestBase):
             self.assertEqual(service.query_active_state(), "active")
 
             proc = self.expect_start_failure(
-                f"error: edenfs systemd service is already running"
+                "error: edenfs systemd service is already running"
             )
             # edenfsctl should show the output of 'systemctl status'.
             self.assertRegex(proc.stdout, r"\bfb-edenfs@.*?\.service\b")

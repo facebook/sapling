@@ -8,7 +8,6 @@ import ctypes
 import ctypes.util
 import os
 import pathlib
-import subprocess
 from typing import Sequence, Type
 
 

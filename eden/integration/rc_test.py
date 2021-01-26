@@ -5,11 +5,6 @@
 # GNU General Public License version 2.
 
 import os
-import stat
-import tempfile
-import textwrap
-
-from eden.fs.cli import util
 
 from .lib import testcase
 

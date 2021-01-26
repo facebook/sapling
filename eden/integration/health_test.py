@@ -5,12 +5,10 @@
 # GNU General Public License version 2.
 
 import os
-import pathlib
 import signal
 import sys
 import typing
 
-import pexpect
 from eden.fs.cli.daemon import wait_for_shutdown
 
 from .lib import edenclient, testcase

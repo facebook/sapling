@@ -12,7 +12,6 @@ import time
 from pathlib import Path
 from typing import Callable, List, Optional
 
-import pexpect
 from eden.fs.cli import proc_utils as proc_utils_mod
 from eden.fs.cli.daemon import wait_for_process_exit
 from eden.fs.cli.util import poll_until

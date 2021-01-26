@@ -161,7 +161,7 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
 
 def skip_if_disabled(test_case: unittest.TestCase) -> None:
     if _is_disabled(test_case):
-        raise unittest.SkipTest(f"this test is currently unsupported on this platform")
+        raise unittest.SkipTest("this test is currently unsupported on this platform")
 
 
 def _is_disabled(test_case: unittest.TestCase) -> bool:

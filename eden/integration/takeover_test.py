@@ -398,8 +398,8 @@ class TakeoverTest(testcase.EdenRepoTest):
             def state_shutting_down() -> Optional[bool]:
                 if not p.is_alive():
                     raise Exception(
-                        f"eden restart --graceful command finished while "
-                        f"graceful restart was still blocked"
+                        "eden restart --graceful command finished while "
+                        "graceful restart was still blocked"
                     )
                 if client.getStatus() is fb303_status.STOPPING:
                     return True

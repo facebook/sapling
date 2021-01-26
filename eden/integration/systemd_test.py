@@ -4,18 +4,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import pathlib
 import shutil
-import signal
 import subprocess
 import sys
 import typing
-import unittest
 from typing import Optional
 
 import pexpect
 import toml
-from eden.test_support.testcase import EdenTestCaseBase
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, PexpectSpawnType, pexpect_spawn

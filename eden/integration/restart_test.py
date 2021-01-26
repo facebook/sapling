@@ -9,7 +9,6 @@ import sys
 import typing
 from typing import Optional
 
-import pexpect
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.util import HealthStatus
 from eden.thrift.legacy import SOCKET_PATH, EdenClient, create_thrift_client

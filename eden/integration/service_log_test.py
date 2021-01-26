@@ -6,7 +6,6 @@
 
 import pathlib
 
-from .lib.fake_edenfs import FakeEdenFS
 from .lib.service_test_case import (
     ManagedFakeEdenFSMixin,
     ServiceTestCaseBase,

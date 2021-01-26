@@ -96,7 +96,7 @@ class InfraTests(unittest.TestCase):
             "a/missing.link: file not present in snapshot",
             f"a/b/wrong_file_type.txt: expected file type to be {stat.S_IFREG:#o}, "
             f"found {stat.S_IFSOCK:#o}",
-            f"a/b/wrong_file_type.txt: expected permissions to be 0o644, found 0o755",
+            "a/b/wrong_file_type.txt: expected permissions to be 0o644, found 0o755",
             "a/b/wrong_perms.txt: expected permissions to be 0o644, found 0o755",
         ]
         self.assertEqual(sorted(verifier.errors), sorted(expected_errors))

@@ -63,7 +63,7 @@ class HgRepository(repobase.Repository):
     @classmethod
     def get_system_hgrc_contents(cls) -> str:
         common_suffix = textwrap.dedent(
-            f"""
+            """
             # Override ui.merge to make sure it does not get set
             # to something that tries to prompt for user input.
             [ui]

@@ -68,8 +68,8 @@ class FsckTest(testcase.EdenRepoTest):
 
         # Running fsck with --force should override that
         returncode, fsck_out = self.run_fsck(self.mount, "--force")
-        self.assertIn(f"warning: could not obtain lock", fsck_out)
-        self.assertIn(f"scanning anyway due to --force", fsck_out)
+        self.assertIn("warning: could not obtain lock", fsck_out)
+        self.assertIn("scanning anyway due to --force", fsck_out)
         self.assertIn(f"Checking {self.mount}", fsck_out)
         self.assertEqual(FSCK_RETCODE_OK, returncode)
 

@@ -4,7 +4,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import abc
 import contextlib
 import logging
 import os
