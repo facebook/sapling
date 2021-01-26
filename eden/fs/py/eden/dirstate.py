@@ -9,7 +9,7 @@ import binascii
 import hashlib
 import struct
 import sys
-from typing import IO, Any, Callable, Dict, Tuple
+from typing import IO, Callable, Dict, Tuple
 
 from six import iteritems
 
@@ -135,7 +135,7 @@ def read(fp, filename):  # noqa: C901
             scalars = hashing_read(6)
             if len(scalars) != 6:
                 raise DirstateParseException(
-                    "Malformed dirstate tuple in ".format(filename)
+                    "Malformed dirstate tuple in {}".format(filename)
                     + ". Aborting read().\n"
                 )
             path = _read_path(hashing_read, filename)
@@ -179,7 +179,7 @@ def read(fp, filename):  # noqa: C901
         else:
             raise DirstateParseException(
                 "Unexpected header byte "
-                "when reading {}: 0x{0:x}.".format(filename, header)
+                "when reading {:s}: 0x{:x}.".format(filename, header)
                 + " Ignoring remaining dirstate data.\n"
             )
 
