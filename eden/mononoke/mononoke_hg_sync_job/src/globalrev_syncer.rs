@@ -7,6 +7,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use bookmarks::BookmarkName;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
@@ -28,6 +29,7 @@ pub struct SqlGlobalrevSyncer {
     hgsql_name: HgsqlGlobalrevsName,
     repo: BlobRepo,
     hgsql: HgsqlConnection,
+    globalrevs_publishing_bookmark: BookmarkName,
 }
 
 #[derive(Clone)]
@@ -52,13 +54,15 @@ impl GlobalrevSyncer {
         fb: FacebookInit,
         repo: BlobRepo,
         use_sqlite: bool,
-        hgsql_db_addr: Option<&str>,
+        params: Option<(&str, BookmarkName)>,
         mysql_options: &MysqlOptions,
         readonly: bool,
         hgsql_name: HgsqlGlobalrevsName,
     ) -> Result<Self, Error> {
-        let hgsql_db_addr = match hgsql_db_addr {
-            Some(hgsql_db_addr) => hgsql_db_addr,
+        let (hgsql_db_addr, globalrevs_publishing_bookmark) = match params {
+            Some((hgsql_db_addr, globalrevs_publishing_bookmark)) => {
+                (hgsql_db_addr, globalrevs_publishing_bookmark)
+            }
             None => return Ok(GlobalrevSyncer::Noop),
         };
 
@@ -73,21 +77,36 @@ impl GlobalrevSyncer {
             hgsql_name,
             repo,
             hgsql,
+            globalrevs_publishing_bookmark,
         };
 
         Ok(GlobalrevSyncer::Sql(Arc::new(syncer)))
     }
 
-    pub async fn sync(&self, ctx: &CoreContext, bcs_id: ChangesetId) -> Result<(), Error> {
+    pub async fn sync(
+        &self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkName,
+        bcs_id: ChangesetId,
+    ) -> Result<(), Error> {
         match self {
             Self::Noop => Ok(()),
-            Self::Sql(syncer) => syncer.sync(ctx, bcs_id).await,
+            Self::Sql(syncer) => syncer.sync(ctx, bookmark, bcs_id).await,
         }
     }
 }
 
 impl SqlGlobalrevSyncer {
-    pub async fn sync(&self, ctx: &CoreContext, bcs_id: ChangesetId) -> Result<(), Error> {
+    pub async fn sync(
+        &self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkName,
+        bcs_id: ChangesetId,
+    ) -> Result<(), Error> {
+        if *bookmark != self.globalrevs_publishing_bookmark {
+            return Ok(());
+        }
+
         let rev = self
             .repo
             .get_globalrev_from_bonsai(ctx, bcs_id)
@@ -183,6 +202,9 @@ mod test {
         async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
 
+            let master = BookmarkName::new("master")?;
+            let stable = BookmarkName::new("stable")?;
+
             let sqlite = SqliteConnection::open_in_memory()?;
             sqlite.execute_batch(HgsqlConnection::CREATION_QUERY)?;
             let connection = Connection::with_sqlite(sqlite);
@@ -212,10 +234,11 @@ mod test {
                 hgsql: HgsqlConnection {
                     connection: connection.clone(),
                 },
+                globalrevs_publishing_bookmark: master.clone(),
             };
 
             // First, check that setting a globalrev before the counter exists fails.
-            assert!(syncer.sync(&ctx, ONES_CSID).await.is_err());
+            assert!(syncer.sync(&ctx, &master, ONES_CSID).await.is_err());
 
             // Now, set the counter
 
@@ -225,7 +248,7 @@ mod test {
 
             // Now, try again to set the globalrev
 
-            syncer.sync(&ctx, TWOS_CSID).await?;
+            syncer.sync(&ctx, &master, TWOS_CSID).await?;
 
             assert_eq!(
                 GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
@@ -233,18 +256,18 @@ mod test {
                     .await?
                     .into_iter()
                     .next()
-                    .ok_or(Error::msg("Globalrev missing"))?
+                    .ok_or_else(|| Error::msg("Globalrev missing"))?
                     .0,
                 GLOBALREV_THREE.id()
             );
 
             // Check that we can sync the same value again successfully
 
-            syncer.sync(&ctx, TWOS_CSID).await?;
+            syncer.sync(&ctx, &master, TWOS_CSID).await?;
 
             // Check that we can't move it back
 
-            assert!(syncer.sync(&ctx, ONES_CSID).await.is_err());
+            assert!(syncer.sync(&ctx, &master, ONES_CSID).await.is_err());
 
             assert_eq!(
                 GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
@@ -252,7 +275,22 @@ mod test {
                     .await?
                     .into_iter()
                     .next()
-                    .ok_or(Error::msg("Globalrev missing"))?
+                    .ok_or_else(|| Error::msg("Globalrev missing"))?
+                    .0,
+                GLOBALREV_THREE.id()
+            );
+
+            // Check that moving a non-publishing bookmark works, but doesn't touch the counter.
+
+            syncer.sync(&ctx, &stable, ONES_CSID).await?;
+
+            assert_eq!(
+                GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
+                    .compat()
+                    .await?
+                    .into_iter()
+                    .next()
+                    .ok_or_else(|| Error::msg("Globalrev missing"))?
                     .0,
                 GLOBALREV_THREE.id()
             );

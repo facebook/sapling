@@ -410,7 +410,9 @@ async fn sync_single_combined_entry(
     globalrev_syncer: &GlobalrevSyncer,
 ) -> Result<RetryAttemptsCount, Error> {
     if let Some((cs_id, _hg_cs_id)) = combined_entry.cs_id {
-        globalrev_syncer.sync(ctx, cs_id).await?
+        globalrev_syncer
+            .sync(ctx, &combined_entry.bookmark, cs_id)
+            .await?
     }
 
     let (_, attempts) = retry(
@@ -716,20 +718,43 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         };
 
         let globalrev_syncer = {
-            if !generate_bundles && hgsql_db_addr.is_some() {
-                return Err(format_err!(
-                    "Syncing globalrevs ({}) requires generating bundles ({})",
-                    HGSQL_GLOBALREVS_DB_ADDR,
-                    GENERATE_BUNDLES
-                ));
-            }
+            let params = match (
+                hgsql_db_addr.as_ref(),
+                repo_config
+                    .pushrebase
+                    .globalrevs_publishing_bookmark
+                    .as_ref(),
+                generate_bundles,
+            ) {
+                (Some(addr), Some(book), true) => Some((addr.as_str(), book.clone())),
+                (Some(..), Some(..), false) => {
+                    return Err(format_err!(
+                        "Syncing globalrevs ({}) requires generating bundles ({})",
+                        HGSQL_GLOBALREVS_DB_ADDR,
+                        GENERATE_BUNDLES
+                    ));
+                }
+                (Some(..), None, ..) => {
+                    return Err(format_err!(
+                        "Syncing globalrevs ({}) requires a globalrevs_publishing_bookmark",
+                        HGSQL_GLOBALREVS_DB_ADDR,
+                    ));
+                }
+                (None, Some(..), ..) => {
+                    return Err(format_err!(
+                        "This repository has Globalrevs enabled but syncing ({}) is not enabled",
+                        HGSQL_GLOBALREVS_DB_ADDR,
+                    ));
+                }
+                (None, None, ..) => None,
+            };
 
             GlobalrevSyncer::new(
                 fb,
                 // FIXME: this clone should go away once GlobalrevSyncer is asyncified
                 repo.clone(),
                 hgsql_use_sqlite,
-                hgsql_db_addr.as_ref().map(|a| a.as_ref()),
+                params,
                 &mysql_options,
                 readonly_storage.0,
                 hgsql_globalrevs_name,
