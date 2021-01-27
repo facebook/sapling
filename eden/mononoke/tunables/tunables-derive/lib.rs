@@ -19,6 +19,7 @@ enum TunableType {
     Bool,
     I64,
     String,
+    ByRepoBool,
 }
 
 #[proc_macro_derive(Tunables)]
@@ -51,19 +52,23 @@ impl TunableType {
             Self::Bool => quote! { bool },
             Self::I64 => quote! { i64 },
             Self::String => quote! { Arc<String> },
+            Self::ByRepoBool => quote! { Option<bool> },
         }
     }
 
-    fn input_type(&self) -> Ident {
+    fn update_container_type(&self) -> TokenStream {
         match self {
-            Self::Bool => quote::format_ident!("{}", "bool"),
-            Self::I64 => quote::format_ident!("{}", "i64"),
-            Self::String => quote::format_ident!("{}", "String"),
+            Self::Bool => quote! { HashMap<String, bool> },
+            Self::I64 => quote! { HashMap<String, i64> },
+            Self::String => quote! { HashMap<String, String> },
+            Self::ByRepoBool => quote! { HashMap<String, HashMap<String, bool>> },
         }
     }
 
     fn generate_getter_method(&self, name: Ident) -> TokenStream {
         let method = quote::format_ident!("get_{}", name);
+        let by_repo_method = quote::format_ident!("get_by_repo_{}", name);
+
         let external_type = self.external_type();
 
         match &self {
@@ -78,6 +83,16 @@ impl TunableType {
                 quote! {
                     pub fn #method(&self) -> #external_type {
                         self.#name.load_full()
+                    }
+                }
+            }
+            Self::ByRepoBool => {
+                quote! {
+                    pub fn #by_repo_method(&self, repo: &String) -> #external_type {
+                        if let Some(value) = self.#name.load_full().get(repo) {
+                            return Some((*value).clone());
+                        }
+                        None
                     }
                 }
             }
@@ -117,9 +132,15 @@ where
     ));
 
     methods.extend(generate_updater_method(
-        names_and_types,
+        names_and_types.clone(),
         TunableType::String,
         quote::format_ident!("update_strings"),
+    ));
+
+    methods.extend(generate_updater_method(
+        names_and_types,
+        TunableType::ByRepoBool,
+        quote::format_ident!("update_by_repo_bools"),
     ));
 
     methods
@@ -135,7 +156,6 @@ where
 {
     let names = names_and_types.filter(|(_, t)| *t == ty).map(|(n, _)| n);
 
-    let type_ident = ty.input_type();
     let mut names = names.peekable();
     let mut body = TokenStream::new();
 
@@ -165,11 +185,30 @@ where
                     }
                 });
             }
+            TunableType::ByRepoBool => {
+                body.extend(quote! {
+                    let mut new_values_by_repo: HashMap<String, bool> = HashMap::new();
+                    #(
+                        for (repo, val_by_tunable) in tunables {
+                                for (tunable, val) in val_by_tunable {
+                                    match tunable.as_ref() {
+                                        stringify!(#names) => {
+                                            new_values_by_repo.insert((*repo).clone(), (*val).clone());
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                        }
+                        self.#names.swap(Arc::new(new_values_by_repo));
+                    )*
+                });
+            }
         }
     }
 
+    let update_container_type = ty.update_container_type();
     quote! {
-        pub fn #method_name(&self, tunables: &std::collections::HashMap<String, #type_ident>) {
+        pub fn #method_name(&self, tunables: &#update_container_type) {
             #body
         }
     }
@@ -202,7 +241,8 @@ fn resolve_type(ty: Type) -> TunableType {
                 // and it makes it harder to parse it.
                 // We use TunableString as a workaround
                 "TunableString" => return TunableType::String,
-                _ => unimplemented!("{}", UNIMPLEMENTED_MSG),
+                "TunableBoolByRepo" => return TunableType::ByRepoBool,
+                _ => unimplemented!("{}, found: {}", UNIMPLEMENTED_MSG, &ident.to_string()[..]),
             }
         }
     }

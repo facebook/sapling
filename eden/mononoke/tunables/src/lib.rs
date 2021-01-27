@@ -23,6 +23,8 @@ use std::sync::atomic::{AtomicBool, AtomicI64};
 use tunables_derive::Tunables;
 use tunables_structs::Tunables as TunablesStruct;
 
+use std::collections::HashMap;
+
 static TUNABLES: OnceCell<MononokeTunables> = OnceCell::new();
 const REFRESH_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -55,6 +57,8 @@ pub fn tunables() -> TunablesReference {
 
 // This type exists to simplify code generation in tunables-derive
 pub type TunableString = ArcSwap<String>;
+
+pub type TunableBoolByRepo = ArcSwap<HashMap<String, bool>>;
 
 #[derive(Tunables, Default, Debug)]
 pub struct MononokeTunables {
@@ -194,6 +198,10 @@ fn update_tunables(new_tunables: Arc<TunablesStruct>) -> Result<()> {
     tunables.update_ints(&new_tunables.ints);
     tunables.update_strings(&new_tunables.strings);
 
+    if let Some(killswitches_by_repo) = &new_tunables.killswitches_by_repo {
+        tunables.update_by_repo_bools(killswitches_by_repo);
+    }
+
     Ok(())
 }
 
@@ -236,6 +244,8 @@ mod test {
         boolean: AtomicBool,
         num: AtomicI64,
         string: TunableString,
+
+        repobool: TunableBoolByRepo,
     }
 
     #[derive(Tunables, Default)]
@@ -310,6 +320,35 @@ mod test {
         assert_eq!(test.get_string().as_str(), "");
         test.update_strings(&d);
         assert_eq!(test.get_string().as_str(), "value");
+    }
+
+    #[test]
+    fn update_by_repo_bool() {
+        let mut d = HashMap::new();
+        d.insert("repobool".to_string(), true);
+
+        let mut r = HashMap::new();
+        r.insert("repo".to_string(), d.clone());
+        r.insert("repo2".to_string(), d);
+
+        let test = TestTunables::default();
+
+        assert_eq!(test.get_by_repo_repobool(&"repo".to_string()), None);
+        assert_eq!(test.get_by_repo_repobool(&"repo2".to_string()), None);
+
+        test.update_by_repo_bools(&r);
+        assert_eq!(test.get_by_repo_repobool(&"repo".to_string()), Some(true));
+        assert_eq!(test.get_by_repo_repobool(&"repo2".to_string()), Some(true));
+
+        r.remove("repo2");
+        test.update_by_repo_bools(&r);
+        assert_eq!(test.get_by_repo_repobool(&"repo2".to_string()), None);
+
+        let mut f = HashMap::new();
+        f.insert("repobool".to_string(), false);
+        r.insert("repo".to_string(), f);
+        test.update_by_repo_bools(&r);
+        assert_eq!(test.get_by_repo_repobool(&"repo".to_string()), Some(false));
     }
 
     #[fbinit::compat_test]
