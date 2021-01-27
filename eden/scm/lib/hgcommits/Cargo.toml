@@ -6,7 +6,7 @@ version = "0.1.0"
 include = ["src/**/*.rs"]
 
 [dependencies]
-dag = { path = "../dag", features = ["for-tests"] }
+dag = { path = "../dag", features = ["for-tests", "indexedlog-backend"] }
 edenapi = { path = "../edenapi" }
 gitdag = { path = "../dag/gitdag" }
 metalog = { path = "../metalog" }
