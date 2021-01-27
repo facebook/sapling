@@ -1,0 +1,28 @@
+[package]
+name = "copy_utils"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+cross_repo_sync = { path = "../../commit_rewriting/cross_repo_sync", version = "0.1.0" }
+derived_data = { path = "../../derived_data", version = "0.1.0" }
+fsnodes = { path = "../../derived_data/fsnodes", version = "0.1.0" }
+manifest = { path = "../../manifest", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+anyhow = "1.0"
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+regex = "1.4.2"
+slog = { version = "2.5", features = ["max_level_debug"] }
+
+[dev-dependencies]
+blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+maplit = "1.0"
+tokio-compat = "0.1"

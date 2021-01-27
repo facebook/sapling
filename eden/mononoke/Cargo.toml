@@ -116,6 +116,7 @@ changeset_fetcher = { path = "blobrepo/changeset_fetcher", version = "0.1.0" }
 changesets = { path = "changesets", version = "0.1.0" }
 cmdlib = { path = "cmdlib", version = "0.1.0" }
 context = { path = "server/context", version = "0.1.0" }
+copy_utils = { path = "common/copy_utils", version = "0.1.0" }
 cross_repo_sync = { path = "commit_rewriting/cross_repo_sync", version = "0.1.0" }
 dbbookmarks = { path = "bookmarks/dbbookmarks", version = "0.1.0" }
 deleted_files_manifest = { path = "derived_data/deleted_files_manifest", version = "0.1.0" }
@@ -274,6 +275,7 @@ members = [
     "common/async_limiter",
     "common/async_limiter/examples/tokio_v2",
     "common/bounded_traversal",
+    "common/copy_utils",
     "common/dedupmap",
     "common/iterhelpers",
     "common/rust/caching_ext",
