@@ -294,7 +294,7 @@ impl IdMap for SqlIdMap {
         let mut cs_ids = select_vertexes(&self.connections.read_connection, &to_query).await?;
         let not_found_in_replica: Vec<_> = vertexes
             .iter()
-            .filter(|x| cs_ids.contains_key(x))
+            .filter(|x| !cs_ids.contains_key(x))
             .map(|v| v.0)
             .collect();
         if !not_found_in_replica.is_empty() {
@@ -355,6 +355,7 @@ mod tests {
     use super::*;
 
     use maplit::hashmap;
+    use sql::{rusqlite::Connection as SqliteConnection, Connection};
 
     use fbinit::FacebookInit;
 
@@ -487,6 +488,41 @@ mod tests {
 
         let response = idmap.find_many_changeset_ids(&ctx, vec![Vertex(6)]).await?;
         assert!(response.is_empty());
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_find_many_changeset_ids_leader_fallback(fb: FacebookInit) -> Result<()> {
+        fn conn() -> Result<Connection> {
+            let con = SqliteConnection::open_in_memory()?;
+            con.execute_batch(SegmentedChangelogBuilder::CREATION_QUERY)?;
+            Ok(Connection::with_sqlite(con))
+        }
+
+        let ctx = CoreContext::test_mock(fb);
+
+        let leader = conn()?;
+        let replica = conn()?;
+
+        let conns = SqlConnections {
+            write_connection: leader.clone(),
+            read_connection: replica,
+            read_master_connection: leader,
+        };
+
+        let idmap = SegmentedChangelogBuilder::new()
+            .with_sql_connections(conns)
+            .with_repo_id(RepositoryId::new(0))
+            .build_sql_idmap()?;
+
+        idmap.insert(&ctx, Vertex(0), ONES_CSID).await?;
+
+        let res = idmap.get_changeset_id(&ctx, Vertex(0)).await?;
+        assert_eq!(res, ONES_CSID);
+
+        let res = idmap.find_many_changeset_ids(&ctx, vec![Vertex(0)]).await?;
+        assert_eq!(res, hashmap![Vertex(0) => ONES_CSID]);
 
         Ok(())
     }
