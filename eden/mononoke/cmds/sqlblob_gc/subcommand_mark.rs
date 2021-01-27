@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use std::{ops::Range, sync::Arc};
+use std::{ops::Range, sync::Arc, time::Duration};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{App, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use futures::{
@@ -15,18 +15,32 @@ use futures::{
     sink::SinkExt,
     stream::{StreamExt, TryStreamExt},
 };
+use rand::{thread_rng, Rng};
 use slog::Logger;
+use tokio::time::delay_for;
 
 use sqlblob::Sqlblob;
 
 pub const MARK_SAFE: &str = "mark";
+const MIN_RETRY_DELAY: Duration = Duration::from_millis(10);
+const MAX_RETRY_DELAY: Duration = Duration::from_millis(100);
+const RETRIES: usize = 3;
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(MARK_SAFE).about("mark referenced blobs as not safe to delete")
 }
 
 async fn handle_one_key(key: String, store: Arc<Sqlblob>) -> Result<()> {
-    store.set_generation(&key).await
+    for _retry in 0..RETRIES {
+        let res = store.set_generation(&key).await;
+        if res.is_ok() {
+            return res;
+        }
+        let delay = thread_rng().gen_range(MIN_RETRY_DELAY, MAX_RETRY_DELAY);
+        eprintln!("Failure {:#?} - delaying for {:#?}", res, delay);
+        delay_for(delay).await;
+    }
+    Err(anyhow!("Did not make an attempt to handle {}", &key))
 }
 
 pub async fn subcommand_mark<'a>(
