@@ -17,6 +17,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_cbor::Deserializer;
 use url::Url;
 
+use auth::check_certs;
 use edenapi_types::{
     wire::{
         WireCloneData, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
@@ -77,6 +78,9 @@ impl Client {
     /// Add configured values to a request.
     fn configure(&self, mut req: Request) -> Result<Request, EdenApiError> {
         if let Some(ref cert) = self.config.cert {
+            if self.config.validate_certs {
+                check_certs(cert)?;
+            }
             req = req.cert(cert);
         }
 

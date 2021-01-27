@@ -36,6 +36,7 @@ pub struct Builder {
     debug: bool,
     correlator: Option<String>,
     http_version: Option<HttpVersion>,
+    validate_certs: bool,
 }
 
 impl Builder {
@@ -57,8 +58,14 @@ impl Builder {
             .parse::<Url>()
             .map_err(ConfigError::InvalidUrl)?;
 
+        let validate_certs = config
+            .get_opt::<bool>("edenapi", "validate-certs")
+            .map_err(|e| ConfigError::Malformed("edenapi.validate-certs".into(), e))?
+            .unwrap_or_default();
+
         let (cert, key, ca_bundle) = AuthConfig::new(&config)
-            .auth_for_url(&server_url)
+            .validate(validate_certs)
+            .auth_for_url(&server_url)?
             .map(|auth| (auth.cert, auth.key, auth.cacerts))
             .unwrap_or_default();
 
@@ -120,6 +127,7 @@ impl Builder {
             debug,
             correlator: None,
             http_version,
+            validate_certs,
         })
     }
 
@@ -226,6 +234,7 @@ pub(crate) struct Config {
     pub(crate) debug: bool,
     pub(crate) correlator: Option<String>,
     pub(crate) http_version: Option<HttpVersion>,
+    pub(crate) validate_certs: bool,
 }
 
 impl TryFrom<Builder> for Config {
@@ -245,6 +254,7 @@ impl TryFrom<Builder> for Config {
             debug,
             correlator,
             http_version,
+            validate_certs,
         } = builder;
 
         // Check for missing required fields.
@@ -268,6 +278,7 @@ impl TryFrom<Builder> for Config {
             debug,
             correlator,
             http_version,
+            validate_certs,
         })
     }
 }
