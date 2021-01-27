@@ -794,7 +794,7 @@ async fn create_file_changes(
         }
         map.insert("overrides".to_string(), map_overrides.into());
 
-        let content = (get_generated_string() + &serde_json::to_string(&map)?).into_bytes();
+        let content = (get_generated_string() + &serde_json::to_string_pretty(&map)?).into_bytes();
         let content = bytes::Bytes::from(content);
         let size = content.len() as u64;
         let content_metadata = filestore::store(
