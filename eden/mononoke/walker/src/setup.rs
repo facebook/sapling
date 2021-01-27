@@ -13,7 +13,7 @@ use crate::progress::{
     sort_by_string, ProgressOptions, ProgressStateCountByType, ProgressStateMutex, ProgressSummary,
 };
 use crate::sampling::SamplingOptions;
-use crate::state::StepStats;
+use crate::state::{InternedType, StepStats};
 use crate::tail::TailParams;
 use crate::validate::{CheckType, REPO, WALK_TYPE};
 use crate::walk::{OutgoingEdge, RepoWalkParams};
@@ -94,6 +94,8 @@ const BOOKMARK_ARG: &str = "bookmark";
 const WALK_ROOT_ARG: &str = "walk-root";
 const CHUNK_BY_PUBLIC_ARG: &str = "chunk-by-public";
 const CHUNK_SIZE_ARG: &str = "chunk-size";
+const INCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG: &str = "include-chunk-clear-interned-type";
+const EXCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG: &str = "exclude-chunk-clear-interned-type";
 const INCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG: &str = "include-chunk-clear-node-type";
 const EXCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG: &str = "exclude-chunk-clear-node-type";
 const CHUNK_CLEAR_SAMPLE_RATE_ARG: &str = "chunk-clear-sample-rate";
@@ -156,6 +158,21 @@ static NODE_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
             .map(|e| e.as_ref() as &'static str),
     );
     v.extend(NodeType::VARIANTS.iter());
+    v
+});
+
+/// Default to clearing out all except HgChangesets ( and bonsai Changsets as no option to clear those)
+const DEFAULT_CHUNK_CLEAR_INTERNED_TYPES: &[InternedType] = &[
+    InternedType::FileUnodeId,
+    InternedType::HgFileNodeId,
+    InternedType::HgManifestId,
+    InternedType::ManifestUnodeId,
+    InternedType::MPathHash,
+];
+
+static INTERNED_TYPE_POSSIBLE_VALUES: Lazy<Vec<&'static str>> = Lazy::new(|| {
+    let mut v = vec![ALL_VALUE_ARG, DEFAULT_VALUE_ARG];
+    v.extend(InternedType::VARIANTS.iter());
     v
 });
 
@@ -733,6 +750,28 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Clear the saved walk state 1 in N steps."),
         )
         .arg(
+            Arg::with_name(INCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG)
+                .long(INCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG)
+                .short("t")
+                .takes_value(true)
+                .required(false)
+                .multiple(false)
+                .number_of_values(1)
+                .possible_values(&INTERNED_TYPE_POSSIBLE_VALUES)
+                .help("Include in InternedTypes to flush between chunks"),
+        )
+        .arg(
+            Arg::with_name(EXCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG)
+                .long(EXCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG)
+                .short("T")
+                .takes_value(true)
+                .required(false)
+                .multiple(false)
+                .number_of_values(1)
+                .possible_values(&INTERNED_TYPE_POSSIBLE_VALUES)
+                .help("Exclude from InternedTypes to flush between chunks"),
+        )
+        .arg(
             Arg::with_name(INCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG)
                 .long(INCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG)
                 .short("n")
@@ -811,6 +850,44 @@ pub fn parse_progress_args(sub_m: &ArgMatches) -> ProgressOptions {
     }
 }
 
+// parse the pre-defined groups we have for default etc
+fn parse_interned_value(
+    arg: &str,
+    default: &[InternedType],
+) -> Result<HashSet<InternedType>, Error> {
+    Ok(match arg {
+        ALL_VALUE_ARG => InternedType::iter().collect(),
+        DEFAULT_VALUE_ARG => default.iter().cloned().collect(),
+        _ => InternedType::from_str(arg)
+            .map(|e| hashset![e])
+            .with_context(|| format_err!("Unknown InternedType {}", arg))?,
+    })
+}
+
+fn parse_interned_values(
+    values: Option<Values>,
+    default: &[InternedType],
+) -> Result<HashSet<InternedType>, Error> {
+    match values {
+        None => Ok(default.iter().cloned().collect()),
+        Some(values) => process_results(values.map(|v| parse_interned_value(v, default)), |s| {
+            s.concat()
+        }),
+    }
+}
+
+pub fn parse_interned_types(
+    sub_m: &ArgMatches,
+    include_arg_name: &str,
+    exclude_arg_name: &str,
+    default: &[InternedType],
+) -> Result<HashSet<InternedType>, Error> {
+    let mut include_types = parse_interned_values(sub_m.values_of(include_arg_name), default)?;
+    let exclude_types = parse_interned_values(sub_m.values_of(exclude_arg_name), &[])?;
+    include_types.retain(|x| !exclude_types.contains(x));
+    Ok(include_types)
+}
+
 pub fn parse_tail_args(sub_m: &ArgMatches) -> Result<TailParams, Error> {
     let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
 
@@ -820,6 +897,13 @@ pub fn parse_tail_args(sub_m: &ArgMatches) -> Result<TailParams, Error> {
     } else {
         None
     };
+
+    let clear_interned_types = parse_interned_types(
+        sub_m,
+        INCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG,
+        EXCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG,
+        DEFAULT_CHUNK_CLEAR_INTERNED_TYPES,
+    )?;
 
     let clear_node_types = parse_node_types(
         sub_m,
@@ -834,6 +918,7 @@ pub fn parse_tail_args(sub_m: &ArgMatches) -> Result<TailParams, Error> {
         tail_secs,
         public_changeset_chunk_size,
         public_changeset_chunk_by,
+        clear_interned_types,
         clear_node_types,
         clear_sample_rate,
     })

@@ -32,6 +32,7 @@ use std::{
     sync::atomic::{AtomicU32, AtomicUsize, Ordering},
 };
 use strum::EnumCount;
+use strum_macros::{EnumIter, EnumString, EnumVariantNames};
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct StepStats {
@@ -367,6 +368,27 @@ impl WalkState {
             self.chunk_bcs.contains_key(&id)
         }
     }
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    Hash,
+    EnumIter,
+    EnumString,
+    EnumVariantNames
+)]
+pub enum InternedType {
+    // No ChangesetId as that is not flushable as it is used to maintain deferred_bcs
+    FileUnodeId,
+    HgChangesetId,
+    HgFileNodeId,
+    HgManifestId,
+    ManifestUnodeId,
+    MPathHash,
 }
 
 #[async_trait]

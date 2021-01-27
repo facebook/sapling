@@ -8,6 +8,7 @@
 use crate::graph::{ChangesetKey, Node, NodeType};
 use crate::log;
 use crate::setup::JobWalkParams;
+use crate::state::InternedType;
 use crate::walk::{
     walk_exact, OutgoingEdge, RepoWalkParams, RepoWalkTypeParams, StepRoute, WalkVisitor,
 };
@@ -68,6 +69,7 @@ pub struct TailParams {
     pub tail_secs: Option<u64>,
     pub public_changeset_chunk_size: Option<usize>,
     pub public_changeset_chunk_by: HashSet<NodeType>,
+    pub clear_interned_types: HashSet<InternedType>,
     pub clear_node_types: HashSet<NodeType>,
     pub clear_sample_rate: Option<u64>,
 }
