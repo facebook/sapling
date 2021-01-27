@@ -50,10 +50,13 @@ use std::fmt;
 use std::ops::Deref;
 use std::sync::Arc;
 
+#[cfg(any(test, feature = "indexedlog-backend"))]
 mod indexedlog_namedag;
 mod mem_namedag;
 
+#[cfg(any(test, feature = "indexedlog-backend"))]
 pub use indexedlog_namedag::IndexedLogNameDagPath;
+#[cfg(any(test, feature = "indexedlog-backend"))]
 pub use indexedlog_namedag::NameDag;
 pub use mem_namedag::MemNameDag;
 pub use mem_namedag::MemNameDagPath;

@@ -12,9 +12,13 @@ use crate::Result;
 use serde::{Deserialize, Serialize};
 
 mod in_process_store;
+
+#[cfg(any(test, feature = "indexedlog-backend"))]
 mod indexedlog_store;
 
 pub(crate) use in_process_store::InProcessStore;
+
+#[cfg(any(test, feature = "indexedlog-backend"))]
 pub(crate) use indexedlog_store::IndexedLogStore;
 
 pub trait IdDagStore: Send + Sync {
@@ -402,9 +406,12 @@ mod tests {
         let mut store = InProcessStore::new();
         f(&mut store);
 
-        let dir = tempfile::tempdir().unwrap();
-        let mut store = IndexedLogStore::open(&dir.path()).unwrap();
-        f(&mut store);
+        #[cfg(feature = "indexedlog-backend")]
+        {
+            let dir = tempfile::tempdir().unwrap();
+            let mut store = IndexedLogStore::open(&dir.path()).unwrap();
+            f(&mut store);
+        }
     }
 
     fn for_each_store(f: impl Fn(&mut dyn IdDagStore)) {

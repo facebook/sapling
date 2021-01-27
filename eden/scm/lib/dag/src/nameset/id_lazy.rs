@@ -325,7 +325,7 @@ impl AsyncNameSetQuery for IdLazySet {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "indexedlog-backend"))]
 #[allow(clippy::redundant_clone)]
 pub(crate) mod tests {
     use super::super::tests::*;

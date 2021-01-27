@@ -10,19 +10,23 @@
 //! See [`IdMap`] for the main structure.
 
 use crate::id::{Group, Id, VertexName};
+#[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::locked::Locked;
 use crate::ops::IdConvert;
 use crate::ops::Parents;
 use crate::segment::PreparedFlatSegments;
 use crate::Result;
 
+#[cfg(any(test, feature = "indexedlog-backend"))]
 mod indexedlog_idmap;
 mod mem_idmap;
 
+#[cfg(any(test, feature = "indexedlog-backend"))]
 pub use indexedlog_idmap::IdMap;
 pub use mem_idmap::MemIdMap;
 
 /// Guard to make sure [`IdMap`] on-disk writes are race-free.
+#[cfg(any(test, feature = "indexedlog-backend"))]
 pub type SyncableIdMap<'a> = Locked<'a, IdMap>;
 
 /// DAG-aware write operations.
@@ -172,6 +176,7 @@ mod tests {
     use std::ops::Deref;
     use tempfile::tempdir;
 
+    #[cfg(all(test, feature = "indexedlog-backend"))]
     #[test]
     fn test_basic_operations() {
         let dir = tempdir().unwrap();

@@ -23,8 +23,10 @@ use crate::iddagstore::IdDagStore;
 use crate::ops::IdConvert;
 use crate::spanset::SpanSet;
 use crate::Error;
+use crate::Id;
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use crate::IdMap;
 use crate::Result;
-use crate::{Id, IdMap};
 use nonblocking::non_blocking_result;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -237,6 +239,7 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestLocationToName, Response
 
 // Name -> Id or Id -> Name, step 3: Apply RequestNameToLocation to a local IdMap.
 // Works on an incomplete IdMap, client-side.
+#[cfg(any(test, feature = "indexedlog-backend"))]
 impl<'a, DagStore: IdDagStore> Process<&ResponseIdNamePair, ()>
     for (&'a mut IdMap, &'a IdDag<DagStore>)
 {

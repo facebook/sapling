@@ -43,6 +43,7 @@ pub enum BackendError {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
+    #[cfg(any(test, feature = "indexedlog-backend"))]
     #[error(transparent)]
     IndexedLog(#[from] indexedlog::Error),
 
@@ -58,6 +59,7 @@ impl From<BackendError> for DagError {
     }
 }
 
+#[cfg(any(test, feature = "indexedlog-backend"))]
 impl From<indexedlog::Error> for DagError {
     fn from(err: indexedlog::Error) -> DagError {
         DagError::Backend(Box::new(BackendError::from(err)))

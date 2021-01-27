@@ -34,6 +34,7 @@ pub mod id_lazy;
 pub mod id_static;
 pub mod intersection;
 pub mod lazy;
+#[cfg(any(test, feature = "indexedlog-backend"))]
 pub mod legacy;
 pub mod meta;
 pub mod r#static;

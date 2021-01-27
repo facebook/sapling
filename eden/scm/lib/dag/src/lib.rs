@@ -37,7 +37,9 @@ pub use dag_wire_types::id;
 pub use clone::CloneData;
 pub use id::{Group, Id, VertexName};
 pub use iddag::IdDag;
+#[cfg(any(test, feature = "indexedlog-backend"))]
 pub use idmap::IdMap;
+#[cfg(any(test, feature = "indexedlog-backend"))]
 pub use namedag::NameDag;
 pub use nameset::NameSet;
 pub use ops::DagAlgorithm;
@@ -47,9 +49,11 @@ pub use verlink::VerLink;
 
 pub type Level = u8;
 pub type InProcessIdDag = IdDag<iddagstore::InProcessStore>;
+#[cfg(any(test, feature = "indexedlog-backend"))]
 pub type OnDiskIdDag = IdDag<iddagstore::IndexedLogStore>;
 
 // Short aliases for main public types.
+#[cfg(any(test, feature = "indexedlog-backend"))]
 pub type Dag = NameDag;
 pub type Set = NameSet;
 pub type IdSet = SpanSet;
@@ -57,6 +61,7 @@ pub use namedag::MemNameDag as MemDag;
 pub use nameset::NameIter as SetIter;
 pub type Vertex = VertexName;
 
+#[cfg(feature = "indexedlog-backend")]
 pub mod tests;
 
 pub use errors::DagError as Error;

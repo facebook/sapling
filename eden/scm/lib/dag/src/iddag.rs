@@ -8,9 +8,12 @@
 use crate::errors::bug;
 use crate::errors::NotFoundError;
 use crate::id::{Group, Id};
-use crate::iddagstore::{IdDagStore, InProcessStore, IndexedLogStore};
+#[cfg(any(test, feature = "indexedlog-backend"))]
+use crate::iddagstore::IndexedLogStore;
+use crate::iddagstore::{IdDagStore, InProcessStore};
 use crate::locked::Locked;
 use crate::ops::Persist;
+#[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::ops::TryClone;
 use crate::segment::{FlatSegment, PreparedFlatSegments, Segment, SegmentFlags};
 use crate::spanset::Span;
@@ -25,6 +28,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::{BTreeSet, BinaryHeap};
 use std::fmt::{self, Debug, Formatter};
+#[cfg(any(test, feature = "indexedlog-backend"))]
 use std::path::Path;
 use tracing::{debug_span, field, trace};
 
@@ -64,6 +68,7 @@ const DEFAULT_SEG_SIZE: usize = 16;
 /// cannot merge level 4 segments).
 const MAX_MEANINGFUL_LEVEL: Level = 4;
 
+#[cfg(any(test, feature = "indexedlog-backend"))]
 impl IdDag<IndexedLogStore> {
     /// Open [`IdDag`] at the given directory. Create it on demand.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
@@ -89,6 +94,7 @@ impl<S> IdDag<S> {
     }
 }
 
+#[cfg(any(test, feature = "indexedlog-backend"))]
 impl TryClone for IdDag<IndexedLogStore> {
     /// Attempt to clone the `IdDag`.
     fn try_clone(&self) -> Result<Self> {
@@ -1251,10 +1257,10 @@ impl<Store: IdDagStore> IdDag<Store> {
 impl<Store: IdDagStore> IdDag<Store> {
     /// Copy a subset of "Universal" mapping from `full_idmap` to
     /// `sparse_idmap`. See [`IdDag::universal`].
-    pub async fn write_sparse_idmap(
+    pub async fn write_sparse_idmap<M: crate::idmap::IdMapWrite>(
         &self,
         full_idmap: &dyn crate::ops::IdConvert,
-        sparse_idmap: &mut crate::idmap::IdMap,
+        sparse_idmap: &mut M,
     ) -> Result<()> {
         for id in self.universal_ids()? {
             let name = full_idmap.vertex_name(id).await?;
