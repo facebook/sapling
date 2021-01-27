@@ -14,12 +14,11 @@ pub use crate::gitimport_objects::{
     GitRangeImport, GitTree, GitimportPreferences, GitimportTarget, ImportMissingForCommit,
 };
 use anyhow::{format_err, Context, Error};
-use blobrepo::BlobRepo;
+use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Blobstore;
 use bonsai_git_mapping::BonsaiGitMappingEntry;
 use bytes::Bytes;
-use changesets::ChangesetInsert;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -32,8 +31,7 @@ use manifest::{bonsai_diff, BonsaiDiffFileChange, StoreLoadable};
 use mercurial_derived_data::get_manifest_from_bonsai;
 use mercurial_types::HgManifestId;
 use mononoke_types::{
-    blob::BlobstoreValue, hash, typed_hash::MononokeId, BonsaiChangeset, BonsaiChangesetMut,
-    ChangesetId, ContentMetadata, FileChange, MPath,
+    hash, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentMetadata, FileChange, MPath,
 };
 use slog::{debug, info};
 use std::collections::{BTreeMap, HashMap};
@@ -244,23 +242,8 @@ pub async fn gitimport(
                     // We now that the commits are in order (this is guaranteed by the Walk), so we
                     // can insert them as-is, one by one, without extra dependency / ordering checks.
 
-                    let blob = bcs.clone().into_blob();
-                    let bcs_id = *blob.id();
-
-                    repo.blobstore()
-                        .put(ctx, bcs_id.blobstore_key(), blob.into())
-                        .await?;
-
-                    repo.get_changesets_object()
-                        .add(
-                            ctx.clone(),
-                            ChangesetInsert {
-                                repo_id: repo.get_repoid(),
-                                cs_id: bcs_id,
-                                parents: bcs.parents().collect(),
-                            },
-                        )
-                        .await?;
+                    let bcs_id = bcs.get_changeset_id();
+                    save_bonsai_changesets(vec![bcs.clone()], ctx.clone(), repo.clone()).await?;
 
                     if bonsai_git_mapping {
                         repo.bonsai_git_mapping()

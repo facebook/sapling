@@ -11,7 +11,6 @@ blobrepo = { path = "../../blobrepo", version = "0.1.0" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
 blobstore = { path = "../../blobstore", version = "0.1.0" }
 bonsai_git_mapping = { path = "../../bonsai_git_mapping", version = "0.1.0" }
-changesets = { path = "../../changesets", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 derived_data = { path = "../../derived_data", version = "0.1.0" }
 filestore = { path = "../../filestore", version = "0.1.0" }
