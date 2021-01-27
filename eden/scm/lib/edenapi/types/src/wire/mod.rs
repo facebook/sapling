@@ -52,6 +52,8 @@ pub mod history;
 pub mod metadata;
 pub mod tree;
 
+use dag_wire_types::id::Id as DagId;
+
 pub use crate::wire::{
     clone::{WireCloneData, WireIdMapEntry},
     complete_tree::WireCompleteTreeRequest,
@@ -433,7 +435,7 @@ impl ToApi for u32 {
 #[derive(Serialize, Deserialize)]
 pub struct WireDagId(u64);
 
-impl ToWire for dag::Id {
+impl ToWire for DagId {
     type Wire = WireDagId;
 
     fn to_wire(self) -> Self::Wire {
@@ -442,11 +444,11 @@ impl ToWire for dag::Id {
 }
 
 impl ToApi for WireDagId {
-    type Api = dag::Id;
+    type Api = DagId;
     type Error = Infallible;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(dag::Id(self.0))
+        Ok(DagId(self.0))
     }
 }
 
@@ -508,7 +510,7 @@ impl Arbitrary for WireRevisionstoreMetadata {
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireDagId {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        dag::Id::arbitrary(g).to_wire()
+        DagId::arbitrary(g).to_wire()
     }
 }
 
@@ -585,7 +587,7 @@ pub mod tests {
             check_wire_roundtrip(v)
         }
 
-        fn test_dagid_roundtrip_wire(v: dag::Id) -> bool {
+        fn test_dagid_roundtrip_wire(v: DagId) -> bool {
             check_wire_roundtrip(v)
         }
     }

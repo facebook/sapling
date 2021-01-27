@@ -1,0 +1,15 @@
+[package]
+name = "dag-wire-types"
+version = "0.1.0"
+edition = "2018"
+
+[features]
+for-tests = ["quickcheck"]
+
+[dependencies]
+minibytes = { path = "../../minibytes" }
+quickcheck = { version = "0.9", optional = true }
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+quickcheck = { version = "0.9" }

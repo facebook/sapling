@@ -647,12 +647,6 @@ mod tests {
         }
     }
 
-    impl std::cmp::PartialEq<u64> for Id {
-        fn eq(&self, other: &u64) -> bool {
-            self.0 == *other
-        }
-    }
-
     #[test]
     fn test_overlapped_spans() {
         let span = SpanSet::from_spans(vec![1..=3, 3..=4]);

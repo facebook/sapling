@@ -10,7 +10,7 @@ default = ["for-tests"]
 for-tests = []
 
 [dependencies]
-dag = { path = "../../dag", features = ["for-tests"] }
+dag-wire-types = { path = "../../dag/dag-wire-types", features = ["for-tests"] }
 revisionstore_types = { path = "../../revisionstore/types" }
 types = { path = "../../types" }
 anyhow = "1.0"

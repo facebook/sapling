@@ -13,12 +13,10 @@
 //! Building blocks for the commit graph used by source control.
 
 mod bsearch;
-pub mod clone;
 mod default_impl;
 mod delegate;
 pub mod errors;
 mod fmt;
-pub mod id;
 mod iddag;
 pub mod iddagstore;
 pub mod idmap;
@@ -32,6 +30,9 @@ pub mod segment;
 pub mod spanset;
 pub mod utils;
 mod verlink;
+
+pub use dag_wire_types::clone;
+pub use dag_wire_types::id;
 
 pub use clone::CloneData;
 pub use id::{Group, Id, VertexName};

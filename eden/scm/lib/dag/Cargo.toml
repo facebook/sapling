@@ -8,6 +8,7 @@ default = ["for-tests"]
 for-tests = ["quickcheck"]
 
 [dependencies]
+dag-wire-types = { path = "dag-wire-types" }
 drawdag = { path = "../drawdag" }
 indexedlog = { path = "../indexedlog" }
 minibytes = { path = "../minibytes" }
@@ -31,6 +32,7 @@ tracing = "0.1"
 
 [dev-dependencies]
 bindag = { path = "bindag" }
+dag-wire-types = { path = "dag-wire-types", features = ["for-tests"] }
 dev-logger = { path = "../dev-logger" }
 mincode = { path = "../mincode" }
 minibench = { path = "../minibench" }

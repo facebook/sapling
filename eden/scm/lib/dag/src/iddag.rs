@@ -1179,7 +1179,9 @@ impl<Store: IdDagStore> IdDag<Store> {
         // or interesting. For a typical query like `x::y`, it might just select
         // a few heads in the non-master group. It's a waste of time to iterate
         // through lots of invisible segments.
-        let non_master_spans = ancestors.intersection(&Group::NON_MASTER.span().into());
+        let non_master_spans = ancestors.intersection(
+            &Span::from(Group::NON_MASTER.min_id()..=Group::NON_MASTER.max_id()).into(),
+        );
         // Visit in ascending order.
         let mut span_iter = non_master_spans.as_spans().iter().rev().cloned();
         let mut next_optional_span = span_iter.next();
