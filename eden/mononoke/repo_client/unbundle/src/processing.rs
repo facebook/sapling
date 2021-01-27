@@ -861,7 +861,7 @@ pub fn get_pushrebase_hooks(
 ) -> Vec<Box<dyn PushrebaseHook>> {
     let mut hooks = vec![];
 
-    if params.assign_globalrevs {
+    if params.globalrevs_publishing_bookmark.is_some() {
         let hook = GlobalrevPushrebaseHook::new(
             ctx,
             repo.bonsai_globalrev_mapping().clone(),

@@ -861,9 +861,9 @@ emit_obsmarkers=true
 CONFIG
 fi
 
-if [[ -n "${ASSIGN_GLOBALREVS:-}" ]]; then
+if [[ -n "${GLOBALREVS_PUBLISHING_BOOKMARK:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
-assign_globalrevs=true
+globalrevs_publishing_bookmark = "${GLOBALREVS_PUBLISHING_BOOKMARK}"
 CONFIG
 fi
 

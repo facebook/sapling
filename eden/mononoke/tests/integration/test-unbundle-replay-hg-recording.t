@@ -9,7 +9,7 @@ Clean up state out of Scuba logs
   $ unset SMC_TIERS TW_TASK_ID TW_CANARY_ID TW_JOB_CLUSTER TW_JOB_USER TW_JOB_NAME
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ ASSIGN_GLOBALREVS=1 ENABLE_PRESERVE_BUNDLE2=1 BLOB_TYPE="blob_files" quiet default_setup
+  $ GLOBALREVS_PUBLISHING_BOOKMARK=master_bookmark ENABLE_PRESERVE_BUNDLE2=1 BLOB_TYPE="blob_files" quiet default_setup
 
 Set up script to output the raw bundle. This doesn't look at its arguments at all
 
@@ -55,7 +55,7 @@ Blow everything away: we're going to re-do the push from scratch, in a new repo.
 
   $ killandwait "$MONONOKE_PID"
   $ rm -rf "$TESTTMP/mononoke-config" "$TESTTMP/monsql" "$TESTTMP/blobstore"
-  $ ASSIGN_GLOBALREVS=1 BLOB_TYPE="blob_files" quiet default_setup
+  $ GLOBALREVS_PUBLISHING_BOOKMARK=master_bookmark BLOB_TYPE="blob_files" quiet default_setup
 
 Replay the push. This will fail because the entry does not exist (we need run this once to create the schema).
 

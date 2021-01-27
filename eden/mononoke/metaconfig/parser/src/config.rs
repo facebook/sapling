@@ -969,7 +969,7 @@ mod test {
                     block_merges: false,
                     emit_obsmarkers: false,
                     commit_scribe_category: None,
-                    assign_globalrevs: false,
+                    globalrevs_publishing_bookmark: None,
                     populate_git_mapping: false,
                 },
                 lfs: LfsParams {

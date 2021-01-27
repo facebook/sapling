@@ -12,7 +12,7 @@ use metaconfig_types::PushrebaseParams;
 pub(crate) fn require_globalrevs_disabled(
     pushrebase_params: &PushrebaseParams,
 ) -> Result<(), BookmarkMovementError> {
-    if pushrebase_params.assign_globalrevs {
+    if pushrebase_params.globalrevs_publishing_bookmark.is_some() {
         return Err(BookmarkMovementError::PushrebaseRequiredGlobalrevs);
     }
     Ok(())

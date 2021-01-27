@@ -6,7 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ DISALLOW_NON_PUSHREBASE=1 ASSIGN_GLOBALREVS=1 EMIT_OBSMARKERS=1 BLOB_TYPE="blob_files" default_setup
+  $ DISALLOW_NON_PUSHREBASE=1 GLOBALREVS_PUBLISHING_BOOKMARK=master_bookmark EMIT_OBSMARKERS=1 BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │

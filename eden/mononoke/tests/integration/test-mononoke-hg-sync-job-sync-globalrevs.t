@@ -9,7 +9,7 @@
 setup configuration
 
   $ DISALLOW_NON_PUSHREBASE=1 \
-  > ASSIGN_GLOBALREVS=1 \
+  > GLOBALREVS_PUBLISHING_BOOKMARK=master_bookmark \
   > EMIT_OBSMARKERS=1 \
   > BLOB_TYPE="blob_files" \
   > HGSQL_NAME=foorepo \

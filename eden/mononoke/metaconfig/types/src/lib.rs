@@ -595,7 +595,7 @@ pub struct PushrebaseParams {
     /// Scribe category we log new commits to
     pub commit_scribe_category: Option<String>,
     /// Whether Globalrevs should be assigned
-    pub assign_globalrevs: bool,
+    pub globalrevs_publishing_bookmark: Option<BookmarkName>,
     /// Whether Git Mapping should be populated from extras (affects also blobimport)
     pub populate_git_mapping: bool,
 }
@@ -607,7 +607,7 @@ impl Default for PushrebaseParams {
             block_merges: false,
             emit_obsmarkers: false,
             commit_scribe_category: None,
-            assign_globalrevs: false,
+            globalrevs_publishing_bookmark: None,
             populate_git_mapping: false,
         }
     }

@@ -147,7 +147,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
 
         let mut pushrebase_hooks = Vec::new();
 
-        if pushrebase_params.assign_globalrevs {
+        if pushrebase_params.globalrevs_publishing_bookmark.is_some() {
             let hook = GlobalrevPushrebaseHook::new(
                 ctx.clone(),
                 repo.bonsai_globalrev_mapping().clone(),

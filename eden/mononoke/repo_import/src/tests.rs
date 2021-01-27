@@ -385,7 +385,7 @@ mod tests {
 
         let mut repo_config = RepoConfig::default();
         repo_config.pushrebase = PushrebaseParams {
-            assign_globalrevs: true,
+            globalrevs_publishing_bookmark: Some(BookmarkName::new("master")?),
             ..Default::default()
         };
 

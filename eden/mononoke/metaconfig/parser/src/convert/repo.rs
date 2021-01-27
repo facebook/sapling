@@ -225,7 +225,10 @@ impl Convert for RawPushrebaseParams {
             commit_scribe_category: self.commit_scribe_category,
             block_merges: self.block_merges.unwrap_or(default.block_merges),
             emit_obsmarkers: self.emit_obsmarkers.unwrap_or(default.emit_obsmarkers),
-            assign_globalrevs: self.assign_globalrevs.unwrap_or(default.assign_globalrevs),
+            globalrevs_publishing_bookmark: self
+                .globalrevs_publishing_bookmark
+                .map(BookmarkName::new)
+                .transpose()?,
             populate_git_mapping: self
                 .populate_git_mapping
                 .unwrap_or(default.populate_git_mapping),
