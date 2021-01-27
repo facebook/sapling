@@ -389,24 +389,31 @@ impl ChunkSqlStore {
         chunk_num: u32,
         chunking_method: ChunkingMethod,
     ) -> Result<(), Error> {
+        let put_generation = self.gc_generations.get().put_generation as u64;
+        let mark_generation = self.gc_generations.get().mark_generation as u64;
         let shard_id = self.shard(key, chunk_num, chunking_method);
+
+        // Short-circuit if we have a generation in replica, and that generation is >=
+        // mark_generation
+        let replica_generation = GetChunkGeneration::query(&self.read_connection[shard_id], &key)
+            .compat()
+            .await?
+            .into_iter()
+            .next();
+        if replica_generation.is_some() && replica_generation >= Some((mark_generation,)) {
+            return Ok(());
+        }
+
         // First set the generation if unset, so that future writers will update it.
-        // TODO: replace 2 with the fetched generation number
-        InsertGeneration::query(
-            &self.write_connection[shard_id],
-            &[(&key, &(self.gc_generations.get().put_generation as u64))],
-        )
-        .compat()
-        .await?;
+        if replica_generation.is_none() {
+            InsertGeneration::query(&self.write_connection[shard_id], &[(&key, &put_generation)])
+                .compat()
+                .await?;
+        }
         // Then update it in case it already existed
-        // TODO: replace 1 with the fetched generation number
-        UpdateGeneration::query(
-            &self.write_connection[shard_id],
-            &key,
-            &(self.gc_generations.get().mark_generation as u64),
-        )
-        .compat()
-        .await?;
+        UpdateGeneration::query(&self.write_connection[shard_id], &key, &mark_generation)
+            .compat()
+            .await?;
         Ok(())
     }
 
