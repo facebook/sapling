@@ -32,11 +32,11 @@ struct ImportPriority {
 
   // set half of the maximum offset as default offset to allow equal
   // space for raising and lowering priority offset.
-  explicit constexpr ImportPriority()
+  explicit constexpr ImportPriority() noexcept
       : kind(ImportPriorityKind::Normal), offset(0x7FFFFFFFFFFF) {}
-  explicit constexpr ImportPriority(ImportPriorityKind kind)
+  explicit constexpr ImportPriority(ImportPriorityKind kind) noexcept
       : kind(kind), offset(0x7FFFFFFFFFFF) {}
-  constexpr ImportPriority(ImportPriorityKind kind, uint64_t offset)
+  constexpr ImportPriority(ImportPriorityKind kind, uint64_t offset) noexcept
       : kind(kind), offset(offset) {}
 
   constexpr inline int64_t value() const noexcept {
