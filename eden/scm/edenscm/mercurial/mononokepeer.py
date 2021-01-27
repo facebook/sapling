@@ -33,6 +33,7 @@ from __future__ import absolute_import
 
 import os
 import socket
+import ssl
 from enum import Enum
 from struct import pack, unpack
 
@@ -228,7 +229,7 @@ class mononokepeer(stdiopeer.stdiopeer):
         msg += " cert:   %s\n" % self._cert
         msg += " key:    %s\n" % self._key
 
-        if tlserror:
+        if tlserror or isinstance(ex, ssl.SSLError):
             msg += "\n"
             msg += self.ui.config("help", "tlsauthhelp")
 
