@@ -127,6 +127,7 @@ sleeps should be used to get predictable order
   $ sleep 1
   $ hg cloud backup -q --config infinitepushbackup.hostname=mydevhost
   $ hg cloud restorebackup --config infinitepushbackup.backuplistlimit=3
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   user test has 5 available backups:
   (backups are ordered with the most recent at the top of the list)
   $TESTTMP/client5 on mydevhost
@@ -137,6 +138,7 @@ sleeps should be used to get predictable order
   (set --hostname and --reporoot to pick a backup)
   [255]
   $ hg cloud restorebackup --hostname mydevhost
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   user test has 2 available backups:
   (backups are ordered with the most recent at the top of the list)
   $TESTTMP/client5 on mydevhost
@@ -145,9 +147,13 @@ sleeps should be used to get predictable order
   (set --hostname and --reporoot to pick a backup)
   [255]
   $ hg cloud restorebackup --reporoot $TESTTMP/client1 --hostname mydevhost -q       # pullbackup should work with reporoot/hostname pair
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   $ hg cloud restorebackup --reporoot $TESTTMP/'client2\dev' --hostname devhost -q   # pullbackup should work with reporoot/hostname pair
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   $ hg cloud restorebackup --reporoot $TESTTMP/client3 -q                            # pullbackup should work with reporoot only if it is unambiguous
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   $ hg cloud restorebackup --hostname ourdevhost -q                                  # pullbackup should work with hostname only if it is unambiguous
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   $ hg log -G --template "{node|short} '{desc}'\n"
   o  3309f3c00117 'Commit in repo client4'
   
@@ -162,6 +168,7 @@ sleeps should be used to get predictable order
 
 hg cloud listbackups should also go in MRU order
   $ hg cloud listbackups --json
+  commitcloud: this command is deprecated, please use 'hg cloud list' command instead
   {
       "mydevhost": [
           "$TESTTMP/client5",* (glob)
@@ -176,6 +183,7 @@ hg cloud listbackups should also go in MRU order
       ]
   }
   $ hg cloud listbackups
+  commitcloud: this command is deprecated, please use 'hg cloud list' command instead
   user test has 5 available backups:
   (backups are ordered with the most recent at the top of the list)
   $TESTTMP/client5 on mydevhost
@@ -214,6 +222,7 @@ safely will be restored on the client2
   $ hg cloud backup -q --config infinitepushbackup.hostname=testhost
   $ cd ../client2
   $ hg cloud restorebackup --hostname testhost -q
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   $ hg log -G --template "{node|short} {bookmarks} '{desc}'\n"
   o  679ff862f673 feature1 'Test commit2'
   │

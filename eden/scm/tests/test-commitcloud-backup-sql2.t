@@ -57,6 +57,7 @@ Pull backup and check that commits are in the same order
   $ hg clone -q ssh://user@dummy/server client2
   $ cd client2
   $ hg cloud restore -q
+  commitcloud: this command is deprecated, please use 'hg cloud list' and 'hg cloud switch' commands instead
   $ hg log -T '{node}\n'
   e1c1c1f2871f70bd24f941ebfec59f14adf7a13d
   f0d24965f49e87fc581a603dee76196f433444ff
