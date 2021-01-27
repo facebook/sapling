@@ -9,10 +9,13 @@ use super::BoxVertexStream;
 use super::{AsyncNameSetQuery, Hints};
 use crate::Result;
 use crate::VertexName;
+use futures::lock::Mutex;
+use futures::lock::MutexGuard;
+use futures::StreamExt;
 use indexmap::IndexSet;
 use std::any::Any;
 use std::fmt;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::Arc;
 
 /// A set backed by a lazy iterator of names.
 pub struct LazySet {
@@ -21,18 +24,18 @@ pub struct LazySet {
 }
 
 struct Inner {
-    iter: Box<dyn Iterator<Item = Result<VertexName>> + Send + Sync>,
+    iter: BoxVertexStream,
     visited: IndexSet<VertexName>,
     state: State,
 }
 
 impl Inner {
-    fn load_more(&mut self, n: usize, mut out: Option<&mut Vec<VertexName>>) -> Result<()> {
+    async fn load_more(&mut self, n: usize, mut out: Option<&mut Vec<VertexName>>) -> Result<()> {
         if matches!(self.state, State::Complete | State::Error) {
             return Ok(());
         }
         for _ in 0..n {
-            match self.iter.next() {
+            match self.iter.next().await {
                 Some(Ok(name)) => {
                     if let Some(ref mut out) = out {
                         out.push(name.clone());
@@ -67,20 +70,21 @@ pub struct Iter {
 
 impl Iter {
     async fn next(&mut self) -> Option<Result<VertexName>> {
-        let mut inner = self.inner.lock().unwrap();
         loop {
+            let mut inner = self.inner.lock().await;
             match inner.state {
                 State::Error => break None,
                 State::Complete if inner.visited.len() <= self.index => break None,
                 State::Complete | State::Incomplete => {
-                    match inner.visited.get_index(self.index) {
+                    let value = inner.visited.get_index(self.index).cloned();
+                    match value {
                         Some(value) => {
                             self.index += 1;
-                            break Some(Ok(value.clone()));
+                            break Some(Ok(value));
                         }
                         None => {
                             // Data not available. Load more.
-                            if let Err(err) = inner.load_more(1, None) {
+                            if let Err(err) = inner.load_more(1, None).await {
                                 return Some(Err(err));
                             }
                             continue;
@@ -102,17 +106,20 @@ impl Iter {
 impl fmt::Debug for LazySet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str("<lazy ")?;
-        let inner = self.inner.lock().unwrap();
-        let limit = f.width().unwrap_or(3);
-        f.debug_list()
-            .entries(inner.visited.iter().take(limit))
-            .finish()?;
-        let remaining = inner.visited.len().max(limit) - limit;
-        match (remaining, inner.state) {
-            (0, State::Incomplete) => f.write_str(" + ? more")?,
-            (n, State::Incomplete) => write!(f, "+ {} + ? more", n)?,
-            (0, _) => {}
-            (n, _) => write!(f, " + {} more", n)?,
+        if let Some(inner) = self.inner.try_lock() {
+            let limit = f.width().unwrap_or(3);
+            f.debug_list()
+                .entries(inner.visited.iter().take(limit))
+                .finish()?;
+            let remaining = inner.visited.len().max(limit) - limit;
+            match (remaining, inner.state) {
+                (0, State::Incomplete) => f.write_str(" + ? more")?,
+                (n, State::Incomplete) => write!(f, "+ {} + ? more", n)?,
+                (0, _) => {}
+                (n, _) => write!(f, " + {} more", n)?,
+            }
+        } else {
+            f.write_str(" ?")?;
         }
         f.write_str(">")?;
         Ok(())
@@ -125,9 +132,13 @@ impl LazySet {
         I: IntoIterator<Item = Result<VertexName>> + 'static,
         <I as IntoIterator>::IntoIter: Send + Sync,
     {
-        let iter = names.into_iter();
+        let stream = futures::stream::iter(names);
+        Self::from_stream(Box::pin(stream))
+    }
+
+    pub fn from_stream(names: BoxVertexStream) -> Self {
         let inner = Inner {
-            iter: Box::new(iter),
+            iter: names,
             visited: IndexSet::new(),
             state: State::Incomplete,
         };
@@ -138,9 +149,9 @@ impl LazySet {
         }
     }
 
-    fn load_all(&self) -> Result<MutexGuard<Inner>> {
-        let mut inner = self.inner.lock().unwrap();
-        inner.load_more(usize::max_value(), None)?;
+    async fn load_all(&self) -> Result<MutexGuard<'_, Inner>> {
+        let mut inner = self.inner.lock().await;
+        inner.load_more(usize::max_value(), None).await?;
         Ok(inner)
     }
 }
@@ -154,31 +165,31 @@ impl AsyncNameSetQuery for LazySet {
     }
 
     async fn iter_rev(&self) -> Result<BoxVertexStream> {
-        let inner = self.load_all()?;
+        let inner = self.load_all().await?;
         let iter = inner.visited.clone().into_iter().rev().map(Ok);
         let stream = futures::stream::iter(iter);
         Ok(Box::pin(stream))
     }
 
     async fn count(&self) -> Result<usize> {
-        let inner = self.load_all()?;
+        let inner = self.load_all().await?;
         Ok(inner.visited.len())
     }
 
     async fn last(&self) -> Result<Option<VertexName>> {
-        let inner = self.load_all()?;
+        let inner = self.load_all().await?;
         Ok(inner.visited.iter().rev().nth(0).cloned())
     }
 
     async fn contains(&self, name: &VertexName) -> Result<bool> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.lock().await;
         if inner.visited.contains(name) {
             return Ok(true);
         } else {
             let mut loaded = Vec::new();
             loop {
                 loaded.clear();
-                inner.load_more(1, Some(&mut loaded))?;
+                inner.load_more(1, Some(&mut loaded)).await?;
                 debug_assert!(loaded.len() <= 1);
                 if loaded.is_empty() {
                     break;
