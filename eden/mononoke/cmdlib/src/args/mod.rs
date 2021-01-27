@@ -80,6 +80,7 @@ const MYSQL_POOL_THREADS_NUM: &str = "mysql-pool-threads-num";
 const MYSQL_POOL_AGE_TIMEOUT: &str = "mysql-pool-age-timeout";
 const MYSQL_POOL_IDLE_TIMEOUT: &str = "mysql-pool-idle-timeout";
 const MYSQL_CONN_OPEN_TIMEOUT: &str = "mysql-conn-open-timeout";
+const MYSQL_MAX_QUERY_TIME: &str = "mysql-query-time-limit";
 const RUNTIME_THREADS: &str = "runtime-threads";
 const TUNABLES_CONFIG: &str = "tunables-config";
 const DISABLE_TUNABLES: &str = "disable-tunables";
@@ -1259,6 +1260,13 @@ fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .takes_value(true)
             .default_value("3000"),
     )
+    .arg(
+        Arg::with_name(MYSQL_MAX_QUERY_TIME)
+            .long(MYSQL_MAX_QUERY_TIME)
+            .help("Mysql query time limit in millisecs")
+            .takes_value(true)
+            .default_value("10000"),
+    )
 }
 
 pub(crate) fn bool_as_str(v: bool) -> &'static str {
@@ -1569,6 +1577,15 @@ fn parse_mysql_pool_options<'a>(matches: &MononokeMatches<'a>) -> PoolConfig {
                 .expect("Provided mysql-conn-open-timeout is not u64")
         })
         .expect("A default is set, should never be None");
+    let max_query_time: Duration = Duration::from_millis(
+        matches
+            .value_of(MYSQL_MAX_QUERY_TIME)
+            .map(|v| {
+                v.parse()
+                    .expect("Provided mysql-query-time-limit is not u64")
+            })
+            .expect("A default is set, should never be None"),
+    );
 
     PoolConfig::new(
         size,
@@ -1577,6 +1594,7 @@ fn parse_mysql_pool_options<'a>(matches: &MononokeMatches<'a>) -> PoolConfig {
         conn_age_timeout,
         conn_idle_timeout,
         conn_open_timeout,
+        max_query_time,
     )
 }
 

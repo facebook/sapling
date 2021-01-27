@@ -46,12 +46,15 @@ use sql_ext::{
     },
     open_sqlite_in_memory, open_sqlite_path, SqlConnections, SqlShardedConnections,
 };
-use std::convert::TryInto;
-use std::fmt;
-use std::num::NonZeroUsize;
-use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::{Duration, SystemTime};
+use std::{
+    collections::HashMap,
+    convert::TryInto,
+    fmt,
+    num::NonZeroUsize,
+    path::PathBuf,
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
 use xdb_gc_structs::XdbGc;
 
 // Leaving some space for metadata
@@ -440,6 +443,15 @@ impl Sqlblob {
 
     pub fn get_keys_from_shard(&self, shard_num: usize) -> impl Stream<Item = Result<String>> {
         self.data_store.get_keys_from_shard(shard_num)
+    }
+
+    pub async fn get_chunk_sizes_by_generation(
+        &self,
+        shard_num: usize,
+    ) -> Result<HashMap<Option<u64>, u64>> {
+        self.chunk_store
+            .get_chunk_sizes_by_generation(shard_num)
+            .await
     }
 
     pub async fn get_chunk_generations(&self, key: &str) -> Result<Vec<Option<u64>>> {

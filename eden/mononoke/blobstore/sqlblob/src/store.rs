@@ -5,9 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::hash::Hasher;
-use std::num::NonZeroUsize;
-use std::sync::Arc;
+use std::{collections::HashMap, hash::Hasher, num::NonZeroUsize, sync::Arc};
 
 use anyhow::{format_err, Error};
 use bytes::BytesMut;
@@ -140,6 +138,12 @@ queries! {
 
     read GetAllKeys() -> (Vec<u8>) {
         "SELECT id FROM data"
+    }
+
+    read GetGenerationSizes() -> (Option<u64>, u64) {
+        "SELECT chunk_generation.last_seen_generation, CAST(SUM(LENGTH(chunk.value)) AS UNSIGNED)
+        FROM chunk LEFT JOIN chunk_generation ON chunk.id = chunk_generation.id
+        GROUP BY chunk_generation.last_seen_generation"
     }
 }
 
@@ -404,6 +408,16 @@ impl ChunkSqlStore {
         .compat()
         .await?;
         Ok(())
+    }
+
+    pub(crate) async fn get_chunk_sizes_by_generation(
+        &self,
+        shard_num: usize,
+    ) -> Result<HashMap<Option<u64>, u64>, Error> {
+        GetGenerationSizes::query(&self.read_master_connection[shard_num])
+            .compat()
+            .await
+            .map(|s| s.into_iter().collect::<HashMap<_, _>>())
     }
 
     fn shard(&self, key: &str, chunk_id: u32, _chunking_method: ChunkingMethod) -> usize {

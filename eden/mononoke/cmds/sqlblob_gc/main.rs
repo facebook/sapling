@@ -17,6 +17,7 @@ use blobstore_factory::{make_sql_blobstore, BlobstoreOptions};
 use cmdlib::args::{self, MononokeClapApp};
 use metaconfig_types::{BlobConfig, BlobstoreId, ShardableRemoteDatabaseConfig};
 
+mod subcommand_log_size;
 mod subcommand_mark;
 
 const ARG_STORAGE_CONFIG_NAME: &str = "storage-config-name";
@@ -67,6 +68,7 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
                 .required(false),
         )
         .subcommand(subcommand_mark::build_subcommand())
+        .subcommand(subcommand_log_size::build_subcommand())
 }
 
 fn remove_wrapper_blobconfigs(mut blob_config: BlobConfig) -> BlobConfig {
@@ -182,6 +184,17 @@ fn main(fb: FacebookInit) -> Result<()> {
         match matches.subcommand() {
             (subcommand_mark::MARK_SAFE, Some(sub_m)) => {
                 subcommand_mark::subcommand_mark(
+                    fb,
+                    logger,
+                    sub_m,
+                    max_parallelism,
+                    blobstore,
+                    shard_range,
+                )
+                .await
+            }
+            (subcommand_log_size::LOG_SIZE, Some(sub_m)) => {
+                subcommand_log_size::subcommand_log_size(
                     fb,
                     logger,
                     sub_m,
