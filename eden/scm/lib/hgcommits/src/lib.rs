@@ -9,6 +9,7 @@
 //!
 //! Commits stored in HG format and backed by efficient `dag` structures.
 
+use dag::errors::NotFoundError;
 use dag::Vertex;
 use futures::future::try_join_all;
 use futures::stream::BoxStream;

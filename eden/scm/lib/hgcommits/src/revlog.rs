@@ -15,6 +15,7 @@ use crate::Result;
 use crate::StreamCommitText;
 use crate::StripCommits;
 use dag::delegate;
+use dag::errors::NotFoundError;
 use dag::nonblocking::non_blocking_result;
 use dag::ops::IdConvert;
 use dag::Group;

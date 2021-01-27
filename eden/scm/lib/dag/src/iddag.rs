@@ -6,6 +6,7 @@
  */
 
 use crate::errors::bug;
+use crate::errors::NotFoundError;
 use crate::id::{Group, Id};
 use crate::iddagstore::{IdDagStore, InProcessStore, IndexedLogStore};
 use crate::locked::Locked;

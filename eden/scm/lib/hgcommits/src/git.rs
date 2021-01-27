@@ -14,6 +14,7 @@ use crate::Result;
 use crate::StreamCommitText;
 use crate::StripCommits;
 use dag::delegate;
+use dag::errors::NotFoundError;
 use dag::Set;
 use dag::Vertex;
 use futures::stream::BoxStream;

@@ -9,6 +9,7 @@
 
 use crate::clone::CloneData;
 use crate::default_impl;
+use crate::errors::NotFoundError;
 use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;

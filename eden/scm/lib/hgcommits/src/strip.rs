@@ -9,6 +9,7 @@ use crate::AppendCommits;
 use crate::HgCommit;
 use crate::ReadCommitText;
 use crate::Result;
+use dag::errors::NotFoundError;
 use dag::DagAlgorithm;
 use dag::Set;
 use dag::Vertex;

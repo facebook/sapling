@@ -15,6 +15,7 @@ use crate::Result;
 use crate::StreamCommitText;
 use crate::StripCommits;
 use dag::delegate;
+use dag::errors::NotFoundError;
 use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;

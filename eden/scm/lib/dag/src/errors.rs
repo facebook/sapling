@@ -80,20 +80,22 @@ pub fn programming<T>(message: impl ToString) -> crate::Result<T> {
     Err(DagError::Programming(message.to_string()))
 }
 
-impl Id {
-    pub fn not_found_error(&self) -> DagError {
-        DagError::IdNotFound(self.clone())
-    }
-    pub fn not_found<T>(&self) -> crate::Result<T> {
+pub trait NotFoundError {
+    fn not_found_error(&self) -> DagError;
+
+    fn not_found<T>(&self) -> crate::Result<T> {
         Err(self.not_found_error())
     }
 }
 
-impl VertexName {
-    pub fn not_found_error(&self) -> DagError {
-        DagError::VertexNotFound(self.clone())
+impl NotFoundError for Id {
+    fn not_found_error(&self) -> DagError {
+        DagError::IdNotFound(self.clone())
     }
-    pub fn not_found<T>(&self) -> crate::Result<T> {
-        Err(self.not_found_error())
+}
+
+impl NotFoundError for VertexName {
+    fn not_found_error(&self) -> DagError {
+        DagError::VertexNotFound(self.clone())
     }
 }

@@ -16,6 +16,7 @@
 //! - Id -> Name: Id -> RequestLocationToName -> ResponseIdNamePair -> Name
 //! - Name -> Id: Name -> RequestNameToLocation -> ResponseIdNamePair -> Id
 
+use crate::errors::NotFoundError;
 use crate::id::VertexName;
 use crate::iddag::{FirstAncestorConstraint, IdDag};
 use crate::iddagstore::IdDagStore;

@@ -12,6 +12,7 @@
 use crate::clone::CloneData;
 use crate::delegate;
 use crate::errors::programming;
+use crate::errors::NotFoundError;
 use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;

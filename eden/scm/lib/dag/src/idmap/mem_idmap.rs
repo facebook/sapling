@@ -6,6 +6,7 @@
  */
 
 use super::IdMapWrite;
+use crate::errors::NotFoundError;
 use crate::id::{Group, Id, VertexName};
 use crate::ops::IdConvert;
 use crate::ops::Persist;

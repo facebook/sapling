@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use dag::errors::NotFoundError;
 use dag::Id;
 use dag::Vertex;
 use std::fmt;

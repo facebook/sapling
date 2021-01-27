@@ -16,6 +16,7 @@ use bit_vec::BitVec;
 use byteorder::ReadBytesExt;
 use byteorder::BE;
 use dag::errors::DagError;
+use dag::errors::NotFoundError;
 use dag::nameset::hints::Flags;
 use dag::nameset::meta::MetaSet;
 use dag::ops::DagAddHeads;
