@@ -55,6 +55,9 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "LEVEL_ERROR", LEVEL_ERROR)?;
     m.add_class::<EventCallsite>(py)?;
     m.add_class::<SpanCallsite>(py)?;
+    m.add_class::<instrument>(py)?;
+    impl_getsetattr::<InstrumentFunction>(py);
+
     Ok(m)
 }
 
@@ -808,6 +811,155 @@ fn new_callsite<K: KindType>(
         }
     });
     Ok(callsite)
+}
+
+// Instrument decorator. Construct a callable that accepts a function
+// and returns InstrumentFunction
+py_class!(class instrument |py| {
+    data name: Option<String>;
+    data target: Option<String>;
+    data level: usize;
+    data skip: Option<Vec<String>>;
+    data meta: Option<Vec<(String, FieldValue)>>;
+
+    def __new__(_cls, *args, **kwargs) -> PyResult<PyObject> {
+        let decorator = {
+            let get = |name| -> Option<PyObject> { kwargs?.get_item(py, name) };
+            let get_str = |name| -> Option<String> { get(name)?.extract(py).ok() };
+            let name: Option<String> = get_str("name");
+            let target: Option<String> = get_str("target");
+            let level: usize = get("level").and_then(|l| l.extract(py).ok()).unwrap_or(LEVEL_INFO);
+            let skip: Option<Vec<String>> = get("skip").and_then(|l| l.extract(py).ok());
+            let meta: Option<Vec<(String, FieldValue)>> = kwargs.map(|kwargs| {
+                // The rest of the kwargs.
+                kwargs.items(py).into_iter().filter_map(|(name, value)| -> Option<_> {
+                    let name = name.extract::<String>(py).ok()?;
+                    if name == "name" || name == "target" || name == "level" || name == "skip" {
+                        None
+                    } else {
+                        let value = value.extract::<FieldValue>(py).ok()?;
+                        Some((name, value))
+                    }
+                }).collect()
+            });
+            Self::create_instance(py, name, target, level, skip, meta)?
+        };
+
+        match args.len(py) {
+            0 => Ok(decorator.into_object()),
+            1 => {
+                // Single function: decoratoring function
+                let func = args.get_item(py, 0);
+                let decorated = decorator.__call__(py, func)?;
+                Ok(decorated.into_object())
+            }
+            _ => {
+                Err(PyErr::new::<exc::TypeError, _>(py, "instrument expect 0 or 1 args"))
+            }
+        }
+    }
+
+    // Decorate a function. Analyze its arguments.
+    def __call__(&self, func: PyObject) -> PyResult<InstrumentFunction> {
+        // See inspect.getargs for how to extract arguments.
+        let code = func.getattr(py, "__code__")?;
+
+        // Predefined fields (name, value). Includes instrumented args and meta.
+        let fields: Vec<(String, InstrumentFieldValue)> = {
+            // "static" normal parameters (no *args, **kwds) that are also not skipped.
+            // "names" include args and kwargs.
+            let names: Vec<String> = code.getattr(py, "co_varnames")?.extract(py)?;
+            // "count" only includes normal parameters (no args, or kwargs).
+            let count: usize = code.getattr(py, "co_argcount")?.extract(py)?;
+            let is_skipped: Box<dyn Fn(&String) -> bool> = match self.skip(py) {
+                None => Box::new(|_n| false),
+                Some(skip) => Box::new(move |n| skip.contains(n)),
+            };
+            let mut fields: Vec<(String, InstrumentFieldValue)> =
+                names.into_iter().enumerate().take(count).filter_map(|(i, n)| {
+                    if is_skipped(&n) {
+                        None
+                    } else {
+                        Some((n, InstrumentFieldValue::FunctionArg(i)))
+                    }
+                }).collect();
+            // Also include names from the metadata.
+            if let Some(meta) = self.meta(py) {
+                for (key, value) in meta.clone() {
+                    fields.push((key, InstrumentFieldValue::Value(value)));
+                }
+            }
+            fields
+        };
+
+        let field_names: Vec<String> = fields.iter().map(|t| t.0.clone()).collect();
+        let callsite = new_callsite::<SpanKindType>(
+            py,
+            func.clone_ref(py),
+            self.target(py).clone(),
+            self.name(py).clone(),
+            *self.level(py),
+            None /* file */,
+            None /* line */,
+            None /* module */,
+            Some(field_names),
+        )?;
+
+        let field_values: Vec<InstrumentFieldValue> = fields.into_iter().map(|t| t.1).collect();
+        InstrumentFunction::create_instance(py, func, callsite, field_values)
+    }
+});
+
+// Instrumented (Python) function.
+//
+// This is similar to wrapfunc with the differences:
+// - it writes to tracing eco-system instead of TracingData (more overhead since
+//   spans are recreated every time (?), but level filtering works)
+// - it supports logging arguments.
+// - it does not wrap iterable or returned iterables.
+py_class!(class InstrumentFunction |py| {
+    data inner: PyObject;
+    data callsite: &'static RuntimeCallsite<SpanKindType>;
+    data field_values: Vec<InstrumentFieldValue>;
+
+    def __call__(&self, *args, **kwargs) -> PyResult<PyObject> {
+        // Prepare a span. To do so we need field values.
+        let owned_values: Vec<FieldValue> = self.field_values(py).iter().map(|v| {
+             match v {
+                InstrumentFieldValue::FunctionArg(i) => {
+                    let i: usize = *i;
+                    if args.len(py) <= i {
+                        FieldValue::None
+                    } else {
+                        let arg = args.get_item(py, i);
+                        arg.extract::<FieldValue>(py).unwrap_or(FieldValue::None)
+                    }
+                },
+                InstrumentFieldValue::Value(v) => v.clone(),
+            }
+        }).collect();
+        let values: Vec<Option<Box<dyn tracing::Value>>> =
+            owned_values.iter().map(|v| v.to_opt_tracing_value()).collect();
+
+        let span = self.callsite(py).create_span(&values);
+        let _entered = span.enter();
+
+        self.inner(py).call(py, args, kwargs)
+    }
+});
+
+impl PythonTypeWithInner for InstrumentFunction {
+    fn inner_obj<'a>(&'a self, py: Python<'a>) -> &'a PyObject {
+        self.inner(py)
+    }
+}
+
+/// FieldValue for instrumented function.
+/// Could be a function parameter, or a predefined FieldValue.
+#[derive(Debug)]
+enum InstrumentFieldValue {
+    FunctionArg(usize),
+    Value(FieldValue),
 }
 
 /// Represent the value type of a field without references.
