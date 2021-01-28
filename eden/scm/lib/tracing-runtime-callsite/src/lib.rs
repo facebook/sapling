@@ -16,6 +16,7 @@
 
 mod array;
 mod callsite_info;
+mod intern_str;
 mod runtime_callsite;
 mod static_box;
 
@@ -27,6 +28,7 @@ pub use callsite_info::CallsiteKey;
 pub use callsite_info::EventKindType;
 pub use callsite_info::KindType;
 pub use callsite_info::SpanKindType;
+pub(crate) use intern_str::Intern;
 pub use runtime_callsite::RuntimeCallsite;
 pub(crate) use static_box::StaticBox;
 
@@ -73,5 +75,6 @@ pub unsafe fn release_callsites() {
     static_box::UNSAFE_ALLOW_DROP.store(true, Release);
     EventKindType::static_map().write().clear();
     SpanKindType::static_map().write().clear();
+    intern_str::INTERNED_STRINGS.write().clear();
     static_box::UNSAFE_ALLOW_DROP.store(false, Release);
 }

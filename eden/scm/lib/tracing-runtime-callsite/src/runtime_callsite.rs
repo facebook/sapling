@@ -9,6 +9,7 @@ use crate::array::Array;
 use crate::call_array;
 use crate::CallsiteInfo;
 use crate::EventKindType;
+use crate::Intern;
 use crate::KindType;
 use crate::SpanKindType;
 use crate::StaticBox;
@@ -119,11 +120,6 @@ pub struct RuntimeCallsite<K> {
 
 /// Values referred by Metadata and FieldSet. Subset of CallsiteInfo.
 struct CallsiteOwned {
-    name: String,
-    target: String,
-    file: Option<String>,
-    module_path: Option<String>,
-    field_names: Vec<String>,
     ref_field_names: Vec<&'static str>,
     fields: Vec<Field>,
 }
@@ -142,20 +138,9 @@ impl<K: KindType> RuntimeCallsite<K> {
             field_names,
         } = info;
         let mut owned = StaticBox::new(CallsiteOwned {
-            name,
-            target,
-            file,
-            module_path,
-            field_names,
-            ref_field_names: Default::default(),
+            ref_field_names: field_names.iter().map(|s| s.intern()).collect(),
             fields: Default::default(),
         });
-        owned.as_mut().ref_field_names = owned
-            .static_ref()
-            .field_names
-            .iter()
-            .map(|n| n.as_str())
-            .collect();
 
         // To construct Callsite, &Callsite is needed (for FieldSet, then Metadata).
         // MaybeUninit allows us to get &Callsite without constructing it.
@@ -171,14 +156,13 @@ impl<K: KindType> RuntimeCallsite<K> {
 
         let fields = FieldSet::new(owned.static_ref().ref_field_names.as_slice(), identifier);
         let meta = {
-            let owned = owned.static_ref();
             StaticBox::new(Metadata::new(
-                &owned.name,
-                &owned.target,
+                name.intern(),
+                target.intern(),
                 level,
-                owned.file.as_ref().map(|s| s.as_str()),
+                file.intern(),
                 line,
-                owned.module_path.as_ref().map(|s| s.as_str()),
+                module_path.intern(),
                 fields,
                 K::kind(),
             ))

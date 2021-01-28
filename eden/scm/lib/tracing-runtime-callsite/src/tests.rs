@@ -96,6 +96,14 @@ fn test_callsite_reuse() {
     assert_eq!(callsite1 as *const _, callsite2 as *const _);
 }
 
+#[test]
+fn test_intern() {
+    use crate::Intern;
+    let s1 = "abc".intern();
+    let s2 = "abc".to_string().intern();
+    assert_eq!(s1.as_ptr(), s2.as_ptr());
+}
+
 /// Capture logs about tracing.
 fn capture(f: impl FnOnce()) -> Vec<String> {
     // Prevent races since tests run in multiple threads.

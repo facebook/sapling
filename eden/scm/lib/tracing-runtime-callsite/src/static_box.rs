@@ -13,6 +13,7 @@ use std::sync::atomic::Ordering::Acquire;
 /// Similar to `Box<T>` but provides `&'static T`.
 /// Cannot be dropped directly.
 #[repr(transparent)]
+#[derive(Eq, PartialOrd, PartialEq, Hash)]
 pub struct StaticBox<T>(Pin<Box<T>>);
 
 impl<T: 'static> StaticBox<T> {
@@ -40,6 +41,12 @@ impl<T> ops::Deref for StaticBox<T> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl std::borrow::Borrow<str> for StaticBox<String> {
+    fn borrow(&self) -> &str {
+        &**self.0
     }
 }
 
