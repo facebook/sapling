@@ -56,14 +56,7 @@ async fn load_git_tree(oid: Oid, pool: &GitPool) -> Result<GitManifest, Error> {
 
                 let r = match entry.kind() {
                     Some(ObjectType::Blob) => {
-                        let ft = match filemode {
-                            mode::GIT_FILEMODE_BLOB => FileType::Regular,
-                            mode::GIT_FILEMODE_BLOB_EXECUTABLE => FileType::Executable,
-                            mode::GIT_FILEMODE_LINK => FileType::Symlink,
-                            _ => {
-                                return Err(format_err!("Invalid filemode: {:?}", filemode));
-                            }
-                        };
+                        let ft = convert_git_filemode(filemode)?;
 
                         (name, Entry::Leaf((ft, GitLeaf(oid))))
                     }
@@ -80,6 +73,15 @@ async fn load_git_tree(oid: Oid, pool: &GitPool) -> Result<GitManifest, Error> {
         Result::<_, Error>::Ok(GitManifest(elements))
     })
     .await
+}
+
+pub fn convert_git_filemode(git_filemode: i32) -> Result<FileType, Error> {
+    match git_filemode {
+        mode::GIT_FILEMODE_BLOB => Ok(FileType::Regular),
+        mode::GIT_FILEMODE_BLOB_EXECUTABLE => Ok(FileType::Executable),
+        mode::GIT_FILEMODE_LINK => Ok(FileType::Symlink),
+        _ => Err(format_err!("Invalid filemode: {:?}", git_filemode)),
+    }
 }
 
 #[async_trait]

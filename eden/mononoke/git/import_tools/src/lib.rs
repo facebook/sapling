@@ -5,13 +5,16 @@
  * GNU General Public License version 2.
  */
 
+#![feature(try_blocks)]
+
 mod git_pool;
 mod gitimport_objects;
 
 pub use crate::git_pool::GitPool;
 pub use crate::gitimport_objects::{
-    oid_to_sha1, CommitMetadata, ExtractedCommit, FullRepoImport, GitLeaf, GitManifest,
-    GitRangeImport, GitTree, GitimportPreferences, GitimportTarget, ImportMissingForCommit,
+    convert_git_filemode, oid_to_sha1, CommitMetadata, ExtractedCommit, FullRepoImport, GitLeaf,
+    GitManifest, GitRangeImport, GitTree, GitimportPreferences, GitimportTarget,
+    ImportMissingForCommit,
 };
 use anyhow::{format_err, Context, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
@@ -24,7 +27,7 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use filestore::{self, Alias, FetchKey, FilestoreConfig, StoreRequest};
 use futures::{future, stream, Stream, StreamExt, TryStreamExt};
-use git2::{Oid, Repository, Sort};
+use git2::{ObjectType, Oid, Repository, Sort, TreeWalkMode, TreeWalkResult};
 use git_types::TreeHandle;
 use linked_hash_map::LinkedHashMap;
 use manifest::{bonsai_diff, BonsaiDiffFileChange, StoreLoadable};
@@ -343,6 +346,108 @@ async fn import_bonsai_changeset(
             )
             .await?;
     }
+
+    Ok(bcs)
+}
+
+pub async fn import_tree_as_single_bonsai_changeset(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    path: &Path,
+    git_cs_id: Oid,
+    prefs: GitimportPreferences,
+) -> Result<BonsaiChangeset, Error> {
+    let pool = &GitPool::new(path.to_path_buf())?;
+
+    let ExtractedCommit { tree, metadata, .. } = ExtractedCommit::new(git_cs_id, pool)
+        .await
+        .with_context(|| format!("While extracting {}", git_cs_id))?;
+
+    let file_paths = pool
+        .with({
+            let ctx = ctx.clone();
+            move |repo| {
+                // Order doesn't matter here
+                let mut file_paths = BTreeMap::new();
+
+                let root_tree = repo.find_tree(tree.0)?;
+                // walk() method doesn't allow returning errors, so use this variable
+                // to remember the error we ran into
+                let mut error = None;
+                root_tree.walk(TreeWalkMode::PreOrder, |root, entry| {
+                    let name_obj = try {
+                        let name = entry.name().ok_or_else(|| {
+                            format_err!("{} has an entry with non-utf8 path", root)
+                        })?;
+
+                        let object = entry.to_object(repo).with_context(|| {
+                            format!(
+                                "failed to convert tree entry {} in {} to object",
+                                name, root
+                            )
+                        })?;
+                        (name, object)
+                    };
+                    let (name, object) = match name_obj {
+                        Ok((name, obj)) => (name, obj),
+                        Err(err) => {
+                            error = Some(err);
+                            return TreeWalkResult::Abort;
+                        }
+                    };
+
+                    if let Some(ObjectType::Blob) = object.kind() {
+                        let mode = entry.filemode();
+                        file_paths.insert(root.to_owned() + name, (object.id(), mode));
+                    }
+
+                    TreeWalkResult::Ok
+                })?;
+
+                if let Some(err) = error {
+                    return Err(err);
+                }
+
+                info!(ctx.logger(), "found {} file paths", file_paths.len());
+                Result::<_, Error>::Ok(file_paths)
+            }
+        })
+        .await?;
+
+    let mut uploading = 0;
+    let file_changes = stream::iter(file_paths.into_iter())
+        .map(Ok)
+        .map_ok(move |(path, (oid, mode))| {
+            uploading += 1;
+            if uploading % 1000 == 0 {
+                info!(ctx.logger(), "started uploading {} entries", uploading);
+            }
+            async move {
+                let path = MPath::new(path)?;
+                let content_metadata = do_upload(&ctx, repo.blobstore(), pool.clone(), oid).await?;
+                let file_type = convert_git_filemode(mode)?;
+                let file_change = FileChange::new(
+                    content_metadata.content_id,
+                    file_type,
+                    content_metadata.total_size,
+                    None,
+                );
+                Result::<_, Error>::Ok((path, Some(file_change)))
+            }
+        })
+        .try_buffer_unordered(100)
+        .try_collect::<BTreeMap<_, _>>()
+        .await?;
+
+    let bcs = import_bonsai_changeset(
+        ctx,
+        repo,
+        metadata,
+        vec![], // no parents
+        file_changes,
+        &prefs,
+    )
+    .await?;
 
     Ok(bcs)
 }

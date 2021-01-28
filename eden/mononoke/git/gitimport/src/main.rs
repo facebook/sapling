@@ -25,7 +25,8 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use git2::{Oid, Repository};
 use import_tools::{
-    FullRepoImport, GitRangeImport, GitimportPreferences, GitimportTarget, ImportMissingForCommit,
+    import_tree_as_single_bonsai_changeset, FullRepoImport, GitRangeImport, GitimportPreferences,
+    GitimportTarget, ImportMissingForCommit,
 };
 use linked_hash_map::LinkedHashMap;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
@@ -42,6 +43,8 @@ use crate::mem_writes_changesets::MemWritesChangesets;
 const SUBCOMMAND_FULL_REPO: &str = "full-repo";
 const SUBCOMMAND_GIT_RANGE: &str = "git-range";
 const SUBCOMMAND_MISSING_FOR_COMMIT: &str = "missing-for-commit";
+const SUBCOMMAND_IMPORT_TREE_AS_SINGLE_BONSAI_CHANGESET: &str =
+    "import-tree-as-single-bonsai-changeset";
 
 const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
 const ARG_DERIVE_TREES: &str = "derive-trees";
@@ -106,6 +109,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         )
         .subcommand(
             SubCommand::with_name(SUBCOMMAND_MISSING_FOR_COMMIT).arg(
+                Arg::with_name(ARG_GIT_COMMIT)
+                    .required(true)
+                    .takes_value(true),
+            ),
+        )
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_IMPORT_TREE_AS_SINGLE_BONSAI_CHANGESET).arg(
                 Arg::with_name(ARG_GIT_COMMIT)
                     .required(true)
                     .takes_value(true),
@@ -175,6 +185,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 (SUBCOMMAND_MISSING_FOR_COMMIT, Some(matches)) => {
                     let commit = matches.value_of(ARG_GIT_COMMIT).unwrap().parse()?;
                     Box::new(ImportMissingForCommit::new(commit, &ctx, &repo, &git_repo).await?)
+                }
+                (SUBCOMMAND_IMPORT_TREE_AS_SINGLE_BONSAI_CHANGESET, Some(matches)) => {
+                    let commit = matches.value_of(ARG_GIT_COMMIT).unwrap().parse()?;
+                    let bcs =
+                        import_tree_as_single_bonsai_changeset(&ctx, &repo, path, commit, prefs)
+                            .await?;
+                    info!(ctx.logger(), "imported as {}", bcs.get_changeset_id());
+                    return Ok(());
                 }
                 _ => {
                     return Err(Error::msg("A valid subcommand is required"));
