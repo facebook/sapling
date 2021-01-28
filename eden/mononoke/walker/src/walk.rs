@@ -10,6 +10,7 @@ use crate::graph::{
     PathKey, UnodeFlags, UnodeKey, UnodeManifestEntry, WrappedPath,
 };
 use crate::setup::JobWalkParams;
+use crate::state::InternedType;
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE, ERROR_MSG};
 
 use anyhow::{format_err, Context, Error};
@@ -173,6 +174,14 @@ pub trait TailingWalkVisitor {
         &mut self,
         chunk_members: &HashSet<ChangesetId>,
     ) -> Result<HashSet<OutgoingEdge>, Error>;
+
+    // WalkVisitor needs to be Arc for clone/move into spawn in walk.rs so we can't use &mut self to restrict this.
+    // Should only called from tail.rs between chunks when nothing else is accessing the WalkVisitor.
+    fn clear_state(
+        &mut self,
+        node_types: &HashSet<NodeType>,
+        interned_types: &HashSet<InternedType>,
+    );
 
     fn end_chunks(&mut self) -> Result<(), Error>;
 

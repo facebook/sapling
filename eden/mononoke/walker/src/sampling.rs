@@ -6,7 +6,7 @@
  */
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
-use crate::state::{StepStats, WalkState};
+use crate::state::{InternedType, StepStats, WalkState};
 use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, TailingWalkVisitor, VisitOne, WalkVisitor};
 
 use anyhow::Error;
@@ -230,6 +230,14 @@ impl<T> TailingWalkVisitor for SamplingWalkVisitor<T> {
         chunk_members: &HashSet<ChangesetId>,
     ) -> Result<HashSet<OutgoingEdge>, Error> {
         self.inner.start_chunk(chunk_members)
+    }
+
+    fn clear_state(
+        &mut self,
+        node_types: &HashSet<NodeType>,
+        interned_types: &HashSet<InternedType>,
+    ) {
+        self.inner.clear_state(node_types, interned_types)
     }
 
     fn end_chunks(&mut self) -> Result<(), Error> {

@@ -22,7 +22,7 @@ use crate::setup::{
     parse_progress_args, setup_common, JobWalkParams, RepoSubcommandParams, EXCLUDE_CHECK_TYPE_ARG,
     INCLUDE_CHECK_TYPE_ARG, VALIDATE,
 };
-use crate::state::{StepStats, WalkState};
+use crate::state::{InternedType, StepStats, WalkState};
 use crate::tail::walk_exact_tail;
 use crate::walk::{
     EmptyRoute, OutgoingEdge, RepoWalkParams, RepoWalkTypeParams, StepRoute, TailingWalkVisitor,
@@ -335,6 +335,14 @@ impl TailingWalkVisitor for ValidatingVisitor {
         chunk_members: &HashSet<ChangesetId>,
     ) -> Result<HashSet<OutgoingEdge>, Error> {
         self.inner.start_chunk(chunk_members)
+    }
+
+    fn clear_state(
+        &mut self,
+        node_types: &HashSet<NodeType>,
+        interned_types: &HashSet<InternedType>,
+    ) {
+        self.inner.clear_state(node_types, interned_types)
     }
 
     fn end_chunks(&mut self) -> Result<(), Error> {

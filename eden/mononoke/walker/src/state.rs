@@ -138,6 +138,11 @@ where
     fn get(&self, k: &K) -> Option<Ref<K, V, RandomState>> {
         self.interned.get(k)
     }
+
+    fn clear(&self) {
+        self.next_id.store(1, Ordering::SeqCst);
+        self.interned.clear()
+    }
 }
 
 type ValueMap<K, V> = DashMap<K, V, RandomState>;
@@ -368,6 +373,89 @@ impl WalkState {
             true
         } else {
             self.chunk_bcs.contains_key(&id)
+        }
+    }
+
+    // Clear the the InternedId to X mappings, which also means we must clear all mappings using those mappings.
+    // InternedId values will start again from 0,  so we don't want old values to clash.
+    //
+    // The match clears mappings containing InternedId<Foo> for InternedType::Foo. The mapping was built by
+    // looking at the type definition, seeing what other fields reference the InternedId<Foo> provided by the InternMap,
+    // and then clearing those too.
+    fn clear_interned(&mut self, interned_type: InternedType) {
+        match interned_type {
+            InternedType::FileUnodeId => {
+                self.unode_file_ids.clear();
+                self.clear_mapping(NodeType::Blame);
+                self.clear_mapping(NodeType::FastlogFile);
+                self.clear_mapping(NodeType::UnodeFile);
+            }
+            InternedType::HgChangesetId => {
+                self.hg_cs_ids.clear();
+                self.hg_to_bcs.clear();
+                self.clear_mapping(NodeType::HgChangeset);
+                self.clear_mapping(NodeType::HgBonsaiMapping);
+                self.clear_mapping(NodeType::HgChangesetViaBonsai);
+            }
+            InternedType::HgFileNodeId => {
+                self.hg_filenode_ids.clear();
+                self.clear_mapping(NodeType::HgFileEnvelope);
+                self.clear_mapping(NodeType::HgFileNode);
+            }
+            InternedType::HgManifestId => {
+                self.hg_manifest_ids.clear();
+                self.clear_mapping(NodeType::HgManifest);
+            }
+            InternedType::ManifestUnodeId => {
+                self.unode_manifest_ids.clear();
+                self.clear_mapping(NodeType::FastlogDir);
+                self.clear_mapping(NodeType::UnodeManifest);
+            }
+            InternedType::MPathHash => {
+                self.mpath_hashs.clear();
+                self.clear_mapping(NodeType::HgFileNode);
+                self.clear_mapping(NodeType::HgManifest);
+            }
+        }
+    }
+
+    fn clear_mapping(&mut self, node_type: NodeType) {
+        match node_type {
+            // Entry points
+            NodeType::Root => {}
+            NodeType::Bookmark => {}
+            NodeType::PublishedBookmarks => {}
+            // Bonsai
+            NodeType::Changeset => self.visited_bcs.clear(),
+            NodeType::BonsaiHgMapping => self.visited_bcs_mapping.clear(),
+            NodeType::PhaseMapping => self.visited_bcs_phase.clear(),
+            // Hg
+            NodeType::HgBonsaiMapping => self.visited_hg_cs_mapping.clear(),
+            NodeType::HgChangeset => self.visited_hg_cs.clear(),
+            NodeType::HgChangesetViaBonsai => self.visited_hg_cs_via_bonsai.clear(),
+            NodeType::HgManifest => self.visited_hg_manifest.clear(),
+            NodeType::HgFileNode => self.visited_hg_filenode.clear(),
+            NodeType::HgFileEnvelope => self.visited_hg_file_envelope.clear(),
+            // Content
+            NodeType::FileContent => self.visited_file.clear(),
+            NodeType::FileContentMetadata => {} // reached via expand_checked_nodes
+            NodeType::AliasContentMapping => {} // reached via expand_checked_nodes
+            // Derived
+            NodeType::Blame => self.visited_blame.clear(),
+            NodeType::ChangesetInfo => self.visited_changeset_info.clear(),
+            NodeType::ChangesetInfoMapping => self.visited_changeset_info_mapping.clear(),
+            NodeType::DeletedManifest => self.visited_deleted_manifest.clear(),
+            NodeType::DeletedManifestMapping => self.visited_deleted_manifest_mapping.clear(),
+            NodeType::FastlogBatch => self.visited_fastlog_batch.clear(),
+            NodeType::FastlogDir => self.visited_fastlog_dir.clear(),
+            NodeType::FastlogFile => self.visited_fastlog_file.clear(),
+            NodeType::Fsnode => self.visited_fsnode.clear(),
+            NodeType::FsnodeMapping => self.visited_fsnode_mapping.clear(),
+            NodeType::SkeletonManifest => self.visited_skeleton_manifest.clear(),
+            NodeType::SkeletonManifestMapping => self.visited_skeleton_manifest_mapping.clear(),
+            NodeType::UnodeFile => self.visited_unode_file.clear(),
+            NodeType::UnodeManifest => self.visited_unode_manifest.clear(),
+            NodeType::UnodeMapping => self.visited_unode_mapping.clear(),
         }
     }
 }
@@ -645,6 +733,15 @@ impl TailingWalkVisitor for WalkState {
             .retain(|k, _v| !chunk_interned.contains(k));
 
         Ok(in_new_chunk)
+    }
+
+    fn clear_state(
+        &mut self,
+        node_types: &HashSet<NodeType>,
+        interned_types: &HashSet<InternedType>,
+    ) {
+        node_types.iter().for_each(|t| self.clear_mapping(*t));
+        interned_types.iter().for_each(|t| self.clear_interned(*t));
     }
 
     fn end_chunks(&mut self) -> Result<(), Error> {

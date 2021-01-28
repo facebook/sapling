@@ -130,15 +130,22 @@ where
         let is_chunking = chunk_params.is_some();
 
         // Done in separate step so that heads_fetcher stays live in chunk_params
-        let chunk_stream = if let Some((chunk_size, heads_fetcher)) = &chunk_params {
-            heads_fetcher
-                .fetch_ids(&ctx, Direction::NewestFirst, None)
-                .chunks(*chunk_size)
-                .map(move |v| v.into_iter().collect::<Result<HashSet<_>, Error>>())
-                .left_stream()
-        } else {
-            stream::once(future::ok(HashSet::new())).right_stream()
-        };
+        let (_repo_high_bound, chunk_stream) =
+            if let Some((chunk_size, heads_fetcher)) = &chunk_params {
+                let (lower, upper) = heads_fetcher.get_repo_bounds().await?;
+                info!(repo_params.logger, #log::CHUNKING, "Repo bounds: ({}, {})", lower, upper);
+                let s = heads_fetcher
+                    .fetch_ids(&ctx, Direction::NewestFirst, Some((lower, upper)))
+                    .chunks(*chunk_size)
+                    .map(move |v| v.into_iter().collect::<Result<HashSet<_>, Error>>())
+                    .left_stream();
+                (Some(upper), s)
+            } else {
+                (
+                    None,
+                    stream::once(future::ok(HashSet::new())).right_stream(),
+                )
+            };
 
         let mut chunk_num: u64 = 0;
 
@@ -184,6 +191,15 @@ where
 
             if is_chunking {
                 info!(logger, #log::LOADED, "Deferred: {}", visitor.num_deferred());
+                if let Some(sample_rate) = tail_params.clear_sample_rate {
+                    if sample_rate != 0 && chunk_num % sample_rate == 0 {
+                        info!(logger, #log::CHUNKING, "Clearing state after chunk {}", chunk_num);
+                        visitor.clear_state(
+                            &tail_params.clear_node_types,
+                            &tail_params.clear_interned_types,
+                        );
+                    }
+                }
                 // TODO(ahornby) checkpoint logic can go here. if chunk_num % checkpoint_sample_rate == 0 or chunk.len() < chunk_size
             }
         }
@@ -193,7 +209,7 @@ where
         if let Some((chunk_size, _heads_fetcher)) = &chunk_params {
             info!(
                 repo_params.logger, #log::CHUNKING,
-                "Completed in {} chunks of {}", chunk_num, chunk_size
+                "Completed in {} chunks of size {}", chunk_num, chunk_size
             );
         };
 

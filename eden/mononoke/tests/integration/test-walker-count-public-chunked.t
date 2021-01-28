@@ -116,6 +116,7 @@ derived unodes, chunked, deep. Expect deferred as unode parent will attempt to s
   $ mononoke_walker -L sizing scrub -q -p UnodeMapping --chunk-size=2 -I deep -i derived_unodes 2>&1 | strip_glog
   Walking edge types [UnodeFileToUnodeFileParent, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent, UnodeMappingToRootUnodeManifest]
   Walking node types [UnodeFile, UnodeManifest, UnodeMapping]
+  Repo bounds: (1, 4)
   Starting chunk 1 with bounds (2, 4)
   Seen,Loaded: 8,6
   * Type:Walked,Checks,Children UnodeFile:3,*,0 UnodeManifest:3,*,4 UnodeMapping:2,*,4 (glob)
@@ -124,7 +125,24 @@ derived unodes, chunked, deep. Expect deferred as unode parent will attempt to s
   Seen,Loaded: 3,3
   * Type:Walked,Checks,Children UnodeFile:4,*,0 UnodeManifest:4,*,4 UnodeMapping:3,*,5 (glob)
   Deferred: 0
-  Completed in 2 chunks of 2
+  Completed in 2 chunks of size 2
+
+derived unodes, chunked, deep with clearing between chunks. Expect more reloaded in second chunk, but not a full reload
+  $ mononoke_walker -L sizing scrub -q -p UnodeMapping --chunk-clear-sample-rate=1 --chunk-size=2 -I deep -i derived_unodes 2>&1 | strip_glog
+  Walking edge types [UnodeFileToUnodeFileParent, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent, UnodeMappingToRootUnodeManifest]
+  Walking node types [UnodeFile, UnodeManifest, UnodeMapping]
+  Repo bounds: (1, 4)
+  Starting chunk 1 with bounds (2, 4)
+  Seen,Loaded: 8,6
+  * Type:Walked,Checks,Children UnodeFile:3,*,0 UnodeManifest:3,*,4 UnodeMapping:2,*,4 (glob)
+  Deferred: 1
+  Clearing state after chunk 1
+  Starting chunk 2 with bounds (1, 2)
+  Seen,Loaded: 5,5
+  * Type:Walked,Checks,Children UnodeFile:5,*,0 UnodeManifest:5,*,5 UnodeMapping:3,*,6 (glob)
+  Deferred: 0
+  Clearing state after chunk 2
+  Completed in 2 chunks of size 2
 
 derived unodes blame, chunked, deep. Expect deferred as blame entry will attempt to step outside chunk
   $ mononoke_walker -L sizing -L chunking scrub -q -p UnodeMapping --chunk-size=2 -I deep -i derived_unodes -i derived_blame -X UnodeFileToUnodeFileParent -X UnodeManifestToUnodeManifestParent 2>&1 | strip_glog
