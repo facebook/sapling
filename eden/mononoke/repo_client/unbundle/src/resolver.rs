@@ -13,7 +13,7 @@ use blobstore::Storable;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
-use context::CoreContext;
+use context::{CoreContext, SessionClass};
 use core::fmt::Debug;
 use derived_data::BonsaiDerivable;
 use futures::{
@@ -1044,8 +1044,16 @@ impl<'r> Bundle2Resolver<'r> {
                 )
                 .await?;
 
+                let mut ctx = self.ctx.clone();
+                if is_infinitepush
+                    && tunables::tunables().get_commit_cloud_use_background_session_class()
+                {
+                    ctx.session_mut()
+                        .override_session_class(SessionClass::Background);
+                }
+
                 let filelogs = upload_hg_blobs(
-                    self.ctx,
+                    &ctx,
                     self.repo,
                     convert_to_revlog_filelog(self.ctx.clone(), self.repo.clone(), filelogs),
                     UploadBlobsType::EnsureNoDuplicates,

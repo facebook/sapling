@@ -126,6 +126,7 @@ pub struct MononokeTunables {
     // Use Background session class while deriving data. This makes derived data not write
     // data to blobstore sync queue if a write was successful to the main blobstore.
     derived_data_use_background_session_class: AtomicBool,
+    commit_cloud_use_background_session_class: AtomicBool,
 
     allow_change_xrepo_mapping_extra: AtomicBool,
 }
