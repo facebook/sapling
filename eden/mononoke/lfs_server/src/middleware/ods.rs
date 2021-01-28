@@ -16,10 +16,17 @@ use super::{LfsMethod, RequestContext};
 
 define_stats! {
     prefix = "mononoke.lfs.request";
-    requests: dynamic_timeseries("{}.requests", (repo_and_method: String); Rate, Sum),
-    success: dynamic_timeseries("{}.success", (repo_and_method: String); Rate, Sum),
-    failure_4xx: dynamic_timeseries("{}.failure_4xx", (repo_and_method: String); Rate, Sum),
-    failure_5xx: dynamic_timeseries("{}.failure_5xx", (repo_and_method: String); Rate, Sum),
+    success: timeseries(Rate, Sum),
+    requests: timeseries(Rate, Sum),
+    failure_4xx: timeseries(Rate, Sum),
+    failure_429: timeseries(Rate, Sum),
+    failure_404: timeseries(Rate, Sum),
+    failure_5xx: timeseries(Rate, Sum),
+
+    repo_requests: dynamic_timeseries("{}.requests", (repo_and_method: String); Rate, Sum),
+    repo_success: dynamic_timeseries("{}.success", (repo_and_method: String); Rate, Sum),
+    repo_failure_4xx: dynamic_timeseries("{}.failure_4xx", (repo_and_method: String); Rate, Sum),
+    repo_failure_5xx: dynamic_timeseries("{}.failure_5xx", (repo_and_method: String); Rate, Sum),
     upload_duration: dynamic_histogram("{}.upload_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     download_duration: dynamic_histogram("{}.download_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     download_sha256_duration: dynamic_histogram("{}.download_sha256_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
@@ -28,14 +35,26 @@ define_stats! {
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
+    // Not all requests have a valid method and repo, so calculate the top level HTTP stats first.
+    STATS::requests.add_value(1);
+    if status.is_success() {
+        STATS::success.add_value(1);
+    } else if status.is_client_error() {
+        if status == StatusCode::TOO_MANY_REQUESTS {
+            STATS::failure_429.add_value(1);
+        } else if status == StatusCode::NOT_FOUND {
+            STATS::failure_404.add_value(1);
+        }
+
+        STATS::failure_4xx.add_value(1);
+    } else if status.is_server_error() {
+        STATS::failure_5xx.add_value(1);
+    }
+
     let ctx = state.try_borrow::<RequestContext>()?;
     let method = ctx.method?;
     let repo = ctx.repository.clone()?;
     let repo_and_method = format!("{}.{}", &repo, method.to_string());
-
-    if !ctx.should_log {
-        return None;
-    }
 
     let callbacks = state.try_borrow_mut::<PostRequestCallbacks>()?;
 
@@ -55,14 +74,14 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
             }
         }
 
-        STATS::requests.add_value(1, (repo_and_method.clone(),));
+        STATS::repo_requests.add_value(1, (repo_and_method.clone(),));
 
         if status.is_success() {
-            STATS::success.add_value(1, (repo_and_method.clone(),));
+            STATS::repo_success.add_value(1, (repo_and_method.clone(),));
         } else if status.is_client_error() {
-            STATS::failure_4xx.add_value(1, (repo_and_method.clone(),));
+            STATS::repo_failure_4xx.add_value(1, (repo_and_method.clone(),));
         } else if status.is_server_error() {
-            STATS::failure_5xx.add_value(1, (repo_and_method.clone(),));
+            STATS::repo_failure_5xx.add_value(1, (repo_and_method.clone(),));
         }
 
         if let Some(response_bytes_sent) = info.bytes_sent {
@@ -85,6 +104,10 @@ impl OdsMiddleware {
 #[async_trait::async_trait]
 impl Middleware for OdsMiddleware {
     async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
-        log_stats(state, response.status());
+        if let Some(ctx) = state.try_borrow::<RequestContext>() {
+            if ctx.should_log {
+                log_stats(state, response.status());
+            }
+        }
     }
 }
