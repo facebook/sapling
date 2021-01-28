@@ -35,7 +35,7 @@ use crate::thrift;
 /// This type is not used directly in most cases -- it is only used to build more specific typed
 /// hashes.
 ///
-/// For more on BLAKE2b, see https://blake2.net/
+/// For more on BLAKE2b, see <https://blake2.net/>
 
 pub const BLAKE2_HASH_LENGTH_BYTES: usize = 32;
 pub const BLAKE2_HASH_LENGTH_HEX: usize = BLAKE2_HASH_LENGTH_BYTES * 2;

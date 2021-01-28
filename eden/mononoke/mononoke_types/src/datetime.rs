@@ -61,7 +61,7 @@ impl DateTime {
     /// Construct a new `DateTime` from an RFC3339 string.
     ///
     /// RFC3339 is a standardized way to represent a specific moment in time. See
-    /// https://tools.ietf.org/html/rfc3339.
+    /// <https://tools.ietf.org/html/rfc3339>.
     pub fn from_rfc3339(rfc3339: &str) -> Result<Self> {
         let dt = ChronoDateTime::parse_from_rfc3339(rfc3339)
             .with_context(|| ErrorKind::InvalidDateTime("while parsing rfc3339".into()))?;
