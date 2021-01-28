@@ -139,8 +139,6 @@ pub async fn gitimport(
         String::from(path.file_name().unwrap_or_default().to_string_lossy())
     };
     let repo_name_ref = &repo_name;
-    let hggit_compatibility = prefs.hggit_compatibility;
-    let bonsai_git_mapping = prefs.bonsai_git_mapping;
 
     let walk_repo = Repository::open(&path)?;
     let pool = &GitPool::new(path.to_path_buf())?;
@@ -163,6 +161,7 @@ pub async fn gitimport(
 
     // TODO: Make concurrency configurable below.
 
+    let prefs = &prefs;
     let import_map: LinkedHashMap<Oid, (ChangesetId, BonsaiChangeset)> = stream::iter(walk)
         .map(|oid| async move {
             let oid = oid.with_context(|| "While walking commits")?;
@@ -196,26 +195,10 @@ pub async fn gitimport(
             LinkedHashMap::<Oid, (ChangesetId, BonsaiChangeset)>::new(),
             {
                 move |mut import_map, (metadata, file_changes)| async move {
-                    let CommitMetadata {
-                        oid,
-                        parents,
-                        message,
-                        author,
-                        author_date,
-                        committer,
-                        committer_date,
-                    } = metadata;
-
-                    let mut extra = BTreeMap::new();
-                    if hggit_compatibility {
-                        extra.insert(
-                            HGGIT_COMMIT_ID_EXTRA.to_string(),
-                            oid.to_string().into_bytes(),
-                        );
-                    }
-
-                    let parents = parents
-                        .into_iter()
+                    let oid = metadata.oid;
+                    let parents = metadata
+                        .parents
+                        .iter()
                         .map(|p| {
                             roots
                                 .get(&p)
@@ -226,33 +209,11 @@ pub async fn gitimport(
                         .collect::<Result<Vec<_>, _>>()
                         .with_context(|| format_err!("While looking for parents of {}", oid))?;
 
-                    // TODO: Should we have further extras?
-                    let bcs = BonsaiChangesetMut {
-                        parents,
-                        author,
-                        author_date,
-                        committer: Some(committer),
-                        committer_date: Some(committer_date),
-                        message,
-                        extra,
-                        file_changes,
-                    }
-                    .freeze()?;
-
-                    // We now that the commits are in order (this is guaranteed by the Walk), so we
-                    // can insert them as-is, one by one, without extra dependency / ordering checks.
+                    let bcs =
+                        import_bonsai_changeset(ctx, repo, metadata, parents, file_changes, &prefs)
+                            .await?;
 
                     let bcs_id = bcs.get_changeset_id();
-                    save_bonsai_changesets(vec![bcs.clone()], ctx.clone(), repo.clone()).await?;
-
-                    if bonsai_git_mapping {
-                        repo.bonsai_git_mapping()
-                            .bulk_add(
-                                &ctx,
-                                &[BonsaiGitMappingEntry::new(oid_to_sha1(&oid)?, bcs_id)],
-                            )
-                            .await?;
-                    }
 
                     import_map.insert(oid, (bcs_id, bcs));
 
@@ -326,4 +287,62 @@ pub async fn gitimport(
     }
 
     Ok(import_map)
+}
+
+async fn import_bonsai_changeset(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    metadata: CommitMetadata,
+    parents: Vec<ChangesetId>,
+    file_changes: BTreeMap<MPath, Option<FileChange>>,
+    prefs: &GitimportPreferences,
+) -> Result<BonsaiChangeset, Error> {
+    let CommitMetadata {
+        oid,
+        message,
+        author,
+        author_date,
+        committer,
+        committer_date,
+        ..
+    } = metadata;
+
+    let mut extra = BTreeMap::new();
+    if prefs.hggit_compatibility {
+        extra.insert(
+            HGGIT_COMMIT_ID_EXTRA.to_string(),
+            oid.to_string().into_bytes(),
+        );
+    }
+
+    // TODO: Should we have further extras?
+    let bcs = BonsaiChangesetMut {
+        parents,
+        author,
+        author_date,
+        committer: Some(committer),
+        committer_date: Some(committer_date),
+        message,
+        extra,
+        file_changes,
+    }
+    .freeze()?;
+
+    let bcs_id = bcs.get_changeset_id();
+
+    // We now that the commits are in order (this is guaranteed by the Walk), so we
+    // can insert them as-is, one by one, without extra dependency / ordering checks.
+
+    save_bonsai_changesets(vec![bcs.clone()], ctx.clone(), repo.clone()).await?;
+
+    if prefs.bonsai_git_mapping {
+        repo.bonsai_git_mapping()
+            .bulk_add(
+                &ctx,
+                &[BonsaiGitMappingEntry::new(oid_to_sha1(&oid)?, bcs_id)],
+            )
+            .await?;
+    }
+
+    Ok(bcs)
 }
