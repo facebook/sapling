@@ -223,10 +223,7 @@ impl SpanSet {
     /// Tests if a given [`Id`] or [`Span`] is covered by this set.
     pub fn contains(&self, value: impl Into<Span>) -> bool {
         let span = value.into();
-        let idx = match self
-            .spans
-            .binary_search_by(|probe| span.low.cmp(&probe.low))
-        {
+        let idx = match self.spans.bsearch_by(|probe| span.low.cmp(&probe.low)) {
             Ok(idx) => idx,
             Err(idx) => idx,
         };
@@ -467,10 +464,7 @@ impl SpanSet {
     /// This is not a general purpose API, but useful for internal logic
     /// like DAG descendant calculation.
     pub(crate) fn intersection_span_min(&self, rhs: Span) -> Option<Id> {
-        let i = match self
-            .spans
-            .binary_search_by(|probe| rhs.low.cmp(&probe.high))
-        {
+        let i = match self.spans.bsearch_by(|probe| rhs.low.cmp(&probe.high)) {
             Ok(idx) => idx,
             Err(idx) => idx.max(1) - 1,
         };

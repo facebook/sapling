@@ -28,13 +28,13 @@ pub trait BinarySearchBy<T> {
     /// one of the matches could be returned. If the value is not found then
     /// [`Result::Err`] is returned, containing the index where a matching
     /// element could be inserted while maintaining sorted order.
-    fn binary_search_by<F>(&self, f: F) -> Result<usize, usize>
+    fn bsearch_by<F>(&self, f: F) -> Result<usize, usize>
     where
         F: FnMut(&T) -> Ordering;
 }
 
 impl<T> BinarySearchBy<T> for VecDeque<T> {
-    fn binary_search_by<F>(&self, mut f: F) -> Result<usize, usize>
+    fn bsearch_by<F>(&self, mut f: F) -> Result<usize, usize>
     where
         F: FnMut(&T) -> Ordering,
     {
