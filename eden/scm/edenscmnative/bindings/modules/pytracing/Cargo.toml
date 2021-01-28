@@ -19,3 +19,4 @@ python3-sys = { version = "0.5", optional = true }
 serde_json = "1"
 tracing = "0.1"
 tracing-collector = { path = "../../../../lib/tracing-collector" }
+tracing-runtime-callsite = { path = "../../../../lib/tracing-runtime-callsite" }

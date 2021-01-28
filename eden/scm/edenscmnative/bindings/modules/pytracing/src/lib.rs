@@ -19,10 +19,16 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+use tracing::Level;
 use tracing_collector::{
     model::{Action, EspanId, TreeSpans},
     TracingData,
 };
+use tracing_runtime_callsite::CallsiteInfo;
+use tracing_runtime_callsite::CallsiteKey;
+use tracing_runtime_callsite::EventKindType;
+use tracing_runtime_callsite::KindType;
+use tracing_runtime_callsite::RuntimeCallsite;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "tracing"].join(".");
@@ -39,6 +45,13 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
     let singleton = tracingdata::create_instance(py, DATA.clone())?;
     m.add(py, "singleton", singleton)?;
+
+    m.add(py, "LEVEL_TRACE", LEVEL_TRACE)?;
+    m.add(py, "LEVEL_DEBUG", LEVEL_DEBUG)?;
+    m.add(py, "LEVEL_INFO", LEVEL_INFO)?;
+    m.add(py, "LEVEL_WARN", LEVEL_WARN)?;
+    m.add(py, "LEVEL_ERROR", LEVEL_ERROR)?;
+    m.add_class::<EventCallsite>(py)?;
     Ok(m)
 }
 
@@ -179,10 +192,20 @@ fn getattr(py: Python, obj: &PyObject, name: &str) -> PyObject {
     obj.getattr(py, name).unwrap_or_else(|_| py.None())
 }
 
+fn getattr_opt(py: Python, obj: &PyObject, name: &str) -> Option<PyObject> {
+    obj.getattr(py, name).ok()
+}
+
 fn tostr(py: Python, obj: PyObject) -> String {
     obj.str(py)
         .map(|s| s.to_string_lossy(py).to_string())
         .unwrap_or_else(|_| "<missing>".to_string())
+}
+
+fn tostr_opt(py: Python, obj: PyObject) -> Option<String> {
+    obj.str(py)
+        .map(|s| Some(s.to_string_lossy(py).to_string()))
+        .unwrap_or_else(|_| None)
 }
 
 // Decorator to set "meta" attribute.
@@ -594,3 +617,166 @@ py_class!(pub class treespans |py| {
         cpython_ext::ser::to_object(py, &spans)
     }
 });
+
+py_class!(pub class EventCallsite |py| {
+    data inner: &'static RuntimeCallsite<EventKindType>;
+
+    // Create a `Callsite` for event in Rust tracing eco-system.
+    def __new__(
+        _cls,
+        obj: PyObject, /* id(obj) for identity */
+        target: Option<String> = None,
+        name: Option<String> = None,
+        level: usize = LEVEL_INFO,
+        file: Option<String> = None,
+        line: Option<usize> = None,
+        module: Option<String> = None,
+        fieldnames: Option<Vec<String>> = None,
+    ) -> PyResult<Self> {
+        let callsite = new_callsite(py, obj, target, name, level, file, line, module, fieldnames)?;
+        Self::create_instance(py, callsite)
+    }
+
+    /// Create a event with the given field values.
+    def event(&self, values: Option<Vec<FieldValue>> = None) -> PyResult<PyNone> {
+        // Convert values to Option<Box<dyn tracing::Value>>.
+        let values: Vec<Option<Box<dyn tracing::Value>>> = match values.as_ref() {
+            None => Vec::new(),
+            Some(list) => list.iter().map(|v| v.to_opt_tracing_value()).collect(),
+        };
+        self.inner(py).create_event(&values);
+        Ok(PyNone)
+    }
+});
+
+/// Create a runtime callsite.
+///
+/// `obj` should be a Python function or frame so we can figure out the right
+/// "callsite" identity and fill up information like module, file, line, etc.
+fn new_callsite<K: KindType>(
+    py: Python,
+    obj: PyObject, /* func, or str */
+    target: Option<String>,
+    name: Option<String>,
+    level: usize,
+    file: Option<String>,
+    line: Option<usize>,
+    module: Option<String>,
+    fieldnames: Option<Vec<String>>,
+) -> PyResult<&'static RuntimeCallsite<K>> {
+    enum ObjType {
+        Frame,
+        Func,
+    }
+
+    // Extract the "code" object and "line". Support frame and function object.
+    let (code, line, obj_type) = if let Some(code) = getattr_opt(py, &obj, "f_code") {
+        // obj is a frame object (f_code, f_lineno, f_globals, etc.)
+        let line = line.or_else(|| getattr(py, &obj, "f_lineno").extract::<usize>(py).ok());
+        (code, line, ObjType::Frame)
+    } else if let Some(code) = getattr_opt(py, &obj, "__code__") {
+        // obj is a function object (__code__, __name__, __module__, etc.)
+        let line = line.or_else(|| {
+            getattr(py, &obj, "co_firstlineno")
+                .extract::<usize>(py)
+                .ok()
+        });
+        (code, line, ObjType::Func)
+    } else {
+        return Err(PyErr::new::<exc::TypeError, _>(
+            py,
+            "callsite: expected frame or function object",
+        ));
+    };
+    let id: CallsiteKey = (code.as_ptr() as usize, line.unwrap_or_default());
+
+    let callsite = tracing_runtime_callsite::create_callsite::<K, _>(id, || {
+        // Populate other fields: name, module, file.
+        let (mut name, module) = match obj_type {
+            ObjType::Frame => {
+                let name = name.or_else(|| tostr_opt(py, getattr(py, &code, "co_name")));
+                let module = module.or_else(|| {
+                    getattr_opt(py, &obj, "f_globals").and_then(|g| {
+                        g.get_item(py, "__name__")
+                            .ok()
+                            .and_then(|n| n.extract::<String>(py).ok())
+                    })
+                });
+                (name, module)
+            }
+            ObjType::Func => {
+                let name = name.or_else(|| tostr_opt(py, getattr(py, &obj, "__name__")));
+                let module = module.or_else(|| tostr_opt(py, getattr(py, &obj, "__module__")));
+                (name, module)
+            }
+        };
+
+        // Discard the "<lambda>" name. It's pointless.
+        if name.as_deref() == Some("<lambda>") {
+            name = None;
+        };
+
+        // code object provides file name.
+        let file = file.or_else(|| tostr_opt(py, getattr(py, &code, "co_filename")));
+
+        CallsiteInfo {
+            name: name.unwrap_or_default(),
+            target: target.unwrap_or_default(),
+            level: usize_to_level(level),
+            file,
+            line: line.map(|l| l as u32),
+            module_path: module,
+            field_names: fieldnames.unwrap_or_default(),
+        }
+    });
+    Ok(callsite)
+}
+
+/// Represent the value type of a field without references.
+/// Conceptually the owned value of `tracing::Value`.
+#[derive(Clone, Debug)]
+pub enum FieldValue {
+    Str(String),
+    Int(i64),
+    None,
+}
+
+impl FieldValue {
+    fn to_opt_tracing_value<'a>(&'a self) -> Option<Box<dyn tracing::Value + 'a>> {
+        match self {
+            FieldValue::Str(s) => Some(Box::new(s.as_str())),
+            FieldValue::Int(i) => Some(Box::new(i)),
+            FieldValue::None => None,
+        }
+    }
+}
+
+impl<'a> FromPyObject<'a> for FieldValue {
+    fn extract(py: Python, obj: &PyObject) -> PyResult<FieldValue> {
+        if let Ok(i) = obj.extract::<i64>(py) {
+            Ok(FieldValue::Int(i))
+        } else if obj == &py.None() {
+            Ok(FieldValue::None)
+        } else {
+            let s = obj.extract::<String>(py)?;
+            Ok(FieldValue::Str(s))
+        }
+    }
+}
+
+fn usize_to_level(level: usize) -> Level {
+    match level {
+        LEVEL_TRACE => Level::TRACE,
+        LEVEL_DEBUG => Level::DEBUG,
+        LEVEL_INFO => Level::INFO,
+        LEVEL_WARN => Level::WARN,
+        LEVEL_ERROR => Level::ERROR,
+        _ => Level::ERROR,
+    }
+}
+
+const LEVEL_TRACE: usize = 0;
+const LEVEL_DEBUG: usize = 1;
+const LEVEL_INFO: usize = 2;
+const LEVEL_WARN: usize = 3;
+const LEVEL_ERROR: usize = 4;
