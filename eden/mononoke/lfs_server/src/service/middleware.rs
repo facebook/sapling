@@ -8,10 +8,15 @@
 use cached_config::ConfigHandle;
 use fbinit::FacebookInit;
 use futures::future::FutureExt;
-use gotham::{handler::HandlerFuture, middleware::Middleware, state::State};
+use gotham::{
+    handler::HandlerFuture,
+    middleware::Middleware,
+    state::{FromState, State},
+};
 use gotham_derive::NewMiddleware;
 use gotham_ext::error::HttpError;
 use gotham_ext::middleware::ClientIdentity;
+use hyper::Uri;
 use permission_checker::MononokeIdentitySet;
 use rand::Rng;
 use stats::prelude::*;
@@ -52,6 +57,12 @@ impl Middleware for ThrottleMiddleware {
     where
         Chain: FnOnce(State) -> Pin<Box<HandlerFuture>>,
     {
+        if let Some(uri) = Uri::try_borrow_from(&state) {
+            if uri.path() == "/health_check" {
+                return chain(state);
+            }
+        }
+
         let identities = if let Some(client_ident) = state.try_borrow::<ClientIdentity>() {
             client_ident.identities().as_ref()
         } else {
