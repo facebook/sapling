@@ -6,7 +6,9 @@
  */
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, UnodeFlags, WrappedPath};
-use crate::walk::{expand_checked_nodes, EmptyRoute, OutgoingEdge, VisitOne, WalkVisitor};
+use crate::walk::{
+    expand_checked_nodes, EmptyRoute, OutgoingEdge, TailingWalkVisitor, VisitOne, WalkVisitor,
+};
 
 use ahash::RandomState;
 use anyhow::{bail, Error};
@@ -617,9 +619,9 @@ impl VisitOne for WalkState {
     }
 }
 
-impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for WalkState {
+impl TailingWalkVisitor for WalkState {
     fn start_chunk(
-        &self,
+        &mut self,
         new_chunk_bcs: &HashSet<ChangesetId>,
     ) -> Result<HashSet<OutgoingEdge>, Error> {
         // Reset self.chunk_bcs
@@ -645,7 +647,7 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         Ok(in_new_chunk)
     }
 
-    fn end_chunks(&self) -> Result<(), Error> {
+    fn end_chunks(&mut self) -> Result<(), Error> {
         if !self.deferred_bcs.is_empty() {
             bail!(
                 "Unexpected remaining edges to walk {:?}",
@@ -661,7 +663,9 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
     fn num_deferred(&self) -> usize {
         self.deferred_bcs.len()
     }
+}
 
+impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for WalkState {
     fn start_step(
         &self,
         ctx: CoreContext,

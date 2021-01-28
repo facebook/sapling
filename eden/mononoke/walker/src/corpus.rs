@@ -435,14 +435,14 @@ async fn run_one(
         }
     };
 
-    let walk_state = Arc::new(SamplingWalkVisitor::new(
+    let walk_state = SamplingWalkVisitor::new(
         repo_params.include_node_types.clone(),
         repo_params.include_edge_types.clone(),
         command.sampling_options,
         command.sampling_path_regex,
         command.sampler,
         job_params.enable_derive,
-    ));
+    );
 
     let type_params = RepoWalkTypeParams {
         required_node_data_types: hashset![NodeType::FileContent],

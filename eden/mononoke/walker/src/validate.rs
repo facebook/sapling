@@ -25,7 +25,8 @@ use crate::setup::{
 use crate::state::{StepStats, WalkState};
 use crate::tail::walk_exact_tail;
 use crate::walk::{
-    EmptyRoute, OutgoingEdge, RepoWalkParams, RepoWalkTypeParams, StepRoute, VisitOne, WalkVisitor,
+    EmptyRoute, OutgoingEdge, RepoWalkParams, RepoWalkTypeParams, StepRoute, TailingWalkVisitor,
+    VisitOne, WalkVisitor,
 };
 
 use anyhow::Error;
@@ -53,7 +54,6 @@ use std::{
     iter::FromIterator,
     result::Result,
     str::FromStr,
-    sync::Arc,
     time::Instant,
 };
 
@@ -329,24 +329,26 @@ impl StepRoute for ValidateRoute {
     }
 }
 
-impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
-    for ValidatingVisitor
-{
+impl TailingWalkVisitor for ValidatingVisitor {
     fn start_chunk(
-        &self,
+        &mut self,
         chunk_members: &HashSet<ChangesetId>,
     ) -> Result<HashSet<OutgoingEdge>, Error> {
         self.inner.start_chunk(chunk_members)
     }
 
-    fn end_chunks(&self) -> Result<(), Error> {
+    fn end_chunks(&mut self) -> Result<(), Error> {
         self.inner.end_chunks()
     }
 
     fn num_deferred(&self) -> usize {
         self.inner.num_deferred()
     }
+}
 
+impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
+    for ValidatingVisitor
+{
     fn start_step(
         &self,
         ctx: CoreContext,
@@ -759,14 +761,14 @@ async fn run_one(
     let always_emit_edge_types =
         HashSet::from_iter(vec![EdgeType::HgFileNodeToLinkedHgChangeset].into_iter());
 
-    let stateful_visitor = Arc::new(ValidatingVisitor::new(
+    let stateful_visitor = ValidatingVisitor::new(
         repo_params.repo.name().clone(),
         repo_params.include_node_types.clone(),
         repo_params.include_edge_types.clone(),
         command.include_check_types,
         always_emit_edge_types.clone(),
         job_params.enable_derive,
-    ));
+    );
 
     let type_params = RepoWalkTypeParams {
         required_node_data_types: hashset![NodeType::PhaseMapping],

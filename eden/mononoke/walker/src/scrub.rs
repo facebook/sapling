@@ -430,14 +430,14 @@ async fn run_one(
     }
     let required_node_data_types: HashSet<NodeType> = output_node_types.into_iter().collect();
 
-    let walk_state = Arc::new(SamplingWalkVisitor::new(
+    let walk_state = SamplingWalkVisitor::new(
         repo_params.include_node_types.clone(),
         repo_params.include_edge_types.clone(),
         command.sampling_options,
         None,
         command.sampler,
         job_params.enable_derive,
-    ));
+    );
 
     let type_params = RepoWalkTypeParams {
         required_node_data_types,

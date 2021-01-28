@@ -6,6 +6,7 @@
  */
 
 /// Tags for slog usage
+pub const CHUNKING: &str = "chunking";
 pub const GRAPH: &str = "graph";
 pub const LOADED: &str = "loaded";
 pub const SIZING: &str = "sizing";

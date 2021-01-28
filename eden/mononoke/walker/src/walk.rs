@@ -140,15 +140,6 @@ pub trait VisitOne {
 // partially derived types (it can see the node_data)
 #[auto_impl(Arc)]
 pub trait WalkVisitor<VOut, Route>: VisitOne {
-    fn start_chunk(
-        &self,
-        chunk_members: &HashSet<ChangesetId>,
-    ) -> Result<HashSet<OutgoingEdge>, Error>;
-
-    fn end_chunks(&self) -> Result<(), Error>;
-
-    fn num_deferred(&self) -> usize;
-
     // Called before the step is attempted
     fn start_step(
         &self,
@@ -174,6 +165,18 @@ pub trait WalkVisitor<VOut, Route>: VisitOne {
         walk_item: &OutgoingEdge,
         route: Option<Route>,
     ) -> (VOut, Route);
+}
+
+// Visitor methods that are only needed during tailing
+pub trait TailingWalkVisitor {
+    fn start_chunk(
+        &mut self,
+        chunk_members: &HashSet<ChangesetId>,
+    ) -> Result<HashSet<OutgoingEdge>, Error>;
+
+    fn end_chunks(&mut self) -> Result<(), Error>;
+
+    fn num_deferred(&self) -> usize;
 }
 
 // Data found for this node, plus next steps

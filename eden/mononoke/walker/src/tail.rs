@@ -10,10 +10,11 @@ use crate::log;
 use crate::setup::JobWalkParams;
 use crate::state::InternedType;
 use crate::walk::{
-    walk_exact, OutgoingEdge, RepoWalkParams, RepoWalkTypeParams, StepRoute, WalkVisitor,
+    walk_exact, OutgoingEdge, RepoWalkParams, RepoWalkTypeParams, StepRoute, TailingWalkVisitor,
+    WalkVisitor,
 };
 
-use anyhow::{bail, Error};
+use anyhow::{anyhow, bail, Error};
 use bulkops::{Direction, PublicChangesetBulkFetch, MAX_FETCH_STEP, MIN_FETCH_STEP};
 use cloned::cloned;
 use context::CoreContext;
@@ -24,7 +25,11 @@ use futures::{
 };
 use mononoke_types::ChangesetId;
 use slog::info;
-use std::collections::HashSet;
+use std::{
+    cmp::{max, min},
+    collections::HashSet,
+    sync::Arc,
+};
 use tokio::time::{Duration, Instant};
 
 // We can chose to go direct from the ChangesetId to types keyed by it without loading the Changeset
@@ -80,19 +85,19 @@ pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, V, VOut, Route>(
     mut repo_params: RepoWalkParams,
     type_params: RepoWalkTypeParams,
     tail_params: TailParams,
-    visitor: V,
+    mut visitor: V,
     make_run: RunFac,
 ) -> Result<(), Error>
 where
     RunFac: 'static + Clone + Send + Sync + FnOnce(&CoreContext, &RepoWalkParams) -> SinkFac,
     SinkFac: 'static + FnOnce(BoxStream<'static, Result<VOut, Error>>) -> SinkOut + Clone + Send,
     SinkOut: Future<Output = Result<(), Error>> + 'static + Send,
-    V: 'static + Clone + WalkVisitor<VOut, Route> + Send + Sync,
+    V: 'static + TailingWalkVisitor + WalkVisitor<VOut, Route> + Send + Sync,
     VOut: 'static + Send,
     Route: 'static + Send + Clone + StepRoute,
 {
     loop {
-        cloned!(job_params, tail_params, type_params, make_run, visitor);
+        cloned!(job_params, tail_params, type_params, make_run);
         let tail_secs = tail_params.tail_secs;
         // Each loop get new ctx and thus session id so we can distinguish runs
         let ctx = CoreContext::new_with_logger(fb, repo_params.logger.clone());
@@ -128,8 +133,6 @@ where
         let chunk_stream = if let Some((chunk_size, heads_fetcher)) = &chunk_params {
             heads_fetcher
                 .fetch_ids(&ctx, Direction::NewestFirst, None)
-                // TODO(ahornby) use chunk bounds for checkpointing
-                .map_ok(|(cs_id, _chunk_bounds)| cs_id)
                 .chunks(*chunk_size)
                 .map(move |v| v.into_iter().collect::<Result<HashSet<_>, Error>>())
                 .left_stream()
@@ -137,40 +140,60 @@ where
             stream::once(future::ok(HashSet::new())).right_stream()
         };
 
-        let chunk_count: usize = chunk_stream
-            .map(|chunk_members| {
-                let chunk_members = chunk_members?;
-                cloned!(mut repo_params);
-                let extra_roots = visitor.start_chunk(&chunk_members)?.into_iter();
-                let chunk_roots =
-                    roots_for_chunk(chunk_members, &tail_params.public_changeset_chunk_by)?;
-                repo_params.walk_roots.extend(chunk_roots);
-                repo_params.walk_roots.extend(extra_roots);
-                Ok(repo_params)
-            })
-            .and_then(|repo_params| {
-                cloned!(ctx, job_params, make_run, type_params, visitor);
-                let make_sink = make_run(&ctx, &repo_params);
-                let logger = repo_params.logger.clone();
-                let walk_output =
-                    walk_exact(ctx, visitor.clone(), job_params, repo_params, type_params);
-                async move {
-                    let res = make_sink(walk_output).await?;
-                    if is_chunking {
-                        info!(logger, #log::LOADED, "Deferred: {}", visitor.num_deferred());
-                    }
-                    Ok::<_, Error>(res)
-                }
-            })
-            .try_fold(0, |acc, _| future::ok(acc + 1))
-            .await?;
+        let mut chunk_num: u64 = 0;
+
+        futures::pin_mut!(chunk_stream);
+        while let Some(chunk_members) = chunk_stream.try_next().await? {
+            if is_chunking && chunk_members.is_empty() {
+                continue;
+            }
+            chunk_num += 1;
+
+            // convert from stream of (id, bounds) to ids plus overall bounds
+            let mut chunk_low: u64 = u64::MAX;
+            let mut chunk_upper: u64 = 0;
+            let chunk_members = chunk_members
+                .into_iter()
+                .map(|(cs_id, (fetch_low, fetch_upper))| {
+                    chunk_low = min(chunk_low, fetch_low);
+                    chunk_upper = max(chunk_upper, fetch_upper);
+                    cs_id
+                })
+                .collect();
+
+            cloned!(repo_params.logger);
+            if is_chunking {
+                info!(logger, #log::CHUNKING, "Starting chunk {} with bounds ({}, {})", chunk_num, chunk_low, chunk_upper);
+            }
+
+            cloned!(mut repo_params);
+            let extra_roots = visitor.start_chunk(&chunk_members)?.into_iter();
+            let chunk_roots =
+                roots_for_chunk(chunk_members, &tail_params.public_changeset_chunk_by)?;
+            repo_params.walk_roots.extend(chunk_roots);
+            repo_params.walk_roots.extend(extra_roots);
+
+            cloned!(ctx, job_params, make_run, type_params);
+            let make_sink = make_run(&ctx, &repo_params);
+
+            // Walk needs clonable visitor, so wrap in Arc for its duration
+            let arc_v = Arc::new(visitor);
+            let walk_output = walk_exact(ctx, arc_v.clone(), job_params, repo_params, type_params);
+            make_sink(walk_output).await?;
+            visitor = Arc::try_unwrap(arc_v).map_err(|_| anyhow!("could not unwrap visitor"))?;
+
+            if is_chunking {
+                info!(logger, #log::LOADED, "Deferred: {}", visitor.num_deferred());
+                // TODO(ahornby) checkpoint logic can go here. if chunk_num % checkpoint_sample_rate == 0 or chunk.len() < chunk_size
+            }
+        }
 
         visitor.end_chunks()?;
 
         if let Some((chunk_size, _heads_fetcher)) = &chunk_params {
             info!(
-                repo_params.logger, #log::LOADED,
-                "Completed in {} chunks of {}", chunk_count, chunk_size
+                repo_params.logger, #log::CHUNKING,
+                "Completed in {} chunks of {}", chunk_num, chunk_size
             );
         };
 

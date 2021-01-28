@@ -7,7 +7,7 @@
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
 use crate::state::{StepStats, WalkState};
-use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, VisitOne, WalkVisitor};
+use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, TailingWalkVisitor, VisitOne, WalkVisitor};
 
 use anyhow::Error;
 use async_trait::async_trait;
@@ -224,26 +224,28 @@ impl<'a> From<&'a WalkKeyOptPath> for &'a Node {
 // Name the stream output payload type
 pub struct WalkPayloadMtime(pub Option<DateTime>, pub Option<NodeData>);
 
-impl<T> WalkVisitor<(WalkKeyOptPath, WalkPayloadMtime, Option<StepStats>), PathTrackingRoute>
-    for SamplingWalkVisitor<T>
-where
-    T: SampleTrigger<WalkKeyOptPath> + Send + Sync,
-{
+impl<T> TailingWalkVisitor for SamplingWalkVisitor<T> {
     fn start_chunk(
-        &self,
+        &mut self,
         chunk_members: &HashSet<ChangesetId>,
     ) -> Result<HashSet<OutgoingEdge>, Error> {
         self.inner.start_chunk(chunk_members)
     }
 
-    fn end_chunks(&self) -> Result<(), Error> {
+    fn end_chunks(&mut self) -> Result<(), Error> {
         self.inner.end_chunks()
     }
 
     fn num_deferred(&self) -> usize {
         self.inner.num_deferred()
     }
+}
 
+impl<T> WalkVisitor<(WalkKeyOptPath, WalkPayloadMtime, Option<StepStats>), PathTrackingRoute>
+    for SamplingWalkVisitor<T>
+where
+    T: SampleTrigger<WalkKeyOptPath> + Send + Sync,
+{
     fn start_step(
         &self,
         mut ctx: CoreContext,
@@ -366,21 +368,6 @@ impl<T> WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute>
 where
     T: SampleTrigger<Node> + Send + Sync,
 {
-    fn start_chunk(
-        &self,
-        chunk_members: &HashSet<ChangesetId>,
-    ) -> Result<HashSet<OutgoingEdge>, Error> {
-        self.inner.start_chunk(chunk_members)
-    }
-
-    fn end_chunks(&self) -> Result<(), Error> {
-        self.inner.end_chunks()
-    }
-
-    fn num_deferred(&self) -> usize {
-        self.inner.num_deferred()
-    }
-
     fn start_step(
         &self,
         mut ctx: CoreContext,
