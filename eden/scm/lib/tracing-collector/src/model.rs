@@ -261,11 +261,14 @@ impl TracingData {
         }
     }
 
-    pub fn insert_id_mapping(&mut self, trace_id: &tracing::span::Id, espan_id: EspanId) {
+    pub(crate) fn insert_id_mapping(&mut self, trace_id: &tracing::span::Id, espan_id: EspanId) {
         self.id_map.insert(trace_id.into_u64(), espan_id);
     }
 
-    pub fn get_espan_id_from_trace(&mut self, trace_id: &tracing::span::Id) -> Option<EspanId> {
+    pub(crate) fn get_espan_id_from_trace(
+        &mut self,
+        trace_id: &tracing::span::Id,
+    ) -> Option<EspanId> {
         self.id_map.get(&trace_id.into_u64()).cloned()
     }
 }
