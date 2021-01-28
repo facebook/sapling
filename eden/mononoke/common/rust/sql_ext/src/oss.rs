@@ -14,6 +14,7 @@ use fbinit::FacebookInit;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::ok;
 use slog::Logger;
+use std::time::Duration;
 
 macro_rules! fb_unimplemented {
     () => {
@@ -54,6 +55,7 @@ impl PoolConfig {
         _conn_age_timeout_ms: u64,
         _conn_idle_timeout_ms: u64,
         _conn_open_timeout_ms: u64,
+        _query_time_limit: Duration,
     ) -> Self {
         Self
     }
