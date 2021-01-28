@@ -57,9 +57,14 @@ impl<S: Subscriber> Layer<S> for TracingCollector {
     }
 
     fn new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
+        let callsite_id = attrs.metadata().callsite();
         let mut data = self.data.lock();
-        let espan_id = data.new_span(attrs);
-        data.insert_id_mapping(id, espan_id);
+        let count = data.callsite_entered.entry(callsite_id).or_default();
+        *count += 1;
+        if *count < data.max_span_ref_count {
+            let espan_id = data.new_span(attrs);
+            data.insert_id_mapping(id, espan_id);
+        }
     }
 
     fn on_record(&self, span_id: &Id, values: &Record<'_>, _ctx: Context<'_, S>) {
@@ -75,8 +80,13 @@ impl<S: Subscriber> Layer<S> for TracingCollector {
     }
 
     fn on_event(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
+        let callsite_id = event.metadata().callsite();
         let mut data = self.data.lock();
-        data.event(event)
+        let count = data.callsite_entered.entry(callsite_id).or_default();
+        *count += 1;
+        if *count < data.max_span_ref_count {
+            data.event(event)
+        }
     }
 
     fn on_enter(&self, span_id: &Id, _ctx: Context<'_, S>) {
@@ -227,5 +237,53 @@ Start Dur.ms | Name               Source
 
 "#
         );
+    }
+
+    #[test]
+    fn test_span_count_limit() {
+        let mut data = TracingData::new_for_test();
+        data.max_span_ref_count = 5;
+        let data = Arc::new(Mutex::new(data));
+        let collector = default_collector(data.clone(), Level::INFO);
+
+        tracing::subscriber::with_default(collector, || fib(10));
+        data.lock().fixup_module_lines_for_tests();
+
+        // fib(6) ... are not logged.
+        assert_eq!(
+            data.lock().ascii(&Default::default()),
+            r#"Process _ Thread _:
+Start Dur.ms | Name               Source
+    2    +14 | fib                <mod> line <line>
+             | - x = 10           :
+    4    +10 | fib                <mod> line <line>
+             | - x = 9            :
+    6     +6 | fib                <mod> line <line>
+             | - x = 8            :
+    8     +2 | fib                <mod> line <line>
+             | - x = 7            :
+
+"#
+        );
+    }
+
+    #[test]
+    fn test_log_count_limit() {
+        let mut data = TracingData::new_for_test();
+        data.max_span_ref_count = 5;
+        let data = Arc::new(Mutex::new(data));
+        let collector = default_collector(data.clone(), Level::INFO);
+
+        let counts = tracing::subscriber::with_default(collector, || {
+            (0..10)
+                .map(|_| {
+                    tracing::info!("log something");
+                    data.lock().eventus_len_for_tests()
+                })
+                .collect::<Vec<usize>>()
+        });
+
+        // Repetitive logs are ignored.
+        assert_eq!(counts, [1, 2, 3, 4, 4, 4, 4, 4, 4, 4]);
     }
 }

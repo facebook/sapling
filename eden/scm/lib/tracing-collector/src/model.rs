@@ -17,6 +17,7 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 use std::rc::Rc;
 use std::sync::atomic::{self, AtomicU64};
+use tracing::callsite::Identifier;
 
 /// Collected tracing data.
 ///
@@ -59,6 +60,15 @@ pub struct TracingData {
     /// This is useful as a sanity check about valid [`EspanId`]s.
     espan_id_offset: EspanId,
 
+    /// Number of EnterSpan or Event actions per callsite.
+    ///
+    /// This is useful to limit repetitive calls from the Rust tracing APIs.
+    /// Callsite is a concept that exists in the Rust tracing APIs, not in
+    /// the TracingData. Unlike calls to TracingData APIs, they will have
+    /// different EspanId, but same callsite.
+    #[serde(skip)]
+    pub(crate) callsite_entered: HashMap<Identifier, usize>,
+
     /// For testing purpose.
     /// - 0: Use real clock.
     /// - Non-zero: Use a faked clock.
@@ -67,7 +77,7 @@ pub struct TracingData {
 
     /// Maximum reference count of a span.
     #[serde(skip, default = "default_max_span_ref_count")]
-    max_span_ref_count: usize,
+    pub(crate) max_span_ref_count: usize,
 }
 
 fn default_max_span_ref_count() -> usize {
@@ -176,6 +186,7 @@ impl TracingData {
             espans: Default::default(),
             eventus: Default::default(),
             espan_id_offset: next_espan_id_offset(),
+            callsite_entered: Default::default(),
             test_clock_step: match std::env::var("TRACING_DATA_FAKE_CLOCK") {
                 Ok(clock) => clock.parse::<u64>().unwrap_or(0),
                 Err(_) => 0,
@@ -405,6 +416,12 @@ impl TracingData {
             meta.insert(self.strings.id("module_path"), module_path);
             meta.insert(self.strings.id("line"), line);
         }
+    }
+
+    /// Count the logged events for test usecases.
+    #[cfg(test)]
+    pub(crate) fn eventus_len_for_tests(&self) -> usize {
+        self.eventus.len()
     }
 }
 
@@ -743,6 +760,7 @@ impl TracingData {
             default_process_id,
             default_thread_id,
             relative_start,
+            callsite_entered: Default::default(),
             test_clock_step,
             max_span_ref_count: default_max_span_ref_count(),
         }
