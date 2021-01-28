@@ -16,6 +16,7 @@ use python3_sys as ffi;
 #[cfg(feature = "python2")]
 use python27_sys as ffi;
 use std::cell::Cell;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
@@ -29,6 +30,7 @@ use tracing_runtime_callsite::CallsiteKey;
 use tracing_runtime_callsite::EventKindType;
 use tracing_runtime_callsite::KindType;
 use tracing_runtime_callsite::RuntimeCallsite;
+use tracing_runtime_callsite::SpanKindType;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "tracing"].join(".");
@@ -52,6 +54,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(py, "LEVEL_WARN", LEVEL_WARN)?;
     m.add(py, "LEVEL_ERROR", LEVEL_ERROR)?;
     m.add_class::<EventCallsite>(py)?;
+    m.add_class::<SpanCallsite>(py)?;
     Ok(m)
 }
 
@@ -615,6 +618,81 @@ py_class!(pub class treespans |py| {
             }
         }).collect::<Vec<_>>();
         cpython_ext::ser::to_object(py, &spans)
+    }
+});
+
+py_class!(pub class TracingSpan |py| {
+    // The fields of a struct are dropped in declaration order.
+    // "entered" is borrowed from "span". Declare it first.
+    data entered: RefCell<Option<UnsafePyLeaked<tracing::span::Entered<'static>>>>;
+    @shared data span: tracing::Span;
+
+    def __enter__(&self) -> PyResult<Self> {
+        let mut entered = self.entered(py).borrow_mut();
+        if entered.is_some() {
+            Err(PyErr::new::<exc::ValueError, _>(py, "tracing span was already entered"))
+        } else {
+            // safety: "entered" lifetime won't exceed its parent (Span).
+            *entered = Some(unsafe {
+                self.span(py).leak_immutable().map(py, |s| { s.enter() } )
+            });
+            Ok(self.clone_ref(py))
+        }
+    }
+
+    def __exit__(&self, _ty: Option<PyType>, _value: PyObject, _traceback: PyObject) -> PyResult<bool> {
+        let mut entered = self.entered(py).borrow_mut();
+        *entered = None;
+        Ok(false) // Do not suppress exception
+    }
+
+    /// Record a value. The field name must be predefined with the callsite.
+    def record(&self, name: &str, value: FieldValue) -> PyResult<PyNone> {
+        if let Some(value) = value.to_opt_tracing_value() {
+            self.span(py).borrow().record(name, &value.as_ref());
+        }
+        Ok(PyNone)
+    }
+
+    /// Returns true if this span was disabled by the subscriber.
+    def is_disabled(&self) -> PyResult<bool> {
+        Ok(self.span(py).borrow().is_disabled())
+    }
+
+    /// Returns this span's Id, if it is enabled.
+    def id(&self) -> PyResult<Option<u64>> {
+        Ok(self.span(py).borrow().id().map(|i| i.into_u64()))
+    }
+});
+
+py_class!(pub class SpanCallsite |py| {
+    data inner: &'static RuntimeCallsite<SpanKindType>;
+
+    // Create a `Callsite` for span in Rust tracing eco-system.
+    def __new__(
+        _cls,
+        obj: PyObject, /* func, or str */
+        target: Option<String> = None,
+        name: Option<String> = None,
+        level: usize = LEVEL_INFO,
+        file: Option<String> = None,
+        line: Option<usize> = None,
+        module: Option<String> = None,
+        fieldnames: Option<Vec<String>> = None,
+    ) -> PyResult<Self> {
+        let callsite = new_callsite(py, obj, target, name, level, file, line, module, fieldnames)?;
+        Self::create_instance(py, callsite)
+    }
+
+    /// Create a span with the given field values.
+    def span(&self, values: Option<Vec<FieldValue>> = None) -> PyResult<TracingSpan> {
+        // Convert values to Option<Box<dyn tracing::Value>>.
+        let values: Vec<Option<Box<dyn tracing::Value>>> = match values.as_ref() {
+            None => Vec::new(),
+            Some(list) => list.iter().map(|v| v.to_opt_tracing_value()).collect(),
+        };
+        let span = self.inner(py).create_span(&values);
+        TracingSpan::create_instance(py, Default::default(), span)
     }
 });
 
