@@ -13,7 +13,7 @@ use fbinit::FacebookInit;
 use futures::{
     channel::mpsc,
     sink::SinkExt,
-    stream::{StreamExt, TryStreamExt},
+    stream::{self, StreamExt, TryStreamExt},
 };
 use rand::{thread_rng, Rng};
 use slog::Logger;
@@ -37,10 +37,37 @@ async fn handle_one_key(key: String, store: Arc<Sqlblob>) -> Result<()> {
             return res;
         }
         let delay = thread_rng().gen_range(MIN_RETRY_DELAY, MAX_RETRY_DELAY);
-        eprintln!("Failure {:#?} - delaying for {:#?}", res, delay);
+        eprintln!(
+            "Failure {:#?} on key {} - delaying for {:#?}",
+            res, &key, delay
+        );
         delay_for(delay).await;
     }
-    Err(anyhow!("Did not make an attempt to handle {}", &key))
+    Err(anyhow!(
+        "Failed to handle {} after {} retries",
+        &key,
+        RETRIES
+    ))
+}
+
+async fn handle_initial_generation(store: &Sqlblob, shard: usize) -> Result<()> {
+    for _retry in 0..RETRIES {
+        let res = store.set_initial_generation(shard).await;
+        if res.is_ok() {
+            return res;
+        }
+        let delay = thread_rng().gen_range(MIN_RETRY_DELAY, MAX_RETRY_DELAY);
+        eprintln!(
+            "Failure {:#?} on shard {} - delaying for {:#?}",
+            res, shard, delay
+        );
+        delay_for(delay).await;
+    }
+    Err(anyhow!(
+        "Failed to handle initial generation on shard {} after {} retries",
+        &shard,
+        RETRIES
+    ))
 }
 
 pub async fn subcommand_mark<'a>(
@@ -51,6 +78,14 @@ pub async fn subcommand_mark<'a>(
     sqlblob: Sqlblob,
     shard_range: Range<usize>,
 ) -> Result<()> {
+    let set_initial_generation_futures: Vec<_> = shard_range
+        .clone()
+        .map(|shard| Ok(handle_initial_generation(&sqlblob, shard)))
+        .collect();
+    stream::iter(set_initial_generation_futures.into_iter())
+        .try_for_each_concurrent(max_parallelism, |fut| fut)
+        .await?;
+
     let sqlblob = Arc::new(sqlblob);
 
     // Set up a task to process each key in parallel in its own task.

@@ -136,6 +136,14 @@ queries! {
         "{insert_or_ignore} INTO chunk_generation VALUES {values}"
     }
 
+    write SetInitialGeneration(generation: u64) {
+        insert_or_ignore,
+        "{insert_or_ignore} INTO chunk_generation
+            SELECT chunk.id, {generation}
+            FROM chunk LEFT JOIN chunk_generation ON chunk.id = chunk_generation.id
+            WHERE chunk_generation.last_seen_generation IS NULL"
+    }
+
     read GetAllKeys() -> (Vec<u8>) {
         "SELECT id FROM data"
     }
@@ -425,6 +433,14 @@ impl ChunkSqlStore {
             .compat()
             .await
             .map(|s| s.into_iter().collect::<HashMap<_, _>>())
+    }
+
+    pub(crate) async fn set_initial_generation(&self, shard_num: usize) -> Result<(), Error> {
+        let put_generation = self.gc_generations.get().put_generation as u64;
+        SetInitialGeneration::query(&self.write_connection[shard_num], &put_generation)
+            .compat()
+            .await?;
+        Ok(())
     }
 
     fn shard(&self, key: &str, chunk_id: u32, _chunking_method: ChunkingMethod) -> usize {
