@@ -76,31 +76,31 @@ sh % "hg debugmetalog" == r"""
        1970-01-01 00:00:00 +0000: foo (added by bookmark foo)
        1970-01-01 00:00:00 +0000: . (removed by debugdrawdag)"""
 
-sh % "hg debugmetalogroots" == r"""
-    14 1970-01-01 00:00:00 +0000 d556f0b5580cfe679acdf066664c8509f7099e79 metaedit -mE1
-    13 1970-01-01 00:00:00 +0000 c54a575924de1145400aae88a877b1653d1c4b95 debugdrawdag
-    12 1970-01-01 00:00:00 +0000 edc497739c37970bc19d8fd0752a3b5751207779 debugdrawdag
-    11 1970-01-01 00:00:00 +0000 9b58f005a1d505ac7a7fa04ef9fa86afb1a15755 debugdrawdag
-    10 1970-01-01 00:00:00 +0000 860ed24ef5c5d2b37c3a040b0dddf71846fddb1b debugdrawdag
-     9 1970-01-01 00:00:00 +0000 18d59faa603480c16c69d486fcb60a18ca0f1ea1 bookmark foo
-     8 1970-01-01 00:00:00 +0000 26ee461e6a3c56f87cb28103297708c8b436dee7 bookmark foo
-     7 1970-01-01 00:00:00 +0000 303519cbdad17997a9a54cd782bf8f8666f3e243 debugdrawdag
-     6 1970-01-01 00:00:00 +0000 c6e11680632adbf09c5d20c7666af403fd7679b8 debugdrawdag
-     5 1970-01-01 00:00:00 +0000 5cfa7fb3a42a3f9ed6812e19eefe13aa91f44766 debugdrawdag
-     4 1970-01-01 00:00:00 +0000 58cdf865a5fa02ef538b487a8be1d304e623e266 debugdrawdag
-     3 1970-01-01 00:00:00 +0000 82e9af13815bdc336c14a4385afe60b061ee3569 debugdrawdag
-     2 1970-01-01 00:00:00 +0000 5d6757bf3e077c83e4e82be112c10b20baa9a0b3 debugdrawdag
+sh % "hg debugmetalogroots -v" == r"""
+    14 1970-01-01 00:00:00 +0000 e101d079054ded8fb61926aa99c6abb5162925f5 metaedit -mE1 Transaction: metaedit
+    13 1970-01-01 00:00:00 +0000 ff82865a3d1b68db09dd5bdf19a14b0d9af724b0 debugdrawdag Transaction: bookmark
+    12 1970-01-01 00:00:00 +0000 ce551e7adf176b648a9fca3ff1dfd0d168e9b9ab debugdrawdag Transaction: commit
+    11 1970-01-01 00:00:00 +0000 6526ac5762293b2f27d3d367492ec2f7941b8250 debugdrawdag Transaction: bookmark
+    10 1970-01-01 00:00:00 +0000 590432f4f161f2ab0b5cf78fd64c9aee54572c51 debugdrawdag Transaction: commit
+     9 1970-01-01 00:00:00 +0000 64ba23c13141797476fbf8dda015c9a733b25d1f bookmark foo Transaction: bookmark
+     8 1970-01-01 00:00:00 +0000 280022070a10d2a1a752f6e0951c7649fa3aeed0 bookmark foo Transaction: bookmark
+     7 1970-01-01 00:00:00 +0000 2b568bbe60079854ed4204d6c23632ec148ba374 debugdrawdag Transaction: bookmark
+     6 1970-01-01 00:00:00 +0000 6002154bee3bcd116f66ce7e8a39a17863d30bf4 debugdrawdag Transaction: commit
+     5 1970-01-01 00:00:00 +0000 8cbb80514b72ecf0e96d4aac3bd6138179acaa8e debugdrawdag Transaction: bookmark
+     4 1970-01-01 00:00:00 +0000 c7b19359bc92edd4ff376128f551fa47d2167a22 debugdrawdag Transaction: commit
+     3 1970-01-01 00:00:00 +0000 c94b525421a275f3af67c8780587af81b2eac8ae debugdrawdag Transaction: bookmark
+     2 1970-01-01 00:00:00 +0000 d4275ab8efc006b015186bd434e7935dd7d653f7 debugdrawdag Transaction: commit
      1 1970-01-01 00:00:00 +0000 433fb6a14b4e7044062a8886ddcb13ffa34a78c1 migrate from vfs
      0 1970-01-01 00:00:00 +0000 29e2dcfbb16f63bb0254df7585a15bb6fb5e927d"""
 
 sh % "hg up -q null"
 
-sh % "HGFORCEMETALOGROOT=26ee461e6a3c56f87cb28103297708c8b436dee7 hg log -G -r 'all()' -T '{desc} {bookmarks}'" == r"""
+sh % "HGFORCEMETALOGROOT=280022070a10d2a1a752f6e0951c7649fa3aeed0 hg log -G -r 'all()' -T '{desc} {bookmarks}'" == r"""
     o  C C
     │
     o  B B
     │
     o  A A foo
 
-    hint[metalog-root-override]: MetaLog root was overridden to 26ee461e6a3c56f87cb28103297708c8b436dee7 by an environment variable. This should only be used for debugging.
+    hint[metalog-root-override]: MetaLog root was overridden to 280022070a10d2a1a752f6e0951c7649fa3aeed0 by an environment variable. This should only be used for debugging.
     hint[hint-ack]: use 'hg hint --ack metalog-root-override' to silence these hints"""

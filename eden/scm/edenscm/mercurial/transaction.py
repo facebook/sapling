@@ -593,10 +593,14 @@ class transaction(util.transactional):
                     "config", pycompat.encodeutf8(self.uiconfig.configtostring())
                 )
 
+            command = encoding.unifromlocal(
+                " ".join(map(util.shellquote, pycompat.sysargv[1:]))
+            )
+            trdesc = "Transaction: %s" % self.desc
+            message = "\n".join([command, trdesc])
+
             metalog.commit(
-                encoding.unifromlocal(
-                    " ".join(map(util.shellquote, pycompat.sysargv[1:]))
-                ),
+                message,
                 int(util.timer()),
             )
             # Discard metalog state when exiting transaction.

@@ -1759,7 +1759,7 @@ class PythonTest(Test):
         cmd = b'%s debugpython -- %s "%s"' % (self._hgcommand, debugargs, self.path)
         if self._options.interactive and self._isdotttest():
             # --fix is picked up by testutil.autofix, which will autofix the test.
-            cmd += " --fix"
+            cmd += b" --fix"
         vlog("# Running", cmd)
         normalizenewlines = os.name == "nt"
         with open(self.path, "r") as f:

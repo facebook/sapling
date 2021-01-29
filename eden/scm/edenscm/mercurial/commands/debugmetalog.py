@@ -46,7 +46,7 @@ def debugmetalog(ui, repo, **opts):
     for root in roots:
         meta = metalog.__class__(metalogpath, root)
         timestamp = meta.timestamp()
-        desc = meta.message()
+        desc = meta.message().split("\n", 1)[0]
         date = util.datestr((timestamp, tzoffset), "%Y-%m-%d %H:%M:%S %1%2")
         nextnodenames = parsenodenames(meta)
         first = not nodenamesdict
@@ -135,11 +135,16 @@ def debugmetalogroots(ui, repo, **opts):
     _now, tzoffset = util.parsedate("now")
     ui.pager("debugmetalogroots")
     fm = ui.formatter("debugmetalogroots", opts)
+    verbose = ui.verbose
     # from the newest to the oldest
     for i, root in reversed(list(enumerate(roots))):
         meta = metalog.__class__(metalogpath, root)
         timestamp = meta.timestamp()
         desc = meta.message()
+        if verbose:
+            desc = desc.replace("\n", " ")
+        else:
+            desc = desc.split("\n", 1)[0]
         shortdesc = util.ellipsis(desc, 60)
         datestr = util.datestr((timestamp, tzoffset), "%Y-%m-%d %H:%M:%S %1%2")
         hexroot = hex(root)
