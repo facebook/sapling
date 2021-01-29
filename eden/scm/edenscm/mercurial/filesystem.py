@@ -128,16 +128,11 @@ class physicalfilesystem(object):
                 "filesystem.walk should not yield state '%s' for '%s'" % (state, fn)
             )
 
-    def _compareondisk(self, path):
+    def _compareondisk(self, path, wctx, pctx):
         """Compares the on-disk file content with the clean-checkout content.
         Return True if on-disk is different, False if it is the same, and None
         of the on-disk file is deleted or no longer accessible.
         """
-        repo = self.dirstate._repo
-        p1 = self.dirstate.parents()[0]
-        wctx = repo[None]
-        pctx = repo[p1]
-
         try:
             # This will return True for a file that got replaced by a
             # directory in the interim, but fixing that is pretty hard.
@@ -299,17 +294,21 @@ class physicalfilesystem(object):
 
     def _processlookups(self, lookups):
         repo = self.dirstate._repo
+        p1 = self.dirstate.parents()[0]
+
         if util.safehasattr(repo, "fileservice"):
-            p1 = self.dirstate.parents()[0]
             p1mf = repo[p1].manifest()
             repo.fileservice.prefetch(
                 list((f, hex(p1mf[f])) for f in lookups if f in p1mf),
                 fetchhistory=False,
             )
 
+        wctx = repo[None]
+        pctx = repo[p1]
+
         # Sort so we get deterministic ordering. This is important for tests.
         for fn in sorted(lookups):
-            changed = self._compareondisk(fn)
+            changed = self._compareondisk(fn, wctx, pctx)
             if changed is None:
                 # File no longer exists
                 if self.dtolog > 0:
@@ -496,6 +495,11 @@ class physicalfilesystem(object):
         cleanlookups = self.cleanlookups
         self.cleanlookups = []
 
+        repo = dirstate._repo
+        p1 = dirstate.parents()[0]
+        wctx = repo[None]
+        pctx = repo[p1]
+
         for f in cleanlookups:
             # Only make something clean if it's already in a
             # normal state. Things in other states, like 'm'
@@ -505,7 +509,7 @@ class physicalfilesystem(object):
                 # It may have been a while since we added the
                 # file to cleanlookups, so double check that
                 # it's still clean.
-                if self._compareondisk(f) is False:
+                if self._compareondisk(f, wctx, pctx) is False:
                     normal(f)
 
 
