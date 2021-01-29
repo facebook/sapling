@@ -15,6 +15,7 @@ mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 reachabilityindex = { path = "..", version = "0.1.0" }
 skiplist-thrift = { path = "../if", version = "0.1.0" }
 tunables = { path = "../../tunables", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
 anyhow = "1.0"
 async-trait = "0.1.29"
@@ -35,7 +36,6 @@ revset = { path = "../../revset", version = "0.1.0" }
 test-helpers = { path = "../test-helpers", version = "0.1.0" }
 tests_utils = { path = "../../tests/utils", version = "0.1.0" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures-old = { package = "futures", version = "0.1.30" }

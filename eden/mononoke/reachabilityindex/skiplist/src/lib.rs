@@ -15,12 +15,14 @@ use async_trait::async_trait;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use chashmap::CHashMap;
+use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use futures::future::try_join_all;
 use futures::stream::{futures_unordered::FuturesUnordered, TryStreamExt};
 use futures_util::try_join;
 use maplit::{hashmap, hashset};
 use slog::{info, Logger};
+use tokio::task;
 
 use changeset_fetcher::ChangesetFetcher;
 use mononoke_types::{ChangesetId, Generation, FIRST_GENERATION};
@@ -135,20 +137,31 @@ pub async fn fetch_skiplist_index(
     match maybe_skiplist_blobstore_key {
         Some(skiplist_index_blobstore_key) => {
             info!(ctx.logger(), "Fetching and initializing skiplist");
-            let maybebytes = blobstore.get(ctx, &skiplist_index_blobstore_key).await?;
-            let slg = match maybebytes {
-                Some(bytes) => {
-                    let bytes = bytes.into_raw_bytes();
-                    let skiplist = deserialize_skiplist_index(ctx.logger().clone(), bytes)?;
-                    info!(ctx.logger(), "Built skiplist");
-                    skiplist
+            let skiplist_index = task::spawn({
+                cloned!(ctx, blobstore, skiplist_index_blobstore_key);
+                async move {
+                    let maybebytes = blobstore.get(&ctx, &skiplist_index_blobstore_key).await?;
+                    match maybebytes {
+                        Some(bytes) => {
+                            let bytes = bytes.into_raw_bytes();
+                            let logger = ctx.logger().clone();
+                            let skiplist = task::spawn_blocking(move || {
+                                deserialize_skiplist_index(logger, bytes)
+                            })
+                            .await??;
+                            info!(ctx.logger(), "Built skiplist");
+                            Ok(skiplist)
+                        }
+                        None => {
+                            info!(ctx.logger(), "Skiplist is empty!");
+                            Result::<_, Error>::Ok(SkiplistIndex::new())
+                        }
+                    }
                 }
-                None => {
-                    info!(ctx.logger(), "Skiplist is empty!");
-                    SkiplistIndex::new()
-                }
-            };
-            Ok(Arc::new(slg))
+            });
+
+            let skiplist_index = skiplist_index.await??;
+            Ok(Arc::new(skiplist_index))
         }
         None => Ok(Arc::new(SkiplistIndex::new())),
     }
