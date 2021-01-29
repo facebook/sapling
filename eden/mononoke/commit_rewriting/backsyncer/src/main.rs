@@ -45,7 +45,7 @@ const ARG_MODE_BACKSYNC_ALL: &str = "backsync-all";
 const ARG_MODE_BACKSYNC_COMMITS: &str = "backsync-commits";
 const ARG_BATCH_SIZE: &str = "batch-size";
 const ARG_INPUT_FILE: &str = "INPUT_FILE";
-const SCUBA_TABLE: &'static str = "mononoke_xrepo_backsync";
+const SCUBA_TABLE: &str = "mononoke_xrepo_backsync";
 
 define_stats! {
     prefix = "mononoke.backsyncer";

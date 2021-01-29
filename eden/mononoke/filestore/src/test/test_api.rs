@@ -25,7 +25,7 @@ use lazy_static::lazy_static;
 use mononoke_types::{hash, typed_hash::MononokeId, ContentId, ContentMetadata, ContentMetadataId};
 use mononoke_types_mocks::contentid::ONES_CTID;
 
-const HELLO_WORLD: &'static [u8] = b"hello, world";
+const HELLO_WORLD: &[u8] = b"hello, world";
 const HELLO_WORLD_LENGTH: u64 = 12;
 const DEFAULT_CONFIG: FilestoreConfig = FilestoreConfig {
     chunk_size: None,

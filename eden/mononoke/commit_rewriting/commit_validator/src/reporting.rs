@@ -12,17 +12,17 @@ use std::time::Duration;
 
 use crate::tail::QueueSize;
 
-const LARGE_REPO: &'static str = "large_repo";
-const SMALL_REPO: &'static str = "small_repo";
-const LARGE_CS_ID: &'static str = "large_cs_id";
-const SMALL_CS_ID: &'static str = "small_cs_id";
-const NOOP_ITERATION: &'static str = "noop";
-const ENTRY: &'static str = "entry";
-const VALIDATION_DURATION_MS: &'static str = "validation_duration_ms";
-const PREPARATION_DURATION_MS: &'static str = "preparation_duration_ms";
-const QUEUE_SIZE: &'static str = "queue_size";
-const ERROR: &'static str = "error";
-const SUCCESS: &'static str = "success";
+const LARGE_REPO: &str = "large_repo";
+const SMALL_REPO: &str = "small_repo";
+const LARGE_CS_ID: &str = "large_cs_id";
+const SMALL_CS_ID: &str = "small_cs_id";
+const NOOP_ITERATION: &str = "noop";
+const ENTRY: &str = "entry";
+const VALIDATION_DURATION_MS: &str = "validation_duration_ms";
+const PREPARATION_DURATION_MS: &str = "preparation_duration_ms";
+const QUEUE_SIZE: &str = "queue_size";
+const ERROR: &str = "error";
+const SUCCESS: &str = "success";
 
 pub fn add_common_commit_syncing_fields(
     scuba_sample: &mut MononokeScubaSampleBuilder,

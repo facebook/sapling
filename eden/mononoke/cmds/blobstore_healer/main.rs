@@ -43,9 +43,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-const QUIET_ARG: &'static str = "quiet";
-const ITER_LIMIT_ARG: &'static str = "iteration-limit";
-const HEAL_MIN_AGE_ARG: &'static str = "heal-min-age-secs";
+const QUIET_ARG: &str = "quiet";
+const ITER_LIMIT_ARG: &str = "iteration-limit";
+const HEAL_MIN_AGE_ARG: &str = "heal-min-age-secs";
 const HEAL_CONCURRENCY_ARG: &str = "heal-concurrency";
 
 lazy_static! {

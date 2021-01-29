@@ -14,16 +14,16 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{error, info, Logger};
 use synced_commit_mapping::SyncedCommitMapping;
 
-pub const SCUBA_TABLE: &'static str = "mononoke_x_repo_sync";
+pub const SCUBA_TABLE: &str = "mononoke_x_repo_sync";
 
-const SOURCE_REPO: &'static str = "source_repo";
-const TARGET_REPO: &'static str = "target_repo";
-const SOURCE_CS_ID: &'static str = "source_cs_id";
+const SOURCE_REPO: &str = "source_repo";
+const TARGET_REPO: &str = "target_repo";
+const SOURCE_CS_ID: &str = "source_cs_id";
 const SYNC_TYPE_ARG: &str = "sync_type";
-const TARGET_CS_ID: &'static str = "target_cs_id";
-const DURATION_MS: &'static str = "duration_ms";
-const ERROR: &'static str = "error";
-const SUCCESS: &'static str = "success";
+const TARGET_CS_ID: &str = "target_cs_id";
+const DURATION_MS: &str = "duration_ms";
+const ERROR: &str = "error";
+const SUCCESS: &str = "success";
 
 /// Populate the `scuba_sample` with fields, common for
 /// this tailer run

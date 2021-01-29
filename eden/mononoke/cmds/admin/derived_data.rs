@@ -48,7 +48,7 @@ const ARG_TYPE: &str = "type";
 const ARG_IF_DERIVED: &str = "if-derived";
 const ARG_BACKFILL: &str = "backfill";
 
-const MANIFEST_DERIVED_DATA_TYPES: &'static [&'static str] = &[
+const MANIFEST_DERIVED_DATA_TYPES: &[&str] = &[
     RootFsnodeId::NAME,
     MappedHgChangesetId::NAME,
     RootUnodeManifestId::NAME,

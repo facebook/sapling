@@ -8,11 +8,11 @@
 use clap::{Arg, SubCommand};
 use cmdlib::args::{self, MononokeClapApp};
 
-pub const ARG_ONCE: &'static str = "once";
-pub const ARG_ENTRY_ID: &'static str = "entry-id";
-pub const ARG_MASTER_BOOKMARK: &'static str = "master-bookmark";
-pub const ARG_TAIL: &'static str = "tail";
-pub const ARG_START_ID: &'static str = "start-id";
+pub const ARG_ONCE: &str = "once";
+pub const ARG_ENTRY_ID: &str = "entry-id";
+pub const ARG_MASTER_BOOKMARK: &str = "master-bookmark";
+pub const ARG_TAIL: &str = "tail";
+pub const ARG_START_ID: &str = "start-id";
 
 pub fn create_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     let app = args::MononokeAppBuilder::new("Mononoke cross-repo sync validator job")

@@ -32,7 +32,7 @@ define_stats! {
     scrub_repair_required: dynamic_timeseries("{}.blobstore.{}.{}.repair_required", (subcommand: &'static str, blobstore_id: String, repo: String); Rate, Sum),
 }
 
-pub const BLOBSTORE_ID: &'static str = "blobstore_id";
+pub const BLOBSTORE_ID: &str = "blobstore_id";
 
 pub struct StatsScrubHandler {
     scuba: MononokeScubaSampleBuilder,

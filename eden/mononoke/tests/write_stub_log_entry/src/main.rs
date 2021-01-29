@@ -17,15 +17,15 @@ use fbinit::FacebookInit;
 use mononoke_types::ChangesetId;
 use std::str::FromStr;
 
-const CREATE: &'static str = "create";
-const UPDATE: &'static str = "update";
+const CREATE: &str = "create";
+const UPDATE: &str = "update";
 
-const BOOKMARK: &'static str = "bookmark";
-const BLOBIMPORT: &'static str = "blobimport";
+const BOOKMARK: &str = "bookmark";
+const BLOBIMPORT: &str = "blobimport";
 
-const FROM_ID: &'static str = "from_id";
-const TO_ID: &'static str = "to_id";
-const ID: &'static str = "id";
+const FROM_ID: &str = "from_id";
+const TO_ID: &str = "to_id";
+const ID: &str = "id";
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     let create = SubCommand::with_name(CREATE).arg(Arg::with_name(ID).required(true));

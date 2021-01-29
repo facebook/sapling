@@ -80,11 +80,11 @@ const ARG_BOOKMARK_MOVE_ANY_DIRECTION: &str = "bookmark-move-any-direction";
 const ARG_USE_HG_SERVER_BOOKMARK_VALUE_IF_MISMATCH: &str =
     "use-hg-server-bookmark-value-if-mismatch";
 const GENERATE_BUNDLES: &str = "generate-bundles";
-const MODE_SYNC_ONCE: &'static str = "sync-once";
-const MODE_SYNC_LOOP: &'static str = "sync-loop";
-const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
+const MODE_SYNC_ONCE: &str = "sync-once";
+const MODE_SYNC_LOOP: &str = "sync-loop";
+const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
 const SLEEP_SECS: u64 = 1;
-const SCUBA_TABLE: &'static str = "mononoke_hg_sync";
+const SCUBA_TABLE: &str = "mononoke_hg_sync";
 const UNLOCK_REASON: &str = "Unlocked by successful sync";
 const LOCK_REASON: &str = "Locked due to sync failure, check Source Control @ FB";
 

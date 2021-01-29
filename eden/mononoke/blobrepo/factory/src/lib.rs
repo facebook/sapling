@@ -76,8 +76,8 @@ pub enum Caching {
     Disabled,
 }
 
-const BLOBSTORE_BLOBS_CACHE_POOL: &'static str = "blobstore-blobs";
-const BLOBSTORE_PRESENCE_CACHE_POOL: &'static str = "blobstore-presence";
+const BLOBSTORE_BLOBS_CACHE_POOL: &str = "blobstore-blobs";
+const BLOBSTORE_PRESENCE_CACHE_POOL: &str = "blobstore-presence";
 
 pub struct BlobrepoBuilder<'a> {
     fb: FacebookInit,
