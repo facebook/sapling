@@ -257,6 +257,13 @@ class EdenConfig : private ConfigSettingManager {
       "scs:use-manifest-based-fetching",
       false,
       this};
+  /**
+   * Log 1 in `scsThrottleErrorSampleRatio` throttling errors to save log space.
+   */
+  ConfigSetting<size_t> scsThrottleErrorSampleRatio{
+      "scs:throttle-error-sample-ratio",
+      1000,
+      this};
 
   /**
    * How often the on-disk config information should be checked for changes.

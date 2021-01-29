@@ -7,6 +7,8 @@
 
 #include "HgBackingStore.h"
 
+#include <memory>
+
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
@@ -40,6 +42,14 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
+
+#ifdef EDEN_HAVE_SERVICEROUTER
+#include "servicerouter/common/TServiceRouterException.h" // @manual
+#include "servicerouter/common/gen-cpp2/error_types.h" // @manual
+
+using facebook::servicerouter::ErrorReason;
+using facebook::servicerouter::TServiceRouterException;
+#endif
 
 using folly::Future;
 using folly::IOBuf;
@@ -254,8 +264,8 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
              manifestNode, edenTreeID, path.copy(), commitHash)
       .thenValue([this,
                   watch,
-                  treeMetadataFuture = std::move(treeMetadataFuture)](
-                     std::unique_ptr<Tree>&& result) mutable {
+                  treeMetadataFuture = std::move(treeMetadataFuture),
+                  config = config_](std::unique_ptr<Tree>&& result) mutable {
         auto& currentThreadStats =
             stats_->getHgBackingStoreStatsForCurrentThread();
         currentThreadStats.hgBackingStoreGetTree.addValue(
@@ -274,7 +284,24 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
                     // closed
                     localStore->putTreeMetadata(*treeMetadata, tree);
                   })
-              .thenError([](auto&& error) {
+              .thenError([config = std::move(config)](
+                             folly::exception_wrapper&& error) {
+#ifdef EDEN_HAVE_SERVICEROUTER
+                if (TServiceRouterException* serviceRouterError =
+                        error.get_exception<TServiceRouterException>()) {
+                  if (config &&
+                      serviceRouterError->getErrorReason() ==
+                          ErrorReason::THROTTLING_REQUEST) {
+                    XLOG_EVERY_N_THREAD(
+                        WARN,
+                        config->getEdenConfig()
+                            ->scsThrottleErrorSampleRatio.getValue())
+                        << "Error during metadata pre-fetching or storage: "
+                        << error.what();
+                    return;
+                  }
+                }
+#endif
                 XLOG(WARN) << "Error during metadata pre-fetching or storage: "
                            << error.what();
               });
