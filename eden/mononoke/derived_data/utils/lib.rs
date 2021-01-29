@@ -146,6 +146,7 @@ pub trait DerivedUtils: Send + Sync + 'static {
         repo: BlobRepo,
         csids: Vec<ChangesetId>,
         parallel: bool,
+        gap_size: Option<usize>,
     ) -> BoxFuture<'static, Result<(), Error>>;
 
     /// Find pending changeset (changesets for which data have not been derived)
@@ -224,6 +225,7 @@ where
         repo: BlobRepo,
         csids: Vec<ChangesetId>,
         parallel: bool,
+        gap_size: Option<usize>,
     ) -> BoxFuture<'static, Result<(), Error>> {
         let orig_mapping = self.mapping.clone();
         // With InMemoryMapping we can ensure that mapping entries are written only after
@@ -243,7 +245,7 @@ where
         let memblobstore = memblobstore.expect("memblobstore should have been updated");
 
         async move {
-            if parallel {
+            if parallel || gap_size.is_some() {
                 // create new context so each derivation batch has its own trace
                 // and is rate-limited
                 let session = SessionContainer::builder(ctx.fb)
@@ -258,7 +260,7 @@ where
                 );
 
                 // derive the batch of derived data in parallel
-                M::Value::batch_derive(&ctx, &repo, csids, &in_memory_mapping).await?;
+                M::Value::batch_derive(&ctx, &repo, csids, &in_memory_mapping, gap_size).await?;
             } else {
                 for csid in csids {
                     // create new context so each derivation has its own trace
@@ -559,6 +561,7 @@ impl DeriveGraph {
         ctx: CoreContext,
         repo: BlobRepo,
         parallel: bool,
+        gap_size: Option<usize>,
     ) -> Result<(), Error> {
         bounded_traversal::bounded_traversal_dag(
             100,
@@ -577,6 +580,7 @@ impl DeriveGraph {
                                 repo,
                                 node.csids.clone(),
                                 parallel,
+                                gap_size,
                             )
                             .await?;
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
@@ -1011,7 +1015,7 @@ mod tests {
             thin_out,
         )
         .await?;
-        graph.derive(ctx.clone(), repo.clone(), false).await?;
+        graph.derive(ctx.clone(), repo.clone(), false, None).await?;
 
         let graph = build_derive_graph(
             &ctx,
@@ -1086,9 +1090,10 @@ mod tests {
             repo: BlobRepo,
             csids: Vec<ChangesetId>,
             parallel: bool,
+            gap_size: Option<usize>,
         ) -> BoxFuture<'static, Result<(), Error>> {
             self.deriver
-                .backfill_batch_dangerous(ctx, repo, csids, parallel)
+                .backfill_batch_dangerous(ctx, repo, csids, parallel, gap_size)
         }
 
         async fn pending(

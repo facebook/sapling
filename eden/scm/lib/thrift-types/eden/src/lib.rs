@@ -67,6 +67,7 @@ pub mod types {
         pub edenClientPath: crate::types::PathString,
         #[serde(default)]
         pub state: crate::types::MountState,
+        pub backingRepoPath: ::std::option::Option<crate::types::PathString>,
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
@@ -1674,6 +1675,7 @@ pub mod types {
                 mountPoint: ::std::default::Default::default(),
                 edenClientPath: ::std::default::Default::default(),
                 state: ::std::default::Default::default(),
+                backingRepoPath: ::std::option::Option::None,
             }
         }
     }
@@ -1700,6 +1702,11 @@ pub mod types {
             p.write_field_begin("state", ::fbthrift::TType::I32, 3);
             ::fbthrift::Serialize::write(&self.state, p);
             p.write_field_end();
+            if let ::std::option::Option::Some(some) = &self.backingRepoPath {
+                p.write_field_begin("backingRepoPath", ::fbthrift::TType::String, 4);
+                ::fbthrift::Serialize::write(some, p);
+                p.write_field_end();
+            }
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -1711,6 +1718,7 @@ pub mod types {
     {
         fn read(p: &mut P) -> ::anyhow::Result<Self> {
             static FIELDS: &[::fbthrift::Field] = &[
+                ::fbthrift::Field::new("backingRepoPath", ::fbthrift::TType::String, 4),
                 ::fbthrift::Field::new("edenClientPath", ::fbthrift::TType::String, 2),
                 ::fbthrift::Field::new("mountPoint", ::fbthrift::TType::String, 1),
                 ::fbthrift::Field::new("state", ::fbthrift::TType::I32, 3),
@@ -1718,6 +1726,7 @@ pub mod types {
             let mut field_mountPoint = ::std::option::Option::None;
             let mut field_edenClientPath = ::std::option::Option::None;
             let mut field_state = ::std::option::Option::None;
+            let mut field_backingRepoPath = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
@@ -1726,6 +1735,7 @@ pub mod types {
                     (::fbthrift::TType::String, 1) => field_mountPoint = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::String, 2) => field_edenClientPath = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::I32, 3) => field_state = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::String, 4) => field_backingRepoPath = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -1735,6 +1745,7 @@ pub mod types {
                 mountPoint: field_mountPoint.unwrap_or_default(),
                 edenClientPath: field_edenClientPath.unwrap_or_default(),
                 state: field_state.unwrap_or_default(),
+                backingRepoPath: field_backingRepoPath,
             })
         }
     }

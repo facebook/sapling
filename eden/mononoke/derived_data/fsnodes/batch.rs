@@ -53,6 +53,7 @@ pub async fn derive_fsnode_in_batch<Mapping>(
     repo: &BlobRepo,
     mapping: &Mapping,
     batch: Vec<ChangesetId>,
+    gap_size: Option<usize>,
 ) -> Result<HashMap<ChangesetId, FsnodeId>, Error>
 where
     Mapping: BonsaiDerivedMapping<Value = RootFsnodeId> + 'static,
@@ -83,8 +84,16 @@ where
             .try_collect::<Vec<_>>()
             .await?;
 
-        let new_fsnodes = linear_stack
-            .file_changes
+        let to_derive = match gap_size {
+            Some(gap_size) => linear_stack
+                .file_changes
+                .chunks(gap_size)
+                .filter_map(|chunk| chunk.last().cloned())
+                .collect(),
+            None => linear_stack.file_changes,
+        };
+
+        let new_fsnodes = to_derive
             .into_iter()
             .map(|(cs_id, fc)| {
                 // Clone the values that we need owned copies of to move
@@ -134,7 +143,7 @@ mod test {
                     .try_collect::<Vec<_>>()
                     .await?;
             cs_ids.reverse();
-            let fsnode_ids = derive_fsnode_in_batch(&ctx, &repo, &mapping, cs_ids).await?;
+            let fsnode_ids = derive_fsnode_in_batch(&ctx, &repo, &mapping, cs_ids, None).await?;
             fsnode_ids.get(&master_cs_id).unwrap().clone()
         };
 

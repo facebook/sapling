@@ -156,21 +156,26 @@ pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone {
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
         mapping: &Mapping,
+        gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>, Error>
     where
         Mapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
     {
         let ctx = &override_ctx(ctx.clone());
-        Self::batch_derive_impl(ctx, repo, csids, mapping).await
+        Self::batch_derive_impl(ctx, repo, csids, mapping, gap_size).await
     }
 
     /// This method might be overridden by BonsaiDerivable implementors if there's a more efficient
     /// way to derive a batch of commits for a particular mapping.
+    ///
+    /// Note that the default implementation does not support gapped derivation, and will
+    /// derive all items in the batch.
     async fn batch_derive_impl<Mapping>(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
         mapping: &Mapping,
+        _gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>, Error>
     where
         Mapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,

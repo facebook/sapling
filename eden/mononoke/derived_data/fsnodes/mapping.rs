@@ -92,11 +92,12 @@ impl BonsaiDerivable for RootFsnodeId {
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
         mapping: &BatchMapping,
+        gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>, Error>
     where
         BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
     {
-        let derived = derive_fsnode_in_batch(ctx, repo, mapping, csids.clone()).await?;
+        let derived = derive_fsnode_in_batch(ctx, repo, mapping, csids.clone(), gap_size).await?;
 
         stream::iter(derived.into_iter().map(|(cs_id, derived)| async move {
             let derived = RootFsnodeId(derived);

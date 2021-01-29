@@ -852,7 +852,8 @@ mod test {
             // Reverse them to derive parents before children
             let cs_ids = cs_ids.clone().into_iter().rev().collect::<Vec<_>>();
             let mapping = TestGenNum::default_mapping(&ctx, &repo)?;
-            let derived_batch = TestGenNum::batch_derive(&ctx, &repo, cs_ids, &mapping).await?;
+            let derived_batch =
+                TestGenNum::batch_derive(&ctx, &repo, cs_ids, &mapping, None).await?;
             derived_batch
                 .get(&master_cs_id)
                 .unwrap_or_else(|| panic!("{} has not been derived", master_cs_id))

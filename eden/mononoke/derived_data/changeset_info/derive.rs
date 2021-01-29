@@ -44,10 +44,13 @@ impl BonsaiDerivable for ChangesetInfo {
         repo: &BlobRepo,
         csids: Vec<ChangesetId>,
         mapping: &BatchMapping,
+        _gap_size: Option<usize>,
     ) -> Result<HashMap<ChangesetId, Self>, Error>
     where
         BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
     {
+        // Derivation with gaps doesn't make much sense for changeset info, so
+        // ignore the gap size.
         let cs_infos = stream::iter(csids.into_iter().map(|csid| async move {
             let bonsai = csid.load(ctx, repo.blobstore()).await?;
             let cs_info = ChangesetInfo::new(csid, bonsai);
@@ -160,7 +163,8 @@ mod test {
                 .try_collect::<Vec<_>>()
                 .await?;
         cs_ids.reverse();
-        let cs_infos = ChangesetInfo::batch_derive(&ctx, &repo, cs_ids.clone(), &mapping).await?;
+        let cs_infos =
+            ChangesetInfo::batch_derive(&ctx, &repo, cs_ids.clone(), &mapping, None).await?;
 
         for cs_id in cs_ids {
             let bonsai = cs_id.load(&ctx, repo.blobstore()).await?;

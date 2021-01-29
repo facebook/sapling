@@ -79,6 +79,7 @@ const ARG_PARALLEL: &str = "parallel";
 const ARG_SLICED: &str = "sliced";
 const ARG_SLICE_SIZE: &str = "slice-size";
 const ARG_BACKFILL: &str = "backfill";
+const ARG_GAP_SIZE: &str = "gap-size";
 
 const SUBCOMMAND_BACKFILL: &str = "backfill";
 const SUBCOMMAND_BACKFILL_ALL: &str = "backfill-all";
@@ -178,6 +179,12 @@ fn main(fb: FacebookInit) -> Result<()> {
                     Arg::with_name(ARG_PARALLEL)
                         .long(ARG_PARALLEL)
                         .help("derive commits within a batch in parallel"),
+                )
+                .arg(
+                    Arg::with_name(ARG_GAP_SIZE)
+                        .long(ARG_GAP_SIZE)
+                        .takes_value(true)
+                        .help("size of gap to leave in derived data types that support gaps"),
                 ),
         )
         .subcommand(
@@ -247,6 +254,12 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .long(ARG_SLICE_SIZE)
                         .default_value(DEFAULT_SLICE_SIZE_STR)
                         .help("number of generations to include in each generation slice"),
+                )
+                .arg(
+                    Arg::with_name(ARG_GAP_SIZE)
+                        .long(ARG_GAP_SIZE)
+                        .takes_value(true)
+                        .help("size of gap to leave in derived data types that support gaps"),
                 ),
         )
         .subcommand(
@@ -320,6 +333,12 @@ fn main(fb: FacebookInit) -> Result<()> {
                         .long(ARG_SLICE_SIZE)
                         .default_value(DEFAULT_SLICE_SIZE_STR)
                         .help("number of generations to include in each generation slice"),
+                )
+                .arg(
+                    Arg::with_name(ARG_GAP_SIZE)
+                        .long(ARG_GAP_SIZE)
+                        .takes_value(true)
+                        .help("size of gap to leave in derived data types that support gaps"),
                 ),
         );
     let matches = app.get_matches();
@@ -370,6 +389,10 @@ async fn run_subcmd<'a>(
             } else {
                 None
             };
+            let gap_size = sub_m
+                .value_of(ARG_GAP_SIZE)
+                .map(str::parse::<usize>)
+                .transpose()?;
 
             subcommand_backfill_all(
                 &ctx,
@@ -379,6 +402,7 @@ async fn run_subcmd<'a>(
                 slice_size,
                 batch_size,
                 parallel,
+                gap_size,
             )
             .await
         }
@@ -460,6 +484,10 @@ async fn run_subcmd<'a>(
                 .value_of(ARG_BATCH_SIZE)
                 .expect("batch-size must be set")
                 .parse::<usize>()?;
+            let gap_size = sub_m
+                .value_of(ARG_GAP_SIZE)
+                .map(str::parse::<usize>)
+                .transpose()?;
 
             subcommand_backfill(
                 &ctx,
@@ -468,6 +496,7 @@ async fn run_subcmd<'a>(
                 regenerate,
                 parallel,
                 batch_size,
+                gap_size,
                 changesets,
                 cleaner,
             )
@@ -502,6 +531,10 @@ async fn run_subcmd<'a>(
             } else {
                 None
             };
+            let gap_size = sub_m
+                .value_of(ARG_GAP_SIZE)
+                .map(str::parse::<usize>)
+                .transpose()?;
             subcommand_tail(
                 &ctx,
                 repo,
@@ -510,6 +543,7 @@ async fn run_subcmd<'a>(
                 stop_on_idle,
                 batch_size,
                 parallel,
+                gap_size,
                 backfill,
                 slice_size,
             )
@@ -599,6 +633,7 @@ async fn subcommand_backfill_all(
     slice_size: Option<u64>,
     batch_size: usize,
     parallel: bool,
+    gap_size: Option<usize>,
 ) -> Result<()> {
     info!(ctx.logger(), "derived data types: {:?}", derived_data_types);
     let derivers = derived_data_types
@@ -622,6 +657,7 @@ async fn subcommand_backfill_all(
         slice_size,
         batch_size,
         parallel,
+        gap_size,
     )
     .await
 }
@@ -635,6 +671,7 @@ async fn backfill_heads(
     slice_size: Option<u64>,
     batch_size: usize,
     parallel: bool,
+    gap_size: Option<usize>,
 ) -> Result<()> {
     if let (Some(skiplist_index), Some(slice_size)) = (skiplist_index, slice_size) {
         let (count, slices) =
@@ -648,11 +685,20 @@ async fn backfill_heads(
                 count,
                 slice_heads.len()
             );
-            tail_batch_iteration(ctx, repo, derivers, slice_heads, batch_size, parallel).await?;
+            tail_batch_iteration(
+                ctx,
+                repo,
+                derivers,
+                slice_heads,
+                batch_size,
+                parallel,
+                gap_size,
+            )
+            .await?;
         }
     } else {
         info!(ctx.logger(), "Deriving {} heads", heads.len());
-        tail_batch_iteration(ctx, repo, derivers, heads, batch_size, parallel).await?;
+        tail_batch_iteration(ctx, repo, derivers, heads, batch_size, parallel, gap_size).await?;
     }
     Ok(())
 }
@@ -668,6 +714,7 @@ async fn subcommand_backfill(
     regenerate: bool,
     parallel: bool,
     batch_size: usize,
+    gap_size: Option<usize>,
     changesets: Vec<ChangesetId>,
     mut cleaner: Option<impl dry_run::Cleaner>,
 ) -> Result<()> {
@@ -705,7 +752,7 @@ async fn subcommand_backfill(
             info!(ctx.logger(), "warmup of {} changesets complete", chunk_size);
 
             derived_utils
-                .backfill_batch_dangerous(ctx.clone(), repo.clone(), chunk, parallel)
+                .backfill_batch_dangerous(ctx.clone(), repo.clone(), chunk, parallel, gap_size)
                 .await?;
             Result::<_>::Ok(chunk_size)
         }
@@ -757,6 +804,7 @@ async fn subcommand_tail(
     stop_on_idle: bool,
     batch_size: Option<usize>,
     parallel: bool,
+    gap_size: Option<usize>,
     mut backfill: bool,
     slice_size: Option<u64>,
 ) -> Result<()> {
@@ -867,6 +915,7 @@ async fn subcommand_tail(
                         underived_heads,
                         batch_size,
                         parallel,
+                        gap_size,
                     )
                     .await?;
                     let _ = sender.broadcast(heads.clone());
@@ -895,6 +944,7 @@ async fn subcommand_tail(
                             slice_size,
                             batch_size,
                             parallel,
+                            gap_size,
                         )
                         .await?;
                         derived_heads = heads;
@@ -938,6 +988,7 @@ async fn tail_batch_iteration(
     heads: Vec<ChangesetId>,
     batch_size: usize,
     parallel: bool,
+    gap_size: Option<usize>,
 ) -> Result<()> {
     let derive_graph = derived_data_utils::build_derive_graph(
         ctx,
@@ -977,6 +1028,7 @@ async fn tail_batch_iteration(
                                 repo,
                                 node.csids.clone(),
                                 parallel,
+                                gap_size,
                             )
                             .await?;
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
@@ -1187,7 +1239,7 @@ mod tests {
 
         let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
         derived_utils
-            .backfill_batch_dangerous(ctx, repo, vec![bcs_id], false)
+            .backfill_batch_dangerous(ctx, repo, vec![bcs_id], false, None)
             .await?;
 
         Ok(())
@@ -1217,7 +1269,7 @@ mod tests {
             .await?;
         assert_eq!(pending.len(), hg_cs_ids.len());
         derived_utils
-            .backfill_batch_dangerous(ctx.clone(), repo.clone(), batch.clone(), false)
+            .backfill_batch_dangerous(ctx.clone(), repo.clone(), batch.clone(), false, None)
             .await?;
         let pending = derived_utils.pending(ctx, repo, batch).await?;
         assert_eq!(pending.len(), 0);
@@ -1243,7 +1295,7 @@ mod tests {
 
         let derived_utils = derived_data_utils(&repo, RootUnodeManifestId::NAME)?;
         let res = derived_utils
-            .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![bcs_id], false)
+            .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![bcs_id], false, None)
             .await;
         // Deriving should fail because blobstore writes fail
         assert!(res.is_err());
@@ -1258,7 +1310,7 @@ mod tests {
             .await?;
         let bcs_id = maybe_bcs_id.unwrap();
         derived_utils
-            .backfill_batch_dangerous(ctx, repo, vec![bcs_id], false)
+            .backfill_batch_dangerous(ctx, repo, vec![bcs_id], false, None)
             .await?;
 
         Ok(())

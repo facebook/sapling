@@ -31,6 +31,7 @@ pub async fn derive_skeleton_manifests_in_batch<Mapping>(
     repo: &BlobRepo,
     mapping: &Mapping,
     batch: Vec<ChangesetId>,
+    gap_size: Option<usize>,
 ) -> Result<HashMap<ChangesetId, SkeletonManifestId>, Error>
 where
     Mapping: BonsaiDerivedMapping<Value = RootSkeletonManifestId> + 'static,
@@ -62,8 +63,16 @@ where
             .try_collect::<Vec<_>>()
             .await?;
 
-        let new_skeleton_manifests = linear_stack
-            .file_changes
+        let to_derive = match gap_size {
+            Some(gap_size) => linear_stack
+                .file_changes
+                .chunks(gap_size)
+                .filter_map(|chunk| chunk.last().cloned())
+                .collect(),
+            None => linear_stack.file_changes,
+        };
+
+        let new_skeleton_manifests = to_derive
             .into_iter()
             .map(|(cs_id, fc)| {
                 // Clone the values that we need owned copies of to move
@@ -120,7 +129,7 @@ mod test {
                     .await?;
             cs_ids.reverse();
             let sk_mf_ids =
-                derive_skeleton_manifests_in_batch(&ctx, &repo, &mapping, cs_ids).await?;
+                derive_skeleton_manifests_in_batch(&ctx, &repo, &mapping, cs_ids, None).await?;
             sk_mf_ids.get(&master_cs_id).unwrap().clone()
         };
 
