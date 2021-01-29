@@ -145,7 +145,8 @@ The history for n is lost
   KeyError: 'Key not found HgId(Key { path: RepoPathBuf("n"), hgid: HgId("c972a0820002b32c6fec4b7ca47d3aecdad8e1c5") })'
 
 The local data and history for o is lost
-  $ hg cat -q o 2>&1 | grep 'KeyError'
-  KeyError: 'Key not found HgId(Key { path: RepoPathBuf("o"), hgid: HgId("fd94f81d01bf8c9d960bb57abdd4e8375309ae43") })'
+  $ hg cat -q o 2>&1
+  abort: stream ended unexpectedly (got 0 bytes, expected 2)
+  [255]
   $ hg log -qf o 2>&1 | grep 'KeyError'
   KeyError: 'Key not found HgId(Key { path: RepoPathBuf("o"), hgid: HgId("fd94f81d01bf8c9d960bb57abdd4e8375309ae43") })'

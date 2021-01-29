@@ -757,10 +757,8 @@ impl RemoteDataStore for PyRemoteDataStore {
 
 impl HgIdDataStore for PyRemoteDataStore {
     fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
-        match self.prefetch(&[key.clone()]) {
-            Ok(_) => self.0.inner.read().datastore.as_ref().unwrap().get(key),
-            Err(_) => Ok(StoreResult::NotFound(key)),
-        }
+        self.prefetch(&[key.clone()])?;
+        self.0.inner.read().datastore.as_ref().unwrap().get(key)
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {

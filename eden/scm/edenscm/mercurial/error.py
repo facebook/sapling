@@ -27,6 +27,7 @@ from . import pycompat
 
 
 CommitLookupError = bindings.error.CommitLookupError
+HttpError = bindings.error.HttpError
 IndexedLogError = bindings.error.IndexedLogError
 MetaLogError = bindings.error.MetaLogError
 RustError = bindings.error.RustError

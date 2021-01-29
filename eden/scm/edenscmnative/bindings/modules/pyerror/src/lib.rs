@@ -11,6 +11,7 @@ use cpython_ext::{error, ResultPyErrExt};
 use taggederror::{intentional_bail, intentional_error, CommonMetadata, FilteredAnyhow};
 use taggederror_util::AnyhowEdenExt;
 
+py_exception!(error, HttpError);
 py_exception!(error, IndexedLogError);
 py_exception!(error, MetaLogError);
 py_exception!(error, RustError);
@@ -72,6 +73,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
 
     m.add(py, "CommitLookupError", py.get_type::<CommitLookupError>())?;
+    m.add(py, "HttpError", py.get_type::<HttpError>())?;
     m.add(py, "IndexedLogError", py.get_type::<IndexedLogError>())?;
     m.add(py, "MetaLogError", py.get_type::<MetaLogError>())?;
     m.add(py, "RustError", py.get_type::<RustError>())?;
@@ -155,6 +157,18 @@ fn register_error_handlers() {
             Some(PyErr::new::<NonUTF8Path, _>(
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
+            ))
+        } else if let Some(edenapi::EdenApiError::Http(http_client::HttpClientError::Curl(e))) =
+            e.downcast_ref::<edenapi::EdenApiError>()
+        {
+            let mut message = format!("{}", e.description());
+            if let Some(detail) = e.extra_description() {
+                message.push_str(" - ");
+                message.push_str(detail);
+            }
+            Some(PyErr::new::<HttpError, _>(
+                py,
+                cpython_ext::Str::from(message),
             ))
         } else {
             None
