@@ -451,6 +451,13 @@ impl BookmarkPrefix {
         like_pattern.push('%');
         like_pattern
     }
+
+    pub fn is_prefix_of(&self, bookmark: &BookmarkName) -> bool {
+        bookmark
+            .bookmark
+            .as_bytes()
+            .starts_with(self.bookmark_prefix.as_bytes())
+    }
 }
 
 fn prefix_to_range_end(mut prefix: AsciiString) -> Option<AsciiString> {

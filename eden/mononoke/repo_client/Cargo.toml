@@ -59,3 +59,8 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 tokio-old = { package = "tokio", version = "0.1" }
+
+[dev-dependencies]
+blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
+tests_utils = { path = "../tests/utils", version = "0.1.0" }
+tokio-compat = "0.1"

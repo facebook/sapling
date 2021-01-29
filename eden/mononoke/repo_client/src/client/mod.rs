@@ -1535,36 +1535,37 @@ impl HgCommands for RepoClient {
             let queries = patterns.into_iter().map({
                 cloned!(ctx);
                 let max = self.repo.list_keys_patterns_max();
-                let repo = self.repo.blobrepo().clone();
+                let session_bookmarks_cache = self.session_bookmarks_cache.clone();
                 move |pattern| {
                     if pattern.ends_with("*") {
                         // prefix match
                         let prefix =
                             try_boxfuture!(BookmarkPrefix::new(&pattern[..pattern.len() - 1]));
-                        repo.get_bookmarks_by_prefix_maybe_stale(ctx.clone(), &prefix, max)
-                            .compat()
-                            .map(|(bookmark, cs_id): (Bookmark, HgChangesetId)| {
-                                (bookmark.into_name().to_string(), cs_id)
-                            })
-                            .collect()
-                            .and_then(move |bookmarks| {
-                                if bookmarks.len() < max as usize {
-                                    Ok(bookmarks)
-                                } else {
-                                    Err(format_err!(
-                                        "Bookmark query was truncated after {} results, use a more specific prefix search.",
-                                        max,
-                                    ))
-                                }
-                            })
-                            .boxify()
+                        session_bookmarks_cache
+                            .get_bookmarks_by_prefix(&ctx, &prefix, max)
+                        .compat()
+                        .map(|(bookmark, cs_id): (BookmarkName, HgChangesetId)| {
+                            (bookmark.to_string(), cs_id)
+                        })
+                        .collect()
+                        .and_then(move |bookmarks| {
+                            if bookmarks.len() < max as usize {
+                                Ok(bookmarks)
+                            } else {
+                                Err(format_err!(
+                                    "Bookmark query was truncated after {} results, use a more specific prefix search.",
+                                    max,
+                                ))
+                            }
+                        })
+                        .boxify()
                     } else {
                         // literal match
                         let bookmark = try_boxfuture!(BookmarkName::new(&pattern));
                         {
-                            cloned!(ctx, repo);
+                            cloned!(ctx, session_bookmarks_cache);
                             async move {
-                                let cs_id = repo.get_bookmark(ctx, &bookmark).await?;
+                                let cs_id = session_bookmarks_cache.get_bookmark(ctx, bookmark).await?;
                                 match cs_id {
                                     Some(cs_id) => Ok(vec![(pattern, cs_id)]),
                                     None => Ok(Vec::new()),

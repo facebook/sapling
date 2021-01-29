@@ -432,11 +432,14 @@ impl BlobRepoHg for BlobRepo {
     }
 }
 
-pub fn to_hg_bookmark_stream(
+pub fn to_hg_bookmark_stream<BookmarkType>(
     repo: &BlobRepo,
     ctx: &CoreContext,
-    stream: impl Stream<Item = Result<(Bookmark, ChangesetId), Error>> + Send + 'static,
-) -> BoxStream<'static, Result<(Bookmark, HgChangesetId), Error>> {
+    stream: impl Stream<Item = Result<(BookmarkType, ChangesetId), Error>> + Send + 'static,
+) -> BoxStream<'static, Result<(BookmarkType, HgChangesetId), Error>>
+where
+    BookmarkType: Send,
+{
     stream
         .chunks(100)
         .map({
