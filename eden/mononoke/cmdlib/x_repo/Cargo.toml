@@ -12,7 +12,7 @@ cmdlib = { path = "..", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 cross_repo_sync = { path = "../../commit_rewriting/cross_repo_sync", version = "0.1.0" }
 live_commit_sync_config = { path = "../../commit_rewriting/live_commit_sync_config", version = "0.1.0" }
+sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
 synced_commit_mapping = { path = "../../commit_rewriting/synced_commit_mapping", version = "0.1.0" }
 anyhow = "1.0"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-util = "0.3.7"

@@ -27,7 +27,6 @@ use anyhow::{bail, format_err, Context, Error, Result};
 use cached_config::{ConfigHandle, ConfigStore, TestSource};
 use clap::{App, Arg, ArgGroup, ArgMatches, Values};
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use maybe_owned::MaybeOwned;
 use once_cell::sync::OnceCell;
 use panichandler::{self, Fate};
@@ -53,9 +52,7 @@ use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::{MysqlConnectionType, MysqlOptions, PoolConfig, SharedConnectionPool};
 use tunables::init_tunables_worker;
 
-use crate::helpers::{
-    create_runtime, open_sql_with_config_and_mysql_options, setup_repo_dir, CreateStorage,
-};
+use crate::helpers::{create_runtime, setup_repo_dir, CreateStorage};
 use crate::log;
 
 pub use self::cache::parse_caching;
@@ -1093,13 +1090,12 @@ where
     let (_, config) = get_config(config_store, matches)?;
     let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
-    open_sql_with_config_and_mysql_options(
+    T::with_metadata_database_config(
         fb,
-        config.storage_config.metadata,
-        mysql_options,
-        readonly_storage,
+        &config.storage_config.metadata,
+        &mysql_options,
+        readonly_storage.0,
     )
-    .compat()
     .await
 }
 
@@ -1115,13 +1111,12 @@ where
     let (_, config) = get_config_by_repoid(config_store, matches, source_repo_id)?;
     let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
-    open_sql_with_config_and_mysql_options(
+    T::with_metadata_database_config(
         fb,
-        config.storage_config.metadata,
-        mysql_options,
-        readonly_storage,
+        &config.storage_config.metadata,
+        &mysql_options,
+        readonly_storage.0,
     )
-    .compat()
     .await
 }
 

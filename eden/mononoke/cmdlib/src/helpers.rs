@@ -14,7 +14,7 @@ use futures::{
     future::{self, Either},
     FutureExt, StreamExt, TryFutureExt,
 };
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures_ext::FutureExt as OldFutureExt;
 use futures_old::{Future as OldFuture, IntoFuture};
 use services::Fb303Service;
 use slog::{debug, error, info, Logger};
@@ -26,16 +26,12 @@ use tokio::{
 use crate::args::{self, MononokeMatches};
 use crate::monitoring;
 use blobrepo::BlobRepo;
-use blobrepo_factory::ReadOnlyStorage;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgManifestId};
-use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
-use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::facebook::MysqlOptions;
 use stats::schedule_stats_aggregation_preview;
 
 pub const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
@@ -148,23 +144,6 @@ pub fn get_root_manifest_id(
         })
         .map(|cs| cs.manifestid())
     })
-}
-
-pub fn open_sql_with_config_and_mysql_options<T>(
-    fb: FacebookInit,
-    dbconfig: MetadataDatabaseConfig,
-    mysql_options: MysqlOptions,
-    readonly_storage: ReadOnlyStorage,
-) -> BoxFuture<T, Error>
-where
-    T: SqlConstructFromMetadataDatabaseConfig,
-{
-    Box::pin(async move {
-        // FIXME: remove pinning when this crate is migrated to new futures
-        T::with_metadata_database_config(fb, &dbconfig, &mysql_options, readonly_storage.0).await
-    })
-    .compat()
-    .boxify()
 }
 
 /// Get a tokio `Runtime` with potentially explicitly set number of core threads

@@ -17,7 +17,7 @@ use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshness};
 use cmdlib::{
     args::{self, MononokeClapApp, MononokeMatches},
-    helpers::{block_execute, open_sql_with_config_and_mysql_options},
+    helpers::block_execute,
     monitoring::AliveService,
 };
 use context::CoreContext;
@@ -28,6 +28,7 @@ use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use mutable_counters::MutableCounters;
 use mutable_counters::SqlMutableCounters;
 use scuba_ext::MononokeScubaSampleBuilder;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 
 mod cli;
 mod reporting;
@@ -185,13 +186,12 @@ async fn run<'a>(
             run_in_once_mode(&ctx, blobrepo, validation_helpers, entry_id).await
         }
         (ARG_TAIL, Some(sub_m)) => {
-            let mutable_counters = open_sql_with_config_and_mysql_options::<SqlMutableCounters>(
+            let mutable_counters = SqlMutableCounters::with_metadata_database_config(
                 fb,
-                dbconfig,
-                mysql_options,
-                readonly_storage,
+                &dbconfig,
+                &mysql_options,
+                readonly_storage.0,
             )
-            .compat()
             .await
             .context("While opening MutableCounters")?;
 

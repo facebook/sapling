@@ -11,19 +11,16 @@
 
 use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
-use cmdlib::{
-    args::{self, MononokeMatches},
-    helpers::open_sql_with_config_and_mysql_options,
-};
+use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use cross_repo_sync::{
     create_commit_syncers,
     types::{Source, Target},
     CommitSyncRepos, CommitSyncer, Syncers,
 };
-use futures::compat::Future01CompatExt;
 use futures_util::try_join;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
@@ -114,13 +111,12 @@ async fn get_things_from_matches(
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
 
-    let mapping = open_sql_with_config_and_mysql_options::<SqlSyncedCommitMapping>(
+    let mapping = SqlSyncedCommitMapping::with_metadata_database_config(
         ctx.fb,
-        source_repo_config.storage_config.metadata.clone(),
-        mysql_options,
-        readonly_storage,
+        &source_repo_config.storage_config.metadata,
+        &mysql_options,
+        readonly_storage.0,
     )
-    .compat()
     .await?;
 
     let source_repo_fut = args::open_repo_with_repo_id(fb, logger, source_repo_id, &matches);
