@@ -504,13 +504,21 @@ impl Blobstore for Sqlblob {
     ) -> Result<Option<BlobstoreGetData>> {
         let chunked = self.data_store.get(&key).await?;
         if let Some(chunked) = chunked {
-            let fetch_chunks: FuturesOrdered<_> = (0..chunked.count)
+            let chunks = (0..chunked.count)
                 .map(|chunk_num| {
                     self.chunk_store
                         .get(&chunked.id, chunk_num, chunked.chunking_method)
                 })
-                .collect();
-            let blob: BytesMut = fetch_chunks.try_concat().await?;
+                .collect::<FuturesOrdered<_>>()
+                .try_collect::<Vec<_>>()
+                .await?;
+
+            let size = chunks.iter().map(|chunk| chunk.len()).sum();
+            let mut blob = BytesMut::with_capacity(size);
+            for chunk in chunks {
+                blob.extend_from_slice(&chunk);
+            }
+
             let meta = BlobstoreMetadata::new(Some(chunked.ctime));
             Ok(Some(BlobstoreGetData::new(
                 meta,
