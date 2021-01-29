@@ -116,9 +116,10 @@ fn is_limit_exceeded(fb: FacebookInit, key: &str, limit: i64) -> Option<ErrorKin
 }
 
 fn limit_applies_to_client(limit: &Limit, client_identity: &Option<&MononokeIdentitySet>) -> bool {
-    let configured_identities = match limit.client_identities().is_empty() {
+    let client_identity_sets = limit.client_identity_sets();
+    let configured_identities = match client_identity_sets.is_empty() {
         true => return true,
-        false => limit.client_identities(),
+        false => client_identity_sets,
     };
 
     let presented_identities = match client_identity {
@@ -126,11 +127,9 @@ fn limit_applies_to_client(limit: &Limit, client_identity: &Option<&MononokeIden
         _ => return false,
     };
 
-    configured_identities.iter().any(|configured_id| {
-        presented_identities
-            .iter()
-            .any(|presented_id| presented_id == configured_id)
-    })
+    configured_identities
+        .iter()
+        .any(|limit_ids| limit_ids.is_subset(&presented_identities))
 }
 
 fn limit_applies_probabilistically(limit: &Limit) -> bool {
@@ -140,6 +139,36 @@ fn limit_applies_probabilistically(limit: &Limit) -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
+    use permission_checker::MononokeIdentity;
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn test_limit_applies_to_client() {
+        let limit_config = lfs_server_config::ThrottleLimit {
+            counter: "".to_string(),
+            limit: 0,
+            sleep_ms: 0,
+            max_jitter_ms: 0,
+            client_identities: vec![],
+            client_identity_sets: vec![vec![
+                "MACHINE_TIER:od".to_string(),
+                "SERVICE_IDENTITY:bambuko".to_string(),
+            ]],
+            probability_pct: 0,
+        };
+
+        let limit: Limit = limit_config.try_into().unwrap();
+
+        let mut identities = BTreeSet::new();
+        let svc_ident = MononokeIdentity::new("SERVICE_IDENTITY", "bambuko").unwrap();
+        identities.insert(MononokeIdentity::new("MACHINE_TIER", "od").unwrap());
+        identities.insert(svc_ident.clone());
+        identities.insert(MononokeIdentity::new("MACHINE", "od123.ftw").unwrap());
+
+        assert!(limit_applies_to_client(&limit, &Some(&identities)));
+        identities.remove(&svc_ident);
+        assert!(!limit_applies_to_client(&limit, &Some(&identities)));
+    }
 
     #[test]
     fn test_limit_applies_probabilistically() {
@@ -149,6 +178,7 @@ mod test {
             sleep_ms: 0,
             max_jitter_ms: 0,
             client_identities: vec![],
+            client_identity_sets: vec![],
             probability_pct: 0,
         };
 

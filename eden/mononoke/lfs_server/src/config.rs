@@ -7,10 +7,11 @@
 
 use anyhow::{Context, Error};
 use gotham_ext::middleware::PostRequestConfig;
-use permission_checker::MononokeIdentity;
+use permission_checker::MononokeIdentitySet;
 use serde::de::{Deserializer, Error as _};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::convert::{TryFrom, TryInto};
 use std::default::Default;
 use std::num::NonZeroU16;
@@ -53,22 +54,25 @@ impl TryFrom<lfs_server_config::ObjectPopularity> for ObjectPopularity {
 #[derive(Debug, Clone)]
 pub struct Limit {
     raw_limit: lfs_server_config::ThrottleLimit,
-    client_identities: Vec<MononokeIdentity>,
+    client_identity_sets: Vec<MononokeIdentitySet>,
 }
 
 impl TryFrom<lfs_server_config::ThrottleLimit> for Limit {
     type Error = Error;
 
     fn try_from(value: lfs_server_config::ThrottleLimit) -> Result<Self, Self::Error> {
-        let client_identities = value
-            .client_identities
-            .iter()
-            .map(|x| FromStr::from_str(&x))
-            .collect::<Result<Vec<_>, _>>()?;
+        let mut client_identity_sets: Vec<MononokeIdentitySet> = Vec::new();
+        for list in value.client_identity_sets.iter() {
+            let is = list
+                .iter()
+                .map(|x| FromStr::from_str(&x))
+                .collect::<Result<BTreeSet<_>, _>>()?;
+            client_identity_sets.push(is);
+        }
 
         Ok(Self {
             raw_limit: value,
-            client_identities,
+            client_identity_sets,
         })
     }
 }
@@ -202,9 +206,11 @@ impl Limit {
     pub fn max_jitter_ms(&self) -> i64 {
         self.raw_limit.max_jitter_ms
     }
-    pub fn client_identities(&self) -> Vec<MononokeIdentity> {
-        self.client_identities.clone()
+
+    pub fn client_identity_sets(&self) -> &Vec<MononokeIdentitySet> {
+        &self.client_identity_sets
     }
+
     pub fn probability_pct(&self) -> i64 {
         self.raw_limit.probability_pct
     }
