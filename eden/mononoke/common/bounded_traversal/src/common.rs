@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::future::Future;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+
+use either::Either;
 use futures::ready;
-use std::{
-    future::Future,
-    pin::Pin,
-    task::{Context, Poll},
-};
 
 #[derive(Clone, Copy)]
 pub(crate) struct NodeLocation<Index> {
@@ -18,39 +18,29 @@ pub(crate) struct NodeLocation<Index> {
     pub child_index: usize, // index inside parents children list
 }
 
-// This is essentially just a `.map`  over futures `{FFut|UFut}`, this only exisists
-// so it would be possible to name `FuturesUnoredered` type parameter.
+/// Equivalent of `futures::future::Either` but with heterogeneous output
+/// types using `either::Either`.
 #[must_use = "futures do nothing unless you `.await` or poll them"]
-pub(crate) enum Job<In, UFut, FFut> {
-    Unfold { value: In, future: UFut },
-    Fold { value: In, future: FFut },
+pub(crate) enum Either2<A, B> {
+    Left(A),
+    Right(B),
 }
 
-pub(crate) enum JobResult<In, UFutResult, FFutResult> {
-    Unfold { value: In, result: UFutResult },
-    Fold { value: In, result: FFutResult },
-}
-
-impl<In, UFut, FFut> Future for Job<In, UFut, FFut>
+impl<A, B> Future for Either2<A, B>
 where
-    In: Clone,
-    UFut: Future,
-    FFut: Future,
+    A: Future,
+    B: Future,
 {
-    type Output = JobResult<In, UFut::Output, FFut::Output>;
+    type Output = Either<A::Output, B::Output>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
-        // see `impl<A, B> Future for Either<A, B>`
+        // see `impl<Left, Right> Future for Either<Left, Right>`
         unsafe {
             let result = match self.get_unchecked_mut() {
-                Job::Fold { value, future } => JobResult::Fold {
-                    value: value.clone(),
-                    result: ready!(Pin::new_unchecked(future).poll(cx)),
-                },
-                Job::Unfold { value, future } => JobResult::Unfold {
-                    value: value.clone(),
-                    result: ready!(Pin::new_unchecked(future).poll(cx)),
-                },
+                Either2::Left(future) => Either::Left(ready!(Pin::new_unchecked(future).poll(cx))),
+                Either2::Right(future) => {
+                    Either::Right(ready!(Pin::new_unchecked(future).poll(cx)))
+                }
             };
             Poll::Ready(result)
         }

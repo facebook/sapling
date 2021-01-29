@@ -7,6 +7,7 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
+either = "1.5"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 
 [dev-dependencies]

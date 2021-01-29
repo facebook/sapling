@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use super::{
-    common::{Job, JobResult, NodeLocation},
-    Iter,
-};
-use futures::{ready, stream::FuturesUnordered, StreamExt};
+use super::common::{Either2, NodeLocation};
+use super::Iter;
+use either::Either;
+use futures::future::{join, ready, Join, Ready};
+use futures::ready;
+use futures::stream::{FuturesUnordered, StreamExt};
+
 use std::{
     collections::{HashMap, VecDeque},
     future::Future,
@@ -85,13 +87,17 @@ enum Node<In, Out, OutCtx> {
 }
 
 #[must_use = "futures do nothing unless polled"]
-struct BoundedTraversalDAG<In, Out, OutCtx, Unfold, UFut, Fold, FFut> {
+struct BoundedTraversalDAG<In, Out, OutCtx, Unfold, UFut, Fold, FFut>
+where
+    UFut: Future,
+    FFut: Future,
+{
     init: In,
     unfold: Unfold,
     fold: Fold,
     scheduled_max: usize,
-    scheduled: FuturesUnordered<Job<In, UFut, FFut>>, // jobs being executed
-    unscheduled: VecDeque<Job<In, UFut, FFut>>,       // as of yet unscheduled jobs
+    scheduled: FuturesUnordered<Join<Ready<In>, Either2<UFut, FFut>>>, // jobs being executed
+    unscheduled: VecDeque<Join<Ready<In>, Either2<UFut, FFut>>>,       // as of yet unscheduled jobs
     execution_tree: HashMap<In, Node<In, Out, OutCtx>>, // tree tracking execution process
 }
 
@@ -139,10 +145,10 @@ where
                         children: None,
                     },
                 );
-                self.unscheduled.push_front(Job::Unfold {
-                    value: value.clone(),
-                    future: (self.unfold)(value),
-                });
+                self.unscheduled.push_front(join(
+                    ready(value.clone()),
+                    Either2::Left((self.unfold)(value)),
+                ));
                 None
             }
             Some(Node::Pending { parents, .. }) => {
@@ -156,10 +162,10 @@ where
     }
 
     fn enqueue_fold(&mut self, value: In, context: OutCtx, children: Iter<Out>) {
-        self.unscheduled.push_front(Job::Fold {
-            value,
-            future: (self.fold)(context, children),
-        });
+        self.unscheduled.push_front(join(
+            ready(value),
+            Either2::Right((self.fold)(context, children)),
+        ));
     }
 
     fn process_unfold(&mut self, value: In, (context, children): (OutCtx, Ins)) {
@@ -290,8 +296,8 @@ where
             // execute scheduled until it is blocked or done
             if let Some(job_result) = ready!(this.scheduled.poll_next_unpin(cx)) {
                 match job_result {
-                    JobResult::Unfold { value, result } => this.process_unfold(value, result?),
-                    JobResult::Fold { value, result } => {
+                    (value, Either::Left(result)) => this.process_unfold(value, result?),
+                    (value, Either::Right(result)) => {
                         // we have computed value associated with `init` node
                         if value == this.init {
                             // all jobs have to be completed and execution_tree empty

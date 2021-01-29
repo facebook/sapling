@@ -5,17 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use super::{
-    common::{Job, JobResult},
-    Iter,
-};
-use futures::{ready, stream::FuturesUnordered, StreamExt};
-use std::{
-    collections::{HashMap, VecDeque},
-    future::Future,
-    pin::Pin,
-    task::{Context, Poll},
-};
+use std::collections::{HashMap, VecDeque};
+use std::future::Future;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+
+use either::Either;
+use futures::future::{join, ready, Join, Ready};
+use futures::ready;
+use futures::stream::{FuturesUnordered, StreamExt};
+
+use super::{common::Either2, Iter};
 
 /// `bounded_traversal` traverses implicit asynchronous tree specified by `init`
 /// and `unfold` arguments, and it also does backward pass with `fold` operation.
@@ -67,14 +67,18 @@ struct NodeIndex(usize);
 type NodeLocation = super::common::NodeLocation<NodeIndex>;
 
 #[must_use = "futures do nothing unless polled"]
-struct BoundedTraversal<Out, OutCtx, Unfold, UFut, Fold, FFut> {
+struct BoundedTraversal<Out, OutCtx, Unfold, UFut, Fold, FFut>
+where
+    UFut: Future,
+    FFut: Future,
+{
     unfold: Unfold,
     fold: Fold,
     scheduled_max: usize,
-    scheduled: FuturesUnordered<Job<NodeLocation, UFut, FFut>>, // jobs being executed
-    unscheduled: VecDeque<Job<NodeLocation, UFut, FFut>>,       // as of yet unscheduled jobs
-    execution_tree: HashMap<NodeIndex, Node<Out, OutCtx>>,      // tree tracking execution process
-    execution_tree_index: NodeIndex,                            // last allocated node index
+    scheduled: FuturesUnordered<Join<Ready<NodeLocation>, Either2<UFut, FFut>>>, // jobs being executed
+    unscheduled: VecDeque<Join<Ready<NodeLocation>, Either2<UFut, FFut>>>, // as of yet unscheduled jobs
+    execution_tree: HashMap<NodeIndex, Node<Out, OutCtx>>, // tree tracking execution process
+    execution_tree_index: NodeIndex,                       // last allocated node index
 }
 
 impl<Err, In, Ins, Out, OutCtx, Unfold, UFut, Fold, FFut>
@@ -107,17 +111,16 @@ where
     }
 
     fn enqueue_unfold(&mut self, parent: NodeLocation, value: In) {
-        self.unscheduled.push_front(Job::Unfold {
-            value: parent,
-            future: (self.unfold)(value),
-        });
+        let fut = join(ready(parent), Either2::Left((self.unfold)(value)));
+        self.unscheduled.push_front(fut);
     }
 
     fn enqueue_fold(&mut self, parent: NodeLocation, context: OutCtx, children: Iter<Out>) {
-        self.unscheduled.push_front(Job::Fold {
-            value: parent,
-            future: (self.fold)(context, children),
-        });
+        let fut = join(
+            ready(parent),
+            Either2::Right((self.fold)(context, children)),
+        );
+        self.unscheduled.push_front(fut);
     }
 
     fn process_unfold(&mut self, parent: NodeLocation, (context, children): (OutCtx, Ins)) {
@@ -209,8 +212,8 @@ where
             // execute scheduled until it is blocked or done
             if let Some(job_result) = ready!(this.scheduled.poll_next_unpin(cx)) {
                 match job_result {
-                    JobResult::Unfold { value, result } => this.process_unfold(value, result?),
-                    JobResult::Fold { value, result } => {
+                    (value, Either::Left(result)) => this.process_unfold(value, result?),
+                    (value, Either::Right(result)) => {
                         // `0` is special index which means whole tree have been executed
                         if value.node_index == NodeIndex(0) {
                             // all jobs have to be completed and execution_tree empty
