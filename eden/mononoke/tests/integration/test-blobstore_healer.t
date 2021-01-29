@@ -26,7 +26,7 @@ Run the heal
   Replication lag is * (glob)
   Fetched 90 queue entires (before building healing futures)
   Out of them 30 distinct blobstore keys, 30 distinct operation keys
-  Found 30 blobs to be healed... Doing it with concurrency 100
+  Found 30 blobs to be healed... Doing it with weight limit 10000000000, max concurrency: 100
   For 30 blobs did HealStats { queue_add: 0, queue_del: 90, put_success: 0, put_failure: 0 }
   Deleting 90 actioned queue entries
   Iteration rows processed: * rows, *s; total: * rows, *s (glob)
@@ -64,7 +64,7 @@ Run the heal, with write errors injected, simulating store still bad
   1 Replication lag is * (glob)
   1 Fetched 60 queue entires (before building healing futures)
   1 Out of them 30 distinct blobstore keys, 30 distinct operation keys
-  1 Found 30 blobs to be healed... Doing it with concurrency 100
+  1 Found 30 blobs to be healed... Doing it with weight limit 10000000000, max concurrency: 100
   30 Adding source blobstores [BlobstoreId(1), BlobstoreId(2)] to the queue so that failed destination blob stores [BlobstoreId(0)] will be retried later
   1 For 30 blobs did HealStats { queue_add: 60, queue_del: 60, put_success: 60, put_failure: 30 }
   1 Deleting 60 actioned queue entries
@@ -80,7 +80,7 @@ Healer run again now store recovered
   1 Replication lag is * (glob)
   1 Fetched 60 queue entires (before building healing futures)
   1 Out of them 30 distinct blobstore keys, 30 distinct operation keys
-  1 Found 30 blobs to be healed... Doing it with concurrency 100
+  1 Found 30 blobs to be healed... Doing it with weight limit 10000000000, max concurrency: 100
   1 For 30 blobs did HealStats { queue_add: 0, queue_del: 60, put_success: 30, put_failure: 0 }
   1 Deleting 60 actioned queue entries
   1 Iteration rows processed: * rows, *s; total: * rows, *s (glob)

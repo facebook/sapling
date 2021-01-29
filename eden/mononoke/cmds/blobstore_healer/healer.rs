@@ -11,8 +11,9 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, Operatio
 use context::CoreContext;
 use futures::{
     future::{join_all, FutureExt, TryFutureExt},
-    stream::{self, StreamExt, TryStreamExt},
+    stream::{self, TryStreamExt},
 };
+use futures_03_ext::{BufferedParams, FbStreamExt};
 use itertools::{Either, Itertools};
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
@@ -35,11 +36,12 @@ mod tests;
 
 const MIN_FETCH_FAILURE_DELAY: Duration = Duration::from_millis(1);
 const MAX_FETCH_FAILURE_DELAY: Duration = Duration::from_millis(100);
+const DEFAULT_BLOB_SIZE_BYTES: u64 = 1024;
 
 pub struct Healer {
     blobstore_sync_queue_limit: usize,
     current_fetch_size: AtomicUsize,
-    heal_concurrency: usize,
+    buffered_params: BufferedParams,
     sync_queue: Arc<dyn BlobstoreSyncQueue>,
     blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
     multiplex_id: MultiplexId,
@@ -50,7 +52,7 @@ pub struct Healer {
 impl Healer {
     pub fn new(
         blobstore_sync_queue_limit: usize,
-        heal_concurrency: usize,
+        buffered_params: BufferedParams,
         sync_queue: Arc<dyn BlobstoreSyncQueue>,
         blobstores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
         multiplex_id: MultiplexId,
@@ -60,7 +62,7 @@ impl Healer {
         Self {
             blobstore_sync_queue_limit,
             current_fetch_size: AtomicUsize::new(blobstore_sync_queue_limit),
-            heal_concurrency,
+            buffered_params,
             sync_queue,
             blobstores,
             multiplex_id,
@@ -120,13 +122,14 @@ impl Healer {
             }
         }
     }
+
     /// Heal one batch of entries. It selects a set of entries which are not too young (bounded
     /// by healing_deadline) up to `blobstore_sync_queue_limit` at once.
     /// Returns a tuple:
     /// - first item indicates whether a full batch was fetcehd
     /// - second item shows how many rows were deleted from the DB
     pub async fn heal(&self, ctx: &CoreContext, healing_deadline: DateTime) -> Result<(bool, u64)> {
-        let heal_concurrency = self.heal_concurrency;
+        let buffered_params = self.buffered_params;
         let drain_only = self.drain_only;
         let multiplex_id = self.multiplex_id;
 
@@ -168,7 +171,7 @@ impl Healer {
             unique_operation_keys
         );
 
-        let healing_futures: Vec<_> = queue_entries
+        let healing_futures: Vec<(_, u64)> = queue_entries
             .into_iter()
             .sorted_by_key(|entry| entry.blobstore_key.clone())
             .group_by(|entry| entry.blobstore_key.clone())
@@ -176,7 +179,7 @@ impl Healer {
             .filter_map(|(key, entries)| {
                 let entries: Vec<_> = entries.collect();
                 if drain_only {
-                    Some(
+                    Some((
                         async move {
                             Ok((
                                 HealStats {
@@ -188,9 +191,23 @@ impl Healer {
                                 entries,
                             ))
                         }
-                        .left_future(),
-                    )
+                        .boxed(),
+                        1,
+                    ))
                 } else {
+                    // The following relies on the fact that after a `.group_by` above
+                    // all `entries` refer to the same blob, as well as that entries
+                    // are not empty. If each of those is not true, it won't crash, but
+                    // rather just assign an incorrect value to `healing_weight`, which
+                    // is not critical, though undesired.
+                    // In addition, if the blob does not have its size recorded, we'll
+                    // just use the avg blob size as a healing weight.
+                    let healing_weight = entries
+                        .iter()
+                        .filter_map(|entry| entry.blob_size)
+                        .next()
+                        .unwrap_or(DEFAULT_BLOB_SIZE_BYTES);
+
                     let heal_opt = heal_blob(
                         ctx,
                         &self.sync_queue,
@@ -201,8 +218,10 @@ impl Healer {
                         &entries,
                     );
                     heal_opt.map(|heal| {
-                        heal.map_ok(|heal_stats| (heal_stats, entries))
-                            .right_future()
+                        (
+                            heal.map_ok(|heal_stats| (heal_stats, entries)).boxed(),
+                            healing_weight,
+                        )
                     })
                 }
             })
@@ -217,13 +236,14 @@ impl Healer {
 
         info!(
             ctx.logger(),
-            "Found {} blobs to be healed... Doing it with concurrency {}",
+            "Found {} blobs to be healed... Doing it with weight limit {}, max concurrency: {}",
             last_batch_size,
-            heal_concurrency
+            buffered_params.weight_limit,
+            buffered_params.buffer_size,
         );
 
         let heal_res: Vec<_> = stream::iter(healing_futures)
-            .buffered(heal_concurrency)
+            .buffered_weight_limited(buffered_params)
             .try_collect()
             .await?;
         let (chunk_stats, processed_entries): (Vec<_>, Vec<_>) = heal_res.into_iter().unzip();
@@ -269,7 +289,7 @@ impl Sum for HealStats {
 
 /// Heal an individual blob. The `entries` are the blobstores which have successfully stored
 /// this blob; we need to replicate them onto the remaining `blobstores`. If the blob is not
-/// yet eligable (too young), then just return None, otherwise we return the healed entries
+/// yet eligible (too young), then just return None, otherwise we return the healed entries
 /// which have now been dealt with and can be deleted.
 fn heal_blob<'out>(
     ctx: &'out CoreContext,

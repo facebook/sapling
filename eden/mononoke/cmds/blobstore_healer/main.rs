@@ -27,6 +27,7 @@ use context::{CoreContext, SessionContainer};
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, future};
+use futures_03_ext::BufferedParams;
 use healer::Healer;
 use lazy_static::lazy_static;
 use metaconfig_types::{BlobConfig, DatabaseConfig, StorageConfig};
@@ -47,6 +48,7 @@ const QUIET_ARG: &str = "quiet";
 const ITER_LIMIT_ARG: &str = "iteration-limit";
 const HEAL_MIN_AGE_ARG: &str = "heal-min-age-secs";
 const HEAL_CONCURRENCY_ARG: &str = "heal-concurrency";
+const HEAL_MAX_BYTES: &str = "heal-max-bytes";
 
 lazy_static! {
     /// Minimal age of entry to consider if it has to be healed
@@ -59,7 +61,7 @@ async fn maybe_schedule_healer_for_storage(
     dry_run: bool,
     drain_only: bool,
     blobstore_sync_queue_limit: usize,
-    heal_concurrency: usize,
+    buffered_params: BufferedParams,
     storage_config: StorageConfig,
     mysql_options: &MysqlOptions,
     source_blobstore_key: Option<String>,
@@ -166,7 +168,7 @@ async fn maybe_schedule_healer_for_storage(
 
     let multiplex_healer = Healer::new(
         blobstore_sync_queue_limit,
-        heal_concurrency,
+        buffered_params,
         sync_queue,
         Arc::new(blobstores),
         multiplex_id,
@@ -274,6 +276,13 @@ fn setup_app<'a, 'b>(app_name: &str) -> MononokeClapApp<'a, 'b> {
                 .takes_value(true)
                 .required(false)
                 .help("How maby blobs to heal concurrently."),
+        ).arg(
+            Arg::with_name(HEAL_MAX_BYTES)
+                .long(HEAL_MAX_BYTES)
+                .takes_value(true)
+                .required(false)
+                .help("max combined size of concurrently healed blobs \
+                       (approximate, will still let individual larger blobs through)")
         )
 }
 
@@ -297,6 +306,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let source_blobstore_key = matches.value_of("blobstore-key-like");
     let blobstore_sync_queue_limit = value_t!(matches, "sync-queue-limit", usize).unwrap_or(10000);
     let heal_concurrency = value_t!(matches, HEAL_CONCURRENCY_ARG, usize).unwrap_or(100);
+    let heal_max_bytes = value_t!(matches, HEAL_MAX_BYTES, u64).unwrap_or(10_000_000_000);
     let dry_run = matches.is_present("dry-run");
     let drain_only = matches.is_present("drain-only");
     if drain_only && source_blobstore_key.is_none() {
@@ -315,6 +325,10 @@ fn main(fb: FacebookInit) -> Result<()> {
     let scuba = get_scuba_sample_builder(fb, &matches)?;
 
     let ctx = SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
+    let buffered_params = BufferedParams {
+        weight_limit: heal_max_bytes,
+        buffer_size: heal_concurrency,
+    };
 
     let healer = maybe_schedule_healer_for_storage(
         fb,
@@ -322,7 +336,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         dry_run,
         drain_only,
         blobstore_sync_queue_limit,
-        heal_concurrency,
+        buffered_params,
         storage_config,
         &mysql_options,
         source_blobstore_key.map(|s| s.to_string()),

@@ -643,7 +643,18 @@ async fn healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<()> {
     )];
     sync_queue.add_many(&ctx, entries).await?;
 
-    let healer = Healer::new(1000, 10, sync_queue.clone(), stores, mp, None, false);
+    let healer = Healer::new(
+        1000,
+        BufferedParams {
+            buffer_size: 10,
+            weight_limit: 1_000_000_000,
+        },
+        sync_queue.clone(),
+        stores,
+        mp,
+        None,
+        false,
+    );
 
     healer.heal(&ctx, DateTime::now()).await?;
 
@@ -699,7 +710,18 @@ async fn healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<()> {
 
     // We aren't healing blobs for old_mp, so expect to only have 1 blob in each
     // blobstore at the end of the test.
-    let healer = Healer::new(1000, 10, sync_queue.clone(), stores, mp, None, false);
+    let healer = Healer::new(
+        1000,
+        BufferedParams {
+            buffer_size: 10,
+            weight_limit: 1_000_000_000,
+        },
+        sync_queue.clone(),
+        stores,
+        mp,
+        None,
+        false,
+    );
     healer.heal(&ctx, DateTime::now()).await?;
 
     assert_eq!(0, sync_queue.len(&ctx, mp).await?);
@@ -734,7 +756,18 @@ async fn healer_heal_complete_batch(fb: FacebookInit) -> Result<()> {
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
     sync_queue.add_many(&ctx, entries).await?;
 
-    let healer = Healer::new(2, 10, sync_queue, stores, mp, None, false);
+    let healer = Healer::new(
+        2,
+        BufferedParams {
+            buffer_size: 10,
+            weight_limit: 1_000_000_000,
+        },
+        sync_queue,
+        stores,
+        mp,
+        None,
+        false,
+    );
     let (complete_batch, _) = healer.heal(&ctx, DateTime::now()).await?;
     assert!(complete_batch);
     Ok(())
@@ -763,7 +796,18 @@ async fn healer_heal_incomplete_batch(fb: FacebookInit) -> Result<()> {
     let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
     sync_queue.add_many(&ctx, entries).await?;
 
-    let healer = Healer::new(20, 10, sync_queue, stores, mp, None, false);
+    let healer = Healer::new(
+        20,
+        BufferedParams {
+            buffer_size: 10,
+            weight_limit: 1_000_000_000,
+        },
+        sync_queue,
+        stores,
+        mp,
+        None,
+        false,
+    );
     let (complete_batch, _) = healer.heal(&ctx, DateTime::now()).await?;
     assert!(!complete_batch);
     Ok(())

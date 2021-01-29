@@ -23,7 +23,7 @@ Drain the healer queue
   Replication lag is * (glob)
   Fetched 60 queue entires (before building healing futures)
   Out of them 30 distinct blobstore keys, 30 distinct operation keys
-  Found 30 blobs to be healed... Doing it with concurrency 100
+  Found 30 blobs to be healed... Doing it with weight limit 10000000000, max concurrency: 100
   For 30 blobs did HealStats { queue_add: 0, queue_del: 60, put_success: 0, put_failure: 0 }
   Deleting 60 actioned queue entries
   Iteration rows processed: * rows, *s; total: * rows, *s (glob)
