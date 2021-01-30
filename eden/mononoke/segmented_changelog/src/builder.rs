@@ -15,6 +15,7 @@ use bulkops::PublicChangesetBulkFetch;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use dag::InProcessIdDag;
+use fbinit::FacebookInit;
 use mononoke_types::RepositoryId;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
@@ -23,7 +24,9 @@ use sql_ext::SqlConnections;
 use crate::bundle::SqlBundleStore;
 use crate::dag::Dag;
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{SqlIdMap, SqlIdMapFactory, SqlIdMapVersionStore};
+use crate::idmap::{
+    CacheHandlers, CachedIdMap, IdMap, SqlIdMap, SqlIdMapFactory, SqlIdMapVersionStore,
+};
 use crate::manager::SegmentedChangelogManager;
 use crate::on_demand::OnDemandUpdateDag;
 use crate::seeder::SegmentedChangelogSeeder;
@@ -50,6 +53,7 @@ pub struct SegmentedChangelogBuilder {
     blobstore: Option<Arc<dyn Blobstore>>,
     bookmarks: Option<Arc<dyn Bookmarks>>,
     bookmark_name: Option<BookmarkName>,
+    cache_handlers: Option<CacheHandlers>,
 }
 
 impl SqlConstruct for SegmentedChangelogBuilder {
@@ -68,6 +72,7 @@ impl SqlConstruct for SegmentedChangelogBuilder {
             blobstore: None,
             bookmarks: None,
             bookmark_name: None,
+            cache_handlers: None,
         }
     }
 }
@@ -130,6 +135,20 @@ impl SegmentedChangelogBuilder {
         self
     }
 
+    pub fn with_caching(
+        mut self,
+        fb: FacebookInit,
+        cache_pool: cachelib::VolatileLruCachePool,
+    ) -> Self {
+        self.cache_handlers = Some(CacheHandlers::prod(fb, cache_pool));
+        self
+    }
+
+    pub fn with_cache_handlers(mut self, cache_handlers: CacheHandlers) -> Self {
+        self.cache_handlers = Some(cache_handlers);
+        self
+    }
+
     pub fn with_blobrepo(self, repo: &BlobRepo) -> Self {
         let repo_id = repo.get_repoid();
         let changesets = repo.get_changesets_object();
@@ -152,6 +171,7 @@ impl SegmentedChangelogBuilder {
             bundle_store,
             iddag_save_store,
             idmap_factory,
+            self.cache_handlers.take(),
         ))
     }
 
@@ -171,8 +191,21 @@ impl SegmentedChangelogBuilder {
 
     pub fn build_dag(&mut self) -> Result<Dag> {
         let iddag = InProcessIdDag::new_in_process();
-        let idmap = Arc::new(self.build_sql_idmap()?);
+        let idmap: Arc<dyn IdMap> = self.build_idmap()?;
         Ok(Dag::new(iddag, idmap))
+    }
+
+    pub(crate) fn build_idmap(&mut self) -> Result<Arc<dyn IdMap>> {
+        let mut idmap: Arc<dyn IdMap> = Arc::new(self.build_sql_idmap()?);
+        if let Some(cache_handlers) = self.cache_handlers.take() {
+            idmap = Arc::new(CachedIdMap::new(
+                idmap,
+                cache_handlers,
+                self.repo_id()?,
+                self.idmap_version(),
+            ));
+        }
+        Ok(idmap)
     }
 
     pub(crate) fn build_sql_idmap(&mut self) -> Result<SqlIdMap> {

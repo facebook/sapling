@@ -15,6 +15,7 @@ use futures::stream::TryStreamExt;
 use futures::StreamExt;
 
 use blobrepo::BlobRepo;
+use caching_ext::{CachelibHandler, MemcacheHandler};
 use context::CoreContext;
 use dag::InProcessIdDag;
 use fixtures::{linear, merge_even, merge_uneven, unshared_merge_even};
@@ -27,6 +28,7 @@ use tests_utils::resolve_cs_id;
 use crate::builder::SegmentedChangelogBuilder;
 use crate::dag::Dag;
 use crate::iddag::IdDagSaveStore;
+use crate::idmap::CacheHandlers;
 use crate::on_demand::OnDemandUpdateDag;
 use crate::types::IdDagVersion;
 use crate::SegmentedChangelog;
@@ -451,6 +453,64 @@ async fn test_full_idmap_clone_data(fb: FacebookInit) -> Result<()> {
     let idmap = clone_data.idmap_stream.try_collect::<Vec<_>>().await?;
 
     assert_eq!(idmap.len(), 11);
+
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_caching(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = linear::getrepo(fb).await;
+
+    let cs_to_dag_handler = CachelibHandler::create_mock();
+    let dag_to_cs_handler = CachelibHandler::create_mock();
+    let memcache_handler = MemcacheHandler::create_mock();
+    let cache_handlers = CacheHandlers::new(
+        cs_to_dag_handler.clone(),
+        dag_to_cs_handler.clone(),
+        memcache_handler.clone(),
+    );
+
+    // It's easier to reason about cache hits and sets when the dag is already built
+    let head = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+    setup_phases(&ctx, &blobrepo, head).await?;
+    let mut builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+        .with_blobrepo(&blobrepo)
+        .with_cache_handlers(cache_handlers);
+    let seeder = builder.build_seeder(&ctx).await?;
+    let (dag, _) = seeder.build_dag_from_scratch(&ctx, head).await?;
+
+    let distance: u64 = 1;
+    let _ = dag.location_to_changeset_id(&ctx, head, distance).await?;
+
+    let cs_to_dag_stats = || {
+        cs_to_dag_handler
+            .mock_store()
+            .expect("mock handler has mock store")
+            .stats()
+    };
+    let dag_to_cs_stats = || {
+        dag_to_cs_handler
+            .mock_store()
+            .expect("mock handler has mock store")
+            .stats()
+    };
+
+    assert_eq!(cs_to_dag_stats().gets, 1);
+    assert_eq!(cs_to_dag_stats().misses, 1);
+    assert_eq!(cs_to_dag_stats().sets, 1);
+
+    assert_eq!(dag_to_cs_stats().gets, 1);
+    assert_eq!(dag_to_cs_stats().misses, 1);
+    assert_eq!(dag_to_cs_stats().sets, 1);
+
+    let _ = dag.location_to_changeset_id(&ctx, head, distance).await?;
+
+    assert_eq!(cs_to_dag_stats().gets, 2);
+    assert_eq!(cs_to_dag_stats().hits, 1);
+
+    assert_eq!(dag_to_cs_stats().gets, 2);
+    assert_eq!(dag_to_cs_stats().hits, 1);
 
     Ok(())
 }

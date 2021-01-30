@@ -5,10 +5,12 @@
  * GNU General Public License version 2.
  */
 
+mod cache;
 mod mem;
 mod sql;
 mod version;
 
+pub use self::cache::{CacheHandlers, CachedIdMap};
 pub use self::mem::MemIdMap;
 pub use self::sql::{SqlIdMap, SqlIdMapFactory};
 pub use self::version::SqlIdMapVersionStore;

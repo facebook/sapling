@@ -19,7 +19,7 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use crate::bundle::SqlBundleStore;
 use crate::dag::Dag;
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{SqlIdMap, SqlIdMapFactory};
+use crate::idmap::{CacheHandlers, CachedIdMap, IdMap, SqlIdMapFactory};
 use crate::logging::log_new_bundle;
 use crate::types::{DagBundle, IdMapVersion};
 use crate::{CloneData, SegmentedChangelog, StreamCloneData};
@@ -29,6 +29,7 @@ pub struct SegmentedChangelogManager {
     bundle_store: SqlBundleStore,
     iddag_save_store: IdDagSaveStore,
     idmap_factory: SqlIdMapFactory,
+    cache_handlers: Option<CacheHandlers>,
 }
 
 impl SegmentedChangelogManager {
@@ -37,12 +38,14 @@ impl SegmentedChangelogManager {
         bundle_store: SqlBundleStore,
         iddag_save_store: IdDagSaveStore,
         idmap_factory: SqlIdMapFactory,
+        cache_handlers: Option<CacheHandlers>,
     ) -> Self {
         Self {
             repo_id,
             bundle_store,
             iddag_save_store,
             idmap_factory,
+            cache_handlers,
         }
     }
 
@@ -97,7 +100,7 @@ impl SegmentedChangelogManager {
             .load(&ctx, bundle.iddag_version)
             .await
             .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
-        let idmap = self.new_sql_idmap(bundle.idmap_version);
+        let idmap = self.new_idmap(bundle.idmap_version);
         debug!(
             ctx.logger(),
             "segmented changelog dag successfully loaded - repo_id: {}, idmap_version: {}, \
@@ -110,8 +113,17 @@ impl SegmentedChangelogManager {
         Ok((bundle, dag))
     }
 
-    pub fn new_sql_idmap(&self, idmap_version: IdMapVersion) -> Arc<SqlIdMap> {
-        Arc::new(self.idmap_factory.sql_idmap(idmap_version))
+    pub fn new_idmap(&self, idmap_version: IdMapVersion) -> Arc<dyn IdMap> {
+        let mut idmap: Arc<dyn IdMap> = Arc::new(self.idmap_factory.sql_idmap(idmap_version));
+        if let Some(cache_handlers) = &self.cache_handlers {
+            idmap = Arc::new(CachedIdMap::new(
+                idmap,
+                cache_handlers.clone(),
+                self.repo_id,
+                idmap_version,
+            ));
+        }
+        idmap
     }
 }
 

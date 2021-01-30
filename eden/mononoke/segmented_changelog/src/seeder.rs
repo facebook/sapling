@@ -102,7 +102,7 @@ impl SegmentedChangelogSeeder {
         }
 
         let low_vertex = dag::Group::MASTER.min_id();
-        let idmap = self.manager.new_sql_idmap(self.idmap_version);
+        let idmap = self.manager.new_idmap(self.idmap_version);
         let mut dag = Dag::new(InProcessIdDag::new_in_process(), idmap);
         let last_vertex = dag.build(ctx, low_vertex, head, start_state).await?;
         Ok((dag, last_vertex))
