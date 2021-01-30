@@ -1553,9 +1553,6 @@ sh % "log 'min((4+0+2+5+7) and contains(stringthatdoesnotappearanywhere))'"
 
 
 sh % "log 'merge()'" == "6"
-sh % "log 'branchpoint()'" == r"""
-    1
-    4"""
 sh % "log 'modifies(b)'" == "4"
 sh % "log 'modifies(\"path:b\")'" == "4"
 sh % "log 'modifies(\"*\")'" == r"""
@@ -1852,13 +1849,6 @@ sh % "log 'p2(merge())'" == "4"
 sh % "log 'parents(merge())'" == r"""
     4
     5"""
-sh % "log 'p1(branchpoint())'" == r"""
-    0
-    2"""
-sh % "log 'p2(branchpoint())'"
-sh % "log 'parents(branchpoint())'" == r"""
-    0
-    2"""
 sh % "log 'removes(a)'" == r"""
     2
     6"""

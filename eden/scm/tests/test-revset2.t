@@ -761,10 +761,6 @@ parentrevspec
   hg: parse error: ^ expects a number 0, 1, or 2
   [255]
 
-  $ log 'branchpoint()~-1'
-  abort: revision in set has more than one child!
-  [255]
-
 Bogus function gets suggestions
   $ log 'add()'
   hg: parse error: unknown identifier: add

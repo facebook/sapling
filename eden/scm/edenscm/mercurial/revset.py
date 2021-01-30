@@ -1586,27 +1586,6 @@ def merge(repo, subset, x):
     return subset.filter(lambda r: cl.parentrevs(r)[1] != -1, condrepr="<merge>")
 
 
-@predicate("branchpoint()", safe=True, weight=10)
-def branchpoint(repo, subset, x):
-    """Changesets with more than one child."""
-    # i18n: "branchpoint" is a keyword
-    getargs(x, 0, 0, _("branchpoint takes no arguments"))
-    cl = repo.changelog
-    if not subset:
-        return baseset(repo=repo)
-    # XXX this should be 'parentset.min()' assuming 'parentset' is a smartset
-    # (and if it is not, it should.)
-    baserev = min(subset)
-    parentscount = [0] * (len(repo) - baserev)
-    for r in cl.revs(start=baserev + 1):
-        for p in cl.parentrevs(r):
-            if p >= baserev:
-                parentscount[p - baserev] += 1
-    return subset.filter(
-        lambda r: parentscount[r - baserev] > 1, condrepr="<branchpoint>"
-    )
-
-
 @predicate("min(set)", safe=True)
 def minrev(repo, subset, x):
     """Changeset with lowest revision number in set."""
