@@ -768,13 +768,14 @@ async fn new_production(
     let censored_scuba_builder = get_censored_scuba_builder(fb, censored_scuba_params)?;
     let repo_blobstore_args =
         RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, censored_scuba_builder);
-    let mut segmented_changelog_builder = segmented_changelog_builder
-        .with_repo_id(repoid)
-        .with_changeset_fetcher(changeset_fetcher.clone())
-        .with_blobstore(Arc::new(repo_blobstore_args.repo_blobstore_clone()));
     let segmented_changelog: Arc<dyn SegmentedChangelog> = if !segmented_changelog_config.enabled {
         Arc::new(segmented_changelog_builder.build_disabled())
     } else {
+        let mut segmented_changelog_builder = segmented_changelog_builder
+            .with_repo_id(repoid)
+            .with_changeset_fetcher(changeset_fetcher.clone())
+            .with_blobstore(Arc::new(repo_blobstore_args.repo_blobstore_clone()))
+            .with_caching(fb, get_volatile_pool("segmented_changelog")?);
         if segmented_changelog_config.is_update_ondemand() {
             Arc::new(segmented_changelog_builder.build_on_demand_update()?)
         } else if segmented_changelog_config.is_update_always_download_save() {

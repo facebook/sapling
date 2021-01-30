@@ -22,6 +22,7 @@ const CACHELIB_ONLY_BLOBSTORE_NEW: &str = "blobstore-cachelib-only";
 const CACHELIB_SHARDS: &str = "cachelib-shards";
 
 const PHASES_CACHE_SIZE: &str = "phases-cache-size";
+const SEGMENTED_CHANGELOG_CACHE_SIZE: &str = "segmented-changelog-cache-size";
 const GLOBALREVS_CACHE_SIZE: &str = "globalrevs-cache-size";
 const BUCKETS_POWER: &str = "buckets-power";
 
@@ -230,6 +231,12 @@ pub(crate) fn parse_and_init_cachelib<'a>(
             if let Some(phases_cache_size) = matches.value_of(PHASES_CACHE_SIZE) {
                 settings.phases_cache_size = Some(phases_cache_size.parse().unwrap());
             }
+            if let Some(segmented_changelog_cache_size) =
+                matches.value_of(SEGMENTED_CHANGELOG_CACHE_SIZE)
+            {
+                settings.segmented_changelog_cache_size =
+                    Some(segmented_changelog_cache_size.parse().unwrap());
+            }
             if let Some(buckets_power) = matches.value_of(BUCKETS_POWER) {
                 settings.buckets_power = Some(buckets_power.parse().unwrap());
             }
@@ -267,6 +274,7 @@ pub struct CachelibSettings {
     pub globalrev_cache_size: Option<usize>,
     pub blob_cache_size: Option<usize>,
     pub phases_cache_size: Option<usize>,
+    pub segmented_changelog_cache_size: Option<usize>,
     pub expected_item_size_bytes: Option<usize>,
     pub blobstore_cachelib_only: bool,
 }
@@ -287,6 +295,7 @@ impl Default for CachelibSettings {
             globalrev_cache_size: None,
             blob_cache_size: None,
             phases_cache_size: None,
+            segmented_changelog_cache_size: None,
             expected_item_size_bytes: None,
             blobstore_cachelib_only: false,
         }
