@@ -14,6 +14,7 @@
 use anyhow::*;
 use serde::*;
 use sha2::{Digest, Sha256};
+use std::ffi::{CStr, CString};
 use std::os::unix::fs::MetadataExt;
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -206,6 +207,12 @@ struct Containers {
     containers: Vec<ApfsContainer>,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct PartitionInfo {
+    parent_whole_disk: String,
+}
+
 // A note about `native-plist` vs `json-plist`.
 // The intent is that `native-plist` be the thing that we use for real in the long
 // term, but we are currently blocked from using this in our CI system due to some
@@ -216,18 +223,8 @@ struct Containers {
 // In the near future we should unblock the vendoring issue and will be able to
 // remove the use of plutil.
 
-#[cfg(feature = "native-plist")]
-/// Parse the output from `diskutil apfs list -plist`
-fn parse_apfs_plist(data: &str) -> Result<Vec<ApfsContainer>> {
-    let containers: Containers =
-        plist::from_bytes(data.as_bytes()).context("parsing plist data")?;
-    Ok(containers.containers)
-}
-
 #[cfg(feature = "json-plist")]
-/// Parse the output from `diskutil apfs list -plist` by running it through
-/// plutil and converting it to json
-fn parse_apfs_plist(data: &str) -> Result<Vec<ApfsContainer>> {
+fn parse_plist<T: de::DeserializeOwned>(data: &str) -> Result<T> {
     use std::io::{Read, Write};
 
     // Run plutil and tell it to convert stdin (that last `-` arg)
@@ -245,8 +242,12 @@ fn parse_apfs_plist(data: &str) -> Result<Vec<ApfsContainer>> {
     let mut json = String::new();
     child.stdout.unwrap().read_to_string(&mut json)?;
 
-    let containers: Containers = serde_json::from_str(&json).context("parsing json data")?;
-    Ok(containers.containers)
+    serde_json::from_str(&json).context("parsing json data")
+}
+
+#[cfg(feature = "native-plist")]
+fn parse_plist<T>(data: &str) -> Result<T> {
+    plist::from_bytes(data.as_bytes()).context("parsing plist data")
 }
 
 /// Obtain the list of apfs containers and volumes by executing `diskutil`.
@@ -257,7 +258,7 @@ fn apfs_list() -> Result<Vec<ApfsContainer>> {
     if !output.status.success() {
         anyhow::bail!("failed to execute diskutil list: {:#?}", output);
     }
-    Ok(parse_apfs_plist(&String::from_utf8(output.stdout)?)?)
+    Ok(parse_plist::<Containers>(&String::from_utf8(output.stdout)?)?.containers)
 }
 
 fn find_existing_volume<'a>(containers: &'a [ApfsContainer], name: &str) -> Option<&'a ApfsVolume> {
@@ -307,9 +308,9 @@ fn new_cmd_unprivileged(path: &str) -> Command {
 
 /// Create a new subvolume with the specified name.
 /// Note that this does NOT require any special privilege on macOS.
-fn make_new_volume(name: &str) -> Result<ApfsVolume> {
+fn make_new_volume(name: &str, disk: &str) -> Result<ApfsVolume> {
     let output = new_cmd_unprivileged(DISKUTIL)
-        .args(&["apfs", "addVolume", "disk1", "apfs", name, "-nomount"])
+        .args(&["apfs", "addVolume", disk, "apfs", name, "-nomount"])
         .output()?;
     if !output.status.success() {
         anyhow::bail!("failed to execute diskutil addVolume: {:?}", output);
@@ -361,6 +362,44 @@ fn canonicalize_mount_point_path(mount_point: &str) -> Result<String> {
         .map(str::to_owned)
 }
 
+#[cfg(target_os = "macos")]
+fn find_disk_for_eden_mount(mount_point: &str) -> Result<String> {
+    let mut client_link = PathBuf::from(mount_point);
+    client_link.push(".eden");
+    client_link.push("client");
+
+    let mut stat: libc::statfs = unsafe { std::mem::zeroed() };
+
+    let client_link_cstr = CString::new(
+        client_link
+            .to_str()
+            .ok_or_else(|| anyhow!("not a valid UTF-8 path somehow"))?,
+    )?;
+    let rv = unsafe { libc::statfs(client_link_cstr.as_ptr(), &mut stat) };
+    if -1 == rv {
+        return Err(std::io::Error::last_os_error().into());
+    }
+
+    let fstype = unsafe { CStr::from_ptr(stat.f_fstypename.as_ptr()).to_str()? };
+    if "apfs" != fstype {
+        bail!("disk {} must be apfs");
+    }
+    let partition = unsafe { CStr::from_ptr(stat.f_mntfromname.as_ptr()).to_str()? };
+    let output = new_cmd_unprivileged(DISKUTIL)
+        .args(&["info", "-plist", &partition])
+        .output()?;
+    if !output.status.success() {
+        anyhow::bail!("failed to execute diskutil info: {:?}", output);
+    }
+
+    Ok(parse_plist::<PartitionInfo>(&String::from_utf8(output.stdout)?)?.parent_whole_disk)
+}
+
+#[cfg(not(target_os = "macos"))]
+fn find_disk_for_eden_mount(_mount_point: &str) -> Result<String> {
+    Err(anyhow!("only supported on macOS"))
+}
+
 fn mount_scratch_space_on(input_mount_point: &str) -> Result<()> {
     let mount_point = canonicalize_mount_point_path(input_mount_point)?;
     println!("want to mount at {:?}", mount_point);
@@ -403,7 +442,7 @@ fn mount_scratch_space_on(input_mount_point: &str) -> Result<()> {
             }
             existing.clone()
         }
-        None => make_new_volume(&name)?,
+        None => make_new_volume(&name, &find_disk_for_eden_mount(&mount_point)?)?,
     };
 
     // Mount the volume at the desired mount point.
@@ -918,7 +957,7 @@ map -fstab on /Network/Servers (autofs, automounted, nobrowse)
 	</array>
 </dict>
 </plist>"#;
-        let containers = parse_apfs_plist(data).unwrap();
+        let containers = parse_plist::<Containers>(data).unwrap().containers;
         assert_eq!(
             containers,
             vec![ApfsContainer {
