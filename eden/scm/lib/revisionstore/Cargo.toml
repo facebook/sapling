@@ -44,7 +44,7 @@ sha-1 = "0.8"
 sha2 = "0.8"
 tempfile = "3.0.4"
 thiserror = "1.0.5"
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 types = { path = "../types" }
 url = "2.1.0"

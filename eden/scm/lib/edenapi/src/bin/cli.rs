@@ -16,7 +16,8 @@ use indicatif::{ProgressBar, ProgressStyle};
 use serde::Serialize;
 use serde_json::Deserializer;
 use structopt::StructOpt;
-use tokio::prelude::*;
+use tokio::io;
+use tokio::io::AsyncWriteExt;
 
 use configparser::config::{ConfigSet, Options};
 use edenapi::{Builder, Client, EdenApi, Entries, Fetch, Progress, ProgressCallback};

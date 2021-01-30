@@ -240,7 +240,7 @@ mod tests {
     use futures::stream::StreamExt;
     use std::sync::Arc;
     use std::sync::Mutex;
-    use tokio::time::{delay_for, Duration};
+    use tokio::time::{sleep, Duration};
 
     type I = usize;
     type O = String;
@@ -263,7 +263,7 @@ mod tests {
         ) -> Result<BoxStream<'static, Result<(I, O), E>>, E> {
             let cached = self.cached.clone();
             // Exercise ".await" in this function.
-            delay_for(Duration::from_millis(1)).await;
+            sleep(Duration::from_millis(1)).await;
             // Return nothing for 404.
             let output_iter = input
                 .to_vec()

@@ -32,7 +32,7 @@ use rand::{thread_rng, Rng};
 use serde_derive::{Deserialize, Serialize};
 use tokio::{
     task::spawn_blocking,
-    time::{delay_for, timeout},
+    time::{sleep, timeout},
 };
 use tracing::info_span;
 use url::Url;
@@ -1099,7 +1099,7 @@ impl LfsRemoteInner {
             if retry {
                 if let Some(backoff_time) = backoff.next() {
                     let sleep_time = Duration::from_secs_f32(rng.gen_range(0.0, backoff_time));
-                    delay_for(sleep_time).await;
+                    sleep(sleep_time).await;
                     continue;
                 }
             }

@@ -11,7 +11,7 @@ futures = "0.3"
 itertools = "0.8"
 
 [dev-dependencies]
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 
 [features]
 default = ["python3"]

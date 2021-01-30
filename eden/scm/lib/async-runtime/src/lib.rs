@@ -25,40 +25,25 @@
 use futures::future::Future;
 use futures::stream::{BoxStream, Stream, StreamExt};
 use once_cell::sync::Lazy;
-use parking_lot::Mutex;
 use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
 
-static RUNTIME: Lazy<Mutex<Runtime>> = Lazy::new(|| {
-    Mutex::new(
-        RuntimeBuilder::new()
-            .threaded_scheduler()
-            .enable_all()
-            .build()
-            .expect("failed to initialize the async runtime"),
-    )
+static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
+    RuntimeBuilder::new_multi_thread()
+        .enable_all()
+        .build()
+        .expect("failed to initialize the async runtime")
 });
 pub static STREAM_BUFFER_SIZE: usize = 128;
 
 /// Blocks the current thread while waiting for the computation defined by the Future `f` to
 /// complete.
 ///
-/// The `'static` lifetime requirement is temporary until we upgrade tokio.
+/// Unlike `block_on_exclusive`, this can be nested without panic.
 pub fn block_on_future<F>(f: F) -> F::Output
 where
     F::Output: Send,
     F: Future + Send + 'static,
 {
-    // The channel is to workaround Runtime::block_on taking `&mut self`.
-    // The upstream provided `handle().block_on`, later removed `handle` and changed
-    // `Runtime::block_on` to take `&self` directly:
-    // https://github.com/tokio-rs/tokio/pull/2782
-    //
-    // However we cannot update tokio. See D24011447. It's blocked by a bug fix in
-    // futures. See: https://github.com/rust-lang/futures-rs/pull/2219.
-    //
-    // Once we upgraded tokio, the whole function can be just:
-    // `RUNTIME.handle().block_on(f)` or `RUNTIME.block_on(f)` and the mutex
-    // can be removed.
     let (tx, rx) = std::sync::mpsc::channel();
     async fn send<F>(f: F, tx: std::sync::mpsc::Sender<F::Output>)
     where
@@ -69,10 +54,7 @@ where
         // not blocking because the channel is unbounded
         tx.send(value).unwrap();
     }
-    let runtime = RUNTIME.lock();
-    runtime.spawn(send(f, tx));
-    // unlock
-    drop(runtime);
+    RUNTIME.spawn(send(f, tx));
     // block
     rx.recv().expect("future panicked in block_on_future")
 }
@@ -82,15 +64,11 @@ where
 ///
 /// This is intended to be used when `f` is not `'static` and cannot be used in
 /// `block_on_future`.
-///
-/// This is temporary and will be merged into `block_on_future` once tokio
-/// supports `Runtime::block_on` without taking `&mut sel`.
 pub fn block_on_exclusive<F>(f: F) -> F::Output
 where
     F: Future,
 {
-    let mut runtime = RUNTIME.lock();
-    runtime.block_on(f)
+    RUNTIME.block_on(f)
 }
 
 /// Takes an async stream and provide its contents in the form of a regular iterator.
@@ -175,17 +153,15 @@ impl RunStreamOptions {
         // it separates the two worlds more clearly.  The channel approach can be optimized to
         // reduce entering the async runtime context when the stream is completed faster that it is
         // processed on the main thread. We could also add multiple consumers.
-        let runtime = RUNTIME.lock();
-        let (mut tx, rx) = tokio::sync::mpsc::channel(self.buffer_size);
-        runtime.enter(|| {
-            tokio::spawn(async move {
-                while let Some(v) = s.next().await {
-                    if tx.send(v).await.is_err() {
-                        // receiver dropped; TODO(T74252041): add logging
-                        return;
-                    }
+        let (tx, rx) = tokio::sync::mpsc::channel(self.buffer_size);
+        let _guard = RUNTIME.enter();
+        tokio::spawn(async move {
+            while let Some(v) = s.next().await {
+                if tx.send(v).await.is_err() {
+                    // receiver dropped; TODO(T74252041): add logging
+                    return;
                 }
-            })
+            }
         });
         RunStream { rx: Some(rx) }
     }
@@ -286,7 +262,7 @@ mod tests {
     fn test_block_on_future_pseudo_parallelism() {
         // This test will deadlock if threads can't schedule tasks while another thread
         // is waiting for a result
-        let (mut tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
         let th1 = thread::spawn(|| block_on_future(async move { rx.recv().await }));
         let _th2 = thread::spawn(|| block_on_future(async move { tx.send(5).await }));
         assert_eq!(th1.join().unwrap(), Some(5));
