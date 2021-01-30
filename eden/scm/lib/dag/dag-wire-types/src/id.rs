@@ -9,6 +9,7 @@
 //!
 //! Defines types around [`Id`].
 
+use abomonation_derive::Abomonation;
 pub use minibytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -18,7 +19,7 @@ use std::ops;
 /// An integer [`Id`] representing a node in the graph.
 /// [`Id`]s are topologically sorted.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Abomonation)]
 pub struct Id(pub u64);
 
 /// Name of a vertex in the graph.
