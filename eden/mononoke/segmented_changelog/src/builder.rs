@@ -84,6 +84,67 @@ impl SegmentedChangelogBuilder {
         Self::default()
     }
 
+    pub fn build_manager(mut self) -> Result<SegmentedChangelogManager> {
+        let repo_id = self.repo_id()?;
+        let bundle_store = self.build_sql_bundle_store()?;
+        let iddag_save_store = self.build_iddag_save_store()?;
+        let idmap_factory = self.build_sql_idmap_factory()?;
+        Ok(SegmentedChangelogManager::new(
+            repo_id,
+            bundle_store,
+            iddag_save_store,
+            idmap_factory,
+            self.cache_handlers.take(),
+        ))
+    }
+
+    pub fn build_disabled(self) -> DisabledSegmentedChangelog {
+        DisabledSegmentedChangelog::new()
+    }
+
+    pub fn build_read_only(mut self) -> Result<Dag> {
+        self.build_dag()
+    }
+
+    pub fn build_on_demand_update(mut self) -> Result<OnDemandUpdateDag> {
+        let dag = self.build_dag()?;
+        let changeset_fetcher = self.changeset_fetcher()?;
+        Ok(OnDemandUpdateDag::new(dag, changeset_fetcher))
+    }
+
+    pub async fn build_seeder(mut self, ctx: &CoreContext) -> Result<SegmentedChangelogSeeder> {
+        let idmap_version_store = self.build_sql_idmap_version_store()?;
+        if self.idmap_version.is_none() {
+            let version = match idmap_version_store
+                .get(&ctx)
+                .await
+                .context("getting idmap version from store")?
+            {
+                Some(v) => v.0 + 1,
+                None => 1,
+            };
+            self.idmap_version = Some(IdMapVersion(version));
+        }
+        let seeder = SegmentedChangelogSeeder::new(
+            self.idmap_version(),
+            idmap_version_store,
+            self.changeset_bulk_fetch()?,
+            self.build_manager()?,
+        );
+        Ok(seeder)
+    }
+
+    pub fn build_tailer(mut self) -> Result<SegmentedChangelogTailer> {
+        let tailer = SegmentedChangelogTailer::new(
+            self.repo_id()?,
+            self.changeset_fetcher()?,
+            self.bookmarks()?,
+            self.bookmark_name()?,
+            self.build_manager()?,
+        );
+        Ok(tailer)
+    }
+
     pub fn with_sql_connections(mut self, connections: SqlConnections) -> Self {
         self.connections = Some(connections);
         self
@@ -161,35 +222,7 @@ impl SegmentedChangelogBuilder {
             .with_changeset_bulk_fetch(Arc::new(bulk_fetch))
     }
 
-    pub fn build_manager(&mut self) -> Result<SegmentedChangelogManager> {
-        let repo_id = self.repo_id()?;
-        let bundle_store = self.build_sql_bundle_store()?;
-        let iddag_save_store = self.build_iddag_save_store()?;
-        let idmap_factory = self.build_sql_idmap_factory()?;
-        Ok(SegmentedChangelogManager::new(
-            repo_id,
-            bundle_store,
-            iddag_save_store,
-            idmap_factory,
-            self.cache_handlers.take(),
-        ))
-    }
-
-    pub fn build_disabled(self) -> DisabledSegmentedChangelog {
-        DisabledSegmentedChangelog::new()
-    }
-
-    pub fn build_read_only(mut self) -> Result<Dag> {
-        self.build_dag()
-    }
-
-    pub fn build_on_demand_update(mut self) -> Result<OnDemandUpdateDag> {
-        let dag = self.build_dag()?;
-        let changeset_fetcher = self.changeset_fetcher()?;
-        Ok(OnDemandUpdateDag::new(dag, changeset_fetcher))
-    }
-
-    pub fn build_dag(&mut self) -> Result<Dag> {
+    pub(crate) fn build_dag(&mut self) -> Result<Dag> {
         let iddag = InProcessIdDag::new_in_process();
         let idmap: Arc<dyn IdMap> = self.build_idmap()?;
         Ok(Dag::new(iddag, idmap))
@@ -248,39 +281,6 @@ impl SegmentedChangelogBuilder {
         let blobstore = self.blobstore()?;
         let repo_id = self.repo_id()?;
         Ok(IdDagSaveStore::new(repo_id, blobstore))
-    }
-
-    pub async fn build_seeder(&mut self, ctx: &CoreContext) -> Result<SegmentedChangelogSeeder> {
-        let idmap_version_store = self.build_sql_idmap_version_store()?;
-        if self.idmap_version.is_none() {
-            let version = match idmap_version_store
-                .get(&ctx)
-                .await
-                .context("getting idmap version from store")?
-            {
-                Some(v) => v.0 + 1,
-                None => 1,
-            };
-            self.idmap_version = Some(IdMapVersion(version));
-        }
-        let seeder = SegmentedChangelogSeeder::new(
-            self.idmap_version(),
-            idmap_version_store,
-            self.changeset_bulk_fetch()?,
-            self.build_manager()?,
-        );
-        Ok(seeder)
-    }
-
-    pub fn build_tailer(&mut self) -> Result<SegmentedChangelogTailer> {
-        let tailer = SegmentedChangelogTailer::new(
-            self.repo_id()?,
-            self.changeset_fetcher()?,
-            self.bookmarks()?,
-            self.bookmark_name()?,
-            self.build_manager()?,
-        );
-        Ok(tailer)
     }
 
     fn repo_id(&self) -> Result<RepositoryId> {

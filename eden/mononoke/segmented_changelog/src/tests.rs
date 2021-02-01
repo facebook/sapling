@@ -382,9 +382,8 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
 
     setup_phases(&ctx, &blobrepo, master_cs).await?;
 
-    let mut builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?.with_blobrepo(&blobrepo);
-    let seeder = builder.build_seeder(&ctx).await?;
-
+    let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?.with_blobrepo(&blobrepo);
+    let seeder = builder.clone().build_seeder(&ctx).await?;
     let (dag, _) = seeder.build_dag_from_scratch(&ctx, master_cs).await?;
 
     let cs7 = resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
@@ -474,10 +473,11 @@ async fn test_caching(fb: FacebookInit) -> Result<()> {
     // It's easier to reason about cache hits and sets when the dag is already built
     let head = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
     setup_phases(&ctx, &blobrepo, head).await?;
-    let mut builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+    let seeder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
         .with_blobrepo(&blobrepo)
-        .with_cache_handlers(cache_handlers);
-    let seeder = builder.build_seeder(&ctx).await?;
+        .with_cache_handlers(cache_handlers)
+        .build_seeder(&ctx)
+        .await?;
     let (dag, _) = seeder.build_dag_from_scratch(&ctx, head).await?;
 
     let distance: u64 = 1;
