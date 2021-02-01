@@ -72,8 +72,8 @@ define_stats! {
 pub async fn request_handler(
     fb: FacebookInit,
     reponame: String,
-    repo_handlers: Arc<HashMap<String, RepoHandler>>,
-    security_checker: Arc<ConnectionsSecurityChecker>,
+    repo_handlers: &HashMap<String, RepoHandler>,
+    security_checker: &ConnectionsSecurityChecker,
     stdio: Stdio,
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
     addr: IpAddr,

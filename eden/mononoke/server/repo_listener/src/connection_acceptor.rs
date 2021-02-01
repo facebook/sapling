@@ -6,6 +6,7 @@
  */
 
 use crate::security_checker::ConnectionsSecurityChecker;
+use hyper::server::conn::Http;
 use session_id::generate_session_id;
 use std::collections::HashMap;
 use std::io;
@@ -16,33 +17,28 @@ use std::sync::{
 };
 use std::time::Duration;
 
+use crate::http_service::MononokeHttpService;
 use anyhow::{anyhow, Context, Error, Result};
 use bytes::Bytes;
 use cached_config::{ConfigHandle, ConfigStore};
-use cloned::cloned;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
-use futures::{channel::oneshot, select_biased};
-use futures_ext::BoxStream;
+use futures::{channel::oneshot, future::Future, select_biased};
+use futures_01_ext::BoxStream;
 use futures_old::{stream, sync::mpsc, Stream};
 use futures_util::compat::Stream01CompatExt;
 use futures_util::future::FutureExt;
 use futures_util::stream::{StreamExt, TryStreamExt};
-use itertools::Itertools;
 use lazy_static::lazy_static;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use metaconfig_types::CommonConfig;
 use openssl::ssl::SslAcceptor;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use scribe_ext::Scribe;
-use sha1::{Digest, Sha1};
 use slog::{debug, error, info, warn, Logger};
-use tokio::io::{
-    AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader,
-};
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
-use tokio_openssl::SslStream;
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 use cmdlib::monitoring::ReadyFlagService;
@@ -53,9 +49,6 @@ use sshrelay::{
 use stats::prelude::*;
 
 use crate::errors::ErrorKind;
-use crate::netspeedtest::{
-    create_http_header, handle_http_netspeedtest, parse_netspeedtest_http_params, NetSpeedTest,
-};
 use crate::repo_handlers::RepoHandler;
 use crate::request_handler::{create_conn_logger, request_handler};
 
@@ -63,19 +56,11 @@ define_stats! {
     prefix = "mononoke.connection_acceptor";
     http_accepted: timeseries(Sum),
     hgcli_accepted: timeseries(Sum),
-    hgcli_no_alpn_accepted: timeseries(Sum),
 }
 
-#[cfg(fbcode_build)]
-const HEADER_ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
-#[cfg(fbcode_build)]
-const HEADER_CLIENT_IP: &str = "tfb-orig-client-ip";
+pub trait MononokeStream: AsyncRead + AsyncWrite + Unpin + Send + Sync + 'static {}
 
-const HEADER_CLIENT_DEBUG: &str = "x-client-debug";
-const HEADER_WEBSOCKET_KEY: &str = "sec-websocket-key";
-
-// See https://tools.ietf.org/html/rfc6455#section-1.3
-const WEBSOCKET_MAGIC_KEY: &str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+impl<T> MononokeStream for T where T: AsyncRead + AsyncWrite + Unpin + Send + Sync + 'static {}
 
 const CHUNK_SIZE: usize = 10000;
 const CONFIGERATOR_LIMITS_CONFIG: &str = "scm/mononoke/loadshedding/limits";
@@ -120,11 +105,8 @@ pub async fn connection_acceptor(
         .map(Option::Some)
         .or_else(|e| if test_instance { Ok(None) } else { Err(e) })?;
 
-    let security_checker = Arc::new(
-        ConnectionsSecurityChecker::new(fb, common_config, &repo_handlers, &root_log).await?,
-    );
-    let repo_handlers = Arc::new(repo_handlers);
-    let tls_acceptor = Arc::new(tls_acceptor);
+    let security_checker =
+        ConnectionsSecurityChecker::new(fb, common_config, &repo_handlers, &root_log).await?;
     let addr: SocketAddr = sockname.parse()?;
     let mut listener = TcpListener::bind(&addr)
         .await
@@ -134,6 +116,18 @@ pub async fn connection_acceptor(
     service.set_ready();
 
     let mut terminate_process = terminate_process.fuse();
+
+    let acceptor = Arc::new(Acceptor {
+        fb,
+        tls_acceptor,
+        repo_handlers,
+        security_checker,
+        load_limiting_config,
+        maybe_live_commit_sync_config,
+        scribe,
+        logger: root_log.clone(),
+    });
+
     loop {
         select_biased! {
             _ = terminate_process => {
@@ -141,36 +135,10 @@ pub async fn connection_acceptor(
                 return Ok(());
             },
             sock_tuple = listener.accept().fuse() => match sock_tuple {
-                Ok((stream, _)) => {
-                    let logger = root_log.clone();
-                    cloned!(
-                        load_limiting_config,
-                        maybe_live_commit_sync_config,
-                        repo_handlers,
-                        tls_acceptor,
-                        security_checker,
-                        scribe,
-                    );
-
-                    OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
-                    tokio::spawn(async move {
-                        match accept(
-                            fb,
-                            stream,
-                            repo_handlers,
-                            tls_acceptor,
-                            security_checker,
-                            load_limiting_config,
-                            maybe_live_commit_sync_config,
-                            scribe,
-                            logger.clone(),
-                        )
-                        .await {
-                            Err(err) => error!(logger, "Failed to accept connection: {}", err.to_string(); SlogKVError(Error::from(err))),
-                            _ => {},
-                        };
-                        OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
-                    });
+                Ok((stream, addr)) => {
+                    let conn = PendingConnection { acceptor: acceptor.clone(), addr };
+                    let task = handle_connection(conn.clone(), stream);
+                    conn.spawn_task(task, "Failed to handle_connection");
                 }
                 Err(err) => {
                     error!(root_log, "{}", err.to_string(); SlogKVError(Error::from(err)));
@@ -180,287 +148,240 @@ pub async fn connection_acceptor(
     }
 }
 
-async fn accept(
-    fb: FacebookInit,
-    sock: TcpStream,
-    repo_handlers: Arc<HashMap<String, RepoHandler>>,
-    tls_acceptor: Arc<SslAcceptor>,
-    security_checker: Arc<ConnectionsSecurityChecker>,
-    load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
-    maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
-    scribe: Scribe,
-    logger: Logger,
-) -> Result<()> {
-    let addr = sock.peer_addr()?;
+/// Our environment for accepting connections.
+pub struct Acceptor {
+    pub fb: FacebookInit,
+    pub tls_acceptor: SslAcceptor,
+    pub repo_handlers: HashMap<String, RepoHandler>,
+    pub security_checker: ConnectionsSecurityChecker,
+    pub load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
+    pub maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
+    pub scribe: Scribe,
+    pub logger: Logger,
+}
 
-    let ssl_socket = tokio_openssl::accept(&tls_acceptor, sock)
+/// Details for a socket we've just opened.
+#[derive(Clone)]
+pub struct PendingConnection {
+    pub acceptor: Arc<Acceptor>,
+    pub addr: SocketAddr,
+}
+
+/// A connection where we completed the initial TLS handshake.
+#[derive(Clone)]
+pub struct AcceptedConnection {
+    pub pending: PendingConnection,
+    pub is_trusted: bool,
+    pub identities: Arc<MononokeIdentitySet>,
+}
+
+impl PendingConnection {
+    /// Spawn a task that is dedicated to this connection. This will block server shutdown, and
+    /// also log on error.
+    pub fn spawn_task(
+        &self,
+        task: impl Future<Output = Result<()>> + Send + 'static,
+        label: &'static str,
+    ) {
+        let this = self.clone();
+
+        OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
+
+        tokio::task::spawn(async move {
+            let res = task
+                .await
+                .context(label)
+                .with_context(|| format!("Failed to handle connection to {}", this.addr));
+
+            if let Err(e) = res {
+                error!(&this.acceptor.logger, "connection_acceptor error: {:#}", e);
+            }
+
+            OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
+        });
+    }
+}
+
+async fn handle_connection(conn: PendingConnection, sock: TcpStream) -> Result<()> {
+    let ssl_socket = tokio_openssl::accept(&conn.acceptor.tls_acceptor, sock)
         .await
-        .with_context(|| format!("tls accept failed: talking to '{}'", addr))?;
+        .context("Failed to perform tls handshake")?;
 
     let identities = match ssl_socket.ssl().peer_certificate() {
         Some(cert) => MononokeIdentity::try_from_x509(&cert),
         None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
     }?;
 
-    let mux_result = server_mux(
-        addr.ip(),
-        ssl_socket,
-        &security_checker,
-        &identities,
-        &logger,
-    )
-    .await
-    .with_context(|| format!("couldn't complete request: talking to '{}'", addr))?;
+    let is_trusted = conn
+        .acceptor
+        .security_checker
+        .check_if_trusted(&identities)
+        .await?;
 
-    match mux_result {
-        MuxOutcome::Proceed(stdio, reponame, forwarding_join_handle) => {
-            request_handler(
-                fb,
-                reponame,
-                repo_handlers,
-                security_checker,
-                stdio,
-                load_limiting_config,
-                addr.ip(),
-                maybe_live_commit_sync_config,
-                scribe,
-            )
-            .await?;
+    let conn = AcceptedConnection {
+        pending: conn,
+        is_trusted,
+        identities: Arc::new(identities),
+    };
 
-            let _ = forwarding_join_handle.await?;
-        }
-        MuxOutcome::Close => {}
+    let is_hgcli = ssl_socket.ssl().selected_alpn_protocol() == Some(alpn::HGCLI_ALPN.as_bytes());
+
+    if is_hgcli {
+        handle_hgcli(conn, ssl_socket)
+            .await
+            .context("Failed to handle_hgcli")?;
+    } else {
+        handle_http(conn, ssl_socket)
+            .await
+            .context("Failed to handle_http")?;
     }
 
     Ok(())
 }
 
-enum MuxOutcome {
-    Proceed(
-        Stdio,
-        String,
-        JoinHandle<std::result::Result<(), std::io::Error>>,
-    ),
-    Close,
-}
+async fn handle_hgcli<S: MononokeStream>(conn: AcceptedConnection, stream: S) -> Result<()> {
+    STATS::hgcli_accepted.add_value(1);
 
-// As a server, given a stream to a client, return an Io pair with stdin/stdout, and an
-// auxillary sink for stderr.
-async fn server_mux(
-    addr: IpAddr,
-    s: SslStream<TcpStream>,
-    security_checker: &Arc<ConnectionsSecurityChecker>,
-    tls_identities: &MononokeIdentitySet,
-    logger: &Logger,
-) -> Result<MuxOutcome> {
-    let is_hgcli = s.ssl().selected_alpn_protocol() == Some(alpn::HGCLI_ALPN.as_bytes());
+    let (rx, tx) = tokio::io::split(stream);
 
-    let is_trusted = security_checker.check_if_trusted(&tls_identities).await?;
-    let (mut rx, mut tx) = tokio::io::split(s);
+    let mut framed = FramedConn::setup(rx, tx);
 
-    // Elaborate scheme to workaround lack of peek() on AsyncRead
-    let mut peek_buf = vec![0; 4];
-    rx.read_exact(&mut peek_buf[..]).await?;
-    let is_http = if is_hgcli {
-        STATS::hgcli_accepted.add_value(1);
-        false
-    } else {
-        match peek_buf.as_slice() {
-            // For non-HTTP connection this can never start with GET or POST as these
-            // are wrapped in NetString encoding and prefixed with a type, so
-            // should start with:
-            // <number>:\x00
-            //
-            // For example:
-            // 7:\x00hello\n,
-            b"GET " | b"POST" => {
-                STATS::http_accepted.add_value(1);
-                true
-            }
-            _ => {
-                STATS::hgcli_no_alpn_accepted.add_value(1);
-                false
-            }
-        }
-    };
-    let buf_rx = std::io::Cursor::new(peek_buf).chain(BufReader::new(rx));
-
-    let (reponame, maybe_metadata, client_debug, channels) = if is_http {
-        let mut persistent_http_buf_rx = buf_rx;
-        loop {
-            // Max 8KB of headers is in line with common HTTP servers
-            // https://www.tutorialspoint.com/What-is-the-maximum-size-of-HTTP-header-values
-            let mut limited_reader = persistent_http_buf_rx.take(8192);
-            match process_http_headers(&mut limited_reader).await {
-                Ok(HttpParse::IoStream(reponame, headers)) => {
-                    let websocket_key = calculate_websocket_accept(&headers);
-                    let maybe_http_metadata =
-                        match try_convert_headers_to_metadata(is_trusted, &headers).await {
-                            Ok(value) => value,
-                            Err(e) => {
-                                tx.write_all(b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
-                                return Err(e);
-                            }
-                        };
-
-                    let mut res = create_http_header(
-                        "101 Switching Protocols",
-                        vec![
-                            ("Upgrade", "websocket"),
-                            ("Sec-WebSocket-Accept", &websocket_key),
-                            ("Connection", "Upgrade"),
-                        ],
-                    );
-                    res.push_str("\r\n");
-                    tx.write_all(res.as_bytes()).await?;
-
-                    let conn = FramedConn::setup(limited_reader.into_inner(), tx);
-                    let channels = ChannelConn::setup(conn);
-                    break (
-                        reponame,
-                        maybe_http_metadata,
-                        headers.contains_key(HEADER_CLIENT_DEBUG),
-                        channels,
-                    );
-                }
-                Ok(HttpParse::NotFound) => {
-                    tx.write_all(b"HTTP/1.1 404 Not Found\r\n\r\n").await?;
-                    return Ok(MuxOutcome::Close);
-                }
-                Ok(HttpParse::BadRequest(msg)) => {
-                    let len = msg.len();
-                    let mut header = create_http_header(
-                        "400 Bad Request",
-                        vec![("Content-Length", &len.to_string())],
-                    );
-                    header.push_str("\r\n");
-                    header.push_str(&msg);
-                    tx.write_all(header.as_bytes()).await?;
-                    return Ok(MuxOutcome::Close);
-                }
-                Ok(HttpParse::HealthCheck) => {
-                    tx.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nI_AM_ALIVE")
-                        .await?;
-                    return Ok(MuxOutcome::Close);
-                }
-                Ok(HttpParse::NetSpeedTest(params, headers)) => {
-                    let mut inner_rx = limited_reader.into_inner();
-                    if let Err(err) = handle_http_netspeedtest(&mut inner_rx, &mut tx, params).await
-                    {
-                        error!(logger, "netspeedtest: {}", err);
-                        return Ok(MuxOutcome::Close);
-                    }
-
-                    if headers.get("connection") == Some(&"close".to_string()) {
-                        return Ok(MuxOutcome::Close);
-                    }
-                    persistent_http_buf_rx = inner_rx;
-                }
-                Err(e) => {
-                    tx.write_all(b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
-                    return Err(e);
-                }
-            }
-        }
-    } else {
-        let mut conn = FramedConn::setup(buf_rx, tx);
-
-        let preamble = match conn.rd.next().await.transpose()? {
-            Some(maybe_preamble) => {
-                if let IoStream::Preamble(preamble) = maybe_preamble.stream() {
-                    preamble
-                } else {
-                    return Err(ErrorKind::NoConnectionPreamble.into());
-                }
-            }
-            None => {
+    let preamble = match framed.rd.next().await.transpose()? {
+        Some(maybe_preamble) => {
+            if let IoStream::Preamble(preamble) = maybe_preamble.stream() {
+                preamble
+            } else {
                 return Err(ErrorKind::NoConnectionPreamble.into());
             }
-        };
-
-        let channels = ChannelConn::setup(conn);
-
-        let metadata = if is_trusted {
-            // Relayed through trusted proxy. Proxy authenticates end client and generates
-            // preamble so we can trust it. Use identity provided in preamble.
-            Some(try_convert_preamble_to_metadata(&preamble, addr, &channels.logger).await?)
-        } else {
-            None
-        };
-
-        (preamble.reponame.clone(), metadata, false, channels)
+        }
+        None => {
+            return Err(ErrorKind::NoConnectionPreamble.into());
+        }
     };
 
-    let metadata = if let Some(metadata) = maybe_metadata {
+    let channels = ChannelConn::setup(framed);
+
+    let metadata = if conn.is_trusted {
+        // Relayed through trusted proxy. Proxy authenticates end client and generates
+        // preamble so we can trust it. Use identity provided in preamble.
+        Some(
+            try_convert_preamble_to_metadata(&preamble, conn.pending.addr.ip(), &channels.logger)
+                .await?,
+        )
+    } else {
+        None
+    };
+
+    handle_wireproto(conn, channels, preamble.reponame, metadata, false)
+        .await
+        .context("Failed to handle_wireproto")?;
+
+    Ok(())
+}
+
+async fn handle_http<S: MononokeStream>(conn: AcceptedConnection, stream: S) -> Result<()> {
+    STATS::http_accepted.add_value(1);
+
+    let svc = MononokeHttpService::<S>::new(conn);
+
+    // NOTE: We don't select h2 in alpn, so we only expect HTTP/1.1 here.
+    Http::new()
+        .http1_only(true)
+        .serve_connection(stream, svc)
+        .with_upgrades()
+        .await
+        .context("Failed to serve_connection")?;
+
+    Ok(())
+}
+
+pub async fn handle_wireproto(
+    conn: AcceptedConnection,
+    channels: ChannelConn,
+    reponame: String,
+    metadata: Option<Metadata>,
+    client_debug: bool,
+) -> Result<()> {
+    let metadata = if let Some(metadata) = metadata {
         metadata
     } else {
         // Most likely client is not trusted. Use TLS connection
         // cert as identity.
         Metadata::new(
             Some(&generate_session_id().to_string()),
-            is_trusted,
-            tls_identities.clone(),
+            conn.is_trusted,
+            (*conn.identities).clone(),
             Priority::Default,
             client_debug,
-            Some(addr),
+            Some(conn.pending.addr.ip()),
         )
         .await
     };
 
+    let ChannelConn {
+        stdin,
+        stdout,
+        stderr,
+        logger,
+        join_handle,
+    } = channels;
+
     if metadata.client_debug() {
-        info!(&channels.logger, "{:#?}", metadata; "remote" => "true");
+        info!(&logger, "{:#?}", metadata; "remote" => "true");
     }
 
-    Ok(MuxOutcome::Proceed(
-        Stdio {
-            metadata,
-            stdin: channels.stdin,
-            stdout: channels.stdout,
-            stderr: channels.stderr,
-        },
+    // Don't let the logger hold onto the channel. This is a bit fragile (but at least it breaks
+    // tests deterministically).
+    drop(logger);
+
+    let stdio = Stdio {
+        metadata,
+        stdin,
+        stdout,
+        stderr,
+    };
+
+    request_handler(
+        conn.pending.acceptor.fb,
         reponame,
-        channels.join_handle,
-    ))
+        &conn.pending.acceptor.repo_handlers,
+        &conn.pending.acceptor.security_checker,
+        stdio,
+        conn.pending.acceptor.load_limiting_config.clone(),
+        conn.pending.addr.ip(),
+        conn.pending.acceptor.maybe_live_commit_sync_config.clone(),
+        conn.pending.acceptor.scribe.clone(),
+    )
+    .await
+    .context("Failed to execute request_handler")?;
+
+    join_handle
+        .await
+        .context("Failed to join ChannelConn")?
+        .context("Failed to close ChannelConn")?;
+
+    Ok(())
 }
 
-// See https://tools.ietf.org/html/rfc6455#section-1.3
-fn calculate_websocket_accept(headers: &HashMap<String, String>) -> String {
-    let mut sha1 = Sha1::new();
-
-    // This is OK to fall back to empty, because we only need to give
-    // this header, if it's asked for. In case of hg<->mononoke with
-    // no Proxygen in between, this header will be missing and the result
-    // ignored.
-    sha1.input(
-        headers
-            .get(HEADER_WEBSOCKET_KEY)
-            .map(|s| s.to_owned())
-            .unwrap_or_default()
-            .as_bytes(),
-    );
-    sha1.input(WEBSOCKET_MAGIC_KEY.as_bytes());
-    let hash: [u8; 20] = sha1.result().into();
-    base64::encode(&hash)
-}
-
-struct FramedConn<R, W> {
+pub struct FramedConn<R, W> {
     rd: FramedRead<R, SshDecoder>,
     wr: FramedWrite<W, SshEncoder>,
 }
 
 impl<R, W> FramedConn<R, W>
 where
-    R: AsyncRead + Send + Sync + std::marker::Unpin + 'static,
-    W: AsyncWrite + Send + Sync + std::marker::Unpin + 'static,
+    R: AsyncRead + Send + std::marker::Unpin + 'static,
+    W: AsyncWrite + Send + std::marker::Unpin + 'static,
 {
     pub fn setup(rd: R, wr: W) -> Self {
+        // NOTE: FramedRead does buffering, so no need to wrap with a BufReader here.
         let rd = FramedRead::new(rd, SshDecoder::new());
         let wr = FramedWrite::new(wr, SshEncoder::new());
         Self { rd, wr }
     }
 }
 
-struct ChannelConn {
+pub struct ChannelConn {
     stdin: BoxStream<Bytes, io::Error>,
     stdout: mpsc::Sender<Bytes>,
     stderr: mpsc::UnboundedSender<Bytes>,
@@ -469,10 +390,10 @@ struct ChannelConn {
 }
 
 impl ChannelConn {
-    fn setup<R, W>(conn: FramedConn<R, W>) -> Self
+    pub fn setup<R, W>(conn: FramedConn<R, W>) -> Self
     where
-        R: AsyncRead + Send + Sync + std::marker::Unpin + 'static,
-        W: AsyncWrite + Send + Sync + std::marker::Unpin + 'static,
+        R: AsyncRead + Send + std::marker::Unpin + 'static,
+        W: AsyncWrite + Send + std::marker::Unpin + 'static,
     {
         let FramedConn { rd, wr } = conn;
 
@@ -520,136 +441,6 @@ impl ChannelConn {
             join_handle,
         }
     }
-}
-
-enum HttpParse {
-    IoStream(String, HashMap<String, String>),
-    NetSpeedTest(NetSpeedTest, HashMap<String, String>),
-    NotFound,
-    HealthCheck,
-    BadRequest(String),
-}
-
-async fn process_http_headers<R>(limited_reader: &mut R) -> Result<HttpParse>
-where
-    R: AsyncBufRead + std::marker::Unpin,
-{
-    let mut headers: HashMap<String, String> = HashMap::new();
-    let mut first_line: Option<String> = None;
-
-    loop {
-        // read_line breaks on \n, which is included in the buffer, so any
-        // newline characters will need to be stripped from the buffer. Depending
-        // on the client, \n can be prepended with \r, which is the recommended HTTP
-        // specification, so take this in to account
-        let mut line_buf = String::new();
-        limited_reader.read_line(&mut line_buf).await?;
-        if line_buf.ends_with('\n') {
-            line_buf.pop();
-        }
-        if line_buf.ends_with('\r') {
-            line_buf.pop();
-        }
-
-        if first_line.is_none() {
-            first_line = Some(line_buf.to_ascii_lowercase());
-        } else if !line_buf.is_empty() {
-            let (key, value) = line_buf
-                .splitn(2, ':')
-                .map(|s| s.trim())
-                .collect_tuple()
-                .ok_or_else(|| anyhow!("invalid header tuple: {}", line_buf))?;
-            headers.insert(key.to_ascii_lowercase(), value.to_string());
-        } else {
-            // HTTP headers are closed by an empty line, so break once we have all our headers
-            break;
-        }
-    }
-
-    if let Some(first_line) = first_line {
-        if headers.get("upgrade").map(|s| s.to_ascii_lowercase()) == Some("websocket".to_string()) {
-            let reponame = first_line
-                .split_ascii_whitespace()
-                .nth(1)
-                .map(|s| s.trim_matches('/').to_string())
-                .ok_or_else(|| anyhow!("missing reponame from request"))?;
-
-            return Ok(HttpParse::IoStream(reponame, headers));
-        }
-
-        let mut tokens = first_line.split_ascii_whitespace();
-        let method = tokens.next().map(|s| s.to_ascii_uppercase());
-        let path = tokens.next();
-
-        if method.as_deref() == Some("GET")
-            && (path.as_deref() == Some("/") || path.as_deref() == Some("/health_check"))
-        {
-            return Ok(HttpParse::HealthCheck);
-        }
-
-        if path.as_deref() == Some("/netspeedtest") {
-            match parse_netspeedtest_http_params(&headers, method) {
-                Ok(params) => {
-                    return Ok(HttpParse::NetSpeedTest(params, headers));
-                }
-                Err(err) => {
-                    return Ok(HttpParse::BadRequest(format!("netspeedtest: {}", err)));
-                }
-            }
-        }
-
-        return Ok(HttpParse::NotFound);
-    }
-
-    Err(anyhow!("invalid http request"))
-}
-
-#[cfg(fbcode_build)]
-async fn try_convert_headers_to_metadata(
-    is_trusted: bool,
-    headers: &HashMap<String, String>,
-) -> Result<Option<Metadata>> {
-    use percent_encoding::percent_decode;
-
-    if !is_trusted {
-        return Ok(None);
-    }
-
-    if let (Some(encoded_identities), Some(client_address)) = (
-        headers.get(HEADER_ENCODED_CLIENT_IDENTITY),
-        headers.get(HEADER_CLIENT_IP),
-    ) {
-        let json_identities = percent_decode(encoded_identities.as_bytes()).decode_utf8()?;
-        let identities = MononokeIdentity::try_from_json_encoded(&json_identities)?;
-        let ip_addr = client_address.parse::<IpAddr>()?;
-
-        // In the case of HTTP proxied/trusted requests we only have the
-        // guarantee that we can trust the forwarded credentials. Beyond
-        // this point we can't trust anything else, ACL checks have not
-        // been performed, so set 'is_trusted' to 'false' here to enforce
-        // further checks.
-        Ok(Some(
-            Metadata::new(
-                Some(&generate_session_id().to_string()),
-                false,
-                identities,
-                Priority::Default,
-                headers.contains_key(HEADER_CLIENT_DEBUG),
-                Some(ip_addr),
-            )
-            .await,
-        ))
-    } else {
-        Ok(None)
-    }
-}
-
-#[cfg(not(fbcode_build))]
-async fn try_convert_headers_to_metadata(
-    _is_trusted: bool,
-    _headers: &HashMap<String, String>,
-) -> Result<Option<Metadata>> {
-    Ok(None)
 }
 
 async fn try_convert_preamble_to_metadata(

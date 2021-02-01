@@ -43,7 +43,8 @@ cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git",
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_01_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
@@ -55,7 +56,8 @@ bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
 futures-util = "0.3.7"
-itertools = "0.8"
+http = "0.2"
+hyper = "0.13.9"
 lazy_static = "1.0"
 maplit = "1.0"
 openssl = "0.10"
