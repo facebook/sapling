@@ -2882,13 +2882,12 @@ def grep(ui, repo, pattern, *pats, **opts):
 
             # Redirect the pull output to stderr so that we don't break folks
             # that are parsing the `hg grep` output
-            fout = ui.fout
             try:
-                ui.fout = ui.ferr
+                fout = ui.fout.swap(ui.ferr)
                 pull = cmdutil.findcmd("pull", table)[1][0]
                 pull(ui, repo)
             finally:
-                ui.fout = fout
+                ui.fout.swap(fout)
 
             # Try to resolve that rev again now
             try:

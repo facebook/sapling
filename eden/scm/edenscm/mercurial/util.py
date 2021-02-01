@@ -678,6 +678,8 @@ class refcell(object):
         return iter(self._obj)
 
     def swap(self, obj):
+        # If obj == self, this will result in infinite recursion in getattr.
+        assert self != obj, "cannot create refcell pointing to itself"
         origobj = self._obj
         self._obj = obj
         return origobj
