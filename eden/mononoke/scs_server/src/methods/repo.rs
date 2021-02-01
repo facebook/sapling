@@ -23,6 +23,7 @@ use mononoke_api::{
     ChangesetSpecifierPrefixResolution, CreateChange, CreateCopyInfo, FileId, FileType,
     MononokePath,
 };
+use mononoke_api_hg::RepoContextHgExt;
 use mononoke_types::hash::{Sha1, Sha256};
 use source_control as thrift;
 

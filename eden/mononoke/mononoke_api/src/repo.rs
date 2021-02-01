@@ -68,7 +68,6 @@ use warm_bookmarks_cache::{BookmarkUpdateDelay, WarmBookmarksCache, WarmBookmark
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::file::{FileContext, FileId};
-use crate::hg::HgRepoContext;
 use crate::repo_write::{PermissionsModel, RepoWriteContext};
 use crate::specifiers::{
     ChangesetId, ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution,
@@ -1273,11 +1272,6 @@ impl RepoContext {
             self,
             PermissionsModel::ServiceIdentity(service_identity),
         ))
-    }
-
-    /// Get an HgRepoContext to access this repo's data in Mercurial-specific formats.
-    pub fn hg(self) -> HgRepoContext {
-        HgRepoContext::new(self)
     }
 
     /// A SegmentedChangelog client repository has a compressed shape of the commit graph but

@@ -336,6 +336,7 @@ members = [
     "microwave/builder",
     "microwave/if",
     "mononoke_api",
+    "mononoke_api_hg",
     "mononoke_hg_sync_job",
     "mononoke_types",
     "mononoke_types/if",

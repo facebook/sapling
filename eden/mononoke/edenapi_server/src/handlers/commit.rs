@@ -17,7 +17,7 @@ use edenapi_types::{
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgChangesetId, HgNodeHash};
-use mononoke_api::hg::HgRepoContext;
+use mononoke_api_hg::HgRepoContext;
 use types::HgId;
 
 use crate::context::ServerContext;

@@ -13,10 +13,9 @@ use mercurial_types::{
     fetch_manifest_envelope, fetch_manifest_envelope_opt, HgBlobEnvelope, HgFileNodeId,
     HgManifestEnvelope, HgManifestId, HgNodeHash, HgParents,
 };
+use mononoke_api::errors::MononokeError;
 use mononoke_types::{file_change::FileType, path::MPathElement};
 use revisionstore_types::Metadata;
-
-use crate::errors::MononokeError;
 
 use super::{HgDataContext, HgDataId, HgRepoContext};
 
@@ -132,11 +131,12 @@ mod tests {
     use fbinit::FacebookInit;
     use fixtures::linear;
     use mercurial_types::NULL_HASH;
-
-    use crate::{
+    use mononoke_api::{
         repo::{Repo, RepoContext},
         specifiers::HgChangesetId,
     };
+
+    use crate::RepoContextHgExt;
 
     #[fbinit::compat_test]
     async fn test_hg_tree_context(fb: FacebookInit) -> Result<(), MononokeError> {

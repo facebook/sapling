@@ -22,8 +22,6 @@ derived_data = { path = "../derived_data", version = "0.1.0" }
 fastlog = { path = "../derived_data/fastlog", version = "0.1.0" }
 filestore = { path = "../filestore", version = "0.1.0" }
 fsnodes = { path = "../derived_data/fsnodes", version = "0.1.0" }
-getbundle_response = { path = "../repo_client/getbundle_response", version = "0.1.0" }
-hgproto = { path = "../hgproto", version = "0.1.0" }
 hook_manager_factory = { path = "../hooks/hook_manager_factory", version = "0.1.0" }
 hooks = { path = "../hooks", version = "0.1.0" }
 live_commit_sync_config = { path = "../commit_rewriting/live_commit_sync_config", version = "0.1.0" }
@@ -36,10 +34,7 @@ mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 mutable_counters = { path = "../mutable_counters", version = "0.1.0" }
 permission_checker = { path = "../permission_checker", version = "0.1.0" }
 reachabilityindex = { path = "../reachabilityindex", version = "0.1.0" }
-remotefilelog = { path = "../repo_client/remotefilelog", version = "0.1.0" }
-repo_client = { path = "../repo_client", version = "0.1.0" }
 repo_read_write_status = { path = "../repo_client/repo_read_write_status", version = "0.1.0" }
-revisionstore_types = { path = "../../scm/lib/revisionstore/types", version = "0.1.0" }
 revset = { path = "../revset", version = "0.1.0" }
 segmented_changelog = { path = "../segmented_changelog", version = "0.1.0" }
 skiplist = { path = "../reachabilityindex/skiplist", version = "0.1.0" }

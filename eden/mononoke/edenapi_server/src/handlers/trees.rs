@@ -18,7 +18,7 @@ use edenapi_types::{
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use manifest::Entry;
 use mercurial_types::{FileType, HgFileNodeId, HgManifestId, HgNodeHash};
-use mononoke_api::hg::{HgDataContext, HgDataId, HgRepoContext, HgTreeContext};
+use mononoke_api_hg::{HgDataContext, HgDataId, HgRepoContext, HgTreeContext};
 use types::{Key, RepoPathBuf};
 
 use crate::context::ServerContext;

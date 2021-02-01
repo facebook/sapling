@@ -12,7 +12,7 @@ use http::HeaderMap;
 use hyper::Body;
 
 use gotham_ext::{body_ext::BodyExt, error::HttpError};
-use mononoke_api::hg::HgRepoContext;
+use mononoke_api_hg::{HgRepoContext, RepoContextHgExt};
 
 use crate::context::ServerContext;
 use crate::errors::{ErrorKind, MononokeErrorExt};

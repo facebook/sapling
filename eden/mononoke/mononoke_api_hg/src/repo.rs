@@ -18,13 +18,10 @@ use hgproto::GettreepackArgs;
 use mercurial_types::blobs::RevlogChangeset;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
+use mononoke_api::{errors::MononokeError, path::MononokePath, repo::RepoContext};
 use mononoke_types::{ChangesetId, MPath};
 use repo_client::gettreepack_entries;
 use segmented_changelog::{CloneData, StreamCloneData, Vertex};
-
-use crate::errors::MononokeError;
-use crate::path::MononokePath;
-use crate::repo::RepoContext;
 
 use super::{HgFileContext, HgTreeContext};
 
@@ -274,10 +271,11 @@ mod tests {
     use anyhow::Error;
     use blobstore::Loadable;
     use fbinit::FacebookInit;
+    use mononoke_api::repo::Repo;
     use mononoke_types::ChangesetId;
     use tests_utils::CreateCommitContext;
 
-    use crate::repo::Repo;
+    use crate::RepoContextHgExt;
 
     #[fbinit::compat_test]
     async fn test_new_hg_context(fb: FacebookInit) -> Result<(), MononokeError> {
@@ -332,7 +330,7 @@ mod tests {
             .into_iter()
             .map(|(_, path)| format!("{}", path))
             .collect::<BTreeSet<_>>();
-        let expected = vec!["".into(), "dir3".into(), "dir1".into(), "dir3/a".into()]
+        let expected = vec!["", "dir3", "dir1", "dir3/a"]
             .into_iter()
             .map(ToString::to_string)
             .collect::<BTreeSet<_>>();

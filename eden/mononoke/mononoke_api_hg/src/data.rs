@@ -9,9 +9,8 @@ use async_trait::async_trait;
 use bytes::Bytes;
 
 use mercurial_types::{HgNodeHash, HgParents};
+use mononoke_api::errors::MononokeError;
 use revisionstore_types::Metadata;
-
-use crate::errors::MononokeError;
 
 use super::repo::HgRepoContext;
 

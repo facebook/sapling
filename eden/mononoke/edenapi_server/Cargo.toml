@@ -15,6 +15,7 @@ gotham_ext = { path = "../gotham_ext", version = "0.1.0" }
 manifest = { path = "../manifest", version = "0.1.0" }
 mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
 mononoke_api = { path = "../mononoke_api", version = "0.1.0" }
+mononoke_api_hg = { path = "../mononoke_api_hg", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 permission_checker = { path = "../permission_checker", version = "0.1.0" }
 scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }

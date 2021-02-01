@@ -14,11 +14,10 @@ use getbundle_response::SessionLfsParams;
 use mercurial_types::{
     envelope::HgFileEnvelope, FileType, HgFileHistoryEntry, HgFileNodeId, HgNodeHash, HgParents,
 };
+use mononoke_api::errors::MononokeError;
 use mononoke_types::{fsnode::FsnodeFile, MPath};
 use remotefilelog::create_getpack_v2_blob;
 use revisionstore_types::Metadata;
-
-use crate::errors::MononokeError;
 
 use super::{HgDataContext, HgDataId, HgRepoContext};
 
@@ -61,7 +60,7 @@ impl HgFileContext {
         match filenode_id.load(ctx, blobstore).await {
             Ok(envelope) => Ok(Some(Self { repo, envelope })),
             Err(LoadableError::Missing(_)) => Ok(None),
-            Err(e) => Err(e)?,
+            Err(e) => return Err(e.into()),
         }
     }
 
@@ -198,8 +197,9 @@ mod tests {
     use fixtures::many_files_dirs;
     use futures::TryStreamExt;
     use mercurial_types::{HgChangesetId, NULL_HASH};
+    use mononoke_api::repo::{Repo, RepoContext};
 
-    use crate::repo::{Repo, RepoContext};
+    use crate::RepoContextHgExt;
 
     #[fbinit::compat_test]
     async fn test_hg_file_context(fb: FacebookInit) -> Result<(), MononokeError> {

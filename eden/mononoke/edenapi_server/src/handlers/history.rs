@@ -22,7 +22,7 @@ use edenapi_types::{
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
-use mononoke_api::hg::HgRepoContext;
+use mononoke_api_hg::HgRepoContext;
 use types::Key;
 
 use crate::context::ServerContext;
