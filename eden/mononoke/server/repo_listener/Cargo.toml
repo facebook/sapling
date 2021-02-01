@@ -62,6 +62,7 @@ lazy_static = "1.0"
 maplit = "1.0"
 openssl = "0.10"
 percent-encoding = "2.1"
+pin-project = "0.4"
 sha-1 = "0.8"
 slog = { version = "2.5", features = ["max_level_debug"] }
 slog-kvfilter = "0.7"

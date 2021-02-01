@@ -51,6 +51,7 @@ use stats::prelude::*;
 use crate::errors::ErrorKind;
 use crate::repo_handlers::RepoHandler;
 use crate::request_handler::{create_conn_logger, request_handler};
+use crate::stream::QuietShutdownStream;
 
 define_stats! {
     prefix = "mononoke.connection_acceptor";
@@ -225,6 +226,8 @@ async fn handle_connection(conn: PendingConnection, sock: TcpStream) -> Result<(
     };
 
     let is_hgcli = ssl_socket.ssl().selected_alpn_protocol() == Some(alpn::HGCLI_ALPN.as_bytes());
+
+    let ssl_socket = QuietShutdownStream::new(ssl_socket);
 
     if is_hgcli {
         handle_hgcli(conn, ssl_socket)
