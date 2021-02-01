@@ -20,6 +20,8 @@ enum TunableType {
     I64,
     String,
     ByRepoBool,
+    ByRepoString,
+    ByRepoI64,
 }
 
 #[proc_macro_derive(Tunables)]
@@ -53,6 +55,17 @@ impl TunableType {
             Self::I64 => quote! { i64 },
             Self::String => quote! { Arc<String> },
             Self::ByRepoBool => quote! { Option<bool> },
+            Self::ByRepoString => quote! { Option<String> },
+            Self::ByRepoI64 => quote! { Option<i64> },
+        }
+    }
+
+    fn by_repo_value_type(&self) -> TokenStream {
+        match self {
+            Self::Bool | Self::I64 | Self::String => panic!("Expected ByRepo flavor of tunable"),
+            Self::ByRepoBool => quote! { bool },
+            Self::ByRepoI64 => quote! { i64 },
+            Self::ByRepoString => quote! { String },
         }
     }
 
@@ -62,6 +75,8 @@ impl TunableType {
             Self::I64 => quote! { HashMap<String, i64> },
             Self::String => quote! { HashMap<String, String> },
             Self::ByRepoBool => quote! { HashMap<String, HashMap<String, bool>> },
+            Self::ByRepoString => quote! { HashMap<String, HashMap<String, String>> },
+            Self::ByRepoI64 => quote! { HashMap<String, HashMap<String, i64>> },
         }
     }
 
@@ -86,13 +101,10 @@ impl TunableType {
                     }
                 }
             }
-            Self::ByRepoBool => {
+            Self::ByRepoBool | Self::ByRepoI64 | Self::ByRepoString => {
                 quote! {
                     pub fn #by_repo_method(&self, repo: &String) -> #external_type {
-                        if let Some(value) = self.#name.load_full().get(repo) {
-                            return Some((*value).clone());
-                        }
-                        None
+                        self.#name.load_full().get(repo).map(|val| (*val).clone())
                     }
                 }
             }
@@ -138,9 +150,21 @@ where
     ));
 
     methods.extend(generate_updater_method(
-        names_and_types,
+        names_and_types.clone(),
         TunableType::ByRepoBool,
         quote::format_ident!("update_by_repo_bools"),
+    ));
+
+    methods.extend(generate_updater_method(
+        names_and_types.clone(),
+        TunableType::ByRepoString,
+        quote::format_ident!("update_by_repo_strings"),
+    ));
+
+    methods.extend(generate_updater_method(
+        names_and_types,
+        TunableType::ByRepoI64,
+        quote::format_ident!("update_by_repo_ints"),
     ));
 
     methods
@@ -185,10 +209,11 @@ where
                     }
                 });
             }
-            TunableType::ByRepoBool => {
+            TunableType::ByRepoBool | TunableType::ByRepoString | TunableType::ByRepoI64 => {
+                let by_repo_value_type = ty.by_repo_value_type();
                 body.extend(quote! {
                     #(
-                        let mut new_values_by_repo: HashMap<String, bool> = HashMap::new();
+                        let mut new_values_by_repo: HashMap<String, #by_repo_value_type> = HashMap::new();
                         for (repo, val_by_tunable) in tunables {
                                 for (tunable, val) in val_by_tunable {
                                     match tunable.as_ref() {
@@ -242,6 +267,8 @@ fn resolve_type(ty: Type) -> TunableType {
                 // We use TunableString as a workaround
                 "TunableString" => return TunableType::String,
                 "TunableBoolByRepo" => return TunableType::ByRepoBool,
+                "TunableI64ByRepo" => return TunableType::ByRepoI64,
+                "TunableStringByRepo" => return TunableType::ByRepoString,
                 _ => unimplemented!("{}, found: {}", UNIMPLEMENTED_MSG, &ident.to_string()[..]),
             }
         }
