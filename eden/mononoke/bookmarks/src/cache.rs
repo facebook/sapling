@@ -292,6 +292,12 @@ impl Bookmarks for CachedBookmarks {
         // mean that the Bookmark does not exist.
         self.bookmarks.get(ctx, bookmark)
     }
+
+    /// Drop this cache without kicking off a refresh right now.
+    fn drop_caches(&self) {
+        let mut cache = self.cache.lock().expect("lock poisoned");
+        *cache = None;
+    }
 }
 
 impl BookmarkTransaction for CachedBookmarksTransaction {

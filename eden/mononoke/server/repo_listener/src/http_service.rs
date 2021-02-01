@@ -123,6 +123,10 @@ where
             return crate::netspeedtest::handle(method, &headers, body).await;
         }
 
+        if let Some(path) = uri.path().strip_prefix("/control") {
+            return self.handle_control_request(method, path).await;
+        }
+
         if method == Method::GET && (uri.path() == "/" || uri.path() == "/health_check") {
             let res = Response::builder()
                 .status(http::StatusCode::OK)
@@ -190,6 +194,31 @@ where
             .spawn_task(fut, "Failed to handle websocket channel");
 
         Ok(res)
+    }
+
+    async fn handle_control_request(
+        &self,
+        method: Method,
+        path: &str,
+    ) -> Result<Response<Body>, HttpError> {
+        if method != Method::POST {
+            return Err(HttpError::NotAcceptable);
+        }
+
+        let ok = Response::builder()
+            .status(http::StatusCode::OK)
+            .body(Body::empty())
+            .map_err(HttpError::internal)?;
+
+        if path == "/drop_bookmarks_cache" {
+            for handler in self.conn.pending.acceptor.repo_handlers.values() {
+                handler.repo.blobrepo().bookmarks().drop_caches();
+            }
+
+            return Ok(ok);
+        }
+
+        Err(HttpError::NotFound)
     }
 
     fn logger(&self) -> &Logger {

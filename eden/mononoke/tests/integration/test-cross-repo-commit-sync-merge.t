@@ -95,6 +95,7 @@ run the sync again
   * syncing 85b7d7910b3858629737adff1f3e2c4aa9f16b6239f115507cce6e91c8665df8 via pushrebase for master_bookmark (glob)
   * synced as * in *ms (glob)
   * successful sync (glob)
+  $ flush_mononoke_bookmarks
 
 check that the changes are synced
   $ cd $TESTTMP/meg-hg-cnt

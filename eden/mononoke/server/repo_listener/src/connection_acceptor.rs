@@ -106,6 +106,8 @@ pub async fn connection_acceptor(
         .map(Option::Some)
         .or_else(|e| if test_instance { Ok(None) } else { Err(e) })?;
 
+    let enable_http_control_api = common_config.enable_http_control_api;
+
     let security_checker =
         ConnectionsSecurityChecker::new(fb, common_config, &repo_handlers, &root_log).await?;
     let addr: SocketAddr = sockname.parse()?;
@@ -127,6 +129,7 @@ pub async fn connection_acceptor(
         maybe_live_commit_sync_config,
         scribe,
         logger: root_log.clone(),
+        enable_http_control_api,
     });
 
     loop {
@@ -159,6 +162,7 @@ pub struct Acceptor {
     pub maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
     pub scribe: Scribe,
     pub logger: Logger,
+    pub enable_http_control_api: bool,
 }
 
 /// Details for a socket we've just opened.

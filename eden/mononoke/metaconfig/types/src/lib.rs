@@ -103,6 +103,9 @@ pub struct CommonConfig {
     pub loadlimiter_category: Option<String>,
     /// Params for logging censored blobstore accesses
     pub censored_scuba_params: CensoredScubaParams,
+    /// Whether to enable the control API over HTTP. At this time, this is only meant to be used in
+    /// tests.
+    pub enable_http_control_api: bool,
 }
 
 /// Configuration for logging of censored blobstore accesses

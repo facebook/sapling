@@ -53,6 +53,7 @@ Backsync to a small repo
   $ backsync_large_to_small 2>&1 | grep "syncing bookmark"
   * syncing bookmark master_bookmark to * (glob)
   * syncing bookmark master_bookmark to * (glob)
+  $ flush_mononoke_bookmarks
 
 Pull from a small repo. Check that both merges are synced
 although the second one became non-merge commit

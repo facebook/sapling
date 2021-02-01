@@ -172,6 +172,7 @@ fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
     Ok(CommonConfig {
         security_config,
         loadlimiter_category,
+        enable_http_control_api: common.enable_http_control_api,
         censored_scuba_params,
     })
 }
@@ -1117,6 +1118,7 @@ mod test {
                     },
                 ],
                 loadlimiter_category: Some("test-category".to_string()),
+                enable_http_control_api: false,
                 censored_scuba_params: CensoredScubaParams {
                     table: Some("censored_table".to_string()),
                     local_path: Some("censored_local_path".to_string()),

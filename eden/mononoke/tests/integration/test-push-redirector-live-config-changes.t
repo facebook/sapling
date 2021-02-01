@@ -210,6 +210,7 @@ Live change of the config, without Mononoke restart
   $ export REPOIDSMALL=1
   $ backsync_large_to_small 2>&1 | grep "force using"
   * force using mapping TEST_VERSION_NAME_LIVE_V2 to rewrite * (glob)
+  $ flush_mononoke_bookmarks
 
 -- wait until it backsyncs to a small repo
   $ sleep 2

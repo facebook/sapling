@@ -125,6 +125,7 @@ Before the change
   > --commit-author user \
   > --commit-message "merging" \
   > --recovery-file-path "$GIT_REPO/recovery_file.json" &> /dev/null
+  $ flush_mononoke_bookmarks
 
 -- Checking imported files
   $ cd "$TESTTMP/large-hg-client"

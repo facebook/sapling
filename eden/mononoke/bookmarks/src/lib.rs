@@ -66,4 +66,9 @@ pub trait Bookmarks: Send + Sync + 'static {
 
     /// Create a transaction to modify bookmarks.
     fn create_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction>;
+
+    /// Drop any caches held by this instance of Bookmarks.
+    fn drop_caches(&self) {
+        // No-op by default.
+    }
 }

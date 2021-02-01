@@ -414,6 +414,10 @@ function wait_for_mononoke {
   fi
 }
 
+function flush_mononoke_bookmarks {
+  sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/drop_bookmarks_cache"
+}
+
 # Wait until cache warmup finishes
 function wait_for_mononoke_cache_warmup {
   local attempts=150
@@ -553,13 +557,20 @@ EOF
 
   cd mononoke-config || exit 1
   mkdir -p common
+  touch common/common.toml
   touch common/commitsyncmap.toml
+
+  # We have some tests that call this twice...
+  truncate -s 0 common/common.toml
+
   if [[ -n "$SCUBA_CENSORED_LOGGING_PATH" ]]; then
   cat > common/common.toml <<CONFIG
 scuba_local_path_censored="$SCUBA_CENSORED_LOGGING_PATH"
 CONFIG
   fi
   cat >> common/common.toml <<CONFIG
+enable_http_control_api=true
+
 [[whitelist_entry]]
 identity_type = "$ALLOWED_IDENTITY_TYPE"
 identity_data = "${OVERRIDE_ALLOWED_IDDATA:-$ALLOWED_IDENTITY_DATA}"
