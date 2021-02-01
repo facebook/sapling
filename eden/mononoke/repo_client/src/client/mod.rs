@@ -92,6 +92,7 @@ use warm_bookmarks_cache::WarmBookmarksCache;
 mod logging;
 mod monitor;
 mod session_bookmarks_cache;
+mod tests;
 
 use logging::CommandLogger;
 pub use logging::WireprotoLogging;
@@ -2578,38 +2579,4 @@ fn generate_lookup_resp_buf(success: bool, message: &[u8]) -> BytesOld {
     buf.put(message);
     buf.put(b'\n');
     buf.freeze()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_debug_format_directories() {
-        assert_eq!(&debug_format_directories(vec![&"foo"]), "foo,");
-        assert_eq!(&debug_format_directories(vec![&"foo,bar"]), "foo:obar,");
-        assert_eq!(&debug_format_directories(vec![&"foo", &"bar"]), "foo,bar,");
-    }
-
-    #[test]
-    fn test_parse_git_lookup() -> Result<(), Error> {
-        assert!(parse_git_lookup("ololo").is_none());
-        assert!(parse_git_lookup("_gitlookup_hg_badhash").is_none());
-        assert!(parse_git_lookup("_gitlookup_git_badhash").is_none());
-        assert_eq!(
-            parse_git_lookup("_gitlookup_hg_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-            Some(GitLookup::HgToGit(HgChangesetId::from_str(
-                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-            )?))
-        );
-
-        assert_eq!(
-            parse_git_lookup("_gitlookup_git_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-            Some(GitLookup::GitToHg(GitSha1::from_str(
-                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-            )?))
-        );
-
-        Ok(())
-    }
 }

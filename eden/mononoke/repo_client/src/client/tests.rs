@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+#![cfg(test)]
+
 use super::*;
 use blobstore::Loadable;
-use cached_config::ConfigHandle;
 use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
 use futures::compat::Future01CompatExt;
@@ -16,7 +17,9 @@ use hooks_content_stores::InMemoryFileContentFetcher;
 use manifest::{Entry, ManifestOps};
 use maplit::hashset;
 use mercurial_types::HgFileNodeId;
-use metaconfig_types::{HookManagerParams, InfinitepushParams, LfsParams, PushrebaseParams};
+use metaconfig_types::{
+    HgsqlName, HookManagerParams, InfinitepushParams, LfsParams, PushrebaseParams,
+};
 use mononoke_repo::MononokeRepo;
 use mutable_counters::SqlMutableCounters;
 use repo_read_write_status::RepoReadWriteFetcher;
@@ -24,9 +27,6 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
 use tests_utils::CreateCommitContext;
-
-use mononoke_types_mocks::changesetid::ONES_CSID;
-use std::collections::HashSet;
 
 #[test]
 fn test_parsing_caps_simple() {
@@ -80,138 +80,6 @@ fn test_parsing_caps_simple() {
     );
 }
 
-#[test]
-fn test_pushredirect_config() {
-    use unbundle::*;
-    // This ends up being exhaustive
-    let json_config = r#"
-{
-  "per_repo": {
-    "-4": {
-        "draft_push": false,
-        "public_push": false
-    },
-    "-3": {
-        "draft_push": true,
-        "public_push": true
-    },
-    "-2": {
-        "draft_push": false,
-        "public_push": true
-    },
-    "-1": {
-        "draft_push": true,
-        "public_push": false
-    }
-  }
-}"#;
-
-    let push_action = PostResolveAction::Push(PostResolvePush {
-        changegroup_id: None,
-        bookmark_pushes: Vec::new(),
-        maybe_raw_bundle2_id: None,
-        non_fast_forward_policy: NonFastForwardPolicy::Allowed,
-        uploaded_bonsais: HashSet::new(),
-    });
-    let infinitepush_action = PostResolveAction::InfinitePush(PostResolveInfinitePush {
-        changegroup_id: None,
-        maybe_bookmark_push: Some(InfiniteBookmarkPush {
-            name: BookmarkName::new("").unwrap(),
-            create: true,
-            force: true,
-            old: None,
-            new: ONES_CSID,
-        }),
-        maybe_raw_bundle2_id: None,
-        uploaded_bonsais: HashSet::new(),
-    });
-    let pushrebase_action = PostResolveAction::PushRebase(PostResolvePushRebase {
-        any_merges: true,
-        bookmark_push_part_id: None,
-        bookmark_spec: PushrebaseBookmarkSpec::ForcePushrebase(PlainBookmarkPush {
-            part_id: 0,
-            name: BookmarkName::new("").unwrap(),
-            old: None,
-            new: None,
-        }),
-        maybe_hg_replay_data: None,
-        maybe_pushvars: None,
-        commonheads: CommonHeads { heads: Vec::new() },
-        uploaded_bonsais: HashSet::new(),
-    });
-    let bookmark_only_action =
-        PostResolveAction::BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase {
-            bookmark_push: PlainBookmarkPush {
-                part_id: 0,
-                name: BookmarkName::new("").unwrap(),
-                old: None,
-                new: None,
-            },
-            maybe_raw_bundle2_id: None,
-            non_fast_forward_policy: NonFastForwardPolicy::Allowed,
-        });
-
-    let config_handler = ConfigHandle::from_json(&json_config).unwrap();
-    for action in [&push_action, &pushrebase_action, &bookmark_only_action].iter() {
-        assert_eq!(
-            maybe_pushredirect_action(RepositoryId::new(-4), Some(&config_handler), action)
-                .unwrap(),
-            false,
-        );
-        assert_eq!(
-            maybe_pushredirect_action(RepositoryId::new(-3), Some(&config_handler), action)
-                .unwrap(),
-            true,
-        );
-        assert_eq!(
-            maybe_pushredirect_action(RepositoryId::new(-2), Some(&config_handler), action)
-                .unwrap(),
-            true,
-        );
-        assert_eq!(
-            maybe_pushredirect_action(RepositoryId::new(-1), Some(&config_handler), action)
-                .unwrap(),
-            false,
-        );
-    }
-    assert_eq!(
-        maybe_pushredirect_action(
-            RepositoryId::new(-4),
-            Some(&config_handler),
-            &infinitepush_action
-        )
-        .unwrap(),
-        false,
-    );
-    assert_eq!(
-        maybe_pushredirect_action(
-            RepositoryId::new(-3),
-            Some(&config_handler),
-            &infinitepush_action
-        )
-        .unwrap(),
-        true,
-    );
-    assert_eq!(
-        maybe_pushredirect_action(
-            RepositoryId::new(-2),
-            Some(&config_handler),
-            &infinitepush_action
-        )
-        .unwrap(),
-        false,
-    );
-    assert_eq!(
-        maybe_pushredirect_action(
-            RepositoryId::new(-1),
-            Some(&config_handler),
-            &infinitepush_action
-        )
-        .unwrap(),
-        true,
-    );
-}
-
 #[fbinit::test]
 fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = tokio_compat::runtime::Runtime::new()?;
@@ -225,7 +93,6 @@ async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), 
     // Commit that has only dir2 directory
     let root_mf_id = HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2")?
         .load(&ctx, &repo.get_blobstore())
-        .compat()
         .await?
         .manifestid();
 
@@ -252,13 +119,11 @@ async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), 
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
         .load(&ctx, &repo.get_blobstore())
-        .compat()
         .await?
         .manifestid();
 
     let base_root_mf_id = HgChangesetId::from_str("2f866e7e549760934e31bf0420a873f65100ad63")?
         .load(&ctx, &repo.get_blobstore())
-        .compat()
         .await?
         .manifestid();
 
@@ -294,7 +159,6 @@ async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Resul
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
         .load(&ctx, &repo.get_blobstore())
-        .compat()
         .await?
         .manifestid();
 
@@ -355,7 +219,6 @@ async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> R
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
         .load(&ctx, &repo.get_blobstore())
-        .compat()
         .await?
         .manifestid();
 
@@ -396,16 +259,14 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
 
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), commit)
-        .compat()
         .await?;
 
-    let hg_cs = hg_cs_id.load(&ctx, &repo.get_blobstore()).compat().await?;
+    let hg_cs = hg_cs_id.load(&ctx, &repo.get_blobstore()).await?;
 
     let path = MPath::new("largefile")?;
     let maybe_entry = hg_cs
         .manifestid()
         .find_entry(ctx.clone(), repo.get_blobstore(), Some(path.clone()))
-        .compat()
         .await?
         .unwrap();
 
@@ -470,32 +331,39 @@ async fn run_and_check_if_lfs(
         repo.clone(),
         &pushrebase_params,
         vec![],
-        Arc::new(HookManager::new(
-            ctx.fb,
-            Box::new(InMemoryFileContentFetcher::new()),
-            HookManagerParams {
-                disable_acl_checker: true,
-                all_hooks_bypassed: true,
-                bypassed_commits_scuba_table: None,
-            },
-            MononokeScubaSampleBuilder::with_discard(),
-            repo.name().clone(),
-        )),
+        Arc::new(
+            HookManager::new(
+                ctx.fb,
+                Box::new(InMemoryFileContentFetcher::new()),
+                HookManagerParams {
+                    disable_acl_checker: true,
+                    all_hooks_bypassed: true,
+                    bypassed_commits_scuba_table: None,
+                },
+                MononokeScubaSampleBuilder::with_discard(),
+                repo.name().clone(),
+            )
+            .await?,
+        ),
         None,
         lfs_params,
         RepoReadWriteFetcher::new(
             None,
             RepoReadOnly::ReadOnly("".to_string()),
-            "repo".to_string(),
+            HgsqlName("repo".into()),
         ),
         InfinitepushParams::default(),
         0,
         Arc::new(SkiplistIndex::new()),
         Arc::new(SqlMutableCounters::with_sqlite_in_memory()?),
+        None,
+        Default::default(),
+        Default::default(),
     )
     .await?;
 
     let logging = LoggingContainer::new(
+        ctx.fb,
         ctx.logger().clone(),
         MononokeScubaSampleBuilder::with_discard(),
     );
@@ -507,13 +375,12 @@ async fn run_and_check_if_lfs(
         mononoke_repo,
         ctx.session().clone(),
         logging,
-        100,   // hash validation percentage
         false, // Don't preserve raw bundle 2 (we don't push)
-        false, // Don't allow pushes (we don't push)
-        true,  // Support bundle2_listkeys
         Arc::new(noop_wireproto),
         None, // No PushRedirectorArgs
         None, // Don't listen to LiveCommitSyncConfig
+        None, // No warm bookmarks cache
+        Default::default(),
     );
 
     let bytes = repo_client
@@ -551,7 +418,36 @@ async fn fetch_mfs(
 
     // Make sure that Manifest ids are present in the repo
     for (hash, _) in &fetched_mfs {
-        hash.load(ctx, repo.blobstore()).compat().await?;
+        hash.load(ctx, repo.blobstore()).await?;
     }
     Ok(fetched_mfs)
+}
+
+#[test]
+fn test_debug_format_directories() {
+    assert_eq!(&debug_format_directories(vec![&"foo"]), "foo,");
+    assert_eq!(&debug_format_directories(vec![&"foo,bar"]), "foo:obar,");
+    assert_eq!(&debug_format_directories(vec![&"foo", &"bar"]), "foo,bar,");
+}
+
+#[test]
+fn test_parse_git_lookup() -> Result<(), Error> {
+    assert!(parse_git_lookup("ololo").is_none());
+    assert!(parse_git_lookup("_gitlookup_hg_badhash").is_none());
+    assert!(parse_git_lookup("_gitlookup_git_badhash").is_none());
+    assert_eq!(
+        parse_git_lookup("_gitlookup_hg_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+        Some(GitLookup::HgToGit(HgChangesetId::from_str(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        )?))
+    );
+
+    assert_eq!(
+        parse_git_lookup("_gitlookup_git_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+        Some(GitLookup::GitToHg(GitSha1::from_str(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        )?))
+    );
+
+    Ok(())
 }
