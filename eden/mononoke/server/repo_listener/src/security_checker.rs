@@ -7,6 +7,7 @@
 
 use crate::repo_handlers::RepoHandler;
 use anyhow::{bail, Context, Error, Result};
+use borrowed::borrowed;
 use fbinit::FacebookInit;
 use futures::future::try_join_all;
 use metaconfig_types::{AllowlistEntry, CommonConfig};
@@ -48,9 +49,9 @@ impl ConnectionsSecurityChecker {
             }
         }
 
-        let futures = repo_handlers
-            .iter()
-            .map(|(reponame, repohandler)| async move {
+        let futures = repo_handlers.iter().map(|(reponame, repohandler)| {
+            borrowed!(allowlisted_identities);
+            async move {
                 if let Some(acl_name) = repohandler.repo.hipster_acl() {
                     let permchecker = PermissionCheckerBuilder::acl_for_repo(fb, acl_name)
                         .await
@@ -63,13 +64,21 @@ impl ConnectionsSecurityChecker {
                         permchecker,
                     ))
                 } else {
-                    warn!(logger, "No ACL set for repo {}.", reponame);
+                    // If we dont have an Acl config here, we just use the allowlisted identities.
+                    // Those are the identities we'd allow to impersonate anyone anyway. Note that
+                    // that this is not a setup we run in prod — it's just convenient for local
+                    // repos.
+                    warn!(
+                        logger,
+                        "No ACL set for repo {}, defaulting to allowlisted identities", reponame
+                    );
                     Result::<(String, BoxPermissionChecker), Error>::Ok((
                         reponame.clone(),
-                        PermissionCheckerBuilder::always_reject(),
+                        PermissionCheckerBuilder::allowlist_checker(allowlisted_identities.clone()),
                     ))
                 }
-            });
+            }
+        });
 
         let repo_permcheckers: HashMap<_, _> = try_join_all(futures).await?.into_iter().collect();
 
