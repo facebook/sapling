@@ -324,7 +324,8 @@ async fn move_bookmark_back_in_history_until_derived(
 }
 
 pub enum LatestDerivedBookmarkEntry {
-    Found(Option<(ChangesetId, Timestamp)>),
+    /// Timestamp can be None if no history entries are found
+    Found(Option<(ChangesetId, Option<Timestamp>)>),
     /// Latest derived bookmark entry is too far away
     NotFound,
 }
@@ -340,7 +341,7 @@ pub async fn find_all_underived_and_latest_derived(
 ) -> Result<
     (
         LatestDerivedBookmarkEntry,
-        VecDeque<(ChangesetId, Timestamp)>,
+        VecDeque<(ChangesetId, Option<Timestamp>)>,
     ),
     Error,
 > {
@@ -353,7 +354,7 @@ pub async fn find_all_underived_and_latest_derived(
         // the next call to `list_bookmark_log_entries(...)` might return
         // entries that were already returned on the previous call `list_bookmark_log_entries(...)`.
         // That means that the same entry might be rechecked, but that shouldn't be a big problem.
-        let log_entries = repo
+        let mut log_entries = repo
             .bookmarks_log()
             .list_bookmark_log_entries(
                 ctx.clone(),
@@ -362,12 +363,21 @@ pub async fn find_all_underived_and_latest_derived(
                 Some(prev_limit),
                 Freshness::MaybeStale,
             )
+            .map_ok(|(_, maybe_cs_id, _, ts)| (maybe_cs_id, Some(ts)))
             .try_collect::<Vec<_>>()
             .await?;
 
+        if log_entries.is_empty() {
+            debug!(ctx.logger(), "bookmark {} has no history in the log", book);
+            let maybe_cs_id = repo.get_bonsai_bookmark(ctx.clone(), book).await?;
+            // If a bookmark has no history then we add a fake entry saying that
+            // timestamp is unknown.
+            log_entries.push((maybe_cs_id, None));
+        }
+
         let log_entries_fetched = log_entries.len();
-        let mut maybe_derived = stream::iter(log_entries.into_iter().map(
-            |(_, maybe_cs_id, _, ts)| async move {
+        let mut maybe_derived =
+            stream::iter(log_entries.into_iter().map(|(maybe_cs_id, ts)| async move {
                 match maybe_cs_id {
                     Some(cs_id) => {
                         let derived = is_warm(ctx, repo, &cs_id, warmers).await;
@@ -375,9 +385,8 @@ pub async fn find_all_underived_and_latest_derived(
                     }
                     None => (None, true),
                 }
-            },
-        ))
-        .buffered(100);
+            }))
+            .buffered(100);
 
         while let Some((maybe_cs_and_ts, is_warm)) = maybe_derived.next().await {
             if is_warm {
@@ -655,15 +664,17 @@ async fn single_bookmark_updater(
         BookmarkUpdateDelay::Disallow => 0,
     };
 
-    let update_bookmark = |ts: Timestamp, cs_id: ChangesetId| async move {
-        let cur_delay = ts.since_seconds();
-        if cur_delay < bookmark_update_delay_secs {
-            let to_sleep = (bookmark_update_delay_secs - cur_delay) as u64;
-            info!(
-                ctx.logger(),
-                "sleeping for {} secs before updating a bookmark", to_sleep
-            );
-            tokio::time::delay_for(Duration::from_secs(to_sleep)).await;
+    let update_bookmark = |maybe_ts: Option<Timestamp>, cs_id: ChangesetId| async move {
+        if let Some(ts) = maybe_ts {
+            let cur_delay = ts.since_seconds();
+            if cur_delay < bookmark_update_delay_secs {
+                let to_sleep = (bookmark_update_delay_secs - cur_delay) as u64;
+                info!(
+                    ctx.logger(),
+                    "sleeping for {} secs before updating a bookmark", to_sleep
+                );
+                tokio::time::delay_for(Duration::from_secs(to_sleep)).await;
+            }
         }
         bookmarks.with_write(|bookmarks| {
             let name = bookmark.name().clone();
@@ -690,13 +701,17 @@ async fn single_bookmark_updater(
         }
     }
 
-    for (underived_cs_id, ts) in underived_history {
-        staleness_reporter(ts);
+    for (underived_cs_id, maybe_ts) in underived_history {
+        if let Some(ts) = maybe_ts {
+            // timestamp might not be known if e.g. bookmark has no history.
+            // In that case let's not report staleness
+            staleness_reporter(ts);
+        }
 
         let res = warm_all(&ctx, &repo, &underived_cs_id, &warmers).await;
         match res {
             Ok(()) => {
-                update_bookmark(ts, underived_cs_id).await;
+                update_bookmark(maybe_ts, underived_cs_id).await;
             }
             Err(err) => {
                 warn!(
@@ -720,8 +735,10 @@ mod tests {
     use anyhow::anyhow;
     use blobrepo_override::DangerousOverride;
     use blobstore::Blobstore;
+    use bookmarks::BookmarkUpdateLog;
     use cloned::cloned;
     use consts::HIGHEST_IMPORTED_GEN_NUM;
+    use dbbookmarks::SqlBookmarksBuilder;
     use delayblob::DelayedBlobstore;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
@@ -1349,6 +1366,49 @@ mod tests {
         .await?;
 
         let _ = cancel.send(());
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_single_bookmarks_no_history(fb: FacebookInit) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+
+        let bookmarks = Arc::new(RwLock::new(HashMap::new()));
+
+        let mut warmers: Vec<Warmer> = Vec::new();
+        warmers.push(create_derived_data_warmer::<RootUnodeManifestId>(&ctx));
+        let warmers = Arc::new(warmers);
+
+        let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+        warm_all(&ctx, &repo, &master_cs_id, &warmers).await?;
+
+        let master_book_name = BookmarkName::new("master")?;
+        let master_book = Bookmark::new(
+            master_book_name.clone(),
+            BookmarkKind::PullDefaultPublishing,
+        );
+
+        let bookmarks_log_override =
+            Arc::new(SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(repo.get_repoid()));
+        let repo =
+            repo.dangerous_override(|_| bookmarks_log_override as Arc<dyn BookmarkUpdateLog>);
+        single_bookmark_updater(
+            &ctx,
+            &repo,
+            &master_book,
+            &bookmarks,
+            &warmers,
+            |_| {},
+            BookmarkUpdateDelay::Disallow,
+        )
+        .await?;
+
+        assert_eq!(
+            bookmarks.with_read(|bookmarks| bookmarks.get(&master_book_name).cloned()),
+            Some((master_cs_id, BookmarkKind::PullDefaultPublishing))
+        );
 
         Ok(())
     }

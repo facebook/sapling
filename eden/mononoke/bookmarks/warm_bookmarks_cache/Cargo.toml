@@ -39,6 +39,7 @@ tokio = { version = "0.2.24", features = ["full", "test-util"] }
 [dev-dependencies]
 blobrepo_override = { path = "../../blobrepo/override", version = "0.1.0" }
 blobstore = { path = "../../blobstore", version = "0.1.0" }
+dbbookmarks = { path = "../dbbookmarks", version = "0.1.0" }
 delayblob = { path = "../../blobstore/delayblob", version = "0.1.0" }
 fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
 sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
