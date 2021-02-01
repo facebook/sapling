@@ -44,7 +44,6 @@ use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
     SyncedCommitMappingEntry,
 };
-use unbundle::get_pushrebase_hooks;
 
 use crate::common::get_source_target_repos_and_mapping;
 use crate::error::SubcommandError;
@@ -468,7 +467,12 @@ async fn change_mapping_via_extras<'a>(
 
 
     let pushrebase_flags = repo_config.pushrebase.flags;
-    let pushrebase_hooks = get_pushrebase_hooks(ctx.clone(), &large_repo, &repo_config.pushrebase);
+    let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
+        &ctx,
+        &large_repo,
+        &large_bookmark,
+        &repo_config.pushrebase,
+    )?;
 
     let bcs = large_cs_id
         .load(&ctx, &large_repo.get_blobstore())

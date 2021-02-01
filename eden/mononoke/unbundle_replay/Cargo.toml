@@ -12,6 +12,7 @@ blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
 blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
 blobstore = { path = "../blobstore", version = "0.1.0" }
 bookmarks = { path = "../bookmarks", version = "0.1.0" }
+bookmarks_movement = { path = "../bookmarks/bookmarks_movement", version = "0.1.0" }
 cmdlib = { path = "../cmdlib", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
 hooks = { path = "../hooks", version = "0.1.0" }

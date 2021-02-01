@@ -22,6 +22,7 @@ use metaconfig_types::{
     BookmarkAttrs, InfinitepushParams, PushrebaseParams, SourceControlServiceParams,
 };
 use mononoke_types::BonsaiChangeset;
+use pushrebase::PushrebaseHook;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::RepoReadWriteFetcher;
 
@@ -145,27 +146,8 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             )
             .await?;
 
-        let mut pushrebase_hooks = Vec::new();
-
-        if pushrebase_params.globalrevs_publishing_bookmark.is_some() {
-            let hook = GlobalrevPushrebaseHook::new(
-                ctx.clone(),
-                repo.bonsai_globalrev_mapping().clone(),
-                repo.get_repoid(),
-            );
-            pushrebase_hooks.push(hook);
-        }
-
-        if pushrebase_params.populate_git_mapping {
-            let hook = GitMappingPushrebaseHook::new(repo.bonsai_git_mapping().clone());
-            pushrebase_hooks.push(hook);
-        }
-
-        let mut flags = pushrebase_params.flags.clone();
-        if let Some(rewritedates) = bookmark_attrs.should_rewrite_dates(self.bookmark) {
-            // Bookmark config overrides repo flags.rewritedates config
-            flags.rewritedates = rewritedates;
-        }
+        let mut pushrebase_hooks =
+            get_pushrebase_hooks(ctx, repo, &self.bookmark, pushrebase_params)?;
 
         // For pushrebase, we check the repo lock once at the beginning of the
         // pushrebase operation, and then once more as part of the pushrebase
@@ -176,6 +158,12 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             RepoLockPushrebaseHook::new(repo_read_write_fetcher, kind, self.pushvars)
         {
             pushrebase_hooks.push(hook);
+        }
+
+        let mut flags = pushrebase_params.flags.clone();
+        if let Some(rewritedates) = bookmark_attrs.should_rewrite_dates(self.bookmark) {
+            // Bookmark config overrides repo flags.rewritedates config
+            flags.rewritedates = rewritedates;
         }
 
         ctx.scuba().clone().log_with_msg("Pushrebase started", None);
@@ -202,4 +190,42 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
 
         result.map_err(BookmarkMovementError::PushrebaseError)
     }
+}
+
+/// Get a Vec of the relevant pushrebase hooks for PushrebaseParams, using this BlobRepo when
+/// required by those hooks.
+pub fn get_pushrebase_hooks(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark: &BookmarkName,
+    params: &PushrebaseParams,
+) -> Result<Vec<Box<dyn PushrebaseHook>>, BookmarkMovementError> {
+    let mut pushrebase_hooks = Vec::new();
+
+    match params.globalrevs_publishing_bookmark.as_ref() {
+        Some(globalrevs_publishing_bookmark) if globalrevs_publishing_bookmark == bookmark => {
+            let hook = GlobalrevPushrebaseHook::new(
+                ctx.clone(),
+                repo.bonsai_globalrev_mapping().clone(),
+                repo.get_repoid(),
+            );
+            pushrebase_hooks.push(hook);
+        }
+        Some(globalrevs_publishing_bookmark) => {
+            return Err(BookmarkMovementError::PushrebaseInvalidGlobalrevsBookmark {
+                bookmark: bookmark.clone(),
+                globalrevs_publishing_bookmark: globalrevs_publishing_bookmark.clone(),
+            });
+        }
+        None => {
+            // No hook necessary
+        }
+    };
+
+    if params.populate_git_mapping {
+        let hook = GitMappingPushrebaseHook::new(repo.bonsai_git_mapping().clone());
+        pushrebase_hooks.push(hook);
+    }
+
+    Ok(pushrebase_hooks)
 }

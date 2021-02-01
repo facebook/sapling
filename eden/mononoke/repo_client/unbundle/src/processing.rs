@@ -19,13 +19,11 @@ use bookmarks_movement::{
 };
 use bytes::Bytes;
 use context::CoreContext;
-use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
-use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use hooks::HookManager;
 use mercurial_bundle_replay_data::BundleReplayData;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id};
-use pushrebase::{PushrebaseError, PushrebaseHook};
+use pushrebase::PushrebaseError;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::RepoReadWriteFetcher;
 use reverse_filler_queue::ReverseFillerQueue;
@@ -850,30 +848,4 @@ async fn infinitepush_scratch_bookmark(
     }
 
     Ok(())
-}
-
-/// Get a Vec of the relevant pushrebase hooks for PushrebaseParams, using this BlobRepo when
-/// required by those hooks.
-pub fn get_pushrebase_hooks(
-    ctx: CoreContext,
-    repo: &BlobRepo,
-    params: &PushrebaseParams,
-) -> Vec<Box<dyn PushrebaseHook>> {
-    let mut hooks = vec![];
-
-    if params.globalrevs_publishing_bookmark.is_some() {
-        let hook = GlobalrevPushrebaseHook::new(
-            ctx,
-            repo.bonsai_globalrev_mapping().clone(),
-            repo.get_repoid(),
-        );
-        hooks.push(hook);
-    }
-
-    if params.populate_git_mapping {
-        let hook = GitMappingPushrebaseHook::new(repo.bonsai_git_mapping().clone());
-        hooks.push(hook);
-    }
-
-    hooks
 }

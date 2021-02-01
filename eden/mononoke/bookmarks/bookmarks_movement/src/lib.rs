@@ -33,7 +33,7 @@ pub use crate::affected_changesets::log_commits_to_scribe;
 pub use crate::create::CreateBookmarkOp;
 pub use crate::delete::DeleteBookmarkOp;
 pub use crate::hook_running::run_hooks;
-pub use crate::pushrebase_onto::PushrebaseOntoBookmarkOp;
+pub use crate::pushrebase_onto::{get_pushrebase_hooks, PushrebaseOntoBookmarkOp};
 pub use crate::update::{BookmarkUpdatePolicy, BookmarkUpdateTargets, UpdateBookmarkOp};
 
 /// An error encountered during an attempt to move a bookmark.
@@ -41,9 +41,6 @@ pub use crate::update::{BookmarkUpdatePolicy, BookmarkUpdateTargets, UpdateBookm
 pub enum BookmarkMovementError {
     #[error("Non fast-forward bookmark move from {from} to {to}")]
     NonFastForwardMove { from: ChangesetId, to: ChangesetId },
-
-    #[error("Pushrebase required when assigning globalrevs")]
-    PushrebaseRequiredGlobalrevs,
 
     #[error("Deletion of '{bookmark}' is prohibited")]
     DeletionProhibited { bookmark: BookmarkName },
@@ -101,6 +98,22 @@ pub enum BookmarkMovementError {
         changeset_id: ChangesetId,
         path1: MPath,
         path2: MPath,
+    },
+
+    #[error(
+        "This repository uses Globalrevs. Pushrebase is only allowed onto the bookmark '{}', this push was for '{}'",
+        .globalrevs_publishing_bookmark,
+        .bookmark
+    )]
+    PushrebaseInvalidGlobalrevsBookmark {
+        bookmark: BookmarkName,
+        globalrevs_publishing_bookmark: BookmarkName,
+    },
+
+    #[error("Bookmark '{bookmark}' can only be moved to ancestors of '{descendant_bookmark}'")]
+    RequiresAncestorOf {
+        bookmark: BookmarkName,
+        descendant_bookmark: BookmarkName,
     },
 
     #[error(transparent)]

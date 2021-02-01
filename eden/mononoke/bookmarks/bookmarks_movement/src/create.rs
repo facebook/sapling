@@ -178,7 +178,16 @@ impl<'op> CreateBookmarkOp<'op> {
                 vec![]
             }
             BookmarkKind::Public => {
-                crate::globalrev_mapping::require_globalrevs_disabled(pushrebase_params)?;
+                crate::globalrev_mapping::check_globalrevs_push(
+                    ctx,
+                    repo,
+                    lca_hint.as_ref(),
+                    pushrebase_params,
+                    self.bookmark,
+                    self.target,
+                )
+                .await?;
+
                 let txn_hook_fut = crate::git_mapping::populate_git_mapping_txn_hook(
                     ctx,
                     repo,

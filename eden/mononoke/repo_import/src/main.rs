@@ -52,7 +52,6 @@ use tokio::{
     process, time,
 };
 use topo_sort::sort_topological;
-use unbundle::get_pushrebase_hooks;
 
 mod cli;
 mod tests;
@@ -579,7 +578,12 @@ async fn push_merge_commit(
 
     let merged_cs = merged_cs_id.load(ctx, repo.blobstore()).await?;
     let pushrebase_flags = repo_config.pushrebase.flags;
-    let pushrebase_hooks = get_pushrebase_hooks(ctx.clone(), &repo, &repo_config.pushrebase);
+    let pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
+        &ctx,
+        &repo,
+        &bookmark_to_merge_into,
+        &repo_config.pushrebase,
+    )?;
 
     let pushrebase_res = do_pushrebase_bonsai(
         &ctx,

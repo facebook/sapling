@@ -109,6 +109,7 @@ blobstore_sync_queue = { path = "blobstore_sync_queue", version = "0.1.0" }
 bonsai_globalrev_mapping = { path = "bonsai_globalrev_mapping", version = "0.1.0" }
 bookmark_renaming = { path = "commit_rewriting/bookmark_renaming", version = "0.1.0" }
 bookmarks = { path = "bookmarks", version = "0.1.0" }
+bookmarks_movement = { path = "bookmarks/bookmarks_movement", version = "0.1.0" }
 bounded_traversal = { path = "common/bounded_traversal", version = "0.1.0" }
 bulkops = { path = "bulkops", version = "0.1.0" }
 cacheblob = { path = "blobstore/cacheblob", version = "0.1.0" }
@@ -154,7 +155,6 @@ sqlblob = { path = "blobstore/sqlblob", version = "0.1.0" }
 streaming_clone = { path = "repo_client/streaming_clone", version = "0.1.0" }
 synced_commit_mapping = { path = "commit_rewriting/synced_commit_mapping", version = "0.1.0" }
 throttledblob = { path = "blobstore/throttledblob", version = "0.1.0" }
-unbundle = { path = "repo_client/unbundle", version = "0.1.0" }
 unodes = { path = "derived_data/unodes", version = "0.1.0" }
 xdiff = { path = "../scm/lib/xdiff", version = "0.1.0" }
 borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }

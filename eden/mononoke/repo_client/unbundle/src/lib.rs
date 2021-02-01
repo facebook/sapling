@@ -25,7 +25,7 @@ mod upload_changesets;
 
 pub use hook_running::run_hooks;
 pub use hooks::CrossRepoPushSource;
-pub use processing::{get_pushrebase_hooks, run_post_resolve_action};
+pub use processing::run_post_resolve_action;
 pub use push_redirector::{PushRedirector, PushRedirectorArgs};
 pub use resolver::{
     resolve, BundleResolverError, BundleResolverResultExt, Changesets, CommonHeads,

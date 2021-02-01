@@ -48,8 +48,8 @@ use std::time::Duration;
 use time_ext::DurationExt;
 use tokio::{task, time};
 use unbundle::{
-    self, get_pushrebase_hooks, run_hooks, CrossRepoPushSource, PostResolveAction,
-    PostResolvePushRebase, PushrebaseBookmarkSpec,
+    self, run_hooks, CrossRepoPushSource, PostResolveAction, PostResolvePushRebase,
+    PushrebaseBookmarkSpec,
 };
 
 use crate::hg_recording::HgRecordingClient;
@@ -543,8 +543,12 @@ async fn do_main(
                 "Pushrebase starting: {}: {:?} -> {:?}", onto_bookmark, onto_rev, target
             );
 
-            let mut pushrebase_hooks =
-                get_pushrebase_hooks(ctx.clone(), &repo, &repo_config.pushrebase);
+            let mut pushrebase_hooks = bookmarks_movement::get_pushrebase_hooks(
+                &ctx,
+                &repo,
+                &onto_bookmark,
+                &repo_config.pushrebase,
+            )?;
 
             pushrebase_hooks.push(UnbundleReplayHook::new(
                 repo.clone(),
