@@ -273,7 +273,7 @@ where
             }
 
             {
-                let ctx = derived_data::override_ctx(ctx.clone());
+                let ctx = derived_data::override_ctx(ctx.clone(), &repo);
                 // flush blobstore
                 memblobstore.persist(&ctx).await?;
             }

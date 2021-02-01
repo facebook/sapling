@@ -131,7 +131,7 @@ pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone {
         parents: Vec<Self>,
         options: &Self::Options,
     ) -> Result<Self, Error> {
-        let ctx = override_ctx(ctx);
+        let ctx = override_ctx(ctx, &repo);
         Self::derive_from_parents_impl(ctx, repo, bonsai, parents, options).await
     }
 
@@ -161,7 +161,7 @@ pub trait BonsaiDerivable: Sized + 'static + Send + Sync + Clone {
     where
         Mapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
     {
-        let ctx = &override_ctx(ctx.clone());
+        let ctx = &override_ctx(ctx.clone(), repo);
         Self::batch_derive_impl(ctx, repo, csids, mapping, gap_size).await
     }
 
@@ -284,8 +284,10 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone + BonsaiDerivable
     }
 }
 
-pub fn override_ctx(mut ctx: CoreContext) -> CoreContext {
-    if tunables::tunables().get_derived_data_use_background_session_class() {
+pub fn override_ctx(mut ctx: CoreContext, repo: &BlobRepo) -> CoreContext {
+    let use_bg_class =
+        tunables::tunables().get_by_repo_derived_data_use_background_session_class(repo.name());
+    if let Some(true) = use_bg_class {
         ctx.session_mut()
             .override_session_class(SessionClass::Background);
         ctx
