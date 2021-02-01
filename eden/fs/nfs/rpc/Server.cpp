@@ -27,32 +27,27 @@ namespace facebook {
 namespace eden {
 
 namespace {
-class RpcTcpHandler {
+class RpcTcpHandler : public folly::DelayedDestruction {
   struct Reader : public folly::AsyncReader::ReadCallback {
-    RpcTcpHandler* handler;
+    RpcTcpHandler* handler_;
+    DestructorGuard guard_;
 
     void deleteMe() {
-      if (handler) {
-        delete handler;
-        handler = nullptr;
-      }
+      handler_->resetReader();
     }
 
-    ~Reader() override {
-      deleteMe();
-    }
-
-    explicit Reader(RpcTcpHandler* handler) : handler(handler) {}
+    explicit Reader(RpcTcpHandler* handler)
+        : handler_(handler), guard_(handler_) {}
 
     void getReadBuffer(void** bufP, size_t* lenP) override {
-      auto [buf, len] = handler->readBuf_.preallocate(64, 64 * 1024);
+      auto [buf, len] = handler_->readBuf_.preallocate(64, 64 * 1024);
       *lenP = len;
       *bufP = buf;
     }
 
     void readDataAvailable(size_t len) noexcept override {
-      handler->readBuf_.postallocate(len);
-      handler->tryConsumeReadBuffer();
+      handler_->readBuf_.postallocate(len);
+      handler_->tryConsumeReadBuffer();
     }
 
     bool isBufferMovable() noexcept override {
@@ -62,8 +57,8 @@ class RpcTcpHandler {
     }
 
     void readBufferAvailable(std::unique_ptr<IOBuf> readBuf) noexcept override {
-      handler->readBuf_.append(std::move(readBuf));
-      handler->tryConsumeReadBuffer();
+      handler_->readBuf_.append(std::move(readBuf));
+      handler_->tryConsumeReadBuffer();
     }
 
     void readEOF() noexcept override {
@@ -77,9 +72,7 @@ class RpcTcpHandler {
   };
 
   struct Writer : public folly::AsyncWriter::WriteCallback {
-    RpcTcpHandler* handler;
-
-    explicit Writer(RpcTcpHandler* handler) : handler(handler) {}
+    Writer() = default;
 
     void writeSuccess() noexcept override {}
 
@@ -87,13 +80,12 @@ class RpcTcpHandler {
         size_t /*bytesWritten*/,
         const folly::AsyncSocketException& ex) noexcept override {
       XLOG(ERR) << "Error while writing: " << folly::exceptionStr(ex);
-      delete handler;
     }
   };
 
   void dispatchAndReply(std::unique_ptr<folly::IOBuf> input) {
-    // TODO(xavierd): `this` capture is unsafe due to the Reader and Writer
-    // above deleting it on error.
+    DestructorGuard guard(this);
+
     folly::makeFutureWith([this, input = std::move(input)]() mutable {
       XdrDeSerializer deser(input.get());
       rpc::rpc_msg_call call;
@@ -167,7 +159,8 @@ class RpcTcpHandler {
           });
     })
         .via(this->sock_->getEventBase())
-        .then([this](folly::Try<std::unique_ptr<folly::IOBuf>> result) {
+        .then([this, guard = std::move(guard)](
+                  folly::Try<std::unique_ptr<folly::IOBuf>> result) {
           if (result.hasException()) {
             // XXX: This should never happen.
           } else {
@@ -186,7 +179,7 @@ class RpcTcpHandler {
 
   std::shared_ptr<RpcServerProcessor> proc_;
   std::unique_ptr<AsyncSocket, ReleasableDestructor> sock_;
-  Reader reader_;
+  std::unique_ptr<Reader> reader_;
   Writer writer_;
   folly::IOBufQueue readBuf_;
 
@@ -194,10 +187,17 @@ class RpcTcpHandler {
   RpcTcpHandler(
       std::shared_ptr<RpcServerProcessor> proc,
       std::unique_ptr<AsyncSocket, ReleasableDestructor>&& socket_)
-      : proc_(proc), sock_(std::move(socket_)), reader_(this), writer_(this) {}
+      : proc_(proc),
+        sock_(std::move(socket_)),
+        reader_(std::make_unique<Reader>(this)),
+        writer_() {}
+
+  void resetReader() {
+    reader_.reset();
+  }
 
   void setup() {
-    sock_->setReadCB(&reader_);
+    sock_->setReadCB(reader_.get());
   }
 
   void tryConsumeReadBuffer() noexcept {
@@ -258,7 +258,11 @@ void RpcServer::RpcAcceptCallback::connectionAccepted(
   XLOG(DBG7) << "Accepted connection from: " << clientAddr;
   auto eb = EventBaseManager::get()->getEventBase();
   auto socket = AsyncSocket::newSocket(eb, fd);
-  auto handler = new RpcTcpHandler(proc, std::move(socket));
+  using UniquePtr =
+      std::unique_ptr<RpcTcpHandler, folly::DelayedDestruction::Destructor>;
+  auto handler = UniquePtr(
+      new RpcTcpHandler(proc, std::move(socket)),
+      folly::DelayedDestruction::Destructor());
   handler->setup();
 }
 
