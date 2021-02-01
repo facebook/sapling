@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::darkstorm_verifier::DarkstormVerifier;
 use crate::lfs_verifier::LfsVerifier;
 use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
@@ -16,7 +17,8 @@ use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use futures::compat::Future01CompatExt;
+use futures::{stream, Future as NewFuture, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use futures_ext::{try_boxfuture, FutureExt as _, StreamExt as _};
 use futures_old::{future::IntoFuture, stream as stream_old, Future, Stream};
 use getbundle_response::{
@@ -170,6 +172,7 @@ impl BookmarkChange {
 pub enum FilenodeVerifier {
     NoopVerifier,
     LfsVerifier(LfsVerifier),
+    DarkstormVerifier(DarkstormVerifier),
 }
 
 impl FilenodeVerifier {
@@ -177,25 +180,36 @@ impl FilenodeVerifier {
         &self,
         ctx: CoreContext,
         filenode_entries: &HashMap<MPath, Vec<PreparedFilenodeEntry>>,
-    ) -> impl Future<Item = (), Error = Error> + 'static {
-        match self {
-            Self::NoopVerifier => Ok(()).into_future().left_future(),
-            Self::LfsVerifier(lfs_verifier) => {
-                let lfs_blobs: Vec<(Sha256, u64)> = filenode_entries
-                    .values()
-                    .map(|entries| entries.into_iter())
-                    .flatten()
-                    .filter_map(|entry| {
-                        entry
-                            .maybe_get_lfs_pointer()
-                            .map(|(sha256, size)| (sha256, size))
-                    })
-                    .collect();
+    ) -> impl NewFuture<Output = Result<(), Error>> {
+        let lfs_blobs: Vec<(Sha256, u64)> = filenode_entries
+            .values()
+            .map(|entries| entries.iter())
+            .flatten()
+            .filter_map(|entry| {
+                entry
+                    .maybe_get_lfs_pointer()
+                    .map(|(sha256, size)| (sha256, size))
+            })
+            .collect();
 
-                lfs_verifier
-                    .ensure_lfs_presence(ctx, &lfs_blobs)
-                    .right_future()
+        let this = self.clone();
+
+        async move {
+            match this {
+                Self::NoopVerifier => {}
+                Self::LfsVerifier(lfs_verifier) => {
+                    lfs_verifier
+                        .ensure_lfs_presence(ctx, &lfs_blobs)
+                        .compat()
+                        .await?;
+                }
+                // Verification for darkstorm backups - will upload large files bypassing LFS server.
+                Self::DarkstormVerifier(ds_verifier) => {
+                    ds_verifier.upload(ctx, &lfs_blobs).await?;
+                }
             }
+
+            Ok(())
         }
     }
 }
@@ -282,8 +296,10 @@ fn create_bundle_impl(
                 };
 
                 // Check that the filenodes pass the verifier prior to serializing them.
-                let verify_ok =
-                    filenode_verifier.verify_entries(ctx.clone(), &prepared_filenode_entries);
+                let verify_ok = filenode_verifier
+                    .verify_entries(ctx.clone(), &prepared_filenode_entries)
+                    .boxed()
+                    .compat();
 
                 let filenode_entries =
                     create_filenodes(ctx.clone(), repo.clone(), prepared_filenode_entries).boxify();

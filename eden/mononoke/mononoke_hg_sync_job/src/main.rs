@@ -7,6 +7,7 @@
 
 #![feature(optin_builtin_traits)]
 #![feature(negative_impls)]
+#![feature(async_closure)]
 #![deny(warnings)]
 
 /// Mononoke -> hg sync job
@@ -28,6 +29,7 @@ use cmdlib::{
     helpers::block_execute,
 };
 use context::CoreContext;
+use darkstorm_verifier::DarkstormVerifier;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use futures::{
@@ -62,6 +64,7 @@ use tempfile::NamedTempFile;
 
 mod bundle_generator;
 mod bundle_preparer;
+mod darkstorm_verifier;
 mod errors;
 mod globalrev_syncer;
 mod hgrepo;
@@ -79,6 +82,7 @@ const ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS: &str = "bookmark-regex-force-genera
 const ARG_BOOKMARK_MOVE_ANY_DIRECTION: &str = "bookmark-move-any-direction";
 const ARG_USE_HG_SERVER_BOOKMARK_VALUE_IF_MISMATCH: &str =
     "use-hg-server-bookmark-value-if-mismatch";
+const ARG_DARKSTORM_BACKUP_REPO_ID: &str = "darkstorm-backup-repo-id";
 const GENERATE_BUNDLES: &str = "generate-bundles";
 const MODE_SYNC_ONCE: &str = "sync-once";
 const MODE_SYNC_LOOP: &str = "sync-loop";
@@ -650,6 +654,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
     let use_hg_server_bookmark_value_if_mismatch =
         matches.is_present(ARG_USE_HG_SERVER_BOOKMARK_VALUE_IF_MISMATCH);
+    let darkstorm_backup_repo_id = matches.value_of(ARG_DARKSTORM_BACKUP_REPO_ID);
 
     let hgsql_use_sqlite = matches.is_present(HGSQL_GLOBALREVS_USE_SQLITE);
     let hgsql_db_addr = matches
@@ -666,6 +671,21 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 let uri = uri.parse::<Uri>()?;
                 let verifier = LfsVerifier::new(uri, Arc::new(repo.get_blobstore()))?;
                 FilenodeVerifier::LfsVerifier(verifier)
+            }
+            None if darkstorm_backup_repo_id.is_some() => {
+                let backup_repo_id = args::get_repo_id_from_value(
+                    config_store,
+                    &matches,
+                    ARG_DARKSTORM_BACKUP_REPO_ID,
+                )?;
+                let backup_repo =
+                    args::open_repo_by_id(ctx.fb, &ctx.logger(), &matches, backup_repo_id).await?;
+                let verifier = DarkstormVerifier::new(
+                    Arc::new(repo.get_blobstore()),
+                    Arc::new(backup_repo.get_blobstore()),
+                    backup_repo.filestore_config(),
+                );
+                FilenodeVerifier::DarkstormVerifier(verifier)
             }
             None => FilenodeVerifier::NoopVerifier,
         };
@@ -1167,6 +1187,14 @@ fn main(fb: FacebookInit) -> Result<()> {
                 .help("This flag controls whether we tell the server to allow \
                 the bookmark movement in any direction (adding pushvar NON_FAST_FORWARD=true). \
                 However, the server checks its per bookmark configuration before move."),
+        )
+        .arg(
+            Arg::with_name(ARG_DARKSTORM_BACKUP_REPO_ID)
+                .long(ARG_DARKSTORM_BACKUP_REPO_ID)
+                .takes_value(true)
+                .required(false)
+                .help("Start hg-sync-job for syncing prod repo and darkstorm backup mononoke repo \
+                and use darkstorm-backup-repo-id value as a target for sync."),
         )
         .about(
             "Special job that takes bundles that were sent to Mononoke and \

@@ -1190,6 +1190,26 @@ pub fn open_repo_unredacted<'a>(
     )
 }
 
+/// Open an existing `BlobRepo` by ID -- for local instances, expect contents to already be there.
+/// It useful when we need to open more than 1 mononoke repo based on command line arguments
+#[inline]
+pub fn open_repo_by_id<'a>(
+    fb: FacebookInit,
+    logger: &'a Logger,
+    matches: &'a MononokeMatches<'a>,
+    repo_id: RepositoryId,
+) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
+    open_repo_internal_with_repo_id(
+        fb,
+        logger,
+        repo_id,
+        matches,
+        false, // use CreateStorage::ExistingOnly when creating blobstore
+        parse_caching(matches.as_ref()),
+        None, // do not override redaction config
+    )
+}
+
 fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name(MYSQL_MYROUTER_PORT)
