@@ -292,6 +292,12 @@ RpcServer::RpcServer(std::shared_ptr<RpcServerProcessor> proc)
   serverSocket_->startAccepting();
 }
 
+RpcServer::~RpcServer() {
+  for (const auto& mapping : mappedPorts_) {
+    portMap_.unsetMapping(mapping);
+  }
+}
+
 void RpcServer::registerService(uint32_t progNumber, uint32_t progVersion) {
   // Enumerate the addresses (in practice, just the loopback) and use the
   // port number we got from the kernel to register the mapping for

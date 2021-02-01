@@ -46,6 +46,8 @@ class RpcServer {
 
  public:
   explicit RpcServer(std::shared_ptr<RpcServerProcessor> proc);
+  ~RpcServer();
+
   void registerService(uint32_t progNumber, uint32_t progVersion);
 
  private:
