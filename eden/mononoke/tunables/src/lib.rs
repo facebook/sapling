@@ -341,8 +341,8 @@ mod test {
     fn update_by_repo_bool() {
         let test = TestTunables::default();
 
-        assert_eq!(test.get_by_repo_repobool(&s("repo")), None);
-        assert_eq!(test.get_by_repo_repobool(&s("repo2")), None);
+        assert_eq!(test.get_by_repo_repobool("repo"), None);
+        assert_eq!(test.get_by_repo_repobool("repo2"), None);
 
         test.update_by_repo_bools(&hashmap! {
             s("repo") => hashmap! {
@@ -352,29 +352,29 @@ mod test {
                 s("repobool") => true,
             }
         });
-        assert_eq!(test.get_by_repo_repobool(&s("repo")), Some(true));
-        assert_eq!(test.get_by_repo_repobool(&s("repo2")), Some(true));
+        assert_eq!(test.get_by_repo_repobool("repo"), Some(true));
+        assert_eq!(test.get_by_repo_repobool("repo2"), Some(true));
 
         test.update_by_repo_bools(&hashmap! {
             s("repo") => hashmap! {
                 s("repobool") => true,
             }
         });
-        assert_eq!(test.get_by_repo_repobool(&s("repo2")), None);
+        assert_eq!(test.get_by_repo_repobool("repo2"), None);
 
         test.update_by_repo_bools(&hashmap! {
             s("repo") => hashmap! {
                 s("repobool") => false,
             }
         });
-        assert_eq!(test.get_by_repo_repobool(&s("repo")), Some(false));
+        assert_eq!(test.get_by_repo_repobool("repo"), Some(false));
     }
 
     #[test]
     fn update_by_repo_two_bools() {
         let test = TestTunables::default();
-        assert_eq!(test.get_by_repo_repobool(&s("repo")), None);
-        assert_eq!(test.get_by_repo_repobool2(&s("repo")), None);
+        assert_eq!(test.get_by_repo_repobool("repo"), None);
+        assert_eq!(test.get_by_repo_repobool2("repo"), None);
 
         test.update_by_repo_bools(&hashmap! {
             s("repo") => hashmap! {
@@ -383,8 +383,8 @@ mod test {
             }
         });
 
-        assert_eq!(test.get_by_repo_repobool(&s("repo")), Some(true));
-        assert_eq!(test.get_by_repo_repobool2(&s("repo")), Some(true));
+        assert_eq!(test.get_by_repo_repobool("repo"), Some(true));
+        assert_eq!(test.get_by_repo_repobool2("repo"), Some(true));
 
         test.update_by_repo_bools(&hashmap! {
             s("repo") => hashmap! {
@@ -393,16 +393,16 @@ mod test {
             }
         });
 
-        assert_eq!(test.get_by_repo_repobool(&s("repo")), Some(true));
-        assert_eq!(test.get_by_repo_repobool2(&s("repo")), Some(false));
+        assert_eq!(test.get_by_repo_repobool("repo"), Some(true));
+        assert_eq!(test.get_by_repo_repobool2("repo"), Some(false));
     }
 
     #[test]
     fn update_by_repo_str() {
         let test = TestTunables::default();
 
-        assert_eq!(test.get_by_repo_repostr(&s("repo")), None);
-        assert_eq!(test.get_by_repo_repostr(&s("repo2")), None);
+        assert_eq!(test.get_by_repo_repostr("repo"), None);
+        assert_eq!(test.get_by_repo_repostr("repo2"), None);
 
         test.update_by_repo_strings(&hashmap! {
             s("repo") => hashmap! {
@@ -412,23 +412,23 @@ mod test {
                 s("repostr") => s("world"),
             },
         });
-        assert_eq!(test.get_by_repo_repostr(&s("repo")), Some(s("hello")));
-        assert_eq!(test.get_by_repo_repostr(&s("repo2")), Some(s("world")));
+        assert_eq!(test.get_by_repo_repostr("repo"), Some(s("hello")));
+        assert_eq!(test.get_by_repo_repostr("repo2"), Some(s("world")));
 
         test.update_by_repo_strings(&hashmap! {
             s("repo") => hashmap! {
                 s("repostr") => s("hello2"),
             },
         });
-        assert_eq!(test.get_by_repo_repostr(&s("repo")), Some(s("hello2")));
-        assert_eq!(test.get_by_repo_repostr(&s("repo2")), None);
+        assert_eq!(test.get_by_repo_repostr("repo"), Some(s("hello2")));
+        assert_eq!(test.get_by_repo_repostr("repo2"), None);
     }
 
     #[test]
     fn update_by_repo_two_strs() {
         let test = TestTunables::default();
-        assert_eq!(test.get_by_repo_repostr(&s("repo")), None);
-        assert_eq!(test.get_by_repo_repostr2(&s("repo")), None);
+        assert_eq!(test.get_by_repo_repostr("repo"), None);
+        assert_eq!(test.get_by_repo_repostr2("repo"), None);
 
         test.update_by_repo_strings(&hashmap! {
             s("repo") => hashmap! {
@@ -437,8 +437,8 @@ mod test {
             }
         });
 
-        assert_eq!(test.get_by_repo_repostr(&s("repo")), Some(s("hello")));
-        assert_eq!(test.get_by_repo_repostr2(&s("repo")), Some(s("world")));
+        assert_eq!(test.get_by_repo_repostr("repo"), Some(s("hello")));
+        assert_eq!(test.get_by_repo_repostr2("repo"), Some(s("world")));
 
         test.update_by_repo_strings(&hashmap! {
             s("repo") => hashmap! {
@@ -446,19 +446,16 @@ mod test {
             }
         });
 
-        assert_eq!(
-            test.get_by_repo_repostr(&"repo".to_string()),
-            Some(s("hello2"))
-        );
-        assert_eq!(test.get_by_repo_repostr2(&"repo".to_string()), None);
+        assert_eq!(test.get_by_repo_repostr("repo"), Some(s("hello2")));
+        assert_eq!(test.get_by_repo_repostr2("repo"), None);
     }
 
     #[test]
     fn update_by_repo_int() {
         let test = TestTunables::default();
 
-        assert_eq!(test.get_by_repo_repoint(&s("repo")), None);
-        assert_eq!(test.get_by_repo_repoint(&s("repo2")), None);
+        assert_eq!(test.get_by_repo_repoint("repo"), None);
+        assert_eq!(test.get_by_repo_repoint("repo2"), None);
 
         test.update_by_repo_ints(&hashmap! {
             s("repo") => hashmap! {
@@ -468,23 +465,23 @@ mod test {
                 s("repoint") => 2,
             },
         });
-        assert_eq!(test.get_by_repo_repoint(&s("repo")), Some(1));
-        assert_eq!(test.get_by_repo_repoint(&s("repo2")), Some(2));
+        assert_eq!(test.get_by_repo_repoint("repo"), Some(1));
+        assert_eq!(test.get_by_repo_repoint("repo2"), Some(2));
 
         test.update_by_repo_ints(&hashmap! {
             s("repo") => hashmap! {
                 s("repoint") => 3,
             },
         });
-        assert_eq!(test.get_by_repo_repoint(&s("repo")), Some(3));
-        assert_eq!(test.get_by_repo_repoint(&s("repo2")), None);
+        assert_eq!(test.get_by_repo_repoint("repo"), Some(3));
+        assert_eq!(test.get_by_repo_repoint("repo2"), None);
     }
 
     #[test]
     fn update_by_repo_two_ints() {
         let test = TestTunables::default();
-        assert_eq!(test.get_by_repo_repoint(&s("repo")), None);
-        assert_eq!(test.get_by_repo_repoint2(&s("repo")), None);
+        assert_eq!(test.get_by_repo_repoint("repo"), None);
+        assert_eq!(test.get_by_repo_repoint2("repo"), None);
 
         test.update_by_repo_ints(&hashmap! {
             s("repo") => hashmap! {
@@ -493,8 +490,8 @@ mod test {
             }
         });
 
-        assert_eq!(test.get_by_repo_repoint(&s("repo")), Some(1));
-        assert_eq!(test.get_by_repo_repoint2(&s("repo")), Some(2));
+        assert_eq!(test.get_by_repo_repoint("repo"), Some(1));
+        assert_eq!(test.get_by_repo_repoint2("repo"), Some(2));
 
         test.update_by_repo_ints(&hashmap! {
             s("repo") => hashmap! {
@@ -502,8 +499,8 @@ mod test {
             }
         });
 
-        assert_eq!(test.get_by_repo_repoint(&s("repo")), Some(3));
-        assert_eq!(test.get_by_repo_repoint2(&s("repo")), None);
+        assert_eq!(test.get_by_repo_repoint("repo"), Some(3));
+        assert_eq!(test.get_by_repo_repoint2("repo"), None);
     }
 
     #[fbinit::compat_test]

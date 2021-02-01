@@ -103,7 +103,7 @@ impl TunableType {
             }
             Self::ByRepoBool | Self::ByRepoI64 | Self::ByRepoString => {
                 quote! {
-                    pub fn #by_repo_method(&self, repo: &String) -> #external_type {
+                    pub fn #by_repo_method(&self, repo: &str) -> #external_type {
                         self.#name.load_full().get(repo).map(|val| (*val).clone())
                     }
                 }
