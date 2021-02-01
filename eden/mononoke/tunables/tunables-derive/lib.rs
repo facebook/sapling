@@ -187,8 +187,8 @@ where
             }
             TunableType::ByRepoBool => {
                 body.extend(quote! {
-                    let mut new_values_by_repo: HashMap<String, bool> = HashMap::new();
                     #(
+                        let mut new_values_by_repo: HashMap<String, bool> = HashMap::new();
                         for (repo, val_by_tunable) in tunables {
                                 for (tunable, val) in val_by_tunable {
                                     match tunable.as_ref() {

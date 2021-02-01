@@ -237,6 +237,7 @@ pub fn with_tunables_async<Out, Fut: Future<Output = Out> + Unpin>(
 #[cfg(test)]
 mod test {
     use super::*;
+    use maplit::hashmap;
     use std::collections::HashMap;
     use std::sync::atomic::AtomicBool;
 
@@ -247,6 +248,7 @@ mod test {
         string: TunableString,
 
         repobool: TunableBoolByRepo,
+        repobool2: TunableBoolByRepo,
     }
 
     #[derive(Tunables, Default)]
@@ -350,6 +352,35 @@ mod test {
         r.insert("repo".to_string(), f);
         test.update_by_repo_bools(&r);
         assert_eq!(test.get_by_repo_repobool(&"repo".to_string()), Some(false));
+    }
+
+    #[test]
+    fn update_by_repo_two_bools() {
+        let test = TestTunables::default();
+        assert_eq!(test.get_by_repo_repobool(&"repo".to_string()), None);
+        assert_eq!(test.get_by_repo_repobool2(&"repo".to_string()), None);
+
+        let r = hashmap! {
+            "repo".to_string() => hashmap! {
+                "repobool".to_string() => true,
+                "repobool2".to_string() => true,
+            }
+        };
+        test.update_by_repo_bools(&r);
+
+        assert_eq!(test.get_by_repo_repobool(&"repo".to_string()), Some(true));
+        assert_eq!(test.get_by_repo_repobool2(&"repo".to_string()), Some(true));
+
+        let r = hashmap! {
+            "repo".to_string() => hashmap! {
+                "repobool".to_string() => true,
+                "repobool2".to_string() => false,
+            }
+        };
+        test.update_by_repo_bools(&r);
+
+        assert_eq!(test.get_by_repo_repobool(&"repo".to_string()), Some(true));
+        assert_eq!(test.get_by_repo_repobool2(&"repo".to_string()), Some(false));
     }
 
     #[fbinit::compat_test]
