@@ -95,9 +95,17 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
         self.add_derived_data_warmers(&self.repo.get_derived_data_config().enabled.types)
     }
 
-    pub fn add_derived_data_warmers(&mut self, types: &HashSet<String>) -> Result<(), Error> {
+    pub fn add_derived_data_warmers<'name, Name>(
+        &mut self,
+        types: impl IntoIterator<Item = &'name Name>,
+    ) -> Result<(), Error>
+    where
+        Name: 'name + AsRef<str> + ?Sized,
+    {
+        let types = types.into_iter().map(AsRef::as_ref).collect::<HashSet<_>>();
+
         let config = &self.repo.get_derived_data_config();
-        for ty in types {
+        for ty in types.iter() {
             if !config.is_enabled(ty) {
                 return Err(anyhow!("{} is not enabled for {}", ty, self.repo.name()));
             }

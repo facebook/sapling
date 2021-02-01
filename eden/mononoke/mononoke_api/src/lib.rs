@@ -19,8 +19,9 @@ use cached_config::ConfigStore;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::future;
-use slog::{debug, info, o, Logger};
+use slog::{debug, info, Logger};
 use sql_ext::facebook::MysqlOptions;
+pub use warm_bookmarks_cache::BookmarkUpdateDelay;
 
 use metaconfig_parser::RepoConfigs;
 
@@ -73,17 +74,7 @@ pub struct Mononoke {
 
 impl Mononoke {
     /// Create a Mononoke instance.
-    pub async fn new(
-        fb: FacebookInit,
-        logger: Logger,
-        configs: RepoConfigs,
-        mysql_options: MysqlOptions,
-        with_cachelib: Caching,
-        readonly_storage: ReadOnlyStorage,
-        blobstore_options: BlobstoreOptions,
-        config_store: &ConfigStore,
-        disabled_hooks: HashMap<String, HashSet<String>>,
-    ) -> Result<Self, Error> {
+    pub async fn new(env: &MononokeEnvironment<'_>, configs: RepoConfigs) -> Result<Self, Error> {
         let common_config = configs.common;
         let repos = future::try_join_all(
             configs
@@ -92,28 +83,15 @@ impl Mononoke {
                 .filter(move |&(_, ref config)| config.enabled)
                 .map({
                     move |(name, config)| {
-                        let mysql_options = mysql_options.clone();
-
-                        let disabled_hooks = disabled_hooks.get(&name).cloned().unwrap_or_default();
-                        cloned!(logger, common_config, blobstore_options, config_store);
+                        cloned!(common_config);
                         async move {
-                            info!(logger, "Initializing repo: {}", &name);
-                            let repo = Repo::new(
-                                fb,
-                                logger.new(o!("repo" => name.clone())),
-                                name.clone(),
-                                config,
-                                common_config,
-                                mysql_options,
-                                with_cachelib,
-                                readonly_storage,
-                                blobstore_options,
-                                &config_store,
-                                disabled_hooks,
-                            )
-                            .await
-                            .with_context(|| format!("could not initialize repo '{}'", &name))?;
-                            debug!(logger, "Initialized {}", &name);
+                            info!(&env.logger, "Initializing repo: {}", &name);
+                            let repo = Repo::new(env, name.clone(), config, common_config)
+                                .await
+                                .with_context(|| {
+                                    format!("could not initialize repo '{}'", &name)
+                                })?;
+                            debug!(&env.logger, "Initialized {}", &name);
                             Ok::<_, Error>((name, Arc::new(repo)))
                         }
                     }
@@ -167,6 +145,26 @@ impl Mononoke {
 
         Ok(())
     }
+}
+
+pub struct MononokeEnvironment<'a> {
+    pub fb: FacebookInit,
+    pub logger: Logger,
+    pub mysql_options: MysqlOptions,
+    pub caching: Caching,
+    pub readonly_storage: ReadOnlyStorage,
+    pub blobstore_options: BlobstoreOptions,
+    pub config_store: &'a ConfigStore,
+    pub disabled_hooks: HashMap<String, HashSet<String>>,
+    pub warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData,
+    pub warm_bookmarks_cache_delay: BookmarkUpdateDelay,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum WarmBookmarksCacheDerivedData {
+    HgOnly,
+    AllKinds,
+    None,
 }
 
 #[cfg(test)]

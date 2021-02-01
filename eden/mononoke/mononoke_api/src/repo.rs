@@ -13,13 +13,12 @@ use std::{
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStorage};
+use blobrepo_factory::{BlobrepoBuilder, ReadOnlyStorage};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobstore_factory::make_metadata_sql_factory;
 pub use bookmarks::Freshness as BookmarkFreshness;
 use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Bookmarks};
-use cached_config::ConfigStore;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use cross_repo_sync::{
@@ -54,7 +53,7 @@ use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use revset::AncestorsNodeStream;
 use segmented_changelog::{CloneData, SegmentedChangelog, StreamCloneData};
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
-use slog::{debug, error, Logger};
+use slog::{debug, error, o, Logger};
 use sql_construct::facebook::FbSqlConstruct;
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -75,6 +74,7 @@ use crate::specifiers::{
 };
 use crate::tree::{TreeContext, TreeId};
 use crate::xrepo::CandidateSelectionHintArgs;
+use crate::{MononokeEnvironment, WarmBookmarksCacheDerivedData};
 
 define_stats! {
     prefix = "mononoke.api";
@@ -146,51 +146,47 @@ pub async fn open_synced_commit_mapping(
 
 impl Repo {
     pub async fn new(
-        fb: FacebookInit,
-        logger: Logger,
+        env: &MononokeEnvironment<'_>,
         name: String,
         config: RepoConfig,
         common_config: CommonConfig,
-        mysql_options: MysqlOptions,
-        with_cachelib: Caching,
-        readonly_storage: ReadOnlyStorage,
-        blobstore_options: BlobstoreOptions,
-        config_store: &ConfigStore,
-        disabled_hooks: HashSet<String>,
     ) -> Result<Self, Error> {
+        let logger = env.logger.new(o!("repo" => name.clone()));
+        let disabled_hooks = env.disabled_hooks.get(&name).cloned().unwrap_or_default();
+
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
         let synced_commit_mapping = open_synced_commit_mapping(
-            fb,
+            env.fb,
             config.clone(),
-            &mysql_options,
-            readonly_storage,
+            &env.mysql_options,
+            env.readonly_storage,
             &logger,
         )
         .await?;
 
         let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
-            Arc::new(CfgrLiveCommitSyncConfig::new(&logger, config_store)?);
+            Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &env.config_store)?);
 
         let builder = BlobrepoBuilder::new(
-            fb,
+            env.fb,
             name.clone(),
             &config,
-            &mysql_options,
-            with_cachelib,
+            &env.mysql_options,
+            env.caching,
             common_config.censored_scuba_params,
-            readonly_storage,
-            blobstore_options,
+            env.readonly_storage,
+            env.blobstore_options.clone(),
             &logger,
-            config_store,
+            &env.config_store,
         );
         let blob_repo = builder.build().await?;
 
-        let ctx = CoreContext::new_with_logger(fb, logger.clone());
+        let ctx = CoreContext::new_with_logger(env.fb, logger.clone());
 
         let repo_permission_checker = async {
             let checker = match &config.hipster_acl {
-                Some(acl) => PermissionCheckerBuilder::acl_for_repo(fb, acl).await?,
+                Some(acl) => PermissionCheckerBuilder::acl_for_repo(env.fb, acl).await?,
                 None => PermissionCheckerBuilder::always_allow(),
             };
             Ok(ArcPermissionChecker::from(checker))
@@ -198,7 +194,7 @@ impl Repo {
 
         let service_permission_checker = async {
             let checker = match &config.source_control_service.service_write_hipster_acl {
-                Some(acl) => PermissionCheckerBuilder::acl_for_tier(fb, acl).await?,
+                Some(acl) => PermissionCheckerBuilder::acl_for_tier(env.fb, acl).await?,
                 None => PermissionCheckerBuilder::always_allow(),
             };
             Ok(ArcPermissionChecker::from(checker))
@@ -220,27 +216,38 @@ impl Repo {
         let skiplist_index = fetch_skiplist_index(&ctx, &skiplist_index_blobstore_key, &blobstore);
 
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(&ctx, &blob_repo);
-        warm_bookmarks_cache_builder.add_all_derived_data_warmers()?;
+        match env.warm_bookmarks_cache_derived_data {
+            WarmBookmarksCacheDerivedData::HgOnly => {
+                warm_bookmarks_cache_builder
+                    .add_derived_data_warmers(Some(MappedHgChangesetId::NAME))?;
+            }
+            WarmBookmarksCacheDerivedData::AllKinds => {
+                warm_bookmarks_cache_builder.add_all_derived_data_warmers()?;
+            }
+            WarmBookmarksCacheDerivedData::None => {}
+        }
+
         if config.warm_bookmark_cache_check_blobimport {
             let db_config = &config.storage_config.metadata;
             let mutable_counters = SqlMutableCounters::with_metadata_database_config(
-                fb,
+                env.fb,
                 db_config,
-                &mysql_options,
-                readonly_storage.0,
+                &env.mysql_options,
+                env.readonly_storage.0,
             )
             .await?;
             warm_bookmarks_cache_builder.add_blobimport_warmer(Arc::new(mutable_counters));
         }
-        let warm_bookmarks_cache = warm_bookmarks_cache_builder.build(BookmarkUpdateDelay::Allow);
+        let warm_bookmarks_cache =
+            warm_bookmarks_cache_builder.build(env.warm_bookmarks_cache_delay);
 
         let sql_read_write_status = async {
             if let Some(addr) = &config.write_lock_db_address {
                 let r = SqlRepoReadWriteStatus::with_xdb(
-                    fb,
+                    env.fb,
                     addr.clone(),
-                    &mysql_options,
-                    readonly_storage.0,
+                    &env.mysql_options,
+                    env.readonly_storage.0,
                 )
                 .await?;
                 Ok(Some(r))

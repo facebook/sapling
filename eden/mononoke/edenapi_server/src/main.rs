@@ -41,7 +41,9 @@ use gotham_ext::{
     },
     socket_data::TlsSocketData,
 };
-use mononoke_api::Mononoke;
+use mononoke_api::{
+    BookmarkUpdateDelay, Mononoke, MononokeEnvironment, WarmBookmarksCacheDerivedData,
+};
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use secure_utils::SslConfig;
 
@@ -128,18 +130,20 @@ async fn start(
     let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches, &logger)?;
 
     debug!(logger, "Initializing Mononoke API");
-    let mononoke = Mononoke::new(
+    let env = MononokeEnvironment {
         fb,
-        logger.clone(),
-        repo_configs,
+        logger: logger.clone(),
         mysql_options,
         caching,
         readonly_storage,
         blobstore_options,
         config_store,
         disabled_hooks,
-    )
-    .await?;
+        warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
+        warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
+    };
+
+    let mononoke = Mononoke::new(&env, repo_configs).await?;
 
     // Global flag that the main loop will set to True when the server
     // has been signalled to gracefully shut down.

@@ -23,7 +23,9 @@ use fbinit::FacebookInit;
 use futures::future::FutureExt;
 use metaconfig_parser::load_repo_configs;
 use metadata_sys::facebook_scm_service_create_metadata as create_metadata;
-use mononoke_api::{CoreContext, Mononoke};
+use mononoke_api::{
+    BookmarkUpdateDelay, CoreContext, Mononoke, MononokeEnvironment, WarmBookmarksCacheDerivedData,
+};
 use panichandler::Fate;
 use slog::info;
 use source_control::server::make_SourceControlService_server;
@@ -100,17 +102,20 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     scuba_builder.add_common_server_data();
 
-    let mononoke = Arc::new(runtime.block_on_std(Mononoke::new(
+    let env = MononokeEnvironment {
         fb,
-        logger.clone(),
-        repo_configs,
-        args::parse_mysql_options(&matches),
+        logger: logger.clone(),
+        mysql_options: args::parse_mysql_options(&matches),
         caching,
-        args::parse_readonly_storage(&matches),
-        args::parse_blobstore_options(&matches),
+        readonly_storage: args::parse_readonly_storage(&matches),
+        blobstore_options: args::parse_blobstore_options(&matches),
         config_store,
-        args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?,
-    ))?);
+        disabled_hooks: args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?,
+        warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::AllKinds,
+        warm_bookmarks_cache_delay: BookmarkUpdateDelay::Allow,
+    };
+
+    let mononoke = Arc::new(runtime.block_on_std(Mononoke::new(&env, repo_configs))?);
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
