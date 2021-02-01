@@ -96,7 +96,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let config_store = args::init_config_store(fb, &logger, &matches)?;
     let repo_configs = load_repo_configs(config_path, config_store)?;
 
-    let mut scuba_builder = args::get_scuba_sample_builder(fb, &matches)?;
+    let mut scuba_builder = args::get_scuba_sample_builder(fb, &matches, &logger)?;
 
     scuba_builder.add_common_server_data();
 

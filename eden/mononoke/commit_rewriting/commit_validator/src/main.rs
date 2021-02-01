@@ -166,7 +166,7 @@ async fn run<'a>(
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let dbconfig = repo_config.storage_config.metadata.clone();
-    let scuba_sample = args::get_scuba_sample_builder(fb, &matches)?;
+    let scuba_sample = args::get_scuba_sample_builder(fb, &matches, logger)?;
     let validation_helpers = get_validation_helpers(
         fb,
         ctx.clone(),

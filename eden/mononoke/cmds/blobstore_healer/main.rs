@@ -322,7 +322,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         info!(logger, "Using storage_config {:?}", storage_config);
     }
 
-    let scuba = get_scuba_sample_builder(fb, &matches)?;
+    let scuba = get_scuba_sample_builder(fb, &matches, &logger)?;
 
     let ctx = SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
     let buffered_params = BufferedParams {

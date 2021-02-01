@@ -477,7 +477,7 @@ async fn do_main<'a>(
     logger: &Logger,
     service: &ReadyFlagService,
 ) -> Result<(), Error> {
-    let mut scuba = args::get_scuba_sample_builder(fb, &matches)?;
+    let mut scuba = args::get_scuba_sample_builder(fb, &matches, logger)?;
     scuba.add_common_server_data();
 
     // Do this earlier to show errors before we bootstrap repositories

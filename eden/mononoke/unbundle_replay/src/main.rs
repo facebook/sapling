@@ -441,7 +441,7 @@ async fn do_main(
 
     service.set_ready();
 
-    let mut scuba = args::get_scuba_sample_builder(fb, &matches)?;
+    let mut scuba = args::get_scuba_sample_builder(fb, &matches, logger)?;
     scuba.add_common_server_data();
 
     let ctx = &ctx;

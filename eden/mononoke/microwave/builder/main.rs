@@ -79,7 +79,7 @@ async fn do_main<'a>(
     matches: &MononokeMatches<'a>,
     logger: &Logger,
 ) -> Result<(), Error> {
-    let mut scuba = args::get_scuba_sample_builder(fb, &matches)?;
+    let mut scuba = args::get_scuba_sample_builder(fb, &matches, logger)?;
     scuba.add_common_server_data();
 
     let mysql_options = cmdlib::args::parse_mysql_options(&matches);

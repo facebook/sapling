@@ -245,7 +245,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
 
-    let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches)?;
+    let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches, &logger)?;
 
     let trusted_proxy_idents = idents_from_values(matches.values_of(ARG_TRUSTED_PROXY_IDENTITY))?;
 

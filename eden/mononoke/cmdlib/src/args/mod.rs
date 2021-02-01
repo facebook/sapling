@@ -1350,8 +1350,10 @@ fn add_scuba_logging_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 pub fn get_scuba_sample_builder<'a>(
     fb: FacebookInit,
-    matches: &MononokeMatches<'a>,
+    matches: &'a MononokeMatches<'a>,
+    logger: &'a Logger,
 ) -> Result<MononokeScubaSampleBuilder> {
+    let octx = init_observability_context(fb, matches, logger)?.clone();
     let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of("scuba-dataset") {
         MononokeScubaSampleBuilder::new(fb, scuba_dataset)
     } else {
@@ -1360,7 +1362,9 @@ pub fn get_scuba_sample_builder<'a>(
     if let Some(scuba_log_file) = matches.value_of("scuba-log-file") {
         scuba_logger = scuba_logger.with_log_file(scuba_log_file)?;
     }
-    let scuba_logger = scuba_logger.with_seq("seq");
+    let scuba_logger = scuba_logger
+        .with_observability_context(octx)
+        .with_seq("seq");
     Ok(scuba_logger)
 }
 
