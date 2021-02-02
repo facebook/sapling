@@ -31,6 +31,7 @@ use futures_ext::{
 use futures_old::{
     future as old_future, stream as old_stream, Future as OldFuture, Stream as OldStream,
 };
+use futures_stats::TimedTryFutureExt;
 use futures_util::try_join;
 use load_limiter::Metric;
 use manifest::{find_intersection_of_diffs_and_parents, Entry};
@@ -50,6 +51,7 @@ use phases::{Phase, Phases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
+use sha1::{Digest, Sha1};
 use slog::{debug, info, o};
 use stats::prelude::*;
 use std::{
@@ -391,6 +393,27 @@ pub(crate) struct Params {
     excludes: Vec<(ChangesetId, Generation)>,
 }
 
+impl Params {
+    pub fn heads_signature(&self) -> Result<String, Error> {
+        Self::signature(&self.heads)
+    }
+
+    pub fn excludes_signature(&self) -> Result<String, Error> {
+        Self::signature(&self.excludes)
+    }
+
+    fn signature(v: &[(ChangesetId, Generation)]) -> Result<String, Error> {
+        let mut csids = v.iter().map(|h| h.0).collect::<Vec<_>>();
+        csids.sort();
+        let mut hasher = Sha1::new();
+        for csid in csids {
+            hasher.input(csid.blake2().as_ref());
+        }
+        let res = faster_hex::hex_string(&hasher.result())?;
+        Ok(res)
+    }
+}
+
 async fn call_difference_of_union_of_ancestors_revset(
     ctx: &CoreContext,
     changeset_fetcher: &Arc<dyn ChangesetFetcher>,
@@ -398,6 +421,12 @@ async fn call_difference_of_union_of_ancestors_revset(
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
     limit: Option<u64>,
 ) -> Result<Option<Vec<ChangesetId>>, Error> {
+    let mut scuba = ctx.scuba().clone();
+    scuba.add_opt("heads_signature", params.heads_signature().ok());
+    scuba.add_opt("excludes_signature", params.excludes_signature().ok());
+    scuba.add("heads_count", params.heads.len());
+    scuba.add("excludes_count", params.excludes.len());
+
     let Params { heads, excludes } = params;
 
     let mut notified_expensive_getbundle = false;
@@ -431,16 +460,25 @@ async fn call_difference_of_union_of_ancestors_revset(
         }
     });
 
-    if let Some(limit) = limit {
-        let res = nodes_to_send.take(limit).collect().compat().await?;
-        if res.len() as u64 == limit {
-            Ok(None)
+    let (stats, res) = async move {
+        if let Some(limit) = limit {
+            let res = nodes_to_send.take(limit).collect().compat().await?;
+            if res.len() as u64 == limit {
+                Ok(None)
+            } else {
+                Ok(Some(res))
+            }
         } else {
-            Ok(Some(res))
+            nodes_to_send.collect().compat().map_ok(Some).await
         }
-    } else {
-        nodes_to_send.collect().compat().map_ok(Some).await
     }
+    .try_timed()
+    .await?;
+
+    scuba.add_future_stats(&stats);
+    scuba.log_with_msg("call_difference_of_union_of_ancestors_revset", None);
+
+    Ok(res)
 }
 
 fn warn_expensive_getbundle(ctx: &CoreContext) {
