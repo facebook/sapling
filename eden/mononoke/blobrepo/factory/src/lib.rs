@@ -601,7 +601,7 @@ async fn new_development(
     let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
     let repo_blobstore_args =
         RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, censored_scuba_builder);
-    let mut segmented_changelog_builder = segmented_changelog_builder
+    let segmented_changelog_builder = segmented_changelog_builder
         .with_repo_id(repoid)
         .with_changeset_fetcher(changeset_fetcher.clone())
         .with_blobstore(Arc::new(repo_blobstore_args.repo_blobstore_clone()));
@@ -771,7 +771,7 @@ async fn new_production(
     let segmented_changelog: Arc<dyn SegmentedChangelog> = if !segmented_changelog_config.enabled {
         Arc::new(segmented_changelog_builder.build_disabled())
     } else {
-        let mut segmented_changelog_builder = segmented_changelog_builder
+        let segmented_changelog_builder = segmented_changelog_builder
             .with_repo_id(repoid)
             .with_changeset_fetcher(changeset_fetcher.clone())
             .with_blobstore(Arc::new(repo_blobstore_args.repo_blobstore_clone()))
