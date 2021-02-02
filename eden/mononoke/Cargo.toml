@@ -400,6 +400,7 @@ prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "proto
 prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 r2d2_sqlite = { git = "https://github.com/jsgf/r2d2-sqlite.git", rev = "6d77a828ca0a3c507a3f58561532a1b6c66c7918" }
 rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
+smallvec = { git = "https://github.com/ahornby/rust-smallvec.git", rev = "708e6f09ced4ed211a7c63f53bce7dfe2bbda478"}
 tokio-core = { git = "https://github.com/bolinfest/tokio-core", rev = "5f37aa3c627d56ee49154bc851d6930f5ab4398f" }
 toml = { git = "https://github.com/jsgf/toml-rs", branch = "dotted-table-0.5.7" }
 enumset = { git = "https://github.com/danobi/enumset", rev = "4c01c583c27a725948fededbfb3461c572a669a4" }

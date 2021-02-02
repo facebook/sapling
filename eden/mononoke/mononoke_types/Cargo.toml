@@ -35,7 +35,7 @@ rand = { version = "0.7", features = ["small_rng"] }
 regex = "1.4.2"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = "1.0"
-smallvec = { version = "1.4.2", features = [ "serde", "specialization", "union" ] }
+smallvec = { version = "1.6.1", features = [ "serde", "specialization", "union" ] }
 thiserror = "1.0"
 
 [dev-dependencies]
