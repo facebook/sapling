@@ -146,8 +146,17 @@ pub fn parse_global_opts(args: &[String]) -> Result<HgGlobalOpts> {
 }
 
 pub fn dispatch(command_table: &CommandTable, args: &[String], io: &mut IO) -> Result<u8> {
-    let early_result = early_parse(args)?;
+    let version_args = vec!["version".to_string()];
+    let mut args = &args[..];
+    if args.get(0).map(|s| s.as_ref()) == Some("--version") {
+        args = &version_args[..];
+    }
+
+    let early_result = early_parse(&args)?;
     let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
+    if global_opts.version {
+        args = &version_args[..];
+    }
 
     if !global_opts.cwd.is_empty() {
         env::set_current_dir(global_opts.cwd)?;
