@@ -123,13 +123,16 @@ def reposetup(ui, repo):
         return
 
     def writesigtracethread(path, interval):
-        dir = os.path.dirname(path)
-        util.makedirs(dir)
-        while True:
-            time.sleep(interval)
-            # Keep 10 minutes of sigtraces.
-            util.gcdir(dir, 60 * 10)
-            writesigtrace(path)
+        try:
+            dir = os.path.dirname(path)
+            util.makedirs(dir)
+            while True:
+                time.sleep(interval)
+                # Keep 10 minutes of sigtraces.
+                util.gcdir(dir, 60 * 10)
+                writesigtrace(path)
+        except Exception:
+            pass
 
     path = repo.localvfs.join("sigtrace", "pid-%s-%s" % (os.getpid(), ui.cmdname))
     thread = threading.Thread(
