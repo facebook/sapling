@@ -4,7 +4,7 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["src/**/*.rs"]
+include = ["schemas/**/*.sql", "src/**/*.rs"]
 
 [dependencies]
 blame = { path = "../derived_data/blame", version = "0.1.0" }
@@ -72,3 +72,7 @@ strum = "0.19"
 strum_macros = "0.19"
 thiserror = "1.0"
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
+
+[dev-dependencies]
+sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
