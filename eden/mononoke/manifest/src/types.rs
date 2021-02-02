@@ -106,6 +106,64 @@ fn convert_skeleton_manifest(
     }
 }
 
+pub type Weight = usize;
+
+pub trait OrderedManifest: Manifest {
+    fn lookup_weighted(
+        &self,
+        name: &MPathElement,
+    ) -> Option<Entry<(Weight, <Self as Manifest>::TreeId), <Self as Manifest>::LeafId>>;
+    fn list_weighted(
+        &self,
+    ) -> Box<
+        dyn Iterator<
+            Item = (
+                MPathElement,
+                Entry<(Weight, <Self as Manifest>::TreeId), <Self as Manifest>::LeafId>,
+            ),
+        >,
+    >;
+}
+
+impl OrderedManifest for SkeletonManifest {
+    fn lookup_weighted(
+        &self,
+        name: &MPathElement,
+    ) -> Option<Entry<(Weight, <Self as Manifest>::TreeId), <Self as Manifest>::LeafId>> {
+        self.lookup(name).map(convert_skeleton_manifest_weighted)
+    }
+
+    fn list_weighted(
+        &self,
+    ) -> Box<
+        dyn Iterator<
+            Item = (
+                MPathElement,
+                Entry<(Weight, <Self as Manifest>::TreeId), <Self as Manifest>::LeafId>,
+            ),
+        >,
+    > {
+        let v: Vec<_> = self
+            .list()
+            .map(|(basename, entry)| (basename.clone(), convert_skeleton_manifest_weighted(entry)))
+            .collect();
+        Box::new(v.into_iter())
+    }
+}
+
+fn convert_skeleton_manifest_weighted(
+    skeleton_entry: &SkeletonManifestEntry,
+) -> Entry<(Weight, SkeletonManifestId), ()> {
+    match skeleton_entry {
+        SkeletonManifestEntry::File => Entry::Leaf(()),
+        SkeletonManifestEntry::Directory(skeleton_directory) => {
+            let summary = skeleton_directory.summary();
+            let weight = summary.descendant_files_count + summary.descendant_dirs_count;
+            Entry::Tree((weight as Weight, skeleton_directory.id().clone()))
+        }
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Serialize, Deserialize)]
 pub enum Entry<T, L> {
     Tree(T),

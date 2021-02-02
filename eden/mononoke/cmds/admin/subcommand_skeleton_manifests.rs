@@ -19,7 +19,7 @@ use cmdlib::{
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, stream::StreamExt};
-use manifest::{Entry, ManifestOps, PathOrPrefix};
+use manifest::{Entry, ManifestOps, ManifestOrderedOps, PathOrPrefix};
 
 use mononoke_types::skeleton_manifest::SkeletonManifestEntry;
 use mononoke_types::{ChangesetId, MPath};
@@ -32,6 +32,7 @@ const COMMAND_LIST: &str = "list";
 const ARG_CSID: &str = "csid";
 const ARG_PATH: &str = "path";
 const ARG_IF_DERIVED: &str = "if-derived";
+const ARG_ORDERED: &str = "ordered";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(SKELETON_MANIFESTS)
@@ -48,6 +49,11 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                     Arg::with_name(ARG_IF_DERIVED)
                         .help("only list the manifests if they are already derived")
                         .long(ARG_IF_DERIVED),
+                )
+                .arg(
+                    Arg::with_name(ARG_ORDERED)
+                        .help("list the manifest in order")
+                        .long(ARG_ORDERED),
                 )
                 .arg(Arg::with_name(ARG_PATH).help("path")),
         )
@@ -88,7 +94,8 @@ pub async fn subcommand_skeleton_manifests<'a>(
                 .compat()
                 .await?;
             let fetch_derived = matches.is_present(ARG_IF_DERIVED);
-            subcommand_tree(&ctx, &repo, csid, path, fetch_derived).await?;
+            let ordered = matches.is_present(ARG_ORDERED);
+            subcommand_tree(&ctx, &repo, csid, path, fetch_derived, ordered).await?;
             Ok(())
         }
         (COMMAND_LIST, Some(matches)) => {
@@ -148,17 +155,30 @@ async fn subcommand_tree(
     csid: ChangesetId,
     path: Option<MPath>,
     fetch_derived: bool,
+    ordered: bool,
 ) -> Result<(), Error> {
     let root = derive_or_fetch::<RootSkeletonManifestId>(ctx, repo, csid, fetch_derived).await?;
 
     info!(ctx.logger(), "ROOT: {:?}", root);
     info!(ctx.logger(), "PATH: {:?}", path);
 
-    let mut stream = root.skeleton_manifest_id().find_entries(
-        ctx.clone(),
-        repo.get_blobstore(),
-        vec![PathOrPrefix::Prefix(path)],
-    );
+    let mut stream = if ordered {
+        root.skeleton_manifest_id()
+            .find_entries_ordered(
+                ctx.clone(),
+                repo.get_blobstore(),
+                vec![PathOrPrefix::Prefix(path)],
+            )
+            .left_stream()
+    } else {
+        root.skeleton_manifest_id()
+            .find_entries(
+                ctx.clone(),
+                repo.get_blobstore(),
+                vec![PathOrPrefix::Prefix(path)],
+            )
+            .right_stream()
+    };
 
     while let Some((path, entry)) = stream.next().await.transpose()? {
         match entry {

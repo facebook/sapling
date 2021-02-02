@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::{Entry, Manifest, PathTree, StoreLoadable};
+use crate::select::select_path_tree;
+use crate::{Entry, Manifest, PathOrPrefix, PathTree, StoreLoadable};
 use anyhow::Error;
 use borrowed::borrowed;
 use cloned::cloned;
@@ -27,24 +28,6 @@ pub enum Diff<Entry> {
     Added(Option<MPath>, Entry),
     Removed(Option<MPath>, Entry),
     Changed(Option<MPath>, Entry, Entry),
-}
-
-#[derive(Debug, Clone)]
-pub enum PathOrPrefix {
-    Path(Option<MPath>),
-    Prefix(Option<MPath>),
-}
-
-impl From<MPath> for PathOrPrefix {
-    fn from(path: MPath) -> Self {
-        PathOrPrefix::Path(Some(path))
-    }
-}
-
-impl From<Option<MPath>> for PathOrPrefix {
-    fn from(path: Option<MPath>) -> Self {
-        PathOrPrefix::Path(path)
-    }
 }
 
 pub trait ManifestOps<Store>
@@ -73,41 +56,7 @@ where
         I: IntoIterator<Item = P>,
         PathOrPrefix: From<P>,
     {
-        enum Select {
-            Single,    // single entry selected
-            Recursive, // whole subtree selected
-            Skip,      // not selected
-        }
-
-        impl Select {
-            fn is_selected(&self) -> bool {
-                match self {
-                    Select::Single | Select::Recursive => true,
-                    Select::Skip => false,
-                }
-            }
-
-            fn is_recursive(&self) -> bool {
-                match self {
-                    Select::Recursive => true,
-                    _ => false,
-                }
-            }
-        }
-
-        impl Default for Select {
-            fn default() -> Select {
-                Select::Skip
-            }
-        }
-
-        let selector: PathTree<Select> = paths_or_prefixes
-            .into_iter()
-            .map(|path_or_prefix| match PathOrPrefix::from(path_or_prefix) {
-                PathOrPrefix::Path(path) => (path, Select::Single),
-                PathOrPrefix::Prefix(path) => (path, Select::Recursive),
-            })
-            .collect();
+        let selector = select_path_tree(paths_or_prefixes);
 
         let init = Some((self.clone(), selector, None, false));
         (async_stream::stream! {
