@@ -26,6 +26,26 @@ use std::io::prelude::*;
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
+/// Configuration for scratch space style. This decides whether the directory
+/// structure is kept exactly as provided subdir or not.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum ScratchStyle {
+    /// With flat scratch style, the sub-directories are created one-level under
+    /// the repository namespace with serialized names.
+    Flat,
+
+    /// With nested scratch style, the sub-directories mirror the directory
+    /// hierarchy of the subdir.
+    Nested,
+}
+
+impl Default for ScratchStyle {
+    fn default() -> Self {
+        ScratchStyle::Flat
+    }
+}
+
 /// The configuration is intentionally very minimal, and explicitly
 /// not made accessible via command line options; the intent is that
 /// placement of the scratch space is the policy of the owner of the
@@ -57,7 +77,11 @@ struct Config {
     template: Option<String>,
 
     /// The list of overridden settings
+    #[serde(default)]
     overrides: HashMap<String, String>,
+
+    /// Scratch style. See [`ScratchStyle`]
+    style: Option<ScratchStyle>,
 }
 
 /// Returns the home directory of the user as a string.
@@ -113,6 +137,10 @@ impl Config {
         }
 
         self.overrides.extend(other.overrides.into_iter());
+
+        if let Some(style) = other.style.take() {
+            self.style = Some(style);
+        }
     }
 
     /// Compute the effective configuration by loading the configuration
@@ -433,7 +461,12 @@ fn path_command(
         if watchable {
             result.push("watchable");
         }
-        result.push(encode(subdir));
+
+        if let Some(ScratchStyle::Nested) = config.style {
+            result.push(subdir);
+        } else {
+            result.push(encode(subdir));
+        }
     }
 
     if !no_create {
