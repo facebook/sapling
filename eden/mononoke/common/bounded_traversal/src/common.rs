@@ -12,10 +12,30 @@ use std::task::{Context, Poll};
 use either::Either;
 use futures::ready;
 
-#[derive(Clone, Copy)]
+/// Return value from `unfold` callbacks for ordered traversals.  Each element
+/// in the unfolded vector can be either an item to output from the traversal,
+/// or a recursive step with an associated weight.
+///
+/// The associated weight should be an estimate of the number of eventual
+/// output items this recursive step will expand into.
+pub enum OrderedTraversal<Out, In> {
+    Output(Out),
+    Recurse(usize, In),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct NodeLocation<Index> {
     pub node_index: Index,  // node index inside execution tree
     pub child_index: usize, // index inside parents children list
+}
+
+impl<Index> NodeLocation<Index> {
+    pub fn new(node_index: Index, child_index: usize) -> Self {
+        NodeLocation {
+            node_index,
+            child_index,
+        }
+    }
 }
 
 /// Equivalent of `futures::future::Either` but with heterogeneous output

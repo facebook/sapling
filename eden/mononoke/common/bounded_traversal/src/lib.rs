@@ -9,6 +9,10 @@
 //! [bounded_traversal_dag](crate::bounded_traversal_dag) and
 //! [bounded_traversal_stream](crate::bounded_traversal_stream)
 
+#[macro_use]
+mod error;
+pub use error::BoundedTraversalError;
+
 mod tree;
 pub use tree::bounded_traversal;
 
@@ -18,7 +22,13 @@ pub use dag::bounded_traversal_dag;
 mod stream;
 pub use stream::{bounded_traversal_stream, bounded_traversal_stream2};
 
+mod ordered_stream;
+pub use ordered_stream::{
+    bounded_traversal_limited_ordered_stream, bounded_traversal_ordered_stream,
+};
+
 mod common;
+pub use common::OrderedTraversal;
 
 #[cfg(test)]
 mod tests;
