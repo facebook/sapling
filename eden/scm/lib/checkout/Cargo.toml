@@ -8,3 +8,4 @@ include = ["src/**/*.rs"]
 [dependencies]
 manifest = { path = "../manifest", features = ["for-tests"] }
 types = { path = "../types" }
+anyhow = "1.0"
