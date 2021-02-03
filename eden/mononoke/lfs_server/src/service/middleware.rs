@@ -149,7 +149,6 @@ mod test {
             limit: 0,
             sleep_ms: 0,
             max_jitter_ms: 0,
-            client_identities: vec![],
             client_identity_sets: vec![vec![
                 "MACHINE_TIER:od".to_string(),
                 "SERVICE_IDENTITY:bambuko".to_string(),
@@ -177,7 +176,6 @@ mod test {
             limit: 0,
             sleep_ms: 0,
             max_jitter_ms: 0,
-            client_identities: vec![],
             client_identity_sets: vec![],
             probability_pct: 0,
         };
