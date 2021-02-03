@@ -257,6 +257,7 @@ function mononoke_bookmarks_filler {
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
     --local-configerator-path="$TESTTMP/configerator" \
+    --skip-scmquery \
     "$@" "$sql_source" "$sql_name"  2>&1 | grep mononoke_commitcloud_bookmarks_filler
 }
 
