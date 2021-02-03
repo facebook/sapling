@@ -96,6 +96,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             repair(
                 shared_path: &PyPath,
                 local_path: Option<&PyPath>,
+                suffix: Option<&PyPath>,
                 config: config
             )
         ),
@@ -142,6 +143,7 @@ fn repair(
     py: Python,
     shared_path: &PyPath,
     local_path: Option<&PyPath>,
+    suffix: Option<&PyPath>,
     config: config,
 ) -> PyResult<Str> {
     let config = config.get_cfg(py);
@@ -149,11 +151,13 @@ fn repair(
         ContentStore::repair(
             shared_path.as_path(),
             local_path.map(|p| p.as_path()),
+            suffix.map(|p| p.as_path()),
             &config,
         )?;
         MetadataStore::repair(
             shared_path.as_path(),
             local_path.map(|p| p.as_path()),
+            suffix.map(|p| p.as_path()),
             &config,
         )
     })

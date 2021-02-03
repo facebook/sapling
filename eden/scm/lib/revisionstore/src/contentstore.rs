@@ -72,14 +72,21 @@ impl ContentStore {
     pub fn repair(
         shared_path: impl AsRef<Path>,
         local_path: Option<impl AsRef<Path>>,
+        suffix: Option<impl AsRef<Path>>,
         config: &ConfigSet,
     ) -> Result<String> {
-        let shared_path = shared_path.as_ref();
-        let local_path = local_path.as_ref();
         let mut repair_str = String::new();
+        let mut shared_path = shared_path.as_ref().to_path_buf();
+        if let Some(suffix) = suffix.as_ref() {
+            shared_path.push(suffix);
+        }
+        let local_path = get_local_path(
+            &local_path.as_ref().map(|l| l.as_ref().to_path_buf()),
+            &suffix.map(|p| p.as_ref().to_path_buf()),
+        )?;
 
         repair_str += &IndexedLogHgIdDataStore::repair(
-            get_indexedlogdatastore_path(shared_path)?,
+            get_indexedlogdatastore_path(&shared_path)?,
             config,
             IndexedLogDataStoreType::Shared,
         )?;

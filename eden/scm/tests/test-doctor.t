@@ -40,12 +40,16 @@ When everything looks okay:
 Break the repo in various ways:
 
   $ mv $TESTTMP/hgcache/master/indexedlogdatastore/latest{,.bak}
+  $ mv $TESTTMP/hgcache/master/manifests/indexedlogdatastore/latest{,.bak}
 #if symlink
   $ ln -s foo $TESTTMP/hgcache/master/indexedlogdatastore/latest
+  $ ln -s foo $TESTTMP/hgcache/master/manifests/indexedlogdatastore/latest
 #else
   $ echo foo > $TESTTMP/hgcache/master/indexedlogdatastore/latest
+  $ echo foo > $TESTTMP/hgcache/master/manifests/indexedlogdatastore/latest
 #endif
   $ echo y > $TESTTMP/hgcache/master/indexedlogdatastore/0/index2-node
+  $ echo y > $TESTTMP/hgcache/master/manifests/indexedlogdatastore/0/index2-node
   $ mkdir -p .hg/store/mutation/
   $ echo v > .hg/store/mutation/log
   $ echo xx > .hg/store/metalog/blobs/index2-id
@@ -71,6 +75,7 @@ Test that 'hg doctor' can fix them:
   hgcommits/v1: repaired
   metalog: repaired
   allheads: repaired
+  revisionstore: repaired
   revisionstore: repaired
   checking commit references
 

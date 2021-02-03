@@ -93,14 +93,16 @@ def doctor(ui, **opts):
 
         sharedpath = os.path.join(shallowutil.getcachepath(ui), repo.name)
         localpath = svfs.base
-        repair(
-            ui,
-            "revisionstore",
-            sharedpath,
-            revisionstore.repair,
-            localpath,
-            ui._uiconfig._rcfg._rcfg,
-        )
+        for suffix in [None, "manifests"]:
+            repair(
+                ui,
+                "revisionstore",
+                sharedpath,
+                revisionstore.repair,
+                localpath,
+                suffix,
+                ui._uiconfig._rcfg._rcfg,
+            )
 
     ui.write(_("checking commit references\n"))
     _try(ui, checklaggingremotename, repo)
@@ -497,11 +499,13 @@ def runglobalindexedlogdoctor(ui):
     from ...hgext.remotefilelog import shallowutil
 
     for path in shallowutil.getallcachepaths(ui):
-        repair(
-            ui,
-            "revisionstore",
-            path,
-            revisionstore.repair,
-            None,
-            ui._uiconfig._rcfg._rcfg,
-        )
+        for suffix in [None, "manifests"]:
+            repair(
+                ui,
+                "revisionstore",
+                path,
+                revisionstore.repair,
+                None,
+                suffix,
+                ui._uiconfig._rcfg._rcfg,
+            )
