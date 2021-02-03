@@ -6,7 +6,7 @@
  */
 
 use anyhow::{bail, format_err, Result};
-use futures::{stream, Stream, StreamExt};
+use futures::{stream, try_join, Stream, StreamExt};
 use manifest::{DiffEntry, DiffType, FileType};
 use revisionstore::{HgIdDataStore, StoreKey, StoreResult};
 use types::{HgId, Key, RepoPathBuf};
@@ -96,7 +96,6 @@ impl CheckoutPlan {
         })
     }
 
-    // todo - handle self.update_meta
     // todo - tests
     // todo (VFS) - when writing simple file verify that destination is not a symlink
     // todo (VFS) - when writing symlink instead of regular file, remove it first
@@ -154,7 +153,14 @@ impl CheckoutPlan {
 
         let update_content = update_content.buffer_unordered(PARALLEL_CHECKOUT);
 
-        Self::process_work_stream(update_content).await?;
+        let update_meta = stream::iter(self.update_meta)
+            .map(|action| Self::set_exec_on_file(vfs, action.path, action.set_x_flag));
+        let update_meta = update_meta.buffer_unordered(PARALLEL_CHECKOUT);
+
+        let update_content = Self::process_work_stream(update_content);
+        let update_meta = Self::process_work_stream(update_meta);
+
+        try_join!(update_content, update_meta)?;
 
         Ok(())
     }
@@ -192,6 +198,14 @@ impl CheckoutPlan {
         let vfs = vfs.clone(); // vfs auditor cache can not be shared across threads
         tokio::runtime::Handle::current()
             .spawn_blocking(move || vfs.remove(path.as_repo_path()))
+            .await??;
+        Ok(())
+    }
+
+    async fn set_exec_on_file(vfs: &VFS, path: RepoPathBuf, flag: bool) -> Result<()> {
+        let vfs = vfs.clone(); // vfs auditor cache can not be shared across threads
+        tokio::runtime::Handle::current()
+            .spawn_blocking(move || vfs.set_executable(path.as_repo_path(), flag))
             .await??;
         Ok(())
     }
