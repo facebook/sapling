@@ -7,5 +7,9 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 manifest = { path = "../manifest", features = ["for-tests"] }
+revisionstore = { path = "../revisionstore" }
 types = { path = "../types" }
+vfs = { path = "../vfs" }
 anyhow = "1.0"
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+tokio = { version = "1", features = ["full", "test-util"] }

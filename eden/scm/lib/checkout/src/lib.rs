@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Result};
+use anyhow::{bail, format_err, Result};
+use futures::{stream, StreamExt};
 use manifest::{DiffEntry, DiffType, FileType};
-use types::{HgId, RepoPathBuf};
+use revisionstore::{HgIdDataStore, StoreKey, StoreResult};
+use types::{HgId, Key, RepoPathBuf};
+use vfs::{UpdateFlag, VFS};
 
 /// Contains lists of files to be removed / updated during checkout.
 #[allow(dead_code)]
@@ -91,5 +94,84 @@ impl CheckoutPlan {
             update_content,
             update_meta,
         })
+    }
+
+    // todo - handle self.remove
+    // todo - handle self.update_meta
+    // todo - create / remove directories as needed
+    // todo - tests
+    // todo (VFS) - when writing simple file verify that destination is not a symlink
+    // todo (VFS) - when writing symlink instead of regular file, remove it first
+    /// Applies plan to the root using store to fetch data.
+    /// This async function offloads file system operation to tokio blocking thread pool.
+    /// It limits number of concurrent fs operations to PARALLEL_CHECKOUT.
+    ///
+    /// This function also designed to leverage async storage API(which we do not yet have).
+    /// When updating content of the file/symlink, this function first creates list of HgId
+    /// it needs to fetch. This list is then converted to stream and fed into storage for fetching
+    ///
+    /// As storage starts returning blobs of data, we start to kick off fs write operations in
+    /// the tokio async worker pool. If more then PARALLEL_CHECKOUT fs operations are pending, we
+    /// stop polling storage stream, until one of pending fs operations complete
+    ///
+    /// This function fails fast and returns error when first checkout operation fails.
+    /// Pending storage futures are dropped when error is returned
+    pub async fn apply<DS: HgIdDataStore>(self, vfs: &VFS, store: &DS) -> Result<()> {
+        const PARALLEL_CHECKOUT: usize = 16;
+
+        let keys: Vec<_> = self
+            .update_content
+            .iter()
+            .map(|u| Key::new(u.path.clone(), u.content_hgid))
+            .collect();
+
+        // todo - replace store with async store when we have it
+        // This does not call prefetch intentionally, since it will go away with async storage api
+        let data_stream = stream::iter(keys.into_iter().map(|key| store.get(StoreKey::HgId(key))));
+
+        let work_stream = data_stream
+            .zip(stream::iter(self.update_content.into_iter()))
+            .map(|(data, action)| async move {
+                let data = data
+                    .map_err(|err| format_err!("Failed to fetch {:?}: {:?}", action.path, err))?;
+                let data = match data {
+                    StoreResult::Found(data) => data,
+                    StoreResult::NotFound(key) => bail!("Key {:?} not found in data store", key),
+                };
+                let path = action.path;
+                let flag = match action.file_type {
+                    FileType::Regular => None,
+                    FileType::Executable => Some(UpdateFlag::Executable),
+                    FileType::Symlink => Some(UpdateFlag::Symlink),
+                };
+
+                Self::write_file(vfs, path, data, flag).await
+            });
+
+        let mut work_stream = work_stream.buffer_unordered(PARALLEL_CHECKOUT);
+
+        while let Some(result) = work_stream.next().await {
+            result?;
+        }
+
+        Ok(())
+    }
+
+    // Functions below use blocking fs operations in spawn_blocking proc.
+    // As of today tokio::fs operations do the same.
+    // Since we do multiple fs calls inside, it is beneficial to 'pack'
+    // all of them into single spawn_blocking.
+
+    async fn write_file(
+        vfs: &VFS,
+        path: RepoPathBuf,
+        data: Vec<u8>,
+        flag: Option<UpdateFlag>,
+    ) -> Result<()> {
+        let vfs = vfs.clone(); // vfs auditor cache can not be shared across threads
+        tokio::runtime::Handle::current()
+            .spawn_blocking(move || vfs.write(path.as_repo_path(), &data.into(), flag))
+            .await??;
+        Ok(())
     }
 }
