@@ -17,12 +17,14 @@ use mononoke_types::{ChangesetId, Generation};
 use reachabilityindex::LeastCommonAncestorsHint;
 use std::{
     collections::{HashMap, HashSet, VecDeque},
+    convert::TryInto,
     iter::FromIterator,
     sync::Arc,
 };
 use tunables::tunables;
 
 pub const DEFAULT_TRAVERSAL_LIMIT: u64 = 20;
+pub const LOW_GEN_HEADS_LIMIT: u64 = 20;
 
 pub(crate) struct LowGenNumChecker {
     low_gen_num_threshold: Option<u64>,
@@ -233,7 +235,7 @@ pub(crate) async fn low_gen_num_optimization(
             return Ok(None);
         }
     };
-    let split_params = match split_heads_excludes(params, threshold) {
+    let split_params = match split_heads_excludes(ctx, params, threshold) {
         Some(split_params) => split_params,
         None => return Ok(None),
     };
@@ -250,23 +252,11 @@ pub(crate) async fn low_gen_num_optimization(
         limit as u64
     };
 
-    let maybe_nodes_to_send = call_difference_of_union_of_ancestors_revset(
-        &ctx,
-        &changeset_fetcher,
-        low_gens_params,
-        &lca_hint,
-        Some(limit),
-    )
-    .await?;
-
+    let maybe_nodes_to_send =
+        process_low_gen_params(ctx, changeset_fetcher, low_gens_params, lca_hint, limit).await?;
     let nodes_to_send = match maybe_nodes_to_send {
         Some(nodes_to_send) => nodes_to_send,
         None => {
-            ctx.scuba().clone().log_with_msg(
-                "Low generation getbundle optimization traversed too many nodes, disabling",
-                Some(format!("{}", limit)),
-            );
-
             return Ok(None);
         }
     };
@@ -307,8 +297,48 @@ pub(crate) async fn low_gen_num_optimization(
     ))
 }
 
+async fn process_low_gen_params(
+    ctx: &CoreContext,
+    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    low_gens_params: Vec<Params>,
+    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
+    limit: u64,
+) -> Result<Option<Vec<ChangesetId>>, Error> {
+    let mut s = stream::iter(low_gens_params)
+        .map(Ok)
+        .map_ok(|low_gens_params| {
+            call_difference_of_union_of_ancestors_revset(
+                &ctx,
+                &changeset_fetcher,
+                low_gens_params,
+                &lca_hint,
+                Some(limit),
+            )
+        })
+        .try_buffer_unordered(10);
+
+    let mut nodes_to_send = vec![];
+    while let Some(maybe_chunk) = s.try_next().await? {
+        match maybe_chunk {
+            Some(chunk) => {
+                nodes_to_send.extend(chunk);
+            }
+            None => {
+                ctx.scuba().clone().log_with_msg(
+                    "Low generation getbundle optimization traversed too many nodes, disabling",
+                    Some(format!("{}", limit)),
+                );
+
+                return Ok(None);
+            }
+        }
+    }
+
+    Ok(Some(nodes_to_send))
+}
+
 struct SplitParams {
-    low_gens_params: Params,
+    low_gens_params: Vec<Params>,
     high_gens_params: Params,
 }
 
@@ -332,33 +362,59 @@ struct SplitParams {
 /// O     O <- exclude 2
 ///
 /// we'd get {head1}, {exclude1, exclude2} and {head2}, {exclude2}
-fn split_heads_excludes(params: Params, threshold: u64) -> Option<SplitParams> {
+fn split_heads_excludes(ctx: &CoreContext, params: Params, threshold: u64) -> Option<SplitParams> {
     let Params { heads, excludes } = params;
     let (high_gen_heads, low_gen_heads): (Vec<_>, Vec<_>) = heads
         .into_iter()
         .partition(|head| head.1.value() > threshold);
 
-    let max_low_gen_num = match low_gen_heads.iter().max_by_key(|entry| entry.1) {
-        Some(max_low_gen_num) => max_low_gen_num.1,
-        None => {
-            return None;
-        }
-    };
-
-    let low_gen_excludes = excludes
-        .clone()
-        .into_iter()
-        .filter(|entry| entry.1 <= max_low_gen_num)
-        .collect();
-
     let high_gens_params = Params {
         heads: high_gen_heads,
-        excludes,
+        excludes: excludes.clone(),
     };
-    let low_gens_params = Params {
-        heads: low_gen_heads,
-        excludes: low_gen_excludes,
-    };
+
+    let mut low_gens_params = vec![];
+    // TODO(stash): remove it after rollout
+    if tunables().get_getbundle_only_single_low_gen_num_head() {
+        let max_low_gen_num = match low_gen_heads.iter().max_by_key(|entry| entry.1) {
+            Some(max_low_gen_num) => max_low_gen_num.1,
+            None => {
+                return None;
+            }
+        };
+
+        let low_gen_excludes: Vec<_> = excludes
+            .into_iter()
+            .filter(|entry| entry.1 <= max_low_gen_num)
+            .collect();
+        low_gens_params.push(Params {
+            heads: low_gen_heads,
+            excludes: low_gen_excludes,
+        });
+    } else {
+        // We shouldn't normally have too many heads with low generation number
+        // If we do have a lot of them, then something weird is going on, and it's
+        // better to exit quickly.
+        let low_gen_heads_num: u64 = low_gen_heads.len().try_into().unwrap();
+        if low_gen_heads_num > LOW_GEN_HEADS_LIMIT {
+            ctx.scuba()
+                .clone()
+                .log_with_msg("Too many heads with low generating number", None);
+            return None;
+        }
+
+        for head in low_gen_heads {
+            let low_gen_excludes = excludes
+                .clone()
+                .into_iter()
+                .filter(|entry| entry.1 <= head.1)
+                .collect();
+            low_gens_params.push(Params {
+                heads: vec![head],
+                excludes: low_gen_excludes,
+            });
+        }
+    }
 
     Some(SplitParams {
         low_gens_params,
@@ -382,8 +438,9 @@ mod test {
     use tests_utils::drawdag::create_from_dag;
     use tunables::{with_tunables_async, MononokeTunables};
 
-    #[test]
-    fn test_split_heads_excludes() -> Result<(), Error> {
+    #[fbinit::test]
+    fn test_split_heads_excludes(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
         let gen_0 = Generation::new(0);
         let gen_1 = Generation::new(1);
         let gen_5 = Generation::new(5);
@@ -396,10 +453,11 @@ mod test {
         let SplitParams {
             low_gens_params,
             high_gens_params,
-        } = split_heads_excludes(params.clone(), 2).unwrap();
+        } = split_heads_excludes(&ctx, params.clone(), 2).unwrap();
 
-        assert_eq!(low_gens_params.heads, vec![(ONES_CSID, gen_0)]);
-        assert_eq!(low_gens_params.excludes, vec![]);
+        assert_eq!(low_gens_params.len(), 1);
+        assert_eq!(low_gens_params[0].heads, vec![(ONES_CSID, gen_0)]);
+        assert_eq!(low_gens_params[0].excludes, vec![]);
 
         assert_eq!(high_gens_params.heads, vec![(FOURS_CSID, gen_7)]);
         assert_eq!(
@@ -408,11 +466,19 @@ mod test {
         );
 
         let SplitParams {
-            low_gens_params,
+            mut low_gens_params,
             high_gens_params,
-        } = split_heads_excludes(params.clone(), 7).unwrap();
-        assert_eq!(low_gens_params.heads, params.heads);
-        assert_eq!(low_gens_params.excludes, params.excludes);
+        } = split_heads_excludes(&ctx, params.clone(), 7).unwrap();
+        assert_eq!(low_gens_params.len(), 2);
+        low_gens_params.sort_by_key(|params| params.heads[0].1);
+        assert_eq!(low_gens_params[0].heads, vec![(ONES_CSID, gen_0)]);
+        assert_eq!(low_gens_params[1].heads, vec![(FOURS_CSID, gen_7)]);
+        assert_eq!(low_gens_params[0].excludes, vec![]);
+        assert_eq!(
+            low_gens_params[1].excludes,
+            vec![(TWOS_CSID, gen_1), (THREES_CSID, gen_5)]
+        );
+
         assert_eq!(high_gens_params.heads, vec![]);
         assert_eq!(high_gens_params.excludes, params.excludes);
 
@@ -759,6 +825,62 @@ mod test {
         assert!(res.partial.is_empty());
         assert_eq!(res.new_heads, params.heads);
         assert_eq!(res.new_excludes, params.excludes);
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_low_gen_num_two_heads(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+
+        let commit_map = create_from_dag(
+            &ctx,
+            &repo,
+            r##"
+                  H
+                 /
+                A-B-C-D-E-F-G
+                   \
+                     I
+            "##,
+        )
+        .await?;
+        let skiplist: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
+
+        let params = generate_params(
+            &ctx,
+            &repo,
+            &commit_map,
+            &["H".to_string(), "I".to_string()],
+            &["B".to_string()],
+        )
+        .await?;
+
+        let tunables = MononokeTunables::default();
+        tunables.update_bools(&hashmap! {"getbundle_use_low_gen_optimization".to_string() => true});
+        tunables.update_ints(&hashmap! {
+            "getbundle_low_gen_optimization_max_traversal_limit".to_string() => 10,
+        });
+        let low_gen_num_checker = LowGenNumChecker::new(Some(5));
+
+        with_tunables_async(
+            tunables,
+            async {
+                let maybe_res = low_gen_num_optimization(
+                    &ctx,
+                    &repo.get_changeset_fetcher(),
+                    params.clone(),
+                    &skiplist,
+                    &low_gen_num_checker,
+                )
+                .await?;
+                assert_eq!(maybe_res.map(|v| v.len()), Some(2));
+                Result::<_, Error>::Ok(())
+            }
+            .boxed(),
+        )
+        .await?;
 
         Ok(())
     }
