@@ -239,18 +239,28 @@ from the backing repo directory!
         for backing in backing_repos:
             self.backing_usage(backing, lfs_repos, backed_working_copy_repos)
 
-        if lfs_repos:
+        if sys.platform != "win32":
+            hgcache_path = subprocess.check_output(
+                ["hg", "config", "remotefilelog.cachepath"], encoding="UTF-8"
+            ).rstrip()
+
+            command = f"`rm -rf {hgcache_path}/*`"
+
             self.writeln_ui(
-                """
-LFS cache detected in backing repo. To reclaim space from the LFS cache directory, run:
+                f"""
+To reclaim space from the hgcache directory, run:
+
+{command}
+
+NOTE: The hgcache should manage its size itself. You should only run the command
+above if you are completely out of space and quickly need to reclaim some space
+temporarily. This will affect other users if you run this command on a shared machine.
 """
             )
-            for lfs_repo in lfs_repos:
-                self.writeln_ui(f"hg -R {lfs_repo} gc")
 
         if backed_working_copy_repos:
             self.writeln_ui(
-                f"""
+                """
 Working copy detected in backing repo.  This is not generally useful
 and just takes up space.  You can make this a bare repo to reclaim
 space by running:
@@ -1313,7 +1323,7 @@ Any uncommitted changes and shelves in this checkout will be lost forever."""
                 # Continue around the loop removing any other mount points
 
         if exit_code == 0:
-            print(f"Success")
+            print("Success")
         return exit_code
 
 
