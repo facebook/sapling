@@ -6,7 +6,7 @@
  */
 
 use anyhow::{bail, format_err, Result};
-use futures::{stream, StreamExt};
+use futures::{stream, Stream, StreamExt};
 use manifest::{DiffEntry, DiffType, FileType};
 use revisionstore::{HgIdDataStore, StoreKey, StoreResult};
 use types::{HgId, Key, RepoPathBuf};
@@ -96,9 +96,7 @@ impl CheckoutPlan {
         })
     }
 
-    // todo - handle self.remove
     // todo - handle self.update_meta
-    // todo - create / remove directories as needed
     // todo - tests
     // todo (VFS) - when writing simple file verify that destination is not a symlink
     // todo (VFS) - when writing symlink instead of regular file, remove it first
@@ -119,6 +117,12 @@ impl CheckoutPlan {
     pub async fn apply<DS: HgIdDataStore>(self, vfs: &VFS, store: &DS) -> Result<()> {
         const PARALLEL_CHECKOUT: usize = 16;
 
+        let remove_files = stream::iter(self.remove).map(|path| Self::remove_file(vfs, path));
+        let remove_files = remove_files.buffer_unordered(PARALLEL_CHECKOUT);
+
+        Self::process_work_stream(remove_files).await?;
+
+
         let keys: Vec<_> = self
             .update_content
             .iter()
@@ -129,7 +133,7 @@ impl CheckoutPlan {
         // This does not call prefetch intentionally, since it will go away with async storage api
         let data_stream = stream::iter(keys.into_iter().map(|key| store.get(StoreKey::HgId(key))));
 
-        let work_stream = data_stream
+        let update_content = data_stream
             .zip(stream::iter(self.update_content.into_iter()))
             .map(|(data, action)| async move {
                 let data = data
@@ -148,12 +152,20 @@ impl CheckoutPlan {
                 Self::write_file(vfs, path, data, flag).await
             });
 
-        let mut work_stream = work_stream.buffer_unordered(PARALLEL_CHECKOUT);
+        let update_content = update_content.buffer_unordered(PARALLEL_CHECKOUT);
 
-        while let Some(result) = work_stream.next().await {
+        Self::process_work_stream(update_content).await?;
+
+        Ok(())
+    }
+
+    /// Drains stream returning error if one of futures fail
+    async fn process_work_stream<S: Stream<Item = Result<()>> + Unpin>(
+        mut stream: S,
+    ) -> Result<()> {
+        while let Some(result) = stream.next().await {
             result?;
         }
-
         Ok(())
     }
 
@@ -162,6 +174,7 @@ impl CheckoutPlan {
     // Since we do multiple fs calls inside, it is beneficial to 'pack'
     // all of them into single spawn_blocking.
 
+    // todo - create directories if needed
     async fn write_file(
         vfs: &VFS,
         path: RepoPathBuf,
@@ -171,6 +184,14 @@ impl CheckoutPlan {
         let vfs = vfs.clone(); // vfs auditor cache can not be shared across threads
         tokio::runtime::Handle::current()
             .spawn_blocking(move || vfs.write(path.as_repo_path(), &data.into(), flag))
+            .await??;
+        Ok(())
+    }
+
+    async fn remove_file(vfs: &VFS, path: RepoPathBuf) -> Result<()> {
+        let vfs = vfs.clone(); // vfs auditor cache can not be shared across threads
+        tokio::runtime::Handle::current()
+            .spawn_blocking(move || vfs.remove(path.as_repo_path()))
             .await??;
         Ok(())
     }
