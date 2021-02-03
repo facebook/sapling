@@ -25,6 +25,7 @@ use crate::connection_acceptor::{
 const HEADER_CLIENT_DEBUG: &str = "x-client-debug";
 const HEADER_WEBSOCKET_KEY: &str = "sec-websocket-key";
 const HEADER_WEBSOCKET_ACCEPT: &str = "sec-websocket-accept";
+const HEADER_MONONOKE_HOST: &str = "x-mononoke-host";
 
 // See https://tools.ietf.org/html/rfc6455#section-1.3
 const WEBSOCKET_MAGIC_KEY: &str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -257,6 +258,23 @@ where
             let res = this
                 .handle(method.clone(), &uri, headers, body)
                 .await
+                .and_then(|mut res| {
+                    match HeaderValue::from_str(this.conn.pending.acceptor.server_hostname.as_str())
+                    {
+                        Ok(header) => {
+                            res.headers_mut().insert(HEADER_MONONOKE_HOST, header);
+                        }
+                        Err(e) => {
+                            error!(
+                                this.logger(),
+                                "http service error: can't set {} header: {}",
+                                HEADER_MONONOKE_HOST,
+                                e
+                            );
+                        }
+                    };
+                    Ok(res)
+                })
                 .or_else(|e| {
                     error!(
                         this.logger(),

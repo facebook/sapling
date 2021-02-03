@@ -47,6 +47,7 @@ fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 futures_01_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+hostname = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }

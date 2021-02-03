@@ -6,6 +6,7 @@
  */
 
 use crate::security_checker::ConnectionsSecurityChecker;
+use hostname::get_hostname;
 use hyper::server::conn::Http;
 use session_id::generate_session_id;
 use std::collections::HashMap;
@@ -130,6 +131,7 @@ pub async fn connection_acceptor(
         scribe,
         logger: root_log.clone(),
         enable_http_control_api,
+        server_hostname: get_hostname().unwrap_or_else(|_| "unknown_hostname".to_string()),
     });
 
     loop {
@@ -163,6 +165,7 @@ pub struct Acceptor {
     pub scribe: Scribe,
     pub logger: Logger,
     pub enable_http_control_api: bool,
+    pub server_hostname: String,
 }
 
 /// Details for a socket we've just opened.

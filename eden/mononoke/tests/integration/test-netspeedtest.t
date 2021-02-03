@@ -17,6 +17,7 @@ Check Download
 Check Upload
   $ sslcurl -i --request POST --header "expect:" https:\/\/localhost:$MONONOKE_SOCKET/netspeedtest --data-binary @output 2>/dev/null | tr -d '\r'
   HTTP/1.1 200 OK
+  x-mononoke-host: * (glob)
   content-length: 0
   date: * (glob)
   
