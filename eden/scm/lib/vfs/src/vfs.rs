@@ -119,16 +119,21 @@ impl VFS {
     /// Write an executable file with `content` as `filepath`.
     fn write_executable(&self, filepath: &Path, content: &Bytes) -> Result<usize> {
         let size = self.write_regular(filepath, content)?;
+        self.set_exec(filepath, true)?;
+        Ok(size)
+    }
 
+    fn set_exec(&self, filepath: &Path, flag: bool) -> Result<()> {
         #[cfg(windows)]
-        return Ok(size);
+        return Ok(());
 
         #[cfg(not(windows))]
         {
-            let perms = Permissions::from_mode(0o755);
+            let mode = if flag { 0o755 } else { 0o644 };
+            let perms = Permissions::from_mode(mode);
             set_permissions(filepath, perms)
-                .with_context(|| format!("Can't set {:?} as executable", filepath))?;
-            Ok(size)
+                .with_context(|| format!("Can't update exec flag({}) on {:?}", flag, filepath))?;
+            Ok(())
         }
     }
 
@@ -180,6 +185,15 @@ impl VFS {
             Some(UpdateFlag::Executable) => self.write_executable(&filepath, data),
             Some(UpdateFlag::Symlink) => self.write_symlink(&filepath, data),
         }
+    }
+
+    pub fn set_executable(&self, path: &RepoPath, flag: bool) -> Result<()> {
+        let filepath = self
+            .auditor
+            .audit(path)
+            .with_context(|| format!("Can't write into {}", path))?;
+
+        self.set_exec(&filepath, flag)
     }
 
     /// Remove the file at `path`.
