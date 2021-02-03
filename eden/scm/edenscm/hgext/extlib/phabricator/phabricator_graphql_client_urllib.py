@@ -5,6 +5,8 @@
 
 from __future__ import absolute_import
 
+import ssl
+
 from edenscm.mercurial import json, util
 
 
@@ -31,8 +33,12 @@ class PhabricatorGraphQLClientRequests(object):
                     urlparts.netloc, timeout=timeout
                 )
             elif urlparts.scheme == "https":
+                context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
                 self._connection = util.httplib.HTTPSConnection(
-                    urlparts.netloc, timeout=timeout, cert_file=ca_bundle
+                    urlparts.netloc,
+                    timeout=timeout,
+                    cert_file=ca_bundle,
+                    context=context,
                 )
             else:
                 raise PhabricatorClientError("Unknown host scheme: %s", urlparts.scheme)
