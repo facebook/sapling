@@ -5,9 +5,8 @@ edition = "2018"
 
 [dependencies]
 ctor = "0.1"
-env_logger = "0.7"
 tracing = "0.1"
-tracing-collector = { path = "../tracing-collector" }
+tracing-subscriber = "0.2"
 
 [[example]]
 name = "test"

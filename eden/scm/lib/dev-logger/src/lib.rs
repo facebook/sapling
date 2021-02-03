@@ -21,12 +21,18 @@
 //! ```
 
 pub use ctor::ctor;
+use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::fmt::Subscriber;
+use tracing_subscriber::EnvFilter;
 
 /// Initialize tracing and env_logger for adhoc logging (ex. in a library test)
 /// purpose.
 pub fn init() {
-    let _ = tracing_collector::test_init();
-    let _ = env_logger::try_init();
+    let builder = Subscriber::builder()
+        .with_env_filter(EnvFilter::from_default_env())
+        .with_span_events(FmtSpan::ACTIVE);
+
+    builder.init();
 }
 
 /// Call `init` on startup. This is useful for tests.
