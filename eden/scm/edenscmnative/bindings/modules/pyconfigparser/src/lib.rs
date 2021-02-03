@@ -165,19 +165,13 @@ py_class!(pub class config |py| {
         &self,
         superset_source: String,
         subset_sources: Vec<String>,
-        legacy_list: Vec<(String, String)>,
-        disallow_list: Vec<(String, String)>,
         allowed_locations: Option<Vec<String>> = None
     ) -> PyResult<Vec<(Str, Str, Option<Str>, Option<Str>)>> {
-        let legacy_list = HashSet::from_iter(legacy_list.iter().map(|v| (v.0.as_ref(), v.1.as_ref())));
-        let disallow_list = HashSet::from_iter(disallow_list.iter().map(|v| (v.0.as_ref(), v.1.as_ref())));
         let allowed_locations = allowed_locations.as_ref().map(|allowed| HashSet::from_iter(allowed.iter().map(|v| v.as_ref())));
 
         let results = self.cfg(py).borrow_mut().ensure_location_supersets(
             superset_source,
             subset_sources,
-            legacy_list,
-            disallow_list,
             allowed_locations,
         );
         if results.is_empty() {

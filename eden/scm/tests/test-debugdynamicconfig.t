@@ -76,7 +76,7 @@ Validate dynamic config
   > key=valueX
   > EOF
   $ echo "%include $TESTTMP/input_hgrc" >> .hg/hgrc
-  $ hg status --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True --config configs.testdynamicconfigsubset=input_hgrc --config configs.legacylist=section.key,section2.key2
+  $ hg status --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True --config configs.testdynamicconfigsubset=input_hgrc
   Config mismatch: section2.key2 has 'value2' (dynamic) vs 'None' (file)
   Config mismatch: section.key has 'value' (dynamic) vs 'valueX' (file)
   Config mismatch: section2.key2 has 'value2' (dynamic) vs 'None' (file)
@@ -185,7 +185,7 @@ Verify we load and verify dynamicconfigs during clone
   > [foo]
   > bar=True
   > EOF
-  $ hg clone ssh://user@dummy/server client2 --configfile $TESTTMP/good_hgrc --config configs.testdynamicconfigsubset=good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True --config configs.legacylist=foo.bar
+  $ hg clone ssh://user@dummy/server client2 --configfile $TESTTMP/good_hgrc --config configs.testdynamicconfigsubset=good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True
   Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
   Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
   no changes found
@@ -206,7 +206,7 @@ Verify unicode characters in configs can be logged to our sampling extension
   > [foo]
   > bar = Å
   > EOF
-  $ hg -R client2 log -q -r . --configfile $TESTTMP/good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchsampling=1 --config extensions.sampling= --config sampling.filepath=$TESTTMP/sampling.log --config sampling.key.config_mismatch=mismatches --config configs.testdynamicconfigsubset=good_hgrc --config configs.legacylist=foo.bar,
+  $ hg -R client2 log -q -r . --configfile $TESTTMP/good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchsampling=1 --config extensions.sampling= --config sampling.filepath=$TESTTMP/sampling.log --config sampling.key.config_mismatch=mismatches --config configs.testdynamicconfigsubset=good_hgrc
   000000000000
   $ cat $TESTTMP/sampling.log
   {"category": "mismatches", "data": {"actual": null, "config": "foo.bar", "expected": "\\u00c5", "metrics_type": "config_mismatch", "msg": "Config mismatch: foo.bar has 'None' (dynamic) vs '\\u00c5' (file)\\n", "repo": "reponame-default"}}\x00{"category": "mismatches", "data": {"actual": null, "config": "foo.bar", "expected": "\\u00c5", "metrics_type": "config_mismatch", "msg": "Config mismatch: foo.bar has 'None' (dynamic) vs '\\u00c5' (file)\\n", "repo": "reponame-default"}}\x00 (no-eol) (esc)
@@ -222,22 +222,6 @@ Verify hgrc.dynamic is updated even if the original command is outside the repo
   [hooks]
   pretxnclose=printf "Hook ran!\n"
   
-Verify configs.disallowlist removes old configs
-- Both good_hgrc and bad_hgrc contain a foo.bar value. bad_hgrc is an old rc and therefore
-- its value should be removed even though it comes later in the load order.
-  $ cat > good_hgrc <<EOF
-  > [foo]
-  > bar = good
-  > EOF
-  $ cat > bad_hgrc <<EOF
-  > [foo]
-  > bar = bad
-  > EOF
-  $ hg -R client2 config foo.bar --configfile $TESTTMP/good_hgrc --configfile $TESTTMP/bad_hgrc --config configs.validatedynamicconfig=True --config configs.testdynamicconfigsubset=bad_hgrc --config configs.legacylist=foo.bar
-  bad
-  $ hg -R client2 config foo.bar --configfile $TESTTMP/good_hgrc --configfile $TESTTMP/bad_hgrc --config configs.validatedynamicconfig=True --config configs.testdynamicconfigsubset=bad_hgrc --config configs.legacylist=foo.bar --config configs.disallowlist=foo.bar
-  good
-
   $ cd client2
 #if no-osx
 Verify fake timestamps dont crash
