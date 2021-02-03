@@ -857,6 +857,7 @@ class fetchbuilddeps(Command):
                 "thrift/util/inspect.py",
                 "thrift/server/TAsyncioServer.py",
                 "thrift/server/test/TAsyncioServerTest.py",
+                "thrift/server/test/handler.py",
                 "thrift/util/tests/__init__.py",
             ],
         ),
