@@ -13,8 +13,7 @@ use std::fmt;
 use std::num::NonZeroU32;
 
 use async_limiter::AsyncLimiter;
-use futures::future::{BoxFuture, FutureExt};
-use ratelimit_meter::{algorithms::LeakyBucket, example_algorithms::Allower, DirectRateLimiter};
+use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use context::CoreContext;
@@ -33,65 +32,47 @@ impl ThrottleOptions {
 }
 
 /// A Blobstore that rate limits the number of read and write operations.
-#[derive(Clone)]
-pub struct ThrottledBlob<T: Clone + fmt::Debug> {
+pub struct ThrottledBlob<T: fmt::Debug> {
     blobstore: T,
-    read_limiter: AsyncLimiter,
-    write_limiter: AsyncLimiter,
+    read_qps_limiter: Option<AsyncLimiter>,
+    write_qps_limiter: Option<AsyncLimiter>,
     /// The options fields are used for Debug. They are not consulted at runtime.
     options: ThrottleOptions,
 }
 
-async fn limiter(qps: Option<NonZeroU32>) -> AsyncLimiter {
-    match qps {
-        Some(qps) => AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(qps)).await,
-        None => AsyncLimiter::new(Allower::ratelimiter()).await,
+async fn limiter(limit: Option<NonZeroU32>) -> Option<AsyncLimiter> {
+    match limit {
+        Some(limit) => {
+            Some(AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(limit)).await)
+        }
+        None => None,
     }
 }
 
-impl<T: Clone + fmt::Debug + Send + Sync> ThrottledBlob<T> {
+impl<T: fmt::Debug + Send + Sync> ThrottledBlob<T> {
     pub async fn new(blobstore: T, options: ThrottleOptions) -> Self {
+        let read_qps_limiter = limiter(options.read_qps).await;
+        let write_qps_limiter = limiter(options.write_qps).await;
         Self {
             blobstore,
-            read_limiter: limiter(options.read_qps).await,
-            write_limiter: limiter(options.write_qps).await,
+            read_qps_limiter,
+            write_qps_limiter,
             options,
         }
     }
-
-    fn throttled_access<'a, ThrottledFn, Out>(
-        &self,
-        limiter: &AsyncLimiter,
-        throttled_fn: ThrottledFn,
-    ) -> BoxFuture<'a, Result<Out>>
-    where
-        T: 'a,
-        ThrottledFn: FnOnce(T) -> BoxFuture<'a, Result<Out>> + Send + 'a,
-    {
-        let access = limiter.access();
-        // NOTE: Make a clone of the Blobstore first then dispatch after the
-        // limiter has allowed access, which ensures even eager work is delayed.
-        let blobstore = self.blobstore.clone();
-        async move {
-            access.await?;
-            throttled_fn(blobstore).await
-        }
-        .boxed()
-    }
 }
 
-// All delegate to throttled_access, which ensures even eager methods are throttled
 #[async_trait]
-impl<T: Blobstore + Clone> Blobstore for ThrottledBlob<T> {
+impl<T: Blobstore> Blobstore for ThrottledBlob<T> {
     async fn get<'a>(
         &'a self,
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        self.throttled_access(&self.read_limiter, move |blobstore| {
-            async move { blobstore.get(ctx, key).await }.boxed()
-        })
-        .await
+        if let Some(limiter) = self.read_qps_limiter.as_ref() {
+            limiter.access().await?;
+        }
+        self.blobstore.get(ctx, key).await
     }
 
     async fn put<'a>(
@@ -100,23 +81,22 @@ impl<T: Blobstore + Clone> Blobstore for ThrottledBlob<T> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()> {
-        self.throttled_access(&self.write_limiter, move |blobstore| {
-            async move { blobstore.put(ctx, key, value).await }.boxed()
-        })
-        .await
+        if let Some(limiter) = self.write_qps_limiter.as_ref() {
+            limiter.access().await?;
+        }
+        self.blobstore.put(ctx, key, value).await
     }
 
     async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
-        self.throttled_access(&self.read_limiter, move |blobstore| {
-            async move { blobstore.is_present(ctx, key).await }.boxed()
-        })
-        .await
+        if let Some(limiter) = self.read_qps_limiter.as_ref() {
+            limiter.access().await?;
+        }
+        self.blobstore.is_present(ctx, key).await
     }
 }
 
-// All delegate to throttled_access, which ensures even eager methods are throttled
 #[async_trait]
-impl<T: BlobstorePutOps + Clone> BlobstorePutOps for ThrottledBlob<T> {
+impl<T: BlobstorePutOps> BlobstorePutOps for ThrottledBlob<T> {
     async fn put_explicit<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -124,10 +104,12 @@ impl<T: BlobstorePutOps + Clone> BlobstorePutOps for ThrottledBlob<T> {
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
     ) -> Result<OverwriteStatus> {
-        self.throttled_access(&self.write_limiter, move |blobstore| {
-            async move { blobstore.put_explicit(ctx, key, value, put_behaviour).await }.boxed()
-        })
-        .await
+        if let Some(limiter) = self.write_qps_limiter.as_ref() {
+            limiter.access().await?;
+        }
+        self.blobstore
+            .put_explicit(ctx, key, value, put_behaviour)
+            .await
     }
 
     async fn put_with_status<'a>(
@@ -136,14 +118,14 @@ impl<T: BlobstorePutOps + Clone> BlobstorePutOps for ThrottledBlob<T> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<OverwriteStatus> {
-        self.throttled_access(&self.write_limiter, move |blobstore| {
-            async move { blobstore.put_with_status(ctx, key, value).await }.boxed()
-        })
-        .await
+        if let Some(limiter) = self.write_qps_limiter.as_ref() {
+            limiter.access().await?;
+        }
+        self.blobstore.put_with_status(ctx, key, value).await
     }
 }
 
-impl<T: Clone + fmt::Debug> fmt::Debug for ThrottledBlob<T> {
+impl<T: fmt::Debug> fmt::Debug for ThrottledBlob<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ThrottledBlob")
             .field("blobstore", &self.blobstore)

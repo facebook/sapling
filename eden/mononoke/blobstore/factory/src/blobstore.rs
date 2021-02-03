@@ -424,7 +424,7 @@ pub fn make_blobstore_put_ops<'a>(
         };
 
         let store = if blobstore_options.throttle_options.has_throttle() {
-            Arc::new(ThrottledBlob::new(store, blobstore_options.throttle_options.clone()).await)
+            Arc::new(ThrottledBlob::new(store, blobstore_options.throttle_options).await)
                 as Arc<dyn BlobstorePutOps>
         } else {
             store
