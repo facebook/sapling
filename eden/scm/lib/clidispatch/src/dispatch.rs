@@ -152,10 +152,11 @@ pub fn dispatch(command_table: &CommandTable, args: &[String], io: &mut IO) -> R
         args = &version_args[..];
     }
 
-    let early_result = early_parse(&args)?;
+    let mut early_result = early_parse(&args)?;
     let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
     if global_opts.version {
         args = &version_args[..];
+        early_result = early_parse(&args)?;
     }
 
     if !global_opts.cwd.is_empty() {

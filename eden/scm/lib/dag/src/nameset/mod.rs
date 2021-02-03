@@ -77,6 +77,11 @@ impl NameSet {
         Self::from_query(lazy::LazySet::from_iter(iter))
     }
 
+    /// Creates from a (lazy) stream of names.
+    pub fn from_stream(stream: BoxVertexStream) -> NameSet {
+        Self::from_query(lazy::LazySet::from_stream(stream))
+    }
+
     /// Creates from a (lazy) iterator of Ids, an IdMap, and a Dag.
     pub fn from_id_iter_idmap_dag<I>(
         iter: I,
