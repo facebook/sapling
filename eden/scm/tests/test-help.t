@@ -545,12 +545,7 @@ Test help on a self-referencing alias that is a rust command
 Test help option with version option
 
   $ hg add -h --version
-  Mercurial Distributed SCM (version *) (glob)
-  (see https://mercurial-scm.org for more information)
-  
-  Copyright (C) 2005-* Matt Mackall and others (glob)
-  This is free software; see the source for copying conditions. There is NO
-  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  EdenSCM * (glob)
 
   $ hg add --skjdfks
   hg add: option --skjdfks not recognized
