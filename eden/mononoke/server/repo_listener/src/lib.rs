@@ -28,13 +28,13 @@ use futures::channel::oneshot;
 use mononoke_api::Mononoke;
 use openssl::ssl::SslAcceptor;
 use scribe_ext::Scribe;
+use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, Logger};
 use sql_ext::facebook::MysqlOptions;
 use std::sync::{atomic::AtomicBool, Arc};
 
 use cmdlib::monitoring::ReadyFlagService;
 use metaconfig_types::CommonConfig;
-use observability::ObservabilityContext;
 
 use crate::connection_acceptor::connection_acceptor;
 use crate::repo_handlers::repo_handlers;
@@ -52,7 +52,7 @@ pub async fn create_repo_listeners<'a>(
     config_store: &'a ConfigStore,
     readonly_storage: ReadOnlyStorage,
     scribe: Scribe,
-    observability_context: &'static ObservabilityContext,
+    scuba: &'a MononokeScubaSampleBuilder,
     will_exit: Arc<AtomicBool>,
 ) -> Result<()> {
     let handlers = repo_handlers(
@@ -62,7 +62,7 @@ pub async fn create_repo_listeners<'a>(
         readonly_storage,
         &root_log,
         config_store,
-        observability_context,
+        scuba,
     )
     .await?;
 

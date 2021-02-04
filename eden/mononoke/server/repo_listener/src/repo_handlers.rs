@@ -21,7 +21,6 @@ use fbinit::FacebookInit;
 use metaconfig_types::{CommitSyncConfig, RepoClientKnobs, WireprotoLoggingConfig};
 use mononoke_api::Mononoke;
 use mononoke_types::RepositoryId;
-use observability::ObservabilityContext;
 use repo_client::{MononokeRepo, PushRedirectorArgs, WireprotoLogging};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o, Logger};
@@ -137,7 +136,7 @@ pub async fn repo_handlers<'a>(
     readonly_storage: ReadOnlyStorage,
     root_log: &Logger,
     config_store: &'a ConfigStore,
-    observability_context: &'a ObservabilityContext,
+    scuba: &MononokeScubaSampleBuilder,
 ) -> Result<HashMap<String, RepoHandler>, Error> {
     // compute eagerly to avoid lifetime issues
     let mut tuples: Vec<(String, IncompleteRepoHandler)> = Vec::new();
@@ -153,8 +152,6 @@ pub async fn repo_handlers<'a>(
 
         // Clone the few things we're going to need later in our bootstrap.
         let cache_warmup_params = config.cache_warmup.clone();
-        let scuba_table = config.scuba_table.clone();
-        let scuba_local_path = config.scuba_local_path.clone();
         let db_config = config.storage_config.metadata.clone();
         let preserve_raw_bundle2 = config.bundle2_replay_params.preserve_raw_bundle2.clone();
         let wireproto_logging = config.wireproto_logging.clone();
@@ -172,13 +169,6 @@ pub async fn repo_handlers<'a>(
                     .with_context(|| format!("while warming up cache for repo: {}", reponame))
             }
         });
-
-        let mut scuba_logger = MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table)
-            .with_observability_context(observability_context.clone());
-        scuba_logger.add_common_server_data();
-        if let Some(scuba_local_path) = scuba_local_path {
-            scuba_logger = scuba_logger.with_log_file(scuba_local_path)?;
-        }
 
         let sql_commit_sync_mapping = SqlSyncedCommitMapping::with_metadata_database_config(
             fb,
@@ -261,7 +251,7 @@ pub async fn repo_handlers<'a>(
             reponame,
             IncompleteRepoHandler {
                 logger,
-                scuba: scuba_logger,
+                scuba: scuba.clone(),
                 wireproto_logging: Arc::new(wireproto_logging),
                 repo: mononoke_repo,
                 preserve_raw_bundle2,

@@ -130,10 +130,6 @@ pub struct RepoConfig {
     pub generation_cache_size: usize,
     /// Numerical repo id of the repo.
     pub repoid: RepositoryId,
-    /// Scuba table for logging performance of operations
-    pub scuba_table: Option<String>,
-    /// Local file to log Scuba output to (useful in tests).
-    pub scuba_local_path: Option<String>,
     /// Scuba table for logging hook executions
     pub scuba_table_hooks: Option<String>,
     /// Local file to log hooks Scuba output to (useful in tests).

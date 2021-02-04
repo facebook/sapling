@@ -183,14 +183,17 @@ pub struct MononokeAppBuilder {
     /// Cachelib default settings, as shown in usage
     cachelib_settings: CachelibSettings,
 
-    // Whether to default to readonly storage or not
+    /// Whether to default to readonly storage or not
     readonly_storage_default: ReadOnlyStorage,
 
-    // Whether to default to attempting to compress to cachelib for large objects
+    /// Whether to default to attempting to compress to cachelib for large objects
     blobstore_cachelib_attempt_zstd_default: bool,
 
-    // Whether to default to limit blobstore read QPS
+    /// Whether to default to limit blobstore read QPS
     blobstore_read_qps_default: Option<NonZeroU32>,
+
+    /// The default Scuba dataset for this app, if any.
+    default_scuba_dataset: Option<String>,
 }
 
 /// Things we want to live for the lifetime of the mononoke binary
@@ -199,6 +202,7 @@ pub struct MononokeAppData {
     cachelib_settings: CachelibSettings,
     repo_required: Option<RepoRequirement>,
     global_mysql_connection_pool: SharedConnectionPool,
+    default_scuba_dataset: Option<String>,
 }
 
 // Result of MononokeAppBuilder::build() which has clap plus the MononokeApp data
@@ -358,6 +362,7 @@ impl MononokeAppBuilder {
             readonly_storage_default: ReadOnlyStorage(false),
             blobstore_cachelib_attempt_zstd_default: true,
             blobstore_read_qps_default: None,
+            default_scuba_dataset: None,
         }
     }
 
@@ -420,6 +425,11 @@ impl MononokeAppBuilder {
     /// This command has arguments for fb303
     pub fn with_fb303_args(mut self) -> Self {
         self.arg_types.insert(ArgType::Fb303);
+        self
+    }
+
+    pub fn with_default_scuba_dataset(mut self, default: impl Into<String>) -> Self {
+        self.default_scuba_dataset = Some(default.into());
         self
     }
 
@@ -604,7 +614,7 @@ impl MononokeAppBuilder {
             app = add_shutdown_timeout_args(app);
         }
         if self.arg_types.contains(&ArgType::ScubaLogging) {
-            app = add_scuba_logging_args(app);
+            app = add_scuba_logging_args(app, self.default_scuba_dataset.is_some());
         }
         if self.arg_types.contains(&ArgType::DisableHooks) {
             app = add_disabled_hooks_args(app);
@@ -619,6 +629,7 @@ impl MononokeAppBuilder {
                 cachelib_settings: self.cachelib_settings,
                 repo_required: self.repo_required,
                 global_mysql_connection_pool: SharedConnectionPool::new(),
+                default_scuba_dataset: self.default_scuba_dataset,
             },
         }
     }
@@ -1339,19 +1350,31 @@ pub fn get_shutdown_timeout<'a>(matches: &MononokeMatches<'a>) -> Result<Duratio
     Ok(Duration::from_secs(seconds))
 }
 
-fn add_scuba_logging_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.arg(
-        Arg::with_name("scuba-dataset")
-            .long("scuba-dataset")
-            .takes_value(true)
-            .help("The name of the scuba dataset to log to"),
-    )
-    .arg(
-        Arg::with_name("scuba-log-file")
-            .long("scuba-log-file")
-            .takes_value(true)
-            .help("A log file to write Scuba logs to (primarily useful in testing)"),
-    )
+fn add_scuba_logging_args<'a, 'b>(app: App<'a, 'b>, has_default: bool) -> App<'a, 'b> {
+    let mut app = app
+        .arg(
+            Arg::with_name("scuba-dataset")
+                .long("scuba-dataset")
+                .takes_value(true)
+                .help("The name of the scuba dataset to log to"),
+        )
+        .arg(
+            Arg::with_name("scuba-log-file")
+                .long("scuba-log-file")
+                .takes_value(true)
+                .help("A log file to write Scuba logs to (primarily useful in testing)"),
+        );
+
+    if has_default {
+        app = app.arg(
+            Arg::with_name("no-default-scuba-dataset")
+                .long("no-default-scuba-dataset")
+                .takes_value(false)
+                .help("Do not to the default scuba dataset for this app"),
+        )
+    }
+
+    app
 }
 
 pub fn get_scuba_sample_builder<'a>(
@@ -1362,6 +1385,12 @@ pub fn get_scuba_sample_builder<'a>(
     let octx = init_observability_context(fb, matches, logger)?.clone();
     let mut scuba_logger = if let Some(scuba_dataset) = matches.value_of("scuba-dataset") {
         MononokeScubaSampleBuilder::new(fb, scuba_dataset)
+    } else if let Some(default_scuba_dataset) = matches.app_data.default_scuba_dataset.as_ref() {
+        if matches.is_present("no-default-scuba-dataset") {
+            MononokeScubaSampleBuilder::with_discard()
+        } else {
+            MononokeScubaSampleBuilder::new(fb, default_scuba_dataset)
+        }
     } else {
         MononokeScubaSampleBuilder::with_discard()
     };

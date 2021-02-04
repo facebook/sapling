@@ -9,8 +9,8 @@
 
 Setup repo, and create test repo
 
-  $ export SCUBA_LOGGING_PATH="$TESTTMP/scuba.json"
-  $ BLOB_TYPE="blob_files" EMIT_OBSMARKERS=1 quiet default_setup
+  $ SCUBA_LOGGING_PATH="$TESTTMP/scuba.json"
+  $ BLOB_TYPE="blob_files" EMIT_OBSMARKERS=1 quiet default_setup --scuba-log-file "$SCUBA_LOGGING_PATH"
 
   $ hg up -q 0
 

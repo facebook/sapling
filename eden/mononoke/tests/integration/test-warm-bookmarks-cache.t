@@ -8,7 +8,7 @@
 
 Setup repository
 
-  $ export SCUBA_LOGGING_PATH="$TESTTMP/scuba.json"
+  $ SCUBA_LOGGING_PATH="$TESTTMP/scuba.json"
   $ export REPO_CLIENT_USE_WARM_BOOKMARKS_CACHE="true"
   $ export WARM_BOOKMARK_CACHE_CHECK_BLOBIMPORT="true"
   $ BLOB_TYPE="blob_files" quiet default_setup_pre_blobimport
@@ -31,7 +31,7 @@ Then set highest-imported-gen-num to 2, so that it looked as if only second comm
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "delete from mutable_counters where repo_id=0";
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "insert into mutable_counters (repo_id, name, value) values(0, 'highest-imported-gen-num', 2)";
 
-  $ mononoke "$@"
+  $ mononoke --scuba-log-file "$SCUBA_LOGGING_PATH"
   $ wait_for_mononoke "$TESTTMP/repo"
   $ cd "$TESTTMP"
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo2 --noupdate --config extensions.remotenames= -q

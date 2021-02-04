@@ -36,6 +36,8 @@ fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
         .with_shutdown_timeout_args()
         .with_all_repos()
         .with_disabled_hooks_args()
+        .with_scuba_logging_args()
+        .with_default_scuba_dataset("mononoke_test_perf")
         .build()
         .about("serve repos")
         .arg(
@@ -137,6 +139,10 @@ fn main(fb: FacebookInit) -> Result<()> {
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
 
+    let mut scuba = cmdlib::args::get_scuba_sample_builder(fb, &matches, &root_log)?
+        .with_observability_context(observability_context.clone());
+    scuba.add_common_server_data();
+
     let will_exit = Arc::new(AtomicBool::new(false));
 
     let repo_listeners = {
@@ -170,7 +176,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 config_store,
                 readonly_storage,
                 scribe,
-                &observability_context,
+                &scuba,
                 will_exit,
             )
             .await

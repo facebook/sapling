@@ -196,7 +196,6 @@ fn parse_repo_config(
         write_lock_db_address,
         redaction,
         generation_cache_size,
-        scuba_table,
         scuba_table_hooks,
         delay_mean: _,
         delay_stddev: _,
@@ -217,7 +216,6 @@ fn parse_repo_config(
         source_control_service_monitoring,
         name: _,
         derived_data_config,
-        scuba_local_path,
         scuba_local_path_hooks,
         hgsql_name,
         hgsql_globalrevs_name,
@@ -354,8 +352,6 @@ fn parse_repo_config(
         storage_config,
         generation_cache_size,
         repoid,
-        scuba_table,
-        scuba_local_path,
         scuba_table_hooks,
         scuba_local_path_hooks,
         cache_warmup,
@@ -653,7 +649,6 @@ mod test {
     fn test_duplicated_repo_ids() {
         let www_content = r#"
             repoid=1
-            scuba_table="scuba_table"
             scuba_table_hooks="scm_hooks"
             storage_config="files"
 
@@ -696,7 +691,6 @@ mod test {
             write_lock_db_address="write_lock_db_address"
             generation_cache_size=1048576
             repoid=0
-            scuba_table="scuba_table"
             scuba_table_hooks="scm_hooks"
             skiplist_index_blobstore_key="skiplist_key"
             bookmarks_cache_ttl=5000
@@ -804,7 +798,6 @@ mod test {
         "#;
         let www_content = r#"
             repoid=1
-            scuba_table="scuba_table"
             scuba_table_hooks="scm_hooks"
             storage_config="files"
             hgsql_name = "www-foobar"
@@ -894,8 +887,6 @@ mod test {
                 write_lock_db_address: Some("write_lock_db_address".into()),
                 generation_cache_size: 1024 * 1024,
                 repoid: RepositoryId::new(0),
-                scuba_table: Some("scuba_table".to_string()),
-                scuba_local_path: None,
                 scuba_table_hooks: Some("scm_hooks".to_string()),
                 scuba_local_path_hooks: None,
                 cache_warmup: Some(CacheWarmupParams {
@@ -1067,8 +1058,6 @@ mod test {
                 write_lock_db_address: None,
                 generation_cache_size: 10 * 1024 * 1024,
                 repoid: RepositoryId::new(1),
-                scuba_table: Some("scuba_table".to_string()),
-                scuba_local_path: None,
                 scuba_table_hooks: Some("scm_hooks".to_string()),
                 scuba_local_path_hooks: None,
                 cache_warmup: None,

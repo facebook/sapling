@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ export SCUBA_LOGGING_PATH="$TESTTMP/scuba.json"
+  $ SCUBA_LOGGING_PATH="$TESTTMP/scuba.json"
   $ INFINITEPUSH_ALLOW_WRITES=true setup_common_config
   $ cd $TESTTMP
 
@@ -46,7 +46,7 @@ blobimport
 
 start mononoke
 
-  $ mononoke
+  $ mononoke --scuba-log-file "$SCUBA_LOGGING_PATH"
   $ wait_for_mononoke
 
 

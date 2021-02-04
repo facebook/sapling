@@ -115,6 +115,7 @@ function mononoke {
   --debug \
   --listening-host-port "$(mononoke_address)" \
   --mononoke-config-path "$TESTTMP/mononoke-config" \
+  --no-default-scuba-dataset \
   "${COMMON_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
   export MONONOKE_PID=$!
   echo "$MONONOKE_PID" >> "$DAEMON_PIDS"
