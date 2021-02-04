@@ -52,7 +52,7 @@ import random
 
 from . import dagutil, error, progress, util
 from .i18n import _
-from .node import nullid, nullrev
+from .node import nullid, nullrev, bin
 
 
 def _updatesample(dag, nodes, sample, quicksamplesize=0):
@@ -358,9 +358,17 @@ def _findcommonheadsnew(
             heads.discard(nullid)
             return heads
 
+    isselectivepull = local.ui.configbool(
+        "remotenames", "selectivepull"
+    ) and local.ui.configbool("remotenames", "selectivepulldiscovery")
+
     if ancestorsof is None:
-        # TODO: Make sure selectivepull does not hit this path.
-        localheads = tonodes(local.changelog.rawheadrevs())
+        if isselectivepull:
+            # With selectivepull, limit heads for discovery for both local and
+            # remote repo - no invisible heads for the local repo.
+            localheads = tonodes(local.headrevs())
+        else:
+            localheads = tonodes(local.changelog.rawheadrevs())
     else:
         localheads = ancestorsof
 
@@ -402,14 +410,16 @@ def _findcommonheadsnew(
                 break
         return list(sample)
 
-    from .bookmarks import selectivepullbookmarknames
+    from .bookmarks import selectivepullbookmarknames, remotenameforurl
 
     sample = set(_limitsample(localheads, initialsamplesize))
+    remotename = remotenameforurl(ui, remote.url())  # ex. 'default' or 'remote'
+    selected = list(selectivepullbookmarknames(local, remotename))
 
     # Include names that the server might have.  'tip' is useful during clone
     # code path where remote names are not known yet.
     # TODO: Improve clone protocol so streamclone transfers remote names.
-    for name in list(selectivepullbookmarknames(local)) + ["tip"]:
+    for name in selected + ["tip"]:
         if name in local:
             node = local[name].node()
             if node not in sample:
@@ -418,16 +428,51 @@ def _findcommonheadsnew(
     sample.discard(nullid)
     sample = list(sample)
 
-    # TODO: Avoid asking the server for its all heads in selectivepull mode.
-    # See also https://phab.mercurial-scm.org/D1962.
     ui.debug("query 1; heads\n")
     batch = remote.iterbatch()
-    batch.heads()
+    if isselectivepull:
+        # With selectivepull, limit heads for discovery for both local and
+        # remote repo - only list selected heads on remote.
+        # Return type: sorteddict[name: str, hex: str].
+        batch.listkeyspatterns("bookmarks", patterns=selected)
+    else:
+        # Legacy pull: list all heads on remote.
+        # Return type: List[node: bytes].
+        batch.heads()
     batch.known(sample)
     batch.submit()
     remoteheads, remotehassample = batch.results()
 
-    # Filter out 'nullid' immediately.
+    # If the server has no selected names (ex. master), fallback to fetch all
+    # heads.
+    #
+    # Note: This behavior is not needed for production use-cases. However, many
+    # tests setup the server repo without a "master" bookmark. They need the
+    # fallback path to not error out like "repository is unrelated" (details
+    # in the note below).
+    if not remoteheads and isselectivepull:
+        isselectivepull = False
+        remoteheads = remote.heads()
+
+    # Normalize 'remoteheads' to Set[node].
+    if isselectivepull:
+        remoteheads = set(bin(h) for h in remoteheads.values())
+    else:
+        remoteheads = set(remoteheads)
+
+    # Unconditionally include 'explicitremoteheads', if selectivepull is used.
+    #
+    # Without selectivepull, the "remoteheads" should already contain all the
+    # heads and there is no need to consider explicitremoteheads.
+    #
+    # Note: It's actually a bit more complicated with non-Mononoke infinitepush
+    # branches - those heads are not visible via "remote.heads()". There are
+    # tests relying on scratch heads _not_ visible in "remote.heads()" to
+    # return early (both commonheads and remoteheads are empty) and not error
+    # out like "repository is unrelated".
+    if explicitremoteheads and isselectivepull:
+        remoteheads = remoteheads.union(explicitremoteheads)
+    # Remove 'nullid' that the Rust layer dislikes.
     remoteheads = sorted(h for h in remoteheads if h != nullid)
 
     if cl.tip() == nullid:

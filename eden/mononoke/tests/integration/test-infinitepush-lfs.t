@@ -72,9 +72,6 @@ Do infinitepush (aka commit cloud) push
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   all remote heads known locally
-  preparing listkeys for "bookmarks"
-  sending listkeys command
-  received listkey for "bookmarks": 57 bytes
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
   sending listkeys command

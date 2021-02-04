@@ -611,6 +611,7 @@ coreconfigitem("rebase", "experimental.inmemory", default=False)
 
 # Remote names.
 coreconfigitem("remotenames", "selectivepulldefault", default=["master"])
+coreconfigitem("remotenames", "selectivepulldiscovery", default=True)
 coreconfigitem("remotenames", "autopullhoistpattern", default="")
 coreconfigitem(
     "remotenames",

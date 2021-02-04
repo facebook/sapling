@@ -70,9 +70,6 @@ Do infinitepush (aka commit cloud) push
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   all remote heads known locally
-  preparing listkeys for "bookmarks"
-  sending listkeys command
-  received listkey for "bookmarks": 57 bytes
   checking for updated bookmarks
   preparing listkeys for "bookmarks"
   sending listkeys command
@@ -209,20 +206,20 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
   scratch/123|scratch|58C64A8A96ADD9087220CA5B94CD892364562F40CBDA51ACFBBA2DAD8F5C979E
-  $ hgmn push ssh://user@dummy/repo -r 007299f6399f --to "scratch/123" --create --config "infinitepush.branchpattern=foo"
-  pushing rev 007299f6399f to destination ssh://user@dummy/repo bookmark scratch/123
+  $ hgmn push ssh://user@dummy/repo -r 007299f6399f --to "scratch/124" --create --config "infinitepush.branchpattern=foo"
+  pushing rev 007299f6399f to destination ssh://user@dummy/repo bookmark scratch/124
   searching for changes
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
   remote: 
   remote:   Root cause:
-  remote:     Invalid public bookmark: scratch/123 (only scratch bookmarks may match pattern ^scratch/.+$)
+  remote:     Invalid public bookmark: scratch/124 (only scratch bookmarks may match pattern ^scratch/.+$)
   remote: 
   remote:   Caused by:
   remote:     Failed to create bookmark
   remote:   Caused by:
-  remote:     Invalid public bookmark: scratch/123 (only scratch bookmarks may match pattern ^scratch/.+$)
+  remote:     Invalid public bookmark: scratch/124 (only scratch bookmarks may match pattern ^scratch/.+$)
   remote: 
   remote:   Debug context:
   remote:     Error {
@@ -231,7 +228,7 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   remote:             context: "Failed to create bookmark",
   remote:             source: InvalidPublicBookmark {
   remote:                 bookmark: BookmarkName {
-  remote:                     bookmark: "scratch/123",
+  remote:                     bookmark: "scratch/124",
   remote:                 },
   remote:                 pattern: "^scratch/.+$",
   remote:             },
