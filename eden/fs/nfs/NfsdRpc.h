@@ -17,6 +17,9 @@
 
 namespace facebook::eden {
 
+constexpr uint32_t kNfsdProgNumber = 100003;
+constexpr uint32_t kNfsd3ProgVersion = 3;
+
 /**
  * The NFS spec specify this struct as being opaque from the client
  * perspective, and thus we are free to use what is needed to uniquely identify

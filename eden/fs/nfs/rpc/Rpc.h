@@ -225,6 +225,8 @@ struct rpc_msg_reply {
 };
 EDEN_XDR_SERDE_DECL(rpc_msg_reply, xid, mtype, rbody);
 
+void serializeReply(folly::io::Appender& ser, accept_stat status, uint32_t xid);
+
 struct authsys_parms {
   uint32_t stamp;
   std::string machinename;

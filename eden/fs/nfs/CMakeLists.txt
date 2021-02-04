@@ -43,6 +43,20 @@ target_link_libraries(
     eden_nfs_rpc
 )
 
+add_library(
+  eden_nfs_nfsd3 STATIC
+    "Nfsd3.cpp" "Nfsd3.h"
+)
+
+target_link_libraries(
+  eden_nfs_nfsd3
+  PUBLIC
+    eden_nfs_rpc_server
+  PRIVATE
+    eden_nfs_nfsd_rpc
+    Folly::folly
+)
+
 add_subdirectory(portmap)
 add_subdirectory(rpc)
 add_subdirectory(xdr)

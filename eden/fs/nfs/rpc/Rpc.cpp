@@ -17,4 +17,25 @@ EDEN_XDR_SERDE_IMPL(rpc_msg_reply, xid, mtype, rbody);
 EDEN_XDR_SERDE_IMPL(accepted_reply, verf, stat);
 EDEN_XDR_SERDE_IMPL(authsys_parms, stamp, machinename, uid, gid, gids);
 
+void serializeReply(
+    folly::io::Appender& ser,
+    accept_stat status,
+    uint32_t xid) {
+  rpc_msg_reply reply{
+      xid,
+      msg_type::REPLY,
+      reply_body{{
+          reply_stat::MSG_ACCEPTED,
+          accepted_reply{
+              opaque_auth{
+                  auth_flavor::AUTH_NONE,
+                  {},
+              },
+              status,
+          },
+      }},
+  };
+  XdrTrait<rpc_msg_reply>::serialize(ser, reply);
+}
+
 } // namespace facebook::eden

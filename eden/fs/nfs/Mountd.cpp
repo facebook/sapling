@@ -82,27 +82,6 @@ constexpr auto kMountHandlers = [] {
   return handlers;
 }();
 
-void serializeReply(
-    folly::io::Appender& ser,
-    accept_stat status,
-    uint32_t xid) {
-  rpc_msg_reply reply{
-      xid,
-      msg_type::REPLY,
-      reply_body{{
-          reply_stat::MSG_ACCEPTED,
-          accepted_reply{
-              opaque_auth{
-                  auth_flavor::AUTH_NONE,
-                  {},
-              },
-              status,
-          },
-      }},
-  };
-  XdrTrait<rpc_msg_reply>::serialize(ser, reply);
-}
-
 folly::Future<folly::Unit> MountdServerProcessor::null(
     folly::io::Cursor /*deser*/,
     folly::io::Appender ser,

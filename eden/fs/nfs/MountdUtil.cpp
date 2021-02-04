@@ -12,6 +12,7 @@
 #include <folly/logging/xlog.h>
 #include <signal.h>
 #include "eden/fs/nfs/Mountd.h"
+#include "eden/fs/nfs/Nfsd3.h"
 
 using namespace facebook::eden;
 
@@ -41,6 +42,9 @@ int main(int argc, char** argv) {
   auto evb = folly::EventBaseManager::get()->getEventBase();
 
   SignalHandler signal(evb);
+
+  Nfsd3 nfsd(true);
+
   Mountd mountd(true);
   mountd.registerMount(AbsolutePathPiece("/foo/bar"), InodeNumber(42));
 
