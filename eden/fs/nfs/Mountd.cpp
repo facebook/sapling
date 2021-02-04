@@ -125,7 +125,7 @@ folly::Future<folly::Unit> MountdServerProcessor::mount(
   if (found != mounts->end()) {
     XdrTrait<mountstat3>::serialize(ser, mountstat3::MNT3_OK);
     XdrTrait<mountres3_ok>::serialize(
-        ser, mountres3_ok{found->second, {auth_flavor::AUTH_UNIX}});
+        ser, mountres3_ok{{found->second}, {auth_flavor::AUTH_UNIX}});
   } else {
     XdrTrait<mountstat3>::serialize(ser, mountstat3::MNT3ERR_NOENT);
   }

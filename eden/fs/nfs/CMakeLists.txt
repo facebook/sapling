@@ -27,6 +27,18 @@ add_library(
 target_link_libraries(
   eden_nfs_mountd_rpc
   PUBLIC
+    eden_nfs_nfsd_rpc
+    eden_nfs_rpc
+)
+
+add_library(
+  eden_nfs_nfsd_rpc STATIC
+    "NfsdRpc.cpp" "NfsdRpc.h"
+)
+
+target_link_libraries(
+  eden_nfs_nfsd_rpc
+  PUBLIC
     eden_inodes_inodenumber
     eden_nfs_rpc
 )

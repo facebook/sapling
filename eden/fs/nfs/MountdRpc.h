@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/nfs/NfsdRpc.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
 
 /*
@@ -45,25 +45,11 @@ enum class mountstat3 {
   MNT3ERR_SERVERFAULT = 10006 /* A failure on the server */
 };
 
-template <>
-struct XdrTrait<InodeNumber> {
-  static void serialize(folly::io::Appender& appender, const InodeNumber& ino) {
-    XdrTrait<uint64_t>::serialize(appender, ino.get());
-  }
-
-  static InodeNumber deserialize(folly::io::Cursor& cursor) {
-    return InodeNumber{XdrTrait<uint64_t>::deserialize(cursor)};
-  }
-};
-
 /**
  * Return value of the mnt procedure.
- *
- * The RFC specifies the fhandle3 to be an opaque value, EdenFS will return an
- * InodeNumber.
  */
 struct mountres3_ok {
-  InodeNumber fhandle3;
+  nfs_fh3 fhandle3;
   std::vector<auth_flavor> auth_flavors;
 };
 EDEN_XDR_SERDE_DECL(mountres3_ok, fhandle3, auth_flavors);
