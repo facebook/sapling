@@ -171,6 +171,10 @@ class RpcTcpHandler : public folly::DelayedDestruction {
             auto fragment = (uint32_t*)resultBuffer->writableData();
             *fragment = folly::Endian::big(len | 0x80000000);
 
+            XLOG(DBG8) << "Sending:\n"
+                       << folly::hexDump(
+                              resultBuffer->data(), resultBuffer->length());
+
             sock_->writeChain(&writer_, std::move(resultBuffer));
           }
         });
