@@ -39,6 +39,7 @@ ServerState::ServerState(
     std::shared_ptr<ProcessNameCache> processNameCache,
     std::shared_ptr<StructuredLogger> structuredLogger,
     std::shared_ptr<const EdenConfig> edenConfig,
+    std::shared_ptr<Mountd> mountd,
     bool enableFaultDetection)
     : userInfo_{std::move(userInfo)},
       privHelper_{std::move(privHelper)},
@@ -47,6 +48,7 @@ ServerState::ServerState(
       processNameCache_{std::move(processNameCache)},
       structuredLogger_{std::move(structuredLogger)},
       faultInjector_{std::make_unique<FaultInjector>(enableFaultDetection)},
+      mountd_{std::move(mountd)},
       config_{edenConfig},
       userIgnoreFileMonitor_{CachedParsedFileMonitor<GitIgnoreFileParser>{
           edenConfig->userIgnoreFile.getValue(),

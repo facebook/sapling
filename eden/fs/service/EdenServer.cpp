@@ -37,6 +37,7 @@
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/nfs/Mountd.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/EdenServiceHandler.h"
@@ -336,6 +337,8 @@ EdenServer::EdenServer(
           std::make_shared<ProcessNameCache>(),
           makeDefaultStructuredLogger(*edenConfig, std::move(sessionInfo)),
           edenConfig,
+          edenConfig->enableNfsServer.getValue() ? std::make_shared<Mountd>()
+                                                 : nullptr,
           FLAGS_enable_fault_injection)},
       version_{std::move(version)},
       progressManager_{std::make_unique<

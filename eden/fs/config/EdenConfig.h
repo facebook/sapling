@@ -432,6 +432,14 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> useEdenApi{"experimental:use-edenapi", false, this};
 
   /**
+   * Controls whether EdenFS exports itself as an NFS server.
+   */
+  ConfigSetting<bool> enableNfsServer{
+      "experimental:enable-nfs-server",
+      false,
+      this};
+
+  /**
    * The maximum number of tree prefetch operations to allow in parallel for any
    * checkout.  Setting this to 0 will disable prefetch operations.
    */

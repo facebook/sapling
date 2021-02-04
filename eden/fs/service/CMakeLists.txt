@@ -68,6 +68,7 @@ target_link_libraries(
     eden_fuse_privhelper
     eden_inodes
     eden_model
+    eden_nfs_mountd
     eden_store
     eden_telemetry
     ${EDEN_STORE_IMPLEMENTATIONS}

@@ -107,6 +107,7 @@ TestMount::TestMount()
           AbsolutePath{
               testDir_->path().string() + "edenfs.rc",
           }),
+      nullptr,
       /*enableFaultInjection=*/true)};
 }
 
