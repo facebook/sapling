@@ -519,8 +519,10 @@ def _findcommonheadsnew(
     elapsed = util.timer() - start
     ui.debug("%d total queries in %.4fs\n" % (roundtrips, elapsed))
     msg = "found %d common and %d unknown server heads," " %d roundtrips in %.4fs\n"
-    missing = commonheads - set(remoteheads)
-    ui.log("discovery", msg, len(commonheads), len(missing), roundtrips, elapsed)
+    remoteonlyheads = set(remoteheads) - commonheads
+    ui.log(
+        "discovery", msg, len(commonheads), len(remoteonlyheads), roundtrips, elapsed
+    )
 
     if not commonheads and remoteheads:
         if abortwhenunrelated:
