@@ -41,6 +41,19 @@ inspect the checkpoint table
   $ sqlite3 "$TESTTMP/test_sqlite" "select repo_id, checkpoint_name, lower_bound, upper_bound from walker_checkpoints;"
   0|bonsai_deep|1|4
 
+same run, but against metadata db
+  $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep_meta -I deep -i bonsai -i FileContent 2>&1 | strip_glog
+  Repo bounds: (1, 4)
+  Starting chunk 1 with bounds (2, 4)
+  Seen,Loaded: 4,4
+  Deferred: 1
+  Chunk 1 inserting checkpoint (2, 4)
+  Starting chunk 2 with bounds (1, 2)
+  Seen,Loaded: 3,3
+  Deferred: 0
+  Chunk 2 updating checkpoint to (1, 4)
+  Completed in 2 chunks of size 2
+
 test restoring from checkpoint, scrub should have no chunks to do as checkpoint loaded covers the repo bounds
   $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Found checkpoint with bounds: (1, 4)

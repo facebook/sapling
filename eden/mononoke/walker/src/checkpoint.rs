@@ -9,7 +9,7 @@ use anyhow::{bail, Error};
 use futures::compat::Future01CompatExt;
 use mononoke_types::{RepositoryId, Timestamp};
 use sql::queries;
-use sql_construct::SqlConstruct;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
 use std::{cmp::Ordering, fmt, sync::Arc};
 
@@ -184,6 +184,8 @@ impl SqlCheckpoints {
         Ok(())
     }
 }
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlCheckpoints {}
 
 queries! {
     read SelectCheckpoint(

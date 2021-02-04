@@ -43,7 +43,8 @@ use once_cell::sync::Lazy;
 use samplingblob::SamplingHandler;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, o, warn, Logger};
-use sql_construct::SqlConstruct;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::facebook::MysqlOptions;
 use std::{
     borrow::Borrow,
     collections::{HashMap, HashSet},
@@ -926,7 +927,12 @@ pub fn parse_interned_types(
     Ok(include_types)
 }
 
-pub fn parse_tail_args(sub_m: &ArgMatches) -> Result<TailParams, Error> {
+async fn parse_tail_args<'a>(
+    fb: FacebookInit,
+    sub_m: &'a ArgMatches<'a>,
+    dbconfig: &'a MetadataDatabaseConfig,
+    mysql_options: &'a MysqlOptions,
+) -> Result<TailParams, Error> {
     let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
 
     let public_changeset_chunk_by = parse_node_values(sub_m.values_of(CHUNK_BY_PUBLIC_ARG), &[])?;
@@ -959,11 +965,8 @@ pub fn parse_tail_args(sub_m: &ArgMatches) -> Result<TailParams, Error> {
         let sql_checkpoints = if let Some(checkpoint_path) = checkpoint_path {
             SqlCheckpoints::with_sqlite_path(checkpoint_path, false)?
         } else {
-            // TODO(ahornby) add mysql schema
-            bail!(
-                "mysql not supported yet, pass path with {} for sqlite based checkpoints",
-                CHECKPOINT_PATH_ARG
-            );
+            SqlCheckpoints::with_metadata_database_config(fb, dbconfig, mysql_options, false)
+                .await?
         };
 
         Some(CheckpointsByName::new(checkpoint_name, sql_checkpoints))
@@ -1180,17 +1183,6 @@ pub async fn setup_common<'a>(
         walk_roots.append(&mut roots);
     }
 
-    let tail_params = parse_tail_args(sub_m)?;
-
-    if tail_params.public_changeset_chunk_by.is_empty() && walk_roots.is_empty() {
-        return Err(format_err!(
-            "No walk roots provided, pass with  --{}, --{} or --{}",
-            BOOKMARK_ARG,
-            WALK_ROOT_ARG,
-            CHUNK_BY_PUBLIC_ARG,
-        ));
-    }
-
     let readonly_storage = args::parse_readonly_storage(&matches);
 
     let error_as_data_node_types = parse_node_types(
@@ -1300,6 +1292,17 @@ pub async fn setup_common<'a>(
 
     // First setup SQL config
     for (metadatadb_config, blobconfigs) in metadatadb_config_to_blob_config {
+        let tail_params = parse_tail_args(fb, sub_m, &metadatadb_config, &mysql_options).await?;
+
+        if tail_params.public_changeset_chunk_by.is_empty() && walk_roots.is_empty() {
+            bail!(
+                "No walk roots provided, pass with  --{}, --{} or --{}",
+                BOOKMARK_ARG,
+                WALK_ROOT_ARG,
+                CHUNK_BY_PUBLIC_ARG,
+            );
+        }
+
         let sql_factory = make_metadata_sql_factory(
             fb,
             metadatadb_config,
