@@ -1341,9 +1341,10 @@ mod tests {
 
             let k = key("a", "abcd");
 
-            let data = (0..10 * 1024 * 1024)
+            let data: Bytes = (0..10 * 1024 * 1024)
                 .map(|_| rand::random::<u8>())
-                .collect::<Bytes>();
+                .collect::<Vec<u8>>()
+                .into();
             assert_eq!(data.len(), 10 * 1024 * 1024);
 
             let mut map = HashMap::new();
