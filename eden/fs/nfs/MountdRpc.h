@@ -23,7 +23,7 @@ constexpr uint32_t kMountdProgVersion = 3;
 /**
  * Procedure values.
  */
-enum mountProcs : uint32_t {
+enum class mountProcs : uint32_t {
   null = 0,
   mnt = 1,
   dump = 2,

@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include <folly/Synchronized.h>
+#include <folly/Utility.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/nfs/MountdRpc.h"
@@ -55,6 +56,8 @@ class MountdServerProcessor final : public RpcServerProcessor {
       mountPoints_;
 };
 
+namespace {
+
 using Handler = folly::Future<folly::Unit> (MountdServerProcessor::*)(
     folly::io::Cursor deser,
     folly::io::Appender ser,
@@ -71,16 +74,23 @@ struct HandlerEntry {
 
 constexpr auto kMountHandlers = [] {
   std::array<HandlerEntry, 6> handlers;
-  handlers[mountProcs::null] = {"NULL", &MountdServerProcessor::null};
-  handlers[mountProcs::mnt] = {"MNT", &MountdServerProcessor::mount};
-  handlers[mountProcs::dump] = {"DUMP", &MountdServerProcessor::dump};
-  handlers[mountProcs::umnt] = {"UMOUNT", &MountdServerProcessor::umount};
-  handlers[mountProcs::umntAll] = {
+  handlers[folly::to_underlying(mountProcs::null)] = {
+      "NULL", &MountdServerProcessor::null};
+  handlers[folly::to_underlying(mountProcs::mnt)] = {
+      "MNT", &MountdServerProcessor::mount};
+  handlers[folly::to_underlying(mountProcs::dump)] = {
+      "DUMP", &MountdServerProcessor::dump};
+  handlers[folly::to_underlying(mountProcs::umnt)] = {
+      "UMOUNT", &MountdServerProcessor::umount};
+  handlers[folly::to_underlying(mountProcs::umntAll)] = {
       "UMOUNTALL", &MountdServerProcessor::umountAll};
-  handlers[mountProcs::exprt] = {"EXPORT", &MountdServerProcessor::exprt};
+  handlers[folly::to_underlying(mountProcs::exprt)] = {
+      "EXPORT", &MountdServerProcessor::exprt};
 
   return handlers;
 }();
+
+} // namespace
 
 folly::Future<folly::Unit> MountdServerProcessor::null(
     folly::io::Cursor /*deser*/,
