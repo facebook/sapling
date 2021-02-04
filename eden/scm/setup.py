@@ -854,6 +854,7 @@ class fetchbuilddeps(Command):
                 "thrift/util/async_common.py",
                 "thrift/util/asyncio.py",
                 "thrift/util/converter.py",
+                "thrift/util/handler.py",
                 "thrift/util/inspect.py",
                 "thrift/server/TAsyncioServer.py",
                 "thrift/server/test/TAsyncioServerTest.py",

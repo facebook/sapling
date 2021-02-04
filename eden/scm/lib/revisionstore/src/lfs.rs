@@ -24,7 +24,7 @@ use std::{
 };
 
 use anyhow::{bail, ensure, format_err, Context, Result};
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use futures::stream::{iter, StreamExt, TryStreamExt};
 use http::status::StatusCode;
 use parking_lot::{Mutex, RwLock};
@@ -331,7 +331,7 @@ impl LfsIndexedLogBlobsStore {
         // unwrap safety: chunks isn't empty.
         let size = chunks.last().unwrap().range.end;
 
-        let mut res = BytesMut::with_capacity(size);
+        let mut res = Vec::with_capacity(size);
 
         let mut next_start = 0;
         for entry in chunks.into_iter() {
@@ -360,7 +360,7 @@ impl LfsIndexedLogBlobsStore {
             res.extend_from_slice(entry.data.slice(range_in_data).as_ref());
         }
 
-        let data = res.freeze();
+        let data: Bytes = res.into();
         if &ContentHash::sha256(&data).unwrap_sha256() == hash || is_redacted(&data) {
             Ok(Some(data))
         } else {
@@ -655,24 +655,25 @@ impl LocalStore for LfsStore {
 /// information
 fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
     if let Some(copy_from) = &entry.copy_from {
-        let mut ret = BytesMut::new();
+        let copy_from_path: &[u8] = copy_from.path.as_ref();
+        let mut ret = Vec::with_capacity(data.len() + copy_from_path.len() + 128);
 
         ret.extend_from_slice(&b"\x01\n"[..]);
         ret.extend_from_slice(&b"copy: "[..]);
-        ret.extend_from_slice(copy_from.path.as_ref());
+        ret.extend_from_slice(copy_from_path);
         ret.extend_from_slice(&b"\n"[..]);
         ret.extend_from_slice(&b"copyrev: "[..]);
         ret.extend_from_slice(copy_from.hgid.to_hex().as_bytes());
         ret.extend_from_slice(&b"\n"[..]);
         ret.extend_from_slice(&b"\x01\n"[..]);
         ret.extend_from_slice(data.as_ref());
-        ret.freeze()
+        ret.into()
     } else {
         if data.as_ref().starts_with(b"\x01\n") {
-            let mut ret = BytesMut::new();
+            let mut ret = Vec::with_capacity(data.len() + 4);
             ret.extend_from_slice(&b"\x01\n\x01\n"[..]);
             ret.extend_from_slice(data.as_ref());
-            ret.freeze()
+            ret.into()
         } else {
             data
         }
@@ -1050,11 +1051,11 @@ impl LfsRemoteInner {
                     chunks.push(chunk);
                 }
 
-                let mut result = BytesMut::with_capacity(chunks.iter().map(|c| c.len()).sum());
+                let mut result = Vec::with_capacity(chunks.iter().map(|c| c.len()).sum());
                 for chunk in chunks.into_iter() {
                     result.extend_from_slice(&chunk);
                 }
-                let result = result.freeze();
+                let result: Bytes = result.into();
 
                 let content_encoding = headers.get("Content-Encoding");
 
