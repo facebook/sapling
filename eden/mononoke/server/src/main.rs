@@ -93,7 +93,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let mysql_options = cmdlib::args::parse_mysql_options(&matches);
     let disabled_hooks = cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?;
     let scribe = cmdlib::args::get_scribe(fb, &matches)?;
-    let is_test = cmdlib::args::is_test_instance(&matches);
     let host_port = matches
         .value_of("listening-host-port")
         .expect("listening path must be specified")
@@ -123,7 +122,6 @@ fn main(fb: FacebookInit) -> Result<()> {
 
             repo_listener::create_repo_listeners(
                 fb,
-                is_test,
                 config.common,
                 mononoke,
                 &mysql_options,

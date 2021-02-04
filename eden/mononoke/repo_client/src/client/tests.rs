@@ -347,7 +347,6 @@ async fn run_and_check_if_lfs(
         false, // Don't preserve raw bundle 2 (we don't push)
         Arc::new(noop_wireproto),
         None, // No PushRedirectorArgs
-        None, // Don't listen to LiveCommitSyncConfig
         Default::default(),
     );
 

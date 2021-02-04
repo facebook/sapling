@@ -45,7 +45,6 @@ use hgproto::{GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hostname::get_hostname;
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use load_limiter::Metric;
 use manifest::{Diff, Entry, ManifestOps};
 use maplit::hashmap;
@@ -421,7 +420,6 @@ pub struct RepoClient {
     wireproto_logging: Arc<WireprotoLogging>,
     maybe_push_redirector_args: Option<PushRedirectorArgs>,
     force_lfs: Arc<AtomicBool>,
-    maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
     knobs: RepoClientKnobs,
 }
 
@@ -433,7 +431,6 @@ impl RepoClient {
         preserve_raw_bundle2: bool,
         wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
-        maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
         knobs: RepoClientKnobs,
     ) -> Self {
         let session_bookmarks_cache = Arc::new(SessionBookmarkCache::new(repo.clone()));
@@ -447,7 +444,6 @@ impl RepoClient {
             wireproto_logging,
             maybe_push_redirector_args,
             force_lfs: Arc::new(AtomicBool::new(false)),
-            maybe_live_commit_sync_config,
             knobs,
         }
     }
@@ -918,37 +914,32 @@ impl RepoClient {
             }
         };
 
-        match self.maybe_live_commit_sync_config {
-            None => Ok(None),
-            Some(ref live_commit_sync_config) => {
-                use unbundle::PostResolveAction::*;
+        use unbundle::PostResolveAction::*;
 
-                let repo_id = self.repo.blobrepo().get_repoid();
-                let redirect = match action {
-                    InfinitePush(_) => {
-                        live_commit_sync_config.push_redirector_enabled_for_draft(repo_id)
-                    }
-                    Push(_) | PushRebase(_) | BookmarkOnlyPushRebase(_) => {
-                        live_commit_sync_config.push_redirector_enabled_for_public(repo_id)
-                    }
-                };
+        let live_commit_sync_config = self.repo.live_commit_sync_config();
 
-                if redirect {
-                    debug!(
-                        ctx.logger(),
-                        "live_commit_sync_config says push redirection is on"
-                    );
-                    Ok(Some(
-                        push_redirector_args.into_push_redirector(ctx, &live_commit_sync_config)?,
-                    ))
-                } else {
-                    debug!(
-                        ctx.logger(),
-                        "live_commit_sync_config says push redirection is off"
-                    );
-                    Ok(None)
-                }
+        let repo_id = self.repo.blobrepo().get_repoid();
+        let redirect = match action {
+            InfinitePush(_) => live_commit_sync_config.push_redirector_enabled_for_draft(repo_id),
+            Push(_) | PushRebase(_) | BookmarkOnlyPushRebase(_) => {
+                live_commit_sync_config.push_redirector_enabled_for_public(repo_id)
             }
+        };
+
+        if redirect {
+            debug!(
+                ctx.logger(),
+                "live_commit_sync_config says push redirection is on"
+            );
+            Ok(Some(
+                push_redirector_args.into_push_redirector(ctx, live_commit_sync_config)?,
+            ))
+        } else {
+            debug!(
+                ctx.logger(),
+                "live_commit_sync_config says push redirection is off"
+            );
+            Ok(None)
         }
     }
 }

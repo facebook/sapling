@@ -15,6 +15,7 @@ use fbinit::FacebookInit;
 use futures_ext::BoxFuture;
 use getbundle_response::SessionLfsParams;
 use hooks::HookManager;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::{
     BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams, RepoReadOnly,
 };
@@ -290,6 +291,10 @@ impl MononokeRepo {
 
     pub fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
         self.repo.warm_bookmarks_cache()
+    }
+
+    pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
+        self.repo.live_commit_sync_config()
     }
 }
 

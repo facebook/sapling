@@ -16,7 +16,6 @@ context = { path = "../server/context", version = "0.1.0" }
 filenodes = { path = "../filenodes", version = "0.1.0" }
 getbundle_response = { path = "getbundle_response", version = "0.1.0" }
 hgproto = { path = "../hgproto", version = "0.1.0" }
-live_commit_sync_config = { path = "../commit_rewriting/live_commit_sync_config", version = "0.1.0" }
 load_limiter = { path = "../load_limiter", version = "0.1.0" }
 manifest = { path = "../manifest", version = "0.1.0" }
 mercurial_bundles = { path = "../mercurial/bundles", version = "0.1.0" }

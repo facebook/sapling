@@ -38,7 +38,7 @@ use futures::{
     try_join,
 };
 use hooks::{CrossRepoPushSource, HookRejection};
-use live_commit_sync_config::CfgrLiveCommitSyncConfig;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use mononoke_repo::MononokeRepo;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use pushrebase::PushrebaseChangesetPair;
@@ -80,7 +80,7 @@ impl PushRedirectorArgs {
     pub fn into_push_redirector(
         self,
         ctx: &CoreContext,
-        live_commit_sync_config: &CfgrLiveCommitSyncConfig,
+        live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     ) -> Result<PushRedirector, Error> {
         // TODO: This function needs to be extended
         //       and query configerator for the fresh
@@ -101,7 +101,7 @@ impl PushRedirectorArgs {
             small_repo,
             large_repo,
             mapping.clone(),
-            Arc::new(live_commit_sync_config.clone()),
+            live_commit_sync_config,
         )?;
 
         let small_to_large_commit_syncer = syncers.small_to_large;

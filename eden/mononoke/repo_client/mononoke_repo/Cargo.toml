@@ -11,6 +11,7 @@ blobrepo = { path = "../../blobrepo", version = "0.1.0" }
 blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
 getbundle_response = { path = "../getbundle_response", version = "0.1.0" }
 hooks = { path = "../../hooks", version = "0.1.0" }
+live_commit_sync_config = { path = "../../commit_rewriting/live_commit_sync_config", version = "0.1.0" }
 metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
 mononoke_api = { path = "../../mononoke_api", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }

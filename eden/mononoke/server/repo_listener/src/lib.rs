@@ -41,7 +41,6 @@ use crate::repo_handlers::repo_handlers;
 
 pub async fn create_repo_listeners<'a>(
     fb: FacebookInit,
-    test_instance: bool,
     common_config: CommonConfig,
     repos: Mononoke,
     mysql_options: &'a MysqlOptions,
@@ -70,7 +69,6 @@ pub async fn create_repo_listeners<'a>(
     debug!(root_log, "Mononoke server is listening on {}", sockname);
     connection_acceptor(
         fb,
-        test_instance,
         common_config,
         sockname,
         service,

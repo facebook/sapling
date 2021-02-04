@@ -29,7 +29,6 @@ use futures_util::compat::Stream01CompatExt;
 use futures_util::future::FutureExt;
 use futures_util::stream::{StreamExt, TryStreamExt};
 use lazy_static::lazy_static;
-use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use metaconfig_types::CommonConfig;
 use openssl::ssl::SslAcceptor;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
@@ -80,7 +79,6 @@ pub async fn wait_for_connections_closed() {
 /// a particular repo
 pub async fn connection_acceptor(
     fb: FacebookInit,
-    test_instance: bool,
     common_config: CommonConfig,
     sockname: String,
     service: ReadyFlagService,
@@ -104,10 +102,6 @@ pub async fn connection_acceptor(
         })
     };
 
-    let maybe_live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&root_log, &config_store)
-        .map(Option::Some)
-        .or_else(|e| if test_instance { Ok(None) } else { Err(e) })?;
-
     let enable_http_control_api = common_config.enable_http_control_api;
 
     let security_checker =
@@ -128,7 +122,6 @@ pub async fn connection_acceptor(
         repo_handlers,
         security_checker,
         load_limiting_config,
-        maybe_live_commit_sync_config,
         scribe,
         logger: root_log.clone(),
         enable_http_control_api,
@@ -163,7 +156,6 @@ pub struct Acceptor {
     pub repo_handlers: HashMap<String, RepoHandler>,
     pub security_checker: ConnectionsSecurityChecker,
     pub load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
-    pub maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
     pub scribe: Scribe,
     pub logger: Logger,
     pub enable_http_control_api: bool,
@@ -362,7 +354,6 @@ pub async fn handle_wireproto(
         stdio,
         conn.pending.acceptor.load_limiting_config.clone(),
         conn.pending.addr.ip(),
-        conn.pending.acceptor.maybe_live_commit_sync_config.clone(),
         conn.pending.acceptor.scribe.clone(),
     )
     .await

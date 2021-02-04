@@ -65,7 +65,6 @@ impl FastReplayDispatcher {
             false, // Don't preserve raw bundle 2 (we don't push)
             self.wireproto_logging.clone(),
             None, // Don't push redirect (we don't push)
-            None, // No need to query live commit sync config
             self.repo_client_knobs.clone(),
         )
     }
