@@ -46,6 +46,7 @@ Before the change
 
 -- wait a little to give sync job some time to catch up
   $ sleep 3
+  $ flush_mononoke_bookmarks
 
 -- check the same commit in the large repo
   $ cd "$TESTTMP/large-hg-client"
@@ -75,6 +76,7 @@ Make a config change
   > --large-repo-bookmark master_bookmark \
   > --version-name new_version \
   > --dump-mapping-large-repo-path smallrepofolder_after/mapping.json &> /dev/null
+  $ flush_mononoke_bookmarks
 
   $ mononoke_x_repo_sync_forever $REPOIDSMALL $REPOIDLARGE --local-configerator-path="$TESTTMP/configerator"
 
@@ -102,6 +104,7 @@ After the change
 
 -- wait a little to give sync job some time to catch up
   $ sleep 3
+  $ flush_mononoke_bookmarks
 
 -- check the same commit in the large repo
   $ cd "$TESTTMP/large-hg-client"

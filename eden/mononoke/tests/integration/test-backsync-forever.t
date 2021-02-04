@@ -44,6 +44,7 @@ Before config change
 
 -- wait a second to give backsyncer some time to catch up
   $ sleep 3
+  $ flush_mononoke_bookmarks
 
 -- check the same commit in the small repo
   $ cd "$TESTTMP/small-hg-client"
@@ -70,6 +71,7 @@ Config change
 
 -- wait a second to give backsyncer some time to catch up
   $ sleep 3
+  $ flush_mononoke_bookmarks
   $ LARGE_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDLARGE master_bookmark)
   $ SMALL_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL master_bookmark)
   $ update_mapping_version "$REPOIDSMALL" "$SMALL_MASTER_BONSAI" "$REPOIDLARGE" "$LARGE_MASTER_BONSAI" "new_version"
@@ -89,6 +91,7 @@ Config change
 
 -- wait a second to give backsyncer some time to catch up
   $ sleep 3
+  $ flush_mononoke_bookmarks
 
 -- check the same commit in the small repo
   $ cd "$TESTTMP/small-hg-client"
