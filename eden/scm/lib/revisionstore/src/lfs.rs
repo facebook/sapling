@@ -1217,7 +1217,7 @@ impl LfsRemoteInner {
                     None => return Err(err),
                     Some(fetch_error) => match fetch_error.error {
                         TransferError::HttpStatus(http::StatusCode::GONE) => {
-                            Some(redacted::REDACTED_CONTENT.clone())
+                            Some(Bytes::from_static(redacted::REDACTED_CONTENT))
                         }
                         _ => return Err(err),
                     },
