@@ -160,7 +160,17 @@ folly::Future<folly::Unit> MountdServerProcessor::exprt(
     folly::io::Cursor /*deser*/,
     folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+  /*
+   * In theory, we're supposed to return a list of exported FS, but since
+   * EdenFS is not intended to be exposed as a generic NFS server, properly
+   * answering with the list of exported FS isn't necessary. For now we can
+   * just pretend that we don't export anything.
+   *
+   * When using libnfs, this may be called during mount to recursively mount
+   * nested NFS mounts.
+   */
+  XdrTrait<bool>::serialize(ser, false);
   return folly::unit;
 }
 
