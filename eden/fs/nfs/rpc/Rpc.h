@@ -80,6 +80,7 @@ namespace facebook::eden {
 enum class auth_flavor {
   AUTH_NONE = 0,
   AUTH_SYS = 1,
+  AUTH_UNIX = 1, /* AUTH_UNIX is the same as AUTH_SYS */
   AUTH_SHORT = 2,
   AUTH_DH = 3,
   RPCSEC_GSS = 6

@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
 
   SignalHandler signal(evb);
   Mountd mountd(true);
+  mountd.registerMount(AbsolutePathPiece("/foo/bar"), InodeNumber(42));
 
   evb->loop();
 }

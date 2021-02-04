@@ -112,10 +112,23 @@ folly::Future<folly::Unit> MountdServerProcessor::null(
 }
 
 folly::Future<folly::Unit> MountdServerProcessor::mount(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::Appender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  AbsolutePath path{XdrTrait<std::string>::deserialize(deser)};
+  XLOG(DBG7) << "Mounting: " << path;
+
+  auto mounts = mountPoints_.rlock();
+  auto found = mounts->find(path);
+  if (found != mounts->end()) {
+    XdrTrait<mountstat3>::serialize(ser, mountstat3::MNT3_OK);
+    XdrTrait<mountres3_ok>::serialize(
+        ser, mountres3_ok{found->second, {auth_flavor::AUTH_UNIX}});
+  } else {
+    XdrTrait<mountstat3>::serialize(ser, mountstat3::MNT3ERR_NOENT);
+  }
   return folly::unit;
 }
 
