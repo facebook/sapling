@@ -7,10 +7,9 @@ license = "GPLv2+"
 include = ["src/*.rs"]
 
 [dependencies]
-async_limiter = { path = "../../common/async_limiter", version = "0.1.0" }
 blobstore = { path = "..", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
-ratelimit_meter = "5"
+governor = "0.3.2"
