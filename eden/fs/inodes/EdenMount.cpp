@@ -34,6 +34,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
+#include "eden/fs/nfs/Mountd.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
@@ -636,8 +637,17 @@ folly::Future<folly::Unit> EdenMount::unmount() {
               .via(serverState_->getThreadPool().get())
               .ensure([this] { channel_.reset(); });
 #else
-          return serverState_->getPrivHelper()->fuseUnmount(
-              getPath().stringPiece());
+          if (serverState_->getReloadableConfig()
+                  .getEdenConfig()
+                  ->enableNfsServer.getValue() &&
+              getConfig()->getMountProtocol() == MountProtocol::NFS) {
+            // TODO(xavierd): We need to actually do the unmount here.
+            serverState_->getMountd()->unregisterMount(getPath());
+            return folly::makeFuture();
+          } else {
+            return serverState_->getPrivHelper()->fuseUnmount(
+                getPath().stringPiece());
+          }
 #endif
         })
         .thenTry([this](Try<Unit>&& result) noexcept -> folly::Future<Unit> {
@@ -1252,43 +1262,54 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
               return makeFuture(channel);
             });
 #else
-        return serverState_->getPrivHelper()
-            ->fuseMount(mountPath.stringPiece(), readOnly)
-            .thenTry(
-                [mountPath, mountPromise, this](Try<folly::File>&& fuseDevice)
-                    -> folly::Future<folly::File> {
-                  if (fuseDevice.hasException()) {
-                    mountPromise->setException(fuseDevice.exception());
-                    return folly::makeFuture<folly::File>(
-                        fuseDevice.exception());
-                  }
-                  if (mountingUnmountingState_.rlock()
-                          ->channelUnmountStarted()) {
-                    fuseDevice->close();
-                    return serverState_->getPrivHelper()
-                        ->fuseUnmount(mountPath.stringPiece())
-                        .thenError(
-                            folly::tag<std::exception>,
-                            [](std::exception&& unmountError) {
-                              // TODO(strager): Should we make
-                              // EdenMount::unmount() also fail with the same
-                              // exception?
-                              XLOG(ERR)
-                                  << "fuseMount was cancelled, but rollback (fuseUnmount) failed: "
-                                  << unmountError.what();
-                              throw std::move(unmountError);
-                            })
-                        .thenValue([mountPath, mountPromise](folly::Unit&&) {
-                          auto error = FuseDeviceUnmountedDuringInitialization{
-                              mountPath};
-                          mountPromise->setException(error);
-                          return folly::makeFuture<folly::File>(error);
-                        });
-                  }
+        if (serverState_->getReloadableConfig()
+                .getEdenConfig()
+                ->enableNfsServer.getValue() &&
+            getConfig()->getMountProtocol() == MountProtocol::NFS) {
+          auto mountd = serverState_->getMountd();
+          mountd->registerMount(mountPath, getRootInode()->getNodeId());
+          // TODO(xavierd): We need to actually do a mount here.
+          return makeFuture(folly::File());
+        } else {
+          return serverState_->getPrivHelper()
+              ->fuseMount(mountPath.stringPiece(), readOnly)
+              .thenTry(
+                  [mountPath, mountPromise, this](Try<folly::File>&& fuseDevice)
+                      -> folly::Future<folly::File> {
+                    if (fuseDevice.hasException()) {
+                      mountPromise->setException(fuseDevice.exception());
+                      return folly::makeFuture<folly::File>(
+                          fuseDevice.exception());
+                    }
+                    if (mountingUnmountingState_.rlock()
+                            ->channelUnmountStarted()) {
+                      fuseDevice->close();
+                      return serverState_->getPrivHelper()
+                          ->fuseUnmount(mountPath.stringPiece())
+                          .thenError(
+                              folly::tag<std::exception>,
+                              [](std::exception&& unmountError) {
+                                // TODO(strager): Should we make
+                                // EdenMount::unmount() also fail with the same
+                                // exception?
+                                XLOG(ERR)
+                                    << "fuseMount was cancelled, but rollback (fuseUnmount) failed: "
+                                    << unmountError.what();
+                                throw std::move(unmountError);
+                              })
+                          .thenValue([mountPath, mountPromise](folly::Unit&&) {
+                            auto error =
+                                FuseDeviceUnmountedDuringInitialization{
+                                    mountPath};
+                            mountPromise->setException(error);
+                            return folly::makeFuture<folly::File>(error);
+                          });
+                    }
 
-                  mountPromise->setValue();
-                  return folly::makeFuture(std::move(fuseDevice).value());
-                });
+                    mountPromise->setValue();
+                    return folly::makeFuture(std::move(fuseDevice).value());
+                  });
+        }
 #endif
       });
 }

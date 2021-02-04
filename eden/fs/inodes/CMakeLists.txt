@@ -53,6 +53,8 @@ target_link_libraries(
     eden_telemetry
     eden_utils
     Folly::folly
+  PRIVATE
+    eden_nfs_mountd
 )
 
 if (WIN32)

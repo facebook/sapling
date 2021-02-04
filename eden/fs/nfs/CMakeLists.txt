@@ -11,7 +11,9 @@ add_library(
 target_link_libraries(
   eden_nfs_mountd
   PUBLIC
+    eden_inodes_inodenumber
     eden_nfs_rpc_server
+    eden_utils
   PRIVATE
     eden_nfs_mountd_rpc
     Folly::folly

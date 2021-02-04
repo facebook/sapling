@@ -7,14 +7,15 @@
 
 #include "eden/fs/nfs/Mountd.h"
 
+#include <memory>
+#include <unordered_map>
+
+#include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
-#include <memory>
 #include "eden/fs/nfs/MountdRpc.h"
 
 namespace facebook::eden {
-
-namespace {
 
 class MountdServerProcessor final : public RpcServerProcessor {
  public:
@@ -45,6 +46,13 @@ class MountdServerProcessor final : public RpcServerProcessor {
   umountAll(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
   folly::Future<folly::Unit>
   exprt(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+
+  void registerMount(AbsolutePathPiece path, InodeNumber rootIno);
+  void unregisterMount(AbsolutePathPiece path);
+
+ private:
+  folly::Synchronized<std::unordered_map<AbsolutePath, InodeNumber>>
+      mountPoints_;
 };
 
 using Handler = folly::Future<folly::Unit> (MountdServerProcessor::*)(
@@ -174,10 +182,31 @@ folly::Future<folly::Unit> MountdServerProcessor::dispatchRpc(
   return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid);
 }
 
-} // namespace
+void MountdServerProcessor::registerMount(
+    AbsolutePathPiece path,
+    InodeNumber ino) {
+  auto map = mountPoints_.wlock();
+  auto [iter, inserted] = map->emplace(path.copy(), ino);
+  XCHECK_EQ(inserted, true);
+}
 
-Mountd::Mountd() : server_(std::make_shared<MountdServerProcessor>()) {
+void MountdServerProcessor::unregisterMount(AbsolutePathPiece path) {
+  auto map = mountPoints_.wlock();
+  auto numRemoved = map->erase(path.copy());
+  XCHECK_EQ(numRemoved, 1u);
+}
+
+Mountd::Mountd()
+    : proc_(std::make_shared<MountdServerProcessor>()), server_(proc_) {
   server_.registerService(kMountdProgNumber, kMountdProgVersion);
+}
+
+void Mountd::registerMount(AbsolutePathPiece path, InodeNumber ino) {
+  proc_->registerMount(path, ino);
+}
+
+void Mountd::unregisterMount(AbsolutePathPiece path) {
+  proc_->unregisterMount(path);
 }
 
 } // namespace facebook::eden
