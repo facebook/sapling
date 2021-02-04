@@ -84,7 +84,7 @@ async fn do_main<'a>(
 
     let mysql_options = cmdlib::args::parse_mysql_options(&matches);
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
-    let blobstore_options = cmdlib::args::parse_blobstore_options(&matches);
+    let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
     let caching = cmdlib::args::init_cachelib(fb, &matches);
     let config_store = cmdlib::args::init_config_store(fb, logger, matches)?;
 

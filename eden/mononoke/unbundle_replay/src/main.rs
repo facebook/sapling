@@ -390,7 +390,7 @@ async fn do_main(
         .unwrap_or(1_usize);
 
     let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches);
+    let blobstore_options = args::parse_blobstore_options(&matches)?;
     let readonly_storage = args::parse_readonly_storage(&matches);
     let caching = args::init_cachelib(fb, &matches);
 

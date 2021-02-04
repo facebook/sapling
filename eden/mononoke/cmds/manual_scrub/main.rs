@@ -115,7 +115,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
 
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options =
-        args::parse_blobstore_options(&matches).with_scrub_action(Some(ScrubAction::Repair));
+        args::parse_blobstore_options(&matches)?.with_scrub_action(Some(ScrubAction::Repair));
     let ctx = CoreContext::new_bulk_with_logger(fb, logger.clone());
 
     let success_file_name = matches

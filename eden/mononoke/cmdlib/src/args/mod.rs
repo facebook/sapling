@@ -1500,7 +1500,7 @@ async fn open_repo_internal_with_repo_id(
     };
 
     let mysql_options = parse_mysql_options(matches);
-    let blobstore_options = parse_blobstore_options(matches);
+    let blobstore_options = parse_blobstore_options(matches)?;
     let readonly_storage = parse_readonly_storage(matches);
 
     let mut builder = BlobrepoBuilder::new(
@@ -1640,47 +1640,55 @@ pub fn parse_mysql_options<'a>(matches: &MononokeMatches<'a>) -> MysqlOptions {
     }
 }
 
-pub fn parse_blobstore_options<'a>(matches: &MononokeMatches<'a>) -> BlobstoreOptions {
+pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOptions, Error> {
     let read_qps: Option<NonZeroU32> = matches
         .value_of(READ_QPS_ARG)
-        .map(|v| v.parse().expect("Provided qps is not u32"));
+        .map(|v| v.parse())
+        .transpose()
+        .context("Provided qps is not u32")?;
 
     let write_qps: Option<NonZeroU32> = matches
         .value_of(WRITE_QPS_ARG)
-        .map(|v| v.parse().expect("Provided qps is not u32"));
+        .map(|v| v.parse())
+        .transpose()
+        .context("Provided qps is not u32")?;
 
     let read_chaos: Option<NonZeroU32> = matches
         .value_of(READ_CHAOS_ARG)
-        .map(|v| v.parse().expect("Provided chaos is not u32"));
+        .map(|v| v.parse())
+        .transpose()
+        .context("Provided chaos is not u32")?;
 
     let write_chaos: Option<NonZeroU32> = matches
         .value_of(WRITE_CHAOS_ARG)
-        .map(|v| v.parse().expect("Provided chaos is not u32"));
+        .map(|v| v.parse())
+        .transpose()
+        .context("Provided chaos is not u32")?;
 
     let manifold_api_key: Option<String> = matches
         .value_of(MANIFOLD_API_KEY_ARG)
         .map(|api_key| api_key.to_string());
 
-    let write_zstd_level: Option<i32> = matches.value_of(WRITE_ZSTD_ARG).map(|v| {
-        v.parse()
-            .expect("Provided Zstd compression level is not i32")
-    });
+    let write_zstd_level: Option<i32> = matches
+        .value_of(WRITE_ZSTD_ARG)
+        .map(|v| v.parse())
+        .transpose()
+        .context("Provided Zstd compression level is not i32")?;
 
     let attempt_zstd: bool = matches
         .value_of(CACHELIB_ATTEMPT_ZSTD_ARG)
-        .map(|v| {
-            v.parse()
-                .expect("Provided blobstore-cachelib-attempt-zstd is not bool")
-        })
-        .expect("A default is set, should never be None");
+        .map(|v| v.parse())
+        .transpose()
+        .context("Provided blobstore-cachelib-attempt-zstd is not bool")?
+        .ok_or_else(|| format_err!("A default is set, should never be None"))?;
 
-    let blobstore_put_behaviour: Option<PutBehaviour> =
-        matches.value_of(BLOBSTORE_PUT_BEHAVIOUR_ARG).map(|v| {
-            v.parse()
-                .expect("Provided blobstore-put-behaviour is not PutBehaviour")
-        });
+    let blobstore_put_behaviour: Option<PutBehaviour> = matches
+        .value_of(BLOBSTORE_PUT_BEHAVIOUR_ARG)
+        .map(|v| v.parse())
+        .transpose()
+        .context("Provided blobstore-put-behaviour is not PutBehaviour")?;
 
-    BlobstoreOptions::new(
+    Ok(BlobstoreOptions::new(
         ChaosOptions::new(read_chaos, write_chaos),
         ThrottleOptions {
             read_qps,
@@ -1691,7 +1699,7 @@ pub fn parse_blobstore_options<'a>(matches: &MononokeMatches<'a>) -> BlobstoreOp
         CachelibBlobstoreOptions::new_lazy(Some(attempt_zstd)),
         blobstore_put_behaviour,
         None, // no top level ScrubOptions yet
-    )
+    ))
 }
 
 pub fn maybe_enable_mcrouter<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) {

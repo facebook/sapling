@@ -108,7 +108,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         mysql_options: args::parse_mysql_options(&matches),
         caching,
         readonly_storage: args::parse_readonly_storage(&matches),
-        blobstore_options: args::parse_blobstore_options(&matches),
+        blobstore_options: args::parse_blobstore_options(&matches)?,
         config_store,
         disabled_hooks: args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?,
         warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::AllKinds,

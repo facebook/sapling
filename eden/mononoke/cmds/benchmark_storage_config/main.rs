@@ -9,6 +9,7 @@
 
 use std::{sync::Arc, time::Duration};
 
+use anyhow::{anyhow, Context, Error};
 use clap::Arg;
 use criterion::Criterion;
 use tokio_compat::runtime::Runtime;
@@ -35,7 +36,7 @@ const ARG_USE_BASELINE: &str = "use-baseline";
 const ARG_FILTER_BENCHMARKS: &str = "filter";
 
 #[fbinit::main]
-fn main(fb: fbinit::FacebookInit) {
+fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
     let app = args::MononokeAppBuilder::new("benchmark_storage_config")
         .with_advanced_args_hidden()
         .with_all_repos()
@@ -91,22 +92,22 @@ fn main(fb: fbinit::FacebookInit) {
     }
 
     let (caching, logger, mut runtime) =
-        args::init_mononoke(fb, &matches).expect("failed to initialise mononoke");
+        args::init_mononoke(fb, &matches).context("failed to initialise mononoke")?;
 
     let config_store =
-        args::init_config_store(fb, &logger, &matches).expect("failed to start Configerator");
+        args::init_config_store(fb, &logger, &matches).context("failed to start Configerator")?;
+
+    let config_name = matches
+        .value_of(ARG_STORAGE_CONFIG_NAME)
+        .context("No storage config name")?;
 
     let storage_config = args::load_storage_configs(config_store, &matches)
-        .expect("Could not read storage configs")
+        .context("Could not read storage configs")?
         .storage
-        .remove(
-            matches
-                .value_of(ARG_STORAGE_CONFIG_NAME)
-                .expect("No storage config name"),
-        )
-        .expect("Storage config not found");
+        .remove(config_name)
+        .ok_or_else(|| anyhow!("unknown storage config"))?;
     let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches);
+    let blobstore_options = args::parse_blobstore_options(&matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let blobstore = || async {
@@ -120,12 +121,12 @@ fn main(fb: fbinit::FacebookInit) {
             config_store,
         )
         .await
-        .expect("Could not make blobstore");
-        match caching {
+        .context("Could not make blobstore")?;
+        let blobstore = match caching {
             Caching::Disabled => blobstore,
             Caching::CachelibOnlyBlobstore(cache_shards) => {
                 get_cachelib_blobstore(blobstore, cache_shards, CachelibBlobstoreOptions::default())
-                    .expect("get_cachelib_blobstore failed")
+                    .context("get_cachelib_blobstore failed")?
             }
             Caching::Enabled(cache_shards) => {
                 let cachelib_blobstore = get_cachelib_blobstore(
@@ -133,13 +134,14 @@ fn main(fb: fbinit::FacebookInit) {
                     cache_shards,
                     CachelibBlobstoreOptions::default(),
                 )
-                .expect("get_cachelib_blobstore failed");
+                .context("get_cachelib_blobstore failed")?;
                 Arc::new(
                     new_memcache_blobstore_no_lease(fb, cachelib_blobstore, "benchmark", "")
-                        .expect("Memcache blobstore issues"),
+                        .context("Memcache blobstore issues")?,
                 )
             }
-        }
+        };
+        Ok::<_, Error>(blobstore)
     };
 
     // Cut all the repetition around running a benchmark. Note that a fresh cachee shouldn't be needed,
@@ -147,18 +149,20 @@ fn main(fb: fbinit::FacebookInit) {
     let mut run_benchmark = {
         let runtime = &mut runtime;
         let criterion = &mut criterion;
-        move |bench: fn(&mut Criterion, CoreContext, Arc<dyn Blobstore>, &mut Runtime)| {
-            let blobstore = runtime.block_on_std(blobstore());
-            bench(criterion, ctx.clone(), blobstore, runtime)
+        move |bench: fn(&mut Criterion, CoreContext, Arc<dyn Blobstore>, &mut Runtime)| -> Result<(), Error> {
+            let blobstore = runtime.block_on_std(blobstore())?;
+            bench(criterion, ctx.clone(), blobstore, runtime);
+            Ok(())
         }
     };
 
     // Tests are run from here
-    run_benchmark(single_puts::benchmark);
-    run_benchmark(single_gets::benchmark);
-    run_benchmark(parallel_same_blob_gets::benchmark);
-    run_benchmark(parallel_different_blob_gets::benchmark);
-    run_benchmark(parallel_puts::benchmark);
+    run_benchmark(single_puts::benchmark)?;
+    run_benchmark(single_gets::benchmark)?;
+    run_benchmark(parallel_same_blob_gets::benchmark)?;
+    run_benchmark(parallel_different_blob_gets::benchmark)?;
+    run_benchmark(parallel_puts::benchmark)?;
 
     criterion.final_summary();
+    Ok(())
 }

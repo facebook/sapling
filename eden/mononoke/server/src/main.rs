@@ -91,7 +91,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .expect("listening path must be specified")
         .to_string();
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
-    let blobstore_options = cmdlib::args::parse_blobstore_options(&matches);
+    let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
 
     let repo_listeners = {
         cloned!(root_log, service);

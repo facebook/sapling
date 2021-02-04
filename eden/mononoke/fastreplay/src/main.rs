@@ -234,7 +234,7 @@ async fn bootstrap_repositories<'a>(
     let mysql_options = cmdlib::args::parse_mysql_options(&matches);
     let caching = cmdlib::args::init_cachelib(fb, &matches);
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
-    let blobstore_options = cmdlib::args::parse_blobstore_options(&matches);
+    let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
 
     let no_skiplist = matches.is_present(ARG_NO_SKIPLIST);
     let no_cache_warmup = matches.is_present(ARG_NO_CACHE_WARMUP);

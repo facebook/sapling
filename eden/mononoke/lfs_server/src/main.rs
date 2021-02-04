@@ -232,7 +232,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let config_store = args::init_config_store(fb, &logger, &matches)?;
 
     let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches);
+    let blobstore_options = args::parse_blobstore_options(&matches)?;
     let readonly_storage = args::parse_readonly_storage(&matches);
 
     let listen_host = matches.value_of(ARG_LISTEN_HOST).unwrap();

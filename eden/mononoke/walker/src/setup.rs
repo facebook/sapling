@@ -1154,7 +1154,7 @@ pub async fn setup_common<'a>(
     }
 
     let mysql_options = args::parse_mysql_options(&matches);
-    let mut blobstore_options = args::parse_blobstore_options(&matches);
+    let mut blobstore_options = args::parse_blobstore_options(&matches)?;
     let storage_id = matches.value_of(STORAGE_ID_ARG);
     let scrub_action = sub_m
         .value_of(SCRUB_BLOBSTORE_ACTION_ARG)

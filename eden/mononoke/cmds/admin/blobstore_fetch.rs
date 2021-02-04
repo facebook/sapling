@@ -165,7 +165,8 @@ pub async fn subcommand_blobstore_fetch<'a>(
         .transpose()
         .map_err(Error::from)?;
     let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches).with_scrub_action(scrub_action);
+    let blobstore_options =
+        args::parse_blobstore_options(&matches)?.with_scrub_action(scrub_action);
 
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_fut = get_blobstore(

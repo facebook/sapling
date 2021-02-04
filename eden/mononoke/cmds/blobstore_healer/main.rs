@@ -298,7 +298,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let config_store = args::init_config_store(fb, &logger, &matches)?;
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
-    let blobstore_options = args::parse_blobstore_options(&matches);
+    let blobstore_options = args::parse_blobstore_options(&matches)?;
     let storage_config = args::load_storage_configs(config_store, &matches)?
         .storage
         .remove(storage_id)

@@ -141,7 +141,7 @@ async fn run_hook_tailer<'a>(
         caching,
         common_config.censored_scuba_params,
         readonly_storage,
-        cmdlib::args::parse_blobstore_options(matches),
+        cmdlib::args::parse_blobstore_options(matches)?,
         &logger,
         config_store,
     );
