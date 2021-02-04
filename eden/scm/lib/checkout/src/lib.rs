@@ -187,7 +187,7 @@ impl CheckoutPlan {
         data: Vec<u8>,
         flag: Option<UpdateFlag>,
     ) -> Result<()> {
-        let vfs = vfs.clone(); // vfs auditor cache can not be shared across threads
+        let vfs = vfs.clone(); // vfs auditor cache is shared
         tokio::runtime::Handle::current()
             .spawn_blocking(move || vfs.write(path.as_repo_path(), &data.into(), flag))
             .await??;
@@ -195,7 +195,7 @@ impl CheckoutPlan {
     }
 
     async fn remove_file(vfs: &VFS, path: RepoPathBuf) -> Result<()> {
-        let vfs = vfs.clone(); // vfs auditor cache can not be shared across threads
+        let vfs = vfs.clone(); // vfs auditor cache is shared
         tokio::runtime::Handle::current()
             .spawn_blocking(move || vfs.remove(path.as_repo_path()))
             .await??;
@@ -203,7 +203,7 @@ impl CheckoutPlan {
     }
 
     async fn set_exec_on_file(vfs: &VFS, path: RepoPathBuf, flag: bool) -> Result<()> {
-        let vfs = vfs.clone(); // vfs auditor cache can not be shared across threads
+        let vfs = vfs.clone(); // vfs auditor cache is shared
         tokio::runtime::Handle::current()
             .spawn_blocking(move || vfs.set_executable(path.as_repo_path(), flag))
             .await??;

@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1"
+chashmap = "2.2"
 fsinfo = { path = "../fsinfo" }
 minibytes = { path = "../minibytes" }
 types = { path = "../types"}

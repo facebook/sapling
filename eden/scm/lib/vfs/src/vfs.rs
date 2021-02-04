@@ -9,6 +9,7 @@ use std::{
     fs::{create_dir_all, remove_dir, remove_dir_all, symlink_metadata, File},
     io::{self, ErrorKind, Write},
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use std::fs::Metadata;
@@ -30,6 +31,10 @@ use crate::pathauditor::PathAuditor;
 
 #[derive(Clone)]
 pub struct VFS {
+    inner: Arc<Inner>,
+}
+
+struct Inner {
     root: PathBuf,
     auditor: PathAuditor,
     supports_symlinks: bool,
@@ -51,19 +56,21 @@ impl VFS {
         let supports_executables = supports_executables(&fs_type);
 
         Ok(Self {
-            root,
-            auditor,
-            supports_symlinks,
-            supports_executables,
+            inner: Arc::new(Inner {
+                root,
+                auditor,
+                supports_symlinks,
+                supports_executables,
+            }),
         })
     }
 
     pub fn root(&self) -> &Path {
-        &self.root
+        &self.inner.root
     }
 
     pub fn join(&self, path: &RepoPath) -> PathBuf {
-        self.root.join(path.as_str())
+        self.inner.root.join(path.as_str())
     }
 
     pub fn metadata(&self, path: &RepoPath) -> Result<Metadata> {
@@ -75,7 +82,7 @@ impl VFS {
     ///
     /// This is a slow operation, and should not be called before attempting to create `path`.
     pub fn clear_conflicts(&self, path: &RepoPath) -> Result<()> {
-        let filepath = self.auditor.audit(path)?;
+        let filepath = self.inner.auditor.audit(path)?;
         let mut path = filepath.as_path();
         if let Ok(metadata) = symlink_metadata(path) {
             let file_type = metadata.file_type();
@@ -86,7 +93,7 @@ impl VFS {
         }
 
         loop {
-            if path == self.root {
+            if path == self.inner.root {
                 break;
             }
 
@@ -155,7 +162,7 @@ impl VFS {
         let result = Self::plain_symlink_file(link_name, link_dest);
 
         #[cfg(not(windows))]
-        let result = if self.supports_symlinks {
+        let result = if self.inner.supports_symlinks {
             std::os::unix::fs::symlink(link_dest, link_name).map_err(Into::into)
         } else {
             Self::plain_symlink_file(link_name, link_dest)
@@ -176,6 +183,7 @@ impl VFS {
     /// disk will be returned.
     pub fn write(&self, path: &RepoPath, data: &Bytes, flags: Option<UpdateFlag>) -> Result<usize> {
         let filepath = self
+            .inner
             .auditor
             .audit(path)
             .with_context(|| format!("Can't write into {}", path))?;
@@ -189,6 +197,7 @@ impl VFS {
 
     pub fn set_executable(&self, path: &RepoPath, flag: bool) -> Result<()> {
         let filepath = self
+            .inner
             .auditor
             .audit(path)
             .with_context(|| format!("Can't write into {}", path))?;
@@ -200,7 +209,7 @@ impl VFS {
     ///
     /// The parent directories of this file will be removed recursively if they are empty.
     pub fn remove(&self, path: &RepoPath) -> Result<()> {
-        let mut filepath = self.auditor.audit(path)?;
+        let mut filepath = self.inner.auditor.audit(path)?;
 
         if let Ok(metadata) = symlink_metadata(&filepath) {
             let file_type = metadata.file_type();
@@ -220,7 +229,7 @@ impl VFS {
         // Mercurial doesn't track empty directories, remove them
         // recursively.
         loop {
-            if !filepath.pop() || filepath == self.root {
+            if !filepath.pop() || filepath == self.inner.root {
                 break;
             }
 
@@ -232,11 +241,11 @@ impl VFS {
     }
 
     pub fn supports_symlinks(&self) -> bool {
-        self.supports_symlinks
+        self.inner.supports_symlinks
     }
 
     pub fn supports_executables(&self) -> bool {
-        self.supports_executables
+        self.inner.supports_executables
     }
 }
 

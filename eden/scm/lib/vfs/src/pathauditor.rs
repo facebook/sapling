@@ -5,8 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::cell::RefCell;
-use std::collections::HashSet;
+use chashmap::CHashMap;
 use std::fs::symlink_metadata;
 use std::path::{Path, PathBuf};
 
@@ -17,21 +16,17 @@ use types::{RepoPath, RepoPathBuf};
 /// Audit repositories path to make sure that it is safe to write/remove through them.
 ///
 /// This uses caching internally to avoid the heavy cost of querying the OS for each directory in
-/// the path of a file. For a multi-threaded writer/removed, the intention is to have one
-/// `PathAuditor` per-thread, this will be more memory intensive than having a shared one, but it
-/// avoids contention on the cache. A fine-grained concurrent `HashSet` could be used instead.
+/// the path of a file.
 ///
-/// Due to the caching, the checks performed by the `PathAuditor` are inherently racy, and
-/// concurrent writes to the working copy by the user may lead to unsafe operations.
-#[derive(Clone)]
+/// The cache is concurrent and is shared between cloned instances of PathAuditor
 pub struct PathAuditor {
     root: PathBuf,
-    audited: RefCell<HashSet<RepoPathBuf>>,
+    audited: CHashMap<RepoPathBuf, ()>,
 }
 
 impl PathAuditor {
     pub fn new(root: impl AsRef<Path>) -> Self {
-        let audited = RefCell::new(HashSet::new());
+        let audited = Default::default();
         let root = root.as_ref().to_owned();
         Self { root, audited }
     }
@@ -53,10 +48,28 @@ impl PathAuditor {
     /// Make sure that it is safe to write/remove `path` from the repo.
     pub fn audit(&self, path: &RepoPath) -> Result<PathBuf> {
         for parent in path.parents() {
-            if !self.audited.borrow().contains(parent) {
-                self.audit_fs(parent)
-                    .with_context(|| format!("Can't audit path \"{}\"", parent))?;
-                self.audited.borrow_mut().insert(parent.to_owned());
+            // First fast check w/ read lock
+            if !self.audited.contains_key(parent) {
+                // If fast check failed, lock and do stat syscall
+                // Alternatively we can just do syscall and then call insert
+                let mut result = Ok(());
+                self.audited.alter(parent.to_owned(), |val| {
+                    match val {
+                        Some(_) => val, // already checked
+                        None => {
+                            if let Err(e) = self
+                                .audit_fs(parent)
+                                .with_context(|| format!("Can't audit path \"{}\"", parent))
+                            {
+                                result = Err(e);
+                                None
+                            } else {
+                                Some(())
+                            }
+                        }
+                    }
+                });
+                result?;
             }
         }
 
