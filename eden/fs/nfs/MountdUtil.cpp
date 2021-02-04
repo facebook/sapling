@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
   auto evb = folly::EventBaseManager::get()->getEventBase();
 
   SignalHandler signal(evb);
-  Mountd mountd;
+  Mountd mountd(true);
 
   evb->loop();
 }

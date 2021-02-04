@@ -478,6 +478,11 @@ class EdenConfig : private ConfigSettingManager {
       "prjfs:use-negative-path-caching",
       true,
       this};
+
+  /**
+   * Controls whether Mountd will register itself against rpcbind.
+   */
+  ConfigSetting<bool> registerMountd{"nfs:register-mountd", false, this};
 };
 } // namespace eden
 } // namespace facebook

@@ -196,9 +196,11 @@ void MountdServerProcessor::unregisterMount(AbsolutePathPiece path) {
   XCHECK_EQ(numRemoved, 1u);
 }
 
-Mountd::Mountd()
+Mountd::Mountd(bool registerWithRpcbind)
     : proc_(std::make_shared<MountdServerProcessor>()), server_(proc_) {
-  server_.registerService(kMountdProgNumber, kMountdProgVersion);
+  if (registerWithRpcbind) {
+    server_.registerService(kMountdProgNumber, kMountdProgVersion);
+  }
 }
 
 void Mountd::registerMount(AbsolutePathPiece path, InodeNumber ino) {
