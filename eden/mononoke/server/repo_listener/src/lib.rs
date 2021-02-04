@@ -30,6 +30,7 @@ use openssl::ssl::SslAcceptor;
 use scribe_ext::Scribe;
 use slog::{debug, Logger};
 use sql_ext::facebook::MysqlOptions;
+use std::sync::{atomic::AtomicBool, Arc};
 
 use cmdlib::monitoring::ReadyFlagService;
 use metaconfig_types::CommonConfig;
@@ -53,6 +54,7 @@ pub async fn create_repo_listeners<'a>(
     readonly_storage: ReadOnlyStorage,
     scribe: Scribe,
     observability_context: &'static ObservabilityContext,
+    will_exit: Arc<AtomicBool>,
 ) -> Result<()> {
     let handlers = repo_handlers(
         fb,
@@ -78,6 +80,7 @@ pub async fn create_repo_listeners<'a>(
         terminate_process,
         config_store,
         scribe,
+        will_exit,
     )
     .await
 }

@@ -18,6 +18,10 @@ use mononoke_api::{
 };
 use openssl::ssl::AlpnError;
 use slog::{error, info};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
     let app = args::MononokeAppBuilder::new("mononoke server")
@@ -97,8 +101,10 @@ fn main(fb: FacebookInit) -> Result<()> {
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
 
+    let will_exit = Arc::new(AtomicBool::new(false));
+
     let repo_listeners = {
-        cloned!(root_log, service);
+        cloned!(root_log, service, will_exit);
         async move {
             let env = MononokeEnvironment {
                 fb,
@@ -130,6 +136,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 readonly_storage,
                 scribe,
                 &observability_context,
+                will_exit,
             )
             .await
         }
@@ -147,7 +154,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         runtime,
         repo_listeners,
         &root_log,
-        || {},
+        move || will_exit.store(true, Ordering::Relaxed),
         args::get_shutdown_grace_period(&matches)?,
         async {
             match terminate_sender.send(()) {

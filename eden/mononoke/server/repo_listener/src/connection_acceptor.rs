@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::io;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{
-    atomic::{AtomicUsize, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
     Arc,
 };
 use std::time::Duration;
@@ -90,6 +90,7 @@ pub async fn connection_acceptor(
     terminate_process: oneshot::Receiver<()>,
     config_store: &ConfigStore,
     scribe: Scribe,
+    will_exit: Arc<AtomicBool>,
 ) -> Result<()> {
     let load_limiting_config = {
         let config_loader = config_store
@@ -132,6 +133,7 @@ pub async fn connection_acceptor(
         logger: root_log.clone(),
         enable_http_control_api,
         server_hostname: get_hostname().unwrap_or_else(|_| "unknown_hostname".to_string()),
+        will_exit,
     });
 
     loop {
@@ -166,6 +168,7 @@ pub struct Acceptor {
     pub logger: Logger,
     pub enable_http_control_api: bool,
     pub server_hostname: String,
+    pub will_exit: Arc<AtomicBool>,
 }
 
 /// Details for a socket we've just opened.

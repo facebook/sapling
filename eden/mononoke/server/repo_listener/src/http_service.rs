@@ -14,12 +14,13 @@ use slog::{debug, error, Logger};
 use sshrelay::Metadata;
 use std::io::Cursor;
 use std::marker::PhantomData;
+use std::sync::atomic::Ordering;
 use std::task;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
 
 use crate::connection_acceptor::{
-    self, AcceptedConnection, ChannelConn, FramedConn, MononokeStream,
+    self, AcceptedConnection, Acceptor, ChannelConn, FramedConn, MononokeStream,
 };
 
 const HEADER_CLIENT_DEBUG: &str = "x-client-debug";
@@ -129,10 +130,17 @@ where
         }
 
         if method == Method::GET && (uri.path() == "/" || uri.path() == "/health_check") {
+            let res = if self.acceptor().will_exit.load(Ordering::Relaxed) {
+                "EXITING"
+            } else {
+                "I_AM_ALIVE"
+            };
+
             let res = Response::builder()
                 .status(http::StatusCode::OK)
-                .body("I_AM_ALIVE".into())
+                .body(res.into())
                 .map_err(HttpError::internal)?;
+
             return Ok(res);
         }
 
@@ -212,7 +220,7 @@ where
             .map_err(HttpError::internal)?;
 
         if path == "/drop_bookmarks_cache" {
-            for handler in self.conn.pending.acceptor.repo_handlers.values() {
+            for handler in self.acceptor().repo_handlers.values() {
                 handler.repo.blobrepo().bookmarks().drop_caches();
             }
 
@@ -222,8 +230,12 @@ where
         Err(HttpError::NotFound)
     }
 
+    fn acceptor(&self) -> &Acceptor {
+        &self.conn.pending.acceptor
+    }
+
     fn logger(&self) -> &Logger {
-        &self.conn.pending.acceptor.logger
+        &self.acceptor().logger
     }
 }
 
