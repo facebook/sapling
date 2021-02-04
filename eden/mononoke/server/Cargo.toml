@@ -10,6 +10,7 @@ include = ["src/**/*.rs"]
 alpn = { path = "../alpn", version = "0.1.0" }
 cmdlib = { path = "../cmdlib", version = "0.1.0" }
 monitoring = { path = "monitoring", version = "0.1.0" }
+mononoke_api = { path = "../mononoke_api", version = "0.1.0" }
 repo_listener = { path = "repo_listener", version = "0.1.0" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }

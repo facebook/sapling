@@ -87,7 +87,6 @@ use tokio_old::timer::timeout::Error as TimeoutError;
 use tokio_old::util::FutureExt as TokioFutureExt;
 use tracing::{trace_args, Traced};
 use tunables::tunables;
-use warm_bookmarks_cache::WarmBookmarksCache;
 
 mod logging;
 mod monitor;
@@ -435,19 +434,16 @@ impl RepoClient {
         wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
         maybe_live_commit_sync_config: Option<CfgrLiveCommitSyncConfig>,
-        maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
         knobs: RepoClientKnobs,
     ) -> Self {
-        let blobrepo = repo.blobrepo().clone();
+        let session_bookmarks_cache = Arc::new(SessionBookmarkCache::new(repo.clone()));
+
         Self {
             repo,
             session,
             logging,
             preserve_raw_bundle2,
-            session_bookmarks_cache: Arc::new(SessionBookmarkCache::new(
-                blobrepo,
-                maybe_warm_bookmarks_cache,
-            )),
+            session_bookmarks_cache,
             wireproto_logging,
             maybe_push_redirector_args,
             force_lfs: Arc::new(AtomicBool::new(false)),

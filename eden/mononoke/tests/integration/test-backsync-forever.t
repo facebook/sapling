@@ -19,14 +19,14 @@
   > EOF
 
 -- Init Mononoke thingies
-  $ PUSHREBASE_REWRITE_DATES=1 init_large_small_repo --local-configerator-path="$TESTTMP/configerator"
+  $ PUSHREBASE_REWRITE_DATES=1 init_large_small_repo
   Setting up hg server repos
   Blobimporting them
   Adding synced mapping entry
   Starting Mononoke server
 
 -- Start up the backsyncer in the background
-  $ backsync_large_to_small_forever --local-configerator-path="$TESTTMP/configerator"
+  $ backsync_large_to_small_forever
 
 Before config change
 -- push to a large repo

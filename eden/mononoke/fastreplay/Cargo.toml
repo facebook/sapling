@@ -14,14 +14,15 @@ cmdlib = { path = "../cmdlib", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
 fastreplay_structs = { path = "../../../configerator/structs/scm/mononoke/fastreplay", version = "0.1.0" }
 hgproto = { path = "../hgproto", version = "0.1.0" }
-hooks = { path = "../hooks", version = "0.1.0" }
-hooks_content_stores = { path = "../hooks/content-stores", version = "0.1.0" }
 mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
+metaconfig_parser = { path = "../metaconfig/parser", version = "0.1.0" }
 metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
+mononoke_api = { path = "../mononoke_api", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 repo_client = { path = "../repo_client", version = "0.1.0" }
 scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
 sshrelay = { path = "../sshrelay", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }

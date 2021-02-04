@@ -9,21 +9,20 @@ include = ["src/**/*.rs"]
 [dependencies]
 blobrepo = { path = "../../blobrepo", version = "0.1.0" }
 blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
 getbundle_response = { path = "../getbundle_response", version = "0.1.0" }
 hooks = { path = "../../hooks", version = "0.1.0" }
 metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
+mononoke_api = { path = "../../mononoke_api", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 mutable_counters = { path = "../../mutable_counters", version = "0.1.0" }
 reachabilityindex = { path = "../../reachabilityindex", version = "0.1.0" }
 repo_blobstore = { path = "../../blobrepo/repo_blobstore", version = "0.1.0" }
 repo_read_write_status = { path = "../repo_read_write_status", version = "0.1.0" }
 reverse_filler_queue = { path = "../reverse_filler_queue", version = "0.1.0" }
-skiplist = { path = "../../reachabilityindex/skiplist", version = "0.1.0" }
 sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
 sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
 streaming_clone = { path = "../streaming_clone", version = "0.1.0" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+warm_bookmarks_cache = { path = "../../bookmarks/warm_bookmarks_cache", version = "0.1.0" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }

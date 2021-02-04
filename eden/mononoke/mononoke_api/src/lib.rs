@@ -137,6 +137,10 @@ impl Mononoke {
         self.repos.keys().map(AsRef::as_ref)
     }
 
+    pub fn repos(&self) -> impl Iterator<Item = &Arc<Repo>> {
+        self.repos.values()
+    }
+
     /// Report configured monitoring stats
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
         for (_, repo) in self.repos.iter() {

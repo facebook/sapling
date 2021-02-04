@@ -109,7 +109,6 @@ pub async fn request_handler(
         repo,
         preserve_raw_bundle2,
         maybe_push_redirector_args,
-        maybe_warm_bookmarks_cache,
         repo_client_knobs,
     } = handler;
 
@@ -188,7 +187,6 @@ pub async fn request_handler(
             wireproto_logging,
             maybe_push_redirector_args,
             maybe_live_commit_sync_config,
-            maybe_warm_bookmarks_cache,
             repo_client_knobs,
         ),
         sshproto::HgSshCommandDecode,

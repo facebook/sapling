@@ -359,7 +359,7 @@ function backsync_large_to_small() {
   "$BACKSYNCER" "${COMMON_ARGS[@]}" --debug --source-repo-id "$REPOIDLARGE" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --target-repo-id "$REPOIDSMALL" \
-   --local-configerator-path="$TESTTMP/configerator" \
+    --local-configerator-path="$TESTTMP/configerator" \
     backsync-all
 }
 
@@ -368,6 +368,7 @@ function backsync_large_to_small_forever {
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --source-repo-id "$REPOIDLARGE" \
     --target-repo-id "$REPOIDSMALL" \
+    --local-configerator-path="$TESTTMP/configerator" \
     "$@" \
     backsync-forever >> "$TESTTMP/backsyncer.out" 2>&1 &
 

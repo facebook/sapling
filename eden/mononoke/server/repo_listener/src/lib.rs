@@ -21,18 +21,18 @@ mod stream;
 pub use crate::connection_acceptor::wait_for_connections_closed;
 
 use anyhow::Result;
-use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
+use blobrepo_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
+use mononoke_api::Mononoke;
 use openssl::ssl::SslAcceptor;
 use scribe_ext::Scribe;
 use slog::{debug, Logger};
 use sql_ext::facebook::MysqlOptions;
-use std::collections::{HashMap, HashSet};
 
 use cmdlib::monitoring::ReadyFlagService;
-use metaconfig_types::{CommonConfig, RepoConfig};
+use metaconfig_types::CommonConfig;
 use observability::ObservabilityContext;
 
 use crate::connection_acceptor::connection_acceptor;
@@ -42,10 +42,8 @@ pub async fn create_repo_listeners<'a>(
     fb: FacebookInit,
     test_instance: bool,
     common_config: CommonConfig,
-    repos: impl IntoIterator<Item = (String, RepoConfig)>,
+    repos: Mononoke,
     mysql_options: &'a MysqlOptions,
-    caching: Caching,
-    disabled_hooks: HashMap<String, HashSet<String>>,
     root_log: Logger,
     sockname: String,
     tls_acceptor: SslAcceptor,
@@ -53,7 +51,6 @@ pub async fn create_repo_listeners<'a>(
     terminate_process: oneshot::Receiver<()>,
     config_store: &'a ConfigStore,
     readonly_storage: ReadOnlyStorage,
-    blobstore_options: BlobstoreOptions,
     scribe: Scribe,
     observability_context: &'static ObservabilityContext,
 ) -> Result<()> {
@@ -61,11 +58,7 @@ pub async fn create_repo_listeners<'a>(
         fb,
         repos,
         mysql_options,
-        caching,
-        disabled_hooks,
-        common_config.censored_scuba_params.clone(),
         readonly_storage,
-        blobstore_options,
         &root_log,
         config_store,
         observability_context,

@@ -17,6 +17,7 @@ use futures::{compat::Stream01CompatExt, Stream, StreamExt, TryFutureExt, TryStr
 use futures_ext::{FutureExt, StreamExt as OldStreamExt};
 use futures_old::{future as future_old, Future, Stream as OldStream};
 use mercurial_types::HgChangesetId;
+use mononoke_repo::MononokeRepo;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::sync::{Arc, Mutex};
@@ -27,10 +28,31 @@ use warm_bookmarks_cache::WarmBookmarksCache;
 
 // We'd like to give user a consistent view of thier bookmarks for the duration of the
 // whole Mononoke session. SessionBookmarkCache is used for that.
-pub struct SessionBookmarkCache {
+pub struct SessionBookmarkCache<R = MononokeRepo> {
     cached_publishing_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
-    repo: BlobRepo,
-    maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
+    repo: R,
+}
+
+pub trait BookmarkCacheRepo {
+    fn blobrepo(&self) -> &BlobRepo;
+
+    fn repo_client_use_warm_bookmarks_cache(&self) -> bool;
+
+    fn warm_bookmarks_cache(&self) -> &WarmBookmarksCache;
+}
+
+impl BookmarkCacheRepo for MononokeRepo {
+    fn blobrepo(&self) -> &BlobRepo {
+        MononokeRepo::blobrepo(self)
+    }
+
+    fn repo_client_use_warm_bookmarks_cache(&self) -> bool {
+        MononokeRepo::repo_client_use_warm_bookmarks_cache(self)
+    }
+
+    fn warm_bookmarks_cache(&self) -> &WarmBookmarksCache {
+        MononokeRepo::warm_bookmarks_cache(self).as_ref()
+    }
 }
 
 fn bookmarks_timeout() -> Duration {
@@ -42,15 +64,14 @@ fn bookmarks_timeout() -> Duration {
     }
 }
 
-impl SessionBookmarkCache {
-    pub fn new(
-        repo: BlobRepo,
-        maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
-    ) -> Self {
+impl<R> SessionBookmarkCache<R>
+where
+    R: BookmarkCacheRepo,
+{
+    pub fn new(repo: R) -> Self {
         Self {
             cached_publishing_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
             repo,
-            maybe_warm_bookmarks_cache,
         }
     }
 
@@ -124,6 +145,7 @@ impl SessionBookmarkCache {
         let left_to_fetch = return_max.saturating_sub(result.len().try_into().unwrap());
         let new_bookmarks = if left_to_fetch > 0 {
             self.repo
+                .blobrepo()
                 .bookmarks()
                 .list(
                     ctx.clone(),
@@ -140,7 +162,7 @@ impl SessionBookmarkCache {
         };
 
         to_hg_bookmark_stream(
-            &self.repo,
+            &self.repo.blobrepo(),
             &ctx,
             futures::stream::iter(result.into_iter())
                 .map(Ok)
@@ -159,13 +181,14 @@ impl SessionBookmarkCache {
             if let Some(cs_id) = warm_bookmarks_cache.get(&bookmark) {
                 return self
                     .repo
+                    .blobrepo()
                     .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
                     .map_ok(Some)
                     .await;
             }
         }
 
-        self.repo.get_bookmark(ctx, &bookmark).await
+        self.repo.blobrepo().get_bookmark(ctx, &bookmark).await
     }
 
     fn get_publishing_bookmarks_maybe_stale_updating_cache(
@@ -195,7 +218,7 @@ impl SessionBookmarkCache {
             )
             .boxify()
             .compat();
-            return to_hg_bookmark_stream(&self.repo, &ctx, s)
+            return to_hg_bookmark_stream(&self.repo.blobrepo(), &ctx, s)
                 .try_collect()
                 .compat()
                 .left_future();
@@ -203,16 +226,19 @@ impl SessionBookmarkCache {
         self.get_publishing_maybe_stale_from_db(ctx).right_future()
     }
 
-    fn get_warm_bookmark_cache(&self, ctx: &CoreContext) -> Option<&Arc<WarmBookmarksCache>> {
-        if let Some(warm_bookmarks_cache) = &self.maybe_warm_bookmarks_cache {
+    fn get_warm_bookmark_cache(&self, ctx: &CoreContext) -> Option<&WarmBookmarksCache> {
+        if self.repo.repo_client_use_warm_bookmarks_cache() {
             let mut skip_warm_bookmark_cache =
                 tunables().get_disable_repo_client_warm_bookmarks_cache();
+
             // We don't ever need warm bookmark cache for the external sync job
             skip_warm_bookmark_cache |= ctx.session().is_external_sync();
+
             if !skip_warm_bookmark_cache {
-                return Some(warm_bookmarks_cache);
+                return Some(self.repo.warm_bookmarks_cache());
             }
         }
+
         None
     }
 
@@ -221,6 +247,7 @@ impl SessionBookmarkCache {
         ctx: CoreContext,
     ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
         self.repo
+            .blobrepo()
             .get_publishing_bookmarks_maybe_stale(ctx)
             .compat()
             .fold(HashMap::new(), |mut map, item| {
@@ -248,11 +275,33 @@ mod test {
     use fbinit::FacebookInit;
     use maplit::{hashmap, hashset};
     use tests_utils::{bookmark, CreateCommitContext};
-    use warm_bookmarks_cache::{BookmarkUpdateDelay, WarmBookmarksCacheBuilder};
+    use warm_bookmarks_cache::{
+        BookmarkUpdateDelay, WarmBookmarksCache, WarmBookmarksCacheBuilder,
+    };
+
+    struct TestRepo {
+        repo: BlobRepo,
+        wbc: Option<WarmBookmarksCache>,
+    }
+
+    impl BookmarkCacheRepo for TestRepo {
+        fn blobrepo(&self) -> &BlobRepo {
+            &self.repo
+        }
+
+        fn repo_client_use_warm_bookmarks_cache(&self) -> bool {
+            self.wbc.is_some()
+        }
+
+        fn warm_bookmarks_cache(&self) -> &WarmBookmarksCache {
+            self.wbc.as_ref().unwrap()
+        }
+    }
 
     #[fbinit::compat_test]
     async fn test_fetch_prefix_no_warm_bookmark_cache(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
+
         let repo = blobrepo_factory::new_memblob_empty(None)?;
 
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
@@ -277,16 +326,21 @@ mod test {
 
         // Let's try without WarmBookmarkCache first
         println!("No warm bookmark cache");
-        let session_bookmark_cache = SessionBookmarkCache::new(repo.clone(), None);
+        let session_bookmark_cache = SessionBookmarkCache::new(TestRepo {
+            repo: repo.clone(),
+            wbc: None,
+        });
         validate(&ctx, hg_cs_id, &session_bookmark_cache).await?;
 
-        // Let's try without WarmBookmarkCache first
+        // Let's try with WarmBookmarkCache next
         println!("With warm bookmark cache");
         let mut builder = WarmBookmarksCacheBuilder::new(&ctx, &repo);
         builder.add_derived_data_warmers(&hashset! {"hgchangesets".to_string()})?;
         let wbc = builder.build(BookmarkUpdateDelay::Disallow).await?;
-
-        let session_bookmark_cache = SessionBookmarkCache::new(repo.clone(), Some(Arc::new(wbc)));
+        let session_bookmark_cache = SessionBookmarkCache::new(TestRepo {
+            repo: repo.clone(),
+            wbc: Some(wbc),
+        });
         validate(&ctx, hg_cs_id, &session_bookmark_cache).await?;
 
         Ok(())
@@ -295,7 +349,7 @@ mod test {
     async fn validate(
         ctx: &CoreContext,
         hg_cs_id: HgChangesetId,
-        session_bookmark_cache: &SessionBookmarkCache,
+        session_bookmark_cache: &SessionBookmarkCache<TestRepo>,
     ) -> Result<(), Error> {
         let maybe_hg_cs_id = session_bookmark_cache
             .get_bookmark(ctx.clone(), BookmarkName::new("prefix/scratchbook")?)

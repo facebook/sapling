@@ -13,6 +13,9 @@ use cloned::cloned;
 use cmdlib::{args, monitoring::ReadyFlagService};
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
+use mononoke_api::{
+    BookmarkUpdateDelay, Mononoke, MononokeEnvironment, WarmBookmarksCacheDerivedData,
+};
 use openssl::ssl::AlpnError;
 use slog::{error, info};
 
@@ -47,12 +50,13 @@ fn main(fb: FacebookInit) -> Result<()> {
     cmdlib::args::maybe_enable_mcrouter(fb, &matches);
 
     let (caching, root_log, runtime) = cmdlib::args::init_mononoke(fb, &matches)?;
-    let config_source = cmdlib::args::init_config_store(fb, &root_log, &matches)?;
+    let config_store = cmdlib::args::init_config_store(fb, &root_log, &matches)?;
     let observability_context = cmdlib::args::init_observability_context(fb, &matches, &root_log)?;
 
     info!(root_log, "Starting up");
 
-    let config = args::load_repo_configs(config_source, &matches)?;
+    let config = args::load_repo_configs(config_store, &matches)?;
+
     let acceptor = {
         let cert = matches.value_of("cert").unwrap().to_string();
         let private_key = matches.value_of("private_key").unwrap().to_string();
@@ -96,22 +100,34 @@ fn main(fb: FacebookInit) -> Result<()> {
     let repo_listeners = {
         cloned!(root_log, service);
         async move {
+            let env = MononokeEnvironment {
+                fb,
+                logger: root_log.clone(),
+                mysql_options: mysql_options.clone(),
+                caching,
+                readonly_storage,
+                blobstore_options,
+                config_store,
+                disabled_hooks,
+                warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
+                warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
+            };
+
+            let mononoke = Mononoke::new(&env, config.clone()).await?;
+
             repo_listener::create_repo_listeners(
                 fb,
                 is_test,
                 config.common,
-                config.repos.into_iter(),
+                mononoke,
                 &mysql_options,
-                caching,
-                disabled_hooks,
                 root_log,
                 host_port,
                 acceptor,
                 service,
                 terminate_receiver,
-                config_source,
+                config_store,
                 readonly_storage,
-                blobstore_options,
                 scribe,
                 &observability_context,
             )

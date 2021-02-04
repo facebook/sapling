@@ -19,7 +19,7 @@
   > }
   > EOF
 
-  $ init_large_small_repo --local-configerator-path="$TESTTMP/configerator"
+  $ init_large_small_repo
   Setting up hg server repos
   Blobimporting them
   Adding synced mapping entry

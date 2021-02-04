@@ -12,19 +12,14 @@ use blobstore::Loadable;
 use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
 use futures::compat::Future01CompatExt;
-use hooks::HookManager;
-use hooks_content_stores::InMemoryFileContentFetcher;
 use manifest::{Entry, ManifestOps};
 use maplit::hashset;
 use mercurial_types::HgFileNodeId;
-use metaconfig_types::{
-    HgsqlName, HookManagerParams, InfinitepushParams, LfsParams, PushrebaseParams,
-};
+use metaconfig_types::LfsParams;
+use mononoke_api::Repo;
 use mononoke_repo::MononokeRepo;
 use mutable_counters::SqlMutableCounters;
-use repo_read_write_status::RepoReadWriteFetcher;
 use scuba_ext::MononokeScubaSampleBuilder;
-use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
 use tests_utils::CreateCommitContext;
 
@@ -323,41 +318,15 @@ async fn run_and_check_if_lfs(
     filenode_id: &HgFileNodeId,
     lfs_params: LfsParams,
 ) -> Result<bool, Error> {
-    let pushrebase_params = PushrebaseParams::default();
+    let mut repo = Repo::new_test(ctx.clone(), repo.clone()).await?;
+    repo.config_mut().lfs = lfs_params;
 
-    let mononoke_repo = MononokeRepo::new(
+    let mononoke_repo = MononokeRepo::new_from_parts(
         ctx.fb,
         ctx.logger().clone(),
-        repo.clone(),
-        &pushrebase_params,
-        vec![],
-        Arc::new(
-            HookManager::new(
-                ctx.fb,
-                Box::new(InMemoryFileContentFetcher::new()),
-                HookManagerParams {
-                    disable_acl_checker: true,
-                    all_hooks_bypassed: true,
-                    bypassed_commits_scuba_table: None,
-                },
-                MononokeScubaSampleBuilder::with_discard(),
-                repo.name().clone(),
-            )
-            .await?,
-        ),
-        None,
-        lfs_params,
-        RepoReadWriteFetcher::new(
-            None,
-            RepoReadOnly::ReadOnly("".to_string()),
-            HgsqlName("repo".into()),
-        ),
-        InfinitepushParams::default(),
-        0,
-        Arc::new(SkiplistIndex::new()),
-        Arc::new(SqlMutableCounters::with_sqlite_in_memory()?),
-        None,
+        Arc::new(repo),
         Default::default(),
+        Arc::new(SqlMutableCounters::with_sqlite_in_memory()?),
         Default::default(),
     )
     .await?;
@@ -379,7 +348,6 @@ async fn run_and_check_if_lfs(
         Arc::new(noop_wireproto),
         None, // No PushRedirectorArgs
         None, // Don't listen to LiveCommitSyncConfig
-        None, // No warm bookmarks cache
         Default::default(),
     );
 

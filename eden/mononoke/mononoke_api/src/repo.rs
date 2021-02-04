@@ -388,6 +388,61 @@ impl Repo {
         })
     }
 
+    /// The name of the underlying repo.
+    pub fn name(&self) -> &String {
+        &self.name
+    }
+
+    /// The internal id of the repo. Used for comparing the repo objects with each other.
+    pub fn repoid(&self) -> RepositoryId {
+        self.blob_repo.get_repoid()
+    }
+
+    /// The underlying `BlobRepo`.
+    pub fn blob_repo(&self) -> &BlobRepo {
+        &self.blob_repo
+    }
+
+    /// `LiveCommitSyncConfig` instance to query current state of sync configs.
+    pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
+        self.live_commit_sync_config.clone()
+    }
+
+    /// The skiplist index for the referenced repository.
+    pub fn skiplist_index(&self) -> &Arc<SkiplistIndex> {
+        &self.skiplist_index
+    }
+
+    /// The commit sync mapping for the referenced repository
+    pub fn synced_commit_mapping(&self) -> &Arc<dyn SyncedCommitMapping> {
+        &self.synced_commit_mapping
+    }
+
+    /// The warm bookmarks cache for the referenced repository.
+    pub fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
+        &self.warm_bookmarks_cache
+    }
+
+    /// The hook manager for the referenced repository.
+    pub fn hook_manager(&self) -> &Arc<HookManager> {
+        &self.hook_manager
+    }
+
+    /// The Read/Write or Read-Only status fetcher.
+    pub fn readonly_fetcher(&self) -> &RepoReadWriteFetcher {
+        &self.readonly_fetcher
+    }
+
+    /// The configuration for the referenced repository.
+    pub fn config(&self) -> &RepoConfig {
+        &self.config
+    }
+
+    /// A mutable reference to this repository's config. This is typically only useful for tests.
+    pub fn config_mut(&mut self) -> &mut RepoConfig {
+        &mut self.config
+    }
+
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
         match self.config.source_control_service_monitoring.as_ref() {
             None => {}
@@ -673,52 +728,52 @@ impl RepoContext {
 
     /// The name of the underlying repo.
     pub fn name(&self) -> &str {
-        &self.repo.name
+        &self.repo.name()
     }
 
     /// The internal id of the repo. Used for comparing the repo objects with each other.
     pub fn repoid(&self) -> RepositoryId {
-        self.repo.blob_repo.get_repoid()
+        self.repo.repoid()
     }
 
     /// The underlying `BlobRepo`.
     pub fn blob_repo(&self) -> &BlobRepo {
-        &self.repo.blob_repo
+        &self.repo.blob_repo()
     }
 
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.
     pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
-        self.repo.live_commit_sync_config.clone()
+        self.repo.live_commit_sync_config()
     }
 
     /// The skiplist index for the referenced repository.
     pub fn skiplist_index(&self) -> &Arc<SkiplistIndex> {
-        &self.repo.skiplist_index
+        self.repo.skiplist_index()
     }
 
     /// The commit sync mapping for the referenced repository
     pub fn synced_commit_mapping(&self) -> &Arc<dyn SyncedCommitMapping> {
-        &self.repo.synced_commit_mapping
+        self.repo.synced_commit_mapping()
     }
 
     /// The warm bookmarks cache for the referenced repository.
     pub fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
-        &self.repo.warm_bookmarks_cache
+        self.repo.warm_bookmarks_cache()
     }
 
     /// The hook manager for the referenced repository.
     pub fn hook_manager(&self) -> &Arc<HookManager> {
-        &self.repo.hook_manager
+        self.repo.hook_manager()
     }
 
     /// The Read/Write or Read-Only status fetcher.
     pub fn readonly_fetcher(&self) -> &RepoReadWriteFetcher {
-        &self.repo.readonly_fetcher
+        self.repo.readonly_fetcher()
     }
 
     /// The configuration for the referenced repository.
     pub fn config(&self) -> &RepoConfig {
-        &self.repo.config
+        self.repo.config()
     }
 
     pub fn derive_changeset_info_enabled(&self) -> bool {

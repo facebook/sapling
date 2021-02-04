@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::security_checker::ConnectionsSecurityChecker;
 use hostname::get_hostname;
 use hyper::server::conn::Http;
 use session_id::generate_session_id;
@@ -18,7 +17,6 @@ use std::sync::{
 };
 use std::time::Duration;
 
-use crate::http_service::MononokeHttpService;
 use anyhow::{anyhow, Context, Error, Result};
 use bytes::Bytes;
 use cached_config::{ConfigHandle, ConfigStore};
@@ -50,8 +48,10 @@ use sshrelay::{
 use stats::prelude::*;
 
 use crate::errors::ErrorKind;
+use crate::http_service::MononokeHttpService;
 use crate::repo_handlers::RepoHandler;
 use crate::request_handler::{create_conn_logger, request_handler};
+use crate::security_checker::ConnectionsSecurityChecker;
 use crate::stream::QuietShutdownStream;
 
 define_stats! {

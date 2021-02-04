@@ -21,7 +21,7 @@ Setup configuration
   > EOF
 
 -- Init Mononoke thingies
-  $ XREPOSYNC=1 init_large_small_repo --local-configerator-path="$TESTTMP/configerator"
+  $ XREPOSYNC=1 init_large_small_repo
   Setting up hg server repos
   Blobimporting them
   Adding synced mapping entry

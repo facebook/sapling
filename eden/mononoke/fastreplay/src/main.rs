@@ -13,6 +13,7 @@ mod protocol;
 
 use anyhow::{Context, Error};
 use blobstore_factory::make_blobstore;
+use borrowed::borrowed;
 use cached_config::ConfigHandle;
 use clap::Arg;
 use cloned::cloned;
@@ -29,13 +30,13 @@ use futures::{
 };
 use futures_stats::TimedFutureExt;
 use hgproto::HgCommands;
-use hooks::HookManager;
-use hooks_content_stores::InMemoryFileContentFetcher;
-use metaconfig_types::{BlobConfig, CensoredScubaParams, HookManagerParams};
+use metaconfig_parser::RepoConfigs;
+use metaconfig_types::{BlobConfig, CensoredScubaParams};
+use mononoke_api::{BookmarkUpdateDelay, MononokeEnvironment, Repo, WarmBookmarksCacheDerivedData};
 use mononoke_types::Timestamp;
 use nonzero_ext::nonzero;
 use rand::{thread_rng, Rng};
-use repo_client::MononokeRepoBuilder;
+use repo_client::MononokeRepo;
 use scopeguard::defer;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o, warn, Logger};
@@ -195,21 +196,6 @@ async fn dispatch(
     Ok(DispatchOutcome::Processed)
 }
 
-async fn build_noop_hook_manager(fb: FacebookInit) -> Result<HookManager, Error> {
-    HookManager::new(
-        fb,
-        Box::new(InMemoryFileContentFetcher::new()),
-        HookManagerParams {
-            disable_acl_checker: true,
-            all_hooks_bypassed: true,
-            bypassed_commits_scuba_table: None,
-        },
-        MononokeScubaSampleBuilder::with_discard(),
-        "fastreplay_none_repo".to_string(),
-    )
-    .await
-}
-
 fn extract_alias(alias: &str) -> Result<(String, String), Error> {
     let mut iter = alias.split(":");
 
@@ -229,12 +215,31 @@ async fn bootstrap_repositories<'a>(
     scuba: &MononokeScubaSampleBuilder,
 ) -> Result<HashMap<String, FastReplayDispatcher>, Error> {
     let config_store = args::init_config_store(fb, logger, matches)?;
-    let config = args::load_repo_configs(config_store, &matches)?;
+    let mut config = args::load_repo_configs(config_store, &matches)?;
+
+    // Update the config to something that makes a little more sense for Fastreplay.
+    config.common.censored_scuba_params = CensoredScubaParams {
+        table: None,
+        local_path: None,
+    };
 
     let mysql_options = cmdlib::args::parse_mysql_options(&matches);
     let caching = cmdlib::args::init_cachelib(fb, &matches);
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let blobstore_options = cmdlib::args::parse_blobstore_options(&matches)?;
+
+    let env = MononokeEnvironment {
+        fb,
+        logger: logger.clone(),
+        mysql_options: mysql_options.clone(),
+        caching,
+        readonly_storage,
+        blobstore_options,
+        config_store,
+        disabled_hooks: Default::default(),
+        warm_bookmarks_cache_derived_data: WarmBookmarksCacheDerivedData::HgOnly,
+        warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
+    };
 
     let no_skiplist = matches.is_present(ARG_NO_SKIPLIST);
     let no_cache_warmup = matches.is_present(ARG_NO_CACHE_WARMUP);
@@ -247,14 +252,12 @@ async fn bootstrap_repositories<'a>(
         .transpose()?
         .unwrap_or(nonzero!(1000u64));
 
-    let noop_hook_manager = Arc::new(build_noop_hook_manager(fb).await?);
-
     info!(&logger, "Creating {} repositories", config.repos.len());
 
-    let repos = future::try_join_all(config.repos.into_iter().map(|(name, mut config)| {
-        let noop_hook_manager = &noop_hook_manager;
-        let blobstore_options = &blobstore_options;
-        let mysql_options = &mysql_options;
+    let RepoConfigs { repos, common } = config;
+
+    let repos = future::try_join_all(repos.into_iter().map(|(name, mut config)| {
+        borrowed!(env, common, mysql_options);
 
         let logger = logger.new(o!("repo" => name.clone()));
 
@@ -264,6 +267,12 @@ async fn bootstrap_repositories<'a>(
             let session = SessionContainer::new_with_defaults(fb);
             session.new_context(logger.clone(), scuba.clone())
         };
+
+        // Don't bother starting a hook manager.
+        config.hooks = Default::default();
+        for book in config.bookmarks.iter_mut() {
+            book.hooks = Default::default();
+        }
 
         if no_skiplist {
             config.skiplist_index_blobstore_key = None;
@@ -303,25 +312,19 @@ async fn bootstrap_repositories<'a>(
             };
 
             let repo_client_knobs = config.repo_client_knobs.clone();
-            let repo = MononokeRepoBuilder::prepare(
-                bootstrap_ctx.clone(),
-                name.clone(),
-                config,
-                mysql_options,
-                caching,
-                // Don't report censored blob access
-                CensoredScubaParams {
-                    table: None,
-                    local_path: None,
-                },
-                readonly_storage,
-                blobstore_options.clone(),
-                false, // Don't record infinitepush writes
-                config_store,
+
+            let repo = Repo::new(&env, name.clone(), config, common.clone())
+                .await
+                .context("Error opening Repo")?;
+            let repo = MononokeRepo::new(
+                fb,
+                logger.clone(),
+                Arc::new(repo),
+                &mysql_options,
+                readonly_storage.clone(),
             )
-            .await?
-            .finalize(noop_hook_manager.clone())
-            .await?;
+            .await
+            .context("Error opening MononokeRepo")?;
 
             let warmup = if no_cache_warmup {
                 None

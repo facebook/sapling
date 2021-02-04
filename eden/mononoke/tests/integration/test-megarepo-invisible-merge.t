@@ -92,7 +92,7 @@ Setup repositories
 
 
 Start mononoke server
-  $ mononoke --local-configerator-path="$TESTTMP/configerator"
+  $ mononoke
   $ wait_for_mononoke
 
 
@@ -185,7 +185,7 @@ but disable push-redirection until invisible merge is done
   > EOF
   $ cp "$TEST_FIXTURES/commitsync/flipped_config.toml" "$TESTTMP/mononoke-config/common/commitsyncmap.toml"
 -- start mononoke
-  $ mononoke --local-configerator-path="$TESTTMP/configerator"
+  $ mononoke
   $ wait_for_mononoke
 
 

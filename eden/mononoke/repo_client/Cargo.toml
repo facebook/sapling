@@ -63,10 +63,8 @@ tokio-old = { package = "tokio", version = "0.1" }
 [dev-dependencies]
 blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
 fixtures = { path = "../tests/fixtures", version = "0.1.0" }
-hooks = { path = "../hooks", version = "0.1.0" }
-hooks_content_stores = { path = "../hooks/content-stores", version = "0.1.0" }
+mononoke_api = { path = "../mononoke_api", version = "0.1.0" }
 mutable_counters = { path = "../mutable_counters", version = "0.1.0" }
-skiplist = { path = "../reachabilityindex/skiplist", version = "0.1.0" }
 sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
 tests_utils = { path = "../tests/utils", version = "0.1.0" }
 tokio-compat = "0.1"

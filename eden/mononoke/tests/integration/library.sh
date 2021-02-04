@@ -98,6 +98,8 @@ function mononoke {
     mkdir "$SCRIBE_LOGS_DIR"
   fi
 
+  setup_configerator_configs
+
   PYTHONWARNINGS="ignore:::requests" \
   GLOG_minloglevel=5 "$MONONOKE_SERVER" "$@" \
   --scribe-logging-directory "$TESTTMP/scribe_logs" \
@@ -108,7 +110,8 @@ function mononoke {
   --debug \
   --listening-host-port "$(mononoke_address)" \
   --mononoke-config-path "$TESTTMP/mononoke-config" \
-   "${COMMON_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
+  --local-configerator-path "$TESTTMP/configerator" \
+  "${COMMON_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
   export MONONOKE_PID=$!
   echo "$MONONOKE_PID" >> "$DAEMON_PIDS"
 }
@@ -652,7 +655,9 @@ function setup_configerator_configs {
   export LOADSHED_CONF
   LOADSHED_CONF="$TESTTMP/configerator/scm/mononoke/loadshedding"
   mkdir -p "$LOADSHED_CONF"
-  cat >> "$LOADSHED_CONF/limits" <<EOF
+
+  if [[ ! -f "$LOADSHED_CONF/limits" ]]; then
+    cat >> "$LOADSHED_CONF/limits" <<EOF
 {
  "defaults": {
 "egress_bytes": 1000000000000,
@@ -671,32 +676,42 @@ function setup_configerator_configs {
 }
 }
 EOF
+  fi
 
   export PUSHREDIRECT_CONF
   PUSHREDIRECT_CONF="$TESTTMP/configerator/scm/mononoke/pushredirect"
   mkdir -p "$PUSHREDIRECT_CONF"
-  cat >> "$PUSHREDIRECT_CONF/enable" <<EOF
+
+  if [[ ! -f "$PUSHREDIRECT_CONF/enable" ]]; then
+    cat >> "$PUSHREDIRECT_CONF/enable" <<EOF
 {
   "per_repo": {}
 }
 EOF
+  fi
 
   export COMMIT_SYNC_CONF
   COMMIT_SYNC_CONF="$TESTTMP/configerator/scm/mononoke/repos/commitsyncmaps"
   mkdir -p "$COMMIT_SYNC_CONF"
-  cp "$TEST_FIXTURES/commitsync/all.json" "$COMMIT_SYNC_CONF/all"
-  cp "$TEST_FIXTURES/commitsync/current.json" "$COMMIT_SYNC_CONF/current"
+  if [[ ! -f "$COMMIT_SYNC_CONF/all" ]]; then
+    cp "$TEST_FIXTURES/commitsync/all.json" "$COMMIT_SYNC_CONF/all"
+  fi
+  if [[ ! -f "$COMMIT_SYNC_CONF/current" ]]; then
+    cp "$TEST_FIXTURES/commitsync/current.json" "$COMMIT_SYNC_CONF/current"
+  fi
 
   export XDB_GC_CONF
   XDB_GC_CONF="$TESTTMP/configerator/scm/mononoke/xdb_gc"
   mkdir -p "$XDB_GC_CONF"
-  cat >> "$XDB_GC_CONF/default" <<EOF
+  if [[ ! -f "$XDB_GC_CONF/default" ]]; then
+    cat >> "$XDB_GC_CONF/default" <<EOF
 {
   "put_generation": 2,
   "mark_generation": 1,
   "delete_generation": 0
 }
 EOF
+  fi
 }
 
 function setup_mononoke_repo_config {
@@ -1836,9 +1851,12 @@ function background_segmented_changelog_tailer() {
 }
 
 function fastreplay() {
+  setup_configerator_configs
+
   "$MONONOKE_FASTREPLAY" \
     "${COMMON_ARGS[@]}" \
     --no-skiplist \
+    --local-configerator-path "$TESTTMP/configerator" \
     --no-cache-warmup \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     "$@"
@@ -1954,6 +1972,7 @@ function repo_import() {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    --local-configerator-path "$TESTTMP/configerator" \
     "$@"
 }
 

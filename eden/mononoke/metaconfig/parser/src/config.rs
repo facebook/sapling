@@ -41,7 +41,7 @@ pub fn load_common_config(
 }
 
 /// Holds configuration for repostories.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RepoConfigs {
     /// Configs for all repositories
     pub repos: HashMap<String, RepoConfig>,

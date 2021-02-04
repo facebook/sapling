@@ -5,29 +5,31 @@
  * GNU General Public License version 2.
  */
 
-#[deny(warnings)]
-use anyhow::Error;
+#![deny(warnings)]
+
+use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
-use cloned::cloned;
+
+use blobrepo_factory::ReadOnlyStorage;
 use fbinit::FacebookInit;
-use futures::{FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as FutureExt01};
-use futures_old::future::Future;
+use futures_ext::BoxFuture;
 use getbundle_response::SessionLfsParams;
 use hooks::HookManager;
 use metaconfig_types::{
-    BookmarkAttrs, BookmarkParams, InfinitepushParams, LfsParams, PushParams, PushrebaseParams,
-    RepoReadOnly,
+    BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams, RepoReadOnly,
 };
+use mononoke_api::Repo;
 use mononoke_types::RepositoryId;
-use mutable_counters::MutableCounters;
+use mutable_counters::{MutableCounters, SqlMutableCounters};
 use rand::Rng;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
 use reverse_filler_queue::ReverseFillerQueue;
+use reverse_filler_queue::SqlReverseFillerQueue;
 use slog::Logger;
 use sql_construct::facebook::FbSqlConstruct;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use std::fmt::{self, Debug};
 use std::sync::{Arc, RwLock};
@@ -36,10 +38,8 @@ use std::{
     hash::{Hash, Hasher},
 };
 use streaming_clone::SqlStreamingChunksFetcher;
+use warm_bookmarks_cache::WarmBookmarksCache;
 
-pub use builder::MononokeRepoBuilder;
-
-mod builder;
 #[cfg(fbcode_build)]
 mod facebook;
 
@@ -52,48 +52,113 @@ pub struct SqlStreamingCloneConfig {
 
 #[derive(Clone)]
 pub struct MononokeRepo {
-    blobrepo: BlobRepo,
-    pushrebase_params: PushrebaseParams,
-    hook_manager: Arc<HookManager>,
-    streaming_clone: Option<SqlStreamingCloneConfig>,
-    lfs_params: LfsParams,
-    readonly_fetcher: RepoReadWriteFetcher,
+    repo: Arc<Repo>,
     bookmark_attrs: BookmarkAttrs,
-    infinitepush: InfinitepushParams,
-    list_keys_patterns_max: u64,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    streaming_clone: Option<SqlStreamingCloneConfig>,
     mutable_counters: Arc<dyn MutableCounters>,
     // Hostnames that always get lfs pointers.
     lfs_rolled_out_hostnames: Arc<RwLock<HashSet<String>>>,
     // Reverse filler queue for recording accepted infinitepush bundles
     // This field is `None` if we don't want recording to happen
     maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
-    push_params: PushParams,
-    hipster_acl: Option<String>,
 }
 
 impl MononokeRepo {
-    #[inline]
     pub async fn new(
         fb: FacebookInit,
         logger: Logger,
-        blobrepo: BlobRepo,
-        pushrebase_params: &PushrebaseParams,
-        bookmark_params: Vec<BookmarkParams>,
-        hook_manager: Arc<HookManager>,
+        repo: Arc<Repo>,
+        mysql_options: &MysqlOptions,
+        readonly_storage: ReadOnlyStorage,
+    ) -> Result<Self, Error> {
+        let storage_config = &repo.config().storage_config;
+
+        let mutable_counters = async {
+            let ret = SqlMutableCounters::with_metadata_database_config(
+                fb,
+                &storage_config.metadata,
+                mysql_options,
+                readonly_storage.0,
+            )
+            .await
+            .context("Failed to open SqlMutableCounters")?;
+
+            Result::<_, Error>::Ok(Arc::new(ret))
+        };
+
+        let streaming_clone = async {
+            let ret = if let Some(db_address) = storage_config.metadata.primary_address() {
+                let ret = streaming_clone(
+                    fb,
+                    repo.blob_repo(),
+                    db_address,
+                    mysql_options,
+                    repo.repoid(),
+                    readonly_storage.0,
+                )
+                .await?;
+                Some(ret)
+            } else {
+                None
+            };
+
+            Result::<_, Error>::Ok(ret)
+        };
+
+        let maybe_reverse_filler_queue = async {
+            let record_infinitepush_writes: bool =
+                repo.config().infinitepush.populate_reverse_filler_queue
+                    && repo.config().infinitepush.allow_writes;
+
+            let ret = if record_infinitepush_writes {
+                let reverse_filler_queue = SqlReverseFillerQueue::with_metadata_database_config(
+                    fb,
+                    &storage_config.metadata,
+                    mysql_options,
+                    readonly_storage.0,
+                )
+                .await?;
+
+                let reverse_filler_queue: Arc<dyn ReverseFillerQueue> =
+                    Arc::new(reverse_filler_queue);
+                Some(reverse_filler_queue)
+            } else {
+                None
+            };
+
+            Result::<_, Error>::Ok(ret)
+        };
+
+        let (mutable_counters, streaming_clone, maybe_reverse_filler_queue) =
+            futures::future::try_join3(
+                mutable_counters,
+                streaming_clone,
+                maybe_reverse_filler_queue,
+            )
+            .await?;
+
+        Self::new_from_parts(
+            fb,
+            logger,
+            repo,
+            streaming_clone,
+            mutable_counters,
+            maybe_reverse_filler_queue,
+        )
+        .await
+    }
+
+    pub async fn new_from_parts(
+        fb: FacebookInit,
+        logger: Logger,
+        repo: Arc<Repo>,
         streaming_clone: Option<SqlStreamingCloneConfig>,
-        lfs_params: LfsParams,
-        readonly_fetcher: RepoReadWriteFetcher,
-        infinitepush: InfinitepushParams,
-        list_keys_patterns_max: u64,
-        lca_hint: Arc<dyn LeastCommonAncestorsHint>,
         mutable_counters: Arc<dyn MutableCounters>,
         maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
-        push_params: PushParams,
-        hipster_acl: Option<String>,
     ) -> Result<Self, Error> {
         let lfs_rolled_out_hostnames = Arc::new(RwLock::new(HashSet::new()));
-        if let Some(rollout_smc_tier) = &lfs_params.rollout_smc_tier {
+
+        if let Some(rollout_smc_tier) = repo.config().lfs.rollout_smc_tier.as_ref() {
             #[cfg(fbcode_build)]
             {
                 crate::facebook::spawn_smc_tier_fetcher(
@@ -110,40 +175,37 @@ impl MononokeRepo {
             }
         }
 
-        Ok(MononokeRepo {
-            blobrepo,
-            pushrebase_params: pushrebase_params.clone(),
-            hook_manager,
+        // TODO: Update Metaconfig so we just have this in config:
+        let bookmark_attrs = BookmarkAttrs::new(repo.config().bookmarks.clone());
+
+        Ok(Self {
+            repo,
             streaming_clone,
-            lfs_params,
-            readonly_fetcher,
-            bookmark_attrs: BookmarkAttrs::new(bookmark_params),
-            infinitepush,
-            list_keys_patterns_max,
-            lca_hint,
             mutable_counters,
-            lfs_rolled_out_hostnames,
             maybe_reverse_filler_queue,
-            push_params,
-            hipster_acl,
+            lfs_rolled_out_hostnames,
+            bookmark_attrs,
         })
     }
 
-    #[inline]
     pub fn blobrepo(&self) -> &BlobRepo {
-        &self.blobrepo
+        &self.repo.blob_repo()
     }
 
     pub fn pushrebase_params(&self) -> &PushrebaseParams {
-        &self.pushrebase_params
+        &self.repo.config().pushrebase
     }
 
     pub fn hipster_acl(&self) -> &Option<String> {
-        &self.hipster_acl
+        &self.repo.config().hipster_acl
     }
 
     pub fn push_params(&self) -> &PushParams {
-        &self.push_params
+        &self.repo.config().push
+    }
+
+    pub fn repo_client_use_warm_bookmarks_cache(&self) -> bool {
+        self.repo.config().repo_client_use_warm_bookmarks_cache
     }
 
     pub fn bookmark_attrs(&self) -> BookmarkAttrs {
@@ -151,7 +213,7 @@ impl MononokeRepo {
     }
 
     pub fn hook_manager(&self) -> Arc<HookManager> {
-        self.hook_manager.clone()
+        self.repo.hook_manager().clone()
     }
 
     pub fn streaming_clone(&self) -> &Option<SqlStreamingCloneConfig> {
@@ -164,12 +226,13 @@ impl MononokeRepo {
 
     pub fn force_lfs_if_threshold_set(&self) -> SessionLfsParams {
         SessionLfsParams {
-            threshold: self.lfs_params.threshold,
+            threshold: self.repo.config().lfs.threshold,
         }
     }
 
     pub fn lfs_params(&self, client_hostname: Option<&str>) -> SessionLfsParams {
-        let percentage = self.lfs_params.rollout_percentage;
+        let percentage = self.repo.config().lfs.rollout_percentage;
+
         let allowed = match client_hostname {
             Some(client_hostname) => {
                 let rolled_out_hostnames = self.lfs_rolled_out_hostnames.read().unwrap();
@@ -190,7 +253,7 @@ impl MononokeRepo {
 
         if allowed {
             SessionLfsParams {
-                threshold: self.lfs_params.threshold,
+                threshold: self.repo.config().lfs.threshold,
             }
         } else {
             SessionLfsParams { threshold: None }
@@ -198,59 +261,60 @@ impl MononokeRepo {
     }
 
     pub fn reponame(&self) -> &String {
-        &self.blobrepo.name()
+        &self.repo.name()
     }
 
-    #[inline]
     pub fn repoid(&self) -> RepositoryId {
-        self.blobrepo.get_repoid()
+        self.repo.repoid()
     }
 
     pub fn readonly(&self) -> BoxFuture<RepoReadOnly, Error> {
-        self.readonly_fetcher.readonly()
+        self.repo.readonly_fetcher().readonly()
     }
 
     pub fn readonly_fetcher(&self) -> &RepoReadWriteFetcher {
-        &self.readonly_fetcher
+        &self.repo.readonly_fetcher()
     }
 
     pub fn infinitepush(&self) -> &InfinitepushParams {
-        &self.infinitepush
+        &self.repo.config().infinitepush
     }
 
     pub fn list_keys_patterns_max(&self) -> u64 {
-        self.list_keys_patterns_max
+        self.repo.config().list_keys_patterns_max
     }
 
     pub fn lca_hint(&self) -> Arc<dyn LeastCommonAncestorsHint> {
-        self.lca_hint.clone()
+        self.repo.skiplist_index().clone()
+    }
+
+    pub fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
+        self.repo.warm_bookmarks_cache()
     }
 }
 
-pub fn streaming_clone(
+async fn streaming_clone(
     fb: FacebookInit,
-    blobrepo: BlobRepo,
+    blobrepo: &BlobRepo,
     db_address: String,
     mysql_options: &MysqlOptions,
     repoid: RepositoryId,
     readonly_storage: bool,
-) -> BoxFuture<SqlStreamingCloneConfig, Error> {
-    cloned!(mysql_options);
-    async move {
-        SqlStreamingChunksFetcher::with_xdb(fb, db_address, &mysql_options, readonly_storage).await
-    }
-    .boxed()
-    .compat()
-    .map(move |fetcher| SqlStreamingCloneConfig {
+) -> Result<SqlStreamingCloneConfig, Error> {
+    let fetcher =
+        SqlStreamingChunksFetcher::with_xdb(fb, db_address, &mysql_options, readonly_storage)
+            .await
+            .context("Failed to open SqlStreamingChunksFetcher")?;
+
+    Ok(SqlStreamingCloneConfig {
         fetcher,
         blobstore: blobrepo.get_blobstore(),
         repoid,
     })
-    .boxify()
 }
 
 impl Debug for MononokeRepo {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "MononokeRepo({:#?})", self.blobrepo.get_repoid())
+        write!(fmt, "MononokeRepo({:#?})", self.repo.repoid())
     }
 }

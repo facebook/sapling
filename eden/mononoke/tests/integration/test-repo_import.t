@@ -58,7 +58,6 @@
 # Run setup checker
   $ cd "$TESTTMP"
   $ repo_import \
-  > --local-configerator-path="$TESTTMP/configerator" \
   > check-additional-setup-steps \
   > --disable-phabricator-check \
   > --bookmark-suffix "new_repo" \
@@ -85,7 +84,6 @@
   > EOF
 
   $ repo_import \
-  > --local-configerator-path="$TESTTMP/configerator" \
   > check-additional-setup-steps \
   > --disable-phabricator-check \
   > --bookmark-suffix "new_repo" \
@@ -99,7 +97,6 @@
 
 # Import the repo
   $ repo_import \
-  > --local-configerator-path="$TESTTMP/configerator" \
   > import \
   > "$GIT_REPO" \
   > --dest-path "new_dir/new_repo" \

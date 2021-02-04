@@ -45,7 +45,7 @@
   > }
   > EOF
 
-  $ start_large_small_repo --local-configerator-path="$TESTTMP/configerator"
+  $ start_large_small_repo
   Starting Mononoke server
 
 We can't force pushrebase to a shared bookmark, so create a test bookmark that only belongs

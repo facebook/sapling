@@ -5,37 +5,30 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::{format_err, Context, Error};
 use backsyncer::{open_backsyncer_dbs, TargetRepoDbs};
 use blobrepo::BlobRepo;
-use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
+use blobrepo_factory::ReadOnlyStorage;
 use blobstore_factory::make_blobstore;
 use cache_warmup::cache_warmup;
 use cached_config::ConfigStore;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerivable;
 use fbinit::FacebookInit;
-use hook_manager_factory::make_hook_manager;
-use maplit::hashset;
-use mercurial_derived_data::MappedHgChangesetId;
-use metaconfig_types::{
-    CensoredScubaParams, CommitSyncConfig, RepoClientKnobs, RepoConfig, WireprotoLoggingConfig,
-};
+use metaconfig_types::{CommitSyncConfig, RepoClientKnobs, WireprotoLoggingConfig};
+use mononoke_api::Mononoke;
 use mononoke_types::RepositoryId;
-use mutable_counters::SqlMutableCounters;
 use observability::ObservabilityContext;
-use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirectorArgs, WireprotoLogging};
+use repo_client::{MononokeRepo, PushRedirectorArgs, WireprotoLogging};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info, o, Logger};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
 use synced_commit_mapping::SqlSyncedCommitMapping;
-use warm_bookmarks_cache::{BookmarkUpdateDelay, WarmBookmarksCache, WarmBookmarksCacheBuilder};
 
 use crate::errors::ErrorKind;
 
@@ -53,7 +46,6 @@ struct IncompleteRepoHandler {
     repo: MononokeRepo,
     preserve_raw_bundle2: bool,
     maybe_incomplete_push_redirector_args: Option<IncompletePushRedirectorArgs>,
-    maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
     repo_client_knobs: RepoClientKnobs,
 }
 
@@ -105,7 +97,6 @@ impl IncompleteRepoHandler {
             repo,
             preserve_raw_bundle2,
             maybe_incomplete_push_redirector_args,
-            maybe_warm_bookmarks_cache,
             repo_client_knobs,
         } = self;
 
@@ -123,7 +114,6 @@ impl IncompleteRepoHandler {
             repo,
             preserve_raw_bundle2,
             maybe_push_redirector_args,
-            maybe_warm_bookmarks_cache,
             repo_client_knobs,
         })
     }
@@ -137,19 +127,14 @@ pub struct RepoHandler {
     pub repo: MononokeRepo,
     pub preserve_raw_bundle2: bool,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
-    pub maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
     pub repo_client_knobs: RepoClientKnobs,
 }
 
 pub async fn repo_handlers<'a>(
     fb: FacebookInit,
-    repos: impl IntoIterator<Item = (String, RepoConfig)>,
+    mononoke: Mononoke,
     mysql_options: &'a MysqlOptions,
-    caching: Caching,
-    mut disabled_hooks: HashMap<String, HashSet<String>>,
-    censored_scuba_params: CensoredScubaParams,
     readonly_storage: ReadOnlyStorage,
-    blobstore_options: BlobstoreOptions,
     root_log: &Logger,
     config_store: &'a ConfigStore,
     observability_context: &'a ObservabilityContext,
@@ -157,17 +142,14 @@ pub async fn repo_handlers<'a>(
     // compute eagerly to avoid lifetime issues
     let mut tuples: Vec<(String, IncompleteRepoHandler)> = Vec::new();
 
-    for (reponame, config) in repos.into_iter().filter(|(reponame, config)| {
-        if !config.enabled {
-            info!(root_log, "Repo {} not enabled", reponame)
-        };
-        config.enabled
-    }) {
+    for repo in mononoke.repos() {
+        let reponame = repo.name().clone();
+        let config = repo.config();
+
         let root_log = root_log.clone();
+
         let logger = root_log.new(o!("repo" => reponame.clone()));
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
-
-        let disabled_hooks = disabled_hooks.remove(&reponame).unwrap_or_default();
 
         // Clone the few things we're going to need later in our bootstrap.
         let cache_warmup_params = config.cache_warmup.clone();
@@ -177,37 +159,9 @@ pub async fn repo_handlers<'a>(
         let preserve_raw_bundle2 = config.bundle2_replay_params.preserve_raw_bundle2.clone();
         let wireproto_logging = config.wireproto_logging.clone();
         let commit_sync_config = config.commit_sync_config.clone();
-        let record_infinitepush_writes: bool =
-            config.infinitepush.populate_reverse_filler_queue && config.infinitepush.allow_writes;
-        let repo_client_use_warm_bookmarks_cache = config.repo_client_use_warm_bookmarks_cache;
-        let warm_bookmark_cache_check_blobimport = config.warm_bookmark_cache_check_blobimport;
         let repo_client_knobs = config.repo_client_knobs.clone();
 
-        // TODO: Don't require ownership of config in load_hooks so we can avoid cloning the entire
-        // config here, and instead just pass a reference.
-        let hook_config = config.clone();
-
-        // And clone a few things of which we only have one but which we're going to need one
-        // per repo.
-        let blobstore_options = blobstore_options.clone();
-        let censored_scuba_params = censored_scuba_params.clone();
-
-        info!(logger, "Opening blobrepo");
-        let builder = MononokeRepoBuilder::prepare(
-            ctx.clone(),
-            reponame.clone(),
-            config,
-            mysql_options,
-            caching,
-            censored_scuba_params.clone(),
-            readonly_storage,
-            blobstore_options,
-            record_infinitepush_writes,
-            config_store,
-        )
-        .await?;
-
-        let blobrepo = builder.blobrepo().clone();
+        let blobrepo = repo.blob_repo().clone();
 
         info!(logger, "Warming up cache");
         let initial_warmup = tokio::task::spawn({
@@ -225,18 +179,6 @@ pub async fn repo_handlers<'a>(
         if let Some(scuba_local_path) = scuba_local_path {
             scuba_logger = scuba_logger.with_log_file(scuba_local_path)?;
         }
-
-        info!(logger, "Creating HookManager and loading hooks");
-        let hook_manager = make_hook_manager(
-            &ctx,
-            &blobrepo,
-            hook_config,
-            reponame.as_str(),
-            &disabled_hooks,
-        )
-        .await?;
-
-        let repo = builder.finalize(Arc::new(hook_manager));
 
         let sql_commit_sync_mapping = SqlSyncedCommitMapping::with_metadata_database_config(
             fb,
@@ -262,57 +204,29 @@ pub async fn repo_handlers<'a>(
             mysql_options.clone(),
             readonly_storage,
         );
-        let maybe_warm_bookmarks_cache = async {
-            if repo_client_use_warm_bookmarks_cache {
-                info!(
-                    ctx.logger(),
-                    "Starting Warm bookmarks cache for {}",
-                    blobrepo.name()
-                );
-                let mut warm_bookmarks_cache_builder =
-                    WarmBookmarksCacheBuilder::new(&ctx, &blobrepo);
-                warm_bookmarks_cache_builder.add_derived_data_warmers(
-                    &hashset! { MappedHgChangesetId::NAME.to_string() },
-                )?;
-                if warm_bookmark_cache_check_blobimport {
-                    let mutable_counters = SqlMutableCounters::with_metadata_database_config(
-                        fb,
-                        &db_config,
-                        mysql_options,
-                        readonly_storage.0,
-                    )
-                    .await?;
-                    warm_bookmarks_cache_builder.add_blobimport_warmer(Arc::new(mutable_counters));
-                }
-                let warm_bookmarks_cache = warm_bookmarks_cache_builder
-                    .build(BookmarkUpdateDelay::Disallow)
-                    .await?;
-
-                Ok(Some(Arc::new(warm_bookmarks_cache)))
-            } else {
-                Ok(None)
-            }
-        };
 
         info!(
             logger,
             "Creating MononokeRepo, CommitSyncMapping, WireprotoLogging, TargetRepoDbs, \
                 WarmBookmarksCache"
         );
-        let (
-            repo,
-            sql_commit_sync_mapping,
-            wireproto_logging,
-            backsyncer_dbs,
-            maybe_warm_bookmarks_cache,
-        ) = futures::future::try_join5(
-            repo,
-            sql_commit_sync_mapping,
-            wireproto_logging,
-            backsyncer_dbs,
-            maybe_warm_bookmarks_cache,
-        )
-        .await?;
+
+        let mononoke_repo = MononokeRepo::new(
+            ctx.fb,
+            ctx.logger().clone(),
+            repo.clone(),
+            mysql_options,
+            readonly_storage,
+        );
+
+        let (mononoke_repo, sql_commit_sync_mapping, wireproto_logging, backsyncer_dbs) =
+            futures::future::try_join4(
+                mononoke_repo,
+                sql_commit_sync_mapping,
+                wireproto_logging,
+                backsyncer_dbs,
+            )
+            .await?;
 
         let maybe_incomplete_push_redirector_args = commit_sync_config.and_then({
             cloned!(logger);
@@ -349,10 +263,9 @@ pub async fn repo_handlers<'a>(
                 logger,
                 scuba: scuba_logger,
                 wireproto_logging: Arc::new(wireproto_logging),
-                repo,
+                repo: mononoke_repo,
                 preserve_raw_bundle2,
                 maybe_incomplete_push_redirector_args,
-                maybe_warm_bookmarks_cache,
                 repo_client_knobs,
             },
         ));

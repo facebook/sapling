@@ -36,7 +36,7 @@
   >     "/[.]git/",
   >   ]
   > CONFIG
-  $ start_large_small_repo --local-configerator-path="$TESTTMP/configerator"
+  $ start_large_small_repo
   Starting Mononoke server
 
 Normal pushrebase to the small repo with one commit succeeds, and does not get

@@ -198,7 +198,7 @@ Setup helpers
   $ SMALL2_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL2 master_bookmark)
 
 start mononoke server
-  $ mononoke --local-configerator-path="$TESTTMP/configerator"
+  $ mononoke
   $ wait_for_mononoke
 
 Make sure mapping is set up and we know what we don't have to sync initial entries
