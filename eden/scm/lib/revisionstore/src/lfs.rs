@@ -381,7 +381,9 @@ impl LfsIndexedLogBlobsStore {
                 None
             } else {
                 let size = min(chunk_size, data.len());
-                let next = Some((start..start + size, data.split_to(size)));
+                let next_data = data.slice(..size);
+                data = data.slice(size..);
+                let next = Some((start..start + size, next_data));
                 start += size;
                 next
             }
