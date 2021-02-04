@@ -64,8 +64,8 @@ struct XdrTrait<InodeNumber> {
  */
 struct mountres3_ok {
   InodeNumber fhandle3;
-  std::vector<auth_flavor> auth_flavor;
+  std::vector<auth_flavor> auth_flavors;
 };
-EDEN_XDR_SERDE_DECL(mountres3_ok, fhandle3, auth_flavor);
+EDEN_XDR_SERDE_DECL(mountres3_ok, fhandle3, auth_flavors);
 
 } // namespace facebook::eden

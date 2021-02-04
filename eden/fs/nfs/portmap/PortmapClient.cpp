@@ -6,7 +6,6 @@
  */
 
 #include "eden/fs/nfs/portmap/PortmapClient.h"
-#include <common/network/NetworkUtil.h>
 #include <folly/Exception.h>
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
@@ -30,10 +29,7 @@ constexpr uint32_t kPortmapGetAddr = 3;
 EDEN_XDR_SERDE_IMPL(PortmapMapping, prog, vers, netid, addr, owner);
 
 PortmapClient::PortmapClient()
-    : client_(SocketAddress(
-          network::NetworkUtil::isIPv6Enabled() ? network::kLocalhostIPv6.str()
-                                                : network::kLocalhostIPv4.str(),
-          kPortmapPortNumber)) {
+    : client_(SocketAddress("127.0.0.1", kPortmapPortNumber)) {
 #ifdef __APPLE__
   {
     // Connect to the portmap "tickler" socket.

@@ -7,7 +7,6 @@
 
 #include "eden/fs/nfs/rpc/Server.h"
 
-#include <common/network/NetworkUtil.h>
 #include <folly/Exception.h>
 #include <folly/String.h>
 #include <folly/io/IOBufQueue.h>
@@ -288,7 +287,7 @@ RpcServer::RpcServer(std::shared_ptr<RpcServerProcessor> proc)
       serverSocket_(AsyncServerSocket::newSocket(
           EventBaseManager::get()->getEventBase())) {
   // Ask kernel to assign us a port on the loopback interface
-  serverSocket_->bind(SocketAddress(network::NetworkUtil::getLocalIPv4(), 0));
+  serverSocket_->bind(SocketAddress("127.0.0.1", 0));
   serverSocket_->listen(1024);
 
   auto eb = EventBaseManager::get()->getEventBase();

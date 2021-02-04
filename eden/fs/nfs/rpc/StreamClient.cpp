@@ -143,6 +143,8 @@ StreamClient::receiveChunk() {
       }
     case reply_stat::MSG_DENIED:
       throw std::runtime_error("MSG_DENIED");
+    default:
+      throw std::runtime_error("invalid reply_stat value");
   }
 }
 

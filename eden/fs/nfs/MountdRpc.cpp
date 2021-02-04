@@ -9,6 +9,6 @@
 
 namespace facebook::eden::rpc {
 
-EDEN_XDR_SERDE_IMPL(mountres3_ok, fhandle3, auth_flavor);
+EDEN_XDR_SERDE_IMPL(mountres3_ok, fhandle3, auth_flavors);
 
 }
