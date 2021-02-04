@@ -741,9 +741,9 @@ def exlog(orig, ui, repo, *args, **opts):
 
 def expushdiscoverybookmarks(pushop):
     repo = pushop.repo
-    remotemarks = pushop.remote.listkeys("bookmarks")
 
     if pushop.delete:
+        remotemarks = pushop.remote.listkeyspatterns("bookmarks", [pushop.delete])
         if pushop.delete not in remotemarks:
             raise error.Abort(_("remote bookmark %s does not exist") % pushop.delete)
         pushop.outbookmarks.append([pushop.delete, remotemarks[pushop.delete], ""])
@@ -802,6 +802,7 @@ def expushdiscoverybookmarks(pushop):
 
     # allow new bookmark only if --create is specified
     old = ""
+    remotemarks = pushop.remote.listkeyspatterns("bookmarks", [bookmark])
     if bookmark in remotemarks:
         old = remotemarks[bookmark]
     elif not pushop.create:

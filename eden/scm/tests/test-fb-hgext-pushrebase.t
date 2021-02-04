@@ -90,8 +90,8 @@ Stack of non-conflicting commits should be accepted
   query 2; still undecided: 2, sample size is: 2
   sending known command
   2 total queries in *s (glob)
-  preparing listkeys for "bookmarks"
-  sending listkeys command
+  preparing listkeys for "bookmarks" with pattern "['main']"
+  sending listkeyspatterns command
   received listkey for "bookmarks": 45 bytes
   validated revset for rebase
   2 changesets found
