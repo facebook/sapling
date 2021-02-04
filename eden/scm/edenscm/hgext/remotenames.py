@@ -175,7 +175,7 @@ def _isselectivepull(ui):
 
 
 def _listremotebookmarks(remote, bookmarks):
-    remotebookmarks = remote.listkeys("bookmarks")
+    remotebookmarks = remote.listkeyspatterns("bookmarks", bookmarks)
     result = {}
     for book in bookmarks:
         if book in remotebookmarks:
