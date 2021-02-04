@@ -698,6 +698,7 @@ bundle single branch
   $ hg bundle bundle.hg part --debug --config progress.debug=true
   query 1; heads
   searching for changes
+  local heads: 2; remote heads: 1 (explicit: 0); initial common: 1
   all remote heads known locally
   2 changesets found
   list of changesets:

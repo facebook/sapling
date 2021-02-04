@@ -233,6 +233,7 @@ push to Mononoke
   query 1; heads
   sending batch command
   searching for changes
+  local heads: 2; remote heads: 1 (explicit: 0); initial common: 1
   all remote heads known locally
   checking for updated bookmarks
   preparing listkeys for "bookmarks"

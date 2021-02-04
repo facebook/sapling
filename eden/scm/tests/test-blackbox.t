@@ -113,6 +113,7 @@ we must not cause a failure if we cannot write to the log
   comparing with $TESTTMP/blackboxtest
   query 1; heads
   searching for changes
+  local heads: 2; remote heads: 2 (explicit: 0); initial common: 2
   all remote heads known locally
   no changes found
   $ hg pull

@@ -65,6 +65,7 @@ create new commit in repo2 and check that push fails
   query 1; heads
   sending batch command
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   all remote heads known locally
   checking for updated bookmarks
   preparing listkeys for "bookmarks"

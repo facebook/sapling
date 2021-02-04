@@ -436,9 +436,21 @@ def _findcommonheadsnew(
 
     ui.status_err(_("searching for changes\n"))
 
+    commonremoteheads = list(filter(cl.hasnode, remoteheads))
+
+    # Mononoke tests do not want this output.
+    ui.debug(
+        "local heads: %s; remote heads: %s (explicit: %s); initial common: %s\n"
+        % (
+            len(localheads),
+            len(remoteheads),
+            len(explicitremoteheads or ()),
+            len(commonremoteheads),
+        )
+    )
+
     # fast paths
 
-    commonremoteheads = list(filter(cl.hasnode, remoteheads))
     if len(commonremoteheads) == len(remoteheads):
         ui.debug("all remote heads known locally\n")
         # TODO: Consider returning [] as the 3rd return value here.

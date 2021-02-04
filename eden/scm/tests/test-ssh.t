@@ -451,6 +451,7 @@ debug output
   query 1; heads
   sending batch command
   searching for changes
+  local heads: 2; remote heads: 2 (explicit: 0); initial common: 2
   all remote heads known locally
   no changes found
   sending getbundle command

@@ -70,6 +70,7 @@ Do infinitepush (aka commit cloud) push
   query 1; heads
   sending batch command
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   all remote heads known locally
   preparing listkeys for "bookmarks"
   sending listkeys command

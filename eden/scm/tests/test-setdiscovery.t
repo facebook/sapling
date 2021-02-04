@@ -42,6 +42,7 @@ Small superset:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 2; remote heads: 3 (explicit: 0); initial common: 1
   all local heads known remotely
   common heads: 01241442b3c2 b5714e113bc0
   local is subset
@@ -50,6 +51,7 @@ Small superset:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 3 (explicit: 0); initial common: 1
   all local heads known remotely
   common heads: b5714e113bc0
   
@@ -57,6 +59,7 @@ Small superset:
   comparing with a
   query 1; heads
   searching for changes
+  local heads: 3; remote heads: 2 (explicit: 0); initial common: 2
   all remote heads known locally
   common heads: 01241442b3c2 b5714e113bc0
   remote is subset
@@ -65,6 +68,7 @@ Small superset:
   comparing with a
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 2 (explicit: 0); initial common: 2
   all remote heads known locally
   common heads: 01241442b3c2 b5714e113bc0
   remote is subset
@@ -80,6 +84,7 @@ Many new:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 2; remote heads: 1 (explicit: 0); initial common: 0
   sampling from both directions (2 of 2)
   sampling undecided commits (29 of 29)
   progress: searching: checking 29 commits, 0 left 2 queries
@@ -92,6 +97,7 @@ Many new:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
   progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
@@ -103,6 +109,7 @@ Many new:
   comparing with a
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 2 (explicit: 0); initial common: 1
   sampling from both directions (2 of 2)
   sampling undecided commits (2 of 2)
   progress: searching: checking 2 commits, 0 left 2 queries
@@ -115,6 +122,7 @@ Many new:
   comparing with a
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 2 (explicit: 0); initial common: 1
   sampling from both directions (2 of 2)
   sampling undecided commits (2 of 2)
   progress: searching: checking 2 commits, 0 left 2 queries
@@ -133,6 +141,7 @@ Both sides many new with stub:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 2; remote heads: 1 (explicit: 0); initial common: 0
   sampling from both directions (2 of 2)
   sampling undecided commits (29 of 29)
   progress: searching: checking 29 commits, 0 left 2 queries
@@ -145,6 +154,7 @@ Both sides many new with stub:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
   progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
@@ -156,6 +166,7 @@ Both sides many new with stub:
   comparing with a
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 2 (explicit: 0); initial common: 1
   sampling from both directions (2 of 2)
   sampling undecided commits (29 of 29)
   progress: searching: checking 29 commits, 0 left 2 queries
@@ -168,6 +179,7 @@ Both sides many new with stub:
   comparing with a
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 2 (explicit: 0); initial common: 1
   sampling from both directions (2 of 2)
   sampling undecided commits (29 of 29)
   progress: searching: checking 29 commits, 0 left 2 queries
@@ -187,6 +199,7 @@ Both many new:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
   progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
@@ -198,6 +211,7 @@ Both many new:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
   progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
@@ -209,6 +223,7 @@ Both many new:
   comparing with a
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
   progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
@@ -220,6 +235,7 @@ Both many new:
   comparing with a
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
   progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
@@ -238,6 +254,7 @@ Both many new skewed:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (51 of 51)
   progress: searching: checking 51 commits, 0 left 2 queries
   query 2; still undecided: 51, sample size is: 51
@@ -249,6 +266,7 @@ Both many new skewed:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (51 of 51)
   progress: searching: checking 51 commits, 0 left 2 queries
   query 2; still undecided: 51, sample size is: 51
@@ -260,6 +278,7 @@ Both many new skewed:
   comparing with a
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
   progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
@@ -271,6 +290,7 @@ Both many new skewed:
   comparing with a
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (31 of 31)
   progress: searching: checking 31 commits, 0 left 2 queries
   query 2; still undecided: 31, sample size is: 31
@@ -289,6 +309,7 @@ Both many new on top of long history:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (200 of 1049)
   progress: searching: checking 200 commits, 849 left 2 queries
   query 2; still undecided: 1049, sample size is: 200
@@ -304,6 +325,7 @@ Both many new on top of long history:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (200 of 1049)
   progress: searching: checking 200 commits, 849 left 2 queries
   query 2; still undecided: 1049, sample size is: 200
@@ -319,6 +341,7 @@ Both many new on top of long history:
   comparing with a
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (200 of 1029)
   progress: searching: checking 200 commits, 829 left 2 queries
   query 2; still undecided: 1029, sample size is: 200
@@ -334,6 +357,7 @@ Both many new on top of long history:
   comparing with a
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
   sampling undecided commits (200 of 1029)
   progress: searching: checking 200 commits, 829 left 2 queries
   query 2; still undecided: 1029, sample size is: 200
@@ -411,6 +435,7 @@ The graph looks like:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 261; remote heads: 1 (explicit: 0); initial common: 1
   all remote heads known locally
   common heads: 513314ca8b3a
   remote is subset
@@ -418,6 +443,7 @@ The graph looks like:
   comparing with b
   query 1; heads
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   all remote heads known locally
   common heads: 513314ca8b3a
   remote is subset

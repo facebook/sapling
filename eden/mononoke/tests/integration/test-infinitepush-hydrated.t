@@ -70,6 +70,7 @@ Do infinitepush (aka commit cloud) push
   query 1; heads
   sending batch command
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 0); initial common: 1
   all remote heads known locally
   preparing listkeys for "bookmarks"
   sending listkeys command
@@ -138,6 +139,7 @@ check unhydrated infinitepush pulls
   query 1; heads
   sending batch command
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 1); initial common: 1
   all remote heads known locally
   sending getbundle command
   bundle2-input-bundle: 1 params with-transaction
@@ -219,6 +221,7 @@ check hydrated infinitepush pulls
   query 1; heads
   sending batch command
   searching for changes
+  local heads: 1; remote heads: 1 (explicit: 1); initial common: 1
   all remote heads known locally
   sending getbundle command
   bundle2-input-bundle: 1 params with-transaction
