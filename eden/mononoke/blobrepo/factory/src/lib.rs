@@ -236,7 +236,10 @@ pub async fn open_blobrepo_given_datasources<'a>(
             .await?
         }
         Caching::Enabled(cache_shards) => {
-            let blobstore = new_memcache_blobstore(fb, blobstore, "multiplexed", "")?;
+            let blobstore = tokio::task::spawn_blocking(move || {
+                new_memcache_blobstore(fb, blobstore, "multiplexed", "")
+            })
+            .await??;
             let blobstore = get_cachelib_blobstore(blobstore, cache_shards, cachelib_options)?;
 
             new_production(
