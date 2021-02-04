@@ -16,6 +16,7 @@ cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
+clap = "2.33"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 openssl = "0.10"
 slog = { version = "2.5", features = ["max_level_debug"] }

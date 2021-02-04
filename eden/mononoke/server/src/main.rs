@@ -9,6 +9,7 @@
 #![feature(never_type)]
 
 use anyhow::{Context, Result};
+use clap::Arg;
 use cloned::cloned;
 use cmdlib::{args, monitoring::ReadyFlagService};
 use fbinit::FacebookInit;
@@ -23,6 +24,13 @@ use std::sync::{
     Arc,
 };
 
+const ARG_LISTENING_HOST_PORT: &str = "listening-host-port";
+const ARG_THRIFT_PORT: &str = "thrift_port";
+const ARG_CERT: &str = "cert";
+const ARG_PRIVATE_KEY: &str = "private-key";
+const ARG_CA_PEM: &str = "ca-pem";
+const ARG_TICKET_SEEDS: &str = "ssl-ticket-seeds";
+
 fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
     let app = args::MononokeAppBuilder::new("mononoke server")
         .with_shutdown_timeout_args()
@@ -30,17 +38,46 @@ fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
         .with_disabled_hooks_args()
         .build()
         .about("serve repos")
-        .args_from_usage(
-            r#"
-            --listening-host-port <PATH>           'tcp address to listen to in format `host:port`'
-
-            -p, --thrift_port [PORT] 'if provided the thrift server will start on this port'
-
-            <cert>        --cert [PATH]                         'path to a file with certificate'
-            <private_key> --private-key [PATH]                  'path to a file with private key'
-            <ca_pem>      --ca-pem [PATH]                       'path to a file with CA certificate'
-            [ticket_seed] --ssl-ticket-seeds [PATH]             'path to a file with encryption keys for SSL tickets'
-            "#,
+        .arg(
+            Arg::with_name(ARG_LISTENING_HOST_PORT)
+                .long(ARG_LISTENING_HOST_PORT)
+                .required(true)
+                .takes_value(true)
+                .help("tcp address to listen to in format `host:port`"),
+        )
+        .arg(
+            Arg::with_name(ARG_THRIFT_PORT)
+                .long(ARG_THRIFT_PORT)
+                .short("-p")
+                .required(false)
+                .takes_value(true)
+                .help("if provided the thrift server will start on this port"),
+        )
+        .arg(
+            Arg::with_name(ARG_CERT)
+                .long(ARG_CERT)
+                .required(true)
+                .takes_value(true)
+                .help("path to a file with certificate"),
+        )
+        .arg(
+            Arg::with_name(ARG_PRIVATE_KEY)
+                .long(ARG_PRIVATE_KEY)
+                .required(true)
+                .takes_value(true)
+                .help("path to a file with private key"),
+        )
+        .arg(
+            Arg::with_name(ARG_CA_PEM)
+                .long(ARG_CA_PEM)
+                .takes_value(true)
+                .help("path to a file with CA certificate"),
+        )
+        .arg(
+            Arg::with_name(ARG_TICKET_SEEDS)
+                .long(ARG_TICKET_SEEDS)
+                .takes_value(true)
+                .help("path to a file with encryption keys for SSL tickets'"),
         );
 
     let app = args::add_mcrouter_args(app);
@@ -62,15 +99,15 @@ fn main(fb: FacebookInit) -> Result<()> {
     let config = args::load_repo_configs(config_store, &matches)?;
 
     let acceptor = {
-        let cert = matches.value_of("cert").unwrap().to_string();
-        let private_key = matches.value_of("private_key").unwrap().to_string();
-        let ca_pem = matches.value_of("ca_pem").unwrap().to_string();
+        let cert = matches.value_of(ARG_CERT).unwrap().to_string();
+        let private_key = matches.value_of(ARG_PRIVATE_KEY).unwrap().to_string();
+        let ca_pem = matches.value_of(ARG_CA_PEM).unwrap().to_string();
 
         let mut builder = secure_utils::SslConfig::new(
             ca_pem,
             cert,
             private_key,
-            matches.value_of("ssl-ticket-seeds"),
+            matches.value_of(ARG_TICKET_SEEDS),
         )
         .tls_acceptor_builder(root_log.clone())
         .context("Failed to instantiate TLS Acceptor builder")?;
@@ -94,7 +131,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let disabled_hooks = cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?;
     let scribe = cmdlib::args::get_scribe(fb, &matches)?;
     let host_port = matches
-        .value_of("listening-host-port")
+        .value_of(ARG_LISTENING_HOST_PORT)
         .expect("listening path must be specified")
         .to_string();
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
