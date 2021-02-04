@@ -58,10 +58,12 @@ impl ContentEncoding {
         }
     }
 
-    /// Parse an Accept-Encoding header and provide a ContentEncoding representing it
-    /// (https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding). This ignores
-    /// client preferences entirely, since we control client & server, and instead uses our own
-    /// preference ordering, restricted to what the client allows.
+    /// Parse an [Accept-Encoding header] and provide a ContentEncoding
+    /// representing it. This ignores client preferences entirely, since we
+    /// control client & server, and instead uses our own preference ordering,
+    /// restricted to what the client allows.
+    ///
+    /// [Accept-Encoding header]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept-Encoding
     fn from_header(header: &[u8]) -> Result<Self, Error> {
         let mut gzip = false;
         let mut zstd = false;

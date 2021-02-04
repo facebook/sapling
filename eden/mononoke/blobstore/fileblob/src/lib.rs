@@ -32,9 +32,9 @@ use tokio::{
 use walkdir::WalkDir;
 
 const PREFIX: &str = "blob";
-/// https://url.spec.whatwg.org/#fragment-percent-encode-set
+// https://url.spec.whatwg.org/#fragment-percent-encode-set
 const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');
-/// https://url.spec.whatwg.org/#path-percent-encode-set
+// https://url.spec.whatwg.org/#path-percent-encode-set
 const PATH: &AsciiSet = &FRAGMENT.add(b'#').add(b'?').add(b'{').add(b'}');
 
 #[derive(Debug, Clone)]

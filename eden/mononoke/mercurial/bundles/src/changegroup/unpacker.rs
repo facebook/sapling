@@ -6,7 +6,7 @@
  */
 
 //! Unpacking changegroups.
-//! See https://www.mercurial-scm.org/repo/hg/file/@/mercurial/help/internals/changegroups.txt.
+//! See <https://www.mercurial-scm.org/repo/hg/file/@/mercurial/help/internals/changegroups.txt>
 
 use std::cmp;
 use std::mem;

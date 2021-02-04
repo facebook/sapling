@@ -39,7 +39,7 @@ pub struct PreMergeDelete {
 
 /// Create `PreMergeDelete` struct, implementing gradual delete strategy
 /// See the struct's docstring for more details about the end state
-/// See also https://fb.quip.com/jPbqA3kK3qCi for strategy and discussion
+/// See also <https://fb.quip.com/jPbqA3kK3qCi> for strategy and discussion
 pub async fn create_pre_merge_delete<'a>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,

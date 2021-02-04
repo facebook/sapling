@@ -6,7 +6,7 @@
  */
 
 //! Packing obsmarkers to be sent after e.g. a pushrebase
-//! Format documentation: https://www.mercurial-scm.org/repo/hg/file/tip/mercurial/obsolete.py
+//! Format documentation: <https://www.mercurial-scm.org/repo/hg/file/tip/mercurial/obsolete.py>
 
 use super::MetadataEntry;
 use crate::chunk::Chunk;

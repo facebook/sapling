@@ -7,8 +7,8 @@
 
 //! SSH/stdio line-oriented protocol
 //!
-//! References are https://www.mercurial-scm.org/wiki/SshCommandProtocol and
-//! https://www.mercurial-scm.org/wiki/WireProtocol though they're scant on detail.
+//! References are <https://www.mercurial-scm.org/wiki/SshCommandProtocol> and
+//! <https://www.mercurial-scm.org/wiki/WireProtocol> though they're scant on detail.
 //!
 //! The encoding is:
 //! ```text

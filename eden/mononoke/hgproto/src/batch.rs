@@ -8,7 +8,7 @@
 //! Operations on the "batch" command.
 //!
 //! Based on the Mercurial wire protocol documentation. See
-//! https://www.mercurial-scm.org/repo/hg/file/@/mercurial/help/internals/wireprotocol.txt.
+//! <https://www.mercurial-scm.org/repo/hg/file/@/mercurial/help/internals/wireprotocol.txt>
 
 use crate::errors::ErrorKind;
 use anyhow::{bail, Result};

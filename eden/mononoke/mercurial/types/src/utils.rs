@@ -7,9 +7,9 @@
 
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 
-/// https://url.spec.whatwg.org/#fragment-percent-encode-set
+// https://url.spec.whatwg.org/#fragment-percent-encode-set
 const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');
-/// https://url.spec.whatwg.org/#path-percent-encode-set
+// https://url.spec.whatwg.org/#path-percent-encode-set
 const PATH: &AsciiSet = &FRAGMENT.add(b'#').add(b'?').add(b'{').add(b'}');
 const USERINFO: &AsciiSet = &PATH
     .add(b'/')

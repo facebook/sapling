@@ -10,7 +10,7 @@
 //! This allows mutation information (i.e., which commits where amended or rebased) to be exchanged
 //! between Mercurial clients via Mononoke.
 //!
-//! See https://fburl.com/m2y3nr5c for more details.
+//! See <https://fburl.com/m2y3nr5c> for more details.
 
 #![deny(warnings)]
 

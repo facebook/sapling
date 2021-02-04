@@ -7,7 +7,7 @@
 
 //! Packing wirepacks to be sent over the wire during e.g. an hg pull.
 //! The format is documented at
-//! https://bitbucket.org/facebook/hg-experimental/src/@/remotefilelog/wirepack.py.
+//! <https://phab.mercurial-scm.org/diffusion/FBHGX/browse/default/remotefilelog/wirepack.py>
 
 #![allow(deprecated)] // TODO: T29077977 convert from put_X::<BigEndian> -> put_X_be
 

@@ -13,7 +13,7 @@
 /// and doing commit rewrites. The main motivation for backsyncer is to keep "small repo" up to
 /// date with "large repo" in a setup where all writes to small repo are redirected to large repo
 /// in a push redirector.
-/// More details can be found here - https://fb.quip.com/tZ4yAaA3S4Mc
+/// More details can be found here - <https://fb.quip.com/tZ4yAaA3S4Mc>
 ///
 /// Target repo tails source repo's bookmark update log and backsync bookmark updates one by one.
 /// The latest backsynced log id is stored in mutable_counters table. Backsync consists of the

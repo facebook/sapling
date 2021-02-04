@@ -47,9 +47,9 @@ use std::{
 };
 use tokio::fs::{self as tkfs};
 
-/// https://url.spec.whatwg.org/#fragment-percent-encode-set
+// https://url.spec.whatwg.org/#fragment-percent-encode-set
 const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');
-/// https://url.spec.whatwg.org/#path-percent-encode-set plus comma
+// https://url.spec.whatwg.org/#path-percent-encode-set plus comma
 const PATH: &AsciiSet = &FRAGMENT.add(b'#').add(b'?').add(b'{').add(b'}').add(b',');
 
 // A path not found in repo paths.
