@@ -20,7 +20,7 @@ use std::{
 };
 
 use anyhow::{bail, ensure, Context, Result};
-use bytes::Bytes;
+use minibytes::Bytes;
 
 use fsinfo::{fstype, FsType};
 use types::RepoPath;

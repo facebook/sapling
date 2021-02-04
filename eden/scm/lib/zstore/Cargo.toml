@@ -8,7 +8,7 @@ include = ["src/**/*.rs"]
 [dependencies]
 indexedlog = { path = "../indexedlog" }
 mincode = { path = "../mincode" }
-minibytes = { path = "../minibytes" }
+minibytes = { path = "../minibytes", features = ["frombytes"] }
 types = { path = "../types" }
 zstdelta = { path = "../zstdelta" }
 lazy_static = "1.0"

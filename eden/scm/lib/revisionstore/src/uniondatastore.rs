@@ -8,7 +8,7 @@
 // Union data store
 use anyhow::Result;
 
-use bytes::Bytes;
+use minibytes::Bytes;
 
 use crate::{
     datastore::{

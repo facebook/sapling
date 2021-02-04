@@ -24,9 +24,9 @@ use std::{
 };
 
 use anyhow::{bail, ensure, format_err, Context, Result};
-use bytes::Bytes;
 use futures::stream::{iter, StreamExt, TryStreamExt};
 use http::status::StatusCode;
+use minibytes::Bytes;
 use parking_lot::{Mutex, RwLock};
 use rand::{thread_rng, Rng};
 use serde_derive::{Deserialize, Serialize};

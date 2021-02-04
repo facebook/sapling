@@ -13,7 +13,7 @@ use std::{
 };
 
 use anyhow::{bail, Result};
-use bytes::Bytes;
+use minibytes::Bytes;
 use parking_lot::Mutex;
 use regex::Regex;
 use serde_derive::{Deserialize, Serialize};
@@ -69,7 +69,7 @@ pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
 
     fn add_file(&self, entry: &FileEntry) -> Result<()> {
         let delta = Delta {
-            data: entry.data()?,
+            data: entry.data()?.into(),
             base: None,
             key: entry.key().clone(),
         };
@@ -78,7 +78,7 @@ pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
 
     fn add_tree(&self, entry: &TreeEntry) -> Result<()> {
         let delta = Delta {
-            data: entry.data()?,
+            data: entry.data()?.into(),
             base: None,
             key: entry.key().clone(),
         };

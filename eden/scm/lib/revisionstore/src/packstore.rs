@@ -697,7 +697,7 @@ mod tests {
 
     use std::fs::{self, OpenOptions};
 
-    use bytes::Bytes;
+    use minibytes::Bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempfile::TempDir;

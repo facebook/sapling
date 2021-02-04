@@ -10,7 +10,7 @@ dag = { path = "../dag", features = ["for-tests", "indexedlog-backend"] }
 edenapi = { path = "../edenapi" }
 gitdag = { path = "../dag/gitdag" }
 metalog = { path = "../metalog" }
-minibytes = { path = "../minibytes" }
+minibytes = { path = "../minibytes", features = ["frombytes"] }
 revlogindex = { path = "../revlogindex" }
 streams = { path = "../streams" }
 zstore = { path = "../zstore" }

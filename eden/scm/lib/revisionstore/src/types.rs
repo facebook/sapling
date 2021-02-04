@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use bytes::Bytes;
+use minibytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 use sha2::Digest;
 

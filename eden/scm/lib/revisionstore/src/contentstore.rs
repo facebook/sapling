@@ -13,7 +13,7 @@ use std::{
 };
 
 use anyhow::{format_err, Result};
-use bytes::Bytes;
+use minibytes::Bytes;
 use regex::Regex;
 use tracing::info_span;
 
@@ -584,7 +584,7 @@ mod tests {
     use std::ffi::OsString;
     use std::ops::{Add, Sub};
 
-    use bytes::Bytes;
+    use minibytes::Bytes;
     use tempfile::TempDir;
 
     use types::testutil::*;

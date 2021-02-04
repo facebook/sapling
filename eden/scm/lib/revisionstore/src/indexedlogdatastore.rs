@@ -12,7 +12,7 @@ use std::{
 
 use anyhow::{bail, ensure, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use bytes::Bytes;
+use minibytes::Bytes;
 use parking_lot::RwLock;
 
 use configparser::{
@@ -321,7 +321,7 @@ mod tests {
 
     use std::fs::remove_file;
 
-    use bytes::Bytes;
+    use minibytes::Bytes;
     use tempfile::TempDir;
 
     use types::testutil::*;

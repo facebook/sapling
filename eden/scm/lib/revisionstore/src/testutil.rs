@@ -9,8 +9,8 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 
 use anyhow::{Error, Result};
 use async_trait::async_trait;
-use bytes::Bytes;
 use futures::prelude::*;
+use minibytes::Bytes;
 
 use configparser::config::ConfigSet;
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stats};
@@ -228,6 +228,7 @@ impl FakeEdenApi {
                     flags: None,
                     size: Some(data.len() as u64),
                 };
+                let data = data.to_vec().into();
                 Some(Ok(FileEntry::new(key, data, parents, metadata)))
             })
             .collect::<Vec<_>>();
@@ -248,6 +249,7 @@ impl FakeEdenApi {
             .filter_map(|key| {
                 let data = map.get(&key)?.clone();
                 let parents = Parents::default();
+                let data = data.to_vec().into();
                 Some(Ok(Ok(TreeEntry::new(key, data, parents))))
             })
             .collect::<Vec<_>>();

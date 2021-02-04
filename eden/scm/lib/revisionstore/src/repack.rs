@@ -14,8 +14,8 @@ use std::{
 };
 
 use anyhow::{format_err, Error, Result};
-use bytes::Bytes;
 use configparser::{config::ConfigSet, hg::ByteCount, hg::ConfigSetHgExt};
+use minibytes::Bytes;
 use thiserror::Error;
 
 use types::Key;
@@ -487,7 +487,7 @@ pub fn repack(
 mod tests {
     use super::*;
 
-    use bytes::Bytes;
+    use minibytes::Bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use std::fs::File;

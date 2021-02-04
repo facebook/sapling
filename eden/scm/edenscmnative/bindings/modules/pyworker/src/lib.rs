@@ -365,8 +365,8 @@ mod tests {
     use std::{fs::OpenOptions, os::windows::fs::OpenOptionsExt};
 
     use anyhow::ensure;
-    use bytes::Bytes;
     use memmap::MmapOptions;
+    use minibytes::Bytes;
     use quickcheck::{quickcheck, TestResult};
     use tempfile::TempDir;
 

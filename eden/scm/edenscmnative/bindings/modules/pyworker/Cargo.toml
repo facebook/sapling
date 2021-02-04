@@ -15,12 +15,12 @@ crossbeam = "0.7"
 revisionstore = { path = "../../../../lib/revisionstore" }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
+minibytes = { path = "../../../../lib/minibytes" }
 types = { path = "../../../../lib/types" }
 tracing = "0.1"
 vfs = { path = "../../../../lib/vfs" }
 
 [dev-dependencies]
-bytes = "0.5"
 tempfile = "3.1"
 quickcheck = "0.9"
 types = { path = "../../../../lib/types", default-features = false, features = ["for-tests"] }

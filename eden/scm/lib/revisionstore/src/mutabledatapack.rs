@@ -343,7 +343,7 @@ mod tests {
         io::Read,
     };
 
-    use bytes::Bytes;
+    use minibytes::Bytes;
     use tempfile::tempdir;
 
     use types::{testutil::*, Key, RepoPathBuf};

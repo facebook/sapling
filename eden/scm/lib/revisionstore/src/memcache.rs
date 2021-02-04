@@ -10,7 +10,7 @@
 use std::{mem::size_of, path::PathBuf, sync::Arc};
 
 use anyhow::Result;
-use bytes::Bytes;
+use minibytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 use tracing::info_span;
 

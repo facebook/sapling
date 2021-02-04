@@ -91,8 +91,8 @@ use std::{
 
 use anyhow::{format_err, Error, Result};
 use byteorder::{BigEndian, ReadBytesExt};
-use bytes::Bytes;
 use memmap::{Mmap, MmapOptions};
+use minibytes::Bytes;
 use thiserror::Error;
 
 use lz4_pyframe::decompress;

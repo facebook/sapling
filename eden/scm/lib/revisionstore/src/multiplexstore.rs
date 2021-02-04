@@ -175,7 +175,7 @@ impl<T: HgIdMutableHistoryStore> LocalStore for MultiplexHgIdHistoryStore<T> {
 mod tests {
     use super::*;
 
-    use bytes::Bytes;
+    use minibytes::Bytes;
     use tempfile::TempDir;
 
     use configparser::config::ConfigSet;
