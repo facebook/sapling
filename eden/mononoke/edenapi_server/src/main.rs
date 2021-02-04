@@ -22,7 +22,6 @@ use futures::{
     future::{lazy, select, FutureExt, TryFutureExt},
 };
 use gotham::{bind_server, bind_server_with_socket_data};
-use hyper::header::HeaderValue;
 use slog::{debug, info, warn, Logger};
 use tokio::net::TcpListener;
 
@@ -33,31 +32,12 @@ use cmdlib::{
     monitoring::{start_fb303_server, AliveService},
 };
 use fbinit::FacebookInit;
-use gotham_ext::{
-    handler::MononokeHttpHandler,
-    middleware::{
-        ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, PostRequestMiddleware,
-        ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware, TlsSessionDataMiddleware,
-    },
-    socket_data::TlsSocketData,
-};
+use gotham_ext::socket_data::TlsSocketData;
 use mononoke_api::{
     BookmarkUpdateDelay, Mononoke, MononokeEnvironment, WarmBookmarksCacheDerivedData,
 };
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use secure_utils::SslConfig;
-
-mod context;
-mod errors;
-mod handlers;
-mod middleware;
-mod scuba;
-mod utils;
-
-use crate::context::ServerContext;
-use crate::handlers::build_router;
-use crate::middleware::{OdsMiddleware, RequestContextMiddleware};
-use crate::scuba::EdenApiScubaHandler;
 
 const ARG_LISTEN_HOST: &str = "listen-host";
 const ARG_LISTEN_PORT: &str = "listen-port";
@@ -149,36 +129,17 @@ async fn start(
     // has been signalled to gracefully shut down.
     let will_exit = Arc::new(AtomicBool::new(false));
 
-    // Set up context to hold the server's global state.
-    let ctx = ServerContext::new(mononoke, will_exit.clone());
-
-    // Configure logging.
-    let log_middleware = match matches.is_present(ARG_TEST_FRIENDLY_LOGGING) {
-        true => LogMiddleware::test_friendly(),
-        false => LogMiddleware::slog(logger.clone()),
-    };
-
     scuba_logger.add_common_server_data();
 
-    // Set up the router and handler for serving HTTP requests, along with custom middleware.
-    // The middleware added here does not implement Gotham's usual Middleware trait; instead,
-    // it uses the custom Middleware API defined in the gotham_ext crate. Native Gotham
-    // middleware is set up during router setup in build_router.
-    let router = build_router(ctx);
-    let handler = MononokeHttpHandler::builder()
-        .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
-        .add(ClientIdentityMiddleware::new())
-        .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
-            "edenapi_server",
-        )))
-        .add(PostRequestMiddleware::default())
-        .add(RequestContextMiddleware::new(fb, logger.clone()))
-        .add(LoadMiddleware::new())
-        .add(log_middleware)
-        .add(OdsMiddleware::new())
-        .add(<ScubaMiddleware<EdenApiScubaHandler>>::new(scuba_logger))
-        .add(TimerMiddleware::new())
-        .build(router);
+    let handler = edenapi_service::build(
+        fb,
+        logger.clone(),
+        scuba_logger,
+        mononoke,
+        will_exit.clone(),
+        matches.is_present(ARG_TEST_FRIENDLY_LOGGING),
+        tls_session_data_log.map(AsRef::as_ref),
+    )?;
 
     // Set up socket and TLS acceptor that this server will listen on.
     let addr = parse_server_addr(&matches)?;

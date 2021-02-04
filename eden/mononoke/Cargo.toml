@@ -303,6 +303,7 @@ members = [
     "derived_data/unodes",
     "derived_data/utils",
     "edenapi_server",
+    "edenapi_service",
     "fastreplay",
     "filenodes",
     "filenodes/if",

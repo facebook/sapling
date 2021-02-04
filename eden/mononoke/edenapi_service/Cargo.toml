@@ -1,0 +1,39 @@
+[package]
+name = "edenapi_service"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+context = { path = "../server/context", version = "0.1.0" }
+edenapi_types = { path = "../../scm/lib/edenapi/types", version = "0.1.0" }
+gotham_ext = { path = "../gotham_ext", version = "0.1.0" }
+manifest = { path = "../manifest", version = "0.1.0" }
+mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
+mononoke_api = { path = "../mononoke_api", version = "0.1.0" }
+mononoke_api_hg = { path = "../mononoke_api_hg", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+sshrelay = { path = "../sshrelay", version = "0.1.0" }
+types = { path = "../../scm/lib/types", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+anyhow = "1.0"
+async-trait = "0.1.29"
+bytes = { version = "0.5", features = ["serde"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+gotham = { version = "=0.5.0", default-features = false }
+gotham_derive = "=0.5.0"
+http = "0.2"
+hyper = "0.13.9"
+mime = "0.3.14"
+once_cell = "1.4"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_cbor = "0.11"
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+slog = { version = "2.5", features = ["max_level_debug"] }
+thiserror = "1.0"
+tokio = { version = "0.2.24", features = ["full", "test-util"] }
