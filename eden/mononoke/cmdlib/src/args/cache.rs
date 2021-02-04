@@ -59,6 +59,10 @@ const CACHE_ARGS: &[(&str, &str)] = &[
         BUCKETS_POWER,
         "override the bucket power for cachelib's hashtable",
     ),
+    (
+        SEGMENTED_CHANGELOG_CACHE_SIZE,
+        "override the size of the segmented changelog cache",
+    ),
 ];
 
 pub(crate) fn add_cachelib_args<'a, 'b>(
