@@ -35,6 +35,7 @@ use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
 use futures::{compat::Future01CompatExt, future, try_join};
+use futures_watchdog::WatchdogExt;
 use git_types::TreeHandle;
 use maplit::hashset;
 use memblob::Memblob;
@@ -142,7 +143,8 @@ impl<'a> BlobrepoBuilder<'a> {
             // FIXME: remove clone when make_metadata_sql_factory is async-await
             self.logger.clone(),
         )
-        .compat();
+        .compat()
+        .watched(self.logger);
 
         let blobstore = make_blobstore(
             self.fb,
@@ -152,7 +154,8 @@ impl<'a> BlobrepoBuilder<'a> {
             &self.blobstore_options,
             &self.logger,
             self.config_store,
-        );
+        )
+        .watched(self.logger);
 
         let (sql_factory, blobstore) = future::try_join(sql_factory, blobstore).await?;
 
@@ -168,6 +171,7 @@ impl<'a> BlobrepoBuilder<'a> {
             self.reponame,
             self.blobstore_options.cachelib_options,
         )
+        .watched(self.logger)
         .await
     }
 }

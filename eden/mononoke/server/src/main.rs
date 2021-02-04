@@ -14,6 +14,7 @@ use cloned::cloned;
 use cmdlib::{args, monitoring::ReadyFlagService};
 use fbinit::FacebookInit;
 use futures::channel::oneshot;
+use futures_watchdog::WatchdogExt;
 use mononoke_api::{
     BookmarkUpdateDelay, Mononoke, MononokeEnvironment, WarmBookmarksCacheDerivedData,
 };
@@ -161,7 +162,10 @@ fn main(fb: FacebookInit) -> Result<()> {
                 warm_bookmarks_cache_delay: BookmarkUpdateDelay::Disallow,
             };
 
-            let mononoke = Mononoke::new(&env, config.clone()).await?;
+            let mononoke = Mononoke::new(&env, config.clone())
+                .watched(&root_log)
+                .await?;
+            info!(&root_log, "Built Mononoke");
 
             repo_listener::create_repo_listeners(
                 fb,

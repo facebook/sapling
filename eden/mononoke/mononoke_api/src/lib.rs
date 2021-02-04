@@ -19,7 +19,8 @@ use cached_config::ConfigStore;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::future;
-use slog::{debug, info, Logger};
+use futures_watchdog::WatchdogExt;
+use slog::{debug, info, o, Logger};
 use sql_ext::facebook::MysqlOptions;
 pub use warm_bookmarks_cache::BookmarkUpdateDelay;
 
@@ -87,6 +88,7 @@ impl Mononoke {
                         async move {
                             info!(&env.logger, "Initializing repo: {}", &name);
                             let repo = Repo::new(env, name.clone(), config, common_config)
+                                .watched(env.logger.new(o!("repo" => name.clone())))
                                 .await
                                 .with_context(|| {
                                     format!("could not initialize repo '{}'", &name)

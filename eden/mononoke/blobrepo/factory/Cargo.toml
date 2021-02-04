@@ -28,6 +28,7 @@ fastlog = { path = "../../derived_data/fastlog", version = "0.1.0" }
 filenodes = { path = "../../filenodes", version = "0.1.0" }
 filestore = { path = "../../filestore", version = "0.1.0" }
 fsnodes = { path = "../../derived_data/fsnodes", version = "0.1.0" }
+futures_watchdog = { path = "../../common/futures_watchdog", version = "0.1.0" }
 git_types = { path = "../../git/git_types", version = "0.1.0" }
 memblob = { path = "../../blobstore/memblob", version = "0.1.0" }
 mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data", version = "0.1.0" }

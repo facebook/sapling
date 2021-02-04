@@ -279,6 +279,7 @@ members = [
     "common/bounded_traversal",
     "common/copy_utils",
     "common/dedupmap",
+    "common/futures_watchdog",
     "common/iterhelpers",
     "common/rust/caching_ext",
     "common/rust/slog_ext",

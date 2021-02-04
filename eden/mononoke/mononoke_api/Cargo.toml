@@ -22,6 +22,7 @@ derived_data = { path = "../derived_data", version = "0.1.0" }
 fastlog = { path = "../derived_data/fastlog", version = "0.1.0" }
 filestore = { path = "../filestore", version = "0.1.0" }
 fsnodes = { path = "../derived_data/fsnodes", version = "0.1.0" }
+futures_watchdog = { path = "../common/futures_watchdog", version = "0.1.0" }
 hook_manager_factory = { path = "../hooks/hook_manager_factory", version = "0.1.0" }
 hooks = { path = "../hooks", version = "0.1.0" }
 live_commit_sync_config = { path = "../commit_rewriting/live_commit_sync_config", version = "0.1.0" }

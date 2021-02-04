@@ -9,6 +9,7 @@ include = ["src/**/*.rs"]
 [dependencies]
 alpn = { path = "../alpn", version = "0.1.0" }
 cmdlib = { path = "../cmdlib", version = "0.1.0" }
+futures_watchdog = { path = "../common/futures_watchdog", version = "0.1.0" }
 monitoring = { path = "monitoring", version = "0.1.0" }
 mononoke_api = { path = "../mononoke_api", version = "0.1.0" }
 repo_listener = { path = "repo_listener", version = "0.1.0" }

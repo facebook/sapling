@@ -29,6 +29,7 @@ COMMON_ARGS=(
   --mysql-master-only
   --tunables-config "file:$TESTTMP/mononoke_tunables.json"
   --local-configerator-path "$TESTTMP/configerator"
+  --log-exclude-tag "futures_watchdog"
 )
 if [[ -n "$MYSQL_CLIENT" ]]; then
   COMMON_ARGS+=(--use-mysql-client)

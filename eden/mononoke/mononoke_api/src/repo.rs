@@ -30,6 +30,7 @@ use filestore::{Alias, FetchKey};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::stream::{Stream, StreamExt, TryStreamExt};
 use futures::try_join;
+use futures_watchdog::WatchdogExt;
 use hook_manager_factory::make_hook_manager;
 use hooks::HookManager;
 use itertools::Itertools;
@@ -180,7 +181,7 @@ impl Repo {
             &logger,
             &env.config_store,
         );
-        let blob_repo = builder.build().await?;
+        let blob_repo = builder.build().watched(&logger).await?;
 
         let ctx = CoreContext::new_with_logger(env.fb, logger.clone());
 
@@ -264,12 +265,12 @@ impl Repo {
             hook_manager,
             sql_read_write_status,
         ) = try_join!(
-            repo_permission_checker,
-            service_permission_checker,
-            skiplist_index,
-            warm_bookmarks_cache,
-            hook_manager,
-            sql_read_write_status,
+            repo_permission_checker.watched(&logger),
+            service_permission_checker.watched(&logger),
+            skiplist_index.watched(&logger),
+            warm_bookmarks_cache.watched(&logger),
+            hook_manager.watched(&logger),
+            sql_read_write_status.watched(&logger),
         )?;
 
         let readonly_fetcher = RepoReadWriteFetcher::new(
