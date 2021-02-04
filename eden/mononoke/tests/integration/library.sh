@@ -466,6 +466,7 @@ EOF
 function setup_common_config {
     setup_mononoke_config "$@"
     setup_common_hg_configs
+    setup_configerator_configs
 }
 
 function create_pushrebaserecording_sqlite3_db {
@@ -709,6 +710,25 @@ EOF
   "put_generation": 2,
   "mark_generation": 1,
   "delete_generation": 0
+}
+EOF
+  fi
+
+  export OBSERVABILITY_CONF
+  OBSERVABILITY_CONF="$TESTTMP/configerator/scm/mononoke/observability"
+  mkdir -p "$OBSERVABILITY_CONF"
+  if [[ ! -f "$OBSERVABILITY_CONF/observability_config" ]]; then
+  cat >> "$OBSERVABILITY_CONF/observability_config" <<EOF
+{
+  "slog_config": {
+    "level": 4
+  },
+  "scuba_config": {
+    "level": 1,
+    "verbose_sessions": [],
+    "verbose_unixnames": [],
+    "verbose_source_hostnames": []
+  }
 }
 EOF
   fi
@@ -1739,6 +1759,7 @@ function log() {
 # Default setup that many of the test use
 function default_setup_pre_blobimport() {
   setup_common_config "$@"
+
   cd "$TESTTMP" || exit 1
 
   cat >> "$HGRCPATH" <<EOF

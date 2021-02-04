@@ -50,6 +50,7 @@ futures-old = { package = "futures", version = "0.1.30" }
 itertools = "0.8"
 lazy_static = "1.0"
 maplit = "1.0"
+nonzero_ext = "0.2"
 percent-encoding = "2.1"
 rand = { version = "0.7", features = ["small_rng"] }
 regex = "1.4.2"

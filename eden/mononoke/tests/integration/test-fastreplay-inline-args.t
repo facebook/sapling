@@ -24,7 +24,7 @@ Wait for requests to be logged
 
 Replay traffic
   $ fastreplay_log="$TESTTMP/fastreplay.json"
-  $ quiet fastreplay --scuba-log-file "$fastreplay_log" < "$WIREPROTO_LOGGING_PATH"
+  $ quiet fastreplay --with-dynamic-observability=true --scuba-log-file "$fastreplay_log" < "$WIREPROTO_LOGGING_PATH"
   $ jq -r .normal.command  "$fastreplay_log" | grep -v null | sort | uniq
   getbundle
   getpackv1
@@ -36,7 +36,7 @@ Replay traffic
   $ truncate -s 0 "$fastreplay_log"
 
 Test a few more options
-  $ quiet fastreplay --hash-validation-percentage 10  --scuba-log-file "$fastreplay_log" < "$WIREPROTO_LOGGING_PATH"
+  $ quiet fastreplay --with-dynamic-observability=true --hash-validation-percentage 10  --scuba-log-file "$fastreplay_log" < "$WIREPROTO_LOGGING_PATH"
   $ jq -r .normal.log_tag  "$fastreplay_log" | grep Replay
   Replay Succeeded
   Replay Succeeded
@@ -83,7 +83,7 @@ Check repo client Scuba logging
   >   "skipped_repos": []
   > }
   > EOF
-  $ fastreplay  --live-config "file:${live_config}" --debug < "$WIREPROTO_LOGGING_PATH" 2>&1 | grep "not admitted"
+  $ fastreplay --live-config "file:${live_config}" --debug < "$WIREPROTO_LOGGING_PATH" 2>&1 | grep "not admitted"
   * Request was not admitted (glob)
   * Request was not admitted (glob)
   * Request was not admitted (glob)

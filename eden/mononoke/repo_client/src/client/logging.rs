@@ -190,7 +190,7 @@ impl ScubaOnlyCommandLogger {
         self.extra.insert(k.into(), v.into());
     }
 
-    fn log_command_processed<'a>(self, stats: CommandStats<'a>) {
+    fn log_command_processed(self, stats: CommandStats) {
         let mut scuba = self.ctx.scuba().clone();
         stats.insert_stats(&mut scuba);
         self.ctx.perf_counters().insert_perf_counters(&mut scuba);
