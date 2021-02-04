@@ -20,10 +20,8 @@ struct PortmapMapping {
 
   static constexpr uint32_t kProtoTcp = 6;
   static constexpr uint32_t kProtoUdp = 17;
-
-  bool operator==(const PortmapMapping&) const;
 };
-EDEN_XDR_SERDE_DECL(PortmapMapping);
+EDEN_XDR_SERDE_DECL(PortmapMapping, prog, vers, prot, port);
 
 class PortmapClient {
  public:

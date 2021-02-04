@@ -87,47 +87,47 @@ class RpcTcpHandler : public folly::DelayedDestruction {
     DestructorGuard guard(this);
 
     folly::makeFutureWith([this, input = std::move(input)]() mutable {
-      XdrDeSerializer deser(input.get());
-      rpc::rpc_msg_call call;
-      deSerializeXdrInto(deser, call);
+      folly::io::Cursor deser(input.get());
+      rpc_msg_call call = XdrTrait<rpc_msg_call>::deserialize(deser);
 
       auto resultBuf = IOBuf::create(1024);
-      XdrSerializer ser(resultBuf.get(), 1024);
-      ser.writeBE<uint32_t>(0); // reserve space for fragment header
+      folly::io::Appender ser(resultBuf.get(), 1024);
+      XdrTrait<uint32_t>::serialize(
+          ser, 0); // reserve space for fragment header
 
-      if (call.cbody.rpcvers != rpc::kRPCVersion) {
-        rpc::rpc_msg_reply reply;
-        reply.xid = call.xid;
-        reply.mtype = rpc::msg_type::REPLY;
+      if (call.cbody.rpcvers != kRPCVersion) {
+        rpc_msg_reply reply{
+            call.xid,
+            msg_type::REPLY,
+            reply_body{{
+                reply_stat::MSG_DENIED,
+                rejected_reply{{
+                    reject_stat::RPC_MISMATCH,
+                    mismatch_info{kRPCVersion, kRPCVersion},
+                }},
+            }},
+        };
 
-        rpc::mismatch_info mismatch = {rpc::kRPCVersion, rpc::kRPCVersion};
-
-        rpc::rejected_reply rejected;
-        rejected.set_RPC_MISMATCH(std::move(mismatch));
-
-        rpc::reply_body body;
-        body.set_MSG_DENIED(std::move(rejected));
-
-        reply.rbody = std::move(body);
-        serializeXdr(ser, reply);
+        XdrTrait<rpc_msg_reply>::serialize(ser, reply);
 
         return folly::makeFuture(std::move(resultBuf));
       }
 
       if (auto auth = proc_->checkAuthentication(call.cbody);
-          auth != rpc::auth_stat::AUTH_OK) {
-        rpc::rpc_msg_reply reply;
-        reply.xid = call.xid;
-        reply.mtype = rpc::msg_type::REPLY;
+          auth != auth_stat::AUTH_OK) {
+        rpc_msg_reply reply{
+            call.xid,
+            msg_type::REPLY,
+            reply_body{{
+                reply_stat::MSG_DENIED,
+                rejected_reply{{
+                    reject_stat::AUTH_ERROR,
+                    auth,
+                }},
+            }},
+        };
 
-        rpc::rejected_reply rejected;
-        rejected.set_AUTH_ERROR(std::move(auth));
-
-        rpc::reply_body body;
-        body.set_MSG_DENIED(std::move(rejected));
-
-        reply.rbody = std::move(body);
-        serializeXdr(ser, reply);
+        XdrTrait<rpc_msg_reply>::serialize(ser, reply);
 
         return folly::makeFuture(std::move(resultBuf));
       }
@@ -266,16 +266,16 @@ void RpcServer::RpcAcceptCallback::connectionAccepted(
   handler->setup();
 }
 
-rpc::auth_stat RpcServerProcessor::checkAuthentication(
-    const rpc::call_body& /*call_body*/) {
+auth_stat RpcServerProcessor::checkAuthentication(
+    const call_body& /*call_body*/) {
   // Completely ignore authentication.
   // TODO: something reasonable here
-  return rpc::auth_stat::AUTH_OK;
+  return auth_stat::AUTH_OK;
 }
 
 Future<folly::Unit> RpcServerProcessor::dispatchRpc(
-    XdrDeSerializer /*deser*/,
-    XdrSerializer /*ser*/,
+    folly::io::Cursor /*deser*/,
+    folly::io::Appender /*ser*/,
     uint32_t /*xid*/,
     uint32_t /*progNumber*/,
     uint32_t /*progVersion*/,

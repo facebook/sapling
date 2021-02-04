@@ -13,8 +13,7 @@
 #include <folly/io/IOBufQueue.h>
 #include <folly/logging/xlog.h>
 #include <folly/net/NetworkSocket.h>
-#include "eden/fs/nfs/xdr/XdrDeSerializer.h"
-#include "eden/fs/nfs/xdr/XdrSerializer.h"
+#include "eden/fs/nfs/xdr/Xdr.h"
 
 namespace facebook::eden {
 
@@ -28,7 +27,8 @@ class StreamClient {
   explicit StreamClient(folly::SocketAddress&& addr);
   void connect();
 
-  std::pair<std::unique_ptr<folly::IOBuf>, XdrSerializer> serializeCallHeader(
+  std::pair<std::unique_ptr<folly::IOBuf>, folly::io::Appender>
+  serializeCallHeader(
       uint32_t progNumber,
       uint32_t progVersion,
       uint32_t procNumber);
@@ -46,26 +46,25 @@ class StreamClient {
     XLOG(DBG9) << "header: " << buf->length() << " request memory size is "
                << sizeof(request);
 
-    serializeXdr(appender, request);
+    XdrTrait<T>::serialize(appender, request);
     XLOG(DBG9) << "after req : " << buf->length();
     return fillFrameAndSend(std::move(buf));
   }
 
-  std::tuple<std::unique_ptr<folly::IOBuf>, XdrDeSerializer, uint32_t>
+  std::tuple<std::unique_ptr<folly::IOBuf>, folly::io::Cursor, uint32_t>
   receiveChunk();
 
   template <class T>
   T receiveResult(uint32_t xid) {
-    T result;
-    auto [buf, deser, got_xid] = receiveChunk();
+    auto [buf, cursor, got_xid] = receiveChunk();
     if (xid != got_xid) {
       throw std::runtime_error("mismatched xid!");
     }
-    deSerializeXdrInto(deser, result);
+    T result = XdrTrait<T>::deserialize(cursor);
 
-    if (!deser.isAtEnd()) {
+    if (!cursor.isAtEnd()) {
       throw std::runtime_error(folly::to<std::string>(
-          "unexpected trailing bytes (", deser.totalLength(), ")"));
+          "unexpected trailing bytes (", cursor.totalLength(), ")"));
     }
 
     return result;

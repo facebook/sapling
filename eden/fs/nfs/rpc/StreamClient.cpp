@@ -29,34 +29,35 @@ void StreamClient::connect() {
       folly::netops::connect(s_, (sockaddr*)&socketAddress, len), "connect");
 }
 
-std::pair<std::unique_ptr<IOBuf>, XdrSerializer>
+std::pair<std::unique_ptr<IOBuf>, folly::io::Appender>
 StreamClient::serializeCallHeader(
     uint32_t progNumber,
     uint32_t progVersion,
     uint32_t procNumber) {
   auto buf = IOBuf::create(kDefaultBufferSize);
-  XdrSerializer appender(buf.get(), kDefaultBufferSize);
+  folly::io::Appender appender(buf.get(), kDefaultBufferSize);
 
-  appender.writeBE<uint32_t>(0); // reserve space for fragment header
-  rpc::rpc_msg_call call{
+  XdrTrait<uint32_t>::serialize(
+      appender, 0); // reserve space for fragment header
+  rpc_msg_call call{
       nextXid_,
-      rpc::msg_type::CALL,
-      rpc::call_body{
-          rpc::kRPCVersion,
+      msg_type::CALL,
+      call_body{
+          kRPCVersion,
           progNumber,
           progVersion,
           procNumber,
-          rpc::opaque_auth{
-              rpc::auth_flavor::AUTH_NONE,
-              rpc::OpaqueBytes{},
+          opaque_auth{
+              auth_flavor::AUTH_NONE,
+              OpaqueBytes{},
           },
-          rpc::opaque_auth{
-              rpc::auth_flavor::AUTH_NONE,
-              rpc::OpaqueBytes{},
+          opaque_auth{
+              auth_flavor::AUTH_NONE,
+              OpaqueBytes{},
           }}};
-  serializeXdr(appender, call);
+  XdrTrait<rpc_msg_call>::serialize(appender, call);
 
-  return {std::move(buf), appender};
+  return {std::move(buf), std::move(appender)};
 }
 
 uint32_t StreamClient::fillFrameAndSend(std::unique_ptr<IOBuf> buf) {
@@ -86,7 +87,7 @@ uint32_t StreamClient::fillFrameAndSend(std::unique_ptr<IOBuf> buf) {
   return nextXid_++;
 }
 
-std::tuple<std::unique_ptr<folly::IOBuf>, XdrDeSerializer, uint32_t>
+std::tuple<std::unique_ptr<folly::IOBuf>, folly::io::Cursor, uint32_t>
 StreamClient::receiveChunk() {
   while (true) {
     uint32_t frag;
@@ -118,30 +119,29 @@ StreamClient::receiveChunk() {
 
   auto buf = readBuf_.pop_front();
   XLOG(DBG8) << "recv:\n" << folly::hexDump(buf->data(), buf->length());
-  XdrDeSerializer deser(buf.get());
+  folly::io::Cursor cursor(buf.get());
 
-  rpc::rpc_msg_reply reply;
-  deSerializeXdrInto(deser, reply);
+  rpc_msg_reply reply = XdrTrait<rpc_msg_reply>::deserialize(cursor);
 
   switch (reply.rbody.tag) {
-    case rpc::MSG_ACCEPTED:
-      switch (reply.rbody.get_MSG_ACCEPTED().stat) {
-        case rpc::accept_stat::SUCCESS:
-          return {std::move(buf), std::move(deser), reply.xid};
-        case rpc::accept_stat::PROG_UNAVAIL:
+    case reply_stat::MSG_ACCEPTED:
+      switch (std::get<accepted_reply>(reply.rbody.v).stat) {
+        case accept_stat::SUCCESS:
+          return {std::move(buf), std::move(cursor), reply.xid};
+        case accept_stat::PROG_UNAVAIL:
           throw std::runtime_error("PROG_UNAVAIL");
-        case rpc::accept_stat::PROG_MISMATCH:
+        case accept_stat::PROG_MISMATCH:
           throw std::runtime_error("PROG_MISMATCH");
-        case rpc::accept_stat::PROC_UNAVAIL:
+        case accept_stat::PROC_UNAVAIL:
           throw std::runtime_error("PROC_UNAVAIL");
-        case rpc::accept_stat::GARBAGE_ARGS:
+        case accept_stat::GARBAGE_ARGS:
           throw std::runtime_error("GARBAGE_ARGS");
-        case rpc::accept_stat::SYSTEM_ERR:
+        case accept_stat::SYSTEM_ERR:
           throw std::runtime_error("SYSTEM_ERR");
         default:
           throw std::runtime_error("invalid accept_stat value");
       }
-    case rpc::MSG_DENIED:
+    case reply_stat::MSG_DENIED:
       throw std::runtime_error("MSG_DENIED");
   }
 }

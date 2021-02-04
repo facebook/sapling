@@ -15,7 +15,7 @@
  * https://tools.ietf.org/html/rfc1813#page-106
  */
 
-namespace facebook::eden::rpc {
+namespace facebook::eden {
 
 constexpr uint32_t kMountdProgNumber = 100005;
 constexpr uint32_t kMountdProgVersion = 3;
@@ -32,7 +32,7 @@ enum mountProcs : uint32_t {
   exprt = 5,
 };
 
-enum mountstat3 {
+enum class mountstat3 {
   MNT3_OK = 0, /* no error */
   MNT3ERR_PERM = 1, /* Not owner */
   MNT3ERR_NOENT = 2, /* No such file or directory */
@@ -45,15 +45,16 @@ enum mountstat3 {
   MNT3ERR_SERVERFAULT = 10006 /* A failure on the server */
 };
 
-inline void serializeXdr(XdrSerializer& xdr, InodeNumber ino) {
-  serializeXdr(xdr, ino.get());
-}
+template <>
+struct XdrTrait<InodeNumber> {
+  static void serialize(folly::io::Appender& appender, const InodeNumber& ino) {
+    XdrTrait<uint64_t>::serialize(appender, ino.get());
+  }
 
-inline void deSerializeXdrInto(XdrDeSerializer& xdr, InodeNumber& ino) {
-  uint64_t raw;
-  deSerializeXdrInto(xdr, raw);
-  ino = InodeNumber(raw);
-}
+  static InodeNumber deserialize(folly::io::Cursor& cursor) {
+    return InodeNumber{XdrTrait<uint64_t>::deserialize(cursor)};
+  }
+};
 
 /**
  * Return value of the mnt procedure.
@@ -64,9 +65,7 @@ inline void deSerializeXdrInto(XdrDeSerializer& xdr, InodeNumber& ino) {
 struct mountres3_ok {
   InodeNumber fhandle3;
   std::vector<auth_flavor> auth_flavor;
-
-  bool operator==(const mountres3_ok&) const;
 };
-EDEN_XDR_SERDE_DECL(mountres3_ok);
+EDEN_XDR_SERDE_DECL(mountres3_ok, fhandle3, auth_flavor);
 
-} // namespace facebook::eden::rpc
+} // namespace facebook::eden

@@ -18,10 +18,10 @@ namespace facebook::eden {
 class RpcServerProcessor {
  public:
   virtual ~RpcServerProcessor() = default;
-  virtual rpc::auth_stat checkAuthentication(const rpc::call_body& call_body);
+  virtual auth_stat checkAuthentication(const call_body& call_body);
   virtual folly::Future<folly::Unit> dispatchRpc(
-      XdrDeSerializer deser,
-      XdrSerializer ser,
+      folly::io::Cursor deser,
+      folly::io::Appender ser,
       uint32_t xid,
       uint32_t progNumber,
       uint32_t progVersion,

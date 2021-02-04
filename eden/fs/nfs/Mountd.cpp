@@ -26,30 +26,30 @@ class MountdServerProcessor final : public RpcServerProcessor {
   MountdServerProcessor& operator=(MountdServerProcessor&&) = delete;
 
   folly::Future<folly::Unit> dispatchRpc(
-      XdrDeSerializer deser,
-      XdrSerializer ser,
+      folly::io::Cursor deser,
+      folly::io::Appender ser,
       uint32_t xid,
       uint32_t progNumber,
       uint32_t progVersion,
       uint32_t procNumber) override;
 
   folly::Future<folly::Unit>
-  null(XdrDeSerializer deser, XdrSerializer ser, uint32_t xid);
+  null(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  mount(XdrDeSerializer deser, XdrSerializer ser, uint32_t xid);
+  mount(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  dump(XdrDeSerializer deser, XdrSerializer ser, uint32_t xid);
+  dump(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  umount(XdrDeSerializer deser, XdrSerializer ser, uint32_t xid);
+  umount(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  umountAll(XdrDeSerializer deser, XdrSerializer ser, uint32_t xid);
+  umountAll(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  exprt(XdrDeSerializer deser, XdrSerializer ser, uint32_t xid);
+  exprt(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
 };
 
 using Handler = folly::Future<folly::Unit> (MountdServerProcessor::*)(
-    XdrDeSerializer deser,
-    XdrSerializer ser,
+    folly::io::Cursor deser,
+    folly::io::Appender ser,
     uint32_t xid);
 
 struct HandlerEntry {
@@ -63,105 +63,108 @@ struct HandlerEntry {
 
 constexpr auto kMountHandlers = [] {
   std::array<HandlerEntry, 6> handlers;
-  handlers[rpc::mountProcs::null] = {"NULL", &MountdServerProcessor::null};
-  handlers[rpc::mountProcs::mnt] = {"MNT", &MountdServerProcessor::mount};
-  handlers[rpc::mountProcs::dump] = {"DUMP", &MountdServerProcessor::dump};
-  handlers[rpc::mountProcs::umnt] = {"UMOUNT", &MountdServerProcessor::umount};
-  handlers[rpc::mountProcs::umntAll] = {
+  handlers[mountProcs::null] = {"NULL", &MountdServerProcessor::null};
+  handlers[mountProcs::mnt] = {"MNT", &MountdServerProcessor::mount};
+  handlers[mountProcs::dump] = {"DUMP", &MountdServerProcessor::dump};
+  handlers[mountProcs::umnt] = {"UMOUNT", &MountdServerProcessor::umount};
+  handlers[mountProcs::umntAll] = {
       "UMOUNTALL", &MountdServerProcessor::umountAll};
-  handlers[rpc::mountProcs::exprt] = {"EXPORT", &MountdServerProcessor::exprt};
+  handlers[mountProcs::exprt] = {"EXPORT", &MountdServerProcessor::exprt};
 
   return handlers;
 }();
 
-void serializeReply(XdrSerializer& ser, rpc::accept_stat status, uint32_t xid) {
-  rpc::rpc_msg_reply reply;
-  reply.xid = xid;
-  reply.mtype = rpc::msg_type::REPLY;
-
-  rpc::accepted_reply accepted;
-  accepted.verf.flavor = rpc::auth_flavor::AUTH_NONE;
-  accepted.stat = status;
-
-  rpc::reply_body body;
-  body.set_MSG_ACCEPTED(std::move(accepted));
-
-  reply.rbody = std::move(body);
-
-  serializeXdr(ser, reply);
+void serializeReply(
+    folly::io::Appender& ser,
+    accept_stat status,
+    uint32_t xid) {
+  rpc_msg_reply reply{
+      xid,
+      msg_type::REPLY,
+      reply_body{{
+          reply_stat::MSG_ACCEPTED,
+          accepted_reply{
+              opaque_auth{
+                  auth_flavor::AUTH_NONE,
+                  {},
+              },
+              status,
+          },
+      }},
+  };
+  XdrTrait<rpc_msg_reply>::serialize(ser, reply);
 }
 
 folly::Future<folly::Unit> MountdServerProcessor::null(
-    XdrDeSerializer /*deser*/,
-    XdrSerializer ser,
+    folly::io::Cursor /*deser*/,
+    folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, rpc::accept_stat::SUCCESS, xid);
+  serializeReply(ser, accept_stat::SUCCESS, xid);
   return folly::unit;
 }
 
 folly::Future<folly::Unit> MountdServerProcessor::mount(
-    XdrDeSerializer /*deser*/,
-    XdrSerializer ser,
+    folly::io::Cursor /*deser*/,
+    folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, rpc::accept_stat::PROC_UNAVAIL, xid);
+  serializeReply(ser, accept_stat::SUCCESS, xid);
   return folly::unit;
 }
 
 folly::Future<folly::Unit> MountdServerProcessor::dump(
-    XdrDeSerializer /*deser*/,
-    XdrSerializer ser,
+    folly::io::Cursor /*deser*/,
+    folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, rpc::accept_stat::PROC_UNAVAIL, xid);
+  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
 }
 
 folly::Future<folly::Unit> MountdServerProcessor::umount(
-    XdrDeSerializer /*deser*/,
-    XdrSerializer ser,
+    folly::io::Cursor /*deser*/,
+    folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, rpc::accept_stat::PROC_UNAVAIL, xid);
+  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
 }
 
 folly::Future<folly::Unit> MountdServerProcessor::umountAll(
-    XdrDeSerializer /*deser*/,
-    XdrSerializer ser,
+    folly::io::Cursor /*deser*/,
+    folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, rpc::accept_stat::PROC_UNAVAIL, xid);
+  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
 }
 
 folly::Future<folly::Unit> MountdServerProcessor::exprt(
-    XdrDeSerializer /*deser*/,
-    XdrSerializer ser,
+    folly::io::Cursor /*deser*/,
+    folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, rpc::accept_stat::PROC_UNAVAIL, xid);
+  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
 }
 
 folly::Future<folly::Unit> MountdServerProcessor::dispatchRpc(
-    XdrDeSerializer deser,
-    XdrSerializer ser,
+    folly::io::Cursor deser,
+    folly::io::Appender ser,
     uint32_t xid,
     uint32_t progNumber,
     uint32_t progVersion,
     uint32_t procNumber) {
-  if (progNumber != rpc::kMountdProgNumber) {
-    serializeReply(ser, rpc::accept_stat::PROG_UNAVAIL, xid);
+  if (progNumber != kMountdProgNumber) {
+    serializeReply(ser, accept_stat::PROG_UNAVAIL, xid);
     return folly::unit;
   }
 
-  if (progVersion != rpc::kMountdProgVersion) {
-    serializeReply(ser, rpc::accept_stat::PROG_MISMATCH, xid);
-    rpc::mismatch_info mismatch = {
-        rpc::kMountdProgVersion, rpc::kMountdProgVersion};
-    serializeXdr(ser, mismatch);
+  if (progVersion != kMountdProgVersion) {
+    serializeReply(ser, accept_stat::PROG_MISMATCH, xid);
+    XdrTrait<mismatch_info>::serialize(
+        ser, mismatch_info{kMountdProgVersion, kMountdProgVersion});
     return folly::unit;
   }
 
   if (procNumber >= kMountHandlers.size()) {
     XLOG(ERR) << "Invalid procedure: " << procNumber;
-    serializeReply(ser, rpc::accept_stat::PROC_UNAVAIL, xid);
+    serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
     return folly::unit;
   }
 
@@ -174,7 +177,7 @@ folly::Future<folly::Unit> MountdServerProcessor::dispatchRpc(
 } // namespace
 
 Mountd::Mountd() : server_(std::make_shared<MountdServerProcessor>()) {
-  server_.registerService(rpc::kMountdProgNumber, rpc::kMountdProgVersion);
+  server_.registerService(kMountdProgNumber, kMountdProgVersion);
 }
 
 } // namespace facebook::eden
