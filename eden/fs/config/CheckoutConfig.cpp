@@ -30,8 +30,22 @@ constexpr folly::StringPiece kRepoSection{"repository"};
 constexpr folly::StringPiece kRepoSourceKey{"path"};
 constexpr folly::StringPiece kRepoTypeKey{"type"};
 constexpr folly::StringPiece kRepoCaseSensitiveKey{"case-sensitive"};
+constexpr folly::StringPiece kMountProtocol{"protocol"};
 #ifdef _WIN32
 constexpr folly::StringPiece kRepoGuid{"guid"};
+#endif
+
+#ifdef _WIN32
+constexpr folly::StringPiece kMountProtocolPrjfs{"prjfs"};
+#else
+constexpr folly::StringPiece kMountProtocolFuse{"fuse"};
+#endif
+constexpr folly::StringPiece kMountProtocolNFS{"nfs"};
+
+#ifdef _WIN32
+constexpr folly::StringPiece kMountProtocolDefault{kMountProtocolPrjfs};
+#else
+constexpr folly::StringPiece kMountProtocolDefault{kMountProtocolFuse};
 #endif
 
 // Files of interest in the client directory.
@@ -174,6 +188,12 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   auto repository = configRoot->get_table(kRepoSection.str());
   config->repoType_ = *repository->get_as<std::string>(kRepoTypeKey.str());
   config->repoSource_ = *repository->get_as<std::string>(kRepoSourceKey.str());
+
+  auto mountProtocol = repository->get_as<std::string>(kMountProtocol.str())
+                           .value_or(kMountProtocolDefault);
+  config->mountProtocol_ = mountProtocol == kMountProtocolNFS
+      ? MountProtocol::NFS
+      : (folly::kIsWindows ? MountProtocol::PRJFS : MountProtocol::FUSE);
 
   // Read optional case-sensitivity.
   auto caseSensitive = repository->get_as<bool>(kRepoCaseSensitiveKey.str());

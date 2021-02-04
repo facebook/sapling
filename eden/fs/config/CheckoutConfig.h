@@ -20,6 +20,12 @@
 namespace facebook {
 namespace eden {
 
+enum class MountProtocol {
+  FUSE,
+  PRJFS,
+  NFS,
+};
+
 /**
  * CheckoutConfig contains the configuration state for a single Eden checkout.
  *
@@ -84,6 +90,13 @@ class CheckoutConfig {
   }
 
   /**
+   * Get the channel type that this mount should be using.
+   */
+  MountProtocol getMountProtocol() const {
+    return mountProtocol_;
+  }
+
+  /**
    * Get the repository source.
    *
    * The meaning and format of repository source string depends on the
@@ -115,6 +128,7 @@ class CheckoutConfig {
   const AbsolutePath mountPath_;
   std::string repoType_;
   std::string repoSource_;
+  MountProtocol mountProtocol_;
   bool caseSensitive_{!folly::kIsWindows};
 #ifdef _WIN32
   Guid repoGuid_;
