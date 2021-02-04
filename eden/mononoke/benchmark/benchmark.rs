@@ -129,7 +129,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let matches = args::MononokeAppBuilder::new("mononoke benchmark")
         .without_arg_types(vec![
             ArgType::Config,
-            ArgType::Test,
             ArgType::Repo,
             ArgType::Mysql,
             ArgType::Blobstore,

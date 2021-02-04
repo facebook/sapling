@@ -24,7 +24,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{bail, format_err, Context, Error, Result};
-use cached_config::{ConfigHandle, ConfigStore, TestSource};
+use cached_config::{ConfigHandle, ConfigStore};
 use clap::{App, Arg, ArgGroup, ArgMatches, Values};
 use fbinit::FacebookInit;
 use maybe_owned::MaybeOwned;
@@ -97,8 +97,6 @@ const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
 const READONLY_STORAGE_OLD_ARG: &str = "readonly-storage";
 const READONLY_STORAGE_NEW_ARG: &str = "with-readonly-storage";
 
-const TEST_INSTANCE_ARG: &str = "test-instance";
-
 const LOG_INCLUDE_TAG: &str = "log-include-tag";
 const LOG_EXCLUDE_TAG: &str = "log-exclude-tag";
 // Argument, responsible for instantiation of `ObservabilityContext::Dynamic`
@@ -115,8 +113,6 @@ const CONFIGERATOR_REFRESH_TIMEOUT: Duration = Duration::from_secs(1);
 pub enum ArgType {
     /// Options related to mononoke config
     Config,
-    /// Options related to mononoke tests
-    Test,
     /// Options related to stderr logging,
     Logging,
     /// Adds options related to mysql database connections
@@ -157,7 +153,6 @@ const DEFAULT_ARG_TYPES: &[ArgType] = &[
     ArgType::Mysql,
     ArgType::Repo,
     ArgType::Runtime,
-    ArgType::Test,
     ArgType::Tunables,
 ];
 
@@ -503,15 +498,6 @@ impl MononokeAppBuilder {
                     .long(LOCAL_CONFIGERATOR_PATH_ARG)
                     .takes_value(true)
                     .help("local path to fetch configerator configs from, instead of normal configerator"),
-            );
-        }
-
-        if self.arg_types.contains(&ArgType::Test) {
-            app = app.arg(
-                Arg::with_name(TEST_INSTANCE_ARG)
-                    .long(TEST_INSTANCE_ARG)
-                    .takes_value(false)
-                    .help("disables some functionality for tests"),
             );
         }
 
@@ -1963,10 +1949,6 @@ pub fn init_observability_context<'a>(
     })
 }
 
-pub fn is_test_instance<'a>(matches: &MononokeMatches<'a>) -> bool {
-    matches.is_present(TEST_INSTANCE_ARG)
-}
-
 pub fn init_config_store<'a>(
     fb: FacebookInit,
     root_log: impl Into<Option<&'a Logger>>,
@@ -1990,18 +1972,16 @@ pub fn init_config_store<'a>(
                     .collect()
             },
         );
-        match (is_test_instance(matches), local_configerator_path) {
+        match local_configerator_path {
             // A local configerator path wins
-            (_, Some(path)) => Ok(ConfigStore::file(
+            Some(path) => Ok(ConfigStore::file(
                 root_log.into().cloned(),
                 PathBuf::from(path),
                 String::new(),
                 CONFIGERATOR_POLL_INTERVAL,
             )),
-            // Test instances can't have network configerator
-            (true, None) => Ok(ConfigStore::new(Arc::new(TestSource::new()), None, None)),
             // Prod instances do have network configerator, with signature checks
-            (false, None) => ConfigStore::regex_signed_configerator(
+            None => ConfigStore::regex_signed_configerator(
                 fb,
                 root_log.into().cloned(),
                 crypto_regex,

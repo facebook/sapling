@@ -28,7 +28,7 @@ Setup configuration
   Starting Mononoke server
 
 -- Start up the sync job in the background
-  $ mononoke_x_repo_sync_forever $REPOIDSMALL $REPOIDLARGE --local-configerator-path="$TESTTMP/configerator"
+  $ mononoke_x_repo_sync_forever $REPOIDSMALL $REPOIDLARGE
 
 Before the change
 -- push to a small repo
@@ -78,7 +78,7 @@ Make a config change
   > --dump-mapping-large-repo-path smallrepofolder_after/mapping.json &> /dev/null
   $ flush_mononoke_bookmarks
 
-  $ mononoke_x_repo_sync_forever $REPOIDSMALL $REPOIDLARGE --local-configerator-path="$TESTTMP/configerator"
+  $ mononoke_x_repo_sync_forever $REPOIDSMALL $REPOIDLARGE
 
 After the change
 -- push to a small repo

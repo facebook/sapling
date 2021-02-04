@@ -10,7 +10,7 @@
 
   $ echo "foobar" > "${TESTTMP}/foo"
 
-  $ "$MONONOKE_BENCHMARK_FILESTORE" --test-instance "${TESTTMP}/foo" memory
+  $ "$MONONOKE_BENCHMARK_FILESTORE" "${COMMON_ARGS[@]}" "${TESTTMP}/foo" memory
   Test with FilestoreConfig { * }, writing into ThrottledBlob { * } (glob)
   Write start: 7 B
   Success: * (glob)

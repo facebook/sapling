@@ -12,7 +12,6 @@ function verify_wc() {
    large_repo_commit="$1"
    "$MONONOKE_ADMIN" "${COMMON_ARGS[@]}" --log-level ERROR \
      --mononoke-config-path  "$TESTTMP"/mononoke-config \
-     --local-configerator-path="$TESTTMP/configerator" \
      --source-repo-id="$REPOIDLARGE" --target-repo-id="$REPOIDSMALL" \
      crossrepo verify-wc "$large_repo_commit"
 }
@@ -23,7 +22,6 @@ function validate_commit_sync() {
   shift
   "$COMMIT_VALIDATOR" "${COMMON_ARGS[@]}" --debug --repo-id "$REPOIDLARGE" \
    --mononoke-config-path "$TESTTMP/mononoke-config" \
-   --local-configerator-path="$TESTTMP/configerator" \
    --master-bookmark=master_bookmark \
    once --entry-id "$entry_id" "$@"
 }
@@ -359,7 +357,6 @@ function backsync_large_to_small() {
   "$BACKSYNCER" "${COMMON_ARGS[@]}" --debug --source-repo-id "$REPOIDLARGE" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --target-repo-id "$REPOIDSMALL" \
-    --local-configerator-path="$TESTTMP/configerator" \
     backsync-all
 }
 
@@ -368,7 +365,6 @@ function backsync_large_to_small_forever {
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --source-repo-id "$REPOIDLARGE" \
     --target-repo-id "$REPOIDSMALL" \
-    --local-configerator-path="$TESTTMP/configerator" \
     "$@" \
     backsync-forever >> "$TESTTMP/backsyncer.out" 2>&1 &
 

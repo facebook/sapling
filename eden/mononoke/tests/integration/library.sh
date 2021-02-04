@@ -24,7 +24,12 @@ fi
 REPOID=0
 REPONAME=${REPONAME:-repo}
 
-COMMON_ARGS=(--skip-caching --mysql-master-only --tunables-config "file:$TESTTMP/mononoke_tunables.json" --test-instance)
+COMMON_ARGS=(
+  --skip-caching
+  --mysql-master-only
+  --tunables-config "file:$TESTTMP/mononoke_tunables.json"
+  --local-configerator-path "$TESTTMP/configerator"
+)
 if [[ -n "$MYSQL_CLIENT" ]]; then
   COMMON_ARGS+=(--use-mysql-client)
 fi
@@ -110,7 +115,6 @@ function mononoke {
   --debug \
   --listening-host-port "$(mononoke_address)" \
   --mononoke-config-path "$TESTTMP/mononoke-config" \
-  --local-configerator-path "$TESTTMP/configerator" \
   "${COMMON_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
   export MONONOKE_PID=$!
   echo "$MONONOKE_PID" >> "$DAEMON_PIDS"
@@ -160,7 +164,6 @@ function megarepo_tool {
 function megarepo_tool_multirepo {
   GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
     "${COMMON_ARGS[@]}" \
-    --local-configerator-path="$TESTTMP/configerator" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
     "$@"
 }
@@ -188,7 +191,6 @@ function mononoke_x_repo_sync() {
   GLOG_minloglevel=5 "$MONONOKE_X_REPO_SYNC" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --local-configerator-path="$TESTTMP/configerator" \
     --source-repo-id "$source_repo_id" \
     --target-repo-id "$target_repo_id" \
     "$@"
@@ -259,7 +261,6 @@ function mononoke_bookmarks_filler {
   GLOG_minloglevel=5 "$MONONOKE_BOOKMARKS_FILLER" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --local-configerator-path="$TESTTMP/configerator" \
     --skip-scmquery \
     "$@" "$sql_source" "$sql_name"  2>&1 | grep mononoke_commitcloud_bookmarks_filler
 }
@@ -328,7 +329,6 @@ function mononoke_hg_sync_loop_regenerate {
 function mononoke_admin {
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${COMMON_ARGS[@]}" \
-    --local-configerator-path="$TESTTMP/configerator" \
     --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 }
@@ -340,7 +340,6 @@ function mononoke_admin_source_target {
   shift
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${COMMON_ARGS[@]}" \
-    --local-configerator-path="$TESTTMP/configerator" \
     --source-repo-id "$source_repo_id" \
     --target-repo-id "$target_repo_id" \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
@@ -349,7 +348,6 @@ function mononoke_admin_source_target {
 function mononoke_admin_sourcerepo {
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${COMMON_ARGS[@]}" \
-    --local-configerator-path="$TESTTMP/configerator" \
     --source-repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 
@@ -1113,7 +1111,6 @@ function start_and_wait_for_scs_server {
     -p "$SCS_PORT" \
     --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --local-configerator-path="$TESTTMP/configerator" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
   export SCS_SERVER_PID=$!
   echo "$SCS_SERVER_PID" >> "$DAEMON_PIDS"
@@ -1174,7 +1171,6 @@ function _start_edenapi_server_impl {
     --listen-host "$LOCALIP" \
     --listen-port "$port" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --local-configerator-path="$TESTTMP/configerator" \
     "${COMMON_ARGS[@]}" >> "$log" 2>&1 &
 
   # Record the PID of the spawned process so the test framework
@@ -1856,7 +1852,6 @@ function fastreplay() {
   "$MONONOKE_FASTREPLAY" \
     "${COMMON_ARGS[@]}" \
     --no-skiplist \
-    --local-configerator-path "$TESTTMP/configerator" \
     --no-cache-warmup \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     "$@"
@@ -1972,7 +1967,6 @@ function repo_import() {
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    --local-configerator-path "$TESTTMP/configerator" \
     "$@"
 }
 
