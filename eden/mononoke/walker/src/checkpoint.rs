@@ -176,6 +176,7 @@ impl SqlCheckpoints {
             checkpoint_name,
             &checkpoint.lower_bound,
             &checkpoint.upper_bound,
+            &checkpoint.create_timestamp,
             &checkpoint.update_timestamp,
         )
         .compat()
@@ -214,11 +215,12 @@ queries! {
         checkpoint_name: String,
         lower_bound: u64,
         upper_bound: u64,
+        create_timestamp: Timestamp,
         update_timestamp: Timestamp,
     ) {
         none,
         "UPDATE walker_checkpoints
-        SET lower_bound={lower_bound}, upper_bound={upper_bound}, update_timestamp={update_timestamp}
+        SET lower_bound={lower_bound}, upper_bound={upper_bound}, create_timestamp={create_timestamp}, update_timestamp={update_timestamp}
         WHERE repo_id={repo_id} AND checkpoint_name={checkpoint_name}"
     }
 }

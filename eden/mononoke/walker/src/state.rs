@@ -747,7 +747,7 @@ impl TailingWalkVisitor for WalkState {
     fn end_chunks(&mut self, contiguous_bounds: bool) -> Result<(), Error> {
         if contiguous_bounds {
             if !self.deferred_bcs.is_empty() {
-                // Where we load from checkpoints the chunks may not be contigous,
+                // Where we load from checkpoints the chunks may not be contiguous,
                 // which means that some deferred edges can be covered in the checkpointed
                 // section we are not repeating.
                 bail!(

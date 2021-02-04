@@ -31,6 +31,7 @@ use std::{
     collections::HashSet,
     sync::Arc,
 };
+use strum::IntoEnumIterator;
 use tokio::time::{Duration, Instant};
 
 // We can chose to go direct from the ChangesetId to types keyed by it without loading the Changeset
@@ -79,6 +80,7 @@ pub struct TailParams {
     pub clear_node_types: HashSet<NodeType>,
     pub clear_sample_rate: Option<u64>,
     pub checkpoints: Option<CheckpointsByName>,
+    pub state_max_age: Duration,
     pub checkpoint_sample_rate: u64,
 }
 
@@ -100,6 +102,8 @@ where
     Route: 'static + Send + Clone + StepRoute,
 {
     let repo_id = repo_params.repo.get_repoid();
+
+    let mut state_start = Timestamp::now();
 
     loop {
         cloned!(job_params, tail_params, type_params, make_run);
@@ -154,26 +158,34 @@ where
             info!(repo_params.logger, #log::CHUNKING, "Repo bounds: ({}, {})", lower, upper);
 
             let (contiguous_bounds, best_low, catchup_bounds, main_bounds) = if let Some(
-                ref checkpoint,
+                ref mut checkpoint,
             ) = checkpoint
             {
-                let (catchup_bounds, main_bounds) = checkpoint.stream_bounds(lower, upper)?;
+                let age_secs = checkpoint.create_timestamp.since_seconds();
+                if age_secs >= 0 && Duration::from_secs(age_secs as u64) > tail_params.state_max_age
+                {
+                    info!(repo_params.logger, #log::CHUNKING, "Checkpoint is too old at {}s, running from repo bounds", age_secs);
+                    // Reset checkpoints create_timestamp as we're starting again
+                    checkpoint.create_timestamp = Timestamp::now();
+                    (true, None, None, Some((lower, upper)))
+                } else {
+                    let (catchup_bounds, main_bounds) = checkpoint.stream_bounds(lower, upper)?;
 
-                let contiguous_bounds = match (catchup_bounds, main_bounds) {
-                    (Some((catchup_lower, _)), Some((_, main_upper))) => {
-                        catchup_lower == main_upper
-                    }
-                    (Some(_), None) => false,
-                    _ => true,
-                };
-
-                info!(repo_params.logger, #log::CHUNKING, "Continuing from checkpoint with catchup {:?} and main {:?} bounds", catchup_bounds, main_bounds);
-                (
-                    contiguous_bounds,
-                    Some(checkpoint.lower_bound),
-                    catchup_bounds,
-                    main_bounds,
-                )
+                    let contiguous_bounds = match (catchup_bounds, main_bounds) {
+                        (Some((catchup_lower, _)), Some((_, main_upper))) => {
+                            catchup_lower == main_upper
+                        }
+                        (Some(_), None) => false,
+                        _ => true,
+                    };
+                    info!(repo_params.logger, #log::CHUNKING, "Continuing from checkpoint with catchup {:?} and main {:?} bounds", catchup_bounds, main_bounds);
+                    (
+                        contiguous_bounds,
+                        Some(checkpoint.lower_bound),
+                        catchup_bounds,
+                        main_bounds,
+                    )
+                }
             } else {
                 (true, None, None, Some((lower, upper)))
             };
@@ -308,6 +320,18 @@ where
                 let start = Instant::now();
                 let next_iter_deadline = start + Duration::from_secs(interval);
                 tokio::time::delay_until(next_iter_deadline).await;
+                let age_secs = state_start.since_seconds();
+                if age_secs >= 0 && Duration::from_secs(age_secs as u64) > tail_params.state_max_age
+                {
+                    // Walk state is too old, clear it.
+                    info!(
+                        repo_params.logger,
+                        "Clearing walk state after {} seconds", age_secs
+                    );
+                    visitor
+                        .clear_state(&NodeType::iter().collect(), &InternedType::iter().collect());
+                    state_start = Timestamp::now();
+                }
             }
             None => return Ok(()),
         }

@@ -104,6 +104,7 @@ const CHUNK_CLEAR_SAMPLE_RATE_ARG: &str = "chunk-clear-sample-rate";
 const CHECKPOINT_NAME_ARG: &str = "checkpoint-name";
 const CHECKPOINT_PATH_ARG: &str = "checkpoint-path";
 const CHECKPOINT_SAMPLE_RATE_ARG: &str = "checkpoint-sample-rate";
+const STATE_MAX_AGE_ARG: &str = "state-max-age";
 const INNER_BLOBSTORE_ID_ARG: &str = "inner-blobstore-id";
 const SCRUB_BLOBSTORE_ACTION_ARG: &str = "scrub-blobstore-action";
 const ENABLE_DERIVE_ARG: &str = "enable-derive";
@@ -822,6 +823,15 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Checkpoint the walk covered bounds 1 in N steps."),
         )
         .arg(
+            Arg::with_name(STATE_MAX_AGE_ARG)
+                .long(STATE_MAX_AGE_ARG)
+                .takes_value(true)
+                .required(false)
+                // 5 days = 5 * 24 * 3600 seconds = 432000
+                .default_value("432000")
+                .help("Max age of walk state held internally ot loaded from checkpoint that we will attempt to continue from, in seconds."),
+        )
+        .arg(
             Arg::with_name(ERROR_AS_DATA_NODE_TYPE_ARG)
                 .long(ERROR_AS_DATA_NODE_TYPE_ARG)
                 .short("e")
@@ -961,6 +971,10 @@ pub fn parse_tail_args(sub_m: &ArgMatches) -> Result<TailParams, Error> {
         None
     };
 
+    // Can unwrap these as they have a clap default set
+    let state_max_age = args::get_u64_opt(&sub_m, STATE_MAX_AGE_ARG)
+        .map(Duration::from_secs)
+        .unwrap();
     let checkpoint_sample_rate = args::get_u64_opt(&sub_m, CHECKPOINT_SAMPLE_RATE_ARG).unwrap();
 
     Ok(TailParams {
@@ -971,6 +985,7 @@ pub fn parse_tail_args(sub_m: &ArgMatches) -> Result<TailParams, Error> {
         clear_node_types,
         clear_sample_rate,
         checkpoints,
+        state_max_age,
         checkpoint_sample_rate,
     })
 }
