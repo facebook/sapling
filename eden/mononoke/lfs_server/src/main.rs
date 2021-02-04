@@ -247,7 +247,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches, &logger)?;
 
-    let trusted_proxy_idents = idents_from_values(matches.values_of(ARG_TRUSTED_PROXY_IDENTITY))?;
+    let trusted_proxy_idents = Arc::new(idents_from_values(
+        matches.values_of(ARG_TRUSTED_PROXY_IDENTITY),
+    )?);
 
     scuba_logger.add_common_server_data();
 
@@ -353,7 +355,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let handler = MononokeHttpHandler::builder()
         .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
-        .add(ClientIdentityMiddleware::new(trusted_proxy_idents))
+        .add(ClientIdentityMiddleware::new())
         .add(PostRequestMiddleware::with_config(config_handle))
         .add(RequestContextMiddleware::new(fb, logger.clone()))
         .add(LoadMiddleware::new())
@@ -403,7 +405,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 listener
                     .incoming()
                     .for_each(move |socket| {
-                        cloned!(acceptor, logger, protocol, handler);
+                        cloned!(acceptor, logger, protocol, handler, trusted_proxy_idents);
 
                         let task = async move {
                             let socket = socket.context("Error obtaining socket")?;
@@ -412,8 +414,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                 .await
                                 .context("Error performing TLS handshake")?;
 
-                            let socket_data =
-                                TlsSocketData::from_ssl(ssl_socket.ssl(), capture_session_data);
+                            let socket_data = TlsSocketData::from_ssl(
+                                ssl_socket.ssl(),
+                                trusted_proxy_idents.as_ref(),
+                                capture_session_data,
+                            );
 
                             let service =
                                 ConnectedGothamService::connect(handler, addr, socket_data);

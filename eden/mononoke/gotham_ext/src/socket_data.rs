@@ -17,8 +17,12 @@ pub struct TlsSocketData {
 }
 
 impl TlsSocketData {
-    pub fn from_ssl(ssl: &SslRef, capture_session_data: bool) -> Self {
-        let identities = TlsCertificateIdentities::from_ssl(ssl);
+    pub fn from_ssl(
+        ssl: &SslRef,
+        trusted_proxy_allowlist: &MononokeIdentitySet,
+        capture_session_data: bool,
+    ) -> Self {
+        let identities = TlsCertificateIdentities::from_ssl(ssl, trusted_proxy_allowlist);
 
         let session_data = if capture_session_data {
             TlsSessionData::from_ssl(ssl)
@@ -78,15 +82,22 @@ impl TlsSessionData {
 }
 
 #[derive(Clone, StateData)]
-pub struct TlsCertificateIdentities {
-    pub identities: MononokeIdentitySet,
+pub enum TlsCertificateIdentities {
+    TrustedProxy,
+    Authenticated(MononokeIdentitySet),
 }
 
 impl TlsCertificateIdentities {
-    pub fn from_ssl(ssl: &SslRef) -> Option<Self> {
+    pub fn from_ssl(ssl: &SslRef, trusted_proxy_allowlist: &MononokeIdentitySet) -> Option<Self> {
         let peer_certificate = ssl.peer_certificate()?;
-        Some(Self {
-            identities: MononokeIdentity::try_from_x509(&peer_certificate).ok()?,
-        })
+        let identities = MononokeIdentity::try_from_x509(&peer_certificate).ok()?;
+
+        let ret = if trusted_proxy_allowlist.is_disjoint(&identities) {
+            TlsCertificateIdentities::Authenticated(identities)
+        } else {
+            TlsCertificateIdentities::TrustedProxy
+        };
+
+        Some(ret)
     }
 }

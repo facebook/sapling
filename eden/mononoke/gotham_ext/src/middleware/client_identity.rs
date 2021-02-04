@@ -14,7 +14,6 @@ use lazy_static::lazy_static;
 use percent_encoding::percent_decode;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use std::net::{IpAddr, SocketAddr};
-use std::sync::Arc;
 use trust_dns_resolver::TokioAsyncResolver;
 
 use super::Middleware;
@@ -87,27 +86,21 @@ impl ClientIdentity {
 }
 
 #[derive(Clone)]
-pub struct ClientIdentityMiddleware {
-    trusted_proxy_allowlist: Arc<MononokeIdentitySet>,
-}
+pub struct ClientIdentityMiddleware;
 
 impl ClientIdentityMiddleware {
-    pub fn new(trusted_proxy_idents: MononokeIdentitySet) -> Self {
-        Self {
-            trusted_proxy_allowlist: Arc::new(trusted_proxy_idents),
-        }
+    pub fn new() -> Self {
+        Self
     }
 
     fn extract_client_identities(
         &self,
-        cert_idents: MononokeIdentitySet,
+        tls_certificate_identities: TlsCertificateIdentities,
         headers: &HeaderMap,
     ) -> Option<MononokeIdentitySet> {
-        let is_trusted_proxy = !self.trusted_proxy_allowlist.is_disjoint(&cert_idents);
-        if is_trusted_proxy {
-            request_identities_from_headers(&headers)
-        } else {
-            Some(cert_idents)
+        match tls_certificate_identities {
+            TlsCertificateIdentities::TrustedProxy => request_identities_from_headers(&headers),
+            TlsCertificateIdentities::Authenticated(idents) => Some(idents),
         }
     }
 }
@@ -144,8 +137,7 @@ impl Middleware for ClientIdentityMiddleware {
             client_identity.client_correlator = request_client_correlator_from_headers(&headers);
 
             if let Some(cert_idents) = cert_idents {
-                client_identity.identities =
-                    self.extract_client_identities(cert_idents.identities, &headers);
+                client_identity.identities = self.extract_client_identities(cert_idents, &headers);
             }
         }
 

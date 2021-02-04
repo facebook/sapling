@@ -125,7 +125,7 @@ async fn start(
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches)?;
     let disabled_hooks = args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?;
-    let trusted_proxy_idents = parse_identities(&matches)?;
+    let trusted_proxy_idents = Arc::new(parse_identities(&matches)?);
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
     let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches, &logger)?;
 
@@ -167,7 +167,7 @@ async fn start(
     let router = build_router(ctx);
     let handler = MononokeHttpHandler::builder()
         .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
-        .add(ClientIdentityMiddleware::new(trusted_proxy_idents))
+        .add(ClientIdentityMiddleware::new())
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "edenapi_server",
         )))
@@ -197,7 +197,7 @@ async fn start(
             bind_server_with_socket_data(listener, handler, {
                 cloned!(logger);
                 move |socket| {
-                    cloned!(acceptor, logger);
+                    cloned!(acceptor, logger, trusted_proxy_idents);
                     async move {
                         let ssl_socket = match tokio_openssl::accept(&acceptor, socket).await {
                             Ok(ssl_socket) => ssl_socket,
@@ -207,8 +207,11 @@ async fn start(
                             }
                         };
 
-                        let socket_data =
-                            TlsSocketData::from_ssl(ssl_socket.ssl(), capture_session_data);
+                        let socket_data = TlsSocketData::from_ssl(
+                            ssl_socket.ssl(),
+                            trusted_proxy_idents.as_ref(),
+                            capture_session_data,
+                        );
 
                         Ok((socket_data, ssl_socket))
                     }
