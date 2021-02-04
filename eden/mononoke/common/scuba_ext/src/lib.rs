@@ -12,8 +12,8 @@ use futures_ext::BoxFuture;
 use futures_stats::{FutureStats, StreamStats};
 use itertools::join;
 use observability::{ObservabilityContext, ScubaLoggingDecisionFields, ScubaVerbosityLevel};
-pub use scuba::ScubaValue;
-use scuba::{builder::ServerData, Sampling, ScubaSample, ScubaSampleBuilder};
+use scuba::{builder::ServerData, ScubaSample, ScubaSampleBuilder};
+pub use scuba::{Sampling, ScubaValue};
 use sshrelay::{Metadata, Preamble};
 use std::collections::hash_map::Entry;
 use std::convert::TryInto;
@@ -35,6 +35,9 @@ pub use scribe_ext::ScribeClientImplementation;
 pub struct MononokeScubaSampleBuilder {
     inner: ScubaSampleBuilder,
     maybe_observability_context: Option<ObservabilityContext>,
+    // This field decides if sampled out requests should
+    // still be logged when verbose logging is enabled
+    fallback_sampled_out_to_verbose: bool,
 }
 
 impl std::fmt::Debug for MononokeScubaSampleBuilder {
@@ -48,6 +51,7 @@ impl MononokeScubaSampleBuilder {
         Self {
             inner: ScubaSampleBuilder::new(fb, scuba_table),
             maybe_observability_context: None,
+            fallback_sampled_out_to_verbose: false,
         }
     }
 
@@ -55,6 +59,7 @@ impl MononokeScubaSampleBuilder {
         Self {
             inner: ScubaSampleBuilder::with_discard(),
             maybe_observability_context: None,
+            fallback_sampled_out_to_verbose: false,
         }
     }
 
@@ -128,7 +133,17 @@ impl MononokeScubaSampleBuilder {
         self
     }
 
+
     pub fn log_with_msg<S: Into<Option<String>>>(&mut self, log_tag: &str, msg: S) {
+        if self.fallback_sampled_out_to_verbose
+            && self.should_log_with_level(ScubaVerbosityLevel::Verbose)
+        {
+            // We need to unsample before we log, so that
+            // `sample_rate` field is not added, as we are about
+            // to log everything.
+            self.inner.unsampled();
+        }
+
         self.inner.add("log_tag", log_tag);
         if let Some(mut msg) = msg.into() {
             match tunables().get_max_scuba_msg_length().try_into() {
@@ -197,9 +212,17 @@ impl MononokeScubaSampleBuilder {
     }
 
     pub fn sampled(&mut self, sample_rate: NonZeroU64) -> &mut Self {
+        self.fallback_sampled_out_to_verbose = false;
         self.inner.sampled(sample_rate);
         self
     }
+
+    pub fn sampled_unless_verbose(&mut self, sample_rate: NonZeroU64) -> &mut Self {
+        self.fallback_sampled_out_to_verbose = true;
+        self.inner.sampled(sample_rate);
+        self
+    }
+
 
     pub fn unsampled(&mut self) -> &mut Self {
         self.inner.unsampled();
