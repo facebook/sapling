@@ -137,6 +137,7 @@ finally, should have a run with both catchup and main bounds
   Starting chunk 2 with bounds (1, 2)
   Seen,Loaded: 2,2
   Deferred: 1
+  Deferred edge counts by type were: ChangesetToBonsaiParent:1
   Completed in 2 chunks of size 1
 
 Check that the checkpoint low bound is not used if its too old

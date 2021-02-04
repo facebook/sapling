@@ -1791,6 +1791,13 @@ pub fn get_i64_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Opti
     })
 }
 
+pub fn get_bool_opt<'a>(matches: &impl Borrow<ArgMatches<'a>>, key: &str) -> Option<bool> {
+    matches.borrow().value_of(key).map(|val| {
+        val.parse::<bool>()
+            .unwrap_or_else(|_| panic!("{} must be bool", key))
+    })
+}
+
 pub fn parse_disabled_hooks_with_repo_prefix<'a>(
     matches: &'a MononokeMatches<'a>,
     logger: &Logger,

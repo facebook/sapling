@@ -18,6 +18,7 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::{datetime::DateTime, ChangesetId, RepositoryId};
 use phases::Phases;
 use regex::Regex;
+use slog::Logger;
 use std::{collections::HashSet, fmt, hash, sync::Arc};
 
 pub trait SampleTrigger<K> {
@@ -240,8 +241,8 @@ impl<T> TailingWalkVisitor for SamplingWalkVisitor<T> {
         self.inner.clear_state(node_types, interned_types)
     }
 
-    fn end_chunks(&mut self, contiguous_bounds: bool) -> Result<(), Error> {
-        self.inner.end_chunks(contiguous_bounds)
+    fn end_chunks(&mut self, logger: &Logger, contiguous_bounds: bool) -> Result<(), Error> {
+        self.inner.end_chunks(logger, contiguous_bounds)
     }
 
     fn num_deferred(&self) -> usize {

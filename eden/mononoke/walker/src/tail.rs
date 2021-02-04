@@ -82,6 +82,7 @@ pub struct TailParams {
     pub checkpoints: Option<CheckpointsByName>,
     pub state_max_age: Duration,
     pub checkpoint_sample_rate: u64,
+    pub allow_remaining_deferred: bool,
 }
 
 pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, V, VOut, Route>(
@@ -306,7 +307,10 @@ where
             }
         }
 
-        visitor.end_chunks(contiguous_bounds)?;
+        visitor.end_chunks(
+            &repo_params.logger,
+            contiguous_bounds && !tail_params.allow_remaining_deferred,
+        )?;
 
         if let Some((chunk_size, _heads_fetcher)) = &chunk_params {
             info!(

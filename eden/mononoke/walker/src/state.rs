@@ -6,6 +6,8 @@
  */
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, UnodeFlags, WrappedPath};
+use crate::log;
+use crate::progress::sort_by_string;
 use crate::walk::{
     expand_checked_nodes, EmptyRoute, OutgoingEdge, TailingWalkVisitor, VisitOne, WalkVisitor,
 };
@@ -18,15 +20,17 @@ use bonsai_hg_mapping::BonsaiHgMapping;
 use context::CoreContext;
 use dashmap::{mapref::one::Ref, DashMap};
 use futures::future::TryFutureExt;
+use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{
     ChangesetId, ContentId, DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId, MPathHash,
     ManifestUnodeId, RepositoryId, SkeletonManifestId,
 };
 use phases::{Phase, Phases};
+use slog::{info, Logger};
 use std::{
     cmp,
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fmt,
     hash::Hash,
     marker::PhantomData,
@@ -744,23 +748,50 @@ impl TailingWalkVisitor for WalkState {
         interned_types.iter().for_each(|t| self.clear_interned(*t));
     }
 
-    fn end_chunks(&mut self, contiguous_bounds: bool) -> Result<(), Error> {
-        if contiguous_bounds {
-            if !self.deferred_bcs.is_empty() {
-                // Where we load from checkpoints the chunks may not be contiguous,
-                // which means that some deferred edges can be covered in the checkpointed
-                // section we are not repeating.
+    fn end_chunks(&mut self, logger: &Logger, contiguous_bounds: bool) -> Result<(), Error> {
+        if !self.deferred_bcs.is_empty() {
+            let summary: HashMap<EdgeType, usize> = self
+                .deferred_bcs
+                .iter()
+                .map(|e| e.value().clone())
+                .flatten()
+                .group_by(|e| e.label)
+                .into_iter()
+                .map(|(key, group)| (key, group.count()))
+                .collect();
+
+            let summary_msg: String = sort_by_string(summary.keys())
+                .iter()
+                .map(|k| {
+                    let mut s = k.to_string();
+                    s.push(':');
+                    s.push_str(&summary.get(k).map_or("".to_string(), |v| v.to_string()));
+                    s
+                })
+                .join(" ");
+
+            // Where we load from checkpoints the chunks may not be contiguous,
+            // which means that some deferred edges can be covered in the checkpointed
+            // section we are not repeating.
+            if contiguous_bounds {
+                let mut count = 0;
                 bail!(
-                    "Unexpected remaining edges to walk {:?}",
+                    "Unexpected remaining edges to walk {}, sample of remaining: {:?}",
+                    summary_msg,
                     self.deferred_bcs
                         .iter()
+                        .take_while(|_| {
+                            count += 1;
+                            count < 50
+                        })
                         .map(|e| e.value().clone())
                         .collect::<Vec<_>>()
-                )
+                );
+            } else {
+                info!(logger, #log::CHUNKING, "Deferred edge counts by type were: {}", summary_msg);
+                // Deferrals are only between chunks, clear if all chunks done.
+                self.deferred_bcs.clear();
             }
-        } else {
-            // Deferrals are only between chunks, clear if all chunks done.
-            self.deferred_bcs.clear();
         }
         Ok(())
     }
