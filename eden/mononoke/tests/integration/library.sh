@@ -1956,3 +1956,9 @@ function repo_import() {
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     "$@"
 }
+
+function sqlite3() {
+  # Set a longer timeout so that we don't break if Mononoke currently has a
+  # handle on the DB.
+  command sqlite3 -cmd '.timeout 1000' "$@"
+}
