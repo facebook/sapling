@@ -4,8 +4,13 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+bytes = { version = "0.5", optional = true }
 memmap = "0.7"
 serde = "1"
 
 [dev-dependencies]
 quickcheck = "0.9"
+
+[features]
+default = ["frombytes"]
+frombytes = ["bytes"]

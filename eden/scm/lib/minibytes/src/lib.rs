@@ -25,5 +25,5 @@ mod text;
 #[cfg(test)]
 mod tests;
 
-pub use bytes::{Bytes, BytesOwner};
+pub use crate::bytes::{Bytes, BytesOwner};
 pub use text::{Text, TextOwner};
