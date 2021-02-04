@@ -15,6 +15,8 @@ blobstore_factory = { path = "../../blobstore/factory", version = "0.1.0" }
 cache_warmup = { path = "../../cache_warmup", version = "0.1.0" }
 cmdlib = { path = "../../cmdlib", version = "0.1.0" }
 context = { path = "../context", version = "0.1.0" }
+edenapi_service = { path = "../../edenapi_service", version = "0.1.0" }
+gotham_ext = { path = "../../gotham_ext", version = "0.1.0" }
 hgproto = { path = "../../hgproto", version = "0.1.0" }
 limits = { path = "../../../../configerator/structs/scm/mononoke/loadshedding", version = "0.1.0" }
 load_limiter = { path = "../../load_limiter", version = "0.1.0" }
@@ -52,6 +54,7 @@ bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
 futures-util = "0.3.7"
+gotham = { version = "=0.5.0", default-features = false }
 http = "0.2"
 hyper = "0.13.9"
 lazy_static = "1.0"

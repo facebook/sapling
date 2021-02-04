@@ -20,7 +20,7 @@ mod stream;
 
 pub use crate::connection_acceptor::wait_for_connections_closed;
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use blobrepo_factory::ReadOnlyStorage;
 use cached_config::ConfigStore;
 use fbinit::FacebookInit;
@@ -29,7 +29,7 @@ use mononoke_api::Mononoke;
 use openssl::ssl::SslAcceptor;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::{debug, Logger};
+use slog::{debug, o, Logger};
 use sql_ext::facebook::MysqlOptions;
 use std::sync::{atomic::AtomicBool, Arc};
 
@@ -42,7 +42,7 @@ use crate::repo_handlers::repo_handlers;
 pub async fn create_repo_listeners<'a>(
     fb: FacebookInit,
     common_config: CommonConfig,
-    repos: Mononoke,
+    mononoke: Mononoke,
     mysql_options: &'a MysqlOptions,
     root_log: Logger,
     sockname: String,
@@ -57,7 +57,7 @@ pub async fn create_repo_listeners<'a>(
 ) -> Result<()> {
     let handlers = repo_handlers(
         fb,
-        repos,
+        &mononoke,
         mysql_options,
         readonly_storage,
         &root_log,
@@ -65,6 +65,22 @@ pub async fn create_repo_listeners<'a>(
         scuba,
     )
     .await?;
+
+    let edenapi = {
+        let mut scuba = scuba.clone();
+        scuba.add("service", "edenapi");
+
+        edenapi_service::build(
+            fb,
+            root_log.new(o!("service" => "edenapi")),
+            scuba,
+            mononoke,
+            will_exit.clone(),
+            false,
+            None,
+        )
+        .context("Error instantiating EdenAPI")?
+    };
 
     debug!(root_log, "Mononoke server is listening on {}", sockname);
     connection_acceptor(
@@ -78,6 +94,7 @@ pub async fn create_repo_listeners<'a>(
         terminate_process,
         config_store,
         scribe,
+        edenapi,
         will_exit,
     )
     .await

@@ -131,7 +131,7 @@ pub struct RepoHandler {
 
 pub async fn repo_handlers<'a>(
     fb: FacebookInit,
-    mononoke: Mononoke,
+    mononoke: &'a Mononoke,
     mysql_options: &'a MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     root_log: &Logger,

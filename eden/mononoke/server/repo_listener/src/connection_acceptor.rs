@@ -20,6 +20,7 @@ use std::time::Duration;
 use anyhow::{anyhow, Context, Error, Result};
 use bytes::Bytes;
 use cached_config::{ConfigHandle, ConfigStore};
+use edenapi_service::EdenApi;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::{channel::oneshot, future::Future, select_biased};
@@ -88,6 +89,7 @@ pub async fn connection_acceptor(
     terminate_process: oneshot::Receiver<()>,
     config_store: &ConfigStore,
     scribe: Scribe,
+    edenapi: EdenApi,
     will_exit: Arc<AtomicBool>,
 ) -> Result<()> {
     let load_limiting_config = {
@@ -124,6 +126,7 @@ pub async fn connection_acceptor(
         load_limiting_config,
         scribe,
         logger: root_log.clone(),
+        edenapi,
         enable_http_control_api,
         server_hostname: get_hostname().unwrap_or_else(|_| "unknown_hostname".to_string()),
         will_exit,
@@ -158,6 +161,7 @@ pub struct Acceptor {
     pub load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
     pub scribe: Scribe,
     pub logger: Logger,
+    pub edenapi: EdenApi,
     pub enable_http_control_api: bool,
     pub server_hostname: String,
     pub will_exit: Arc<AtomicBool>,

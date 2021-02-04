@@ -35,6 +35,20 @@ impl TlsSocketData {
             session_data,
         }
     }
+
+    pub fn trusted_proxy() -> Self {
+        Self {
+            identities: Some(TlsCertificateIdentities::TrustedProxy),
+            session_data: None,
+        }
+    }
+
+    pub fn authenticated_identities(identities: MononokeIdentitySet) -> Self {
+        Self {
+            identities: Some(TlsCertificateIdentities::Authenticated(identities)),
+            session_data: None,
+        }
+    }
 }
 
 impl SocketData for TlsSocketData {

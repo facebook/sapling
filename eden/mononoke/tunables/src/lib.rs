@@ -132,6 +132,9 @@ pub struct MononokeTunables {
     commit_cloud_use_background_session_class: AtomicBool,
 
     allow_change_xrepo_mapping_extra: AtomicBool,
+
+    // Disable EdenAPI in http_service.
+    disable_http_service_edenapi: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

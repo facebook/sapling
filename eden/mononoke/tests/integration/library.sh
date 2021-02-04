@@ -1534,6 +1534,29 @@ backofftimes=0
 EOF
 }
 
+function setup_hg_edenapi() {
+  local repo
+  repo="$1"
+
+  cat >> .hg/hgrc <<EOF
+[edenapi]
+url=https://localhost:$MONONOKE_SOCKET/edenapi/$repo
+[remotefilelog]
+http=True
+useruststore=True
+getpackversion = 2
+[treemanifest]
+http=True
+useruststore=True
+[auth]
+edenapi.cert=$TEST_CERTDIR/localhost.crt
+edenapi.key=$TEST_CERTDIR/localhost.key
+edenapi.prefix=localhost
+edenapi.schemes=https
+edenapi.cacerts=$TEST_CERTDIR/root-ca.crt
+EOF
+}
+
 function aliasverify() {
   mode=$1
   shift 1

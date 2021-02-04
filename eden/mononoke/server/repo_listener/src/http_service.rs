@@ -7,17 +7,21 @@
 
 use anyhow::{Context, Error, Result};
 use futures::future::{BoxFuture, FutureExt};
-use http::{request::Parts, HeaderMap, HeaderValue, Method, Request, Response, Uri};
+use gotham::ConnectedGothamService;
+use gotham_ext::socket_data::TlsSocketData;
+use http::{HeaderMap, HeaderValue, Method, Request, Response, Uri};
 use hyper::{service::Service, Body};
 use sha1::{Digest, Sha1};
 use slog::{debug, error, Logger};
 use sshrelay::Metadata;
 use std::io::Cursor;
 use std::marker::PhantomData;
-use std::sync::atomic::Ordering;
+use std::str::FromStr;
+use std::sync::{atomic::Ordering, Arc};
 use std::task;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
+use tunables::tunables;
 
 use crate::connection_acceptor::{
     self, AcceptedConnection, Acceptor, ChannelConn, FramedConn, MononokeStream,
@@ -99,12 +103,11 @@ where
 {
     async fn handle(
         &self,
-        method: Method,
-        uri: &Uri,
-        headers: HeaderMap<HeaderValue>,
+        req: http::request::Parts,
         body: Body,
     ) -> Result<Response<Body>, HttpError> {
-        let upgrade = headers
+        let upgrade = req
+            .headers
             .get(http::header::UPGRADE)
             .as_ref()
             .map(|h| h.to_str())
@@ -118,18 +121,21 @@ where
             .map_err(HttpError::BadRequest)?;
 
         if upgrade == Some("websocket") {
-            return self.handle_websocket_request(&uri, &headers, body).await;
+            return self
+                .handle_websocket_request(&req.uri, &req.headers, body)
+                .await;
         }
 
-        if uri.path() == "/netspeedtest" {
-            return crate::netspeedtest::handle(method, &headers, body).await;
+        if req.uri.path() == "/netspeedtest" {
+            return crate::netspeedtest::handle(req.method, &req.headers, body).await;
         }
 
-        if let Some(path) = uri.path().strip_prefix("/control") {
-            return self.handle_control_request(method, path).await;
+        if let Some(path) = req.uri.path().strip_prefix("/control") {
+            return self.handle_control_request(req.method, path).await;
         }
 
-        if method == Method::GET && (uri.path() == "/" || uri.path() == "/health_check") {
+        if req.method == Method::GET && (req.uri.path() == "/" || req.uri.path() == "/health_check")
+        {
             let res = if self.acceptor().will_exit.load(Ordering::Relaxed) {
                 "EXITING"
             } else {
@@ -142,6 +148,19 @@ where
                 .map_err(HttpError::internal)?;
 
             return Ok(res);
+        }
+
+        let edenapi_path_and_query = req
+            .uri
+            .path_and_query()
+            .as_ref()
+            .and_then(|pq| pq.as_str().strip_prefix("/edenapi"));
+
+        if let Some(edenapi_path_and_query) = edenapi_path_and_query {
+            let pq = http::uri::PathAndQuery::from_str(edenapi_path_and_query)
+                .context("Error translating EdenAPI request path")
+                .map_err(HttpError::internal)?;
+            return self.handle_eden_api_request(req, pq, body).await;
         }
 
         Err(HttpError::NotFound)
@@ -230,6 +249,46 @@ where
         Err(HttpError::NotFound)
     }
 
+    async fn handle_eden_api_request(
+        &self,
+        mut req: http::request::Parts,
+        pq: http::uri::PathAndQuery,
+        body: Body,
+    ) -> Result<Response<Body>, HttpError> {
+        if tunables().get_disable_http_service_edenapi() {
+            let res = Response::builder()
+                .status(http::StatusCode::SERVICE_UNAVAILABLE)
+                .body("EdenAPI service is killswitched".into())
+                .map_err(HttpError::internal)?;
+            return Ok(res);
+        }
+
+        let mut uri_parts = req.uri.into_parts();
+
+        uri_parts.path_and_query = Some(pq);
+
+        req.uri = Uri::from_parts(uri_parts)
+            .context("Error translating EdenAPI request")
+            .map_err(HttpError::internal)?;
+
+        let socket_data = if self.conn.is_trusted {
+            TlsSocketData::trusted_proxy()
+        } else {
+            TlsSocketData::authenticated_identities((*self.conn.identities).clone())
+        };
+
+        let mut gotham = ConnectedGothamService::connect(
+            Arc::new(self.acceptor().edenapi.clone()),
+            self.conn.pending.addr,
+            socket_data,
+        );
+
+        return gotham
+            .call(Request::from_parts(req, body))
+            .await
+            .map_err(HttpError::internal);
+    }
+
     fn acceptor(&self) -> &Acceptor {
         &self.conn.pending.acceptor
     }
@@ -255,20 +314,14 @@ where
         let this = self.clone();
 
         async move {
-            let (
-                Parts {
-                    method,
-                    uri,
-                    headers,
-                    ..
-                },
-                body,
-            ) = req.into_parts();
+            let (req, body) = req.into_parts();
 
+            let method = req.method.clone();
+            let uri = req.uri.clone();
             debug!(this.logger(), "{} {}", method, uri);
 
             let res = this
-                .handle(method.clone(), &uri, headers, body)
+                .handle(req, body)
                 .await
                 .and_then(|mut res| {
                     match HeaderValue::from_str(this.conn.pending.acceptor.server_hostname.as_str())
