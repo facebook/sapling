@@ -183,7 +183,7 @@ pub trait TailingWalkVisitor {
         interned_types: &HashSet<InternedType>,
     );
 
-    fn end_chunks(&mut self) -> Result<(), Error>;
+    fn end_chunks(&mut self, contiguous_bounds: bool) -> Result<(), Error>;
 
     fn num_deferred(&self) -> usize;
 }

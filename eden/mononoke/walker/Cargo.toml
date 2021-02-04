@@ -38,6 +38,7 @@ phases = { path = "../phases", version = "0.1.0" }
 samplingblob = { path = "../blobstore/samplingblob", version = "0.1.0" }
 scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
 skeleton_manifest = { path = "../derived_data/skeleton_manifest", version = "0.1.0" }
+sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
 sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
 unodes = { path = "../derived_data/unodes", version = "0.1.0" }
 async_compression = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
@@ -46,6 +47,7 @@ cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 hash_memo = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 ahash = "0.4.4"
 anyhow = "1.0"
@@ -72,7 +74,3 @@ strum = "0.19"
 strum_macros = "0.19"
 thiserror = "1.0"
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
-
-[dev-dependencies]
-sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }

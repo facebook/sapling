@@ -18,7 +18,6 @@ use cmdlib::{
 };
 
 mod blobstore;
-#[cfg(test)]
 mod checkpoint;
 mod corpus;
 #[macro_use]

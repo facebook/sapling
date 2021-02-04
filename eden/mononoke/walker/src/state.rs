@@ -744,15 +744,23 @@ impl TailingWalkVisitor for WalkState {
         interned_types.iter().for_each(|t| self.clear_interned(*t));
     }
 
-    fn end_chunks(&mut self) -> Result<(), Error> {
-        if !self.deferred_bcs.is_empty() {
-            bail!(
-                "Unexpected remaining edges to walk {:?}",
-                self.deferred_bcs
-                    .iter()
-                    .map(|e| e.value().clone())
-                    .collect::<Vec<_>>()
-            );
+    fn end_chunks(&mut self, contiguous_bounds: bool) -> Result<(), Error> {
+        if contiguous_bounds {
+            if !self.deferred_bcs.is_empty() {
+                // Where we load from checkpoints the chunks may not be contigous,
+                // which means that some deferred edges can be covered in the checkpointed
+                // section we are not repeating.
+                bail!(
+                    "Unexpected remaining edges to walk {:?}",
+                    self.deferred_bcs
+                        .iter()
+                        .map(|e| e.value().clone())
+                        .collect::<Vec<_>>()
+                )
+            }
+        } else {
+            // Deferrals are only between chunks, clear if all chunks done.
+            self.deferred_bcs.clear();
         }
         Ok(())
     }

@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{bail, Error};
 use futures::compat::Future01CompatExt;
 use mononoke_types::{RepositoryId, Timestamp};
 use sql::queries;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
-use std::{fmt, sync::Arc};
+use std::{cmp::Ordering, fmt, sync::Arc};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Checkpoint {
@@ -19,6 +19,40 @@ pub struct Checkpoint {
     pub upper_bound: u64,
     pub create_timestamp: Timestamp,
     pub update_timestamp: Timestamp,
+}
+
+impl Checkpoint {
+    /// Get the bounds for a catchup stream for new Changesets, plus the main stream for continuing from this checkpoint
+    pub fn stream_bounds(
+        &self,
+        repo_lower: u64,
+        repo_upper: u64,
+    ) -> Result<(Option<(u64, u64)>, Option<(u64, u64)>), Error> {
+        // First work out the main bound from checkpoint restart
+        let main_bound = match repo_lower.cmp(&self.lower_bound) {
+            // Checkpoint didn't get to the end, continue from it
+            Ordering::Less => Some((repo_lower, self.lower_bound)),
+            Ordering::Greater => bail!(
+                "Repo lower bound reversed from {} to {}",
+                self.lower_bound,
+                repo_lower
+            ),
+            Ordering::Equal => None,
+        };
+
+        // Then if we need to catchup due to new Changesets
+        match repo_upper.cmp(&self.upper_bound) {
+            // repo has advanced. We'll do the newest part first, then continue from checkpoint
+            Ordering::Greater => Ok((Some((self.upper_bound, repo_upper)), main_bound)),
+            Ordering::Less => bail!(
+                "Repo upper bound reversed from {} to {}",
+                self.upper_bound,
+                repo_upper
+            ),
+            // repo upper still the same as checkpoint, no need to catchup for new Changesets
+            Ordering::Equal => Ok((None, main_bound)),
+        }
+    }
 }
 
 #[derive(Clone)]

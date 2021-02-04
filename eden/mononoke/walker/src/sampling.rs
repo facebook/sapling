@@ -240,8 +240,8 @@ impl<T> TailingWalkVisitor for SamplingWalkVisitor<T> {
         self.inner.clear_state(node_types, interned_types)
     }
 
-    fn end_chunks(&mut self) -> Result<(), Error> {
-        self.inner.end_chunks()
+    fn end_chunks(&mut self, contiguous_bounds: bool) -> Result<(), Error> {
+        self.inner.end_chunks(contiguous_bounds)
     }
 
     fn num_deferred(&self) -> usize {

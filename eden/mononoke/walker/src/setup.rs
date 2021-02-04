@@ -6,6 +6,7 @@
  */
 
 use crate::blobstore;
+use crate::checkpoint::{CheckpointsByName, SqlCheckpoints};
 use crate::graph::{EdgeType, Node, NodeType};
 use crate::log;
 use crate::parse_node::parse_node;
@@ -19,7 +20,7 @@ use crate::validate::{CheckType, REPO, WALK_TYPE};
 use crate::walk::{OutgoingEdge, RepoWalkParams};
 
 use ::blobstore::Blobstore;
-use anyhow::{format_err, Context, Error};
+use anyhow::{bail, format_err, Context, Error};
 use blobrepo_factory::{open_blobrepo_given_datasources, Caching, ReadOnlyStorage};
 use blobstore_factory::{
     make_metadata_sql_factory, CachelibBlobstoreOptions, MetadataSqlFactory, ScrubAction,
@@ -42,6 +43,7 @@ use once_cell::sync::Lazy;
 use samplingblob::SamplingHandler;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, o, warn, Logger};
+use sql_construct::SqlConstruct;
 use std::{
     borrow::Borrow,
     collections::{HashMap, HashSet},
@@ -99,6 +101,9 @@ const EXCLUDE_CHUNK_CLEAR_INTERNED_TYPE_ARG: &str = "exclude-chunk-clear-interne
 const INCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG: &str = "include-chunk-clear-node-type";
 const EXCLUDE_CHUNK_CLEAR_NODE_TYPE_ARG: &str = "exclude-chunk-clear-node-type";
 const CHUNK_CLEAR_SAMPLE_RATE_ARG: &str = "chunk-clear-sample-rate";
+const CHECKPOINT_NAME_ARG: &str = "checkpoint-name";
+const CHECKPOINT_PATH_ARG: &str = "checkpoint-path";
+const CHECKPOINT_SAMPLE_RATE_ARG: &str = "checkpoint-sample-rate";
 const INNER_BLOBSTORE_ID_ARG: &str = "inner-blobstore-id";
 const SCRUB_BLOBSTORE_ACTION_ARG: &str = "scrub-blobstore-action";
 const ENABLE_DERIVE_ARG: &str = "enable-derive";
@@ -794,6 +799,29 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Exclude from NodeTypes to flush between chunks"),
         )
         .arg(
+            Arg::with_name(CHECKPOINT_NAME_ARG)
+                .long(CHECKPOINT_NAME_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Name of checkpoint."),
+        )
+        .arg(
+            Arg::with_name(CHECKPOINT_PATH_ARG)
+                .long(CHECKPOINT_PATH_ARG)
+                .takes_value(true)
+                .required(false)
+                .requires(CHECKPOINT_NAME_ARG)
+                .help("Path for sqlite checkpoint db if using sqlite"),
+        )
+        .arg(
+            Arg::with_name(CHECKPOINT_SAMPLE_RATE_ARG)
+                .long(CHECKPOINT_SAMPLE_RATE_ARG)
+                .takes_value(true)
+                .required(false)
+                .default_value("1")
+                .help("Checkpoint the walk covered bounds 1 in N steps."),
+        )
+        .arg(
             Arg::with_name(ERROR_AS_DATA_NODE_TYPE_ARG)
                 .long(ERROR_AS_DATA_NODE_TYPE_ARG)
                 .short("e")
@@ -914,6 +942,27 @@ pub fn parse_tail_args(sub_m: &ArgMatches) -> Result<TailParams, Error> {
 
     let clear_sample_rate = args::get_u64_opt(&sub_m, CHUNK_CLEAR_SAMPLE_RATE_ARG);
 
+    let checkpoint_name = sub_m.value_of(CHECKPOINT_NAME_ARG).map(|s| s.to_string());
+
+    let checkpoints = if let Some(checkpoint_name) = checkpoint_name {
+        let checkpoint_path = sub_m.value_of(CHECKPOINT_PATH_ARG).map(|s| s.to_string());
+        let sql_checkpoints = if let Some(checkpoint_path) = checkpoint_path {
+            SqlCheckpoints::with_sqlite_path(checkpoint_path, false)?
+        } else {
+            // TODO(ahornby) add mysql schema
+            bail!(
+                "mysql not supported yet, pass path with {} for sqlite based checkpoints",
+                CHECKPOINT_PATH_ARG
+            );
+        };
+
+        Some(CheckpointsByName::new(checkpoint_name, sql_checkpoints))
+    } else {
+        None
+    };
+
+    let checkpoint_sample_rate = args::get_u64_opt(&sub_m, CHECKPOINT_SAMPLE_RATE_ARG).unwrap();
+
     Ok(TailParams {
         tail_secs,
         public_changeset_chunk_size,
@@ -921,6 +970,8 @@ pub fn parse_tail_args(sub_m: &ArgMatches) -> Result<TailParams, Error> {
         clear_interned_types,
         clear_node_types,
         clear_sample_rate,
+        checkpoints,
+        checkpoint_sample_rate,
     })
 }
 

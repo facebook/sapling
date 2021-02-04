@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::checkpoint::{Checkpoint, CheckpointsByName};
 use crate::graph::{ChangesetKey, Node, NodeType};
 use crate::log;
 use crate::setup::JobWalkParams;
@@ -23,7 +24,7 @@ use futures::{
     future::{self, Future},
     stream::{self, BoxStream, StreamExt, TryStreamExt},
 };
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, Timestamp};
 use slog::info;
 use std::{
     cmp::{max, min},
@@ -77,6 +78,8 @@ pub struct TailParams {
     pub clear_interned_types: HashSet<InternedType>,
     pub clear_node_types: HashSet<NodeType>,
     pub clear_sample_rate: Option<u64>,
+    pub checkpoints: Option<CheckpointsByName>,
+    pub checkpoint_sample_rate: u64,
 }
 
 pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, V, VOut, Route>(
@@ -96,6 +99,8 @@ where
     VOut: 'static + Send,
     Route: 'static + Send + Clone + StepRoute,
 {
+    let repo_id = repo_params.repo.get_repoid();
+
     loop {
         cloned!(job_params, tail_params, type_params, make_run);
         let tail_secs = tail_params.tail_secs;
@@ -103,6 +108,16 @@ where
         let ctx = CoreContext::new_with_logger(fb, repo_params.logger.clone());
         let session_text = ctx.session().metadata().session_id().to_string();
         repo_params.scuba_builder.add("session", session_text);
+
+        let mut checkpoint = if let Some(checkpoints) = tail_params.checkpoints.as_ref() {
+            checkpoints.load(repo_id).await?
+        } else {
+            None
+        };
+
+        if let Some(cp) = checkpoint.as_ref() {
+            info!(repo_params.logger, #log::CHUNKING, "Found checkpoint with bounds: ({}, {})", cp.lower_bound, cp.upper_bound);
+        }
 
         let chunk_params = tail_params
             .public_changeset_chunk_size
@@ -129,23 +144,63 @@ where
 
         let is_chunking = chunk_params.is_some();
 
-        // Done in separate step so that heads_fetcher stays live in chunk_params
-        let (_repo_high_bound, chunk_stream) =
-            if let Some((chunk_size, heads_fetcher)) = &chunk_params {
-                let (lower, upper) = heads_fetcher.get_repo_bounds().await?;
-                info!(repo_params.logger, #log::CHUNKING, "Repo bounds: ({}, {})", lower, upper);
-                let s = heads_fetcher
+        // Get the chunk stream and whether the bounds it covers are contiguous
+        let (contiguous_bounds, mut best_bounds, chunk_stream) = if let Some((
+            chunk_size,
+            heads_fetcher,
+        )) = &chunk_params
+        {
+            let (lower, upper) = heads_fetcher.get_repo_bounds().await?;
+            info!(repo_params.logger, #log::CHUNKING, "Repo bounds: ({}, {})", lower, upper);
+
+            let (contiguous_bounds, best_low, catchup_bounds, main_bounds) = if let Some(
+                ref checkpoint,
+            ) = checkpoint
+            {
+                let (catchup_bounds, main_bounds) = checkpoint.stream_bounds(lower, upper)?;
+
+                let contiguous_bounds = match (catchup_bounds, main_bounds) {
+                    (Some((catchup_lower, _)), Some((_, main_upper))) => {
+                        catchup_lower == main_upper
+                    }
+                    (Some(_), None) => false,
+                    _ => true,
+                };
+
+                info!(repo_params.logger, #log::CHUNKING, "Continuing from checkpoint with catchup {:?} and main {:?} bounds", catchup_bounds, main_bounds);
+                (
+                    contiguous_bounds,
+                    Some(checkpoint.lower_bound),
+                    catchup_bounds,
+                    main_bounds,
+                )
+            } else {
+                (true, None, None, Some((lower, upper)))
+            };
+
+            let load_ids = |(lower, upper)| {
+                heads_fetcher
                     .fetch_ids(&ctx, Direction::NewestFirst, Some((lower, upper)))
                     .chunks(*chunk_size)
                     .map(move |v| v.into_iter().collect::<Result<HashSet<_>, Error>>())
-                    .left_stream();
-                (Some(upper), s)
-            } else {
-                (
-                    None,
-                    stream::once(future::ok(HashSet::new())).right_stream(),
-                )
             };
+
+            let main_s = if let Some(main_bounds) = main_bounds {
+                load_ids(main_bounds).left_stream()
+            } else {
+                stream::once(future::ok(HashSet::new())).right_stream()
+            };
+
+            let s = if let Some(catchup_bounds) = catchup_bounds {
+                load_ids(catchup_bounds).chain(main_s).left_stream()
+            } else {
+                main_s.right_stream()
+            };
+            (contiguous_bounds, Some((best_low, upper)), s.left_stream())
+        } else {
+            let s = stream::once(future::ok(HashSet::new())).right_stream();
+            (true, None, s)
+        };
 
         let mut chunk_num: u64 = 0;
 
@@ -200,11 +255,46 @@ where
                         );
                     }
                 }
-                // TODO(ahornby) checkpoint logic can go here. if chunk_num % checkpoint_sample_rate == 0 or chunk.len() < chunk_size
+
+                // Record checkpoint and update best_bounds
+                if let Some((best_low, repo_high_bound)) = &mut best_bounds {
+                    if tail_params.checkpoint_sample_rate != 0
+                        && chunk_num % tail_params.checkpoint_sample_rate == 0
+                    {
+                        let new_best = best_low.map_or_else(
+                            || Some(chunk_low),
+                            |v| if chunk_low < v { Some(chunk_low) } else { None },
+                        );
+                        match (new_best, tail_params.checkpoints.as_ref()) {
+                            (Some(new_best), Some(checkpoints)) => {
+                                let now = Timestamp::now();
+                                if let Some(checkpoint) = &mut checkpoint {
+                                    checkpoint.lower_bound = new_best;
+                                    checkpoint.upper_bound = *repo_high_bound;
+                                    checkpoint.update_timestamp = now;
+                                    info!(logger, #log::CHUNKING, "Chunk {} updating checkpoint to ({}, {})", chunk_num, new_best, repo_high_bound);
+                                    checkpoints.update(repo_id, checkpoint).await?;
+                                } else {
+                                    let new_cp = Checkpoint {
+                                        lower_bound: new_best,
+                                        upper_bound: *repo_high_bound,
+                                        create_timestamp: now,
+                                        update_timestamp: now,
+                                    };
+                                    info!(logger, #log::CHUNKING, "Chunk {} inserting checkpoint ({}, {})", chunk_num, new_best, repo_high_bound);
+                                    checkpoints.insert(repo_id, &new_cp).await?;
+                                    checkpoint.replace(new_cp);
+                                }
+                                best_low.replace(new_best);
+                            }
+                            _ => {}
+                        }
+                    }
+                }
             }
         }
 
-        visitor.end_chunks()?;
+        visitor.end_chunks(contiguous_bounds)?;
 
         if let Some((chunk_size, _heads_fetcher)) = &chunk_params {
             info!(
