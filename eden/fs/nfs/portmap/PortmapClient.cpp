@@ -21,22 +21,18 @@ namespace facebook::eden {
 namespace {
 constexpr uint32_t kPortmapPortNumber = 111;
 constexpr uint32_t kPortmapProgNumber = 100000;
-/*
- * Ideally we should use version 3 and 4, as that appears to have better
- * support for ipv6. For now, and since the goal is to only support a loopback
- * NFS, let's use version 2 and ipv4.
- */
-constexpr uint32_t kPortmapVersionNumber = 2;
+constexpr uint32_t kPortmapVersionNumber = 4;
 constexpr uint32_t kPortmapSet = 1;
 constexpr uint32_t kPortmapUnSet = 2;
-constexpr uint32_t kPortmapGetPort = 3;
+constexpr uint32_t kPortmapGetAddr = 3;
 } // namespace
 
-EDEN_XDR_SERDE_IMPL(PortmapMapping, prog, vers, prot, port);
+EDEN_XDR_SERDE_IMPL(PortmapMapping, prog, vers, netid, addr, owner);
 
 PortmapClient::PortmapClient()
     : client_(SocketAddress(
-          network::NetworkUtil::getLocalIPv4(),
+          network::NetworkUtil::isIPv6Enabled() ? network::kLocalhostIPv6.str()
+                                                : network::kLocalhostIPv4.str(),
           kPortmapPortNumber)) {
 #ifdef __APPLE__
   {
@@ -66,9 +62,9 @@ bool PortmapClient::setMapping(PortmapMapping map) {
       kPortmapProgNumber, kPortmapVersionNumber, kPortmapSet, map);
 }
 
-uint32_t PortmapClient::getPort(PortmapMapping map) {
-  return client_.call<uint32_t, PortmapMapping>(
-      kPortmapProgNumber, kPortmapVersionNumber, kPortmapGetPort, map);
+std::string PortmapClient::getAddr(PortmapMapping map) {
+  return client_.call<std::string, PortmapMapping>(
+      kPortmapProgNumber, kPortmapVersionNumber, kPortmapGetAddr, map);
 }
 
 } // namespace facebook::eden

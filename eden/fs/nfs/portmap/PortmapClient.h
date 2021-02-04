@@ -10,24 +10,29 @@
 #include "eden/fs/nfs/rpc/Rpc.h"
 #include "eden/fs/nfs/rpc/StreamClient.h"
 
+// Implement: https://tools.ietf.org/html/rfc1833
+
 namespace facebook::eden {
 
 struct PortmapMapping {
   uint32_t prog;
   uint32_t vers;
-  uint32_t prot;
-  uint32_t port;
 
-  static constexpr uint32_t kProtoTcp = 6;
-  static constexpr uint32_t kProtoUdp = 17;
+  std::string netid;
+  std::string addr;
+  std::string owner;
+
+  static constexpr const char* kTcpNetId = "tcp";
+  static constexpr const char* kTcp6NetId = "tcp6";
+  static constexpr const char* kLocalNetId = "local";
 };
-EDEN_XDR_SERDE_DECL(PortmapMapping, prog, vers, prot, port);
+EDEN_XDR_SERDE_DECL(PortmapMapping, prog, vers, netid, addr, owner);
 
 class PortmapClient {
  public:
   bool setMapping(PortmapMapping map);
   bool unsetMapping(PortmapMapping map);
-  uint32_t getPort(PortmapMapping map);
+  std::string getAddr(PortmapMapping map);
 
   PortmapClient();
 

@@ -13,29 +13,27 @@
 
 using namespace facebook::eden;
 
-FOLLY_INIT_LOGGING_CONFIG("eden=INFO");
+FOLLY_INIT_LOGGING_CONFIG("eden=DBG9");
 
 int main(int argc, char** argv) {
   folly::init(&argc, &argv);
 
   PortmapClient client;
 
-  auto port =
-      client.getPort(PortmapMapping{100003, 3, PortmapMapping::kProtoTcp, 0});
+  auto addr = client.getAddr(PortmapMapping{100003, 3, "", "", ""});
 
-  XLOG(INFO) << "Got port: " << port;
+  XLOG(INFO) << "Got addr: " << addr;
 
-  // Try to set a bogus port for NFS.
+  // Try to set a bogus address for NFS.
   // This will fail if there is already an NFS daemon running
   XLOG(INFO) << "Set mapping: "
              << client.setMapping(
-                    PortmapMapping{100003, 3, PortmapMapping::kProtoTcp, 123});
+                    PortmapMapping{100003, 3, "tcp6", "::123", "edenfs"});
 
-  // Read back the current port
-  auto newPort =
-      client.getPort(PortmapMapping{100003, 3, PortmapMapping::kProtoTcp, 0});
+  // Read back the current address
+  auto newAddr = client.getAddr(PortmapMapping{100003, 3, "", "", ""});
 
-  XLOG(INFO) << "Got new port: " << newPort;
+  XLOG(INFO) << "Got new addr: " << newAddr;
 
   return 0;
 }
