@@ -61,6 +61,7 @@ def findcommonincoming(
         remote,
         abortwhenunrelated=not force,
         ancestorsof=ancestorsof,
+        explicitremoteheads=heads,
         needlargestcommonset=needlargestcommonset,
     )
     common, anyinc, srvheads = res

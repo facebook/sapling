@@ -224,6 +224,7 @@ def findcommonheads(
     fullsamplesize=200,
     abortwhenunrelated=True,
     ancestorsof=None,
+    explicitremoteheads=None,
     needlargestcommonset=True,
 ):
     """Return a tuple (commonheads, anyincoming, remoteheads) used to
@@ -243,6 +244,8 @@ def findcommonheads(
     - abortwhenunrelated: aborts if 'common' is empty.
     - ancestorsof: heads (in nodes) to consider. 'unknown' is initially
       '::ancestorsof'.
+    - explicitremoteheads: if not None, a list of nodes that are known existed
+      on the remote server.
     - needlargestcommonset: do not try heuristic algorithm that can categorize
       some 'common' commits as 'missing'.
 
@@ -274,6 +277,7 @@ def findcommonheads(
             fullsamplesize,
             abortwhenunrelated,
             ancestorsof,
+            explicitremoteheads,
         )
     else:
         return _findcommonheadsold(
@@ -295,6 +299,7 @@ def _findcommonheadsnew(
     fullsamplesize=200,
     abortwhenunrelated=True,
     ancestorsof=None,
+    explicitremoteheads=None,
 ):
     """New implementation that does not depend on dagutil.py or ancestor.py,
     for easy Rust migration.
