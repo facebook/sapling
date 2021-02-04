@@ -21,6 +21,34 @@ constexpr uint32_t kNfsdProgNumber = 100003;
 constexpr uint32_t kNfsd3ProgVersion = 3;
 
 /**
+ * Procedure values.
+ */
+enum class nfsv3Procs : uint32_t {
+  null = 0,
+  getattr = 1,
+  setattr = 2,
+  lookup = 3,
+  access = 4,
+  readlink = 5,
+  read = 6,
+  write = 7,
+  create = 8,
+  mkdir = 9,
+  symlink = 10,
+  mknod = 11,
+  remove = 12,
+  rmdir = 13,
+  rename = 14,
+  link = 15,
+  readdir = 16,
+  readdirplus = 17,
+  fsstat = 18,
+  fsinfo = 19,
+  pathconf = 20,
+  commit = 21,
+};
+
+/**
  * The NFS spec specify this struct as being opaque from the client
  * perspective, and thus we are free to use what is needed to uniquely identify
  * a file. In EdenFS, this is perfectly represented by an InodeNumber.
