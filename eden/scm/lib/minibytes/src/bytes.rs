@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::any::Any;
 use std::ops::{Range, RangeBounds};
 use std::sync::Arc;
 
@@ -21,9 +22,15 @@ pub struct AbstractBytes<T: ?Sized> {
 }
 
 /// The actual storage owning the bytes.
-pub trait AbstractOwner<T: ?Sized>: AsRef<T> + Send + Sync + 'static {}
+pub trait AbstractOwner<T: ?Sized>: AsRef<T> + Send + Sync + 'static {
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+}
 
-impl<T: BytesOwner> AbstractOwner<[u8]> for T {}
+impl<T: BytesOwner> AbstractOwner<[u8]> for T {
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
 
 // AbstractOwner<T> is Send + Sync and AbstractBytes<T> is immutable.
 unsafe impl<T: ?Sized> Send for AbstractBytes<T> {}
@@ -148,6 +155,23 @@ where
     #[inline]
     pub(crate) fn as_bytes(&self) -> &[u8] {
         unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
+    }
+
+    /// Attempt to downcast to an exclusive mut reference.
+    ///
+    /// Returns None if the type mismatches, or the internal reference count is
+    /// not 0.
+    pub fn downcast_mut<A: Any>(&mut self) -> Option<&mut A> {
+        let arc_owner = match self.owner.as_mut() {
+            None => return None,
+            Some(owner) => owner,
+        };
+        let owner = match Arc::get_mut(arc_owner) {
+            None => return None,
+            Some(owner) => owner,
+        };
+        let any = owner.as_any_mut();
+        any.downcast_mut()
     }
 }
 

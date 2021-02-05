@@ -65,3 +65,14 @@ fn test_text_slice_invalid() {
     let a: Text = SAMPLE_TEXT.into();
     let _b = a.slice(3..11); // invalid utf-8 boundary
 }
+
+#[test]
+fn test_downcast_mut() {
+    let v = b"abcd".to_vec();
+    let mut b = Bytes::from(v);
+    assert!(b.downcast_mut::<Vec<u8>>().is_some());
+    assert!(b.downcast_mut::<String>().is_none());
+    let mut c = b.clone();
+    assert!(b.downcast_mut::<Vec<u8>>().is_none());
+    assert!(c.downcast_mut::<Vec<u8>>().is_none());
+}

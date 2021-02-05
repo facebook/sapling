@@ -6,11 +6,16 @@
  */
 
 use super::bytes::{AbstractBytes, AbstractOwner, SliceLike};
+use std::any::Any;
 
 pub type Text = AbstractBytes<str>;
 pub trait TextOwner: AsRef<str> + Send + Sync + 'static {}
 
-impl<T: TextOwner> AbstractOwner<str> for T {}
+impl<T: TextOwner> AbstractOwner<str> for T {
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
 
 impl Text {
     #[inline]
