@@ -46,6 +46,10 @@ SOCKET_AF = {
 BLOCK_SIZE = 2 * 1024 * 1024
 
 
+def httpstatussuccess(s):
+    return s >= 200 and s < 300
+
+
 def checkdnsresolution(ui, url):
     ui.status(_("Resolving remote hostname: %s\n") % url.host, component="debugnetwork")
     try:
@@ -174,8 +178,8 @@ def checkspeedhttp(ui, url, opts):
         while not res.complete():
             res.read(length=BLOCK_SIZE)
         endtime = util.timer()
-        if res.status != 200:
-            raise error.Abort("downloadtest: HTTP response status code != 200")
+        if not httpstatussuccess(res.status):
+            raise error.Abort("downloadtest: HTTP response status code: %s", res.status)
 
         return endtime - starttime
 
@@ -187,8 +191,9 @@ def checkspeedhttp(ui, url, opts):
         while not res.complete():
             res.read(length=BLOCK_SIZE)
         endtime = util.timer()
-        if res.status != 204:
-            raise error.Abort("uploadtest: HTTP response status code != 204")
+
+        if not httpstatussuccess(res.status):
+            raise error.Abort("uploadtest: HTTP response status code: %s" % res.status)
         return endtime - starttime
 
     def latencytest(n):
@@ -200,8 +205,10 @@ def checkspeedhttp(ui, url, opts):
             while not res.complete():
                 res.read(length=BLOCK_SIZE)
             endtime = util.timer()
-            if res.status != 200:
-                raise error.Abort("latencytest: HTTP response status code != 200")
+            if not httpstatussuccess(res.status):
+                raise error.Abort(
+                    "latencytest: HTTP response status code: %s" % res.status
+                )
             latencies.append(endtime - starttime)
             n -= 1
         return latencies
