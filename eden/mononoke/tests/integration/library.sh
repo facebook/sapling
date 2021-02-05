@@ -622,6 +622,7 @@ $(db_config "$blobstorename")
 [$blobstorename.blobstore.multiplexed]
 multiplex_id = 1
 $(blobstore_db_config)
+minimum_successful_writes = ${MULTIPLEXED}
 components = [
 CONFIG
 
