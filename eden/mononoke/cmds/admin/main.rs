@@ -13,7 +13,7 @@ use blobstore::PutBehaviour;
 use fbinit::FacebookInit;
 use std::process::ExitCode;
 
-use cmdlib::args::{self, MononokeClapApp};
+use cmdlib::args::{self, ArgType, MononokeClapApp};
 use context::CoreContext;
 use slog::error;
 
@@ -59,6 +59,7 @@ mod subcommand_unodes;
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Mononoke admin command line tool")
+        .with_arg_types(vec![ArgType::Scrub])
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
         .with_special_put_behaviour(PutBehaviour::Overwrite)

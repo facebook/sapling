@@ -15,7 +15,7 @@ use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, future::try_join};
 
 use blobstore::{Blobstore, BlobstoreGetData};
-use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage, ScrubAction};
+use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use cached_config::ConfigStore;
 use cmdlib::args::{self, MononokeMatches};
@@ -34,13 +34,11 @@ use sql_ext::facebook::MysqlOptions;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::iter::FromIterator;
-use std::str::FromStr;
 use tokio::{fs::File, io::AsyncWriteExt};
 
 use crate::error::SubcommandError;
 
 pub const BLOBSTORE_FETCH: &str = "blobstore-fetch";
-const SCRUB_BLOBSTORE_ACTION_ARG: &str = "scrub-blobstore-action";
 const RAW_FILE_NAME_ARG: &str = "raw-blob";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
@@ -79,13 +77,6 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .required(false)
                 .help("If main blobstore in the storage config is a multiplexed one, use inner blobstore with this id")
-        )
-        .arg(
-            Arg::with_name(SCRUB_BLOBSTORE_ACTION_ARG)
-                .long(SCRUB_BLOBSTORE_ACTION_ARG)
-                .takes_value(true)
-                .required(false)
-                .help("Enable ScrubBlobstore with the given action. Checks for keys missing from stores. In ReportOnly mode this logs only, otherwise it performs a copy to the missing stores."),
         )
         .arg(
             Arg::with_name(RAW_FILE_NAME_ARG)
@@ -159,14 +150,8 @@ pub async fn subcommand_blobstore_fetch<'a>(
     let redaction = config.redaction;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
-    let scrub_action = sub_m
-        .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
-        .map(ScrubAction::from_str)
-        .transpose()
-        .map_err(Error::from)?;
     let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options =
-        args::parse_blobstore_options(&matches)?.with_scrub_action(scrub_action);
+    let blobstore_options = args::parse_blobstore_options(&matches)?;
 
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_fut = get_blobstore(

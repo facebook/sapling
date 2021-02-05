@@ -63,14 +63,14 @@ Check blobstore-fetch, with scrub actions
   $ ls blobstore/1/blobs | wc -l
   29
 
-  $ mononoke_admin blobstore-fetch --scrub-blobstore-action=ReportOnly changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd 2>&1 | strip_glog
+  $ mononoke_admin --blobstore-scrub-action=ReportOnly blobstore-fetch changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd 2>&1 | strip_glog
   using blobstore: *ScrubBlobstore* (glob)
   scrub: blobstore_id BlobstoreId(1) not repaired for repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
   Some(BlobstoreGetData* (glob)
   $ ls blobstore/1/blobs | wc -l
   29
 
-  $ mononoke_admin blobstore-fetch --scrub-blobstore-action=Repair changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd 2>&1 | strip_glog
+  $ mononoke_admin --blobstore-scrub-action=Repair blobstore-fetch changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd 2>&1 | strip_glog
   using blobstore: *ScrubBlobstore* (glob)
   scrub: blobstore_id BlobstoreId(1) repaired for repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
   Some(BlobstoreGetData* (glob)
