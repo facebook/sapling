@@ -314,6 +314,50 @@ impl NameSet {
         Self::from_query(union::UnionSet::new(self.clone(), other.clone()))
     }
 
+    /// Filter using the given async function. If `filter_func` returns `true`
+    /// for a vertex, then the vertex will be taken, other it will be skipped.
+    pub fn filter(
+        &self,
+        filter_func: Box<dyn Fn(&VertexName) -> BoxFuture<Result<bool>> + Send + Sync + 'static>,
+    ) -> Self {
+        let filter_func = Arc::new(filter_func);
+        let this = self.clone();
+        let result = Self::from_async_evaluate_contains(
+            Box::new({
+                let filter_func = filter_func.clone();
+                let this = this.clone();
+                move || {
+                    let filter_func = filter_func.clone();
+                    let this = this.clone();
+                    Box::pin(async move {
+                        let stream = this.0.iter().await?;
+                        let stream = stream.filter_map(move |v| {
+                            let filter_func = filter_func.clone();
+                            async move {
+                                match v {
+                                    Ok(v) => match (&filter_func)(&v).await {
+                                        Ok(true) => Some(Ok(v)),
+                                        Ok(false) => None,
+                                        Err(e) => Some(Err(e)),
+                                    },
+                                    Err(e) => Some(Err(e)),
+                                }
+                            }
+                        });
+                        Ok(Self::from_stream(Box::pin(stream)))
+                    })
+                }
+            }),
+            Box::new(move |_, v| {
+                let filter_func = filter_func.clone();
+                let this = this.clone();
+                Box::pin(async move { Ok((&filter_func)(v).await? && this.0.contains(v).await?) })
+            }),
+        );
+        result.hints().add_flags(Flags::FILTER);
+        result
+    }
+
     /// Obtain the attached dag if available.
     pub fn dag(&self) -> Option<Arc<dyn DagAlgorithm + Send + Sync>> {
         self.hints().dag()
@@ -1024,6 +1068,19 @@ pub(crate) mod tests {
                 "| Hints(ANCESTORS)",
                 "  Hints(ANCESTORS)"
             ]
+        );
+    }
+
+    #[test]
+    fn test_filter() {
+        let abc: NameSet = "a b c".into();
+        let filter: NameSet = abc.filter(Box::new(|v: &VertexName| {
+            Box::pin(async move { Ok(v.as_ref() != b"a") })
+        }));
+        check_invariants(filter.0.as_ref()).unwrap();
+        assert_eq!(
+            format!("{:?}", r(filter.flatten_names())),
+            "Ok(<static [b, c]>)"
         );
     }
 
