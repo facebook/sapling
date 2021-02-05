@@ -201,6 +201,16 @@ impl AsyncNameSetQuery for LazySet {
         Ok(false)
     }
 
+    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+        let inner = self.inner.lock().await;
+        if inner.visited.contains(name) {
+            return Ok(Some(true));
+        } else if inner.state != State::Incomplete {
+            return Ok(Some(false));
+        }
+        Ok(None)
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }

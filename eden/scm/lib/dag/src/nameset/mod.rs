@@ -520,6 +520,13 @@ pub trait AsyncNameSetQuery: Any + Debug + Send + Sync {
         Ok(false)
     }
 
+    /// Test contains in less than O(N) time.
+    /// Returns None if cannot achieve in less than O(N) time.
+    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+        let _ = name;
+        Ok(None)
+    }
+
     /// For downcasting.
     fn as_any(&self) -> &dyn Any;
 
@@ -1125,6 +1132,14 @@ pub(crate) mod tests {
     /// Check consistency of a `AsyncNameSetQuery`, such as `iter().nth(0)` matches
     /// `first()` etc.
     pub(crate) fn check_invariants(query: &dyn AsyncNameSetQuery) -> Result<()> {
+        // Collect contains_fast result before calling other functions which might
+        // change the internal set state.
+        let contains_fast_vec: Vec<Option<bool>> = (0..=0xff)
+            .map(|b| {
+                let name = VertexName::from(vec![b; 20]);
+                nb(query.contains_fast(&name)).unwrap_or(None)
+            })
+            .collect();
         let is_empty = nb(query.is_empty())?;
         let count = nb(query.count())?;
         let first = nb(query.first())?;
@@ -1162,11 +1177,38 @@ pub(crate) mod tests {
             &query
         );
         assert!(
+            names
+                .iter()
+                .all(|name| nb(query.contains_fast(name)).unwrap_or(None) != Some(false)),
+            "contains_fast() should not return false for names returned by iter() (set: {:?})",
+            &query
+        );
+        assert!(
             (0..=0xff).all(|b| {
                 let name = VertexName::from(vec![b; 20]);
                 nb(query.contains(&name)).ok() == Some(names.contains(&name))
             }),
             "contains() should return false for names not returned by iter() (set: {:?})",
+            &query
+        );
+        assert!(
+            (0..=0xff)
+                .zip(contains_fast_vec.into_iter())
+                .all(|(b, old_contains)| {
+                    let name = VertexName::from(vec![b; 20]);
+                    let contains = nb(query.contains_fast(&name)).unwrap_or(None);
+                    old_contains == None || contains == old_contains
+                }),
+            "contains_fast() should be consistent (set: {:?})",
+            &query
+        );
+        assert!(
+            (0..=0xff).all(|b| {
+                let name = VertexName::from(vec![b; 20]);
+                let contains = nb(query.contains_fast(&name)).unwrap_or(None);
+                contains == None || contains == Some(names.contains(&name))
+            }),
+            "contains_fast() should not return true for names not returned by iter() (set: {:?})",
             &query
         );
         let reversed: Vec<VertexName> = ni(query.iter_rev())?.collect::<Result<Vec<_>>>()?;

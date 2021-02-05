@@ -99,6 +99,15 @@ impl AsyncNameSetQuery for UnionSet {
         Ok(false)
     }
 
+    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+        for set in &self.sets {
+            if let Some(result) = set.contains_fast(name).await? {
+                return Ok(Some(result));
+            }
+        }
+        Ok(None)
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }

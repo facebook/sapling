@@ -59,6 +59,10 @@ impl AsyncNameSetQuery for StaticSet {
         Ok(self.0.contains(name))
     }
 
+    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+        Ok(Some(self.0.contains(name)))
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }

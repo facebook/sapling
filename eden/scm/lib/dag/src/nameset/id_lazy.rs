@@ -312,6 +312,26 @@ impl AsyncNameSetQuery for IdLazySet {
         Ok(false)
     }
 
+    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+        let id = match self
+            .map
+            .vertex_id_with_max_group(name, Group::NON_MASTER)
+            .await?
+        {
+            None => {
+                return Ok(Some(false));
+            }
+            Some(id) => id,
+        };
+        let inner = self.inner.lock().unwrap();
+        if inner.visited.contains(&id) {
+            return Ok(Some(true));
+        } else if inner.state != State::Incomplete {
+            return Ok(Some(false));
+        }
+        Ok(None)
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }

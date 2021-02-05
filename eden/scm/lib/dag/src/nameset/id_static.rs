@@ -197,6 +197,10 @@ impl AsyncNameSetQuery for IdStaticSet {
         Ok(result)
     }
 
+    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+        self.contains(name).await.map(Some)
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }

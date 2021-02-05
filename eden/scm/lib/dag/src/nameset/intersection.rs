@@ -219,6 +219,17 @@ impl AsyncNameSetQuery for IntersectionSet {
         Ok(self.lhs.contains(name).await? && self.rhs.contains(name).await?)
     }
 
+    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+        for set in &[&self.lhs, &self.rhs] {
+            let contains = set.contains_fast(name).await?;
+            match contains {
+                Some(false) | None => return Ok(contains),
+                Some(true) => {}
+            }
+        }
+        Ok(Some(true))
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }

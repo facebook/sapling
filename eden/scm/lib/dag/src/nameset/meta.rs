@@ -135,6 +135,13 @@ impl AsyncNameSetQuery for MetaSet {
         }
     }
 
+    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+        match &self.contains {
+            Some(f) => Ok(Some(f(self, name).await?)),
+            None => Ok(None),
+        }
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }

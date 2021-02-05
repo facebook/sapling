@@ -73,6 +73,20 @@ impl AsyncNameSetQuery for DifferenceSet {
         Ok(self.lhs.contains(name).await? && !self.rhs.contains(name).await?)
     }
 
+    async fn contains_fast(&self, name: &VertexName) -> Result<Option<bool>> {
+        let lhs_contains = self.lhs.contains_fast(name).await?;
+        if lhs_contains == Some(false) {
+            return Ok(Some(false));
+        }
+        let rhs_contains = self.rhs.contains_fast(name).await?;
+        let result = match (lhs_contains, rhs_contains) {
+            (Some(true), Some(false)) => Some(true),
+            (_, Some(true)) | (Some(false), _) => Some(false),
+            (Some(true), None) | (None, _) => None,
+        };
+        Ok(result)
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }
