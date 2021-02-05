@@ -203,6 +203,32 @@ pub(crate) async fn first_ancestor_nth(
     Ok(Some(vertex))
 }
 
+pub(crate) async fn first_ancestors(
+    this: &(impl DagAlgorithm + ?Sized),
+    set: NameSet,
+) -> Result<NameSet> {
+    let mut to_visit: Vec<VertexName> = {
+        let mut list = Vec::with_capacity(set.count().await?);
+        let mut iter = set.iter().await?;
+        while let Some(next) = iter.next().await {
+            let vertex = next?;
+            list.push(vertex);
+        }
+        list
+    };
+    let mut visited: HashSet<VertexName> = to_visit.clone().into_iter().collect();
+    while let Some(v) = to_visit.pop() {
+        #[allow(clippy::never_loop)]
+        if let Some(parent) = this.parent_names(v).await?.into_iter().next() {
+            if visited.insert(parent.clone()) {
+                to_visit.push(parent);
+            }
+        }
+    }
+    let set = NameSet::from_iter(visited.into_iter().map(Ok));
+    this.sort(&set).await
+}
+
 pub(crate) async fn heads(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result<NameSet> {
     Ok(set.clone() - this.parents(set).await?)
 }

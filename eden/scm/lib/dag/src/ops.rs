@@ -57,6 +57,11 @@ pub trait DagAlgorithm: Send + Sync {
         default_impl::first_ancestor_nth(self, name, n).await
     }
 
+    /// Calculates ancestors but only follows the first parent.
+    async fn first_ancestors(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::first_ancestors(self, set).await
+    }
+
     /// Calculates heads of the given set.
     async fn heads(&self, set: NameSet) -> Result<NameSet> {
         default_impl::heads(self, set).await

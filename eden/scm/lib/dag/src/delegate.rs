@@ -117,6 +117,13 @@ macro_rules! delegate {
             {
                 self.$($t)*.ancestors(set)
             }
+            fn first_ancestors<'a: 's, 's>(&'a self, set: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
+                self.$($t)*.first_ancestors(set)
+            }
             fn parents<'a: 's, 's>(&'a self, set: $crate::Set)
                 -> std::pin::Pin<Box<dyn std::future::Future<Output=
                         $crate::Result<$crate::Set>
