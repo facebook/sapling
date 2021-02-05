@@ -70,8 +70,14 @@ lazy_static! {
     static ref OPEN_CONNECTIONS: AtomicUsize = AtomicUsize::new(0);
 }
 
-pub async fn wait_for_connections_closed() {
-    while OPEN_CONNECTIONS.load(Ordering::Relaxed) > 0 {
+pub async fn wait_for_connections_closed(logger: &Logger) {
+    loop {
+        let conns = OPEN_CONNECTIONS.load(Ordering::Relaxed);
+        if conns == 0 {
+            break;
+        }
+
+        slog::info!(logger, "Waiting for {} connections to close", conns);
         tokio::time::delay_for(Duration::new(1, 0)).await;
     }
 }

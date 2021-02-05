@@ -206,7 +206,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 Err(err) => error!(root_log, "could not send termination signal: {:?}", err),
                 _ => {}
             }
-            repo_listener::wait_for_connections_closed().await;
+            repo_listener::wait_for_connections_closed(&root_log).await;
         },
         args::get_shutdown_timeout(&matches)?,
     )
