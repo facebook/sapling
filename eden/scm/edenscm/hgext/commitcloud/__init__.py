@@ -331,49 +331,6 @@ def hintcommitcloudswitch(ui, active):
     )
 
 
-@revsetpredicate("cloudremote([set])")
-def cloudremote(repo, subset, x):
-    """pull missing known changesets from the remote store
-
-    Currently only for obsoleted commits, can be extended for any commit.
-    """
-
-    args = revset.getargs(x, 1, 50, _("cloudremote takes from 1 to up to 50 hex revs"))
-    args = [n[1] for n in args]
-
-    try:
-        nodespulled = missingcloudrevspull(
-            repo, [nodemod.bin(nodehex) for nodehex in args]
-        )
-        hexnodespulled = [nodemod.hex(node) for node in nodespulled]
-        return subset & repo.revs("%ls", hexnodespulled)
-    except Exception as e:
-        repo.ui.status(
-            _("unable to pull all changesets from the remote store\n%s\n") % e,
-            component="commitcloud",
-        )
-    return smartset.baseset([], repo=repo)
-
-
-def missingcloudrevspull(repo, nodes):
-    """pull wrapper for changesets that are known to the obstore and unknown for the repo
-
-    This is, for example, the case for all hidden revs on new clone + cloud sync.
-    """
-    unfi = repo
-
-    def obscontains(nodebin):
-        return bool(unfi.obsstore.successors.get(nodebin, None))
-
-    nodes = [node for node in nodes if node not in unfi and obscontains(node)]
-    if nodes:
-        pullcmd, pullopts = ccutil.getcommandandoptions("pull|pul")
-        pullopts["rev"] = [nodemod.hex(node) for node in nodes]
-        pullcmd(repo.ui, unfi, **pullopts)
-
-    return nodes
-
-
 @revsetpredicate("backedup")
 def backedup(repo, subset, x):
     """draft changesets that have been backed up to Commit Cloud"""
