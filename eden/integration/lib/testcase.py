@@ -144,6 +144,15 @@ class EdenTestCase(EdenTestCaseBase):
         # Just to better reflect normal user environments, update $HOME
         # to point to our test home directory for the duration of the test.
         self.setenv("HOME", str(self.eden.home_dir))
+
+        extra_config = self.edenfs_extra_config()
+        if extra_config:
+            with open(self.eden.system_rc_path, "w") as edenfsrc:
+                for key, values in extra_config.items():
+                    edenfsrc.write(f"[{key}]\n")
+                    for setting in values:
+                        edenfsrc.write(f"{setting}\n")
+
         self.eden.start()
         self.addCleanup(self.eden.cleanup)
         self.report_time("eden daemon started")
@@ -203,6 +212,16 @@ class EdenTestCase(EdenTestCaseBase):
         Get additional arguments to pass to edenfs
         """
         return []
+
+    def edenfs_extra_config(self) -> Optional[Dict[str, List[str]]]:
+        """
+        Get additional configs to write to the edenfs.rc file before starting
+        EdenFS.
+
+        The format is the following:
+        {"namespace": ["key1=value1", "key2=value2"}
+        """
+        return None
 
     def create_hg_repo(
         self, name: str, hgrc: Optional[configparser.ConfigParser] = None
