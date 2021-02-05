@@ -27,7 +27,6 @@ extern const uint64_t Eden_BuildInfo_kTimeUnix;
 #define EDEN_BUILD_REVISION (::Eden_BuildInfo_kRevision)
 #define EDEN_BUILD_TIME_UNIX (::Eden_BuildInfo_kTimeUnix)
 
-#define EDEN_BUILD_FLAVOR "CMake"
 #define EDEN_ETC_EDEN_DIR "${ETC_EDEN_DIR}"
 
 #cmakedefine EDEN_HAVE_CURL
