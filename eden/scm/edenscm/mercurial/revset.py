@@ -595,14 +595,27 @@ def ancestorspec(repo, subset, x, n, order):
         return _childrenspec(repo, subset, x, -n, order)
     ps = set()
     cl = repo.changelog
-    for r in getset(repo, fullreposet(repo), x):
-        for i in range(n):
-            try:
-                r = cl.parentrevs(r)[0]
-            except error.WdirUnsupported:
-                r = repo[r].parents()[0].rev()
-        ps.add(r)
-    return subset & ps
+    s = getset(repo, fullreposet(repo), x)
+    if cl.userust("revset"):
+        firstancestornth = cl.dag.firstancestornth
+        tonode = cl.node
+        torev = cl.rev
+        psadd = ps.add
+        nullrev = node.nullrev
+        for r in s:
+            if r != nullrev:
+                n = firstancestornth(tonode(r), n)
+                if n is not None:
+                    psadd(torev(n))
+    else:
+        for r in s:
+            for i in range(n):
+                try:
+                    r = cl.parentrevs(r)[0]
+                except error.WdirUnsupported:
+                    r = repo[r].parents()[0].rev()
+            ps.add(r)
+    return subset & baseset(ps, repo=repo)
 
 
 @predicate("ancestorsaged(set, agerange)")

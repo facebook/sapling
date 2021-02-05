@@ -761,7 +761,7 @@ pub(crate) mod tests {
     }
 
     impl VecQuery {
-        /// Quickly crate [`VecQuery`] that contains `len(bytes)` items.
+        /// Quickly create [`VecQuery`] that contains `len(bytes)` items.
         pub(crate) fn from_bytes(bytes: &[u8]) -> Self {
             let mut used = [false; 255];
             Self(

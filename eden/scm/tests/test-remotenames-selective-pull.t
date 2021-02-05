@@ -424,4 +424,3 @@ Check the repo.pull API
   $ newrepo
   $ setconfig paths.default=ssh://user@dummy/remoterepo
   $ hg log -r '.~1000000' -T "{node}\n"
-  0000000000000000000000000000000000000000

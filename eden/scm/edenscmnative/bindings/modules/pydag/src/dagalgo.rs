@@ -42,6 +42,12 @@ py_class!(pub class dagalgo |py| {
         Ok(parents.into_iter().map(|name| PyBytes::new(py, name.as_ref())).collect())
     }
 
+    /// The `n`-th first ancestor of `x`
+    def firstancestornth(&self, x: PyBytes, n: u64) -> PyResult<Option<PyBytes>> {
+        let result = block_on(self.dag(py).first_ancestor_nth(Vertex::copy_from(x.data(py)), n)).map_pyerr(py)?;
+        Ok(result.map(|v| PyBytes::new(py, v.as_ref())))
+    }
+
     /// Calculate parents of the given set.
     def heads(&self, set: Names) -> PyResult<Names> {
         Ok(Names(block_on(self.dag(py).heads(set.0)).map_pyerr(py)?))
