@@ -9,7 +9,7 @@ use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreBytes};
 use chrono::Utc;
 use cloned::cloned;
-use context::{CoreContext, SessionId};
+use context::{CoreContext, PerfCounters, SessionId};
 use fbinit::FacebookInit;
 use futures::{FutureExt, TryFutureExt};
 use futures_ext::FutureExt as _;
@@ -120,8 +120,13 @@ pub struct CommandLogger {
 }
 
 impl CommandLogger {
-    pub fn new(ctx: CoreContext, command: String, wireproto: Arc<WireprotoLogging>) -> Self {
-        let inner = ScubaOnlyCommandLogger::new(ctx);
+    pub fn new(
+        ctx: CoreContext,
+        command: String,
+        wireproto: Arc<WireprotoLogging>,
+        request_perf_counters: Arc<PerfCounters>,
+    ) -> Self {
+        let inner = ScubaOnlyCommandLogger::new(ctx, request_perf_counters);
 
         Self {
             inner,
@@ -171,13 +176,15 @@ impl CommandLogger {
 #[must_use = "A CommandLogger does not do anything if you don't use it"]
 pub struct ScubaOnlyCommandLogger {
     ctx: CoreContext,
+    request_perf_counters: Arc<PerfCounters>,
     extra: HashMap<String, ScubaValue>,
 }
 
 impl ScubaOnlyCommandLogger {
-    fn new(ctx: CoreContext) -> Self {
+    fn new(ctx: CoreContext, request_perf_counters: Arc<PerfCounters>) -> Self {
         Self {
             ctx,
+            request_perf_counters,
             extra: HashMap::new(),
         }
     }
@@ -191,6 +198,8 @@ impl ScubaOnlyCommandLogger {
     }
 
     fn log_command_processed(self, stats: CommandStats) {
+        self.request_perf_counters
+            .update_with_counters(self.ctx.perf_counters().top());
         let mut scuba = self.ctx.scuba().clone();
         stats.insert_stats(&mut scuba);
         self.ctx.perf_counters().insert_perf_counters(&mut scuba);

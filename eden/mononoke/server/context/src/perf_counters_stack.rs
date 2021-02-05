@@ -73,6 +73,9 @@ impl PerfCountersStack {
         pub fn set_max_counter(&self, counter: PerfCounterType, val: i64);
     }
 
+    pub fn top(&self) -> &PerfCounters {
+        &self.inner.top
+    }
 
     pub fn get_counter(&self, counter: PerfCounterType) -> i64 {
         self.inner.top.get_counter(counter)

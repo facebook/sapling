@@ -104,6 +104,11 @@ define_perf_counters! {
     }
 }
 
+enum PerfCounterTypeUpdateFunc {
+    Add,
+    Max,
+}
+
 impl PerfCounterType {
     /// Whether to log the zero value of the counter
     fn always_log(&self) -> bool {
@@ -127,6 +132,67 @@ impl PerfCounterType {
             | SqlReadsReplica
             | SqlWrites => true,
             _ => false,
+        }
+    }
+
+    fn expected_update_func(&self) -> PerfCounterTypeUpdateFunc {
+        use PerfCounterType::*;
+
+        match self {
+            BlobGets
+            | BlobGetsAccessWait
+            | BlobGetsShardAccessWait
+            | BlobGetsDeduplicated
+            | BlobPresenceChecks
+            | BlobPuts
+            | BlobPutsAccessWait
+            | BlobPutsShardAccessWait
+            | BlobPutsDeduplicated
+            | BytesSent
+            | CachelibHits
+            | CachelibMisses
+            | GetbundleFilenodesTotalWeight
+            | GetbundleNumCommits
+            | GetbundleNumDrafts
+            | GetbundleNumFilenodes
+            | GetbundleNumManifests
+            | GetbundlePartialTraversal
+            | GetcommitdataNumCommits
+            | GetcommitdataResponseSize
+            | GetpackNumFiles
+            | GetpackNumPossibleLFSFiles
+            | GetpackPossibleLFSFilesSumSize
+            | GetpackResponseSize
+            | FilenodesTooBigHistory
+            | GettreepackDesignatedNodes
+            | GettreepackNumTreepacks
+            | GettreepackResponseSize
+            | HgMutationStoreNumAdded
+            | HgMutationStoreNumFetched
+            | MemcacheHits
+            | MemcacheMisses
+            | NullLinknode
+            | NumKnown
+            | NumUnknown
+            | SkiplistAncestorGen
+            | SkiplistDescendantGen
+            | SkiplistNoskipIterations
+            | SkiplistSkipIterations
+            | SkiplistSkippedGenerations
+            | SqlReadsMaster
+            | SqlReadsReplica
+            | SqlWrites
+            | SumManifoldPollTime
+            | UndesiredTreeFetch
+            | ManifoldBlobSumDelay
+            | ManifoldBlobRetries
+            | ManifoldBlobConflicts
+            | S3BlobRetries
+            | S3BlobSumDelay => PerfCounterTypeUpdateFunc::Add,
+            BlobGetsMaxLatency
+            | BlobPresenceChecksMaxLatency
+            | BlobPutsMaxLatency
+            | GetpackMaxFileSize => PerfCounterTypeUpdateFunc::Max,
         }
     }
 }
@@ -159,6 +225,19 @@ impl PerfCounters {
 
     pub fn get_counter(&self, counter: PerfCounterType) -> i64 {
         self.get_counter_atomic(counter).load(Ordering::Relaxed)
+    }
+
+    pub fn update_with_counters(&self, counters: &PerfCounters) {
+        for key in PERF_COUNTERS.iter() {
+            match key.expected_update_func() {
+                PerfCounterTypeUpdateFunc::Add => {
+                    self.add_to_counter(*key, counters.get_counter(*key))
+                }
+                PerfCounterTypeUpdateFunc::Max => {
+                    self.set_max_counter(*key, counters.get_counter(*key))
+                }
+            };
+        }
     }
 
     pub fn insert_nonzero_perf_counters(&self, builder: &mut MononokeScubaSampleBuilder) {

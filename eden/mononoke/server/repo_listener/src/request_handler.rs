@@ -173,19 +173,22 @@ pub async fn request_handler(
     let mut logging = LoggingContainer::new(fb, conn_log.clone(), scuba.clone());
     logging.with_scribe(scribe);
 
+    let repo_client = RepoClient::new(
+        repo,
+        session.clone(),
+        logging,
+        preserve_raw_bundle2,
+        wireproto_logging,
+        maybe_push_redirector_args,
+        repo_client_knobs,
+    );
+    let request_perf_counters = repo_client.request_perf_counters();
+
     // Construct a hg protocol handler
     let proto_handler = HgProtoHandler::new(
         conn_log.clone(),
         stdin.map(bytes_ext::copy_from_new),
-        RepoClient::new(
-            repo,
-            session.clone(),
-            logging,
-            preserve_raw_bundle2,
-            wireproto_logging,
-            maybe_push_redirector_args,
-            repo_client_knobs,
-        ),
+        repo_client,
         sshproto::HgSshCommandDecode,
         sshproto::HgSshCommandEncode,
         wireproto_calls.clone(),
@@ -222,6 +225,9 @@ pub async fn request_handler(
     // Populate stats no matter what to avoid dead detectors firing.
     STATS::request_success.add_value(0);
     STATS::request_failure.add_value(0);
+
+    // Log request level perf counters
+    request_perf_counters.insert_perf_counters(&mut scuba);
 
     match &result {
         Ok(_) => {

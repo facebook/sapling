@@ -21,7 +21,7 @@ use bookmarks_types::BookmarkKind;
 use bytes::Bytes;
 use bytes_old::{BufMut as BufMutOld, Bytes as BytesOld, BytesMut as BytesMutOld};
 use cloned::cloned;
-use context::{CoreContext, LoggingContainer, PerfCounterType, SessionContainer};
+use context::{CoreContext, LoggingContainer, PerfCounterType, PerfCounters, SessionContainer};
 use filenodes::FilenodeResult;
 use futures::{
     channel::oneshot::{self, Sender},
@@ -437,6 +437,7 @@ pub struct RepoClient {
     maybe_push_redirector_args: Option<PushRedirectorArgs>,
     force_lfs: Arc<AtomicBool>,
     knobs: RepoClientKnobs,
+    request_perf_counters: Arc<PerfCounters>,
 }
 
 impl RepoClient {
@@ -461,7 +462,12 @@ impl RepoClient {
             maybe_push_redirector_args,
             force_lfs: Arc::new(AtomicBool::new(false)),
             knobs,
+            request_perf_counters: Arc::new(PerfCounters::default()),
         }
+    }
+
+    pub fn request_perf_counters(&self) -> Arc<PerfCounters> {
+        self.request_perf_counters.clone()
     }
 
     fn command_future<F, I, E, H>(
@@ -518,6 +524,7 @@ impl RepoClient {
             ctx.clone(),
             command.to_owned(),
             self.wireproto_logging.clone(),
+            self.request_perf_counters.clone(),
         );
 
         (ctx, command_logger)
