@@ -95,7 +95,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(
             SubCommand::with_name(COMMAND_ALL_FILENODES)
-                .about("count how many filenodes for a path")
+                .about("print all filenodes for a path")
                 .arg(
                     Arg::with_name(ARG_PATH)
                         .long(ARG_PATH)
