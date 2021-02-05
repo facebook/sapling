@@ -647,6 +647,35 @@ impl<Store: IdDagStore> IdDag<Store> {
         Ok(result)
     }
 
+    /// Like `ancestors` but follows only the first parents.
+    pub fn first_ancestors(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
+        let set: SpanSet = set.into();
+        let tracing_span = debug_span!("first_ancestors", result = "", set = field::debug(&set));
+        let _scope = tracing_span.enter();
+        let mut result = SpanSet::empty();
+        let mut to_visit: BinaryHeap<_> = set.iter().collect();
+        // Lookup flat segments to figure out the first ancestors.
+        while let Some(id) = to_visit.pop() {
+            if result.contains(id) {
+                // If `id` is in `result`, then `ancestors(id)` are all in `result`.
+                continue;
+            }
+            let flat_seg = self.find_flat_segment_including_id(id)?;
+            if let Some(ref seg) = flat_seg {
+                let span = seg.span()?;
+                result.push_span((span.low..=id).into());
+                if let Some(&p) = seg.parents()?.get(0) {
+                    to_visit.push(p);
+                }
+            }
+        }
+        if !tracing_span.is_disabled() {
+            tracing_span.record("result", &field::debug(&result));
+        }
+        Ok(result)
+    }
+
+
     /// Calculate merges within the given set.
     pub fn merges(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let mut result = SpanSet::empty();
