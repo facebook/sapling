@@ -235,6 +235,63 @@ impl SpanSet {
         }
     }
 
+    /// Skip the first `n` items.
+    pub fn skip(&self, mut n: u64) -> Self {
+        #[cfg(test)]
+        let expected = n.max(self.count()) - n;
+        let mut result = SpanSet::empty();
+        for span in self.as_spans() {
+            if n == 0 {
+                result.push_span(*span);
+            } else {
+                let count = span.count();
+                if count <= n {
+                    // This span is skipped entirely.
+                    n -= count;
+                } else {
+                    // This span is skipped partially.
+                    debug_assert!(n > 0);
+                    debug_assert!(n < count);
+                    let high = span.high - n;
+                    n = 0;
+                    result.push_span((span.low..=high).into());
+                }
+            }
+        }
+        #[cfg(test)]
+        assert_eq!(result.count(), expected);
+        result
+    }
+
+    /// Only take the first `n` items.
+    pub fn take(&self, mut n: u64) -> Self {
+        #[cfg(test)]
+        let expected = n.min(self.count());
+        let mut result = SpanSet::empty();
+        for span in self.as_spans() {
+            if n == 0 {
+                break;
+            } else {
+                let count = span.count();
+                if count <= n {
+                    // This span is taken entirely.
+                    n -= count;
+                    result.push_span(*span);
+                } else {
+                    // Part of the span is the last to be taken.
+                    debug_assert!(n > 0);
+                    debug_assert!(n < count);
+                    let low = span.high - (n - 1);
+                    n = 0;
+                    result.push_span((low..=span.high).into());
+                }
+            }
+        }
+        #[cfg(test)]
+        assert_eq!(result.count(), expected);
+        result
+    }
+
     /// Calculates the union of two sets.
     pub fn union(&self, rhs: &SpanSet) -> SpanSet {
         let mut spans = VecDeque::with_capacity((self.spans.len() + rhs.spans.len()).min(32));
@@ -666,6 +723,38 @@ mod tests {
 
         let set = SpanSet::from_spans(vec![1..=10, 20..=20, 31..=40]);
         assert_eq!(set.count(), 10 + 1 + 10);
+    }
+
+    #[test]
+    fn test_skip() {
+        let set = SpanSet::from_spans(vec![1..=10, 20..=20, 31..=40]);
+        let skip = |n| format!("{:?}", set.skip(n));
+        assert_eq!(skip(0), "1..=10 20 31..=40");
+        assert_eq!(skip(1), "1..=10 20 31..=39");
+        assert_eq!(skip(9), "1..=10 20 31");
+        assert_eq!(skip(10), "1..=10 20");
+        assert_eq!(skip(11), "1..=10");
+        assert_eq!(skip(12), "1..=9");
+        assert_eq!(skip(20), "1");
+        assert_eq!(skip(21), "");
+        assert_eq!(skip(22), "");
+        assert_eq!(skip(50), "");
+    }
+
+    #[test]
+    fn test_take() {
+        let set = SpanSet::from_spans(vec![1..=10, 20..=20, 31..=40]);
+        let take = |n| format!("{:?}", set.take(n));
+        assert_eq!(take(0), "");
+        assert_eq!(take(1), "40");
+        assert_eq!(take(9), "32..=40");
+        assert_eq!(take(10), "31..=40");
+        assert_eq!(take(11), "20 31..=40");
+        assert_eq!(take(12), "10 20 31..=40");
+        assert_eq!(take(20), "2..=10 20 31..=40");
+        assert_eq!(take(21), "1..=10 20 31..=40");
+        assert_eq!(take(22), "1..=10 20 31..=40");
+        assert_eq!(take(50), "1..=10 20 31..=40");
     }
 
     #[test]
