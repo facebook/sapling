@@ -564,6 +564,42 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
 #endif
 }
 
+void PrivHelperServer::nfsMount(
+    std::string mountPath,
+    uint16_t mountdPort,
+    uint16_t nfsdPort,
+    bool readOnly) {
+#ifdef __APPLE__
+  // TODO(xavierd): build the NFS mount args found in:
+  // https://opensource.apple.com/source/NFS/NFS-150.40.3/mount_nfs/nfs_sys_prot.x.auto.html
+  // Or invoke mount_nfs directly.
+  throw std::runtime_error("NFS is not yet supported on macOS");
+#else
+  // Prepare the flags and options to pass to mount(2).
+  // Since each mount point will have its own NFS server, we need to manually
+  // specify it.
+  auto mountOpts = fmt::format(
+      "addr=127.0.0.1,vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},noresvport",
+      nfsdPort,
+      mountdPort);
+
+  // The mount flags.
+  // We do not use MS_NODEV.  MS_NODEV prevents mount points from being created
+  // inside our filesystem.  We currently use bind mounts to point the buck-out
+  // directory to an alternate location outside of eden.
+  int mountFlags = MS_NOSUID;
+  if (readOnly) {
+    mountFlags |= MS_RDONLY;
+  }
+  auto source = fmt::format("127.0.0.1:{}", mountPath);
+  XLOG(WARN) << "Mounting: " << source << ", opts=" << mountOpts;
+
+  int rc = mount(
+      source.c_str(), mountPath.c_str(), "nfs", mountFlags, mountOpts.c_str());
+  checkUnixError(rc, "failed to mount");
+#endif
+}
+
 void PrivHelperServer::bindMount(
     const char* clientPath,
     const char* mountPath) {
@@ -642,6 +678,20 @@ UnixSocket::Message PrivHelperServer::processMountMsg(Cursor& cursor) {
   mountPoints_.insert(mountPath);
 
   return makeResponse(std::move(fuseDev));
+}
+
+UnixSocket::Message PrivHelperServer::processMountNfsMsg(Cursor& cursor) {
+  string mountPath;
+  uint16_t mountdPort, nfsdPort;
+  bool readOnly;
+  PrivHelperConn::parseMountNfsRequest(
+      cursor, mountPath, mountdPort, nfsdPort, readOnly);
+  XLOG(DBG3) << "mount.nfs \"" << mountPath << "\"";
+
+  nfsMount(mountPath, mountdPort, nfsdPort, readOnly);
+  mountPoints_.insert(mountPath);
+
+  return makeResponse();
 }
 
 UnixSocket::Message PrivHelperServer::processUnmountMsg(Cursor& cursor) {
@@ -917,6 +967,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
   switch (msgType) {
     case PrivHelperConn::REQ_MOUNT_FUSE:
       return processMountMsg(cursor);
+    case PrivHelperConn::REQ_MOUNT_NFS:
+      return processMountNfsMsg(cursor);
     case PrivHelperConn::REQ_MOUNT_BIND:
       return processBindMountMsg(cursor);
     case PrivHelperConn::REQ_UNMOUNT_FUSE:

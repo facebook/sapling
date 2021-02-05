@@ -46,6 +46,7 @@ class PrivHelperConn {
     REQ_UNMOUNT_BIND = 8,
     REQ_SET_DAEMON_TIMEOUT = 9,
     REQ_SET_USE_EDENFS = 10,
+    REQ_MOUNT_NFS = 11,
   };
 
   /**
@@ -76,6 +77,19 @@ class PrivHelperConn {
   static void parseMountRequest(
       folly::io::Cursor& cursor,
       std::string& mountPoint,
+      bool& readOnly);
+
+  static UnixSocket::Message serializeMountNfsRequest(
+      uint32_t xid,
+      folly::StringPiece mountPoint,
+      uint16_t mountdPort,
+      uint16_t nfsdPort,
+      bool readOnly);
+  static void parseMountNfsRequest(
+      folly::io::Cursor& cursor,
+      std::string& mountPoint,
+      uint16_t& mountdPort,
+      uint16_t& nfsdPort,
       bool& readOnly);
 
   static UnixSocket::Message serializeUnmountRequest(

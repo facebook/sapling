@@ -71,6 +71,14 @@ bool deserializeBool(Cursor& cursor) {
   return static_cast<bool>(cursor.readBE<uint8_t>());
 }
 
+void serializeUint16(Appender& a, uint16_t val) {
+  a.writeBE<uint16_t>(val);
+}
+
+uint16_t deserializeUint16(Cursor& cursor) {
+  return cursor.readBE<uint16_t>();
+}
+
 // Helper for setting close-on-exec.  Not needed on systems
 // that can atomically do this in socketpair
 void setCloExecIfNoSockCloExec(int fd) {
@@ -123,6 +131,35 @@ void PrivHelperConn::parseMountRequest(
   mountPoint = deserializeString(cursor);
   readOnly = deserializeBool(cursor);
   checkAtEnd(cursor, "mount request");
+}
+
+UnixSocket::Message PrivHelperConn::serializeMountNfsRequest(
+    uint32_t xid,
+    folly::StringPiece mountPoint,
+    uint16_t mountdPort,
+    uint16_t nfsdPort,
+    bool readOnly) {
+  auto msg = serializeHeader(xid, REQ_MOUNT_NFS);
+  Appender appender(&msg.data, kDefaultBufferSize);
+
+  serializeString(appender, mountPoint);
+  serializeUint16(appender, mountdPort);
+  serializeUint16(appender, nfsdPort);
+  serializeBool(appender, readOnly);
+  return msg;
+}
+
+void PrivHelperConn::parseMountNfsRequest(
+    folly::io::Cursor& cursor,
+    std::string& mountPoint,
+    uint16_t& mountdPort,
+    uint16_t& nfsdPort,
+    bool& readOnly) {
+  mountPoint = deserializeString(cursor);
+  mountdPort = deserializeUint16(cursor);
+  nfsdPort = deserializeUint16(cursor);
+  readOnly = deserializeBool(cursor);
+  checkAtEnd(cursor, "mount nfs request");
 }
 
 UnixSocket::Message PrivHelperConn::serializeUnmountRequest(

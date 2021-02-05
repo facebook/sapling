@@ -97,6 +97,11 @@ class PrivHelperClientImpl : public PrivHelper,
   }
 
   Future<File> fuseMount(folly::StringPiece mountPath, bool readOnly) override;
+  Future<Unit> nfsMount(
+      folly::StringPiece mountPath,
+      uint16_t mountdPort,
+      uint16_t nfsdPort,
+      bool readOnly) override;
   Future<Unit> fuseUnmount(StringPiece mountPath) override;
   Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
       override;
@@ -356,6 +361,21 @@ Future<File> PrivHelperClientImpl::fuseMount(
               response.files.size()));
         }
         return std::move(response.files[0]);
+      });
+}
+
+Future<Unit> PrivHelperClientImpl::nfsMount(
+    folly::StringPiece mountPath,
+    uint16_t mountdPort,
+    uint16_t nfsdPort,
+    bool readOnly) {
+  auto xid = getNextXid();
+  auto request = PrivHelperConn::serializeMountNfsRequest(
+      xid, mountPath, mountdPort, nfsdPort, readOnly);
+  return sendAndRecv(xid, std::move(request))
+      .thenValue([](UnixSocket::Message&& response) {
+        PrivHelperConn::parseEmptyResponse(
+            PrivHelperConn::REQ_MOUNT_NFS, response);
       });
 }
 

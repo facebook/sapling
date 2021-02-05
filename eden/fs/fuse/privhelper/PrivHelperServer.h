@@ -79,6 +79,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   UnixSocket::Message makeResponse(folly::File&& file);
 
   UnixSocket::Message processMountMsg(folly::io::Cursor& cursor);
+  UnixSocket::Message processMountNfsMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processUnmountMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processBindMountMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processBindUnMountMsg(folly::io::Cursor& cursor);
@@ -98,6 +99,11 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
 
   // These methods are virtual so we can override them during unit tests
   virtual folly::File fuseMount(const char* mountPath, bool readOnly);
+  virtual void nfsMount(
+      std::string mountPath,
+      uint16_t mountdPort,
+      uint16_t nfsdPort,
+      bool readOnly);
   virtual void fuseUnmount(const char* mountPath);
   // Both clientPath and mountPath must be existing directories.
   virtual void bindMount(const char* clientPath, const char* mountPath);

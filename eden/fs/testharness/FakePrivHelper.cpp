@@ -92,6 +92,15 @@ Future<File> FakePrivHelper::fuseMount(
   return getMountDelegate(mountPath)->fuseMount();
 }
 
+Future<Unit> FakePrivHelper::nfsMount(
+    folly::StringPiece /*mountPath*/,
+    uint16_t /*mountdPort*/,
+    uint16_t /*nfsdPort*/,
+    bool /*readOnly*/) {
+  return makeFuture<Unit>(
+      runtime_error("FakePrivHelper::nfsMount() not implemented"));
+}
+
 Future<Unit> FakePrivHelper::fuseUnmount(folly::StringPiece mountPath) {
   return folly::makeFutureWith(
       [&] { return getMountDelegate(mountPath)->fuseUnmount(); });
