@@ -127,22 +127,21 @@ impl fmt::Debug for LazySet {
 }
 
 impl LazySet {
-    pub fn from_iter<I>(names: I) -> Self
+    pub fn from_iter<I>(names: I, hints: Hints) -> Self
     where
         I: IntoIterator<Item = Result<VertexName>> + 'static,
         <I as IntoIterator>::IntoIter: Send + Sync,
     {
         let stream = futures::stream::iter(names);
-        Self::from_stream(Box::pin(stream))
+        Self::from_stream(Box::pin(stream), hints)
     }
 
-    pub fn from_stream(names: BoxVertexStream) -> Self {
+    pub fn from_stream(names: BoxVertexStream, hints: Hints) -> Self {
         let inner = Inner {
             iter: names,
             visited: IndexSet::new(),
             state: State::Incomplete,
         };
-        let hints = Hints::default();
         Self {
             inner: Arc::new(Mutex::new(inner)),
             hints,
@@ -218,7 +217,10 @@ mod tests {
     use std::collections::HashSet;
 
     fn lazy_set(a: &[u8]) -> LazySet {
-        LazySet::from_iter(a.to_vec().into_iter().map(|b| Ok(to_name(b))))
+        LazySet::from_iter(
+            a.to_vec().into_iter().map(|b| Ok(to_name(b))),
+            Hints::default(),
+        )
     }
 
     #[test]

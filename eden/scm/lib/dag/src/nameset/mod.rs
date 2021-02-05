@@ -69,17 +69,17 @@ impl NameSet {
     }
 
     /// Creates from a (lazy) iterator of names.
-    pub fn from_iter<I>(iter: I) -> NameSet
+    pub fn from_iter<I>(iter: I, hints: Hints) -> NameSet
     where
         I: IntoIterator<Item = Result<VertexName>> + 'static,
         <I as IntoIterator>::IntoIter: Send + Sync,
     {
-        Self::from_query(lazy::LazySet::from_iter(iter))
+        Self::from_query(lazy::LazySet::from_iter(iter, hints))
     }
 
-    /// Creates from a (lazy) stream of names.
-    pub fn from_stream(stream: BoxVertexStream) -> NameSet {
-        Self::from_query(lazy::LazySet::from_stream(stream))
+    /// Creates from a (lazy) stream of names with hints.
+    pub fn from_stream(stream: BoxVertexStream, hints: Hints) -> NameSet {
+        Self::from_query(lazy::LazySet::from_stream(stream, hints))
     }
 
     /// Creates from a (lazy) iterator of Ids, an IdMap, and a Dag.
@@ -322,13 +322,21 @@ impl NameSet {
     ) -> Self {
         let filter_func = Arc::new(filter_func);
         let this = self.clone();
+        let hints = {
+            // Drop ANCESTORS | FULL and add FILTER.
+            let hints = self.hints().clone();
+            hints.update_flags_with(|f| (f - Flags::ANCESTORS - Flags::FULL) | Flags::FILTER);
+            hints
+        };
         let result = Self::from_async_evaluate_contains(
             Box::new({
                 let filter_func = filter_func.clone();
                 let this = this.clone();
+                let hints = hints.clone();
                 move || {
                     let filter_func = filter_func.clone();
                     let this = this.clone();
+                    let hints = hints.clone();
                     Box::pin(async move {
                         let stream = this.0.iter().await?;
                         let stream = stream.filter_map(move |v| {
@@ -344,7 +352,7 @@ impl NameSet {
                                 }
                             }
                         });
-                        Ok(Self::from_stream(Box::pin(stream)))
+                        Ok(Self::from_stream(Box::pin(stream), hints))
                     })
                 }
             }),
@@ -353,7 +361,7 @@ impl NameSet {
                 let this = this.clone();
                 Box::pin(async move { Ok((&filter_func)(v).await? && this.0.contains(v).await?) })
             }),
-            Hints::default(), // TODO: Use a proper Hints.
+            hints,
         );
         result.hints().add_flags(Flags::FILTER);
         result

@@ -12,6 +12,7 @@ use async_runtime::block_on_exclusive as block_on;
 use cpython::*;
 use cpython_ext::{AnyhowResultExt, ResultPyErrExt};
 use dag::nameset::hints::Flags;
+use dag::nameset::hints::Hints;
 use dag::{nameset::NameIter, Set, Vertex};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -186,9 +187,11 @@ impl<'a> FromPyObject<'a> for Names {
         }
 
         // Others - convert to LazySet.
+        // XXX: This makes it possible that async Rust calls into Python!!!
+        // Should this be an error?
         let obj = obj.clone_ref(py);
         let iter = PyNameIter::new(py, obj.iter(py)?.into_object())?;
-        let set = Set::from_iter(iter);
+        let set = Set::from_iter(iter, Hints::default());
         Ok(Names(set))
     }
 }

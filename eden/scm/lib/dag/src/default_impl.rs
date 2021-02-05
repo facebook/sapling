@@ -6,6 +6,7 @@
  */
 
 use crate::namedag::MemNameDag;
+use crate::nameset::hints::Hints;
 use crate::ops::DagAddHeads;
 use crate::DagAlgorithm;
 use crate::NameSet;
@@ -225,7 +226,8 @@ pub(crate) async fn first_ancestors(
             }
         }
     }
-    let set = NameSet::from_iter(visited.into_iter().map(Ok));
+    let hints = Hints::new_inherit_idmap_dag(set.hints());
+    let set = NameSet::from_iter(visited.into_iter().map(Ok), hints);
     this.sort(&set).await
 }
 
