@@ -77,7 +77,9 @@ impl LoadLimiterEnvironment {
         let region_percentage =
             impl_mod::select_region_capacity(&config.datacenter_prefix_capacity).unwrap_or(100.0);
 
-        let hostprefix = hostname.map(|h| extract_hostprefix(h));
+        let hostprefix = identities
+            .hostprefix()
+            .or_else(|| Some(extract_hostprefix(hostname?)));
 
         let hostprefix_config = hostprefix
             .and_then(|hostprefix| config.hostprefixes.get(hostprefix))
