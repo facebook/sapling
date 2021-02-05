@@ -216,7 +216,6 @@ where
 }
 
 lazy_static! {
-    static ref LOAD_LIMIT_TIMEFRAME: Duration = Duration::from_secs(1);
     static ref SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(1);
 }
 
@@ -994,7 +993,7 @@ where
     S: Stream<Item = V, Error = Error> + Send + 'static,
 {
     let session = session.clone();
-    async move { session.should_throttle(metric, *LOAD_LIMIT_TIMEFRAME).await }
+    async move { session.should_throttle(metric).await }
         .boxed()
         .compat()
         .then(move |throttle| {

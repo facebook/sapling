@@ -36,7 +36,7 @@ impl HgRepoContext {
     }
 
     /// The `CoreContext` for this query.
-    pub(crate) fn ctx(&self) -> &CoreContext {
+    pub fn ctx(&self) -> &CoreContext {
         &self.repo.ctx()
     }
 

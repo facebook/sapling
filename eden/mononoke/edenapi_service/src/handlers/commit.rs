@@ -51,7 +51,7 @@ pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse,
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
 
-    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo).await?;
+    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
 
     let request: CommitLocationToHashRequest = parse_cbor_request(state).await?; // TODO: Should this use parse_wire_request?
     let hgid_list = request
@@ -73,7 +73,7 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state).clone();
 
-    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo).await?;
+    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
 
     let request: CommitRevlogDataRequest = parse_cbor_request(state).await?;
     let revlog_commits = request

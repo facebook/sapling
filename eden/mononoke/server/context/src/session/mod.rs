@@ -102,9 +102,11 @@ impl SessionContainer {
         }
     }
 
-    pub async fn should_throttle(&self, metric: Metric, duration: Duration) -> Result<bool, !> {
+    pub async fn should_throttle(&self, metric: Metric) -> Result<bool, !> {
+        const LOAD_LIMIT_TIMEFRAME: Duration = Duration::from_secs(1);
+
         match &self.inner.load_limiter {
-            Some(limiter) => match limiter.should_throttle(metric, duration).await {
+            Some(limiter) => match limiter.should_throttle(metric, LOAD_LIMIT_TIMEFRAME).await {
                 Ok(res) => Ok(res),
                 Err(_) => Ok(false),
             },

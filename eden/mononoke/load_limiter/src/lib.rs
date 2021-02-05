@@ -31,7 +31,7 @@ pub type BoxLoadLimiter = Box<dyn LoadLimiter + Send + Sync + 'static>;
 
 pub type LoadCost = f64;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Metric {
     EgressBytes,
     IngressBlobstoreBytes,

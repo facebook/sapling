@@ -6,7 +6,7 @@
  */
 
 use anyhow::{Context, Error};
-use futures::{stream, Stream, StreamExt};
+use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
@@ -16,6 +16,7 @@ use edenapi_types::{
     FileEntry, FileRequest,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
+use load_limiter::Metric;
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api_hg::{HgDataContext, HgDataId, HgRepoContext};
 use types::Key;
@@ -44,7 +45,7 @@ pub async fn files(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
-    let repo = get_repo(&sctx, &rctx, &params.repo).await?;
+    let repo = get_repo(&sctx, &rctx, &params.repo, Metric::EgressGetpackFiles).await?;
     let request = parse_wire_request::<WireFileRequest>(state).await?;
 
     Ok(cbor_stream(
@@ -58,12 +59,18 @@ fn fetch_all_files(
     repo: HgRepoContext,
     request: FileRequest,
 ) -> impl Stream<Item = Result<FileEntry, Error>> {
+    let ctx = repo.ctx().clone();
+
     let fetches = request
         .keys
         .into_iter()
         .map(move |key| fetch_file(repo.clone(), key));
 
-    stream::iter(fetches).buffer_unordered(MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST)
+    stream::iter(fetches)
+        .buffer_unordered(MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST)
+        .inspect_ok(move |_| {
+            ctx.session().bump_load(Metric::EgressGetpackFiles, 1.0);
+        })
 }
 
 /// Fetch requested file for a single key.

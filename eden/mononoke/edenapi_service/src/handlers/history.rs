@@ -50,7 +50,7 @@ pub async fn history(state: &mut State) -> Result<impl TryIntoResponse, HttpErro
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
-    let repo = get_repo(&sctx, &rctx, &params.repo).await?;
+    let repo = get_repo(&sctx, &rctx, &params.repo, None).await?;
     let request = parse_wire_request::<WireHistoryRequest>(state).await?;
 
     Ok(cbor_stream(

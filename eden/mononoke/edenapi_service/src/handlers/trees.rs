@@ -6,7 +6,7 @@
  */
 
 use anyhow::{Context, Error};
-use futures::{stream, Future, FutureExt, Stream, StreamExt};
+use futures::{stream, Future, FutureExt, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
@@ -16,6 +16,7 @@ use edenapi_types::{
     EdenApiServerError, FileMetadata, TreeChildEntry, TreeEntry, TreeRequest,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
+use load_limiter::Metric;
 use manifest::Entry;
 use mercurial_types::{FileType, HgFileNodeId, HgManifestId, HgNodeHash};
 use mononoke_api_hg::{HgDataContext, HgDataId, HgRepoContext, HgTreeContext};
@@ -46,7 +47,7 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
-    let repo = get_repo(&sctx, &rctx, &params.repo).await?;
+    let repo = get_repo(&sctx, &rctx, &params.repo, Metric::EgressTotalManifests).await?;
     let request = parse_wire_request::<WireTreeRequest>(state).await?;
 
     Ok(cbor_stream(
@@ -60,13 +61,19 @@ fn fetch_all_trees(
     repo: HgRepoContext,
     request: TreeRequest,
 ) -> impl Stream<Item = Result<TreeEntry, EdenApiServerError>> {
+    let ctx = repo.ctx().clone();
+
     let fetch_metadata = request.attributes.child_metadata;
     let fetches = request.keys.into_iter().map(move |key| {
         fetch_tree(repo.clone(), key.clone(), fetch_metadata)
             .map(|r| r.map_err(|e| EdenApiServerError::with_key(key, e)))
     });
 
-    stream::iter(fetches).buffer_unordered(MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST)
+    stream::iter(fetches)
+        .buffer_unordered(MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST)
+        .inspect_ok(move |_| {
+            ctx.session().bump_load(Metric::EgressTotalManifests, 1.0);
+        })
 }
 
 /// Fetch requested tree for a single key.

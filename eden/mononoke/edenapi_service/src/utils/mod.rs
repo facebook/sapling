@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Context;
+use anyhow::{format_err, Context};
 use bytes::Bytes;
 use gotham::state::{FromState, State};
 use http::HeaderMap;
 use hyper::Body;
 
 use gotham_ext::{body_ext::BodyExt, error::HttpError};
+use load_limiter::Metric;
 use mononoke_api_hg::{HgRepoContext, RepoContextHgExt};
 
 use crate::context::ServerContext;
@@ -28,7 +29,14 @@ pub async fn get_repo(
     sctx: &ServerContext,
     rctx: &RequestContext,
     name: impl AsRef<str>,
+    throttle_metric: impl Into<Option<Metric>>,
 ) -> Result<HgRepoContext, HttpError> {
+    if let Some(metric) = throttle_metric.into() {
+        if rctx.ctx.session().should_throttle(metric).await? {
+            return Err(HttpError::e429(format_err!("Throttled by {:?}", metric)));
+        }
+    }
+
     let name = name.as_ref();
     sctx.mononoke_api()
         .repo(rctx.ctx.clone(), name)
