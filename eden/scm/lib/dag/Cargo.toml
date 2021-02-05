@@ -30,6 +30,7 @@ serde = { version = "1", features = ["derive"] }
 tempfile = { version = "3", optional = true }
 thiserror = "1"
 tracing = "0.1"
+tracing-futures = "0.2"
 
 [dev-dependencies]
 # Note: bindag depends on "dag" with features!
