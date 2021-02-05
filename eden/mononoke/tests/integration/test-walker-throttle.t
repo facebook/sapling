@@ -40,7 +40,7 @@ Delete all data from one side of the multiplex
 
 Check writes throttle in Repair mode
   $ START_SECS=$(/bin/date "+%s")
-  $ mononoke_walker --blobstore-write-qps=4 -l loaded scrub -q --scrub-blobstore-action=Repair -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --blobstore-write-qps=4 -l loaded --blobstore-scrub-action=Repair scrub -q -I deep -b master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
   1 Seen,Loaded: 40,40
   $ END_SECS=$(/bin/date "+%s")

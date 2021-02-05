@@ -28,7 +28,8 @@ use blobstore_factory::{
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args::{
-    self, CachelibSettings, MononokeClapApp, MononokeMatches, RepoRequirement, ResolvedRepo,
+    self, ArgType, CachelibSettings, MononokeClapApp, MononokeMatches, RepoRequirement,
+    ResolvedRepo,
 };
 use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
@@ -491,6 +492,7 @@ pub fn setup_toplevel_app<'a, 'b>(
     cachelib_defaults: CachelibSettings,
 ) -> MononokeClapApp<'a, 'b> {
     let app_template = args::MononokeAppBuilder::new(app_name)
+        .with_arg_types(vec![ArgType::Scrub])
         .with_blobstore_cachelib_attempt_zstd_default(false)
         .with_blobstore_read_qps_default(NonZeroU32::new(20000))
         .with_readonly_storage_default(ReadOnlyStorage(true))
@@ -1226,10 +1228,15 @@ pub async fn setup_common<'a>(
     let mysql_options = args::parse_mysql_options(&matches);
     let mut blobstore_options = args::parse_blobstore_options(&matches)?;
     let storage_id = matches.value_of(STORAGE_ID_ARG);
-    let scrub_action = sub_m
-        .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
-        .map(ScrubAction::from_str)
-        .transpose()?;
+
+    let scrub_action = if let Some(scrub_options) = &blobstore_options.scrub_options {
+        Some(scrub_options.scrub_action)
+    } else {
+        sub_m
+            .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
+            .map(ScrubAction::from_str)
+            .transpose()?
+    };
 
     let enable_redaction = sub_m.is_present(ENABLE_REDACTION_ARG);
 

@@ -78,7 +78,7 @@ Check can walk fine on the multiplex remaining side
   Seen,Loaded: 40,40
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly mode, should log the scrub repairs needed
-  $ mononoke_walker -l loaded scrub -q --scrub-blobstore-action=ReportOnly -I deep -b master_bookmark --scuba-log-file scuba-reportonly.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker -l loaded --blobstore-scrub-action=ReportOnly scrub -q -I deep -b master_bookmark --scuba-log-file scuba-reportonly.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. not repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) not repaired for repo0000. (glob)
   1 Seen,Loaded: 40,40
 
@@ -116,7 +116,7 @@ Note - we might get duplicate reports, we just expect that there should not be a
   1,"scrub_repair","repo0000.hgmanifest.sha1.eb79886383871977bccdb3000c275a279f0d4c99","repo","scrub",1* (glob)
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode, should also log the scrub repairs done
-  $ mononoke_walker -l loaded scrub -q --scrub-blobstore-action=Repair -I deep -b master_bookmark --scuba-log-file scuba-repair.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker -l loaded --blobstore-scrub-action=Repair scrub -q -I deep -b master_bookmark --scuba-log-file scuba-repair.json 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
   1 Seen,Loaded: 40,40
 
