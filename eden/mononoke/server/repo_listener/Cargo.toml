@@ -18,7 +18,6 @@ context = { path = "../context", version = "0.1.0" }
 edenapi_service = { path = "../../edenapi_service", version = "0.1.0" }
 gotham_ext = { path = "../../gotham_ext", version = "0.1.0" }
 hgproto = { path = "../../hgproto", version = "0.1.0" }
-limits = { path = "../../../../configerator/structs/scm/mononoke/loadshedding", version = "0.1.0" }
 load_limiter = { path = "../../load_limiter", version = "0.1.0" }
 metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
 mononoke_api = { path = "../../mononoke_api", version = "0.1.0" }

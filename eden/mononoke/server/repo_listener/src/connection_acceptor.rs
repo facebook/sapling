@@ -19,7 +19,7 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Context, Error, Result};
 use bytes::Bytes;
-use cached_config::{ConfigHandle, ConfigStore};
+use cached_config::ConfigStore;
 use edenapi_service::EdenApi;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
@@ -30,6 +30,7 @@ use futures_util::compat::Stream01CompatExt;
 use futures_util::future::{AbortHandle, FutureExt};
 use futures_util::stream::{StreamExt, TryStreamExt};
 use lazy_static::lazy_static;
+use load_limiter::LoadLimiterEnvironment;
 use metaconfig_types::CommonConfig;
 use openssl::ssl::SslAcceptor;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
@@ -41,7 +42,6 @@ use tokio::task::JoinHandle;
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 use cmdlib::monitoring::ReadyFlagService;
-use limits::types::MononokeThrottleLimits;
 use sshrelay::{
     IoStream, Metadata, Preamble, Priority, SshDecoder, SshEncoder, SshEnvVars, SshMsg, Stdio,
 };
@@ -99,15 +99,16 @@ pub async fn connection_acceptor(
     edenapi: EdenApi,
     will_exit: Arc<AtomicBool>,
 ) -> Result<()> {
-    let load_limiting_config = {
-        let config_loader = config_store
+    let load_limiter = {
+        let handle = config_store
             .get_config_handle(CONFIGERATOR_LIMITS_CONFIG.to_string())
             .ok();
-        config_loader.and_then(|config_loader| {
+
+        handle.and_then(|handle| {
             common_config
                 .loadlimiter_category
                 .clone()
-                .map(|category| (config_loader, category))
+                .map(|category| LoadLimiterEnvironment::new(fb, category, handle))
         })
     };
 
@@ -130,7 +131,7 @@ pub async fn connection_acceptor(
         tls_acceptor,
         repo_handlers,
         security_checker,
-        load_limiting_config,
+        load_limiter,
         scribe,
         logger: root_log.clone(),
         edenapi,
@@ -165,7 +166,7 @@ pub struct Acceptor {
     pub tls_acceptor: SslAcceptor,
     pub repo_handlers: HashMap<String, RepoHandler>,
     pub security_checker: ConnectionsSecurityChecker,
-    pub load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
+    pub load_limiter: Option<LoadLimiterEnvironment>,
     pub scribe: Scribe,
     pub logger: Logger,
     pub edenapi: EdenApi,
@@ -366,7 +367,7 @@ pub async fn handle_wireproto(
         &conn.pending.acceptor.repo_handlers,
         &conn.pending.acceptor.security_checker,
         stdio,
-        conn.pending.acceptor.load_limiting_config.clone(),
+        conn.pending.acceptor.load_limiter.clone(),
         conn.pending.addr.ip(),
         conn.pending.acceptor.scribe.clone(),
     )

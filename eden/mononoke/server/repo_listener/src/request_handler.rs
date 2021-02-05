@@ -11,7 +11,6 @@ use std::collections::HashMap;
 
 use anyhow::{anyhow, Context, Error, Result};
 use bytes::Bytes;
-use cached_config::ConfigHandle;
 use context::{LoggingContainer, SessionClass, SessionContainer, SessionId};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
@@ -19,17 +18,14 @@ use futures::compat::Future01CompatExt;
 use futures_old::{sync::mpsc, Future, Stream};
 use futures_stats::TimedFutureExt;
 use hgproto::{sshproto, HgProtoHandler};
-use lazy_static::lazy_static;
-use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
-use load_limiter::{LoadLimiterBuilder, Metric};
+use load_limiter::{LoadLimiterEnvironment, Metric};
 use maplit::{hashmap, hashset};
-use permission_checker::MononokeIdentitySetExt;
 use repo_client::RepoClient;
 use scribe_ext::Scribe;
 use slog::{self, error, o, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
-use sshrelay::{Metadata, Priority, SenderBytesWrite, Stdio};
+use sshrelay::{Priority, SenderBytesWrite, Stdio};
 use stats::prelude::*;
 use std::mem;
 use std::net::IpAddr;
@@ -40,25 +36,6 @@ use tracing::{trace_args, TraceContext, TraceId, Traced};
 use tunables::tunables;
 
 use crate::repo_handlers::RepoHandler;
-
-lazy_static! {
-    static ref DATACENTER_REGION_PREFIX: String = {
-        #[cfg(fbcode_build)]
-        {
-            ::fbwhoami::FbWhoAmI::get()
-                .expect("failed to init fbwhoami")
-                .region_datacenter_prefix
-                .clone()
-                .expect("failed to get region from fbwhoami")
-        }
-        #[cfg(not(fbcode_build))]
-        {
-            "global".to_owned()
-        }
-    };
-}
-
-const DEFAULT_PERCENTAGE: f64 = 100.0;
 
 define_stats! {
     prefix = "mononoke.request_handler";
@@ -75,7 +52,7 @@ pub async fn request_handler(
     repo_handlers: &HashMap<String, RepoHandler>,
     security_checker: &ConnectionsSecurityChecker,
     stdio: Stdio,
-    load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
+    load_limiter: Option<LoadLimiterEnvironment>,
     addr: IpAddr,
     scribe: Scribe,
 ) -> Result<()> {
@@ -150,15 +127,12 @@ pub async fn request_handler(
     scuba.add("priority", priority.to_string());
     scuba.log_with_msg("Connection established", None);
 
-    let load_limiter = load_limiting_config.map(|(config, category)| {
-        let (throttle_limits, rate_limits) = loadlimiting_configs(config, &metadata);
-        LoadLimiterBuilder::build(fb, throttle_limits, rate_limits, category)
-    });
-
     let mut session_builder = SessionContainer::builder(fb)
         .trace(trace.clone())
         .metadata(metadata.clone())
-        .load_limiter(load_limiter);
+        .load_limiter(
+            load_limiter.map(|l| l.get(metadata.identities(), metadata.client_hostname())),
+        );
 
     if priority == &Priority::Wishlist {
         session_builder = session_builder
@@ -257,59 +231,6 @@ pub async fn request_handler(
     Ok(())
 }
 
-fn loadlimiting_configs(
-    config: ConfigHandle<MononokeThrottleLimits>,
-    metadata: &Metadata,
-) -> (MononokeThrottleLimit, RateLimits) {
-    let is_quicksand = metadata.identities().is_quicksand();
-
-    let config = config.get();
-    let region_percentage = config
-        .datacenter_prefix_capacity
-        .get(&*DATACENTER_REGION_PREFIX)
-        .copied()
-        .unwrap_or(DEFAULT_PERCENTAGE);
-    let limit = match metadata.client_hostname() {
-        Some(client_hostname) => {
-            let host_scheme = hostname_scheme(client_hostname);
-            config
-                .hostprefixes
-                .get(host_scheme)
-                .unwrap_or(&config.defaults)
-        }
-        None => &config.defaults,
-    };
-
-    let multiplier = if is_quicksand {
-        region_percentage / 100.0 * config.quicksand_multiplier
-    } else {
-        region_percentage / 100.0
-    };
-
-    let throttle_limits = MononokeThrottleLimit {
-        egress_bytes: limit.egress_bytes * multiplier,
-        ingress_blobstore_bytes: limit.ingress_blobstore_bytes * multiplier,
-        total_manifests: limit.total_manifests * multiplier,
-        quicksand_manifests: limit.quicksand_manifests * multiplier,
-        getfiles_files: limit.getfiles_files * multiplier,
-        getpack_files: limit.getpack_files * multiplier,
-        commits: limit.commits * multiplier,
-    };
-
-    (throttle_limits, config.rate_limits.clone())
-}
-
-/// Translates a hostname in to a host scheme:
-///   devvm001.lla1.facebook.com -> devvm
-///   hg001.lla1.facebook.com -> hg
-fn hostname_scheme(hostname: &str) -> &str {
-    let index = hostname.find(|c: char| !c.is_ascii_alphabetic());
-    match index {
-        Some(index) => hostname.split_at(index).0,
-        None => hostname,
-    }
-}
-
 pub fn create_conn_logger(
     stderr: mpsc::UnboundedSender<Bytes>,
     server_logger: Option<Logger>,
@@ -344,18 +265,5 @@ pub fn create_conn_logger(
         Logger::root(drain, decorator)
     } else {
         Logger::root(client_drain.ignore_res(), decorator)
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_hostname_scheme() {
-        assert_eq!(hostname_scheme("devvm001.lla1.facebook.com"), "devvm");
-        assert_eq!(hostname_scheme("hg001.lla1.facebook.com"), "hg");
-        assert_eq!(hostname_scheme("ololo"), "ololo");
-        assert_eq!(hostname_scheme(""), "");
     }
 }

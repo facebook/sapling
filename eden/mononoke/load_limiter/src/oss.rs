@@ -9,22 +9,25 @@ use anyhow::Result;
 use async_trait::async_trait;
 use fbinit::FacebookInit;
 use limits::types::{MononokeThrottleLimit, RateLimits};
+use std::collections::BTreeMap;
 use std::time::Duration;
 
-use crate::{BoxLoadLimiter, LoadCost, LoadLimiter, LoadLimiterBuilder, Metric};
+use crate::{BoxLoadLimiter, LoadCost, LoadLimiter, Metric};
 
-impl LoadLimiterBuilder {
-    pub fn build(
-        _fb: FacebookInit,
-        _throttle_limits: MononokeThrottleLimit,
-        rate_limits: RateLimits,
-        category: String,
-    ) -> BoxLoadLimiter {
-        Box::new(NoopLimiter {
-            category,
-            rate_limits,
-        })
-    }
+pub fn select_region_capacity(_: &BTreeMap<String, f64>) -> Option<f64> {
+    None
+}
+
+pub fn build_load_limiter(
+    _: FacebookInit,
+    _: MononokeThrottleLimit,
+    rate_limits: RateLimits,
+    category: String,
+) -> BoxLoadLimiter {
+    Box::new(NoopLimiter {
+        category,
+        rate_limits,
+    })
 }
 
 #[derive(Debug)]
