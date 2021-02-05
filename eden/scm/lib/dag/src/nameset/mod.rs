@@ -1082,15 +1082,26 @@ pub(crate) mod tests {
 
     #[test]
     fn test_filter() {
-        let abc: NameSet = "a b c".into();
-        let filter: NameSet = abc.filter(Box::new(|v: &VertexName| {
-            Box::pin(async move { Ok(v.as_ref() != b"a") })
-        }));
-        check_invariants(filter.0.as_ref()).unwrap();
-        assert_eq!(
-            format!("{:?}", r(filter.flatten_names())),
-            "Ok(<static [b, c]>)"
-        );
+        id_static::tests::with_dag(|dag| {
+            let sets: Vec<NameSet> = vec!["C B A".into(), nb(dag.ancestors("C".into())).unwrap()];
+            for abc in sets {
+                let filter: NameSet = abc.filter(Box::new(|v: &VertexName| {
+                    Box::pin(async move { Ok(v.as_ref() != b"A") })
+                }));
+                check_invariants(filter.0.as_ref()).unwrap();
+                assert_eq!(abc.hints().dag_version(), filter.hints().dag_version());
+                assert_eq!(
+                    abc.hints().id_map_version(),
+                    filter.hints().id_map_version()
+                );
+                assert!(filter.hints().flags().contains(Flags::FILTER));
+                assert!(!filter.hints().flags().contains(Flags::ANCESTORS));
+                assert_eq!(
+                    format!("{:?}", r(filter.flatten_names())),
+                    "Ok(<static [C, B]>)"
+                );
+            }
+        })
     }
 
     // Print hints for &, |, - operations.
