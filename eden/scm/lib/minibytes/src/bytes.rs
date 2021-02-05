@@ -180,6 +180,18 @@ impl Bytes {
     pub(crate) fn as_slice(&self) -> &[u8] {
         self.as_bytes()
     }
+
+    /// Convert to `Vec<u8>`, in a zero-copy way if possible.
+    pub fn into_vec(mut self) -> Vec<u8> {
+        match self.downcast_mut() {
+            None => self.as_slice().to_vec(),
+            Some(ref mut owner) => {
+                let mut result: Vec<u8> = Vec::new();
+                std::mem::swap(&mut result, owner);
+                result
+            }
+        }
+    }
 }
 
 pub trait SliceLike: 'static {

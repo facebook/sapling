@@ -76,3 +76,19 @@ fn test_downcast_mut() {
     assert!(b.downcast_mut::<Vec<u8>>().is_none());
     assert!(c.downcast_mut::<Vec<u8>>().is_none());
 }
+
+#[test]
+fn test_into_vec() {
+    let v = b"abcd".to_vec();
+    let ptr1 = &v[0] as *const u8;
+    let b = Bytes::from(v);
+    let v = b.into_vec(); // zero-copy
+    let ptr2 = &v[0] as *const u8;
+    assert_eq!(ptr1, ptr2);
+
+    let b = Bytes::from(v);
+    let _c = b.clone();
+    let v = b.into_vec(); // not zero-copy because refcount > 1
+    let ptr3 = &v[0] as *const u8;
+    assert_ne!(ptr1, ptr3);
+}
