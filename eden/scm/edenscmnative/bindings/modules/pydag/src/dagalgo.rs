@@ -57,6 +57,11 @@ py_class!(pub class dagalgo |py| {
         Ok(Names(block_on(self.dag(py).roots(set.0)).map_pyerr(py)?))
     }
 
+    /// Calculate merges of the given set.
+    def merges(&self, set: Names) -> PyResult<Names> {
+        Ok(Names(block_on(self.dag(py).merges(set.0)).map_pyerr(py)?))
+    }
+
     /// Calculate one greatest common ancestor of a set.
     /// If there are multiple greatest common ancestors, pick an arbitrary one.
     def gcaone(&self, set: Names) -> PyResult<Option<PyBytes>> {
