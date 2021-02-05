@@ -27,7 +27,7 @@ use futures::{channel::oneshot, future::Future, select_biased};
 use futures_01_ext::BoxStream;
 use futures_old::{stream, sync::mpsc, Stream};
 use futures_util::compat::Stream01CompatExt;
-use futures_util::future::FutureExt;
+use futures_util::future::{AbortHandle, FutureExt};
 use futures_util::stream::{StreamExt, TryStreamExt};
 use lazy_static::lazy_static;
 use metaconfig_types::CommonConfig;
@@ -64,6 +64,7 @@ pub trait MononokeStream: AsyncRead + AsyncWrite + Unpin + Send + Sync + 'static
 
 impl<T> MononokeStream for T where T: AsyncRead + AsyncWrite + Unpin + Send + Sync + 'static {}
 
+const KEEP_ALIVE_INTERVAL: Duration = Duration::from_millis(5000);
 const CHUNK_SIZE: usize = 10000;
 const CONFIGERATOR_LIMITS_CONFIG: &str = "scm/mononoke/loadshedding/limits";
 lazy_static! {
@@ -338,6 +339,7 @@ pub async fn handle_wireproto(
         stdout,
         stderr,
         logger,
+        keep_alive,
         join_handle,
     } = channels;
 
@@ -356,7 +358,9 @@ pub async fn handle_wireproto(
         stderr,
     };
 
-    request_handler(
+    // Don't immediately return error here, we need to cleanup our
+    // handlers like keep alive, otherwise they will run forever.
+    let result = request_handler(
         conn.pending.acceptor.fb,
         reponame,
         &conn.pending.acceptor.repo_handlers,
@@ -367,14 +371,17 @@ pub async fn handle_wireproto(
         conn.pending.acceptor.scribe.clone(),
     )
     .await
-    .context("Failed to execute request_handler")?;
+    .context("Failed to execute request_handler");
+
+    // Shutdown our keepalive handler
+    keep_alive.abort();
 
     join_handle
         .await
         .context("Failed to join ChannelConn")?
         .context("Failed to close ChannelConn")?;
 
-    Ok(())
+    result
 }
 
 pub struct FramedConn<R, W> {
@@ -400,6 +407,7 @@ pub struct ChannelConn {
     stdout: mpsc::Sender<Bytes>,
     stderr: mpsc::UnboundedSender<Bytes>,
     logger: Logger,
+    keep_alive: AbortHandle,
     join_handle: JoinHandle<Result<(), io::Error>>,
 }
 
@@ -419,9 +427,10 @@ impl ChannelConn {
             }
         }));
 
-        let (stdout, stderr, join_handle) = {
+        let (stdout, stderr, keep_alive, join_handle) = {
             let (otx, orx) = mpsc::channel(1);
             let (etx, erx) = mpsc::unbounded();
+            let (ktx, krx) = mpsc::unbounded();
 
             let orx = orx
                 .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
@@ -431,18 +440,34 @@ impl ChannelConn {
                 .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
                 .flatten()
                 .map(|v| SshMsg::new(IoStream::Stderr, v));
+            let krx = krx.map(|v| SshMsg::new(IoStream::Stderr, v));
 
             // Glue them together
             let fwd = orx
                 .select(erx)
+                .select(krx)
                 .compat()
                 .map_err(|()| io::Error::new(io::ErrorKind::Other, "huh?"))
                 .forward(wr);
 
+            let keep_alive_sender = async move {
+                loop {
+                    tokio::time::delay_for(KEEP_ALIVE_INTERVAL).await;
+                    if ktx.unbounded_send(Bytes::new()).is_err() {
+                        break;
+                    }
+                }
+            };
+            let (keep_alive_sender, keep_alive_abort) =
+                futures::future::abortable(keep_alive_sender);
+
+            // spawn a task for sending keepalive messages
+            tokio::spawn(keep_alive_sender);
+
             // spawn a task for forwarding stdout/err into stream
             let join_handle = tokio::spawn(fwd);
 
-            (otx, etx, join_handle)
+            (otx, etx, keep_alive_abort, join_handle)
         };
 
         let logger = create_conn_logger(stderr.clone(), None, None);
@@ -452,6 +477,7 @@ impl ChannelConn {
             stdout,
             stderr,
             logger,
+            keep_alive,
             join_handle,
         }
     }
