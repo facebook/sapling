@@ -561,6 +561,11 @@ def ancestors(repo, subset, x):
 def _firstancestors(repo, subset, x):
     # ``_firstancestors(set)``
     # Like ``ancestors(set)`` but follows only the first parents.
+    cl = repo.changelog
+    if cl.userust("revset"):
+        s = getset(repo, fullreposet(repo), x)
+        result = cl.dag.firstancestors(cl.tonodes(s))
+        return subset & cl.torevset(result)
     return _ancestors(repo, subset, x, followfirst=True)
 
 

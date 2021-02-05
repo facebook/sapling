@@ -31,6 +31,11 @@ py_class!(pub class dagalgo |py| {
         Ok(Names(block_on(self.dag(py).ancestors(set.0)).map_pyerr(py)?))
     }
 
+    /// Calculate all ancestors reachable from the set, following only first parents.
+    def firstancestors(&self, set: Names) -> PyResult<Names> {
+        Ok(Names(block_on(self.dag(py).first_ancestors(set.0)).map_pyerr(py)?))
+    }
+
     /// Calculate parents of the given set.
     def parents(&self, set: Names) -> PyResult<Names> {
         Ok(Names(block_on(self.dag(py).parents(set.0)).map_pyerr(py)?))
