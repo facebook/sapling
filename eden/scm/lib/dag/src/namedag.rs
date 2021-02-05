@@ -357,6 +357,24 @@ where
         Ok(result)
     }
 
+    /// Like `ancestors` but follows only the first parents.
+    async fn first_ancestors(&self, set: NameSet) -> Result<NameSet> {
+        // If set == ancestors(set), then first_ancestors(set) == set.
+        if set.hints().contains(Flags::ANCESTORS)
+            && set.hints().dag_version() <= Some(self.dag_version())
+        {
+            return Ok(set);
+        }
+        let spans = self.to_id_set(&set).await?;
+        let spans = self.dag().first_ancestors(spans)?;
+        let result = NameSet::from_spans_dag(spans, self)?;
+        #[cfg(test)]
+        {
+            result.assert_eq(crate::default_impl::first_ancestors(self, set).await?);
+        }
+        Ok(result)
+    }
+
     /// Calculate merges within the given set.
     async fn merges(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.to_id_set(&set).await?;
