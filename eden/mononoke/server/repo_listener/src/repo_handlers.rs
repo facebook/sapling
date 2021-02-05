@@ -138,10 +138,7 @@ pub async fn repo_handlers<'a>(
     config_store: &'a ConfigStore,
     scuba: &MononokeScubaSampleBuilder,
 ) -> Result<HashMap<String, RepoHandler>, Error> {
-    // compute eagerly to avoid lifetime issues
-    let mut tuples: Vec<(String, IncompleteRepoHandler)> = Vec::new();
-
-    for repo in mononoke.repos() {
+    let futs = mononoke.repos().map(|repo| async move {
         let reponame = repo.name().clone();
         let config = repo.config();
 
@@ -247,7 +244,7 @@ pub async fn repo_handlers<'a>(
         initial_warmup.await??;
 
         info!(logger, "Repository is ready");
-        tuples.push((
+        Result::<_, Error>::Ok((
             reponame,
             IncompleteRepoHandler {
                 logger,
@@ -258,8 +255,10 @@ pub async fn repo_handlers<'a>(
                 maybe_incomplete_push_redirector_args,
                 repo_client_knobs,
             },
-        ));
-    }
+        ))
+    });
+
+    let tuples = futures::future::try_join_all(futs).await?;
 
     build_repo_handlers(tuples).await
 }
