@@ -41,7 +41,7 @@ use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, Caching, ReadOnlyStorage};
 use blobstore_factory::{
     BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, PackOptions, PutBehaviour,
-    ThrottleOptions, DEFAULT_PUT_BEHAVIOUR,
+    ScrubAction, ThrottleOptions, DEFAULT_PUT_BEHAVIOUR,
 };
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig};
@@ -50,6 +50,7 @@ use observability::{DynamicLevelDrain, ObservabilityContext};
 use slog_ext::make_tag_filter_drain;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::{MysqlConnectionType, MysqlOptions, PoolConfig, SharedConnectionPool};
+use strum::VariantNames;
 use tunables::init_tunables_worker;
 
 use crate::helpers::{create_runtime, setup_repo_dir, CreateStorage};
@@ -92,6 +93,7 @@ const WRITE_ZSTD_ARG: &str = "blobstore-write-zstd-level";
 const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
 const CACHELIB_ATTEMPT_ZSTD_ARG: &str = "blobstore-cachelib-attempt-zstd";
 const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
+const BLOBSTORE_SCRUB_ACTION_ARG: &str = "blobstore-scrub-action";
 
 // Old version took no args which means it would be no good for overriding default for a binary that defaults to true.
 const READONLY_STORAGE_OLD_ARG: &str = "readonly-storage";
@@ -127,6 +129,8 @@ pub enum ArgType {
     Tunables,
     /// Adds options to select a repo. If not present then all repos.
     Repo,
+    /// Adds options for scrubbing blobstores
+    Scrub,
     /// Adds --source-repo-id/repo-name and --target-repo-id/repo-name options.
     /// Necessary for crossrepo operations
     /// Only visible if Repo group is visible.
@@ -194,6 +198,9 @@ pub struct MononokeAppBuilder {
 
     /// The default Scuba dataset for this app, if any.
     default_scuba_dataset: Option<String>,
+
+    // Whether to default to scrubbing when using a multiplexed blobstore
+    scrub_action_default: Option<ScrubAction>,
 }
 
 /// Things we want to live for the lifetime of the mononoke binary
@@ -209,20 +216,21 @@ pub struct MononokeAppData {
 pub struct MononokeClapApp<'a, 'b> {
     clap: App<'a, 'b>,
     app_data: MononokeAppData,
+    arg_types: HashSet<ArgType>,
 }
 
 impl<'a, 'b> MononokeClapApp<'a, 'b> {
     pub fn about<S: Into<&'b str>>(self, about: S) -> Self {
         Self {
             clap: self.clap.about(about),
-            app_data: self.app_data,
+            ..self
         }
     }
 
     pub fn subcommand(self, subcmd: App<'a, 'b>) -> Self {
         Self {
             clap: self.clap.subcommand(subcmd),
-            app_data: self.app_data,
+            ..self
         }
     }
 
@@ -234,14 +242,14 @@ impl<'a, 'b> MononokeClapApp<'a, 'b> {
     pub fn args_from_usage(self, usage: &'a str) -> Self {
         Self {
             clap: self.clap.args_from_usage(usage),
-            app_data: self.app_data,
+            ..self
         }
     }
 
     pub fn group(self, group: ArgGroup<'a>) -> Self {
         Self {
             clap: self.clap.group(group),
-            app_data: self.app_data,
+            ..self
         }
     }
 
@@ -249,6 +257,7 @@ impl<'a, 'b> MononokeClapApp<'a, 'b> {
         MononokeMatches {
             matches: MaybeOwned::from(self.clap.get_matches()),
             app_data: self.app_data,
+            arg_types: self.arg_types,
         }
     }
 
@@ -260,6 +269,7 @@ impl<'a, 'b> MononokeClapApp<'a, 'b> {
         MononokeMatches {
             matches: MaybeOwned::from(self.clap.get_matches_from(itr)),
             app_data: self.app_data,
+            arg_types: self.arg_types,
         }
     }
 }
@@ -268,6 +278,7 @@ impl<'a, 'b> MononokeClapApp<'a, 'b> {
 pub struct MononokeMatches<'a> {
     matches: MaybeOwned<'a, ArgMatches<'a>>,
     app_data: MononokeAppData,
+    arg_types: HashSet<ArgType>,
 }
 
 impl<'a> MononokeMatches<'a> {
@@ -363,6 +374,7 @@ impl MononokeAppBuilder {
             blobstore_cachelib_attempt_zstd_default: true,
             blobstore_read_qps_default: None,
             default_scuba_dataset: None,
+            scrub_action_default: None,
         }
     }
 
@@ -482,6 +494,12 @@ impl MononokeAppBuilder {
     /// This command has different cachelib defaults, show them in --help
     pub fn with_cachelib_settings(mut self, cachelib_settings: CachelibSettings) -> Self {
         self.cachelib_settings = cachelib_settings;
+        self
+    }
+
+    /// This command has a special scrub_action default setting
+    pub fn with_scrub_action_default(mut self, d: Option<ScrubAction>) -> Self {
+        self.scrub_action_default = d;
         self
     }
 
@@ -631,6 +649,7 @@ impl MononokeAppBuilder {
                 global_mysql_connection_pool: SharedConnectionPool::new(),
                 default_scuba_dataset: self.default_scuba_dataset,
             },
+            arg_types: self.arg_types,
         }
     }
 
@@ -662,7 +681,7 @@ impl MononokeAppBuilder {
                 read_qps_arg.default_value(&QPS_FORMATTED.get_or_init(|| format!("{}", default)));
         }
 
-        app.arg(
+        let app = app.arg(
            read_qps_arg
         )
         .arg(
@@ -724,7 +743,22 @@ impl MononokeAppBuilder {
                 .possible_values(BOOL_VALUES)
                 .default_value(bool_as_str(self.readonly_storage_default.0))
                 .help("Error on any attempts to write to storage if set to true"),
-        )
+        );
+
+        if self.arg_types.contains(&ArgType::Scrub) {
+            let mut scrub_action_arg = Arg::with_name(BLOBSTORE_SCRUB_ACTION_ARG)
+                .long(BLOBSTORE_SCRUB_ACTION_ARG)
+                .takes_value(true)
+                .required(false)
+                .possible_values(ScrubAction::VARIANTS)
+                .help("Enable ScrubBlobstore with the given action. Checks for keys missing from stores. In ReportOnly mode this logs only, otherwise it performs a copy to the missing stores.");
+            if let Some(default) = self.scrub_action_default {
+                scrub_action_arg = scrub_action_arg.default_value(default.into());
+            }
+            app.arg(scrub_action_arg)
+        } else {
+            app
+        }
     }
 }
 
@@ -1703,7 +1737,7 @@ pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOpt
         .transpose()
         .context("Provided blobstore-put-behaviour is not PutBehaviour")?;
 
-    Ok(BlobstoreOptions::new(
+    let blobstore_options = BlobstoreOptions::new(
         ChaosOptions::new(read_chaos, write_chaos),
         ThrottleOptions {
             read_qps,
@@ -1713,8 +1747,19 @@ pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOpt
         PackOptions::new(write_zstd_level),
         CachelibBlobstoreOptions::new_lazy(Some(attempt_zstd)),
         blobstore_put_behaviour,
-        None, // no top level ScrubOptions yet
-    ))
+    );
+
+    let blobstore_options = if matches.arg_types.contains(&ArgType::Scrub) {
+        let scrub_action = matches
+            .value_of(BLOBSTORE_SCRUB_ACTION_ARG)
+            .map(ScrubAction::from_str)
+            .transpose()?;
+        blobstore_options.with_scrub_action(scrub_action)
+    } else {
+        blobstore_options
+    };
+
+    Ok(blobstore_options)
 }
 
 pub fn maybe_enable_mcrouter<'a>(fb: FacebookInit, matches: &MononokeMatches<'a>) {

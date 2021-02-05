@@ -28,13 +28,23 @@ use std::collections::HashMap;
 use std::fmt;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::{atomic::AtomicUsize, Arc};
-use strum_macros::{EnumString, EnumVariantNames};
+use strum_macros::{EnumString, EnumVariantNames, IntoStaticStr};
 
 static DEFAULT_HEAL_MAX_BACKLOG_DAYS: i64 = 7;
 static HEAL_MAX_BACKLOG: OnceCell<ChronoDuration> = OnceCell::new();
 
 /// What to do when the ScrubBlobstore finds a problem
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, EnumString, EnumVariantNames)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Eq,
+    PartialEq,
+    Hash,
+    EnumString,
+    EnumVariantNames,
+    IntoStaticStr
+)]
 pub enum ScrubAction {
     /// Log items needing repair
     ReportOnly,

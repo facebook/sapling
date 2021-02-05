@@ -19,7 +19,7 @@ use tokio::{
 };
 
 use blobstore_factory::{make_blobstore, ScrubAction};
-use cmdlib::args;
+use cmdlib::args::{self, ArgType};
 use context::CoreContext;
 
 mod scrub;
@@ -59,6 +59,8 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
     let app = args::MononokeAppBuilder::new("manual scrub")
         .with_advanced_args_hidden()
         .with_all_repos()
+        .with_arg_types(vec![ArgType::Scrub])
+        .with_scrub_action_default(Some(ScrubAction::Repair))
         .build()
         .arg(
             Arg::with_name(ARG_STORAGE_CONFIG_NAME)
@@ -114,8 +116,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         .context("Requested storage config not found")?;
 
     let mysql_options = args::parse_mysql_options(&matches);
-    let blobstore_options =
-        args::parse_blobstore_options(&matches)?.with_scrub_action(Some(ScrubAction::Repair));
+    let blobstore_options = args::parse_blobstore_options(&matches)?;
     let ctx = CoreContext::new_bulk_with_logger(fb, logger.clone());
 
     let success_file_name = matches

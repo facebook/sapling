@@ -48,5 +48,6 @@ once_cell = "1.4"
 serde = { version = "1.0", features = ["derive", "rc"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 slog-term = "2.4.2"
+strum = "0.19"
 tokio = { version = "0.2.24", features = ["full", "test-util"] }
 tokio-compat = "0.1"

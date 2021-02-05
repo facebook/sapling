@@ -57,7 +57,6 @@ impl BlobstoreOptions {
         pack_options: PackOptions,
         cachelib_options: CachelibBlobstoreOptions,
         put_behaviour: Option<PutBehaviour>,
-        scrub_options: Option<ScrubOptions>,
     ) -> Self {
         Self {
             chaos_options,
@@ -67,7 +66,8 @@ impl BlobstoreOptions {
             cachelib_options,
             // If not specified, maintain status quo, which is overwrite
             put_behaviour: put_behaviour.unwrap_or(DEFAULT_PUT_BEHAVIOUR),
-            scrub_options,
+            // These are added via the builder methods
+            scrub_options: None,
         }
     }
 
@@ -93,7 +93,6 @@ impl Default for BlobstoreOptions {
             None,
             PackOptions::default(),
             CachelibBlobstoreOptions::default(),
-            None,
             None,
         )
     }
