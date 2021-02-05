@@ -139,6 +139,7 @@ async fn start(
         will_exit.clone(),
         matches.is_present(ARG_TEST_FRIENDLY_LOGGING),
         tls_session_data_log.map(AsRef::as_ref),
+        None,
     )?;
 
     // Set up socket and TLS acceptor that this server will listen on.

@@ -13,6 +13,7 @@ use futures::{
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use hyper::{Body, Response};
+use load_limiter::LoadLimiterEnvironment;
 use slog::{error, o, Logger};
 
 use cloned::cloned;
@@ -61,11 +62,20 @@ impl RequestContext {
 pub struct RequestContextMiddleware {
     fb: FacebookInit,
     logger: Logger,
+    load_limiter: Option<LoadLimiterEnvironment>,
 }
 
 impl RequestContextMiddleware {
-    pub fn new(fb: FacebookInit, logger: Logger) -> Self {
-        Self { fb, logger }
+    pub fn new(
+        fb: FacebookInit,
+        logger: Logger,
+        load_limiter: Option<LoadLimiterEnvironment>,
+    ) -> Self {
+        Self {
+            fb,
+            logger,
+            load_limiter,
+        }
     }
 }
 
@@ -76,9 +86,12 @@ impl Middleware for RequestContextMiddleware {
             .identities()
             .clone()
             .unwrap_or_default();
+
+        let load_limiter = self.load_limiter.as_ref().map(|l| l.get(&identities, None));
         let metadata = Metadata::default().set_identities(identities);
         let session = SessionContainer::builder(self.fb)
             .metadata(metadata)
+            .load_limiter(load_limiter)
             .build();
 
         let request_id = request_id(&state);

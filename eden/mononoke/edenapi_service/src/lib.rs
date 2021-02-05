@@ -25,6 +25,7 @@ use gotham_ext::{
     },
 };
 use http::HeaderValue;
+use load_limiter::LoadLimiterEnvironment;
 use mononoke_api::Mononoke;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
@@ -46,6 +47,7 @@ pub fn build(
     will_exit: Arc<AtomicBool>,
     test_friendly_loging: bool,
     tls_session_data_log_path: Option<&Path>,
+    load_limiter: Option<LoadLimiterEnvironment>,
 ) -> Result<EdenApi, Error> {
     let ctx = ServerContext::new(mononoke, will_exit.clone());
 
@@ -68,7 +70,7 @@ pub fn build(
             "edenapi_server",
         )))
         .add(PostRequestMiddleware::default())
-        .add(RequestContextMiddleware::new(fb, logger))
+        .add(RequestContextMiddleware::new(fb, logger, load_limiter))
         .add(LoadMiddleware::new())
         .add(log_middleware)
         .add(OdsMiddleware::new())

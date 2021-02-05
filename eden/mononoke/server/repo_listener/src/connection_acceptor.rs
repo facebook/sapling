@@ -19,7 +19,6 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Context, Error, Result};
 use bytes::Bytes;
-use cached_config::ConfigStore;
 use edenapi_service::EdenApi;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
@@ -66,7 +65,6 @@ impl<T> MononokeStream for T where T: AsyncRead + AsyncWrite + Unpin + Send + Sy
 
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_millis(5000);
 const CHUNK_SIZE: usize = 10000;
-const CONFIGERATOR_LIMITS_CONFIG: &str = "scm/mononoke/loadshedding/limits";
 lazy_static! {
     static ref OPEN_CONNECTIONS: AtomicUsize = AtomicUsize::new(0);
 }
@@ -94,24 +92,11 @@ pub async fn connection_acceptor(
     repo_handlers: HashMap<String, RepoHandler>,
     tls_acceptor: SslAcceptor,
     terminate_process: oneshot::Receiver<()>,
-    config_store: &ConfigStore,
+    load_limiter: Option<LoadLimiterEnvironment>,
     scribe: Scribe,
     edenapi: EdenApi,
     will_exit: Arc<AtomicBool>,
 ) -> Result<()> {
-    let load_limiter = {
-        let handle = config_store
-            .get_config_handle(CONFIGERATOR_LIMITS_CONFIG.to_string())
-            .ok();
-
-        handle.and_then(|handle| {
-            common_config
-                .loadlimiter_category
-                .clone()
-                .map(|category| LoadLimiterEnvironment::new(fb, category, handle))
-        })
-    };
-
     let enable_http_control_api = common_config.enable_http_control_api;
 
     let security_checker =
