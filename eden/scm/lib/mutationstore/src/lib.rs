@@ -32,6 +32,7 @@
 use anyhow::Result;
 use bitflags::bitflags;
 use dag::namedag::MemNameDag;
+use dag::nameset::hints::Flags;
 use dag::nameset::meta::MetaSet;
 use dag::nonblocking::non_blocking_result;
 use dag::ops::DagAddHeads;
@@ -241,6 +242,8 @@ impl MutationStore {
     pub async fn calculate_obsolete(&self, public: Set, draft: Set) -> Result<Set> {
         let visible = public | draft.clone();
         let this = Arc::new(self.try_clone()?);
+        let hints = draft.hints().clone();
+        hints.update_flags_with(|f| f - Flags::ANCESTORS - Flags::FULL);
 
         // Evaluate `obsolete()` for all `draft`.
         // A draft is obsoleted if it has a visible successor.
@@ -325,6 +328,7 @@ impl MutationStore {
                     ))
                 })
             },
+            hints,
         ))
     }
 

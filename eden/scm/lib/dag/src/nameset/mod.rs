@@ -130,6 +130,7 @@ impl NameSet {
     pub fn from_evaluate_contains<C>(
         evaluate: impl Fn() -> Result<NameSet> + Send + Sync + 'static,
         contains: C,
+        hints: Hints,
     ) -> NameSet
     where
         C: for<'a> Fn(&'a MetaSet, &'a VertexName) -> Result<bool>,
@@ -146,6 +147,7 @@ impl NameSet {
                 let contains = contains.clone();
                 Box::pin(async move { contains(m, v) })
             }),
+            hints,
         )
     }
 
@@ -158,8 +160,9 @@ impl NameSet {
                 + Send
                 + Sync,
         >,
+        hints: Hints,
     ) -> NameSet {
-        Self::from_query(MetaSet::from_evaluate(evaluate).with_contains(contains))
+        Self::from_query(MetaSet::from_evaluate_hints(evaluate, hints).with_contains(contains))
     }
 
     /// Calculates the subset that is only in self, not in other.
@@ -350,6 +353,7 @@ impl NameSet {
                 let this = this.clone();
                 Box::pin(async move { Ok((&filter_func)(v).await? && this.0.contains(v).await?) })
             }),
+            Hints::default(), // TODO: Use a proper Hints.
         );
         result.hints().add_flags(Flags::FILTER);
         result

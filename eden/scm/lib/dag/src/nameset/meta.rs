@@ -64,14 +64,15 @@ impl fmt::Debug for MetaSet {
 impl MetaSet {
     /// Constructs `MetaSet` from an `evaluate` function that returns a
     /// `NameSet`. The `evaluate` function is not called immediately.
-    pub fn from_evaluate(
+    pub fn from_evaluate_hints(
         evaluate: Box<dyn Fn() -> BoxFuture<'static, Result<NameSet>> + Send + Sync + 'static>,
+        hints: Hints,
     ) -> Self {
         Self {
             evaluate,
             evaluated: Default::default(),
             contains: None,
-            hints: Hints::default(),
+            hints,
         }
     }
 
@@ -155,7 +156,7 @@ mod tests {
             let s = NameSet::from_static_names(v.clone().into_iter().map(Into::into));
             Box::pin(async move { Ok(s) })
         };
-        MetaSet::from_evaluate(Box::new(f))
+        MetaSet::from_evaluate_hints(Box::new(f), Hints::default())
     }
 
     #[test]

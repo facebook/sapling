@@ -1380,6 +1380,9 @@ impl DagAlgorithm for RevlogIndex {
 
     /// Calculate `::reachable - ::unreachable` and `::unreachable`.
     async fn only_both(&self, reachable: Set, unreachable: Set) -> dag::Result<(Set, Set)> {
+        let hints_ancestors_of_unreachable = unreachable.hints().clone();
+        hints_ancestors_of_unreachable.update_flags_with(|f| f | Flags::ANCESTORS | Flags::ID_DESC);
+
         let reachable_ids = self.to_id_set(&reachable).await?;
         let unreachable_ids = self.to_id_set(&unreachable).await?;
         let reachable_revs = reachable_ids.into_iter().map(|i| i.0 as u32);
@@ -1533,10 +1536,8 @@ impl DagAlgorithm for RevlogIndex {
                 ))
             },
             is_public,
+            hints_ancestors_of_unreachable,
         );
-        unreachable_set
-            .hints()
-            .add_flags(Flags::ANCESTORS | Flags::ID_DESC);
         Ok((reachable_set, unreachable_set))
     }
 
