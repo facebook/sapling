@@ -83,26 +83,28 @@ impl Hints {
         debug_assert!(default.id_map().is_none());
         let id_map = hints_list
             .iter()
-            .fold(&default, |a, b| {
-                match a.id_map_version().partial_cmp(&b.id_map_version()) {
-                    None => &default,
-                    Some(cmp::Ordering::Equal) | Some(cmp::Ordering::Greater) => a,
-                    Some(cmp::Ordering::Less) => b,
-                }
+            .fold(Some(&default), |opt_a, b| {
+                opt_a.and_then(
+                    |a| match a.id_map_version().partial_cmp(&b.id_map_version()) {
+                        None => None, // Incompatible sets
+                        Some(cmp::Ordering::Equal) | Some(cmp::Ordering::Greater) => Some(a),
+                        Some(cmp::Ordering::Less) => Some(b),
+                    },
+                )
             })
-            .id_map();
+            .and_then(|a| a.id_map());
         // Find the dag that is compatible with all other dags.
         debug_assert!(default.dag().is_none());
         let dag = hints_list
             .iter()
-            .fold(&default, |a, b| {
-                match a.dag_version().partial_cmp(&b.dag_version()) {
-                    None => &default,
-                    Some(cmp::Ordering::Equal) | Some(cmp::Ordering::Greater) => a,
-                    Some(cmp::Ordering::Less) => b,
-                }
+            .fold(Some(&default), |opt_a, b| {
+                opt_a.and_then(|a| match a.dag_version().partial_cmp(&b.dag_version()) {
+                    None => None,
+                    Some(cmp::Ordering::Equal) | Some(cmp::Ordering::Greater) => Some(a),
+                    Some(cmp::Ordering::Less) => Some(b),
+                })
             })
-            .dag();
+            .and_then(|a| a.dag());
         Self {
             id_map: IdMapSnapshot(id_map),
             dag: DagSnapshot(dag),
@@ -295,4 +297,30 @@ impl fmt::Debug for Hints {
         write!(f, ")")?;
         Ok(())
     }
+}
+
+#[cfg(test)]
+#[test]
+fn test_incompatilbe_union() {
+    use crate::tests::dummy_dag::DummyDag;
+    let dag1 = DummyDag::new();
+    let dag2 = DummyDag::new();
+
+    let mut hints1 = Hints::default();
+    hints1.dag = DagSnapshot(Some(dag1.dag_snapshot().unwrap()));
+
+    let mut hints2 = Hints::default();
+    hints2.dag = DagSnapshot(Some(dag2.dag_snapshot().unwrap()));
+
+    assert_eq!(
+        Hints::union(&[&hints1, &hints1]).dag_version(),
+        hints1.dag_version()
+    );
+
+    assert_eq!(Hints::union(&[&hints1, &hints2]).dag_version(), None);
+    assert_eq!(Hints::union(&[&hints2, &hints1]).dag_version(), None);
+    assert_eq!(
+        Hints::union(&[&hints2, &hints1, &hints2]).dag_version(),
+        None
+    );
 }
