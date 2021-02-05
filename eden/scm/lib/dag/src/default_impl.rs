@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::errors::programming;
 use crate::namedag::MemNameDag;
 use crate::ops::DagAddHeads;
 use crate::DagAlgorithm;
@@ -192,16 +191,16 @@ pub(crate) async fn first_ancestor_nth(
     this: &(impl DagAlgorithm + ?Sized),
     name: VertexName,
     n: u64,
-) -> Result<VertexName> {
+) -> Result<Option<VertexName>> {
     let mut vertex = name.clone();
     for _ in 0..n {
         let parents = this.parent_names(vertex).await?;
         if parents.is_empty() {
-            return programming(format!("{:?}~{} cannot be resolved", name, n));
+            return Ok(None);
         }
         vertex = parents[0].clone();
     }
-    Ok(vertex)
+    Ok(Some(vertex))
 }
 
 pub(crate) async fn heads(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result<NameSet> {

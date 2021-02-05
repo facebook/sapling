@@ -277,7 +277,8 @@ fn test_generic_dag2<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
     assert_eq!(expand(r(dag.all())?), "A B C D E F G H I J K");
     assert_eq!(expand(r(dag.ancestors(nameset("H I")))?), "A B C D E F H I");
     assert_eq!(expand(r(dag.parents(nameset("H I E")))?), "A B D E F");
-    assert_eq!(r(dag.first_ancestor_nth(v("H"), 2))?, v("A"));
+    assert_eq!(r(dag.first_ancestor_nth(v("H"), 2))?.unwrap(), v("A"));
+    assert!(r(dag.first_ancestor_nth(v("H"), 3))?.is_none());
     assert_eq!(expand(r(dag.heads(nameset("E H F K I D")))?), "K");
     assert_eq!(expand(r(dag.children(nameset("E F I")))?), "G H I J K");
     assert_eq!(expand(r(dag.merges(r(dag.all())?))?), "E F H I J K");

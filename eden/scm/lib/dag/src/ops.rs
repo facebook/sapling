@@ -53,7 +53,7 @@ pub trait DagAlgorithm: Send + Sync {
     }
 
     /// Calculates the n-th first ancestor.
-    async fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<VertexName> {
+    async fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<Option<VertexName>> {
         default_impl::first_ancestor_nth(self, name, n).await
     }
 

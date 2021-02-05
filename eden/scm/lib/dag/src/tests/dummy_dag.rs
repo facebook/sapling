@@ -56,9 +56,9 @@ impl DagAlgorithm for DummyDag {
     }
 
     /// Calculates the n-th first ancestor.
-    async fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<VertexName> {
+    async fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<Option<VertexName>> {
         if n == 0 {
-            Ok(name)
+            Ok(Some(name))
         } else {
             crate::errors::programming("DummyDag does not resolve x~n where n > 1")
         }

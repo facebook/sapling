@@ -387,12 +387,15 @@ where
     }
 
     /// Calculates the n-th first ancestor.
-    async fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<VertexName> {
+    async fn first_ancestor_nth(&self, name: VertexName, n: u64) -> Result<Option<VertexName>> {
         #[cfg(test)]
         let name2 = name.clone();
         let id = self.map().vertex_id(name).await?;
-        let id = self.dag().first_ancestor_nth(id, n)?;
-        let result = self.map().vertex_name(id).await?;
+        let id = self.dag().try_first_ancestor_nth(id, n)?;
+        let result = match id {
+            None => None,
+            Some(id) => Some(self.map().vertex_name(id).await?),
+        };
         #[cfg(test)]
         {
             let result2 = crate::default_impl::first_ancestor_nth(self, name2, n).await?;

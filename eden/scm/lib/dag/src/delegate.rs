@@ -133,7 +133,7 @@ macro_rules! delegate {
             }
             fn first_ancestor_nth<'a: 's, 's>(&'a self, name: $crate::Vertex, n: u64)
                 -> std::pin::Pin<Box<dyn std::future::Future<Output=
-                        $crate::Result<$crate::Vertex>
+                        $crate::Result<Option<$crate::Vertex>>
                     > + Send + 's>> where Self: 's
             {
                 self.$($t)*.first_ancestor_nth(name, n)
