@@ -463,8 +463,17 @@ class baseset(abstractsmartset):
                 repo=self.repo(),
             )
             s._ascending = self._ascending
+        elif type(other) is nameset:
+            # Convert to nameset first, then use nameset fastpath
+            s = getattr(self._tonameset(), op)(other)
         else:
             s = getattr(super(baseset, self), op)(other)
+        return s
+
+    def _tonameset(self):
+        cl = self.repo().changelog
+        nodes = cl.tonodes(self._list)
+        s = cl.torevset(nodes, reverse=not self.isdescending())
         return s
 
     def __and__(self, other):
@@ -858,6 +867,9 @@ class nameset(abstractsmartset):
             otherset = self._changelog.tonodes(other)
         elif ty is nameset:
             otherset = other._set
+        elif ty is baseset:
+            # convert basesee to nameset
+            otherset = self._changelog.tonodes(other._list)
         else:
             otherset = None
         if otherset is not None:
