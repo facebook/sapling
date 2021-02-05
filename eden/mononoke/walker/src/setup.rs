@@ -735,7 +735,7 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .short("p")
                 .takes_value(true)
                 .required(false)
-                .multiple(false)
+                .multiple(true)
                 .number_of_values(1)
                 .possible_values(&CHUNK_BY_PUBLIC_POSSIBLE_VALUES)
                 .help("Traverse using chunks of public changesets as roots to the specified node type"),
