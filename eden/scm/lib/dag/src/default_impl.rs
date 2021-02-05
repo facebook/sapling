@@ -212,6 +212,14 @@ pub(crate) async fn roots(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> 
     Ok(set.clone() - this.children(set).await?)
 }
 
+pub(crate) async fn merges(this: &(impl DagAlgorithm + ?Sized), set: NameSet) -> Result<NameSet> {
+    let this = this.dag_snapshot()?;
+    Ok(set.filter(Box::new(move |v: &VertexName| {
+        let this = this.clone();
+        Box::pin(async move { this.parent_names(v.clone()).await.map(|ps| ps.len() >= 2) })
+    })))
+}
+
 pub(crate) async fn reachable_roots(
     this: &(impl DagAlgorithm + ?Sized),
     roots: NameSet,

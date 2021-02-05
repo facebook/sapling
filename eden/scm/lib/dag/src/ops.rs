@@ -70,6 +70,11 @@ pub trait DagAlgorithm: Send + Sync {
         default_impl::roots(self, set).await
     }
 
+    /// Calculates merges of the selected set (vertexes with >=2 parents).
+    async fn merges(&self, set: NameSet) -> Result<NameSet> {
+        default_impl::merges(self, set).await
+    }
+
     /// Calculates one "greatest common ancestor" of the given set.
     ///
     /// If there are no common ancestors, return None.

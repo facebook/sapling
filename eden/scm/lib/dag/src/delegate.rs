@@ -124,6 +124,13 @@ macro_rules! delegate {
             {
                 self.$($t)*.parents(set)
             }
+            fn merges<'a: 's, 's>(&'a self, set: $crate::Set)
+                -> std::pin::Pin<Box<dyn std::future::Future<Output=
+                        $crate::Result<$crate::Set>
+                    > + Send + 's>> where Self: 's
+            {
+                self.$($t)*.merges(set)
+            }
             fn first_ancestor_nth<'a: 's, 's>(&'a self, name: $crate::Vertex, n: u64)
                 -> std::pin::Pin<Box<dyn std::future::Future<Output=
                         $crate::Result<$crate::Vertex>
