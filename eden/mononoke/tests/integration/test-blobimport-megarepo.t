@@ -35,6 +35,6 @@ Set up the base repo, and a fake source repo
 
 Do the import, cross-check that the mapping is preserved
   $ blobimport repo-hg/.hg repo --source-repo-id 65535
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select large_repo_id, hex(large_bcs_id), small_repo_id, hex(small_bcs_id) from synced_commit_mapping;"
-  0|73D11CCF7D3515BFD96DC1F43FF5A2E51636F4D9ECC299E3246C7C46ED55E874|65535|73D11CCF7D3515BFD96DC1F43FF5A2E51636F4D9ECC299E3246C7C46ED55E874
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select large_repo_id, hex(large_bcs_id), small_repo_id, hex(small_bcs_id) from synced_commit_mapping;" | sort
   0|59695D47BD01807288E7A7D14AAE5E93507C8B4E2B48B8CC4947B18C0E8BF471|65535|59695D47BD01807288E7A7D14AAE5E93507C8B4E2B48B8CC4947B18C0E8BF471
+  0|73D11CCF7D3515BFD96DC1F43FF5A2E51636F4D9ECC299E3246C7C46ED55E874|65535|73D11CCF7D3515BFD96DC1F43FF5A2E51636F4D9ECC299E3246C7C46ED55E874
