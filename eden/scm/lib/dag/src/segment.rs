@@ -116,6 +116,14 @@ impl Segment {
         }
     }
 
+    pub(crate) fn parent_count(&self) -> Result<usize> {
+        let mut cur = Cursor::new(&self.0);
+        cur.set_position(Self::OFFSET_DELTA as u64);
+        let _: u64 = cur.read_vlq()?;
+        let parent_count: usize = cur.read_vlq()?;
+        Ok(parent_count)
+    }
+
     pub(crate) fn parents(&self) -> Result<Vec<Id>> {
         let mut cur = Cursor::new(&self.0);
         cur.set_position(Self::OFFSET_DELTA as u64);
