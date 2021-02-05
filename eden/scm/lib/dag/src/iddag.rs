@@ -647,6 +647,67 @@ impl<Store: IdDagStore> IdDag<Store> {
         Ok(result)
     }
 
+    /// Calculate merges within the given set.
+    pub fn merges(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
+        let mut result = SpanSet::empty();
+        let set = set.into();
+
+        let tracing_span = debug_span!("merges", result = "", set = field::debug(&set));
+        let _scope = tracing_span.enter();
+
+        // Check overlapped flat segments. By definition, merges can only be the
+        // "low"s of flat segments.
+
+        // Process the given span overlapped with the segment.
+        // Return the next "high" id for segment lookup.
+        // Return None if there is no segment to check for the given span.
+        let mut process_seg = |span: &Span, seg: Segment| -> Result<Option<Id>> {
+            let seg_span = seg.span()?;
+            let low = seg_span.low;
+            if low < span.low {
+                return Ok(None);
+            }
+            if seg.parent_count()? >= 2 {
+                // span.low <= low <= high <= span.high
+                debug_assert!(set.contains(low));
+                result.push_span(low.into());
+            }
+            if seg_span.low > Id(0) {
+                Ok(Some(seg_span.low - 1))
+            } else {
+                Ok(None)
+            }
+        };
+
+        for span in set.as_spans() {
+            // Cannot use iter_segments_descending, since it skips overlapping
+            // segments (seg.high > span.high and seg.low > span.low). Use
+            // find_flat_segment_including_id to find the first overlapping
+            // segment, then use iter_segments_descending to handle a large
+            // span (ex. all()) efficiently.
+            let high = match self.find_flat_segment_including_id(span.high)? {
+                None => continue,
+                Some(seg) => match process_seg(span, seg)? {
+                    None => continue,
+                    Some(id) => id,
+                },
+            };
+            'iter_seg: for seg in self.iter_segments_descending(high, 0)? {
+                let seg = seg?;
+                match process_seg(span, seg)? {
+                    None => break 'iter_seg,
+                    Some(_) => {}
+                }
+            }
+        }
+
+        if !tracing_span.is_disabled() {
+            tracing_span.record("result", &field::debug(&result));
+        }
+
+        Ok(result)
+    }
+
     /// Calculate parents of the given set.
     ///
     /// Note: [`SpanSet`] does not preserve order. Use [`IdDag::parent_ids`] if
