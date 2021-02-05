@@ -357,6 +357,18 @@ where
         Ok(result)
     }
 
+    /// Calculate merges within the given set.
+    async fn merges(&self, set: NameSet) -> Result<NameSet> {
+        let spans = self.to_id_set(&set).await?;
+        let spans = self.dag().merges(spans)?;
+        let result = NameSet::from_spans_dag(spans, self)?;
+        #[cfg(test)]
+        {
+            result.assert_eq(crate::default_impl::merges(self, set).await?);
+        }
+        Ok(result)
+    }
+
     /// Calculates parents of the given set.
     ///
     /// Note: Parent order is not preserved. Use [`NameDag::parent_names`]

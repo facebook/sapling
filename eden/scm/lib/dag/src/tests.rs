@@ -78,6 +78,9 @@ fn test_generic_dag1<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
     );
     assert_eq!(expand(r(dag.parents(nameset("H I E")))?), "B D G");
     assert_eq!(expand(r(dag.children(nameset("G D L")))?), "E H I");
+    assert_eq!(expand(r(dag.merges(r(dag.all())?))?), "E K");
+    assert_eq!(expand(r(dag.merges(nameset("E F J K")))?), "E K");
+    assert_eq!(expand(r(dag.merges(nameset("A B D F H J L")))?), "");
     assert_eq!(expand(r(dag.roots(nameset("A B E F C D I J")))?), "A C I");
     assert_eq!(expand(r(dag.heads(nameset("A B E F C D I J")))?), "F J");
     assert_eq!(expand(r(dag.gca_all(nameset("J K H")))?), "G");
@@ -277,6 +280,8 @@ fn test_generic_dag2<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
     assert_eq!(r(dag.first_ancestor_nth(v("H"), 2))?, v("A"));
     assert_eq!(expand(r(dag.heads(nameset("E H F K I D")))?), "K");
     assert_eq!(expand(r(dag.children(nameset("E F I")))?), "G H I J K");
+    assert_eq!(expand(r(dag.merges(r(dag.all())?))?), "E F H I J K");
+    assert_eq!(expand(r(dag.merges(nameset("E H G D I")))?), "E H I");
     assert_eq!(expand(r(dag.roots(nameset("E G H J I K D")))?), "D E");
     assert_eq!(r(dag.gca_one(nameset("J K")))?, Some(v("I")));
     assert_eq!(expand(r(dag.gca_all(nameset("J K")))?), "E I");
