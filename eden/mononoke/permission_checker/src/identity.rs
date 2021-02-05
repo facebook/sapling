@@ -71,3 +71,9 @@ impl Serialize for MononokeIdentity {
         serializer.collect_str(self)
     }
 }
+
+pub trait MononokeIdentitySetExt {
+    fn is_quicksand(&self) -> bool;
+
+    fn is_external_sync(&self) -> bool;
+}

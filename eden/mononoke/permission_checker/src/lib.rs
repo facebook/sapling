@@ -16,7 +16,7 @@ mod oss;
 pub use checker::{
     ArcPermissionChecker, BoxPermissionChecker, PermissionChecker, PermissionCheckerBuilder,
 };
-pub use identity::{MononokeIdentity, MononokeIdentitySet};
+pub use identity::{MononokeIdentity, MononokeIdentitySet, MononokeIdentitySetExt};
 pub use membership::{
     ArcMembershipChecker, BoxMembershipChecker, MembershipChecker, MembershipCheckerBuilder,
 };

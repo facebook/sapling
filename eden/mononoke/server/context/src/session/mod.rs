@@ -9,6 +9,7 @@ use anyhow::Result;
 use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
 use load_limiter::{BoxLoadLimiter, LoadCost, LoadLimiter, Metric};
+use permission_checker::MononokeIdentitySetExt;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::Logger;
@@ -20,7 +21,6 @@ use tracing::TraceContext;
 pub use self::builder::SessionContainerBuilder;
 use crate::core::CoreContext;
 use crate::logging::LoggingContainer;
-use crate::{is_external_sync, is_quicksand};
 
 mod builder;
 
@@ -113,11 +113,11 @@ impl SessionContainer {
     }
 
     pub fn is_quicksand(&self) -> bool {
-        is_quicksand(self.metadata())
+        self.metadata().identities().is_quicksand()
     }
 
     pub fn is_external_sync(&self) -> bool {
-        is_external_sync(self.metadata())
+        self.metadata().identities().is_external_sync()
     }
 
     pub fn blobstore_read_limiter(&self) -> &Option<AsyncLimiter> {

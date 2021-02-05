@@ -10,7 +10,7 @@ use fbinit::FacebookInit;
 use openssl::x509::X509;
 
 use crate::checker::{BoxPermissionChecker, PermissionCheckerBuilder};
-use crate::identity::{MononokeIdentity, MononokeIdentitySet};
+use crate::identity::{MononokeIdentity, MononokeIdentitySet, MononokeIdentitySetExt};
 use crate::membership::{BoxMembershipChecker, MembershipCheckerBuilder};
 
 impl MononokeIdentity {
@@ -43,6 +43,16 @@ impl MononokeIdentity {
         let mut idents = MononokeIdentitySet::new();
         idents.insert(MononokeIdentity::new("X509_SUBJECT_NAME", subject_name)?);
         Ok(idents)
+    }
+}
+
+impl MononokeIdentitySetExt for MononokeIdentitySet {
+    fn is_quicksand(&self) -> bool {
+        false
+    }
+
+    fn is_external_sync(&self) -> bool {
+        false
     }
 }
 

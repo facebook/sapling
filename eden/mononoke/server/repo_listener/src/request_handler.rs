@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use anyhow::{anyhow, Context, Error, Result};
 use bytes::Bytes;
 use cached_config::ConfigHandle;
-use context::{is_quicksand, LoggingContainer, SessionClass, SessionContainer, SessionId};
+use context::{LoggingContainer, SessionClass, SessionContainer, SessionId};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
@@ -23,6 +23,7 @@ use lazy_static::lazy_static;
 use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
 use load_limiter::{LoadLimiterBuilder, Metric};
 use maplit::{hashmap, hashset};
+use permission_checker::MononokeIdentitySetExt;
 use repo_client::RepoClient;
 use scribe_ext::Scribe;
 use slog::{self, error, o, Drain, Level, Logger};
@@ -260,7 +261,7 @@ fn loadlimiting_configs(
     config: ConfigHandle<MononokeThrottleLimits>,
     metadata: &Metadata,
 ) -> (MononokeThrottleLimit, RateLimits) {
-    let is_quicksand = is_quicksand(&metadata);
+    let is_quicksand = metadata.identities().is_quicksand();
 
     let config = config.get();
     let region_percentage = config
