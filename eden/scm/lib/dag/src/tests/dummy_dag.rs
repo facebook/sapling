@@ -39,7 +39,7 @@ impl DagAlgorithm for DummyDag {
         Ok(Vec::new())
     }
 
-    /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
+    /// Returns a set that covers all vertexes tracked by this DAG.
     async fn all(&self) -> Result<NameSet> {
         crate::errors::programming("DummyDag does not support all()")
     }

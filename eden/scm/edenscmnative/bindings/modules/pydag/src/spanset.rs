@@ -7,9 +7,9 @@
 
 use cpython::*;
 
-use dag::spanset::SpanSetIter;
 use dag::Id;
 use dag::IdSet;
+use dag::IdSetIter;
 use std::cell::RefCell;
 
 /// A wrapper around [`IdSet`] with Python integration.
@@ -123,9 +123,9 @@ py_class!(pub class spans |py| {
     }
 });
 
-// A wrapper to [`SpanSetIter`].
+// A wrapper to [`IdSetIter`].
 py_class!(pub class spansiter |py| {
-    data iter: RefCell<SpanSetIter<IdSet>>;
+    data iter: RefCell<IdSetIter<IdSet>>;
     data ascending: bool;
 
     def __next__(&self) -> PyResult<Option<u64>> {

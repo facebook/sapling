@@ -10,27 +10,27 @@ use super::BoxVertexStream;
 use super::{AsyncNameSetQuery, Hints};
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
-use crate::spanset::Span;
-use crate::spanset::{SpanSet, SpanSetIter};
 use crate::Group;
+use crate::IdSpan;
 use crate::Result;
 use crate::VertexName;
+use crate::{IdSet, IdSetIter};
 use nonblocking::non_blocking_result;
 use std::any::Any;
 use std::fmt;
 use std::sync::Arc;
 
-/// A set backed by [`SpanSet`] + [`IdMap`].
+/// A set backed by [`IdSet`] + [`IdMap`].
 /// Efficient for DAG calculation.
 pub struct IdStaticSet {
-    pub(crate) spans: SpanSet,
+    pub(crate) spans: IdSet,
     pub(crate) map: Arc<dyn IdConvert + Send + Sync>,
     pub(crate) dag: Arc<dyn DagAlgorithm + Send + Sync>,
     hints: Hints,
 }
 
 struct Iter {
-    iter: SpanSetIter<SpanSet>,
+    iter: IdSetIter<IdSet>,
     map: Arc<dyn IdConvert + Send + Sync>,
     reversed: bool,
 }
@@ -55,7 +55,7 @@ impl Iter {
 }
 
 struct DebugSpan {
-    span: Span,
+    span: IdSpan,
     low_name: Option<VertexName>,
     high_name: Option<VertexName>,
 }
@@ -112,7 +112,7 @@ impl fmt::Debug for IdStaticSet {
 
 impl IdStaticSet {
     pub(crate) fn from_spans_idmap_dag(
-        spans: SpanSet,
+        spans: IdSet,
         map: Arc<dyn IdConvert + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
     ) -> Self {

@@ -38,7 +38,7 @@ use crate::ops::ToIdSet;
 use crate::ops::TryClone;
 use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
-use crate::spanset::SpanSet;
+use crate::IdSet;
 use crate::Result;
 use crate::VerLink;
 use futures::future::join_all;
@@ -313,7 +313,7 @@ where
             Ok(set.clone())
         } else {
             let flags = extract_ancestor_flag_if_compatible(set.hints(), self.dag_version());
-            let mut spans = SpanSet::empty();
+            let mut spans = IdSet::empty();
             for name in set.iter()? {
                 let id = self.map().vertex_id(name?).await?;
                 spans.push(id);
@@ -335,7 +335,7 @@ where
         Ok(result)
     }
 
-    /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
+    /// Returns a set that covers all vertexes tracked by this DAG.
     async fn all(&self) -> Result<NameSet> {
         let spans = self.dag().all()?;
         let result = NameSet::from_spans_dag(spans, self)?;

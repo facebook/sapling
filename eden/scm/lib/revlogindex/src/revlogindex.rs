@@ -1017,7 +1017,7 @@ impl DagAlgorithm for RevlogIndex {
         Ok(result)
     }
 
-    /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
+    /// Returns a set that covers all vertexes tracked by this DAG.
     async fn all(&self) -> dag::Result<Set> {
         let id_set = if self.len() == 0 {
             IdSet::empty()

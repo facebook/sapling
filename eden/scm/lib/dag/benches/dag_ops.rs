@@ -13,7 +13,7 @@ use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
 use dag::ops::Persist;
 use dag::Set;
-use dag::{idmap::IdMap, spanset::SpanSet, Group, Id, IdDag, VertexName};
+use dag::{idmap::IdMap, Group, Id, IdDag, IdSet, VertexName};
 use minibench::{bench, elapsed};
 use tempfile::tempdir;
 
@@ -75,7 +75,7 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
         .unwrap();
     syncable.sync().unwrap();
 
-    let sample_two_ids: Vec<SpanSet> = (0..parents.len() as u64)
+    let sample_two_ids: Vec<IdSet> = (0..parents.len() as u64)
         .step_by(10079)
         .flat_map(|i| {
             (1..parents.len() as u64)
@@ -83,11 +83,11 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
                 .map(move |j| (Id(i), Id(j)).into())
         })
         .collect(); // 2679 samples
-    let sample_one_ids: Vec<SpanSet> = (0..parents.len() as u64)
+    let sample_one_ids: Vec<IdSet> = (0..parents.len() as u64)
         .step_by(153)
-        .map(|i| SpanSet::from(Id(i)))
+        .map(|i| IdSet::from(Id(i)))
         .collect();
-    let sample_sets: Vec<SpanSet> = (0..parents.len() as u64)
+    let sample_sets: Vec<IdSet> = (0..parents.len() as u64)
         .step_by(10079)
         .flat_map(|i| {
             ((i + 7919)..parents.len() as u64)

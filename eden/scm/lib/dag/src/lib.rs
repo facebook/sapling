@@ -27,7 +27,7 @@ pub mod ops;
 pub mod protocol;
 pub mod render;
 pub mod segment;
-pub mod spanset;
+mod spanset;
 pub mod utils;
 mod verlink;
 
@@ -44,7 +44,6 @@ pub use namedag::NameDag;
 pub use nameset::NameSet;
 pub use ops::DagAlgorithm;
 pub use segment::{FlatSegment, PreparedFlatSegments};
-pub use spanset::SpanSet;
 pub use verlink::VerLink;
 
 pub type Level = u8;
@@ -56,7 +55,9 @@ pub type OnDiskIdDag = IdDag<iddagstore::IndexedLogStore>;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub type Dag = NameDag;
 pub type Set = NameSet;
-pub type IdSet = SpanSet;
+pub type IdSet = spanset::SpanSet;
+pub type IdSetIter<T> = spanset::SpanSetIter<T>;
+pub type IdSpan = spanset::Span;
 pub use namedag::MemNameDag as MemDag;
 pub use nameset::NameIter as SetIter;
 pub type Vertex = VertexName;

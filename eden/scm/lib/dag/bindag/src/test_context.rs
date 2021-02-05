@@ -10,7 +10,7 @@ use dag::nameset::SyncNameSetQuery;
 use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
 use dag::OnDiskIdDag;
-use dag::{ops::DagPersistent, spanset::SpanSet, Id, NameDag, VertexName};
+use dag::{ops::DagPersistent, Id, IdSet, NameDag, VertexName};
 use nonblocking::non_blocking_result;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -130,8 +130,8 @@ impl<T> GeneralTestContext<T> {
         self
     }
 
-    /// Convert a SpanSet (used by IdDag) to plain revs (used by `parents`).
-    pub fn to_plain_revs(&self, set: &SpanSet) -> Vec<usize> {
+    /// Convert a IdSet (used by IdDag) to plain revs (used by `parents`).
+    pub fn to_plain_revs(&self, set: &IdSet) -> Vec<usize> {
         set.iter().map(|i| self.idmap[&i]).collect()
     }
 
@@ -148,9 +148,9 @@ impl<T> GeneralTestContext<T> {
             .collect()
     }
 
-    /// Convert `usize` plain revs to SpanSet used by IdDag.
-    pub fn to_dag_revs(&self, revs: &[usize]) -> SpanSet {
+    /// Convert `usize` plain revs to IdSet used by IdDag.
+    pub fn to_dag_revs(&self, revs: &[usize]) -> IdSet {
         let iter = revs.iter().map(|&i| self.rev_idmap[i].clone());
-        SpanSet::from_spans(iter)
+        IdSet::from_spans(iter)
     }
 }

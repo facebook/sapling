@@ -16,7 +16,7 @@
 
 use crate::errors::bug;
 use crate::id::Id;
-use crate::spanset::Span;
+use crate::IdSpan;
 use crate::Level;
 use crate::Result;
 use bitflags::bitflags;
@@ -98,7 +98,7 @@ impl Segment {
         Ok(len)
     }
 
-    pub(crate) fn span(&self) -> Result<Span> {
+    pub(crate) fn span(&self) -> Result<IdSpan> {
         let high = self.high()?;
         let delta = self.delta()?;
         let low = high - delta;

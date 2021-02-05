@@ -12,8 +12,8 @@
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
-use crate::spanset::SpanSet;
 use crate::Id;
+use crate::IdSet;
 use crate::Result;
 use crate::VertexName;
 use futures::future::BoxFuture;
@@ -109,20 +109,17 @@ impl NameSet {
         Ok(Self::from_id_iter_idmap_dag(iter, map, dag))
     }
 
-    /// Creates from [`SpanSet`], [`IdMap`] and [`DagAlgorithm`].
+    /// Creates from [`IdSet`], [`IdMap`] and [`DagAlgorithm`].
     pub fn from_spans_idmap_dag(
-        spans: SpanSet,
+        spans: IdSet,
         map: Arc<dyn IdConvert + Send + Sync>,
         dag: Arc<dyn DagAlgorithm + Send + Sync>,
     ) -> NameSet {
         Self::from_query(IdStaticSet::from_spans_idmap_dag(spans, map, dag))
     }
 
-    /// Creates from [`SpanSet`] and a struct with snapshot abilities.
-    pub fn from_spans_dag(
-        spans: SpanSet,
-        dag: &(impl DagAlgorithm + IdMapSnapshot),
-    ) -> Result<Self> {
+    /// Creates from [`IdSet`] and a struct with snapshot abilities.
+    pub fn from_spans_dag(spans: IdSet, dag: &(impl DagAlgorithm + IdMapSnapshot)) -> Result<Self> {
         let map = dag.id_map_snapshot()?;
         let dag = dag.dag_snapshot()?;
         Ok(Self::from_spans_idmap_dag(spans, map, dag))
@@ -399,7 +396,7 @@ impl NameSet {
             ids.push(id);
         }
         ids.sort_unstable_by_key(|i| u64::MAX - i.0);
-        let spans = SpanSet::from_sorted_spans(ids);
+        let spans = IdSet::from_sorted_spans(ids);
         let flat_set = NameSet::from_spans_idmap_dag(spans, id_map, dag);
         flat_set.hints().inherit_flags_min_max_id(self.hints());
         Ok(flat_set)

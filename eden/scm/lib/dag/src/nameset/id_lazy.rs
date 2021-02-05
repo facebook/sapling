@@ -11,9 +11,9 @@ use super::BoxVertexStream;
 use super::{AsyncNameSetQuery, Hints};
 use crate::ops::DagAlgorithm;
 use crate::ops::IdConvert;
-use crate::spanset::SpanSet;
 use crate::Group;
 use crate::Id;
+use crate::IdSet;
 use crate::Result;
 use crate::VertexName;
 use indexmap::IndexSet;
@@ -197,7 +197,7 @@ impl IdLazySet {
     /// Convert to an IdStaticSet.
     pub fn to_static(&self) -> Result<IdStaticSet> {
         let inner = self.load_all()?;
-        let mut spans = SpanSet::empty();
+        let mut spans = IdSet::empty();
         for &id in inner.visited.iter() {
             spans.push(id);
         }

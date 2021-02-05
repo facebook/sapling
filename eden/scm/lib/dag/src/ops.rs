@@ -38,7 +38,7 @@ pub trait DagAlgorithm: Send + Sync {
     /// Get ordered parent vertexes.
     async fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>>;
 
-    /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
+    /// Returns a set that covers all vertexes tracked by this DAG.
     async fn all(&self) -> Result<NameSet>;
 
     /// Calculates all ancestors reachable from any name from the given set.
@@ -352,12 +352,12 @@ where
 
 #[async_trait::async_trait]
 pub trait ToIdSet {
-    /// Converts [`NameSet`] to [`SpanSet`].
+    /// Converts [`NameSet`] to [`IdSet`].
     async fn to_id_set(&self, set: &NameSet) -> Result<IdSet>;
 }
 
 pub trait ToSet {
-    /// Converts [`SpanSet`] to [`NameSet`].
+    /// Converts [`IdSet`] to [`NameSet`].
     fn to_set(&self, set: &IdSet) -> Result<NameSet>;
 }
 
@@ -459,7 +459,7 @@ impl IdMapSnapshot for Arc<dyn IdConvert + Send + Sync> {
 }
 
 impl<T: IdMapSnapshot + DagAlgorithm> ToSet for T {
-    /// Converts [`SpanSet`] to [`NameSet`].
+    /// Converts [`IdSet`] to [`NameSet`].
     fn to_set(&self, set: &IdSet) -> Result<NameSet> {
         NameSet::from_spans_dag(set.clone(), self)
     }

@@ -21,11 +21,11 @@ use crate::id::VertexName;
 use crate::iddag::{FirstAncestorConstraint, IdDag};
 use crate::iddagstore::IdDagStore;
 use crate::ops::IdConvert;
-use crate::spanset::SpanSet;
 use crate::Error;
 use crate::Id;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use crate::IdMap;
+use crate::IdSet;
 use crate::Result;
 use nonblocking::non_blocking_result;
 use serde::{Deserialize, Serialize};
@@ -175,7 +175,7 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestNameToLocation, Response
             .into_iter()
             .map(|s| non_blocking_result(map.vertex_id(s)))
             .collect::<Result<Vec<Id>>>()?;
-        let heads = SpanSet::from_spans(heads);
+        let heads = IdSet::from_spans(heads);
         let path_names = request
             .names
             .into_iter()

@@ -13,10 +13,10 @@ use crate::ops::ImportAscii;
 use crate::render::render_namedag;
 use crate::DagAlgorithm;
 use crate::IdMap;
+use crate::IdSet;
 use crate::NameDag;
 use crate::NameSet;
 use crate::Result;
-use crate::SpanSet;
 use nonblocking::non_blocking_result as r;
 use tempfile::tempdir;
 pub use test_dag::TestDag;
@@ -854,7 +854,7 @@ fn test_segment_ancestors_example1() {
         (vec![1..=4], vec![]),
     ] {
         assert_eq!(
-            dag.gca_all(SpanSet::from_spans(spans))
+            dag.gca_all(IdSet::from_spans(spans))
                 .unwrap()
                 .iter()
                 .collect::<Vec<Id>>(),
@@ -902,8 +902,7 @@ Lv1: R0-7[]"#
 
     let dag = result.name_dag.dag;
 
-    let parents =
-        |spans| -> String { format_set(dag.parents(SpanSet::from_spans(spans)).unwrap()) };
+    let parents = |spans| -> String { format_set(dag.parents(IdSet::from_spans(spans)).unwrap()) };
     let parent_ids = |id| -> String { format!("{:?}", dag.parent_ids(Id(id)).unwrap()) };
     let first_ancestor_nth =
         |id, n| -> String { format!("{:?}", dag.first_ancestor_nth(Id(id), n).unwrap()) };
@@ -972,7 +971,7 @@ fn test_children() {
     let result = build_segments(ASCII_DAG1, "L", 3);
     let dag = result.name_dag.dag;
     let children =
-        |spans| -> String { format_set(dag.children(SpanSet::from_spans(spans)).unwrap()) };
+        |spans| -> String { format_set(dag.children(IdSet::from_spans(spans)).unwrap()) };
 
     // See test_parents above for the ASCII DAG.
 
@@ -1031,7 +1030,7 @@ Lv2: R0-2[] R3-6[] R7-9[]"#
     );
 
     let dag = result.name_dag.dag;
-    let heads = |spans| -> String { format_set(dag.heads(SpanSet::from_spans(spans)).unwrap()) };
+    let heads = |spans| -> String { format_set(dag.heads(IdSet::from_spans(spans)).unwrap()) };
 
     assert_eq!(heads(vec![]), "");
     assert_eq!(heads(vec![0..=11]), "2 6 9 10 11");
@@ -1064,7 +1063,7 @@ Lv2: R0-2[] R3-6[]"#
     );
 
     let dag = result.name_dag.dag;
-    let roots = |spans| -> String { format_set(dag.roots(SpanSet::from_spans(spans)).unwrap()) };
+    let roots = |spans| -> String { format_set(dag.roots(IdSet::from_spans(spans)).unwrap()) };
 
     assert_eq!(roots(vec![]), "");
     assert_eq!(roots(vec![0..=11]), "0 3 7 8 10");
@@ -1103,7 +1102,7 @@ Lv2: R0-3[] R4-6[1]"#
     let dag = result.name_dag.dag;
     let range = |roots, heads| -> String {
         format_set(
-            dag.range(SpanSet::from_spans(roots), SpanSet::from_spans(heads))
+            dag.range(IdSet::from_spans(roots), IdSet::from_spans(heads))
                 .unwrap(),
         )
     };
@@ -1173,7 +1172,7 @@ Lv2: R0-3[] R4-6[1]"#
 
     // Test descendants() and ancestors() against range().
     for bits in 0..(1 << 10) {
-        let mut set = SpanSet::empty();
+        let mut set = IdSet::empty();
         for i in (0..=9).rev() {
             if bits & (1 << i) != 0 {
                 set.push_span(i.into());
@@ -1213,7 +1212,7 @@ fn nameset(names: &str) -> NameSet {
     NameSet::from_static_names(names)
 }
 
-fn format_set(set: SpanSet) -> String {
+fn format_set(set: IdSet) -> String {
     format!("{:?}", set)
 }
 
