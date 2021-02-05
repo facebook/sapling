@@ -76,6 +76,10 @@ fn test_generic_dag1<T: DagAlgorithm + DagAddHeads>(dag: T) -> Result<T> {
         expand(r(dag.ancestors(nameset("H I")))?),
         "A B C D E F G H I"
     );
+    assert_eq!(
+        expand(r(dag.sort(&nameset("H E A")))?.skip(1).take(2)),
+        "A E"
+    );
     assert_eq!(expand(r(dag.first_ancestors(nameset("F")))?), "A B E F");
     assert_eq!(expand(r(dag.parents(nameset("H I E")))?), "B D G");
     assert_eq!(expand(r(dag.children(nameset("G D L")))?), "E H I");

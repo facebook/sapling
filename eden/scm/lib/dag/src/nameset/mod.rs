@@ -425,6 +425,33 @@ impl NameSet {
         flat_set.hints().inherit_flags_min_max_id(self.hints());
         Ok(flat_set)
     }
+
+    /// Take the first `n` items.
+    pub fn take(&self, n: u64) -> NameSet {
+        if let Some(set) = self.as_any().downcast_ref::<IdStaticSet>() {
+            tracing::debug!("take(x={:.6?}, {}) (fast path)", self, n);
+            Self::from_spans_idmap_dag(set.spans.take(n), set.map.clone(), set.dag.clone())
+        } else {
+            tracing::debug!("take(x={:.6?}, {}) (slow path)", self, n);
+            let set = slice::SliceSet::new(self.clone(), 0, Some(n));
+            Self::from_query(set)
+        }
+    }
+
+    /// Skip the first `n` items.
+    pub fn skip(&self, n: u64) -> NameSet {
+        if n == 0 {
+            return self.clone();
+        }
+        if let Some(set) = self.as_any().downcast_ref::<IdStaticSet>() {
+            tracing::debug!("skip(x={:.6?}, {}) (fast path)", self, n);
+            Self::from_spans_idmap_dag(set.spans.skip(n), set.map.clone(), set.dag.clone())
+        } else {
+            tracing::debug!("skip(x={:.6?}, {}) (slow path)", self, n);
+            let set = slice::SliceSet::new(self.clone(), n, None);
+            Self::from_query(set)
+        }
+    }
 }
 
 impl BitAnd for NameSet {
@@ -908,6 +935,15 @@ pub(crate) mod tests {
         assert_eq!(s(ab.clone() | bc.clone()), ["61", "62", "63"]);
         assert_eq!(s(ab.clone() & bc.clone()), ["62"]);
         assert_eq!(s(ab.clone() - bc.clone()), ["61"]);
+    }
+
+    #[test]
+    fn test_skip_take_slow_path() {
+        let s: NameSet = "a b c d".into();
+        let d = |set: NameSet| -> String { format!("{:?}", r(set.flatten_names()).unwrap()) };
+        assert_eq!(d(s.take(2)), "<static [a, b]>");
+        assert_eq!(d(s.skip(2)), "<static [c, d]>");
+        assert_eq!(d(s.skip(1).take(2)), "<static [b, c]>");
     }
 
     #[test]
