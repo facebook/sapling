@@ -939,13 +939,16 @@ void EdenServiceHandler::getFilesChangedSince(
           EdenErrorType::JOURNAL_TRUNCATED,
           "Journal entry range has been truncated.");
     }
+
     out.toPosition_ref()->sequenceNumber_ref() = summed->toSequence;
-    out.toPosition_ref()->snapshotHash_ref() = thriftHash(summed->toHash);
+    out.toPosition_ref()->snapshotHash_ref() =
+        thriftHash(summed->snapshotTransitions.back());
     out.toPosition_ref()->mountGeneration_ref() =
         edenMount->getMountGeneration();
 
     out.fromPosition_ref()->sequenceNumber_ref() = summed->fromSequence;
-    out.fromPosition_ref()->snapshotHash_ref() = thriftHash(summed->fromHash);
+    out.fromPosition_ref()->snapshotHash_ref() =
+        thriftHash(summed->snapshotTransitions.front());
     out.fromPosition_ref()->mountGeneration_ref() =
         *out.toPosition_ref()->mountGeneration_ref();
 
@@ -961,6 +964,11 @@ void EdenServiceHandler::getFilesChangedSince(
 
     for (auto& path : summed->uncleanPaths) {
       out.uncleanPaths_ref()->emplace_back(path.stringPiece().str());
+    }
+
+    out.snapshotTransitions_ref()->reserve(summed->snapshotTransitions.size());
+    for (auto& hash : summed->snapshotTransitions) {
+      out.snapshotTransitions_ref()->push_back(thriftHash(hash));
     }
   }
 }

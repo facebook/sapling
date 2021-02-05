@@ -395,7 +395,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
 
   size_t filesAccumulated = 0;
   auto deltaState = deltaState_.lock();
-  // If this is going to be truncated handle it before iterating.
+  // If this is going to be truncated, handle it before iterating.
   if (!deltaState->empty() && deltaState->getFrontSequenceID() > from) {
     result = std::make_unique<JournalDeltaRange>();
     result->isTruncated = true;
@@ -410,8 +410,7 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
             result = std::make_unique<JournalDeltaRange>();
             result->toSequence = current.sequenceID;
             result->toTime = current.time;
-            result->toHash = deltaState->currentHash;
-            result->fromHash = deltaState->currentHash;
+            result->snapshotTransitions.push_back(deltaState->currentHash);
           }
           // Capture the lower bound.
           result->fromSequence = current.sequenceID;
@@ -441,12 +440,12 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
             result = std::make_unique<JournalDeltaRange>();
             result->toSequence = current.sequenceID;
             result->toTime = current.time;
-            result->toHash = deltaState->currentHash;
+            result->snapshotTransitions.push_back(deltaState->currentHash);
           }
           // Capture the lower bound.
           result->fromSequence = current.sequenceID;
           result->fromTime = current.time;
-          result->fromHash = current.fromHash;
+          result->snapshotTransitions.push_back(current.fromHash);
 
           // Merge the unclean status list
           result->uncleanPaths.insert(
@@ -467,10 +466,12 @@ std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
       deltaState->stats->maxFilesAccumulated =
           std::max(deltaState->stats->maxFilesAccumulated, filesAccumulated);
     }
+
+    std::reverse(
+        result->snapshotTransitions.begin(), result->snapshotTransitions.end());
   }
 
   deltaState->lastModificationHasBeenObserved = true;
-
   return result;
 }
 

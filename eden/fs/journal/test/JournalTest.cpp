@@ -11,10 +11,14 @@
 
 using namespace facebook::eden;
 
+namespace {
+
 struct JournalTest : ::testing::Test {
   std::shared_ptr<EdenStats> edenStats{std::make_shared<EdenStats>()};
   Journal journal{edenStats};
 };
+
+} // namespace
 
 TEST_F(JournalTest, accumulate_range_all_changes) {
   // Empty journals have no rang to accumulate over
@@ -127,20 +131,25 @@ TEST_F(JournalTest, accumulateRangeRemoveCreateUpdate) {
       summed->changedFilesInOverlay[RelativePath{"test.txt"}].existedAfter);
 }
 
-void checkHashMatches(const Hash& from, const Hash& to, Journal& journal) {
+namespace {
+
+void checkHashMatches(const std::vector<Hash>& transitions, Journal& journal) {
   auto latest = journal.getLatest();
   ASSERT_TRUE(latest);
-  EXPECT_EQ(from, latest->fromHash);
-  EXPECT_EQ(to, latest->toHash);
+  EXPECT_EQ(transitions.front(), latest->fromHash);
+  EXPECT_EQ(transitions.back(), latest->toHash);
+
   auto range = journal.accumulateRange(latest->sequenceID);
   ASSERT_TRUE(range);
-  EXPECT_EQ(from, range->fromHash);
-  EXPECT_EQ(to, range->toHash);
+  EXPECT_EQ(transitions, range->snapshotTransitions);
+
   range = journal.accumulateRange();
   ASSERT_TRUE(range);
-  EXPECT_EQ(kZeroHash, range->fromHash);
-  EXPECT_EQ(to, range->toHash);
+  EXPECT_EQ(kZeroHash, range->snapshotTransitions.front());
+  EXPECT_EQ(transitions.back(), range->snapshotTransitions.back());
 }
+
+} // namespace
 
 TEST_F(JournalTest, accumulate_range_with_hash_updates) {
   auto hash0 = kZeroHash;
@@ -152,29 +161,29 @@ TEST_F(JournalTest, accumulate_range_with_hash_updates) {
 
   // Make an initial entry.
   journal.recordChanged("foo/bar"_relpath);
-  checkHashMatches(hash0, hash0, journal);
+  checkHashMatches({hash0}, journal);
 
   // Update to a new hash using 'to' syntax
   journal.recordHashUpdate(hash1);
-  checkHashMatches(hash0, hash1, journal);
+  checkHashMatches({hash0, hash1}, journal);
 
   journal.recordChanged("foo/bar"_relpath);
-  checkHashMatches(hash1, hash1, journal);
+  checkHashMatches({hash1}, journal);
 
   // Update to a new hash using 'from/to' syntax
   journal.recordHashUpdate(hash1, hash2);
-  checkHashMatches(hash1, hash2, journal);
+  checkHashMatches({hash1, hash2}, journal);
 
   journal.recordChanged("foo/bar"_relpath);
-  checkHashMatches(hash2, hash2, journal);
+  checkHashMatches({hash2}, journal);
 
   auto uncleanPaths = std::unordered_set<RelativePath>();
   uncleanPaths.insert(RelativePath("foo/bar"));
   journal.recordUncleanPaths(hash2, hash1, std::move(uncleanPaths));
-  checkHashMatches(hash2, hash1, journal);
+  checkHashMatches({hash2, hash1}, journal);
 
   journal.recordChanged("foo/bar"_relpath);
-  checkHashMatches(hash1, hash1, journal);
+  checkHashMatches({hash1}, journal);
 }
 
 TEST_F(JournalTest, debugRawJournalInfoRemoveCreateUpdate) {
@@ -517,6 +526,20 @@ TEST_F(JournalTest, compaction) {
   EXPECT_EQ(3, summed->fromSequence);
   EXPECT_EQ(3, summed->toSequence);
   EXPECT_EQ(1, summed->changedFilesInOverlay.size());
+}
+
+TEST_F(JournalTest, update_transitions_are_all_recorded) {
+  Hash hash1{"0000000000000000000000000000000000000001"};
+  Hash hash2{"0000000000000000000000000000000000000002"};
+  Hash hash3{"0000000000000000000000000000000000000003"};
+  journal.recordHashUpdate(hash1, hash2);
+  journal.recordHashUpdate(hash2, hash3);
+
+  auto summed = journal.accumulateRange();
+  EXPECT_EQ(3, summed->snapshotTransitions.size());
+  EXPECT_EQ(hash1, summed->snapshotTransitions[0]);
+  EXPECT_EQ(hash2, summed->snapshotTransitions[1]);
+  EXPECT_EQ(hash3, summed->snapshotTransitions[2]);
 }
 
 TEST_F(JournalTest, subscribers_are_notified_of_changes) {

@@ -167,20 +167,31 @@ class JournalDeltaPtr {
 };
 
 struct JournalDeltaRange {
-  /** The current sequence range.
-   * This is a range to accommodate merging a range into a single entry. */
+  /**
+   * The current sequence range.
+   * This is a range to accommodate merging a range into a single entry.
+   */
   JournalDelta::SequenceNumber fromSequence;
   JournalDelta::SequenceNumber toSequence;
-  /** The time at which the change was recorded.
-   * This is a range to accommodate merging a range into a single entry. */
+
+  /**
+   * The time at which the change was recorded.
+   * This is a range to accommodate merging a range into a single entry.
+   */
   std::chrono::steady_clock::time_point fromTime;
   std::chrono::steady_clock::time_point toTime;
 
-  /** The snapshot hash that we started and ended up on.
-   * This will often be the same unless we perform a checkout or make
-   * a new snapshot from the snapshotable files in the overlay. */
-  Hash fromHash;
-  Hash toHash;
+  /**
+   * If the current commit did not change during this window, the list contains
+   * one entry: the current snapshot hash. If the range contains an update
+   * operation, the list contains two entries: the previous hash and the new
+   * hash. If two commits have occurred in this range, there are three entries,
+   * and so on.
+   *
+   * This entries in this list are not unique. [A, B, C] is different than [A,
+   * C, B], and [A, B, A] is common too.
+   */
+  std::vector<Hash> snapshotTransitions;
 
   /**
    * The set of files that changed in the overlay in this update, including
@@ -192,7 +203,10 @@ struct JournalDeltaRange {
   std::unordered_set<RelativePath> uncleanPaths;
 
   bool isTruncated = false;
-  JournalDeltaRange() = default;
+  JournalDeltaRange() {
+    // 1 and 2 entries are the most common by far.
+    snapshotTransitions.reserve(2);
+  }
   JournalDeltaRange(JournalDeltaRange&&) = default;
   JournalDeltaRange& operator=(JournalDeltaRange&&) = default;
 };
