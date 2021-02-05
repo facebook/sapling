@@ -507,7 +507,11 @@ class EdenFS(object):
             return None
 
     def clone(
-        self, repo: str, path: Union[str, os.PathLike], allow_empty: bool = False
+        self,
+        repo: str,
+        path: Union[str, os.PathLike],
+        allow_empty: bool = False,
+        nfs: bool = False,
     ) -> None:
         """
         Run "eden clone"
@@ -515,6 +519,8 @@ class EdenFS(object):
         params = ["clone", repo, str(path)]
         if allow_empty:
             params.append("--allow-empty-repo")
+        if nfs:
+            params.append("--nfs")
         self.run_cmd(*params)
 
     def remove(self, path: str) -> None:

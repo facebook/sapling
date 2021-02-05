@@ -711,6 +711,13 @@ class CloneCmd(Subcmd):
             help=argparse.SUPPRESS,
         )
 
+        parser.add_argument(
+            "--nfs",
+            dest="nfs",
+            action="store_true",
+            help=argparse.SUPPRESS,
+        )
+
     async def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
 
@@ -738,7 +745,7 @@ class CloneCmd(Subcmd):
         # Find the repository information
         try:
             repo, repo_type, repo_config = self._get_repo_info(
-                instance, args.repo, args.rev
+                instance, args.repo, args.rev, args.nfs
             )
         except RepoError as ex:
             print_stderr("error: {}", ex)
@@ -805,7 +812,11 @@ re-run `eden clone` with --allow-empty-repo"""
             return 1
 
     def _get_repo_info(
-        self, instance: EdenInstance, repo_arg: str, rev: Optional[str]
+        self,
+        instance: EdenInstance,
+        repo_arg: str,
+        rev: Optional[str],
+        nfs: bool,
     ) -> Tuple[util.Repo, Optional[str], config_mod.CheckoutConfig]:
         # Check to see if repo_arg points to an existing Eden mount
         checkout_config = instance.get_checkout_config_for_path(repo_arg)
@@ -826,6 +837,11 @@ re-run `eden clone` with --allow-empty-repo"""
                 f"{repo_arg!r} does not look like a valid hg or git repository"
             )
 
+        if sys.platform == "win32":
+            mount_protocol = "prjfs"
+        else:
+            mount_protocol = "nfs" if nfs else "fuse"
+
         # This is a valid repository path.
         # Prepare a CheckoutConfig object for it.
         project_id = util.get_project_id(repo, rev)
@@ -834,6 +850,7 @@ re-run `eden clone` with --allow-empty-repo"""
             backing_repo=Path(repo.source),
             scm_type=repo.type,
             guid=str(uuid.uuid4()),
+            mount_protocol=mount_protocol,
             default_revision=config_mod.DEFAULT_REVISION[repo.type],
             redirections={},
             active_prefetch_profiles=[],

@@ -87,6 +87,8 @@ SUPPORTED_REPOS = DEFAULT_REVISION.keys()
 
 REPO_FOR_EXTENSION = {".git": "git", ".hg": "hg"}
 
+SUPPORTED_MOUNT_PROTOCOLS = {"fuse", "nfs", "prjfs"}
+
 # Create a readme file with this name in the mount point directory.
 # The intention is for this to contain instructions telling users what to do if their
 # Eden mount is not currently mounted.
@@ -121,6 +123,7 @@ class CheckoutConfig(typing.NamedTuple):
     - backing_repo: The path where the true repo resides on disk.  For mercurial backing
         repositories this does not include the final ".hg" directory component.
     - scm_type: "hg" or "git"
+    - mount_protocol: "fuse", "nfs" or "prjfs"
     - guid: Used on Windows by ProjectedFS to identify this checkout.
     - redirections: dict where keys are relative pathnames in the EdenFS mount
       and the values are RedirectionType enum values that describe the type of
@@ -130,6 +133,7 @@ class CheckoutConfig(typing.NamedTuple):
     backing_repo: Path
     scm_type: str
     guid: str
+    mount_protocol: str
     default_revision: str
     redirections: Dict[str, "RedirectionType"]
     active_prefetch_profiles: List[str]
@@ -921,6 +925,7 @@ class EdenCheckout:
                 "path": str(checkout_config.backing_repo).replace("\\", "/"),
                 "type": checkout_config.scm_type,
                 "guid": checkout_config.guid,
+                "protocol": checkout_config.mount_protocol,
             },
             "redirections": redirections,
             "profiles": {"active": checkout_config.active_prefetch_profiles},
@@ -958,6 +963,15 @@ class EdenCheckout:
         if scm_type not in SUPPORTED_REPOS:
             raise Exception(
                 f'repository "{config_path}" has unsupported type ' f'"{scm_type}"'
+            )
+
+        mount_protocol = repository.get("protocol")
+        if not isinstance(mount_protocol, str):
+            mount_protocol = "prjfs" if sys.platform == "win32" else "fuse"
+        if mount_protocol not in SUPPORTED_MOUNT_PROTOCOLS:
+            raise Exception(
+                f'repository "{config_path}" has unsupported mount protocol '
+                f'"{mount_protocol}"'
             )
 
         guid = repository.get("guid")
@@ -1009,6 +1023,7 @@ class EdenCheckout:
             backing_repo=Path(get_field("path")),
             scm_type=scm_type,
             guid=guid,
+            mount_protocol=mount_protocol,
             redirections=redirections,
             default_revision=(
                 repository.get("default-revision") or DEFAULT_REVISION[scm_type]
@@ -1056,6 +1071,7 @@ class EdenCheckout:
             backing_repo=old_config.backing_repo,
             scm_type=old_config.scm_type,
             guid=old_config.guid,
+            mount_protocol=old_config.mount_protocol,
             redirections=old_config.redirections,
             default_revision=old_config.default_revision,
             active_prefetch_profiles=new_active_profiles,
@@ -1086,6 +1102,7 @@ class EdenCheckout:
             backing_repo=old_config.backing_repo,
             scm_type=old_config.scm_type,
             guid=old_config.guid,
+            mount_protocol=old_config.mount_protocol,
             redirections=old_config.redirections,
             default_revision=old_config.default_revision,
             active_prefetch_profiles=new_active_profiles,

@@ -9,6 +9,7 @@ import collections
 import os
 import shutil
 import stat
+import sys
 import typing
 import uuid
 from pathlib import Path
@@ -107,6 +108,7 @@ class FakeEdenInstance:
             backing_repo=backing_repo_path,
             scm_type=scm_type,
             guid=uuid.uuid4(),
+            mount_protocol="prjfs" if sys.platform == "win32" else "fuse",
             default_revision=snapshot,
             redirections={},
             active_prefetch_profiles=[],
