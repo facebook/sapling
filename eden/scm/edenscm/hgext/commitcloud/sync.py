@@ -14,7 +14,6 @@ from edenscm.mercurial import (
     blackbox,
     bookmarks,
     error,
-    exchange,
     extensions,
     hg,
     hintutil,
@@ -58,7 +57,10 @@ def _isremotebookmarkssyncenabled(ui):
 
 def _getheads(repo):
     if visibility.enabled(repo):
-        return [nodemod.hex(n) for n in visibility.heads(repo)]
+        # Visible heads can contain public heads in some cases due to a known issue.
+        # TODO (liubovd): remove the filer once the issue is fixed.
+        public = set(repo.heads(includepublic=True, includedraft=False))
+        return [nodemod.hex(n) for n in visibility.heads(repo) if not n in public]
     else:
         # Select the commits to sync.  To match previous behaviour, this is
         # all draft but not obsolete commits, plus any bookmarked commits,
@@ -1046,24 +1048,6 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
     newomittedbookmarks = list(
         set(newcloudbookmarks.keys()).difference(localbookmarks.keys())
     )
-
-    newcloudsnapshots = util.removeduplicates(
-        [s for s in lastsyncstate.snapshots if s in localsnapshotsset] + localsnapshots
-    )
-
-    # Check for workspace oscillation.  This is where we try to revert the
-    # workspace back to how it was immediately prior to applying the cloud
-    # changes at the start of the sync.  This is usually an error caused by
-    # inconsistent obsmarkers.
-    if lastsyncstate.oscillating(newcloudheads, newcloudbookmarks, newcloudsnapshots):
-        raise ccerror.SynchronizationError(
-            repo.ui,
-            _(
-                "oscillating commit cloud workspace detected.\n"
-                "check for commits that are visible in one repo but hidden in another,\n"
-                "and hide or unhide those commits in all places."
-            ),
-        )
 
     oldremotebookmarks = []
     newremotebookmarks = {}

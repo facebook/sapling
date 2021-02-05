@@ -107,7 +107,7 @@ Run cloud status after setting a workspace
   Automatic Sync (on local changes): OFF
   Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 1
-  Last Sync Heads: 1 (0 omitted)
+  Last Sync Heads: 0 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 0
   Last Sync Snapshots: 0
@@ -153,7 +153,7 @@ Run cloud status after setting workspace
   Automatic Sync (on local changes): OFF
   Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 1
-  Last Sync Heads: 1 (0 omitted)
+  Last Sync Heads: 0 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 0
   Last Sync Snapshots: 0
@@ -170,7 +170,7 @@ Run cloud status after enabling autosync
   Automatic Sync (on local changes): ON
   Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 1
-  Last Sync Heads: 1 (0 omitted)
+  Last Sync Heads: 0 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 0
   Last Sync Snapshots: 0
@@ -186,7 +186,7 @@ Run cloud status after disabling autosync
   Automatic Sync (on local changes): OFF
   Automatic Sync via 'Scm Daemon' (on remote changes): OFF
   Last Sync Version: 1
-  Last Sync Heads: 1 (0 omitted)
+  Last Sync Heads: 0 (0 omitted)
   Last Sync Bookmarks: 0 (0 omitted)
   Last Sync Remote Bookmarks: 0
   Last Sync Snapshots: 0

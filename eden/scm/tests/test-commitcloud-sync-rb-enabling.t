@@ -18,6 +18,8 @@
   $ setconfig infinitepush.server=yes infinitepush.reponame=testrepo
   $ setconfig infinitepush.indextype=disk infinitepush.storetype=disk
 
+Set remotebookmarkssync True initially for the first repo and False for the second repo
+
   $ cd $TESTTMP
   $ clone server client1
   $ cd client1
@@ -40,6 +42,7 @@
   $ setconfig remotenames.selectivepull=True
   $ setconfig remotenames.selectivepulldefault=master,base
   $ setconfig remotenames.selectivepullaccessedbookmarks=True
+  $ setconfig commitcloud.remotebookmarkssync=False
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo

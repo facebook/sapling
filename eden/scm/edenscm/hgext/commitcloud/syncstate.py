@@ -159,21 +159,3 @@ class SyncState(object):
             len(omittedremotebookmarks),
             len(snapshots),
         )
-
-    def oscillating(self, newheads, newbookmarks, newsnapshots):
-        """detect oscillating workspaces
-
-        Returns true if updating the cloud state to the new heads or bookmarks
-        would be equivalent to updating back to the immediate previous
-        version.
-        """
-        if self.prevstate is not None and self.lastupdatetime is not None:
-            prevversion, prevheads, prevbookmarks, prevsnapshots = self.prevstate
-            return (
-                prevversion == self.version - 1
-                and prevheads == newheads
-                and prevbookmarks == newbookmarks
-                and prevsnapshots == newsnapshots
-                and self.lastupdatetime > time.time() - 60
-            )
-        return False

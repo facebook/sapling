@@ -27,7 +27,7 @@
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
   visibility: read 1 heads: df4f53cec30a
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  commitcloud_sync: synced to workspace user/test/default version 1: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
+  commitcloud_sync: synced to workspace user/test/default version 1: 0 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ cd ..
@@ -42,7 +42,7 @@
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
   visibility: read 1 heads: df4f53cec30a
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  commitcloud_sync: synced to workspace user/test/default version 1: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
+  commitcloud_sync: synced to workspace user/test/default version 1: 0 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ cd ..
