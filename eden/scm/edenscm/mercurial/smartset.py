@@ -857,6 +857,36 @@ class nameset(abstractsmartset):
         if node:
             return self._torev(node)
 
+    def min(self):
+        hints = self._set.hints()
+        if hints.get("desc"):
+            result = self._set.last()
+        elif hints.get("asc"):
+            result = self._set.first()
+        else:
+            result = None
+        if result is None:
+            result = min(self)
+        else:
+            result = self._torev(result)
+        self.min = lambda: result
+        return result
+
+    def max(self):
+        hints = self._set.hints()
+        if hints.get("desc"):
+            result = self._set.first()
+        elif hints.get("asc"):
+            result = self._set.last()
+        else:
+            result = None
+        if result is None:
+            result = max(self)
+        else:
+            result = self._torev(result)
+        self.max = lambda: result
+        return result
+
     def _setop(self, other, op):
         # try to use native set operations as fast paths
 
