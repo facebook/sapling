@@ -112,6 +112,20 @@ py_class!(pub class nameset |py| {
         Ok(Names(set))
     }
 
+    /// Skip the first `n` items.
+    def skip(&self, n: u64) -> PyResult<Names> {
+        let inner = self.inner(py);
+        let set = inner.skip(n);
+        Ok(Names(set))
+    }
+
+    /// Take the first `n` items.
+    def take(&self, n: u64) -> PyResult<Names> {
+        let inner = self.inner(py);
+        let set = inner.take(n);
+        Ok(Names(set))
+    }
+
     def hints(&self) -> PyResult<HashMap<&'static str, PyObject>> {
         let mut result = HashMap::new();
         let hints = self.inner(py).hints();

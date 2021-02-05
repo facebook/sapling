@@ -927,6 +927,45 @@ class nameset(abstractsmartset):
         # orders.
         return self._setop(other, "__add__")
 
+    def _slice(self, start, stop):
+        # sub classes may override this. start and stop must not be negative,
+        # but start > stop is allowed, which should be an empty set.
+        take = stop - start
+        skip = start
+
+        if self._reversed:
+            # The Rust set does not support order.
+            #
+            # Translate
+            #   [<---------------]
+            #         [take][skip]
+            # to:
+            #   [--------------->]
+            #   [skip][take]
+            skip = len(self) - take - start
+            if skip < 0:
+                # Translate
+                #   [-skip][-------------->]
+                #   [   take    ]
+                # to:
+                #          [-------------->]
+                #          [take]
+                take -= -skip
+                skip = 0
+
+        repo = self.repo()
+        if take <= 0:
+            return baseset([], repo=repo)
+
+        newset = self._set.skip(skip).take(take)
+        s = nameset(self._changelog, newset, repo=self.repo())
+        # preserve order
+        if self.isascending():
+            s.sort()
+        elif self.isdescending():
+            s.sort(reverse=True)
+        return s
+
     def __repr__(self):
         d = {False: "-", True: "+", None: ""}[self._ascending]
         return "<%s%s %s>" % (type(self).__name__, d, self._set)
