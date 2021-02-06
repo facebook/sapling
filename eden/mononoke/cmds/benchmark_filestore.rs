@@ -304,6 +304,7 @@ async fn get_blob<'a>(
         ThrottleOptions {
             read_qps,
             write_qps,
+            ..ThrottleOptions::default()
         },
     )
     .await;

@@ -13,3 +13,4 @@ mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 governor = "0.3.2"
+nonzero_ext = "0.2"

@@ -17,7 +17,7 @@ use std::ffi::{OsStr, OsString};
 use std::future::Future;
 use std::io;
 use std::iter::FromIterator;
-use std::num::NonZeroU32;
+use std::num::{NonZeroU32, NonZeroUsize};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -87,6 +87,11 @@ const DEFAULT_TUNABLES_PATH: &str = "configerator:scm/mononoke/tunables/default"
 
 const READ_QPS_ARG: &str = "blobstore-read-qps";
 const WRITE_QPS_ARG: &str = "blobstore-write-qps";
+const READ_BYTES_ARG: &str = "blobstore-read-bytes-s";
+const WRITE_BYTES_ARG: &str = "blobstore-write-bytes-s";
+const READ_BURST_BYTES_ARG: &str = "blobstore-read-burst-bytes-s";
+const WRITE_BURST_BYTES_ARG: &str = "blobstore-write-burst-bytes-s";
+const BLOBSTORE_BYTES_MIN_THROTTLE_ARG: &str = "blobstore-bytes-min-throttle";
 const READ_CHAOS_ARG: &str = "blobstore-read-chaos-rate";
 const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
 const WRITE_ZSTD_ARG: &str = "blobstore-write-zstd-level";
@@ -690,6 +695,41 @@ impl MononokeAppBuilder {
                 .takes_value(true)
                 .required(false)
                 .help("Write QPS limit to ThrottledBlob"),
+        )
+        .arg(
+            Arg::with_name(WRITE_BYTES_ARG)
+                .long(WRITE_BYTES_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Write Bytes/s limit to ThrottledBlob"),
+        )
+        .arg(
+            Arg::with_name(READ_BYTES_ARG)
+                .long(READ_BYTES_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Read Bytes/s limit to ThrottledBlob"),
+        )
+        .arg(
+            Arg::with_name(READ_BURST_BYTES_ARG)
+                .long(READ_BURST_BYTES_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Maximum burst bytes/s limit to ThrottledBlob.  Blobs larger than this will error rather than throttle due to consuming too much quota."),
+        )
+        .arg(
+            Arg::with_name(WRITE_BURST_BYTES_ARG)
+                .long(WRITE_BURST_BYTES_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Maximum burst bytes/s limit to ThrottledBlob.  Blobs larger than this will error rather than throttle due to consuming too much quota."),
+        )
+        .arg(
+            Arg::with_name(BLOBSTORE_BYTES_MIN_THROTTLE_ARG)
+                .long(BLOBSTORE_BYTES_MIN_THROTTLE_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Minimum number of bytes ThrottledBlob can count"),
         )
         .arg(
             Arg::with_name(READ_CHAOS_ARG)
@@ -1702,6 +1742,26 @@ pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOpt
         .transpose()
         .context("Provided qps is not u32")?;
 
+    let read_bytes: Option<NonZeroUsize> = matches
+        .value_of(READ_BYTES_ARG)
+        .map(|v| v.parse().expect("Provided Bytes/s is not usize"));
+
+    let write_bytes: Option<NonZeroUsize> = matches
+        .value_of(WRITE_BYTES_ARG)
+        .map(|v| v.parse().expect("Provided Bytes/s is not usize"));
+
+    let read_burst_bytes: Option<NonZeroUsize> = matches
+        .value_of(READ_BURST_BYTES_ARG)
+        .map(|v| v.parse().expect("Provided Bytes/s is not usize"));
+
+    let write_burst_bytes: Option<NonZeroUsize> = matches
+        .value_of(WRITE_BURST_BYTES_ARG)
+        .map(|v| v.parse().expect("Provided Bytes/s is not usize"));
+
+    let bytes_min_count: Option<NonZeroUsize> = matches
+        .value_of(BLOBSTORE_BYTES_MIN_THROTTLE_ARG)
+        .map(|v| v.parse().expect("Provided Bytes/s is not usize"));
+
     let read_chaos: Option<NonZeroU32> = matches
         .value_of(READ_CHAOS_ARG)
         .map(|v| v.parse())
@@ -1742,6 +1802,11 @@ pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOpt
         ThrottleOptions {
             read_qps,
             write_qps,
+            read_bytes,
+            write_bytes,
+            read_burst_bytes,
+            write_burst_bytes,
+            bytes_min_count,
         },
         manifold_api_key,
         PackOptions::new(write_zstd_level),
