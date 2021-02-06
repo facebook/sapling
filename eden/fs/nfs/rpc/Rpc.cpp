@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/nfs/rpc/Rpc.h"
 
 namespace facebook::eden {
@@ -39,3 +41,5 @@ void serializeReply(
 }
 
 } // namespace facebook::eden
+
+#endif

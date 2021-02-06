@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/nfs/Nfsd3.h"
 
 #include <folly/Utility.h>
@@ -355,3 +357,5 @@ Nfsd3::Nfsd3(bool registerWithRpcbind)
   }
 }
 } // namespace facebook::eden
+
+#endif

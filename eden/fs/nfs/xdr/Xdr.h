@@ -7,6 +7,8 @@
 
 #pragma once
 
+#ifndef _WIN32
+
 #include <folly/io/Cursor.h>
 #include <variant>
 
@@ -262,3 +264,5 @@ struct XdrTrait<XdrVariant<Enum, Vars...>> {
 };
 
 } // namespace facebook::eden
+
+#endif

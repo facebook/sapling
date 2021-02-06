@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/nfs/xdr/Xdr.h"
 #include <folly/container/Array.h>
 #include <folly/test/TestUtils.h>
@@ -99,3 +101,5 @@ TEST(XdrSerializer, structs) {
       s, sizeof(s.number) + sizeof(uint32_t) + detail::roundUp(s.str.size()));
 }
 } // namespace facebook::eden
+
+#endif

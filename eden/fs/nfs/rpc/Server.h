@@ -6,6 +6,9 @@
  */
 
 #pragma once
+
+#ifndef _WIN32
+
 #include <folly/SocketAddress.h>
 #include <folly/io/async/AsyncServerSocket.h>
 #include <folly/logging/xlog.h>
@@ -59,3 +62,5 @@ class RpcServer {
 };
 
 } // namespace facebook::eden
+
+#endif

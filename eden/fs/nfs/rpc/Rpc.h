@@ -7,6 +7,8 @@
 
 #pragma once
 
+#ifndef _WIN32
+
 // https://datatracker.ietf.org/doc/rfc5531/?include_text=1
 
 #include <vector>
@@ -237,3 +239,5 @@ struct authsys_parms {
 EDEN_XDR_SERDE_DECL(authsys_parms, stamp, machinename, uid, gid, gids);
 
 } // namespace facebook::eden
+
+#endif

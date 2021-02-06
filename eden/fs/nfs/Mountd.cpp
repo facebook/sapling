@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/nfs/Mountd.h"
 
 #include <memory>
@@ -224,3 +226,5 @@ void Mountd::unregisterMount(AbsolutePathPiece path) {
 }
 
 } // namespace facebook::eden
+
+#endif

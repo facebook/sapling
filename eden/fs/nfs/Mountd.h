@@ -7,6 +7,8 @@
 
 #pragma once
 
+#ifndef _WIN32
+
 // Implementation of the mount protocol as described in:
 // https://tools.ietf.org/html/rfc1813#page-106
 
@@ -59,3 +61,5 @@ class Mountd {
 };
 
 } // namespace facebook::eden
+
+#endif

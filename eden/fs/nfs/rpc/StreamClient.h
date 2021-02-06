@@ -6,6 +6,9 @@
  */
 
 #pragma once
+
+#ifndef _WIN32
+
 #include <tuple>
 
 #include <folly/SocketAddress.h>
@@ -82,3 +85,5 @@ class StreamClient {
 };
 
 } // namespace facebook::eden
+
+#endif

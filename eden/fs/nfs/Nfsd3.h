@@ -7,6 +7,8 @@
 
 #pragma once
 
+#ifndef _WIN32
+
 // Implementation of the NFSv3 protocol as described in:
 // https://tools.ietf.org/html/rfc1813
 
@@ -41,3 +43,5 @@ class Nfsd3 {
 };
 
 } // namespace facebook::eden
+
+#endif

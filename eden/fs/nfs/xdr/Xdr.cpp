@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/nfs/xdr/Xdr.h"
 
 namespace facebook::eden {
@@ -32,3 +34,5 @@ void serialize_variable(folly::io::Appender& appender, folly::ByteRange value) {
 } // namespace detail
 
 } // namespace facebook::eden
+
+#endif

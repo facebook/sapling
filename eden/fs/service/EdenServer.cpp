@@ -337,9 +337,12 @@ EdenServer::EdenServer(
           std::make_shared<ProcessNameCache>(),
           makeDefaultStructuredLogger(*edenConfig, std::move(sessionInfo)),
           edenConfig,
+#ifndef _WIN32
           edenConfig->enableNfsServer.getValue()
               ? std::make_shared<Mountd>(edenConfig->registerMountd.getValue())
-              : nullptr,
+              :
+#endif
+              nullptr,
           FLAGS_enable_fault_injection)},
       version_{std::move(version)},
       progressManager_{std::make_unique<

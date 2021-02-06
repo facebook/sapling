@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/nfs/rpc/Rpc.h"
 #include <folly/container/Array.h>
 #include <folly/test/TestUtils.h>
@@ -55,3 +57,5 @@ TEST(RpcTest, enums) {
       rejected_reply{{reject_stat::AUTH_ERROR, auth_stat::AUTH_FAILED}},
       sizeof(auth_stat) + sizeof(uint32_t));
 }
+
+#endif

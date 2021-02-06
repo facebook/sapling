@@ -7,6 +7,8 @@
 
 #pragma once
 
+#ifndef _WIN32
+
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
 
@@ -83,3 +85,5 @@ inline bool operator==(const nfs_fh3& a, const nfs_fh3& b) {
 }
 
 } // namespace facebook::eden
+
+#endif

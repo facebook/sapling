@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/nfs/portmap/PortmapClient.h"
 #include <folly/Exception.h>
 #include <folly/SocketAddress.h>
@@ -64,3 +66,5 @@ std::string PortmapClient::getAddr(PortmapMapping map) {
 }
 
 } // namespace facebook::eden
+
+#endif

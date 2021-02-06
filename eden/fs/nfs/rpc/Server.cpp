@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/nfs/rpc/Server.h"
 
 #include <folly/Exception.h>
@@ -339,3 +341,5 @@ void RpcServer::registerService(uint32_t progNumber, uint32_t progVersion) {
 
 } // namespace eden
 } // namespace facebook
+
+#endif
