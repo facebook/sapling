@@ -8,6 +8,7 @@
 #![deny(warnings)]
 
 use anyhow::{anyhow, Error, Result};
+use async_trait::async_trait;
 use cached_config::{ConfigHandle, ConfigStore};
 use commitsync::types::{RawCommitSyncAllVersions, RawCommitSyncCurrentVersions};
 use context::CoreContext;
@@ -43,6 +44,7 @@ pub enum ErrorKind {
     UnknownCommitSyncConfigVersion(RepositoryId, String),
 }
 
+#[async_trait]
 pub trait LiveCommitSyncConfig: Send + Sync {
     /// Return whether push redirection is currently
     /// enabled for draft commits in `repo_id`
@@ -63,12 +65,12 @@ pub trait LiveCommitSyncConfig: Send + Sync {
     ///
     /// NOTE: two subsequent calls may return different results
     ///       as this queries  config source
-    fn get_current_commit_sync_config_version(
+    async fn get_current_commit_sync_config_version(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> Result<CommitSyncConfigVersion> {
-        let commit_sync_config = self.get_current_commit_sync_config(ctx, repo_id)?;
+        let commit_sync_config = self.get_current_commit_sync_config(ctx, repo_id).await?;
 
         let version_name = commit_sync_config.version_name;
         Ok(version_name)
@@ -79,7 +81,7 @@ pub trait LiveCommitSyncConfig: Send + Sync {
     ///
     /// NOTE: two subsequent calls may return different results
     ///       as this queries  config source
-    fn get_current_commit_sync_config(
+    async fn get_current_commit_sync_config(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
@@ -90,13 +92,14 @@ pub trait LiveCommitSyncConfig: Send + Sync {
     ///
     /// NOTE: two subsequent calls may return different results
     ///       as this queries config source
-    fn get_all_commit_sync_config_versions(
+    async fn get_all_commit_sync_config_versions(
         &self,
         repo_id: RepositoryId,
     ) -> Result<HashMap<CommitSyncConfigVersion, CommitSyncConfig>>;
 
+
     /// Return `CommitSyncConfig` for repo `repo_id` of version `version_name`
-    fn get_commit_sync_config_by_version(
+    async fn get_commit_sync_config_by_version(
         &self,
         repo_id: RepositoryId,
         version_name: &CommitSyncConfigVersion,
@@ -156,6 +159,7 @@ impl CfgrLiveCommitSyncConfig {
     }
 }
 
+#[async_trait]
 impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
     /// Return whether push redirection is currently
     /// enabled for draft commits in `repo_id`
@@ -186,7 +190,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
     ///
     /// NOTE: two subsequent calls may return different results
     ///       as this queries  config source
-    fn get_current_commit_sync_config(
+    async fn get_current_commit_sync_config(
         &self,
         _ctx: &CoreContext,
         repo_id: RepositoryId,
@@ -218,7 +222,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
     ///
     /// NOTE: two subsequent calls may return different results
     ///       as this queries config source
-    fn get_all_commit_sync_config_versions(
+    async fn get_all_commit_sync_config_versions(
         &self,
         repo_id: RepositoryId,
     ) -> Result<HashMap<CommitSyncConfigVersion, CommitSyncConfig>> {
@@ -247,12 +251,12 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
     }
 
     /// Return `CommitSyncConfig` for repo `repo_id` of version `version_name`
-    fn get_commit_sync_config_by_version(
+    async fn get_commit_sync_config_by_version(
         &self,
         repo_id: RepositoryId,
         version_name: &CommitSyncConfigVersion,
     ) -> Result<CommitSyncConfig> {
-        let mut all_versions = self.get_all_commit_sync_config_versions(repo_id)?;
+        let mut all_versions = self.get_all_commit_sync_config_versions(repo_id).await?;
         all_versions.remove(&version_name).ok_or_else(|| {
             ErrorKind::UnknownCommitSyncConfigVersion(repo_id, version_name.0.clone()).into()
         })
@@ -464,6 +468,7 @@ impl TestLiveCommitSyncConfig {
     }
 }
 
+#[async_trait]
 impl LiveCommitSyncConfig for TestLiveCommitSyncConfig {
     fn push_redirector_enabled_for_draft(&self, repo_id: RepositoryId) -> bool {
         self.source.push_redirector_enabled_for_draft(repo_id)
@@ -473,7 +478,7 @@ impl LiveCommitSyncConfig for TestLiveCommitSyncConfig {
         self.source.push_redirector_enabled_for_public(repo_id)
     }
 
-    fn get_current_commit_sync_config(
+    async fn get_current_commit_sync_config(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
@@ -481,14 +486,14 @@ impl LiveCommitSyncConfig for TestLiveCommitSyncConfig {
         self.source.get_current_commit_sync_config(ctx, repo_id)
     }
 
-    fn get_all_commit_sync_config_versions(
+    async fn get_all_commit_sync_config_versions(
         &self,
         repo_id: RepositoryId,
     ) -> Result<HashMap<CommitSyncConfigVersion, CommitSyncConfig>> {
         self.source.get_all_commit_sync_config_versions(repo_id)
     }
 
-    fn get_commit_sync_config_by_version(
+    async fn get_commit_sync_config_by_version(
         &self,
         repo_id: RepositoryId,
         version_name: &CommitSyncConfigVersion,

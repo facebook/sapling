@@ -93,7 +93,8 @@ pub async fn subcommand_crossrepo<'a>(
                 get_source_target_repos_and_mapping(fb, logger, matches).await?;
 
             let commit_sync_config = live_commit_sync_config
-                .get_current_commit_sync_config(&ctx, source_repo.get_repoid())?;
+                .get_current_commit_sync_config(&ctx, source_repo.get_repoid())
+                .await?;
             let commit_sync_repos =
                 CommitSyncRepos::new(source_repo, target_repo, &commit_sync_config)?;
             let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
@@ -115,7 +116,8 @@ pub async fn subcommand_crossrepo<'a>(
                 target_repo,
                 live_commit_sync_config.clone(),
                 mapping,
-            )?;
+            )
+            .await?;
 
             let large_hash = {
                 let large_hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
@@ -232,7 +234,8 @@ async fn run_pushredirection_subcommand<'a>(
                 target_repo,
                 live_commit_sync_config.clone(),
                 mapping,
-            )?;
+            )
+            .await?;
 
             if live_commit_sync_config
                 .push_redirector_enabled_for_public(commit_syncer.get_small_repo().get_repoid())
@@ -290,7 +293,8 @@ async fn run_pushredirection_subcommand<'a>(
                 target_repo,
                 live_commit_sync_config.clone(),
                 mapping,
-            )?;
+            )
+            .await?;
 
             if sub_m.is_present(VIA_EXTRAS_ARG) {
                 change_mapping_via_extras(
@@ -323,9 +327,9 @@ async fn run_pushredirection_subcommand<'a>(
                     .ok_or_else(|| format_err!("{} is not specified", LARGE_REPO_BOOKMARK_ARG))?,
             );
             let small_bookmark = Small(
-                commit_syncer.get_bookmark_renamer(&ctx)?(&large_bookmark).ok_or_else(|| {
-                    format_err!("{} bookmark doesn't remap to small repo", large_bookmark)
-                })?,
+                commit_syncer.get_bookmark_renamer(&ctx).await?(&large_bookmark).ok_or_else(
+                    || format_err!("{} bookmark doesn't remap to small repo", large_bookmark),
+                )?,
             );
 
             let large_repo = Large(commit_syncer.get_large_repo());
@@ -339,7 +343,7 @@ async fn run_pushredirection_subcommand<'a>(
                 .value_of(ARG_VERSION_NAME)
                 .ok_or_else(|| format_err!("{} is not specified", ARG_VERSION_NAME))?;
             let mapping_version = CommitSyncConfigVersion(mapping_version.to_string());
-            if !commit_syncer.version_exists(&mapping_version)? {
+            if !commit_syncer.version_exists(&mapping_version).await? {
                 return Err(format_err!("{} version does not exist", mapping_version).into());
             }
 
@@ -441,7 +445,7 @@ async fn change_mapping_via_extras<'a>(
         .value_of(ARG_VERSION_NAME)
         .ok_or_else(|| format_err!("{} is not specified", ARG_VERSION_NAME))?;
     let mapping_version = CommitSyncConfigVersion(mapping_version.to_string());
-    if !commit_syncer.version_exists(&mapping_version)? {
+    if !commit_syncer.version_exists(&mapping_version).await? {
         return Err(format_err!("{} version does not exist", mapping_version).into());
     }
 
@@ -511,7 +515,8 @@ async fn run_insert_subcommand<'a>(
         target_repo.clone(),
         live_commit_sync_config.clone(),
         mapping.clone(),
-    )?;
+    )
+    .await?;
 
     match insert_subcommand_matches.subcommand() {
         (REWRITTEN_SUBCOMMAND, Some(sub_m)) => {
@@ -604,7 +609,7 @@ async fn run_insert_subcommand<'a>(
             let maybe_mapping_version = match maybe_mapping_version {
                 Some(mapping_version) => {
                     let mapping_version = CommitSyncConfigVersion(mapping_version.to_string());
-                    if !commit_syncer.version_exists(&mapping_version)? {
+                    if !commit_syncer.version_exists(&mapping_version).await? {
                         return Err(
                             format_err!("{} version does not exist", mapping_version).into()
                         );
@@ -668,7 +673,7 @@ async fn get_source_target_cs_ids_and_version(
         .ok_or_else(|| format_err!("{} is not specified", ARG_VERSION_NAME))?;
 
     let mapping_version = CommitSyncConfigVersion(mapping_version.to_string());
-    if !commit_syncer.version_exists(&mapping_version)? {
+    if !commit_syncer.version_exists(&mapping_version).await? {
         return Err(format_err!("{} version does not exist", mapping_version));
     }
 
@@ -759,9 +764,11 @@ async fn create_file_changes(
         // going to exist in the small repo.
 
         let mover = if commit_syncer.get_source_repo().get_repoid() == large_repo.get_repoid() {
-            commit_syncer.get_mover_by_version(&mapping_version)?
+            commit_syncer.get_mover_by_version(&mapping_version).await?
         } else {
-            commit_syncer.get_reverse_mover_by_version(&mapping_version)?
+            commit_syncer
+                .get_reverse_mover_by_version(&mapping_version)
+                .await?
         };
 
         if mover(&path)?.is_none() {
@@ -772,7 +779,8 @@ async fn create_file_changes(
 
         // Now get the mapping and create json with it
         let commit_sync_config = live_commit_sync_config
-            .get_commit_sync_config_by_version(large_repo.get_repoid(), mapping_version)?;
+            .get_commit_sync_config_by_version(large_repo.get_repoid(), mapping_version)
+            .await?;
 
         let small_repo_sync_config = commit_sync_config
             .small_repos
@@ -917,7 +925,9 @@ async fn subcommand_current<'a, L: LiveCommitSyncConfig>(
     live_commit_sync_config: L,
     with_contents: bool,
 ) -> Result<(), Error> {
-    let csc = live_commit_sync_config.get_current_commit_sync_config(&ctx, repo_id)?;
+    let csc = live_commit_sync_config
+        .get_current_commit_sync_config(&ctx, repo_id)
+        .await?;
     if with_contents {
         print_commit_sync_config(csc, "");
     } else {
@@ -932,7 +942,9 @@ async fn subcommand_list<'a, L: LiveCommitSyncConfig>(
     live_commit_sync_config: L,
     with_contents: bool,
 ) -> Result<(), Error> {
-    let all = live_commit_sync_config.get_all_commit_sync_config_versions(repo_id)?;
+    let all = live_commit_sync_config
+        .get_all_commit_sync_config_versions(repo_id)
+        .await?;
     for (version_name, csc) in all.into_iter().sorted_by_key(|(vn, _)| vn.clone()) {
         if with_contents {
             println!("{}:", version_name);
@@ -952,7 +964,8 @@ async fn subcommand_by_version<'a, L: LiveCommitSyncConfig>(
     version_name: String,
 ) -> Result<(), Error> {
     let csc = live_commit_sync_config
-        .get_commit_sync_config_by_version(repo_id, &CommitSyncConfigVersion(version_name))?;
+        .get_commit_sync_config_by_version(repo_id, &CommitSyncConfigVersion(version_name))
+        .await?;
     print_commit_sync_config(csc, "");
     Ok(())
 }
@@ -997,7 +1010,8 @@ async fn subcommand_verify_bookmarks(
         target_repo,
         live_commit_sync_config,
         mapping.clone(),
-    )?;
+    )
+    .await?;
 
     let large_repo = commit_syncer.get_large_repo();
     let small_repo = commit_syncer.get_small_repo();
@@ -1370,15 +1384,16 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .subcommand(insert_subcommand)
 }
 
-fn get_large_to_small_commit_syncer(
+async fn get_large_to_small_commit_syncer(
     ctx: &CoreContext,
     source_repo: BlobRepo,
     target_repo: BlobRepo,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     mapping: SqlSyncedCommitMapping,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
-    let commit_sync_config =
-        live_commit_sync_config.get_current_commit_sync_config(ctx, source_repo.get_repoid())?;
+    let commit_sync_config = live_commit_sync_config
+        .get_current_commit_sync_config(ctx, source_repo.get_repoid())
+        .await?;
 
     let (large_repo, small_repo) = if commit_sync_config.large_repo_id == source_repo.get_repoid()
         && commit_sync_config

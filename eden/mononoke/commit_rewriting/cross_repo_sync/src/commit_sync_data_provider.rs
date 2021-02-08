@@ -112,7 +112,7 @@ impl CommitSyncDataProvider {
         }
     }
 
-    pub fn get_mover(
+    pub async fn get_mover(
         &self,
         version: &CommitSyncConfigVersion,
         source_repo_id: RepositoryId,
@@ -123,7 +123,8 @@ impl CommitSyncDataProvider {
         match self {
             Live(live_commit_sync_config) => {
                 let commit_sync_config = live_commit_sync_config
-                    .get_commit_sync_config_by_version(source_repo_id, version)?;
+                    .get_commit_sync_config_by_version(source_repo_id, version)
+                    .await?;
 
                 let Movers { mover, .. } =
                     get_movers_from_config(&commit_sync_config, source_repo_id, target_repo_id)?;
@@ -136,7 +137,7 @@ impl CommitSyncDataProvider {
         }
     }
 
-    pub fn get_reverse_mover(
+    pub async fn get_reverse_mover(
         &self,
         version: &CommitSyncConfigVersion,
         source_repo_id: RepositoryId,
@@ -147,7 +148,8 @@ impl CommitSyncDataProvider {
         match self {
             Live(live_commit_sync_config) => {
                 let commit_sync_config = live_commit_sync_config
-                    .get_commit_sync_config_by_version(source_repo_id, version)?;
+                    .get_commit_sync_config_by_version(source_repo_id, version)
+                    .await?;
 
                 let Movers { reverse_mover, .. } =
                     get_movers_from_config(&commit_sync_config, source_repo_id, target_repo_id)?;
@@ -160,7 +162,7 @@ impl CommitSyncDataProvider {
         }
     }
 
-    pub fn get_bookmark_renamer(
+    pub async fn get_bookmark_renamer(
         &self,
         version: &CommitSyncConfigVersion,
         source_repo_id: RepositoryId,
@@ -171,7 +173,8 @@ impl CommitSyncDataProvider {
         match self {
             Live(live_commit_sync_config) => {
                 let commit_sync_config = live_commit_sync_config
-                    .get_commit_sync_config_by_version(source_repo_id, version)?;
+                    .get_commit_sync_config_by_version(source_repo_id, version)
+                    .await?;
 
                 let BookmarkRenamers {
                     bookmark_renamer, ..
@@ -189,7 +192,7 @@ impl CommitSyncDataProvider {
         }
     }
 
-    pub fn get_reverse_bookmark_renamer(
+    pub async fn get_reverse_bookmark_renamer(
         &self,
         version: &CommitSyncConfigVersion,
         source_repo_id: RepositoryId,
@@ -200,7 +203,8 @@ impl CommitSyncDataProvider {
         match self {
             Live(live_commit_sync_config) => {
                 let commit_sync_config = live_commit_sync_config
-                    .get_commit_sync_config_by_version(source_repo_id, version)?;
+                    .get_commit_sync_config_by_version(source_repo_id, version)
+                    .await?;
 
                 let BookmarkRenamers {
                     reverse_bookmark_renamer,
@@ -219,7 +223,7 @@ impl CommitSyncDataProvider {
         }
     }
 
-    pub fn get_current_version(
+    pub async fn get_current_version(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
@@ -228,7 +232,9 @@ impl CommitSyncDataProvider {
 
         match self {
             Live(live_commit_sync_config) => {
-                live_commit_sync_config.get_current_commit_sync_config_version(ctx, repo_id)
+                live_commit_sync_config
+                    .get_current_commit_sync_config_version(ctx, repo_id)
+                    .await
             }
             Test {
                 current_version, ..
@@ -250,22 +256,23 @@ impl CommitSyncDataProvider {
         }
     }
 
-    pub fn version_exists(
+    pub async fn version_exists(
         &self,
         repo_id: RepositoryId,
         version: &CommitSyncConfigVersion,
     ) -> Result<bool, Error> {
         match self {
             Self::Live(live_commit_sync_config) => {
-                let versions =
-                    live_commit_sync_config.get_all_commit_sync_config_versions(repo_id)?;
+                let versions = live_commit_sync_config
+                    .get_all_commit_sync_config_versions(repo_id)
+                    .await?;
                 Ok(versions.contains_key(version))
             }
             Self::Test { map, .. } => Ok(map.contains_key(version)),
         }
     }
 
-    pub fn get_common_pushrebase_bookmarks(
+    pub async fn get_common_pushrebase_bookmarks(
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
@@ -274,8 +281,9 @@ impl CommitSyncDataProvider {
 
         match self {
             Live(live_commit_sync_config) => {
-                let commit_sync_config =
-                    live_commit_sync_config.get_current_commit_sync_config(ctx, repo_id)?;
+                let commit_sync_config = live_commit_sync_config
+                    .get_current_commit_sync_config(ctx, repo_id)
+                    .await?;
                 Ok(commit_sync_config.common_pushrebase_bookmarks)
             }
             Test {

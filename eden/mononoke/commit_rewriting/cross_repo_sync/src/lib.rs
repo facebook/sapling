@@ -598,67 +598,74 @@ where
         &self.mapping
     }
 
-    pub fn version_exists(&self, version: &CommitSyncConfigVersion) -> Result<bool, Error> {
+    pub async fn version_exists(&self, version: &CommitSyncConfigVersion) -> Result<bool, Error> {
         self.commit_sync_data_provider
             .version_exists(self.get_target_repo_id(), version)
+            .await
     }
 
-    pub fn get_mover_by_version(&self, version: &CommitSyncConfigVersion) -> Result<Mover, Error> {
-        let (source_repo, target_repo) = self.get_source_target();
-        self.commit_sync_data_provider.get_mover(
-            version,
-            source_repo.get_repoid(),
-            target_repo.get_repoid(),
-        )
-    }
-
-    pub fn get_reverse_mover_by_version(
+    pub async fn get_mover_by_version(
         &self,
         version: &CommitSyncConfigVersion,
     ) -> Result<Mover, Error> {
         let (source_repo, target_repo) = self.get_source_target();
-        self.commit_sync_data_provider.get_reverse_mover(
-            version,
-            source_repo.get_repoid(),
-            target_repo.get_repoid(),
-        )
+        self.commit_sync_data_provider
+            .get_mover(version, source_repo.get_repoid(), target_repo.get_repoid())
+            .await
     }
 
-    pub fn get_bookmark_renamer(&self, ctx: &CoreContext) -> Result<BookmarkRenamer, Error> {
-        let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx)?;
-
-        self.commit_sync_data_provider.get_bookmark_renamer(
-            &version_name,
-            source_repo.get_repoid(),
-            target_repo.get_repoid(),
-        )
+    pub async fn get_reverse_mover_by_version(
+        &self,
+        version: &CommitSyncConfigVersion,
+    ) -> Result<Mover, Error> {
+        let (source_repo, target_repo) = self.get_source_target();
+        self.commit_sync_data_provider
+            .get_reverse_mover(version, source_repo.get_repoid(), target_repo.get_repoid())
+            .await
     }
 
-    pub fn get_reverse_bookmark_renamer(
+    pub async fn get_bookmark_renamer(&self, ctx: &CoreContext) -> Result<BookmarkRenamer, Error> {
+        let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx).await?;
+
+        self.commit_sync_data_provider
+            .get_bookmark_renamer(
+                &version_name,
+                source_repo.get_repoid(),
+                target_repo.get_repoid(),
+            )
+            .await
+    }
+
+    pub async fn get_reverse_bookmark_renamer(
         &self,
         ctx: &CoreContext,
     ) -> Result<BookmarkRenamer, Error> {
-        let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx)?;
+        let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx).await?;
 
-        self.commit_sync_data_provider.get_reverse_bookmark_renamer(
-            &version_name,
-            source_repo.get_repoid(),
-            target_repo.get_repoid(),
-        )
+        self.commit_sync_data_provider
+            .get_reverse_bookmark_renamer(
+                &version_name,
+                source_repo.get_repoid(),
+                target_repo.get_repoid(),
+            )
+            .await
     }
 
-    pub fn get_current_version(&self, ctx: &CoreContext) -> Result<CommitSyncConfigVersion, Error> {
-        let (_, _, version_name) = self.get_source_target_version(ctx)?;
+    pub async fn get_current_version(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<CommitSyncConfigVersion, Error> {
+        let (_, _, version_name) = self.get_source_target_version(ctx).await?;
 
         Ok(version_name)
     }
 
-    pub fn rename_bookmark(
+    pub async fn rename_bookmark(
         &self,
         ctx: &CoreContext,
         bookmark: &BookmarkName,
     ) -> Result<Option<BookmarkName>, Error> {
-        Ok(self.get_bookmark_renamer(ctx)?(bookmark))
+        Ok(self.get_bookmark_renamer(ctx).await?(bookmark))
     }
 
     pub async fn get_plural_commit_sync_outcome<'a>(
@@ -1015,7 +1022,7 @@ where
         sync_config_version: &CommitSyncConfigVersion,
     ) -> Result<Option<ChangesetId>, Error> {
         let (source_repo, target_repo) = self.get_source_target();
-        let mover = self.get_mover_by_version(sync_config_version)?;
+        let mover = self.get_mover_by_version(sync_config_version).await?;
         let source_cs = source_cs_id.load(ctx, source_repo.blobstore()).await?;
 
         let source_cs = source_cs.clone().into_mut();
@@ -1085,12 +1092,13 @@ where
         res
     }
 
-    pub fn get_common_pushrebase_bookmarks(
+    pub async fn get_common_pushrebase_bookmarks(
         &self,
         ctx: &CoreContext,
     ) -> Result<Vec<BookmarkName>, Error> {
         self.commit_sync_data_provider
             .get_common_pushrebase_bookmarks(ctx, self.get_small_repo().get_repoid())
+            .await
     }
 
     async fn unsafe_sync_commit_pushrebase_impl<'a>(
@@ -1159,7 +1167,7 @@ where
             }
         };
 
-        let mover = self.get_mover_by_version(&version_name)?;
+        let mover = self.get_mover_by_version(&version_name).await?;
         let source_cs_mut = source_cs.clone().into_mut();
         let remapped_parents =
             remap_parents(ctx, &source_cs_mut, self, parent_selection_hint).await?;
@@ -1260,7 +1268,7 @@ where
         }
 
         let (source_repo, target_repo) = self.get_source_target();
-        let mover = self.get_mover_by_version(&expected_version)?;
+        let mover = self.get_mover_by_version(&expected_version).await?;
 
         match rewrite_commit(
             ctx,
@@ -1340,7 +1348,7 @@ where
                     }
                 }
 
-                let rewrite_paths = self.get_mover_by_version(&version)?;
+                let rewrite_paths = self.get_mover_by_version(&version).await?;
 
                 let mut remapped_parents = HashMap::new();
                 remapped_parents.insert(p, remapped_p);
@@ -1406,6 +1414,7 @@ where
 
         let mover = self
             .get_mover_by_version(&version)
+            .await
             .with_context(|| format!("failed getting a mover of version {}", version))?;
         Ok((mover, version))
     }
@@ -1587,14 +1596,15 @@ where
         Ok(source_cs)
     }
 
-    fn get_source_target_version(
+    async fn get_source_target_version(
         &self,
         ctx: &CoreContext,
     ) -> Result<(BlobRepo, BlobRepo, CommitSyncConfigVersion), Error> {
         let (source, target) = self.get_source_target();
         let version = self
             .commit_sync_data_provider
-            .get_current_version(ctx, source.get_repoid())?;
+            .get_current_version(ctx, source.get_repoid())
+            .await?;
         Ok((source, target, version))
     }
 
@@ -1620,7 +1630,7 @@ where
         maybe_target_bcs_id: Option<ChangesetId>,
     ) -> Result<(), Error> {
         // TODO(stash, ikostia): use the real version that was used to remap a commit
-        let version_name = self.get_current_version(&ctx)?;
+        let version_name = self.get_current_version(&ctx).await?;
         self.update_wc_equivalence_with_version(
             ctx,
             source_bcs_id,

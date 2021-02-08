@@ -62,7 +62,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
     mut scuba_sample: MononokeScubaSampleBuilder,
 ) -> Result<Vec<ChangesetId>, Error> {
     info!(ctx.logger(), "processing log entry #{}", entry.id);
-    let bookmark = commit_syncer.get_bookmark_renamer(ctx)?(&entry.bookmark_name)
+    let bookmark = commit_syncer.get_bookmark_renamer(ctx).await?(&entry.bookmark_name)
         .ok_or(format_err!("unexpected empty bookmark rename"))?;
     scuba_sample
         .add("source_bookmark_name", format!("{}", entry.bookmark_name))
@@ -120,7 +120,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
     let version = if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome() {
         // TODO(stash): do not use current version here, and instead do not sync
         // these commits
-        commit_syncer.get_current_version(&ctx)?
+        commit_syncer.get_current_version(&ctx).await?
     } else {
         let maybe_version = unsynced_ancestors_versions
             .get_only_version()

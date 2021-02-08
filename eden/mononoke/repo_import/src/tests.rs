@@ -704,7 +704,8 @@ mod tests {
         movers.push(
             syncers
                 .small_to_large
-                .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION".to_string()))?,
+                .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION".to_string()))
+                .await?,
         );
 
         let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
@@ -742,7 +743,7 @@ mod tests {
             &small_repo,
             &large_to_small_syncer,
             &shifted_bcs_ids,
-            &large_to_small_syncer.get_current_version(&ctx)?,
+            &large_to_small_syncer.get_current_version(&ctx).await?,
         )
         .await?;
 
@@ -860,7 +861,8 @@ mod tests {
         movers.push(
             syncers
                 .small_to_large
-                .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION".to_string()))?,
+                .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION".to_string()))
+                .await?,
         );
 
         let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
@@ -882,7 +884,7 @@ mod tests {
             &small_repo,
             &large_to_small_syncer,
             &large_repo_cs_ids,
-            &large_to_small_syncer.get_current_version(&ctx)?,
+            &large_to_small_syncer.get_current_version(&ctx).await?,
         )
         .await?;
 
@@ -931,7 +933,7 @@ mod tests {
             &small_repo,
             &large_to_small_syncer,
             &[root, first_commit],
-            &large_to_small_syncer.get_current_version(&ctx)?,
+            &large_to_small_syncer.get_current_version(&ctx).await?,
         )
         .await?;
 

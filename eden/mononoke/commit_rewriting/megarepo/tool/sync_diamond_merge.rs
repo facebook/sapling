@@ -175,7 +175,7 @@ pub async fn do_sync_diamond_merge(
         &ctx,
         hashmap! {small_merge_cs_id => new_merge_cs_id},
         &syncers.small_to_large,
-        &syncers.small_to_large.get_current_version(&ctx)?,
+        &syncers.small_to_large.get_current_version(&ctx).await?,
     )
     .await?;
 
@@ -248,7 +248,10 @@ async fn create_rewritten_merge_commit(
         &ctx,
         merge_bcs,
         &remapped_parents,
-        syncers.small_to_large.get_mover_by_version(&version_p1)?,
+        syncers
+            .small_to_large
+            .get_mover_by_version(&version_p1)
+            .await?,
         syncers.small_to_large.get_source_repo().clone(),
     )
     .await?;
@@ -293,7 +296,7 @@ async fn generate_additional_file_changes(
             BonsaiDiffFileChange::Changed(ref path, ..)
             | BonsaiDiffFileChange::ChangedReusedId(ref path, ..)
             | BonsaiDiffFileChange::Deleted(ref path) => {
-                let maybe_new_path = large_to_small.get_mover_by_version(&version)?(path)?;
+                let maybe_new_path = large_to_small.get_mover_by_version(&version).await?(path)?;
                 if maybe_new_path.is_some() {
                     continue;
                 }

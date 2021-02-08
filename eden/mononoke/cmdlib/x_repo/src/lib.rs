@@ -32,8 +32,9 @@ pub async fn create_commit_syncers_from_matches(
     let (source_repo, target_repo, mapping, live_commit_sync_config) =
         get_things_from_matches(ctx, matches).await?;
 
-    let current_config =
-        live_commit_sync_config.get_current_commit_sync_config(ctx, source_repo.0.get_repoid())?;
+    let current_config = live_commit_sync_config
+        .get_current_commit_sync_config(ctx, source_repo.0.get_repoid())
+        .await?;
 
     let large_repo_id = current_config.large_repo_id;
     let source_repo_id = source_repo.0.get_repoid();
@@ -170,8 +171,9 @@ async fn create_commit_syncer<'a>(
     mapping: SqlSyncedCommitMapping,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
-    let current_config =
-        live_commit_sync_config.get_current_commit_sync_config(ctx, source_repo.0.get_repoid())?;
+    let current_config = live_commit_sync_config
+        .get_current_commit_sync_config(ctx, source_repo.0.get_repoid())
+        .await?;
 
     let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, &current_config)?;
     let commit_syncer = CommitSyncer::new(ctx, mapping, repos, live_commit_sync_config);

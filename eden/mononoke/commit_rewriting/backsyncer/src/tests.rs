@@ -714,7 +714,10 @@ async fn verify_mapping_and_all_wc(
             EquivalentWorkingCopyAncestor(target_cs_id, ref version)
             | RewrittenAs(target_cs_id, ref version) => {
                 println!("using mover for {:?}", version);
-                (target_cs_id, commit_syncer.get_mover_by_version(version)?)
+                (
+                    target_cs_id,
+                    commit_syncer.get_mover_by_version(version).await?,
+                )
             }
         };
 
@@ -756,7 +759,7 @@ async fn verify_bookmarks(
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
-    let bookmark_renamer = commit_syncer.get_bookmark_renamer(&ctx)?;
+    let bookmark_renamer = commit_syncer.get_bookmark_renamer(&ctx).await?;
 
     let bookmarks: Vec<_> = source_repo
         .get_publishing_bookmarks_maybe_stale(ctx.clone())
@@ -806,7 +809,7 @@ async fn verify_bookmarks(
                     }
                     EquivalentWorkingCopyAncestor(_, version) | RewrittenAs(_, version) => {
                         println!("using mover for {:?}", version);
-                        commit_syncer.get_mover_by_version(&version)?
+                        commit_syncer.get_mover_by_version(&version).await?
                     }
                 };
 

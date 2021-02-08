@@ -230,8 +230,8 @@ const ALL_COMMIT_SYNC_CONFIG_V3: &str = r#"{
     }
 }"#;
 
-#[fbinit::test]
-fn test_adding_a_new_version(fb: FacebookInit) {
+#[fbinit::compat_test]
+async fn test_adding_a_new_version(fb: FacebookInit) {
     let (_ctx, test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
         EMPTY_PUSHREDIRECTOR,
@@ -248,9 +248,11 @@ fn test_adding_a_new_version(fb: FacebookInit) {
     // Before we apply any changes, configs are as expected
     let av1 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_1)
+        .await
         .unwrap();
     let av3 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_3)
+        .await
         .unwrap();
 
     assert_eq!(av1.len(), 1);
@@ -270,9 +272,11 @@ fn test_adding_a_new_version(fb: FacebookInit) {
     // Ensure an added version is recognized after a change
     let av1 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_1)
+        .await
         .unwrap();
     let av3 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_3)
+        .await
         .unwrap();
 
     assert_eq!(av1.len(), 2);
@@ -292,9 +296,11 @@ fn test_adding_a_new_version(fb: FacebookInit) {
     // Ensure new current version is picked up, but len of versions is the same for r1
     let av1 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_1)
+        .await
         .unwrap();
     let av3 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_3)
+        .await
         .unwrap();
 
     assert_eq!(av1.len(), 2);
@@ -304,8 +310,8 @@ fn test_adding_a_new_version(fb: FacebookInit) {
     assert!(av3.contains_key(&vr31));
 }
 
-#[fbinit::test]
-fn test_query_by_version_name(fb: FacebookInit) {
+#[fbinit::compat_test]
+async fn test_query_by_version_name(fb: FacebookInit) {
     let (_ctx, test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
         EMPTY_PUSHREDIRECTOR,
@@ -321,8 +327,11 @@ fn test_query_by_version_name(fb: FacebookInit) {
     // Before we apply any changes, configs are as expected
     let r1_v1 = live_commit_sync_config
         .get_commit_sync_config_by_version(repo_1, &v1)
+        .await
         .unwrap();
-    let r3_v1_res = live_commit_sync_config.get_commit_sync_config_by_version(repo_3, &v1);
+    let r3_v1_res = live_commit_sync_config
+        .get_commit_sync_config_by_version(repo_3, &v1)
+        .await;
 
     assert_eq!(r1_v1.version_name, v1);
     // This version is not for r3, so we did not get a repo
@@ -343,9 +352,11 @@ fn test_query_by_version_name(fb: FacebookInit) {
     // Ensure an added version is recognized after a change
     let r1_v1 = live_commit_sync_config
         .get_commit_sync_config_by_version(repo_1, &v1)
+        .await
         .unwrap();
     let r1_v2 = live_commit_sync_config
         .get_commit_sync_config_by_version(repo_1, &v2)
+        .await
         .unwrap();
 
     assert_eq!(r1_v1.version_name, v1);
@@ -363,9 +374,11 @@ fn test_query_by_version_name(fb: FacebookInit) {
     // but v2 is still accessible
     let r1_v1 = live_commit_sync_config
         .get_commit_sync_config_by_version(repo_1, &v1)
+        .await
         .unwrap();
     let r1_v2 = live_commit_sync_config
         .get_commit_sync_config_by_version(repo_1, &v2)
+        .await
         .unwrap();
 
     assert_eq!(r1_v1.version_name, v1);

@@ -59,8 +59,8 @@ const CURRENT_COMMIT_SYNC_CONFIG_V2: &str = r#"{
     }
 }"#;
 
-#[fbinit::test]
-fn test_changing_commit_sync_config(fb: FacebookInit) {
+#[fbinit::compat_test]
+async fn test_changing_commit_sync_config(fb: FacebookInit) {
     let (ctx, test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
         EMPTY_PUSHREDIRECTOR,
@@ -73,9 +73,11 @@ fn test_changing_commit_sync_config(fb: FacebookInit) {
     // CommitSyncConfig is accessible by small repo ids
     let csc_r1_v1 = live_commit_sync_config
         .get_current_commit_sync_config(&ctx, repo_1)
+        .await
         .unwrap();
     let csc_r2_v1 = live_commit_sync_config
         .get_current_commit_sync_config(&ctx, repo_2)
+        .await
         .unwrap();
 
     assert_eq!(
@@ -100,9 +102,11 @@ fn test_changing_commit_sync_config(fb: FacebookInit) {
 
     let csc_r1_v2 = live_commit_sync_config
         .get_current_commit_sync_config(&ctx, repo_1)
+        .await
         .unwrap();
     let csc_r2_v2 = live_commit_sync_config
         .get_current_commit_sync_config(&ctx, repo_2)
+        .await
         .unwrap();
 
     assert_eq!(

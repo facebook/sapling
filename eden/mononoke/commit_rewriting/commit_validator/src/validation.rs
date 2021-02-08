@@ -637,14 +637,15 @@ impl ValidationHelpers {
     }
 
     // First returned mover is small to large, second is large to small
-    fn create_movers(
+    async fn create_movers(
         &self,
         small_repo_id: &Small<RepositoryId>,
         version_name: &CommitSyncConfigVersion,
     ) -> Result<(Mover, Mover), Error> {
         let commit_sync_config = self
             .live_commit_sync_config
-            .get_commit_sync_config_by_version(self.large_repo.0.get_repoid(), version_name)?;
+            .get_commit_sync_config_by_version(self.large_repo.0.get_repoid(), version_name)
+            .await?;
 
         let movers = get_movers(
             &commit_sync_config,
@@ -1336,8 +1337,9 @@ pub async fn validate_entry(
                     .clone();
                 let scuba_sample = validation_helper.scuba_sample.clone();
                 let mapping = &validation_helpers.mapping;
-                let (small_to_large_mover, large_to_small_mover) =
-                    validation_helpers.create_movers(&repo_id, &version_name)?;
+                let (small_to_large_mover, large_to_small_mover) = validation_helpers
+                    .create_movers(&repo_id, &version_name)
+                    .await?;
 
                 let (stats, validation_result): (_, Result<Result<(), _>, tokio::task::JoinError>) =
                     tokio::task::spawn({
@@ -1574,7 +1576,9 @@ mod tests {
             &ctx,
             commit_mapping,
             &small_to_large_commit_syncer,
-            &small_to_large_commit_syncer.get_current_version(&ctx)?,
+            &small_to_large_commit_syncer
+                .get_current_version(&ctx)
+                .await?,
         )
         .await?;
         let large_repo = Large(large_repo.clone());

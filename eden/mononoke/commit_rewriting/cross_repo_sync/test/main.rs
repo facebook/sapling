@@ -1862,7 +1862,7 @@ async fn prepare_commit_syncer_with_mapping_change(
         .set_to(root_cs_id)
         .await?;
 
-    let current_version = large_to_small_syncer.get_current_version(&ctx)?;
+    let current_version = large_to_small_syncer.get_current_version(&ctx).await?;
     let maybe_small_root_cs_id = large_to_small_syncer
         .unsafe_always_rewrite_sync_commit(
             &ctx,
@@ -2133,7 +2133,7 @@ async fn test_sync_merge_gets_version_from_parents_1(fb: FacebookInit) -> Result
     let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
     let heads = heads_with_versions[&Some(v1.clone())].clone();
     let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), heads).await;
-    assert_eq!(lts_syncer.get_current_version(&ctx)?, v1);
+    assert_eq!(lts_syncer.get_current_version(&ctx).await?, v1);
     println!(
         "merge sync outcome: {:?}",
         lts_syncer
@@ -2166,7 +2166,7 @@ async fn test_sync_merge_gets_version_from_parents_2(fb: FacebookInit) -> Result
     let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
     let heads = heads_with_versions[&Some(v2.clone())].clone();
     let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), heads).await;
-    assert_ne!(lts_syncer.get_current_version(&ctx)?, v2);
+    assert_ne!(lts_syncer.get_current_version(&ctx).await?, v2);
     lts_syncer
         .sync_commit(
             &ctx,

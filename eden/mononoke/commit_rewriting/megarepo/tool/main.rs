@@ -654,7 +654,7 @@ async fn run_mover<'a>(
 ) -> Result<(), Error> {
     let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
     let version = get_version(sub_m)?;
-    let mover = commit_syncer.get_mover_by_version(&version)?;
+    let mover = commit_syncer.get_mover_by_version(&version).await?;
     let path = sub_m
         .value_of(PATH)
         .ok_or_else(|| format_err!("{} not set", PATH))?;
@@ -780,7 +780,7 @@ async fn run_backfill_noop_mapping<'a>(
         .value_of(MAPPING_VERSION_NAME)
         .ok_or_else(|| format_err!("mapping-version-name is not specified"))?;
     let mapping_version_name = CommitSyncConfigVersion(mapping_version_name.to_string());
-    if !commit_syncer.version_exists(&mapping_version_name)? {
+    if !commit_syncer.version_exists(&mapping_version_name).await? {
         return Err(format_err!("{} version is not found", mapping_version_name));
     }
 
@@ -856,8 +856,9 @@ async fn run_diff_mapping_versions<'a>(
     let mut commit_sync_configs = vec![];
     for version in mapping_version_names {
         let version = CommitSyncConfigVersion(version.to_string());
-        let config =
-            live_commit_sync_config.get_commit_sync_config_by_version(target_repo_id, &version)?;
+        let config = live_commit_sync_config
+            .get_commit_sync_config_by_version(target_repo_id, &version)
+            .await?;
         commit_sync_configs.push(config);
     }
 

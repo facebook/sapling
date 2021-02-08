@@ -75,7 +75,8 @@ where
         async move {
             let map = HashMap::new();
             let mover = commit_syncer
-                .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()))?;
+                .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()))
+                .await?;
             rewrite_commit(&ctx, source_bcs_mut, &map, mover, source_repo.clone()).await
         }
     }
@@ -301,7 +302,9 @@ pub async fn init_small_large_repo(
         &ctx,
         hashmap! { small_master_bcs_id => large_master_bcs_id},
         &small_to_large_commit_syncer,
-        &small_to_large_commit_syncer.get_current_version(&ctx)?,
+        &small_to_large_commit_syncer
+            .get_current_version(&ctx)
+            .await?,
     )
     .await?;
 

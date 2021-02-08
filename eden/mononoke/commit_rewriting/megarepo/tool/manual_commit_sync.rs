@@ -117,7 +117,7 @@ mod test {
             &small_to_large,
             commit_to_sync,
             vec![bigmove],
-            small_to_large.get_current_version(&ctx)?,
+            small_to_large.get_current_version(&ctx).await?,
         )
         .await?;
 

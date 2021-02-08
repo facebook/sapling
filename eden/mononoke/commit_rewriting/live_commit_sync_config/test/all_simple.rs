@@ -89,8 +89,8 @@ const ALL_COMMIT_SYNC_CONFIG_V1: &str = r#"{
     }
 }"#;
 
-#[fbinit::test]
-fn test_different_repos_same_group(fb: FacebookInit) {
+#[fbinit::compat_test]
+async fn test_different_repos_same_group(fb: FacebookInit) {
     let (_ctx, _test_source, _store, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(
             fb,
@@ -107,18 +107,23 @@ fn test_different_repos_same_group(fb: FacebookInit) {
 
     let av0 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_0)
+        .await
         .unwrap();
     let av1 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_1)
+        .await
         .unwrap();
     let av2 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_2)
+        .await
         .unwrap();
     let av3 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_3)
+        .await
         .unwrap();
     let av4 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_4)
+        .await
         .unwrap();
 
     assert_eq!(av0, av1);
@@ -127,8 +132,8 @@ fn test_different_repos_same_group(fb: FacebookInit) {
     assert_ne!(av0, av3);
 }
 
-#[fbinit::test]
-fn test_version_counts(fb: FacebookInit) {
+#[fbinit::compat_test]
+async fn test_version_counts(fb: FacebookInit) {
     let (_ctx, _test_source, _store, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(
             fb,
@@ -142,9 +147,11 @@ fn test_version_counts(fb: FacebookInit) {
 
     let av0 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_0)
+        .await
         .unwrap();
     let av4 = live_commit_sync_config
         .get_all_commit_sync_config_versions(repo_4)
+        .await
         .unwrap();
 
     assert_eq!(av0.len(), 2);

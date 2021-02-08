@@ -754,11 +754,13 @@ async fn get_large_repo_config_if_pushredirected<'a>(
     let enabled = live_commit_sync_config.push_redirector_enabled_for_public(repo_id);
 
     if enabled {
-        let commit_sync_config =
-            match live_commit_sync_config.get_current_commit_sync_config(&ctx, repo_id) {
-                Ok(config) => config,
-                Err(e) => return Err(format_err!("Failed to fetch commit sync config: {}", e)),
-            };
+        let commit_sync_config = match live_commit_sync_config
+            .get_current_commit_sync_config(&ctx, repo_id)
+            .await
+        {
+            Ok(config) => config,
+            Err(e) => return Err(format_err!("Failed to fetch commit sync config: {}", e)),
+        };
         let large_repo_id = commit_sync_config.large_repo_id;
         let (_, large_repo_config) = match repos
             .iter()
@@ -796,7 +798,7 @@ where
 
     let large_importing_bookmark =
         commit_syncer
-            .rename_bookmark(ctx, &importing_bookmark)?
+            .rename_bookmark(ctx, &importing_bookmark).await?
             .ok_or_else(|| format_err!(
         "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_importing_bookmark",
         importing_bookmark,
@@ -807,7 +809,7 @@ where
         "Set large repo's importing bookmark to {}", large_importing_bookmark
     );
     let large_dest_bookmark = commit_syncer
-        .rename_bookmark(ctx, &dest_bookmark)?
+        .rename_bookmark(ctx, &dest_bookmark).await?
         .ok_or_else(|| {
             format_err!(
         "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_dest_bookmark",
@@ -993,7 +995,12 @@ async fn repo_import(
             )
         })?;
 
-        movers.push(syncers.small_to_large.get_mover_by_version(&version)?);
+        movers.push(
+            syncers
+                .small_to_large
+                .get_mover_by_version(&version)
+                .await?,
+        );
 
         maybe_small_repo_back_sync_vars = Some(SmallRepoBackSyncVars {
             large_to_small_syncer: syncers.large_to_small.clone(),

@@ -14,8 +14,8 @@ use crate::{
     EMTPY_COMMMIT_SYNC_ALL, EMTPY_COMMMIT_SYNC_CURRENT,
 };
 
-#[fbinit::test]
-fn test_empty_configs(fb: FacebookInit) {
+#[fbinit::compat_test]
+async fn test_empty_configs(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
         EMPTY_PUSHREDIRECTOR,
@@ -34,12 +34,13 @@ fn test_empty_configs(fb: FacebookInit) {
     assert!(
         live_commit_sync_config
             .get_current_commit_sync_config(&ctx, repo_1)
+            .await
             .is_err()
     );
 }
 
-#[fbinit::test]
-fn test_commit_sync_config_groups(fb: FacebookInit) {
+#[fbinit::compat_test]
+async fn test_commit_sync_config_groups(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
         EMPTY_PUSHREDIRECTOR,
@@ -55,13 +56,16 @@ fn test_commit_sync_config_groups(fb: FacebookInit) {
     // CommitSyncConfig is accessible by the large repo id
     let csc_r0 = live_commit_sync_config
         .get_current_commit_sync_config(&ctx, repo_0)
+        .await
         .unwrap();
     // CommitSyncConfig is accessible by small repo ids
     let csc_r1 = live_commit_sync_config
         .get_current_commit_sync_config(&ctx, repo_1)
+        .await
         .unwrap();
     let csc_r2 = live_commit_sync_config
         .get_current_commit_sync_config(&ctx, repo_2)
+        .await
         .unwrap();
 
     // Same group, same configs
@@ -70,9 +74,11 @@ fn test_commit_sync_config_groups(fb: FacebookInit) {
 
     let csc_r3 = live_commit_sync_config
         .get_current_commit_sync_config(&ctx, repo_3)
+        .await
         .unwrap();
     let csc_r4 = live_commit_sync_config
         .get_current_commit_sync_config(&ctx, repo_4)
+        .await
         .unwrap();
     // Same group, same configs
     assert_eq!(csc_r3, csc_r4);

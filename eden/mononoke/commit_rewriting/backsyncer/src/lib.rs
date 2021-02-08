@@ -269,7 +269,7 @@ where
     debug!(ctx.logger(), "preparing to backsync {:?}", log_entry);
 
     let new_counter = log_entry.id;
-    let bookmark = commit_syncer.get_bookmark_renamer(&ctx)?(&log_entry.bookmark_name);
+    let bookmark = commit_syncer.get_bookmark_renamer(&ctx).await?(&log_entry.bookmark_name);
     debug!(ctx.logger(), "bookmark was renamed into {:?}", bookmark);
     let from_cs_id = log_entry.from_changeset_id;
     let to_cs_id = log_entry.to_changeset_id;

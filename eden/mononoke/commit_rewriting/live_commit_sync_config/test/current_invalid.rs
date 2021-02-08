@@ -121,8 +121,8 @@ const CURRENT_COMMIT_SYNC_CONFIG_INVALID_SMALL_IN_ONE_LARGE_IN_OTHER: &str = r#"
     }
 }"#;
 
-#[fbinit::test]
-fn test_unknown_repo(fb: FacebookInit) {
+#[fbinit::compat_test]
+async fn test_unknown_repo(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
         EMPTY_PUSHREDIRECTOR,
@@ -131,15 +131,17 @@ fn test_unknown_repo(fb: FacebookInit) {
     );
     let repo_9 = RepositoryId::new(9);
     // Unknown repo
-    let csc_r9_res = live_commit_sync_config.get_current_commit_sync_config(&ctx, repo_9);
+    let csc_r9_res = live_commit_sync_config
+        .get_current_commit_sync_config(&ctx, repo_9)
+        .await;
     assert!(is_error_kind!(
         csc_r9_res,
         ErrorKind::NotPartOfAnyCommitSyncConfig(_)
     ));
 }
 
-#[fbinit::test]
-fn test_large_repo_part_of_multiple_configs(fb: FacebookInit) {
+#[fbinit::compat_test]
+async fn test_large_repo_part_of_multiple_configs(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
         EMPTY_PUSHREDIRECTOR,
@@ -147,15 +149,17 @@ fn test_large_repo_part_of_multiple_configs(fb: FacebookInit) {
         EMTPY_COMMMIT_SYNC_ALL,
     );
     let repo_0 = RepositoryId::new(0);
-    let csc_r0_res = live_commit_sync_config.get_current_commit_sync_config(&ctx, repo_0);
+    let csc_r0_res = live_commit_sync_config
+        .get_current_commit_sync_config(&ctx, repo_0)
+        .await;
     assert!(is_error_kind!(
         csc_r0_res,
         ErrorKind::PartOfMultipleCommitSyncConfigs(_)
     ));
 }
 
-#[fbinit::test]
-fn test_small_repo_part_of_multiple_configs(fb: FacebookInit) {
+#[fbinit::compat_test]
+async fn test_small_repo_part_of_multiple_configs(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
         EMPTY_PUSHREDIRECTOR,
@@ -163,15 +167,17 @@ fn test_small_repo_part_of_multiple_configs(fb: FacebookInit) {
         EMTPY_COMMMIT_SYNC_ALL,
     );
     let repo_1 = RepositoryId::new(1);
-    let csc_r1_res = live_commit_sync_config.get_current_commit_sync_config(&ctx, repo_1);
+    let csc_r1_res = live_commit_sync_config
+        .get_current_commit_sync_config(&ctx, repo_1)
+        .await;
     assert!(is_error_kind!(
         csc_r1_res,
         ErrorKind::PartOfMultipleCommitSyncConfigs(_)
     ));
 }
 
-#[fbinit::test]
-fn test_repo_is_small_in_one_config_and_large_in_the_other(fb: FacebookInit) {
+#[fbinit::compat_test]
+async fn test_repo_is_small_in_one_config_and_large_in_the_other(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
         EMPTY_PUSHREDIRECTOR,
@@ -179,7 +185,9 @@ fn test_repo_is_small_in_one_config_and_large_in_the_other(fb: FacebookInit) {
         EMTPY_COMMMIT_SYNC_ALL,
     );
     let repo_1 = RepositoryId::new(1);
-    let csc_r1_res = live_commit_sync_config.get_current_commit_sync_config(&ctx, repo_1);
+    let csc_r1_res = live_commit_sync_config
+        .get_current_commit_sync_config(&ctx, repo_1)
+        .await;
     assert!(is_error_kind!(
         csc_r1_res,
         ErrorKind::PartOfMultipleCommitSyncConfigs(_)

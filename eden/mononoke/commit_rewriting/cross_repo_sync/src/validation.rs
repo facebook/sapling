@@ -58,8 +58,8 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
         Target::ref_cast(target_repo),
         Source(source_hash),
         Target(target_hash),
-        &commit_syncer.get_mover_by_version(&version)?,
-        &commit_syncer.get_reverse_mover_by_version(&version)?,
+        &commit_syncer.get_mover_by_version(&version).await?,
+        &commit_syncer.get_reverse_mover_by_version(&version).await?,
         PrefixesToVisit::default(),
     )
     .await
@@ -88,7 +88,8 @@ pub async fn verify_working_copy_fast_path<'a, M: SyncedCommitMapping + Clone + 
         commit_syncer,
         &version,
         live_commit_sync_config,
-    )?;
+    )
+    .await?;
 
     verify_working_copy_inner(
         ctx,
@@ -96,8 +97,8 @@ pub async fn verify_working_copy_fast_path<'a, M: SyncedCommitMapping + Clone + 
         Target::ref_cast(target_repo),
         Source(source_hash),
         Target(target_hash),
-        &commit_syncer.get_mover_by_version(&version)?,
-        &commit_syncer.get_reverse_mover_by_version(&version)?,
+        &commit_syncer.get_mover_by_version(&version).await?,
+        &commit_syncer.get_reverse_mover_by_version(&version).await?,
         prefixes_to_visit,
     )
     .await
@@ -118,7 +119,8 @@ pub async fn verify_working_copy_with_version_fast_path<
     let target_repo = commit_syncer.get_target_repo();
 
     let prefixes_to_visit =
-        get_fast_path_prefixes(source_repo, commit_syncer, version, live_commit_sync_config)?;
+        get_fast_path_prefixes(source_repo, commit_syncer, version, live_commit_sync_config)
+            .await?;
 
     verify_working_copy_inner(
         ctx,
@@ -126,8 +128,8 @@ pub async fn verify_working_copy_with_version_fast_path<
         Target::ref_cast(target_repo),
         source_hash,
         target_hash,
-        &commit_syncer.get_mover_by_version(&version)?,
-        &commit_syncer.get_reverse_mover_by_version(&version)?,
+        &commit_syncer.get_mover_by_version(&version).await?,
+        &commit_syncer.get_reverse_mover_by_version(&version).await?,
         prefixes_to_visit,
     )
     .await
@@ -135,15 +137,16 @@ pub async fn verify_working_copy_with_version_fast_path<
 
 // Returns list of prefixes that need to be visited in both large and small
 // repositories to establish working copy equivalence.
-fn get_fast_path_prefixes<M: SyncedCommitMapping + Clone + 'static>(
-    source_repo: &BlobRepo,
-    commit_syncer: &CommitSyncer<M>,
-    version: &CommitSyncConfigVersion,
+async fn get_fast_path_prefixes<'a, M: SyncedCommitMapping + Clone + 'static>(
+    source_repo: &'a BlobRepo,
+    commit_syncer: &'a CommitSyncer<M>,
+    version: &'a CommitSyncConfigVersion,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<PrefixesToVisit, Error> {
     let small_repo_id = commit_syncer.get_small_repo().get_repoid();
     let config = live_commit_sync_config
-        .get_commit_sync_config_by_version(source_repo.get_repoid(), &version)?;
+        .get_commit_sync_config_by_version(source_repo.get_repoid(), &version)
+        .await?;
 
     let small_repo_config = config.small_repos.get(&small_repo_id).ok_or_else(|| {
         format_err!(
@@ -391,7 +394,7 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
         }
         let corresponding_changesets = renamed_source_bookmarks.get(target_book);
         let remapped_source_cs_id = corresponding_changesets.map(|cs| cs.target_cs_id);
-        let reverse_bookmark_renamer = commit_syncer.get_reverse_bookmark_renamer(&ctx)?;
+        let reverse_bookmark_renamer = commit_syncer.get_reverse_bookmark_renamer(&ctx).await?;
         if remapped_source_cs_id.is_none() && reverse_bookmark_renamer(target_book).is_none() {
             // Note that the reverse_bookmark_renamer check below is necessary because there
             // might be bookmark in the source repo that shouldn't be present in the target repo
@@ -723,7 +726,7 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
     ),
     Error,
 > {
-    let bookmark_renamer = commit_syncer.get_bookmark_renamer(&ctx)?;
+    let bookmark_renamer = commit_syncer.get_bookmark_renamer(&ctx).await?;
 
     let mut renamed_and_remapped_bookmarks = vec![];
     for (bookmark, cs_id) in bookmarks {

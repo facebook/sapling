@@ -413,8 +413,9 @@ async fn run<'a>(
     let commit_syncer = create_commit_syncer_from_matches(&ctx, &matches).await?;
 
     let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
-    let commit_sync_config =
-        live_commit_sync_config.get_current_commit_sync_config(&ctx, source_repo.get_repoid())?;
+    let commit_sync_config = live_commit_sync_config
+        .get_current_commit_sync_config(&ctx, source_repo.get_repoid())
+        .await?;
 
     let common_bookmarks: HashSet<_> = commit_sync_config
         .common_pushrebase_bookmarks

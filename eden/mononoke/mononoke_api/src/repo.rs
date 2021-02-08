@@ -328,10 +328,13 @@ impl Repo {
         live_commit_sync_config: Option<Arc<dyn LiveCommitSyncConfig>>,
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     ) -> Result<Self, Error> {
-        let init_commit_sync_config = live_commit_sync_config
-            .as_ref()
-            .map(|lcsc| lcsc.get_current_commit_sync_config(&ctx, blob_repo.get_repoid()))
-            .transpose()?;
+        let init_commit_sync_config = match live_commit_sync_config.as_ref() {
+            None => None,
+            Some(lcsc) => Some(
+                lcsc.get_current_commit_sync_config(&ctx, blob_repo.get_repoid())
+                    .await?,
+            ),
+        };
 
         let config = RepoConfig {
             commit_sync_config: init_commit_sync_config,
@@ -1236,6 +1239,7 @@ impl RepoContext {
         let commit_sync_config = self
             .live_commit_sync_config()
             .get_current_commit_sync_config(self.ctx(), self.blob_repo().get_repoid())
+            .await
             .map_err(|e| {
                 MononokeError::InvalidRequest(format!(
                     "Commits from {} are not configured to be remapped to another repo: {}",
