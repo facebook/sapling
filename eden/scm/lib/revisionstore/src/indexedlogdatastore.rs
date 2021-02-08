@@ -8,12 +8,17 @@
 use std::{
     io::{Cursor, Write},
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
+use anyhow::anyhow;
 use anyhow::{bail, ensure, Result};
+use async_trait::async_trait;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use futures::{FutureExt, StreamExt};
 use minibytes::Bytes;
 use parking_lot::RwLock;
+use tokio::task::spawn_blocking;
 
 use configparser::{
     config::ConfigSet,
@@ -27,6 +32,7 @@ use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::{ExtStoredPolicy, LocalStore},
+    newstore::{FetchStream, KeyStream, ReadStore},
     repack::ToKeys,
     sliceext::SliceExt,
     types::StoreKey,
@@ -47,6 +53,7 @@ pub struct IndexedLogHgIdDataStore {
     extstored_policy: ExtStoredPolicy,
 }
 
+#[derive(Debug)]
 struct Entry {
     key: Key,
     metadata: Metadata,
@@ -225,6 +232,28 @@ impl IndexedLogHgIdDataStore {
     }
 }
 
+#[async_trait]
+impl ReadStore<Key, Entry> for IndexedLogHgIdDataStore {
+    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Entry> {
+        Box::pin(keys.then(move |key| {
+            let self_ = self.clone();
+            spawn_blocking(move || {
+                let inner = self_.inner.read();
+                match Entry::from_log(&key, &inner.log)? {
+                    // TODO: NotFound error should be strongly typed.
+                    None => Err(anyhow!("key not found in indexedlog")),
+                    Some(entry) => Ok(entry),
+                }
+            })
+            .map(|spawn_res| match spawn_res {
+                Ok(Ok(entry)) => Ok(entry),
+                Ok(Err(e)) => Err(e),
+                Err(e) => Err(e.into()),
+            })
+        }))
+    }
+}
+
 impl HgIdMutableDeltaStore for IndexedLogHgIdDataStore {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
@@ -321,9 +350,11 @@ mod tests {
 
     use std::fs::remove_file;
 
+    use futures::stream;
     use minibytes::Bytes;
     use tempfile::TempDir;
 
+    use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
     use types::testutil::*;
 
     #[test]
@@ -564,5 +595,47 @@ mod tests {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn test_newstore() {
+        let tempdir = TempDir::new().unwrap();
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
+
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: key("a", "1"),
+        };
+        let metadata = Default::default();
+
+        log.add(&delta, &metadata).unwrap();
+
+        log.flush().unwrap();
+
+        let log = Arc::new(log);
+
+        let mut fetched: Vec<_> = block_on_stream(block_on(
+            log.fetch_stream(Box::pin(stream::iter(vec![key("a", "1")]))),
+        ))
+        .collect();
+
+        assert_eq!(fetched.len(), 1);
+        assert_eq!(
+            fetched
+                .get_mut(0)
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .content()
+                .unwrap(),
+            Bytes::from(&[1, 2, 3, 4][..])
+        );
     }
 }
