@@ -27,6 +27,7 @@ minibytes = { path = "../minibytes", features = ["frombytes"] }
 mpatch = { path = "../mpatch" }
 progress = { path = "../progress" }
 revisionstore_types = { path = "types" }
+streams = { path = "../streams" }
 types = { path = "../types" }
 util = { path = "../util" }
 anyhow = "1.0"

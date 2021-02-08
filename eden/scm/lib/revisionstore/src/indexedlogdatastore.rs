@@ -24,6 +24,7 @@ use configparser::{
     config::ConfigSet,
     hg::{ByteCount, ConfigSetHgExt},
 };
+use edenapi_types::TreeEntry;
 use indexedlog::log::IndexOutput;
 use lz4_pyframe::{compress, decompress};
 use types::{hgid::ReadHgIdExt, HgId, Key, RepoPath};
@@ -54,7 +55,7 @@ pub struct IndexedLogHgIdDataStore {
 }
 
 #[derive(Debug)]
-struct Entry {
+pub struct Entry {
     key: Key,
     metadata: Metadata,
 
@@ -232,23 +233,37 @@ impl IndexedLogHgIdDataStore {
     }
 }
 
+impl std::convert::From<TreeEntry> for Entry {
+    fn from(v: TreeEntry) -> Self {
+        Entry::new(
+            v.key().clone(),
+            v.data_unchecked().unwrap().into(),
+            Metadata::default(),
+        )
+    }
+}
+
 #[async_trait]
 impl ReadStore<Key, Entry> for IndexedLogHgIdDataStore {
-    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Entry> {
+    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Key, Entry> {
         Box::pin(keys.then(move |key| {
             let self_ = self.clone();
+            let key_ = key.clone();
             spawn_blocking(move || {
                 let inner = self_.inner.read();
-                match Entry::from_log(&key, &inner.log)? {
+                match Entry::from_log(&key, &inner.log) {
                     // TODO: NotFound error should be strongly typed.
-                    None => Err(anyhow!("key not found in indexedlog")),
-                    Some(entry) => Ok(entry),
+                    Ok(None) => Err((Some(key.clone()), anyhow!("key not found in indexedlog"))),
+                    Ok(Some(entry)) => Ok(entry),
+                    Err(e) => Err((Some(key.clone()), e)),
                 }
             })
-            .map(|spawn_res| match spawn_res {
-                Ok(Ok(entry)) => Ok(entry),
-                Ok(Err(e)) => Err(e),
-                Err(e) => Err(e.into()),
+            .map(move |spawn_res| {
+                match spawn_res {
+                    Ok(Ok(entry)) => Ok(entry),
+                    Ok(Err(e)) => Err(e),
+                    Err(e) => Err((Some(key_), e.into())),
+                }
             })
         }))
     }
@@ -356,6 +371,8 @@ mod tests {
 
     use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
     use types::testutil::*;
+
+    use crate::newstore::fallback::FallbackStore;
 
     #[test]
     fn test_empty() {
@@ -598,7 +615,7 @@ mod tests {
     }
 
     #[test]
-    fn test_newstore() {
+    fn test_newstore_read() {
         let tempdir = TempDir::new().unwrap();
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
@@ -636,6 +653,78 @@ mod tests {
                 .content()
                 .unwrap(),
             Bytes::from(&[1, 2, 3, 4][..])
+        );
+    }
+
+    #[test]
+    fn test_newstore_fallback() {
+        let tempdir = TempDir::new().unwrap();
+        let log1 = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
+        let log2 = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
+
+        let delta1 = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: key("a", "1"),
+        };
+        let delta2 = Delta {
+            data: Bytes::from(&[2, 3, 4, 5][..]),
+            base: None,
+            key: key("b", "2"),
+        };
+        let metadata = Default::default();
+
+        log1.add(&delta1, &metadata).unwrap();
+        log1.flush().unwrap();
+
+        log2.add(&delta2, &metadata).unwrap();
+        log2.flush().unwrap();
+
+        let log1 = Arc::new(log1);
+        let log2 = Arc::new(log2);
+
+        let fallback = Arc::new(FallbackStore {
+            preferred: log1,
+            fallback: log2,
+        });
+
+        let mut fetched: Vec<_> = block_on_stream(block_on(
+            fallback.fetch_stream(Box::pin(stream::iter(vec![key("a", "1"), key("b", "2")]))),
+        ))
+        .collect();
+
+        assert_eq!(fetched.len(), 2);
+        assert_eq!(
+            fetched
+                .get_mut(0)
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .content()
+                .unwrap(),
+            Bytes::from(&[1, 2, 3, 4][..])
+        );
+        assert_eq!(
+            fetched
+                .get_mut(1)
+                .unwrap()
+                .as_mut()
+                .unwrap()
+                .content()
+                .unwrap(),
+            Bytes::from(&[2, 3, 4, 5][..])
         );
     }
 }

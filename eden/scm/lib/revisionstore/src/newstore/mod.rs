@@ -15,20 +15,25 @@ use futures::{
 };
 
 pub mod edenapi;
+pub mod fallback;
 
 /// A pinned, boxed stream of keys to fetch.
 pub type KeyStream<K> = BoxStream<'static, K>;
 
 /// A pinned, boxed stream of (fallible) fetched values
-pub type FetchStream<V> = BoxStream<'static, Result<V, Error>>;
+pub type FetchStream<K, V> = BoxStream<'static, Result<V, (Option<K>, Error)>>;
+
+/// A boxed, object-safe ReadStore trait object for a given key and value type.
+pub type BoxedReadStore<K, V> = Arc<dyn ReadStore<K, V>>;
 
 /// Transform an error into a single-item FetchStream
-pub fn fetch_error<V, E>(e: E) -> FetchStream<V>
+pub fn fetch_error<K, V, E>(e: E) -> FetchStream<K, V>
 where
     E: std::error::Error + Send + Sync + 'static,
+    K: Send + Sync + 'static,
     V: Send + Sync + 'static,
 {
-    Box::pin(stream::once(future::err(Error::new(e))))
+    Box::pin(stream::once(future::ready(Err((None, Error::new(e))))))
 }
 
 // TODO: Add attributes support
@@ -38,5 +43,5 @@ pub trait ReadStore<K: Send + Sync + 'static, V: Send + Sync + 'static>:
     Send + Sync + 'static
 {
     /// Map a stream of keys to a stream of values by fetching from the underlying store
-    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<V>;
+    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, V>;
 }

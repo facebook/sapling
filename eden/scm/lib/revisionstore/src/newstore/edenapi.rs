@@ -33,7 +33,7 @@ impl<C> ReadStore<Key, TreeEntry> for EdenApiAdapter<C>
 where
     C: EdenApi,
 {
-    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<TreeEntry> {
+    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Key, TreeEntry> {
         Box::pin(
             keys.chunks_timeout(BATCH_SIZE, BATCH_TIMEOUT)
                 .then(move |keys| {
@@ -46,9 +46,11 @@ where
                             .map_or_else(fetch_error, |s| {
                                 Box::pin(s.entries.map(|v| match v {
                                     Ok(Ok(v)) => Ok(v),
-                                    Ok(Err(e)) => Err(Error::new(e)),
-                                    Err(e) => Err(Error::new(e)),
-                                })) as FetchStream<TreeEntry>
+                                    // TODO: We could eliminate this redundant key clone with a FetchError trait.
+                                    Ok(Err(e)) => Err((e.key.clone(), Error::new(e))),
+                                    // TODO: What should happen when an entire batch fails?
+                                    Err(e) => Err((None, Error::new(e))),
+                                })) as FetchStream<Key, TreeEntry>
                             })
                     }
                 })
