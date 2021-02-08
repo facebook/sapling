@@ -57,7 +57,7 @@ auto_impl = "0.4"
 bitflags = "1.2"
 bytes = { version = "0.5", features = ["serde"] }
 clap = "2.33"
-dashmap = "3.11.10"
+dashmap = {version = "3.11.10", features = ["serde"] }
 derive_more = "0.99.3"
 filetime = "0.2.9"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
