@@ -501,8 +501,8 @@ Test repack option
 
   $ hg prefetch -r '4' --repack
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' aa52a49be5221fd6fb50743e0641040baa96ba89, based on ef362f8bbe8aa457b0cfc49f200cbeb7747984ed, found via 7609b5c63072
-  3 trees fetched over 0.00s
+  fetching tree '' aa52a49be5221fd6fb50743e0641040baa96ba89, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via 7609b5c63072
+  2 trees fetched over 0.00s
   (running background incremental repack)
 
   $ sleep 3
