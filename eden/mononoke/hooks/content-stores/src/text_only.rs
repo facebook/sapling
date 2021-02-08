@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use crate::{ErrorKind, FileContentFetcher, PathContent};
+use crate::{ErrorKind, FileChange, FileContentFetcher, PathContent};
 
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use mononoke_types::{ContentId, MPath};
+use mononoke_types::{ChangesetId, ContentId, MPath};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -72,6 +72,15 @@ impl<T: FileContentFetcher + 'static> FileContentFetcher for TextOnlyFileContent
         paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, PathContent>, ErrorKind> {
         self.inner.find_content(ctx, bookmark, paths).await
+    }
+
+    async fn file_changes<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        new_cs_id: ChangesetId,
+        old_cs_id: ChangesetId,
+    ) -> Result<Vec<(MPath, FileChange)>, ErrorKind> {
+        self.inner.file_changes(ctx, new_cs_id, old_cs_id).await
     }
 }
 

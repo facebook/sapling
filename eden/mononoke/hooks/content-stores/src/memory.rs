@@ -5,14 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::{ErrorKind, FileContentFetcher, PathContent};
+use crate::{ErrorKind, FileChange, FileContentFetcher, PathContent};
 
 use anyhow::format_err;
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use mononoke_types::{ContentId, MPath};
+use mononoke_types::{ChangesetId, ContentId, MPath};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -83,6 +83,18 @@ impl FileContentFetcher for InMemoryFileContentFetcher {
     ) -> Result<HashMap<MPath, PathContent>, ErrorKind> {
         Err(
             format_err!("`find_content` is not implemented for `InMemoryFileContentFetcher`")
+                .into(),
+        )
+    }
+
+    async fn file_changes<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _new_cs_id: ChangesetId,
+        _old_cs_id: ChangesetId,
+    ) -> Result<Vec<(MPath, FileChange)>, ErrorKind> {
+        Err(
+            format_err!("`file_changes` is not implemented for `InMemoryFileContentFetcher`")
                 .into(),
         )
     }

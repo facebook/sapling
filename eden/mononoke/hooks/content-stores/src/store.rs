@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use mononoke_types::{ContentId, MPath};
+use mononoke_types::{ChangesetId, ContentId, MPath};
 use std::collections::HashMap;
 
 #[async_trait]
@@ -34,10 +34,24 @@ pub trait FileContentFetcher: Send + Sync {
         bookmark: BookmarkName,
         paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, PathContent>, ErrorKind>;
+
+    async fn file_changes<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        new_cs_id: ChangesetId,
+        old_cs_id: ChangesetId,
+    ) -> Result<Vec<(MPath, FileChange)>, ErrorKind>;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum PathContent {
     Directory,
     File(ContentId),
+}
+
+#[derive(Clone, Debug)]
+pub enum FileChange {
+    Added(ContentId),
+    Changed(ContentId, ContentId),
+    Removed,
 }

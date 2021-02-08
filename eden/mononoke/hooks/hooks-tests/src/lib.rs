@@ -22,7 +22,8 @@ use hooks::{
     HookExecution, HookManager, HookRejectionInfo,
 };
 use hooks_content_stores::{
-    BlobRepoFileContentFetcher, FileContentFetcher, InMemoryFileContentFetcher, PathContent,
+    BlobRepoFileContentFetcher, FileChange as FileDiff, FileContentFetcher,
+    InMemoryFileContentFetcher, PathContent,
 };
 use maplit::{btreemap, hashmap, hashset};
 use metaconfig_types::{BookmarkParams, HookConfig, HookParams, RepoConfig};
@@ -32,7 +33,7 @@ use regex::Regex;
 use scuba_ext::MononokeScubaSampleBuilder;
 use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use tests_utils::{create_commit, store_files, CreateCommitContext};
+use tests_utils::{bookmark, create_commit, store_files, CreateCommitContext};
 
 #[derive(Clone, Debug)]
 struct FnChangesetHook {
@@ -103,6 +104,52 @@ impl ChangesetHook for FindFilesChangesetHook {
                 Err(err).map_err(Error::from)
             }
         }
+    }
+}
+
+#[derive(Clone)]
+struct FileChangesChangesetHook {
+    pub added: i32,
+    pub changed: i32,
+    pub removed: i32,
+}
+
+#[async_trait]
+impl ChangesetHook for FileChangesChangesetHook {
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+        &'this self,
+        ctx: &'ctx CoreContext,
+        _bookmark: &BookmarkName,
+        changeset: &'cs BonsaiChangeset,
+        content_fetcher: &'fetcher dyn FileContentFetcher,
+        _cross_repo_push_source: CrossRepoPushSource,
+    ) -> Result<HookExecution, Error> {
+        let parent = changeset.parents().next();
+        let (added, changed, removed) = if let Some(parent) = parent {
+            let file_changes = content_fetcher
+                .file_changes(&ctx, changeset.get_changeset_id(), parent)
+                .await?;
+
+            let (mut added, mut changed, mut removed) = (0, 0, 0);
+            for (_path, change) in file_changes.into_iter() {
+                match change {
+                    FileDiff::Added(_) => added += 1,
+                    FileDiff::Changed(_, _) => changed += 1,
+                    FileDiff::Removed => removed += 1,
+                }
+            }
+            Result::<_, Error>::Ok((added, changed, removed))
+        } else {
+            Ok((0, 0, 0))
+        }?;
+
+        if added != self.added || changed != self.changed || removed != self.removed {
+            return Ok(HookExecution::Rejected(HookRejectionInfo::new(
+                "Wrong number of added, changed or removed files",
+            )));
+        }
+
+        Ok(HookExecution::Accepted)
     }
 }
 
@@ -903,6 +950,7 @@ fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) {
 
         run_changeset_hooks_with_mgr(
             ctx.clone(),
+            None,
             "bm1",
             hooks,
             bookmarks,
@@ -938,6 +986,69 @@ fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) {
         };
         run_changeset_hooks_with_mgr(
             ctx.clone(),
+            None,
+            "bm1",
+            hooks,
+            bookmarks,
+            regexes.clone(),
+            expected,
+            ContentFetcherType::Blob(repo),
+        )
+        .await;
+    });
+}
+
+#[fbinit::test]
+fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) {
+    async_unit::tokio_unit_test(async move {
+        let ctx = CoreContext::test_mock(fb);
+        // set up a blobrepo
+        let repo = new_memblob_empty(None).unwrap();
+        let root_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file", "file")
+            .add_file("dir/file", "dir/file")
+            .add_file("dir/sub/file", "dir/sub/file")
+            .add_file("dir-2/file", "dir-2/file")
+            .commit()
+            .await
+            .unwrap();
+        // set master bookmark
+        bookmark(&ctx, &repo, "master")
+            .set_to(root_id)
+            .await
+            .unwrap();
+
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![root_id])
+            .delete_file("file")
+            .add_file("dir", "dir to file")
+            .add_file("dir-2/file", "updated dir-2/file")
+            .add_file("dir-3/sub/file-1", "dir-3/sub/file-1")
+            .add_file("dir-3/sub/file-2", "dir-3/sub/file-2")
+            .commit()
+            .await
+            .unwrap();
+        let changeset = bcs_id.load(&ctx, &repo.get_blobstore()).await.unwrap();
+
+        let hook_name = "hook".to_string();
+        let hook = Box::new(FileChangesChangesetHook {
+            added: 3,
+            changed: 1,
+            removed: 3,
+        });
+
+        let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
+            hook_name.clone() => hook as Box<dyn ChangesetHook>,
+        };
+        let bookmarks = hashmap! {
+            "bm1".to_string() => vec![hook_name.clone()]
+        };
+        let regexes = hashmap! {};
+        let expected = hashmap! {
+            hook_name => HookExecution::Accepted,
+        };
+        run_changeset_hooks_with_mgr(
+            ctx.clone(),
+            Some(changeset),
             "bm1",
             hooks,
             bookmarks,
@@ -965,6 +1076,7 @@ fn test_cs_hooks_with_blob_store(fb: FacebookInit) {
         };
         run_changeset_hooks_with_mgr(
             ctx.clone(),
+            None,
             "bm1",
             hooks,
             bookmarks,
@@ -1064,6 +1176,7 @@ async fn run_changeset_hooks(
 ) {
     run_changeset_hooks_with_mgr(
         ctx,
+        None,
         bookmark_name,
         hooks,
         bookmarks,
@@ -1076,6 +1189,7 @@ async fn run_changeset_hooks(
 
 async fn run_changeset_hooks_with_mgr(
     ctx: CoreContext,
+    changeset: Option<BonsaiChangeset>,
     bookmark_name: &str,
     hooks: HashMap<String, Box<dyn ChangesetHook>>,
     bookmarks: HashMap<String, Vec<String>>,
@@ -1088,10 +1202,12 @@ async fn run_changeset_hooks_with_mgr(
     for (hook_name, hook) in hooks {
         hook_manager.register_changeset_hook(&hook_name, hook, Default::default());
     }
+
+    let changeset = changeset.unwrap_or_else(default_changeset);
     let res = hook_manager
         .run_hooks_for_bookmark(
             &ctx,
-            vec![default_changeset()].iter(),
+            vec![changeset].iter(),
             &BookmarkName::new(bookmark_name).unwrap(),
             None,
             CrossRepoPushSource::NativeToThisRepo,
