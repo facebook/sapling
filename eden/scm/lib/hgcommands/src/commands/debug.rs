@@ -20,6 +20,7 @@ commands! {
     mod dynamicconfig;
     mod fsync;
     mod http;
+    mod newstore;
     mod python;
     mod segmentclone;
     mod store;

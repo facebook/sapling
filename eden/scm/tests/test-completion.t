@@ -140,6 +140,7 @@ Show debug commands if there are no other candidates
   debugmutation
   debugmutationfromobsmarkers
   debugnamecomplete
+  debugnewstore
   debugobsolete
   debugpathcomplete
   debugpickmergetool
@@ -428,6 +429,7 @@ Show all commands + options
   debugmutation: rev, successors, time-range
   debugmutationfromobsmarkers: 
   debugnamecomplete: 
+  debugnewstore: 
   debugobsolete: flags, record-parents, rev, exclusive, index, delete, date, user, template
   debugpathcomplete: full, normal, added, removed
   debugpickmergetool: rev, changedelete, include, exclude, tool

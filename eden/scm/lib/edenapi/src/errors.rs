@@ -8,7 +8,7 @@
 use thiserror::Error;
 
 use auth::X509Error;
-use edenapi_types::wire::WireToApiConversionError;
+use edenapi_types::{wire::WireToApiConversionError, EdenApiServerError};
 use http::status::StatusCode;
 use http_client::HttpClientError;
 
@@ -28,6 +28,8 @@ pub enum EdenApiError {
     InvalidUrl(#[from] url::ParseError),
     #[error(transparent)]
     WireToApiConversionFailed(#[from] WireToApiConversionError),
+    #[error(transparent)]
+    ServerError(#[from] EdenApiServerError),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

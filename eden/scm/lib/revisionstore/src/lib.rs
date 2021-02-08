@@ -155,6 +155,7 @@ pub mod multiplexstore;
 pub mod mutabledatapack;
 pub mod mutablehistorypack;
 pub mod mutablepack;
+pub mod newstore;
 pub mod packstore;
 pub mod packwriter;
 pub mod uniondatastore;

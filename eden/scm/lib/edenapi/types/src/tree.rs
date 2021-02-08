@@ -212,11 +212,21 @@ pub struct TreeRequest {
     pub attributes: TreeAttributes,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Eq, PartialEq)]
 pub struct TreeAttributes {
     pub manifest_blob: bool,
     pub parents: bool,
     pub child_metadata: bool,
+}
+
+impl TreeAttributes {
+    pub fn all() -> Self {
+        TreeAttributes {
+            manifest_blob: true,
+            parents: true,
+            child_metadata: true,
+        }
+    }
 }
 
 impl Default for TreeAttributes {

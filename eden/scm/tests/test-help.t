@@ -1022,6 +1022,8 @@ Test list of internal help commands
                  convert obsolescence markers to mutation records
    debugnamecomplete
                  complete "names" - tags, open branch names, bookmark names
+   debugnewstore
+                 test newstore storage api
    debugobsolete
                  create arbitrary obsolete marker
    debugoptADV   (no help text available)
