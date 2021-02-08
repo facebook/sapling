@@ -27,7 +27,7 @@ memblob = { path = "../memblob", version = "0.1.0" }
 prefixblob = { path = "../prefixblob", version = "0.1.0" }
 borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-assert_matches = "1.3"
+assert_matches = "1.5"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 maplit = "1.0"
 tokio-compat = "0.1"

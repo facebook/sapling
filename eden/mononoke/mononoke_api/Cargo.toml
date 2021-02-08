@@ -67,5 +67,5 @@ thiserror = "1.0"
 cross_repo_sync_test_utils = { path = "../commit_rewriting/cross_repo_sync/test_utils", version = "0.1.0" }
 fixtures = { path = "../tests/fixtures", version = "0.1.0" }
 tests_utils = { path = "../tests/utils", version = "0.1.0" }
-assert_matches = "1.3"
+assert_matches = "1.5"
 tokio-compat = "0.1"

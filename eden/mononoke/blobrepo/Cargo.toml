@@ -52,7 +52,7 @@ scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
 tests_utils = { path = "../tests/utils", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 ascii = "1.0"
-assert_matches = "1.3"
+assert_matches = "1.5"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
 maplit = "1.0"

@@ -58,7 +58,7 @@ revset = { path = "../../revset", version = "0.1.0" }
 skiplist = { path = "../../reachabilityindex/skiplist", version = "0.1.0" }
 tests_utils = { path = "../../tests/utils", version = "0.1.0" }
 tunables = { path = "../../tunables", version = "0.1.0" }
-assert_matches = "1.3"
+assert_matches = "1.5"
 maplit = "1.0"
 pretty_assertions = "0.6"
 tokio-compat = "0.1"
