@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::{ErrorKind, FileContentFetcher};
+use crate::{ErrorKind, FileContentFetcher, PathContent};
 
+use anyhow::format_err;
 use async_trait::async_trait;
+use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use mononoke_types::ContentId;
+use mononoke_types::{ContentId, MPath};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -71,6 +73,18 @@ impl FileContentFetcher for InMemoryFileContentFetcher {
                 InMemoryFileText::Present(bytes) => Some(bytes.clone()),
                 InMemoryFileText::Elided(_) => None,
             })
+    }
+
+    async fn find_content<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _bookmark: BookmarkName,
+        _paths: Vec<MPath>,
+    ) -> Result<HashMap<MPath, PathContent>, ErrorKind> {
+        Err(
+            format_err!("`find_content` is not implemented for `InMemoryFileContentFetcher`")
+                .into(),
+        )
     }
 }
 

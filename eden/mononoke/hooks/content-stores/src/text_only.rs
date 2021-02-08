@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use crate::{ErrorKind, FileContentFetcher};
+use crate::{ErrorKind, FileContentFetcher, PathContent};
 
 use async_trait::async_trait;
+use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use mononoke_types::ContentId;
+use mononoke_types::{ContentId, MPath};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 const NULL: u8 = 0;
@@ -61,6 +63,15 @@ impl<T: FileContentFetcher + 'static> FileContentFetcher for TextOnlyFileContent
                 Some(bytes)
             }
         }))
+    }
+
+    async fn find_content<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bookmark: BookmarkName,
+        paths: Vec<MPath>,
+    ) -> Result<HashMap<MPath, PathContent>, ErrorKind> {
+        self.inner.find_content(ctx, bookmark, paths).await
     }
 }
 

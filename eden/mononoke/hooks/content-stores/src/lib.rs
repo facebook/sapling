@@ -15,7 +15,7 @@ mod text_only;
 pub use crate::blobrepo::BlobRepoFileContentFetcher;
 pub use crate::memory::{InMemoryFileContentFetcher, InMemoryFileText};
 pub use crate::text_only::TextOnlyFileContentFetcher;
-pub use store::FileContentFetcher;
+pub use store::{FileContentFetcher, PathContent};
 
 use errors::ErrorKind;
 

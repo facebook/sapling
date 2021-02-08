@@ -8,9 +8,11 @@
 use crate::ErrorKind;
 
 use async_trait::async_trait;
+use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use mononoke_types::ContentId;
+use mononoke_types::{ContentId, MPath};
+use std::collections::HashMap;
 
 #[async_trait]
 pub trait FileContentFetcher: Send + Sync {
@@ -25,4 +27,17 @@ pub trait FileContentFetcher: Send + Sync {
         ctx: &'a CoreContext,
         id: ContentId,
     ) -> Result<Option<Bytes>, ErrorKind>;
+
+    async fn find_content<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bookmark: BookmarkName,
+        paths: Vec<MPath>,
+    ) -> Result<HashMap<MPath, PathContent>, ErrorKind>;
+}
+
+#[derive(Clone)]
+pub enum PathContent {
+    Directory,
+    File(ContentId),
 }
