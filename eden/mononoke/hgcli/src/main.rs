@@ -8,11 +8,13 @@
 #![deny(warnings)]
 
 use anyhow::Error;
-use clap::{App, Arg, ArgGroup, SubCommand};
+use clap::{value_t, App, Arg, ArgGroup, SubCommand};
 use fbinit::FacebookInit;
 use std::time::Duration;
 
 mod serve;
+
+const ARG_RUNTIME_THREADS: &str = "runtime-threads";
 
 #[fbinit::main]
 fn main(fb: FacebookInit) {
@@ -35,6 +37,13 @@ fn main(fb: FacebookInit) {
                 .takes_value(true)
                 .required(false)
                 .help("Set request priority"),
+        )
+        .arg(
+            Arg::with_name(ARG_RUNTIME_THREADS)
+                .long(ARG_RUNTIME_THREADS)
+                .takes_value(true)
+                .default_value("1")
+                .help("a number of threads to use in the tokio runtime (default: 1)"),
         )
         .subcommand(
             SubCommand::with_name("serve")
@@ -94,8 +103,20 @@ fn main(fb: FacebookInit) {
         )
         .get_matches();
 
+    let core_threads = match value_t!(matches.value_of(ARG_RUNTIME_THREADS), usize) {
+        Ok(core_threads) => core_threads,
+        Err(err) => {
+            eprintln!("{:?}", err);
+            return;
+        }
+    };
+
     let res = if let Some(subcmd) = matches.subcommand_matches("serve") {
-        tokio::runtime::Runtime::new()
+        tokio::runtime::Builder::new()
+            .threaded_scheduler()
+            .core_threads(core_threads)
+            .enable_all()
+            .build()
             .map_err(Error::from)
             .and_then(|mut runtime| {
                 let result = runtime.block_on(serve::cmd(fb, &matches, subcmd));
