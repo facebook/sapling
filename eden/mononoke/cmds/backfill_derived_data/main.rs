@@ -1034,7 +1034,7 @@ async fn tail_batch_iteration(
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
                             slog::info!(
                                 ctx.logger(),
-                                "[{}:{}] count:{} time:{:?} start:{} end:{}",
+                                "[{}:{}] count:{} time:{:.2?} start:{} end:{}",
                                 deriver.name(),
                                 node.id,
                                 node.csids.len(),

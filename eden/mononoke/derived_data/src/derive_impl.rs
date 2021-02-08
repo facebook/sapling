@@ -138,7 +138,7 @@ pub async fn derive_impl<
     if should_log_slow_derivation(stats.completion_time) {
         warn!(
             ctx.logger(),
-            "slow derivation of {} {} for {}, took {:?}: mononoke_prod/flat/{}.trace",
+            "slow derivation of {} {} for {}, took {:.2?}: mononoke_prod/flat/{}.trace",
             count,
             Derivable::NAME,
             start_csid,
