@@ -142,9 +142,7 @@ class lockinfo(object):
         return _("process %r on host %r") % (self.pid, self.host)
 
 
-def trylock(
-    ui, vfs, lockname, timeout, warntimeout=defaultlockwaitwarntimeout, *args, **kwargs
-):
+def trylock(ui, vfs, lockname, timeout, warntimeout=None, *args, **kwargs):
     """return an acquired lock or raise an a LockHeld exception
 
     This function is responsible to issue warnings and or debug messages about
@@ -155,8 +153,10 @@ def trylock(
     warningidx = 0
     if not timeout:
         warningidx = -1
-    elif warntimeout:
+    elif warntimeout is not None:
         warningidx = warntimeout
+    else:
+        warningidx = defaultlockwaitwarntimeout
 
     delay = 0
     while True:

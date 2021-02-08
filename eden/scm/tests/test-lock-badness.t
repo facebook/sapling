@@ -49,16 +49,16 @@ Test that raising an exception in the release function doesn't cause the lock to
   abort: expected release exception
   [255]
 
-One process waiting for another
+One process waiting for another for a significant period of time (longer than the default threshold). Warning should be shown.
 
   $ cat > hooks.py << EOF
   > import time
-  > def sleepone(**x): time.sleep(1)
-  > def sleephalf(**x): time.sleep(0.5)
+  > def sleeplong(**x): time.sleep(3.1)
+  > def sleepshort(**x): time.sleep(0.1)
   > EOF
   $ echo b > b/b
-  $ hg -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleepone" > stdout &
-  $ hg -R b up -q --config hooks.pre-update="python:`pwd`/hooks.py:sleephalf" \
+  $ hg -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleeplong" > stdout &
+  $ hg -R b up -q --config hooks.pre-update="python:`pwd`/hooks.py:sleepshort" \
   > > preup-stdout 2>preup-stderr
   $ wait
   $ cat preup-stdout
@@ -69,9 +69,26 @@ One process waiting for another
   $ cat stdout
   adding b
 
+One process waiting for another for short period of time. No warning.
+
+  $ cat > hooks.py << EOF
+  > import time
+  > def sleepone(**x): time.sleep(1)
+  > def sleephalf(**x): time.sleep(0.5)
+  > EOF
+  $ echo b > b/c
+  $ hg -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleepone" > stdout &
+  $ hg -R b up -q --config hooks.pre-update="python:`pwd`/hooks.py:sleephalf" \
+  > > preup-stdout 2>preup-stderr
+  $ wait
+  $ cat preup-stdout
+  $ cat preup-stderr
+  $ cat stdout
+  adding c
+
 On processs waiting on another, warning after a long time.
 
-  $ echo b > b/c
+  $ echo b > b/d
   $ hg -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleepone" > stdout &
   $ hg -R b up -q --config hooks.pre-update="python:`pwd`/hooks.py:sleephalf" \
   > --config ui.timeout.warn=250 \
@@ -80,11 +97,11 @@ On processs waiting on another, warning after a long time.
   $ cat preup-stdout
   $ cat preup-stderr
   $ cat stdout
-  adding c
+  adding d
 
 On processs waiting on another, warning disabled.
 
-  $ echo b > b/d
+  $ echo b > b/e
   $ hg -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleepone" > stdout &
   $ hg -R b up -q --config hooks.pre-update="python:`pwd`/hooks.py:sleephalf" \
   > --config ui.timeout.warn=-1 \
@@ -93,13 +110,13 @@ On processs waiting on another, warning disabled.
   $ cat preup-stdout
   $ cat preup-stderr
   $ cat stdout
-  adding d
+  adding e
 
 check we still print debug output
 
 On processs waiting on another, warning after a long time (debug output on)
 
-  $ echo b > b/e
+  $ echo b > b/f
   $ hg -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleepone" > stdout &
   $ hg -R b up --config hooks.pre-update="python:`pwd`/hooks.py:sleephalf" \
   > --config ui.timeout.warn=250 --debug\
@@ -114,11 +131,11 @@ On processs waiting on another, warning after a long time (debug output on)
   (hint: run * to see related processes) (glob)
   got lock after * seconds (glob)
   $ cat stdout
-  adding e
+  adding f
 
 On processs waiting on another, warning disabled, (debug output on)
 
-  $ echo b > b/f
+  $ echo b > b/g
   $ hg -R b ci -A -m b --config hooks.precommit="python:`pwd`/hooks.py:sleepone" > stdout &
   $ hg -R b up --config hooks.pre-update="python:`pwd`/hooks.py:sleephalf" \
   > --config ui.timeout.warn=-1 --debug\
@@ -133,7 +150,7 @@ On processs waiting on another, warning disabled, (debug output on)
   (hint: run * to see related processes) (glob)
   got lock after * seconds (glob)
   $ cat stdout
-  adding f
+  adding g
 
 #if windows
 Pushing to a local read-only repo that can't be locked
