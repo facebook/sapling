@@ -23,6 +23,7 @@ fsnodes = { path = "../../derived_data/fsnodes", version = "0.1.0" }
 mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 mutable_counters = { path = "../../mutable_counters", version = "0.1.0" }
+skeleton_manifest = { path = "../../derived_data/skeleton_manifest", version = "0.1.0" }
 tunables = { path = "../../tunables", version = "0.1.0" }
 unodes = { path = "../../derived_data/unodes", version = "0.1.0" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }

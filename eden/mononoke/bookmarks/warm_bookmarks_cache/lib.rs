@@ -34,6 +34,7 @@ use lock_ext::RwLockExt;
 use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::{ChangesetId, Timestamp};
 use mutable_counters::MutableCounters;
+use skeleton_manifest::RootSkeletonManifestId;
 use slog::{debug, info, warn};
 use stats::prelude::*;
 use tunables::tunables;
@@ -123,6 +124,12 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
         if types.contains(RootFsnodeId::NAME) {
             self.warmers
                 .push(create_derived_data_warmer::<RootFsnodeId>(&self.ctx));
+        }
+        if types.contains(RootSkeletonManifestId::NAME) {
+            self.warmers
+                .push(create_derived_data_warmer::<RootSkeletonManifestId>(
+                    &self.ctx,
+                ));
         }
         if types.contains(BlameRoot::NAME) {
             self.warmers
