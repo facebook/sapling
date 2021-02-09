@@ -54,7 +54,7 @@ pub use crate::tree::{
 pub use crate::wire::{ToApi, ToWire, WireToApiConversionError};
 
 // re-export CloneData
-pub use dag_wire_types::{clone::CloneData, segment::FlatSegment, segment::PreparedFlatSegments};
+pub use dag_types::{clone::CloneData, segment::FlatSegment, segment::PreparedFlatSegments};
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;

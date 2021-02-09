@@ -31,8 +31,8 @@ mod spanset;
 pub mod utils;
 mod verlink;
 
-pub use dag_wire_types::clone;
-pub use dag_wire_types::id;
+pub use dag_types::clone;
+pub use dag_types::id;
 
 pub use clone::CloneData;
 pub use id::{Group, Id, VertexName};

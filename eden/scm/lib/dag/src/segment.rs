@@ -27,8 +27,8 @@ use std::fmt::{self, Debug, Formatter};
 use std::io::Cursor;
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
-pub use dag_wire_types::segment::FlatSegment;
-pub use dag_wire_types::segment::PreparedFlatSegments;
+pub use dag_types::segment::FlatSegment;
+pub use dag_types::segment::PreparedFlatSegments;
 
 /// [`Segment`] represents a range of [`Id`]s in an [`IdDag`] graph.
 /// It provides methods to access properties of the segments, including the range itself,

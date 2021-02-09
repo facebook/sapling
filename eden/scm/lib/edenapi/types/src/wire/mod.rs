@@ -52,7 +52,7 @@ pub mod history;
 pub mod metadata;
 pub mod tree;
 
-use dag_wire_types::id::Id as DagId;
+use dag_types::id::Id as DagId;
 
 pub use crate::wire::{
     clone::{WireCloneData, WireIdMapEntry},
