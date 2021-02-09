@@ -7,25 +7,23 @@
 
 #![deny(warnings)]
 
+mod errors;
+mod store;
+
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
-use mononoke_types::{BlobstoreBytes, Timestamp};
+use mononoke_types::BlobstoreBytes;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::debug;
 use std::collections::HashMap;
-mod errors;
-pub use crate::errors::ErrorKind;
-use std::{
-    ops::Deref,
-    sync::{
-        atomic::{AtomicI64, Ordering},
-        Arc,
-    },
-};
+use std::convert::TryInto;
+use std::num::NonZeroU64;
+use std::{ops::Deref, sync::Arc};
 use tunables::tunables;
-mod store;
+
+pub use crate::errors::ErrorKind;
 pub use crate::store::{RedactedMetadata, SqlRedactedContentStore};
 
 pub mod config {
@@ -70,7 +68,6 @@ impl RedactedBlobstoreConfig {
 pub struct RedactedBlobstoreInner<T> {
     blobstore: T,
     config: RedactedBlobstoreConfig,
-    timestamp: Arc<AtomicI64>,
 }
 
 // A wrapper for any blobstore, which provides a verification layer for the redacted blobs.
@@ -113,12 +110,7 @@ impl<T: Blobstore> RedactedBlobstore<T> {
 
 impl<T: Blobstore> RedactedBlobstoreInner<T> {
     pub fn new(blobstore: T, config: RedactedBlobstoreConfig) -> Self {
-        let timestamp = Arc::new(AtomicI64::new(Timestamp::now().timestamp_nanos()));
-        Self {
-            blobstore,
-            config,
-            timestamp,
-        }
+        Self { blobstore, config }
     }
 
     // Checks for access to this key, then yields the blobstore if access is allowed.
@@ -147,41 +139,30 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
     }
 
     pub fn to_scuba_redacted_blob_accessed(&self, ctx: &CoreContext, key: &str, operation: &str) {
-        let curr_timestamp = Timestamp::now().timestamp_nanos();
-        let last_timestamp = self.timestamp.load(Ordering::Acquire);
+        let sampling_rate = tunables()
+            .get_redacted_logging_sampling_rate()
+            .try_into()
+            .ok()
+            .and_then(NonZeroU64::new);
 
-        let sampling_rate =
-            core::num::NonZeroU64::new(tunables().get_redacted_logging_sampling_rate() as u64);
+        let mut scuba_builder = self.config.scuba_builder.clone();
 
-        let res = &self.timestamp.compare_exchange(
-            last_timestamp,
-            curr_timestamp,
-            Ordering::Acquire,
-            Ordering::Relaxed,
-        );
-
-        if res.is_ok() {
-            let mut scuba_builder = self.config.scuba_builder.clone();
-
-            if let Some(sampling_rate) = sampling_rate {
-                scuba_builder.sampled(sampling_rate);
-            } else {
-                scuba_builder.unsampled();
-            }
-
-            let session = &ctx.metadata().session_id();
-            scuba_builder
-                .add("time", curr_timestamp)
-                .add("operation", operation)
-                .add("key", key.to_string())
-                .add("session_uuid", session.to_string());
-
-            if let Some(unix_username) = ctx.metadata().unix_name() {
-                scuba_builder.add("unix_username", unix_username);
-            }
-
-            scuba_builder.log();
+        if let Some(sampling_rate) = sampling_rate {
+            scuba_builder.sampled(sampling_rate);
+        } else {
+            scuba_builder.unsampled();
         }
+
+        scuba_builder
+            .add("operation", operation)
+            .add("key", key.to_string())
+            .add("session_uuid", ctx.metadata().session_id().to_string());
+
+        if let Some(unix_username) = ctx.metadata().unix_name() {
+            scuba_builder.add("unix_username", unix_username);
+        }
+
+        scuba_builder.log();
     }
 }
 
