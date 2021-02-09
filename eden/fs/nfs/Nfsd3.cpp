@@ -18,7 +18,8 @@ namespace facebook::eden {
 namespace {
 class Nfsd3ServerProcessor final : public RpcServerProcessor {
  public:
-  Nfsd3ServerProcessor() = default;
+  explicit Nfsd3ServerProcessor(const folly::Logger* straceLogger)
+      : straceLogger_(straceLogger) {}
 
   Nfsd3ServerProcessor(const Nfsd3ServerProcessor&) = delete;
   Nfsd3ServerProcessor(Nfsd3ServerProcessor&&) = delete;
@@ -77,6 +78,9 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   pathconf(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
   folly::Future<folly::Unit>
   commit(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+
+ private:
+  const folly::Logger* straceLogger_;
 };
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::null(
@@ -345,7 +349,8 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   }
 
   auto handlerEntry = kNfs3dHandlers[procNumber];
-  XLOG(DBG7) << handlerEntry.name;
+  // TODO(xavierd): log the arguments too.
+  FB_LOGF(*straceLogger_, DBG7, "{}()", handlerEntry.name);
   return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid);
 }
 } // namespace
@@ -354,11 +359,11 @@ Nfsd3::Nfsd3(
     bool registerWithRpcbind,
     folly::EventBase* evb,
     Dispatcher* const /*dispatcher*/,
-    const folly::Logger* /*straceLogger*/,
+    const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> /*processNameCache*/,
     folly::Duration /*requestTimeout*/,
     Notifications* /*notifications*/)
-    : server_(std::make_shared<Nfsd3ServerProcessor>(), evb) {
+    : server_(std::make_shared<Nfsd3ServerProcessor>(straceLogger), evb) {
   if (registerWithRpcbind) {
     server_.registerService(kNfsdProgNumber, kNfsd3ProgVersion);
   }
