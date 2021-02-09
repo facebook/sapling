@@ -20,18 +20,19 @@ use chrono::Duration as ChronoDuration;
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
 use metaconfig_types::{BlobstoreId, MultiplexId};
-use mononoke_types::{BlobstoreBytes, DateTime};
-use once_cell::sync::OnceCell;
+use mononoke_types::{BlobstoreBytes, Timestamp};
+use once_cell::sync::Lazy;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn};
 use std::collections::HashMap;
 use std::fmt;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::{atomic::AtomicUsize, Arc};
+use std::time::Duration;
 use strum_macros::{EnumString, EnumVariantNames, IntoStaticStr};
 
-static DEFAULT_HEAL_MAX_BACKLOG_DAYS: i64 = 7;
-static HEAL_MAX_BACKLOG: OnceCell<ChronoDuration> = OnceCell::new();
+static HEAL_MAX_BACKLOG: Lazy<Duration> =
+    Lazy::new(|| Duration::from_secs(ChronoDuration::days(7).num_seconds() as u64));
 
 /// What to do when the ScrubBlobstore finds a problem
 #[derive(
@@ -56,6 +57,7 @@ pub enum ScrubAction {
 pub struct ScrubOptions {
     pub scrub_action: ScrubAction,
     pub scrub_handler: Arc<dyn ScrubHandler>,
+    pub scrub_grace: Option<Duration>,
 }
 
 impl Default for ScrubOptions {
@@ -63,6 +65,7 @@ impl Default for ScrubOptions {
         Self {
             scrub_action: ScrubAction::ReportOnly,
             scrub_handler: Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
+            scrub_grace: None,
         }
     }
 }
@@ -221,23 +224,31 @@ async fn blobstore_get(
                 }
             }
             ErrorKind::SomeMissingItem(missing_reads, Some(value)) => {
-                // Avoid false alarms for recently written items still on the healer queue
-                let mut do_peek_queue = true;
-                if let Some(ctime) = value.as_meta().ctime() {
-                    let now = DateTime::now().into_chrono();
-                    let peek_max = now
-                        - *HEAL_MAX_BACKLOG
-                            .get_or_init(|| ChronoDuration::days(DEFAULT_HEAL_MAX_BACKLOG_DAYS));
-                    if ctime < peek_max.timestamp() {
-                        do_peek_queue = false;
+                let ctime_age = value.as_meta().ctime().and_then(|ctime| {
+                    let age_secs = Timestamp::from_timestamp_secs(ctime).since_seconds();
+                    if age_secs > 0 {
+                        Some(Duration::from_secs(age_secs as u64))
+                    } else {
+                        None
                     }
+                });
+
+                match (ctime_age, scrub_options.scrub_grace) {
+                    // value written recently, within the grace period, so don't attempt repair
+                    (Some(ctime_age), Some(scrub_grace)) if ctime_age < scrub_grace => {
+                        return Ok(Some(value));
+                    }
+                    _ => {}
                 }
 
-                let entries = if do_peek_queue {
-                    queue.get(ctx, key).await?
-                } else {
-                    vec![]
+                let entries = match ctime_age.as_ref() {
+                    // Avoid false alarms for recently written items still on the healer queue
+                    Some(ctime_age) if ctime_age < &*HEAL_MAX_BACKLOG => {
+                        queue.get(ctx, key).await?
+                    }
+                    _ => vec![],
                 };
+
                 let mut needs_repair: HashMap<BlobstoreId, &dyn BlobstorePutOps> = HashMap::new();
 
                 for k in missing_reads.iter() {
@@ -251,6 +262,7 @@ async fn blobstore_get(
                         None => {}
                     }
                 }
+
                 if scrub_options.scrub_action == ScrubAction::ReportOnly {
                     for id in needs_repair.keys() {
                         scrub_options.scrub_handler.on_repair(

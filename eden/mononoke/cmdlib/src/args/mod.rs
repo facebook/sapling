@@ -99,6 +99,7 @@ const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
 const CACHELIB_ATTEMPT_ZSTD_ARG: &str = "blobstore-cachelib-attempt-zstd";
 const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
 const BLOBSTORE_SCRUB_ACTION_ARG: &str = "blobstore-scrub-action";
+const BLOBSTORE_SCRUB_GRACE_ARG: &str = "blobstore-scrub-grace";
 
 // Old version took no args which means it would be no good for overriding default for a binary that defaults to true.
 const READONLY_STORAGE_OLD_ARG: &str = "readonly-storage";
@@ -206,6 +207,9 @@ pub struct MononokeAppBuilder {
 
     // Whether to default to scrubbing when using a multiplexed blobstore
     scrub_action_default: Option<ScrubAction>,
+
+    // Whether to allow a grace period before reporting a key missing in a store for recent keys
+    scrub_grace_secs_default: Option<u64>,
 }
 
 /// Things we want to live for the lifetime of the mononoke binary
@@ -380,6 +384,7 @@ impl MononokeAppBuilder {
             blobstore_read_qps_default: None,
             default_scuba_dataset: None,
             scrub_action_default: None,
+            scrub_grace_secs_default: None,
         }
     }
 
@@ -505,6 +510,12 @@ impl MononokeAppBuilder {
     /// This command has a special scrub_action default setting
     pub fn with_scrub_action_default(mut self, d: Option<ScrubAction>) -> Self {
         self.scrub_action_default = d;
+        self
+    }
+
+    /// This command has a special grace period for recent keys when scrubbing
+    pub fn with_scrub_grace_secs_default(mut self, d: Option<u64>) -> Self {
+        self.scrub_grace_secs_default = d;
         self
     }
 
@@ -795,7 +806,17 @@ impl MononokeAppBuilder {
             if let Some(default) = self.scrub_action_default {
                 scrub_action_arg = scrub_action_arg.default_value(default.into());
             }
-            app.arg(scrub_action_arg)
+            let mut scrub_grace_arg = Arg::with_name(BLOBSTORE_SCRUB_GRACE_ARG)
+                .long(BLOBSTORE_SCRUB_GRACE_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Number of seconds grace to give for key to arrive in multiple blobstores or the healer queue when scrubbing");
+            if let Some(default) = self.scrub_grace_secs_default {
+                static FORMATTED: OnceCell<String> = OnceCell::new(); // Lazy static is nicer to LeakSanitizer than Box::leak
+                scrub_grace_arg = scrub_grace_arg
+                    .default_value(&FORMATTED.get_or_init(|| format!("{}", default)));
+            }
+            app.arg(scrub_action_arg).arg(scrub_grace_arg)
         } else {
             app
         }
@@ -1819,7 +1840,13 @@ pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOpt
             .value_of(BLOBSTORE_SCRUB_ACTION_ARG)
             .map(ScrubAction::from_str)
             .transpose()?;
-        blobstore_options.with_scrub_action(scrub_action)
+        let scrub_grace = matches
+            .value_of(BLOBSTORE_SCRUB_GRACE_ARG)
+            .map(u64::from_str)
+            .transpose()?;
+        blobstore_options
+            .with_scrub_action(scrub_action)
+            .with_scrub_grace(scrub_grace)
     } else {
         blobstore_options
     };

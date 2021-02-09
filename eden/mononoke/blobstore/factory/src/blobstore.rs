@@ -34,6 +34,7 @@ use sql_ext::facebook::{MysqlConnectionType, MysqlOptions};
 use sqlblob::{CountedSqlblob, Sqlblob};
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
+use std::time::Duration;
 use throttledblob::{ThrottleOptions, ThrottledBlob};
 
 use crate::ReadOnlyStorage;
@@ -75,6 +76,18 @@ impl BlobstoreOptions {
         if let Some(scrub_action) = scrub_action {
             let mut scrub_options = self.scrub_options.unwrap_or_default();
             scrub_options.scrub_action = scrub_action;
+            Self {
+                scrub_options: Some(scrub_options),
+                ..self
+            }
+        } else {
+            self
+        }
+    }
+
+    pub fn with_scrub_grace(self, scrub_grace: Option<u64>) -> Self {
+        if let Some(mut scrub_options) = self.scrub_options {
+            scrub_options.scrub_grace = scrub_grace.map(Duration::from_secs);
             Self {
                 scrub_options: Some(scrub_options),
                 ..self

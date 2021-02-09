@@ -249,6 +249,7 @@ async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
         ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
             scrub_handler: Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
+            scrub_grace: None,
         },
     );
 
@@ -625,6 +626,7 @@ async fn scrubbed(fb: FacebookInit) {
         ScrubOptions {
             scrub_action: ScrubAction::ReportOnly,
             scrub_handler: scrub_handler.clone(),
+            scrub_grace: None,
         },
     );
 
@@ -697,6 +699,7 @@ async fn scrubbed(fb: FacebookInit) {
         ScrubOptions {
             scrub_action: ScrubAction::Repair,
             scrub_handler,
+            scrub_grace: None,
         },
     );
 
