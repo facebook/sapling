@@ -26,7 +26,7 @@ use hooks_content_stores::{
     InMemoryFileContentFetcher, PathContent,
 };
 use maplit::{btreemap, hashmap, hashset};
-use metaconfig_types::{BookmarkParams, HookConfig, HookParams, RepoConfig};
+use metaconfig_types::{BookmarkParams, HookConfig, HookManagerParams, HookParams, RepoConfig};
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileType, MPath};
 use mononoke_types_mocks::contentid::{ONES_CTID, THREES_CTID, TWOS_CTID};
 use regex::Regex;
@@ -1359,7 +1359,10 @@ async fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager 
     HookManager::new(
         ctx.fb,
         Box::new(content_fetcher),
-        Default::default(),
+        HookManagerParams {
+            disable_acl_checker: true,
+            ..Default::default()
+        },
         MononokeScubaSampleBuilder::with_discard(),
         "zoo".to_string(),
     )
@@ -1386,7 +1389,10 @@ async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
     HookManager::new(
         ctx.fb,
         Box::new(content_fetcher),
-        Default::default(),
+        HookManagerParams {
+            disable_acl_checker: true,
+            ..Default::default()
+        },
         MononokeScubaSampleBuilder::with_discard(),
         "zoo".to_string(),
     )
