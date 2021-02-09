@@ -25,10 +25,10 @@ use structopt::StructOpt;
 
 use edenapi_types::{
     wire::{
-        ToApi, WireCloneData, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
-        WireTreeEntry,
+        ToApi, WireCloneData, WireCommitLocationToHashResponse, WireFileEntry,
+        WireHistoryResponseChunk, WireIdMapEntry, WireTreeEntry,
     },
-    CommitLocationToHash, CommitRevlogData, FileError, TreeError, WireHistoryEntry,
+    CommitRevlogData, FileError, TreeError, WireHistoryEntry,
 };
 use types::{HgId, Key, Parents, RepoPathBuf};
 
@@ -391,14 +391,18 @@ fn cmd_commit_revlog_data_check(args: CommitRevlogDataCheckArgs) -> Result<()> {
 }
 
 fn cmd_commit_location_to_hash(args: CommitLocationToHashArgs) -> Result<()> {
-    let commit_location_to_hash_list: Vec<CommitLocationToHash> = read_input(args.input, None)?;
-    let iter = commit_location_to_hash_list
+    let commit_location_to_hash_response: Vec<WireCommitLocationToHashResponse> =
+        read_input(args.input, None)?;
+    let iter = commit_location_to_hash_response
         .iter()
         .skip(args.start.unwrap_or(0))
         .take(args.limit.unwrap_or(usize::MAX));
-    for clh in iter {
-        println!("{:?}", clh.location);
-        for hgid in clh.hgids.iter() {
+    for response in iter {
+        println!(
+            "LocationToHashRequest(known={}, dist={}, count={})",
+            response.location.descendant, response.location.distance, response.count
+        );
+        for hgid in response.hgids.iter() {
             println!("  {}", hgid);
         }
     }

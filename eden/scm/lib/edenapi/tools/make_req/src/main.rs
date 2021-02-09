@@ -25,7 +25,7 @@ use serde_json::Value;
 use structopt::StructOpt;
 
 use edenapi_types::{
-    json::FromJson, wire::ToWire, CommitLocationToHashRequest, CommitRevlogDataRequest,
+    json::FromJson, wire::ToWire, CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
     CompleteTreeRequest, FileRequest, HistoryRequest, TreeRequest,
 };
 
@@ -55,7 +55,7 @@ fn main() -> Result<()> {
         Command::History(args) => make_req::<HistoryRequest>(args),
         Command::CompleteTree(args) => make_req::<CompleteTreeRequest>(args),
         Command::CommitRevlogData(args) => make_req_wire::<CommitRevlogDataRequest>(args),
-        Command::CommitLocationToHash(args) => make_req_wire::<CommitLocationToHashRequest>(args),
+        Command::CommitLocationToHash(args) => make_req::<CommitLocationToHashRequestBatch>(args),
     }
 }
 

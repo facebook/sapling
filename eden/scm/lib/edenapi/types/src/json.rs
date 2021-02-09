@@ -25,9 +25,12 @@ use std::str::FromStr;
 use anyhow::{ensure, Context, Result};
 use serde_json::{json, Map, Value};
 
+use dag_types::Location;
 use types::{HgId, Key, RepoPathBuf};
 
-use crate::commit::{CommitLocation, CommitLocationToHashRequest, CommitRevlogDataRequest};
+use crate::commit::{
+    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
+};
 use crate::complete_tree::CompleteTreeRequest;
 use crate::file::FileRequest;
 use crate::history::HistoryRequest;
@@ -56,43 +59,54 @@ pub fn parse_commit_revlog_data_req(json: &Value) -> Result<CommitRevlogDataRequ
 /// Example request:
 /// ```json
 /// {
-///   "locations": [{
-///     "known_descendant": "159a8912de890112b8d6005999cdf4988213fb2f",
-///     "distance_to_descendant": 1,
+///   "requests": [{
+///     "location": {
+///         "descendant": "159a8912de890112b8d6005999cdf4988213fb2f",
+///         "distance": 1,
+///     },
 ///     "count": 2
 ///   }]
 /// }
-pub fn parse_commit_location_to_hash_req(json: &Value) -> Result<CommitLocationToHashRequest> {
+pub fn parse_commit_location_to_hash_req(json: &Value) -> Result<CommitLocationToHashRequestBatch> {
     let json = json.as_object().context("input must be a JSON object")?;
-    let locations_json = json
-        .get("locations")
-        .context("missing field locations")?
+    let requests_json = json
+        .get("requests")
+        .context("missing field requests")?
         .as_array()
-        .context("field locations is not an array")?;
-    let mut locations = Vec::new();
-    for entry in locations_json {
-        let known_descendent = HgId::from_str(
-            entry
-                .get("known_descendant")
+        .context("field requests is not an array")?;
+    let mut requests = Vec::new();
+    for request_json in requests_json {
+        let location_json = request_json
+            .get("location")
+            .context("field location is missing")?
+            .as_object()
+            .context("field location is not an object")?;
+        let descendant = HgId::from_str(
+            location_json
+                .get("descendant")
                 .context("missing field descendant")?
                 .as_str()
                 .context("field descendant is not a string")?,
         )
         .context("could not be parsed as HgId")?;
-        let distance_to_descendant = entry
-            .get("distance_to_descendant")
-            .context("missing field distance_to_descendant")?
+        let distance = location_json
+            .get("distance")
+            .context("missing field distance")?
             .as_u64()
-            .context("field distance_to_descendant is not a valid u64 number")?;
-        let count = entry
+            .context("field distance is not a valid u64 number")?;
+        let location = Location {
+            descendant,
+            distance,
+        };
+        let count = request_json
             .get("count")
             .context("missing field count")?
             .as_u64()
             .context("field count is not a valid u64 number")?;
-        let location = CommitLocation::new(known_descendent, distance_to_descendant, count);
-        locations.push(location);
+        let request = CommitLocationToHashRequest { location, count };
+        requests.push(request);
     }
-    Ok(CommitLocationToHashRequest { locations })
+    Ok(CommitLocationToHashRequestBatch { requests })
 }
 
 /// Parse a `FileRequest` from JSON.
@@ -413,7 +427,7 @@ impl FromJson for CompleteTreeRequest {
     }
 }
 
-impl FromJson for CommitLocationToHashRequest {
+impl FromJson for CommitLocationToHashRequestBatch {
     fn from_json(json: &Value) -> Result<Self> {
         parse_commit_location_to_hash_req(json)
     }
@@ -517,12 +531,11 @@ impl ToJson for DirectoryMetadataRequest {
     }
 }
 
-impl ToJson for CommitLocation {
+impl<T: ToJson> ToJson for Location<T> {
     fn to_json(&self) -> Value {
         json!({
-            "known_descendant": self.known_descendant.to_json(),
-            "distance_to_descendant": self.distance_to_descendant,
-            "count": self.count,
+            "descendant": self.descendant.to_json(),
+            "distance": self.distance,
         })
     }
 }
@@ -530,7 +543,16 @@ impl ToJson for CommitLocation {
 impl ToJson for CommitLocationToHashRequest {
     fn to_json(&self) -> Value {
         json!({
-            "locations": self.locations,
+            "location": self.location.to_json(),
+            "count": self.count,
+        })
+    }
+}
+
+impl ToJson for CommitLocationToHashRequestBatch {
+    fn to_json(&self) -> Value {
+        json!({
+            "requests": self.requests,
         })
     }
 }

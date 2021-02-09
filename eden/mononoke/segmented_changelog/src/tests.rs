@@ -348,7 +348,7 @@ async fn test_two_repo_dags(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::compat_test]
-async fn test_on_demand_update_dag_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
+async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
 

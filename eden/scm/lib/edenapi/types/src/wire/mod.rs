@@ -46,6 +46,7 @@
 //! trip test.
 
 pub mod clone;
+pub mod commit;
 pub mod complete_tree;
 pub mod file;
 pub mod history;
@@ -56,6 +57,10 @@ use dag_types::id::Id as DagId;
 
 pub use crate::wire::{
     clone::{WireCloneData, WireIdMapEntry},
+    commit::{
+        WireCommitLocation, WireCommitLocationToHashRequest, WireCommitLocationToHashRequestBatch,
+        WireCommitLocationToHashResponse,
+    },
     complete_tree::WireCompleteTreeRequest,
     file::{WireFileEntry, WireFileRequest},
     history::{WireHistoryRequest, WireHistoryResponseChunk, WireWireHistoryEntry},

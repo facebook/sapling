@@ -6,14 +6,14 @@
  */
 
 use anyhow::{Context, Error};
-use futures::{stream, StreamExt};
+use futures::{stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{
-    CommitLocation, CommitLocationToHash, CommitLocationToHashRequest, CommitRevlogData,
-    CommitRevlogDataRequest,
+    wire::WireCommitLocationToHashRequestBatch, CommitLocationToHashRequest,
+    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest, ToWire,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::HgChangesetId;
@@ -23,7 +23,7 @@ use types::HgId;
 use crate::context::ServerContext;
 use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
-use crate::utils::{cbor_stream, get_repo, parse_cbor_request};
+use crate::utils::{cbor_stream, get_repo, parse_cbor_request, parse_wire_request};
 
 use super::{EdenApiMethod, HandlerInfo};
 
@@ -53,12 +53,14 @@ pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse,
 
     let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
 
-    let request: CommitLocationToHashRequest = parse_cbor_request(state).await?; // TODO: Should this use parse_wire_request?
-    let hgid_list = request
-        .locations
+    let batch = parse_wire_request::<WireCommitLocationToHashRequestBatch>(state).await?;
+    let hgid_list = batch
+        .requests
         .into_iter()
         .map(move |location| translate_location(hg_repo_ctx.clone(), location));
-    let response = stream::iter(hgid_list).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST);
+    let response = stream::iter(hgid_list)
+        .buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
+        .map_ok(|response| response.to_wire());
     Ok(cbor_stream(rctx, response))
 }
 
@@ -87,19 +89,19 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
 
 async fn translate_location(
     hg_repo_ctx: HgRepoContext,
-    location: CommitLocation,
-) -> Result<CommitLocationToHash, Error> {
+    request: CommitLocationToHashRequest,
+) -> Result<CommitLocationToHashResponse, Error> {
+    let location = request.location.map_descendant(HgChangesetId::from);
     let ancestors: Vec<HgChangesetId> = hg_repo_ctx
-        .location_to_hg_changeset_id(
-            location.known_descendant.into(),
-            location.distance_to_descendant,
-            location.count,
-        )
+        .location_to_hg_changeset_id(location.descendant, location.distance, request.count)
         .await
-        .with_context(|| ErrorKind::CommitLocationToHashRequestFailed)?;
+        .context(ErrorKind::CommitLocationToHashRequestFailed)?;
     let hgids = ancestors.into_iter().map(|x| x.into()).collect();
-    let answer = CommitLocationToHash::new(location, hgids);
-
+    let answer = CommitLocationToHashResponse {
+        location: request.location,
+        count: request.count,
+        hgids,
+    };
     Ok(answer)
 }
 

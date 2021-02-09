@@ -5,80 +5,76 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt;
-
 use bytes::Bytes;
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 
+use dag_types::Location;
 use types::hgid::HgId;
 
-/// Given the position of some node(s) in the commit graph, return the corresponding Mercurial
-/// hashes of those nodes. The position is determined by a common known commit, identified by
-/// it's Mercurial commit id, and the distance to reach our node(s) by repeatedly following
-/// the first parent. The response is to return a set of addiacent nodes by following the first
-/// parent thereafter.
+/// Given a graph location, return `count` hashes following first parent links.
 ///
 /// Example:
 /// 0 - a - b - c
 /// In this example our initial commit is `0`, then we have `a` the first commit, `b` second,
 /// `c` third.
 /// {
-///   known_descendant: c,
-///   distance_to_descendant: 1,
+///   location: {
+///     descendant: c,
+///     distance: 1,
+///   }
 ///   count: 2,
 /// }
 /// => [b, a]
-///
-/// Notes.
-///  * We expect the default or master bookmark to be a known commit.
-#[derive(Clone, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-#[derive(Serialize, Deserialize)]
-pub struct CommitLocation {
-    #[serde(with = "types::serde_with::hgid::bytes")]
-    pub known_descendant: HgId,
-    pub distance_to_descendant: u64,
-    pub count: u64,
-}
-
-impl fmt::Debug for CommitLocation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "CommitLocation(known=\"{}\", dist={}, count={})",
-            self.known_descendant, self.distance_to_descendant, self.count
-        )
-    }
-}
-
-/// A LocationToHashRequest consists of a set of locations that we want to retrieve the hashe for.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
 pub struct CommitLocationToHashRequest {
-    pub locations: Vec<CommitLocation>,
+    pub location: Location<HgId>,
+    pub count: u64,
 }
 
-/// Given a Location we want to return the hash for the commit that it points to in the graph.
-/// LocationToHash groups together the Location and the commit hash for easy response construction.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
-pub struct CommitLocationToHash {
-    pub location: CommitLocation,
+pub struct CommitLocationToHashResponse {
+    pub location: Location<HgId>,
+    pub count: u64,
     pub hgids: Vec<HgId>,
 }
 
-impl CommitLocation {
-    pub fn new(known_descendant: HgId, distance_to_descendant: u64, count: u64) -> Self {
-        Self {
-            known_descendant,
-            distance_to_descendant,
-            count,
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize)]
+pub struct CommitLocationToHashRequestBatch {
+    pub requests: Vec<CommitLocationToHashRequest>,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CommitLocationToHashRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitLocationToHashRequest {
+            location: Arbitrary::arbitrary(g),
+            count: Arbitrary::arbitrary(g),
         }
     }
 }
 
-impl CommitLocationToHash {
-    pub fn new(location: CommitLocation, hgids: Vec<HgId>) -> Self {
-        Self { location, hgids }
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CommitLocationToHashResponse {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitLocationToHashResponse {
+            location: Arbitrary::arbitrary(g),
+            count: Arbitrary::arbitrary(g),
+            hgids: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CommitLocationToHashRequestBatch {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitLocationToHashRequestBatch {
+            requests: Arbitrary::arbitrary(g),
+        }
     }
 }
 

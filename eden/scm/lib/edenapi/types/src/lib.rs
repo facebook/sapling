@@ -35,8 +35,8 @@ pub mod tree;
 pub mod wire;
 
 pub use crate::commit::{
-    CommitLocation, CommitLocationToHash, CommitLocationToHashRequest, CommitRevlogData,
-    CommitRevlogDataRequest,
+    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
+    CommitRevlogData, CommitRevlogDataRequest,
 };
 pub use crate::complete_tree::CompleteTreeRequest;
 pub use crate::file::{FileEntry, FileError, FileRequest};
@@ -54,7 +54,7 @@ pub use crate::tree::{
 pub use crate::wire::{ToApi, ToWire, WireToApiConversionError};
 
 // re-export CloneData
-pub use dag_types::{clone::CloneData, segment::FlatSegment, segment::PreparedFlatSegments};
+pub use dag_types::{CloneData, FlatSegment, Location as CommitLocation, PreparedFlatSegments};
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;

@@ -50,6 +50,7 @@ Populate test repo
   o  e83645968c8f2954b97a3c79ce5a6b90a464c54d add test.txt
   
 
+
 Blobimport test repo.
   $ cd ..
   $ blobimport repo-hg/.hg repo
@@ -61,28 +62,52 @@ Start up EdenAPI server.
 Create and send file data request.
   $ edenapi_make_req commit-location-to-hash > req.cbor <<EOF
   > {
-  >   "locations": [{
-  >       "known_descendant": "$COMMIT_B1",
-  >       "distance_to_descendant": 1,
+  >   "requests": [{
+  >       "location": {
+  >           "descendant": "$COMMIT_B1",
+  >           "distance": 1
+  >       },
   >       "count": 2
   >     }, {
-  >       "known_descendant": "$COMMIT_B1",
-  >       "distance_to_descendant": 2,
+  >       "location": {
+  >           "descendant": "$COMMIT_B1",
+  >           "distance": 2
+  >       },
   >       "count": 1
   >     }, {
-  >       "known_descendant": "$COMMIT_M1",
-  >       "distance_to_descendant": 1,
+  >       "location": {
+  >           "descendant": "$COMMIT_M1",
+  >           "distance": 1
+  >       },
   >       "count": 1
   >     }
   >   ]
   > }
   > EOF
   Reading from stdin
-  Generated request: CommitLocationToHashRequest {
-      locations: [
-          CommitLocation(known="45a08a9d95ee1053cf34273c8a427973d4ffd11a", dist=1, count=2),
-          CommitLocation(known="45a08a9d95ee1053cf34273c8a427973d4ffd11a", dist=2, count=1),
-          CommitLocation(known="b5bc5249412595662f15a1aca5ae50fec4a93628", dist=1, count=1),
+  Generated request: WireCommitLocationToHashRequestBatch {
+      requests: [
+          WireCommitLocationToHashRequest {
+              location: WireCommitLocation {
+                  descendant: WireHgId("45a08a9d95ee1053cf34273c8a427973d4ffd11a"),
+                  distance: 1,
+              },
+              count: 2,
+          },
+          WireCommitLocationToHashRequest {
+              location: WireCommitLocation {
+                  descendant: WireHgId("45a08a9d95ee1053cf34273c8a427973d4ffd11a"),
+                  distance: 2,
+              },
+              count: 1,
+          },
+          WireCommitLocationToHashRequest {
+              location: WireCommitLocation {
+                  descendant: WireHgId("b5bc5249412595662f15a1aca5ae50fec4a93628"),
+                  distance: 1,
+              },
+              count: 1,
+          },
       ],
   }
 
@@ -92,10 +117,10 @@ Create and send file data request.
 Check files in response.
   $ edenapi_read_res commit-location-to-hash res.cbor
   Reading from file: "res.cbor"
-  CommitLocation(known="45a08a9d95ee1053cf34273c8a427973d4ffd11a", dist=1, count=2)
+  LocationToHashRequest(known=45a08a9d95ee1053cf34273c8a427973d4ffd11a, dist=1, count=2)
     c7dcf24fab3a8ab956273fa40d5cc44bc26ec655
     e83645968c8f2954b97a3c79ce5a6b90a464c54d
-  CommitLocation(known="45a08a9d95ee1053cf34273c8a427973d4ffd11a", dist=2, count=1)
+  LocationToHashRequest(known=45a08a9d95ee1053cf34273c8a427973d4ffd11a, dist=2, count=1)
     e83645968c8f2954b97a3c79ce5a6b90a464c54d
-  CommitLocation(known="b5bc5249412595662f15a1aca5ae50fec4a93628", dist=1, count=1)
+  LocationToHashRequest(known=b5bc5249412595662f15a1aca5ae50fec4a93628, dist=1, count=1)
     ce33edd793793f108fbe78aa90f3fedbeae09082
