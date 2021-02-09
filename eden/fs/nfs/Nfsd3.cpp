@@ -236,10 +236,34 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::fsstat(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::fsinfo(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  nfs_fh3 fh = XdrTrait<nfs_fh3>::deserialize(deser);
+  (void)fh;
+
+  FSINFO3res res{
+      {nfsstat3::NFS3_OK,
+       FSINFO3resok{
+           // TODO(xavierd): fill the post_op_attr and check the values chosen
+           // randomly below.
+           post_op_attr{},
+           /*rtmax=*/1024 * 1024,
+           /*rtpref=*/1024 * 1024,
+           /*rtmult=*/1,
+           /*wtmax=*/1024 * 1024,
+           /*wtpref=*/1024 * 1024,
+           /*wtmult=*/1,
+           /*dtpref=*/1024 * 1024,
+           /*maxfilesize=*/std::numeric_limits<uint64_t>::max(),
+           nfstime3{0, 1},
+           /*properties*/ FSF3_SYMLINK | FSF3_HOMOGENEOUS | FSF3_CANSETTIME,
+       }}};
+
+  XdrTrait<FSINFO3res>::serialize(ser, res);
+
   return folly::unit;
 }
 
