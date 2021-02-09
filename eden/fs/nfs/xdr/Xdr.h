@@ -236,7 +236,7 @@ struct XdrTrait<std::string> {
 template <typename Enum, class... Vars>
 struct XdrVariant {
   Enum tag;
-  std::variant<Vars...> v;
+  std::variant<std::monostate, Vars...> v;
 
   using Base = XdrVariant<Enum, Vars...>;
 };
@@ -257,7 +257,9 @@ struct XdrTrait<XdrVariant<Enum, Vars...>> {
     std::visit(
         [&appender](auto&& arg) {
           using ArgType = std::decay_t<decltype(arg)>;
-          XdrTrait<ArgType>::serialize(appender, arg);
+          if constexpr (!std::is_same_v<ArgType, std::monostate>) {
+            XdrTrait<ArgType>::serialize(appender, arg);
+          }
         },
         value.v);
   }

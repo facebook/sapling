@@ -95,11 +95,34 @@ struct XdrTrait<MySerializableStruct> {
   }
 };
 
-TEST(XdrSerializer, structs) {
+TEST(XdrSerialize, structs) {
   MySerializableStruct s{123, "hello world"};
   roundtrip(
       s, sizeof(s.number) + sizeof(uint32_t) + detail::roundUp(s.str.size()));
 }
+
+struct MyVariant : XdrVariant<bool, uint32_t> {};
+
+template <>
+struct XdrTrait<MyVariant> : public XdrTrait<MyVariant::Base> {
+  static MyVariant deserialize(folly::io::Cursor& cursor) {
+    MyVariant var;
+    var.tag = XdrTrait<bool>::deserialize(cursor);
+    if (var.tag) {
+      var.v = XdrTrait<uint32_t>::deserialize(cursor);
+    }
+    return var;
+  }
+};
+
+TEST(XdrSerialize, variant) {
+  MyVariant var1{{true, 42u}};
+  roundtrip(var1, 2 * sizeof(uint32_t));
+
+  MyVariant var2;
+  roundtrip(var2, sizeof(uint32_t));
+}
+
 } // namespace facebook::eden
 
 #endif
