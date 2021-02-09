@@ -34,8 +34,7 @@ mod verlink;
 pub use dag_types::clone;
 pub use dag_types::id;
 
-pub use clone::CloneData;
-pub use id::{Group, Id, VertexName};
+pub use dag_types::{CloneData, Group, Id, VertexName};
 pub use iddag::IdDag;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub use idmap::IdMap;

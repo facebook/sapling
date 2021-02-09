@@ -10,3 +10,7 @@
 pub mod clone;
 pub mod id;
 pub mod segment;
+
+pub use clone::CloneData;
+pub use id::{Bytes, Group, Id, IdIter, VertexName};
+pub use segment::{FlatSegment, PreparedFlatSegments};
