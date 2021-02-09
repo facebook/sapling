@@ -37,7 +37,7 @@
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/nfs/Mountd.h"
+#include "eden/fs/nfs/NfsServer.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/EdenServiceHandler.h"
@@ -343,7 +343,7 @@ EdenServer::EdenServer(
           edenConfig,
 #ifndef _WIN32
           edenConfig->enableNfsServer.getValue()
-              ? std::make_shared<Mountd>(
+              ? std::make_shared<NfsServer>(
                     edenConfig->registerMountd.getValue(),
                     mainEventBase_)
               :

@@ -337,6 +337,10 @@ void RpcServer::registerService(uint32_t progNumber, uint32_t progVersion) {
   }
 }
 
+uint16_t RpcServer::getPort() const {
+  return serverSocket_->getAddress().getPort();
+}
+
 } // namespace eden
 } // namespace facebook
 

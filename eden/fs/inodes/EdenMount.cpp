@@ -34,7 +34,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
-#include "eden/fs/nfs/Mountd.h"
+#include "eden/fs/nfs/NfsServer.h"
 #include "eden/fs/service/PrettyPrinters.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
@@ -642,7 +642,7 @@ folly::Future<folly::Unit> EdenMount::unmount() {
                   ->enableNfsServer.getValue() &&
               getConfig()->getMountProtocol() == MountProtocol::NFS) {
             // TODO(xavierd): We need to actually do the unmount here.
-            serverState_->getMountd()->unregisterMount(getPath());
+            serverState_->getNfsServer()->unregisterMount(getPath());
             return folly::makeFuture();
           } else {
             return serverState_->getPrivHelper()->fuseUnmount(
@@ -1266,10 +1266,18 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                 .getEdenConfig()
                 ->enableNfsServer.getValue() &&
             getConfig()->getMountProtocol() == MountProtocol::NFS) {
-          auto mountd = serverState_->getMountd();
-          mountd->registerMount(mountPath, getRootInode()->getNodeId());
-          // TODO(xavierd): We need to actually do a mount here.
-          return makeFuture(folly::File());
+          auto nfsServer = serverState_->getNfsServer();
+
+          // Make sure that we are running on the EventBase while registering
+          // the mount point.
+          return via(
+              nfsServer->getEventBase(),
+              [this, nfsServer, mountPath = std::move(mountPath)]() {
+                nfsServer->registerMount(
+                    mountPath, getRootInode()->getNodeId());
+                // TODO(xavierd): We need to actually do a mount here.
+                return folly::File();
+              });
         } else {
           return serverState_->getPrivHelper()
               ->fuseMount(mountPath.stringPiece(), readOnly)

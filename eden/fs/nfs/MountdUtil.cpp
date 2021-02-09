@@ -11,8 +11,7 @@
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
 #include <signal.h>
-#include "eden/fs/nfs/Mountd.h"
-#include "eden/fs/nfs/Nfsd3.h"
+#include "eden/fs/nfs/NfsServer.h"
 
 using namespace facebook::eden;
 
@@ -42,11 +41,12 @@ int main(int argc, char** argv) {
   auto evb = folly::EventBaseManager::get()->getEventBase();
 
   SignalHandler signal(evb);
+  NfsServer server(false, evb);
+  auto [nfsd, mountdport, nfsdport] =
+      server.registerMount(AbsolutePathPiece("/foo/bar"), InodeNumber(42));
 
-  Nfsd3 nfsd(true, evb);
-
-  Mountd mountd(true, evb);
-  mountd.registerMount(AbsolutePathPiece("/foo/bar"), InodeNumber(42));
+  XLOG(INFO) << "Started NfsServer, mountdport=" << mountdport
+             << ", nfsdport=" << nfsdport;
 
   evb->loop();
 }

@@ -36,6 +36,13 @@ class Nfsd3 {
    */
   Nfsd3(bool registerWithRpcbind, folly::EventBase* evb);
 
+  /**
+   * Obtain the TCP port that this NFSv3 program is listening on.
+   */
+  uint16_t getPort() const {
+    return server_.getPort();
+  }
+
   Nfsd3(const Nfsd3&) = delete;
   Nfsd3(Nfsd3&&) = delete;
   Nfsd3& operator=(const Nfsd3&) = delete;

@@ -53,6 +53,13 @@ class Mountd {
    */
   void unregisterMount(AbsolutePathPiece path);
 
+  /**
+   * Obtain the TCP port that this mountd program is listening on.
+   */
+  uint16_t getPort() const {
+    return server_.getPort();
+  }
+
   Mountd(const Mountd&) = delete;
   Mountd(Mountd&&) = delete;
   Mountd& operator=(const Mountd&) = delete;

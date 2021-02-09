@@ -54,7 +54,7 @@ target_link_libraries(
     eden_utils
     Folly::folly
   PRIVATE
-    eden_nfs_mountd
+    eden_nfs_server
 )
 
 if (WIN32)

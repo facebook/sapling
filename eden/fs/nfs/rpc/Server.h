@@ -65,6 +65,11 @@ class RpcServer {
     return evb_;
   }
 
+  /**
+   * Returns the TCP port number this RPC server is listening on.
+   */
+  uint16_t getPort() const;
+
  private:
   folly::EventBase* evb_;
   RpcAcceptCallback acceptCb_;

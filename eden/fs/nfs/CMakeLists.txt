@@ -57,6 +57,18 @@ target_link_libraries(
     Folly::folly
 )
 
+add_library(
+  eden_nfs_server STATIC
+    "NfsServer.cpp" "NfsServer.h"
+)
+
+target_link_libraries(
+  eden_nfs_server
+  PUBLIC
+    eden_nfs_mountd
+    eden_nfs_nfsd3
+)
+
 add_subdirectory(portmap)
 add_subdirectory(rpc)
 add_subdirectory(xdr)
