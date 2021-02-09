@@ -22,9 +22,7 @@ use crate::walk::{OutgoingEdge, RepoWalkParams};
 use ::blobstore::Blobstore;
 use anyhow::{bail, format_err, Context, Error};
 use blobrepo_factory::{open_blobrepo_given_datasources, Caching, ReadOnlyStorage};
-use blobstore_factory::{
-    make_metadata_sql_factory, CachelibBlobstoreOptions, MetadataSqlFactory, ScrubAction,
-};
+use blobstore_factory::{make_metadata_sql_factory, CachelibBlobstoreOptions, MetadataSqlFactory};
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args::{
@@ -39,7 +37,7 @@ use itertools::{process_results, Itertools};
 use maplit::hashset;
 use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::{BlobConfig, CensoredScubaParams, MetadataDatabaseConfig, Redaction};
-use multiplexedblob::{ScrubHandler, ScrubOptions};
+use multiplexedblob::ScrubHandler;
 use once_cell::sync::Lazy;
 use samplingblob::SamplingHandler;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -109,7 +107,6 @@ const CHECKPOINT_SAMPLE_RATE_ARG: &str = "checkpoint-sample-rate";
 const STATE_MAX_AGE_ARG: &str = "state-max-age";
 const ALLOW_REMAINING_DEFERRED_ARG: &str = "allow-remaining-deferred";
 const INNER_BLOBSTORE_ID_ARG: &str = "inner-blobstore-id";
-const SCRUB_BLOBSTORE_ACTION_ARG: &str = "scrub-blobstore-action";
 const ENABLE_DERIVE_ARG: &str = "enable-derive";
 const PROGRESS_SAMPLE_RATE_ARG: &str = "progress-sample-rate";
 const PROGRESS_INTERVAL_ARG: &str = "progress-interval";
@@ -652,13 +649,6 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .takes_value(false)
                 .required(false)
                 .help("Enable derivation of data (e.g. hg, file metadata). Default is false"),
-        )
-        .arg(
-            Arg::with_name(SCRUB_BLOBSTORE_ACTION_ARG)
-                .long(SCRUB_BLOBSTORE_ACTION_ARG)
-                .takes_value(true)
-                .required(false)
-                .help("Enable ScrubBlobstore with the given action. Checks for keys missing from stores. In ReportOnly mode this logs only, otherwise it performs a copy to the missing stores."),
         )
         .arg(
             Arg::with_name(EXCLUDE_NODE_TYPE_ARG)
@@ -1228,16 +1218,6 @@ pub async fn setup_common<'a>(
     let mysql_options = args::parse_mysql_options(&matches);
     let mut blobstore_options = args::parse_blobstore_options(&matches)?;
     let storage_id = matches.value_of(STORAGE_ID_ARG);
-
-    let scrub_action = if let Some(scrub_options) = &blobstore_options.scrub_options {
-        Some(scrub_options.scrub_action)
-    } else {
-        sub_m
-            .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
-            .map(ScrubAction::from_str)
-            .transpose()?
-    };
-
     let enable_redaction = sub_m.is_present(ENABLE_REDACTION_ARG);
 
     // Setup scuba
@@ -1264,16 +1244,13 @@ pub async fn setup_common<'a>(
         repo_id_to_name.insert(repo.id, repo.name.clone());
     }
 
-    if let Some(scrub_action) = scrub_action {
-        blobstore_options.scrub_options = Some(ScrubOptions {
-            scrub_action,
-            scrub_handler: Arc::new(blobstore::StatsScrubHandler::new(
-                false,
-                scuba_builder.clone(),
-                walk_stats_key,
-                repo_id_to_name.clone(),
-            )) as Arc<dyn ScrubHandler>,
-        });
+    if let Some(scrub_options) = blobstore_options.scrub_options.as_mut() {
+        scrub_options.scrub_handler = Arc::new(blobstore::StatsScrubHandler::new(
+            false,
+            scuba_builder.clone(),
+            walk_stats_key,
+            repo_id_to_name.clone(),
+        )) as Arc<dyn ScrubHandler>;
     }
 
     let storage_override = if let Some(storage_id) = storage_id {
