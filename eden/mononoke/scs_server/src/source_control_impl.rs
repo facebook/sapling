@@ -77,9 +77,11 @@ impl SourceControlServiceImpl {
         fb: FacebookInit,
         mononoke: Arc<Mononoke>,
         logger: Logger,
-        scuba_builder: MononokeScubaSampleBuilder,
+        mut scuba_builder: MononokeScubaSampleBuilder,
         scribe: Scribe,
     ) -> Self {
+        scuba_builder.add_common_server_data();
+
         Self {
             fb,
             mononoke,
@@ -127,7 +129,6 @@ impl SourceControlServiceImpl {
         identities: &MononokeIdentitySet,
     ) -> Result<MononokeScubaSampleBuilder, errors::ServiceError> {
         let mut scuba = self.scuba_builder.clone().with_seq("seq");
-        scuba.add_common_server_data();
         scuba.add("type", "thrift");
         scuba.add("method", name);
         if let Some(specifier) = specifier {
