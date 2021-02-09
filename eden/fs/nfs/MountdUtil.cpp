@@ -42,8 +42,14 @@ int main(int argc, char** argv) {
 
   SignalHandler signal(evb);
   NfsServer server(false, evb);
-  auto [nfsd, mountdport, nfsdport] =
-      server.registerMount(AbsolutePathPiece("/foo/bar"), InodeNumber(42));
+  auto [nfsd, mountdport, nfsdport] = server.registerMount(
+      AbsolutePathPiece("/foo/bar"),
+      InodeNumber(42),
+      nullptr,
+      nullptr,
+      nullptr,
+      std::chrono::duration_cast<folly::Duration>(std::chrono::seconds(0)),
+      nullptr);
 
   XLOG(INFO) << "Started NfsServer, mountdport=" << mountdport
              << ", nfsdport=" << nfsdport;

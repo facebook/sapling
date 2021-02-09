@@ -15,6 +15,10 @@
 
 namespace facebook::eden {
 
+class Dispatcher;
+class Notifications;
+class ProcessNameCache;
+
 class NfsServer {
  public:
   /**
@@ -52,7 +56,12 @@ class NfsServer {
    */
   NfsServer::NfsMountInfo registerMount(
       AbsolutePathPiece path,
-      InodeNumber rootIno);
+      InodeNumber rootIno,
+      Dispatcher* const dispatcher,
+      const folly::Logger* straceLogger,
+      std::shared_ptr<ProcessNameCache> processNameCache,
+      folly::Duration requestTimeout,
+      Notifications* FOLLY_NULLABLE notifications);
 
   /**
    * Unregister the mount point matching the path.

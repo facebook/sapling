@@ -16,6 +16,10 @@
 
 namespace facebook::eden {
 
+class Dispatcher;
+class Notifications;
+class ProcessNameCache;
+
 class Nfsd3 {
  public:
   /**
@@ -34,7 +38,14 @@ class Nfsd3 {
    * to manually specify the port on which this server is bound, so registering
    * is not necessary for a properly behaving EdenFS.
    */
-  Nfsd3(bool registerWithRpcbind, folly::EventBase* evb);
+  Nfsd3(
+      bool registerWithRpcbind,
+      folly::EventBase* evb,
+      Dispatcher* const dispatcher,
+      const folly::Logger* straceLogger,
+      std::shared_ptr<ProcessNameCache> processNameCache,
+      folly::Duration requestTimeout,
+      Notifications* FOLLY_NULLABLE notifications);
 
   /**
    * Obtain the TCP port that this NFSv3 program is listening on.

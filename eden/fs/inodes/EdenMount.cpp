@@ -1270,20 +1270,53 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
 
           // Make sure that we are running on the EventBase while registering
           // the mount point.
-          return via(
-              nfsServer->getEventBase(),
-              [this, nfsServer, mountPath = std::move(mountPath)]() {
-                nfsServer->registerMount(
-                    mountPath, getRootInode()->getNodeId());
-                // TODO(xavierd): We need to actually do a mount here.
-                return folly::File();
+          auto fut =
+              via(nfsServer->getEventBase(), [this, mountPath, nfsServer]() {
+                return nfsServer->registerMount(
+                    mountPath,
+                    getRootInode()->getNodeId(),
+                    getDispatcher(),
+                    &getStraceLogger(),
+                    serverState_->getProcessNameCache(),
+                    std::chrono::duration_cast<folly::Duration>(
+                        serverState_->getReloadableConfig()
+                            .getEdenConfig()
+                            ->prjfsRequestTimeout.getValue()),
+                    serverState_->getNotifications());
+              });
+          return std::move(fut).thenValue(
+              [this,
+               readOnly,
+               mountPromise = std::move(mountPromise),
+               mountPath = std::move(mountPath)](
+                  NfsServer::NfsMountInfo mountInfo) mutable {
+                auto [channel, mountdPort, nfsdPort] = std::move(mountInfo);
+                return serverState_->getPrivHelper()
+                    ->nfsMount(
+                        mountPath.stringPiece(), mountdPort, nfsdPort, readOnly)
+                    .thenTry([mountPromise = std::move(mountPromise),
+                              channel = std::move(channel)](
+                                 Try<folly::Unit>&& try_) mutable {
+                      if (try_.hasException()) {
+                        mountPromise->setException(try_.exception());
+                        return folly::makeFuture<EdenMount::channelType>(
+                            try_.exception());
+                      }
+
+                      // TODO(xavierd): Do something meaningful once nfsMount
+                      // succeeds, and return the channel.
+                      XLOG(FATAL) << "Mount should have failed but didn't?";
+
+                      mountPromise->setValue();
+                      return makeFuture(folly::File());
+                    });
               });
         } else {
           return serverState_->getPrivHelper()
               ->fuseMount(mountPath.stringPiece(), readOnly)
               .thenTry(
                   [mountPath, mountPromise, this](Try<folly::File>&& fuseDevice)
-                      -> folly::Future<folly::File> {
+                      -> folly::Future<EdenMount::channelType> {
                     if (fuseDevice.hasException()) {
                       mountPromise->setException(fuseDevice.exception());
                       return folly::makeFuture<folly::File>(

@@ -14,8 +14,20 @@ namespace facebook::eden {
 
 NfsServer::NfsMountInfo NfsServer::registerMount(
     AbsolutePathPiece path,
-    InodeNumber rootIno) {
-  auto nfsd = std::make_unique<Nfsd3>(false, evb_);
+    InodeNumber rootIno,
+    Dispatcher* const dispatcher,
+    const folly::Logger* straceLogger,
+    std::shared_ptr<ProcessNameCache> processNameCache,
+    folly::Duration requestTimeout,
+    Notifications* notifications) {
+  auto nfsd = std::make_unique<Nfsd3>(
+      false,
+      evb_,
+      dispatcher,
+      straceLogger,
+      std::move(processNameCache),
+      requestTimeout,
+      notifications);
   mountd_.registerMount(path, rootIno);
 
   auto nfsdPort = nfsd->getPort();

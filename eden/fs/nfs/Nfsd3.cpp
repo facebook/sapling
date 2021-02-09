@@ -350,7 +350,14 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
 }
 } // namespace
 
-Nfsd3::Nfsd3(bool registerWithRpcbind, folly::EventBase* evb)
+Nfsd3::Nfsd3(
+    bool registerWithRpcbind,
+    folly::EventBase* evb,
+    Dispatcher* const /*dispatcher*/,
+    const folly::Logger* /*straceLogger*/,
+    std::shared_ptr<ProcessNameCache> /*processNameCache*/,
+    folly::Duration /*requestTimeout*/,
+    Notifications* /*notifications*/)
     : server_(std::make_shared<Nfsd3ServerProcessor>(), evb) {
   if (registerWithRpcbind) {
     server_.registerService(kNfsdProgNumber, kNfsd3ProgVersion);
