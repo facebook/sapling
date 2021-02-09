@@ -9,8 +9,10 @@
 
 pub mod clone;
 pub mod id;
+pub mod location;
 pub mod segment;
 
 pub use clone::CloneData;
 pub use id::{Bytes, Group, Id, IdIter, VertexName};
+pub use location::Location;
 pub use segment::{FlatSegment, PreparedFlatSegments};
