@@ -325,6 +325,18 @@ impl Arbitrary for HgChangesetId {
     }
 }
 
+impl From<HgId> for HgChangesetId {
+    fn from(hgid: HgId) -> Self {
+        HgChangesetId::new(HgNodeHash::from(hgid))
+    }
+}
+
+impl From<HgChangesetId> for HgId {
+    fn from(hg_cs_id: HgChangesetId) -> HgId {
+        hg_cs_id.into_nodehash().into()
+    }
+}
+
 /// An identifier for a changeset hash prefix in Nercurial.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 #[derive(Abomonation)]

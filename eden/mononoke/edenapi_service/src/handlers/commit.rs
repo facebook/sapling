@@ -16,7 +16,7 @@ use edenapi_types::{
     CommitRevlogDataRequest,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use mercurial_types::HgChangesetId;
 use mononoke_api_hg::HgRepoContext;
 use types::HgId;
 
@@ -89,18 +89,16 @@ async fn translate_location(
     hg_repo_ctx: HgRepoContext,
     location: CommitLocation,
 ) -> Result<CommitLocationToHash, Error> {
-    let known_descendant = HgChangesetId::new(HgNodeHash::from(location.known_descendant));
-
     let ancestors: Vec<HgChangesetId> = hg_repo_ctx
         .location_to_hg_changeset_id(
-            known_descendant,
+            location.known_descendant.into(),
             location.distance_to_descendant,
             location.count,
         )
         .await
         .with_context(|| ErrorKind::CommitLocationToHashRequestFailed)?;
-    let converted = ancestors.iter().map(|a| a.into_nodehash().into()).collect();
-    let answer = CommitLocationToHash::new(location, converted);
+    let hgids = ancestors.into_iter().map(|x| x.into()).collect();
+    let answer = CommitLocationToHash::new(location, hgids);
 
     Ok(answer)
 }
@@ -109,11 +107,10 @@ async fn commit_revlog_data(
     hg_repo_ctx: HgRepoContext,
     hg_id: HgId,
 ) -> Result<CommitRevlogData, Error> {
-    let hg_cs_id = HgChangesetId::new(HgNodeHash::from(hg_id));
     let bytes = hg_repo_ctx
-        .revlog_commit_data(hg_cs_id)
+        .revlog_commit_data(hg_id.into())
         .await
-        .with_context(|| ErrorKind::CommitRevlogDataRequestFailed)?
+        .context(ErrorKind::CommitRevlogDataRequestFailed)?
         .ok_or_else(|| ErrorKind::HgIdNotFound(hg_id))?;
     let answer = CommitRevlogData::new(hg_id, bytes);
     Ok(answer)
