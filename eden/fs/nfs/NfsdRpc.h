@@ -50,6 +50,54 @@ enum class nfsv3Procs : uint32_t {
   commit = 21,
 };
 
+enum class nfsstat3 : uint32_t {
+  NFS3_OK = 0,
+  NFS3ERR_PERM = 1,
+  NFS3ERR_NOENT = 2,
+  NFS3ERR_IO = 5,
+  NFS3ERR_NXIO = 6,
+  NFS3ERR_ACCES = 13,
+  NFS3ERR_EXIST = 17,
+  NFS3ERR_XDEV = 18,
+  NFS3ERR_NODEV = 19,
+  NFS3ERR_NOTDIR = 20,
+  NFS3ERR_ISDIR = 21,
+  NFS3ERR_INVAL = 22,
+  NFS3ERR_FBIG = 27,
+  NFS3ERR_NOSPC = 28,
+  NFS3ERR_ROFS = 30,
+  NFS3ERR_MLINK = 31,
+  NFS3ERR_NAMETOOLONG = 63,
+  NFS3ERR_NOTEMPTY = 66,
+  NFS3ERR_DQUOT = 69,
+  NFS3ERR_STALE = 70,
+  NFS3ERR_REMOTE = 71,
+  NFS3ERR_BADHANDLE = 10001,
+  NFS3ERR_NOT_SYNC = 10002,
+  NFS3ERR_BAD_COOKIE = 10003,
+  NFS3ERR_NOTSUPP = 10004,
+  NFS3ERR_TOOSMALL = 10005,
+  NFS3ERR_SERVERFAULT = 10006,
+  NFS3ERR_BADTYPE = 10007,
+  NFS3ERR_JUKEBOX = 10008
+};
+
+enum class ftype3 : uint32_t {
+  NF3REG = 1,
+  NF3DIR = 2,
+  NF3BLK = 3,
+  NF3CHR = 4,
+  NF3LNK = 5,
+  NF3SOCK = 6,
+  NF3FIFO = 7
+};
+
+struct specdata3 {
+  uint32_t specdata1;
+  uint32_t specdata2;
+};
+EDEN_XDR_SERDE_DECL(specdata3, specdata1, specdata2);
+
 /**
  * The NFS spec specify this struct as being opaque from the client
  * perspective, and thus we are free to use what is needed to uniquely identify
@@ -83,6 +131,116 @@ struct XdrTrait<nfs_fh3> {
 inline bool operator==(const nfs_fh3& a, const nfs_fh3& b) {
   return a.ino == b.ino;
 }
+
+struct nfstime3 {
+  uint32_t seconds;
+  uint32_t nseconds;
+};
+EDEN_XDR_SERDE_DECL(nfstime3, seconds, nseconds);
+
+struct fattr3 {
+  ftype3 type;
+  uint32_t mode;
+  uint32_t nlink;
+  uint32_t uid;
+  uint32_t gid;
+  uint64_t size;
+  uint64_t used;
+  specdata3 rdev;
+  uint64_t fsid;
+  uint64_t fileid;
+  nfstime3 atime;
+  nfstime3 mtime;
+  nfstime3 ctime;
+};
+EDEN_XDR_SERDE_DECL(
+    fattr3,
+    type,
+    mode,
+    nlink,
+    uid,
+    gid,
+    size,
+    used,
+    rdev,
+    fsid,
+    fileid,
+    atime,
+    mtime,
+    ctime);
+
+struct post_op_attr : public XdrVariant<bool, fattr3> {};
+
+template <>
+struct XdrTrait<post_op_attr> : public XdrTrait<post_op_attr::Base> {
+  static post_op_attr deserialize(folly::io::Cursor& cursor) {
+    post_op_attr ret;
+    ret.tag = XdrTrait<bool>::deserialize(cursor);
+    if (ret.tag) {
+      ret.v = XdrTrait<fattr3>::deserialize(cursor);
+    }
+    return ret;
+  }
+};
+
+// FSINFO Procedure:
+
+const uint32_t FSF3_LINK = 0x0001;
+const uint32_t FSF3_SYMLINK = 0x0002;
+const uint32_t FSF3_HOMOGENEOUS = 0x0008;
+const uint32_t FSF3_CANSETTIME = 0x0010;
+
+struct FSINFO3resok {
+  post_op_attr obj_attributes;
+  uint32_t rtmax;
+  uint32_t rtpref;
+  uint32_t rtmult;
+  uint32_t wtmax;
+  uint32_t wtpref;
+  uint32_t wtmult;
+  uint32_t dtpref;
+  uint64_t maxfilesize;
+  nfstime3 time_delta;
+  uint32_t properties;
+};
+EDEN_XDR_SERDE_DECL(
+    FSINFO3resok,
+    obj_attributes,
+    rtmax,
+    rtpref,
+    rtmult,
+    wtmax,
+    wtpref,
+    wtmult,
+    dtpref,
+    maxfilesize,
+    time_delta,
+    properties);
+
+struct FSINFO3resfail {
+  post_op_attr obj_attributes;
+};
+EDEN_XDR_SERDE_DECL(FSINFO3resfail, obj_attributes);
+
+struct FSINFO3res : public XdrVariant<nfsstat3, FSINFO3resok, FSINFO3resfail> {
+};
+
+template <>
+struct XdrTrait<FSINFO3res> : public XdrTrait<FSINFO3res::Base> {
+  static FSINFO3res deserialize(folly::io::Cursor& cursor) {
+    FSINFO3res ret;
+    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
+    switch (ret.tag) {
+      case nfsstat3::NFS3_OK:
+        ret.v = XdrTrait<FSINFO3resok>::deserialize(cursor);
+        break;
+      default:
+        ret.v = XdrTrait<FSINFO3resfail>::deserialize(cursor);
+        break;
+    }
+    return ret;
+  }
+};
 
 } // namespace facebook::eden
 
