@@ -32,11 +32,12 @@ class RpcServerProcessor {
 };
 
 class RpcServer {
-  struct RpcAcceptCallback : public folly::AsyncServerSocket::AcceptCallback {
-    std::shared_ptr<RpcServerProcessor> proc;
-
-    explicit RpcAcceptCallback(std::shared_ptr<RpcServerProcessor> proc)
-        : proc(proc) {}
+  class RpcAcceptCallback : public folly::AsyncServerSocket::AcceptCallback {
+   public:
+    explicit RpcAcceptCallback(
+        std::shared_ptr<RpcServerProcessor> proc,
+        folly::EventBase* evb)
+        : evb_(evb), proc_(proc) {}
 
     void connectionAccepted(
         folly::NetworkSocket fd,
@@ -45,15 +46,27 @@ class RpcServer {
     void acceptError(const std::exception& ex) noexcept override {
       XLOG(ERR) << "acceptError: " << folly::exceptionStr(ex);
     }
+
+   private:
+    folly::EventBase* evb_;
+    std::shared_ptr<RpcServerProcessor> proc_;
   };
 
  public:
-  explicit RpcServer(std::shared_ptr<RpcServerProcessor> proc);
+  RpcServer(std::shared_ptr<RpcServerProcessor> proc, folly::EventBase* evb);
   ~RpcServer();
 
   void registerService(uint32_t progNumber, uint32_t progVersion);
 
+  /**
+   * Return the EventBase that this RpcServer is running on.
+   */
+  folly::EventBase* getEventBase() const {
+    return evb_;
+  }
+
  private:
+  folly::EventBase* evb_;
   RpcAcceptCallback acceptCb_;
   std::shared_ptr<folly::AsyncServerSocket> serverSocket_;
   PortmapClient portMap_;

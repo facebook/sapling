@@ -210,8 +210,8 @@ void MountdServerProcessor::unregisterMount(AbsolutePathPiece path) {
   XCHECK_EQ(numRemoved, 1u);
 }
 
-Mountd::Mountd(bool registerWithRpcbind)
-    : proc_(std::make_shared<MountdServerProcessor>()), server_(proc_) {
+Mountd::Mountd(bool registerWithRpcbind, folly::EventBase* evb)
+    : proc_(std::make_shared<MountdServerProcessor>()), server_(proc_, evb) {
   if (registerWithRpcbind) {
     server_.registerService(kMountdProgNumber, kMountdProgVersion);
   }

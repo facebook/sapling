@@ -31,11 +31,14 @@ class Mountd {
    * registered with rpcbind, and thus if a real NFS server is running on this
    * host, EdenFS won't be able to register itself.
    *
+   * All the socket processing will be run on the EventBase passed in. This
+   * also must be called on that EventBase thread.
+   *
    * Note: at mount time, EdenFS will manually call mount.nfs with -o mountport
    * to manually specify the port on which this server is bound, so registering
    * is not necessary for a properly behaving EdenFS.
    */
-  explicit Mountd(bool registerWithRpcbind);
+  Mountd(bool registerWithRpcbind, folly::EventBase* evb);
 
   /**
    * Register a path as the root of a mount point.

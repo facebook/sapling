@@ -43,9 +43,9 @@ int main(int argc, char** argv) {
 
   SignalHandler signal(evb);
 
-  Nfsd3 nfsd(true);
+  Nfsd3 nfsd(true, evb);
 
-  Mountd mountd(true);
+  Mountd mountd(true, evb);
   mountd.registerMount(AbsolutePathPiece("/foo/bar"), InodeNumber(42));
 
   evb->loop();

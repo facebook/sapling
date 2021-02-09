@@ -329,6 +329,10 @@ EdenServer::EdenServer(
       blobCache_{BlobCache::create(
           FLAGS_maximumBlobCacheSize,
           FLAGS_minimumBlobCacheEntryCount)},
+      // Store a pointer to the EventBase that will be used to drive
+      // the main thread.  The runServer() code will end up driving this
+      // EventBase.
+      mainEventBase_{folly::EventBaseManager::get()->getEventBase()},
       serverState_{make_shared<ServerState>(
           std::move(userInfo),
           std::move(privHelper),
@@ -339,7 +343,9 @@ EdenServer::EdenServer(
           edenConfig,
 #ifndef _WIN32
           edenConfig->enableNfsServer.getValue()
-              ? std::make_shared<Mountd>(edenConfig->registerMountd.getValue())
+              ? std::make_shared<Mountd>(
+                    edenConfig->registerMountd.getValue(),
+                    mainEventBase_)
               :
 #endif
               nullptr,
@@ -762,9 +768,6 @@ Future<Unit> EdenServer::prepareImpl(
     }
     doingTakeover = true;
   }
-  // Store a pointer to the EventBase that will be used to drive
-  // the main thread.  The runServer() code will end up driving this EventBase.
-  mainEventBase_ = folly::EventBaseManager::get()->getEventBase();
   auto thriftRunningFuture = createThriftServer();
 #ifndef _WIN32
   // Start the PrivHelper client, using our main event base to drive its I/O

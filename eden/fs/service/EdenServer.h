@@ -597,6 +597,17 @@ class EdenServer : private TakeoverHandler {
   folly::Synchronized<RunStateData> runningState_;
 
   /**
+   * The EventBase driving the main thread loop.
+   *
+   * This is used to drive the the thrift server and can also be used for
+   * scheduling other asynchronous operations.
+   *
+   * This is set when the EdenServer is started and is never updated after
+   * this, so we do not need synchronization when reading it.
+   */
+  folly::EventBase* mainEventBase_;
+
+  /**
    * Common state shared by all of the EdenMount objects.
    */
   const std::shared_ptr<ServerState> serverState_;
@@ -665,17 +676,6 @@ class EdenServer : private TakeoverHandler {
   };
 
   const std::unique_ptr<folly::Synchronized<ProgressManager>> progressManager_;
-
-  /**
-   * The EventBase driving the main thread loop.
-   *
-   * This is used to drive the the thrift server and can also be used for
-   * scheduling other asynchronous operations.
-   *
-   * This is set when the EdenServer is started and is never updated after
-   * this, so we do not need synchronization when reading it.
-   */
-  folly::EventBase* mainEventBase_;
 
   PeriodicFnTask<&EdenServer::reloadConfig> reloadConfigTask_{
       this,

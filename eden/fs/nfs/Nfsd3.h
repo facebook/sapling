@@ -27,11 +27,14 @@ class Nfsd3 {
    * registered with rpcbind, and thus if a real NFS server is running on this
    * host, EdenFS won't be able to register itself.
    *
+   * All the socket processing will be run on the EventBase passed in. This
+   * also must be called on that EventBase thread.
+   *
    * Note: at mount time, EdenFS will manually call mount.nfs with -o port
    * to manually specify the port on which this server is bound, so registering
    * is not necessary for a properly behaving EdenFS.
    */
-  explicit Nfsd3(bool registerWithRpcbind);
+  Nfsd3(bool registerWithRpcbind, folly::EventBase* evb);
 
   Nfsd3(const Nfsd3&) = delete;
   Nfsd3(Nfsd3&&) = delete;

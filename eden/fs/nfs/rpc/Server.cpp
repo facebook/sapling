@@ -13,13 +13,11 @@
 #include <folly/String.h>
 #include <folly/io/IOBufQueue.h>
 #include <folly/io/async/AsyncSocket.h>
-#include <folly/io/async/EventBaseManager.h>
 #include <tuple>
 
 using folly::AsyncServerSocket;
 using ReleasableDestructor = folly::AsyncSocket::ReleasableDestructor;
 using folly::AsyncSocket;
-using folly::EventBaseManager;
 using folly::Future;
 using folly::IOBuf;
 using folly::SocketAddress;
@@ -261,12 +259,11 @@ void RpcServer::RpcAcceptCallback::connectionAccepted(
     folly::NetworkSocket fd,
     const folly::SocketAddress& clientAddr) noexcept {
   XLOG(DBG7) << "Accepted connection from: " << clientAddr;
-  auto eb = EventBaseManager::get()->getEventBase();
-  auto socket = AsyncSocket::newSocket(eb, fd);
+  auto socket = AsyncSocket::newSocket(evb_, fd);
   using UniquePtr =
       std::unique_ptr<RpcTcpHandler, folly::DelayedDestruction::Destructor>;
   auto handler = UniquePtr(
-      new RpcTcpHandler(proc, std::move(socket)),
+      new RpcTcpHandler(proc_, std::move(socket)),
       folly::DelayedDestruction::Destructor());
   handler->setup();
 }
@@ -288,16 +285,17 @@ Future<folly::Unit> RpcServerProcessor::dispatchRpc(
   return folly::unit;
 }
 
-RpcServer::RpcServer(std::shared_ptr<RpcServerProcessor> proc)
-    : acceptCb_(proc),
-      serverSocket_(AsyncServerSocket::newSocket(
-          EventBaseManager::get()->getEventBase())) {
+RpcServer::RpcServer(
+    std::shared_ptr<RpcServerProcessor> proc,
+    folly::EventBase* evb)
+    : evb_(evb),
+      acceptCb_(proc, evb_),
+      serverSocket_(AsyncServerSocket::newSocket(evb_)) {
   // Ask kernel to assign us a port on the loopback interface
   serverSocket_->bind(SocketAddress("127.0.0.1", 0));
   serverSocket_->listen(1024);
 
-  auto eb = EventBaseManager::get()->getEventBase();
-  serverSocket_->addAcceptCallback(&acceptCb_, eb);
+  serverSocket_->addAcceptCallback(&acceptCb_, evb_);
   serverSocket_->startAccepting();
 }
 
