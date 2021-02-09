@@ -412,6 +412,7 @@ impl ChunkSqlStore {
             return Ok(());
         }
 
+        self.delay.delay(shard_id).await;
         // First set the generation if unset, so that future writers will update it.
         if replica_generation.is_none() {
             InsertGeneration::query(&self.write_connection[shard_id], &[(&key, &put_generation)])
@@ -437,6 +438,9 @@ impl ChunkSqlStore {
 
     pub(crate) async fn set_initial_generation(&self, shard_num: usize) -> Result<(), Error> {
         let put_generation = self.gc_generations.get().put_generation as u64;
+
+        self.delay.delay(shard_num).await;
+
         SetInitialGeneration::query(&self.write_connection[shard_num], &put_generation)
             .compat()
             .await?;
