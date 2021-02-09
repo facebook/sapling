@@ -9,15 +9,16 @@
 
 use anyhow::Error;
 use clap::{value_t, App, Arg, ArgGroup, SubCommand};
-use fbinit::FacebookInit;
+use rand::Rng;
 use std::time::Duration;
 
 mod serve;
 
 const ARG_RUNTIME_THREADS: &str = "runtime-threads";
+const ARG_FORCE_FB: &str = "force-fb";
+const ARG_NO_FB: &str = "no-fb";
 
-#[fbinit::main]
-fn main(fb: FacebookInit) {
+pub fn main() {
     let matches = App::new("Mononoke CLI")
         .about("Provide minimally compatible CLI to Mononoke server")
         .arg(Arg::from_usage("-R, --repository=<REPO> 'repository name'"))
@@ -45,6 +46,19 @@ fn main(fb: FacebookInit) {
                 .default_value("1")
                 .help("a number of threads to use in the tokio runtime (default: 1)"),
         )
+        .arg(
+            Arg::with_name(ARG_FORCE_FB)
+                .long(ARG_FORCE_FB)
+                .takes_value(false)
+                .required(false)
+        )
+        .arg(
+            Arg::with_name(ARG_NO_FB)
+                .long(ARG_NO_FB)
+                .takes_value(false)
+                .required(false)
+        )
+        .group(ArgGroup::with_name("fb").args(&[ARG_FORCE_FB, ARG_NO_FB]))
         .subcommand(
             SubCommand::with_name("serve")
                 .about("start server")
@@ -111,6 +125,25 @@ fn main(fb: FacebookInit) {
         }
     };
 
+    let use_fb = if matches.is_present(ARG_NO_FB) {
+        false
+    } else if matches.is_present(ARG_FORCE_FB) {
+        true
+    } else {
+        rand::thread_rng().gen_range(0, 100) == 0usize
+    };
+
+    let (fb, mut fb_destroy_guard) = if use_fb {
+        unsafe {
+            let fb = fbinit::r#impl::perform_init();
+            let fb_destroy_guard = fbinit::r#impl::DestroyGuard::new();
+            (Some(fb), Some(fb_destroy_guard))
+        }
+    } else {
+        (None, None)
+    };
+
+
     let res = if let Some(subcmd) = matches.subcommand_matches("serve") {
         tokio::runtime::Builder::new()
             .threaded_scheduler()
@@ -154,4 +187,6 @@ fn main(fb: FacebookInit) {
     if let Err(err) = res {
         eprintln!("Subcommand failed: {:?}", err);
     }
+
+    fb_destroy_guard.take();
 }

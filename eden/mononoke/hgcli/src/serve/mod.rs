@@ -55,7 +55,7 @@ pub const ARG_SERVER_CERT_IDENTITY: &str = "server-cert-identity";
 const SCUBA_TIMEOUT: Duration = Duration::from_millis(1000);
 
 pub async fn cmd(
-    fb: FacebookInit,
+    fb: Option<FacebookInit>,
     main: &ArgMatches<'_>,
     sub: &ArgMatches<'_>,
 ) -> Result<(), Error> {
@@ -86,8 +86,13 @@ pub async fn cmd(
             let mock_username = sub.value_of("mock-username");
             let client_debug = sub.is_present("client-debug");
 
-            let mut scuba_logger =
-                MononokeScubaSampleBuilder::with_opt_table(fb, scuba_table.map(|v| v.to_owned()));
+            let mut scuba_logger = match fb {
+                Some(fb) => MononokeScubaSampleBuilder::with_opt_table(
+                    fb,
+                    scuba_table.map(|v| v.to_owned()),
+                ),
+                None => MononokeScubaSampleBuilder::with_discard(),
+            };
             scuba_logger.add_common_server_data();
 
             let client_logger = {
