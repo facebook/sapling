@@ -15,7 +15,7 @@ use futures::try_join;
 use slog::{debug, warn};
 use tokio::sync::RwLock;
 
-use dag::{self, CloneData, Id as Vertex};
+use dag::{self, CloneData, Id as Vertex, Location};
 use stats::prelude::*;
 
 use changeset_fetcher::ChangesetFetcher;
@@ -51,8 +51,7 @@ impl SegmentedChangelog for OnDemandUpdateDag {
     async fn location_to_many_changeset_ids(
         &self,
         ctx: &CoreContext,
-        known: ChangesetId,
-        distance: u64,
+        location: Location<ChangesetId>,
         count: u64,
     ) -> Result<Vec<ChangesetId>> {
         STATS::location_to_changeset_id.add_value(1);
@@ -60,13 +59,14 @@ impl SegmentedChangelog for OnDemandUpdateDag {
             let dag = self.dag.read().await;
             if let Some(known_vertex) = dag
                 .idmap
-                .find_vertex(ctx, known)
+                .find_vertex(ctx, location.descendant)
                 .await
                 .context("fetching vertex for csid")?
             {
                 if dag.iddag.contains_id(known_vertex)? {
+                    let location = location.with_descendant(known_vertex);
                     return dag
-                        .known_location_to_many_changeset_ids(ctx, known_vertex, distance, count)
+                        .known_location_to_many_changeset_ids(ctx, location, count)
                         .await
                         .context("ondemand first known_location_many_changest_ids");
                 }
@@ -74,10 +74,11 @@ impl SegmentedChangelog for OnDemandUpdateDag {
         }
         let known_vertex = {
             let mut dag = self.dag.write().await;
-            build_incremental(ctx, &mut dag, &self.changeset_fetcher, known).await?
+            build_incremental(ctx, &mut dag, &self.changeset_fetcher, location.descendant).await?
         };
         let dag = self.dag.read().await;
-        dag.known_location_to_many_changeset_ids(ctx, known_vertex, distance, count)
+        let location = Location::new(known_vertex, location.distance);
+        dag.known_location_to_many_changeset_ids(ctx, location, count)
             .await
     }
 

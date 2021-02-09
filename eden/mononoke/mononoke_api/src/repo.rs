@@ -52,7 +52,7 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use revset::AncestorsNodeStream;
-use segmented_changelog::{CloneData, SegmentedChangelog, StreamCloneData};
+use segmented_changelog::{CloneData, Location, SegmentedChangelog, StreamCloneData};
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, o, Logger};
 use sql_construct::facebook::FbSqlConstruct;
@@ -1352,11 +1352,10 @@ impl RepoContext {
     /// Let's assume our graph is `0 - a - b - c`.
     /// In this example our initial commit is `0`, then we have `a` the first commit, `b` second,
     /// `c` third.
-    /// For `known_descendant = c` and `distance_to_descendant = 2` we want to return `a`.
+    /// For `descendant = c` and `distance = 2` we want to return `a`.
     pub async fn location_to_changeset_id(
         &self,
-        known_descendant: ChangesetId,
-        distance_to_descendant: u64,
+        location: Location<ChangesetId>,
         count: u64,
     ) -> Result<Vec<ChangesetId>, MononokeError> {
         let blob_repo = self.blob_repo();
@@ -1369,12 +1368,7 @@ impl RepoContext {
                     ))
                 })?;
         let ancestor = segmented_changelog
-            .location_to_many_changeset_ids(
-                &self.ctx,
-                known_descendant,
-                distance_to_descendant,
-                count,
-            )
+            .location_to_many_changeset_ids(&self.ctx, location, count)
             .await
             .map_err(MononokeError::from)?;
         Ok(ancestor)

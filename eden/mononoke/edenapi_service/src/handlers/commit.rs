@@ -91,9 +91,9 @@ async fn translate_location(
     hg_repo_ctx: HgRepoContext,
     request: CommitLocationToHashRequest,
 ) -> Result<CommitLocationToHashResponse, Error> {
-    let location = request.location.map_descendant(HgChangesetId::from);
+    let location = request.location.map_descendant(|x| x.into());
     let ancestors: Vec<HgChangesetId> = hg_repo_ctx
-        .location_to_hg_changeset_id(location.descendant, location.distance, request.count)
+        .location_to_hg_changeset_id(location, request.count)
         .await
         .context(ErrorKind::CommitLocationToHashRequestFailed)?;
     let hgids = ancestors.into_iter().map(|x| x.into()).collect();

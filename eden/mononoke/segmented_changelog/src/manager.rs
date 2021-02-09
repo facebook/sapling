@@ -11,7 +11,7 @@ use anyhow::{format_err, Context, Result};
 use async_trait::async_trait;
 use slog::{debug, info};
 
-use dag::InProcessIdDag;
+use dag::{InProcessIdDag, Location};
 
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -132,8 +132,7 @@ impl SegmentedChangelog for SegmentedChangelogManager {
     async fn location_to_many_changeset_ids(
         &self,
         ctx: &CoreContext,
-        known: ChangesetId,
-        distance: u64,
+        location: Location<ChangesetId>,
         count: u64,
     ) -> Result<Vec<ChangesetId>> {
         let (_, dag) = self.load_dag(&ctx).await.with_context(|| {
@@ -142,7 +141,7 @@ impl SegmentedChangelog for SegmentedChangelogManager {
                 self.repo_id
             )
         })?;
-        dag.location_to_many_changeset_ids(ctx, known, distance, count)
+        dag.location_to_many_changeset_ids(ctx, location, count)
             .await
     }
 

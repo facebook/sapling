@@ -34,7 +34,7 @@ mod types;
 #[cfg(test)]
 mod tests;
 
-pub use ::dag::{CloneData, FlatSegment, Id as Vertex, PreparedFlatSegments};
+pub use ::dag::{CloneData, FlatSegment, Id as Vertex, Location, PreparedFlatSegments};
 
 pub use crate::builder::SegmentedChangelogBuilder;
 
@@ -57,10 +57,9 @@ pub trait SegmentedChangelog: Send + Sync {
     async fn location_to_changeset_id(
         &self,
         ctx: &CoreContext,
-        known: ChangesetId,
-        distance: u64,
+        location: Location<ChangesetId>,
     ) -> Result<ChangesetId> {
-        self.location_to_many_changeset_ids(ctx, known, distance, 1)
+        self.location_to_many_changeset_ids(ctx, location, 1)
             .await
             .map(|v| v[0])
     }
@@ -73,8 +72,7 @@ pub trait SegmentedChangelog: Send + Sync {
     async fn location_to_many_changeset_ids(
         &self,
         ctx: &CoreContext,
-        known: ChangesetId,
-        distance: u64,
+        location: Location<ChangesetId>,
         count: u64,
     ) -> Result<Vec<ChangesetId>>;
 
@@ -106,8 +104,7 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
     async fn location_to_many_changeset_ids(
         &self,
         _ctx: &CoreContext,
-        _known: ChangesetId,
-        _distance: u64,
+        _location: Location<ChangesetId>,
         _count: u64,
     ) -> Result<Vec<ChangesetId>> {
         // TODO(T74420661): use `thiserror` to represent error case

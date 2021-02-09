@@ -14,7 +14,7 @@ use maplit::hashset;
 use slog::{debug, trace};
 
 use cloned::cloned;
-use dag::{self, CloneData, Group, Id as Vertex, InProcessIdDag};
+use dag::{self, CloneData, Group, Id as Vertex, InProcessIdDag, Location};
 use stats::prelude::*;
 
 use context::CoreContext;
@@ -42,13 +42,14 @@ impl SegmentedChangelog for Dag {
     async fn location_to_many_changeset_ids(
         &self,
         ctx: &CoreContext,
-        known: ChangesetId,
-        distance: u64,
+        location: Location<ChangesetId>,
         count: u64,
     ) -> Result<Vec<ChangesetId>> {
         STATS::location_to_changeset_id.add_value(1);
-        let known_vertex = self.idmap.get_vertex(ctx, known).await?;
-        self.known_location_to_many_changeset_ids(ctx, known_vertex, distance, count)
+        let location = location
+            .and_then_descendant(|hgid| self.idmap.get_vertex(ctx, hgid))
+            .await?;
+        self.known_location_to_many_changeset_ids(ctx, location, count)
             .await
     }
 
@@ -120,15 +121,14 @@ impl Dag {
     pub(crate) async fn known_location_to_many_changeset_ids(
         &self,
         ctx: &CoreContext,
-        known_vertex: Vertex,
-        distance: u64,
+        location: Location<Vertex>,
         count: u64,
     ) -> Result<Vec<ChangesetId>> {
         STATS::location_to_changeset_id.add_value(1);
         let mut dist_ancestor_vertex = self
             .iddag
-            .first_ancestor_nth(known_vertex, distance)
-            .with_context(|| format!("nth ({}) p1 ancestor for {}", distance, known_vertex))?;
+            .first_ancestor_nth(location.descendant, location.distance)
+            .with_context(|| format!("failed to compute location origin for {:?}", location))?;
         let mut vertexes = vec![dist_ancestor_vertex];
         for _ in 1..count {
             let parents = self
@@ -138,8 +138,8 @@ impl Dag {
             if parents.len() != 1 {
                 return Err(format_err!(
                     "invalid request: changeset with vertex {} does not have {} single parent ancestors",
-                    known_vertex,
-                    distance + count - 1
+                    location.descendant,
+                    location.distance + count - 1
                 ));
             }
             dist_ancestor_vertex = parents[0];

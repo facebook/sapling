@@ -17,7 +17,7 @@ use futures::StreamExt;
 use blobrepo::BlobRepo;
 use caching_ext::{CachelibHandler, MemcacheHandler};
 use context::CoreContext;
-use dag::InProcessIdDag;
+use dag::{InProcessIdDag, Location};
 use fixtures::{linear, merge_even, merge_uneven, unshared_merge_even};
 use mononoke_types::ChangesetId;
 use phases::mark_reachable_as_public;
@@ -91,7 +91,7 @@ async fn test_iddag_save_store(fb: FacebookInit) -> Result<()> {
 
     let distance: u64 = 2;
     let answer = dag
-        .location_to_changeset_id(&ctx, known_cs, distance)
+        .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
         .await?;
     let expected_cs =
         resolve_cs_id(&ctx, &blobrepo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
@@ -109,7 +109,7 @@ async fn test_iddag_save_store(fb: FacebookInit) -> Result<()> {
     let loaded_id_dag = iddag_save_store.load(&ctx, iddag_version).await?;
     let from_save = Dag::new(loaded_id_dag, dag.idmap.clone());
     let answer = from_save
-        .location_to_changeset_id(&ctx, known_cs, distance)
+        .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
         .await?;
     assert_eq!(answer, expected_cs);
 
@@ -153,7 +153,7 @@ async fn validate_location_to_changeset_ids(
     let dag = new_build_all_from_blobrepo(&ctx, &blobrepo, known_cs_id).await?;
 
     let answer = dag
-        .location_to_many_changeset_ids(&ctx, known_cs_id, distance, count)
+        .location_to_many_changeset_ids(&ctx, Location::new(known_cs_id, distance), count)
         .await?;
     let expected_cs_ids = try_join_all(
         expected
@@ -212,26 +212,26 @@ async fn test_location_to_changeset_id_invalid_req(fb: FacebookInit) -> Result<(
     setup_phases(&ctx, &blobrepo, known_cs_id).await?;
     let dag = new_build_all_from_blobrepo(&ctx, &blobrepo, known_cs_id).await?;
     assert!(
-        dag.location_to_many_changeset_ids(&ctx, known_cs_id, 1u64, 2u64)
+        dag.location_to_many_changeset_ids(&ctx, Location::new(known_cs_id, 1u64), 2u64)
             .await
             .is_err()
     );
     // TODO(T74320664): Ideally LocationToHash should error when asked to go over merge commit.
     // The parents order is not well defined enough for this not to be ambiguous.
     assert!(
-        dag.location_to_many_changeset_ids(&ctx, known_cs_id, 2u64, 1u64)
+        dag.location_to_many_changeset_ids(&ctx, Location::new(known_cs_id, 2u64), 1u64)
             .await
             .is_ok()
     );
     let second_commit =
         resolve_cs_id(&ctx, &blobrepo, "1700524113b1a3b1806560341009684b4378660b").await?;
     assert!(
-        dag.location_to_many_changeset_ids(&ctx, second_commit, 1u64, 2u64)
+        dag.location_to_many_changeset_ids(&ctx, Location::new(second_commit, 1u64), 2u64)
             .await
             .is_err()
     );
     assert!(
-        dag.location_to_many_changeset_ids(&ctx, second_commit, 2u64, 1u64)
+        dag.location_to_many_changeset_ids(&ctx, Location::new(second_commit, 2u64), 1u64)
             .await
             .is_err()
     );
@@ -253,7 +253,7 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
             resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
         let distance: u64 = 4;
         let answer = dag
-            .location_to_changeset_id(&ctx, known_cs, distance)
+            .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
             .await?;
         let expected_cs =
             resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
@@ -270,7 +270,7 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
             resolve_cs_id(&ctx, &blobrepo, "264f01429683b3dd8042cb3979e8bf37007118bc").await?;
         let distance: u64 = 5;
         let answer = dag
-            .location_to_changeset_id(&ctx, known_cs, distance)
+            .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
             .await?;
         let expected_cs =
             resolve_cs_id(&ctx, &blobrepo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
@@ -291,7 +291,7 @@ async fn test_build_calls_together(fb: FacebookInit) -> Result<()> {
     let dag = new_build_all_from_blobrepo(&ctx, &blobrepo, known_cs).await?;
     let distance: u64 = 2;
     let answer = dag
-        .location_to_changeset_id(&ctx, known_cs, distance)
+        .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
         .await?;
     let expected_cs =
         resolve_cs_id(&ctx, &blobrepo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
@@ -303,7 +303,7 @@ async fn test_build_calls_together(fb: FacebookInit) -> Result<()> {
     let on_demand_update_dag = OnDemandUpdateDag::new(dag, blobrepo.get_changeset_fetcher());
     let distance: u64 = 3;
     let answer = on_demand_update_dag
-        .location_to_changeset_id(&ctx, known_cs, distance)
+        .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
         .await?;
     let expected_cs =
         resolve_cs_id(&ctx, &blobrepo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
@@ -330,7 +330,7 @@ async fn test_two_repo_dags(fb: FacebookInit) -> Result<()> {
 
     let distance: u64 = 4;
     let answer = dag1
-        .location_to_changeset_id(&ctx, known_cs1, distance)
+        .location_to_changeset_id(&ctx, Location::new(known_cs1, distance))
         .await?;
     let expected_cs_id =
         resolve_cs_id(&ctx, &blobrepo1, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
@@ -338,7 +338,7 @@ async fn test_two_repo_dags(fb: FacebookInit) -> Result<()> {
 
     let distance: u64 = 2;
     let answer = dag2
-        .location_to_changeset_id(&ctx, known_cs2, distance)
+        .location_to_changeset_id(&ctx, Location::new(known_cs2, distance))
         .await?;
     let expected_cs_id =
         resolve_cs_id(&ctx, &blobrepo2, "d7542c9db7f4c77dab4b315edd328edf1514952f").await?;
@@ -361,7 +361,7 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
 
     let distance: u64 = 4;
     let answer = dag
-        .location_to_changeset_id(&ctx, known_cs, distance)
+        .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
         .await?;
     let expected_cs =
         resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
@@ -389,7 +389,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
     let cs7 = resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
     let distance: u64 = 4;
     let answer = dag
-        .location_to_changeset_id(&ctx, master_cs, distance)
+        .location_to_changeset_id(&ctx, Location::new(master_cs, distance))
         .await?;
     assert_eq!(answer, cs7);
 
@@ -397,12 +397,12 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
 
     let cs3 = resolve_cs_id(&ctx, &blobrepo, "607314ef579bd2407752361ba1b0c1729d08b281").await?;
     let answer = ondemand_dag
-        .location_to_changeset_id(&ctx, cs7, distance)
+        .location_to_changeset_id(&ctx, Location::new(cs7, distance))
         .await?;
     assert_eq!(answer, cs3);
 
     let answer = ondemand_dag
-        .location_to_changeset_id(&ctx, master_cs, distance)
+        .location_to_changeset_id(&ctx, Location::new(master_cs, distance))
         .await?;
     assert_eq!(answer, cs7);
 
@@ -428,7 +428,7 @@ async fn test_clone_data(fb: FacebookInit) -> Result<()> {
 
     let distance: u64 = 4;
     let answer = new_dag
-        .location_to_changeset_id(&ctx, head, distance)
+        .location_to_changeset_id(&ctx, Location::new(head, distance))
         .await?;
     let expected_cs =
         resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
@@ -481,7 +481,9 @@ async fn test_caching(fb: FacebookInit) -> Result<()> {
     let (dag, _) = seeder.build_dag_from_scratch(&ctx, head).await?;
 
     let distance: u64 = 1;
-    let _ = dag.location_to_changeset_id(&ctx, head, distance).await?;
+    let _ = dag
+        .location_to_changeset_id(&ctx, Location::new(head, distance))
+        .await?;
 
     let cs_to_dag_stats = || {
         cs_to_dag_handler
@@ -504,7 +506,9 @@ async fn test_caching(fb: FacebookInit) -> Result<()> {
     assert_eq!(dag_to_cs_stats().misses, 1);
     assert_eq!(dag_to_cs_stats().sets, 1);
 
-    let _ = dag.location_to_changeset_id(&ctx, head, distance).await?;
+    let _ = dag
+        .location_to_changeset_id(&ctx, Location::new(head, distance))
+        .await?;
 
     assert_eq!(cs_to_dag_stats().gets, 2);
     assert_eq!(cs_to_dag_stats().hits, 1);

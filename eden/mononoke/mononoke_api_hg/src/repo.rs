@@ -21,7 +21,7 @@ use metaconfig_types::RepoConfig;
 use mononoke_api::{errors::MononokeError, path::MononokePath, repo::RepoContext};
 use mononoke_types::{ChangesetId, MPath};
 use repo_client::gettreepack_entries;
-use segmented_changelog::{CloneData, StreamCloneData, Vertex};
+use segmented_changelog::{CloneData, Location, StreamCloneData, Vertex};
 
 use super::{HgFileContext, HgTreeContext};
 
@@ -124,23 +124,25 @@ impl HgRepoContext {
     /// response using Mercurial specific types.
     pub async fn location_to_hg_changeset_id(
         &self,
-        known_descendant: HgChangesetId,
-        distance_to_descendant: u64,
+        location: Location<HgChangesetId>,
         count: u64,
     ) -> Result<Vec<HgChangesetId>, MononokeError> {
-        let known_descendent_csid = self
-            .blob_repo()
-            .get_bonsai_from_hg(self.ctx().clone(), known_descendant)
-            .await?
-            .ok_or_else(|| {
-                MononokeError::InvalidRequest(format!(
-                    "hg changeset {} not found",
-                    known_descendant
-                ))
-            })?;
+        let cs_location = location
+            .and_then_descendant(|descendant| async move {
+                self.blob_repo()
+                    .get_bonsai_from_hg(self.ctx().clone(), descendant)
+                    .await?
+                    .ok_or_else(|| {
+                        MononokeError::InvalidRequest(format!(
+                            "hg changeset {} not found",
+                            location.descendant
+                        ))
+                    })
+            })
+            .await?;
         let result_csids = self
             .repo()
-            .location_to_changeset_id(known_descendent_csid, distance_to_descendant, count)
+            .location_to_changeset_id(cs_location, count)
             .await?;
         let hg_id_futures = result_csids.iter().map(|result_csid| {
             self.blob_repo()
