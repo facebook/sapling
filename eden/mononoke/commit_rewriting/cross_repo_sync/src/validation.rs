@@ -384,6 +384,7 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
         rename_and_remap_bookmarks(ctx.clone(), &commit_syncer, source_bookmarks).await?
     };
 
+    let reverse_bookmark_renamer = commit_syncer.get_reverse_bookmark_renamer(&ctx).await?;
     let mut diff = vec![];
     for (target_book, target_cs_id) in &target_bookmarks {
         if no_sync_outcome.contains(&target_book) {
@@ -394,7 +395,6 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
         }
         let corresponding_changesets = renamed_source_bookmarks.get(target_book);
         let remapped_source_cs_id = corresponding_changesets.map(|cs| cs.target_cs_id);
-        let reverse_bookmark_renamer = commit_syncer.get_reverse_bookmark_renamer(&ctx).await?;
         if remapped_source_cs_id.is_none() && reverse_bookmark_renamer(target_book).is_none() {
             // Note that the reverse_bookmark_renamer check below is necessary because there
             // might be bookmark in the source repo that shouldn't be present in the target repo
