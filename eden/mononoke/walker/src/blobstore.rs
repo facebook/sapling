@@ -8,23 +8,15 @@
 use crate::validate::{CHECK_FAIL, CHECK_TYPE, ERROR_MSG, NODE_KEY, REPO};
 
 use anyhow::{format_err, Error};
-use blobstore::{Blobstore, BlobstoreMetadata};
-use blobstore_factory::{
-    make_blobstore_multiplexed, make_blobstore_put_ops, BlobstoreOptions, ReadOnlyStorage,
-};
-use cached_config::ConfigStore;
+use blobstore::BlobstoreMetadata;
 use context::CoreContext;
-use fbinit::FacebookInit;
 use metaconfig_types::{BlobConfig, BlobstoreId};
 use mononoke_types::{repo::REPO_PREFIX_REGEX, RepositoryId};
 use multiplexedblob::{LoggingScrubHandler, ScrubHandler};
-use samplingblob::{SamplingBlobstore, SamplingHandler};
 use scuba::value::{NullScubaValue, ScubaValue};
 use scuba_ext::MononokeScubaSampleBuilder;
-use slog::Logger;
-use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
-use std::{collections::HashMap, convert::From, fmt, str::FromStr, sync::Arc};
+use std::{collections::HashMap, convert::From, fmt, str::FromStr};
 
 define_stats! {
     prefix = "mononoke.walker";
@@ -136,115 +128,54 @@ impl ScrubHandler for StatsScrubHandler {
     }
 }
 
-fn get_blobconfig(
+pub fn get_blobconfig(
     blob_config: BlobConfig,
     inner_blobstore_id: Option<u64>,
-) -> Result<BlobConfig, Error> {
-    match inner_blobstore_id {
-        None => Ok(blob_config),
-        Some(inner_blobstore_id) => match blob_config {
-            BlobConfig::Multiplexed { blobstores, .. } => {
-                let seeked_id = BlobstoreId::new(inner_blobstore_id);
-                blobstores
-                    .into_iter()
-                    .find_map(|(blobstore_id, _, blobstore)| {
-                        if blobstore_id == seeked_id {
-                            Some(blobstore)
-                        } else {
-                            None
-                        }
-                    })
-                    .ok_or(format_err!(
-                        "could not find a blobstore with id {}",
-                        inner_blobstore_id
-                    ))
-            }
-            _ => Err(format_err!(
-                "inner-blobstore-id supplied but blobstore is not multiplexed"
-            )),
-        },
-    }
-}
-
-pub async fn open_blobstore<'a>(
-    fb: FacebookInit,
-    mysql_options: &'a MysqlOptions,
-    blob_config: BlobConfig,
-    inner_blobstore_id: Option<u64>,
-    readonly_storage: ReadOnlyStorage,
-    blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
+    repo_names: impl Iterator<Item = String>,
     walk_stats_key: &'static str,
-    repo_id_to_name: HashMap<RepositoryId, String>,
-    blobstore_options: &'a BlobstoreOptions,
-    logger: &'a Logger,
-    config_store: &'a ConfigStore,
-) -> Result<Arc<dyn Blobstore>, Error> {
-    let blobconfig = get_blobconfig(blob_config, inner_blobstore_id)?;
-
-    let blobstore = match (&blobstore_options.scrub_options, blobconfig) {
-        (
-            scrub_options,
-            BlobConfig::Multiplexed {
-                multiplex_id,
-                scuba_table,
-                scuba_sample_rate,
-                blobstores,
-                minimum_successful_writes,
-                queue_db,
-            },
-        ) => {
-            if scrub_options.is_some() {
+    is_scrubbing: bool,
+) -> Result<BlobConfig, Error> {
+    match blob_config {
+        BlobConfig::Multiplexed { ref blobstores, .. } => {
+            if is_scrubbing {
                 // Make sure the repair stats are set to zero for each store.
                 // Without this the new stats only show up when a repair is needed (i.e. as they get incremented),
                 // which makes them harder to monitor on (no datapoints rather than a zero datapoint at start).
-                for name in repo_id_to_name.values() {
+                for name in repo_names {
                     for s in &[STATS::scrub_repaired, STATS::scrub_repair_required] {
-                        for (id, _ty, _config) in &blobstores {
+                        for (id, _ty, _config) in blobstores {
                             s.add_value(0, (walk_stats_key, id.to_string(), name.clone()));
                         }
                     }
                 }
             }
-            make_blobstore_multiplexed(
-                fb,
-                multiplex_id,
-                queue_db,
-                scuba_table,
-                scuba_sample_rate,
-                blobstores,
-                minimum_successful_writes,
-                mysql_options,
-                readonly_storage,
-                blobstore_options,
-                logger,
-                config_store,
-            )
-            .await?
+            match inner_blobstore_id {
+                None => Ok(blob_config),
+                Some(inner_blobstore_id) => {
+                    let seeked_id = BlobstoreId::new(inner_blobstore_id);
+                    blobstores
+                        .iter()
+                        .find_map(|(blobstore_id, _, blobstore)| {
+                            if blobstore_id == &seeked_id {
+                                Some(blobstore.clone())
+                            } else {
+                                None
+                            }
+                        })
+                        .ok_or_else(|| {
+                            format_err!("could not find a blobstore with id {}", inner_blobstore_id)
+                        })
+                }
+            }
         }
-        (None, blobconfig) => {
-            make_blobstore_put_ops(
-                fb,
-                blobconfig,
-                mysql_options,
-                readonly_storage,
-                blobstore_options,
-                logger,
-                config_store,
-            )
-            .await?
+        blob_config => {
+            if inner_blobstore_id.is_some() {
+                Err(format_err!(
+                    "inner-blobstore-id supplied but blobstore is not multiplexed"
+                ))
+            } else {
+                Ok(blob_config)
+            }
         }
-        (Some(_), _) => {
-            return Err(format_err!(
-                "Scrub requested passed for non-scrubbable store"
-            ));
-        }
-    };
-
-    let blobstore = match blobstore_sampler {
-        Some(blobstore_sampler) => Arc::new(SamplingBlobstore::new(blobstore, blobstore_sampler))
-            as Arc<dyn blobstore::Blobstore>,
-        None => Arc::new(blobstore) as Arc<dyn blobstore::Blobstore>,
-    };
-
-    Ok(blobstore)
+    }
 }

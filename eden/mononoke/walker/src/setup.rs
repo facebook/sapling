@@ -22,7 +22,9 @@ use crate::walk::{OutgoingEdge, RepoWalkParams};
 use ::blobstore::Blobstore;
 use anyhow::{bail, format_err, Context, Error};
 use blobrepo_factory::{open_blobrepo_given_datasources, Caching, ReadOnlyStorage};
-use blobstore_factory::{make_metadata_sql_factory, CachelibBlobstoreOptions, MetadataSqlFactory};
+use blobstore_factory::{
+    make_blobstore, make_metadata_sql_factory, CachelibBlobstoreOptions, MetadataSqlFactory,
+};
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args::{
@@ -39,7 +41,7 @@ use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::{BlobConfig, CensoredScubaParams, MetadataDatabaseConfig, Redaction};
 use multiplexedblob::ScrubHandler;
 use once_cell::sync::Lazy;
-use samplingblob::SamplingHandler;
+use samplingblob::{SamplingBlobstore, SamplingHandler};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, o, warn, Logger};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
@@ -1313,23 +1315,35 @@ pub async fn setup_common<'a>(
         for blobconfig in blobconfigs {
             let repos = blob_config_to_repos.get(&blobconfig);
 
+            let blobconfig = blobstore::get_blobconfig(
+                blobconfig,
+                inner_blobstore_id,
+                repos.iter().flat_map(|r| r.iter().map(|r| r.name.clone())),
+                walk_stats_key,
+                blobstore_options.scrub_options.is_some(),
+            )?;
+
             // Open the blobstore explicitly so we can do things like run on one side of a multiplex
             let blobstore = Arc::new(
-                blobstore::open_blobstore(
+                make_blobstore(
                     fb,
-                    &mysql_options,
                     blobconfig,
-                    inner_blobstore_id,
+                    &mysql_options,
                     readonly_storage,
-                    blobstore_sampler.clone(),
-                    walk_stats_key,
-                    repo_id_to_name.clone(),
                     &blobstore_options,
                     &logger,
                     config_store,
                 )
                 .await?,
             );
+
+            let blobstore = match blobstore_sampler.clone() {
+                Some(blobstore_sampler) => {
+                    Arc::new(SamplingBlobstore::new(blobstore, blobstore_sampler))
+                        as Arc<dyn Blobstore>
+                }
+                None => Arc::new(blobstore) as Arc<dyn Blobstore>,
+            };
 
             // Build the per-repo structures sharing common blobstore
             for repo in repos.into_iter().flatten() {

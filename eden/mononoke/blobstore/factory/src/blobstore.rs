@@ -244,9 +244,8 @@ pub async fn make_sql_blobstore<'a>(
     }
 }
 
-// Constructs the BlobstorePutOps store implementations for apps needing low level blobsore access
-// most users should use `make_blobstore`
-pub fn make_blobstore_put_ops<'a>(
+// Constructs the BlobstorePutOps store implementations for low level blobsore access
+fn make_blobstore_put_ops<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
     mysql_options: &'a MysqlOptions,
@@ -446,7 +445,7 @@ pub fn make_blobstore_put_ops<'a>(
     .boxed()
 }
 
-pub async fn make_blobstore_multiplexed<'a>(
+async fn make_blobstore_multiplexed<'a>(
     fb: FacebookInit,
     multiplex_id: MultiplexId,
     queue_db: DatabaseConfig,
