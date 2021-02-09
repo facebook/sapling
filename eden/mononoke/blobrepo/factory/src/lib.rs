@@ -906,6 +906,7 @@ fn get_censored_scuba_builder(
     censored_scuba_params: CensoredScubaParams,
 ) -> Result<MononokeScubaSampleBuilder, Error> {
     let mut builder = MononokeScubaSampleBuilder::with_opt_table(fb, censored_scuba_params.table);
+    builder.add_common_server_data();
 
     if let Some(scuba_log_file) = censored_scuba_params.local_path {
         builder = builder.with_log_file(scuba_log_file)?;
