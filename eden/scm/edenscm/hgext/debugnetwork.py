@@ -44,6 +44,8 @@ SOCKET_AF = {
     getattr(socket, field): field for field in dir(socket) if field.startswith("AF_")
 }
 BLOCK_SIZE = 2 * 1024 * 1024
+HEADER_MONONOKE_HOST = "x-mononoke-host"
+HEADER_NETSPEEDTEST_NBYTES = "x-netspeedtest-nbytes"
 
 
 def httpstatussuccess(s):
@@ -88,6 +90,37 @@ def checkreachability(ui, url, addrinfos):
         except Exception as e:
             ui.status(_("failed to connect to remote host: %s\n") % e, error=_("error"))
     return ok
+
+
+def checkmononokehost(ui, url, opts):
+    sslvalidator = lambda x: None if opts.get("insecure") else sslutil.validatesocket
+
+    _authdata, auth = httpconnection.readauthforuri(ui, str(url), url.user)
+
+    conn = httpclient.HTTPConnection(
+        url.host,
+        int(url.port),
+        use_ssl=True,
+        ssl_wrap_socket=sslutil.wrapsocket,
+        ssl_validator=sslvalidator,
+        ui=ui,
+        certfile=auth.get("cert"),
+        keyfile=auth.get("key"),
+    )
+
+    conn.request(b"GET", b"/health_check", body=None, headers=None)
+    res = conn.getresponse()
+    while not res.complete():
+        res.read(length=BLOCK_SIZE)
+    if not httpstatussuccess(res.status):
+        raise error.Abort(
+            "checkmononokehost: HTTP response status code: %s", res.status
+        )
+
+    hostname = res.headers.get(HEADER_MONONOKE_HOST)
+    if hostname:
+        ui.status(_("Server hostname is %s\n") % hostname, component="debugnetwork")
+    return True
 
 
 def checksshcommand(ui, url, opts):
@@ -171,7 +204,7 @@ def checkspeedhttp(ui, url, opts):
     )
 
     def downloadtest(_description, bytecount):
-        headers = {"x-netspeedtest-nbytes": bytecount}
+        headers = {HEADER_NETSPEEDTEST_NBYTES: bytecount}
         conn.request(b"GET", b"/netspeedtest", body=None, headers=headers)
         starttime = util.timer()
         res = conn.getresponse()
@@ -397,9 +430,11 @@ def debugnetwork(ui, repo, remote="default", **opts):
 
     if url.scheme == "ssh":
         checkspeed = checkhgspeed
+        checkserverhostname = checksshcommand
         servertype = "Mercurial"
     else:
         checkspeed = checkspeedhttp
+        checkserverhostname = checkmononokehost
         servertype = "Mononoke"
         if url.port is None:
             url.port = "443"
@@ -416,8 +451,8 @@ def debugnetwork(ui, repo, remote="default", **opts):
             ui.status(msg, component=_("debugnetwork"))
             return 3
 
-        if servertype == "Mercurial" and not checksshcommand(ui, url, opts):
-            msg = _("Failed to connect to SSH on the server.\n")
+        if not checkserverhostname(ui, url, opts):
+            msg = _("Failed to connect to check %s server hostname.\n") % servertype
             ui.status(msg, component=_("debugnetwork"))
             return 4
 
