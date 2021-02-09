@@ -268,10 +268,30 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::fsinfo(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::pathconf(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  nfs_fh3 fh = XdrTrait<nfs_fh3>::deserialize(deser);
+  (void)fh;
+
+  PATHCONF3res res{
+      {nfsstat3::NFS3_OK,
+       PATHCONF3resok{
+           // TODO(xavierd): fill up the post_op_attr and make case_insensitive
+           // depends on the configured value for that mount.
+           post_op_attr{},
+           /*linkmax=*/0,
+           /*name_max=*/NAME_MAX,
+           /*no_trunc=*/true,
+           /*chown_restricted=*/true,
+           /*case_insensitive=*/false,
+           /*case_preserving=*/true,
+       }}};
+
+  XdrTrait<PATHCONF3res>::serialize(ser, res);
+
   return folly::unit;
 }
 
