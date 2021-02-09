@@ -15,9 +15,7 @@ use clidispatch::errors;
 use edenapi::Builder;
 use revisionstore::{
     indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
-    newstore::{
-        edenapi::EdenApiAdapter, fallback::FallbackStore, KeyStream, ReadStore,
-    },
+    newstore::{edenapi::EdenApiAdapter, fallback::FallbackStore, KeyStream, ReadStore},
     ExtStoredPolicy,
 };
 use types::{HgId, Key, RepoPathBuf};
