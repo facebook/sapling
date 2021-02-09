@@ -59,9 +59,17 @@ pub trait SegmentedChangelog: Send + Sync {
         ctx: &CoreContext,
         location: Location<ChangesetId>,
     ) -> Result<ChangesetId> {
-        self.location_to_many_changeset_ids(ctx, location, 1)
-            .await
-            .map(|v| v[0])
+        let mut ids = self
+            .location_to_many_changeset_ids(ctx, location, 1)
+            .await?;
+        if ids.len() == 1 {
+            if let Some(id) = ids.pop() {
+                return Ok(id);
+            }
+        }
+        Err(format_err!(
+            "unexpected result from location_to_many_changeset_ids"
+        ))
     }
 
     /// Get identifiers of a continuous set of commit given their commit graph location.
