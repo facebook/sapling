@@ -242,6 +242,52 @@ struct XdrTrait<FSINFO3res> : public XdrTrait<FSINFO3res::Base> {
   }
 };
 
+// PATHCONF Procedure:
+
+struct PATHCONF3resok {
+  post_op_attr obj_attributes;
+  uint32_t linkmax;
+  uint32_t name_max;
+  bool no_trunc;
+  bool chown_restricted;
+  bool case_insensitive;
+  bool case_preserving;
+};
+EDEN_XDR_SERDE_DECL(
+    PATHCONF3resok,
+    obj_attributes,
+    linkmax,
+    name_max,
+    no_trunc,
+    chown_restricted,
+    case_insensitive,
+    case_preserving);
+
+struct PATHCONF3resfail {
+  post_op_attr obj_attributes;
+};
+EDEN_XDR_SERDE_DECL(PATHCONF3resfail, obj_attributes);
+
+struct PATHCONF3res
+    : public XdrVariant<nfsstat3, PATHCONF3resok, PATHCONF3resfail> {};
+
+template <>
+struct XdrTrait<PATHCONF3res> : public XdrTrait<PATHCONF3res::Base> {
+  static PATHCONF3res deserialize(folly::io::Cursor& cursor) {
+    PATHCONF3res ret;
+    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
+    switch (ret.tag) {
+      case nfsstat3::NFS3_OK:
+        ret.v = XdrTrait<PATHCONF3resok>::deserialize(cursor);
+        break;
+      default:
+        ret.v = XdrTrait<PATHCONF3resfail>::deserialize(cursor);
+        break;
+    }
+    return ret;
+  }
+};
+
 } // namespace facebook::eden
 
 #endif

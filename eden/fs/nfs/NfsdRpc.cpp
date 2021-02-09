@@ -41,6 +41,16 @@ EDEN_XDR_SERDE_IMPL(
     time_delta,
     properties);
 EDEN_XDR_SERDE_IMPL(FSINFO3resfail, obj_attributes);
+EDEN_XDR_SERDE_IMPL(
+    PATHCONF3resok,
+    obj_attributes,
+    linkmax,
+    name_max,
+    no_trunc,
+    chown_restricted,
+    case_insensitive,
+    case_preserving);
+EDEN_XDR_SERDE_IMPL(PATHCONF3resfail, obj_attributes);
 } // namespace facebook::eden
 
 #endif
