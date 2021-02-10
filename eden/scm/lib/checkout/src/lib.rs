@@ -8,7 +8,7 @@
 use anyhow::{bail, format_err, Result};
 use futures::{stream, try_join, Stream, StreamExt};
 use manifest::{DiffEntry, DiffType, FileMetadata, FileType};
-use revisionstore::{HgIdDataStore, StoreKey, StoreResult};
+use revisionstore::{HgIdDataStore, RemoteDataStore, StoreKey, StoreResult};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use types::{HgId, Key, RepoPathBuf};
@@ -111,7 +111,14 @@ impl CheckoutPlan {
     ///
     /// This function fails fast and returns error when first checkout operation fails.
     /// Pending storage futures are dropped when error is returned
-    pub async fn apply<DS: HgIdDataStore>(self, vfs: &VFS, store: &DS) -> Result<CheckoutStats> {
+    pub async fn apply_stream<
+        S: Stream<Item = Result<StoreResult<Vec<u8>>>> + Unpin,
+        F: FnOnce(Vec<Key>) -> Result<S>,
+    >(
+        self,
+        vfs: &VFS,
+        f: F,
+    ) -> Result<CheckoutStats> {
         let stats_arc = Arc::new(CheckoutStats::default());
         let stats = &stats_arc;
         const PARALLEL_CHECKOUT: usize = 16;
@@ -128,9 +135,7 @@ impl CheckoutPlan {
             .map(|u| Key::new(u.path.clone(), u.content_hgid))
             .collect();
 
-        // todo - replace store with async store when we have it
-        // This does not call prefetch intentionally, since it will go away with async storage api
-        let data_stream = stream::iter(keys.into_iter().map(|key| store.get(StoreKey::HgId(key))));
+        let data_stream = f(keys)?;
 
         let update_content = data_stream
             .zip(stream::iter(self.update_content.into_iter()))
@@ -165,6 +170,34 @@ impl CheckoutPlan {
         Ok(Arc::try_unwrap(stats_arc)
             .ok()
             .expect("Failed to unwrap stats - lingering workers?"))
+    }
+
+    pub async fn apply_data_store<DS: HgIdDataStore>(
+        self,
+        vfs: &VFS,
+        store: &DS,
+    ) -> Result<CheckoutStats> {
+        self.apply_stream(vfs, |keys| {
+            Ok(stream::iter(
+                keys.into_iter().map(|key| store.get(StoreKey::HgId(key))),
+            ))
+        })
+        .await
+    }
+
+    pub async fn apply_remote_data_store<DS: RemoteDataStore>(
+        self,
+        vfs: &VFS,
+        store: &DS,
+    ) -> Result<CheckoutStats> {
+        self.apply_stream(vfs, |keys| {
+            let store_keys: Vec<_> = keys.into_iter().map(StoreKey::HgId).collect();
+            store.prefetch(&store_keys)?;
+            Ok(stream::iter(
+                store_keys.into_iter().map(|key| store.get(key)),
+            ))
+        })
+        .await
     }
 
     /// Drains stream returning error if one of futures fail
