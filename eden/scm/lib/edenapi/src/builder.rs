@@ -258,7 +258,14 @@ impl TryFrom<Builder> for Config {
         } = builder;
 
         // Check for missing required fields.
-        let server_url = server_url.ok_or(ConfigError::MissingUrl)?;
+        let mut server_url = server_url.ok_or(ConfigError::MissingUrl)?;
+
+        // Ensure the base URL's path ends with a slash so that `Url::join`
+        // won't strip the final path component.
+        if !server_url.path().ends_with('/') {
+            let path = format!("{}/", server_url.path());
+            server_url.set_path(&path);
+        }
 
         // Setting these to 0 is the same as None.
         let max_files = max_files.filter(|n| *n > 0);
