@@ -23,7 +23,7 @@ _EDENFS_POSIX_CAPS = {
     SYMLINK: True,
     HARDLINK: False,
     EXECBIT: True,
-    ALWAYSCASESENSITIVE: True,
+    ALWAYSCASESENSITIVE: pycompat.islinux,
 }
 
 _EDENFS_WINDOWS_CAPS = {
