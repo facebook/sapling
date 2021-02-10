@@ -589,6 +589,7 @@ impl Debug for SpanSet {
 }
 
 /// Iterator of integers in a [`SpanSet`].
+#[derive(Clone)]
 pub struct SpanSetIter<T> {
     span_set: T,
     // (index of span_set.spans, index of span_set.spans[i])
@@ -987,6 +988,17 @@ mod tests {
             set.clone().into_iter().rev().collect::<Vec<Id>>(),
             vec![3, 4, 5, 7, 8]
         );
+
+        let set = SpanSet::from_spans(vec![3..=5, 7..=8]);
+        let mut iter = set.iter();
+        assert_eq!(iter.next().unwrap(), 8);
+        assert_eq!(iter.next_back().unwrap(), 3);
+
+        let mut iter2 = iter.clone();
+        assert_eq!(iter.next().unwrap(), 7);
+        assert_eq!(iter.next_back().unwrap(), 4);
+        assert_eq!(iter2.next().unwrap(), 7);
+        assert_eq!(iter2.next_back().unwrap(), 4);
     }
 
     #[test]
