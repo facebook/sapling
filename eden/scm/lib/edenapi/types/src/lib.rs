@@ -35,8 +35,9 @@ pub mod tree;
 pub mod wire;
 
 pub use crate::commit::{
-    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
-    CommitRevlogData, CommitRevlogDataRequest,
+    CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
+    CommitRevlogDataRequest,
 };
 pub use crate::complete_tree::CompleteTreeRequest;
 pub use crate::file::{FileEntry, FileError, FileRequest};

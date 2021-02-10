@@ -25,6 +25,7 @@ define_stats! {
     complete_trees_duration: dynamic_histogram("{}.complete_trees_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     history_duration: dynamic_histogram("{}.history_ms", (repo: String); 100, 0, 5000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     commit_location_to_hash_duration: dynamic_histogram("{}.commit_location_to_hash_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    commit_hash_to_location_duration: dynamic_histogram("{}.commit_hash_to_location_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     commit_revlog_data_duration: dynamic_histogram("{}.commit_revlog_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     clone_duration: dynamic_histogram("{}.clone_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     full_idmap_clone_duration: dynamic_histogram("{}.full_idmap_clone_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
@@ -58,6 +59,9 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 History => STATS::history_duration.add_value(dur_ms, (repo,)),
                 CommitLocationToHash => {
                     STATS::commit_location_to_hash_duration.add_value(dur_ms, (repo,))
+                }
+                CommitHashToLocation => {
+                    STATS::commit_hash_to_location_duration.add_value(dur_ms, (repo,))
                 }
                 CommitRevlogData => STATS::commit_revlog_data_duration.add_value(dur_ms, (repo,)),
                 Clone => STATS::clone_duration.add_value(dur_ms, (repo,)),

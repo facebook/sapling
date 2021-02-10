@@ -43,6 +43,7 @@ pub enum EdenApiMethod {
     CompleteTrees,
     History,
     CommitLocationToHash,
+    CommitHashToLocation,
     CommitRevlogData,
     Clone,
     FullIdMapClone,
@@ -56,6 +57,7 @@ impl fmt::Display for EdenApiMethod {
             Self::CompleteTrees => "complete_trees",
             Self::History => "history",
             Self::CommitLocationToHash => "commit_location_to_hash",
+            Self::CommitHashToLocation => "commit_hash_to_location",
             Self::CommitRevlogData => "commit_revlog_data",
             Self::Clone => "clone",
             Self::FullIdMapClone => "full_idmap_clone",
@@ -119,6 +121,7 @@ define_handler!(trees_handler, trees::trees);
 define_handler!(complete_trees_handler, complete_trees::complete_trees);
 define_handler!(history_handler, history::history);
 define_handler!(commit_location_to_hash_handler, commit::location_to_hash);
+define_handler!(commit_hash_to_location_handler, commit::hash_to_location);
 define_handler!(commit_revlog_data_handler, commit::revlog_data);
 define_handler!(clone_handler, clone::clone_data);
 define_handler!(full_idmap_clone_handler, clone::full_idmap_clone_data);
@@ -158,6 +161,10 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/commit/location_to_hash")
             .with_path_extractor::<commit::LocationToHashParams>()
             .to(commit_location_to_hash_handler);
+        route
+            .post("/:repo/commit/hash_to_location")
+            .with_path_extractor::<commit::HashToLocationParams>()
+            .to(commit_hash_to_location_handler);
         route
             .post("/:repo/commit/revlog_data")
             .with_path_extractor::<commit::RevlogDataParams>()

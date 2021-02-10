@@ -25,8 +25,8 @@ use structopt::StructOpt;
 
 use edenapi_types::{
     wire::{
-        ToApi, WireCloneData, WireCommitLocationToHashResponse, WireFileEntry,
-        WireHistoryResponseChunk, WireIdMapEntry, WireTreeEntry,
+        ToApi, WireCloneData, WireCommitHashToLocationResponse, WireCommitLocationToHashResponse,
+        WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry, WireTreeEntry,
     },
     CommitRevlogData, FileError, TreeError, WireHistoryEntry,
 };
@@ -40,6 +40,7 @@ enum Args {
     History(HistoryArgs),
     CommitRevlogData(CommitRevlogDataArgs),
     CommitLocationToHash(CommitLocationToHashArgs),
+    CommitHashToLocation(CommitHashToLocationArgs),
     Clone(CloneArgs),
     FullIdmapClone(CloneArgs),
 }
@@ -179,6 +180,19 @@ struct CommitLocationToHashArgs {
 }
 
 #[derive(Debug, StructOpt)]
+#[structopt(about = "Read the contents of a commit location-to-hash request")]
+struct CommitHashToLocationArgs {
+    #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
+    input: Option<PathBuf>,
+    #[structopt(long, short, help = "Output file (stdout used if omitted)")]
+    output: Option<PathBuf>,
+    #[structopt(long, short, help = "Look at items starting with index start")]
+    start: Option<usize>,
+    #[structopt(long, short, help = "Only look at N entries")]
+    limit: Option<usize>,
+}
+
+#[derive(Debug, StructOpt)]
 #[structopt(about = "Read the contents of a clone data request")]
 struct CloneArgs {
     #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
@@ -192,6 +206,7 @@ fn main() -> Result<()> {
         Args::History(args) => cmd_history(args),
         Args::CommitRevlogData(args) => cmd_commit_revlog_data(args),
         Args::CommitLocationToHash(args) => cmd_commit_location_to_hash(args),
+        Args::CommitHashToLocation(args) => cmd_commit_hash_to_location(args),
         Args::Clone(args) => cmd_clone(args),
         Args::FullIdmapClone(args) => cmd_full_idmap_clone(args),
     }
@@ -405,6 +420,21 @@ fn cmd_commit_location_to_hash(args: CommitLocationToHashArgs) -> Result<()> {
         for hgid in response.hgids.iter() {
             println!("  {}", hgid);
         }
+    }
+    Ok(())
+}
+
+fn cmd_commit_hash_to_location(args: CommitHashToLocationArgs) -> Result<()> {
+    let response_list: Vec<WireCommitHashToLocationResponse> = read_input(args.input, None)?;
+    let iter = response_list
+        .iter()
+        .skip(args.start.unwrap_or(0))
+        .take(args.limit.unwrap_or(usize::MAX));
+    for response in iter {
+        println!(
+            "{} =>\n    Location(descendant={}, dist={})",
+            response.hgid, response.location.descendant, response.location.distance
+        );
     }
     Ok(())
 }

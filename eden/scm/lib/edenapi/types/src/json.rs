@@ -29,7 +29,8 @@ use dag_types::Location;
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::commit::{
-    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
+    CommitHashToLocationRequestBatch, CommitLocationToHashRequest,
+    CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
 };
 use crate::complete_tree::CompleteTreeRequest;
 use crate::file::FileRequest;
@@ -109,6 +110,43 @@ pub fn parse_commit_location_to_hash_req(json: &Value) -> Result<CommitLocationT
     Ok(CommitLocationToHashRequestBatch { requests })
 }
 
+/// Parse a `LocationToHashRequest` from JSON.
+///
+/// Example request:
+/// ```json
+/// {
+///   "client_head": "c1d934ef5a2b899e0c34d967d9d907e60911bb42",
+///   "hgids": [
+///     "76fef898cdc04b36cff0664d280b956bb07003eb",
+///     "34b93dfd5987551ac91087a1dc5637a19be4dd0f"
+///   ]
+/// }
+pub fn parse_commit_hash_to_location_req(json: &Value) -> Result<CommitHashToLocationRequestBatch> {
+    let json = json.as_object().context("input must be a JSON object")?;
+    let client_head = HgId::from_str(
+        json.get("client_head")
+            .context("missing field client_head")?
+            .as_str()
+            .context("field client_heade is not a string")?,
+    )
+    .context("could not be parsed as HgId")?;
+    let hgids_json = json
+        .get("hgids")
+        .context("missing field requests")?
+        .as_array()
+        .context("field requests is not an array")?;
+    let mut hgids = Vec::new();
+    for hgid_json in hgids_json {
+        let hgid = HgId::from_str(
+            hgid_json
+                .as_str()
+                .context("field client_heade is not a string")?,
+        )
+        .context("could not be parsed as HgId")?;
+        hgids.push(hgid);
+    }
+    Ok(CommitHashToLocationRequestBatch { client_head, hgids })
+}
 /// Parse a `FileRequest` from JSON.
 ///
 /// The request is represented as a JSON object containing a "keys" field
@@ -430,6 +468,12 @@ impl FromJson for CompleteTreeRequest {
 impl FromJson for CommitLocationToHashRequestBatch {
     fn from_json(json: &Value) -> Result<Self> {
         parse_commit_location_to_hash_req(json)
+    }
+}
+
+impl FromJson for CommitHashToLocationRequestBatch {
+    fn from_json(json: &Value) -> Result<Self> {
+        parse_commit_hash_to_location_req(json)
     }
 }
 

@@ -58,7 +58,8 @@ use dag_types::id::Id as DagId;
 pub use crate::wire::{
     clone::{WireCloneData, WireIdMapEntry},
     commit::{
-        WireCommitLocation, WireCommitLocationToHashRequest, WireCommitLocationToHashRequestBatch,
+        WireCommitHashToLocationRequestBatch, WireCommitHashToLocationResponse, WireCommitLocation,
+        WireCommitLocationToHashRequest, WireCommitLocationToHashRequestBatch,
         WireCommitLocationToHashResponse,
     },
     complete_tree::WireCompleteTreeRequest,

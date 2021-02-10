@@ -6,14 +6,15 @@
  */
 
 use anyhow::{Context, Error};
-use futures::{stream, StreamExt, TryStreamExt};
+use futures::{stream, Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{
-    wire::WireCommitLocationToHashRequestBatch, CommitLocationToHashRequest,
-    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest, ToWire,
+    wire::{WireCommitHashToLocationRequestBatch, WireCommitLocationToHashRequestBatch},
+    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashResponse,
+    CommitRevlogData, CommitRevlogDataRequest, ToWire,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::HgChangesetId;
@@ -29,9 +30,15 @@ use super::{EdenApiMethod, HandlerInfo};
 
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
+const HASH_TO_LOCATION_BATCH_SIZE: usize = 100;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct LocationToHashParams {
+    repo: String,
+}
+
+#[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
+pub struct HashToLocationParams {
     repo: String,
 }
 
@@ -60,6 +67,57 @@ pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse,
         .map(move |location| translate_location(hg_repo_ctx.clone(), location));
     let response = stream::iter(hgid_list)
         .buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST)
+        .map_ok(|response| response.to_wire());
+    Ok(cbor_stream(rctx, response))
+}
+
+pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    async fn hash_to_location_chunk(
+        hg_repo_ctx: HgRepoContext,
+        client_head: HgChangesetId,
+        hg_cs_ids: Vec<HgChangesetId>,
+    ) -> Result<impl Stream<Item = Result<CommitHashToLocationResponse, Error>>, Error> {
+        let locations = hg_repo_ctx
+            .many_changeset_ids_to_locations(client_head, hg_cs_ids.clone())
+            .await?;
+        let responses =
+            hg_cs_ids
+                .into_iter()
+                .zip(locations.into_iter())
+                .map(|(hg_cs_id, location)| {
+                    let response = CommitHashToLocationResponse {
+                        hgid: hg_cs_id.into(),
+                        location: location.map_descendant(|x| x.into()),
+                    };
+                    Ok(response)
+                });
+        Ok(stream::iter(responses))
+    }
+
+    let params = HashToLocationParams::take_from(state);
+
+    state.put(HandlerInfo::new(
+        &params.repo,
+        EdenApiMethod::CommitHashToLocation,
+    ));
+
+    let sctx = ServerContext::borrow_from(state);
+    let rctx = RequestContext::borrow_from(state).clone();
+
+    let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo, None).await?;
+
+    let batch = parse_wire_request::<WireCommitHashToLocationRequestBatch>(state).await?;
+    let client_head = batch.client_head.into();
+
+    let response = stream::iter(batch.hgids)
+        .chunks(HASH_TO_LOCATION_BATCH_SIZE)
+        .map(|chunk| chunk.into_iter().map(|x| x.into()).collect::<Vec<_>>())
+        .map({
+            let ctx = hg_repo_ctx.clone();
+            move |chunk| hash_to_location_chunk(ctx.clone(), client_head, chunk)
+        })
+        .buffer_unordered(3)
+        .try_flatten()
         .map_ok(|response| response.to_wire());
     Ok(cbor_stream(rctx, response))
 }
