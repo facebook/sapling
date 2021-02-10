@@ -9,6 +9,8 @@ use anyhow::{bail, format_err, Result};
 use futures::{stream, try_join, Stream, StreamExt};
 use manifest::{DiffEntry, DiffType, FileMetadata, FileType};
 use revisionstore::{HgIdDataStore, StoreKey, StoreResult};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use types::{HgId, Key, RepoPathBuf};
 use vfs::{UpdateFlag, VFS};
 
@@ -41,6 +43,14 @@ struct UpdateMetaAction {
     path: RepoPathBuf,
     /// true if need to set executable flag, false if need to remove it.
     set_x_flag: bool,
+}
+
+#[derive(Default)]
+pub struct CheckoutStats {
+    removed: AtomicUsize,
+    updated: AtomicUsize,
+    meta_updated: AtomicUsize,
+    written_bytes: AtomicUsize,
 }
 
 impl CheckoutPlan {
@@ -101,10 +111,13 @@ impl CheckoutPlan {
     ///
     /// This function fails fast and returns error when first checkout operation fails.
     /// Pending storage futures are dropped when error is returned
-    pub async fn apply<DS: HgIdDataStore>(self, vfs: &VFS, store: &DS) -> Result<()> {
+    pub async fn apply<DS: HgIdDataStore>(self, vfs: &VFS, store: &DS) -> Result<CheckoutStats> {
+        let stats_arc = Arc::new(CheckoutStats::default());
+        let stats = &stats_arc;
         const PARALLEL_CHECKOUT: usize = 16;
 
-        let remove_files = stream::iter(self.remove).map(|path| Self::remove_file(vfs, path));
+        let remove_files =
+            stream::iter(self.remove).map(|path| Self::remove_file(vfs, stats, path));
         let remove_files = remove_files.buffer_unordered(PARALLEL_CHECKOUT);
 
         Self::process_work_stream(remove_files).await?;
@@ -135,13 +148,13 @@ impl CheckoutPlan {
                     FileType::Symlink => Some(UpdateFlag::Symlink),
                 };
 
-                Self::write_file(vfs, path, data, flag).await
+                Self::write_file(vfs, stats, path, data, flag).await
             });
 
         let update_content = update_content.buffer_unordered(PARALLEL_CHECKOUT);
 
         let update_meta = stream::iter(self.update_meta)
-            .map(|action| Self::set_exec_on_file(vfs, action.path, action.set_x_flag));
+            .map(|action| Self::set_exec_on_file(vfs, stats, action.path, action.set_x_flag));
         let update_meta = update_meta.buffer_unordered(PARALLEL_CHECKOUT);
 
         let update_content = Self::process_work_stream(update_content);
@@ -149,7 +162,9 @@ impl CheckoutPlan {
 
         try_join!(update_content, update_meta)?;
 
-        Ok(())
+        Ok(Arc::try_unwrap(stats_arc)
+            .ok()
+            .expect("Failed to unwrap stats - lingering workers?"))
     }
 
     /// Drains stream returning error if one of futures fail
@@ -168,32 +183,52 @@ impl CheckoutPlan {
     // all of them into single spawn_blocking.
     async fn write_file(
         vfs: &VFS,
+        stats: &Arc<CheckoutStats>,
         path: RepoPathBuf,
         data: Vec<u8>,
         flag: Option<UpdateFlag>,
     ) -> Result<()> {
         let vfs = vfs.clone(); // vfs auditor cache is shared
+        let stats = Arc::clone(stats);
         tokio::runtime::Handle::current()
-            .spawn_blocking(move || {
+            .spawn_blocking(move || -> Result<()> {
                 let repo_path = path.as_repo_path();
-                vfs.write(repo_path, &data.into(), flag)
+                let w = vfs.write(repo_path, &data.into(), flag)?;
+                stats.updated.fetch_add(1, Ordering::Relaxed);
+                stats.written_bytes.fetch_add(w, Ordering::Relaxed);
+                Ok(())
             })
             .await??;
         Ok(())
     }
 
-    async fn remove_file(vfs: &VFS, path: RepoPathBuf) -> Result<()> {
+    async fn remove_file(vfs: &VFS, stats: &Arc<CheckoutStats>, path: RepoPathBuf) -> Result<()> {
         let vfs = vfs.clone(); // vfs auditor cache is shared
+        let stats = Arc::clone(stats);
         tokio::runtime::Handle::current()
-            .spawn_blocking(move || vfs.remove(path.as_repo_path()))
+            .spawn_blocking(move || -> Result<()> {
+                vfs.remove(path.as_repo_path())?;
+                stats.removed.fetch_add(1, Ordering::Relaxed);
+                Ok(())
+            })
             .await??;
         Ok(())
     }
 
-    async fn set_exec_on_file(vfs: &VFS, path: RepoPathBuf, flag: bool) -> Result<()> {
+    async fn set_exec_on_file(
+        vfs: &VFS,
+        stats: &Arc<CheckoutStats>,
+        path: RepoPathBuf,
+        flag: bool,
+    ) -> Result<()> {
         let vfs = vfs.clone(); // vfs auditor cache is shared
+        let stats = Arc::clone(stats);
         tokio::runtime::Handle::current()
-            .spawn_blocking(move || vfs.set_executable(path.as_repo_path(), flag))
+            .spawn_blocking(move || -> Result<()> {
+                vfs.set_executable(path.as_repo_path(), flag)?;
+                stats.meta_updated.fetch_add(1, Ordering::Relaxed);
+                Ok(())
+            })
             .await??;
         Ok(())
     }
