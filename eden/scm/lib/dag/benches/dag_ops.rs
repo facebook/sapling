@@ -7,7 +7,6 @@
 
 use dag::iddagstore::IdDagStore;
 use dag::idmap::IdMapAssignHead;
-use dag::idmap::IdMapBuildParents;
 use dag::namedag::NameDag;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
@@ -15,7 +14,10 @@ use dag::ops::Persist;
 use dag::Set;
 use dag::{idmap::IdMap, Group, Id, IdDag, IdSet, VertexName};
 use minibench::{bench, elapsed};
+use nonblocking::non_blocking_result as nbr;
 use tempfile::tempdir;
+
+type ParentsFunc<'a> = Box<dyn Fn(VertexName) -> dag::Result<Vec<VertexName>> + Send + Sync + 'a>;
 
 fn main() {
     let dag_dir = tempdir().unwrap();
@@ -31,35 +33,24 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
     let parents = bindag::parse_bindag(bindag::MOZILLA);
 
     let head_name = VertexName::copy_from(format!("{}", parents.len() - 1).as_bytes());
-    let parents_by_name = |name: VertexName| -> dag::Result<Vec<VertexName>> {
-        let i = String::from_utf8(name.as_ref().to_vec())
-            .unwrap()
-            .parse::<usize>()
-            .unwrap();
-        Ok(parents[i]
-            .iter()
-            .map(|p| format!("{}", p).as_bytes().to_vec().into())
-            .collect())
-    };
+    let parents_by_name: ParentsFunc =
+        Box::new(|name: VertexName| -> dag::Result<Vec<VertexName>> {
+            let i = String::from_utf8(name.as_ref().to_vec())
+                .unwrap()
+                .parse::<usize>()
+                .unwrap();
+            Ok(parents[i]
+                .iter()
+                .map(|p| format!("{}", p).as_bytes().to_vec().into())
+                .collect())
+        });
 
     let id_map_dir = tempdir().unwrap();
     let mut id_map = IdMap::open(id_map_dir.path()).unwrap();
-    let outcome = id_map
-        .assign_head(head_name.clone(), &parents_by_name, Group::MASTER)
-        .unwrap();
+    let outcome =
+        nbr(id_map.assign_head(head_name.clone(), &parents_by_name, Group::MASTER)).unwrap();
 
-    let head_id = id_map.find_id_by_name(head_name.as_ref()).unwrap().unwrap();
-    let parents_by_id = id_map.build_get_parents_by_id(&parents_by_name);
-
-    bench("building segments (old)", || {
-        let mut dag = get_empty_iddag();
-        elapsed(|| {
-            dag.build_segments_volatile(head_id, &parents_by_id)
-                .unwrap();
-        })
-    });
-
-    bench("building segments (new)", || {
+    bench("building segments", || {
         let mut dag = get_empty_iddag();
         elapsed(|| {
             dag.build_segments_volatile_from_prepared_flat_segments(&outcome)
@@ -71,7 +62,7 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
     let mut dag = get_empty_iddag();
     let mut syncable = dag.prepare_filesystem_sync().unwrap();
     syncable
-        .build_segments_volatile(head_id, &parents_by_id)
+        .build_segments_volatile_from_prepared_flat_segments(&outcome)
         .unwrap();
     syncable.sync().unwrap();
 
@@ -247,7 +238,7 @@ fn bench_many_heads_namedag() {
     //
     // VertexName are just strings of Ids (0, 1, ..., N0, N1, ...).
     const M: usize = 8192;
-    let parent_func = |v: VertexName| -> dag::Result<Vec<VertexName>> {
+    let parent_func: ParentsFunc = Box::new(|v: VertexName| -> dag::Result<Vec<VertexName>> {
         let is_non_master = v.as_ref().starts_with(b"N");
         let idx: usize = if is_non_master {
             std::str::from_utf8(&v.as_ref()[1..])
@@ -265,7 +256,7 @@ fn bench_many_heads_namedag() {
             vec![]
         };
         Ok(parents)
-    };
+    });
     let non_master_heads: Vec<VertexName> = (0..M)
         .map(|i| VertexName::copy_from(format!("N{}", i).as_bytes()))
         .collect::<Vec<_>>();
@@ -273,13 +264,12 @@ fn bench_many_heads_namedag() {
         vec![VertexName::copy_from(format!("{}", M - 1).as_bytes())];
     let dag_dir = tempdir().unwrap();
     let mut dag = NameDag::open(&dag_dir.path()).unwrap();
-    dag.add_heads_and_flush(parent_func, &master_heads, &non_master_heads)
-        .unwrap();
+    nbr(dag.add_heads_and_flush(&parent_func, &master_heads, &non_master_heads)).unwrap();
 
     let to_set = |v: &str| -> Set {
-        dag.sort(&Set::from_static_names(vec![VertexName::copy_from(
+        nbr(dag.sort(&Set::from_static_names(vec![VertexName::copy_from(
             v.as_bytes(),
-        )]))
+        )])))
         .unwrap()
     };
     let head_root_pairs: Vec<(Set, Set)> = (0..M)
@@ -292,17 +282,17 @@ fn bench_many_heads_namedag() {
     bench("range (master::draft)", || {
         elapsed(|| {
             for (head, root) in &head_root_pairs {
-                dag.range(root.clone(), head.clone()).unwrap();
+                nbr(dag.range(root.clone(), head.clone())).unwrap();
             }
         })
     });
 
-    let heads = dag.heads(dag.all().unwrap()).unwrap();
+    let heads = nbr(dag.heads(nbr(dag.all()).unwrap())).unwrap();
     let root_list: Vec<Set> = ((M - 64)..M).map(|i| to_set(&format!("N{}", i))).collect();
     bench("range (recent_draft::drafts)", || {
         elapsed(|| {
             for root in &root_list {
-                dag.range(root.clone(), heads.clone()).unwrap();
+                nbr(dag.range(root.clone(), heads.clone())).unwrap();
             }
         })
     });
