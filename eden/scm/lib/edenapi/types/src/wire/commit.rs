@@ -13,7 +13,8 @@ use dag_types::Location;
 use types::HgId;
 
 use crate::commit::{
-    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
+    CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
 };
 use crate::wire::{ToApi, ToWire, WireHgId, WireToApiConversionError};
 
@@ -173,6 +174,84 @@ impl Arbitrary for WireCommitLocationToHashRequestBatch {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireCommitHashToLocationRequestBatch {
+    #[serde(rename = "1")]
+    pub client_head: WireHgId,
+    #[serde(rename = "2")]
+    pub hgids: Vec<WireHgId>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireCommitHashToLocationResponse {
+    #[serde(rename = "1")]
+    pub hgid: WireHgId,
+    #[serde(rename = "2")]
+    pub location: WireCommitLocation,
+}
+
+impl ToWire for CommitHashToLocationRequestBatch {
+    type Wire = WireCommitHashToLocationRequestBatch;
+
+    fn to_wire(self) -> Self::Wire {
+        Self::Wire {
+            client_head: self.client_head.to_wire(),
+            hgids: self.hgids.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireCommitHashToLocationRequestBatch {
+    type Api = CommitHashToLocationRequestBatch;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        let api = Self::Api {
+            client_head: self.client_head.to_api()?,
+            hgids: self.hgids.to_api()?,
+        };
+        Ok(api)
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireCommitHashToLocationRequestBatch {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitHashToLocationRequestBatch::arbitrary(g).to_wire()
+    }
+}
+
+impl ToWire for CommitHashToLocationResponse {
+    type Wire = WireCommitHashToLocationResponse;
+
+    fn to_wire(self) -> Self::Wire {
+        Self::Wire {
+            hgid: self.hgid.to_wire(),
+            location: self.location.to_wire(),
+        }
+    }
+}
+
+impl ToApi for WireCommitHashToLocationResponse {
+    type Api = CommitHashToLocationResponse;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        let api = Self::Api {
+            hgid: self.hgid.to_api()?,
+            location: self.location.to_api()?,
+        };
+        Ok(api)
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireCommitHashToLocationResponse {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitHashToLocationResponse::arbitrary(g).to_wire()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -190,27 +269,63 @@ mod tests {
             check_wire_roundtrip(v)
         }
 
-        fn test_roundtrip_serialize_request(v: WireCommitLocationToHashRequest) -> bool {
+        fn test_roundtrip_serialize_location_to_hash_request(
+            v: WireCommitLocationToHashRequest
+        ) -> bool {
             check_serialize_roundtrip(v)
         }
 
-        fn test_roundtrip_wire_request(v: CommitLocationToHashRequest) -> bool {
+        fn test_roundtrip_wire_location_to_hash_request(
+            v: CommitLocationToHashRequest
+        ) -> bool {
             check_wire_roundtrip(v)
         }
 
-        fn test_roundtrip_serialize_response(v: WireCommitLocationToHashResponse) -> bool {
+        fn test_roundtrip_serialize_location_to_hash_response(
+            v: WireCommitLocationToHashResponse
+        ) -> bool {
             check_serialize_roundtrip(v)
         }
 
-        fn test_roundtrip_wire_response(v: CommitLocationToHashResponse) -> bool {
+        fn test_roundtrip_wire_location_to_hash_response(
+            v: CommitLocationToHashResponse
+        ) -> bool {
             check_wire_roundtrip(v)
         }
 
-        fn test_roundtrip_serialize_request_batch(v: WireCommitLocationToHashRequestBatch) -> bool {
+        fn test_roundtrip_serialize_location_to_hash_request_batch(
+            v: WireCommitLocationToHashRequestBatch
+        ) -> bool {
             check_serialize_roundtrip(v)
         }
 
-        fn test_roundtrip_wire_request_batch(v: CommitLocationToHashRequestBatch) -> bool {
+        fn test_roundtrip_wire_location_to_hash_request_batch(
+            v: CommitLocationToHashRequestBatch
+        ) -> bool {
+            check_wire_roundtrip(v)
+        }
+
+        fn test_roundtrip_serialize_hash_to_location_request_batch(
+            v: WireCommitHashToLocationRequestBatch
+        ) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
+        fn test_roundtrip_hash_to_location_request_batch(
+            v: CommitHashToLocationRequestBatch
+        ) -> bool {
+            check_wire_roundtrip(v)
+        }
+
+        fn test_roundtrip_serialize_hash_to_location_response(
+            v: WireCommitHashToLocationResponse
+        ) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
+        fn test_roundtrip_wire_hash_to_location_response(
+            v: CommitHashToLocationResponse
+        ) -> bool {
             check_wire_roundtrip(v)
         }
     }

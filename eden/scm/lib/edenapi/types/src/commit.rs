@@ -78,6 +78,40 @@ impl Arbitrary for CommitLocationToHashRequestBatch {
     }
 }
 
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize)]
+pub struct CommitHashToLocationRequestBatch {
+    pub client_head: HgId,
+    pub hgids: Vec<HgId>,
+}
+
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize)]
+pub struct CommitHashToLocationResponse {
+    pub hgid: HgId,
+    pub location: Location<HgId>,
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CommitHashToLocationRequestBatch {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitHashToLocationRequestBatch {
+            client_head: Arbitrary::arbitrary(g),
+            hgids: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CommitHashToLocationResponse {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitHashToLocationResponse {
+            hgid: Arbitrary::arbitrary(g),
+            location: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
 /// The list of Mercurial commit identifiers for which we want the commit data to be returned.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
