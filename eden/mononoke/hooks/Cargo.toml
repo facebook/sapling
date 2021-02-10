@@ -19,6 +19,7 @@ path = "hooks-tests/src/lib.rs"
 bookmarks = { path = "../bookmarks", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
 hooks_content_stores = { path = "content-stores", version = "0.1.0" }
+manifest = { path = "../manifest", version = "0.1.0" }
 mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
 metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }

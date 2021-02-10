@@ -32,7 +32,7 @@ use futures::{
     try_join, Future, TryFutureExt,
 };
 use futures_stats::TimedFutureExt;
-use hooks_content_stores::FileContentManager;
+pub use hooks_content_stores::{FileContentManager, PathContent};
 use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
 use permission_checker::{ArcMembershipChecker, MembershipCheckerBuilder};
