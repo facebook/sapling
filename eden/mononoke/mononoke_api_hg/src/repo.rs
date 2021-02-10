@@ -153,6 +153,73 @@ impl HgRepoContext {
             .map_err(MononokeError::from)
     }
 
+    /// This provides the same functionality as
+    /// `mononke_api::RepoContext::many_changeset_ids_to_locations`. It just translates to
+    /// and from Mercurial types.
+    pub async fn many_changeset_ids_to_locations(
+        &self,
+        hg_client_head: HgChangesetId,
+        hg_ids: Vec<HgChangesetId>,
+    ) -> Result<Vec<Location<HgChangesetId>>, MononokeError> {
+        let all_hg_ids: Vec<_> = hg_ids
+            .iter()
+            .cloned()
+            .chain(std::iter::once(hg_client_head))
+            .collect();
+        let hg_to_bonsai: HashMap<HgChangesetId, ChangesetId> = self
+            .blob_repo()
+            .get_hg_bonsai_mapping(self.ctx().clone(), all_hg_ids)
+            .await?
+            .into_iter()
+            .collect();
+        let client_head = *hg_to_bonsai.get(&hg_client_head).ok_or_else(|| {
+            MononokeError::InvalidRequest(format!(
+                "failed to find bonsai equivalent for client head {}",
+                hg_client_head
+            ))
+        })?;
+        let cs_ids = hg_ids
+            .iter()
+            .map(|hg_id| {
+                hg_to_bonsai.get(hg_id).cloned().ok_or_else(|| {
+                    MononokeError::InvalidRequest(format!(
+                        "failed to find bonsaid equivalent for {}",
+                        hg_id
+                    ))
+                })
+            })
+            .collect::<Result<Vec<ChangesetId>, MononokeError>>()?;
+
+        let bonsai_locations = self
+            .repo()
+            .many_changeset_ids_to_locations(client_head, cs_ids)
+            .await?;
+
+        let r_cs_ids: Vec<_> = bonsai_locations.iter().map(|l| l.descendant).collect();
+        let bonsai_to_hg: HashMap<ChangesetId, HgChangesetId> = self
+            .blob_repo()
+            .get_hg_bonsai_mapping(self.ctx().clone(), r_cs_ids)
+            .await?
+            .into_iter()
+            .map(|(hg_id, cs_id)| (cs_id, hg_id))
+            .collect();
+        let locations = bonsai_locations
+            .iter()
+            .map(|bl| {
+                bl.try_map_descendant(|descendant| {
+                    bonsai_to_hg.get(&descendant).cloned().ok_or_else(|| {
+                        MononokeError::InvalidRequest(format!(
+                            "failed to find hg equivalent for bonsai {}",
+                            bl.descendant,
+                        ))
+                    })
+                })
+            })
+            .collect::<Result<Vec<Location<HgChangesetId>>, MononokeError>>()?;
+
+        Ok(locations)
+    }
+
     pub async fn revlog_commit_data(
         &self,
         hg_cs_id: HgChangesetId,

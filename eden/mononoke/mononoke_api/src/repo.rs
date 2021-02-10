@@ -1374,6 +1374,30 @@ impl RepoContext {
         Ok(ancestor)
     }
 
+    /// A Segmented Changelog client needs to know how to translate between a commit hash,
+    /// for example one that is provided by the user, and the information that it has locally,
+    /// the shape of the graph, i.e. a location in the graph.
+    pub async fn many_changeset_ids_to_locations(
+        &self,
+        client_head: ChangesetId,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<Location<ChangesetId>>, MononokeError> {
+        let blob_repo = self.blob_repo();
+        let segmented_changelog =
+            blob_repo
+                .attribute::<dyn SegmentedChangelog>()
+                .ok_or_else(|| {
+                    MononokeError::InvalidRequest(String::from(
+                        "Segmented Changelog is not enabled for this repo",
+                    ))
+                })?;
+        let result = segmented_changelog
+            .many_changeset_ids_to_locations(&self.ctx, client_head, cs_ids)
+            .await
+            .map_err(MononokeError::from)?;
+        Ok(result)
+    }
+
     pub async fn segmented_changelog_clone_data(
         &self,
     ) -> Result<CloneData<ChangesetId>, MononokeError> {
