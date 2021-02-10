@@ -151,25 +151,7 @@ fn update(state: &WriterState, key: Key, flag: Option<UpdateFlag>) -> Result<usi
 
     let content = redact_if_needed(content);
 
-    // Fast path: let's try to open the file directly, we'll handle the failure only if this fails.
-    match state.working_copy.write(&key.path, &content, flag) {
-        Ok(size) => Ok(size),
-        Err(e) => {
-            // Ideally, we shouldn't need to retry for some failures, but this is the slow path, any
-            // failures not due to a conflicting file would show up here again, so let's not worry
-            // about it.
-            state
-                .working_copy
-                .clear_conflicts(&key.path)
-                .with_context(|| {
-                    format!("Can't clear conflicts after handling error \"{:?}\"", e)
-                })?;
-            state
-                .working_copy
-                .write(&key.path, &content, flag)
-                .with_context(|| format!("Can't write after handling error \"{:?}\"", e))
-        }
-    }
+    state.working_copy.write(&key.path, &content, flag)
 }
 
 fn threaded_writer(

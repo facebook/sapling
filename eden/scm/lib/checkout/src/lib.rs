@@ -166,8 +166,6 @@ impl CheckoutPlan {
     // As of today tokio::fs operations do the same.
     // Since we do multiple fs calls inside, it is beneficial to 'pack'
     // all of them into single spawn_blocking.
-
-    // todo - create directories if needed
     async fn write_file(
         vfs: &VFS,
         path: RepoPathBuf,

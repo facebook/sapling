@@ -181,7 +181,12 @@ impl VFS {
 
     /// Overwrite the content of the file at `path` with `data`. The number of bytes written on
     /// disk will be returned.
-    pub fn write(&self, path: &RepoPath, data: &Bytes, flags: Option<UpdateFlag>) -> Result<usize> {
+    fn write_inner(
+        &self,
+        path: &RepoPath,
+        data: &Bytes,
+        flags: Option<UpdateFlag>,
+    ) -> Result<usize> {
         let filepath = self
             .inner
             .auditor
@@ -192,6 +197,26 @@ impl VFS {
             None => self.write_regular(&filepath, data),
             Some(UpdateFlag::Executable) => self.write_executable(&filepath, data),
             Some(UpdateFlag::Symlink) => self.write_symlink(&filepath, data),
+        }
+    }
+
+    /// Overwrite content of the file, try to clear conflicts if attempt fails
+    ///
+    /// Return an error if fails to overwrite after clearing conflicts, or if clear conflicts fail
+    pub fn write(&self, path: &RepoPath, data: &Bytes, flag: Option<UpdateFlag>) -> Result<usize> {
+        // Fast path: let's try to open the file directly, we'll handle the failure only if this fails.
+        match self.write_inner(path, data, flag) {
+            Ok(size) => Ok(size),
+            Err(e) => {
+                // Ideally, we shouldn't need to retry for some failures, but this is the slow path, any
+                // failures not due to a conflicting file would show up here again, so let's not worry
+                // about it.
+                self.clear_conflicts(path).with_context(|| {
+                    format!("Can't clear conflicts after handling error \"{:?}\"", e)
+                })?;
+                self.write_inner(path, data, flag)
+                    .with_context(|| format!("Can't write after handling error \"{:?}\"", e))
+            }
         }
     }
 
