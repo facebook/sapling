@@ -16,9 +16,10 @@ use futures::{
     future::{FutureExt, TryFutureExt},
 };
 use futures_ext::FutureExt as OldFutureExt;
+use futures_watchdog::WatchdogExt;
 use mononoke_types::{ChangesetId, Generation};
 use mutable_counters::MutableCounters;
-use slog::info;
+use slog::{info, o};
 use std::{sync::Arc, time::Duration};
 
 pub fn blobimport_changeset_warmer(
@@ -64,9 +65,13 @@ pub fn blobimport_changeset_warmer(
         move |ctx: &CoreContext, repo: &BlobRepo, cs_id: &ChangesetId| {
             let mutable_counters = mutable_counters.clone();
             async move {
-                let gen_num = fetch_generation_number(&ctx, &repo, *cs_id).await?;
+                let gen_num = fetch_generation_number(&ctx, &repo, *cs_id)
+                    .watched(ctx.logger())
+                    .await?;
 
-                check_if_present_in_hg(&ctx, &mutable_counters, &repo, gen_num).await
+                check_if_present_in_hg(&ctx, &mutable_counters, &repo, gen_num)
+                    .watched(ctx.logger())
+                    .await
             }
             .boxed()
         },
@@ -119,7 +124,9 @@ pub fn create_derived_data_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer
 
     let is_warm: Box<IsWarmFn> =
         Box::new(|ctx: &CoreContext, repo: &BlobRepo, cs_id: &ChangesetId| {
+            let logger = ctx.logger().new(o!("type" => D::NAME));
             D::is_derived(&ctx, &repo, &cs_id)
+                .watched(logger)
                 .map_err(Error::from)
                 .boxed()
         });

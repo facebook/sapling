@@ -20,6 +20,7 @@ context = { path = "../../server/context", version = "0.1.0" }
 deleted_files_manifest = { path = "../../derived_data/deleted_files_manifest", version = "0.1.0" }
 derived_data = { path = "../../derived_data", version = "0.1.0" }
 fsnodes = { path = "../../derived_data/fsnodes", version = "0.1.0" }
+futures_watchdog = { path = "../../common/futures_watchdog", version = "0.1.0" }
 mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 mutable_counters = { path = "../../mutable_counters", version = "0.1.0" }

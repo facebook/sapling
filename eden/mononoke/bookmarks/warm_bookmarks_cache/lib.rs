@@ -29,6 +29,7 @@ use futures::{
     stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_ext::BoxFuture as OldBoxFuture;
+use futures_watchdog::WatchdogExt;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derived_data::MappedHgChangesetId;
@@ -395,7 +396,9 @@ pub async fn find_all_underived_and_latest_derived(
             }))
             .buffered(100);
 
-        while let Some((maybe_cs_and_ts, is_warm)) = maybe_derived.next().await {
+        while let Some((maybe_cs_and_ts, is_warm)) =
+            maybe_derived.next().watched(ctx.logger()).await
+        {
             if is_warm {
                 return Ok((LatestDerivedBookmarkEntry::Found(maybe_cs_and_ts), res));
             } else {
