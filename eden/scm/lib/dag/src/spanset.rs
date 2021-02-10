@@ -596,13 +596,38 @@ pub struct SpanSetIter<T> {
     back: (isize, u64),
 }
 
+impl<T: AsRef<SpanSet>> SpanSetIter<T> {
+    fn count_remaining(&self) -> u64 {
+        let mut front = self.front;
+        let back = self.back;
+        let mut count = 0;
+        while front <= back {
+            let (vec_id, span_id) = front;
+            let (back_vec_id, back_span_id) = back;
+            if vec_id < back_vec_id {
+                let len = self.span_set.as_ref().spans[vec_id as usize].count();
+                count += len.max(span_id) - span_id;
+                front = (vec_id + 1, 0);
+            } else {
+                count += back_span_id - span_id + 1;
+                front = (vec_id + 1, 0);
+            }
+        }
+        count
+    }
+}
+
 impl<T: AsRef<SpanSet>> Iterator for SpanSetIter<T> {
     type Item = Id;
 
     fn next(&mut self) -> Option<Id> {
         if self.front > self.back {
+            #[cfg(test)]
+            assert_eq!(self.size_hint().0, 0);
             None
         } else {
+            #[cfg(test)]
+            let old_size = self.size_hint().0;
             let (vec_id, span_id) = self.front;
             let span = &self.span_set.as_ref().spans[vec_id as usize];
             self.front = if span_id == span.high.0 - span.low.0 {
@@ -610,16 +635,35 @@ impl<T: AsRef<SpanSet>> Iterator for SpanSetIter<T> {
             } else {
                 (vec_id, span_id + 1)
             };
+            #[cfg(test)]
+            assert_eq!(self.size_hint().0 + 1, old_size);
             Some(span.high - span_id)
         }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.count_remaining() as _;
+        (size, Some(size))
+    }
+
+    fn count(self) -> usize {
+        self.count_remaining() as _
+    }
+
+    fn last(mut self) -> Option<Self::Item> {
+        self.next_back()
     }
 }
 
 impl<T: AsRef<SpanSet>> DoubleEndedIterator for SpanSetIter<T> {
     fn next_back(&mut self) -> Option<Id> {
         if self.front > self.back {
+            #[cfg(test)]
+            assert_eq!(self.size_hint().0, 0);
             None
         } else {
+            #[cfg(test)]
+            let old_size = self.size_hint().0;
             let (vec_id, span_id) = self.back;
             let span = &self.span_set.as_ref().spans[vec_id as usize];
             self.back = if span_id == 0 {
@@ -633,6 +677,8 @@ impl<T: AsRef<SpanSet>> DoubleEndedIterator for SpanSetIter<T> {
             } else {
                 (vec_id, span_id - 1)
             };
+            #[cfg(test)]
+            assert_eq!(self.size_hint().0 + 1, old_size);
             Some(span.high - span_id)
         }
     }
@@ -914,10 +960,13 @@ mod tests {
         let set = SpanSet::empty();
         assert!(set.iter().next().is_none());
         assert!(set.iter().rev().next().is_none());
+        assert_eq!(set.iter().size_hint(), (0, Some(0)));
 
         let set = SpanSet::from(0..=1);
         assert_eq!(set.iter().collect::<Vec<Id>>(), vec![1, 0]);
         assert_eq!(set.iter().rev().collect::<Vec<Id>>(), vec![0, 1]);
+        assert_eq!(set.iter().size_hint(), (2, Some(2)));
+        assert_eq!(set.iter().count(), 2);
 
         let mut iter = set.iter();
         assert!(iter.next().is_some());
@@ -927,6 +976,8 @@ mod tests {
         let set = SpanSet::from_spans(vec![3..=5, 7..=8]);
         assert_eq!(set.iter().collect::<Vec<Id>>(), vec![8, 7, 5, 4, 3]);
         assert_eq!(set.iter().rev().collect::<Vec<Id>>(), vec![3, 4, 5, 7, 8]);
+        assert_eq!(set.iter().size_hint(), (5, Some(5)));
+        assert_eq!(set.iter().last(), Some(Id(3)));
 
         assert_eq!(
             set.clone().into_iter().collect::<Vec<Id>>(),
