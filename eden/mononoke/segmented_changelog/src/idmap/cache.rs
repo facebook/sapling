@@ -13,7 +13,6 @@ use abomonation_derive::Abomonation;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
-use maplit::hashset;
 
 use caching_ext::{
     get_or_fill, CacheDisposition, CacheTtl, CachelibHandler, EntityStore, KeyedEntityStore,
@@ -115,10 +114,19 @@ impl IdMap for CachedIdMap {
         Ok(res)
     }
 
-    async fn find_vertex(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<Vertex>> {
+    async fn find_many_vertexes(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Vertex>> {
         let ctx = (ctx, self);
-        let mut res = get_or_fill(ctx, hashset![cs_id]).await?;
-        Ok(res.remove(&cs_id).map(|w| w.0))
+        let res = get_or_fill(ctx, cs_ids.into_iter().collect())
+            .await
+            .with_context(|| "Error fetching many changeset ids via cache")?
+            .into_iter()
+            .map(|(k, v)| (k, v.0))
+            .collect();
+        Ok(res)
     }
 
     async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(Vertex, ChangesetId)>> {

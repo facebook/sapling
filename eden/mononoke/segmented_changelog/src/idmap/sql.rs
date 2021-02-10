@@ -98,20 +98,24 @@ queries! {
     read SelectManyChangesetIds(
         repo_id: RepositoryId,
         version: IdMapVersion,
-        >list vertex: u64
+        >list vertexes: u64
     ) -> (u64, ChangesetId) {
         "
         SELECT idmap.vertex as vertex, idmap.cs_id as cs_id
         FROM segmented_changelog_idmap AS idmap
-        WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.vertex IN {vertex}
+        WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.vertex IN {vertexes}
         "
     }
 
-    read SelectVertex(repo_id: RepositoryId, version: IdMapVersion, cs_id: ChangesetId) -> (u64) {
+    read SelectManyVertexes(
+        repo_id: RepositoryId,
+        version: IdMapVersion,
+        >list cs_ids: ChangesetId
+    ) -> (ChangesetId, u64) {
         "
-        SELECT idmap.vertex as vertex
+        SELECT idmap.cs_id as cs_id, idmap.vertex as vertex
         FROM segmented_changelog_idmap AS idmap
-        WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.cs_id = {cs_id}
+        WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.cs_id in {cs_ids}
         "
     }
 
@@ -312,24 +316,44 @@ impl IdMap for SqlIdMap {
         Ok(cs_ids)
     }
 
-    async fn find_vertex(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<Vertex>> {
-        STATS::find_vertex.add_value(1);
-        let select = |connection| async move {
-            let rows = SelectVertex::query(connection, &self.repo_id, &self.version, &cs_id)
+    async fn find_many_vertexes(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Vertex>> {
+        let select_vertexes = |connection: &Connection, cs_ids: &[ChangesetId]| {
+            SelectManyVertexes::query(connection, &self.repo_id, &self.version, cs_ids)
                 .compat()
-                .await?;
-            Ok(rows.into_iter().next().map(|r| Vertex(r.0)))
+                .and_then(|rows| {
+                    future::ok(
+                        rows.into_iter()
+                            .map(|row| (row.0, Vertex(row.1)))
+                            .collect::<HashMap<_, _>>(),
+                    )
+                })
         };
+        STATS::find_vertex.add_value(cs_ids.len() as i64);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        match select(&self.connections.read_connection).await? {
-            None => {
-                ctx.perf_counters()
-                    .increment_counter(PerfCounterType::SqlReadsMaster);
-                select(&self.connections.read_master_connection).await
+        let mut vertexes = select_vertexes(&self.connections.read_connection, &cs_ids).await?;
+        let not_found_in_replica: Vec<_> = cs_ids
+            .iter()
+            .filter(|x| !vertexes.contains_key(x))
+            .cloned()
+            .collect();
+        if !not_found_in_replica.is_empty() {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
+            let from_master = select_vertexes(
+                &self.connections.read_master_connection,
+                &not_found_in_replica,
+            )
+            .await?;
+            for (k, v) in from_master {
+                vertexes.insert(k, v);
             }
-            Some(v) => Ok(Some(v)),
         }
+        Ok(vertexes)
     }
 
     async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(Vertex, ChangesetId)>> {
@@ -523,6 +547,48 @@ mod tests {
 
         let res = idmap.find_many_changeset_ids(&ctx, vec![Vertex(0)]).await?;
         assert_eq!(res, hashmap![Vertex(0) => ONES_CSID]);
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_find_many_vertexes(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let idmap = new_sql_idmap()?;
+
+        let response = idmap
+            .find_many_vertexes(&ctx, vec![ONES_CSID, TWOS_CSID, THREES_CSID, FOURS_CSID])
+            .await?;
+        assert!(response.is_empty());
+
+        idmap.insert(&ctx, Vertex(0), AS_CSID).await?;
+        idmap
+            .insert_many(
+                &ctx,
+                vec![
+                    (Vertex(1), ONES_CSID),
+                    (Vertex(2), TWOS_CSID),
+                    (Vertex(3), THREES_CSID),
+                    (Vertex(4), FOURS_CSID),
+                ],
+            )
+            .await?;
+
+        let response = idmap
+            .find_many_vertexes(&ctx, vec![ONES_CSID, TWOS_CSID, THREES_CSID])
+            .await?;
+        assert_eq!(
+            response,
+            hashmap![ONES_CSID => Vertex(1), TWOS_CSID => Vertex(2), THREES_CSID => Vertex(3)]
+        );
+
+        let response = idmap
+            .find_many_vertexes(&ctx, vec![FOURS_CSID, FIVES_CSID])
+            .await?;
+        assert_eq!(response, hashmap![FOURS_CSID => Vertex(4)]);
+
+        let response = idmap.find_many_vertexes(&ctx, vec![FIVES_CSID]).await?;
+        assert!(response.is_empty());
 
         Ok(())
     }

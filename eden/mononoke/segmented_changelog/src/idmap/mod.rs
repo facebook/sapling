@@ -40,7 +40,12 @@ pub trait IdMap: Send + Sync {
         vertexes: Vec<Vertex>,
     ) -> Result<HashMap<Vertex, ChangesetId>>;
 
-    async fn find_vertex(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<Vertex>>;
+
+    async fn find_many_vertexes(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Vertex>>;
 
     async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(Vertex, ChangesetId)>>;
 
@@ -55,8 +60,17 @@ pub trait IdMap: Send + Sync {
         ctx: &CoreContext,
         vertex: Vertex,
     ) -> Result<Option<ChangesetId>> {
-        let result = self.find_many_changeset_ids(ctx, vec![vertex]).await?;
-        Ok(result.get(&vertex).copied())
+        Ok(self
+            .find_many_changeset_ids(ctx, vec![vertex])
+            .await?
+            .remove(&vertex))
+    }
+
+    async fn find_vertex(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<Vertex>> {
+        Ok(self
+            .find_many_vertexes(ctx, vec![cs_id])
+            .await?
+            .remove(&cs_id))
     }
 
     async fn get_changeset_id(&self, ctx: &CoreContext, vertex: Vertex) -> Result<ChangesetId> {
@@ -90,8 +104,12 @@ impl IdMap for Arc<dyn IdMap> {
         (**self).find_many_changeset_ids(ctx, vertexes).await
     }
 
-    async fn find_vertex(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<Vertex>> {
-        (**self).find_vertex(ctx, cs_id).await
+    async fn find_many_vertexes(
+        &self,
+        ctx: &CoreContext,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Vertex>> {
+        (**self).find_many_vertexes(ctx, cs_ids).await
     }
 
     async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(Vertex, ChangesetId)>> {
