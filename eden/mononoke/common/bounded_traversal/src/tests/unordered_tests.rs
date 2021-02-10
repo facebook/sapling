@@ -366,6 +366,52 @@ where
     Ok(())
 }
 
+// Test the parents observed for each item.
+// This is similar to check_stream_unfold_ticks, but it assumes test_fn is putting the parent id
+// in the log instead of the tick number
+async fn check_stream_unfold_parents<TestFn, Outs>(test_fn: TestFn) -> Result<(), Error>
+where
+    TestFn: FnOnce(Tree, Tick, StateLog<BTreeSet<usize>>) -> Outs,
+    Outs: Stream<Item = Result<usize, Error>> + Send + 'static,
+{
+    let tree = build_tree();
+
+    let tick = Tick::new();
+    let log: StateLog<BTreeSet<usize>> = StateLog::new();
+    let reference: StateLog<BTreeSet<usize>> = StateLog::new();
+
+    let traverse = test_fn(tree, tick.clone(), log.clone())
+        .try_collect::<BTreeSet<usize>>()
+        .boxed();
+    let handle = tokio::spawn(traverse);
+
+    yield_now().await;
+    assert_eq!(log, reference);
+
+    tick.tick().await;
+    reference.unfold(0, 0);
+    assert_eq!(log, reference);
+
+    // Important part of this is that 2 unfold per tick if possible
+    // and that tree structure matches the diagram above
+    tick.tick().await;
+    reference.unfold(1, 0);
+    reference.unfold(2, 0);
+    assert_eq!(log, reference);
+
+    tick.tick().await;
+    reference.unfold(4, 2);
+    reference.unfold(5, 1);
+    assert_eq!(log, reference);
+
+    tick.tick().await;
+    reference.unfold(3, 2);
+    assert_eq!(log, reference);
+
+    assert_eq!(handle.await??, (0..6).collect::<BTreeSet<_>>());
+    Ok(())
+}
+
 #[tokio::test]
 async fn test_bounded_traversal_stream_ticks() -> Result<(), Error> {
     check_stream_unfold_ticks(|tree, tick, log| {
@@ -376,6 +422,23 @@ async fn test_bounded_traversal_stream_ticks() -> Result<(), Error> {
                 tick.sleep(1).map(move |now| {
                     log.unfold(id, now);
                     Ok::<_, Error>((id, children))
+                })
+            }
+        })
+    })
+    .await
+}
+
+#[tokio::test]
+async fn test_bounded_traversal_stream_parents() -> Result<(), Error> {
+    check_stream_unfold_parents(|tree, tick, log| {
+        bounded_traversal_stream(2, Some((tree, 0)), {
+            cloned!(tick, log);
+            move |(Tree { id, children }, parent)| {
+                cloned!(log);
+                tick.sleep(1).map(move |_now| {
+                    log.unfold(id, parent);
+                    Ok::<_, Error>((id, children.into_iter().map(move |i| (i, id))))
                 })
             }
         })
