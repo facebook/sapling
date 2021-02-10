@@ -72,10 +72,10 @@ bool operator==(const timespec& ts, std::chrono::system_clock::time_point tp) {
 
 namespace {
 
-Dispatcher::Attr getFileAttr(const FileInodePtr& inode) {
+FuseDispatcher::Attr getFileAttr(const FileInodePtr& inode) {
   auto attrFuture =
       inode->stat(ObjectFetchContext::getNullContext())
-          .thenValue([](struct stat st) { return Dispatcher::Attr{st}; });
+          .thenValue([](struct stat st) { return FuseDispatcher::Attr{st}; });
   // We unfortunately can't use an ASSERT_* check here, since it tries
   // to return from the function normally, rather than throwing.
   if (!attrFuture.isReady()) {
@@ -87,7 +87,7 @@ Dispatcher::Attr getFileAttr(const FileInodePtr& inode) {
   return std::move(attrFuture).get();
 }
 
-Dispatcher::Attr setFileAttr(
+FuseDispatcher::Attr setFileAttr(
     const FileInodePtr& inode,
     const fuse_setattr_in& desired) {
   auto attrFuture = inode->setattr(desired);
@@ -101,7 +101,9 @@ Dispatcher::Attr setFileAttr(
 /**
  * Helper function used by BASIC_ATTR_XCHECKS()
  */
-void basicAttrChecks(const FileInodePtr& inode, const Dispatcher::Attr& attr) {
+void basicAttrChecks(
+    const FileInodePtr& inode,
+    const FuseDispatcher::Attr& attr) {
   EXPECT_EQ(inode->getNodeId().getRawValue(), attr.st.st_ino);
   EXPECT_EQ(1, attr.st.st_nlink);
   EXPECT_EQ(inode->getMount()->getOwner().uid, attr.st.st_uid);

@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/fuse/FuseDispatcher.h"
 
 #include <folly/Exception.h>
 #include <folly/Format.h>
@@ -23,10 +23,10 @@ using namespace folly;
 namespace facebook {
 namespace eden {
 
-Dispatcher::Attr::Attr(const struct stat& st, uint64_t timeout)
+FuseDispatcher::Attr::Attr(const struct stat& st, uint64_t timeout)
     : st(st), timeout_seconds(timeout) {}
 
-fuse_attr_out Dispatcher::Attr::asFuseAttr() const {
+fuse_attr_out FuseDispatcher::Attr::asFuseAttr() const {
   // Ensure that we initialize the members to zeroes;
   // This is important on macOS where there are a couple
   // of additional fields (notably `flags`) that influence
@@ -55,17 +55,17 @@ fuse_attr_out Dispatcher::Attr::asFuseAttr() const {
   return result;
 }
 
-Dispatcher::~Dispatcher() {}
+FuseDispatcher::~FuseDispatcher() {}
 
-Dispatcher::Dispatcher(EdenStats* stats) : stats_(stats) {}
+FuseDispatcher::FuseDispatcher(EdenStats* stats) : stats_(stats) {}
 
-void Dispatcher::initConnection(const fuse_init_out& out) {
+void FuseDispatcher::initConnection(const fuse_init_out& out) {
   connInfo_ = out;
 }
 
-void Dispatcher::destroy() {}
+void FuseDispatcher::destroy() {}
 
-folly::Future<fuse_entry_out> Dispatcher::lookup(
+folly::Future<fuse_entry_out> FuseDispatcher::lookup(
     uint64_t /*requestID*/,
     InodeNumber /*parent*/,
     PathComponentPiece /*name*/,
@@ -73,28 +73,28 @@ folly::Future<fuse_entry_out> Dispatcher::lookup(
   throwSystemErrorExplicit(ENOENT);
 }
 
-void Dispatcher::forget(InodeNumber /*ino*/, unsigned long /*nlookup*/) {}
+void FuseDispatcher::forget(InodeNumber /*ino*/, unsigned long /*nlookup*/) {}
 
-folly::Future<Dispatcher::Attr> Dispatcher::getattr(
+folly::Future<FuseDispatcher::Attr> FuseDispatcher::getattr(
     InodeNumber /*ino*/,
     ObjectFetchContext& /*context*/) {
   throwSystemErrorExplicit(ENOENT);
 }
 
-folly::Future<Dispatcher::Attr> Dispatcher::setattr(
+folly::Future<FuseDispatcher::Attr> FuseDispatcher::setattr(
     InodeNumber /*ino*/,
     const fuse_setattr_in& /*attr*/
 ) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<std::string> Dispatcher::readlink(
+folly::Future<std::string> FuseDispatcher::readlink(
     InodeNumber /*ino*/,
     bool /*kernelCachesReadlink*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<fuse_entry_out> Dispatcher::mknod(
+folly::Future<fuse_entry_out> FuseDispatcher::mknod(
     InodeNumber /*parent*/,
     PathComponentPiece /*name*/,
     mode_t /*mode*/,
@@ -103,24 +103,28 @@ folly::Future<fuse_entry_out> Dispatcher::mknod(
 }
 
 folly::Future<fuse_entry_out>
-Dispatcher::mkdir(InodeNumber, PathComponentPiece, mode_t) {
+FuseDispatcher::mkdir(InodeNumber, PathComponentPiece, mode_t) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> Dispatcher::unlink(InodeNumber, PathComponentPiece) {
+folly::Future<folly::Unit> FuseDispatcher::unlink(
+    InodeNumber,
+    PathComponentPiece) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> Dispatcher::rmdir(InodeNumber, PathComponentPiece) {
+folly::Future<folly::Unit> FuseDispatcher::rmdir(
+    InodeNumber,
+    PathComponentPiece) {
   FUSELL_NOT_IMPL();
 }
 
 folly::Future<fuse_entry_out>
-Dispatcher::symlink(InodeNumber, PathComponentPiece, folly::StringPiece) {
+FuseDispatcher::symlink(InodeNumber, PathComponentPiece, folly::StringPiece) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> Dispatcher::rename(
+folly::Future<folly::Unit> FuseDispatcher::rename(
     InodeNumber,
     PathComponentPiece,
     InodeNumber,
@@ -129,33 +133,35 @@ folly::Future<folly::Unit> Dispatcher::rename(
 }
 
 folly::Future<fuse_entry_out>
-Dispatcher::link(InodeNumber, InodeNumber, PathComponentPiece) {
+FuseDispatcher::link(InodeNumber, InodeNumber, PathComponentPiece) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<uint64_t> Dispatcher::open(InodeNumber /*ino*/, int /*flags*/) {
-  FUSELL_NOT_IMPL();
-}
-
-folly::Future<folly::Unit> Dispatcher::release(
-    InodeNumber /*ino*/,
-    uint64_t /*fh*/) {
-  FUSELL_NOT_IMPL();
-}
-
-folly::Future<uint64_t> Dispatcher::opendir(
+folly::Future<uint64_t> FuseDispatcher::open(
     InodeNumber /*ino*/,
     int /*flags*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> Dispatcher::releasedir(
+folly::Future<folly::Unit> FuseDispatcher::release(
     InodeNumber /*ino*/,
     uint64_t /*fh*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<BufVec> Dispatcher::read(
+folly::Future<uint64_t> FuseDispatcher::opendir(
+    InodeNumber /*ino*/,
+    int /*flags*/) {
+  FUSELL_NOT_IMPL();
+}
+
+folly::Future<folly::Unit> FuseDispatcher::releasedir(
+    InodeNumber /*ino*/,
+    uint64_t /*fh*/) {
+  FUSELL_NOT_IMPL();
+}
+
+folly::Future<BufVec> FuseDispatcher::read(
     InodeNumber /*ino*/,
     size_t /*size*/,
     off_t /*off*/,
@@ -163,29 +169,31 @@ folly::Future<BufVec> Dispatcher::read(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<size_t>
-Dispatcher::write(InodeNumber /*ino*/, StringPiece /*data*/, off_t /*off*/) {
+folly::Future<size_t> FuseDispatcher::write(
+    InodeNumber /*ino*/,
+    StringPiece /*data*/,
+    off_t /*off*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> Dispatcher::flush(InodeNumber, uint64_t) {
+folly::Future<folly::Unit> FuseDispatcher::flush(InodeNumber, uint64_t) {
   FUSELL_NOT_IMPL();
 }
 
 folly::Future<folly::Unit>
-Dispatcher::fallocate(InodeNumber, uint64_t, uint64_t) {
+FuseDispatcher::fallocate(InodeNumber, uint64_t, uint64_t) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> Dispatcher::fsync(InodeNumber, bool) {
+folly::Future<folly::Unit> FuseDispatcher::fsync(InodeNumber, bool) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> Dispatcher::fsyncdir(InodeNumber, bool) {
+folly::Future<folly::Unit> FuseDispatcher::fsyncdir(InodeNumber, bool) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<DirList> Dispatcher::readdir(
+folly::Future<DirList> FuseDispatcher::readdir(
     InodeNumber,
     DirList&&,
     off_t,
@@ -194,7 +202,7 @@ folly::Future<DirList> Dispatcher::readdir(
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<struct fuse_kstatfs> Dispatcher::statfs(InodeNumber /*ino*/) {
+folly::Future<struct fuse_kstatfs> FuseDispatcher::statfs(InodeNumber /*ino*/) {
   struct fuse_kstatfs info = {};
 
   // Suggest a large blocksize to software that looks at that kind of thing
@@ -216,7 +224,7 @@ folly::Future<struct fuse_kstatfs> Dispatcher::statfs(InodeNumber /*ino*/) {
   return info;
 }
 
-folly::Future<folly::Unit> Dispatcher::setxattr(
+folly::Future<folly::Unit> FuseDispatcher::setxattr(
     InodeNumber /*ino*/,
     folly::StringPiece /*name*/,
     folly::StringPiece /*value*/,
@@ -224,7 +232,7 @@ folly::Future<folly::Unit> Dispatcher::setxattr(
   FUSELL_NOT_IMPL();
 }
 
-const int Dispatcher::kENOATTR =
+const int FuseDispatcher::kENOATTR =
 #ifndef ENOATTR
     ENODATA // Linux
 #else
@@ -232,24 +240,24 @@ const int Dispatcher::kENOATTR =
 #endif
     ;
 
-folly::Future<std::string> Dispatcher::getxattr(
+folly::Future<std::string> FuseDispatcher::getxattr(
     InodeNumber /*ino*/,
     folly::StringPiece /*name*/) {
   throwSystemErrorExplicit(kENOATTR);
 }
 
-folly::Future<std::vector<std::string>> Dispatcher::listxattr(
+folly::Future<std::vector<std::string>> FuseDispatcher::listxattr(
     InodeNumber /*ino*/) {
   return std::vector<std::string>();
 }
 
-folly::Future<folly::Unit> Dispatcher::removexattr(
+folly::Future<folly::Unit> FuseDispatcher::removexattr(
     InodeNumber /*ino*/,
     folly::StringPiece /*name*/) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> Dispatcher::access(
+folly::Future<folly::Unit> FuseDispatcher::access(
     InodeNumber /*ino*/,
     int /*mask*/) {
   // Note that if you mount with the "default_permissions" kernel mount option,
@@ -262,20 +270,22 @@ folly::Future<folly::Unit> Dispatcher::access(
 }
 
 folly::Future<fuse_entry_out>
-Dispatcher::create(InodeNumber, PathComponentPiece, mode_t, int) {
+FuseDispatcher::create(InodeNumber, PathComponentPiece, mode_t, int) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<uint64_t>
-Dispatcher::bmap(InodeNumber /*ino*/, size_t /*blocksize*/, uint64_t /*idx*/) {
+folly::Future<uint64_t> FuseDispatcher::bmap(
+    InodeNumber /*ino*/,
+    size_t /*blocksize*/,
+    uint64_t /*idx*/) {
   FUSELL_NOT_IMPL();
 }
 
-const fuse_init_out& Dispatcher::getConnInfo() const {
+const fuse_init_out& FuseDispatcher::getConnInfo() const {
   return connInfo_;
 }
 
-EdenStats* Dispatcher::getStats() const {
+EdenStats* FuseDispatcher::getStats() const {
   return stats_;
 }
 

@@ -15,8 +15,8 @@
 #include <gflags/gflags.h>
 #include <signal.h>
 #include <sysexits.h>
-#include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
 #include "eden/fs/store/ObjectStore.h"
@@ -36,10 +36,10 @@ DEFINE_int32(numFuseThreads, 4, "The number of FUSE worker threads");
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2,eden.fs.fuse=DBG7");
 
 namespace {
-class TestDispatcher : public Dispatcher {
+class TestDispatcher : public FuseDispatcher {
  public:
   TestDispatcher(EdenStats* stats, const UserInfo& identity)
-      : Dispatcher(stats), identity_(identity) {}
+      : FuseDispatcher(stats), identity_(identity) {}
 
   folly::Future<Attr> getattr(InodeNumber ino, ObjectFetchContext& /*context*/)
       override {
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
           .get(100ms);
 
   EdenStats stats;
-  TestDispatcher dispatcher(&stats, identity);
+  auto dispatcher = std::make_unique<TestDispatcher>(&stats, identity);
 
   folly::Logger straceLogger{"eden.strace"};
 
@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
       std::move(fuseDevice),
       mountPath,
       FLAGS_numFuseThreads,
-      &dispatcher,
+      std::move(dispatcher),
       &straceLogger,
       std::make_shared<ProcessNameCache>()));
 

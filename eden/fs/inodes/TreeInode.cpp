@@ -204,8 +204,8 @@ folly::Future<struct stat> TreeInode::stat(ObjectFetchContext& /*context*/) {
 }
 
 #ifndef _WIN32
-Dispatcher::Attr TreeInode::getAttrLocked(const DirContents& contents) {
-  Dispatcher::Attr attr(getMount()->initStatData());
+FuseDispatcher::Attr TreeInode::getAttrLocked(const DirContents& contents) {
+  FuseDispatcher::Attr attr(getMount()->initStatData());
 
   attr.st.st_ino = getNodeId().get();
   getMetadataLocked(contents).applyToStat(attr.st);
@@ -3555,10 +3555,10 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
       });
 }
 
-folly::Future<Dispatcher::Attr> TreeInode::setattr(
+folly::Future<FuseDispatcher::Attr> TreeInode::setattr(
     const fuse_setattr_in& attr) {
   materialize();
-  Dispatcher::Attr result(getMount()->initStatData());
+  FuseDispatcher::Attr result(getMount()->initStatData());
 
   // We do not have size field for directories and currently TreeInode does not
   // have any field like FileInode::state_::mode to set the mode. May be in the

@@ -20,7 +20,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
-#include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/inodes/InodeMetadata.h"
 #endif
 
@@ -133,7 +133,7 @@ class InodeBase {
 
 #ifndef _WIN32
   // See Dispatcher::setattr
-  virtual folly::Future<Dispatcher::Attr> setattr(
+  virtual folly::Future<FuseDispatcher::Attr> setattr(
       const fuse_setattr_in& attr) = 0;
 
   FOLLY_NODISCARD folly::Future<folly::Unit>

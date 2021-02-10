@@ -38,10 +38,10 @@ struct LookupResult {
   std::function<void()> incFsRefcount;
 };
 
-class Dispatcher {
+class PrjfsDispatcher {
  public:
-  virtual ~Dispatcher();
-  explicit Dispatcher(EdenStats* stats);
+  virtual ~PrjfsDispatcher();
+  explicit PrjfsDispatcher(EdenStats* stats);
 
   EdenStats* getStats() const;
 

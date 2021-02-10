@@ -19,7 +19,7 @@
 #include <sys/types.h>
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/inodes/EdenDispatcher.h"
+#include "eden/fs/inodes/EdenDispatcherFactory.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -209,6 +209,9 @@ void TestMount::createMount() {
       blobCache_,
       serverState_,
       std::move(journal));
+#ifndef _WIN32
+  dispatcher_ = EdenDispatcherFactory::makeFuseDispatcher(edenMount_.get());
+#endif
 }
 
 #ifndef _WIN32
@@ -256,8 +259,8 @@ void TestMount::initTestDirectory() {
 }
 
 #ifndef _WIN32
-Dispatcher* TestMount::getDispatcher() const {
-  return edenMount_->getDispatcher();
+FuseDispatcher* TestMount::getDispatcher() const {
+  return dispatcher_.get();
 }
 
 void TestMount::startFuseAndWait(std::shared_ptr<FakeFuse> fuse) {

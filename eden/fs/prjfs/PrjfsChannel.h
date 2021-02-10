@@ -13,6 +13,7 @@
 
 #include <ProjectedFSLib.h> // @manual
 #include "eden/fs/prjfs/Enumerator.h"
+#include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
@@ -21,7 +22,6 @@
 namespace facebook {
 namespace eden {
 class EdenMount;
-class Dispatcher;
 class Notifications;
 class PrjfsChannelInner;
 class PrjfsRequestContext;
@@ -34,7 +34,7 @@ using RcuLockedPtr = RcuPtr<PrjfsChannelInner, RcuTag>::RcuLockedPtr;
 class PrjfsChannelInner {
  public:
   PrjfsChannelInner(
-      Dispatcher* const dispatcher,
+      std::unique_ptr<PrjfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       ProcessAccessLog& processAccessLog,
       folly::Duration requestTimeout,
@@ -165,7 +165,7 @@ class PrjfsChannelInner {
   // Internal ProjectedFS channel used to communicate with ProjectedFS.
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
 
-  Dispatcher* const dispatcher_{nullptr};
+  std::unique_ptr<PrjfsDispatcher> dispatcher_;
   const folly::Logger* const straceLogger_{nullptr};
 
   // The processAccessLog_ is owned by PrjfsChannel which is guaranteed to have
@@ -189,7 +189,7 @@ class PrjfsChannel {
 
   PrjfsChannel(
       AbsolutePathPiece mountPath,
-      Dispatcher* const dispatcher,
+      std::unique_ptr<PrjfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout,

@@ -14,12 +14,11 @@
 #include <condition_variable>
 #include <unordered_map>
 
-#include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /**
  * A FUSE Dispatcher implementation for use in unit tests.
@@ -27,7 +26,7 @@ namespace eden {
  * It allows the test code to generate responses to specific requests on
  * demand.
  */
-class TestDispatcher : public Dispatcher {
+class TestDispatcher : public FuseDispatcher {
  public:
   /**
    * Data for a pending FUSE_LOOKUP request.
@@ -41,7 +40,7 @@ class TestDispatcher : public Dispatcher {
     folly::Promise<fuse_entry_out> promise;
   };
 
-  using Dispatcher::Dispatcher;
+  using FuseDispatcher::FuseDispatcher;
 
   folly::Future<fuse_entry_out> lookup(
       uint64_t requestID,
@@ -68,5 +67,4 @@ class TestDispatcher : public Dispatcher {
   std::condition_variable requestReceived_;
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

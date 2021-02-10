@@ -191,7 +191,7 @@ class TestMount {
   }
 
 #ifndef _WIN32
-  Dispatcher* getDispatcher() const;
+  FuseDispatcher* getDispatcher() const;
 #endif // !_WIN32
 
   /**
@@ -362,6 +362,9 @@ class TestMount {
   std::optional<folly::test::TemporaryDirectory> testDir_;
 
   std::shared_ptr<EdenMount> edenMount_;
+#ifndef _WIN32
+  std::unique_ptr<FuseDispatcher> dispatcher_;
+#endif
   std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<FakeBackingStore> backingStore_;
   std::shared_ptr<EdenStats> stats_;

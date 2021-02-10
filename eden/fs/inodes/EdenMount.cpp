@@ -23,7 +23,7 @@
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/CheckoutContext.h"
-#include "eden/fs/inodes/EdenDispatcher.h"
+#include "eden/fs/inodes/EdenDispatcherFactory.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -200,7 +200,6 @@ EdenMount::EdenMount(
     : config_{std::move(config)},
       serverState_{std::move(serverState)},
       inodeMap_{new InodeMap(this)},
-      dispatcher_{new EdenDispatcher(this)},
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
@@ -1233,7 +1232,7 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                     readOnly]() -> folly::Future<PrjfsChannel*> {
                      auto channel = new PrjfsChannel(
                          mountPath,
-                         getDispatcher(),
+                         EdenDispatcherFactory::makePrjfsDispatcher(this),
                          &getStraceLogger(),
                          serverState_->getProcessNameCache(),
                          std::chrono::duration_cast<folly::Duration>(
@@ -1275,7 +1274,7 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                 return nfsServer->registerMount(
                     mountPath,
                     getRootInode()->getNodeId(),
-                    getDispatcher(),
+                    nullptr, // TODO(xavierd): Add makeNfsDispatcher()
                     &getStraceLogger(),
                     serverState_->getProcessNameCache(),
                     std::chrono::duration_cast<folly::Duration>(
@@ -1363,7 +1362,7 @@ void EdenMount::createChannel(EdenMount::channelType channel) {
       std::move(channel),
       getPath(),
       FLAGS_fuseNumThreads,
-      dispatcher_.get(),
+      EdenDispatcherFactory::makeFuseDispatcher(this),
       &straceLogger_,
       serverState_->getProcessNameCache(),
       std::chrono::duration_cast<folly::Duration>(

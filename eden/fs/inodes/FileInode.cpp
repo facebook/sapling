@@ -426,19 +426,19 @@ FileInode::FileInode(
       state_(folly::in_place) {}
 
 #ifndef _WIN32
-folly::Future<Dispatcher::Attr> FileInode::setattr(
+folly::Future<FuseDispatcher::Attr> FileInode::setattr(
     const fuse_setattr_in& attr) {
   // If this file is inside of .eden it cannot be reparented, so getParentRacy()
   // is okay.
   auto parent = getParentRacy();
   if (parent && parent->getNodeId() == getMount()->getDotEdenInodeNumber()) {
-    return folly::makeFuture<Dispatcher::Attr>(
+    return folly::makeFuture<FuseDispatcher::Attr>(
         InodeError(EPERM, inodePtrFromThis()));
   }
 
   auto setAttrs = [self = inodePtrFromThis(), attr](LockedState&& state) {
     auto ino = self->getNodeId();
-    auto result = Dispatcher::Attr{self->getMount()->initStatData()};
+    auto result = FuseDispatcher::Attr{self->getMount()->initStatData()};
 
     XDCHECK_EQ(State::MATERIALIZED_IN_OVERLAY, state->tag)
         << "Must have a file in the overlay at this point";

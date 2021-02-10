@@ -7,14 +7,14 @@
 
 #ifdef _WIN32
 
-#include "eden/fs/prjfs/Dispatcher.h"
+#include "eden/fs/prjfs/PrjfsDispatcher.h"
 
 namespace facebook::eden {
-Dispatcher::~Dispatcher() {}
+PrjfsDispatcher::~PrjfsDispatcher() {}
 
-Dispatcher::Dispatcher(EdenStats* stats) : stats_(stats) {}
+PrjfsDispatcher::PrjfsDispatcher(EdenStats* stats) : stats_(stats) {}
 
-EdenStats* Dispatcher::getStats() const {
+EdenStats* PrjfsDispatcher::getStats() const {
   return stats_;
 }
 } // namespace facebook::eden

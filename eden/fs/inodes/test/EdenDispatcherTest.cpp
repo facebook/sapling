@@ -7,7 +7,7 @@
 
 #ifndef _WIN32
 
-#include "eden/fs/inodes/EdenDispatcher.h"
+#include "eden/fs/fuse/FuseDispatcher.h"
 
 #include <folly/experimental/TestUtil.h>
 #include <folly/test/TestUtils.h>

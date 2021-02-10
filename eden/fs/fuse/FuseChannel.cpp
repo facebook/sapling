@@ -16,7 +16,7 @@
 #include <signal.h>
 #include <type_traits>
 #include "eden/fs/fuse/DirList.h"
-#include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/FuseRequestContext.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/IDGen.h"
@@ -769,14 +769,14 @@ FuseChannel::FuseChannel(
     folly::File&& fuseDevice,
     AbsolutePathPiece mountPath,
     size_t numThreads,
-    Dispatcher* dispatcher,
+    std::unique_ptr<FuseDispatcher> dispatcher,
     folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration requestTimeout,
     Notifications* notifications)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       numThreads_(numThreads),
-      dispatcher_(dispatcher),
+      dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
       mountPath_(mountPath),
       requestTimeout_(requestTimeout),
@@ -1437,9 +1437,9 @@ void FuseChannel::readInitPacket(bool caseSensitive) {
   // to update without synchronization.
   connInfo_ = connInfo;
 
-  // Send the INIT reply before informing the Dispatcher or signalling
+  // Send the INIT reply before informing the FuseDispatcher or signalling
   // initPromise_, so that the kernel will put the mount point in use and will
-  // not block further filesystem access on us while running the Dispatcher
+  // not block further filesystem access on us while running the FuseDispatcher
   // callback code.
 #ifdef __linux__
   static_assert(
@@ -1826,7 +1826,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
     ByteRange /*arg*/) {
   XLOG(DBG7) << "FUSE_GETATTR inode=" << header.nodeid;
   return dispatcher_->getattr(InodeNumber{header.nodeid}, request)
-      .thenValue([&request](Dispatcher::Attr attr) {
+      .thenValue([&request](FuseDispatcher::Attr attr) {
         request.sendReply(attr.asFuseAttr());
       });
 }
@@ -1838,7 +1838,7 @@ folly::Future<folly::Unit> FuseChannel::fuseSetAttr(
   const auto setattr = reinterpret_cast<const fuse_setattr_in*>(arg.data());
   XLOG(DBG7) << "FUSE_SETATTR inode=" << header.nodeid;
   return dispatcher_->setattr(InodeNumber{header.nodeid}, *setattr)
-      .thenValue([&request](Dispatcher::Attr attr) {
+      .thenValue([&request](FuseDispatcher::Attr attr) {
         request.sendReply(attr.asFuseAttr());
       });
 }

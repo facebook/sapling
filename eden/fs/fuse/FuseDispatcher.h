@@ -21,8 +21,7 @@ template <class T>
 class Future;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 #define FUSELL_NOT_IMPL()                                               \
   do {                                                                  \
@@ -31,17 +30,16 @@ namespace eden {
   } while (0)
 
 class DirList;
-class Dispatcher;
 class EdenStats;
 
-class Dispatcher {
+class FuseDispatcher {
   fuse_init_out connInfo_{};
   EdenStats* stats_{nullptr};
 
  public:
-  virtual ~Dispatcher();
+  virtual ~FuseDispatcher();
 
-  explicit Dispatcher(EdenStats* stats);
+  explicit FuseDispatcher(EdenStats* stats);
   EdenStats* getStats() const;
 
   const fuse_init_out& getConnInfo() const;
@@ -465,5 +463,4 @@ class Dispatcher {
   bmap(InodeNumber ino, size_t blocksize, uint64_t idx);
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

@@ -10,7 +10,7 @@
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>
-#include "eden/fs/prjfs/Dispatcher.h"
+#include "eden/fs/prjfs/PrjfsDispatcher.h"
 #include "eden/fs/prjfs/PrjfsRequestContext.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Guid.h"
@@ -154,12 +154,12 @@ HRESULT notification(
 } // namespace
 
 PrjfsChannelInner::PrjfsChannelInner(
-    Dispatcher* const dispatcher,
+    std::unique_ptr<PrjfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
     ProcessAccessLog& processAccessLog,
     folly::Duration requestTimeout,
     Notifications* notifications)
-    : dispatcher_(dispatcher),
+    : dispatcher_(std::move(dispatcher)),
       straceLogger_(straceLogger),
       processAccessLog_(processAccessLog),
       requestTimeout_(requestTimeout),
@@ -579,7 +579,7 @@ HRESULT PrjfsChannelInner::getFileData(
 }
 
 namespace {
-typedef folly::Future<folly::Unit> (Dispatcher::*NotificationHandler)(
+typedef folly::Future<folly::Unit> (PrjfsDispatcher::*NotificationHandler)(
     RelativePath oldPath,
     RelativePath destPath,
     bool isDirectory,
@@ -657,43 +657,43 @@ const std::unordered_map<PRJ_NOTIFICATION, NotificationHandlerEntry>
     notificationHandlerMap = {
         {
             PRJ_NOTIFICATION_NEW_FILE_CREATED,
-            {&Dispatcher::newFileCreated,
+            {&PrjfsDispatcher::newFileCreated,
              newFileCreatedRenderer,
              &ChannelThreadStats::newFileCreated},
         },
         {
             PRJ_NOTIFICATION_FILE_OVERWRITTEN,
-            {&Dispatcher::fileOverwritten,
+            {&PrjfsDispatcher::fileOverwritten,
              fileOverwrittenRenderer,
              &ChannelThreadStats::fileOverwritten},
         },
         {
             PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
-            {&Dispatcher::fileHandleClosedFileModified,
+            {&PrjfsDispatcher::fileHandleClosedFileModified,
              fileHandleClosedFileModifiedRenderer,
              &ChannelThreadStats::fileHandleClosedFileModified},
         },
         {
             PRJ_NOTIFICATION_FILE_RENAMED,
-            {&Dispatcher::fileRenamed,
+            {&PrjfsDispatcher::fileRenamed,
              fileRenamedRenderer,
              &ChannelThreadStats::fileRenamed},
         },
         {
             PRJ_NOTIFICATION_PRE_RENAME,
-            {&Dispatcher::preRename,
+            {&PrjfsDispatcher::preRename,
              preRenamedRenderer,
              &ChannelThreadStats::preRenamed},
         },
         {
             PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
-            {&Dispatcher::fileHandleClosedFileDeleted,
+            {&PrjfsDispatcher::fileHandleClosedFileDeleted,
              fileHandleClosedFileDeletedRenderer,
              &ChannelThreadStats::fileHandleClosedFileDeleted},
         },
         {
             PRJ_NOTIFICATION_PRE_SET_HARDLINK,
-            {&Dispatcher::preSetHardlink,
+            {&PrjfsDispatcher::preSetHardlink,
              preSetHardlinkRenderer,
              &ChannelThreadStats::preSetHardlink},
         },
@@ -732,7 +732,7 @@ HRESULT PrjfsChannelInner::notification(
       context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
 
       FB_LOG(getStraceLogger(), DBG7, renderer(relPath, destPath, isDirectory));
-      return (dispatcher_->*handler)(
+      return (dispatcher_.get()->*handler)(
                  std::move(relPath), std::move(destPath), isDirectory, *context)
           .thenValue([context = std::move(context)](auto&&) {
             context->sendNotificationSuccess();
@@ -776,7 +776,7 @@ folly::Indestructible<folly::rcu_domain<detail::RcuTag>> prjfsRcuDomain;
 
 PrjfsChannel::PrjfsChannel(
     AbsolutePathPiece mountPath,
-    Dispatcher* const dispatcher,
+    std::unique_ptr<PrjfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration requestTimeout,
@@ -787,7 +787,7 @@ PrjfsChannel::PrjfsChannel(
       processAccessLog_(std::move(processNameCache)),
       inner_(
           *prjfsRcuDomain,
-          dispatcher,
+          std::move(dispatcher),
           straceLogger,
           processAccessLog_,
           requestTimeout,

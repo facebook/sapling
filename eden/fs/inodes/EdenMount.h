@@ -33,7 +33,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
-#include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #else
@@ -65,7 +64,6 @@ class CheckoutConfig;
 class CheckoutConflict;
 class Clock;
 class DiffContext;
-class EdenDispatcher;
 class FuseChannel;
 class FuseDeviceUnmountedDuringInitialization;
 class DiffCallback;
@@ -324,13 +322,6 @@ class EdenMount {
    */
   BlobAccess* getBlobAccess() {
     return &blobAccess_;
-  }
-
-  /**
-   * Return the EdenDispatcher used for this mount.
-   */
-  EdenDispatcher* getDispatcher() const {
-    return dispatcher_.get();
   }
 
   /**
@@ -843,8 +834,6 @@ class EdenMount {
   std::shared_ptr<ServerState> serverState_;
 
   std::unique_ptr<InodeMap> inodeMap_;
-
-  std::unique_ptr<EdenDispatcher> dispatcher_;
 
   std::shared_ptr<ObjectStore> objectStore_;
   std::shared_ptr<BlobCache> blobCache_;

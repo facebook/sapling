@@ -25,6 +25,7 @@
 #include <variant>
 #include <vector>
 
+#include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
@@ -38,7 +39,6 @@ struct Unit;
 
 namespace facebook::eden {
 
-class Dispatcher;
 class Notifications;
 class FuseRequestContext;
 
@@ -202,7 +202,7 @@ class FuseChannel {
       folly::File&& fuseDevice,
       AbsolutePathPiece mountPath,
       size_t numThreads,
-      Dispatcher* const dispatcher,
+      std::unique_ptr<FuseDispatcher> dispatcher,
       folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout = std::chrono::seconds(60),
@@ -714,7 +714,7 @@ class FuseChannel {
    */
   const size_t bufferSize_{0};
   const size_t numThreads_;
-  Dispatcher* const dispatcher_;
+  std::unique_ptr<FuseDispatcher> dispatcher_;
   folly::Logger* const straceLogger_;
   const AbsolutePath mountPath_;
   const folly::Duration requestTimeout_;

@@ -12,7 +12,7 @@
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 #include <unordered_map>
-#include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/fuse/FuseDispatcher.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/TestDispatcher.h"
@@ -66,11 +66,13 @@ class FuseChannelTest : public ::testing::Test {
  protected:
   unique_ptr<FuseChannel, FuseChannelDeleter> createChannel(
       size_t numThreads = 2) {
+    auto testDispatcher = std::make_unique<TestDispatcher>(&stats_);
+    dispatcher_ = testDispatcher.get();
     return unique_ptr<FuseChannel, FuseChannelDeleter>(new FuseChannel(
         fuse_.start(),
         mountPath_,
         numThreads,
-        &dispatcher_,
+        std::move(testDispatcher),
         &straceLogger,
         std::make_shared<ProcessNameCache>()));
   }
@@ -104,7 +106,7 @@ class FuseChannelTest : public ::testing::Test {
 
   FakeFuse fuse_;
   EdenStats stats_;
-  TestDispatcher dispatcher_{&stats_};
+  TestDispatcher* dispatcher_;
   AbsolutePath mountPath_{"/fake/mount/path"};
 };
 
@@ -281,9 +283,9 @@ TEST_F(FuseChannelTest, testDestroyWithPendingRequests) {
   auto id2 = fuse_.sendLookup(FUSE_ROOT_ID, "some_file.txt");
   auto id3 = fuse_.sendLookup(FUSE_ROOT_ID, "main.c");
 
-  auto req1 = dispatcher_.waitForLookup(id1);
-  auto req2 = dispatcher_.waitForLookup(id2);
-  auto req3 = dispatcher_.waitForLookup(id3);
+  auto req1 = dispatcher_->waitForLookup(id1);
+  auto req2 = dispatcher_->waitForLookup(id2);
+  auto req3 = dispatcher_->waitForLookup(id3);
 
   // Destroy the channel object
   channel.reset();
@@ -354,7 +356,7 @@ TEST_F(FuseChannelTest, interruptLookups) {
     // dispatcher will definitely receive the request.
     // We may need to change this code in the future if we do add true
     // interrupt support to FuseChannel.
-    auto req = dispatcher_.waitForLookup(requestId);
+    auto req = dispatcher_->waitForLookup(requestId);
 
     auto nodeId = 5 + i * 7;
     auto response = genRandomLookupResponse(nodeId);
