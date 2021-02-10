@@ -648,6 +648,20 @@ impl MPath {
         }
     }
 
+    /// Split an MPath into first path component and the rest
+    pub fn split_first(&self) -> (&MPathElement, Option<MPath>) {
+        let (first, file_elements) = self
+            .elements
+            .split_first()
+            .expect("MPaths should never be empty");
+
+        if file_elements.is_empty() {
+            (first, None)
+        } else {
+            (first, Some(MPath::from_elements(file_elements.iter())))
+        }
+    }
+
     pub fn into_thrift(self) -> thrift::MPath {
         thrift::MPath(
             self.elements
