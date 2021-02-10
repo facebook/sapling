@@ -372,6 +372,13 @@ def _findcommonheadsnew(
     else:
         localheads = ancestorsof
 
+    # localheads can be empty in special case: after initial streamclone,
+    # because both remotenames and visible heads are empty. Ensure 'tip' is
+    # part of 'localheads' so we don't pull the entire repo.
+    # TODO: Improve clone protocol so streamclone transfers remote names.
+    if not localheads:
+        localheads = [local["tip"].node()]
+
     # Filter out 'nullid' immediately.
     localheads = sorted(h for h in localheads if h != nullid)
     unknown = set()
@@ -416,14 +423,15 @@ def _findcommonheadsnew(
     remotename = remotenameforurl(ui, remote.url())  # ex. 'default' or 'remote'
     selected = list(selectivepullbookmarknames(local, remotename))
 
-    # Include names that the server might have.  'tip' is useful during clone
-    # code path where remote names are not known yet.
-    # TODO: Improve clone protocol so streamclone transfers remote names.
-    for name in selected + ["tip"]:
+    # Include names (public heads) that the server might have in sample.
+    # This can efficiently extend the "common" set, if the server does
+    # have them.
+    for name in selected:
         if name in local:
             node = local[name].node()
             if node not in sample:
                 sample.add(node)
+
     # Drop nullid special case.
     sample.discard(nullid)
     sample = list(sample)
