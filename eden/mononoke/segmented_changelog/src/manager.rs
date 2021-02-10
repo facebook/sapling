@@ -145,6 +145,22 @@ impl SegmentedChangelog for SegmentedChangelogManager {
             .await
     }
 
+    async fn many_changeset_ids_to_locations(
+        &self,
+        ctx: &CoreContext,
+        client_head: ChangesetId,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<Location<ChangesetId>>> {
+        let (_, dag) = self.load_dag(&ctx).await.with_context(|| {
+            format!(
+                "repo {}: error loading segmented changelog from save",
+                self.repo_id
+            )
+        })?;
+        dag.many_changeset_ids_to_locations(ctx, client_head, cs_ids)
+            .await
+    }
+
     async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
         let (_, dag) = self.load_dag(&ctx).await.with_context(|| {
             format!(

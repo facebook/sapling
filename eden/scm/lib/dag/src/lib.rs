@@ -35,7 +35,7 @@ pub use dag_types::clone;
 pub use dag_types::id;
 
 pub use dag_types::{CloneData, Group, Id, Location, VertexName};
-pub use iddag::IdDag;
+pub use iddag::{FirstAncestorConstraint, IdDag};
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub use idmap::IdMap;
 #[cfg(any(test, feature = "indexedlog-backend"))]

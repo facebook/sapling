@@ -1405,6 +1405,7 @@ impl<Store: IdDagStore> IdDag<Store> {
 
 /// There are many `x~n`s that all resolves to a single commit.
 /// Constraint about `x~n`.
+#[derive(Clone)]
 pub enum FirstAncestorConstraint {
     /// No constraints.
     None,

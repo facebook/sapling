@@ -30,6 +30,7 @@ define_stats! {
     prefix = "mononoke.segmented_changelog.ondemand";
     build_incremental: timeseries(Sum),
     location_to_changeset_id: timeseries(Sum),
+    changeset_id_to_location: timeseries(Sum),
 }
 
 pub struct OnDemandUpdateDag {
@@ -80,6 +81,38 @@ impl SegmentedChangelog for OnDemandUpdateDag {
         let location = Location::new(known_vertex, location.distance);
         dag.known_location_to_many_changeset_ids(ctx, location, count)
             .await
+    }
+
+    async fn many_changeset_ids_to_locations(
+        &self,
+        ctx: &CoreContext,
+        client_head: ChangesetId,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<Location<ChangesetId>>> {
+        STATS::changeset_id_to_location.add_value(1);
+        {
+            let dag = self.dag.read().await;
+            if let Some(_vertex) = dag
+                .idmap
+                .find_vertex(ctx, client_head)
+                .await
+                .context("fetching vertex for csid")?
+            {
+                return dag
+                    .many_changeset_ids_to_locations(ctx, client_head, cs_ids)
+                    .await
+                    .context("failed ondemand read many_changeset_ids_to_locations");
+            }
+        }
+        {
+            let mut dag = self.dag.write().await;
+            build_incremental(ctx, &mut dag, &self.changeset_fetcher, client_head).await?
+        };
+        let dag = self.dag.read().await;
+        return dag
+            .many_changeset_ids_to_locations(ctx, client_head, cs_ids)
+            .await
+            .context("failed ondemand read many_changeset_ids_to_locations");
     }
 
     async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {

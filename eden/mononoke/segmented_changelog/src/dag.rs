@@ -9,12 +9,14 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{format_err, Context, Result};
 use async_trait::async_trait;
-use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::prelude::*;
 use maplit::hashset;
 use slog::{debug, trace};
 
 use cloned::cloned;
-use dag::{self, CloneData, Group, Id as Vertex, InProcessIdDag, Location};
+use dag::{
+    self, CloneData, FirstAncestorConstraint, Group, Id as Vertex, InProcessIdDag, Location,
+};
 use stats::prelude::*;
 
 use context::CoreContext;
@@ -51,6 +53,83 @@ impl SegmentedChangelog for Dag {
             .await?;
         self.known_location_to_many_changeset_ids(ctx, location, count)
             .await
+    }
+
+    async fn many_changeset_ids_to_locations(
+        &self,
+        ctx: &CoreContext,
+        client_head: ChangesetId,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<Location<ChangesetId>>> {
+        let vertexes = self
+            .idmap
+            .find_many_vertexes(
+                ctx,
+                cs_ids
+                    .iter()
+                    .cloned()
+                    .chain(std::iter::once(client_head))
+                    .collect(),
+            )
+            .await
+            .with_context(|| {
+                format!(
+                    "failed fetching vertex translations for {} and {:?}",
+                    client_head, cs_ids
+                )
+            })?;
+        let head_vertex = *vertexes
+            .get(&client_head)
+            .ok_or_else(|| format_err!("failed to find vertex for client_head {}", client_head))?;
+        let constraints = FirstAncestorConstraint::KnownUniversally {
+            heads: head_vertex.into(),
+        };
+        let vertex_locations = cs_ids
+            .into_iter()
+            .map(|cs_id| {
+                let vertex = *vertexes
+                    .get(&cs_id)
+                    .ok_or_else(|| format_err!("failed to find vertex for changeset {}", cs_id))?;
+                let (descendant, dist) = self
+                    .iddag
+                    .to_first_ancestor_nth(vertex, constraints.clone())
+                    .with_context(|| {
+                        format!(
+                            "failed to compute the common descendant and distance for {}",
+                            cs_id
+                        )
+                    })?
+                    .ok_or_else(|| {
+                        format_err!(
+                            "failure in descendant computation, {} is not ancestor of {}",
+                            cs_id,
+                            client_head
+                        )
+                    })?;
+                Ok(Location::new(descendant, dist))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let common_cs_ids = self
+            .idmap
+            .find_many_changeset_ids(ctx, vertex_locations.iter().map(|l| l.descendant).collect())
+            .await
+            .with_context(|| {
+                format!(
+                    "failed fetching changeset translations for {:?}",
+                    vertex_locations
+                )
+            })?;
+        let locations = vertex_locations
+            .into_iter()
+            .map(|location| {
+                location.try_map_descendant(|vertex| {
+                    common_cs_ids.get(&vertex).cloned().ok_or_else(|| {
+                        format_err!("failed to find vertex translation for {}", vertex)
+                    })
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(locations)
     }
 
     async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {

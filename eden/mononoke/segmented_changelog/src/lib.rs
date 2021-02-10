@@ -84,6 +84,45 @@ pub trait SegmentedChangelog: Send + Sync {
         count: u64,
     ) -> Result<Vec<ChangesetId>>;
 
+    /// Get the graph location of a given commit identifier.
+    ///
+    /// The client using segmented changelog will have only a set of identifiers for the commits in
+    /// the graph. The client needs a way to translate user input to data that it has locally.
+    /// For example, when checking out an older commit by hash the client will have to retrieve
+    /// a location to understand the place in the graph of the commit.
+    ///
+    /// The `client_head` parameter is required in order to construct consistent Locations for the
+    /// client.
+    async fn changeset_id_to_location(
+        &self,
+        ctx: &CoreContext,
+        client_head: ChangesetId,
+        cs_id: ChangesetId,
+    ) -> Result<Location<ChangesetId>> {
+        let mut ids = self
+            .many_changeset_ids_to_locations(ctx, client_head, vec![cs_id])
+            .await?;
+        if ids.len() == 1 {
+            if let Some(id) = ids.pop() {
+                return Ok(id);
+            }
+        }
+        Err(format_err!(
+            "unexpected result from many_changeset_ids_to_locations"
+        ))
+    }
+
+    /// Get the graph locations given a set of commit identifier.
+    ///
+    /// Batch variation of `changeset_id_to_location`. The assumption is that we are dealing with
+    /// the same client repository so the `head` parameter stays the same between changesets.
+    async fn many_changeset_ids_to_locations(
+        &self,
+        ctx: &CoreContext,
+        client_head: ChangesetId,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<Location<ChangesetId>>>;
+
     /// Returns data necessary for SegmentedChangelog to be initialized by a client.
     ///
     /// Note that the heads that are sent over in a clone can vary. Strictly speaking the client
@@ -131,6 +170,17 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
         &self,
         _ctx: &CoreContext,
     ) -> Result<StreamCloneData<ChangesetId>> {
+        Err(format_err!(
+            "Segmented Changelog is not enabled for this repo",
+        ))
+    }
+
+    async fn many_changeset_ids_to_locations(
+        &self,
+        _ctx: &CoreContext,
+        _client_head: ChangesetId,
+        _cs_ids: Vec<ChangesetId>,
+    ) -> Result<Vec<Location<ChangesetId>>> {
         Err(format_err!(
             "Segmented Changelog is not enabled for this repo",
         ))
