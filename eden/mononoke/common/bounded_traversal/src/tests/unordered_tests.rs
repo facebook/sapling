@@ -8,8 +8,9 @@
 use std::collections::BTreeSet;
 
 use anyhow::Error;
+use cloned::cloned;
 use futures::future::FutureExt;
-use futures::stream::{self, TryStreamExt};
+use futures::stream::{self, Stream, TryStreamExt};
 use maplit::hashmap;
 use pretty_assertions::assert_eq;
 use tokio::task::yield_now;
@@ -37,19 +38,7 @@ impl Tree {
 
 #[tokio::test]
 async fn test_bounded_traversal() -> Result<(), Error> {
-    // tree
-    //      0
-    //     / \
-    //    1   2
-    //   /   / \
-    //  5   3   4
-    let tree = Tree::new(
-        0,
-        vec![
-            Tree::new(1, vec![Tree::leaf(5)]),
-            Tree::new(2, vec![Tree::leaf(3), Tree::leaf(4)]),
-        ],
-    );
+    let tree = build_tree();
 
     let tick = Tick::new();
     let log: StateLog<String> = StateLog::new();
@@ -320,39 +309,36 @@ async fn test_bounded_traversal_dag_with_cycle() -> Result<(), Error> {
     Ok(())
 }
 
-#[tokio::test]
-async fn test_bounded_traversal_stream() -> Result<(), Error> {
+fn build_tree() -> Tree {
     // tree
     //      0
     //     / \
     //    1   2
     //   /   / \
     //  5   3   4
-    let tree = Tree::new(
+    Tree::new(
         0,
         vec![
             Tree::new(1, vec![Tree::leaf(5)]),
             Tree::new(2, vec![Tree::leaf(3), Tree::leaf(4)]),
         ],
-    );
+    )
+}
+
+async fn check_stream_unfold_ticks<TestFn, Outs>(test_fn: TestFn) -> Result<(), Error>
+where
+    TestFn: FnOnce(Tree, Tick, StateLog<BTreeSet<usize>>) -> Outs,
+    Outs: Stream<Item = Result<usize, Error>> + Send + 'static,
+{
+    let tree = build_tree();
 
     let tick = Tick::new();
     let log: StateLog<BTreeSet<usize>> = StateLog::new();
     let reference: StateLog<BTreeSet<usize>> = StateLog::new();
 
-    let traverse = bounded_traversal_stream(2, Some(tree), {
-        let tick = tick.clone();
-        let log = log.clone();
-        move |Tree { id, children }| {
-            let log = log.clone();
-            tick.sleep(1).map(move |now| {
-                log.unfold(id, now);
-                Ok::<_, Error>((id, children))
-            })
-        }
-    })
-    .try_collect::<BTreeSet<usize>>()
-    .boxed();
+    let traverse = test_fn(tree, tick.clone(), log.clone())
+        .try_collect::<BTreeSet<usize>>()
+        .boxed();
     let handle = tokio::spawn(traverse);
 
     yield_now().await;
@@ -381,20 +367,25 @@ async fn test_bounded_traversal_stream() -> Result<(), Error> {
 }
 
 #[tokio::test]
+async fn test_bounded_traversal_stream_ticks() -> Result<(), Error> {
+    check_stream_unfold_ticks(|tree, tick, log| {
+        bounded_traversal_stream(2, Some(tree), {
+            cloned!(tick, log);
+            move |Tree { id, children }| {
+                cloned!(log);
+                tick.sleep(1).map(move |now| {
+                    log.unfold(id, now);
+                    Ok::<_, Error>((id, children))
+                })
+            }
+        })
+    })
+    .await
+}
+
+#[tokio::test]
 async fn test_bounded_traversal_stream2() -> Result<(), Error> {
-    // tree
-    //      0
-    //     / \
-    //    1   2
-    //   /   / \
-    //  5   3   4
-    let tree = Tree::new(
-        0,
-        vec![
-            Tree::new(1, vec![Tree::leaf(5)]),
-            Tree::new(2, vec![Tree::leaf(3), Tree::leaf(4)]),
-        ],
-    );
+    let tree = build_tree();
 
     let tick = Tick::new();
     let log: StateLog<BTreeSet<usize>> = StateLog::new();
