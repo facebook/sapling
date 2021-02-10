@@ -829,7 +829,7 @@ fn test_segment_ancestors_example1() {
         (1, 2),
         (0, 1),
     ] {
-        assert_eq!(dag.ancestors(id).unwrap().count(), count);
+        assert_eq!(dag.ancestors(id.into()).unwrap().count(), count);
     }
 
     for (a, b, ancestor) in vec![
@@ -845,9 +845,9 @@ fn test_segment_ancestors_example1() {
         let ancestor = ancestor.map(Id);
         let a = Id(a);
         let b = Id(b);
-        assert_eq!(dag.gca_one((a, b)).unwrap(), ancestor);
-        assert_eq!(dag.gca_all((a, b)).unwrap().iter().nth(0), ancestor);
-        assert_eq!(dag.gca_all((a, b)).unwrap().iter().nth(1), None);
+        assert_eq!(dag.gca_one((a, b).into()).unwrap(), ancestor);
+        assert_eq!(dag.gca_all((a, b).into()).unwrap().iter().nth(0), ancestor);
+        assert_eq!(dag.gca_all((a, b).into()).unwrap().iter().nth(1), None);
         assert_eq!(dag.is_ancestor(b, a).unwrap(), ancestor == Some(b));
         assert_eq!(dag.is_ancestor(a, b).unwrap(), ancestor == Some(a));
     }
@@ -885,9 +885,12 @@ Lv1: R0-2[]"#
     );
     let dag = result.name_dag.dag;
     // This is kind of "undefined" whether it's 1 or 0.
-    assert_eq!(dag.gca_one((2, 3)).unwrap(), Some(Id(1)));
+    assert_eq!(dag.gca_one((2, 3).into()).unwrap(), Some(Id(1)));
     assert_eq!(
-        dag.gca_all((2, 3)).unwrap().iter().collect::<Vec<_>>(),
+        dag.gca_all((2, 3).into())
+            .unwrap()
+            .iter()
+            .collect::<Vec<_>>(),
         vec![1, 0]
     );
 }

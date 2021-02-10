@@ -28,6 +28,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::{BTreeSet, BinaryHeap};
 use std::fmt::{self, Debug, Formatter};
+use std::ops::Deref;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 use std::path::Path;
 use tracing::{debug_span, field, trace};
@@ -332,7 +333,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         let mut current_parents = Vec::new();
         let mut insert_count = 0;
         let mut head_ids: HashSet<Id> = if group == Group::MASTER && low > Id::MIN {
-            self.heads(Id::MIN..=(low - 1))?.iter().collect()
+            self.heads((Id::MIN..=(low - 1)).into())?.iter().collect()
         } else {
             Default::default()
         };
@@ -557,9 +558,9 @@ impl<Store: IdDagStore> IdDag<Store> {
 }
 
 // User-facing DAG-related algorithms.
-impl<Store: IdDagStore> IdDag<Store> {
+pub trait IdDagAlgorithm: IdDagStore {
     /// Return a [`IdSet`] that covers all ids stored in this [`IdDag`].
-    pub fn all(&self) -> Result<IdSet> {
+    fn all(&self) -> Result<IdSet> {
         let mut result = IdSet::empty();
         for &group in Group::ALL.iter().rev() {
             let next = self.next_free_id(0, group)?;
@@ -571,7 +572,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     }
 
     /// Return a [`IdSet`] that covers all ids stored in the master group.
-    pub(crate) fn master_group(&self) -> Result<IdSet> {
+    fn master_group(&self) -> Result<IdSet> {
         let group = Group::MASTER;
         let next = self.next_free_id(0, group)?;
         if next > group.min_id() {
@@ -586,8 +587,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// ```plain,ignore
     /// union(ancestors(i) for i in set)
     /// ```
-    pub fn ancestors(&self, set: impl Into<IdSet>) -> Result<IdSet> {
-        let mut set: IdSet = set.into();
+    fn ancestors(&self, mut set: IdSet) -> Result<IdSet> {
         let tracing_span = debug_span!("ancestors", result = "", set = field::debug(&set));
         let _scope = tracing_span.enter();
         if set.count() > 2 {
@@ -597,6 +597,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         }
         let mut result = IdSet::empty();
         let mut to_visit: BinaryHeap<_> = set.iter().collect();
+        let max_level = self.max_level()?;
         'outer: while let Some(id) = to_visit.pop() {
             if result.contains(id) {
                 // If `id` is in `result`, then `ancestors(id)` are all in `result`.
@@ -612,7 +613,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                     break 'outer;
                 }
             }
-            for level in (1..=self.max_level).rev() {
+            for level in (1..=max_level).rev() {
                 let seg = self.find_segment_by_head_and_level(id, level)?;
                 if let Some(seg) = seg {
                     let span = seg.span()?.into();
@@ -648,8 +649,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     }
 
     /// Like `ancestors` but follows only the first parents.
-    pub fn first_ancestors(&self, set: impl Into<IdSet>) -> Result<IdSet> {
-        let set: IdSet = set.into();
+    fn first_ancestors(&self, set: IdSet) -> Result<IdSet> {
         let tracing_span = debug_span!("first_ancestors", result = "", set = field::debug(&set));
         let _scope = tracing_span.enter();
         let mut result = IdSet::empty();
@@ -677,9 +677,8 @@ impl<Store: IdDagStore> IdDag<Store> {
 
 
     /// Calculate merges within the given set.
-    pub fn merges(&self, set: impl Into<IdSet>) -> Result<IdSet> {
+    fn merges(&self, set: IdSet) -> Result<IdSet> {
         let mut result = IdSet::empty();
-        let set = set.into();
 
         let tracing_span = debug_span!("merges", result = "", set = field::debug(&set));
         let _scope = tracing_span.enter();
@@ -741,17 +740,17 @@ impl<Store: IdDagStore> IdDag<Store> {
     ///
     /// Note: [`IdSet`] does not preserve order. Use [`IdDag::parent_ids`] if
     /// order is needed.
-    pub fn parents(&self, set: impl Into<IdSet>) -> Result<IdSet> {
+    fn parents(&self, mut set: IdSet) -> Result<IdSet> {
         let mut result = IdSet::empty();
-        let mut set = set.into();
 
         let tracing_span = debug_span!("parents", result = "", set = field::debug(&set));
         let _scope = tracing_span.enter();
+        let max_level = self.max_level()?;
 
         'outer: while let Some(head) = set.max() {
             // For high-level segments. If the set covers the entire segment, then
             // the parents is (the segment - its head + its parents).
-            for level in (1..=self.max_level).rev() {
+            for level in (1..=max_level).rev() {
                 if let Some(seg) = self.find_segment_by_head_and_level(head, level)? {
                     let seg_span = seg.span()?;
                     if set.contains(seg_span) {
@@ -804,7 +803,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     }
 
     /// Get parents of a single `id`. Preserve the order.
-    pub fn parent_ids(&self, id: Id) -> Result<Vec<Id>> {
+    fn parent_ids(&self, id: Id) -> Result<Vec<Id>> {
         let seg = match self.find_flat_segment_including_id(id)? {
             Some(seg) => seg,
             None => return id.not_found(),
@@ -819,7 +818,7 @@ impl<Store: IdDagStore> IdDag<Store> {
 
     /// Calculate the n-th first ancestor. If `n` is 0, return `id` unchanged.
     /// If `n` is 1, return the first parent of `id`.
-    pub fn first_ancestor_nth(&self, id: Id, n: u64) -> Result<Id> {
+    fn first_ancestor_nth(&self, id: Id, n: u64) -> Result<Id> {
         match self.try_first_ancestor_nth(id, n)? {
             None => Err(Programming(format!(
                 "{}~{} cannot be resolved - no parents",
@@ -833,7 +832,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// If `n` is 1, return the first parent of `id`.
     /// If `n` is too large, exceeding the distance between the root and `id`,
     /// return `None`.
-    pub fn try_first_ancestor_nth(&self, mut id: Id, mut n: u64) -> Result<Option<Id>> {
+    fn try_first_ancestor_nth(&self, mut id: Id, mut n: u64) -> Result<Option<Id>> {
         // PERF: this can have fast paths from high-level segments if high-level
         // segments have extra information.
         while n > 0 {
@@ -863,7 +862,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// Convert an `id` to `x~n` form with the given constraint.
     ///
     /// Return `None` if the conversion can not be done with the constraints.
-    pub fn to_first_ancestor_nth(
+    fn to_first_ancestor_nth(
         &self,
         id: Id,
         constraint: FirstAncestorConstraint,
@@ -930,19 +929,18 @@ impl<Store: IdDagStore> IdDag<Store> {
     }
 
     /// Calculate heads of the given set.
-    pub fn heads(&self, set: impl Into<IdSet>) -> Result<IdSet> {
-        let set = set.into();
+    fn heads(&self, set: IdSet) -> Result<IdSet> {
         Ok(set.difference(&self.parents(set.clone())?))
     }
 
     /// Calculate children for a single `Id`.
-    pub fn children_id(&self, id: Id) -> Result<IdSet> {
+    fn children_id(&self, id: Id) -> Result<IdSet> {
         let mut result = BTreeSet::new();
-        for seg in self.store.iter_flat_segments_with_parent(id)? {
+        for seg in self.iter_flat_segments_with_parent(id)? {
             let seg = seg?;
             result.insert(seg.span()?.low);
         }
-        if let Some(seg) = self.store.find_flat_segment_including_id(id)? {
+        if let Some(seg) = self.find_flat_segment_including_id(id)? {
             let span = seg.span()?;
             if span.high != id {
                 result.insert(id + 1);
@@ -953,8 +951,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     }
 
     /// Calculate children of the given set.
-    pub fn children(&self, set: impl Into<IdSet>) -> Result<IdSet> {
-        let set = set.into();
+    fn children(&self, set: IdSet) -> Result<IdSet> {
         if set.count() < 5 {
             let result =
                 set.iter()
@@ -991,14 +988,14 @@ impl<Store: IdDagStore> IdDag<Store> {
         //     - Yes: Figure out children in the flat segment.
         //            Push them to the result.
 
-        struct Context<'a, Store> {
-            this: &'a IdDag<Store>,
+        struct Context<'a, Store: ?Sized> {
+            this: &'a Store,
             set: IdSet,
             result_lower_bound: Id,
             result: IdSet,
         }
 
-        fn visit_segments<S: IdDagStore>(
+        fn visit_segments<S: IdDagStore + ?Sized>(
             ctx: &mut Context<S>,
             mut range: IdSpan,
             level: Level,
@@ -1096,8 +1093,9 @@ impl<Store: IdDagStore> IdDag<Store> {
             result: IdSet::empty(),
         };
 
+        let max_level = self.max_level()?;
         for span in self.all()?.as_spans() {
-            visit_segments(&mut ctx, *span, self.max_level)?;
+            visit_segments(&mut ctx, *span, max_level)?;
         }
 
         if !tracing_span.is_disabled() {
@@ -1108,8 +1106,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     }
 
     /// Calculate roots of the given set.
-    pub fn roots(&self, set: impl Into<IdSet>) -> Result<IdSet> {
-        let set = set.into();
+    fn roots(&self, set: IdSet) -> Result<IdSet> {
         Ok(set.difference(&self.children(set.clone())?))
     }
 
@@ -1118,16 +1115,14 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// If there are no common ancestors, return None.
     /// If there are multiple greatest common ancestors, pick one arbitrarily.
     /// Use `gca_all` to get all of them.
-    pub fn gca_one(&self, set: impl Into<IdSet>) -> Result<Option<Id>> {
-        let set = set.into();
+    fn gca_one(&self, set: IdSet) -> Result<Option<Id>> {
         // The set is sorted in DESC order. Therefore its first item can be used as the result.
         Ok(self.common_ancestors(set)?.max())
     }
 
     /// Calculate all "greatest common ancestor"s of the given set.
     /// `gca_one` is faster if an arbitrary answer is ok.
-    pub fn gca_all(&self, set: impl Into<IdSet>) -> Result<IdSet> {
-        let set = set.into();
+    fn gca_all(&self, set: IdSet) -> Result<IdSet> {
         self.heads_ancestors(self.common_ancestors(set)?)
     }
 
@@ -1136,8 +1131,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// ```plain,ignore
     /// intersect(ancestors(i) for i in set)
     /// ```
-    pub fn common_ancestors(&self, set: impl Into<IdSet>) -> Result<IdSet> {
-        let set = set.into();
+    fn common_ancestors(&self, set: IdSet) -> Result<IdSet> {
         let result = match set.count() {
             0 => set,
             1 => self.ancestors(set)?,
@@ -1146,7 +1140,8 @@ impl<Store: IdDagStore> IdDag<Store> {
                 let mut iter = set.iter();
                 let a = iter.next().unwrap();
                 let b = iter.next().unwrap();
-                self.ancestors(a)?.intersection(&self.ancestors(b)?)
+                self.ancestors(a.into())?
+                    .intersection(&self.ancestors(b.into())?)
             }
             _ => {
                 // Try to reduce the size of `set`.
@@ -1154,7 +1149,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                 let set = self.roots(set)?;
                 set.iter()
                     .fold(Ok(IdSet::full()), |set: Result<IdSet>, id| {
-                        Ok(set?.intersection(&self.ancestors(id)?))
+                        Ok(set?.intersection(&self.ancestors(id.into())?))
                     })?
             }
         };
@@ -1162,8 +1157,8 @@ impl<Store: IdDagStore> IdDag<Store> {
     }
 
     /// Test if `ancestor_id` is an ancestor of `descendant_id`.
-    pub fn is_ancestor(&self, ancestor_id: Id, descendant_id: Id) -> Result<bool> {
-        let set = self.ancestors(descendant_id)?;
+    fn is_ancestor(&self, ancestor_id: Id, descendant_id: Id) -> Result<bool> {
+        let set = self.ancestors(descendant_id.into())?;
         Ok(set.contains(ancestor_id))
     }
 
@@ -1176,14 +1171,13 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// This is different from `heads`. In case set contains X and Y, and Y is
     /// an ancestor of X, but not the immediate ancestor, `heads` will include
     /// Y while this function won't.
-    pub fn heads_ancestors(&self, set: impl Into<IdSet>) -> Result<IdSet> {
-        let set = set.into();
+    fn heads_ancestors(&self, set: IdSet) -> Result<IdSet> {
         let mut remaining = set;
         let mut result = IdSet::empty();
         while let Some(id) = remaining.max() {
             result.push_span((id..=id).into());
             // Remove ancestors reachable from that head.
-            remaining = remaining.difference(&self.ancestors(id)?);
+            remaining = remaining.difference(&self.ancestors(id.into())?);
         }
         Ok(result)
     }
@@ -1195,12 +1189,10 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// ```
     ///
     /// This is O(flat segments), or O(merges).
-    pub fn range(&self, roots: impl Into<IdSet>, heads: impl Into<IdSet>) -> Result<IdSet> {
-        let roots = roots.into();
+    fn range(&self, roots: IdSet, mut heads: IdSet) -> Result<IdSet> {
         if roots.is_empty() {
             return Ok(IdSet::empty());
         }
-        let mut heads = heads.into();
         if heads.is_empty() {
             return Ok(IdSet::empty());
         }
@@ -1229,8 +1221,8 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// Logically equivalent to `range(set, all())`.
     ///
     /// This is O(flat segments), or O(merges).
-    pub fn descendants(&self, set: impl Into<IdSet>) -> Result<IdSet> {
-        let roots = set.into();
+    fn descendants(&self, set: IdSet) -> Result<IdSet> {
+        let roots = set;
         let result = self.descendants_intersection(&roots, &self.all()?)?;
         Ok(result)
     }
@@ -1355,6 +1347,16 @@ impl<Store: IdDagStore> IdDag<Store> {
         }
 
         Ok(result)
+    }
+}
+
+impl<S: IdDagStore> IdDagAlgorithm for S {}
+
+impl<Store: IdDagStore> Deref for IdDag<Store> {
+    type Target = dyn IdDagAlgorithm;
+
+    fn deref(&self) -> &Self::Target {
+        &self.store
     }
 }
 
@@ -1626,7 +1628,10 @@ mod tests {
 
         assert_eq!(dag.max_level, 3);
         assert_eq!(
-            dag.children(Id(1000)).unwrap().iter().collect::<Vec<Id>>(),
+            dag.children(Id(1000).into())
+                .unwrap()
+                .iter()
+                .collect::<Vec<Id>>(),
             vec![Id(1001)]
         );
     }

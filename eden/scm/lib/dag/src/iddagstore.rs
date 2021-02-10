@@ -21,7 +21,7 @@ pub(crate) use in_process_store::InProcessStore;
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub(crate) use indexedlog_store::IndexedLogStore;
 
-pub trait IdDagStore: Send + Sync {
+pub trait IdDagStore: Send + Sync + 'static {
     /// Maximum level segment in the store
     fn max_level(&self) -> Result<Level>;
 

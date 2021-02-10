@@ -208,7 +208,7 @@ fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag
         elapsed(|| {
             for set in &sample_two_ids {
                 let ids: Vec<_> = set.iter().collect();
-                dag.range(ids[0], ids[1]).unwrap();
+                dag.range(ids[0].into(), ids[1].into()).unwrap();
             }
         })
     });
