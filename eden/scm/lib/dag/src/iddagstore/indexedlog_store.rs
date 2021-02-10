@@ -19,15 +19,26 @@ use minibytes::Bytes;
 use std::fs::{self, File};
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicU8;
+use std::sync::atomic::Ordering::AcqRel;
+use std::sync::atomic::Ordering::Acquire;
+use std::sync::atomic::Ordering::Release;
 
 pub struct IndexedLogStore {
     log: log::Log,
     path: PathBuf,
+    cached_max_level: AtomicU8,
 }
+
+const MAX_LEVEL_UNKNOWN: u8 = 0;
 
 // Required functionality
 impl IdDagStore for IndexedLogStore {
     fn max_level(&self) -> Result<Level> {
+        let max_level = self.cached_max_level.load(Acquire);
+        if max_level != MAX_LEVEL_UNKNOWN {
+            return Ok(max_level);
+        }
         let max_level = match self
             .log
             .lookup_range(Self::INDEX_LEVEL_HEAD, ..)?
@@ -37,6 +48,7 @@ impl IdDagStore for IndexedLogStore {
             None => 0,
             Some(key) => key?.0.get(0).cloned().unwrap_or(0),
         };
+        self.cached_max_level.store(max_level, Release);
         Ok(max_level)
     }
 
@@ -72,6 +84,8 @@ impl IdDagStore for IndexedLogStore {
     }
 
     fn insert_segment(&mut self, segment: Segment) -> Result<()> {
+        let level = segment.level()?;
+        self.cached_max_level.fetch_max(level, AcqRel);
         self.log.append(&segment.0)?;
         Ok(())
     }
@@ -357,12 +371,20 @@ impl IndexedLogStore {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref().to_path_buf();
         let log = Self::log_open_options().open(path.clone())?;
-        Ok(Self { log, path })
+        Ok(Self {
+            log,
+            path,
+            cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
+        })
     }
 
     pub fn open_from_log(log: log::Log) -> Self {
         let path = log.path().as_opt_path().unwrap().to_path_buf();
-        Self { log, path }
+        Self {
+            log,
+            path,
+            cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
+        }
     }
 
     pub fn try_clone(&self) -> Result<IndexedLogStore> {
@@ -370,6 +392,7 @@ impl IndexedLogStore {
         let store = IndexedLogStore {
             log,
             path: self.path.clone(),
+            cached_max_level: AtomicU8::new(self.cached_max_level.load(Acquire)),
         };
         Ok(store)
     }
@@ -379,6 +402,7 @@ impl IndexedLogStore {
         let store = IndexedLogStore {
             log,
             path: self.path.clone(),
+            cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
         };
         Ok(store)
     }
