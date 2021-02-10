@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import unittest
 from pathlib import Path
 
@@ -20,13 +22,13 @@ from .lib.output import TestOutput
 
 
 class ListTest(unittest.TestCase):
-    def test_no_mounts(self):
+    def test_no_mounts(self) -> None:
         out = TestOutput()
-        mounts = main_mod.ListCmd.combine_mount_info({}, [])
+        mounts = main_mod.ListCmd.combine_mount_info([], [])
         main_mod.ListCmd.print_mounts(out, mounts)
         self.assertEqual(out.getvalue(), "")
 
-    def test_list_mounts_no_backing_repos(self):
+    def test_list_mounts_no_backing_repos(self) -> None:
         self.maxDiff = None
 
         thrift_mounts = [
@@ -224,7 +226,7 @@ class ListTest(unittest.TestCase):
             json_out.getvalue(),
         )
 
-    def test_list_mounts_no_state(self):
+    def test_list_mounts_no_state(self) -> None:
         self.maxDiff = None
 
         # Simulate an older edenfs daemon that does not send the "state" field
@@ -353,7 +355,7 @@ class ListTest(unittest.TestCase):
             json_out.getvalue(),
         )
 
-    def test_list_mounts_no_backing_repos(self):
+    def test_list_mounts_no_backing_repos(self) -> None:
         self.maxDiff = None
 
         thrift_mounts = [
