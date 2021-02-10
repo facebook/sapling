@@ -20,14 +20,14 @@ use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, ContentId, MPath};
 use std::collections::HashMap;
 
-use crate::{ErrorKind, FileChange, FileContentFetcher, PathContent};
+use crate::{ErrorKind, FileChange, FileContentManager, PathContent};
 
-pub struct BlobRepoFileContentFetcher {
+pub struct BlobRepoFileContentManager {
     pub repo: BlobRepo,
 }
 
 #[async_trait]
-impl FileContentFetcher for BlobRepoFileContentFetcher {
+impl FileContentManager for BlobRepoFileContentManager {
     async fn get_file_size<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -137,9 +137,9 @@ impl FileContentFetcher for BlobRepoFileContentFetcher {
     }
 }
 
-impl BlobRepoFileContentFetcher {
-    pub fn new(repo: BlobRepo) -> BlobRepoFileContentFetcher {
-        BlobRepoFileContentFetcher { repo }
+impl BlobRepoFileContentManager {
+    pub fn new(repo: BlobRepo) -> BlobRepoFileContentManager {
+        BlobRepoFileContentManager { repo }
     }
 }
 

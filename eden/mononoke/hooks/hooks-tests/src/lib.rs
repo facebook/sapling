@@ -22,8 +22,8 @@ use hooks::{
     HookExecution, HookManager, HookRejectionInfo,
 };
 use hooks_content_stores::{
-    BlobRepoFileContentFetcher, FileChange as FileDiff, FileContentFetcher,
-    InMemoryFileContentFetcher, PathContent,
+    BlobRepoFileContentManager, FileChange as FileDiff, FileContentManager,
+    InMemoryFileContentManager, PathContent,
 };
 use maplit::{btreemap, hashmap, hashset};
 use metaconfig_types::{BookmarkParams, HookConfig, HookManagerParams, HookParams, RepoConfig};
@@ -53,7 +53,7 @@ impl ChangesetHook for FnChangesetHook {
         _ctx: &'ctx CoreContext,
         _bookmark: &BookmarkName,
         _changeset: &'cs BonsaiChangeset,
-        _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         Ok((self.f)())
@@ -82,11 +82,11 @@ impl ChangesetHook for FindFilesChangesetHook {
         ctx: &'ctx CoreContext,
         _bookmark: &BookmarkName,
         _changeset: &'cs BonsaiChangeset,
-        content_fetcher: &'fetcher dyn FileContentFetcher,
+        content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let path = to_mpath(self.filename.as_str());
-        let res = content_fetcher
+        let res = content_manager
             .find_content(ctx, BookmarkName::new("master")?, vec![path.clone()])
             .await;
 
@@ -121,12 +121,12 @@ impl ChangesetHook for FileChangesChangesetHook {
         ctx: &'ctx CoreContext,
         _bookmark: &BookmarkName,
         changeset: &'cs BonsaiChangeset,
-        content_fetcher: &'fetcher dyn FileContentFetcher,
+        content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let parent = changeset.parents().next();
         let (added, changed, removed) = if let Some(parent) = parent {
-            let file_changes = content_fetcher
+            let file_changes = content_manager
                 .file_changes(&ctx, changeset.get_changeset_id(), parent)
                 .await?;
 
@@ -165,7 +165,7 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
         ctx: &'ctx CoreContext,
         _bookmark: &BookmarkName,
         changeset: &'cs BonsaiChangeset,
-        content_fetcher: &'fetcher dyn FileContentFetcher,
+        content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let futs = futures_unordered::FuturesUnordered::new();
@@ -180,7 +180,7 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
             match change {
                 Some(change) => {
                     let fut = async move {
-                        let content = content_fetcher
+                        let content = content_manager
                             .get_file_text(ctx, change.content_id())
                             .await?;
                         let content =
@@ -240,7 +240,7 @@ impl ChangesetHook for LengthMatchingChangesetHook {
         ctx: &'ctx CoreContext,
         _bookmark: &BookmarkName,
         changeset: &'cs BonsaiChangeset,
-        content_fetcher: &'fetcher dyn FileContentFetcher,
+        content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let futs = futures_unordered::FuturesUnordered::new();
@@ -250,7 +250,7 @@ impl ChangesetHook for LengthMatchingChangesetHook {
             match change {
                 Some(change) => {
                     let fut = async move {
-                        let size = content_fetcher
+                        let size = content_manager
                             .get_file_size(ctx, change.content_id())
                             .await?;
 
@@ -297,7 +297,7 @@ impl FileHook for FnFileHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _content_manager: &'fetcher dyn FileContentManager,
         _change: Option<&'change FileChange>,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -326,7 +326,7 @@ impl FileHook for PathMatchingFileHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _content_manager: &'fetcher dyn FileContentManager,
         _change: Option<&'change FileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -353,14 +353,14 @@ impl FileHook for FileContentMatchingFileHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_fetcher: &'fetcher dyn FileContentFetcher,
+        content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change FileChange>,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         match change {
             Some(change) => {
-                let content = content_fetcher
+                let content = content_manager
                     .get_file_text(ctx, change.content_id())
                     .await?;
                 let content = content.map(|c| std::str::from_utf8(c.as_ref()).unwrap().to_string());
@@ -396,7 +396,7 @@ impl FileHook for IsSymLinkMatchingFileHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change FileChange>,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -427,14 +427,14 @@ impl FileHook for LengthMatchingFileHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_fetcher: &'fetcher dyn FileContentFetcher,
+        content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change FileChange>,
         _path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let length = match change {
             Some(change) => {
-                content_fetcher
+                content_manager
                     .get_file_size(ctx, change.content_id())
                     .await?
             }
@@ -1195,10 +1195,10 @@ async fn run_changeset_hooks_with_mgr(
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HookExecution>,
-    content_fetcher_type: ContentFetcherType,
+    content_manager_type: ContentFetcherType,
 ) {
     let mut hook_manager =
-        setup_hook_manager(ctx.fb, bookmarks, regexes, content_fetcher_type).await;
+        setup_hook_manager(ctx.fb, bookmarks, regexes, content_manager_type).await;
     for (hook_name, hook) in hooks {
         hook_manager.register_changeset_hook(&hook_name, hook, Default::default());
     }
@@ -1233,7 +1233,7 @@ async fn run_file_hooks(
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HashMap<String, HookExecution>>,
-    content_fetcher_type: ContentFetcherType,
+    content_manager_type: ContentFetcherType,
 ) {
     run_file_hooks_with_mgr(
         ctx,
@@ -1242,7 +1242,7 @@ async fn run_file_hooks(
         bookmarks,
         regexes,
         expected,
-        content_fetcher_type,
+        content_manager_type,
         default_changeset(),
     )
     .await
@@ -1255,7 +1255,7 @@ async fn run_file_hooks_for_cs(
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HashMap<String, HookExecution>>,
-    content_fetcher_type: ContentFetcherType,
+    content_manager_type: ContentFetcherType,
     cs: BonsaiChangeset,
 ) {
     run_file_hooks_with_mgr(
@@ -1265,7 +1265,7 @@ async fn run_file_hooks_for_cs(
         bookmarks,
         regexes,
         expected,
-        content_fetcher_type,
+        content_manager_type,
         cs,
     )
     .await
@@ -1278,11 +1278,11 @@ async fn run_file_hooks_with_mgr(
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
     expected: HashMap<String, HashMap<String, HookExecution>>,
-    content_fetcher_type: ContentFetcherType,
+    content_manager_type: ContentFetcherType,
     cs: BonsaiChangeset,
 ) {
     let mut hook_manager =
-        setup_hook_manager(ctx.fb, bookmarks, regexes, content_fetcher_type).await;
+        setup_hook_manager(ctx.fb, bookmarks, regexes, content_manager_type).await;
     for (hook_name, hook) in hooks {
         hook_manager.register_file_hook(&hook_name, hook, Default::default());
     }
@@ -1312,9 +1312,9 @@ async fn setup_hook_manager(
     fb: FacebookInit,
     bookmarks: HashMap<String, Vec<String>>,
     regexes: HashMap<String, Vec<String>>,
-    content_fetcher_type: ContentFetcherType,
+    content_manager_type: ContentFetcherType,
 ) -> HookManager {
-    let mut hook_manager = match content_fetcher_type {
+    let mut hook_manager = match content_manager_type {
         ContentFetcherType::InMemory => hook_manager_inmem(fb).await,
         ContentFetcherType::Blob(repo) => hook_manager_blobrepo(fb, repo).await,
     };
@@ -1355,10 +1355,10 @@ fn default_changeset() -> BonsaiChangeset {
 async fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
-    let content_fetcher = BlobRepoFileContentFetcher::new(repo);
+    let content_manager = BlobRepoFileContentManager::new(repo);
     HookManager::new(
         ctx.fb,
-        Box::new(content_fetcher),
+        Box::new(content_manager),
         HookManagerParams {
             disable_acl_checker: true,
             ..Default::default()
@@ -1381,14 +1381,14 @@ fn to_mpath(string: &str) -> MPath {
 async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
-    let mut content_fetcher = InMemoryFileContentFetcher::new();
-    content_fetcher.insert(ONES_CTID, "elephants");
-    content_fetcher.insert(TWOS_CTID, "hippopatami");
-    content_fetcher.insert(THREES_CTID, "eels");
+    let mut content_manager = InMemoryFileContentManager::new();
+    content_manager.insert(ONES_CTID, "elephants");
+    content_manager.insert(TWOS_CTID, "hippopatami");
+    content_manager.insert(THREES_CTID, "eels");
 
     HookManager::new(
         ctx.fb,
-        Box::new(content_fetcher),
+        Box::new(content_manager),
         HookManagerParams {
             disable_acl_checker: true,
             ..Default::default()

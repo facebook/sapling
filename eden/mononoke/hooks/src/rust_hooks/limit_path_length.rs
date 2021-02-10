@@ -6,7 +6,7 @@
  */
 
 use crate::{
-    CrossRepoPushSource, FileContentFetcher, FileHook, HookConfig, HookExecution, HookRejectionInfo,
+    CrossRepoPushSource, FileContentManager, FileHook, HookConfig, HookExecution, HookRejectionInfo,
 };
 use anyhow::{anyhow, Context, Error};
 use async_trait::async_trait;
@@ -40,7 +40,7 @@ impl FileHook for LimitPathLengthHook {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change FileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,

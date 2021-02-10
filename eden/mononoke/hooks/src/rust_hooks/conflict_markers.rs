@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::{CrossRepoPushSource, FileContentFetcher, FileHook, HookExecution, HookRejectionInfo};
+use crate::{CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo};
 use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -30,7 +30,7 @@ impl FileHook for ConflictMarkers {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_fetcher: &'fetcher dyn FileContentFetcher,
+        content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change FileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,
@@ -46,7 +46,7 @@ impl FileHook for ConflictMarkers {
             return Ok(HookExecution::Accepted);
         }
 
-        let text = content_fetcher
+        let text = content_manager
             .get_file_text(ctx, change.content_id())
             .await?;
         if let Some(text) = text {

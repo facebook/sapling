@@ -32,7 +32,7 @@ use futures::{
     try_join, Future, TryFutureExt,
 };
 use futures_stats::TimedFutureExt;
-use hooks_content_stores::FileContentFetcher;
+use hooks_content_stores::FileContentManager;
 use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
 use permission_checker::{ArcMembershipChecker, MembershipCheckerBuilder};
@@ -53,7 +53,7 @@ pub struct HookManager {
     hooks: HashMap<String, Hook>,
     bookmark_hooks: HashMap<BookmarkName, Vec<String>>,
     regex_hooks: Vec<(Regex, Vec<String>)>,
-    content_fetcher: Box<dyn FileContentFetcher>,
+    content_manager: Box<dyn FileContentManager>,
     reviewers_membership: ArcMembershipChecker,
     admin_membership: ArcMembershipChecker,
     scuba: MononokeScubaSampleBuilder,
@@ -64,7 +64,7 @@ pub struct HookManager {
 impl HookManager {
     pub async fn new(
         fb: FacebookInit,
-        content_fetcher: Box<dyn FileContentFetcher>,
+        content_manager: Box<dyn FileContentManager>,
         hook_manager_params: HookManagerParams,
         mut scuba: MononokeScubaSampleBuilder,
         repo_name: String,
@@ -103,7 +103,7 @@ impl HookManager {
             hooks,
             bookmark_hooks: HashMap::new(),
             regex_hooks: Vec::new(),
-            content_fetcher,
+            content_manager,
             reviewers_membership: reviewers_membership.into(),
             admin_membership: admin_membership.into(),
             scuba,
@@ -234,7 +234,7 @@ impl HookManager {
             for future in hook.get_futures(
                 ctx,
                 bookmark,
-                &*self.content_fetcher,
+                &*self.content_manager,
                 hook_name,
                 cs,
                 scuba,
@@ -311,7 +311,7 @@ impl<'a> HookInstance<'a> {
         self,
         ctx: &CoreContext,
         bookmark: &BookmarkName,
-        content_fetcher: &dyn FileContentFetcher,
+        content_manager: &dyn FileContentManager,
         hook_name: &str,
         mut scuba: MononokeScubaSampleBuilder,
         cs: &BonsaiChangeset,
@@ -320,7 +320,7 @@ impl<'a> HookInstance<'a> {
     ) -> Result<HookOutcome, Error> {
         let (stats, result) = match self {
             Self::Changeset(hook) => {
-                hook.run(ctx, bookmark, cs, content_fetcher, cross_repo_push_source)
+                hook.run(ctx, bookmark, cs, content_manager, cross_repo_push_source)
                     .map_ok(|exec| {
                         HookOutcome::ChangesetHook(
                             ChangesetHookExecutionID {
@@ -334,7 +334,7 @@ impl<'a> HookInstance<'a> {
                     .await
             }
             Self::File(hook, path, change) => {
-                hook.run(ctx, content_fetcher, change, path, cross_repo_push_source)
+                hook.run(ctx, content_manager, change, path, cross_repo_push_source)
                     .map_ok(|exec| {
                         HookOutcome::FileHook(
                             FileHookExecutionID {
@@ -404,7 +404,7 @@ impl Hook {
         &'a self,
         ctx: &'a CoreContext,
         bookmark: &'a BookmarkName,
-        content_fetcher: &'a dyn FileContentFetcher,
+        content_manager: &'a dyn FileContentManager,
         hook_name: &'cs str,
         cs: &'cs BonsaiChangeset,
         scuba: MononokeScubaSampleBuilder,
@@ -418,7 +418,7 @@ impl Hook {
             Self::Changeset(hook, _) => futures.push(HookInstance::Changeset(&**hook).run(
                 ctx,
                 bookmark,
-                content_fetcher,
+                content_manager,
                 &hook_name,
                 scuba,
                 cs,
@@ -429,7 +429,7 @@ impl Hook {
                 HookInstance::File(&**hook, path, change).run(
                     ctx,
                     bookmark,
-                    content_fetcher,
+                    content_manager,
                     &hook_name,
                     scuba.clone(),
                     cs,
@@ -449,7 +449,7 @@ pub trait ChangesetHook: Send + Sync {
         ctx: &'ctx CoreContext,
         bookmark: &BookmarkName,
         changeset: &'cs BonsaiChangeset,
-        content_fetcher: &'fetcher dyn FileContentFetcher,
+        content_manager: &'fetcher dyn FileContentManager,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error>;
 }
@@ -459,7 +459,7 @@ pub trait FileHook: Send + Sync {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         ctx: &'ctx CoreContext,
-        content_fetcher: &'fetcher dyn FileContentFetcher,
+        content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change FileChange>,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,

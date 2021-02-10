@@ -6,7 +6,7 @@
  */
 
 use crate::{
-    ChangesetHook, CrossRepoPushSource, FileContentFetcher, HookConfig, HookExecution,
+    ChangesetHook, CrossRepoPushSource, FileContentManager, HookConfig, HookExecution,
     HookRejectionInfo,
 };
 use anyhow::{Context, Error};
@@ -53,7 +53,7 @@ impl ChangesetHook for LimitCommitMessageLength {
         _ctx: &'ctx CoreContext,
         _bookmark: &BookmarkName,
         changeset: &'cs BonsaiChangeset,
-        _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let message = changeset.message();

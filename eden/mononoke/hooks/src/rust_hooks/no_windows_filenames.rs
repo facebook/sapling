@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::{CrossRepoPushSource, FileContentFetcher, FileHook, HookExecution, HookRejectionInfo};
+use crate::{CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo};
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -68,7 +68,7 @@ impl FileHook for NoWindowsFilenames {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _context_fetcher: &'fetcher dyn FileContentFetcher,
+        _context_fetcher: &'fetcher dyn FileContentManager,
         change: Option<&'change FileChange>,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,

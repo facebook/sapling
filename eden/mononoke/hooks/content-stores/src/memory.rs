@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::{ErrorKind, FileChange, FileContentFetcher, PathContent};
+use crate::{ErrorKind, FileChange, FileContentManager, PathContent};
 
 use anyhow::format_err;
 use async_trait::async_trait;
@@ -41,12 +41,12 @@ impl Into<InMemoryFileText> for u64 {
 }
 
 #[derive(Clone)]
-pub struct InMemoryFileContentFetcher {
+pub struct InMemoryFileContentManager {
     id_to_text: HashMap<ContentId, InMemoryFileText>,
 }
 
 #[async_trait]
-impl FileContentFetcher for InMemoryFileContentFetcher {
+impl FileContentManager for InMemoryFileContentManager {
     async fn get_file_size<'a>(
         &'a self,
         _ctx: &'a CoreContext,
@@ -82,7 +82,7 @@ impl FileContentFetcher for InMemoryFileContentFetcher {
         _paths: Vec<MPath>,
     ) -> Result<HashMap<MPath, PathContent>, ErrorKind> {
         Err(
-            format_err!("`find_content` is not implemented for `InMemoryFileContentFetcher`")
+            format_err!("`find_content` is not implemented for `InMemoryFileContentManager`")
                 .into(),
         )
     }
@@ -94,15 +94,15 @@ impl FileContentFetcher for InMemoryFileContentFetcher {
         _old_cs_id: ChangesetId,
     ) -> Result<Vec<(MPath, FileChange)>, ErrorKind> {
         Err(
-            format_err!("`file_changes` is not implemented for `InMemoryFileContentFetcher`")
+            format_err!("`file_changes` is not implemented for `InMemoryFileContentManager`")
                 .into(),
         )
     }
 }
 
-impl InMemoryFileContentFetcher {
-    pub fn new() -> InMemoryFileContentFetcher {
-        InMemoryFileContentFetcher {
+impl InMemoryFileContentManager {
+    pub fn new() -> InMemoryFileContentManager {
+        InMemoryFileContentManager {
             id_to_text: HashMap::new(),
         }
     }

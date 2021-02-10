@@ -15,7 +15,7 @@ use mononoke_types::{ChangesetId, ContentId, MPath};
 use std::collections::HashMap;
 
 #[async_trait]
-pub trait FileContentFetcher: Send + Sync {
+pub trait FileContentManager: Send + Sync {
     async fn get_file_size<'a>(
         &'a self,
         ctx: &'a CoreContext,

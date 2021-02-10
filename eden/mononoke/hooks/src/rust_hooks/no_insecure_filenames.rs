@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::{CrossRepoPushSource, FileContentFetcher, FileHook, HookExecution, HookRejectionInfo};
+use crate::{CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo};
 use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -49,7 +49,7 @@ impl FileHook for NoInsecureFilenames {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change FileChange>,
         path: &'path MPath,
         _cross_repo_push_source: CrossRepoPushSource,

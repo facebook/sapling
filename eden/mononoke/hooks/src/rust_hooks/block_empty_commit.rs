@@ -6,7 +6,7 @@
  */
 
 use crate::{
-    ChangesetHook, CrossRepoPushSource, FileContentFetcher, HookExecution, HookRejectionInfo,
+    ChangesetHook, CrossRepoPushSource, FileContentManager, HookExecution, HookRejectionInfo,
 };
 use anyhow::Error;
 use async_trait::async_trait;
@@ -30,7 +30,7 @@ impl ChangesetHook for BlockEmptyCommit {
         _ctx: &'ctx CoreContext,
         _bookmark: &BookmarkName,
         changeset: &'cs BonsaiChangeset,
-        _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _content_manager: &'fetcher dyn FileContentManager,
         _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         if changeset.file_changes_map().is_empty() {

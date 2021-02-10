@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::{ErrorKind, FileChange, FileContentFetcher, PathContent};
+use crate::{ErrorKind, FileChange, FileContentManager, PathContent};
 
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
@@ -17,12 +17,12 @@ use std::sync::Arc;
 
 const NULL: u8 = 0;
 
-pub struct TextOnlyFileContentFetcher<T> {
+pub struct TextOnlyFileContentManager<T> {
     inner: Arc<T>,
     max_size: u64,
 }
 
-impl<T> TextOnlyFileContentFetcher<T> {
+impl<T> TextOnlyFileContentManager<T> {
     pub fn new(inner: T, max_size: u64) -> Self {
         Self {
             inner: Arc::new(inner),
@@ -32,7 +32,7 @@ impl<T> TextOnlyFileContentFetcher<T> {
 }
 
 #[async_trait]
-impl<T: FileContentFetcher + 'static> FileContentFetcher for TextOnlyFileContentFetcher<T> {
+impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContentManager<T> {
     async fn get_file_size<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -91,7 +91,7 @@ fn looks_like_binary(file_bytes: &[u8]) -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::InMemoryFileContentFetcher;
+    use crate::InMemoryFileContentManager;
     use fbinit::FacebookInit;
     use mononoke_types_mocks::contentid::ONES_CTID;
     use tokio_compat::runtime::Runtime;
@@ -101,10 +101,10 @@ mod test {
         let mut rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
-        let mut inner = InMemoryFileContentFetcher::new();
+        let mut inner = InMemoryFileContentManager::new();
         inner.insert(ONES_CTID, "foobar");
 
-        let store = TextOnlyFileContentFetcher::new(inner, 10);
+        let store = TextOnlyFileContentManager::new(inner, 10);
         let ret = rt
             .block_on_std(store.get_file_text(&ctx, ONES_CTID))
             .unwrap();
@@ -120,10 +120,10 @@ mod test {
         let mut rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
-        let mut inner = InMemoryFileContentFetcher::new();
+        let mut inner = InMemoryFileContentManager::new();
         inner.insert(ONES_CTID, "foobar");
 
-        let store = TextOnlyFileContentFetcher::new(inner, 2);
+        let store = TextOnlyFileContentManager::new(inner, 2);
         let ret = rt
             .block_on_std(store.get_file_text(&ctx, ONES_CTID))
             .unwrap();
@@ -140,10 +140,10 @@ mod test {
         let mut rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
-        let mut inner = InMemoryFileContentFetcher::new();
+        let mut inner = InMemoryFileContentManager::new();
         inner.insert(ONES_CTID, "foo\0");
 
-        let store = TextOnlyFileContentFetcher::new(inner, 10);
+        let store = TextOnlyFileContentManager::new(inner, 10);
         let ret = rt
             .block_on_std(store.get_file_text(&ctx, ONES_CTID))
             .unwrap();

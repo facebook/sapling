@@ -14,7 +14,7 @@ use metaconfig_types::HookConfig;
 use mononoke_types::{FileChange, MPath};
 
 use super::LuaPattern;
-use crate::{CrossRepoPushSource, FileContentFetcher, FileHook, HookExecution, HookRejectionInfo};
+use crate::{CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo};
 
 #[derive(Default)]
 pub struct DenyFilesBuilder {
@@ -93,7 +93,7 @@ impl FileHook for DenyFiles {
     async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
         &'this self,
         _ctx: &'ctx CoreContext,
-        _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _content_manager: &'fetcher dyn FileContentManager,
         change: Option<&'change FileChange>,
         path: &'path MPath,
         cross_repo_push_source: CrossRepoPushSource,
