@@ -2803,7 +2803,11 @@ def grep(ui, repo, pattern, *pats, **opts):
             shards = revisionline.split(",")
             for shard in shards:
                 name, info = shard.split("=")
-                corpusrev, timestamp = info.split(":")
+                # biggrep doesn't have a consistent format
+                if ":" in info:
+                    corpusrev, timestamp = info.split(":")
+                else:
+                    corpusrev = info
                 corpusrevs.append(corpusrev)
 
             if not corpusrevs:
