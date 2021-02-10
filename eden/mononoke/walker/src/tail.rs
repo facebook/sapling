@@ -253,7 +253,8 @@ where
 
             // Walk needs clonable visitor, so wrap in Arc for its duration
             let arc_v = Arc::new(visitor);
-            let walk_output = walk_exact(ctx, arc_v.clone(), job_params, repo_params, type_params);
+            let walk_output =
+                walk_exact(ctx, arc_v.clone(), job_params, repo_params, type_params).boxed();
             make_sink(walk_output).await?;
             visitor = Arc::try_unwrap(arc_v).map_err(|_| anyhow!("could not unwrap visitor"))?;
 

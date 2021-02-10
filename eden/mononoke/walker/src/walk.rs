@@ -34,7 +34,7 @@ use filestore::{self, Alias};
 use fsnodes::RootFsnodeId;
 use futures::{
     future::{self, FutureExt, TryFutureExt},
-    stream::{BoxStream, StreamExt, TryStreamExt},
+    stream::{Stream, TryStreamExt},
 };
 use itertools::{Either, Itertools};
 use manifest::{Entry, Manifest};
@@ -1598,7 +1598,7 @@ pub fn walk_exact<V, VOut, Route>(
     job_params: JobWalkParams,
     repo_params: RepoWalkParams,
     type_params: RepoWalkTypeParams,
-) -> BoxStream<'static, Result<VOut, Error>>
+) -> impl Stream<Item = Result<VOut, Error>>
 where
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send + Sync,
     VOut: 'static + Send,
@@ -1704,12 +1704,10 @@ where
                         let handle = tokio::task::spawn(next);
                         handle.await?
                     }
-                    .boxed()
                 }
             })
         })
         .try_flatten_stream()
-        .boxed()
 }
 
 async fn walk_one<V, VOut, Route>(
