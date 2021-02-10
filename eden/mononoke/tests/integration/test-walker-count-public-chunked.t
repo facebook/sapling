@@ -127,6 +127,18 @@ derived unodes, chunked, deep. Expect deferred as unode parent will attempt to s
   Deferred: 0
   Completed in 2 chunks of size 2
 
+walk with explicit repo bounds, e.g. to reproduce an issue in chunk with bounds 2, 4
+  $ mononoke_walker -L sizing scrub -q -p UnodeMapping --repo-lower-bound=2 --repo-upper-bound=4 --chunk-size=2 -I deep -i derived_unodes 2>&1 | strip_glog
+  Walking edge types [UnodeFileToUnodeFileParent, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent, UnodeMappingToRootUnodeManifest]
+  Walking node types [UnodeFile, UnodeManifest, UnodeMapping]
+  Repo bounds: (2, 4)
+  Starting chunk 1 with bounds (2, 4)
+  Seen,Loaded: 8,6
+  * Type:Walked,Checks,Children UnodeFile:3,*,0 UnodeManifest:3,*,4 UnodeMapping:2,*,4 (glob)
+  Deferred: 1
+  Deferred edge counts by type were: UnodeManifestToUnodeFileChild:1 UnodeManifestToUnodeManifestParent:1
+  Completed in 1 chunks of size 2
+
 derived unodes, chunked, deep with clearing between chunks. Expect more reloaded in second chunk, but not a full reload
   $ mononoke_walker -L sizing scrub -q -p UnodeMapping --chunk-clear-sample-rate=1 --chunk-size=2 -I deep -i derived_unodes 2>&1 | strip_glog
   Walking edge types [UnodeFileToUnodeFileParent, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent, UnodeMappingToRootUnodeManifest]

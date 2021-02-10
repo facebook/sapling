@@ -107,6 +107,8 @@ const CHECKPOINT_NAME_ARG: &str = "checkpoint-name";
 const CHECKPOINT_PATH_ARG: &str = "checkpoint-path";
 const CHECKPOINT_SAMPLE_RATE_ARG: &str = "checkpoint-sample-rate";
 const STATE_MAX_AGE_ARG: &str = "state-max-age";
+const REPO_LOWER_BOUND: &str = "repo-lower-bound";
+const REPO_UPPER_BOUND: &str = "repo-upper-bound";
 const ALLOW_REMAINING_DEFERRED_ARG: &str = "allow-remaining-deferred";
 const INNER_BLOBSTORE_ID_ARG: &str = "inner-blobstore-id";
 const ENABLE_DERIVE_ARG: &str = "enable-derive";
@@ -828,6 +830,22 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Max age of walk state held internally ot loaded from checkpoint that we will attempt to continue from, in seconds."),
         )
         .arg(
+            Arg::with_name(REPO_LOWER_BOUND)
+                .long(REPO_LOWER_BOUND)
+                .takes_value(true)
+                .required(false)
+                .requires(CHUNK_BY_PUBLIC_ARG)
+                .help("Set the repo upper bound used by chunking instead of loading it.  Inclusive. Useful for reproducing issues from a particular chunk."),
+        )
+        .arg(
+            Arg::with_name(REPO_UPPER_BOUND)
+                .long(REPO_UPPER_BOUND)
+                .takes_value(true)
+                .required(false)
+                .requires(CHUNK_BY_PUBLIC_ARG)
+                .help("Set the repo lower bound used by chunking instead of loading it.  Exclusive (used in rust ranges). Useful for reproducing issues from a particular chunk."),
+        )
+        .arg(
             Arg::with_name(ALLOW_REMAINING_DEFERRED_ARG)
                 .long(ALLOW_REMAINING_DEFERRED_ARG)
                 .takes_value(true)
@@ -985,6 +1003,9 @@ async fn parse_tail_args<'a>(
     let allow_remaining_deferred =
         args::get_bool_opt(&sub_m, ALLOW_REMAINING_DEFERRED_ARG).unwrap();
 
+    let repo_lower_bound_override = args::get_u64_opt(&sub_m, REPO_LOWER_BOUND);
+    let repo_upper_bound_override = args::get_u64_opt(&sub_m, REPO_UPPER_BOUND);
+
     Ok(TailParams {
         tail_secs,
         public_changeset_chunk_size,
@@ -996,6 +1017,8 @@ async fn parse_tail_args<'a>(
         state_max_age,
         checkpoint_sample_rate,
         allow_remaining_deferred,
+        repo_lower_bound_override,
+        repo_upper_bound_override,
     })
 }
 

@@ -83,6 +83,8 @@ pub struct TailParams {
     pub state_max_age: Duration,
     pub checkpoint_sample_rate: u64,
     pub allow_remaining_deferred: bool,
+    pub repo_lower_bound_override: Option<u64>,
+    pub repo_upper_bound_override: Option<u64>,
 }
 
 pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, V, VOut, Route>(
@@ -155,7 +157,14 @@ where
             heads_fetcher,
         )) = &chunk_params
         {
-            let (lower, upper) = heads_fetcher.get_repo_bounds().await?;
+            let (mut lower, mut upper) = heads_fetcher.get_repo_bounds().await?;
+            if let Some(lower_override) = tail_params.repo_lower_bound_override {
+                lower = lower_override;
+            }
+            if let Some(upper_override) = tail_params.repo_upper_bound_override {
+                upper = upper_override;
+            }
+
             info!(repo_params.logger, #log::CHUNKING, "Repo bounds: ({}, {})", lower, upper);
 
             let (contiguous_bounds, best_low, catchup_bounds, main_bounds) = if let Some(
@@ -310,7 +319,10 @@ where
 
         visitor.end_chunks(
             &repo_params.logger,
-            contiguous_bounds && !tail_params.allow_remaining_deferred,
+            contiguous_bounds
+                && !tail_params.allow_remaining_deferred
+                // If lower bound overridden then not contiguous to repo start. Overriding upper bound should not result in deferred.
+                && tail_params.repo_lower_bound_override.is_none(),
         )?;
 
         if let Some((chunk_size, _heads_fetcher)) = &chunk_params {
