@@ -235,7 +235,7 @@ struct XdrTrait<std::string> {
  */
 template <typename Enum, class... Vars>
 struct XdrVariant {
-  Enum tag;
+  Enum tag{};
   std::variant<std::monostate, Vars...> v;
 
   using Base = XdrVariant<Enum, Vars...>;
