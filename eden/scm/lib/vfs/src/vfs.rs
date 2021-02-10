@@ -207,24 +207,12 @@ impl VFS {
 
     /// Remove the file at `path`.
     ///
+    /// If file does not exist, returns without an error
+    ///
     /// The parent directories of this file will be removed recursively if they are empty.
     pub fn remove(&self, path: &RepoPath) -> Result<()> {
         let mut filepath = self.inner.auditor.audit(path)?;
-
-        if let Ok(metadata) = symlink_metadata(&filepath) {
-            let file_type = metadata.file_type();
-            if file_type.is_file() || file_type.is_symlink() {
-                let result = remove_file(&filepath)
-                    .with_context(|| format!("Can't remove file {:?}", filepath));
-                if let Err(e) = result {
-                    if let Some(io_error) = e.downcast_ref::<io::Error>() {
-                        ensure!(io_error.kind() == ErrorKind::NotFound, e);
-                    } else {
-                        return Err(e);
-                    };
-                }
-            }
-        }
+        self.remove_keep_path(&filepath)?;
 
         // Mercurial doesn't track empty directories, remove them
         // recursively.
@@ -240,12 +228,57 @@ impl VFS {
         Ok(())
     }
 
+    /// Removes file, but inlike Self::remove, does not delete empty directories.
+    fn remove_keep_path(&self, filepath: &PathBuf) -> Result<()> {
+        if let Ok(metadata) = symlink_metadata(&filepath) {
+            let file_type = metadata.file_type();
+            if file_type.is_file() || file_type.is_symlink() {
+                let result = remove_file(&filepath)
+                    .with_context(|| format!("Can't remove file {:?}", filepath));
+                if let Err(e) = result {
+                    if let Some(io_error) = e.downcast_ref::<io::Error>() {
+                        ensure!(io_error.kind() == ErrorKind::NotFound, e);
+                    } else {
+                        return Err(e);
+                    };
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn supports_symlinks(&self) -> bool {
         self.inner.supports_symlinks
     }
 
     pub fn supports_executables(&self) -> bool {
         self.inner.supports_executables
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_symlink_overwrite() {
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("a").unwrap();
+        vfs.write(path, &Bytes::from("abc"), Some(UpdateFlag::Symlink))
+            .unwrap();
+        vfs.write(path, &Bytes::from(&[1, 2, 3][..]), None).unwrap();
+        let mut buf = tmp.path().to_path_buf();
+        buf.push("a");
+        assert!(
+            !File::open(buf)
+                .unwrap()
+                .metadata()
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        )
     }
 }
 

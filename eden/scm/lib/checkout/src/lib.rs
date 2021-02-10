@@ -7,7 +7,7 @@
 
 use anyhow::{bail, format_err, Result};
 use futures::{stream, try_join, Stream, StreamExt};
-use manifest::{DiffEntry, DiffType, FileType};
+use manifest::{DiffEntry, DiffType, FileMetadata, FileType};
 use revisionstore::{HgIdDataStore, StoreKey, StoreResult};
 use types::{HgId, Key, RepoPathBuf};
 use vfs::{UpdateFlag, VFS};
@@ -55,36 +55,26 @@ impl CheckoutPlan {
             let item: DiffEntry = item?;
             match item.diff_type {
                 DiffType::LeftOnly(_) => remove.push(item.path),
-                DiffType::RightOnly(meta) => update_content.push(UpdateContentAction {
-                    path: item.path,
-                    content_hgid: meta.hgid,
-                    file_type: meta.file_type,
-                }),
+                DiffType::RightOnly(meta) => {
+                    update_content.push(UpdateContentAction::new(item, meta))
+                }
                 DiffType::Changed(old, new) => {
-                    if old.hgid == new.hgid {
-                        let set_x_flag = match (old.file_type, new.file_type) {
-                            (FileType::Executable, FileType::Regular) => false,
-                            (FileType::Regular, FileType::Executable) => true,
-                            // todo - address this case
-                            // Since this is rare case we are going to handle it by submitting
-                            // delete and then create operation to avoid complexity
-                            (o, n) => bail!(
-                                "Can not update {}: hg id has not changed and file type changed {:?}->{:?}",
-                                item.path,
-                                o,
-                                n
-                            ),
-                        };
-                        update_meta.push(UpdateMetaAction {
-                            path: item.path,
-                            set_x_flag,
-                        });
-                    } else {
-                        update_content.push(UpdateContentAction {
-                            path: item.path,
-                            content_hgid: new.hgid,
-                            file_type: new.file_type,
-                        })
+                    match (old.hgid == new.hgid, old.file_type, new.file_type) {
+                        (true, FileType::Executable, FileType::Regular) => {
+                            update_meta.push(UpdateMetaAction {
+                                path: item.path,
+                                set_x_flag: false,
+                            });
+                        }
+                        (true, FileType::Regular, FileType::Executable) => {
+                            update_meta.push(UpdateMetaAction {
+                                path: item.path,
+                                set_x_flag: true,
+                            });
+                        }
+                        _ => {
+                            update_content.push(UpdateContentAction::new(item, new));
+                        }
                     }
                 }
             };
@@ -97,8 +87,6 @@ impl CheckoutPlan {
     }
 
     // todo - tests
-    // todo (VFS) - when writing simple file verify that destination is not a symlink
-    // todo (VFS) - when writing symlink instead of regular file, remove it first
     /// Applies plan to the root using store to fetch data.
     /// This async function offloads file system operation to tokio blocking thread pool.
     /// It limits number of concurrent fs operations to PARALLEL_CHECKOUT.
@@ -120,7 +108,6 @@ impl CheckoutPlan {
         let remove_files = remove_files.buffer_unordered(PARALLEL_CHECKOUT);
 
         Self::process_work_stream(remove_files).await?;
-
 
         let keys: Vec<_> = self
             .update_content
@@ -189,7 +176,10 @@ impl CheckoutPlan {
     ) -> Result<()> {
         let vfs = vfs.clone(); // vfs auditor cache is shared
         tokio::runtime::Handle::current()
-            .spawn_blocking(move || vfs.write(path.as_repo_path(), &data.into(), flag))
+            .spawn_blocking(move || {
+                let repo_path = path.as_repo_path();
+                vfs.write(repo_path, &data.into(), flag)
+            })
             .await??;
         Ok(())
     }
@@ -208,5 +198,15 @@ impl CheckoutPlan {
             .spawn_blocking(move || vfs.set_executable(path.as_repo_path(), flag))
             .await??;
         Ok(())
+    }
+}
+
+impl UpdateContentAction {
+    pub fn new(item: DiffEntry, meta: FileMetadata) -> Self {
+        Self {
+            path: item.path,
+            content_hgid: meta.hgid,
+            file_type: meta.file_type,
+        }
     }
 }
