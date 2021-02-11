@@ -167,7 +167,9 @@ static int to_python_time(const FILETIME* tm) {
 static PyObject* make_item(const WIN32_FIND_DATAA* fd, int wantstat) {
   PyObject* py_st;
   struct hg_stat* stp;
+#ifndef IS_PY3K
   const int S_IFLNK = 40960; /* stat.S_IFLINK defined by Python on Windows */
+#endif
 
   int kind = (fd->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
       ? ((fd->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) ? S_IFLNK
