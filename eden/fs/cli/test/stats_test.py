@@ -4,17 +4,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import unittest
 from io import StringIO
+from typing import Optional
 
 from .. import stats_print
 from ..stats import DiagInfoCounters, get_counter_table, get_store_latency
 
 
 class StatsTest(unittest.TestCase):
-    maxDiff = None
+    maxDiff: Optional[int] = None
 
-    def test_print_heading(self):
+    def test_print_heading(self) -> None:
         expected_output = """\
                                    **********
                                    TheHeading
@@ -25,7 +28,7 @@ class StatsTest(unittest.TestCase):
         stats_print.write_heading("TheHeading", out)
         self.assertEqual(out.getvalue(), expected_output)
 
-    def test_print_latency_record(self):
+    def test_print_latency_record(self) -> None:
         matrix = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
         expected_output = """\
               |      avg               1                2           3          4
@@ -39,7 +42,7 @@ access        |      p90               9               10          11         12
         stats_print.write_latency_record("access", matrix, out)
         self.assertEqual(out.getvalue(), expected_output)
 
-    def test_print_table(self):
+    def test_print_table(self) -> None:
         table = {
             "key1": [1, 2, 3, 4],
             "key2": [5, 6, 7, 8],
@@ -58,7 +61,7 @@ key4                     13             14             15             16
         stats_print.write_table(table, "SystemCall", out)
         self.assertEqual(expected_output, out.getvalue())
 
-    def test_print_table_with_shorter_header_and_key_column(self):
+    def test_print_table_with_shorter_header_and_key_column(self) -> None:
         table = {"key": [1, 2, 3, 4]}
         # Verifies the width of the first column depends on the header's and
         # key's lengths.
@@ -71,7 +74,7 @@ key                1              2              3              4
         stats_print.write_table(table, "SC", out)
         self.assertEqual(expected_output, out.getvalue())
 
-    def test_format_size(self):
+    def test_format_size(self) -> None:
         self.assertEqual("1.5 GB", stats_print.format_size(1500000000))
         # rounds up
         self.assertEqual("1.6 GB", stats_print.format_size(1590000000))
@@ -79,7 +82,7 @@ key                1              2              3              4
         self.assertEqual("12 B", stats_print.format_size(12))
         self.assertEqual("0", stats_print.format_size(0))
 
-    def test_time_formats_correctly(self):
+    def test_time_formats_correctly(self) -> None:
         self.assertEqual(stats_print.format_time(0), "0 second(s)")
         self.assertEqual(stats_print.format_time(30), "30 second(s)")
         self.assertEqual(stats_print.format_time(60), "1.0 minute(s)")

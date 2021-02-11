@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import unittest
 
 from eden.fs.cli.tabulate import tabulate
@@ -13,7 +15,7 @@ eol = ""
 
 
 class TabulateTest(unittest.TestCase):
-    def test_tabulate(self):
+    def test_tabulate(self) -> None:
         output = tabulate(
             ["a", "b", "c"],
             rows=[
@@ -29,7 +31,7 @@ a_1   b_1 see_1{eol}
 a_two b_2 c_2{eol}""",
         )
 
-    def test_tabulate_header_labels(self):
+    def test_tabulate_header_labels(self) -> None:
         output = tabulate(
             ["a", "b", "c"],
             rows=[

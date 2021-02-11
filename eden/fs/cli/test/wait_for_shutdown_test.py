@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import contextlib
 import signal
 import subprocess
@@ -43,7 +45,7 @@ class WaitForShutdownTest(unittest.TestCase):
 class AutoReapingChildProcess:
     """A child process (subprocess.Popen) which is promptly reaped."""
 
-    def __init__(self, args) -> None:
+    def __init__(self, args: typing.List[str]) -> None:
         super().__init__()
 
         self.__condition = threading.Condition()
@@ -65,29 +67,26 @@ class AutoReapingChildProcess:
         with self.__condition:
             while self.__returncode is None:
                 self.__condition.wait()
-            assert self.__returncode is not None
-            # pyre-fixme[7]: Expected `int` but got `Optional[int]`.
-            return self.__returncode
+            returncode = self.__returncode
+            assert returncode is not None
+            return returncode
 
     def __wait_for_process_start(self) -> None:
         with self.__condition:
             while self.__pid is None and self.__error is None:
                 self.__condition.wait()
-            if self.__error is not None:
-                # pyre-fixme[48]: Expression `self.__error` has type
-                #  `Optional[BaseException]` but must extend BaseException.
-                raise self.__error
+            error = self.__error
+            if error is not None:
+                raise error
             assert self.__pid is not None
 
-    def __start_thread(self, *args, **kwargs) -> None:
-        thread = threading.Thread(
-            target=self.__run_thread, args=(args, kwargs), daemon=True
-        )
+    def __start_thread(self, *args: typing.List[str]) -> None:
+        thread = threading.Thread(target=self.__run_thread, args=(args), daemon=True)
         thread.start()
 
-    def __run_thread(self, popen_args, popen_kwargs) -> None:
+    def __run_thread(self, popen_args: typing.List[str]) -> None:
         try:
-            with subprocess.Popen(*popen_args, **popen_kwargs) as process:
+            with subprocess.Popen(popen_args) as process:
                 with self.__condition:
                     self.__pid = process.pid
                     self.__condition.notify_all()

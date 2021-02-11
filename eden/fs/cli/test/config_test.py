@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import configparser
 import io
 import os
@@ -22,14 +24,14 @@ from ..configinterpolator import EdenConfigInterpolator
 from ..configutil import EdenConfigParser, UnexpectedType
 
 
-def get_toml_test_file_invalid():
+def get_toml_test_file_invalid() -> str:
     cfg_file = """
 [core thisIsNotAllowed]
 """
     return cfg_file
 
 
-def get_toml_test_file_defaults():
+def get_toml_test_file_defaults() -> str:
     cfg_file = """
 [core]
 systemIgnoreFile = "/etc/eden/gitignore"
@@ -44,7 +46,7 @@ reporter = 'pastry --title "eden rage from $(hostname)"'
     return cfg_file
 
 
-def get_toml_test_file_user_rc():
+def get_toml_test_file_user_rc() -> str:
     cfg_file = """
 [core]
 ignoreFile = "/home/${USER}/.gitignore-override"
@@ -56,7 +58,7 @@ scribe-cat = "/usr/local/bin/scribe_cat"
     return cfg_file
 
 
-def get_toml_test_file_system_rc():
+def get_toml_test_file_system_rc() -> str:
     cfg_file = """
 ["telemetry"]
 scribe-cat = "/bad/path/to/scribe_cat"
