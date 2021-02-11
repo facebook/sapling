@@ -110,14 +110,24 @@ def getconfigs(repo):
 
 
 def getmirrors(maps, filename):
+    # The getconfigs() code above adds "/" to the end of all of the entries.
+    # This makes it easy to check that we are only matching full directory path name
+    # components (e.g., so we don't incorrectly treat "foobar/test.txt" as matching a
+    # rule for "foo").
+    #
+    # However, we do want to allow rules to match exact file names too, and not just
+    # directory prefixes.  Therefore when looking matches append "/" to the end of the
+    # filename that we are checking.
+    checkpath = filename + "/"
+
     if EXCLUDE_PATHS in maps:
         for subdir in maps[EXCLUDE_PATHS]:
-            if filename.startswith(subdir):
+            if checkpath.startswith(subdir):
                 return []
 
-    for key, mirrordirs in pycompat.iteritems(maps):
+    for key, mirrordirs in maps.items():
         for subdir in mirrordirs:
-            if filename.startswith(subdir):
+            if checkpath.startswith(subdir):
                 return mirrordirs
 
     return []
@@ -206,15 +216,16 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
     mirroredfiles = set()
 
     # Detect which mirror this file comes from
+    rulecheckpath = sourcepath + "/"
     sourcemirror = None
     for mirror in mirrors:
-        if sourcepath.startswith(mirror):
+        if rulecheckpath.startswith(mirror):
             sourcemirror = mirror
             break
     if not sourcemirror:
         raise error.Abort(_("unable to detect source mirror of '%s'") % (sourcepath,))
 
-    relpath = sourcepath[len(sourcemirror) :]
+    relpath = rulecheckpath[len(sourcemirror) :]
 
     # Apply the change to each mirror one by one
     allchanges = set(status.modified + status.removed + status.added)
@@ -223,6 +234,14 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
             continue
 
         mirrorpath = mirror + relpath
+        # mirrorpath will always end in "/" here:
+        # - mirror always ends in "/", since a "/" is appended by getconfigs()
+        # - if the mirror rule matched an exact file relpath will be empty
+        # - if the mirror rule matched a directory prefix, relpath will be non-empty
+        #   but will end in a "/" since we appended one to rulecheckpath above.
+        # Strip off the final "/" here
+        mirrorpath = mirrorpath.rstrip("/")
+
         mirroredfiles.add(mirrorpath)
         if mirrorpath in allchanges:
             wctx = repo[None]

@@ -735,3 +735,98 @@ Test that excludes only work when specified for every destination
   mirrored adding 'a/c/1' to 'b/c/1'
   mirrored adding 'a/excl/2' to 'b/excl/2'
 
+Match and exclude rules can match individual files
+  $ newrepo sync-individual-files
+  $ readconfig <<EOF
+  > [dirsync]
+  > group1.dir1 = somedir/
+  > group1.dir2 = elsewhere/
+  > singlefile.dir1 = a/myfile.txt
+  > singlefile.dir2 = b/foo.txt
+  > rootfile.dir1 = toplevel.txt
+  > rootfile.dir2 = x/y/z/foo.txt
+  > toroot.dir1 = a/root.txt
+  > toroot.dir2 = root.txt
+  > exclude.group1_path = somedir/readme.txt
+  > EOF
+  $ mkdir somedir
+  $ echo a > somedir/a
+  $ echo b > somedir/readme.txt
+  $ mkdir a
+  $ echo c > a/myfile.txt
+  $ echo d > toplevel.txt
+  $ echo e > a/root.txt
+  $ echo f > toplevel.txt
+  $ echo g > other.txt
+  $ hg add somedir a other.txt toplevel.txt
+  adding a/myfile.txt
+  adding a/root.txt
+  adding somedir/a
+  adding somedir/readme.txt
+  $ hg commit -m 'test commit' --traceback
+  mirrored adding 'a/myfile.txt' to 'b/foo.txt'
+  mirrored adding 'a/root.txt' to 'root.txt'
+  mirrored adding 'somedir/a' to 'elsewhere/a'
+  mirrored adding 'toplevel.txt' to 'x/y/z/foo.txt'
+  $ hg diff --git -r null -r .
+  diff --git a/a/myfile.txt b/a/myfile.txt
+  new file mode 100644
+  --- /dev/null
+  +++ b/a/myfile.txt
+  @@ -0,0 +1,1 @@
+  +c
+  diff --git a/a/root.txt b/a/root.txt
+  new file mode 100644
+  --- /dev/null
+  +++ b/a/root.txt
+  @@ -0,0 +1,1 @@
+  +e
+  diff --git a/b/foo.txt b/b/foo.txt
+  new file mode 100644
+  --- /dev/null
+  +++ b/b/foo.txt
+  @@ -0,0 +1,1 @@
+  +c
+  diff --git a/elsewhere/a b/elsewhere/a
+  new file mode 100644
+  --- /dev/null
+  +++ b/elsewhere/a
+  @@ -0,0 +1,1 @@
+  +a
+  diff --git a/other.txt b/other.txt
+  new file mode 100644
+  --- /dev/null
+  +++ b/other.txt
+  @@ -0,0 +1,1 @@
+  +g
+  diff --git a/root.txt b/root.txt
+  new file mode 100644
+  --- /dev/null
+  +++ b/root.txt
+  @@ -0,0 +1,1 @@
+  +e
+  diff --git a/somedir/a b/somedir/a
+  new file mode 100644
+  --- /dev/null
+  +++ b/somedir/a
+  @@ -0,0 +1,1 @@
+  +a
+  diff --git a/somedir/readme.txt b/somedir/readme.txt
+  new file mode 100644
+  --- /dev/null
+  +++ b/somedir/readme.txt
+  @@ -0,0 +1,1 @@
+  +b
+  diff --git a/toplevel.txt b/toplevel.txt
+  new file mode 100644
+  --- /dev/null
+  +++ b/toplevel.txt
+  @@ -0,0 +1,1 @@
+  +f
+  diff --git a/x/y/z/foo.txt b/x/y/z/foo.txt
+  new file mode 100644
+  --- /dev/null
+  +++ b/x/y/z/foo.txt
+  @@ -0,0 +1,1 @@
+  +f
+
