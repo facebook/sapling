@@ -1626,88 +1626,81 @@ where
         .map(|e| (None, e.clone()))
         .collect();
 
-    published_bookmarks
-        .map_ok(move |published_bookmarks| {
-            let published_bookmarks = Arc::new(published_bookmarks);
+    async move {
+        let published_bookmarks = Arc::new(published_bookmarks.await?);
+        let heads_fetcher: HeadsFetcher = Arc::new({
+            cloned!(published_bookmarks);
+            move |_ctx: &CoreContext| {
+                future::ok(published_bookmarks.iter().map(|(_, csid)| *csid).collect()).boxed()
+            }
+        });
 
-            let heads_fetcher: HeadsFetcher = Arc::new({
-                cloned!(published_bookmarks);
-                move |_ctx: &CoreContext| {
-                    future::ok(
-                        published_bookmarks
-                            .iter()
-                            .map(|(_, csid)| csid)
-                            .cloned()
-                            .collect(),
-                    )
-                    .boxed()
-                }
-            });
+        cloned!(
+            repo_params.repo,
+            repo_params.include_edge_types,
+            repo_params.include_node_types
+        );
 
-            cloned!(
-                repo_params.repo,
-                repo_params.include_edge_types,
-                repo_params.include_node_types
-            );
+        let checker = Arc::new(Checker {
+            with_blame: repo_params.include_node_types.contains(&NodeType::Blame),
+            with_fastlog: include_node_types
+                .iter()
+                .any(|n| n.derived_data_name() == Some(RootFastlog::NAME)),
+            with_filenodes: include_edge_types
+                .iter()
+                .any(|e| e.outgoing_type() == NodeType::HgFileNode),
+            include_edge_types,
+            always_emit_edge_types: type_params.always_emit_edge_types,
+            keep_edge_paths: type_params.keep_edge_paths,
+            visitor: visitor.clone(),
+            required_node_data_types: type_params.required_node_data_types,
+            phases_store: repo.get_phases_factory().get_phases(
+                repo.get_repoid(),
+                repo.get_changeset_fetcher(),
+                heads_fetcher,
+            ),
+            bonsai_hg_mapping: repo.get_bonsai_hg_mapping().clone(),
+            repo_id: repo.get_repoid(),
+        });
 
-            let checker = Arc::new(Checker {
-                with_blame: repo_params.include_node_types.contains(&NodeType::Blame),
-                with_fastlog: include_node_types
-                    .iter()
-                    .any(|n| n.derived_data_name() == Some(RootFastlog::NAME)),
-                with_filenodes: include_edge_types
-                    .iter()
-                    .any(|e| e.outgoing_type() == NodeType::HgFileNode),
-                include_edge_types,
-                always_emit_edge_types: type_params.always_emit_edge_types,
-                keep_edge_paths: type_params.keep_edge_paths,
-                visitor: visitor.clone(),
-                required_node_data_types: type_params.required_node_data_types,
-                phases_store: repo.get_phases_factory().get_phases(
-                    repo.get_repoid(),
-                    repo.get_changeset_fetcher(),
-                    heads_fetcher,
-                ),
-                bonsai_hg_mapping: repo.get_bonsai_hg_mapping().clone(),
-                repo_id: repo.get_repoid(),
-            });
-
-            bounded_traversal_stream(repo_params.scheduled_max, walk_roots, {
-                move |(via, walk_item): (Option<Route>, OutgoingEdge)| {
-                    let ctx = visitor.start_step(ctx.clone(), via.as_ref(), &walk_item);
-                    cloned!(
-                        job_params.error_as_data_node_types,
-                        job_params.error_as_data_edge_types,
-                        job_params.enable_derive,
-                        published_bookmarks,
-                        repo_params.repo,
-                        repo_params.scuba_builder,
+        Ok(bounded_traversal_stream(
+            repo_params.scheduled_max,
+            walk_roots,
+            move |(via, walk_item): (Option<Route>, OutgoingEdge)| {
+                let ctx = visitor.start_step(ctx.clone(), via.as_ref(), &walk_item);
+                cloned!(
+                    job_params.error_as_data_node_types,
+                    job_params.error_as_data_edge_types,
+                    job_params.enable_derive,
+                    published_bookmarks,
+                    repo_params.repo,
+                    repo_params.scuba_builder,
+                    visitor,
+                    checker,
+                );
+                // Each step returns the walk result, and next steps
+                async move {
+                    let next = walk_one(
+                        ctx,
+                        via,
+                        walk_item,
+                        repo,
+                        enable_derive,
                         visitor,
+                        error_as_data_node_types,
+                        error_as_data_edge_types,
+                        scuba_builder,
+                        published_bookmarks,
                         checker,
                     );
-                    // Each step returns the walk result, and next steps
-                    async move {
-                        let next = walk_one(
-                            ctx,
-                            via,
-                            walk_item,
-                            repo,
-                            enable_derive,
-                            visitor,
-                            error_as_data_node_types,
-                            error_as_data_edge_types,
-                            scuba_builder,
-                            published_bookmarks,
-                            checker,
-                        );
 
-                        let handle = tokio::task::spawn(next);
-                        handle.await?
-                    }
+                    let handle = tokio::task::spawn(next);
+                    handle.await?
                 }
-            })
-        })
-        .try_flatten_stream()
+            },
+        ))
+    }
+    .try_flatten_stream()
 }
 
 async fn walk_one<V, VOut, Route>(
