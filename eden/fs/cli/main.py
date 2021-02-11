@@ -2037,7 +2037,9 @@ class StopCmd(Subcmd):
 
 def create_parser() -> argparse.ArgumentParser:
     """Returns a parser"""
-    parser = argparse.ArgumentParser(description="Manage Eden checkouts.")
+    parser = argparse.ArgumentParser(
+        prog="edenfsctl", description="Manage Eden checkouts."
+    )
     # TODO: We should probably rename this argument to --state-dir.
     # This directory contains materialized file state and the list of managed checkouts,
     # but doesn't really contain configuration.
