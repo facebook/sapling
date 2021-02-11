@@ -15,9 +15,9 @@ A few basic tests
    (empty) (no-eol)
   $ echo a > a
   $ cmd hg add a
-   (00000000) (no-eol)
+   (000000000) (no-eol)
   $ cmd hg commit -m 'c1'
-   (5cad84d1) (no-eol)
+   (5cad84d17) (no-eol)
   $ cmd hg book active
    (active) (no-eol)
 
@@ -25,7 +25,7 @@ Test old mode
   $ export WANT_OLD_SCM_PROMPT
   $ WANT_OLD_SCM_PROMPT=1
   $ cmd hg book -i
-  5cad84d1 (no-eol)
+  5cad84d17 (no-eol)
   $ cmd hg book active
   active (no-eol)
 

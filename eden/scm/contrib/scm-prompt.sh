@@ -131,7 +131,7 @@ _hg_prompt() {
       fi
     fi
   else
-    br="$(builtin echo "$dirstate" | command cut -c 1-8)"
+    br="$(builtin echo "$dirstate" | command cut -c 1-9)"
   fi
   if [[ -f "$remote" ]]; then
     local allremotemarks="$(command grep "^$dirstate bookmarks" "$remote" | \
