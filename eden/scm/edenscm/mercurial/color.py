@@ -24,7 +24,7 @@ try:
     import curses
 
     curses.COLOR_BLACK
-except ImportError:
+except (ImportError, AttributeError):
     curses = None
 
 # start and stop parameters for effects

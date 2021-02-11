@@ -363,7 +363,7 @@ replace-with = "vendored-sources"
             )
         except subprocess.CalledProcessError as e:
             no_resource_err = (
-                "The specified image file did not contain a resource section".lower()
+                b"The specified image file did not contain a resource section".lower()
             )
             if no_resource_err not in e.output.lower():
                 distutils.log.error(

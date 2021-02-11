@@ -280,7 +280,7 @@ cdef class linelog:
         """
         self.path = path
         if path:
-            IF UNAME_SYSNAME == b'Windows':
+            IF UNAME_SYSNAME == 'Windows':
                 raise RuntimeError(b'on-disk linelog is unavailable on Windows')
             ELSE:
                 self.buf = _filebuffer(path)
