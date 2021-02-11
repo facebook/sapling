@@ -24,6 +24,7 @@ use mononoke_types::{BlobstoreBytes, Timestamp};
 use once_cell::sync::Lazy;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{info, warn};
+use std::cmp::max;
 use std::collections::HashMap;
 use std::fmt;
 use std::num::{NonZeroU64, NonZeroUsize};
@@ -224,13 +225,9 @@ async fn blobstore_get(
                 }
             }
             ErrorKind::SomeMissingItem(missing_reads, Some(value)) => {
-                let ctime_age = value.as_meta().ctime().and_then(|ctime| {
-                    let age_secs = Timestamp::from_timestamp_secs(ctime).since_seconds();
-                    if age_secs > 0 {
-                        Some(Duration::from_secs(age_secs as u64))
-                    } else {
-                        None
-                    }
+                let ctime_age = value.as_meta().ctime().map(|ctime| {
+                    let age_secs = max(0, Timestamp::from_timestamp_secs(ctime).since_seconds());
+                    Duration::from_secs(age_secs as u64)
                 });
 
                 match (ctime_age, scrub_options.scrub_grace) {
