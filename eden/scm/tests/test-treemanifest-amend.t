@@ -5,6 +5,7 @@ Crash in histpack code path where the amend destination already exists
   $ configure mutation-norecord
   $ enable undo treemanifest remotefilelog
   $ setconfig treemanifest.treeonly=1 remotefilelog.reponame=foo remotefilelog.cachepath=$TESTTMP/cache
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
   $ newrepo
   $ drawdag << 'EOS'
   > B

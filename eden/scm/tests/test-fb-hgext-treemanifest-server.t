@@ -4,6 +4,7 @@
 
 #testcases vfscachestore simplecachestore
   $ setconfig treemanifest.flatcompat=False
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
   $ configure mutation-norecord
   $ . "$TESTDIR/library.sh"

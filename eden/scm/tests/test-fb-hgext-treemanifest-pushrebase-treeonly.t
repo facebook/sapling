@@ -4,6 +4,7 @@ Push treeonly commits from a treeonly shallow repo to a treeonly server
 
   $ setconfig remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache
   $ setconfig treemanifest.flatcompat=False
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
   $ configure dummyssh
 
   $ newrepo server

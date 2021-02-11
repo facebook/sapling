@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ CACHEDIR=`pwd`/hgcache
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
   $ . "$TESTDIR/library.sh"
 

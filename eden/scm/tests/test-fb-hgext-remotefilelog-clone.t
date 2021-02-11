@@ -2,6 +2,7 @@
 
   $ disable treemanifest
   $ setconfig remotenames.selectivepull=1
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
   $ . "$TESTDIR/library.sh"
 

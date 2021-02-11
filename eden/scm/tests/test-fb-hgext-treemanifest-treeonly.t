@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ setconfig treemanifest.flatcompat=False remotefilelog.localdatarepack=True
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
   $ . "$TESTDIR/library.sh"
 
 Setup the server

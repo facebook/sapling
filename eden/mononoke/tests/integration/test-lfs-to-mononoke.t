@@ -6,6 +6,7 @@
 
   $ CACHEDIR=$PWD/cachepath
   $ . "${TEST_FIXTURES}/library.sh"
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
 Setup repo config (we use blob_files to share across Mononoke and API Server):
   $ LFS_THRESHOLD="1000" setup_common_config "blob_files"

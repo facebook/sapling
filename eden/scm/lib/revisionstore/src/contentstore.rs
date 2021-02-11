@@ -372,19 +372,20 @@ impl<'a> ContentStoreBuilder<'a> {
         let shared_lfs_store = Arc::new(LfsStore::shared(&cache_path, self.config)?);
         blob_stores.add(shared_lfs_store.clone());
 
-        let primary: Arc<dyn HgIdMutableDeltaStore> = if self
-            .config
-            .get_or_default::<bool>("remotefilelog", "write-hgcache-to-indexedlog")?
-        {
-            // Put the indexedlog first, since recent data will have gone there.
-            datastore.add(shared_indexedlogdatastore.clone());
-            datastore.add(shared_pack_store.clone());
-            shared_indexedlogdatastore
-        } else {
-            datastore.add(shared_pack_store.clone());
-            datastore.add(shared_indexedlogdatastore.clone());
-            shared_pack_store
-        };
+        let primary: Arc<dyn HgIdMutableDeltaStore> =
+            if self
+                .config
+                .get_or("remotefilelog", "write-hgcache-to-indexedlog", || true)?
+            {
+                // Put the indexedlog first, since recent data will have gone there.
+                datastore.add(shared_indexedlogdatastore.clone());
+                datastore.add(shared_pack_store);
+                shared_indexedlogdatastore
+            } else {
+                datastore.add(shared_pack_store.clone());
+                datastore.add(shared_indexedlogdatastore);
+                shared_pack_store
+            };
         datastore.add(shared_lfs_store.clone());
 
         let shared_mutabledatastore: Arc<dyn HgIdMutableDeltaStore> = {
@@ -416,19 +417,20 @@ impl<'a> ContentStoreBuilder<'a> {
                     IndexedLogDataStoreType::Local,
                 )?);
 
-                let primary: Arc<dyn HgIdMutableDeltaStore> = if self
-                    .config
-                    .get_or_default::<bool>("remotefilelog", "write-local-to-indexedlog")?
-                {
-                    // Put the indexedlog first, since recent data will have gone there.
-                    datastore.add(local_indexedlogdatastore.clone());
-                    datastore.add(local_pack_store);
-                    local_indexedlogdatastore
-                } else {
-                    datastore.add(local_pack_store.clone());
-                    datastore.add(local_indexedlogdatastore);
-                    local_pack_store
-                };
+                let primary: Arc<dyn HgIdMutableDeltaStore> =
+                    if self
+                        .config
+                        .get_or("remotefilelog", "write-local-to-indexedlog", || true)?
+                    {
+                        // Put the indexedlog first, since recent data will have gone there.
+                        datastore.add(local_indexedlogdatastore.clone());
+                        datastore.add(local_pack_store);
+                        local_indexedlogdatastore
+                    } else {
+                        datastore.add(local_pack_store.clone());
+                        datastore.add(local_indexedlogdatastore);
+                        local_pack_store
+                    };
 
                 let local_lfs_store = Arc::new(LfsStore::local(&local_path.unwrap(), self.config)?);
                 blob_stores.add(local_lfs_store.clone());
@@ -631,7 +633,13 @@ mod tests {
     fn test_add_dropped() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
-        let config = make_config(&cachedir);
+        let mut config = make_config(&cachedir);
+        config.set(
+            "remotefilelog",
+            "write-local-to-indexedlog",
+            Some("False"),
+            &Default::default(),
+        );
 
         let store = ContentStore::new(&localdir, &config)?;
 
@@ -845,7 +853,13 @@ mod tests {
     fn test_add_shared_only_store() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
-        let config = make_config(&cachedir);
+        let mut config = make_config(&cachedir);
+        config.set(
+            "remotefilelog",
+            "write-local-to-indexedlog",
+            Some("False"),
+            &Default::default(),
+        );
 
         let store = ContentStore::new(&localdir, &config)?;
 
@@ -1038,6 +1052,18 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let mut config = make_config(&cachedir);
+        config.set(
+            "remotefilelog",
+            "write-local-to-indexedlog",
+            Some("False"),
+            &Default::default(),
+        );
+        config.set(
+            "remotefilelog",
+            "write-hgcache-to-indexedlog",
+            Some("False"),
+            &Default::default(),
+        );
 
         let k = key("a", "2");
         let store_key = StoreKey::hgid(k.clone());

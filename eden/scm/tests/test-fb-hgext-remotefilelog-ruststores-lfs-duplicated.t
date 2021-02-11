@@ -1,5 +1,7 @@
 #chg-compatible
 
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
+
   $ newserver master
   $ setconfig extensions.lfs= lfs.url=file:$TESTTMP/lfs-server
 

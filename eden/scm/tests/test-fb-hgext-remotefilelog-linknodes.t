@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
 # Tests for the complicated linknode logic in remotefilelog.py::ancestormap()
 

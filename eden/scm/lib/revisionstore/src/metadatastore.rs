@@ -258,19 +258,20 @@ impl<'a> MetadataStoreBuilder<'a> {
         //  - When pushing changes on a pushrebase server, the local linknode will become
         //    incorrect, future fetches will put that change in the shared cache where the linknode
         //    will be correct.
-        let primary: Arc<dyn HgIdMutableHistoryStore> = if self
-            .config
-            .get_or_default::<bool>("remotefilelog", "write-hgcache-to-indexedlog")?
-        {
-            // Put the indexedlog first, since recent data will have gone there.
-            historystore.add(shared_indexedloghistorystore.clone());
-            historystore.add(shared_pack_store.clone());
-            shared_indexedloghistorystore
-        } else {
-            historystore.add(shared_pack_store.clone());
-            historystore.add(shared_indexedloghistorystore.clone());
-            shared_pack_store
-        };
+        let primary: Arc<dyn HgIdMutableHistoryStore> =
+            if self
+                .config
+                .get_or("remotefilelog", "write-hgcache-to-indexedlog", || true)?
+            {
+                // Put the indexedlog first, since recent data will have gone there.
+                historystore.add(shared_indexedloghistorystore.clone());
+                historystore.add(shared_pack_store);
+                shared_indexedloghistorystore
+            } else {
+                historystore.add(shared_pack_store.clone());
+                historystore.add(shared_indexedloghistorystore);
+                shared_pack_store
+            };
 
         let local_mutablehistorystore: Option<Arc<dyn HgIdMutableHistoryStore>> =
             if let Some(unsuffixed_local_path) = self.local_path {
@@ -285,19 +286,20 @@ impl<'a> MetadataStoreBuilder<'a> {
                     &self.config,
                     IndexedLogHistoryStoreType::Local,
                 )?);
-                let primary: Arc<dyn HgIdMutableHistoryStore> = if self
-                    .config
-                    .get_or_default::<bool>("remotefilelog", "write-local-to-indexedlog")?
-                {
-                    // Put the indexedlog first, since recent data will have gone there.
-                    historystore.add(local_indexedloghistorystore.clone());
-                    historystore.add(local_pack_store);
-                    local_indexedloghistorystore
-                } else {
-                    historystore.add(local_pack_store.clone());
-                    historystore.add(local_indexedloghistorystore);
-                    local_pack_store
-                };
+                let primary: Arc<dyn HgIdMutableHistoryStore> =
+                    if self
+                        .config
+                        .get_or("remotefilelog", "write-local-to-indexedlog", || true)?
+                    {
+                        // Put the indexedlog first, since recent data will have gone there.
+                        historystore.add(local_indexedloghistorystore.clone());
+                        historystore.add(local_pack_store);
+                        local_indexedloghistorystore
+                    } else {
+                        historystore.add(local_pack_store.clone());
+                        historystore.add(local_indexedloghistorystore);
+                        local_pack_store
+                    };
 
                 Some(primary)
             } else {
