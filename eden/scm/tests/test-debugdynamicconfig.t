@@ -171,6 +171,10 @@ Verify configs.allowedlocations limits config loading to the allowed locations
   $ hg config --debug --config configs.allowedlocations=hgrc3 | grep zz
   [1]
 
+  $ hg config --debug --config configs.allowedlocations=hgrc3 --config configs.allowedconfigs=zz_section.key | grep zz
+  --config: configs.allowedconfigs=zz_section.key
+  $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
+
 Verify we load and verify dynamicconfigs during clone
   $ newserver server
   $ cd $TESTTMP

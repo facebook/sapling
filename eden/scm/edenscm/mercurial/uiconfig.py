@@ -623,8 +623,16 @@ def validatedynamicconfig(ui):
     allowedlocations = ui.configlist("configs", "allowedlocations")
     if not allowedlocations:
         allowedlocations = None
+
+    allowedconfigs = []
+    for sectionkey in ui.configlist("configs", "allowedconfigs", []):
+        section, key = sectionkey.split(".", 1)
+        allowedconfigs.append((section, key))
+    if not allowedconfigs:
+        allowedconfigs = None
+
     issues = ui._uiconfig._rcfg.ensure_location_supersets(
-        "hgrc.dynamic", originalrcs, allowedlocations
+        "hgrc.dynamic", originalrcs, allowedlocations, allowedconfigs
     )
 
     for section, key, dynamic_value, file_value in issues:

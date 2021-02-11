@@ -165,14 +165,17 @@ py_class!(pub class config |py| {
         &self,
         superset_source: String,
         subset_sources: Vec<String>,
-        allowed_locations: Option<Vec<String>> = None
+        allowed_locations: Option<Vec<String>> = None,
+        allowed_configs: Option<Vec<(String, String)>> = None
     ) -> PyResult<Vec<(Str, Str, Option<Str>, Option<Str>)>> {
         let allowed_locations = allowed_locations.as_ref().map(|allowed| HashSet::from_iter(allowed.iter().map(|v| v.as_ref())));
+        let allowed_configs = allowed_configs.as_ref().map(|allowed| HashSet::from_iter(allowed.iter().map(|v| (v.0.as_ref(), v.1.as_ref()))));
 
         let results = self.cfg(py).borrow_mut().ensure_location_supersets(
             superset_source,
             subset_sources,
             allowed_locations,
+            allowed_configs,
         );
         if results.is_empty() {
             return Ok(vec![]);

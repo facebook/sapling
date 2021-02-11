@@ -429,6 +429,7 @@ impl ConfigSet {
         superset_location: String,
         subset_locations: Vec<String>,
         allowed_locations: Option<HashSet<&str>>,
+        allowed_configs: Option<HashSet<(&str, &str)>>,
     ) -> SupersetVerification {
         let mut result = SupersetVerification::new();
 
@@ -469,6 +470,10 @@ impl ConfigSet {
                             .as_ref()
                             .map(|a| a.contains(location.as_str()))
                             == Some(false)
+                            && allowed_configs
+                                .as_ref()
+                                .map(|a| a.contains(&(sname, kname)))
+                                != Some(true)
                         {
                             values.remove(index);
                             removals += 1;
@@ -1140,6 +1145,7 @@ space_list=value1.a value1.b
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
             None,
+            None,
         );
         assert!(result.is_empty());
 
@@ -1150,6 +1156,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
+            None,
             None,
         );
         assert_eq!(
@@ -1167,6 +1174,7 @@ space_list=value1.a value1.b
             "super".to_string(),
             vec!["subset1".to_string()],
             None,
+            None,
         );
         assert!(result.is_empty());
 
@@ -1179,6 +1187,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
+            None,
             None,
         );
         assert_eq!(
@@ -1200,6 +1209,7 @@ space_list=value1.a value1.b
             "super".to_string(),
             vec!["subset1".to_string(), "subset2".to_string()],
             None,
+            None,
         );
         assert_eq!(
             result.mismatched,
@@ -1220,6 +1230,7 @@ space_list=value1.a value1.b
         let result = tempcfg.ensure_location_supersets(
             "super".to_string(),
             vec!["subset2".to_string()],
+            None,
             None,
         );
         assert!(result.is_empty());
@@ -1255,12 +1266,32 @@ space_list=value1.a value1.b
         let mut allow_list = HashSet::new();
         allow_list.insert("subset1");
 
-        cfg.ensure_location_supersets("super".to_string(), vec![], Some(allow_list));
+        cfg.ensure_location_supersets("super".to_string(), vec![], Some(allow_list.clone()), None);
         assert_eq!(
             cfg.get("section1", "key1"),
             Some(Text::from_static("value1"))
         );
         assert_eq!(cfg.get("section2", "key2"), None);
+
+        // Check that allow_configs allows the config through, even if allow_locations did not.
+        let mut allow_configs = HashSet::new();
+        allow_configs.insert(("section2", "key2"));
+
+        set(&mut cfg, "section2", "key2", "value2", "subset2");
+        cfg.ensure_location_supersets(
+            "super".to_string(),
+            vec![],
+            Some(allow_list),
+            Some(allow_configs),
+        );
+        assert_eq!(
+            cfg.get("section1", "key1"),
+            Some(Text::from_static("value1"))
+        );
+        assert_eq!(
+            cfg.get("section2", "key2"),
+            Some(Text::from_static("value2"))
+        );
     }
 
     #[test]
@@ -1299,6 +1330,7 @@ space_list=value1.a value1.b
             "super".to_string(),
             vec!["subset".to_string()],
             Some(allowed_locations),
+            None,
         );
     }
 }
