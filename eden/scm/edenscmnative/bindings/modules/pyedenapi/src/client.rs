@@ -14,7 +14,7 @@ use cpython_async::TStream;
 use cpython_ext::convert::Serde;
 use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
-use edenapi_types::{CommitLocationToHashResponse, CommitRevlogData};
+use edenapi_types::{CommitHashToLocationResponse, CommitLocationToHashResponse, CommitRevlogData};
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
@@ -153,8 +153,8 @@ py_class!(pub class client |py| {
         edenapitreestore::new(py, store)
     }
 
-    /// commitlocationtohash(repo: str, requests: [(bytes, u64, u64), progress = None] ->
-    ///   [(location: (descendant: bytes, distance: u64), count: u64, hgids: [bytes])]
+    /// commitlocationtohash(repo: str, requests: [(bytes, u64, u64), progress = None) ->
+    ///   [(location: (descendant: bytes, distance: u64), count: u64, hgids: [bytes])], stats
     ///
     /// Fetch the hash(es) of a location in the commit graph.
     /// A request is a tuple (descendant, distance, count) where descendant is a known hgid,
@@ -167,6 +167,23 @@ py_class!(pub class client |py| {
         callback: Option<PyObject> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<CommitLocationToHashResponse>>>, PyFuture)> {
         self.inner(py).clone().commit_location_to_hash_py(py, repo, requests, callback)
+    }
+
+    /// commithashtolocation(repo: str, repo_master: bytes, hghds: [bytes], progress = None) ->
+    ///   [(hgid: bytes, location: (descendant: bytes, distance: u64))], stats
+    ///
+    /// Fetch the location in the commit graph of a given hash.
+    /// WARNING. Only hashes of ancestors of master are supported.
+    /// It is necessary pass in the hash of the master branch in order for the server to be able
+    /// to construct a valid location for the client.
+    def commithashtolocation(
+        &self,
+        repo: String,
+        repo_master: PyBytes,
+        hgids: Vec<PyBytes>,
+        callback: Option<PyObject> = None
+    ) -> PyResult<(TStream<anyhow::Result<Serde<CommitHashToLocationResponse>>>, PyFuture)> {
+        self.inner(py).clone().commit_hash_to_location_py(py, repo, repo_master, hgids, callback)
     }
 });
 

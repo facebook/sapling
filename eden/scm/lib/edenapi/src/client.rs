@@ -20,13 +20,15 @@ use url::Url;
 use auth::check_certs;
 use edenapi_types::{
     wire::{
-        WireCloneData, WireCommitLocationToHashResponse, WireFileEntry, WireHistoryResponseChunk,
-        WireIdMapEntry, WireToApiConversionError, WireTreeEntry,
+        WireCloneData, WireCommitHashToLocationResponse, WireCommitLocationToHashResponse,
+        WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry, WireToApiConversionError,
+        WireTreeEntry,
     },
-    CloneData, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
-    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest,
-    EdenApiServerError, FileEntry, FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire,
-    TreeAttributes, TreeEntry, TreeRequest,
+    CloneData, CommitHashToLocationRequestBatch, CommitHashToLocationResponse,
+    CommitLocationToHashRequest, CommitLocationToHashRequestBatch, CommitLocationToHashResponse,
+    CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, FileEntry,
+    FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire, TreeAttributes, TreeEntry,
+    TreeRequest,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -51,6 +53,7 @@ mod paths {
     pub const CLONE_DATA: &str = "clone";
     pub const FULL_IDMAP_CLONE_DATA: &str = "full_idmap_clone";
     pub const COMMIT_LOCATION_TO_HASH: &str = "commit/location_to_hash";
+    pub const COMMIT_HASH_TO_LOCATION: &str = "commit/hash_to_location";
 }
 
 pub struct Client {
@@ -488,6 +491,41 @@ impl EdenApi for Client {
 
         Ok(self
             .fetch::<WireCommitLocationToHashResponse>(formatted, progress)
+            .await?)
+    }
+
+    async fn commit_hash_to_location(
+        &self,
+        repo: String,
+        repo_master: HgId,
+        hgids: Vec<HgId>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError> {
+        let msg = format!(
+            "Requesting commit hash to location (batch size = {})",
+            hgids.len()
+        );
+        tracing::info!("{}", &msg);
+        if self.config.debug {
+            eprintln!("{}", &msg);
+        }
+
+        if hgids.is_empty() {
+            return Ok(Fetch::empty());
+        }
+
+        let url = self.url(paths::COMMIT_HASH_TO_LOCATION, Some(&repo))?;
+
+        let formatted = self.prepare(&url, hgids, self.config.max_location_to_hash, |hgids| {
+            CommitHashToLocationRequestBatch {
+                client_head: repo_master,
+                hgids,
+            }
+            .to_wire()
+        })?;
+
+        Ok(self
+            .fetch::<WireCommitHashToLocationResponse>(formatted, progress)
             .await?)
     }
 }

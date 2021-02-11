@@ -7,8 +7,9 @@
 
 use async_runtime::block_on_exclusive as block_on_future;
 use edenapi_types::{
-    CloneData, CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileEntry, HistoryEntry, TreeAttributes, TreeEntry,
+    CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
+    TreeAttributes, TreeEntry,
 };
 use types::{HgId, Key, RepoPathBuf};
 
@@ -101,6 +102,16 @@ pub trait EdenApiBlocking: EdenApi {
         progress: Option<ProgressCallback>,
     ) -> Result<BlockingFetch<CommitLocationToHashResponse>, EdenApiError> {
         BlockingFetch::from_async(self.commit_location_to_hash(repo, requests, progress))
+    }
+
+    fn commit_hash_to_location_blocking(
+        &self,
+        repo: String,
+        repo_master: HgId,
+        hgids: Vec<HgId>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<BlockingFetch<CommitHashToLocationResponse>, EdenApiError> {
+        BlockingFetch::from_async(self.commit_hash_to_location(repo, repo_master, hgids, progress))
     }
 }
 

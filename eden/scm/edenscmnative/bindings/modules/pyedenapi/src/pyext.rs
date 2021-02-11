@@ -18,8 +18,8 @@ use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use dag_types::Location;
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
 use edenapi_types::{
-    CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileEntry, HistoryEntry, TreeEntry,
+    CommitHashToLocationResponse, CommitLocationToHashRequest, CommitLocationToHashResponse,
+    CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeEntry,
 };
 use progress::{ProgressBar, ProgressFactory, Unit};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
@@ -224,6 +224,36 @@ pub trait EdenApiPyExt: EdenApi {
                 block_on_future(async move {
                     let response = self
                         .commit_location_to_hash(repo, requests, callback)
+                        .await?;
+                    Ok::<_, EdenApiError>((response.entries, response.stats))
+                })
+            })
+            .map_pyerr(py)?;
+
+        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
+        Ok((responses_py.into(), stats_py))
+    }
+
+    fn commit_hash_to_location_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        repo_master: PyBytes,
+        hgids: Vec<PyBytes>,
+        callback: Option<PyObject>,
+    ) -> PyResult<(
+        TStream<anyhow::Result<Serde<CommitHashToLocationResponse>>>,
+        PyFuture,
+    )> {
+        let callback = callback.map(wrap_callback);
+        let repo_master = to_hgid(py, &repo_master);
+        let hgids = to_hgids(py, hgids);
+        let (responses, stats) = py
+            .allow_threads(|| {
+                block_on_future(async move {
+                    let response = self
+                        .commit_hash_to_location(repo, repo_master, hgids, callback)
                         .await?;
                     Ok::<_, EdenApiError>((response.entries, response.stats))
                 })

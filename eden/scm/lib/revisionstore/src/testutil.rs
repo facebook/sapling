@@ -15,8 +15,9 @@ use minibytes::Bytes;
 use configparser::config::ConfigSet;
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stats};
 use edenapi_types::{
-    CloneData, CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
-    EdenApiServerError, FileEntry, HistoryEntry, TreeAttributes, TreeEntry,
+    CloneData, CommitHashToLocationResponse, CommitLocationToHashRequest,
+    CommitLocationToHashResponse, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry,
+    TreeAttributes, TreeEntry,
 };
 use types::{HgId, Key, NodeInfo, Parents, RepoPathBuf};
 
@@ -352,6 +353,16 @@ impl EdenApi for FakeEdenApi {
         _requests: Vec<CommitLocationToHashRequest>,
         _progress: Option<ProgressCallback>,
     ) -> Result<Fetch<CommitLocationToHashResponse>, EdenApiError> {
+        unimplemented!()
+    }
+
+    async fn commit_hash_to_location(
+        &self,
+        _repo: String,
+        _repo_master: HgId,
+        _hgids: Vec<HgId>,
+        _progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<CommitHashToLocationResponse>, EdenApiError> {
         unimplemented!()
     }
 }
