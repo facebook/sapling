@@ -669,7 +669,7 @@ impl RepoClient {
                 }
             });
 
-        let part = parts::treepack_part(changed_entries);
+        let part = parts::treepack_part(changed_entries, parts::StoreInHgCache::Yes);
         // Mercurial currently hangs while trying to read compressed bundles over the wire:
         // https://bz.mercurial-scm.org/show_bug.cgi?id=5646
         // TODO: possibly enable compression support once this is fixed.

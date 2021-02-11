@@ -157,7 +157,12 @@ pub async fn create_getbundle_response(
         if let Some(manifests) = maybe_manifests {
             let manifests_stream =
                 create_manifest_entries_stream(ctx.clone(), blobrepo.get_blobstore(), manifests);
-            let tp_part = parts::treepack_part(manifests_stream)?;
+            let hg_cache_policy = if tunables().get_disable_hydrating_manifests_in_dot_hg() {
+                parts::StoreInHgCache::Yes
+            } else {
+                parts::StoreInHgCache::No
+            };
+            let tp_part = parts::treepack_part(manifests_stream, hg_cache_policy)?;
 
             parts.push(tp_part);
         }

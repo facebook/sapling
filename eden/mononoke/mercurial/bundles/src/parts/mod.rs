@@ -281,27 +281,50 @@ pub struct TreepackPartInput {
     pub linknode: HgNodeHash,
 }
 
-pub fn treepack_part<S>(entries: S) -> Result<PartEncodeBuilder>
+// Controls whether client should store trees in hg cache (which means
+// they might be deleted and refetched from the server) or they should be stored
+// in .hg directory (which means client should never delete them).
+// Normally this should only be used for hydrated commit cloud commits, and
+// with hg server deprecation it won't be necessary anymore.
+#[derive(Clone, Copy)]
+pub enum StoreInHgCache {
+    Yes,
+    No,
+}
+
+pub fn treepack_part<S>(entries: S, hg_cache_policy: StoreInHgCache) -> Result<PartEncodeBuilder>
 where
     S: Stream<Item = BoxFuture<TreepackPartInput, Error>, Error = Error> + Send + 'static,
 {
-    treepack_part_impl(entries, PartHeaderType::B2xTreegroup2)
+    treepack_part_impl(entries, PartHeaderType::B2xTreegroup2, hg_cache_policy)
 }
 
 pub fn pushrebase_treepack_part<S>(entries: S) -> Result<PartEncodeBuilder>
 where
     S: Stream<Item = BoxFuture<TreepackPartInput, Error>, Error = Error> + Send + 'static,
 {
-    treepack_part_impl(entries, PartHeaderType::B2xRebasePack)
+    treepack_part_impl(entries, PartHeaderType::B2xRebasePack, StoreInHgCache::Yes)
 }
 
-fn treepack_part_impl<S>(entries: S, header_type: PartHeaderType) -> Result<PartEncodeBuilder>
+fn treepack_part_impl<S>(
+    entries: S,
+    header_type: PartHeaderType,
+    hg_cache_policy: StoreInHgCache,
+) -> Result<PartEncodeBuilder>
 where
     S: Stream<Item = BoxFuture<TreepackPartInput, Error>, Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(header_type)?;
     builder.add_mparam("version", "1")?;
-    builder.add_mparam("cache", "True")?;
+    match hg_cache_policy {
+        StoreInHgCache::Yes => {
+            builder.add_mparam("cache", "True")?;
+        }
+        StoreInHgCache::No => {
+            builder.add_mparam("cache", "False")?;
+        }
+    };
+
     builder.add_mparam("category", "manifests")?;
 
     let buffer_size = 10000; // TODO(stash): make it configurable

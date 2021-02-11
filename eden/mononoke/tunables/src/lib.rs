@@ -135,6 +135,9 @@ pub struct MononokeTunables {
 
     // Disable EdenAPI in http_service.
     disable_http_service_edenapi: AtomicBool,
+
+    // Disable putting hydrating manifests in .hg
+    disable_hydrating_manifests_in_dot_hg: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

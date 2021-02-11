@@ -317,7 +317,8 @@ fn create_bundle_impl(
                     )));
 
                     bundle2_parts.push(try_boxfuture!(parts::treepack_part(
-                        create_manifest_entries_stream(ctx, repo.get_blobstore(), manifests)
+                        create_manifest_entries_stream(ctx, repo.get_blobstore(), manifests),
+                        parts::StoreInHgCache::Yes
                     )));
                 }
 
