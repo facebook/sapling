@@ -322,12 +322,15 @@ fn topo_sort(hgid_map: &HashMap<Key, NodeInfo>) -> Result<Vec<(&Key, &NodeInfo)>
 impl HgIdHistoryStore for MutableHistoryPack {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         let mut guard = self.inner.lock();
-        let pack = self.get_pack(&mut guard)?;
-        Ok(pack
-            .mem_index
-            .get(&key.path)
-            .and_then(|nodes| nodes.get(key))
-            .cloned())
+        if let Some(pack) = guard.as_mut() {
+            Ok(pack
+                .mem_index
+                .get(&key.path)
+                .and_then(|nodes| nodes.get(key))
+                .cloned())
+        } else {
+            Ok(None)
+        }
     }
 
     fn refresh(&self) -> Result<()> {
@@ -338,18 +341,21 @@ impl HgIdHistoryStore for MutableHistoryPack {
 impl LocalStore for MutableHistoryPack {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let mut guard = self.inner.lock();
-        let pack = self.get_pack(&mut guard)?;
-        Ok(keys
-            .iter()
-            .filter(|k| match k {
-                StoreKey::HgId(k) => match pack.mem_index.get(&k.path) {
-                    Some(e) => e.get(k).is_none(),
-                    None => true,
-                },
-                StoreKey::Content(_, _) => true,
-            })
-            .cloned()
-            .collect())
+        if let Some(pack) = guard.as_mut() {
+            Ok(keys
+                .iter()
+                .filter(|k| match k {
+                    StoreKey::HgId(k) => match pack.mem_index.get(&k.path) {
+                        Some(e) => e.get(k).is_none(),
+                        None => true,
+                    },
+                    StoreKey::Content(_, _) => true,
+                })
+                .cloned()
+                .collect())
+        } else {
+            Ok(keys.to_vec())
+        }
     }
 }
 

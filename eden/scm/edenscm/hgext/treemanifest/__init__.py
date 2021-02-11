@@ -841,13 +841,16 @@ def setuptreestores(repo, mfl):
 
 class basetreemanifestlog(object):
     def __init__(self, repo):
-        self._mutablelocalpacks = mutablestores.pendingmutablepack(
-            repo,
-            lambda: shallowutil.getlocalpackpath(self._opener.vfs.base, "manifests"),
-        )
-        self._mutablesharedpacks = mutablestores.pendingmutablepack(
-            repo, lambda: shallowutil.getcachepackpath(self._repo, PACK_CATEGORY)
-        )
+        if not useruststore(self._repo.ui):
+            self._mutablelocalpacks = mutablestores.pendingmutablepack(
+                repo,
+                lambda: shallowutil.getlocalpackpath(
+                    self._opener.vfs.base, "manifests"
+                ),
+            )
+            self._mutablesharedpacks = mutablestores.pendingmutablepack(
+                repo, lambda: shallowutil.getcachepackpath(self._repo, PACK_CATEGORY)
+            )
         self.recentlinknode = None
         cachesize = 4
         self._treemanifestcache = util.lrucachedict(cachesize)
@@ -992,20 +995,28 @@ class basetreemanifestlog(object):
 
     def commitsharedpacks(self):
         """Persist the dirty trees written to the shared packs."""
-        self._mutablesharedpacks.commit()
 
         self.datastore.markforrefresh()
         self.historystore.markforrefresh()
         if useruststore(self.ui):
             self.datastore.flush()
             self.historystore.flush()
+        else:
+            self._mutablesharedpacks.commit()
+
+        if useruststore(self._repo.ui):
+            self.datastore = None
+            self.historystore = None
+            self.makeruststore()
 
     def commitpending(self):
-        self._mutablelocalpacks.commit()
+        if not useruststore(self._repo.ui):
+            self._mutablelocalpacks.commit()
         self.commitsharedpacks()
 
     def abortpending(self):
-        self._mutablelocalpacks.abort()
+        if not useruststore(self._repo.ui):
+            self._mutablelocalpacks.abort()
         self.commitsharedpacks()
 
     def __nonzero__(self):

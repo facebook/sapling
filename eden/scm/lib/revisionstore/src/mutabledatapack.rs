@@ -183,33 +183,35 @@ impl MutableDataPack {
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        let mut chain: Vec<Delta> = Default::default();
-        let mut next_key = Some(key.clone());
         let mut guard = self.inner.lock();
-        let pack = self.get_pack(&mut guard)?;
-        while let Some(key) = next_key {
-            let (delta, _metadata) = match pack.read_entry(&key) {
-                Ok(Some(entry)) => entry,
-                Ok(None) => {
-                    if chain.is_empty() {
-                        return Ok(None);
-                    } else {
-                        return Ok(Some(chain));
+        if let Some(pack) = guard.as_mut() {
+            let mut chain: Vec<Delta> = Default::default();
+            let mut next_key = Some(key.clone());
+            while let Some(key) = next_key {
+                let (delta, _metadata) = match pack.read_entry(&key) {
+                    Ok(Some(entry)) => entry,
+                    Ok(None) => {
+                        if chain.is_empty() {
+                            return Ok(None);
+                        } else {
+                            return Ok(Some(chain));
+                        }
                     }
-                }
-                Err(e) => {
-                    if chain.is_empty() {
-                        return Err(e);
-                    } else {
-                        return Ok(Some(chain));
+                    Err(e) => {
+                        if chain.is_empty() {
+                            return Err(e);
+                        } else {
+                            return Ok(Some(chain));
+                        }
                     }
-                }
-            };
-            next_key = delta.base.clone();
-            chain.push(delta);
+                };
+                next_key = delta.base.clone();
+                chain.push(delta);
+            }
+            Ok(Some(chain))
+        } else {
+            Ok(None)
         }
-
-        Ok(Some(chain))
     }
 }
 
@@ -302,15 +304,19 @@ impl HgIdDataStore for MutableDataPack {
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
-        let key = match key {
-            StoreKey::HgId(key) => key,
-            content => return Ok(StoreResult::NotFound(content)),
-        };
-
         let mut guard = self.inner.lock();
-        match self.get_pack(&mut guard)?.read_entry(&key)? {
-            None => Ok(StoreResult::NotFound(StoreKey::HgId(key))),
-            Some((_, metadata)) => Ok(StoreResult::Found(metadata)),
+        if let Some(pack) = guard.as_mut() {
+            let key = match key {
+                StoreKey::HgId(key) => key,
+                content => return Ok(StoreResult::NotFound(content)),
+            };
+
+            match pack.read_entry(&key)? {
+                None => Ok(StoreResult::NotFound(StoreKey::HgId(key))),
+                Some((_, metadata)) => Ok(StoreResult::Found(metadata)),
+            }
+        } else {
+            Ok(StoreResult::NotFound(key))
         }
     }
 
@@ -322,15 +328,18 @@ impl HgIdDataStore for MutableDataPack {
 impl LocalStore for MutableDataPack {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let mut guard = self.inner.lock();
-        let pack = self.get_pack(&mut guard)?;
-        Ok(keys
-            .iter()
-            .filter(|k| match k {
-                StoreKey::HgId(k) => pack.mem_index.get(&k.hgid).is_none(),
-                StoreKey::Content(_, _) => true,
-            })
-            .cloned()
-            .collect())
+        if let Some(pack) = guard.as_mut() {
+            Ok(keys
+                .iter()
+                .filter(|k| match k {
+                    StoreKey::HgId(k) => pack.mem_index.get(&k.hgid).is_none(),
+                    StoreKey::Content(_, _) => true,
+                })
+                .cloned()
+                .collect())
+        } else {
+            Ok(keys.to_vec())
+        }
     }
 }
 
