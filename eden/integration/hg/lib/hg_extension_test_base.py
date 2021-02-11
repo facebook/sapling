@@ -437,7 +437,7 @@ class JournalEntry(object):
         # Search for the last argument that gets added by the profiling code.
         m = re.search("--config 'profiling.freq=[0-9]+' ", command)
         if not m:
-            logging.warn(
+            logging.warning(
                 "did not find match when trying to strip profiling "
                 f"arguments: {command}"
             )
