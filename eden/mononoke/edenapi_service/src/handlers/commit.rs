@@ -77,20 +77,16 @@ pub async fn hash_to_location(state: &mut State) -> Result<impl TryIntoResponse,
         client_head: HgChangesetId,
         hg_cs_ids: Vec<HgChangesetId>,
     ) -> Result<impl Stream<Item = Result<CommitHashToLocationResponse, Error>>, Error> {
-        let locations = hg_repo_ctx
+        let hgcsid_to_location = hg_repo_ctx
             .many_changeset_ids_to_locations(client_head, hg_cs_ids.clone())
             .await?;
-        let responses =
-            hg_cs_ids
-                .into_iter()
-                .zip(locations.into_iter())
-                .map(|(hg_cs_id, location)| {
-                    let response = CommitHashToLocationResponse {
-                        hgid: hg_cs_id.into(),
-                        location: location.map_descendant(|x| x.into()),
-                    };
-                    Ok(response)
-                });
+        let responses = hgcsid_to_location.into_iter().map(|(hgcsid, location)| {
+            let response = CommitHashToLocationResponse {
+                hgid: hgcsid.into(),
+                location: location.map_descendant(|x| x.into()),
+            };
+            Ok(response)
+        });
         Ok(stream::iter(responses))
     }
 

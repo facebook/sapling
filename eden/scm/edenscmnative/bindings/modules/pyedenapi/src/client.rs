@@ -176,6 +176,7 @@ py_class!(pub class client |py| {
     /// WARNING. Only hashes of ancestors of master are supported.
     /// It is necessary pass in the hash of the master branch in order for the server to be able
     /// to construct a valid location for the client.
+    /// Hashes that cannot be found will be missing from the returned list.
     def commithashtolocation(
         &self,
         repo: String,

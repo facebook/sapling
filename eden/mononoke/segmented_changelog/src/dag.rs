@@ -60,75 +60,50 @@ impl SegmentedChangelog for Dag {
         ctx: &CoreContext,
         client_head: ChangesetId,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<Vec<Location<ChangesetId>>> {
-        let vertexes = self
-            .idmap
-            .find_many_vertexes(
-                ctx,
-                cs_ids
-                    .iter()
-                    .cloned()
-                    .chain(std::iter::once(client_head))
-                    .collect(),
-            )
-            .await
-            .with_context(|| {
-                format!(
-                    "failed fetching vertex translations for {} and {:?}",
-                    client_head, cs_ids
-                )
-            })?;
-        let head_vertex = *vertexes
-            .get(&client_head)
-            .ok_or_else(|| format_err!("failed to find vertex for client_head {}", client_head))?;
+    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
+        let (head_vertex, cs_to_vertex) = futures::try_join!(
+            self.idmap.get_vertex(ctx, client_head),
+            self.idmap.find_many_vertexes(ctx, cs_ids),
+        )
+        .context("failed fetching changeset to vertex translations")?;
         let constraints = FirstAncestorConstraint::KnownUniversally {
             heads: head_vertex.into(),
         };
-        let vertex_locations = cs_ids
+        let cs_to_vlocation = cs_to_vertex
             .into_iter()
-            .map(|cs_id| {
-                let vertex = *vertexes
-                    .get(&cs_id)
-                    .ok_or_else(|| format_err!("failed to find vertex for changeset {}", cs_id))?;
-                let (descendant, dist) = self
-                    .iddag
+            .filter_map(|(cs_id, vertex)| {
+                // We do not return an entry when the asked commit is a descendant of client_head.
+                self.iddag
                     .to_first_ancestor_nth(vertex, constraints.clone())
                     .with_context(|| {
                         format!(
                             "failed to compute the common descendant and distance for {}",
                             cs_id
                         )
-                    })?
-                    .ok_or_else(|| {
-                        format_err!(
-                            "failure in descendant computation, {} is not ancestor of {}",
-                            cs_id,
-                            client_head
-                        )
-                    })?;
-                Ok(Location::new(descendant, dist))
-            })
-            .collect::<Result<Vec<_>>>()?;
-        let common_cs_ids = self
-            .idmap
-            .find_many_changeset_ids(ctx, vertex_locations.iter().map(|l| l.descendant).collect())
-            .await
-            .with_context(|| {
-                format!(
-                    "failed fetching changeset translations for {:?}",
-                    vertex_locations
-                )
-            })?;
-        let locations = vertex_locations
-            .into_iter()
-            .map(|location| {
-                location.try_map_descendant(|vertex| {
-                    common_cs_ids.get(&vertex).cloned().ok_or_else(|| {
-                        format_err!("failed to find vertex translation for {}", vertex)
                     })
-                })
+                    .map(|opt| opt.map(|(v, dist)| (cs_id, Location::new(v, dist))))
+                    .transpose()
             })
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<Result<HashMap<_, _>>>()?;
+        let common_cs_ids = {
+            let to_fetch = cs_to_vlocation.values().map(|l| l.descendant).collect();
+            self.idmap
+                .find_many_changeset_ids(ctx, to_fetch)
+                .await
+                .context("failed fetching vertex to changeset translations")?
+        };
+        let locations = cs_to_vlocation
+            .into_iter()
+            .map(|(cs, location)| {
+                location
+                    .try_map_descendant(|vertex| {
+                        common_cs_ids.get(&vertex).cloned().ok_or_else(|| {
+                            format_err!("failed to find vertex translation for {}", vertex)
+                        })
+                    })
+                    .map(|l| (cs, l))
+            })
+            .collect::<Result<HashMap<_, _>>>()?;
         Ok(locations)
     }
 

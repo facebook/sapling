@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::{format_err, Context, Result};
@@ -150,7 +151,7 @@ impl SegmentedChangelog for SegmentedChangelogManager {
         ctx: &CoreContext,
         client_head: ChangesetId,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<Vec<Location<ChangesetId>>> {
+    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
         let (_, dag) = self.load_dag(&ctx).await.with_context(|| {
             format!(
                 "repo {}: error loading segmented changelog from save",

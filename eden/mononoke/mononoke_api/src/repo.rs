@@ -7,6 +7,7 @@
 
 use std::fmt;
 use std::{
+    collections::HashMap,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -1381,7 +1382,7 @@ impl RepoContext {
         &self,
         client_head: ChangesetId,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<Vec<Location<ChangesetId>>, MononokeError> {
+    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>, MononokeError> {
         let blob_repo = self.blob_repo();
         let segmented_changelog =
             blob_repo

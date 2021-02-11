@@ -244,7 +244,7 @@ async fn validate_changeset_id_to_location(
     server_master: &'static str,
     head: &'static str,
     hg_id: &'static str,
-    expected: Location<&'static str>,
+    expected: Option<Location<&'static str>>,
 ) -> Result<()> {
     let server_master = resolve_cs_id(&ctx, &blobrepo, server_master).await?;
     setup_phases(&ctx, &blobrepo, server_master).await?;
@@ -252,8 +252,16 @@ async fn validate_changeset_id_to_location(
 
     let head_cs = resolve_cs_id(&ctx, &blobrepo, head).await?;
     let cs_id = resolve_cs_id(&ctx, &blobrepo, hg_id).await?;
-    let common_cs = resolve_cs_id(&ctx, &blobrepo, expected.descendant).await?;
-    let expected_location = Location::new(common_cs, expected.distance);
+
+    let expected_location = match expected {
+        None => None,
+        Some(location) => {
+            let cs_location = location
+                .and_then_descendant(|d| resolve_cs_id(&ctx, &blobrepo, d))
+                .await?;
+            Some(cs_location)
+        }
+    };
 
     let answer = dag.changeset_id_to_location(&ctx, head_cs, cs_id).await?;
     assert_eq!(answer, expected_location);
@@ -270,7 +278,7 @@ async fn test_dag_chanset_id_to_location(fb: FacebookInit) -> Result<()> {
         "79a13814c5ce7330173ec04d279bf95ab3f652fb", // master commit, message: modified 10
         "79a13814c5ce7330173ec04d279bf95ab3f652fb", // client head == master_commit
         "0ed509bf086fadcb8a8a5384dc3b550729b0fc17", // message: added 7
-        Location::new("79a13814c5ce7330173ec04d279bf95ab3f652fb", 4),
+        Some(Location::new("79a13814c5ce7330173ec04d279bf95ab3f652fb", 4)),
     )
     .await?;
     validate_changeset_id_to_location(
@@ -279,7 +287,16 @@ async fn test_dag_chanset_id_to_location(fb: FacebookInit) -> Result<()> {
         "79a13814c5ce7330173ec04d279bf95ab3f652fb", // master commit, message: modified 10
         "3c15267ebf11807f3d772eb891272b911ec68759", // message: added 9
         "0ed509bf086fadcb8a8a5384dc3b550729b0fc17", // message: added 7
-        Location::new("3c15267ebf11807f3d772eb891272b911ec68759", 2),
+        Some(Location::new("3c15267ebf11807f3d772eb891272b911ec68759", 2)),
+    )
+    .await?;
+    validate_changeset_id_to_location(
+        ctx.clone(),
+        linear::getrepo(fb).await,
+        "79a13814c5ce7330173ec04d279bf95ab3f652fb", // master commit, message: modified 10
+        "3c15267ebf11807f3d772eb891272b911ec68759", // message: added 9
+        "79a13814c5ce7330173ec04d279bf95ab3f652fb", // our master, client doesn't know
+        None,
     )
     .await?;
     validate_changeset_id_to_location(
@@ -288,7 +305,7 @@ async fn test_dag_chanset_id_to_location(fb: FacebookInit) -> Result<()> {
         "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b", // master, message: Merge two branches
         "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b", // client head == master
         "fc2cef43395ff3a7b28159007f63d6529d2f41ca", // message: Add 4
-        Location::new("264f01429683b3dd8042cb3979e8bf37007118bc", 2), // message: add 5
+        Some(Location::new("264f01429683b3dd8042cb3979e8bf37007118bc", 2)), // message: add 5
     )
     .await?;
     validate_changeset_id_to_location(
@@ -297,9 +314,30 @@ async fn test_dag_chanset_id_to_location(fb: FacebookInit) -> Result<()> {
         "7fe9947f101acb4acf7d945e69f0d6ce76a81113", // master commit
         "33fb49d8a47b29290f5163e30b294339c89505a2", // head merged branch, message: Add 5
         "163adc0d0f5d2eb0695ca123addcb92bab202096", // message: Add 3
-        Location::new("33fb49d8a47b29290f5163e30b294339c89505a2", 2),
+        Some(Location::new("33fb49d8a47b29290f5163e30b294339c89505a2", 2)),
     )
     .await?;
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_dag_chanset_id_to_location_random_hash(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = linear::getrepo(fb).await;
+
+    let server_master =
+        resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+    setup_phases(&ctx, &blobrepo, server_master).await?;
+    let dag = new_build_all_from_blobrepo(&ctx, &blobrepo, server_master).await?;
+
+    let head_cs = server_master;
+    let random_cs_id = mononoke_types_mocks::changesetid::ONES_CSID;
+
+    let answer = dag
+        .changeset_id_to_location(&ctx, head_cs, random_cs_id)
+        .await?;
+    assert_eq!(answer, None);
+
     Ok(())
 }
 

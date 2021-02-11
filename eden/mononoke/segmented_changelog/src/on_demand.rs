@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
@@ -88,7 +88,7 @@ impl SegmentedChangelog for OnDemandUpdateDag {
         ctx: &CoreContext,
         client_head: ChangesetId,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<Vec<Location<ChangesetId>>> {
+    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
         STATS::changeset_id_to_location.add_value(1);
         {
             let dag = self.dag.read().await;

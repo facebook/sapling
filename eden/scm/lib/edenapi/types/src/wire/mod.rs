@@ -207,7 +207,7 @@ impl ToApi for WireEdenApiServerError {
     }
 }
 
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct WireHgId([u8; WireHgId::len()]);
 
 impl WireHgId {

@@ -425,7 +425,8 @@ fn cmd_commit_location_to_hash(args: CommitLocationToHashArgs) -> Result<()> {
 }
 
 fn cmd_commit_hash_to_location(args: CommitHashToLocationArgs) -> Result<()> {
-    let response_list: Vec<WireCommitHashToLocationResponse> = read_input(args.input, None)?;
+    let mut response_list: Vec<WireCommitHashToLocationResponse> = read_input(args.input, None)?;
+    response_list.sort_by_key(|r| r.hgid);
     let iter = response_list
         .iter()
         .skip(args.start.unwrap_or(0))

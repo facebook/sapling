@@ -11,6 +11,8 @@
 ///!
 ///! This represents an implementation for the core commit graph that we have
 ///! in a given repository. It provides algorithms over the commit graph.
+use std::collections::HashMap;
+
 use anyhow::{format_err, Result};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
@@ -93,23 +95,18 @@ pub trait SegmentedChangelog: Send + Sync {
     ///
     /// The `client_head` parameter is required in order to construct consistent Locations for the
     /// client.
+    /// Since the input for this function is potentially user input, it is expected that not all
+    /// hashes would be valid.
     async fn changeset_id_to_location(
         &self,
         ctx: &CoreContext,
         client_head: ChangesetId,
         cs_id: ChangesetId,
-    ) -> Result<Location<ChangesetId>> {
+    ) -> Result<Option<Location<ChangesetId>>> {
         let mut ids = self
             .many_changeset_ids_to_locations(ctx, client_head, vec![cs_id])
             .await?;
-        if ids.len() == 1 {
-            if let Some(id) = ids.pop() {
-                return Ok(id);
-            }
-        }
-        Err(format_err!(
-            "unexpected result from many_changeset_ids_to_locations"
-        ))
+        Ok(ids.remove(&cs_id))
     }
 
     /// Get the graph locations given a set of commit identifier.
@@ -121,7 +118,7 @@ pub trait SegmentedChangelog: Send + Sync {
         ctx: &CoreContext,
         client_head: ChangesetId,
         cs_ids: Vec<ChangesetId>,
-    ) -> Result<Vec<Location<ChangesetId>>>;
+    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>>;
 
     /// Returns data necessary for SegmentedChangelog to be initialized by a client.
     ///
@@ -180,7 +177,7 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
         _ctx: &CoreContext,
         _client_head: ChangesetId,
         _cs_ids: Vec<ChangesetId>,
-    ) -> Result<Vec<Location<ChangesetId>>> {
+    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
         Err(format_err!(
             "Segmented Changelog is not enabled for this repo",
         ))
