@@ -32,6 +32,7 @@ pub struct Builder {
     max_files: Option<usize>,
     max_trees: Option<usize>,
     max_history: Option<usize>,
+    max_location_to_hash: Option<usize>,
     timeout: Option<Duration>,
     debug: bool,
     correlator: Option<String>,
@@ -89,6 +90,10 @@ impl Builder {
             .get_opt("edenapi", "maxhistory")
             .map_err(|e| ConfigError::Malformed("edenapi.maxhistory".into(), e))?;
 
+        let max_location_to_hash = config
+            .get_opt("edenapi", "maxlocationtohash")
+            .map_err(|e| ConfigError::Malformed("edenapi.maxlocationtohash".into(), e))?;
+
         let timeout = config
             .get_opt("edenapi", "timeout")
             .map_err(|e| ConfigError::Malformed("edenapi.timeout".into(), e))?
@@ -123,6 +128,7 @@ impl Builder {
             max_files,
             max_trees,
             max_history,
+            max_location_to_hash,
             timeout,
             debug,
             correlator: None,
@@ -201,6 +207,15 @@ impl Builder {
         self
     }
 
+
+    /// Maximum number of locations per location to has request. Larger requests will be split up
+    /// into concurrently-sent batches.
+    pub fn max_location_to_hash(mut self, size: Option<usize>) -> Self {
+        self.max_location_to_hash = size;
+        self
+    }
+
+
     /// Timeout for HTTP requests sent by the client.
     pub fn timeout(mut self, timeout: Duration) -> Self {
         self.timeout = Some(timeout);
@@ -230,6 +245,7 @@ pub(crate) struct Config {
     pub(crate) max_files: Option<usize>,
     pub(crate) max_trees: Option<usize>,
     pub(crate) max_history: Option<usize>,
+    pub(crate) max_location_to_hash: Option<usize>,
     pub(crate) timeout: Option<Duration>,
     pub(crate) debug: bool,
     pub(crate) correlator: Option<String>,
@@ -250,6 +266,7 @@ impl TryFrom<Builder> for Config {
             max_files,
             max_trees,
             max_history,
+            max_location_to_hash,
             timeout,
             debug,
             correlator,
@@ -281,6 +298,7 @@ impl TryFrom<Builder> for Config {
             max_files,
             max_trees,
             max_history,
+            max_location_to_hash,
             timeout,
             debug,
             correlator,

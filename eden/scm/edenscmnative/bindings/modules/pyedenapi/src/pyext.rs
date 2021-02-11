@@ -15,16 +15,20 @@ use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::convert::Serde;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
+use dag_types::Location;
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
-use edenapi_types::{CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeEntry};
+use edenapi_types::{
+    CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
+    EdenApiServerError, FileEntry, HistoryEntry, TreeEntry,
+};
 use progress::{ProgressBar, ProgressFactory, Unit};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 
 use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
-    as_deltastore, as_historystore, meta_to_dict, to_hgids, to_keys, to_path, to_tree_attrs,
-    wrap_callback,
+    as_deltastore, as_historystore, meta_to_dict, to_hgid, to_hgids, to_keys, to_path,
+    to_tree_attrs, wrap_callback,
 };
 
 /// Extension trait allowing EdenAPI methods to be called from Python code.
@@ -195,6 +199,40 @@ pub trait EdenApiPyExt: EdenApi {
         let commits_py = commits.map_ok(Serde).map_err(Into::into);
         let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
         Ok((commits_py.into(), stats_py))
+    }
+
+    fn commit_location_to_hash_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        requests: Vec<(PyBytes, u64, u64)>,
+        callback: Option<PyObject>,
+    ) -> PyResult<(
+        TStream<anyhow::Result<Serde<CommitLocationToHashResponse>>>,
+        PyFuture,
+    )> {
+        let callback = callback.map(wrap_callback);
+        let requests = requests
+            .into_iter()
+            .map(|(hgid_bytes, distance, count)| {
+                let location = Location::new(to_hgid(py, &hgid_bytes), distance);
+                CommitLocationToHashRequest { location, count }
+            })
+            .collect();
+        let (responses, stats) = py
+            .allow_threads(|| {
+                block_on_future(async move {
+                    let response = self
+                        .commit_location_to_hash(repo, requests, callback)
+                        .await?;
+                    Ok::<_, EdenApiError>((response.entries, response.stats))
+                })
+            })
+            .map_pyerr(py)?;
+
+        let responses_py = responses.map_ok(Serde).map_err(Into::into);
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
+        Ok((responses_py.into(), stats_py))
     }
 }
 

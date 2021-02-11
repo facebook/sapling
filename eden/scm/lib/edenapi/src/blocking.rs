@@ -7,8 +7,8 @@
 
 use async_runtime::block_on_exclusive as block_on_future;
 use edenapi_types::{
-    CloneData, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeAttributes,
-    TreeEntry,
+    CloneData, CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
+    EdenApiServerError, FileEntry, HistoryEntry, TreeAttributes, TreeEntry,
 };
 use types::{HgId, Key, RepoPathBuf};
 
@@ -92,6 +92,15 @@ pub trait EdenApiBlocking: EdenApi {
         progress: Option<ProgressCallback>,
     ) -> Result<CloneData<HgId>, EdenApiError> {
         block_on_future(self.full_idmap_clone_data(repo, progress))
+    }
+
+    fn commit_location_to_hash_blocking(
+        &self,
+        repo: String,
+        requests: Vec<CommitLocationToHashRequest>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<BlockingFetch<CommitLocationToHashResponse>, EdenApiError> {
+        BlockingFetch::from_async(self.commit_location_to_hash(repo, requests, progress))
     }
 }
 

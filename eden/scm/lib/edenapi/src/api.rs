@@ -8,8 +8,8 @@
 use async_trait::async_trait;
 
 use edenapi_types::{
-    CloneData, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeAttributes,
-    TreeEntry,
+    CloneData, CommitLocationToHashRequest, CommitLocationToHashResponse, CommitRevlogData,
+    EdenApiServerError, FileEntry, HistoryEntry, TreeAttributes, TreeEntry,
 };
 use http_client::Progress;
 use types::{HgId, Key, RepoPathBuf};
@@ -74,4 +74,11 @@ pub trait EdenApi: Send + Sync + 'static {
         repo: String,
         progress: Option<ProgressCallback>,
     ) -> Result<CloneData<HgId>, EdenApiError>;
+
+    async fn commit_location_to_hash(
+        &self,
+        repo: String,
+        requests: Vec<CommitLocationToHashRequest>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<CommitLocationToHashResponse>, EdenApiError>;
 }

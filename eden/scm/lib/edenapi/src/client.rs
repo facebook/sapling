@@ -20,12 +20,13 @@ use url::Url;
 use auth::check_certs;
 use edenapi_types::{
     wire::{
-        WireCloneData, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
-        WireToApiConversionError, WireTreeEntry,
+        WireCloneData, WireCommitLocationToHashResponse, WireFileEntry, WireHistoryResponseChunk,
+        WireIdMapEntry, WireToApiConversionError, WireTreeEntry,
     },
-    CloneData, CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError,
-    FileEntry, FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire, TreeAttributes, TreeEntry,
-    TreeRequest,
+    CloneData, CommitLocationToHashRequest, CommitLocationToHashRequestBatch,
+    CommitLocationToHashResponse, CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest,
+    EdenApiServerError, FileEntry, FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire,
+    TreeAttributes, TreeEntry, TreeRequest,
 };
 use hg_http::http_client;
 use http_client::{AsyncResponse, HttpClient, HttpClientError, Progress, Request};
@@ -49,6 +50,7 @@ mod paths {
     pub const COMMIT_REVLOG_DATA: &str = "commit/revlog_data";
     pub const CLONE_DATA: &str = "clone";
     pub const FULL_IDMAP_CLONE_DATA: &str = "full_idmap_clone";
+    pub const COMMIT_LOCATION_TO_HASH: &str = "commit/location_to_hash";
 }
 
 pub struct Client {
@@ -115,7 +117,7 @@ impl Client {
     /// The keys will be grouped into batches of the specified size and
     /// passed to the `make_req` callback, which should insert them into
     /// a struct that will be CBOR-encoded and used as the request body.
-    fn prepare<K, F, R>(
+    fn prepare<T, K, F, R>(
         &self,
         url: &Url,
         keys: K,
@@ -123,8 +125,8 @@ impl Client {
         mut make_req: F,
     ) -> Result<Vec<Request>, EdenApiError>
     where
-        K: IntoIterator<Item = Key>,
-        F: FnMut(Vec<Key>) -> R,
+        K: IntoIterator<Item = T>,
+        F: FnMut(Vec<T>) -> R,
         R: Serialize,
     {
         split_into_batches(keys, batch_size)
@@ -455,13 +457,46 @@ impl EdenApi for Client {
         clone_data.idmap = idmap;
         Ok(clone_data)
     }
+
+    async fn commit_location_to_hash(
+        &self,
+        repo: String,
+        requests: Vec<CommitLocationToHashRequest>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<CommitLocationToHashResponse>, EdenApiError> {
+        let msg = format!(
+            "Requesting commit location to hash (batch size = {})",
+            requests.len()
+        );
+        tracing::info!("{}", &msg);
+        if self.config.debug {
+            eprintln!("{}", &msg);
+        }
+
+        if requests.is_empty() {
+            return Ok(Fetch::empty());
+        }
+
+        let url = self.url(paths::COMMIT_LOCATION_TO_HASH, Some(&repo))?;
+
+        let formatted = self.prepare(
+            &url,
+            requests,
+            self.config.max_location_to_hash,
+            |requests| CommitLocationToHashRequestBatch { requests }.to_wire(),
+        )?;
+
+        Ok(self
+            .fetch::<WireCommitLocationToHashResponse>(formatted, progress)
+            .await?)
+    }
 }
 
 /// Split up a collection of keys into batches of at most `batch_size`.
-fn split_into_batches(
-    keys: impl IntoIterator<Item = Key>,
+fn split_into_batches<T>(
+    keys: impl IntoIterator<Item = T>,
     batch_size: Option<usize>,
-) -> Vec<Vec<Key>> {
+) -> Vec<Vec<T>> {
     match batch_size {
         Some(n) => keys
             .into_iter()

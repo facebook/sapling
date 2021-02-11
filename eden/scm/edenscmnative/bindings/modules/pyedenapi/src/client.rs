@@ -14,7 +14,7 @@ use cpython_async::TStream;
 use cpython_ext::convert::Serde;
 use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
-use edenapi_types::CommitRevlogData;
+use edenapi_types::{CommitLocationToHashResponse, CommitRevlogData};
 use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
@@ -151,6 +151,22 @@ py_class!(pub class client |py| {
         let store = EdenApiTreeStore::new(repo, edenapi, progress);
 
         edenapitreestore::new(py, store)
+    }
+
+    /// commitlocationtohash(repo: str, requests: [(bytes, u64, u64), progress = None] ->
+    ///   [(location: (descendant: bytes, distance: u64), count: u64, hgids: [bytes])]
+    ///
+    /// Fetch the hash(es) of a location in the commit graph.
+    /// A request is a tuple (descendant, distance, count) where descendant is a known hgid,
+    /// distance represents how many parents we traverse from descendant to the desired commit and
+    /// count represents the number of ancestors from the location that we want.
+    def commitlocationtohash(
+        &self,
+        repo: String,
+        requests: Vec<(PyBytes, u64, u64)>,
+        callback: Option<PyObject> = None
+    ) -> PyResult<(TStream<anyhow::Result<Serde<CommitLocationToHashResponse>>>, PyFuture)> {
+        self.inner(py).clone().commit_location_to_hash_py(py, repo, requests, callback)
     }
 });
 
