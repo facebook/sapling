@@ -124,6 +124,8 @@ class CheckoutConfig(typing.NamedTuple):
         repositories this does not include the final ".hg" directory component.
     - scm_type: "hg" or "git"
     - mount_protocol: "fuse", "nfs" or "prjfs"
+    - case_sensitive: whether the mount point is case sensitive. Default to
+      false on Windows and macOS.
     - guid: Used on Windows by ProjectedFS to identify this checkout.
     - redirections: dict where keys are relative pathnames in the EdenFS mount
       and the values are RedirectionType enum values that describe the type of
@@ -134,6 +136,7 @@ class CheckoutConfig(typing.NamedTuple):
     scm_type: str
     guid: str
     mount_protocol: str
+    case_sensitive: bool
     default_revision: str
     redirections: Dict[str, "RedirectionType"]
     active_prefetch_profiles: List[str]
@@ -926,6 +929,7 @@ class EdenCheckout:
                 "type": checkout_config.scm_type,
                 "guid": checkout_config.guid,
                 "protocol": checkout_config.mount_protocol,
+                "case-sensitive": checkout_config.case_sensitive,
             },
             "redirections": redirections,
             "profiles": {"active": checkout_config.active_prefetch_profiles},
@@ -978,6 +982,11 @@ class EdenCheckout:
         if not isinstance(guid, str):
             guid = str(uuid.uuid4())
 
+        case_sensitive = repository.get("case-sensitive")
+        if not isinstance(case_sensitive, bool):
+            # For existing repositories, keep it case sensitive
+            case_sensitive = sys.platform != "win32"
+
         redirections = {}
         redirections_dict = config.get("redirections")
 
@@ -1023,6 +1032,7 @@ class EdenCheckout:
             backing_repo=Path(get_field("path")),
             scm_type=scm_type,
             guid=guid,
+            case_sensitive=case_sensitive,
             mount_protocol=mount_protocol,
             redirections=redirections,
             default_revision=(
@@ -1071,6 +1081,7 @@ class EdenCheckout:
             backing_repo=old_config.backing_repo,
             scm_type=old_config.scm_type,
             guid=old_config.guid,
+            case_sensitive=old_config.case_sensitive,
             mount_protocol=old_config.mount_protocol,
             redirections=old_config.redirections,
             default_revision=old_config.default_revision,
@@ -1102,6 +1113,7 @@ class EdenCheckout:
             backing_repo=old_config.backing_repo,
             scm_type=old_config.scm_type,
             guid=old_config.guid,
+            case_sensitive=old_config.case_sensitive,
             mount_protocol=old_config.mount_protocol,
             redirections=old_config.redirections,
             default_revision=old_config.default_revision,

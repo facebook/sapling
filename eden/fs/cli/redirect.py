@@ -607,6 +607,7 @@ def apply_redirection_configs_to_checkout_config(
         scm_type=config.scm_type,
         guid=config.guid,
         mount_protocol=config.mount_protocol,
+        case_sensitive=config.case_sensitive,
         default_revision=config.default_revision,
         redirections=redirections,
         active_prefetch_profiles=config.active_prefetch_profiles,

@@ -842,6 +842,9 @@ re-run `eden clone` with --allow-empty-repo"""
         else:
             mount_protocol = "nfs" if nfs else "fuse"
 
+        # New clones on macOS and Windows are case insensitive.
+        case_sensitive = sys.platform == "linux"
+
         # This is a valid repository path.
         # Prepare a CheckoutConfig object for it.
         project_id = util.get_project_id(repo, rev)
@@ -851,6 +854,7 @@ re-run `eden clone` with --allow-empty-repo"""
             scm_type=repo.type,
             guid=str(uuid.uuid4()),
             mount_protocol=mount_protocol,
+            case_sensitive=case_sensitive,
             default_revision=config_mod.DEFAULT_REVISION[repo.type],
             redirections={},
             active_prefetch_profiles=[],

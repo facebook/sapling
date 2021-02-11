@@ -109,6 +109,7 @@ class FakeEdenInstance:
             scm_type=scm_type,
             guid=uuid.uuid4(),
             mount_protocol="prjfs" if sys.platform == "win32" else "fuse",
+            case_sensitive=sys.platform == "linux",
             default_revision=snapshot,
             redirections={},
             active_prefetch_profiles=[],
