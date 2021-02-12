@@ -12,13 +12,10 @@ use std::process::Command;
 use anyhow::{anyhow, Context, Result};
 use structopt::StructOpt;
 
-mod opt;
+mod cmds;
+mod edenfs;
 
-use crate::opt::Opt;
-
-fn process_opt(_opt: Opt) -> Result<()> {
-    Ok(())
-}
+type ExitCode = i32;
 
 fn python_fallback() -> Result<Command> {
     if let Ok(args) = std::env::var("EDENFSCTL_REAL") {
@@ -64,8 +61,11 @@ fn fallback() -> Result<()> {
 fn main() -> Result<()> {
     if std::env::var("EDENFSCTL_SKIP_RUST").is_ok() {
         fallback()
-    } else if let Ok(opt) = Opt::from_args_safe() {
-        process_opt(opt)
+    } else if let Ok(cmd) = crate::cmds::Command::from_args_safe() {
+        match cmd.run() {
+            Ok(code) => std::process::exit(code),
+            Err(e) => Err(e),
+        }
     } else {
         fallback()
     }
