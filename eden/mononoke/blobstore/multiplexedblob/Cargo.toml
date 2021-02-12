@@ -27,7 +27,7 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 strum = "0.19"
 strum_macros = "0.19"
 thiserror = "1.0"
-tokio = { version = "0.2.24", features = ["full", "test-util"] }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
 twox-hash = "1.5"
 
 [dev-dependencies]

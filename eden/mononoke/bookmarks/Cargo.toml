@@ -22,5 +22,5 @@ ascii_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", bra
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 ascii = "1.0"
 quickcheck = "0.9"
-tokio = { version = "0.2.24", features = ["full", "test-util"] }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tokio-compat = "0.1"

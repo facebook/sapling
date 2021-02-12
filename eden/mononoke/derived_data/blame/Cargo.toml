@@ -24,7 +24,7 @@ async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 thiserror = "1.0"
-tokio = { version = "0.2.24", features = ["full", "test-util"] }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }

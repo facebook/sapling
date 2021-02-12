@@ -14,5 +14,5 @@ anyhow = "1.0"
 async-trait = "0.1.29"
 percent-encoding = "2.1"
 tempfile = "3.1"
-tokio = { version = "0.2.24", features = ["full", "test-util"] }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
 walkdir = "2.2.9"

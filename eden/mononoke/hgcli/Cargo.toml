@@ -31,7 +31,7 @@ openssl = "0.10"
 rand = { version = "0.7", features = ["small_rng"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 slog-term = "2.4.2"
-tokio = { version = "0.2.24", features = ["full", "test-util"] }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tokio-openssl = "0.4"
 tokio-util = { version = "0.2", features = ["codec", "udp"] }
 users = "0.9"

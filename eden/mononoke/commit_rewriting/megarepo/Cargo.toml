@@ -52,7 +52,7 @@ maplit = "1.0"
 ref-cast = "1.0.2"
 regex = "1.4.2"
 slog = { version = "2.5", features = ["max_level_debug"] }
-tokio = { version = "0.2.24", features = ["full", "test-util"] }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }

@@ -15,4 +15,4 @@ mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 clap = "2.33"
-tokio = { version = "0.2.24", features = ["full", "test-util"] }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }

@@ -15,4 +15,4 @@ async-trait = "0.1.29"
 futures-old = { package = "futures", version = "0.1.30" }
 rand = { version = "0.7", features = ["small_rng"] }
 rand_distr = "0.2"
-tokio = { version = "0.2.24", features = ["full", "test-util"] }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }

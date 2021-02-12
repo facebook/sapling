@@ -26,7 +26,7 @@ anyhow = "1.0"
 async-trait = "0.1.29"
 auto_impl = "0.4"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-tokio = { version = "0.2.24", features = ["full", "test-util"] }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
 uuid = { version = "0.8.1", features = ["v4"] }
 
 [dev-dependencies]

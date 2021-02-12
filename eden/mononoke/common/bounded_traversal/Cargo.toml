@@ -21,4 +21,4 @@ pretty_assertions = "0.6"
 quickcheck = "0.9"
 quickcheck_async = "0.1.1"
 rand = { version = "0.7", features = ["small_rng"] }
-tokio = { version = "0.2.24", features = ["full", "test-util"] }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }

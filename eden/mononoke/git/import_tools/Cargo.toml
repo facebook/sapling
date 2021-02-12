@@ -30,4 +30,4 @@ git2 = "0.13"
 linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 r2d2 = "0.8.8"
 slog = { version = "2.5", features = ["max_level_debug"] }
-tokio = { version = "0.2.24", features = ["full", "test-util"] }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }

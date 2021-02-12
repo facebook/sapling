@@ -22,4 +22,4 @@ borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", bran
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-tokio = { version = "0.2.24", features = ["full", "test-util"] }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
