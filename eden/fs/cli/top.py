@@ -88,13 +88,13 @@ COLUMN_REVERSE_SORT = Row(
 )
 
 
-def format_duration(duration):
+def format_duration(duration) -> str:
     modulos = (1000, 1000, 1000, 60, 60, 24)
     suffixes = ("ns", "us", "ms", "s", "m", "h", "d")
     return format_time(duration, modulos, suffixes)
 
 
-def format_last_access(last_access):
+def format_last_access(last_access: float) -> str:
     elapsed = int(time.monotonic() - last_access)
 
     modulos = (60, 60, 24)
