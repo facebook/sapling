@@ -25,7 +25,9 @@ pub struct StatusCmd {
 
 impl StatusCmd {
     async fn get_status(&self, instance: &EdenFsInstance) -> Result<i32> {
-        let health = instance.get_health(Duration::from_secs(self.timeout)).await;
+        let health = instance
+            .get_health(Some(Duration::from_secs(self.timeout)))
+            .await;
 
         if let Ok(health) = health {
             if health.is_healthy() {

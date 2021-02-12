@@ -7,8 +7,6 @@
 
 //! edenfsctl pid
 
-use std::time::Duration;
-
 use structopt::StructOpt;
 
 use edenfs_client::EdenFsInstance;
@@ -16,15 +14,11 @@ use edenfs_client::EdenFsInstance;
 use crate::ExitCode;
 
 #[derive(StructOpt, Debug)]
-pub struct PidCmd {
-    /// Wait up to TIMEOUT seconds for the daemon to respond
-    #[structopt(long, default_value = "3")]
-    timeout: u64,
-}
+pub struct PidCmd {}
 
 impl PidCmd {
     pub async fn run(self, instance: EdenFsInstance) -> ExitCode {
-        let health = instance.get_health(Duration::from_secs(self.timeout)).await;
+        let health = instance.get_health(None).await;
 
         match health {
             Ok(health) => {

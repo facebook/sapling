@@ -56,18 +56,24 @@ impl EdenFsInstance {
         Ok(client)
     }
 
-    pub async fn connect(&self, timeout: Duration) -> Result<EdenFsClient> {
+    pub async fn connect(&self, timeout: Option<Duration>) -> Result<EdenFsClient> {
         let socket_path = self.config_dir.join("socket");
 
-        tokio::time::timeout(timeout, self._connect(&socket_path))
-            .await
-            .with_context(|| {
-                format!(
-                    "Timed out while trying to connect to '{}'",
-                    socket_path.display()
-                )
-            })?
-            .with_context(|| format!("failed to connect to socket at {}", socket_path.display()))
+        let connect = self._connect(&socket_path);
+        let res = if let Some(timeout) = timeout {
+            tokio::time::timeout(timeout, connect)
+                .await
+                .with_context(|| {
+                    format!(
+                        "Timed out while trying to connect to '{}'",
+                        socket_path.display()
+                    )
+                })?
+        } else {
+            connect.await
+        };
+
+        res.with_context(|| format!("failed to connect to socket at {}", socket_path.display()))
     }
 
     #[cfg(windows)]
@@ -114,8 +120,10 @@ impl EdenFsInstance {
         }
     }
 
-    pub async fn get_health(&self, timeout: Duration) -> Result<DaemonInfo> {
-        let client = self.connect(timeout).await?;
+    pub async fn get_health(&self, timeout: Option<Duration>) -> Result<DaemonInfo> {
+        let client = self
+            .connect(timeout.or_else(|| Some(Duration::from_secs(3))))
+            .await?;
         Ok(client.getDaemonInfo().await?)
     }
 }
