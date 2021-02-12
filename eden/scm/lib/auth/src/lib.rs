@@ -38,7 +38,7 @@ impl TryFrom<(&str, HashMap<&str, Text>)> for Auth {
     fn try_from((group, mut settings): (&str, HashMap<&str, Text>)) -> Result<Self> {
         let group = group.into();
 
-        let prefix = settings
+        let mut prefix = settings
             .remove("prefix")
             .map(|s| s.to_string())
             .ok_or_else(|| Error::msg("auth prefix missing"))?;
@@ -58,10 +58,21 @@ impl TryFrom<(&str, HashMap<&str, Text>)> for Auth {
 
         let username = settings.remove("username").map(|s| s.to_string());
 
-        let schemes = settings.remove("schemes").map_or_else(
-            || vec!["https".into()],
-            |line| line.split(' ').map(String::from).collect(),
-        );
+        // If the URL prefix for this group has a scheme specified, use that
+        // and ignore the contents of the "schemes" field for this group.
+        let schemes = if let Some(i) = prefix.find("://") {
+            let _ = settings.remove("schemes");
+            let scheme = prefix[..i].into();
+            prefix = prefix[i + 3..].into();
+            vec![scheme]
+        } else {
+            // Default to HTTPS if no schemes are specified in either the
+            // prefix or schemes field.
+            settings.remove("schemes").map_or_else(
+                || vec!["https".into()],
+                |line| line.split(' ').map(String::from).collect(),
+            )
+        };
 
         let priority = settings
             .remove("priority")
