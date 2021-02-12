@@ -18,9 +18,11 @@ use tokio::task::yield_now;
 use super::utils::{StateLog, Tick};
 use crate::{
     bounded_traversal, bounded_traversal_dag, bounded_traversal_stream, bounded_traversal_stream2,
+    bounded_traversal_unique,
 };
 
 // Tree for test purposes
+#[derive(Debug)]
 struct Tree {
     id: usize,
     children: Vec<Tree>,
@@ -325,6 +327,19 @@ fn build_tree() -> Tree {
     )
 }
 
+fn build_duplicates() -> Tree {
+    Tree::new(
+        0,
+        vec![
+            Tree::leaf(1),
+            Tree::leaf(1),
+            Tree::leaf(2),
+            Tree::leaf(2),
+            Tree::leaf(2),
+        ],
+    )
+}
+
 async fn check_stream_unfold_ticks<TestFn, Outs>(test_fn: TestFn) -> Result<(), Error>
 where
     TestFn: FnOnce(Tree, Tick, StateLog<BTreeSet<usize>>) -> Outs,
@@ -363,6 +378,47 @@ where
     assert_eq!(log, reference);
 
     assert_eq!(handle.await??, (0..6).collect::<BTreeSet<_>>());
+    Ok(())
+}
+
+async fn check_duplicate_stream_unfold_ticks<TestFn, Outs>(test_fn: TestFn) -> Result<(), Error>
+where
+    TestFn: FnOnce(Tree, Tick, StateLog<BTreeSet<usize>>) -> Outs,
+    Outs: Stream<Item = Result<usize, Error>> + Send + 'static,
+{
+    let tree = build_duplicates();
+
+    let tick = Tick::new();
+    let log: StateLog<BTreeSet<usize>> = StateLog::new();
+    let reference: StateLog<BTreeSet<usize>> = StateLog::new();
+
+    let traverse = test_fn(tree, tick.clone(), log.clone())
+        .try_collect::<BTreeSet<usize>>()
+        .boxed();
+    let handle = tokio::spawn(traverse);
+
+    yield_now().await;
+    assert_eq!(log, reference);
+
+    tick.tick().await;
+    reference.unfold(0, 1);
+    assert_eq!(log, reference);
+
+    tick.tick().await;
+    reference.unfold(2, 2);
+    reference.unfold(1, 2);
+    assert_eq!(log, reference);
+
+    tick.tick().await;
+    reference.unfold(2, 3);
+    reference.unfold(1, 3);
+    assert_eq!(log, reference);
+
+    tick.tick().await;
+    reference.unfold(2, 4);
+    assert_eq!(log, reference);
+
+    assert_eq!(handle.await??, (0..3).collect::<BTreeSet<_>>());
     Ok(())
 }
 
@@ -442,6 +498,75 @@ async fn test_bounded_traversal_stream_parents() -> Result<(), Error> {
                 })
             }
         })
+    })
+    .await
+}
+
+#[tokio::test]
+async fn test_bounded_traversal_unique_ticks() -> Result<(), Error> {
+    check_stream_unfold_ticks(|tree, tick, log| {
+        bounded_traversal_unique(
+            2,
+            Some(tree),
+            {
+                cloned!(tick, log);
+                move |Tree { id, children }| {
+                    cloned!(log);
+                    tick.sleep(1).map(move |now| {
+                        log.unfold(id, now);
+                        (id, Ok::<_, Error>((id, children)))
+                    })
+                }
+            },
+            |item| &item.id,
+        )
+    })
+    .await
+}
+
+#[tokio::test]
+async fn test_bounded_traversal_unique_duplicate_ticks() -> Result<(), Error> {
+    check_duplicate_stream_unfold_ticks(|tree, tick, log| {
+        bounded_traversal_unique(
+            2,
+            Some(tree),
+            {
+                cloned!(tick, log);
+                move |Tree { id, children }| {
+                    cloned!(log);
+                    tick.sleep(1).map(move |now| {
+                        log.unfold(id, now);
+                        (id, Ok::<_, Error>((id, children)))
+                    })
+                }
+            },
+            |item| &item.id,
+        )
+    })
+    .await
+}
+
+#[tokio::test]
+async fn test_bounded_traversal_unique_parents() -> Result<(), Error> {
+    check_stream_unfold_parents(|tree, tick, log| {
+        bounded_traversal_unique(
+            2,
+            Some((tree, 0)),
+            {
+                cloned!(tick, log);
+                move |(Tree { id, children }, parent)| {
+                    cloned!(log);
+                    tick.sleep(1).map(move |_now| {
+                        log.unfold(id, parent);
+                        (
+                            id,
+                            Ok::<_, Error>((id, children.into_iter().map(move |i| (i, id)))),
+                        )
+                    })
+                }
+            },
+            |(item, _parent)| &item.id,
+        )
     })
     .await
 }

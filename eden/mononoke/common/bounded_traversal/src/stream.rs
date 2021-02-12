@@ -11,7 +11,13 @@ use futures::{
     stream::{self, FuturesUnordered, StreamExt},
     Stream,
 };
-use std::{collections::VecDeque, future::Future, iter::FromIterator, task::Poll};
+use std::{
+    collections::{HashMap, VecDeque},
+    future::Future,
+    hash::Hash,
+    iter::FromIterator,
+    task::Poll,
+};
 
 /// `bounded_traversal_stream` traverses implicit asynchronous tree specified by `init`
 /// and `unfold` arguments. All `unfold` operations are executed in parallel if they
@@ -57,6 +63,68 @@ where
             }
 
             if let Some((out, children)) = ready!(scheduled.poll_next_unpin(cx)).transpose()? {
+                for child in children {
+                    unscheduled.push_front(child);
+                }
+                return Poll::Ready(Some(Ok(out)));
+            }
+        }
+    })
+}
+
+/// This function is similar to `bounded_traversal_stream` but prevents items with duplicate keys executing in parallel.
+pub fn bounded_traversal_unique<In, InsInit, Ins, Out, Unfold, UFut, UErr, Key, KeyFn>(
+    scheduled_max: usize,
+    init: InsInit,
+    mut unfold: Unfold,
+    key_fn: KeyFn,
+) -> impl Stream<Item = Result<Out, UErr>>
+where
+    Unfold: FnMut(In) -> UFut,
+    UFut: Future<Output = (Key, Result<(Out, Ins), UErr>)>,
+    InsInit: IntoIterator<Item = In>,
+    Ins: IntoIterator<Item = In>,
+    Key: Clone + Eq + Hash,
+    KeyFn: Fn(&In) -> &Key,
+{
+    let mut unscheduled = VecDeque::from_iter(init);
+    let mut scheduled = FuturesUnordered::new();
+    let mut waiting_for_inflight: HashMap<Key, VecDeque<_>> = HashMap::new();
+
+    stream::poll_fn(move |cx| {
+        loop {
+            if scheduled.is_empty() && unscheduled.is_empty() {
+                return Poll::Ready(None);
+            }
+
+            while scheduled.len() < scheduled_max && !unscheduled.is_empty() {
+                for item in unscheduled
+                    .drain(..std::cmp::min(unscheduled.len(), scheduled_max - scheduled.len()))
+                {
+                    let key = key_fn(&item);
+                    if let Some(inflight) = waiting_for_inflight.get_mut(key) {
+                        inflight.push_back(item);
+                    } else {
+                        waiting_for_inflight.insert(key.clone(), VecDeque::new());
+                        let unfolded = unfold(item);
+                        scheduled.push(unfolded);
+                    }
+                }
+            }
+
+            if let Some((key, unfolded)) = ready!(scheduled.poll_next_unpin(cx)) {
+                let (out, children) = unfolded?;
+
+                if let Some((reinsert_key, mut queue)) = waiting_for_inflight.remove_entry(&key) {
+                    if let Some(item) = queue.pop_front() {
+                        let unfolded = unfold(item);
+                        scheduled.push(unfolded);
+                    }
+                    if !queue.is_empty() {
+                        waiting_for_inflight.insert(reinsert_key, queue);
+                    }
+                }
+
                 for child in children {
                     unscheduled.push_front(child);
                 }

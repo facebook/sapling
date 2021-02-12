@@ -20,7 +20,7 @@ mod dag;
 pub use dag::bounded_traversal_dag;
 
 mod stream;
-pub use stream::{bounded_traversal_stream, bounded_traversal_stream2};
+pub use stream::{bounded_traversal_stream, bounded_traversal_stream2, bounded_traversal_unique};
 
 mod ordered_stream;
 pub use ordered_stream::{
