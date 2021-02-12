@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
-use tokio_02::net::UnixStream;
+use tokio::net::UnixStream;
 
 use fbthrift_socket::SocketTransport;
 use thrift_types::edenfs::client::EdenService;

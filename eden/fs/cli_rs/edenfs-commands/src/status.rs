@@ -12,7 +12,8 @@ use std::time::Duration;
 use anyhow::Result;
 use structopt::StructOpt;
 
-use crate::edenfs::EdenFsInstance;
+use edenfs_client::EdenFsInstance;
+
 use crate::ExitCode;
 
 #[derive(StructOpt, Debug)]

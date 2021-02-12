@@ -12,11 +12,6 @@ use std::process::Command;
 use anyhow::{anyhow, Context, Result};
 use structopt::StructOpt;
 
-mod cmds;
-mod edenfs;
-
-type ExitCode = i32;
-
 fn python_fallback() -> Result<Command> {
     if let Ok(args) = std::env::var("EDENFSCTL_REAL") {
         // We might get a command starting with python.exe here instead of a simple path.
@@ -61,7 +56,7 @@ fn fallback() -> Result<()> {
 fn main() -> Result<()> {
     if std::env::var("EDENFSCTL_SKIP_RUST").is_ok() {
         fallback()
-    } else if let Ok(cmd) = crate::cmds::Command::from_args_safe() {
+    } else if let Ok(cmd) = edenfs_commands::Command::from_args_safe() {
         match cmd.run() {
             Ok(code) => std::process::exit(code),
             Err(e) => Err(e),

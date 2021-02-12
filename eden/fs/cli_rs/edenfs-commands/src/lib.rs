@@ -11,16 +11,16 @@ use anyhow::{Context, Result};
 use structopt::{clap::AppSettings, StructOpt};
 use tokio_compat_02::FutureExt;
 
+use edenfs_client::EdenFsInstance;
 use util::path::expand_path;
-
-use crate::edenfs::EdenFsInstance;
-use crate::{cmds, ExitCode};
 
 mod status;
 
 const DEFAULT_CONFIG_DIR: &str = "~/local/.eden";
 const DEFAULT_ETC_EDEN_DIR: &str = "/etc/eden";
 const DEFAULT_HOME_DIR: &str = "~";
+
+type ExitCode = i32;
 
 fn expand_default(default: &'static str) -> impl Fn() -> PathBuf {
     move || expand_path(default)
@@ -53,7 +53,7 @@ pub struct Command {
 pub enum SubCommand {
     /// Check the health of the Eden service
     #[structopt(alias = "health")]
-    Status(cmds::status::StatusCmd),
+    Status(crate::status::StatusCmd),
 }
 
 impl Command {
