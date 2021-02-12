@@ -102,7 +102,7 @@ def format_last_access(last_access):
     return format_time(elapsed, modulos, suffixes)
 
 
-def format_time(elapsed, modulos, suffixes):
+def format_time(elapsed, modulos, suffixes) -> str:
     for modulo, suffix in zip(modulos, suffixes):
         if elapsed < modulo:
             return f"{elapsed}{suffix}"
@@ -254,7 +254,7 @@ class Window:
 
     # prints starting from the `current_x_offset`, does NOT add a newline
     def write_part_of_line(
-        self, part, max_width: int, attr: Optional[int] = None
+        self, part: str, max_width: int, attr: Optional[int] = None
     ) -> None:
         self._write(self.current_line, self.current_x_offset, part, max_width, attr)
         self.current_x_offset += min(max_width, len(part))
@@ -262,7 +262,7 @@ class Window:
     # prints a line with the line right justified, adds a new line after printing
     # the line
     def write_line_right_justified(
-        self, line, max_width: int, attr: Optional[int] = None
+        self, line: str, max_width: int, attr: Optional[int] = None
     ) -> None:
         max_width = min(max_width, self.width - self.current_x_offset)
         width = min(max_width, len(line))
@@ -270,7 +270,7 @@ class Window:
         self._write(self.current_line, x, line, max_width, attr)
         self.write_new_line()
 
-    def write_labeled_rows(self, rows):
+    def write_labeled_rows(self, rows) -> None:
         longest_row_name = max(len(row_name) for row_name in rows)
         for row_name in rows:
             self.write_part_of_line(f"{row_name:<{longest_row_name}}", longest_row_name)
@@ -292,7 +292,7 @@ class Window:
 
     def _write(
         self, y: int, x: int, text: str, max_width: int, attr: Optional[int] = None
-    ):
+    ) -> None:
         if self.scrollable:
             if self.in_scrollable_section(y):
                 y = y - self.scrollable_offset
@@ -391,7 +391,7 @@ class Window:
 
 
 class Top:
-    def __init__(self):
+    def __init__(self) -> None:
         import curses
 
         self.curses = curses
@@ -449,7 +449,7 @@ class Top:
     def running(self):
         return self.state == State.MAIN or self.state == State.HELP
 
-    def update(self, client):
+    def update(self, client) -> None:
         if self.ephemeral:
             self.processes.clear()
 
@@ -463,6 +463,7 @@ class Top:
                     self.processes[pid] = Process(pid, cmd, mount)
 
                 self.processes[pid].increment_counts(access_counts)
+                # pyre-fixme[16]: `Process` has no attribute `last_access`.
                 self.processes[pid].last_access = time.monotonic()
 
             # When querying older versions of EdenFS fetchCountsByPid will be None
@@ -478,7 +479,7 @@ class Top:
         for pid in self.processes.keys():
             self.processes[pid].is_running = os.path.exists(f"/proc/{pid}/")
 
-    def _update_summary_stats(self, client):
+    def _update_summary_stats(self, client) -> None:
         client.flushStatsNow()
         counter_regex = r"((store\.hg.*)|(fuse\.([^\.]*)\..*requests.*))"
         counters = client.getRegexCounters(counter_regex)
@@ -621,7 +622,7 @@ class Top:
         window.write_line(imports_header, window.get_width(), self.curses.A_UNDERLINE)
         self.render_import_section(window, len_longest_stage)
 
-    def render_fuse_request_section(self, window, len_longest_stage):
+    def render_fuse_request_section(self, window, len_longest_stage) -> None:
         section_size = window.get_width() // 2
         separator = ""
         for stage in RequestStage:
@@ -634,8 +635,8 @@ class Top:
         window.write_new_line()
 
     def render_fuse_request_part(
-        self, window, import_stage, len_longest_stage, section_size
-    ):
+        self, window, import_stage: RequestStage, len_longest_stage, section_size
+    ) -> None:
         stage_display = self.get_display_name_for_import_stage(import_stage)
         header = f"{stage_display:<{len_longest_stage}} -- "
         window.write_part_of_line(header, len(header))
@@ -644,7 +645,7 @@ class Top:
             window, self.fuse_requests_summary[import_stage], section_size - len(header)
         )
 
-    def render_import_section(self, window, len_longest_stage):
+    def render_import_section(self, window: Window, len_longest_stage: int) -> None:
         for import_stage in RequestStage:
             self.render_import_row(window, import_stage, len_longest_stage)
 
@@ -673,7 +674,7 @@ class Top:
             separator = " | "
         window.write_new_line()
 
-    def render_request_metrics(self, window, metrics, section_size):
+    def render_request_metrics(self, window, metrics, section_size) -> None:
         # split the section between the number of imports and
         # the duration of the longest import
         request_count_size = section_size // 2
@@ -776,12 +777,14 @@ class Top:
             window.write_part_of_line(text, space + 1, color | style)
         window.write_new_line()
 
-    def render_help(self, window):
+    def render_help(self, window: Window) -> None:
         window.reset()
 
         self.render_top_bar(window)
         window.write_new_line()
 
+        # pyre-fixme[58]: `-` is not supported for operand types `Optional[int]` and
+        #  `int`.
         window.start_scrollable_section(window.get_remaining_rows() - 1)
         self.render_fuse_help(window)
         window.write_new_line()
@@ -800,7 +803,7 @@ class Top:
 
         window.refresh()
 
-    def render_fuse_help(self, window):
+    def render_fuse_help(self, window) -> None:
         fuse_req_header = "Outstanding FUSE request:"
         fuse_what = (
             "This section contains the total number and duration "
@@ -832,7 +835,7 @@ class Top:
             }
         )
 
-    def render_fuse_fetch_help(self, window):
+    def render_fuse_fetch_help(self, window) -> None:
         fuse_fetch_header = "FUSE FETCH:"
         fuse_what = (
             "This column contains the total number of imports cause by "
@@ -859,7 +862,7 @@ class Top:
             }
         )
 
-    def render_import_help(self, window):
+    def render_import_help(self, window) -> None:
         object_imports_header = "Outstanding object imports:"
         import_what = (
             "This section contains the total number and duration "
@@ -893,7 +896,7 @@ class Top:
             }
         )
 
-    def render_process_table_help(self, window):
+    def render_process_table_help(self, window) -> None:
         process_table_header = "Process table:"
         process_what = (
             "This section contains a list of all the process that have accessed "
@@ -929,7 +932,7 @@ class Top:
             }
         )
 
-    def get_keypress(self, window):
+    def get_keypress(self, window) -> None:
         key = window.get_keypress()
         if key == self.curses.KEY_RESIZE:
             self.curses.update_lines_cols()
@@ -958,7 +961,7 @@ class Top:
 
 
 class Process:
-    def __init__(self, pid, cmd, mount):
+    def __init__(self, pid, cmd, mount) -> None:
         self.pid = pid
         self.cmd = format_cmd(cmd)
         self.mount = format_mount(mount)
@@ -970,16 +973,17 @@ class Process:
     def get_key(self):
         return (self.cmd, self.mount)
 
-    def aggregate(self, other):
+    def aggregate(self, other) -> None:
         self.increment_counts(other.access_counts)
         self.is_running |= other.is_running
 
         # Check if other is more relevant
+        # pyre-fixme[16]: `Process` has no attribute `last_access`.
         if other.is_running or other.last_access > self.last_access:
             self.pid = other.pid
             self.last_access = other.last_access
 
-    def increment_counts(self, access_counts):
+    def increment_counts(self, access_counts) -> None:
         self.access_counts.fsChannelReads += access_counts.fsChannelReads
         self.access_counts.fsChannelWrites += access_counts.fsChannelWrites
         self.access_counts.fsChannelTotal += access_counts.fsChannelTotal
@@ -988,10 +992,10 @@ class Process:
         )
         self.access_counts.fsChannelDurationNs += access_counts.fsChannelDurationNs
 
-    def set_fetchs(self, fetch_counts):
+    def set_fetchs(self, fetch_counts: int) -> None:
         self.fuseFetch = fetch_counts
 
-    def get_row(self):
+    def get_row(self) -> Row:
         return Row(
             top_pid=self.pid,
             mount=self.mount,
@@ -1001,6 +1005,7 @@ class Process:
             fuse_fetch=self.fuseFetch,
             fuse_backing_store_imports=self.access_counts.fsChannelBackingStoreImports,
             fuse_duration=self.access_counts.fsChannelDurationNs,
+            # pyre-fixme[16]: `Process` has no attribute `last_access`.
             fuse_last_access=self.last_access,
             command=self.cmd,
         )
