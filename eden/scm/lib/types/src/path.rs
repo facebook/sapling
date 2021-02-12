@@ -663,13 +663,9 @@ impl quickcheck::Arbitrary for PathComponentBuf {
             let size = g.gen_range(1, 8);
             let mut s = String::with_capacity(size);
             for _ in 0..size {
-                let c = loop {
-                    let x = char::arbitrary(g);
-                    if x != SEPARATOR {
-                        break x;
-                    }
-                };
-                s.push(c);
+                let x = g.gen_range(0u8, 25);
+                let x = (b'a' + x) as char;
+                s.push(x);
             }
             if let Ok(component) = PathComponentBuf::from_string(s) {
                 return component;
