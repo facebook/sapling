@@ -19,7 +19,7 @@ pub mod x509;
 pub use x509::{check_certs, X509Error};
 
 /// A group of client authentiation settings from the user's config.
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Auth {
     pub group: String,
     pub prefix: String,
@@ -29,44 +29,50 @@ pub struct Auth {
     pub username: Option<String>,
     pub schemes: Vec<String>,
     pub priority: i32,
+    pub extras: HashMap<String, String>,
 }
 
 impl TryFrom<(&str, HashMap<&str, Text>)> for Auth {
     type Error = Error;
 
-    fn try_from((group, settings): (&str, HashMap<&str, Text>)) -> Result<Self> {
+    fn try_from((group, mut settings): (&str, HashMap<&str, Text>)) -> Result<Self> {
         let group = group.into();
 
         let prefix = settings
-            .get("prefix")
+            .remove("prefix")
             .map(|s| s.to_string())
             .ok_or_else(|| Error::msg("auth prefix missing"))?;
 
         let cert = settings
-            .get("cert")
+            .remove("cert")
             .filter(|s| !s.is_empty())
             .map(expand_path);
         let key = settings
-            .get("key")
+            .remove("key")
             .filter(|s| !s.is_empty())
             .map(expand_path);
         let cacerts = settings
-            .get("cacerts")
+            .remove("cacerts")
             .filter(|s| !s.is_empty())
             .map(expand_path);
 
-        let username = settings.get("username").map(|s| s.to_string());
+        let username = settings.remove("username").map(|s| s.to_string());
 
-        let schemes = settings
-            .get("schemes")
-            .map(|line| line.split(" ").map(String::from).collect())
-            .unwrap_or_else(|| vec!["https".into()]);
+        let schemes = settings.remove("schemes").map_or_else(
+            || vec!["https".into()],
+            |line| line.split(' ').map(String::from).collect(),
+        );
 
         let priority = settings
-            .get("priority")
+            .remove("priority")
             .map(|s| s.parse())
             .transpose()?
             .unwrap_or_default();
+
+        let extras = settings
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect::<HashMap<_, _>>();
 
         Ok(Self {
             group,
@@ -77,6 +83,7 @@ impl TryFrom<(&str, HashMap<&str, Text>)> for Auth {
             username,
             schemes,
             priority,
+            extras,
         })
     }
 }
@@ -286,6 +293,7 @@ mod test {
                 username: Some("user".into()),
                 schemes: vec!["http".into(), "https".into()],
                 priority: 1,
+                extras: HashMap::new(),
             }
         );
         assert_eq!(
@@ -299,6 +307,7 @@ mod test {
                 username: None,
                 schemes: vec!["https".into()],
                 priority: 0,
+                extras: HashMap::new(),
             }
         );
     }
@@ -411,6 +420,31 @@ mod test {
             .auth_for_url(&"https://invalid.com".parse()?)?
             .unwrap();
         assert_eq!(auth.group, "default");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_extras() -> Result<()> {
+        let mut config = ConfigSet::new();
+        let _errors = config.parse(
+            "[auth]\n\
+             foo.prefix = foo.com\n\
+             foo.username = user\n\
+             foo.hello = world\n\
+             foo.bar = baz\n\
+             ",
+            &Options::default(),
+        );
+        let auth_config = AuthConfig::new(&config);
+
+        let auth = auth_config
+            .auth_for_url(&"https://foo.com".parse()?)?
+            .unwrap();
+
+        assert_eq!(auth.extras.get("hello").unwrap(), "world");
+        assert_eq!(auth.extras.get("bar").unwrap(), "baz");
+        assert_eq!(auth.extras.get("username"), None);
 
         Ok(())
     }
