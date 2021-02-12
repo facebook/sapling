@@ -18,15 +18,17 @@ use util::path::expand_path;
 mod pid;
 mod status;
 
+#[cfg(unix)]
 const DEFAULT_CONFIG_DIR: &str = "~/local/.eden";
+#[cfg(unix)]
 const DEFAULT_ETC_EDEN_DIR: &str = "/etc/eden";
-const DEFAULT_HOME_DIR: &str = "~";
+
+#[cfg(windows)]
+const DEFAULT_CONFIG_DIR: &str = "~/.eden";
+#[cfg(windows)]
+const DEFAULT_ETC_EDEN_DIR: &str = "C:\\ProgramData\\facebook\\eden";
 
 type ExitCode = i32;
-
-fn expand_default(default: &'static str) -> impl Fn() -> PathBuf {
-    move || expand_path(default)
-}
 
 #[derive(StructOpt, Debug)]
 #[structopt(
@@ -65,17 +67,35 @@ pub enum SubCommand {
 }
 
 impl Command {
+    fn get_etc_eden_dir(&self) -> PathBuf {
+        if let Some(etc_eden_dir) = &self.etc_eden_dir {
+            etc_eden_dir.clone()
+        } else {
+            DEFAULT_ETC_EDEN_DIR.into()
+        }
+    }
+
+    fn get_config_dir(&self) -> PathBuf {
+        if let Some(config_dir) = &self.config_dir {
+            config_dir.clone()
+        } else {
+            expand_path(DEFAULT_CONFIG_DIR)
+        }
+    }
+
+    fn get_home_dir(&self) -> Option<PathBuf> {
+        if let Some(home_dir) = &self.home_dir {
+            Some(home_dir.clone())
+        } else {
+            dirs::home_dir()
+        }
+    }
+
     fn get_instance(&self) -> EdenFsInstance {
         EdenFsInstance::new(
-            self.config_dir
-                .clone()
-                .unwrap_or_else(expand_default(DEFAULT_CONFIG_DIR)),
-            self.etc_eden_dir
-                .clone()
-                .unwrap_or_else(expand_default(DEFAULT_ETC_EDEN_DIR)),
-            self.home_dir
-                .clone()
-                .unwrap_or_else(expand_default(DEFAULT_HOME_DIR)),
+            self.get_config_dir(),
+            self.get_etc_eden_dir(),
+            self.get_home_dir(),
         )
     }
 

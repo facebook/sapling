@@ -20,13 +20,9 @@ pub struct Core {
 
 #[derive(Deserialize, StackConfig, Debug)]
 pub struct EdenFsConfig {
+    #[stack(nested)]
     core: Core,
 }
-
-#[cfg(windows)]
-const ETC_EDENFS_DIR: &str = "C:\\ProgramData\\facebook\\eden";
-#[cfg(unix)]
-const ETC_EDENFS_DIR: &str = "/etc/eden";
 
 fn load_path(loader: &mut EdenFsConfigLoader, path: &Path) -> Result<()> {
     let content = String::from_utf8(std::fs::read(&path)?)?;
@@ -84,21 +80,29 @@ fn load_user(loader: &mut EdenFsConfigLoader, home_dir: &Path) -> Result<()> {
     load_path(loader, &home_rc)
 }
 
-pub fn load_config(etc_eden_dir: Option<&Path>, home_dir: Option<&Path>) -> Result<EdenFsConfig> {
+pub fn load_config(etc_eden_dir: &Path, home_dir: Option<&Path>) -> Result<EdenFsConfig> {
     let mut loader = EdenFsConfig::loader();
-    let etc_eden_dir = if let Some(dir) = etc_eden_dir.as_ref() {
-        dir.as_ref()
-    } else {
-        ETC_EDENFS_DIR.as_ref()
-    };
 
-    load_system(&mut loader, &etc_eden_dir)?;
-    load_system_rcs(&mut loader, &etc_eden_dir)?;
+    if let Err(e) = load_system(&mut loader, &etc_eden_dir) {
+        event!(
+            Level::INFO,
+            etc_eden_dir = ?etc_eden_dir,
+            "Unable to load system configuration, skipped: {:?}",
+            e
+        );
+    }
 
-    if let Some(dir) = home_dir.as_ref() {
-        load_user(&mut loader, &dir)?;
-    } else if let Some(dir) = dirs::home_dir() {
-        load_user(&mut loader, &dir)?;
+    if let Err(e) = load_system_rcs(&mut loader, &etc_eden_dir) {
+        event!(
+            Level::INFO,
+            etc_eden_dir = ?etc_eden_dir,
+            "Unable to load system RC configurations, skipped: {:?}",
+            e
+        );
+    }
+
+    if let Some(home) = home_dir {
+        load_user(&mut loader, &home)?;
     } else {
         event!(
             Level::INFO,

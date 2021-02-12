@@ -14,6 +14,7 @@ use std::time::Duration;
 use anyhow::{anyhow, Context, Result};
 use tokio::net::UnixStream;
 
+use edenfs_config::EdenFsConfig;
 use fb303_core::types::fb303_status;
 use fbthrift_socket::SocketTransport;
 use thrift_types::edenfs::{client::EdenService, types::DaemonInfo};
@@ -26,16 +27,23 @@ use crate::EdenFsClient;
 pub struct EdenFsInstance {
     config_dir: PathBuf,
     etc_eden_dir: PathBuf,
-    home_dir: PathBuf,
+    home_dir: Option<PathBuf>,
 }
 
 impl EdenFsInstance {
-    pub fn new(config_dir: PathBuf, etc_eden_dir: PathBuf, home_dir: PathBuf) -> Self {
+    pub fn new(config_dir: PathBuf, etc_eden_dir: PathBuf, home_dir: Option<PathBuf>) -> Self {
         Self {
             config_dir,
             etc_eden_dir,
             home_dir,
         }
+    }
+
+    pub fn get_config(&self) -> Result<EdenFsConfig> {
+        edenfs_config::load_config(
+            &self.etc_eden_dir,
+            self.home_dir.as_ref().map(|x| x.as_ref()),
+        )
     }
 
     async fn _connect(&self, socket_path: &PathBuf) -> Result<EdenFsClient> {
