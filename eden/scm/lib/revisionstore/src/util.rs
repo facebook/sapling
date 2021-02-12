@@ -13,7 +13,7 @@ use anyhow::Result;
 use hgtime::HgTime;
 use thiserror::Error;
 
-use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
+use configparser::config::ConfigSet;
 use util::path::{create_dir, create_shared_dir};
 
 #[derive(Error, Debug)]

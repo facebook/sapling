@@ -17,10 +17,7 @@ use minibytes::Bytes;
 use regex::Regex;
 use tracing::info_span;
 
-use configparser::{
-    config::ConfigSet,
-    hg::{ByteCount, ConfigSetHgExt},
-};
+use configparser::{config::ConfigSet, convert::ByteCount};
 use hgtime::HgTime;
 use types::{Key, RepoPathBuf};
 

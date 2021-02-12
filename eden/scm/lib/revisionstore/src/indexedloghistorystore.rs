@@ -15,10 +15,7 @@ use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use sha1::{Digest, Sha1};
 
-use configparser::{
-    config::ConfigSet,
-    hg::{ByteCount, ConfigSetHgExt},
-};
+use configparser::{config::ConfigSet, convert::ByteCount};
 use indexedlog::log::IndexOutput;
 use types::{
     hgid::{ReadHgIdExt, WriteHgIdExt},

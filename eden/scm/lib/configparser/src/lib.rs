@@ -68,6 +68,7 @@
 
 pub mod c_api;
 pub mod config;
+pub mod convert;
 pub mod dynamicconfig;
 pub mod error;
 pub mod hg;

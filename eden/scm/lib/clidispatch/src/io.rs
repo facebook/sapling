@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
+use configparser::config::ConfigSet;
 use pipe::pipe;
 use std::any::Any;
 use std::io;

@@ -12,10 +12,7 @@ use std::{
 
 use anyhow::{format_err, Result};
 
-use configparser::{
-    config::ConfigSet,
-    hg::{ByteCount, ConfigSetHgExt},
-};
+use configparser::{config::ConfigSet, convert::ByteCount};
 use types::{Key, NodeInfo};
 
 use crate::{

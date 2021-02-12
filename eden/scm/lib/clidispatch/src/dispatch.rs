@@ -14,7 +14,6 @@ use anyhow::Error;
 use cliparser::alias::{expand_aliases, find_command_name};
 use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
 use configparser::config::ConfigSet;
-use configparser::hg::ConfigSetHgExt;
 use std::convert::TryInto;
 use std::sync::atomic::Ordering::SeqCst;
 use std::{env, path::Path};
@@ -104,7 +103,7 @@ fn initialize_blackbox(optional_repo: &OptionalRepo) -> Result<()> {
         let config = repo.config();
         let max_size = config
             .get_or("blackbox", "maxsize", || {
-                configparser::hg::ByteCount::from(1u64 << 12)
+                configparser::convert::ByteCount::from(1u64 << 12)
             })?
             .value();
         let max_files = config.get_or("blackbox", "maxfiles", || 3)?;

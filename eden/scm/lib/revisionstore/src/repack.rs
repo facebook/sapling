@@ -14,7 +14,7 @@ use std::{
 };
 
 use anyhow::{format_err, Error, Result};
-use configparser::{config::ConfigSet, hg::ByteCount, hg::ConfigSetHgExt};
+use configparser::{config::ConfigSet, convert::ByteCount};
 use minibytes::Bytes;
 use thiserror::Error;
 

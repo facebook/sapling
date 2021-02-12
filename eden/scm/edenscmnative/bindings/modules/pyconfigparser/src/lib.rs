@@ -13,8 +13,9 @@ use cpython::*;
 
 use configparser::{
     config::{ConfigSet, Options},
+    convert::parse_list,
     dynamicconfig::Generator,
-    hg::{generate_dynamicconfig, parse_list, ConfigSetHgExt, OptionsHgExt},
+    hg::{generate_dynamicconfig, ConfigSetHgExt, OptionsHgExt},
 };
 use cpython_ext::{error::ResultPyErrExt, PyNone, PyPath, PyPathBuf, Str};
 

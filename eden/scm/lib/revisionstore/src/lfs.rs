@@ -39,10 +39,7 @@ use url::Url;
 
 use async_runtime::block_on_exclusive as block_on_future;
 use auth::{Auth, AuthConfig};
-use configparser::{
-    config::ConfigSet,
-    hg::{ByteCount, ConfigSetHgExt},
-};
+use configparser::{config::ConfigSet, convert::ByteCount};
 use hg_http::http_client;
 use http_client::{HttpClient, HttpClientError, HttpVersion, Method, MinTransferSpeed, Request};
 use indexedlog::{log::IndexOutput, rotate, DefaultOpenOptions, Repair};

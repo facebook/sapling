@@ -9,7 +9,6 @@ use crate::remotestore::FakeRemoteStore;
 use crate::treecontentstore::TreeContentStore;
 use crate::utils::key_from_path_node_slice;
 use anyhow::Result;
-use configparser::hg::ConfigSetHgExt;
 use edenapi::{Builder as EdenApiBuilder, EdenApi};
 use log::warn;
 use manifest::{List, Manifest};

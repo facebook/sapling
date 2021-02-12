@@ -15,7 +15,7 @@ use url::Url;
 
 use anyhow::anyhow;
 use auth::AuthConfig;
-use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
+use configparser::config::ConfigSet;
 use http_client::HttpVersion;
 
 use crate::client::Client;

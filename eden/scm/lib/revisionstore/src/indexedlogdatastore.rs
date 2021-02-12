@@ -20,10 +20,7 @@ use minibytes::Bytes;
 use parking_lot::RwLock;
 use tokio::task::spawn_blocking;
 
-use configparser::{
-    config::ConfigSet,
-    hg::{ByteCount, ConfigSetHgExt},
-};
+use configparser::{config::ConfigSet, convert::ByteCount};
 use edenapi_types::TreeEntry;
 use indexedlog::log::IndexOutput;
 use lz4_pyframe::{compress, decompress};

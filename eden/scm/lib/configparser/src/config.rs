@@ -15,11 +15,13 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
 
+use anyhow::Result;
 use indexmap::IndexMap;
 use minibytes::Text;
 use pest::{self, Parser, Span};
 use util::path::expand_path;
 
+use crate::convert::FromConfigValue;
 use crate::error::Error;
 use crate::parser::{ConfigParser, Rule};
 
@@ -150,6 +152,36 @@ impl ConfigSet {
             .get(section.as_ref())
             .and_then(|section| section.items.get(name.as_ref()).cloned())
             .unwrap_or_default()
+    }
+
+    /// Get a config item. Convert to type `T`.
+    pub fn get_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Result<Option<T>> {
+        self.get(section, name)
+            .map(|bytes| T::try_from_str(&bytes))
+            .transpose()
+    }
+
+    /// Get a config item. Convert to type `T`.
+    ///
+    /// If the config item is not set, calculate it using `default_func`.
+    pub fn get_or<T: FromConfigValue>(
+        &self,
+        section: &str,
+        name: &str,
+        default_func: impl Fn() -> T,
+    ) -> Result<T> {
+        Ok(self.get_opt(section, name)?.unwrap_or_else(default_func))
+    }
+
+    /// Get a config item. Convert to type `T`.
+    ///
+    /// If the config item is not set, return `T::default()`.
+    pub fn get_or_default<T: Default + FromConfigValue>(
+        &self,
+        section: &str,
+        name: &str,
+    ) -> Result<T> {
+        self.get_or(section, name, Default::default)
     }
 
     /// Set a config item directly. `section`, `name` locates the config. `value` is the new value.
@@ -632,6 +664,7 @@ impl SupersetVerification {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::convert::ByteCount;
     use std::io::Write;
     use tempdir::TempDir;
 
@@ -1332,5 +1365,74 @@ space_list=value1.a value1.b
             Some(allowed_locations),
             None,
         );
+    }
+
+    #[test]
+    fn test_get_or() {
+        let mut cfg = ConfigSet::new();
+        cfg.parse(
+            "[foo]\n\
+             bool1 = yes\n\
+             bool2 = unknown\n\
+             bools = 1, TRUE, On, aLwAys, 0, false, oFF, never\n\
+             int1 = -33\n\
+             list1 = x y z\n\
+             list3 = 2, 3, 1\n\
+             byte1 = 1.5 KB\n\
+             byte2 = 500\n\
+             byte3 = 0.125M\n\
+             float = 1.42\n\
+             ",
+            &"test".into(),
+        );
+
+        assert_eq!(cfg.get_or("foo", "bar", || 3).unwrap(), 3);
+        assert_eq!(cfg.get_or("foo", "bool1", || false).unwrap(), true);
+        assert_eq!(
+            format!("{}", cfg.get_or("foo", "bool2", || true).unwrap_err()),
+            "invalid bool: unknown"
+        );
+        assert_eq!(cfg.get_or("foo", "int1", || 42).unwrap(), -33);
+        assert_eq!(
+            cfg.get_or("foo", "list1", || vec!["x".to_string()])
+                .unwrap(),
+            vec!["x", "y", "z"]
+        );
+        assert_eq!(
+            cfg.get_or("foo", "list3", || vec![0]).unwrap(),
+            vec![2, 3, 1]
+        );
+
+        assert_eq!(cfg.get_or_default::<bool>("foo", "bool1").unwrap(), true);
+        assert_eq!(
+            cfg.get_or_default::<Vec<bool>>("foo", "bools").unwrap(),
+            vec![true, true, true, true, false, false, false, false]
+        );
+
+        assert_eq!(
+            cfg.get_or_default::<ByteCount>("foo", "byte1")
+                .unwrap()
+                .value(),
+            1536
+        );
+        assert_eq!(
+            cfg.get_or_default::<ByteCount>("foo", "byte2")
+                .unwrap()
+                .value(),
+            500
+        );
+        assert_eq!(
+            cfg.get_or_default::<ByteCount>("foo", "byte3")
+                .unwrap()
+                .value(),
+            131072
+        );
+        assert_eq!(
+            cfg.get_or("foo", "missing", || ByteCount::from(3))
+                .unwrap()
+                .value(),
+            3
+        );
+        assert_eq!(cfg.get_or("foo", "float", || 42f32).unwrap(), 1.42f32);
     }
 }
