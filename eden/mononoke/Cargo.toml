@@ -309,6 +309,7 @@ members = [
     "filenodes",
     "filenodes/if",
     "filestore",
+    "git/git-pool",
     "git/git_types",
     "git/git_types/if",
     "git/gitimport",

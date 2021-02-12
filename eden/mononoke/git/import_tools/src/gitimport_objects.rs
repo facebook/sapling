@@ -7,7 +7,6 @@
 
 #![deny(warnings)]
 
-use crate::git_pool::GitPool;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
@@ -15,6 +14,7 @@ use blobstore::LoadableError;
 use bytes::Bytes;
 use context::CoreContext;
 use git2::{ObjectType, Oid, Repository, Revwalk};
+use git_pool::GitPool;
 use git_types::mode;
 use manifest::{Entry, Manifest, StoreLoadable};
 use mononoke_types::{hash, typed_hash::ChangesetId, DateTime, FileType, MPathElement};

@@ -7,10 +7,8 @@
 
 #![feature(try_blocks)]
 
-mod git_pool;
 mod gitimport_objects;
 
-pub use crate::git_pool::GitPool;
 pub use crate::gitimport_objects::{
     convert_git_filemode, oid_to_sha1, CommitMetadata, ExtractedCommit, FullRepoImport, GitLeaf,
     GitManifest, GitRangeImport, GitTree, GitimportPreferences, GitimportTarget,
@@ -28,6 +26,7 @@ use derived_data::BonsaiDerived;
 use filestore::{self, Alias, FetchKey, FilestoreConfig, StoreRequest};
 use futures::{future, stream, Stream, StreamExt, TryStreamExt};
 use git2::{ObjectType, Oid, Repository, Sort, TreeWalkMode, TreeWalkResult};
+pub use git_pool::GitPool;
 use git_types::TreeHandle;
 use linked_hash_map::LinkedHashMap;
 use manifest::{bonsai_diff, BonsaiDiffFileChange, StoreLoadable};

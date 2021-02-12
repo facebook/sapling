@@ -1,0 +1,13 @@
+[package]
+name = "git-pool"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+anyhow = "1.0"
+git2 = "0.13"
+r2d2 = "0.8.8"
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
