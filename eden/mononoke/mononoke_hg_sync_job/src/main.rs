@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#![feature(optin_builtin_traits)]
+#![feature(auto_traits)]
 #![feature(negative_impls)]
 #![feature(async_closure)]
 #![deny(warnings)]

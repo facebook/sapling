@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#![feature(optin_builtin_traits)]
+#![feature(auto_traits)]
 #![deny(warnings)]
 
 /// Mononoke Cross Repo validator job

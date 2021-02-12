@@ -26,7 +26,7 @@ jobs:
     - name: Install Rust Stable
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: 1.49.0
+        toolchain: 1.50.0
         default: true
         profile: minimal
     - name: Install Python 2.7
