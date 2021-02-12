@@ -1,8 +1,8 @@
-#require py2
   $ disable treemanifest
 
   $ . "$TESTDIR/library.sh"
   $ setconfig devel.print-metrics=1
+  $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
   $ hginit master
   $ cd master
