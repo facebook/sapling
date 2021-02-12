@@ -14,12 +14,13 @@ use std::time::Duration;
 use anyhow::{anyhow, Context, Result};
 use tokio::net::UnixStream;
 
+use fb303_core::types::fb303_status;
 use fbthrift_socket::SocketTransport;
-use thrift_types::edenfs::client::EdenService;
+use thrift_types::edenfs::{client::EdenService, types::DaemonInfo};
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 
-use super::utils::get_executable;
-use super::EdenFsClient;
+use crate::utils::get_executable;
+use crate::EdenFsClient;
 
 #[derive(Debug)]
 pub struct EdenFsInstance {
@@ -103,5 +104,21 @@ impl EdenFsInstance {
         } else {
             Err(anyhow!("EdenFS is not running"))
         }
+    }
+
+    pub async fn get_health(&self, timeout: Duration) -> Result<DaemonInfo> {
+        let client = self.connect(timeout).await?;
+        Ok(client.getDaemonInfo().await?)
+    }
+}
+
+pub trait DaemonHealthy {
+    fn is_healthy(&self) -> bool;
+}
+
+impl DaemonHealthy for DaemonInfo {
+    fn is_healthy(&self) -> bool {
+        self.status
+            .map_or_else(|| false, |val| val == fb303_status::ALIVE)
     }
 }

@@ -12,6 +12,6 @@ use thrift_types::edenfs::client::EdenService;
 pub mod instance;
 mod utils;
 
-pub use instance::EdenFsInstance;
+pub use instance::{DaemonHealthy, EdenFsInstance};
 
 pub type EdenFsClient = Arc<dyn EdenService>;

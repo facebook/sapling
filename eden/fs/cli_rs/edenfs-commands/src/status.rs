@@ -12,7 +12,7 @@ use std::time::Duration;
 use anyhow::Result;
 use structopt::StructOpt;
 
-use edenfs_client::EdenFsInstance;
+use edenfs_client::{DaemonHealthy, EdenFsInstance};
 
 use crate::ExitCode;
 
@@ -25,12 +25,11 @@ pub struct StatusCmd {
 
 impl StatusCmd {
     async fn get_status(&self, instance: &EdenFsInstance) -> Result<i32> {
-        let client = instance.connect(Duration::from_secs(self.timeout)).await;
+        let health = instance.get_health(Duration::from_secs(self.timeout)).await;
 
-        if let Ok(client) = client {
-            if let Ok(status) = client.getDaemonInfo().await {
-                // TODO: we should report health infomration from fb303 here
-                return Ok(status.pid);
+        if let Ok(health) = health {
+            if health.is_healthy() {
+                return Ok(health.pid);
             }
         }
 

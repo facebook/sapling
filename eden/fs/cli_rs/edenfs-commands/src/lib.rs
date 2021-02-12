@@ -15,6 +15,7 @@ use tracing::{event, Level};
 use edenfs_client::EdenFsInstance;
 use util::path::expand_path;
 
+mod pid;
 mod status;
 
 const DEFAULT_CONFIG_DIR: &str = "~/local/.eden";
@@ -58,6 +59,9 @@ pub enum SubCommand {
     /// Check the health of the Eden service
     #[structopt(alias = "health")]
     Status(crate::status::StatusCmd),
+
+    /// Print the daemon's process ID if running
+    Pid(crate::pid::PidCmd),
 }
 
 impl Command {
@@ -94,6 +98,7 @@ impl Command {
         let instance = self.get_instance();
         match self.subcommand {
             SubCommand::Status(status) => status.run(instance).await,
+            SubCommand::Pid(pid_cmd) => pid_cmd.run(instance).await,
         }
     }
 }
