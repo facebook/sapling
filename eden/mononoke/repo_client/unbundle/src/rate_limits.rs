@@ -15,9 +15,9 @@ use futures::{
 use limits::types::{RateLimit, RateLimitStatus};
 use maplit::hashmap;
 use mercurial_revlog::changeset::RevlogChangeset;
-use mononoke_types::{BonsaiChangeset, RepositoryId};
+use mononoke_types::BonsaiChangeset;
 use sha2::{Digest, Sha256};
-use slog::debug;
+use slog::{debug, warn};
 use std::collections::HashMap;
 use std::time::Duration;
 use time_window_counter::{BoxGlobalTimeWindowCounter, GlobalTimeWindowCounterBuilder};
@@ -41,39 +41,18 @@ impl std::fmt::Display for RateLimitedPushKind {
     }
 }
 
-fn get_file_changes_rate_limit(
-    ctx: &CoreContext,
-    repo_id: RepositoryId,
-    push_kind: RateLimitedPushKind,
-) -> Option<(RateLimit, &str)> {
-    let maybe_rate_limit_with_category = ctx
-        .session()
-        .load_limiter()
-        .and_then(|load_limiter| {
-            let maybe_limit_map = if push_kind == RateLimitedPushKind::InfinitePush {
-                load_limiter
-                    .rate_limits()
-                    .infinitepush_file_changes
-                    .as_ref()
-            } else {
-                load_limiter.rate_limits().public_file_changes.as_ref()
-            };
-
-            let category = load_limiter.category();
-
-            maybe_limit_map.map(|limit_map| (limit_map, category))
-        })
-        .and_then(|(limit_map, category)| {
-            limit_map
-                .get(&(repo_id.id() as i64))
-                .map(|limit| (limit.clone(), category))
-        });
+fn get_file_changes_rate_limit(ctx: &CoreContext) -> Option<(RateLimit, &str)> {
+    let maybe_rate_limit_with_category = ctx.session().load_limiter().and_then(|load_limiter| {
+        let category = load_limiter.category();
+        load_limiter
+            .rate_limits()
+            .total_file_changes
+            .clone()
+            .map(|limit| (limit, category))
+    });
 
     if maybe_rate_limit_with_category.is_none() {
-        debug!(
-            ctx.logger(),
-            "{} is not rate-limited for {:?}", repo_id, push_kind
-        );
+        debug!(ctx.logger(), "file-changes rate limit not enabled");
     }
 
     maybe_rate_limit_with_category
@@ -84,11 +63,10 @@ pub(crate) async fn enforce_file_changes_rate_limits<
     RC: Iterator<Item = &'a RevlogChangeset>,
 >(
     ctx: &CoreContext,
-    repo_id: RepositoryId,
     push_kind: RateLimitedPushKind,
     revlog_changesets: RC,
 ) -> Result<(), BundleResolverError> {
-    let (limit, category) = match get_file_changes_rate_limit(ctx, repo_id, push_kind) {
+    let (limit, category) = match get_file_changes_rate_limit(ctx) {
         Some((limit, category)) => (limit, category),
         None => return Ok(()),
     };
@@ -105,10 +83,9 @@ pub(crate) async fn enforce_file_changes_rate_limits<
         }
     };
 
-
     let max_value = limit.max_value as f64;
     let interval = limit.interval as u32;
-    let key = format!("{}_{}", limit.prefix, repo_id);
+    let key = limit.prefix.to_string();
     let timeout_dur = Duration::from_secs(limit.timeout as u64);
 
     let counter = GlobalTimeWindowCounterBuilder::build(
@@ -119,7 +96,7 @@ pub(crate) async fn enforce_file_changes_rate_limits<
         TIME_WINDOW_MAX,
     );
     let total_file_number: usize = revlog_changesets.map(|rc| rc.files().len()).sum();
-    {
+    let res = {
         let push_kind = format!("{}", push_kind);
         counter_check_and_bump(
             ctx,
@@ -139,7 +116,19 @@ pub(crate) async fn enforce_file_changes_rate_limits<
         limit,
         entity: format!("{:?}", push_kind),
         value,
-    })
+    });
+
+    if push_kind == RateLimitedPushKind::Public && res.is_err() {
+        // For public pushes, let's bump the counter,
+        // but never actually block them
+        warn!(
+            ctx.logger(),
+            "File Changes Rate Limit enforced and exceeded, but push is allowed, as it is public"
+        );
+        Ok(())
+    } else {
+        res
+    }
 }
 
 pub(crate) async fn enforce_commit_rate_limits(

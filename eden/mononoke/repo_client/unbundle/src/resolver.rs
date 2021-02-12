@@ -1038,7 +1038,6 @@ impl<'r> Bundle2Resolver<'r> {
 
                 enforce_file_changes_rate_limits(
                     &self.ctx,
-                    self.repo.get_repoid(),
                     push_kind,
                     changesets.iter().map(|(_, rc)| rc),
                 )
