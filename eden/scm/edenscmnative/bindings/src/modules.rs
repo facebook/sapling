@@ -13,6 +13,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
     let m = module;
     let name = m.get(py, "__name__")?.extract::<String>(py)?;
     m.add(py, "__doc__", "Mercurial Rust Bindings")?;
+    m.add(py, "auth", pyauth::init_module(py, &name)?)?;
     m.add(py, "blackbox", pyblackbox::init_module(py, &name)?)?;
     m.add(py, "bytes", pybytes::init_module(py, &name)?)?;
     m.add(
