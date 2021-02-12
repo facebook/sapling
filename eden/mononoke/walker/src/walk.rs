@@ -22,7 +22,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness};
-use bounded_traversal::bounded_traversal_stream;
+use bounded_traversal::bounded_traversal_unique;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
@@ -1663,7 +1663,7 @@ where
             repo_id: repo.get_repoid(),
         });
 
-        Ok(bounded_traversal_stream(
+        Ok(bounded_traversal_unique(
             repo_params.scheduled_max,
             walk_roots,
             move |(via, walk_item): (Option<Route>, OutgoingEdge)| {
@@ -1677,6 +1677,7 @@ where
                     repo_params.scuba_builder,
                     visitor,
                     checker,
+                    walk_item.target,
                 );
                 // Each step returns the walk result, and next steps
                 async move {
@@ -1697,7 +1698,9 @@ where
                     let handle = tokio::task::spawn(next);
                     handle.await?
                 }
+                .map(move |v| (target, v))
             },
+            |(_route, edge)| &edge.target,
         ))
     }
     .try_flatten_stream()
