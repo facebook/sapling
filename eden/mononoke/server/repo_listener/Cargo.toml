@@ -55,7 +55,7 @@ futures-old = { package = "futures", version = "0.1.30" }
 futures-util = "0.3.7"
 gotham = { version = "=0.5.0", default-features = false }
 http = "0.2"
-hyper = "0.13.9"
+hyper = "0.13.10"
 lazy_static = "1.0"
 maplit = "1.0"
 openssl = "0.10"

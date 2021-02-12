@@ -38,7 +38,7 @@ futures-util = "0.3.7"
 gotham = { version = "=0.5.0", default-features = false }
 gotham_derive = "=0.5.0"
 http = "0.2"
-hyper = "0.13.9"
+hyper = "0.13.10"
 hyper-openssl = "0.8"
 itertools = "0.8"
 maplit = "1.0"

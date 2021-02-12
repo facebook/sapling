@@ -408,6 +408,6 @@ tokio-core = { git = "https://github.com/bolinfest/tokio-core", rev = "5f37aa3c6
 toml = { git = "https://github.com/jsgf/toml-rs", branch = "dotted-table-0.5.7" }
 enumset = { git = "https://github.com/danobi/enumset", rev = "4c01c583c27a725948fededbfb3461c572a669a4" }
 cursive_buffered_backend = { git = "https://github.com/chengxiong-ruan/cursive_buffered_backend", branch = "upgrade_cursive_core_from_v0.4.1"}
-hyper-02 = { git = "https://github.com/krallin/hyper.git", rev = "e5cc6150ebe82eae6daa3ec61c91296b19200a81", package = "hyper", version = "0.13.9" }
+hyper-02 = { git = "https://github.com/krallin/hyper.git", rev = "9c9453c5ae3e92de4ba30edd81bb45371b8fa8d6", package = "hyper", version = "0.13.10" }
 tokio-02 = { git = "https://github.com/krallin/tokio.git", rev = "818f943db36e32b7c928351c32fe69ac913409f9", package = "tokio", version = "0.2.25" }
 tokio-compat = { git = "https://github.com/krallin/tokio-compat.git", rev = "c2330c2a0141353e467cc5861988daa2eae7cb54", package = "tokio-compat", version = "0.1.6" }

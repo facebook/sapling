@@ -20,7 +20,7 @@ gotham = { version = "=0.5.0", default-features = false }
 gotham_derive = "=0.5.0"
 hex = "0.4"
 http = "0.2"
-hyper = "0.13.9"
+hyper = "0.13.10"
 itertools = "0.8"
 lazy_static = "1.0"
 mime = "0.3.14"
