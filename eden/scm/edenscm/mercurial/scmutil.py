@@ -204,14 +204,14 @@ def callcatch(ui, func):
         ui.warn(_("file censored %s!\n") % inst, error=_("abort"))
     except error.CommitLookupError as inst:
         ui.warn(_("%s!\n") % inst.args[0], error=_("abort"))
-    except error.HttpError as inst:
+    except error.TlsError as inst:
         ui.warn(
             _(
                 "%s!\n(try fixing your credentials with `fixmyserver` or "
                 "`fixmyconnection`)\n"
             )
             % inst.args[0],
-            error=_("http error"),
+            error=_("tls error"),
         )
     except error.RevlogError as inst:
         ui.warn(_("%s!\n") % inst, error=_("abort"))

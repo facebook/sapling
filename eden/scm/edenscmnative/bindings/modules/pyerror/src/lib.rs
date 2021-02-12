@@ -11,13 +11,14 @@ use cpython_ext::{error, ResultPyErrExt};
 use taggederror::{intentional_bail, intentional_error, CommonMetadata, FilteredAnyhow};
 use taggederror_util::AnyhowEdenExt;
 
+py_exception!(error, CommitLookupError, exc::KeyError);
 py_exception!(error, HttpError);
 py_exception!(error, IndexedLogError);
 py_exception!(error, MetaLogError);
+py_exception!(error, NonUTF8Path);
 py_exception!(error, RustError);
 py_exception!(error, RevisionstoreError);
-py_exception!(error, NonUTF8Path);
-py_exception!(error, CommitLookupError, exc::KeyError);
+py_exception!(error, TlsError);
 
 py_class!(pub class TaggedExceptionData |py| {
     data metadata: CommonMetadata;
@@ -88,6 +89,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         "TaggedExceptionData",
         py.get_type::<TaggedExceptionData>(),
     )?;
+    m.add(py, "TlsError", py.get_type::<TlsError>())?;
     m.add(py, "throwrustexception", py_fn!(py, py_intentional_error()))?;
     m.add(py, "throwrustbail", py_fn!(py, py_intentional_bail()))?;
 
@@ -158,18 +160,18 @@ fn register_error_handlers() {
                 py,
                 cpython_ext::Str::from(format!("{:?}", e)),
             ))
-        } else if let Some(edenapi::EdenApiError::Http(http_client::HttpClientError::Curl(e))) =
+        } else if let Some(edenapi::EdenApiError::Http(e)) =
             e.downcast_ref::<edenapi::EdenApiError>()
         {
-            let mut message = format!("{}", e.description());
-            if let Some(detail) = e.extra_description() {
-                message.push_str(" - ");
-                message.push_str(detail);
+            match e {
+                http_client::HttpClientError::Tls(http_client::TlsError { source: e, .. }) => Some(
+                    PyErr::new::<TlsError, _>(py, cpython_ext::Str::from(e.to_string())),
+                ),
+                _ => Some(PyErr::new::<HttpError, _>(
+                    py,
+                    cpython_ext::Str::from(e.to_string()),
+                )),
             }
-            Some(PyErr::new::<HttpError, _>(
-                py,
-                cpython_ext::Str::from(message),
-            ))
         } else {
             None
         }

@@ -30,9 +30,10 @@ CommitLookupError = bindings.error.CommitLookupError
 HttpError = bindings.error.HttpError
 IndexedLogError = bindings.error.IndexedLogError
 MetaLogError = bindings.error.MetaLogError
+NonUTF8PathError = bindings.error.NonUTF8Path
 RustError = bindings.error.RustError
 RevisionstoreError = bindings.error.RevisionstoreError
-NonUTF8PathError = bindings.error.NonUTF8Path
+TlsError = bindings.error.TlsError
 
 
 def _tobytes(exc):
