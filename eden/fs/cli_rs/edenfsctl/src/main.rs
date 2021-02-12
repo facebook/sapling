@@ -11,6 +11,7 @@ use std::process::Command;
 
 use anyhow::{anyhow, Context, Result};
 use structopt::StructOpt;
+use tracing_subscriber::filter::EnvFilter;
 
 fn python_fallback() -> Result<Command> {
     if let Ok(args) = std::env::var("EDENFSCTL_REAL") {
@@ -53,10 +54,30 @@ fn fallback() -> Result<()> {
     }
 }
 
+/// Setup tracing logging. If we are in development mode, we use the fancier logger, otherwise a
+/// simple logger for production use. Logs will be printined to stderr when `--debug` flag is
+/// passed.
+fn setup_logging() {
+    let subscriber = tracing_subscriber::fmt();
+    #[cfg(debug_assertions)]
+    let subscriber = subscriber.pretty();
+    let subscriber = subscriber.with_env_filter(EnvFilter::from_env("EDENFS_LOG"));
+
+    if let Err(e) = subscriber.try_init() {
+        eprintln!(
+            "Unable to initialize logger. Logging will be disabled. Cause: {:?}",
+            e
+        );
+    }
+}
+
 fn main() -> Result<()> {
     if std::env::var("EDENFSCTL_SKIP_RUST").is_ok() {
         fallback()
     } else if let Ok(cmd) = edenfs_commands::Command::from_args_safe() {
+        if cmd.debug {
+            setup_logging();
+        }
         match cmd.run() {
             Ok(code) => std::process::exit(code),
             Err(e) => Err(e),

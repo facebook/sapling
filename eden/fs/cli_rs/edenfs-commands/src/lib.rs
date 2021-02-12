@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use structopt::{clap::AppSettings, StructOpt};
 use tokio_compat_02::FutureExt;
+use tracing::{event, Level};
 
 use edenfs_client::EdenFsInstance;
 use util::path::expand_path;
@@ -44,6 +45,9 @@ pub struct Command {
     /// Path to directory where .edenrc config file is stored.
     #[structopt(long, parse(from_str = expand_path))]
     home_dir: Option<PathBuf>,
+
+    #[structopt(long)]
+    pub debug: bool,
 
     #[structopt(subcommand)]
     subcommand: SubCommand,
@@ -85,6 +89,8 @@ impl Command {
     /// Execute subcommands. This function returns only a return code since all the error handling
     /// should be taken care of by each sub-command.
     async fn dispatch(self) -> ExitCode {
+        event!(Level::TRACE, cmd = ?self, "Dispatching");
+
         let instance = self.get_instance();
         match self.subcommand {
             SubCommand::Status(status) => status.run(instance).await,
