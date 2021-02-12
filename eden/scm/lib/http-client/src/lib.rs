@@ -24,7 +24,7 @@ mod stream;
 
 pub use client::{HttpClient, ResponseStream, StatsFuture};
 pub use curl::easy::HttpVersion;
-pub use errors::{Abort, HttpClientError};
+pub use errors::{Abort, HttpClientError, TlsError};
 pub use header::Header;
 pub use progress::Progress;
 pub use receiver::Receiver;

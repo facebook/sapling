@@ -45,7 +45,7 @@ Configure TLS
 Initially, enable the killswitch This will fail, because we don't have certs.
 
   $ setconfig "lfs.use-client-certs=false"
-  $ hgmn up master -q 2>&1 | grep -i 'ssl'
+  $ hgmn up master -q 2>&1 | grep -i 'ssl' -m 1
   * (SSL certificate problem: self signed certificate in certificate chain)* (glob)
   $ ! test -f large
 

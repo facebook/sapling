@@ -16,6 +16,7 @@ path = "src/bin/cli.rs"
 anyhow = "1.0"
 atty = "0.2"
 curl = { version = "0.4", features = ["http2"] }
+curl-sys = "0.4"
 env_logger = "0.7"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 http = "0.2"
