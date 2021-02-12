@@ -119,7 +119,7 @@ impl ConfigField {
 
         if self.nested {
             quote! {
-                #field: self.#field.finalize()?,
+                #field: self.#field.finalize()?
             }
         } else {
             quote! {
