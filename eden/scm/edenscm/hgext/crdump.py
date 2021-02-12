@@ -305,7 +305,7 @@ def phabricatorrevision(ctx):
 
 
 def publicbase(repo, ctx):
-    base = repo.revs("last(::%d & public())", ctx.rev())
+    base = repo.revs("max(::%d & public())", ctx.rev())
     if len(base):
         return repo[base.first()]
     return None
