@@ -12,7 +12,7 @@ use std::{
     sync::Arc,
 };
 
-use std::fs::Metadata;
+use std::fs::{Metadata, OpenOptions};
 
 #[cfg(not(windows))]
 use std::{
@@ -117,7 +117,16 @@ impl VFS {
 
     /// Write a plain file with `content` at `filepath`.
     fn write_regular(&self, filepath: &Path, content: &Bytes) -> Result<usize> {
-        let mut f = File::create(&filepath)?;
+        let mut options = OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.custom_flags(libc::O_NOFOLLOW);
+        }
+
+        let mut f = options.open(filepath)?;
         f.write_all(&content)
             .with_context(|| format!("Can't write to {:?}", filepath))?;
         Ok(content.len())
@@ -285,7 +294,9 @@ impl VFS {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
+    #[cfg(unix)]
     #[test]
     fn test_symlink_overwrite() {
         let tmp = tempfile::tempdir().unwrap();
@@ -296,14 +307,8 @@ mod tests {
         vfs.write(path, &Bytes::from(&[1, 2, 3][..]), None).unwrap();
         let mut buf = tmp.path().to_path_buf();
         buf.push("a");
-        assert!(
-            !File::open(buf)
-                .unwrap()
-                .metadata()
-                .unwrap()
-                .file_type()
-                .is_symlink()
-        )
+        let metadata = fs::symlink_metadata(buf).unwrap();
+        assert!(metadata.file_type().is_file())
     }
 }
 

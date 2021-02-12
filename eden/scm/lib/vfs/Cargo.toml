@@ -7,6 +7,7 @@ edition = "2018"
 anyhow = "1"
 chashmap = "2.2"
 fsinfo = { path = "../fsinfo" }
+libc = "0.2"
 minibytes = { path = "../minibytes" }
 types = { path = "../types"}
 util = { path = "../util" }

@@ -316,10 +316,8 @@ mod test {
         assert_checkout_symmetrical(&[a.clone()], &[a.clone(), b.clone()]).await?;
         // regular<->exec
         assert_checkout_symmetrical(&[a.clone()], &[a_e.clone()]).await?;
-        // regular->symlink
-        assert_checkout(&[a.clone()], &[a_s.clone()]).await?;
-        // symlink->regular - todo - does not currently work
-        // assert_checkout(vec![a_s.clone()], vec![a.clone()]).await?;
+        // regular<->symlink
+        assert_checkout_symmetrical(&[a.clone()], &[a_s.clone()]).await?;
         // dir <-> file with the same name
         assert_checkout_symmetrical(&[ab.clone()], &[a.clone()]).await?;
         // mv file between dirs
