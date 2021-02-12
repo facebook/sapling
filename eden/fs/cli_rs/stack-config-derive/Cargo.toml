@@ -1,0 +1,14 @@
+[package]
+name = "stack-config-derive"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0.60", features = ["full", "visit-mut"] }
+quote = "1.0.8"
+darling = "0.12.0"
+proc-macro2 = "1.0.24"
+proc-macro-error = "1"
