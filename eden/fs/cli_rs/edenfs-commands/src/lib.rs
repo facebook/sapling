@@ -17,6 +17,7 @@ use util::path::expand_path;
 
 mod pid;
 mod status;
+mod uptime;
 
 #[cfg(unix)]
 const DEFAULT_CONFIG_DIR: &str = "~/local/.eden";
@@ -64,6 +65,9 @@ pub enum SubCommand {
 
     /// Print the daemon's process ID if running
     Pid(crate::pid::PidCmd),
+
+    /// Determine uptime of running edenfs daemon
+    Uptime(crate::uptime::UptimeCmd),
 }
 
 impl Command {
@@ -119,6 +123,7 @@ impl Command {
         match self.subcommand {
             SubCommand::Status(status) => status.run(instance).await,
             SubCommand::Pid(pid_cmd) => pid_cmd.run(instance).await,
+            SubCommand::Uptime(uptime_cmd) => uptime_cmd.run(instance).await,
         }
     }
 }
