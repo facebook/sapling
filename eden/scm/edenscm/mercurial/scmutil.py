@@ -205,12 +205,11 @@ def callcatch(ui, func):
     except error.CommitLookupError as inst:
         ui.warn(_("%s!\n") % inst.args[0], error=_("abort"))
     except error.TlsError as inst:
+        helptext = ui.config("help", "tlshelp")
+        if helptext is None:
+            helptext = _("(is your client certificate valid?)")
         ui.warn(
-            _(
-                "%s!\n(try fixing your credentials with `fixmyserver` or "
-                "`fixmyconnection`)\n"
-            )
-            % inst.args[0],
+            _("%s!\n\n%s\n") % (inst.args[0], helptext),
             error=_("tls error"),
         )
     except error.RevlogError as inst:
