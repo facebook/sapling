@@ -292,9 +292,13 @@ mod test {
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::Diff;
     use pathmatcher::AlwaysMatcher;
+    use quickcheck::{Arbitrary, StdGen};
+    use rand::SeedableRng;
+    use rand_chacha::ChaChaRng;
     use std::collections::HashMap;
     use std::path::Path;
     use tempfile::TempDir;
+    use types::testutil::generate_repo_paths;
     use walkdir::{DirEntry, WalkDir};
 
     #[tokio::test]
@@ -324,6 +328,38 @@ mod test {
         assert_checkout(&[ab.clone()], &[cd.clone()]).await?;
 
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_checkout_generated() -> Result<()> {
+        let trees = generate_trees(6, 50);
+        for a in trees.iter() {
+            for b in trees.iter() {
+                if a == b {
+                    continue;
+                }
+                assert_checkout(a, b).await?;
+            }
+        }
+        Ok(())
+    }
+
+    fn generate_trees(tree_size: usize, count: usize) -> Vec<Vec<(RepoPathBuf, FileMetadata)>> {
+        let mut result = vec![];
+        let rng = ChaChaRng::from_seed([0u8; 32]);
+        let mut gen = StdGen::new(rng, 5);
+        let paths = generate_repo_paths(tree_size * count, &mut gen);
+
+        for i in 0..count {
+            let mut tree = vec![];
+            for idx in 0..tree_size {
+                let meta = FileMetadata::arbitrary(&mut gen);
+                let path = paths.get(i * tree_size / 2 + idx).unwrap().clone();
+                tree.push((path, meta));
+            }
+            result.push(tree)
+        }
+        result
     }
 
     fn rp(p: &str) -> RepoPathBuf {
