@@ -14,7 +14,7 @@ use parking_lot::{Mutex, RwLock};
 use manifest::{testutil::*, Manifest};
 use types::{testutil::*, HgId, Key, RepoPath, RepoPathBuf};
 
-use crate::{TreeManifest, TreeStore};
+use crate::{FileMetadata, TreeManifest, TreeStore};
 
 pub fn make_tree_manifest<'a>(
     paths: impl IntoIterator<Item = &'a (&'a str, &'a str)>,
@@ -23,6 +23,16 @@ pub fn make_tree_manifest<'a>(
     for (path, filenode) in paths {
         tree.insert(repo_path_buf(path), make_meta(filenode))
             .unwrap();
+    }
+    tree
+}
+
+pub fn make_tree_manifest_from_meta(
+    paths: impl IntoIterator<Item = (RepoPathBuf, FileMetadata)>,
+) -> TreeManifest {
+    let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
+    for (path, meta) in paths {
+        tree.insert(path, meta).unwrap();
     }
     tree
 }
