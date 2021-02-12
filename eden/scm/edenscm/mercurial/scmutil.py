@@ -204,7 +204,19 @@ def callcatch(ui, func):
         ui.warn(_("file censored %s!\n") % inst, error=_("abort"))
     except error.CommitLookupError as inst:
         ui.warn(_("%s!\n") % inst.args[0], error=_("abort"))
+    except error.CertificateError as inst:
+        # This error is definitively due to a problem with the user's client
+        # certificate, so print the configured remediation message.
+        helptext = ui.config("help", "tlsauthhelp")
+        if helptext is None:
+            helptext = _("(run 'hg config auth' to see configured certificates)")
+        ui.warn(
+            _("%s!\n\n%s\n") % (inst.args[0], helptext),
+            error=_("certificate error"),
+        )
     except error.TlsError as inst:
+        # This is a generic TLS error that may or may not be due to the user's
+        # client certificate, so print a more generic message about TLS errors.
         helptext = ui.config("help", "tlshelp")
         if helptext is None:
             helptext = _("(is your client certificate valid?)")

@@ -11,6 +11,7 @@ use cpython_ext::{error, ResultPyErrExt};
 use taggederror::{intentional_bail, intentional_error, CommonMetadata, FilteredAnyhow};
 use taggederror_util::AnyhowEdenExt;
 
+py_exception!(error, CertificateError);
 py_exception!(error, CommitLookupError, exc::KeyError);
 py_exception!(error, HttpError);
 py_exception!(error, IndexedLogError);
@@ -73,6 +74,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "error"].join(".");
     let m = PyModule::new(py, &name)?;
 
+    m.add(py, "CertificateError", py.get_type::<CertificateError>())?;
     m.add(py, "CommitLookupError", py.get_type::<CommitLookupError>())?;
     m.add(py, "HttpError", py.get_type::<HttpError>())?;
     m.add(py, "IndexedLogError", py.get_type::<IndexedLogError>())?;
@@ -172,6 +174,18 @@ fn register_error_handlers() {
                     cpython_ext::Str::from(e.to_string()),
                 )),
             }
+        } else if let Some(edenapi::EdenApiError::BadCertificate(e)) =
+            e.downcast_ref::<edenapi::EdenApiError>()
+        {
+            Some(PyErr::new::<CertificateError, _>(
+                py,
+                cpython_ext::Str::from(format!("{}", e)),
+            ))
+        } else if e.is::<auth::X509Error>() {
+            Some(PyErr::new::<CertificateError, _>(
+                py,
+                cpython_ext::Str::from(format!("{}", e)),
+            ))
         } else {
             None
         }
