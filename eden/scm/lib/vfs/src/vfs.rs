@@ -115,8 +115,7 @@ impl VFS {
         Ok(())
     }
 
-    /// Write a plain file with `content` at `filepath`.
-    fn write_regular(&self, filepath: &Path, content: &Bytes) -> Result<usize> {
+    fn write_mode(&self, filepath: &Path, content: &Bytes, exec: bool) -> Result<usize> {
         let mut options = OpenOptions::new();
         options.write(true).create(true).truncate(true);
 
@@ -127,16 +126,20 @@ impl VFS {
         }
 
         let mut f = options.open(filepath)?;
+
+        #[cfg(unix)]
+        {
+            let metadata = f.metadata()?;
+            let mut permissions = metadata.permissions();
+            let mode = if exec { 0o755 } else { 0o644 };
+            permissions.set_mode(mode);
+            f.set_permissions(permissions)
+                .with_context(|| format!("Failed to set permissions on {:?}", filepath))?;
+        }
+
         f.write_all(&content)
             .with_context(|| format!("Can't write to {:?}", filepath))?;
         Ok(content.len())
-    }
-
-    /// Write an executable file with `content` as `filepath`.
-    fn write_executable(&self, filepath: &Path, content: &Bytes) -> Result<usize> {
-        let size = self.write_regular(filepath, content)?;
-        self.set_exec(filepath, true)?;
-        Ok(size)
     }
 
     fn set_exec(&self, filepath: &Path, flag: bool) -> Result<()> {
@@ -203,8 +206,8 @@ impl VFS {
             .with_context(|| format!("Can't write into {}", path))?;
 
         match flags {
-            None => self.write_regular(&filepath, data),
-            Some(UpdateFlag::Executable) => self.write_executable(&filepath, data),
+            None => self.write_mode(&filepath, data, false),
+            Some(UpdateFlag::Executable) => self.write_mode(&filepath, data, true),
             Some(UpdateFlag::Symlink) => self.write_symlink(&filepath, data),
         }
     }
@@ -309,6 +312,23 @@ mod tests {
         buf.push("a");
         let metadata = fs::symlink_metadata(buf).unwrap();
         assert!(metadata.file_type().is_file())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_exec_overwrite() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let tmp = tempfile::tempdir().unwrap();
+        let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
+        let path = RepoPath::from_str("a").unwrap();
+        vfs.write(path, &Bytes::from("abc"), Some(UpdateFlag::Executable))
+            .unwrap();
+        vfs.write(path, &Bytes::from(&[1, 2, 3][..]), None).unwrap();
+        let mut buf = tmp.path().to_path_buf();
+        buf.push("a");
+        let metadata = fs::symlink_metadata(buf).unwrap();
+        assert_eq!(0, metadata.permissions().mode() & 0o111)
     }
 }
 
