@@ -4,7 +4,6 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["schemas/**/*.sql", "src/**/*.rs"]
 
 [dependencies]
 caching_ext = { path = "../common/rust/caching_ext", version = "0.1.0" }

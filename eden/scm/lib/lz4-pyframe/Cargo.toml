@@ -4,7 +4,6 @@ name = "lz4-pyframe"
 edition = "2018"
 version = "0.1.0"
 authors = ['Facebook Source Control Team <sourcecontrol-dev@fb.com>']
-include = ["src/**/*.rs"]
 
 [[bench]]
 name = "bench"

@@ -4,7 +4,6 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["helper_lib/**/*.rs", "schemas/**/*.sql", "src/**/*.py", "src/**/*.rs"]
 
 [lib]
 path = "helper_lib/lib.rs"

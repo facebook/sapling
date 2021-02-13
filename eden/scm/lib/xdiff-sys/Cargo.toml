@@ -3,7 +3,6 @@
 name = "xdiff-sys"
 edition = "2018"
 version = "0.1.0"
-include = ["src/**/*.rs", "src/bin/xdiff-sys-bin.rs"]
 
 [lib]
 path = "src/lib.rs"

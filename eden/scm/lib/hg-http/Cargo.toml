@@ -3,7 +3,6 @@
 name = "hg-http"
 edition = "2018"
 version = "0.1.0"
-include = ["src/**/*.rs"]
 
 [dependencies]
 hg-metrics = { path = "../hg-metrics" }

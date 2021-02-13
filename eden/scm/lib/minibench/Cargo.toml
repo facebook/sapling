@@ -3,4 +3,3 @@
 name = "minibench"
 edition = "2018"
 version = "0.1.0"
-include = ["src/**/*.rs"]

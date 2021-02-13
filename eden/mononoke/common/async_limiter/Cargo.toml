@@ -5,7 +5,6 @@ version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
 autoexamples = false
-include = ["src/**/*.rs"]
 
 [dependencies]
 anyhow = "1.0"

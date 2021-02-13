@@ -3,7 +3,6 @@
 name = "streams"
 edition = "2018"
 version = "0.1.0"
-include = ["src/**/*.rs"]
 
 [dependencies]
 async-trait = "0.1.29"
