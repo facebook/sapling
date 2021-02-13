@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, convert::TryFrom, path::PathBuf, str};
+use std::{collections::HashMap, path::PathBuf, str};
 
 use anyhow::{Error, Result};
 use indexmap::IndexMap;
@@ -20,8 +20,8 @@ pub use x509::{check_certs, X509Error};
 
 /// A group of client authentiation settings from the user's config.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Auth {
-    pub group: String,
+pub struct AuthGroup {
+    pub name: String,
     pub prefix: String,
     pub cert: Option<PathBuf>,
     pub key: Option<PathBuf>,
@@ -32,11 +32,9 @@ pub struct Auth {
     pub extras: HashMap<String, String>,
 }
 
-impl TryFrom<(&str, HashMap<&str, Text>)> for Auth {
-    type Error = Error;
-
-    fn try_from((group, mut settings): (&str, HashMap<&str, Text>)) -> Result<Self> {
-        let group = group.into();
+impl AuthGroup {
+    fn new(group: &str, mut settings: HashMap<&str, Text>) -> Result<Self> {
+        let name = group.into();
 
         let mut prefix = settings
             .remove("prefix")
@@ -86,7 +84,7 @@ impl TryFrom<(&str, HashMap<&str, Text>)> for Auth {
             .collect::<HashMap<_, _>>();
 
         Ok(Self {
-            group,
+            name,
             prefix,
             cert,
             key,
@@ -100,12 +98,12 @@ impl TryFrom<(&str, HashMap<&str, Text>)> for Auth {
 }
 
 #[derive(Clone, Debug)]
-pub struct AuthConfig {
-    groups: Vec<Auth>,
+pub struct AuthSection {
+    groups: Vec<AuthGroup>,
     validate: bool,
 }
 
-impl AuthConfig {
+impl AuthSection {
     /// Parse the `[auth]` section of a Mercurial config into a map
     /// of grouped auth settings.
     ///
@@ -115,7 +113,7 @@ impl AuthConfig {
     ///
     /// Values are parsed `Auth` structs containing all of the values
     /// found for the given grouping.
-    pub fn new(config: &ConfigSet) -> Self {
+    pub fn from_config(config: &ConfigSet) -> Self {
         // Use an IndexMap to preserve ordering; needed to correctly handle precedence.
         let mut groups = IndexMap::new();
 
@@ -137,7 +135,7 @@ impl AuthConfig {
 
         let groups = groups
             .into_iter()
-            .filter_map(|group| Auth::try_from(group).ok())
+            .filter_map(|(group, settings)| AuthGroup::new(group, settings).ok())
             .collect();
 
         Self {
@@ -154,7 +152,7 @@ impl AuthConfig {
     ///
     /// If disabled (the default), groups with missing or invalid certificates
     /// will simply be ignored, which means that in the case that all candidate
-    /// auth groups are invalid, `auth_for_url` will report that there are no
+    /// auth groups are invalid, `best_match_for` will report that there are no
     /// matching auth groups instead of returning an error.
     ///
     /// This option exists to ensure backwards-compatibility with the old
@@ -173,29 +171,29 @@ impl AuthConfig {
     }
 
     /// Find the best matching auth group for the given URL.
-    pub fn auth_for_url(&self, url: &Url) -> Result<Option<Auth>, X509Error> {
-        let mut best: Option<&Auth> = None;
+    pub fn best_match_for(&self, url: &Url) -> Result<Option<AuthGroup>, X509Error> {
+        let mut best: Option<&AuthGroup> = None;
         let mut error: Option<X509Error> = None;
 
         let scheme = url.scheme().to_string();
         let username = url.username();
         let url_suffix = strip_scheme_and_user(&url);
 
-        for auth in &self.groups {
-            if !auth.schemes.contains(&scheme) {
+        for group in &self.groups {
+            if !group.schemes.contains(&scheme) {
                 continue;
             }
 
             // If the URL contains a username, the entry's username must
             // match if the entry's username field is non-None.
             if !username.is_empty() {
-                match auth.username {
+                match group.username {
                     Some(ref u) if u != username => continue,
                     _ => {}
                 }
             }
 
-            if auth.prefix != "*" && !url_suffix.starts_with(&auth.prefix) {
+            if group.prefix != "*" && !url_suffix.starts_with(&group.prefix) {
                 continue;
             }
 
@@ -203,16 +201,16 @@ impl AuthConfig {
             // auth entry is a more specific match.
             if let Some(ref best) = best {
                 // Take the entry with the longer prefix.
-                if auth.prefix.len() < best.prefix.len() {
+                if group.prefix.len() < best.prefix.len() {
                     continue;
-                } else if auth.prefix.len() == best.prefix.len() {
+                } else if group.prefix.len() == best.prefix.len() {
                     // If prefixes are the same, break the tie using priority.
-                    if auth.priority < best.priority {
+                    if group.priority < best.priority {
                         continue;
                     // If the priorities are the same, prefer entries with usernames.
-                    } else if auth.priority == best.priority
+                    } else if group.priority == best.priority
                         && best.username.is_some()
-                        && auth.username.is_none()
+                        && group.username.is_none()
                     {
                         continue;
                     }
@@ -222,7 +220,7 @@ impl AuthConfig {
             // Skip if the cert is missing or invalid since there may be other
             // matching auth groups with valid certs, but hang on to the error
             // in case there aren't any others.
-            if let Some(path) = &auth.cert {
+            if let Some(path) = &group.cert {
                 if let Err(e) = check_certs(path) {
                     // If validatation is disabled, just pretend this auth group
                     // doesn't exist instead of reporting the error.
@@ -233,13 +231,13 @@ impl AuthConfig {
                 }
             }
 
-            best = Some(auth);
+            best = Some(group);
         }
 
         // If we encountered a missing or invalid cert, only return an error
         // if there were no other matching valid certs.
         match (best, error) {
-            (Some(auth), _) => Ok(Some(auth.clone())),
+            (Some(best), _) => Ok(Some(best.clone())),
             (None, Some(e)) => Err(e),
             (None, None) => Ok(None),
         }
@@ -289,14 +287,14 @@ mod test {
              ",
             &Options::default(),
         );
-        let groups = AuthConfig::new(&config).groups;
+        let groups = AuthSection::from_config(&config).groups;
 
         // Only 2 groups because "baz" is missing the required "prefix" setting.
         assert_eq!(groups.len(), 2);
         assert_eq!(
             groups[0],
-            Auth {
-                group: "foo".into(),
+            AuthGroup {
+                name: "foo".into(),
                 prefix: "foo.com".into(),
                 cert: Some("/foo/cert".into()),
                 key: Some("/foo/key".into()),
@@ -309,8 +307,8 @@ mod test {
         );
         assert_eq!(
             groups[1],
-            Auth {
-                group: "bar".into(),
+            AuthGroup {
+                name: "bar".into(),
                 prefix: "bar.com".into(),
                 cert: Some("/bar/cert".into()),
                 key: Some("/bar/key".into()),
@@ -337,7 +335,7 @@ mod test {
     }
 
     #[test]
-    fn test_auth_for_url() -> Result<()> {
+    fn test_best_match_for() -> Result<()> {
         let mut config = ConfigSet::new();
         let _errors = config.parse(
             "[auth]\n\
@@ -362,75 +360,69 @@ mod test {
              ",
             &Options::default(),
         );
-        let auth_config = AuthConfig::new(&config);
+        let auth = AuthSection::from_config(&config);
 
         // Basic case: an exact match.
-        let auth = auth_config
-            .auth_for_url(&"http://example.com".parse()?)?
+        let group = auth
+            .best_match_for(&"http://example.com".parse()?)?
             .unwrap();
-        assert_eq!(auth.group, "a");
+        assert_eq!(group.name, "a");
 
         // Scheme mismatch.
-        let auth = auth_config.auth_for_url(&"ftp://example.com".parse()?)?;
-        assert!(auth.is_none());
+        let group = auth.best_match_for(&"ftp://example.com".parse()?)?;
+        assert!(group.is_none());
 
         // Given URL's hosts matches a config prefix, but doesn't match
         // the entire prefix.
-        let auth = auth_config
-            .auth_for_url(&"https://foo.com.".parse()?)?
-            .unwrap();
-        assert_eq!(auth.group, "default");
+        let group = auth.best_match_for(&"https://foo.com.".parse()?)?.unwrap();
+        assert_eq!(group.name, "default");
 
         // Matching the entire prefix works as expected.
-        let auth = auth_config
-            .auth_for_url(&"https://foo.com/bar".parse()?)?
+        let group = auth
+            .best_match_for(&"https://foo.com/bar".parse()?)?
             .unwrap();
-        assert_eq!(auth.group, "b");
+        assert_eq!(group.name, "b");
 
         // A more specific prefix wins.
-        let auth = auth_config
-            .auth_for_url(&"https://foo.com/bar/baz".parse()?)?
+        let group = auth
+            .best_match_for(&"https://foo.com/bar/baz".parse()?)?
             .unwrap();
-        assert_eq!(auth.group, "c");
+        assert_eq!(group.name, "c");
 
         // Still matches even if the URL has other components in it.
-        let auth = auth_config
-            .auth_for_url(&"https://foo.com/bar/baz/dir?query=1#fragment".parse()?)?
+        let group = auth
+            .best_match_for(&"https://foo.com/bar/baz/dir?query=1#fragment".parse()?)?
             .unwrap();
-        assert_eq!(auth.group, "c");
+        assert_eq!(group.name, "c");
 
         // There are two entries matching this prefix, but one has higher priority.
-        let auth = auth_config
-            .auth_for_url(&"https://bar.com".parse()?)?
-            .unwrap();
-        assert_eq!(auth.group, "d");
+        let group = auth.best_match_for(&"https://bar.com".parse()?)?.unwrap();
+        assert_eq!(group.name, "d");
 
         // Even if another entry has a username match, the higher priority should win.
-        let auth = auth_config
-            .auth_for_url(&"https://e_user@bar.com".parse()?)?
+        let group = auth
+            .best_match_for(&"https://e_user@bar.com".parse()?)?
             .unwrap();
-        assert_eq!(auth.group, "d");
+        assert_eq!(group.name, "d");
 
         // Even if no user is specified in the URL, the entry with a username should
         // take precedence all else being equal.
-        let auth = auth_config
-            .auth_for_url(&"https://baz.com".parse()?)?
-            .unwrap();
-        assert_eq!(auth.group, "f");
+        let group = auth.best_match_for(&"https://baz.com".parse()?)?.unwrap();
+        assert_eq!(group.name, "f");
 
         // If all else fails, later entries take precedence over earlier ones.
         // Even if no user is specified in the URL, the entry with a username should
         // take precedence all else being equal.
-        let auth = auth_config
-            .auth_for_url(&"https://example.net".parse()?)?
+        let group = auth
+            .best_match_for(&"https://example.net".parse()?)?
             .unwrap();
-        assert_eq!(auth.group, "i");
+        assert_eq!(group.name, "i");
 
         // If the cert of key is missing, the entry shouldn't match.
-        let auth = auth_config
-            .auth_for_url(&"https://invalid.com".parse()?)?
+        let group = auth
+            .best_match_for(&"https://invalid.com".parse()?)?
             .unwrap();
-        assert_eq!(auth.group, "default");
+        assert_eq!(group.name, "default");
 
         Ok(())
     }
@@ -447,15 +439,13 @@ mod test {
              ",
             &Options::default(),
         );
-        let auth_config = AuthConfig::new(&config);
+        let auth = AuthSection::from_config(&config);
 
-        let auth = auth_config
-            .auth_for_url(&"https://foo.com".parse()?)?
-            .unwrap();
+        let group = auth.best_match_for(&"https://foo.com".parse()?)?.unwrap();
 
-        assert_eq!(auth.extras.get("hello").unwrap(), "world");
-        assert_eq!(auth.extras.get("bar").unwrap(), "baz");
-        assert_eq!(auth.extras.get("username"), None);
+        assert_eq!(group.extras.get("hello").unwrap(), "world");
+        assert_eq!(group.extras.get("bar").unwrap(), "baz");
+        assert_eq!(group.extras.get("username"), None);
 
         Ok(())
     }

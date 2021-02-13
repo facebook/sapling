@@ -14,7 +14,7 @@ use anyhow::{Context, Error};
 use url::Url;
 
 use anyhow::anyhow;
-use auth::AuthConfig;
+use auth::AuthSection;
 use configparser::config::ConfigSet;
 use http_client::HttpVersion;
 
@@ -64,9 +64,9 @@ impl Builder {
             .map_err(|e| ConfigError::Malformed("edenapi.validate-certs".into(), e))?
             .unwrap_or_default();
 
-        let (cert, key, ca_bundle) = AuthConfig::new(&config)
+        let (cert, key, ca_bundle) = AuthSection::from_config(&config)
             .validate(validate_certs)
-            .auth_for_url(&server_url)?
+            .best_match_for(&server_url)?
             .map(|auth| (auth.cert, auth.key, auth.cacerts))
             .unwrap_or_default();
 

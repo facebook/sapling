@@ -38,7 +38,7 @@ use tracing::info_span;
 use url::Url;
 
 use async_runtime::block_on_exclusive as block_on_future;
-use auth::{Auth, AuthConfig};
+use auth::{AuthGroup, AuthSection};
 use configparser::{config::ConfigSet, convert::ByteCount};
 use hg_http::http_client;
 use http_client::{HttpClient, HttpClientError, HttpVersion, Method, MinTransferSpeed, Request};
@@ -90,7 +90,7 @@ enum LfsBlobsStore {
 
 struct HttpLfsRemote {
     url: Url,
-    auth: Option<Auth>,
+    auth: Option<AuthGroup>,
     user_agent: String,
     concurrent_fetches: usize,
     backoff_times: Vec<f32>,
@@ -957,7 +957,7 @@ impl LfsRemoteInner {
 
     async fn send_with_retry(
         client: &HttpClient,
-        auth: Option<&Auth>,
+        auth: Option<&AuthGroup>,
         method: Method,
         url: Url,
         user_agent: &str,
@@ -1159,7 +1159,7 @@ impl LfsRemoteInner {
 
     async fn process_action(
         client: &HttpClient,
-        auth: Option<&Auth>,
+        auth: Option<&AuthGroup>,
         user_agent: &str,
         backoff_times: Vec<f32>,
         request_timeout: Duration,
@@ -1351,7 +1351,7 @@ impl LfsRemote {
             }
 
             let auth = if config.get_or("lfs", "use-client-certs", || true)? {
-                AuthConfig::new(&config).auth_for_url(&url)?
+                AuthSection::from_config(&config).best_match_for(&url)?
             } else {
                 None
             };

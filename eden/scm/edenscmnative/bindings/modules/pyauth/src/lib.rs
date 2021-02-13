@@ -11,7 +11,7 @@ use anyhow::{anyhow, Context};
 use cpython::*;
 use url::Url;
 
-use auth::{self, AuthConfig};
+use auth::{self, AuthSection};
 use cpython_ext::{PyNone, PyPath, ResultPyErrExt};
 use pyconfigparser::config;
 
@@ -56,32 +56,32 @@ fn getauth(
             .map_pyerr(py)?;
     }
 
-    AuthConfig::new(&cfg)
+    AuthSection::from_config(&cfg)
         .validate(validate)
-        .auth_for_url(&uri)
+        .best_match_for(&uri)
         .map_pyerr(py)?
         .map_or_else(
             || Ok(PyNone.to_py_object(py).into_object()),
-            |auth| {
-                let cert = auth.cert.as_ref().map(|path| path.to_string_lossy());
-                let key = auth.key.as_ref().map(|path| path.to_string_lossy());
-                let cacerts = auth.cacerts.as_ref().map(|path| path.to_string_lossy());
+            |group| {
+                let cert = group.cert.as_ref().map(|path| path.to_string_lossy());
+                let key = group.key.as_ref().map(|path| path.to_string_lossy());
+                let cacerts = group.cacerts.as_ref().map(|path| path.to_string_lossy());
 
                 let dict = PyDict::new(py);
 
                 dict.set_item(py, "cert", cert)?;
                 dict.set_item(py, "key", key)?;
                 dict.set_item(py, "cacerts", cacerts)?;
-                dict.set_item(py, "prefix", &auth.prefix)?;
-                dict.set_item(py, "username", &auth.username)?;
-                dict.set_item(py, "schemes", &auth.schemes)?;
-                dict.set_item(py, "priority", &auth.priority)?;
+                dict.set_item(py, "prefix", &group.prefix)?;
+                dict.set_item(py, "username", &group.username)?;
+                dict.set_item(py, "schemes", &group.schemes)?;
+                dict.set_item(py, "priority", &group.priority)?;
 
-                for (k, v) in &auth.extras {
+                for (k, v) in &group.extras {
                     dict.set_item(py, k, v)?;
                 }
 
-                Ok((&auth.group, dict).to_py_object(py).into_object())
+                Ok((&group.name, dict).to_py_object(py).into_object())
             },
         )
 }
