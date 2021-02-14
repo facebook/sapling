@@ -232,7 +232,7 @@ class Redirection:
 
     def _bind_mount_darwin(
         self, instance: EdenInstance, checkout_path: Path, target: Path
-    ):
+    ) -> None:
         if have_apfs_helper():
             return self._bind_mount_darwin_apfs(instance, checkout_path, target)
         else:
@@ -362,7 +362,7 @@ class Redirection:
 
         raise Exception(f"don't know how to handle bind mounts on {sys.platform}")
 
-    def _bind_unmount(self, checkout: EdenCheckout):
+    def _bind_unmount(self, checkout: EdenCheckout) -> None:
         if sys.platform == "darwin":
             return self._bind_unmount_darwin(checkout)
 
