@@ -28,7 +28,7 @@ from .util import mkscratch_bin
 
 redirect_cmd = subcmd_mod.Decorator()
 
-log = logging.getLogger(__name__)
+log: logging.Logger = logging.getLogger(__name__)
 
 USER_REDIRECTION_SOURCE = ".eden/client/config.toml:redirections"
 REPO_SOURCE = ".eden-redirections"
@@ -170,7 +170,7 @@ class Redirection:
         target: Optional[Path],
         source: str,
         state: Optional[RedirectionState] = None,
-    ):
+    ) -> None:
         self.repo_path = repo_path
         self.type = redir_type
         self.target = target
@@ -240,7 +240,7 @@ class Redirection:
 
     def _bind_mount_darwin_apfs(
         self, instance: EdenInstance, checkout_path: Path, target: Path
-    ):
+    ) -> None:
         """Attempt to use an APFS volume for a bind redirection.
         The heavy lifting is part of the APFS_HELPER utility found
         in `eden/scm/exec/eden_apfs_mount_helper/`"""
@@ -250,7 +250,7 @@ class Redirection:
 
     def _bind_mount_darwin_dmg(
         self, instance: EdenInstance, checkout_path: Path, target: Path
-    ):
+    ) -> None:
         # Since we don't have bind mounts, we set up a disk image file
         # and mount that instead.
         image_file_name = self._dmg_file_name(target)
@@ -288,14 +288,14 @@ class Redirection:
             ]
         )
 
-    def _bind_unmount_darwin(self, checkout: EdenCheckout):
+    def _bind_unmount_darwin(self, checkout: EdenCheckout) -> None:
         mount_path = checkout.path / self.repo_path
         # This will unmount/detach both disk images and apfs volumes
         run_cmd_quietly(["diskutil", "unmount", "force", mount_path])
 
     def _bind_mount_linux(
         self, instance: EdenInstance, checkout_path: Path, target: Path
-    ):
+    ) -> None:
         abs_mount_path_in_repo = checkout_path / self.repo_path
         with instance.get_thrift_client_legacy() as client:
             if abs_mount_path_in_repo.exists():
@@ -329,7 +329,7 @@ class Redirection:
                     raise Exception(PLEASE_RESTART)
                 raise
 
-    def _bind_unmount_linux(self, checkout: EdenCheckout):
+    def _bind_unmount_linux(self, checkout: EdenCheckout) -> None:
         with checkout.instance.get_thrift_client_legacy() as client:
             try:
                 client.removeBindMount(
@@ -342,10 +342,10 @@ class Redirection:
 
     def _bind_mount_windows(
         self, instance: EdenInstance, checkout_path: Path, target: Path
-    ):
+    ) -> None:
         self._apply_symlink(checkout_path, target)
 
-    def _bind_unmount_windows(self, checkout: EdenCheckout):
+    def _bind_unmount_windows(self, checkout: EdenCheckout) -> None:
         repo_path = self.expand_repo_path(checkout)
         repo_path.unlink()
 
@@ -400,12 +400,12 @@ class Redirection:
             return RepoPathDisposition.DOES_NOT_EXIST
         return disposition
 
-    def _apply_symlink(self, checkout_path: Path, target: Path):
+    def _apply_symlink(self, checkout_path: Path, target: Path) -> None:
         symlink_path = Path(checkout_path / self.repo_path)
         symlink_path.parent.mkdir(exist_ok=True, parents=True)
         symlink_path.symlink_to(target)
 
-    def apply(self, checkout: EdenCheckout):
+    def apply(self, checkout: EdenCheckout) -> None:
         disposition = self.remove_existing(checkout)
         if disposition == RepoPathDisposition.IS_NON_EMPTY_DIR and (
             self.type == RedirectionType.SYMLINK
@@ -562,7 +562,7 @@ def file_size(path: Path) -> int:
     return st.st_size
 
 
-def run_cmd_quietly(args, check=True) -> int:
+def run_cmd_quietly(args, check: bool = True) -> int:
     """Quietly run a command; if successful then its output is entirely suppressed.
     If it fails then raise an exception containing the output/error streams.
     If check=False then print the output and return the exit status"""
