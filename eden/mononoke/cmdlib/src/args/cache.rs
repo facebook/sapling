@@ -9,6 +9,7 @@ use blobrepo_factory::Caching;
 use clap::{App, Arg, ArgMatches};
 use fbinit::FacebookInit;
 use once_cell::sync::{Lazy, OnceCell};
+use std::time::Duration;
 
 use crate::args::{bool_as_str, MononokeMatches, BOOL_VALUES};
 
@@ -20,6 +21,8 @@ const SKIP_CACHING: &str = "skip-caching";
 const CACHELIB_ONLY_BLOBSTORE_OLD: &str = "cachelib-only-blobstore";
 const CACHELIB_ONLY_BLOBSTORE_NEW: &str = "blobstore-cachelib-only";
 const CACHELIB_SHARDS: &str = "cachelib-shards";
+const CACHELIB_REBALANCING_USE_LRU: &str = "cachelib-rebalancing-use-lru";
+const CACHELIB_REBALANCING_INTERVAL: &str = "cachelib-rebalancing-interval-secs";
 
 const PHASES_CACHE_SIZE: &str = "phases-cache-size";
 const SEGMENTED_CHANGELOG_CACHE_SIZE: &str = "segmented-changelog-cache-size";
@@ -121,6 +124,17 @@ pub(crate) fn add_cachelib_args<'a, 'b>(
             .takes_value(true)
             .value_name("SIZE")
             .help(&MIN_PROCESS_SIZE_HELP),
+    )
+    .arg(
+        Arg::with_name(CACHELIB_REBALANCING_USE_LRU)
+            .long(CACHELIB_REBALANCING_USE_LRU)
+            .help("Whether to ensure that objects of all size enjoy a similar LRU policy"),
+    )
+    .arg(
+        Arg::with_name(CACHELIB_REBALANCING_INTERVAL)
+            .long(CACHELIB_REBALANCING_INTERVAL)
+            .takes_value(true)
+            .help("How often to rebalance across allocation classes"),
     )
     .arg(
         Arg::with_name(SKIP_CACHING)
@@ -244,6 +258,10 @@ pub(crate) fn parse_and_init_cachelib<'a>(
             if let Some(buckets_power) = matches.value_of(BUCKETS_POWER) {
                 settings.buckets_power = Some(buckets_power.parse().unwrap());
             }
+            settings.rebalancing_use_lru = matches.is_present(CACHELIB_REBALANCING_USE_LRU);
+            if let Some(freq) = matches.value_of(CACHELIB_REBALANCING_INTERVAL) {
+                settings.rebalancing_interval = Duration::from_secs(freq.parse().unwrap());
+            }
 
             #[cfg(not(fbcode_build))]
             {
@@ -281,6 +299,8 @@ pub struct CachelibSettings {
     pub segmented_changelog_cache_size: Option<usize>,
     pub expected_item_size_bytes: Option<usize>,
     pub blobstore_cachelib_only: bool,
+    pub rebalancing_use_lru: bool,
+    pub rebalancing_interval: Duration,
 }
 
 impl Default for CachelibSettings {
@@ -302,6 +322,8 @@ impl Default for CachelibSettings {
             segmented_changelog_cache_size: None,
             expected_item_size_bytes: None,
             blobstore_cachelib_only: false,
+            rebalancing_use_lru: false,
+            rebalancing_interval: Duration::from_secs(300),
         }
     }
 }
