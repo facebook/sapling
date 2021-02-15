@@ -10,12 +10,6 @@
 #include <chrono>
 #include <memory>
 
-namespace {
-constexpr std::chrono::microseconds kMinValue{0};
-constexpr std::chrono::microseconds kMaxValue{10000};
-constexpr std::chrono::microseconds kBucketSize{1000};
-} // namespace
-
 namespace facebook {
 namespace eden {
 
@@ -40,6 +34,11 @@ JournalThreadStats& EdenStats::getJournalStatsForCurrentThread() {
 }
 
 void EdenStats::aggregate() {
+  // Flush the quantile stats since some of our stats are based on that
+  // mechanism. Eventually, every stat will be a quantile stat and we can
+  // remove the rest of the logic from this method.
+  fb303::ServiceData::get()->getQuantileStatMap()->flushAll();
+
   for (auto& stats : threadLocalChannelStats_.accessAllThreads()) {
     stats.aggregate();
   }
@@ -65,18 +64,14 @@ std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
 
 EdenThreadStatsBase::EdenThreadStatsBase() {}
 
-EdenThreadStatsBase::Histogram EdenThreadStatsBase::createHistogram(
+EdenThreadStatsBase::Stat EdenThreadStatsBase::createStat(
     const std::string& name) {
-  return Histogram{
-      this,
+  return Stat{
       name,
-      static_cast<int64_t>(kBucketSize.count()),
-      kMinValue.count(),
-      kMaxValue.count(),
-      fb303::COUNT,
-      50,
-      90,
-      99};
+      fb303::ExportTypeConsts::kSumCountAvgRate,
+      fb303::QuantileConsts::kP1_P10_P50_P90_P99,
+      fb303::SlidingWindowPeriodConsts::kOneMinTenMinHour,
+  };
 }
 
 EdenThreadStatsBase::Timeseries EdenThreadStatsBase::createTimeseries(
@@ -88,7 +83,7 @@ EdenThreadStatsBase::Timeseries EdenThreadStatsBase::createTimeseries(
 }
 
 void ChannelThreadStats::recordLatency(
-    HistogramPtr item,
+    StatPtr item,
     std::chrono::microseconds elapsed) {
   (this->*item).addValue(elapsed.count());
 }

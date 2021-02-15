@@ -7,9 +7,11 @@
 
 #pragma once
 
-#include <fb303/ThreadLocalStats.h>
-#include <folly/ThreadLocal.h>
 #include <memory>
+
+#include <fb303/ThreadLocalStats.h>
+#include <fb303/detail/QuantileStatWrappers.h>
+#include <folly/ThreadLocal.h>
 
 #include "eden/fs/eden-config.h"
 
@@ -93,88 +95,88 @@ std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
 class EdenThreadStatsBase
     : public fb303::ThreadLocalStatsT<fb303::TLStatsThreadSafe> {
  public:
-  using Histogram = TLHistogram;
+  using Stat = fb303::detail::QuantileStatWrapper;
   using Timeseries = TLTimeseries;
 
   explicit EdenThreadStatsBase();
 
  protected:
-  Histogram createHistogram(const std::string& name);
+  Stat createStat(const std::string& name);
   Timeseries createTimeseries(const std::string& name);
 };
 
 class ChannelThreadStats : public EdenThreadStatsBase {
  public:
-  // We track latency in units of microseconds, hence the _us suffix
-  // in the histogram names below.
+  // We track latency in units of microseconds, hence the _us suffix in the
+  // stat names below.
 
 #ifndef _WIN32
-  Histogram lookup{createHistogram("fuse.lookup_us")};
-  Histogram forget{createHistogram("fuse.forget_us")};
-  Histogram getattr{createHistogram("fuse.getattr_us")};
-  Histogram setattr{createHistogram("fuse.setattr_us")};
-  Histogram readlink{createHistogram("fuse.readlink_us")};
-  Histogram mknod{createHistogram("fuse.mknod_us")};
-  Histogram mkdir{createHistogram("fuse.mkdir_us")};
-  Histogram unlink{createHistogram("fuse.unlink_us")};
-  Histogram rmdir{createHistogram("fuse.rmdir_us")};
-  Histogram symlink{createHistogram("fuse.symlink_us")};
-  Histogram rename{createHistogram("fuse.rename_us")};
-  Histogram link{createHistogram("fuse.link_us")};
-  Histogram open{createHistogram("fuse.open_us")};
-  Histogram read{createHistogram("fuse.read_us")};
-  Histogram write{createHistogram("fuse.write_us")};
-  Histogram flush{createHistogram("fuse.flush_us")};
-  Histogram release{createHistogram("fuse.release_us")};
-  Histogram fsync{createHistogram("fuse.fsync_us")};
-  Histogram opendir{createHistogram("fuse.opendir_us")};
-  Histogram readdir{createHistogram("fuse.readdir_us")};
-  Histogram releasedir{createHistogram("fuse.releasedir_us")};
-  Histogram fsyncdir{createHistogram("fuse.fsyncdir_us")};
-  Histogram statfs{createHistogram("fuse.statfs_us")};
-  Histogram setxattr{createHistogram("fuse.setxattr_us")};
-  Histogram getxattr{createHistogram("fuse.getxattr_us")};
-  Histogram listxattr{createHistogram("fuse.listxattr_us")};
-  Histogram removexattr{createHistogram("fuse.removexattr_us")};
-  Histogram access{createHistogram("fuse.access_us")};
-  Histogram create{createHistogram("fuse.create_us")};
-  Histogram bmap{createHistogram("fuse.bmap_us")};
-  Histogram ioctl{createHistogram("fuse.ioctl_us")};
-  Histogram poll{createHistogram("fuse.poll_us")};
-  Histogram forgetmulti{createHistogram("fuse.forgetmulti_us")};
-  Histogram fallocate{createHistogram("fuse.fallocate_us")};
+  Stat lookup{createStat("fuse.lookup_us")};
+  Stat forget{createStat("fuse.forget_us")};
+  Stat getattr{createStat("fuse.getattr_us")};
+  Stat setattr{createStat("fuse.setattr_us")};
+  Stat readlink{createStat("fuse.readlink_us")};
+  Stat mknod{createStat("fuse.mknod_us")};
+  Stat mkdir{createStat("fuse.mkdir_us")};
+  Stat unlink{createStat("fuse.unlink_us")};
+  Stat rmdir{createStat("fuse.rmdir_us")};
+  Stat symlink{createStat("fuse.symlink_us")};
+  Stat rename{createStat("fuse.rename_us")};
+  Stat link{createStat("fuse.link_us")};
+  Stat open{createStat("fuse.open_us")};
+  Stat read{createStat("fuse.read_us")};
+  Stat write{createStat("fuse.write_us")};
+  Stat flush{createStat("fuse.flush_us")};
+  Stat release{createStat("fuse.release_us")};
+  Stat fsync{createStat("fuse.fsync_us")};
+  Stat opendir{createStat("fuse.opendir_us")};
+  Stat readdir{createStat("fuse.readdir_us")};
+  Stat releasedir{createStat("fuse.releasedir_us")};
+  Stat fsyncdir{createStat("fuse.fsyncdir_us")};
+  Stat statfs{createStat("fuse.statfs_us")};
+  Stat setxattr{createStat("fuse.setxattr_us")};
+  Stat getxattr{createStat("fuse.getxattr_us")};
+  Stat listxattr{createStat("fuse.listxattr_us")};
+  Stat removexattr{createStat("fuse.removexattr_us")};
+  Stat access{createStat("fuse.access_us")};
+  Stat create{createStat("fuse.create_us")};
+  Stat bmap{createStat("fuse.bmap_us")};
+  Stat ioctl{createStat("fuse.ioctl_us")};
+  Stat poll{createStat("fuse.poll_us")};
+  Stat forgetmulti{createStat("fuse.forgetmulti_us")};
+  Stat fallocate{createStat("fuse.fallocate_us")};
 #else
   Timeseries outOfOrderCreate{createTimeseries("prjfs.out_of_order_create")};
 
-  Histogram newFileCreated{createHistogram("prjfs.newFileCreated_us")};
-  Histogram fileOverwritten{createHistogram("prjfs.fileOverwritten_us")};
-  Histogram fileHandleClosedFileModified{
-      createHistogram("prjfs.fileHandleClosedFileModified_us")};
-  Histogram fileRenamed{createHistogram("prjfs.fileRenamed_us")};
-  Histogram preRenamed{createHistogram("prjfs.preRenamed_us")};
-  Histogram fileHandleClosedFileDeleted{
-      createHistogram("prjfs.fileHandleClosedFileDeleted_us")};
-  Histogram preSetHardlink{createHistogram("prjfs.preSetHardlink_us")};
+  Stat newFileCreated{createStat("prjfs.newFileCreated_us")};
+  Stat fileOverwritten{createStat("prjfs.fileOverwritten_us")};
+  Stat fileHandleClosedFileModified{
+      createStat("prjfs.fileHandleClosedFileModified_us")};
+  Stat fileRenamed{createStat("prjfs.fileRenamed_us")};
+  Stat preRenamed{createStat("prjfs.preRenamed_us")};
+  Stat fileHandleClosedFileDeleted{
+      createStat("prjfs.fileHandleClosedFileDeleted_us")};
+  Stat preSetHardlink{createStat("prjfs.preSetHardlink_us")};
 
-  Histogram openDir{createHistogram("prjfs.opendir_us")};
-  Histogram readDir{createHistogram("prjfs.readdir_us")};
-  Histogram lookup{createHistogram("prjfs.lookup_us")};
-  Histogram access{createHistogram("prjfs.access_us")};
-  Histogram read{createHistogram("prjfs.read_us")};
+  Stat openDir{createStat("prjfs.opendir_us")};
+  Stat readDir{createStat("prjfs.readdir_us")};
+  Stat lookup{createStat("prjfs.lookup_us")};
+  Stat access{createStat("prjfs.access_us")};
+  Stat read{createStat("prjfs.read_us")};
 #endif
 
-  // Since we can potentially finish a request in a different
-  // thread from the one used to initiate it, we use HistogramPtr
-  // as a helper for referencing the pointer-to-member that we
-  // want to update at the end of the request.
-  using HistogramPtr = Histogram ChannelThreadStats::*;
+  // Since we can potentially finish a request in a different thread from the
+  // one used to initiate it, we use StatPtr as a helper for referencing the
+  // pointer-to-member that we want to update at the end of the request.
+  using StatPtr = Stat ChannelThreadStats::*;
 
-  /** Record a the latency for an operation.
-   * item is the pointer-to-member for one of the histograms defined
-   * above.
+  /**
+   * Record a the latency for an operation.
+   *
+   * item is the pointer-to-member for one of the stats defined above.
    * elapsed is the duration of the operation, measured in microseconds.
    */
-  void recordLatency(HistogramPtr item, std::chrono::microseconds elapsed);
+  void recordLatency(StatPtr item, std::chrono::microseconds elapsed);
 };
 
 /**
@@ -205,14 +207,12 @@ class ObjectStoreThreadStats : public EdenThreadStatsBase {
  */
 class HgBackingStoreThreadStats : public EdenThreadStatsBase {
  public:
-  Histogram hgBackingStoreGetBlob{createHistogram("store.hg.get_blob")};
-  Histogram hgBackingStoreImportBlob{createHistogram("store.hg.import_blob")};
-  Histogram hgBackingStoreGetTree{createHistogram("store.hg.get_tree")};
-  Histogram hgBackingStoreImportTree{createHistogram("store.hg.import_tree")};
-  Histogram mononokeBackingStoreGetTree{
-      createHistogram("store.mononoke.get_tree")};
-  Histogram mononokeBackingStoreGetBlob{
-      createHistogram("store.mononoke.get_blob")};
+  Stat hgBackingStoreGetBlob{createStat("store.hg.get_blob")};
+  Stat hgBackingStoreImportBlob{createStat("store.hg.import_blob")};
+  Stat hgBackingStoreGetTree{createStat("store.hg.get_tree")};
+  Stat hgBackingStoreImportTree{createStat("store.hg.import_tree")};
+  Stat mononokeBackingStoreGetTree{createStat("store.mononoke.get_tree")};
+  Stat mononokeBackingStoreGetBlob{createStat("store.mononoke.get_blob")};
 };
 
 /**

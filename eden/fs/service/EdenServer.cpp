@@ -609,7 +609,7 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
 
 void EdenServer::startPeriodicTasks() {
   // Flush stats must run once every second for accurate aggregation of
-  // the time series & histogram buckets
+  // the stats.
   flushStatsTask_.updateInterval(1s, /*splay=*/false);
 
   // Report memory usage stats once every 30 seconds

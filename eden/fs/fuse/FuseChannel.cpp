@@ -231,9 +231,9 @@ struct HandlerEntry {
       StringPiece n,
       Handler h,
       FuseArgRenderer r,
-      ChannelThreadStats::HistogramPtr hist,
+      ChannelThreadStats::StatPtr s,
       AccessType at = AccessType::FsChannelOther)
-      : name{n}, handler{h}, argRenderer{r}, histogram{hist}, accessType{at} {}
+      : name{n}, handler{h}, argRenderer{r}, stat{s}, accessType{at} {}
 
   std::string getShortName() const {
     if (name.startsWith("FUSE_")) {
@@ -257,7 +257,7 @@ struct HandlerEntry {
   StringPiece name;
   Handler handler = nullptr;
   FuseArgRenderer argRenderer = nullptr;
-  ChannelThreadStats::HistogramPtr histogram = nullptr;
+  ChannelThreadStats::StatPtr stat = nullptr;
   AccessType accessType = AccessType::FsChannelOther;
 };
 
@@ -1676,7 +1676,7 @@ void FuseChannel::processSession() {
                   folly::makeFutureWith([&] {
                     request->startRequest(
                         dispatcher_->getStats(),
-                        handlerEntry->histogram,
+                        handlerEntry->stat,
                         *(liveRequestWatches_.get()));
                     return (this->*handlerEntry->handler)(
                         *request, request->getReq(), arg);

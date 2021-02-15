@@ -22,7 +22,7 @@ namespace facebook::eden {
 class RequestContext : public ObjectFetchContext {
   // Needed to track stats
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
-  ChannelThreadStats::HistogramPtr latencyHistogram_{nullptr};
+  ChannelThreadStats::StatPtr latencyStat_{nullptr};
   EdenStats* stats_{nullptr};
   RequestMetricsScope requestMetricsScope_;
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
@@ -96,7 +96,7 @@ class RequestContext : public ObjectFetchContext {
 
   void startRequest(
       EdenStats* stats,
-      ChannelThreadStats::HistogramPtr histogram,
+      ChannelThreadStats::StatPtr stat,
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
           requestWatches);
   void finishRequest();

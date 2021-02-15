@@ -180,8 +180,8 @@ HRESULT PrjfsChannelInner::startEnumeration(
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
-        auto histogram = &ChannelThreadStats::openDir;
-        context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
+        auto stat = &ChannelThreadStats::openDir;
+        context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
         FB_LOGF(getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
         return dispatcher_->opendir(path, *context)
@@ -255,8 +255,8 @@ HRESULT PrjfsChannelInner::getEnumerationData(
                                     buffer = dirEntryBufferHandle] {
     auto requestWatch =
         std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
-    auto histogram = &ChannelThreadStats::readDir;
-    context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
+    auto stat = &ChannelThreadStats::readDir;
+    context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
     bool added = false;
     for (FileMetadata* entry; (entry = enumerator->current());
@@ -316,8 +316,8 @@ HRESULT PrjfsChannelInner::getPlaceholderInfo(
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
-        auto histogram = &ChannelThreadStats::lookup;
-        context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
+        auto stat = &ChannelThreadStats::lookup;
+        context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
         FB_LOGF(getStraceLogger(), DBG7, "lookup({})", path);
         return dispatcher_->lookup(std::move(path), *context)
@@ -374,8 +374,8 @@ HRESULT PrjfsChannelInner::queryFileName(
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
-        auto histogram = &ChannelThreadStats::access;
-        context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
+        auto stat = &ChannelThreadStats::access;
+        context->startRequest(dispatcher_->getStats(), stat, requestWatch);
         FB_LOGF(getStraceLogger(), DBG7, "access({})", path);
         return dispatcher_->access(std::move(path), *context)
             .thenValue([context = std::move(context)](bool present) {
@@ -491,8 +491,8 @@ HRESULT PrjfsChannelInner::getFileData(
         auto requestWatch =
             std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                 nullptr);
-        auto histogram = &ChannelThreadStats::read;
-        context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
+        auto stat = &ChannelThreadStats::read;
+        context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
         FB_LOGF(
             getStraceLogger(),
@@ -594,12 +594,12 @@ struct NotificationHandlerEntry {
   constexpr NotificationHandlerEntry(
       NotificationHandler h,
       NotificationArgRenderer r,
-      ChannelThreadStats::HistogramPtr hist)
-      : handler{h}, renderer{r}, histogram{hist} {}
+      ChannelThreadStats::StatPtr s)
+      : handler{h}, renderer{r}, stat{s} {}
 
   NotificationHandler handler;
   NotificationArgRenderer renderer;
-  ChannelThreadStats::HistogramPtr histogram;
+  ChannelThreadStats::StatPtr stat;
 };
 
 std::string newFileCreatedRenderer(
@@ -712,7 +712,7 @@ HRESULT PrjfsChannelInner::notification(
     XLOG(WARN) << "Unrecognized notification: " << notificationType;
     return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
   } else {
-    auto histogram = it->second.histogram;
+    auto stat = it->second.stat;
     auto handler = it->second.handler;
     auto renderer = it->second.renderer;
 
@@ -721,7 +721,7 @@ HRESULT PrjfsChannelInner::notification(
 
     auto fut = folly::makeFutureWith([this,
                                       context,
-                                      histogram = histogram,
+                                      stat = stat,
                                       handler = handler,
                                       renderer = renderer,
                                       relPath = std::move(relPath),
@@ -729,7 +729,7 @@ HRESULT PrjfsChannelInner::notification(
                                       isDirectory]() mutable {
       auto requestWatch =
           std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
-      context->startRequest(dispatcher_->getStats(), histogram, requestWatch);
+      context->startRequest(dispatcher_->getStats(), stat, requestWatch);
 
       FB_LOG(getStraceLogger(), DBG7, renderer(relPath, destPath, isDirectory));
       return (dispatcher_.get()->*handler)(
