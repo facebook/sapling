@@ -608,10 +608,6 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
 #endif
 
 void EdenServer::startPeriodicTasks() {
-  // Flush stats must run once every second for accurate aggregation of
-  // the stats.
-  flushStatsTask_.updateInterval(1s, /*splay=*/false);
-
   // Report memory usage stats once every 30 seconds
   memoryStatsTask_.updateInterval(30s);
   auto config = serverState_->getReloadableConfig().getEdenConfig();
@@ -1846,7 +1842,7 @@ void EdenServer::shutdownSubscribers() {
 }
 
 void EdenServer::flushStatsNow() {
-  serverState_->getStats().aggregate();
+  serverState_->getStats().flush();
 }
 
 void EdenServer::reportMemoryStats() {

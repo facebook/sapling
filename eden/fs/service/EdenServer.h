@@ -683,9 +683,6 @@ class EdenServer : private TakeoverHandler {
   PeriodicFnTask<&EdenServer::checkLockValidity> checkValidityTask_{
       this,
       "check_lock_validity"};
-  PeriodicFnTask<&EdenServer::flushStatsNow> flushStatsTask_{
-      this,
-      "flush_stats"};
   PeriodicFnTask<&EdenServer::reportMemoryStats> memoryStatsTask_{
       this,
       "mem_stats"};

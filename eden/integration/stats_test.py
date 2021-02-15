@@ -99,7 +99,7 @@ class ObjectStoreStatsTest(testcase.EdenRepoTest):
         self.repo.commit("Initial commit.")
 
     def test_get_blob(self) -> None:
-        TEMPLATE = "object_store.get_blob.{}_store.pct"
+        TEMPLATE = "object_store.get_blob.{}_store.rate"
         LOCAL = TEMPLATE.format("local")
         BACKING = TEMPLATE.format("backing")
 
@@ -110,7 +110,7 @@ class ObjectStoreStatsTest(testcase.EdenRepoTest):
         foo.read_bytes()
 
         counters = self.get_counters()
-        self.assertEqual(counters.get(LOCAL, 0) + counters.get(BACKING, 0), 100)
+        self.assertEqual(counters.get(LOCAL, 0) + counters.get(BACKING, 0), 2)
 
 
 class HgBackingStoreStatsTest(testcase.EdenRepoTest):

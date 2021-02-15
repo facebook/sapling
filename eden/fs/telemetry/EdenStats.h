@@ -9,7 +9,6 @@
 
 #include <memory>
 
-#include <fb303/ThreadLocalStats.h>
 #include <fb303/detail/QuantileStatWrappers.h>
 #include <folly/ThreadLocal.h>
 
@@ -64,7 +63,7 @@ class EdenStats {
   /**
    * This function can be called on any thread.
    */
-  void aggregate();
+  void flush();
 
  private:
   class ThreadLocalTag {};
@@ -92,17 +91,14 @@ std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
  * EdenStats object should be used to maintain one EdenThreadStatsBase object
  * for each thread that needs to access/update the stats.
  */
-class EdenThreadStatsBase
-    : public fb303::ThreadLocalStatsT<fb303::TLStatsThreadSafe> {
+class EdenThreadStatsBase {
  public:
   using Stat = fb303::detail::QuantileStatWrapper;
-  using Timeseries = TLTimeseries;
 
   explicit EdenThreadStatsBase();
 
  protected:
   Stat createStat(const std::string& name);
-  Timeseries createTimeseries(const std::string& name);
 };
 
 class ChannelThreadStats : public EdenThreadStatsBase {
@@ -146,7 +142,7 @@ class ChannelThreadStats : public EdenThreadStatsBase {
   Stat forgetmulti{createStat("fuse.forgetmulti_us")};
   Stat fallocate{createStat("fuse.fallocate_us")};
 #else
-  Timeseries outOfOrderCreate{createTimeseries("prjfs.out_of_order_create")};
+  Stat outOfOrderCreate{createStat("prjfs.out_of_order_create")};
 
   Stat newFileCreated{createStat("prjfs.newFileCreated_us")};
   Stat fileOverwritten{createStat("prjfs.fileOverwritten_us")};
@@ -184,22 +180,21 @@ class ChannelThreadStats : public EdenThreadStatsBase {
  */
 class ObjectStoreThreadStats : public EdenThreadStatsBase {
  public:
-  Timeseries getBlobFromLocalStore{
-      createTimeseries("object_store.get_blob.local_store")};
-  Timeseries getBlobFromBackingStore{
-      createTimeseries("object_store.get_blob.backing_store")};
+  Stat getBlobFromLocalStore{createStat("object_store.get_blob.local_store")};
+  Stat getBlobFromBackingStore{
+      createStat("object_store.get_blob.backing_store")};
 
-  Timeseries getBlobMetadataFromMemory{
-      createTimeseries("object_store.get_blob_metadata.memory")};
-  Timeseries getBlobMetadataFromLocalStore{
-      createTimeseries("object_store.get_blob_metadata.local_store")};
-  Timeseries getBlobMetadataFromBackingStore{
-      createTimeseries("object_store.get_blob_metadata.backing_store")};
+  Stat getBlobMetadataFromMemory{
+      createStat("object_store.get_blob_metadata.memory")};
+  Stat getBlobMetadataFromLocalStore{
+      createStat("object_store.get_blob_metadata.local_store")};
+  Stat getBlobMetadataFromBackingStore{
+      createStat("object_store.get_blob_metadata.backing_store")};
 
-  Timeseries getBlobSizeFromLocalStore{
-      createTimeseries("object_store.get_blob_size.local_store")};
-  Timeseries getBlobSizeFromBackingStore{
-      createTimeseries("object_store.get_blob_size.backing_store")};
+  Stat getBlobSizeFromLocalStore{
+      createStat("object_store.get_blob_size.local_store")};
+  Stat getBlobSizeFromBackingStore{
+      createStat("object_store.get_blob_size.backing_store")};
 };
 
 /**
@@ -221,23 +216,19 @@ class HgBackingStoreThreadStats : public EdenThreadStatsBase {
  */
 class HgImporterThreadStats : public EdenThreadStatsBase {
  public:
-  Timeseries catFile{createTimeseries("hg_importer.cat_file")};
-  Timeseries fetchTree{createTimeseries("hg_importer.fetch_tree")};
-  Timeseries manifest{createTimeseries("hg_importer.manifest")};
-  Timeseries manifestNodeForCommit{
-      createTimeseries("hg_importer.manifest_node_for_commit")};
-  Timeseries prefetchFiles{createTimeseries("hg_importer.prefetch_files")};
-  Timeseries catTree{createTimeseries("hg_importer.cat_tree")};
+  Stat catFile{createStat("hg_importer.cat_file")};
+  Stat fetchTree{createStat("hg_importer.fetch_tree")};
+  Stat manifest{createStat("hg_importer.manifest")};
+  Stat manifestNodeForCommit{
+      createStat("hg_importer.manifest_node_for_commit")};
+  Stat prefetchFiles{createStat("hg_importer.prefetch_files")};
+  Stat catTree{createStat("hg_importer.cat_tree")};
 };
 
 class JournalThreadStats : public EdenThreadStatsBase {
  public:
-  Timeseries truncatedReads{this, "journal.truncated_reads", fb303::SUM};
-  Timeseries filesAccumulated{
-      this,
-      "journal.files_accumulated",
-      fb303::COUNT,
-      fb303::SUM};
+  Stat truncatedReads{createStat("journal.truncated_reads")};
+  Stat filesAccumulated{createStat("journal.files_accumulated")};
 };
 
 } // namespace eden

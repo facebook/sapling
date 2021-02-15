@@ -328,56 +328,67 @@ TEST_F(JournalTest, basic_journal_stats) {
 }
 
 TEST_F(JournalTest, truncated_read_stats) {
-  // Since each test is run on a single thread we can check that the stats of
-  // this thread match up with what we would expect.
   journal.setMemoryLimit(0);
   journal.recordCreated("test1.txt"_relpath);
   journal.recordRemoved("test1.txt"_relpath);
-  ASSERT_EQ(
-      0, edenStats->getJournalStatsForCurrentThread().truncatedReads.sum());
+
+  auto data = facebook::fb303::ServiceData::get();
+  constexpr folly::StringPiece key = "journal.truncated_reads.sum";
+  edenStats->flush();
+  auto initialValue = data->getCounter(key);
+
   // Empty Accumulate range, should be 0 files accumulated
   journal.accumulateRange(3);
-  ASSERT_EQ(
-      0, edenStats->getJournalStatsForCurrentThread().truncatedReads.sum());
+  edenStats->flush();
+  ASSERT_EQ(0, data->getCounter(key) - initialValue);
+
   // This is not a truncated read since journal remembers at least one entry
   journal.accumulateRange(2);
-  ASSERT_EQ(
-      0, edenStats->getJournalStatsForCurrentThread().truncatedReads.sum());
+  edenStats->flush();
+  ASSERT_EQ(0, data->getCounter(key) - initialValue);
+
   journal.accumulateRange(1);
-  ASSERT_EQ(
-      1, edenStats->getJournalStatsForCurrentThread().truncatedReads.sum());
+  edenStats->flush();
+  ASSERT_EQ(1, data->getCounter(key) - initialValue);
+
   journal.accumulateRange(2);
-  ASSERT_EQ(
-      1, edenStats->getJournalStatsForCurrentThread().truncatedReads.sum());
+  edenStats->flush();
+  ASSERT_EQ(1, data->getCounter(key) - initialValue);
+
   journal.accumulateRange(1);
-  ASSERT_EQ(
-      2, edenStats->getJournalStatsForCurrentThread().truncatedReads.sum());
+  edenStats->flush();
+  ASSERT_EQ(2, data->getCounter(key) - initialValue);
 }
 
 TEST_F(JournalTest, files_accumulated_stats) {
-  // Since each test is run on a single thread we can check that the stats of
-  // this thread match up with what we would expect.
   journal.recordCreated("test1.txt"_relpath);
   journal.recordRemoved("test1.txt"_relpath);
-  ASSERT_EQ(
-      0, edenStats->getJournalStatsForCurrentThread().filesAccumulated.sum());
+
+  auto data = facebook::fb303::ServiceData::get();
+  constexpr folly::StringPiece key = "journal.files_accumulated.sum";
+  edenStats->flush();
+  auto initialValue = data->getCounter(key);
   ASSERT_EQ(0, journal.getStats()->maxFilesAccumulated);
+
   // Empty Accumulate range, should be 0 files accumulated
   journal.accumulateRange(3);
-  ASSERT_EQ(
-      0, edenStats->getJournalStatsForCurrentThread().filesAccumulated.sum());
+  edenStats->flush();
+  ASSERT_EQ(0, data->getCounter(key) - initialValue);
   ASSERT_EQ(0, journal.getStats()->maxFilesAccumulated);
+
   journal.accumulateRange(2);
-  ASSERT_EQ(
-      1, edenStats->getJournalStatsForCurrentThread().filesAccumulated.sum());
+  edenStats->flush();
+  ASSERT_EQ(1, data->getCounter(key) - initialValue);
   ASSERT_EQ(1, journal.getStats()->maxFilesAccumulated);
+
   journal.accumulateRange(1);
-  ASSERT_EQ(
-      3, edenStats->getJournalStatsForCurrentThread().filesAccumulated.sum());
+  edenStats->flush();
+  ASSERT_EQ(3, data->getCounter(key) - initialValue);
   ASSERT_EQ(2, journal.getStats()->maxFilesAccumulated);
+
   journal.accumulateRange(2);
-  ASSERT_EQ(
-      4, edenStats->getJournalStatsForCurrentThread().filesAccumulated.sum());
+  edenStats->flush();
+  ASSERT_EQ(4, data->getCounter(key) - initialValue);
   ASSERT_EQ(2, journal.getStats()->maxFilesAccumulated);
 }
 

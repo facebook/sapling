@@ -33,27 +33,12 @@ JournalThreadStats& EdenStats::getJournalStatsForCurrentThread() {
   return *threadLocalJournalStats_.get();
 }
 
-void EdenStats::aggregate() {
-  // Flush the quantile stats since some of our stats are based on that
-  // mechanism. Eventually, every stat will be a quantile stat and we can
-  // remove the rest of the logic from this method.
+void EdenStats::flush() {
+  // This method is only really useful while testing to ensure that the service
+  // data singleton instance has the latest stats. Since all our stats are now
+  // quantile stat based, flushing the quantile stat map is sufficient for that
+  // use case.
   fb303::ServiceData::get()->getQuantileStatMap()->flushAll();
-
-  for (auto& stats : threadLocalChannelStats_.accessAllThreads()) {
-    stats.aggregate();
-  }
-  for (auto& stats : threadLocalObjectStoreStats_.accessAllThreads()) {
-    stats.aggregate();
-  }
-  for (auto& stats : threadLocalHgBackingStoreStats_.accessAllThreads()) {
-    stats.aggregate();
-  }
-  for (auto& stats : threadLocalHgImporterStats_.accessAllThreads()) {
-    stats.aggregate();
-  }
-  for (auto& stats : threadLocalJournalStats_.accessAllThreads()) {
-    stats.aggregate();
-  }
 }
 
 std::shared_ptr<HgImporterThreadStats> getSharedHgImporterStatsForCurrentThread(
@@ -72,14 +57,6 @@ EdenThreadStatsBase::Stat EdenThreadStatsBase::createStat(
       fb303::QuantileConsts::kP1_P10_P50_P90_P99,
       fb303::SlidingWindowPeriodConsts::kOneMinTenMinHour,
   };
-}
-
-EdenThreadStatsBase::Timeseries EdenThreadStatsBase::createTimeseries(
-    const std::string& name) {
-  auto timeseries = Timeseries{this, name};
-  timeseries.exportStat(fb303::COUNT);
-  timeseries.exportStat(fb303::PERCENT);
-  return timeseries;
 }
 
 void ChannelThreadStats::recordLatency(
