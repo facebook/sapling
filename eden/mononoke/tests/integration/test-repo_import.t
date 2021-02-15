@@ -34,8 +34,7 @@
 # Setup git repository
   $ mkdir "$GIT_REPO"
   $ cd "$GIT_REPO"
-  $ git init
-  Initialized empty Git repository in $TESTTMP/repo-git/.git/
+  $ git init -q
   $ echo "this is file1" > file1
   $ mkdir file2_repo
   $ cd file2_repo

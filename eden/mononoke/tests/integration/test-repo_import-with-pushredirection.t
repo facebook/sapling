@@ -86,8 +86,7 @@ Before the change
   $ export GIT_REPO=git_repo
   $ mkdir "$GIT_REPO"
   $ cd "$GIT_REPO"
-  $ git init
-  Initialized empty Git repository in $TESTTMP/git_repo/.git/
+  $ git init -q
   $ echo "this is file1" > file1
   $ mkdir file2_repo
   $ cd file2_repo

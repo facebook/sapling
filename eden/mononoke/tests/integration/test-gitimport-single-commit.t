@@ -12,8 +12,7 @@
 # Setup git repsitory
   $ mkdir "$GIT_REPO"
   $ cd "$GIT_REPO"
-  $ git init
-  Initialized empty Git repository in $TESTTMP/repo-git/.git/
+  $ git init -q
   $ echo "this is file1" > file1
   $ git add file1
   $ git commit -am "Add file1"
