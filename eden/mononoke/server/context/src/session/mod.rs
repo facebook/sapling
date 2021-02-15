@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
 use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
-use load_limiter::{BoxLoadLimiter, LoadCost, LoadLimiter, Metric};
+use load_limiter::{BoxLoadLimiter, LoadCost, LoadLimiter, Metric, ThrottleReason};
 use permission_checker::MononokeIdentitySetExt;
 use scribe_ext::Scribe;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -102,15 +101,15 @@ impl SessionContainer {
         }
     }
 
-    pub async fn should_throttle(&self, metric: Metric) -> Result<bool, !> {
+    pub async fn check_throttle(&self, metric: Metric) -> Result<(), ThrottleReason> {
         const LOAD_LIMIT_TIMEFRAME: Duration = Duration::from_secs(1);
 
         match &self.inner.load_limiter {
-            Some(limiter) => match limiter.should_throttle(metric, LOAD_LIMIT_TIMEFRAME).await {
-                Ok(res) => Ok(res),
-                Err(_) => Ok(false),
-            },
-            None => Ok(false),
+            Some(limiter) => limiter
+                .check_throttle(metric, LOAD_LIMIT_TIMEFRAME)
+                .await
+                .unwrap_or(Ok(())),
+            None => Ok(()),
         }
     }
 

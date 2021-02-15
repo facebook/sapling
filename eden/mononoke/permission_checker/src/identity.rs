@@ -78,4 +78,6 @@ pub trait MononokeIdentitySetExt {
     fn is_external_sync(&self) -> bool;
 
     fn hostprefix(&self) -> Option<&str>;
+
+    fn hostname(&self) -> Option<&str>;
 }

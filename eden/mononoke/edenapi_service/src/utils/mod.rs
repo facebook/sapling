@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Context};
+use anyhow::Context;
 use bytes::Bytes;
 use gotham::state::{FromState, State};
 use http::HeaderMap;
@@ -31,10 +31,8 @@ pub async fn get_repo(
     name: impl AsRef<str>,
     throttle_metric: impl Into<Option<Metric>>,
 ) -> Result<HgRepoContext, HttpError> {
-    if let Some(metric) = throttle_metric.into() {
-        if rctx.ctx.session().should_throttle(metric).await? {
-            return Err(HttpError::e429(format_err!("Throttled by {:?}", metric)));
-        }
+    if let Some(throttle_metric) = throttle_metric.into() {
+        rctx.ctx.session().check_throttle(throttle_metric).await?;
     }
 
     let name = name.as_ref();

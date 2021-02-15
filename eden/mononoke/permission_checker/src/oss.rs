@@ -58,6 +58,10 @@ impl MononokeIdentitySetExt for MononokeIdentitySet {
     fn hostprefix(&self) -> Option<&str> {
         None
     }
+
+    fn hostname(&self) -> Option<&str> {
+        None
+    }
 }
 
 impl PermissionCheckerBuilder {

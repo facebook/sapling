@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use load_limiter::ThrottleReason;
 use thiserror::Error;
 
 use mercurial_types::{HgNodeHash, RepoPath};
@@ -18,7 +19,11 @@ pub enum ErrorKind {
         actual: HgNodeHash,
     },
     #[error("Request {request_name} was throttled")]
-    RequestThrottled { request_name: String },
+    RequestThrottled {
+        request_name: String,
+        #[source]
+        reason: ThrottleReason,
+    },
     #[error("Repo is marked as read-only: {0}")]
     RepoReadOnly(String),
 }

@@ -12,7 +12,7 @@ use limits::types::{MononokeThrottleLimit, RateLimits};
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-use crate::{BoxLoadLimiter, LoadCost, LoadLimiter, Metric};
+use crate::{BoxLoadLimiter, LoadCost, LoadLimiter, Metric, ThrottleReason};
 
 pub fn select_region_capacity(_: &BTreeMap<String, f64>) -> Option<f64> {
     None
@@ -23,6 +23,7 @@ pub fn build_load_limiter(
     _: MononokeThrottleLimit,
     rate_limits: RateLimits,
     category: String,
+    _in_throttled_slice: bool,
 ) -> BoxLoadLimiter {
     Box::new(NoopLimiter {
         category,
@@ -38,8 +39,12 @@ struct NoopLimiter {
 
 #[async_trait]
 impl LoadLimiter for NoopLimiter {
-    async fn should_throttle(&self, _metric: Metric, _window: Duration) -> Result<bool> {
-        Ok(false)
+    async fn check_throttle(
+        &self,
+        _metric: Metric,
+        _window: Duration,
+    ) -> Result<Result<(), ThrottleReason>> {
+        Ok(Ok(()))
     }
 
     fn bump_load(&self, _metric: Metric, _load: LoadCost) {}

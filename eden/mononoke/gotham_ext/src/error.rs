@@ -15,6 +15,7 @@ use gotham::{
 };
 use hyper::{Body, Response, StatusCode};
 use itertools::Itertools;
+use load_limiter::ThrottleReason;
 use serde_derive::{Deserialize, Serialize};
 
 /// Wrapper around an anyhow::Error to indicate which
@@ -105,6 +106,12 @@ impl HttpError {
             }
             Err(error) => Err((state, error.into())),
         }
+    }
+}
+
+impl From<ThrottleReason> for HttpError {
+    fn from(r: ThrottleReason) -> Self {
+        Self::e429(r)
     }
 }
 

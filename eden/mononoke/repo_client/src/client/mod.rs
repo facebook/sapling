@@ -985,7 +985,7 @@ impl RepoClient {
 fn throttle_stream<F, S, V>(
     session: &SessionContainer,
     metric: Metric,
-    name: &'static str,
+    request_name: &'static str,
     func: F,
 ) -> impl Stream<Item = V, Error = Error>
 where
@@ -993,26 +993,20 @@ where
     S: Stream<Item = V, Error = Error> + Send + 'static,
 {
     let session = session.clone();
-    async move { session.should_throttle(metric).await }
-        .boxed()
-        .compat()
-        .then(move |throttle| {
-            match throttle {
-                Ok(throttle) => {
-                    if throttle {
-                        let err: Error = ErrorKind::RequestThrottled {
-                            request_name: name.to_string(),
-                        }
-                        .into();
-                        Err(err)
-                    } else {
-                        Ok(func())
-                    }
-                }
-                Err(never_type) => never_type,
-            }
-        })
-        .flatten_stream()
+    async move {
+        session
+            .check_throttle(metric)
+            .await
+            .map_err(|reason| ErrorKind::RequestThrottled {
+                request_name: request_name.into(),
+                reason,
+            })?;
+
+        Result::<_, Error>::Ok(func())
+    }
+    .boxed()
+    .compat()
+    .flatten_stream()
 }
 
 async fn check_lock_repo(repo: MononokeRepo) -> Result<Bytes, BundleResolverError> {

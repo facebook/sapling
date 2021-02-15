@@ -6,6 +6,7 @@ authors = ['Facebook']
 license = "GPLv2+"
 
 [dependencies]
+load_limiter = { path = "../load_limiter", version = "0.1.0" }
 permission_checker = { path = "../permission_checker", version = "0.1.0" }
 scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
 cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
