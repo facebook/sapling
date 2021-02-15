@@ -46,10 +46,10 @@ impl RequestContext {
 
         // Spawn error logging task.
         let _ = tokio::spawn({
-            cloned!(rctx);
+            cloned!(rctx.logger);
             async move {
                 while let Some(error) = error_rx.next().await {
-                    error!(&rctx.logger, "{:?}", error);
+                    error!(&logger, "{:?}", error);
                 }
             }
         });
