@@ -61,7 +61,7 @@ from .subcmd import Subcmd
 from .util import format_cmd, format_mount, split_inodes_by_operation_type
 
 
-MB = 1024 ** 2
+MB: int = 1024 ** 2
 debug_cmd = subcmd_mod.Decorator()
 
 
@@ -178,13 +178,13 @@ class TreeCmd(Subcmd):
 
 
 class Process:
-    def __init__(self, pid, cmd, mount):
+    def __init__(self, pid, cmd, mount) -> None:
         self.pid = pid
         self.cmd = format_cmd(cmd)
         self.fetch_count = 0
         self.mount = format_mount(mount)
 
-    def set_fetchs(self, fetch_counts):
+    def set_fetchs(self, fetch_counts: int) -> None:
         self.fetch_count = fetch_counts
 
 
@@ -327,7 +327,11 @@ class BlobMetaCmd(Subcmd):
         return 0
 
 
-_FILE_TYPE_FLAGS = {stat.S_IFREG: "f", stat.S_IFDIR: "d", stat.S_IFLNK: "l"}
+_FILE_TYPE_FLAGS: Dict[int, str] = {
+    stat.S_IFREG: "f",
+    stat.S_IFDIR: "d",
+    stat.S_IFLNK: "l",
+}
 
 
 def _parse_mode(mode: int) -> Tuple[str, int]:
