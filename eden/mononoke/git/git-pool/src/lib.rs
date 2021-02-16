@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+#![feature(never_type)]
+use anyhow::{anyhow, Error};
 use git2::{Error as Git2Error, Repository};
 use r2d2::{ManageConnection, Pool};
 use std::path::PathBuf;
@@ -33,8 +34,14 @@ impl GitPool {
         let pool = self.pool.clone();
 
         let ret = task::spawn_blocking(move || {
-            let conn = pool.get()?;
-            let ret = f(&conn).map_err(|e| e.into())?;
+            let result_repo = pool.get()?;
+            let repo = match &*result_repo {
+                Ok(repo) => repo,
+                Err(err) => {
+                    return Err(anyhow!("error while opening repo: {}", err));
+                }
+            };
+            let ret = f(&repo).map_err(|e| e.into())?;
             Result::<_, Error>::Ok(ret)
         })
         .await??;
@@ -49,11 +56,11 @@ struct GitConnectionManager {
 }
 
 impl ManageConnection for GitConnectionManager {
-    type Connection = Repository;
-    type Error = Git2Error;
+    type Connection = Result<Repository, Git2Error>;
+    type Error = !;
 
     fn connect(&self) -> Result<Self::Connection, Self::Error> {
-        let repo = Repository::open(&self.path)?;
+        let repo = Repository::open(&self.path);
         Ok(repo)
     }
 
@@ -61,7 +68,7 @@ impl ManageConnection for GitConnectionManager {
         Ok(())
     }
 
-    fn has_broken(&self, _conn: &mut Self::Connection) -> bool {
-        false
+    fn has_broken(&self, conn: &mut Self::Connection) -> bool {
+        conn.is_err()
     }
 }
