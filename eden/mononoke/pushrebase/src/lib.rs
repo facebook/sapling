@@ -244,11 +244,22 @@ impl PushrebaseRetryNum {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct PushrebaseDistance(pub usize);
+
+impl PushrebaseDistance {
+    fn add(&self, value: usize) -> Self {
+        let PushrebaseDistance(prev) = self;
+        PushrebaseDistance(prev + value)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PushrebaseOutcome {
     pub head: ChangesetId,
     pub retry_num: PushrebaseRetryNum,
     pub rebased_changesets: Vec<PushrebaseChangesetPair>,
+    pub pushrebase_distance: PushrebaseDistance,
 }
 
 /// Does a pushrebase of a list of commits `pushed` onto `onto_bookmark`
@@ -328,6 +339,7 @@ async fn rebase_in_loop(
     prepushrebase_hooks: &[Box<dyn PushrebaseHook>],
 ) -> Result<PushrebaseOutcome, PushrebaseError> {
     let mut latest_rebase_attempt = root;
+    let mut pushrebase_distance = PushrebaseDistance(0);
 
     for retry_num in 0..MAX_REBASE_ATTEMPTS {
         let retry_num = PushrebaseRetryNum(retry_num);
@@ -348,6 +360,7 @@ async fn rebase_in_loop(
             bookmark_val.unwrap_or(root),
         )
         .await?;
+        pushrebase_distance = pushrebase_distance.add(server_bcs.len());
 
         for bcs in server_bcs.iter() {
             if should_fail_pushrebase(bcs) {
@@ -393,6 +406,7 @@ async fn rebase_in_loop(
                 head,
                 retry_num,
                 rebased_changesets,
+                pushrebase_distance,
             };
             return Ok(res);
         }

@@ -6,7 +6,7 @@
 #require slow
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ BLOB_TYPE="blob_files" default_setup
+  $ BLOB_TYPE="blob_files" default_setup --scuba-log-file "$TESTTMP/log.json"
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │
@@ -44,6 +44,10 @@ Pushrebase commit 1
   ├─╯
   o  A [public;rev=0;426bada5c675]
   $
+
+Pushrebased commit 1 over commits B and C (thus the distance should be 2).
+  $ jq < "$TESTTMP/log.json" '.int.pushrebase_distance | numbers' | tail -n 1
+  2
 
 Check that the filenode for 1 does not point to the draft commit in a new clone
   $ cd ..
@@ -139,6 +143,10 @@ Push stack
   o  A [public;rev=0;426bada5c675]
   $
 
+Pushrebased commits {3, 4} over commits {B, C, 1} (thus the distance should be 3).
+  $ jq < "$TESTTMP/log.json" '.int.pushrebase_distance | numbers' | tail -n 1
+  3
+
 Push fast-forward
   $ hg up master_bookmark
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -166,6 +174,8 @@ Push fast-forward
   │
   o  A [public;rev=0;426bada5c675]
   $
+  $ jq < "$TESTTMP/log.json" '.int.pushrebase_distance | numbers' | tail -n 1
+  0
 
 
 Push with no new commits
@@ -179,6 +189,8 @@ Push with no new commits
   @  5 [public;rev=12;59e5396444cf] default/master_bookmark
   │
   ~
+  $ jq < "$TESTTMP/log.json" '.int.pushrebase_distance | numbers' | tail -n 1
+  0
 
 Push a merge commit with both parents not ancestors of destination bookmark
   $ hg up -q 1
@@ -238,6 +250,8 @@ Push a merge commit with both parents not ancestors of destination bookmark
   │
   o  A [public;rev=0;426bada5c675]
   $
+  $ jq < "$TESTTMP/log.json" '.int.pushrebase_distance | numbers' | tail -n 1
+  5
 
 
 Previously commits below were testing pushrebasing over merge.

@@ -184,6 +184,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         match &result {
             Ok(outcome) => scuba_logger
                 .add("pushrebase_retry_num", outcome.retry_num.0)
+                .add("pushrebase_distance", outcome.pushrebase_distance.0)
                 .log_with_msg("Pushrebase finished", None),
             Err(err) => scuba_logger.log_with_msg("Pushrebase failed", Some(format!("{:#?}", err))),
         }
