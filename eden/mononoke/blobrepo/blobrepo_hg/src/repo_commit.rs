@@ -43,6 +43,7 @@ define_stats! {
     prefix = "mononoke.blobrepo_commit";
     process_file_entry: timeseries(Rate, Sum),
     process_tree_entry: timeseries(Rate, Sum),
+    parents_checked: timeseries(Rate, Average, Sum),
     finalize_parent: timeseries(Rate, Average, Sum),
     finalize_uploaded: timeseries(Rate, Average, Sum),
     finalize_uploaded_filenodes: timeseries(Rate, Average, Sum),
@@ -329,6 +330,7 @@ impl UploadEntries {
                             .with_context(|| {
                                 format!("Error checking for a parent node: {:?}", entry)
                             })?;
+                        STATS::parents_checked.add_value(1);
                         Ok(())
                     })
                     .collect()

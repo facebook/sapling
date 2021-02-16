@@ -28,7 +28,6 @@ use futures_old::{
     sync::oneshot,
     Future, IntoFuture,
 };
-use scuba_ext::MononokeScubaSampleBuilder;
 use tokio::executor::DefaultExecutor;
 use tracing::{trace_args, EventId, Traced};
 
@@ -515,11 +514,7 @@ impl UploadChangesets {
                     must_check_case_conflicts: false,
                     create_bonsai_changeset_hook: Some(create_and_verify_bonsai.clone()),
                 };
-                let cshandle = create_changeset.create(
-                    ctx.clone(),
-                    &blobrepo,
-                    MononokeScubaSampleBuilder::with_discard(),
-                );
+                let cshandle = create_changeset.create(ctx.clone(), &blobrepo, ctx.scuba().clone());
                 parent_changeset_handles.insert(csid, cshandle.clone());
 
                 cloned!(ctx);

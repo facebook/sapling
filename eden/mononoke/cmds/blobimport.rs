@@ -14,10 +14,10 @@ use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use clap::Arg;
 use cmdlib::{
-    args::{self, MononokeClapApp, MononokeMatches, RepoRequirement},
+    args::{self, get_scuba_sample_builder, MononokeClapApp, MononokeMatches, RepoRequirement},
     helpers::{block_execute, upload_and_show_trace},
 };
-use context::CoreContext;
+use context::{CoreContext, SessionContainer};
 use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
@@ -50,6 +50,8 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("revlog to blob importer")
         .with_repo_required(RepoRequirement::ExactlyOne)
         .with_source_repos()
+        .with_scuba_logging_args()
+        .with_fb303_args()
         .build()
         .about("Import a revlog-backed Mercurial repo into Mononoke blobstore.")
         .args_from_usage(
@@ -481,7 +483,9 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     args::init_cachelib(fb, &matches);
     let logger = args::init_logging(fb, &matches)?;
-    let ctx = &CoreContext::new_with_logger(fb, logger.clone());
+    let scuba = get_scuba_sample_builder(fb, &matches, &logger)?;
+
+    let ctx = &SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
     args::init_config_store(fb, &logger, &matches)?;
 
     block_execute(
