@@ -12,6 +12,7 @@ use futures::{
     channel::oneshot,
     future::{self, BoxFuture, FutureExt, TryFutureExt},
     stream::{self, BoxStream, TryStreamExt},
+    StreamExt,
 };
 use futures_ext::{future::TryShared, FbFutureExt};
 use futures_stats::TimedTryFutureExt;
@@ -316,7 +317,7 @@ impl UploadEntries {
             }
         };
 
-        let parent_checks = {
+        let parent_checks = async move {
             let checks: Vec<_> = {
                 let inner = this.inner.lock().expect("Lock poisoned");
 
@@ -331,21 +332,22 @@ impl UploadEntries {
                                 format!("Error checking for a parent node: {:?}", entry)
                             })?;
                         STATS::parents_checked.add_value(1);
-                        Ok(())
+                        Result::<_, Error>::Ok(())
                     })
                     .collect()
             };
 
             STATS::finalize_parent.add_value(checks.len() as i64);
 
-            future::try_join_all(checks).try_timed().map_ok({
-                let mut scuba_logger = this.scuba_logger();
-                move |(stats, _)| {
-                    scuba_logger
-                        .add_future_stats(&stats)
-                        .log_with_msg("Parent checks", None);
-                }
-            })
+            let (stats, ()) = stream::iter(checks)
+                .map(Ok)
+                .try_for_each_concurrent(100, |f| f)
+                .try_timed()
+                .await?;
+            this.scuba_logger()
+                .add_future_stats(&stats)
+                .log_with_msg("Parent checks", None);
+            Ok(())
         };
 
         {
