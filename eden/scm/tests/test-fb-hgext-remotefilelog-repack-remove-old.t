@@ -58,24 +58,24 @@ Cleanup old packs during writes when we're over the threshold
   $ hg pull -q
   $ clearcache
   $ hg up -q tip --config packs.maxdatapendingbytes=30
-  $ ls_l $CACHEDIR/master/packs | grep datapack | sort
+  $ ls_l $CACHEDIR/master/packs | grep datapack | LC_ALL=C sort
+  -r--r--r--      80 *.datapack (glob)
+  -r--r--r--      80 *.datapack (glob)
+  -r--r--r--      80 *.datapack (glob)
+  -r--r--r--      80 *.datapack (glob)
   -r--r--r--     144 *.datapack (glob)
-  -r--r--r--      80 *.datapack (glob)
-  -r--r--r--      80 *.datapack (glob)
-  -r--r--r--      80 *.datapack (glob)
-  -r--r--r--      80 *.datapack (glob)
   $ hg up -q null
 
   $ clearcache
   $ hg up -q tip --config packs.maxdatapendingbytes=30 --config packs.maxdatabytes=120
-  $ ls_l $CACHEDIR/master/packs | grep datapack | sort
+  $ ls_l $CACHEDIR/master/packs | grep datapack | LC_ALL=C sort
   -r--r--r--      65 *.datapack (glob)
   -r--r--r--      80 *.datapack (glob)
   $ hg up -q null
 
   $ clearcache
   $ hg up -q tip --config packs.maxdatapendingbytes=30 --config packs.maxdatabytes=200
-  $ ls_l $CACHEDIR/master/packs | grep datapack | sort
+  $ ls_l $CACHEDIR/master/packs | grep datapack | LC_ALL=C sort
   -r--r--r--      65 *.datapack (glob)
   -r--r--r--      80 *.datapack (glob)
   -r--r--r--      80 *.datapack (glob)
