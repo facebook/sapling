@@ -45,6 +45,9 @@ impl RequestContext {
         };
 
         // Spawn error logging task.
+        //
+        // NOTE: Make sure that rctx isn't cloned and then moved into this task as it will lead to
+        // a memory leak due to error_rx never returning None. See D26451527 for more information.
         let _ = tokio::spawn({
             cloned!(rctx.logger);
             async move {
