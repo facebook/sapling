@@ -23,6 +23,7 @@ pyauth = { path = "modules/pyauth" }
 pyblackbox = { path = "modules/pyblackbox" }
 pybookmarkstore = { path = "modules/pybookmarkstore" }
 pybytes = { path = "modules/pybytes" }
+pycheckout = { path = "modules/pycheckout" }
 pycliparser = { path = "modules/pycliparser" }
 pyconfigparser = { path = "modules/pyconfigparser" }
 pydag = { path = "modules/pydag" }
