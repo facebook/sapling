@@ -20,6 +20,9 @@ pub type Globalrev = mercurial_types::Globalrev;
 /// A Git SHA-1 hash.
 pub type GitSha1 = mononoke_types::hash::GitSha1;
 
+/// A SVN revision number.
+pub type Svnrev = mononoke_types::Svnrev;
+
 /// A changeset specifier.  This is anything that may be used to specify a
 /// unique changeset, such as its bonsai changeset ID, a changeset hash in an
 /// alternative hashing scheme, a globally unique hash prefix, or an
@@ -30,6 +33,7 @@ pub enum ChangesetSpecifier {
     Hg(HgChangesetId),
     Globalrev(Globalrev),
     GitSha1(GitSha1),
+    Svnrev(Svnrev),
 }
 
 impl From<ChangesetId> for ChangesetSpecifier {
@@ -47,6 +51,12 @@ impl From<HgChangesetId> for ChangesetSpecifier {
 impl From<Globalrev> for ChangesetSpecifier {
     fn from(id: Globalrev) -> Self {
         Self::Globalrev(id)
+    }
+}
+
+impl From<Svnrev> for ChangesetSpecifier {
+    fn from(id: Svnrev) -> Self {
+        Self::Svnrev(id)
     }
 }
 
@@ -142,6 +152,7 @@ impl fmt::Display for ChangesetSpecifier {
             ChangesetSpecifier::Hg(hg_cs_id) => write!(f, "hg changeset {}", hg_cs_id),
             ChangesetSpecifier::Globalrev(rev) => write!(f, "globalrev {}", rev.id()),
             ChangesetSpecifier::GitSha1(git_sha1) => write!(f, "git sha1 {}", git_sha1),
+            ChangesetSpecifier::Svnrev(rev) => write!(f, "svn rev {}", rev.id()),
         }
     }
 }

@@ -45,7 +45,7 @@ use metaconfig_types::{
 };
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
-    Generation, RepositoryId,
+    Generation, RepositoryId, Svnrev,
 };
 use mutable_counters::SqlMutableCounters;
 use permission_checker::{ArcPermissionChecker, PermissionCheckerBuilder};
@@ -820,6 +820,12 @@ impl RepoContext {
                     .get_bonsai_from_globalrev(&self.ctx, rev)
                     .await?
             }
+            ChangesetSpecifier::Svnrev(rev) => {
+                self.blob_repo()
+                    .bonsai_svnrev_mapping()
+                    .get_bonsai_from_svnrev(&self.ctx, rev)
+                    .await?
+            }
             ChangesetSpecifier::GitSha1(git_sha1) => {
                 self.blob_repo()
                     .bonsai_git_mapping()
@@ -961,6 +967,22 @@ impl RepoContext {
             .get_bonsai_globalrev_mapping(&self.ctx, changesets)
             .await?
             .into_iter()
+            .collect();
+        Ok(mapping)
+    }
+
+    /// Similar to changeset_hg_ids, but returning Svnrevs.
+    pub async fn changeset_svnrev_ids(
+        &self,
+        changesets: Vec<ChangesetId>,
+    ) -> Result<Vec<(ChangesetId, Svnrev)>, MononokeError> {
+        let mapping = self
+            .blob_repo()
+            .bonsai_svnrev_mapping()
+            .get(&self.ctx, changesets.into())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.bcs_id, entry.svnrev))
             .collect();
         Ok(mapping)
     }

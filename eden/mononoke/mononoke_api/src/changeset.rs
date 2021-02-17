@@ -26,7 +26,7 @@ use manifest::{Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, PathOr
 use maplit::hashset;
 use mercurial_types::Globalrev;
 pub use mononoke_types::Generation;
-use mononoke_types::{BonsaiChangeset, FileChange, MPath, MPathElement};
+use mononoke_types::{BonsaiChangeset, FileChange, MPath, MPathElement, Svnrev};
 use reachabilityindex::ReachabilityIndex;
 use unodes::RootUnodeManifestId;
 
@@ -165,6 +165,17 @@ impl ChangesetContext {
             .get_globalrev_from_bonsai(&self.ctx(), self.id)
             .await?;
         Ok(mapping.into_iter().next())
+    }
+
+    /// The SVN revision number for the changeset.
+    pub async fn svnrev(&self) -> Result<Option<Svnrev>, MononokeError> {
+        let mapping = self
+            .repo()
+            .blob_repo()
+            .bonsai_svnrev_mapping()
+            .get_svnrev_from_bonsai(&self.ctx(), self.id)
+            .await?;
+        Ok(mapping)
     }
 
     /// The git Sha1 for the changeset (if available).
