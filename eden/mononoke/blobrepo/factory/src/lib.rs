@@ -16,6 +16,10 @@ use bonsai_globalrev_mapping::{
     BonsaiGlobalrevMapping, CachingBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
 };
 use bonsai_hg_mapping::{BonsaiHgMapping, CachingBonsaiHgMapping, SqlBonsaiHgMapping};
+use bonsai_svnrev_mapping::{
+    BonsaiSvnrevMapping, CachingBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping,
+    SqlBonsaiSvnrevMapping,
+};
 use bookmarks::{BookmarkUpdateLog, Bookmarks, CachedBookmarks};
 use cacheblob::{
     new_cachelib_blobstore_no_lease, new_memcache_blobstore, CachelibBlobstoreOptions,
@@ -347,6 +351,13 @@ impl TestRepoBuilder {
                 SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()
                     .context(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))?,
             ),
+            RepoBonsaiSvnrevMapping::new(
+                repo_id,
+                Arc::new(
+                    SqlBonsaiSvnrevMapping::with_sqlite_in_memory()
+                        .context(ErrorKind::StateOpen(StateOpenError::BonsaiSvnrevMapping))?,
+                ),
+            ),
             Arc::new(
                 SqlBonsaiHgMapping::with_sqlite_in_memory()
                     .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
@@ -414,6 +425,7 @@ pub fn new_memblob_with_sqlite_connection_with_id(
     con.execute_batch(SqlChangesets::CREATION_QUERY)?;
     con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
     con.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
+    con.execute_batch(SqlBonsaiSvnrevMapping::CREATION_QUERY)?;
     con.execute_batch(SqlBonsaiHgMapping::CREATION_QUERY)?;
     con.execute_batch(SqlPhasesFactory::CREATION_QUERY)?;
     con.execute_batch(SqlHgMutationStoreBuilder::CREATION_QUERY)?;
@@ -463,6 +475,12 @@ pub fn new_memblob_with_connection_with_id(
             Arc::new(SqlBonsaiGlobalrevMapping::from_sql_connections(
                 sql_connections.clone(),
             )),
+            RepoBonsaiSvnrevMapping::new(
+                repo_id,
+                Arc::new(SqlBonsaiSvnrevMapping::from_sql_connections(
+                    sql_connections.clone(),
+                )),
+            ),
             Arc::new(SqlBonsaiHgMapping::from_sql_connections(
                 sql_connections.clone(),
             )),
@@ -547,6 +565,14 @@ async fn new_development(
             .context(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))
     };
 
+    let bonsai_svnrev_mapping = async {
+        sql_factory
+            .open::<SqlBonsaiSvnrevMapping>()
+            .compat()
+            .await
+            .context(ErrorKind::StateOpen(StateOpenError::BonsaiSvnrevMapping))
+    };
+
     let bonsai_hg_mapping = async {
         sql_factory
             .open::<SqlBonsaiHgMapping>()
@@ -587,6 +613,7 @@ async fn new_development(
         changesets,
         bonsai_git_mapping,
         bonsai_globalrev_mapping,
+        bonsai_svnrev_mapping,
         bonsai_hg_mapping,
         hg_mutation_store,
         phases_factory,
@@ -597,6 +624,7 @@ async fn new_development(
         changesets,
         bonsai_git_mapping,
         bonsai_globalrev_mapping,
+        bonsai_svnrev_mapping,
         bonsai_hg_mapping,
         hg_mutation_store,
         phases_factory,
@@ -633,6 +661,7 @@ async fn new_development(
         changeset_fetcher,
         Arc::new(bonsai_git_mapping),
         Arc::new(bonsai_globalrev_mapping),
+        RepoBonsaiSvnrevMapping::new(repoid, Arc::new(bonsai_svnrev_mapping)),
         Arc::new(bonsai_hg_mapping),
         Arc::new(hg_mutation_store),
         Arc::new(InProcessLease::new()),
@@ -664,6 +693,7 @@ async fn new_production(
     let filenodes_history_pool = get_volatile_pool("filenodes_history")?;
     let changesets_cache_pool = get_volatile_pool("changesets")?;
     let bonsai_globalrev_mapping_cache_pool = get_volatile_pool("bonsai_globalrev_mapping")?;
+    let bonsai_svnrev_mapping_cache_pool = get_volatile_pool("bonsai_svnrev_mapping")?;
     let bonsai_hg_mapping_cache_pool = get_volatile_pool("bonsai_hg_mapping")?;
     let phases_cache_pool = get_volatile_pool("phases")?;
     let derived_data_lease = MemcacheOps::new(fb, "derived-data-lease", "")?;
@@ -685,6 +715,7 @@ async fn new_production(
         Ok(conn.with_repo_id(repoid))
     };
     let bonsai_globalrev_mapping = sql_factory.open::<SqlBonsaiGlobalrevMapping>().compat();
+    let bonsai_svnrev_mapping = sql_factory.open::<SqlBonsaiSvnrevMapping>().compat();
     let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>().compat();
     let hg_mutation_store = async {
         let conn = sql_factory
@@ -718,6 +749,7 @@ async fn new_production(
         bookmarks,
         changesets,
         bonsai_globalrev_mapping,
+        bonsai_svnrev_mapping,
         bonsai_hg_mapping,
         hg_mutation_store,
         segmented_changelog_builder,
@@ -728,6 +760,7 @@ async fn new_production(
         bookmarks,
         changesets,
         bonsai_globalrev_mapping,
+        bonsai_svnrev_mapping,
         bonsai_hg_mapping,
         hg_mutation_store,
         segmented_changelog_builder,
@@ -763,6 +796,12 @@ async fn new_production(
         fb,
         Arc::new(bonsai_globalrev_mapping),
         bonsai_globalrev_mapping_cache_pool,
+    );
+
+    let bonsai_svnrev_mapping = CachingBonsaiSvnrevMapping::new(
+        fb,
+        Arc::new(bonsai_svnrev_mapping),
+        bonsai_svnrev_mapping_cache_pool,
     );
 
     let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
@@ -801,6 +840,7 @@ async fn new_production(
         changeset_fetcher,
         Arc::new(bonsai_git_mapping),
         Arc::new(bonsai_globalrev_mapping),
+        RepoBonsaiSvnrevMapping::new(repoid, Arc::new(bonsai_svnrev_mapping)),
         Arc::new(bonsai_hg_mapping),
         Arc::new(hg_mutation_store),
         Arc::new(derived_data_lease),
@@ -867,6 +907,7 @@ pub fn blobrepo_new(
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
+    bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping<Arc<dyn BonsaiSvnrevMapping>>,
     bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
     hg_mutation_store: Arc<dyn HgMutationStore>,
     derived_data_lease: Arc<dyn LeaseOps>,
@@ -892,6 +933,7 @@ pub fn blobrepo_new(
         changesets,
         bonsai_git_mapping,
         bonsai_globalrev_mapping,
+        bonsai_svnrev_mapping,
         derived_data_lease,
         filestore_config,
         phases_factory,

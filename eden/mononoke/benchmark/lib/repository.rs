@@ -19,6 +19,7 @@ use bonsai_hg_mapping::{
     BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
     SqlBonsaiHgMapping,
 };
+use bonsai_svnrev_mapping::{RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping};
 use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, CachelibBlobstoreOptions};
 use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::{CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
@@ -138,6 +139,8 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
     //  - add delay
     let bookmarks = Arc::new(SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(repoid));
 
+    let bonsai_svnrev_mapping = Arc::new(SqlBonsaiSvnrevMapping::with_sqlite_in_memory()?);
+
     let bonsai_git_mapping =
         Arc::new(SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(repoid));
 
@@ -163,6 +166,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         changeset_fetcher,
         bonsai_git_mapping,
         bonsai_globalrev_mapping,
+        RepoBonsaiSvnrevMapping::new(repoid, bonsai_svnrev_mapping),
         bonsai_hg_mapping,
         hg_mutation_store,
         Arc::new(DummyLease {}),

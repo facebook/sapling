@@ -16,6 +16,7 @@ path = "test/main.rs"
 blobstore = { path = "../blobstore", version = "0.1.0" }
 bonsai_git_mapping = { path = "../bonsai_git_mapping", version = "0.1.0" }
 bonsai_globalrev_mapping = { path = "../bonsai_globalrev_mapping", version = "0.1.0" }
+bonsai_svnrev_mapping = { path = "../bonsai_svnrev_mapping", version = "0.1.0" }
 bookmarks = { path = "../bookmarks", version = "0.1.0" }
 cacheblob = { path = "../blobstore/cacheblob", version = "0.1.0" }
 changeset_fetcher = { path = "changeset_fetcher", version = "0.1.0" }
