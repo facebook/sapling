@@ -7,6 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
+use std::cell::Ref;
 use std::{borrow::Borrow, cell::RefCell, collections::HashSet, ops::Deref, str, sync::Arc};
 
 use anyhow::{format_err, Error};
@@ -90,7 +91,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     Ok(m)
 }
 
-py_class!(class treemanifest |py| {
+py_class!(pub class treemanifest |py| {
     data underlying: RefCell<TreeManifest>;
     data pending_delete: RefCell<HashSet<RepoPathBuf>>;
 
@@ -461,6 +462,12 @@ py_class!(class treemanifest |py| {
         Ok(result)
     }
 });
+
+impl treemanifest {
+    pub fn borrow_underlying<'a>(&'a self, py: Python<'a>) -> Ref<'a, TreeManifest> {
+        self.underlying(py).borrow()
+    }
+}
 
 pub fn subdir_diff(
     py: Python,
