@@ -509,6 +509,10 @@ function init_bookmark_log_sqlite3_db {
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from bookmarks_update_log";
 }
 
+function get_bonsai_svnrev_mapping {
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select hex(bcs_id), svnrev from bonsai_svnrev_mapping order by id";
+}
+
 function get_bonsai_git_mapping {
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select hex(bcs_id), hex(git_sha1) from bonsai_git_mapping order by id";
 }
@@ -1075,8 +1079,8 @@ CONF
 
 }
 
-function backfill_git_mapping {
-  GLOG_minloglevel=5 "$MONONOKE_BACKFILL_GIT_MAPPING" --repo_id "$REPOID" \
+function backfill_mapping {
+  GLOG_minloglevel=5 "$MONONOKE_BACKFILL_MAPPING" --repo_id "$REPOID" \
   --mononoke-config-path "$TESTTMP/mononoke-config" "${COMMON_ARGS[@]}" "$@"
 }
 

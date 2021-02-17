@@ -18,8 +18,8 @@ name = "backfill_derived_data"
 path = "cmds/backfill_derived_data/main.rs"
 
 [[bin]]
-name = "backfill_git_mapping"
-path = "cmds/backfill_git_mapping.rs"
+name = "backfill_mapping"
+path = "cmds/backfill_mapping.rs"
 
 [[bin]]
 name = "benchmark_filestore"

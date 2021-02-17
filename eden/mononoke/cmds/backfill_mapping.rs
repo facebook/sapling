@@ -11,7 +11,7 @@ use ascii::AsciiStr;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use clap::Arg;
+use clap::{Arg, ArgGroup};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
@@ -27,6 +27,13 @@ use std::path::Path;
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("Tool to backfill git mappings for given commits")
         .build()
+        .arg(Arg::with_name("git").long("git"))
+        .arg(Arg::with_name("svnrev").long("svnrev"))
+        .group(
+            ArgGroup::with_name("mode")
+                .args(&["git", "svnrev"])
+                .required(true),
+        )
         .arg(Arg::from_usage(
             "<IN_FILENAME>  'file with hg changeset ids (separated by newlines)'",
         ))
@@ -42,10 +49,17 @@ fn parse_input<P: AsRef<Path>>(
     Ok(iter)
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum BackfillMode {
+    Git,
+    Svnrev,
+}
+
 pub async fn backfill<P: AsRef<Path>>(
     ctx: CoreContext,
     repo: BlobRepo,
     in_path: P,
+    mode: BackfillMode,
 ) -> Result<(), Error> {
     let chunk_size = 1000;
     let ids = parse_input(in_path)?;
@@ -74,9 +88,18 @@ pub async fn backfill<P: AsRef<Path>>(
         .try_for_each(|chunk| {
             cloned!(ctx, repo);
             async move {
-                repo.bonsai_git_mapping()
-                    .bulk_import_from_bonsai(&ctx, &chunk)
-                    .await
+                match mode {
+                    BackfillMode::Git => {
+                        repo.bonsai_git_mapping()
+                            .bulk_import_from_bonsai(&ctx, &chunk)
+                            .await
+                    }
+                    BackfillMode::Svnrev => {
+                        repo.bonsai_svnrev_mapping()
+                            .bulk_import_from_bonsai(&ctx, &chunk)
+                            .await
+                    }
+                }
             }
         })
         .await
@@ -90,10 +113,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
+    let mode = if matches.is_present("git") {
+        BackfillMode::Git
+    } else if matches.is_present("svnrev") {
+        BackfillMode::Svnrev
+    } else {
+        panic!("backfill mode not specified");
+    };
+
     let run = async {
         let repo = args::open_repo(fb, &logger, &matches).await?;
         let in_filename = matches.value_of("IN_FILENAME").unwrap();
-        backfill(ctx, repo, in_filename).await
+        backfill(ctx, repo, in_filename, mode).await
     };
 
     runtime.block_on_std(run)?;

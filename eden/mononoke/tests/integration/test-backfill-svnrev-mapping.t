@@ -26,27 +26,27 @@ Commit without git mapping:
 Commit git SHA:
   $ touch b
   $ hg add b
-  $ hg commit -Am "commit with git sha" --extra convert_revision=37b0a167e07f2b84149c918cec818ffeb183dddd --extra hg-git-rename-source=git
+  $ hg commit -Am "commit with svnrev" --extra convert_revision=svn:22222222-aaaa-0000-aaaa-ddddddddcccc/repo/trunk/project@2077
   $ export HG_HASH_2="$(hg --debug id -i)"
 
 import testing repo to mononoke
   $ cd ..
-  $ blobimport repo-hg/.hg repo --has-globalrev
+  $ blobimport repo-hg/.hg repo
 
   $ echo $HG_HASH_1 > hash_list
   $ echo $HG_HASH_2 > hash_list
-  $ backfill_mapping --git hash_list
+  $ backfill_mapping --svnrev hash_list
   * using repo "repo" repoid RepositoryId(0) (glob)
 
 check that mapping is populated
   $ echo ${HG_HASH_1^^}
   D000F571737066778CC230F7DC9A763180FDE257
   $ echo ${HG_HASH_2^^}
-  87B89069092550479FDF0EB22E632E031AF9C3D9
+  8369D94764C293BAABD6DEF07F48E4613B60F3BE
 
-  $ get_bonsai_git_mapping
-  1DE9FD24AAA4D21A00FF488B6C363C8E52CDFEC73E363766110A03C810821FEF|37B0A167E07F2B84149C918CEC818FFEB183DDDD
+  $ get_bonsai_svnrev_mapping
+  0949D5C4F49C53A89816984E6E32D35012DF772DDD451C4B9CD7B16F2908A65D|2077
 
   $ get_bonsai_hg_mapping
-  1DE9FD24AAA4D21A00FF488B6C363C8E52CDFEC73E363766110A03C810821FEF|87B89069092550479FDF0EB22E632E031AF9C3D9
+  0949D5C4F49C53A89816984E6E32D35012DF772DDD451C4B9CD7B16F2908A65D|8369D94764C293BAABD6DEF07F48E4613B60F3BE
   7BB4BC4B68FA09F86A9D757D345418ED6B83A1EF7FD6BF614FFA63F9338FBAC1|D000F571737066778CC230F7DC9A763180FDE257
