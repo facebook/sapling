@@ -14,3 +14,4 @@ pub mod datetime;
 pub mod globalrev;
 pub mod hash;
 pub mod repo;
+pub mod svnrev;

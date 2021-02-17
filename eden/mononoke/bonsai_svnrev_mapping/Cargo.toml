@@ -1,0 +1,40 @@
+[package]
+name = "bonsai_svnrev_mapping"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "bonsai_svnrev_mapping_test"
+path = "test/main.rs"
+
+[dependencies]
+bonsai_svnrev_mapping_thrift = { path = "if", version = "0.1.0" }
+caching_ext = { path = "../common/rust/caching_ext", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
+cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
+memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+abomonation = "0.7"
+abomonation_derive = "0.5"
+anyhow = "1.0"
+async-trait = "0.1.29"
+auto_impl = "0.4"
+bytes = { version = "0.5", features = ["serde"] }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+slog = { version = "2.5", features = ["max_level_debug"] }
+thiserror = "1.0"
+
+[dev-dependencies]
+mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tokio-compat = "0.1"

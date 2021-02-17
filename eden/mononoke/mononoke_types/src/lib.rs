@@ -30,6 +30,7 @@ pub mod rawbundle2;
 pub mod repo;
 pub mod skeleton_manifest;
 pub mod sql_types;
+pub mod svnrev;
 pub mod typed_hash;
 pub mod unode;
 
@@ -47,6 +48,7 @@ pub use globalrev::Globalrev;
 pub use path::{check_case_conflicts, MPath, MPathElement, MPathHash, PrefixTrie, RepoPath};
 pub use rawbundle2::RawBundle2;
 pub use repo::{RepositoryId, REPO_PREFIX_REGEX};
+pub use svnrev::Svnrev;
 pub use typed_hash::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, ContentChunkId, ContentId,
     ContentMetadataId, DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId, ManifestUnodeId,

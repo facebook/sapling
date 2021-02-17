@@ -15,3 +15,7 @@ pub mod nodehash;
 pub mod globalrev {
     pub use mononoke_types_mocks::globalrev::*;
 }
+
+pub mod svnrev {
+    pub use mononoke_types_mocks::svnrev::*;
+}

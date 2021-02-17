@@ -9,6 +9,7 @@ use crate::datetime::Timestamp;
 use crate::globalrev::Globalrev;
 use crate::hash::{Blake2, GitSha1};
 use crate::repo::RepositoryId;
+use crate::svnrev::Svnrev;
 use crate::typed_hash::ChangesetId;
 use sql::mysql_async::{
     from_value_opt,
@@ -155,4 +156,28 @@ impl ConvIr<Globalrev> for Globalrev {
 
 impl FromValue for Globalrev {
     type Intermediate = Globalrev;
+}
+
+impl From<Svnrev> for Value {
+    fn from(svnrev: Svnrev) -> Self {
+        Value::UInt(svnrev.id())
+    }
+}
+
+impl ConvIr<Svnrev> for Svnrev {
+    fn new(v: Value) -> FromValueResult<Self> {
+        Ok(Svnrev::new(from_value_opt(v)?))
+    }
+
+    fn commit(self) -> Self {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for Svnrev {
+    type Intermediate = Svnrev;
 }
