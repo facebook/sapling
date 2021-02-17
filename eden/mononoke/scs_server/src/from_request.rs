@@ -14,7 +14,7 @@ use std::str::FromStr;
 use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, TimeZone};
 use faster_hex::hex_string;
-use mononoke_api::specifiers::{GitSha1, Globalrev};
+use mononoke_api::specifiers::{GitSha1, Globalrev, Svnrev};
 use mononoke_api::{
     BookmarkName, CandidateSelectionHintArgs, ChangesetId, ChangesetIdPrefix,
     ChangesetPrefixSpecifier, ChangesetSpecifier, CopyInfo, CreateCopyInfo, FileId, FileType,
@@ -122,6 +122,12 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                     ))
                 })?;
                 Ok(ChangesetSpecifier::GitSha1(git_sha1))
+            }
+            thrift::CommitId::svnrev(rev) => {
+                let rev = Svnrev::new((*rev).try_into().map_err(|_| {
+                    errors::invalid_request(format!("cannot parse svn revision {} to u64", rev))
+                })?);
+                Ok(ChangesetSpecifier::Svnrev(rev))
             }
             _ => Err(errors::invalid_request(format!(
                 "unsupported commit identity scheme ({})",

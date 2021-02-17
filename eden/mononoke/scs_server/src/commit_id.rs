@@ -53,6 +53,20 @@ pub(crate) async fn map_commit_identity(
         };
         scheme_identities.push(identity.boxed());
     }
+    if schemes.contains(&thrift::CommitIdentityScheme::SVNREV) {
+        let identity = async {
+            if let Some(svnrev) = changeset_ctx.svnrev().await? {
+                let result: Result<Option<_>, MononokeError> = Ok(Some((
+                    thrift::CommitIdentityScheme::SVNREV,
+                    thrift::CommitId::svnrev(svnrev.id() as i64),
+                )));
+                result
+            } else {
+                Ok(None)
+            }
+        };
+        scheme_identities.push(identity.boxed());
+    }
     if schemes.contains(&thrift::CommitIdentityScheme::GIT) {
         let identity = async {
             if let Some(git_sha1) = changeset_ctx.git_sha1().await? {
@@ -137,6 +151,7 @@ pub(crate) async fn map_commit_identities(
         scheme_identities.push(identities.boxed());
     }
     if schemes.contains(&thrift::CommitIdentityScheme::GLOBALREV) {
+        cloned!(ids);
         let identities = async {
             let bonsai_globalrev_ids = repo_ctx
                 .changeset_globalrev_ids(ids)
@@ -151,6 +166,25 @@ pub(crate) async fn map_commit_identities(
                 })
                 .collect::<Vec<_>>();
             let result: Result<_, MononokeError> = Ok(bonsai_globalrev_ids);
+            result
+        };
+        scheme_identities.push(identities.boxed());
+    }
+    if schemes.contains(&thrift::CommitIdentityScheme::SVNREV) {
+        let identities = async {
+            let bonsai_svnrev_ids = repo_ctx
+                .changeset_svnrev_ids(ids)
+                .await?
+                .into_iter()
+                .map(|(cs_id, svnrev)| {
+                    (
+                        cs_id,
+                        thrift::CommitIdentityScheme::SVNREV,
+                        thrift::CommitId::svnrev(svnrev.id() as i64),
+                    )
+                })
+                .collect::<Vec<_>>();
+            let result: Result<_, MononokeError> = Ok(bonsai_svnrev_ids);
             result
         };
         scheme_identities.push(identities.boxed());
@@ -181,6 +215,7 @@ impl CommitIdExt for thrift::CommitId {
             thrift::CommitId::hg(_) => thrift::CommitIdentityScheme::HG,
             thrift::CommitId::git(_) => thrift::CommitIdentityScheme::GIT,
             thrift::CommitId::globalrev(_) => thrift::CommitIdentityScheme::GLOBALREV,
+            thrift::CommitId::svnrev(_) => thrift::CommitIdentityScheme::SVNREV,
             thrift::CommitId::UnknownField(t) => (*t).into(),
         }
     }
@@ -194,6 +229,7 @@ impl CommitIdExt for thrift::CommitId {
             thrift::CommitId::hg(id) => hex_string(&id).expect("hex_string should never fail"),
             thrift::CommitId::git(id) => hex_string(&id).expect("hex_string should never fail"),
             thrift::CommitId::globalrev(rev) => rev.to_string(),
+            thrift::CommitId::svnrev(rev) => rev.to_string(),
             thrift::CommitId::UnknownField(t) => format!("unknown id type ({})", t),
         }
     }
