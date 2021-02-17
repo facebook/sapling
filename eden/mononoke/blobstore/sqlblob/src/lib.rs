@@ -548,7 +548,7 @@ impl Blobstore for Sqlblob {
 impl BlobstorePutOps for Sqlblob {
     async fn put_explicit<'a>(
         &'a self,
-        ctx: &'a CoreContext,
+        _ctx: &'a CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
@@ -587,8 +587,7 @@ impl BlobstorePutOps for Sqlblob {
                     Err(negative) => negative.duration().as_secs().try_into().map(|v: i64| -v),
                 }
             }?;
-            let res = self
-                .data_store
+            self.data_store
                 .put(
                     &key,
                     ctime,
@@ -596,26 +595,36 @@ impl BlobstorePutOps for Sqlblob {
                     chunk_count,
                     chunking_method,
                 )
-                .await;
-            res.map(|()| OverwriteStatus::NotChecked)
+                .await
+                .map(|()| OverwriteStatus::NotChecked)
         };
-
 
         match put_behaviour {
             PutBehaviour::Overwrite => put_fut.await,
             PutBehaviour::IfAbsent | PutBehaviour::OverwriteAndLog => {
-                if self.is_present(ctx, &key).await? {
-                    if put_behaviour.should_overwrite() {
+                match self.data_store.get(&key).await? {
+                    None => {
                         put_fut.await?;
-                        Ok(OverwriteStatus::Overwrote)
-                    } else {
-                        // discard the put
-                        let _ = put_fut;
-                        Ok(OverwriteStatus::Prevented)
+                        Ok(OverwriteStatus::New)
                     }
-                } else {
-                    put_fut.await?;
-                    Ok(OverwriteStatus::New)
+                    Some(chunked) => {
+                        if put_behaviour.should_overwrite() {
+                            put_fut.await?;
+                            Ok(OverwriteStatus::Overwrote)
+                        } else {
+                            let chunk_count = chunked.count;
+                            for chunk_num in 0..chunk_count {
+                                self.chunk_store
+                                    .update_generation(
+                                        &chunked.id,
+                                        chunk_num,
+                                        chunked.chunking_method,
+                                    )
+                                    .await?;
+                            }
+                            Ok(OverwriteStatus::Prevented)
+                        }
+                    }
                 }
             }
         }

@@ -369,6 +369,25 @@ impl ChunkSqlStore {
         Ok(())
     }
 
+    pub(crate) async fn update_generation(
+        &self,
+        key: &str,
+        chunk_num: u32,
+        chunking_method: ChunkingMethod,
+    ) -> Result<(), Error> {
+        let shard_id = self.shard(key, chunk_num, chunking_method);
+
+        self.delay.delay(shard_id).await;
+        UpdateGeneration::query(
+            &self.write_connection[shard_id],
+            &key,
+            &(self.gc_generations.get().put_generation as u64),
+        )
+        .compat()
+        .await?;
+        Ok(())
+    }
+
     pub(crate) async fn get_generation(
         &self,
         key: &str,
