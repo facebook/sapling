@@ -11,5 +11,5 @@ edenapi_types = { path = "../types" }
 types = { path = "../../types" }
 anyhow = "1.0"
 env_logger = "0.7"
-libc = "0.2"
+libc = "0.2.86"
 thiserror = "1.0"

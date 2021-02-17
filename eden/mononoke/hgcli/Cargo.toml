@@ -25,7 +25,7 @@ dns-lookup = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
 futures-util = "0.3.7"
-libc = "0.2"
+libc = "0.2.86"
 openssl = "0.10"
 rand = { version = "0.7", features = ["small_rng"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
