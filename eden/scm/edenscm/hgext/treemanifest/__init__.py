@@ -1004,11 +1004,6 @@ class basetreemanifestlog(object):
         else:
             self._mutablesharedpacks.commit()
 
-        if useruststore(self._repo.ui):
-            self.datastore = None
-            self.historystore = None
-            self.makeruststore()
-
     def commitpending(self):
         if not useruststore(self._repo.ui):
             self._mutablelocalpacks.commit()
