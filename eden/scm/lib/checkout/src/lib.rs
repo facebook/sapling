@@ -324,6 +324,8 @@ mod test {
         assert_checkout_symmetrical(&[a.clone()], &[a_s.clone()]).await?;
         // dir <-> file with the same name
         assert_checkout_symmetrical(&[ab.clone()], &[a.clone()]).await?;
+        // create / rm dir
+        assert_checkout_symmetrical(&[ab.clone()], &[b.clone()]).await?;
         // mv file between dirs
         assert_checkout(&[ab.clone()], &[cd.clone()]).await?;
 
@@ -444,7 +446,7 @@ mod test {
         for dir in WalkDir::new(root).into_iter() {
             let dir = dir?;
             if dir.file_type().is_dir() {
-                // todo check is not empty
+                assert_not_empty_dir(&dir)?;
                 continue;
             }
             let rel_path = dir.path().strip_prefix(root)?;
@@ -474,6 +476,14 @@ mod test {
     #[cfg(windows)]
     fn into_repo_path(path: String) -> String {
         path.replace("\\", "/")
+    }
+
+    fn assert_not_empty_dir(dir: &DirEntry) -> Result<()> {
+        let mut rd = std::fs::read_dir(dir.path())?;
+        if rd.next().is_none() {
+            bail!("Unexpected empty dir: {}", dir.path().display())
+        }
+        Ok(())
     }
 
     fn assert_metadata(expected: &FileMetadata, actual: &DirEntry) -> Result<()> {
