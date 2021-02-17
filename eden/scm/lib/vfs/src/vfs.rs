@@ -29,6 +29,8 @@ use util::path::remove_file;
 
 use crate::pathauditor::PathAuditor;
 
+use once_cell::sync::Lazy;
+
 #[derive(Clone)]
 pub struct VFS {
     inner: Arc<Inner>,
@@ -46,6 +48,14 @@ pub enum UpdateFlag {
     Symlink,
     Executable,
 }
+
+#[cfg(unix)]
+static UMASK: Lazy<u32> = Lazy::new(|| unsafe {
+    let umask = libc::umask(0);
+    libc::umask(umask);
+    #[allow(clippy::useless_conversion)] // mode_t is u16 on mac and u32 on linux
+    umask.into()
+});
 
 impl VFS {
     pub fn new(root: PathBuf) -> Result<Self> {
@@ -131,7 +141,7 @@ impl VFS {
         {
             let metadata = f.metadata()?;
             let mut permissions = metadata.permissions();
-            let mode = if exec { 0o755 } else { 0o644 };
+            let mode = Self::update_mode(permissions.mode(), exec);
             permissions.set_mode(mode);
             f.set_permissions(permissions)
                 .with_context(|| format!("Failed to set permissions on {:?}", filepath))?;
@@ -140,6 +150,15 @@ impl VFS {
         f.write_all(&content)
             .with_context(|| format!("Can't write to {:?}", filepath))?;
         Ok(content.len())
+    }
+
+    #[cfg(unix)]
+    fn update_mode(mode: u32, exec: bool) -> u32 {
+        if exec {
+            mode | (mode & 0o444) >> 2 & !*UMASK
+        } else {
+            mode & 0o666
+        }
     }
 
     fn set_exec(&self, filepath: &Path, flag: bool) -> Result<()> {
@@ -294,12 +313,12 @@ impl VFS {
     }
 }
 
+#[cfg(unix)]
 #[cfg(test)]
-mod tests {
+mod unix_tests {
     use super::*;
     use std::fs;
 
-    #[cfg(unix)]
     #[test]
     fn test_symlink_overwrite() {
         let tmp = tempfile::tempdir().unwrap();
@@ -314,7 +333,6 @@ mod tests {
         assert!(metadata.file_type().is_file())
     }
 
-    #[cfg(unix)]
     #[test]
     fn test_exec_overwrite() {
         use std::os::unix::fs::PermissionsExt;
@@ -329,6 +347,15 @@ mod tests {
         buf.push("a");
         let metadata = fs::symlink_metadata(buf).unwrap();
         assert_eq!(0, metadata.permissions().mode() & 0o111)
+    }
+
+    #[test]
+    fn test_update_mode() {
+        assert_eq!(0o644, VFS::update_mode(0o644, false));
+        assert_eq!(0o755, VFS::update_mode(0o755, true));
+
+        assert_eq!(0o755, VFS::update_mode(0o644, true));
+        assert_eq!(0o644, VFS::update_mode(0o755, false));
     }
 }
 

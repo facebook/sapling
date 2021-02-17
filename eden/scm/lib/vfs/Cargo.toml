@@ -9,6 +9,7 @@ chashmap = "2.2"
 fsinfo = { path = "../fsinfo" }
 libc = "0.2"
 minibytes = { path = "../minibytes" }
+once_cell = "1.4"
 types = { path = "../types"}
 util = { path = "../util" }
 
