@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+anyhow = "1.0.20"
+async-runtime = { path = "../../../../lib/async-runtime" }
 checkout = { path = "../../../../lib/checkout" }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
@@ -11,3 +13,5 @@ manifest-tree = { path = "../../../../lib/manifest-tree" }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
 pypathmatcher = { path = "../pypathmatcher" }
 pymanifest = { path = "../pymanifest" }
+pyrevisionstore = { path = "../pyrevisionstore" }
+vfs = { path = "../../../../lib/vfs" }
