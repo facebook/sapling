@@ -139,3 +139,64 @@ pub trait BonsaiSvnrevMapping: Send + Sync {
         Ok(())
     }
 }
+
+#[derive(Clone)]
+pub struct RepoBonsaiSvnrevMapping<T: Sized> {
+    inner: T,
+    repo_id: RepositoryId,
+}
+
+impl<T> RepoBonsaiSvnrevMapping<T>
+where
+    T: BonsaiSvnrevMapping + Clone + Sync + Send + 'static,
+{
+    pub fn new(repo_id: RepositoryId, inner: T) -> RepoBonsaiSvnrevMapping<T> {
+        RepoBonsaiSvnrevMapping { inner, repo_id }
+    }
+
+    pub async fn bulk_import(
+        &self,
+        ctx: &CoreContext,
+        entries: &[BonsaiSvnrevMappingEntry],
+    ) -> Result<(), Error> {
+        self.inner.bulk_import(ctx, entries).await
+    }
+
+    pub async fn get(
+        &self,
+        ctx: &CoreContext,
+        field: BonsaisOrSvnrevs,
+    ) -> Result<Vec<BonsaiSvnrevMappingEntry>, Error> {
+        self.inner.get(ctx, self.repo_id, field).await
+    }
+
+    pub async fn get_svnrev_from_bonsai(
+        &self,
+        ctx: &CoreContext,
+        bcs_id: ChangesetId,
+    ) -> Result<Option<Svnrev>, Error> {
+        self.inner
+            .get_svnrev_from_bonsai(ctx, self.repo_id, bcs_id)
+            .await
+    }
+
+    pub async fn get_bonsai_from_svnrev(
+        &self,
+        ctx: &CoreContext,
+        svnrev: Svnrev,
+    ) -> Result<Option<ChangesetId>, Error> {
+        self.inner
+            .get_bonsai_from_svnrev(ctx, self.repo_id, svnrev)
+            .await
+    }
+
+    pub async fn bulk_import_from_bonsai(
+        &self,
+        ctx: &CoreContext,
+        changesets: &[BonsaiChangeset],
+    ) -> anyhow::Result<()> {
+        self.inner
+            .bulk_import_from_bonsai(ctx, self.repo_id, changesets)
+            .await
+    }
+}
