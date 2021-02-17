@@ -27,7 +27,7 @@ else:
 
 
 class PexpectAssertionMixin(metaclass=abc.ABCMeta):
-    def assert_process_succeeds(self, process: PexpectSpawnType):
+    def assert_process_succeeds(self, process: PexpectSpawnType) -> None:
         actual_exit_code = wait_for_pexpect_process(process)
         self.assertEqual(
             actual_exit_code,
@@ -37,7 +37,7 @@ class PexpectAssertionMixin(metaclass=abc.ABCMeta):
 
     def assert_process_fails(
         self, process: PexpectSpawnType, exit_code: Optional[int] = None
-    ):
+    ) -> None:
         if exit_code is None:
             actual_exit_code = wait_for_pexpect_process(process)
             self.assertNotEqual(
@@ -49,7 +49,9 @@ class PexpectAssertionMixin(metaclass=abc.ABCMeta):
         else:
             self.assert_process_exit_code(process, exit_code)
 
-    def assert_process_exit_code(self, process: PexpectSpawnType, exit_code: int):
+    def assert_process_exit_code(
+        self, process: PexpectSpawnType, exit_code: int
+    ) -> None:
         actual_exit_code = wait_for_pexpect_process(process)
         self.assertEqual(
             actual_exit_code,
