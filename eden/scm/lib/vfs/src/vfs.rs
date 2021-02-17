@@ -21,7 +21,6 @@ use std::{
 };
 
 use anyhow::{bail, ensure, Context, Result};
-use minibytes::Bytes;
 
 use fsinfo::{fstype, FsType};
 use types::RepoPath;
@@ -125,7 +124,7 @@ impl VFS {
         Ok(())
     }
 
-    fn write_mode(&self, filepath: &Path, content: &Bytes, exec: bool) -> Result<usize> {
+    fn write_mode(&self, filepath: &Path, content: &[u8], exec: bool) -> Result<usize> {
         let mut options = OpenOptions::new();
         options.write(true).create(true).truncate(true);
 
@@ -147,7 +146,7 @@ impl VFS {
                 .with_context(|| format!("Failed to set permissions on {:?}", filepath))?;
         }
 
-        f.write_all(&content)
+        f.write_all(content)
             .with_context(|| format!("Can't write to {:?}", filepath))?;
         Ok(content.len())
     }
@@ -203,8 +202,8 @@ impl VFS {
     }
 
     /// Write a symlink file at `filepath`. The destination is represented by `content`.
-    fn write_symlink(&self, filepath: &Path, content: &Bytes) -> Result<usize> {
-        let link_dest = Path::new(std::str::from_utf8(content.as_ref())?);
+    fn write_symlink(&self, filepath: &Path, content: &[u8]) -> Result<usize> {
+        let link_dest = Path::new(std::str::from_utf8(content)?);
 
         self.symlink(filepath, link_dest)?;
         Ok(filepath.as_os_str().len())
@@ -215,7 +214,7 @@ impl VFS {
     fn write_inner(
         &self,
         path: &RepoPath,
-        data: &Bytes,
+        data: &[u8],
         flags: Option<UpdateFlag>,
     ) -> Result<usize> {
         let filepath = self
@@ -234,7 +233,7 @@ impl VFS {
     /// Overwrite content of the file, try to clear conflicts if attempt fails
     ///
     /// Return an error if fails to overwrite after clearing conflicts, or if clear conflicts fail
-    pub fn write(&self, path: &RepoPath, data: &Bytes, flag: Option<UpdateFlag>) -> Result<usize> {
+    pub fn write(&self, path: &RepoPath, data: &[u8], flag: Option<UpdateFlag>) -> Result<usize> {
         // Fast path: let's try to open the file directly, we'll handle the failure only if this fails.
         match self.write_inner(path, data, flag) {
             Ok(size) => Ok(size),
@@ -324,9 +323,8 @@ mod unix_tests {
         let tmp = tempfile::tempdir().unwrap();
         let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a").unwrap();
-        vfs.write(path, &Bytes::from("abc"), Some(UpdateFlag::Symlink))
-            .unwrap();
-        vfs.write(path, &Bytes::from(&[1, 2, 3][..]), None).unwrap();
+        vfs.write(path, b"abc", Some(UpdateFlag::Symlink)).unwrap();
+        vfs.write(path, &[1, 2, 3], None).unwrap();
         let mut buf = tmp.path().to_path_buf();
         buf.push("a");
         let metadata = fs::symlink_metadata(buf).unwrap();
@@ -340,9 +338,9 @@ mod unix_tests {
         let tmp = tempfile::tempdir().unwrap();
         let vfs = VFS::new(tmp.path().to_path_buf()).unwrap();
         let path = RepoPath::from_str("a").unwrap();
-        vfs.write(path, &Bytes::from("abc"), Some(UpdateFlag::Executable))
+        vfs.write(path, "abc".as_bytes(), Some(UpdateFlag::Executable))
             .unwrap();
-        vfs.write(path, &Bytes::from(&[1, 2, 3][..]), None).unwrap();
+        vfs.write(path, &[1, 2, 3], None).unwrap();
         let mut buf = tmp.path().to_path_buf();
         buf.push("a");
         let metadata = fs::symlink_metadata(buf).unwrap();

@@ -222,7 +222,7 @@ impl CheckoutPlan {
         tokio::runtime::Handle::current()
             .spawn_blocking(move || -> Result<()> {
                 let repo_path = path.as_repo_path();
-                let w = vfs.write(repo_path, &data.into(), flag)?;
+                let w = vfs.write(repo_path, &data, flag)?;
                 stats.updated.fetch_add(1, Ordering::Relaxed);
                 stats.written_bytes.fetch_add(w, Ordering::Relaxed);
                 Ok(())
@@ -436,7 +436,7 @@ mod test {
         for (path, meta) in files {
             let flag = type_to_flag(&meta.file_type);
             let data = hgid_file(&meta.hgid);
-            vfs.write(path.as_repo_path(), &data.into(), flag)?;
+            vfs.write(path.as_repo_path(), &data, flag)?;
         }
         Ok(())
     }
