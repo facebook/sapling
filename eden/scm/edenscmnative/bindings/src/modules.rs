@@ -21,6 +21,7 @@ pub(crate) fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyN
         "bookmarkstore",
         pybookmarkstore::init_module(py, &name)?,
     )?;
+    m.add(py, "checkout", pycheckout::init_module(py, &name)?)?;
     m.add(py, "cliparser", pycliparser::init_module(py, &name)?)?;
     m.add(py, "configparser", pyconfigparser::init_module(py, &name)?)?;
     m.add(py, "dag", pydag::init_module(py, &name)?)?;
