@@ -48,6 +48,7 @@ mod hg_sync;
 mod mutable_counters;
 mod phases;
 mod pushrebase;
+mod rebase;
 mod redaction;
 mod rsync;
 mod skiplist_subcommand;
@@ -86,6 +87,7 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
         .subcommand(subcommand_deleted_manifest::build_subcommand())
         .subcommand(derived_data::build_subcommand())
         .subcommand(rsync::build_subcommand())
+        .subcommand(rebase::build_subcommand())
         .subcommand(pushrebase::build_subcommand())
         .subcommand(subcommand_skeleton_manifests::build_subcommand())
 }
@@ -172,6 +174,9 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (rsync::RSYNC, Some(sub_m)) => {
                 rsync::subcommand_rsync(fb, logger, &matches, sub_m).await
+            }
+            (rebase::REBASE, Some(sub_m)) => {
+                rebase::subcommand_rebase(fb, logger, &matches, sub_m).await
             }
             (pushrebase::PUSHREBASE, Some(sub_m)) => {
                 pushrebase::subcommand_pushrebase(fb, logger, &matches, sub_m).await

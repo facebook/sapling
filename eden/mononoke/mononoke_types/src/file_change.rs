@@ -96,6 +96,10 @@ impl FileChange {
         self.copy_from.as_ref()
     }
 
+    pub fn copy_from_mut(&mut self) -> Option<&mut (MPath, ChangesetId)> {
+        self.copy_from.as_mut()
+    }
+
     #[inline]
     pub(crate) fn into_thrift_opt(fc_opt: Option<Self>) -> thrift::FileChangeOpt {
         let fc_opt = fc_opt.map(Self::into_thrift);
