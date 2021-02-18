@@ -1274,7 +1274,7 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                 return nfsServer->registerMount(
                     mountPath,
                     getRootInode()->getNodeId(),
-                    nullptr, // TODO(xavierd): Add makeNfsDispatcher()
+                    EdenDispatcherFactory::makeNfsDispatcher(this),
                     &getStraceLogger(),
                     serverState_->getProcessNameCache(),
                     std::chrono::duration_cast<folly::Duration>(

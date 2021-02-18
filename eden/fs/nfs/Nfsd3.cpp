@@ -18,8 +18,10 @@ namespace facebook::eden {
 namespace {
 class Nfsd3ServerProcessor final : public RpcServerProcessor {
  public:
-  explicit Nfsd3ServerProcessor(const folly::Logger* straceLogger)
-      : straceLogger_(straceLogger) {}
+  explicit Nfsd3ServerProcessor(
+      std::unique_ptr<NfsDispatcher> dispatcher,
+      const folly::Logger* straceLogger)
+      : dispatcher_(std::move(dispatcher)), straceLogger_(straceLogger) {}
 
   Nfsd3ServerProcessor(const Nfsd3ServerProcessor&) = delete;
   Nfsd3ServerProcessor(Nfsd3ServerProcessor&&) = delete;
@@ -80,6 +82,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   commit(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
 
  private:
+  std::unique_ptr<NfsDispatcher> dispatcher_;
   const folly::Logger* straceLogger_;
 };
 
@@ -402,12 +405,16 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
 Nfsd3::Nfsd3(
     bool registerWithRpcbind,
     folly::EventBase* evb,
-    Dispatcher* const /*dispatcher*/,
+    std::unique_ptr<NfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> /*processNameCache*/,
     folly::Duration /*requestTimeout*/,
     Notifications* /*notifications*/)
-    : server_(std::make_shared<Nfsd3ServerProcessor>(straceLogger), evb) {
+    : server_(
+          std::make_shared<Nfsd3ServerProcessor>(
+              std::move(dispatcher),
+              straceLogger),
+          evb) {
   if (registerWithRpcbind) {
     server_.registerService(kNfsdProgNumber, kNfsd3ProgVersion);
   }

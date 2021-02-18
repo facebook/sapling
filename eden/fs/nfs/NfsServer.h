@@ -15,7 +15,6 @@
 
 namespace facebook::eden {
 
-class Dispatcher;
 class Notifications;
 class ProcessNameCache;
 
@@ -57,7 +56,7 @@ class NfsServer {
   NfsServer::NfsMountInfo registerMount(
       AbsolutePathPiece path,
       InodeNumber rootIno,
-      Dispatcher* const dispatcher,
+      std::unique_ptr<NfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout,

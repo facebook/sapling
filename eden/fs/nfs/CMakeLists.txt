@@ -51,6 +51,7 @@ add_library(
 target_link_libraries(
   eden_nfs_nfsd3
   PUBLIC
+    eden_nfs_dispatcher
     eden_nfs_rpc_server
   PRIVATE
     eden_nfs_nfsd_rpc
@@ -67,6 +68,18 @@ target_link_libraries(
   PUBLIC
     eden_nfs_mountd
     eden_nfs_nfsd3
+)
+
+add_library(
+  eden_nfs_dispatcher STATIC
+    "NfsDispatcher.cpp" "NfsDispatcher.h"
+)
+
+target_link_libraries(
+  eden_nfs_dispatcher
+  PUBLIC
+    eden_inodes_inodenumber
+    eden_store
 )
 
 add_subdirectory(portmap)

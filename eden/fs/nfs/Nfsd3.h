@@ -12,11 +12,11 @@
 // Implementation of the NFSv3 protocol as described in:
 // https://tools.ietf.org/html/rfc1813
 
+#include "eden/fs/nfs/NfsDispatcher.h"
 #include "eden/fs/nfs/rpc/Server.h"
 
 namespace facebook::eden {
 
-class Dispatcher;
 class Notifications;
 class ProcessNameCache;
 
@@ -41,7 +41,7 @@ class Nfsd3 {
   Nfsd3(
       bool registerWithRpcbind,
       folly::EventBase* evb,
-      Dispatcher* const dispatcher,
+      std::unique_ptr<NfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout,

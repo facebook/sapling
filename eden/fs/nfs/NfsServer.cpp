@@ -15,15 +15,15 @@ namespace facebook::eden {
 NfsServer::NfsMountInfo NfsServer::registerMount(
     AbsolutePathPiece path,
     InodeNumber rootIno,
-    Dispatcher* const dispatcher,
+    std::unique_ptr<NfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration requestTimeout,
-    Notifications* notifications) {
+    Notifications* FOLLY_NULLABLE notifications) {
   auto nfsd = std::make_unique<Nfsd3>(
       false,
       evb_,
-      dispatcher,
+      std::move(dispatcher),
       straceLogger,
       std::move(processNameCache),
       requestTimeout,
