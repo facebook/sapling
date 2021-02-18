@@ -169,6 +169,22 @@ EDEN_XDR_SERDE_DECL(
     mtime,
     ctime);
 
+/**
+ * Values for fattr3::mode
+ */
+constexpr uint32_t kSUIDBit = 0x800;
+constexpr uint32_t kGIDBit = 0x400;
+constexpr uint32_t kSaveSwappedTextBit = 0x200;
+constexpr uint32_t kReadOwnerBit = 0x100;
+constexpr uint32_t kWriteOwnerBit = 0x80;
+constexpr uint32_t kExecOwnerBit = 0x40;
+constexpr uint32_t kReadGroupBit = 0x20;
+constexpr uint32_t kWriteGroupBit = 0x10;
+constexpr uint32_t kExecGroupBit = 0x8;
+constexpr uint32_t kReadOtherBit = 0x4;
+constexpr uint32_t kWriteOtherBit = 0x2;
+constexpr uint32_t kExecOtherBit = 0x1;
+
 struct post_op_attr : public XdrVariant<bool, fattr3> {};
 
 template <>
@@ -178,6 +194,27 @@ struct XdrTrait<post_op_attr> : public XdrTrait<post_op_attr::Base> {
     ret.tag = XdrTrait<bool>::deserialize(cursor);
     if (ret.tag) {
       ret.v = XdrTrait<fattr3>::deserialize(cursor);
+    }
+    return ret;
+  }
+};
+
+// GETATTR Procedure:
+
+struct GETATTR3resok {
+  fattr3 obj_attributes;
+};
+EDEN_XDR_SERDE_DECL(GETATTR3resok, obj_attributes);
+
+struct GETATTR3res : public XdrVariant<nfsstat3, GETATTR3resok> {};
+
+template <>
+struct XdrTrait<GETATTR3res> : public XdrTrait<GETATTR3res::Base> {
+  static GETATTR3res deserialize(folly::io::Cursor& cursor) {
+    GETATTR3res ret;
+    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
+    if (ret.tag == nfsstat3::NFS3_OK) {
+      ret.v = XdrTrait<GETATTR3resok>::deserialize(cursor);
     }
     return ret;
   }
