@@ -57,11 +57,8 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.bookmarks import (
     _readremotenamesfrom,
-    _selectivepullaccessedbookmarks,
-    _selectivepullaccessedbookmarkslock,
     _selectivepullenabledfile,
     _selectivepullenabledfilelock,
-    _trackaccessedbookmarks,
     _writesingleremotename,
     _enableselectivepullforremote,
     _disableselectivepull,
@@ -71,7 +68,6 @@ from edenscm.mercurial.bookmarks import (
     saveremotenames,
     selectivepullbookmarknames,
     splitremotename,
-    updateaccessedbookmarks,
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
@@ -102,7 +98,6 @@ configitem("remotenames", "pushanonheads", default=False)
 configitem("remotenames", "pushrev", default=None)
 configitem("remotenames", "resolvenodes", default=True)
 configitem("remotenames", "selectivepull", default=False)
-configitem("remotenames", "selectivepullaccessedbookmarks", default=False)
 configitem("remotenames", "syncbookmarks", default=False)
 configitem("remotenames", "tracking", default=True)
 configitem("remotenames", "transitionbookmarks", default=[])
@@ -183,10 +178,6 @@ def _listremotebookmarks(remote, bookmarks):
     return result
 
 
-def _reportaccessedbookmarks(ui, accessedremotenames):
-    ui.log("accessedremotenames", accessedremotenames_totalnum=len(accessedremotenames))
-
-
 def expull(orig, repo, remote, heads=None, force=False, **kwargs):
     if not kwargs.get("opargs", {}).get("extras", {}).get("bookmarks", True):
         # The callsite disables the bookmarks pulling.
@@ -235,13 +226,6 @@ def _expull(orig, repo, remote, heads=None, force=False, **kwargs):
         _enableselectivepullforremote(repo, path)
     else:
         _disableselectivepull(repo)
-
-    if _trackaccessedbookmarks(repo.ui):
-        pulledbookmarks = kwargs.get("bookmarks", [])
-        if pulledbookmarks:
-            accessedbookmarks = _listremotebookmarks(remote, pulledbookmarks)
-            remotepath = activepath(repo.ui, remote)
-            updateaccessedbookmarks(repo, remotepath, accessedbookmarks)
 
     return res
 
@@ -673,7 +657,6 @@ def extsetup(ui):
     bookcmd = extensions.wrapcommand(commands.table, "bookmarks", exbookmarks)
     pushcmd = extensions.wrapcommand(commands.table, "push", expushcmd)
 
-    localrepo.localrepository._wlockfreeprefix.add("selectivepullaccessedbookmarks")
     localrepo.localrepository._wlockfreeprefix.add("selectivepullenabled")
 
     if _tracking(ui):

@@ -135,10 +135,12 @@ Push to scratch branch
   remote:     20759b6926ce  scratchcommit
   remote:     1de1d7d92f89  new scratch commit
   $ hg log -G -T '{desc} {phase} {bookmarks}'
-  @  new scratch commit draft
+  o  newcommit public
   │
-  o  scratchcommit draft
-  │
+  │ @  new scratch commit draft
+  │ │
+  │ o  scratchcommit draft
+  ├─╯
   o  initialcommit public
   
   $ scratchnodes
@@ -156,10 +158,12 @@ Push scratch bookmark with no new revs
   remote:     20759b6926ce  scratchcommit
   remote:     1de1d7d92f89  new scratch commit
   $ hg log -G -T '{desc} {phase} {bookmarks}'
-  @  new scratch commit draft
+  o  newcommit public
   │
-  o  scratchcommit draft
-  │
+  │ @  new scratch commit draft
+  │ │
+  │ o  scratchcommit draft
+  ├─╯
   o  initialcommit public
   
   $ scratchbookmarks
@@ -361,17 +365,19 @@ Use --force because this push creates new head
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
-  remote: added 2 changesets with 2 changes to 2 files
+  remote: added 1 changesets with 1 changes to 1 files
   $ hg -R ../repo log -G -T '{desc} {phase} {bookmarks}'
   o  newcommit draft main
   │
   o  initialcommit draft
   
   $ hg -R ../client2 log -G -T '{desc} {phase} {bookmarks}'
-  @  new scratch commit draft
+  o  newcommit public
   │
-  o  scratchcommit draft
-  │
+  │ @  new scratch commit draft
+  │ │
+  │ o  scratchcommit draft
+  ├─╯
   o  initialcommit public
   
   $ hg book --list-remote scratch/*

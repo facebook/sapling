@@ -161,21 +161,10 @@ Pull in this repo
   $ hg pull
   pulling from ssh://user@dummy/server
   no changes found
-  $ showgraph
-  o  draft1: draft  remote/scratch/draft1
-  │
-  o  public3: draft
-  │
-  │ @  public1: public  remote/master
-  ├─╯
-  o  base: public
-  
-BUG! our subscriptions have been lost
-
-Work around this by pulling them by name
-  $ hg pull -B created -B other
-  pulling from ssh://user@dummy/server
-  no changes found
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 1 changes to 1 files
   $ showgraph
   o  draft1: draft  remote/scratch/draft1
   │
@@ -187,7 +176,6 @@ Work around this by pulling them by name
   ├─╯
   o  base: public
   
-
 Sync in the third repo
   $ cd $TESTTMP/client3
   $ hg cloud sync -q

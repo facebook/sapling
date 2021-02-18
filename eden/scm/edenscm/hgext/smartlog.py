@@ -397,7 +397,6 @@ def interestingheads(repo, subset, x):
         for name in _reposnames(repo.ui):
             nodes = ns.namemap(repo, name)
             if nodes:
-                ns.accessed(repo, name)
                 heads.add(rev(nodes[0]))
 
     return subset & smartset.baseset(heads, repo=repo)

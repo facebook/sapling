@@ -339,7 +339,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
   updating bookmark master_bookmark
 -- pushredirected_3 was correctly pushed to master_bookmark in ovrsource
   $ log -r master_bookmark
-  @  pushredirected_3 [public;rev=4;4355e6b9eafb] default/master_bookmark
+  @  pushredirected_3 [public;rev=5;4355e6b9eafb] default/master_bookmark
   │
   ~
 -- pushredirected_3 is also present in megarepo

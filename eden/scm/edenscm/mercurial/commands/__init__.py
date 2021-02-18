@@ -4993,12 +4993,6 @@ def _newpull(ui, repo, source, **opts):
             # Update the file marking selectivepull is enabled.
             bookmarks._enableselectivepullforremote(repo, remotename)
 
-    # Update accessed bookmarks with -B parameters.
-    if bookmarks._trackaccessedbookmarks(repo.ui):
-        accessed = namestonamehex(opts.get("bookmark") or [])
-        if accessed:
-            bookmarks.updateaccessedbookmarks(repo, remotename, accessed)
-
     # Decide return value.
     if oldlen == newlen:
         # Not changed.

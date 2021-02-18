@@ -279,8 +279,6 @@ def cloudjoin(ui, repo, **opts):
                     for key in sync._getremotebookmarks(repo).keys()
                 }
                 sync._updateremotebookmarks(repo, tr, bmremove)
-                # erase state of the remote accessed bookmarks as well
-                bookmarksmod.cleanselectivepullaccessedbookmarks(repo)
                 # erase state if the repo has been connected before to the destination workspace
                 syncstate.SyncState.erasestate(repo, workspacename)
                 # clear subscription

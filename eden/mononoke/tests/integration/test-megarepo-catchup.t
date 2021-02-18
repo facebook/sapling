@@ -150,6 +150,7 @@ blobimport
   $ hg log -G
   @  commit:      * (glob)
   │  bookmark:    head_bookmark
+  │  bookmark:    default/head_bookmark
   │  user:        user
   │  date:        * (glob)
   │  summary:     [MEGAREPO CATCHUP DELETE] deletion commit (1)
@@ -172,7 +173,6 @@ blobimport
   │ │  summary:     move files in small repo
   │ │
   o │  commit:      b662a919caea
-  │ │  bookmark:    default/head_bookmark
   │ │  user:        test
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │  summary:     new commit in large repo

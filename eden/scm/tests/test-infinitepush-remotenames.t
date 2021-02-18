@@ -135,7 +135,7 @@ Go back to client, make pull and make sure that we pulled remote branches
   64d557aa86fdc42384b193f7eab99059da84f1f0 bookmarks default/scratch/serverbook
   $ cd ..
 
-Push from another client, make sure that push doesn't override scratch bookmarks
+Push from another client, make sure that push updates other remote bookmarks as well (like "serverbook")
   $ cd client2
   $ hg up scratch/serverbook
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -148,7 +148,7 @@ Push from another client, make sure that push doesn't override scratch bookmarks
   $ hg book --remote
      default/scratch/mybranch  620472ff5c0c
      default/scratch/secondbranch 36667a3f76e4
-     default/scratch/serverbook ac312cb08db5
+     default/scratch/serverbook 64d557aa86fd
   $ hg book
   no bookmarks set
 

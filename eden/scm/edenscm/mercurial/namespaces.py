@@ -11,7 +11,6 @@
 from __future__ import absolute_import
 
 from . import error, pycompat, registrar, templatekw, util
-from .bookmarks import _trackaccessedbookmarks, splitremotename, updateaccessedbookmarks
 from .i18n import _
 from .node import hex
 
@@ -68,14 +67,6 @@ def branches(repo):
 def remotebookmarks(repo):
     namemap = lambda repo, name: repo._remotenames.mark2nodes().get(name, [])
 
-    def accessed(repo, name):
-        if _trackaccessedbookmarks(repo.ui):
-            nodes = namemap(repo, name)
-            if nodes:
-                rnode = hex(nodes[0])
-                remote, rname = splitremotename(name)
-                updateaccessedbookmarks(repo, remote, {rname: rnode})
-
     return namespace(
         templatename="remotebookmarks",
         logname="bookmark",
@@ -84,7 +75,6 @@ def remotebookmarks(repo):
         namemap=namemap,
         nodemap=lambda repo, node: repo._remotenames.node2marks().get(node, []),
         builtin=True,
-        accessed=accessed,
     )
 
 
@@ -94,13 +84,6 @@ def hoistednames(repo):
     # hoisting only works if there are remote bookmarks
     if hoist:
         namemap = lambda repo, name: repo._remotenames.hoist2nodes(hoist).get(name, [])
-
-        def accessed(repo, name):
-            if _trackaccessedbookmarks(repo.ui):
-                nodes = namemap(repo, name)
-                if nodes:
-                    rnode = hex(nodes[0])
-                    updateaccessedbookmarks(repo, hoist, {name: rnode})
 
         return namespace(
             templatename="hoistednames",
@@ -112,7 +95,6 @@ def hoistednames(repo):
                 node, []
             ),
             builtin=True,
-            accessed=accessed,
         )
     else:
         return None
@@ -182,7 +164,6 @@ class namespaces(object):
                 continue
             n = v.namemap(repo, name)
             if n:
-                v.accessed(repo, name)
                 # return max revision number
                 if len(n) > 1:
                     cl = repo.changelog
@@ -218,9 +199,6 @@ class namespace(object):
       'deprecated': set of names to be masked for ordinary use
       'builtin': bool indicating if this namespace is supported by core
                  Mercurial.
-      'accessed': function, that is used to log if the name from the namespace
-                  was accessed. The method helps to build metrics around name
-                  "access" event.
     """
 
     def __init__(
@@ -234,7 +212,6 @@ class namespace(object):
         nodemap=None,
         deprecated=None,
         builtin=False,
-        accessed=None,
     ):
         """create a namespace
 
@@ -250,8 +227,6 @@ class namespace(object):
         nodemap: function that inputs a node, output name(s)
         deprecated: set of names to be masked for ordinary use
         builtin: whether namespace is implemented by core Mercurial
-        accessed: function, that is used to log if the name from the namespace
-        was accessed
 
         """
         self.templatename = templatename
@@ -261,11 +236,6 @@ class namespace(object):
         self.listnames = listnames
         self.namemap = namemap
         self.nodemap = nodemap
-
-        if accessed is not None:
-            self.accessed = accessed
-        else:
-            self.accessed = lambda repo, name: None
 
         # if logname is not specified, use the template name as backup
         if self.logname is None:

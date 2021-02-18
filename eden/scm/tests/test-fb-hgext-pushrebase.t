@@ -86,8 +86,9 @@ Stack of non-conflicting commits should be accepted
   sending batch command
   searching for changes
   local heads: 1; remote heads: 1 (explicit: 0); initial common: 0
-  sampling undecided commits (2 of 2)
-  query 2; still undecided: 2, sample size is: 2
+  sampling from both directions (1 of 1)
+  sampling undecided commits (1 of 1)
+  query 2; still undecided: 1, sample size is: 1
   sending known command
   2 total queries in *s (glob)
   preparing listkeys for "bookmarks" with pattern "['main']"

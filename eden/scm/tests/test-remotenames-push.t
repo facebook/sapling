@@ -165,8 +165,12 @@ creation of a new one (locally unknonw).
      rbook2                    7c3bad9141dc
   $ cd ..
 
-Force client to get data about new bookmarks without getting commits
+Force client to get data about new bookmarks without getting commits.
+Expect update for the bookmark after the push.
   $ cd rnclient
+  $ hg book --all
+  no bookmarks set
+     default/rbook             1f0dee641bb7
   $ hg push
   pushing to $TESTTMP/repo2/rnserver
   searching for changes
@@ -174,7 +178,7 @@ Force client to get data about new bookmarks without getting commits
   [1]
   $ hg book --all
   no bookmarks set
-     default/rbook             1f0dee641bb7
+     default/rbook             7c3bad9141dc
   $ hg update rbook
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

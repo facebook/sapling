@@ -8,7 +8,11 @@ Set up repos
   $ cd remoterepo
   $ setconfig treemanifest.server=True
   $ cd ..
-  $ hg clone -q ssh://user@dummy/remoterepo localrepo
+  $ hg clone --config remotenames.selectivepull=True --config remotenames.selectivepulldefault=master -q ssh://user@dummy/remoterepo localrepo
+  $ cd localrepo
+  $ setconfig remotenames.selectivepull=True
+  $ setconfig remotenames.selectivepulldefault=master
+  $ cd .. 
 
 Pull master bookmark
 
@@ -20,18 +24,12 @@ Pull master bookmark
   $ cd ../localrepo
   $ hg pull
   pulling from ssh://user@dummy/remoterepo
-  requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
   $ hg bookmarks --list-subscriptions
      default/master            1449e7934ec1
-
-Set up selective pull
-  $ setconfig remotenames.selectivepull=True
-  $ setconfig remotenames.selectivepullaccessedbookmarks=True
-  $ setconfig remotenames.selectivepulldefault=master
 
 Create another bookmark on the remote repo
   $ cd ../remoterepo
@@ -189,30 +187,30 @@ Make another clone with selectivepull disabled
      default/master            0238718db2b1
      default/thirdbook         1449e7934ec1
 
-Enable selectivepull and make a pull. Make sure only master bookmark is left
+Enable selectivepull and make a pull. All the bookmarks remain.
+This is expected. Enabling selectivepull for the existing repo
+won't reduce the number of subscribed bookmarks.
   $ setconfig remotenames.selectivepull=True
-  $ setconfig remotenames.selectivepullaccessedbookmarks=True
   $ setconfig remotenames.selectivepulldefault=master
-
   $ hg pull -q
-  $ hg book --list-subscriptions
-     default/master            0238718db2b1
-
-Temporarily disable selectivepull, pull, enable it again and pull again.
-Make sure only master bookmark is present
-  $ hg pull --config remotenames.selectivepull=False -q
   $ hg book --list-subscriptions
      default/book-with-dashes  1449e7934ec1
      default/master            0238718db2b1
      default/thirdbook         1449e7934ec1
-  $ hg pull -q
+
+
+Clean the repo and make a fresh clone with right configuration.
+  $ cd ..
+  $ rm -rf localrepo2
+  $ hg clone --config remotenames.selectivepull=True --config remotenames.selectivepulldefault=master -q ssh://user@dummy/remoterepo localrepo2
+  $ cd localrepo2
+  $ setconfig remotenames.selectivepull=True
+  $ setconfig remotenames.selectivepulldefault=master
+  $ hg pull
+  pulling from ssh://user@dummy/remoterepo
+  no changes found
   $ hg book --list-subscriptions
      default/master            0238718db2b1
-
-Check that log shows the hint about selective pull
-  $ hg log -r thirdbook
-  abort: unknown revision 'thirdbook'!
-  [255]
 
 By using "default/" the commit gets automatically pulled
   $ hg log -r default/thirdbook
@@ -291,7 +289,6 @@ Clone remote repo with the selectivepull enabled
   $ cd new_localrepo
 
   $ setconfig remotenames.selectivepull=True
-  $ setconfig remotenames.selectivepullaccessedbookmarks=True
   $ setconfig remotenames.selectivepulldefault=master
 
   $ hg book --list-subscriptions

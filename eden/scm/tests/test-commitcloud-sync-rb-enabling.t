@@ -25,7 +25,6 @@ Set remotebookmarkssync True initially for the first repo and False for the seco
   $ cd client1
   $ setconfig remotenames.selectivepull=True
   $ setconfig remotenames.selectivepulldefault=master,base
-  $ setconfig remotenames.selectivepullaccessedbookmarks=True
   $ setconfig commitcloud.remotebookmarkssync=True
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
   $ hg cloud join
@@ -41,7 +40,6 @@ Set remotebookmarkssync True initially for the first repo and False for the seco
   $ cd client2
   $ setconfig remotenames.selectivepull=True
   $ setconfig remotenames.selectivepulldefault=master,base
-  $ setconfig remotenames.selectivepullaccessedbookmarks=True
   $ setconfig commitcloud.remotebookmarkssync=False
   $ setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP commitcloud.token_enforced=False
   $ hg cloud join

@@ -164,7 +164,6 @@ configure() {
         enable remotenames
         setconfig remotenames.selectivepull=True
         setconfig remotenames.selectivepulldefault=master
-        setconfig remotenames.selectivepullaccessedbookmarks=True
         ;;
       modern)
         enable amend

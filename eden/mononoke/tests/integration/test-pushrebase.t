@@ -427,7 +427,7 @@ Test non-fast-forward force pushrebase
   adding changesets
   adding manifests
   adding file changes
-  added 8 changesets with 0 changes to 0 files
+  added 12 changesets with 0 changes to 0 files
   $ hgmn up newbook
   7 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hgmn debugsh -c 'ui.write("%s\n" % m.node.hex(repo["."].filectx("was_a_lively_fellow").getnodeinfo()[2]))'
