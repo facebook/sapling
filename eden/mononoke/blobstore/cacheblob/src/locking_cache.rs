@@ -122,7 +122,7 @@ pub struct CacheBlobstore<C, L, T>
 where
     C: CacheOps + Clone,
     L: LeaseOps + Clone,
-    T: Blobstore + Clone,
+    T: Blobstore,
 {
     blobstore: T,
     cache: C,
@@ -134,7 +134,7 @@ impl<C, L, T> CacheBlobstore<C, L, T>
 where
     C: CacheOps + Clone,
     L: LeaseOps + Clone,
-    T: Blobstore + Clone,
+    T: Blobstore,
 {
     pub fn new(cache: C, lease: L, blobstore: T, lazy_cache_put: bool) -> Self {
         Self {
@@ -165,7 +165,7 @@ impl<C, L, T> Blobstore for CacheBlobstore<C, L, T>
 where
     C: CacheOps + Clone + 'static,
     L: LeaseOps + Clone + 'static,
-    T: Blobstore + Clone,
+    T: Blobstore,
 {
     async fn get<'a>(
         &'a self,
@@ -235,7 +235,7 @@ impl<C, L, T> CacheBlobstoreExt for CacheBlobstore<C, L, T>
 where
     C: CacheOps + Clone + 'static,
     L: LeaseOps + Clone + 'static,
-    T: Blobstore + Clone,
+    T: Blobstore,
 {
     async fn get_no_cache_fill<'a>(
         &'a self,
@@ -263,7 +263,7 @@ impl<C, L, T> fmt::Debug for CacheBlobstore<C, L, T>
 where
     C: CacheOps + Clone,
     L: LeaseOps + Clone,
-    T: Blobstore + Clone,
+    T: Blobstore,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CacheBlobstore")

@@ -78,7 +78,7 @@ pub fn new_cachelib_blobstore_no_lease<T>(
     options: CachelibBlobstoreOptions,
 ) -> CountedBlobstore<CacheBlobstore<CachelibOps, DummyLease, T>>
 where
-    T: Blobstore + Clone,
+    T: Blobstore,
 {
     let cache_ops = CachelibOps::new(blob_pool, presence_pool, options);
     CountedBlobstore::new(
