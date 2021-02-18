@@ -108,7 +108,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
     let mut segmented_changelog_builder = sql_factory
         .open::<SegmentedChangelogBuilder>()
-        .compat()
         .await
         .context("constructing segmented changelog builder")?;
 

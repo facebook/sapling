@@ -139,10 +139,7 @@ pub async fn open_synced_commit_mapping(
     .await?;
 
     Ok(Arc::new(
-        sql_factory
-            .open::<SqlSyncedCommitMapping>()
-            .compat()
-            .await?,
+        sql_factory.open::<SqlSyncedCommitMapping>().await?,
     ))
 }
 

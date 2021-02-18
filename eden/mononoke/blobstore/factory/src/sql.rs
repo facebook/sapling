@@ -5,14 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::{bail, Error};
 use fbinit::FacebookInit;
-use futures::{FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::{
-    future::{self, IntoFuture},
-    Future,
-};
+use futures::compat::Future01CompatExt;
+use futures_ext::FutureExt as _;
+use futures_old::{future, Future};
 use metaconfig_types::{
     LocalDatabaseConfig, MetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
 };
@@ -43,40 +40,26 @@ pub struct MetadataSqlFactory {
 }
 
 impl MetadataSqlFactory {
-    pub fn open<T: SqlConstructFromMetadataDatabaseConfig>(&self) -> BoxFuture<T, Error> {
-        // FIXME: remove boxing and cloning when this crate is migrated to new futures
-        let factory = self.clone();
-        async move {
-            T::with_metadata_database_config(
-                factory.fb,
-                &factory.dbconfig,
-                &factory.mysql_options,
-                factory.readonly.0,
-            )
-            .await
-        }
-        .boxed()
-        .compat()
-        .boxify()
+    pub async fn open<T: SqlConstructFromMetadataDatabaseConfig>(&self) -> Result<T, Error> {
+        T::with_metadata_database_config(
+            self.fb,
+            &self.dbconfig,
+            &self.mysql_options,
+            self.readonly.0,
+        )
+        .await
     }
 
-    pub fn open_shardable<T: SqlShardableConstructFromMetadataDatabaseConfig>(
+    pub async fn open_shardable<T: SqlShardableConstructFromMetadataDatabaseConfig>(
         &self,
-    ) -> BoxFuture<T, Error> {
-        // FIXME: remove boxing and cloning when this crate is migrated to new futures
-        let factory = self.clone();
-        async move {
-            T::with_metadata_database_config(
-                factory.fb,
-                &factory.dbconfig,
-                &factory.mysql_options,
-                factory.readonly.0,
-            )
-            .await
-        }
-        .boxed()
-        .compat()
-        .boxify()
+    ) -> Result<T, Error> {
+        T::with_metadata_database_config(
+            self.fb,
+            &self.dbconfig,
+            &self.mysql_options,
+            self.readonly.0,
+        )
+        .await
     }
 
     pub fn tier_name_shardable<T: SqlShardableConstructFromMetadataDatabaseConfig>(
@@ -91,33 +74,28 @@ impl MetadataSqlFactory {
                 Some(ShardableRemoteDatabaseConfig::Sharded(config)) => {
                     Ok(config.shard_map.clone())
                 }
-                None => Err(anyhow!("missing tier name in configuration")),
+                None => bail!("missing tier name in configuration"),
             },
         }
     }
 
     /// Make connections to the primary metadata database
-    pub fn make_primary_connections(&self, label: String) -> BoxFuture<SqlConnections, Error> {
+    pub async fn make_primary_connections(&self, label: String) -> Result<SqlConnections, Error> {
         match &self.dbconfig {
             MetadataDatabaseConfig::Local(LocalDatabaseConfig { path }) => {
                 open_sqlite_path(path.join("sqlite_dbs"), self.readonly.0)
-                    .into_future()
                     .map(|conn| SqlConnections::new_single(Connection::with_sqlite(conn)))
-                    .boxify()
             }
             MetadataDatabaseConfig::Remote(config) => match &self.mysql_options.connection_type {
-                MysqlConnectionType::Myrouter(myrouter_port) => {
-                    future::ok(create_myrouter_connections(
-                        config.primary.db_address.clone(),
-                        None,
-                        *myrouter_port,
-                        self.mysql_options.read_connection_type(),
-                        PoolSizeConfig::for_regular_connection(),
-                        label,
-                        self.readonly.0,
-                    ))
-                    .boxify()
-                }
+                MysqlConnectionType::Myrouter(myrouter_port) => Ok(create_myrouter_connections(
+                    config.primary.db_address.clone(),
+                    None,
+                    *myrouter_port,
+                    self.mysql_options.read_connection_type(),
+                    PoolSizeConfig::for_regular_connection(),
+                    label,
+                    self.readonly.0,
+                )),
                 MysqlConnectionType::Mysql(global_connection_pool, pool_config) => {
                     create_mysql_connections_unsharded(
                         self.fb,
@@ -127,16 +105,17 @@ impl MetadataSqlFactory {
                         self.mysql_options.read_connection_type(),
                         self.readonly.0,
                     )
-                    .into_future()
-                    .boxify()
                 }
-                MysqlConnectionType::RawXDB => create_raw_xdb_connections(
-                    self.fb,
-                    config.primary.db_address.clone(),
-                    self.mysql_options.read_connection_type(),
-                    self.readonly.0,
-                )
-                .boxify(),
+                MysqlConnectionType::RawXDB => {
+                    create_raw_xdb_connections(
+                        self.fb,
+                        config.primary.db_address.clone(),
+                        self.mysql_options.read_connection_type(),
+                        self.readonly.0,
+                    )
+                    .compat()
+                    .await
+                }
             },
         }
     }

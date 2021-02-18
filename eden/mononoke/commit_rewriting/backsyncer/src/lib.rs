@@ -464,7 +464,6 @@ pub async fn open_backsyncer_dbs(
 
     let connections = sql_factory
         .make_primary_connections("bookmark_mutable_counters".to_string())
-        .compat()
         .await?;
 
     let counters = SqlMutableCounters::from_sql_connections(connections.clone());

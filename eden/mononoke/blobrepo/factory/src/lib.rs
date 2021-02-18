@@ -197,7 +197,6 @@ pub async fn open_blobrepo_given_datasources<'a>(
         Redaction::Enabled => {
             let redacted_blobs = sql_factory
                 .open::<SqlRedactedContentStore>()
-                .compat()
                 .await?
                 .get_all_redacted_blobs()
                 .compat()
@@ -516,7 +515,6 @@ async fn new_development(
         let sql_bookmarks = Arc::new(
             sql_factory
                 .open::<SqlBookmarksBuilder>()
-                .compat()
                 .await
                 .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?
                 .with_repo_id(repoid),
@@ -534,7 +532,6 @@ async fn new_development(
     let filenodes_builder = async {
         sql_factory
             .open_shardable::<NewFilenodesBuilder>()
-            .compat()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::Filenodes))
     };
@@ -542,7 +539,6 @@ async fn new_development(
     let changesets = async {
         sql_factory
             .open::<SqlChangesets>()
-            .compat()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::Changesets))
     };
@@ -550,7 +546,6 @@ async fn new_development(
     let bonsai_git_mapping = async {
         let conn = sql_factory
             .open::<SqlBonsaiGitMappingConnection>()
-            .compat()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))?;
 
@@ -560,7 +555,6 @@ async fn new_development(
     let bonsai_globalrev_mapping = async {
         sql_factory
             .open::<SqlBonsaiGlobalrevMapping>()
-            .compat()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))
     };
@@ -568,7 +562,6 @@ async fn new_development(
     let bonsai_svnrev_mapping = async {
         sql_factory
             .open::<SqlBonsaiSvnrevMapping>()
-            .compat()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::BonsaiSvnrevMapping))
     };
@@ -576,7 +569,6 @@ async fn new_development(
     let bonsai_hg_mapping = async {
         sql_factory
             .open::<SqlBonsaiHgMapping>()
-            .compat()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))
     };
@@ -584,7 +576,6 @@ async fn new_development(
     let hg_mutation_store = async {
         let conn = sql_factory
             .open::<SqlHgMutationStoreBuilder>()
-            .compat()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::HgMutationStore))?;
 
@@ -594,7 +585,6 @@ async fn new_development(
     let phases_factory = async {
         sql_factory
             .open::<SqlPhasesFactory>()
-            .compat()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::Phases))
     };
@@ -602,7 +592,6 @@ async fn new_development(
     let segmented_changelog_builder = async {
         sql_factory
             .open::<SegmentedChangelogBuilder>()
-            .compat()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::SegmentedChangelog))
     };
@@ -699,33 +688,27 @@ async fn new_production(
     let derived_data_lease = MemcacheOps::new(fb, "derived-data-lease", "")?;
 
     let filenodes_tier = sql_factory.tier_name_shardable::<NewFilenodesBuilder>()?;
-    let filenodes_builder = sql_factory.open_shardable::<NewFilenodesBuilder>().compat();
+    let filenodes_builder = sql_factory.open_shardable::<NewFilenodesBuilder>();
     let bookmarks = async {
-        let builder = sql_factory.open::<SqlBookmarksBuilder>().compat().await?;
+        let builder = sql_factory.open::<SqlBookmarksBuilder>().await?;
 
         Ok(builder.with_repo_id(repoid))
     };
-    let changesets = sql_factory.open::<SqlChangesets>().compat();
+    let changesets = sql_factory.open::<SqlChangesets>();
     let bonsai_git_mapping = async {
-        let conn = sql_factory
-            .open::<SqlBonsaiGitMappingConnection>()
-            .compat()
-            .await?;
+        let conn = sql_factory.open::<SqlBonsaiGitMappingConnection>().await?;
 
         Ok(conn.with_repo_id(repoid))
     };
-    let bonsai_globalrev_mapping = sql_factory.open::<SqlBonsaiGlobalrevMapping>().compat();
-    let bonsai_svnrev_mapping = sql_factory.open::<SqlBonsaiSvnrevMapping>().compat();
-    let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>().compat();
+    let bonsai_globalrev_mapping = sql_factory.open::<SqlBonsaiGlobalrevMapping>();
+    let bonsai_svnrev_mapping = sql_factory.open::<SqlBonsaiSvnrevMapping>();
+    let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>();
     let hg_mutation_store = async {
-        let conn = sql_factory
-            .open::<SqlHgMutationStoreBuilder>()
-            .compat()
-            .await?;
+        let conn = sql_factory.open::<SqlHgMutationStoreBuilder>().await?;
 
         Ok(conn.with_repo_id(repoid))
     };
-    let phases_factory = sql_factory.open::<SqlPhasesFactory>().compat();
+    let phases_factory = sql_factory.open::<SqlPhasesFactory>();
 
     // Wrap again to avoid any writes to memcache
     let blobstore = if readonly_storage.0 {
@@ -737,7 +720,6 @@ async fn new_production(
     let segmented_changelog_builder = async {
         sql_factory
             .open::<SegmentedChangelogBuilder>()
-            .compat()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::SegmentedChangelog))
     };
