@@ -10,7 +10,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
-use cloned::cloned;
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use std::sync::Arc;
@@ -34,7 +33,7 @@ pub trait SamplingHandler: std::fmt::Debug + Send + Sync {
 
 /// A layer over an existing blobstore that allows sampling of blobs, e.g. for
 /// corpus generation.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct SamplingBlobstore<T> {
     inner: T,
     handler: Arc<dyn SamplingHandler>,
@@ -54,10 +53,9 @@ impl<T: Blobstore> Blobstore for SamplingBlobstore<T> {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        cloned!(self.handler);
-        let get = self.inner.get(ctx, key);
-        let opt_blob = get.await?;
-        handler.sample_get(ctx, key, opt_blob.as_ref().map(|blob| blob.as_bytes()))?;
+        let opt_blob = self.inner.get(ctx, key).await?;
+        self.handler
+            .sample_get(ctx, key, opt_blob.as_ref().map(|blob| blob.as_bytes()))?;
         Ok(opt_blob)
     }
 
@@ -69,17 +67,14 @@ impl<T: Blobstore> Blobstore for SamplingBlobstore<T> {
         value: BlobstoreBytes,
     ) -> Result<()> {
         let sample_res = self.handler.sample_put(&ctx, &key, &value);
-        let put = self.inner.put(ctx, key, value);
-        put.await?;
+        self.inner.put(ctx, key, value).await?;
         sample_res
     }
 
     #[inline]
     async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
-        let is_present = self.inner.is_present(ctx, key);
-        cloned!(self.handler);
-        let is_present = is_present.await?;
-        handler.sample_is_present(ctx, key, is_present)?;
+        let is_present = self.inner.is_present(ctx, key).await?;
+        self.handler.sample_is_present(ctx, key, is_present)?;
         Ok(is_present)
     }
 }
