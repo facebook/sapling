@@ -27,6 +27,7 @@ const CACHELIB_REBALANCING_INTERVAL: &str = "cachelib-rebalancing-interval-secs"
 const PHASES_CACHE_SIZE: &str = "phases-cache-size";
 const SEGMENTED_CHANGELOG_CACHE_SIZE: &str = "segmented-changelog-cache-size";
 const GLOBALREVS_CACHE_SIZE: &str = "globalrevs-cache-size";
+const SVNREVS_CACHE_SIZE: &str = "svnrevs-cache-size";
 const BUCKETS_POWER: &str = "buckets-power";
 
 const ONE_GIB: usize = 1073741824; // 2^30 aka 1GiB
@@ -56,6 +57,10 @@ const CACHE_ARGS: &[(&str, &str)] = &[
     (
         GLOBALREVS_CACHE_SIZE,
         "override size of the bonsai/globalrev mapping cache",
+    ),
+    (
+        SVNREVS_CACHE_SIZE,
+        "override size of the bonsai/svnrev mapping cache",
     ),
     (PHASES_CACHE_SIZE, "override size of the phases cache"),
     (
@@ -243,6 +248,9 @@ pub(crate) fn parse_and_init_cachelib<'a>(
             if let Some(globalrev_cache_size) = matches.value_of(GLOBALREVS_CACHE_SIZE) {
                 settings.globalrev_cache_size = Some(globalrev_cache_size.parse().unwrap());
             }
+            if let Some(svnrev_cache_size) = matches.value_of(SVNREVS_CACHE_SIZE) {
+                settings.svnrev_cache_size = Some(svnrev_cache_size.parse().unwrap());
+            }
             if let Some(blob_cache_size) = matches.value_of("blob-cache-size") {
                 settings.blob_cache_size = Some(blob_cache_size.parse().unwrap());
             }
@@ -294,6 +302,7 @@ pub struct CachelibSettings {
     pub filenodes_history_cache_size: Option<usize>,
     pub idmapping_cache_size: Option<usize>,
     pub globalrev_cache_size: Option<usize>,
+    pub svnrev_cache_size: Option<usize>,
     pub blob_cache_size: Option<usize>,
     pub phases_cache_size: Option<usize>,
     pub segmented_changelog_cache_size: Option<usize>,
@@ -317,6 +326,7 @@ impl Default for CachelibSettings {
             filenodes_history_cache_size: None,
             idmapping_cache_size: None,
             globalrev_cache_size: None,
+            svnrev_cache_size: None,
             blob_cache_size: None,
             phases_cache_size: None,
             segmented_changelog_cache_size: None,
