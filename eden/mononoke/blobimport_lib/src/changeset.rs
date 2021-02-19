@@ -19,8 +19,7 @@ use futures::{
     FutureExt, StreamExt, TryFutureExt,
 };
 use futures_01_ext::{
-    spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt as _,
-    StreamExt as _,
+    try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt as _, StreamExt as _,
 };
 use futures_ext::FbTryFutureExt;
 use futures_old::{
@@ -228,11 +227,12 @@ fn upload_entry(
                         p1: p1.map(HgFileNodeId::new),
                         p2: p2.map(HgFileNodeId::new),
                     };
-                    let upload_fut = upload
-                        .upload_as_entry(ctx, blobstore, path)
+                    let upload_fut = upload.upload_as_entry(ctx, blobstore, path);
+                    tokio::task::spawn(upload_fut)
+                        .flatten_err()
                         .boxed()
-                        .compat();
-                    spawn_future(upload_fut).boxify()
+                        .compat()
+                        .boxify()
                 }
                 (Type::File(..), true) => {
                     let p1 = p1.map(HgFileNodeId::new);
@@ -256,11 +256,12 @@ fn upload_entry(
                                 p1,
                                 p2,
                             };
-                            let upload_fut = upload
-                                .upload_as_entry(ctx, blobstore, path)
+                            let upload_fut = upload.upload_as_entry(ctx, blobstore, path);
+                            tokio::task::spawn(upload_fut)
+                                .flatten_err()
                                 .boxed()
-                                .compat();
-                            spawn_future(upload_fut).boxify()
+                                .compat()
+                                .boxify()
                         })
                         .boxify()
                 }
