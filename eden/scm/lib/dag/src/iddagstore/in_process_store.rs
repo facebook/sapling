@@ -16,9 +16,11 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::IdDagStore;
 use super::StoreId;
+use crate::errors::bug;
 use crate::id::{Group, Id};
 use crate::ops::Persist;
 use crate::segment::Segment;
+use crate::segment::SegmentFlags;
 use crate::Level;
 use crate::Result;
 
@@ -30,6 +32,7 @@ pub struct InProcessStore {
     level_head_index: Vec<BTreeMap<Id, StoreId>>,
     // (child-group, parent) -> serialized Segment
     parent_index: BTreeMap<(Group, Id), BTreeSet<StoreId>>,
+    merge_segments: bool,
 }
 
 impl IdDagStore for InProcessStore {
@@ -55,9 +58,80 @@ impl IdDagStore for InProcessStore {
     }
 
     fn insert_segment(&mut self, segment: Segment) -> Result<()> {
-        let high = segment.high()?;
+        let span = segment.span()?;
+        let high = span.high;
         let level = segment.level()?;
         let parents = segment.parents()?;
+        let group = high.group();
+
+        // Can we merge the segment with the last flat segment in "master_segments"?
+        for _ in Some(()) {
+            if !self.merge_segments
+                || level != 0
+                || group != Group::MASTER
+                || parents.len() != 1
+                || parents[0] + 1 != span.low
+            {
+                break;
+            }
+            let (&last_high, &last_store_id) = match self
+                .get_head_index(0)
+                .and_then(|index| index.range(..group.max_id()).rev().next())
+            {
+                Some(found) => found,
+                None => break, // Cannot merge - No last flat segment.
+            };
+
+            let last_segment = self.get_segment(&last_store_id);
+            let last_span = last_segment.span()?;
+            if last_span.high != parents[0] {
+                break;
+            }
+
+            // Can merge!
+            //
+            // Sanity check: No high-level segments should cover "last_span".
+            for lv in 1..self.max_level()? {
+                if self
+                    .find_segment_by_head_and_level(last_span.high, lv)?
+                    .is_some()
+                {
+                    return bug(format!(
+                        "lv{} segment should not cover last flat segment {:?}! ({})",
+                        lv, last_span, "check build_high_level_segments"
+                    ));
+                }
+            }
+
+            let merged = {
+                let last_parents = last_segment.parents()?;
+                let flags = {
+                    let last_flags = last_segment.flags()?;
+                    let flags = segment.flags()?;
+                    (flags & SegmentFlags::ONLY_HEAD) | (last_flags & SegmentFlags::HAS_ROOT)
+                };
+                Segment::new(flags, level, last_span.low, high, &last_parents)
+            };
+
+            tracing::debug!(
+                "merge flat segments {:?} + {:?} => {:?}",
+                &last_segment,
+                &segment,
+                &merged
+            );
+
+            // Store the merged segment.
+            self.set_segment(&last_store_id, merged);
+
+            // Update the "head" index.
+            let index = self.get_head_index_mut(level);
+            index.remove(&last_high);
+            index.insert(high, last_store_id);
+
+            // No need to update "parents" index.
+
+            return Ok(());
+        }
 
         let store_id = match high.group() {
             Group::MASTER => {
@@ -70,7 +144,6 @@ impl IdDagStore for InProcessStore {
             }
         };
         if level == 0 {
-            let group = high.group();
             for parent in parents {
                 let children = self
                     .parent_index
@@ -233,6 +306,13 @@ impl InProcessStore {
             &StoreId::NonMaster(offset) => self.non_master_segments[offset].clone(),
         }
     }
+
+    fn set_segment(&mut self, store_id: &StoreId, segment: Segment) {
+        match store_id {
+            &StoreId::Master(offset) => self.master_segments[offset] = segment,
+            &StoreId::NonMaster(offset) => self.non_master_segments[offset] = segment,
+        }
+    }
 }
 
 impl InProcessStore {
@@ -242,6 +322,7 @@ impl InProcessStore {
             non_master_segments: Vec::new(),
             level_head_index: Vec::new(),
             parent_index: BTreeMap::new(),
+            merge_segments: false,
         }
     }
 }
