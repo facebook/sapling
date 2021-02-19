@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use super::process_timeout_error;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::{to_hg_bookmark_stream, BlobRepoHg};
@@ -13,16 +12,16 @@ use bookmarks::{
     Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness,
 };
 use context::CoreContext;
-use futures::{compat::Stream01CompatExt, Stream, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{compat::Stream01CompatExt, future, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use futures_01_ext::{FutureExt, StreamExt as OldStreamExt};
-use futures_old::{future as future_old, Future, Stream as OldStream};
+use futures_ext::{FbFutureExt, FbTryFutureExt};
+use futures_old::{future as future_old, Future};
 use mercurial_types::HgChangesetId;
 use mononoke_repo::MononokeRepo;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use tokio_old::util::FutureExt as TokioFutureExt;
 use tunables::tunables;
 use warm_bookmarks_cache::WarmBookmarksCache;
 
@@ -249,14 +248,13 @@ where
         self.repo
             .blobrepo()
             .get_publishing_bookmarks_maybe_stale(ctx)
-            .compat()
-            .fold(HashMap::new(), |mut map, item| {
+            .try_fold(HashMap::new(), |mut map, item| {
                 map.insert(item.0, item.1);
-                let ret: Result<_, Error> = Ok(map);
-                ret
+                future::ready(Ok(map))
             })
             .timeout(bookmarks_timeout())
-            .map_err(process_timeout_error)
+            .flatten_err()
+            .compat()
     }
 }
 

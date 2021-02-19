@@ -27,12 +27,14 @@ use futures::{
     channel::oneshot::{self, Sender},
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, select, Either, FutureExt, TryFutureExt},
-    pin_mut, StreamExt, TryStreamExt,
+    pin_mut,
+    stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_01_ext::{
-    spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,
-    FutureExt as OldFutureExt, StreamExt as OldStreamExt, StreamTimeoutError,
+    spawn_future, try_boxstream, BoxFuture, BoxStream, BufferedParams, FutureExt as OldFutureExt,
+    StreamExt as OldStreamExt, StreamTimeoutError,
 };
+use futures_ext::{FbFutureExt, FbTryFutureExt};
 use futures_old::future::ok;
 use futures_old::{
     future as future_old, stream, try_ready, Async, Future, IntoFuture, Poll, Stream,
@@ -84,8 +86,6 @@ use std::time::{Duration, Instant};
 use streaming_clone::RevlogStreamingChunks;
 use time_ext::DurationExt;
 use tokio::time::delay_for;
-use tokio_old::timer::timeout::Error as TimeoutError;
-use tokio_old::util::FutureExt as TokioFutureExt;
 use tracing::{trace_args, Traced};
 use tunables::tunables;
 
@@ -251,13 +251,6 @@ fn getpack_timeout() -> Duration {
         Duration::from_secs(timeout as u64)
     } else {
         Duration::from_secs(5 * 60 * 60)
-    }
-}
-
-pub(crate) fn process_timeout_error(err: TimeoutError<Error>) -> Error {
-    match err.into_inner() {
-        Some(err) => err,
-        None => Error::msg("timeout"),
     }
 }
 
@@ -1116,8 +1109,11 @@ impl HgCommands for RepoClient {
                     }
                 })
                 .collect()
+                .compat()
                 .timeout(default_timeout())
-                .map_err(process_timeout_error)
+                .flatten_err()
+                .boxed()
+                .compat()
                 .traced(self.session.trace(), ops::BETWEEN, trace_args!())
                 .timed(move |stats, _| {
                     command_logger.without_wireproto().finalize_command(&stats);
@@ -1158,8 +1154,6 @@ impl HgCommands for RepoClient {
                 }
 
                 future_old::ok(hostname)
-                    .timeout(default_timeout())
-                    .map_err(process_timeout_error)
                     .traced(self.session.trace(), ops::CLIENTTELEMETRY, trace_args!())
                     .timed(move |stats, _| {
                         command_logger.without_wireproto().finalize_command(&stats);
@@ -1178,8 +1172,11 @@ impl HgCommands for RepoClient {
             // that points to it.
             self.get_publishing_bookmarks_maybe_stale(ctx)
                 .map(|map| map.into_iter().map(|(_, hg_cs_id)| hg_cs_id).collect())
+                .compat()
                 .timeout(default_timeout())
-                .map_err(process_timeout_error)
+                .flatten_err()
+                .boxed()
+                .compat()
                 .traced(self.session.trace(), ops::HEADS, trace_args!())
                 .timed(move |stats, _| {
                     command_logger.without_wireproto().finalize_command(&stats);
@@ -1354,10 +1351,10 @@ impl HgCommands for RepoClient {
                 }
                 lookup_fut.compat().await
             }
+            .timeout(default_timeout())
+            .flatten_err()
             .boxed()
             .compat()
-            .timeout(default_timeout())
-            .map_err(process_timeout_error)
             .traced(self.session.trace(), ops::LOOKUP, trace_args!())
             .timed(move |stats, _| {
                 command_logger.without_wireproto().finalize_command(&stats);
@@ -1375,25 +1372,21 @@ impl HgCommands for RepoClient {
             let phases_hint = blobrepo.get_phases().clone();
 
             {
-                cloned!(ctx, nodes);
-                async move { blobrepo.get_hg_bonsai_mapping(ctx, nodes).await }
-            }
-            .boxed()
-            .compat()
-            .map(|hg_bcs_mapping| {
-                let mut bcs_ids = vec![];
-                let mut bcs_hg_mapping = hashmap! {};
-
-                for (hg, bcs) in hg_bcs_mapping {
-                    bcs_ids.push(bcs);
-                    bcs_hg_mapping.insert(bcs, hg);
-                }
-                (bcs_ids, bcs_hg_mapping)
-            })
-            .and_then({
                 cloned!(ctx);
-                move |(bcs_ids, bcs_hg_mapping)| {
-                    phases_hint
+                async move {
+                    let hg_bcs_mapping = blobrepo
+                        .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
+                        .await?;
+
+                    let mut bcs_ids = vec![];
+                    let mut bcs_hg_mapping = hashmap! {};
+
+                    for (hg, bcs) in hg_bcs_mapping {
+                        bcs_ids.push(bcs);
+                        bcs_hg_mapping.insert(bcs, hg);
+                    }
+
+                    let found_hg_changesets = phases_hint
                         .get_public(ctx, bcs_ids, false)
                         .map_ok(move |public_csids| {
                             public_csids
@@ -1401,17 +1394,20 @@ impl HgCommands for RepoClient {
                                 .filter_map(|csid| bcs_hg_mapping.get(&csid).cloned())
                                 .collect::<HashSet<_>>()
                         })
-                        .compat()
+                        .await?;
+
+                    let res = nodes
+                        .into_iter()
+                        .map(move |node| found_hg_changesets.contains(&node))
+                        .collect::<Vec<_>>();
+
+                    Result::<_, Error>::Ok(res)
                 }
-            })
-            .map(move |found_hg_changesets| {
-                nodes
-                    .into_iter()
-                    .map(move |node| found_hg_changesets.contains(&node))
-                    .collect::<Vec<_>>()
-            })
+            }
             .timeout(default_timeout())
-            .map_err(process_timeout_error)
+            .flatten_err()
+            .boxed()
+            .compat()
             .traced(self.session.trace(), ops::KNOWN, trace_args!())
             .timed(move |stats, known_nodes| {
                 if let Ok(known) = known_nodes {
@@ -1435,20 +1431,26 @@ impl HgCommands for RepoClient {
             let nodes_len = nodes.len();
 
             {
-                cloned!(ctx, nodes);
-                async move { blobrepo.get_hg_bonsai_mapping(ctx, nodes).await }
+                cloned!(ctx);
+                async move {
+                    let hg_bcs_mapping = blobrepo
+                        .get_hg_bonsai_mapping(ctx, nodes.clone())
+                        .await?
+                        .into_iter()
+                        .collect::<HashMap<_, _>>();
+
+                    let res = nodes
+                        .into_iter()
+                        .map(move |node| hg_bcs_mapping.contains_key(&node))
+                        .collect::<Vec<_>>();
+
+                    Result::<_, Error>::Ok(res)
+                }
             }
+            .timeout(default_timeout())
+            .flatten_err()
             .boxed()
             .compat()
-            .map(|hg_bcs_mapping| {
-                let hg_bcs_mapping: HashMap<_, _> = hg_bcs_mapping.into_iter().collect();
-                nodes
-                    .into_iter()
-                    .map(move |node| hg_bcs_mapping.contains_key(&node))
-                    .collect::<Vec<_>>()
-            })
-            .timeout(default_timeout())
-            .map_err(process_timeout_error)
             .traced(self.session.trace(), ops::KNOWNNODES, trace_args!())
             .timed(move |stats, known_nodes| {
                 if let Ok(known) = known_nodes {
@@ -1507,8 +1509,6 @@ impl HgCommands for RepoClient {
             res.insert("capabilities".to_string(), caps);
 
             future_old::ok(res)
-                .timeout(default_timeout())
-                .map_err(process_timeout_error)
                 .traced(self.session.trace(), ops::HELLO, trace_args!())
                 .timed(move |stats, _| {
                     command_logger.without_wireproto().finalize_command(&stats);
@@ -1556,58 +1556,54 @@ impl HgCommands for RepoClient {
         }
 
         self.command_future(ops::LISTKEYSPATTERNS, UNSAMPLED, |ctx, command_logger| {
-            let queries = patterns.into_iter().map({
-                cloned!(ctx);
-                let max = self.repo.list_keys_patterns_max();
-                let session_bookmarks_cache = self.session_bookmarks_cache.clone();
-                move |pattern| {
+            let max = self.repo.list_keys_patterns_max();
+            let session_bookmarks_cache = self.session_bookmarks_cache.clone();
+
+            let queries = patterns.into_iter().map(move |pattern| {
+                cloned!(ctx, session_bookmarks_cache);
+                async move {
                     if pattern.ends_with("*") {
                         // prefix match
-                        let prefix =
-                            try_boxfuture!(BookmarkPrefix::new(&pattern[..pattern.len() - 1]));
-                        session_bookmarks_cache
+                        let prefix = BookmarkPrefix::new(&pattern[..pattern.len() - 1])?;
+
+                        let bookmarks = session_bookmarks_cache
                             .get_bookmarks_by_prefix(&ctx, &prefix, max)
-                        .compat()
-                        .map(|(bookmark, cs_id): (BookmarkName, HgChangesetId)| {
-                            (bookmark.to_string(), cs_id)
-                        })
-                        .collect()
-                        .and_then(move |bookmarks| {
-                            if bookmarks.len() < max as usize {
-                                Ok(bookmarks)
-                            } else {
-                                Err(format_err!(
+                            .map_ok(|(bookmark, cs_id)| {
+                                (bookmark.to_string(), cs_id)
+                            })
+                            .try_collect::<Vec<_>>().await?;
+
+                        if bookmarks.len() < max as usize {
+                            Ok(bookmarks)
+                        } else {
+                            Err(format_err!(
                                     "Bookmark query was truncated after {} results, use a more specific prefix search.",
                                     max,
-                                ))
-                            }
-                        })
-                        .boxify()
+                            ))
+                        }
                     } else {
                         // literal match
-                        let bookmark = try_boxfuture!(BookmarkName::new(&pattern));
-                        {
-                            cloned!(ctx, session_bookmarks_cache);
-                            async move {
-                                let cs_id = session_bookmarks_cache.get_bookmark(ctx, bookmark).await?;
-                                match cs_id {
-                                    Some(cs_id) => Ok(vec![(pattern, cs_id)]),
-                                    None => Ok(Vec::new()),
-                                }
-                            }
+                        let bookmark = BookmarkName::new(&pattern)?;
+
+                        let cs_id = session_bookmarks_cache.get_bookmark(ctx, bookmark).await?;
+                        match cs_id {
+                            Some(cs_id) => Ok(vec![(pattern, cs_id)]),
+                            None => Ok(Vec::new()),
                         }
-                        .boxed()
-                        .compat()
-                        .boxify()
                     }
                 }
             });
 
-            stream::futures_unordered(queries)
-                .concat2()
-                .map(|bookmarks| bookmarks.into_iter().collect())
+            queries
+                .collect::<FuturesUnordered<_>>()
+                .try_fold(BTreeMap::new(), |mut ret, books| {
+                    ret.extend(books);
+                    future::ready(Ok(ret))
+                })
                 .timeout(default_timeout())
-                .map_err(process_timeout_error)
+                .flatten_err()
+                .boxed()
+                .compat()
                 .traced(self.session.trace(), ops::LISTKEYS, trace_args!())
                 .timed(move |stats, _| {
                     command_logger.without_wireproto().finalize_command(&stats);
@@ -1786,8 +1782,6 @@ impl HgCommands for RepoClient {
                             }
                         }
                     }
-                    .boxed()
-                    .compat()
                     .inspect_err({
                         cloned!(reponame);
                         move |err| {
@@ -1816,11 +1810,13 @@ impl HgCommands for RepoClient {
                             };
                         }
                     })
-                    .map(bytes_ext::copy_from_new)
-                    .from_err()
+                    .inspect_ok(move |_| STATS::push_success.add_value(1, (reponame,)))
+                    .map_ok(bytes_ext::copy_from_new)
+                    .map_err(Error::from)
                     .timeout(default_timeout())
-                    .map_err(process_timeout_error)
-                    .inspect(move |_| STATS::push_success.add_value(1, (reponame,)))
+                    .flatten_err()
+                    .boxed()
+                    .compat()
                     .traced(&trace, ops::UNBUNDLE, trace_args!())
                     .timed(move |stats, _| {
                         command_logger.without_wireproto().finalize_command(&stats);

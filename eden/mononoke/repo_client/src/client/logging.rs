@@ -11,7 +11,7 @@ use chrono::Utc;
 use cloned::cloned;
 use context::{CoreContext, PerfCounters, SessionId};
 use fbinit::FacebookInit;
-use futures::{FutureExt, TryFutureExt};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use futures_01_ext::FutureExt as _;
 use futures_old::{future, Future};
 use futures_stats::{FutureStats, StreamStats};
@@ -305,9 +305,9 @@ fn do_wireproto_logging<'a>(
 
                 builder.log();
             })
-            .or_else(|_| Ok(()))
+            .or_else(|_| Result::<_, Error>::Ok(()))
     });
-    tokio_old::spawn(f);
+    tokio::spawn(f.compat());
 }
 
 fn generate_random_string(len: usize) -> String {
