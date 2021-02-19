@@ -196,13 +196,11 @@ class mononokepeer(stdiopeer.stdiopeer):
 
         authdata = httpconnection.readauthforuri(self._ui, path, self._user)
         if not authdata:
+            errormessage = _("No certificates have been found to connect to Mononoke")
             helptext = ui.config("help", "tlsauthhelp")
-            self._abort(
-                error.ConfigError(
-                    _("No certificates have been found to connect to Mononoke\n\n")
-                    + helptext
-                )
-            )
+            if helptext:
+                errormessage += "\n\n" + helptext
+            self._abort(error.ConfigError(errormessage))
 
         (authname, auth) = authdata
         self._cert = auth.get("cert")
