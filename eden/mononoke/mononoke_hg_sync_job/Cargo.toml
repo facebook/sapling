@@ -22,6 +22,7 @@ context = { path = "../server/context", version = "0.1.0" }
 dbbookmarks = { path = "../bookmarks/dbbookmarks", version = "0.1.0" }
 filestore = { path = "../filestore", version = "0.1.0" }
 getbundle_response = { path = "../repo_client/getbundle_response", version = "0.1.0" }
+gotham_ext = { path = "../gotham_ext", version = "0.1.0" }
 hgserver_config = { path = "../../../configerator/structs/scm/mononoke/hgserverconf", version = "0.1.0" }
 lfs_protocol = { path = "../lfs_protocol", version = "0.1.0" }
 mercurial_bundle_replay_data = { path = "../mercurial/bundle_replay_data", version = "0.1.0" }
@@ -55,9 +56,9 @@ bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 clap = "2.33"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
-http = "0.1"
-hyper = "0.12"
-hyper-openssl = "0.7"
+http = "0.2"
+hyper = "0.13.10"
+hyper-openssl = "0.8"
 itertools = "0.8"
 maplit = "1.0"
 parking_lot = "0.10.2"

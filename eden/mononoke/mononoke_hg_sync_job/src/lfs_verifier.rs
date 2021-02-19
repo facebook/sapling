@@ -9,16 +9,13 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Error};
 use blobstore::Blobstore;
-use bytes_old::Bytes as BytesOld;
+use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::FutureFailureExt;
 use filestore::{fetch_stream, FetchKey};
-use futures::{
-    compat::Future01CompatExt, pin_mut, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
-};
-use futures_01_ext::{try_boxfuture, FutureExt as OldFutureExt};
-use futures_old::{future, stream, Future, IntoFuture, Stream};
+use futures::{future, pin_mut, stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use futures_old::Future;
+use gotham_ext::body_ext::BodyExt;
 use http::{status::StatusCode, uri::Uri};
 use hyper::{client::HttpConnector, Client};
 use hyper::{Body, Request};
@@ -65,7 +62,7 @@ pub struct LfsVerifier {
 
 impl LfsVerifier {
     pub fn new(batch_uri: Uri, blobstore: Arc<dyn Blobstore>) -> Result<Self, Error> {
-        let connector = HttpsConnector::new(4)?;
+        let connector = HttpsConnector::new()?;
         let client = Client::builder().build(connector);
 
         let inner = LfsVerifierInner {
@@ -84,68 +81,60 @@ impl LfsVerifier {
         ctx: CoreContext,
         blobs: &[(Sha256, u64)],
     ) -> impl Future<Item = (), Error = Error> {
-        let batch = build_upload_request_batch(blobs);
-        let body: BytesOld =
-            try_boxfuture!(serde_json::to_vec(&batch).context(ErrorKind::SerializationFailed))
-                .into();
-
         let uri = self.inner.batch_uri.clone();
-        let req = try_boxfuture!(
-            Request::post(uri)
-                .body(body.into())
-                .context(ErrorKind::RequestCreationFailed)
-        );
-
         let blobstore = self.inner.blobstore.clone();
-
         let client = self.inner.client.clone();
-        self.inner
-            .client
-            .request(req)
-            .context(ErrorKind::BatchRequestNoResponse)
-            .map_err(Error::from)
-            .and_then(|response| {
-                let (head, body) = response.into_parts();
 
-                if !head.status.is_success() {
-                    return Err(ErrorKind::BatchRequestFailed(head.status).into())
-                        .into_future()
-                        .left_future();
-                }
+        let batch = build_upload_request_batch(blobs);
 
-                body.concat2()
-                    .context(ErrorKind::BatchRequestReadFailed)
-                    .map_err(Error::from)
-                    .right_future()
-            })
-            .and_then(|body| {
-                serde_json::from_slice::<ResponseBatch>(&body)
-                    .context(ErrorKind::DeserializationFailed)
-                    .map_err(Error::from)
-            })
-            .and_then(move |batch| {
-                let missing_objects = find_missing_objects(batch);
+        async move {
+            let body =
+                Bytes::from(serde_json::to_vec(&batch).context(ErrorKind::SerializationFailed)?);
 
-                if missing_objects.is_empty() {
-                    return future::ok(()).boxify();
-                }
+            let req = Request::post(uri)
+                .body(body.into())
+                .context(ErrorKind::RequestCreationFailed)?;
 
-                for object in &missing_objects {
-                    warn!(ctx.logger(), "missing {:?} object, uploading", object);
-                }
+            let response = client
+                .request(req)
+                .await
+                .context(ErrorKind::BatchRequestNoResponse)?;
 
-                stream::iter_ok(missing_objects)
-                    .map(move |object| {
-                        cloned!(ctx, client, object, blobstore);
-                        async move { upload(ctx, client, object, blobstore).await }
-                            .boxed()
-                            .compat()
-                    })
-                    .buffer_unordered(100)
-                    .for_each(|_| Ok(()))
-                    .boxify()
-            })
-            .boxify()
+            let (head, body) = response.into_parts();
+
+            if !head.status.is_success() {
+                return Result::<_, Error>::Err(ErrorKind::BatchRequestFailed(head.status).into())?;
+            }
+
+            let body = body
+                .try_concat_body(&head.headers)
+                .context(ErrorKind::BatchRequestReadFailed)?
+                .await
+                .context(ErrorKind::BatchRequestReadFailed)?;
+
+            let batch = serde_json::from_slice::<ResponseBatch>(&body)
+                .context(ErrorKind::DeserializationFailed)?;
+
+            let missing_objects = find_missing_objects(batch);
+
+            if missing_objects.is_empty() {
+                return Ok(());
+            }
+
+            for object in &missing_objects {
+                warn!(ctx.logger(), "missing {:?} object, uploading", object);
+            }
+
+            stream::iter(missing_objects)
+                .map(|object| upload(&ctx, &client, object, blobstore.clone()))
+                .buffer_unordered(100)
+                .try_for_each(|()| future::ready(Ok(())))
+                .await?;
+
+            Result::<_, Error>::Ok(())
+        }
+        .boxed()
+        .compat()
     }
 }
 
@@ -179,9 +168,9 @@ fn find_missing_objects(batch: ResponseBatch) -> Vec<ResponseObject> {
         .collect()
 }
 
-async fn upload(
-    ctx: CoreContext,
-    client: HttpsHyperClient,
+async fn upload<'a>(
+    ctx: &'a CoreContext,
+    client: &'a HttpsHyperClient,
     resp_object: ResponseObject,
     blobstore: Arc<dyn Blobstore>,
 ) -> Result<(), Error> {
@@ -191,12 +180,13 @@ async fn upload(
                 let ObjectAction { href, .. } = action;
 
                 let key = FetchKey::from(Sha256::from_byte_array(resp_object.object.oid.0));
-                let s = ({
+
+                let s = {
                     cloned!(ctx);
                     async_stream::stream! {
                         let s = fetch_stream(
                             &blobstore,
-                            ctx.clone(),
+                            ctx,
                             key,
                         );
 
@@ -205,31 +195,31 @@ async fn upload(
                             yield value;
                         }
                     }
-                })
-                .boxed()
-                .compat();
+                };
 
-                let body = Body::wrap_stream(s.map(|s| s.to_vec()));
+                let body = Body::wrap_stream(s);
+
                 let req = Request::put(format!("{}", href))
                     .header("Content-Length", &resp_object.object.size.to_string())
                     .body(body)?;
 
-                let res = client.request(req).compat().await?;
+                let res = client.request(req).await?;
                 let (head, body) = res.into_parts();
 
+                let body = body.try_concat_body(&head.headers)?.await?;
+
                 if !head.status.is_success() {
-                    let body = body.concat2().compat().await?;
                     return Err(ErrorKind::UpstreamError(
                         head.status,
                         String::from_utf8_lossy(&body).to_string(),
                     )
                     .into());
-                } else {
-                    info!(
-                        ctx.logger(),
-                        "uploaded content for {:?}", resp_object.object
-                    );
                 }
+
+                info!(
+                    ctx.logger(),
+                    "uploaded content for {:?}", resp_object.object
+                );
 
                 Ok(())
             }
