@@ -21,7 +21,7 @@ use parking_lot::RwLock;
 use tokio::task::spawn_blocking;
 
 use configparser::{config::ConfigSet, convert::ByteCount};
-use edenapi_types::TreeEntry;
+use edenapi_types::{FileEntry, TreeEntry};
 use indexedlog::log::IndexOutput;
 use lz4_pyframe::{compress, decompress};
 use types::{hgid::ReadHgIdExt, HgId, Key, RepoPath};
@@ -252,6 +252,16 @@ impl std::convert::From<TreeEntry> for Entry {
             v.key().clone(),
             v.data_unchecked().unwrap().into(),
             Metadata::default(),
+        )
+    }
+}
+
+impl std::convert::From<FileEntry> for Entry {
+    fn from(v: FileEntry) -> Self {
+        Entry::new(
+            v.key().clone(),
+            v.data_unchecked().into(),
+            v.metadata().clone(),
         )
     }
 }

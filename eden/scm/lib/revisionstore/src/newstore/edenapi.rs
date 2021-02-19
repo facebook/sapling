@@ -14,12 +14,21 @@ use futures::StreamExt;
 use futures_batch::ChunksTimeoutStreamExt;
 
 use edenapi::EdenApi;
-use edenapi_types::{TreeAttributes, TreeEntry};
+use edenapi_types::{FileEntry, TreeAttributes, TreeEntry};
 use types::Key;
 
 use crate::newstore::{fetch_error, FetchStream, KeyStream, ReadStore};
 
-// TODO: These should be configurable
+// TODO(meyer): These should be configurable
+// EdenApi's API is batch-based and async, and it will split a large batch into multiple requests to send in parallel
+// but it won't join separate batches into larger ones. Because the input stream may not terminate in a timely fashion,
+// we group the stream into batches with a timeout so that EdenApi will actually be sent batches, rather than constructing
+// a batch of one for each item in the stream. This is worth investigating in the future, though - we could be sending
+// "batches of one" to EdenApi, or we could change the EdenApi client to batch across requests, not just within them.
+// I believe Arun has determined that even with HTTP2, some level of batching within requests is advantageous instead
+// of individually streaming a separate request for each key, but it's still worth making sure we're doing the rgiht thing.
+// We might also want to just grab all ready items from the stream in a batch, with no timeout, if the cost of small batches
+// is smaller than the cost of the timeout waiting to collect larger ones.
 const BATCH_SIZE: usize = 100;
 const BATCH_TIMEOUT: Duration = Duration::from_millis(100);
 
@@ -51,6 +60,32 @@ where
                                     // TODO: What should happen when an entire batch fails?
                                     Err(e) => Err((None, Error::new(e))),
                                 })) as FetchStream<Key, TreeEntry>
+                            })
+                    }
+                })
+                .flatten(),
+        )
+    }
+}
+
+#[async_trait]
+impl<C> ReadStore<Key, FileEntry> for EdenApiAdapter<C>
+where
+    C: EdenApi,
+{
+    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Key, FileEntry> {
+        Box::pin(
+            keys.chunks_timeout(BATCH_SIZE, BATCH_TIMEOUT)
+                .then(move |keys| {
+                    let self_ = self.clone();
+                    async move {
+                        self_
+                            .client
+                            .files(self_.repo.clone(), keys, None)
+                            .await
+                            .map_or_else(fetch_error, |s| {
+                                Box::pin(s.entries.map(|v| v.map_err(|e| (None, Error::new(e)))))
+                                    as FetchStream<Key, FileEntry>
                             })
                     }
                 })

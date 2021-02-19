@@ -21,6 +21,7 @@ cpython = { version = "0.5", default-features = false }
 configparser = { path = "../configparser" }
 dag = { path = "../dag" }
 edenapi = { path = "../edenapi" }
+edenapi_types = { path = "../edenapi/types" }
 edenfs-client = { path = "../edenfs-client"}
 encoding = { path = "../encoding" }
 env_logger = "0.7"
