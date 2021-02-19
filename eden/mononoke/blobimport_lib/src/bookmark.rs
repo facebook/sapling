@@ -12,7 +12,7 @@ use anyhow::{format_err, Error};
 use ascii::AsciiString;
 use cloned::cloned;
 use futures::{FutureExt, TryFutureExt};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt as _};
+use futures_01_ext::{try_boxfuture, BoxFuture, FutureExt as _};
 use futures_old::{prelude::*, stream};
 use slog::{info, Logger};
 

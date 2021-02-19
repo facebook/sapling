@@ -18,7 +18,7 @@ use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     FutureExt, StreamExt, TryFutureExt,
 };
-use futures_ext::{
+use futures_01_ext::{
     spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt as _,
     StreamExt as _,
 };

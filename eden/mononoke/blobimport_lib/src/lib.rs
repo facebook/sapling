@@ -26,7 +26,7 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
     Stream,
 };
-use futures_ext::StreamExt as OldStreamExt;
+use futures_01_ext::StreamExt as OldStreamExt;
 use futures_old::Future as OldFuture;
 use slog::{debug, error, info};
 

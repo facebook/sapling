@@ -6,7 +6,7 @@
  */
 
 use anyhow::{format_err, Error, Result};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_01_ext::{BoxFuture, FutureExt};
 use futures_old::{
     sync::{mpsc, oneshot},
     Future, IntoFuture, Stream,
