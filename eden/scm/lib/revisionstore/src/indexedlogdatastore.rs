@@ -30,7 +30,7 @@ use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::{ExtStoredPolicy, LocalStore},
-    newstore::{FetchStream, KeyStream, ReadStore},
+    newstore::{FetchStream, KeyStream, ReadStore, WriteResults, WriteStore, WriteStream},
     repack::ToKeys,
     sliceext::SliceExt,
     types::StoreKey,
@@ -51,13 +51,24 @@ pub struct IndexedLogHgIdDataStore {
     extstored_policy: ExtStoredPolicy,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Entry {
     key: Key,
     metadata: Metadata,
 
     content: Option<Bytes>,
     compressed_content: Option<Bytes>,
+}
+
+impl std::cmp::PartialEq for Entry {
+    fn eq(&self, other: &Self) -> bool {
+        self.key == other.key
+            && self.metadata == other.metadata
+            && match (self.content_inner(), other.content_inner()) {
+                (Ok(c1), Ok(c2)) if c1 == c2 => true,
+                _ => false,
+            }
+    }
 }
 
 impl Entry {
@@ -146,18 +157,23 @@ impl Entry {
         Ok(log.append(buf)?)
     }
 
-    pub fn content(&mut self) -> Result<Bytes> {
+    fn content_inner(&self) -> Result<Bytes> {
         if let Some(content) = self.content.as_ref() {
             return Ok(content.clone());
         }
 
         if let Some(compressed) = self.compressed_content.as_ref() {
             let raw = Bytes::from(decompress(&compressed)?);
-            self.content = Some(raw.clone());
             Ok(raw)
         } else {
             bail!("No content");
         }
+    }
+
+    pub fn content(&mut self) -> Result<Bytes> {
+        self.content = Some(self.content_inner()?);
+        // this unwrap is safe because we assign the field in the line above
+        Ok(self.content.as_ref().unwrap().clone())
     }
 
     pub fn metadata(&self) -> &Metadata {
@@ -249,7 +265,7 @@ impl ReadStore<Key, Entry> for IndexedLogHgIdDataStore {
             spawn_blocking(move || {
                 let inner = self_.inner.read();
                 match Entry::from_log(&key, &inner.log) {
-                    // TODO: NotFound error should be strongly typed.
+                    // TODO(meyer): NotFound error should be strongly typed.
                     Ok(None) => Err((Some(key.clone()), anyhow!("key not found in indexedlog"))),
                     Ok(Some(entry)) => Ok(entry),
                     Err(e) => Err((Some(key.clone()), e)),
@@ -260,6 +276,31 @@ impl ReadStore<Key, Entry> for IndexedLogHgIdDataStore {
                     Ok(Ok(entry)) => Ok(entry),
                     Ok(Err(e)) => Err(e),
                     Err(e) => Err((Some(key_), e.into())),
+                }
+            })
+        }))
+    }
+}
+
+#[async_trait]
+impl WriteStore<Key, Entry> for IndexedLogHgIdDataStore {
+    async fn write_stream(self: Arc<Self>, values: WriteStream<Entry>) -> WriteResults<Key> {
+        Box::pin(values.then(move |value| {
+            let self_ = self.clone();
+            let key = value.key.clone();
+            spawn_blocking(move || {
+                let mut inner = self_.inner.write();
+                let key = value.key.clone();
+                match value.write_to_log(&mut inner.log) {
+                    Ok(()) => Ok(key),
+                    Err(e) => Err((Some(key), e)),
+                }
+            })
+            .map(move |spawn_res| {
+                match spawn_res {
+                    Ok(Ok(entry)) => Ok(entry),
+                    Ok(Err(e)) => Err(e),
+                    Err(e) => Err((Some(key), e.into())),
                 }
             })
         }))
@@ -722,6 +763,57 @@ mod tests {
                 .content()
                 .unwrap(),
             Bytes::from(&[2, 3, 4, 5][..])
+        );
+    }
+
+    #[test]
+    fn test_newstore_write_read() {
+        let tempdir = TempDir::new().unwrap();
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
+
+        let entry_key = key("a", "1");
+        let content = Bytes::from(&[1, 2, 3, 4][..]);
+        let metadata = Default::default();
+        let entry = Entry::new(entry_key.clone(), content, metadata);
+
+        let log = Arc::new(log);
+
+        let entries = vec![entry];
+
+        let written: Vec<_> = block_on_stream(block_on(
+            log.clone()
+                .write_stream(Box::pin(stream::iter(entries.clone()))),
+        ))
+        .collect();
+
+        assert_eq!(
+            written
+                .into_iter()
+                .map(|r| r.expect("failed to write to test write store"))
+                .collect::<Vec<_>>(),
+            vec![entry_key.clone()]
+        );
+
+        // TODO(meyer): Add "flush" support to WriteStore trait
+        log.flush().unwrap();
+
+        let fetched: Vec<_> = block_on_stream(block_on(
+            log.fetch_stream(Box::pin(stream::iter(vec![entry_key]))),
+        ))
+        .collect();
+
+        assert_eq!(
+            fetched
+                .into_iter()
+                .map(|r| r.expect("failed to fetch from test read store"))
+                .collect::<Vec<_>>(),
+            entries
         );
     }
 }
