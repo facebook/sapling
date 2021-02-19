@@ -1,22 +1,22 @@
 [package]
 name = "microwave"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 blobrepo = { path = "../blobrepo", version = "0.1.0" }
 blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
 blobstore = { path = "../blobstore", version = "0.1.0" }
 changesets = { path = "../changesets", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
-filenodes = { path = "../filenodes", version = "0.1.0" }
-mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
-microwave-if = { path = "if", version = "0.1.0" }
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
-anyhow = "1.0"
+filenodes = { path = "../filenodes", version = "0.1.0" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
+mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
+microwave_if = { path = "if", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

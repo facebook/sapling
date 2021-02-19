@@ -1,28 +1,28 @@
 [package]
 name = "skeleton_manifest"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [lib]
 path = "lib.rs"
 
 [dependencies]
+anyhow = "1.0"
+async-trait = "0.1.29"
 blobrepo = { path = "../../blobrepo", version = "0.1.0" }
 blobstore = { path = "../../blobstore", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+bytes = { version = "0.5", features = ["serde"] }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 derived_data = { path = "..", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 manifest = { path = "../../manifest", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 repo_blobstore = { path = "../../blobrepo/repo_blobstore", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 sorted_vector_map = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-async-trait = "0.1.29"
-bytes = { version = "0.5", features = ["serde"] }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
 thiserror = "1.0"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
@@ -31,10 +31,10 @@ blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
 bookmarks = { path = "../../bookmarks", version = "0.1.0" }
 derived_data_test_utils = { path = "../test_utils", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
 mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+pretty_assertions = "0.6"
 revset = { path = "../../revset", version = "0.1.0" }
 tests_utils = { path = "../../tests/utils", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-pretty_assertions = "0.6"
 tokio-compat = "0.1"

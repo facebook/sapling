@@ -1,21 +1,21 @@
 [package]
 name = "derived_data_test_utils"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [lib]
 path = "lib.rs"
 
 [dependencies]
+anyhow = "1.0"
 blobrepo = { path = "../../blobrepo", version = "0.1.0" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
 blobstore = { path = "../../blobstore", version = "0.1.0" }
 bounded_traversal = { path = "../../common/bounded_traversal", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 manifest = { path = "../../manifest", version = "0.1.0" }
 mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-anyhow = "1.0"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }

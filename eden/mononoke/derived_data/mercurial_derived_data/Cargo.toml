@@ -1,27 +1,27 @@
 [package]
 name = "mercurial_derived_data"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [lib]
 path = "lib.rs"
 
 [dependencies]
+anyhow = "1.0"
+async-trait = "0.1.29"
 blobrepo = { path = "../../blobrepo", version = "0.1.0" }
 blobrepo_common = { path = "../../blobrepo/common", version = "0.1.0" }
 blobrepo_errors = { path = "../../blobrepo/errors", version = "0.1.0" }
 blobstore = { path = "../../blobstore", version = "0.1.0" }
 bonsai_hg_mapping = { path = "../../bonsai_hg_mapping", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 derived_data = { path = "..", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 manifest = { path = "../../manifest", version = "0.1.0" }
 mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-async-trait = "0.1.29"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }

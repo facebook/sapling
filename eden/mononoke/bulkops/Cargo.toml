@@ -1,23 +1,23 @@
 [package]
 name = "bulkops"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 bounded_traversal = { path = "../common/bounded_traversal", version = "0.1.0" }
 changesets = { path = "../changesets", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 phases = { path = "../phases", version = "0.1.0" }
-anyhow = "1.0"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]
 blobrepo = { path = "../blobrepo", version = "0.1.0" }
 bookmarks = { path = "../bookmarks", version = "0.1.0" }
-fixtures = { path = "../tests/fixtures", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fixtures = { path = "../tests/fixtures", version = "0.1.0" }
 tokio-compat = "0.1"

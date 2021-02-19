@@ -1,21 +1,21 @@
 [package]
 name = "blobrepo_common"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 blobrepo = { path = "..", version = "0.1.0" }
 blobstore = { path = "../../blobstore", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 filenodes = { path = "../../filenodes", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 manifest = { path = "../../manifest", version = "0.1.0" }
+maplit = "1.0"
 mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-maplit = "1.0"
 thiserror = "1.0"

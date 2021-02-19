@@ -1,28 +1,28 @@
 [package]
 name = "hgproto"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
+bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures = "0.1.30"
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+hex = "0.4"
+itertools = "0.8"
+limited_async_read = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 mercurial_bundles = { path = "../mercurial/bundles", version = "0.1.0" }
 mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-limited_async_read = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
-futures = "0.1.30"
-hex = "0.4"
-itertools = "0.8"
-nom = { version = "3", features = [ "verbose-errors" ] }
+nom = { version = "3", features = ["verbose-errors"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio-io = "0.1"
 
 [dev-dependencies]
-mercurial_types-mocks = { path = "../mercurial/types/mocks", version = "0.1.0" }
 maplit = "1.0"
+mercurial_types-mocks = { path = "../mercurial/types/mocks", version = "0.1.0" }
 quickcheck = "0.9"

@@ -1,35 +1,35 @@
 [package]
 name = "hgcli"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
 alpn = { path = "../alpn", version = "0.1.0" }
-permission_checker = { path = "../permission_checker", version = "0.1.0" }
-scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
-session_id = { path = "../server/session_id", version = "0.1.0" }
-sshrelay = { path = "../sshrelay", version = "0.1.0" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-hostname = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 clap = "2.33"
 dns-lookup = "1.0"
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
 futures-util = "0.3.7"
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+hostname = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 libc = "0.2.86"
 openssl = "0.10"
+permission_checker = { path = "../permission_checker", version = "0.1.0" }
 rand = { version = "0.7", features = ["small_rng"] }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+session_id = { path = "../server/session_id", version = "0.1.0" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 slog-term = "2.4.2"
+sshrelay = { path = "../sshrelay", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tokio-openssl = "0.4"
 tokio-util = { version = "0.2", features = ["codec", "udp"] }

@@ -1,36 +1,36 @@
 [package]
 name = "virtually_sharded_blobstore"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
-async_limiter = { path = "../../common/async_limiter", version = "0.1.0" }
-blobstore = { path = "..", version = "0.1.0" }
-cacheblob = { path = "../cacheblob", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-tunables = { path = "../../tunables", version = "0.1.0" }
-cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
+async_limiter = { path = "../../common/async_limiter", version = "0.1.0" }
+blobstore = { path = "..", version = "0.1.0" }
 bytes = { version = "0.5", features = ["serde"] }
+cacheblob = { path = "../cacheblob", version = "0.1.0" }
+cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 scopeguard = "1.0.0"
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tunables = { path = "../../tunables", version = "0.1.0" }
 twox-hash = "1.5"
 
 [dev-dependencies]
-scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
 borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 nonzero_ext = "0.2"
 once_cell = "1.4"
 ratelimit_meter = "5"
+scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
 slog = { version = "2.5", features = ["max_level_debug"] }
+slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }

@@ -1,53 +1,53 @@
 [package]
 name = "lfs_server"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
+async-trait = "0.1.29"
 blobrepo = { path = "../blobrepo", version = "0.1.0" }
 blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
 blobstore = { path = "../blobstore", version = "0.1.0" }
+bytes = { version = "0.5", features = ["serde"] }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+clap = "2.33"
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 cmdlib = { path = "../cmdlib", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
-filestore = { path = "../filestore", version = "0.1.0" }
-gotham_ext = { path = "../gotham_ext", version = "0.1.0" }
-lfs_protocol = { path = "../lfs_protocol", version = "0.1.0" }
-lfs_server_config = { path = "../../../configerator/structs/scm/mononoke/lfs_server", version = "0.1.0" }
-metaconfig_parser = { path = "../metaconfig/parser", version = "0.1.0" }
-metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
-permission_checker = { path = "../permission_checker", version = "0.1.0" }
-redactedblobstore = { path = "../blobstore/redactedblobstore", version = "0.1.0" }
-scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
-time_window_counter = { path = "../time_window_counter", version = "0.1.0" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-async-trait = "0.1.29"
-bytes = { version = "0.5", features = ["serde"] }
-clap = "2.33"
+filestore = { path = "../filestore", version = "0.1.0" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 gotham = { version = "=0.5.0", default-features = false }
 gotham_derive = "=0.5.0"
+gotham_ext = { path = "../gotham_ext", version = "0.1.0" }
 http = "0.2"
 hyper = "0.13.10"
 hyper-openssl = "0.8"
 itertools = "0.8"
+lfs_protocol = { path = "../lfs_protocol", version = "0.1.0" }
+lfs_server_config = { path = "../../../configerator/structs/scm/mononoke/lfs_server", version = "0.1.0" }
 maplit = "1.0"
+metaconfig_parser = { path = "../metaconfig/parser", version = "0.1.0" }
+metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
 mime = "0.3.14"
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+permission_checker = { path = "../permission_checker", version = "0.1.0" }
 pin-project = "0.4"
 rand = { version = "0.7", features = ["small_rng"] }
+redactedblobstore = { path = "../blobstore/redactedblobstore", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 thiserror = "1.0"
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+time_window_counter = { path = "../time_window_counter", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tokio-openssl = "0.4"
 

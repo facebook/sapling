@@ -1,16 +1,16 @@
 [package]
 name = "fileblob"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
+async-trait = "0.1.29"
 blobstore = { path = "..", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-anyhow = "1.0"
-async-trait = "0.1.29"
 percent-encoding = "2.1"
 tempfile = "3.1"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

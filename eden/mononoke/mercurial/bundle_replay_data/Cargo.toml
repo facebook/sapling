@@ -1,13 +1,13 @@
 [package]
 name = "mercurial_bundle_replay_data"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 bookmarks = { path = "../../bookmarks", version = "0.1.0" }
 mercurial_types = { path = "../types", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-anyhow = "1.0"
 serde_json = { version = "1.0", features = ["float_roundtrip"] }

@@ -1,17 +1,17 @@
 [package]
 name = "write_stub_log_entry"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 bookmarks = { path = "../../bookmarks", version = "0.1.0" }
+clap = "2.33"
 cmdlib = { path = "../../cmdlib", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 dbbookmarks = { path = "../../bookmarks/dbbookmarks", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-clap = "2.33"
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

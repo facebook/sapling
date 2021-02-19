@@ -1,32 +1,32 @@
 [package]
 name = "cross_repo_sync_test_utils"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [lib]
 path = "lib.rs"
 
 [dependencies]
+anyhow = "1.0"
+ascii = "1.0"
 blobrepo = { path = "../../../blobrepo", version = "0.1.0" }
 blobrepo_factory = { path = "../../../blobrepo/factory", version = "0.1.0" }
 blobrepo_hg = { path = "../../../blobrepo/blobrepo_hg", version = "0.1.0" }
 blobstore = { path = "../../../blobstore", version = "0.1.0" }
 bookmarks = { path = "../../../bookmarks", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 context = { path = "../../../server/context", version = "0.1.0" }
 cross_repo_sync = { path = "..", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 live_commit_sync_config = { path = "../../live_commit_sync_config", version = "0.1.0" }
+maplit = "1.0"
 megarepolib = { path = "../../megarepo", version = "0.1.0" }
 metaconfig_types = { path = "../../../metaconfig/types", version = "0.1.0" }
 mononoke_types = { path = "../../../mononoke_types", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 sql_construct = { path = "../../../common/sql_construct", version = "0.1.0" }
 sql_ext = { path = "../../../common/rust/sql_ext", version = "0.1.0" }
 synced_commit_mapping = { path = "../../synced_commit_mapping", version = "0.1.0" }
 tests_utils = { path = "../../../tests/utils", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-ascii = "1.0"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-maplit = "1.0"

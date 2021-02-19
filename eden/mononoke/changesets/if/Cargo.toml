@@ -1,8 +1,8 @@
 [package]
-name = "changeset-entry-thrift"
-edition = "2018"
+name = "changeset_entry_thrift"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 include = ["thrift_lib.rs"]
 build = "thrift_build.rs"
@@ -14,14 +14,14 @@ path = "thrift_lib.rs"
 thrift_compiler = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 
 [dependencies]
-mononoke_types-thrift = { path = "../../mononoke_types/if", version = "0.1.0" }
-codegen_includer_proc_macro = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
 anyhow = "1.0"
 async-trait = "0.1.29"
+codegen_includer_proc_macro = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 const-cstr = "0.3.0"
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 lazy_static = "1.0"
+mononoke_types_thrift = { path = "../../mononoke_types/if", version = "0.1.0" }
 ref-cast = "1.0.2"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = "1.0"

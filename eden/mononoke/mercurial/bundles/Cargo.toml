@@ -1,47 +1,47 @@
 [package]
 name = "mercurial_bundles"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
-context = { path = "../../server/context", version = "0.1.0" }
-mercurial_mutation = { path = "../mutation", version = "0.1.0" }
-mercurial_types = { path = "../types", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-phases = { path = "../../phases", version = "0.1.0" }
-revisionstore_types = { path = "../../../scm/lib/revisionstore/types", version = "0.1.0" }
-types = { path = "../../../scm/lib/types", version = "0.1.0" }
-vlqencoding = { path = "../../../scm/lib/vlqencoding", version = "0.1.0" }
-async_compression = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-limited_async_read = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
+async_compression = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 bufsize = "0.4"
 byteorder = "1.3"
 bytes = { version = "0.5", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
+bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 itertools = "0.8"
 lazy_static = "1.0"
+limited_async_read = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 maplit = "1.0"
+mercurial_mutation = { path = "../mutation", version = "0.1.0" }
+mercurial_types = { path = "../types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 percent-encoding = "2.1"
+phases = { path = "../../phases", version = "0.1.0" }
 quickcheck = "0.9"
 rand = { version = "0.7", features = ["small_rng"] }
+revisionstore_types = { path = "../../../scm/lib/revisionstore/types", version = "0.1.0" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tokio-codec = "0.1"
 tokio-io = "0.1"
+types = { path = "../../../scm/lib/types", version = "0.1.0" }
+vlqencoding = { path = "../../../scm/lib/vlqencoding", version = "0.1.0" }
 
 [dev-dependencies]
-mercurial_types-mocks = { path = "../types/mocks", version = "0.1.0" }
+assert_matches = "1.5"
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-assert_matches = "1.5"
+mercurial_types-mocks = { path = "../types/mocks", version = "0.1.0" }
 partial-io = { git = "https://github.com/lukaspiatkowski/rust-partial-io", rev = "9cab8b8a2b41f2c78aa109dcba5d00212cbe43cf", features = ["quickcheck_types", "tokio"] }
 tokio-compat = "0.1"

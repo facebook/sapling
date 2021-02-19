@@ -1,17 +1,17 @@
 [package]
 name = "tunables-derive"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [lib]
 path = "lib.rs"
-proc-macro = true
 test = false
 doctest = false
+proc-macro = true
 
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = { version = "1.0", features = ["full", "visit", "visit-mut", "fold", "extra-traits"] }
+syn = { version = "1.0", features = ["extra-traits", "fold", "full", "visit", "visit-mut"] }

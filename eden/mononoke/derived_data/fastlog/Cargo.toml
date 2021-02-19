@@ -1,48 +1,48 @@
 [package]
 name = "fastlog"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [lib]
 path = "lib.rs"
 
 [dependencies]
+anyhow = "1.0"
+async-trait = "0.1.29"
 blobrepo = { path = "../../blobrepo", version = "0.1.0" }
 blobstore = { path = "../../blobstore", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 deleted_files_manifest = { path = "../deleted_files_manifest", version = "0.1.0" }
 derived_data = { path = "..", version = "0.1.0" }
-manifest = { path = "../../manifest", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-mononoke_types-thrift = { path = "../../mononoke_types/if", version = "0.1.0" }
-unodes = { path = "../unodes", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-async-trait = "0.1.29"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 itertools = "0.8"
+manifest = { path = "../../manifest", version = "0.1.0" }
 maplit = "1.0"
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+mononoke_types_thrift = { path = "../../mononoke_types/if", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 thiserror = "1.0"
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
+unodes = { path = "../unodes", version = "0.1.0" }
 
 [dev-dependencies]
 benchmark_lib = { path = "../../benchmark", version = "0.1.0" }
 blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
 bookmarks = { path = "../../bookmarks", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
 mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
 mononoke_types-mocks = { path = "../../mononoke_types/mocks", version = "0.1.0" }
-revset = { path = "../../revset", version = "0.1.0" }
-tests_utils = { path = "../../tests/utils", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 pretty_assertions = "0.6"
 rand = { version = "0.7", features = ["small_rng"] }
 rand_xorshift = "0.2"
+revset = { path = "../../revset", version = "0.1.0" }
+tests_utils = { path = "../../tests/utils", version = "0.1.0" }

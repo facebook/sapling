@@ -1,8 +1,8 @@
 [package]
 name = "mercurial_mutation"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [lib]
@@ -13,24 +13,24 @@ name = "mercurial_mutation_test"
 path = "test/main.rs"
 
 [dependencies]
+anyhow = "1.0"
+async-trait = "0.1.29"
 context = { path = "../../server/context", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 mercurial_types = { path = "../types", version = "0.1.0" }
 metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+slog = { version = "2.5", features = ["max_level_debug"] }
+smallvec = { version = "1.6.1", features = ["serde", "specialization", "union"] }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
 sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
 types = { path = "../../../scm/lib/types", version = "0.1.0" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-async-trait = "0.1.29"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-serde_json = { version = "1.0", features = ["float_roundtrip"] }
-slog = { version = "2.5", features = ["max_level_debug"] }
-smallvec = { version = "1.6.1", features = [ "serde", "specialization", "union" ] }
 
 [dev-dependencies]
-mercurial_types-mocks = { path = "../types/mocks", version = "0.1.0" }
-mononoke_types-mocks = { path = "../../mononoke_types/mocks", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 maplit = "1.0"
+mercurial_types-mocks = { path = "../types/mocks", version = "0.1.0" }
+mononoke_types-mocks = { path = "../../mononoke_types/mocks", version = "0.1.0" }
 tokio-compat = "0.1"

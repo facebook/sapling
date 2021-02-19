@@ -1,35 +1,35 @@
 [package]
 name = "blobimport_lib"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
+ascii = "1.0"
 blobrepo = { path = "../blobrepo", version = "0.1.0" }
 blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
 blobstore = { path = "../blobstore", version = "0.1.0" }
 bonsai_git_mapping = { path = "../bonsai_git_mapping", version = "0.1.0" }
 bonsai_globalrev_mapping = { path = "../bonsai_globalrev_mapping", version = "0.1.0" }
 bookmarks = { path = "../bookmarks", version = "0.1.0" }
+bytes = { version = "0.5", features = ["serde"] }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 consts = { path = "consts", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
 derived_data_utils = { path = "../derived_data/utils", version = "0.1.0" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1.30" }
+futures_01_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 lfs_import_lib = { path = "../lfs_import_lib", version = "0.1.0" }
 manifest = { path = "../manifest", version = "0.1.0" }
 mercurial_revlog = { path = "../mercurial/revlog", version = "0.1.0" }
 mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
-synced_commit_mapping = { path = "../commit_rewriting/synced_commit_mapping", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_01_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-ascii = "1.0"
-bytes = { version = "0.5", features = ["serde"] }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.30" }
 slog = { version = "2.5", features = ["max_level_debug"] }
+synced_commit_mapping = { path = "../commit_rewriting/synced_commit_mapping", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }

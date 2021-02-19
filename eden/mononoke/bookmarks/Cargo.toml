@@ -1,25 +1,25 @@
 [package]
 name = "bookmarks"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 bookmarks_types = { path = "bookmarks_types", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
 thiserror = "1.0"
 
 [dev-dependencies]
-mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
+ascii = "1.0"
 ascii_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-ascii = "1.0"
+mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
 quickcheck = "0.9"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tokio-compat = "0.1"

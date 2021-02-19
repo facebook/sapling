@@ -1,11 +1,13 @@
 [package]
 name = "blobrepo_hg"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
+async-trait = "0.1.29"
 blobrepo = { path = "..", version = "0.1.0" }
 blobrepo_common = { path = "../common", version = "0.1.0" }
 blobrepo_errors = { path = "../errors", version = "0.1.0" }
@@ -15,8 +17,12 @@ bookmarks = { path = "../../bookmarks", version = "0.1.0" }
 bounded_traversal = { path = "../../common/bounded_traversal", version = "0.1.0" }
 changeset_fetcher = { path = "../changeset_fetcher", version = "0.1.0" }
 changesets = { path = "../../changesets", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 filenodes = { path = "../../filenodes", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 manifest = { path = "../../manifest", version = "0.1.0" }
 mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data", version = "0.1.0" }
 mercurial_mutation = { path = "../../mercurial/mutation", version = "0.1.0" }
@@ -24,12 +30,6 @@ mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 repo_blobstore = { path = "../repo_blobstore", version = "0.1.0" }
 scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-async-trait = "0.1.29"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 uuid = { version = "0.8.1", features = ["v4"] }

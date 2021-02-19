@@ -1,13 +1,13 @@
 [package]
 name = "observability"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
-observability_config = { path = "../../../configerator/structs/scm/mononoke/observability", version = "0.1.0" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+observability_config = { path = "../../../configerator/structs/scm/mononoke/observability", version = "0.1.0" }
+scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 slog = { version = "2.5", features = ["max_level_debug"] }

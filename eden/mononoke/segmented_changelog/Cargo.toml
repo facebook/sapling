@@ -1,41 +1,41 @@
 [package]
 name = "segmented_changelog"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
-blobrepo = { path = "../blobrepo", version = "0.1.0" }
-blobstore = { path = "../blobstore", version = "0.1.0" }
-bookmarks = { path = "../bookmarks", version = "0.1.0" }
-bulkops = { path = "../bulkops", version = "0.1.0" }
-caching_ext = { path = "../common/rust/caching_ext", version = "0.1.0" }
-changeset_fetcher = { path = "../blobrepo/changeset_fetcher", version = "0.1.0" }
-changesets = { path = "../changesets", version = "0.1.0" }
-context = { path = "../server/context", version = "0.1.0" }
-dag = { path = "../../scm/lib/dag", features = ["for-tests"], version = "0.1.0" }
-mincode = { path = "../../scm/lib/mincode", version = "0.1.0" }
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
-scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
-sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
-cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
 async-trait = "0.1.29"
 auto_impl = "0.4"
+blobrepo = { path = "../blobrepo", version = "0.1.0" }
+blobstore = { path = "../blobstore", version = "0.1.0" }
+bookmarks = { path = "../bookmarks", version = "0.1.0" }
+bulkops = { path = "../bulkops", version = "0.1.0" }
 bytes = { version = "0.5", features = ["serde"] }
+cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+caching_ext = { path = "../common/rust/caching_ext", version = "0.1.0" }
+changeset_fetcher = { path = "../blobrepo/changeset_fetcher", version = "0.1.0" }
+changesets = { path = "../changesets", version = "0.1.0" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
+dag = { path = "../../scm/lib/dag", features = ["for-tests"], version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 maplit = "1.0"
+memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+mincode = { path = "../../scm/lib/mincode", version = "0.1.0" }
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
 slog = { version = "2.5", features = ["max_level_debug"] }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]

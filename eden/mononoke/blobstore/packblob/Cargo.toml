@@ -1,30 +1,30 @@
 [package]
 name = "packblob"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
-blobstore = { path = "..", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-packblob-thrift = { path = "if", version = "0.1.0" }
-zstdelta = { path = "../../../scm/lib/zstdelta", version = "0.1.0" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
 anyhow = "1.0"
 ascii = "1.0"
 async-trait = "0.1.29"
+blobstore = { path = "..", version = "0.1.0" }
 bufsize = "0.5"
 bytes = { version = "0.5", features = ["serde"] }
+context = { path = "../../server/context", version = "0.1.0" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+packblob_thrift = { path = "if", version = "0.1.0" }
 zstd = "=0.5.3+zstd.1.4.5"
+zstdelta = { path = "../../../scm/lib/zstdelta", version = "0.1.0" }
 
 [dev-dependencies]
-memblob = { path = "../memblob", version = "0.1.0" }
 borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+memblob = { path = "../memblob", version = "0.1.0" }
 rand = { version = "0.7", features = ["small_rng"] }
 rand_xorshift = "0.2"
 tokio-compat = "0.1"

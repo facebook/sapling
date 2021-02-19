@@ -1,18 +1,18 @@
 [package]
 name = "obsolete"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 blobrepo = { path = "../../blobrepo", version = "0.1.0" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1.30" }
 mercurial_bundles = { path = "../../mercurial/bundles", version = "0.1.0" }
 mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 pushrebase = { path = "../../pushrebase", version = "0.1.0" }
-anyhow = "1.0"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.30" }

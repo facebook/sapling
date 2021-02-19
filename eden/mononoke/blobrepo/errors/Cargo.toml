@@ -1,13 +1,13 @@
 [package]
 name = "blobrepo_errors"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
-mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 ascii = "1.0"
 bincode = "1.2"
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 thiserror = "1.0"

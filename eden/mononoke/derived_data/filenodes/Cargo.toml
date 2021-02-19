@@ -1,36 +1,36 @@
 [package]
 name = "derived_data_filenodes"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [lib]
 path = "lib.rs"
 
 [dependencies]
-blobrepo = { path = "../../blobrepo", version = "0.1.0" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
-blobstore = { path = "../../blobstore", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-derived_data = { path = "..", version = "0.1.0" }
-filenodes = { path = "../../filenodes", version = "0.1.0" }
-manifest = { path = "../../manifest", version = "0.1.0" }
-mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
 async-stream = "0.3"
 async-trait = "0.1.29"
+blobrepo = { path = "../../blobrepo", version = "0.1.0" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
+blobstore = { path = "../../blobstore", version = "0.1.0" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
+derived_data = { path = "..", version = "0.1.0" }
+filenodes = { path = "../../filenodes", version = "0.1.0" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 itertools = "0.8"
+manifest = { path = "../../manifest", version = "0.1.0" }
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
+mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
-tests_utils = { path = "../../tests/utils", version = "0.1.0" }
-tunables = { path = "../../tunables", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 maplit = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }
+tests_utils = { path = "../../tests/utils", version = "0.1.0" }
 tokio-compat = "0.1"
+tunables = { path = "../../tunables", version = "0.1.0" }

@@ -1,15 +1,15 @@
 [package]
 name = "hook_manager_factory"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 blobrepo = { path = "../../blobrepo", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 hooks = { path = "..", version = "0.1.0" }
 hooks_content_stores = { path = "../content-stores", version = "0.1.0" }
 metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
 scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
-anyhow = "1.0"

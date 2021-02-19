@@ -1,11 +1,18 @@
 [package]
 name = "walker"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+ahash = "0.4.4"
+anyhow = "1.0"
+array-init = "0.1"
+async-trait = "0.1.29"
+async_compression = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+auto_impl = "0.4"
+bitflags = "1.2"
 blame = { path = "../derived_data/blame", version = "0.1.0" }
 blobrepo = { path = "../blobrepo", version = "0.1.0" }
 blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
@@ -16,59 +23,52 @@ bonsai_hg_mapping = { path = "../bonsai_hg_mapping", version = "0.1.0" }
 bookmarks = { path = "../bookmarks", version = "0.1.0" }
 bounded_traversal = { path = "../common/bounded_traversal", version = "0.1.0" }
 bulkops = { path = "../bulkops", version = "0.1.0" }
+bytes = { version = "0.5", features = ["serde"] }
 changeset_info = { path = "../derived_data/changeset_info", version = "0.1.0" }
+clap = "2.33"
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 cmdlib = { path = "../cmdlib", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
+dashmap = { version = "4.0.2", features = ["serde"] }
 deleted_files_manifest = { path = "../derived_data/deleted_files_manifest", version = "0.1.0" }
+derive_more = "0.99.3"
 derived_data = { path = "../derived_data", version = "0.1.0" }
 derived_data_filenodes = { path = "../derived_data/filenodes", version = "0.1.0" }
 fastlog = { path = "../derived_data/fastlog", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 filenodes = { path = "../filenodes", version = "0.1.0" }
 filestore = { path = "../filestore", version = "0.1.0" }
+filetime = "0.2.9"
 fsnodes = { path = "../derived_data/fsnodes", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+hash_memo = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+hex = "0.4"
+internment = { version = "0.4.1", features = ["serde"] }
+itertools = "0.8"
 manifest = { path = "../manifest", version = "0.1.0" }
+maplit = "1.0"
 mercurial_derived_data = { path = "../derived_data/mercurial_derived_data", version = "0.1.0" }
 mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
 metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 multiplexedblob = { path = "../blobstore/multiplexedblob", version = "0.1.0" }
 newfilenodes = { path = "../newfilenodes", version = "0.1.0" }
-phases = { path = "../phases", version = "0.1.0" }
-samplingblob = { path = "../blobstore/samplingblob", version = "0.1.0" }
-scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
-skeleton_manifest = { path = "../derived_data/skeleton_manifest", version = "0.1.0" }
-sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
-unodes = { path = "../derived_data/unodes", version = "0.1.0" }
-async_compression = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-hash_memo = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-ahash = "0.4.4"
-anyhow = "1.0"
-array-init = "0.1"
-async-trait = "0.1.29"
-auto_impl = "0.4"
-bitflags = "1.2"
-bytes = { version = "0.5", features = ["serde"] }
-clap = "2.33"
-dashmap = {version = "4.0.2", features = ["serde"] }
-derive_more = "0.99.3"
-filetime = "0.2.9"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-hex = "0.4"
-internment = {version = "0.4.1", features = ["serde"]}
-itertools = "0.8"
-maplit = "1.0"
 once_cell = "1.4"
 paste = "1.0"
 percent-encoding = "2.1"
+phases = { path = "../phases", version = "0.1.0" }
 regex = "1.4.2"
+samplingblob = { path = "../blobstore/samplingblob", version = "0.1.0" }
+scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+skeleton_manifest = { path = "../derived_data/skeleton_manifest", version = "0.1.0" }
 slog = { version = "2.5", features = ["max_level_debug"] }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
+sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 strum = "0.19"
 strum_macros = "0.19"
 thiserror = "1.0"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
+unodes = { path = "../derived_data/unodes", version = "0.1.0" }

@@ -1,63 +1,63 @@
 [package]
 name = "repo_client"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 blobrepo = { path = "../blobrepo", version = "0.1.0" }
 blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
 blobstore = { path = "../blobstore", version = "0.1.0" }
 bookmarks = { path = "../bookmarks", version = "0.1.0" }
 bookmarks_types = { path = "../bookmarks/bookmarks_types", version = "0.1.0" }
+bytes = { version = "0.5", features = ["serde"] }
+bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
+bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+chrono = { version = "0.4", features = ["serde"] }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 filenodes = { path = "../filenodes", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1.30" }
+futures_01_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 getbundle_response = { path = "getbundle_response", version = "0.1.0" }
 hgproto = { path = "../hgproto", version = "0.1.0" }
+hostname = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+itertools = "0.8"
+lazy_static = "1.0"
 load_limiter = { path = "../load_limiter", version = "0.1.0" }
 manifest = { path = "../manifest", version = "0.1.0" }
+maplit = "1.0"
 mercurial_bundles = { path = "../mercurial/bundles", version = "0.1.0" }
 mercurial_revlog = { path = "../mercurial/revlog", version = "0.1.0" }
 mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
 metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
 mononoke_repo = { path = "mononoke_repo", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
-remotefilelog = { path = "remotefilelog", version = "0.1.0" }
-repo_read_write_status = { path = "repo_read_write_status", version = "0.1.0" }
-revisionstore_types = { path = "../../scm/lib/revisionstore/types", version = "0.1.0" }
-scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
-streaming_clone = { path = "streaming_clone", version = "0.1.0" }
-tunables = { path = "../tunables", version = "0.1.0" }
-unbundle = { path = "unbundle", version = "0.1.0" }
-warm_bookmarks_cache = { path = "../bookmarks/warm_bookmarks_cache", version = "0.1.0" }
-bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_01_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-hostname = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-bytes = { version = "0.5", features = ["serde"] }
-bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
-chrono = { version = "0.4", features = ["serde"] }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.30" }
-itertools = "0.8"
-lazy_static = "1.0"
-maplit = "1.0"
 nonzero_ext = "0.2"
 percent-encoding = "2.1"
 rand = { version = "0.7", features = ["small_rng"] }
 regex = "1.4.2"
+remotefilelog = { path = "remotefilelog", version = "0.1.0" }
+repo_read_write_status = { path = "repo_read_write_status", version = "0.1.0" }
+revisionstore_types = { path = "../../scm/lib/revisionstore/types", version = "0.1.0" }
+scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+streaming_clone = { path = "streaming_clone", version = "0.1.0" }
 thiserror = "1.0"
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
+tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+tunables = { path = "../tunables", version = "0.1.0" }
+unbundle = { path = "unbundle", version = "0.1.0" }
+warm_bookmarks_cache = { path = "../bookmarks/warm_bookmarks_cache", version = "0.1.0" }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }

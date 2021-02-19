@@ -1,15 +1,15 @@
 [package]
 name = "filenodes"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 context = { path = "../server/context", version = "0.1.0" }
-filenodes-if = { path = "if", version = "0.1.0" }
+filenodes_if = { path = "if", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
 quickcheck = "0.9"

@@ -1,11 +1,12 @@
 [package]
 name = "regenerate_hg_filenodes"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 blobrepo = { path = "../blobrepo", version = "0.1.0" }
 blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
 blobrepo_override = { path = "../blobrepo/override", version = "0.1.0" }
@@ -14,7 +15,6 @@ cacheblob = { path = "../blobstore/cacheblob", version = "0.1.0" }
 cmdlib = { path = "../cmdlib", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
 derived_data_filenodes = { path = "../derived_data/filenodes", version = "0.1.0" }
-mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
+mercurial_types = { path = "../mercurial/types", version = "0.1.0" }

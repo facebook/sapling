@@ -1,36 +1,36 @@
 [package]
 name = "blame"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [lib]
 path = "lib.rs"
 
 [dependencies]
+anyhow = "1.0"
+async-trait = "0.1.29"
 blobrepo = { path = "../../blobrepo", version = "0.1.0" }
 blobstore = { path = "../../blobstore", version = "0.1.0" }
+bytes = { version = "0.5", features = ["serde"] }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 derived_data = { path = "..", version = "0.1.0" }
 filestore = { path = "../../filestore", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 manifest = { path = "../../manifest", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-unodes = { path = "../unodes", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-async-trait = "0.1.29"
-bytes = { version = "0.5", features = ["serde"] }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
 thiserror = "1.0"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
+unodes = { path = "../unodes", version = "0.1.0" }
 
 [dev-dependencies]
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
 blobrepo_override = { path = "../../blobrepo/override", version = "0.1.0" }
-metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
-tests_utils = { path = "../../tests/utils", version = "0.1.0" }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 maplit = "1.0"
+metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
+tests_utils = { path = "../../tests/utils", version = "0.1.0" }

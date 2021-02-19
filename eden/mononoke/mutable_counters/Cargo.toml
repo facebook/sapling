@@ -1,8 +1,8 @@
 [package]
 name = "mutable_counters"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [lib]
@@ -13,16 +13,16 @@ name = "mutable_counters_test"
 path = "test/main.rs"
 
 [dependencies]
+anyhow = "1.0"
 context = { path = "../server/context", version = "0.1.0" }
+futures = "0.1.30"
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
 sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-futures = "0.1.30"
 
 [dev-dependencies]
-mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
 tokio-compat = "0.1"

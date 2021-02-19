@@ -1,8 +1,8 @@
 [package]
 name = "hook_tailer"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [[bin]]
@@ -10,25 +10,25 @@ name = "hook_tailer"
 path = "main.rs"
 
 [dependencies]
+anyhow = "1.0"
 blobrepo = { path = "../blobrepo", version = "0.1.0" }
 blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
 blobstore = { path = "../blobstore", version = "0.1.0" }
 bookmarks = { path = "../bookmarks", version = "0.1.0" }
+clap = "2.33"
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 cmdlib = { path = "../cmdlib", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 hooks = { path = "../hooks", version = "0.1.0" }
 hooks_content_stores = { path = "../hooks/content-stores", version = "0.1.0" }
 metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 revset = { path = "../revset", version = "0.1.0" }
 scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-clap = "2.33"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

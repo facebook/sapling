@@ -1,32 +1,32 @@
 [package]
 name = "import_tools"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
+async-trait = "0.1.29"
 blobrepo = { path = "../../blobrepo", version = "0.1.0" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
 blobstore = { path = "../../blobstore", version = "0.1.0" }
 bonsai_git_mapping = { path = "../../bonsai_git_mapping", version = "0.1.0" }
+bytes = { version = "0.5", features = ["serde"] }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 derived_data = { path = "../../derived_data", version = "0.1.0" }
 filestore = { path = "../../filestore", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1.30" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 git-pool = { path = "../git-pool", version = "0.1.0" }
+git2 = "0.13"
 git_types = { path = "../git_types", version = "0.1.0" }
+linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 manifest = { path = "../../manifest", version = "0.1.0" }
 mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data", version = "0.1.0" }
 mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-async-trait = "0.1.29"
-bytes = { version = "0.5", features = ["serde"] }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.30" }
-git2 = "0.13"
-linked-hash-map = { version = "0.5", features = ["serde_impl"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

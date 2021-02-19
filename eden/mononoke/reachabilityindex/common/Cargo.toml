@@ -1,14 +1,14 @@
 [package]
 name = "common"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 changeset_fetcher = { path = "../../blobrepo/changeset_fetcher", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 reachabilityindex = { path = "..", version = "0.1.0" }
-anyhow = "1.0"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }

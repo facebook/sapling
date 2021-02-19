@@ -1,18 +1,18 @@
 [package]
 name = "bookmark_renaming"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
+ascii = "1.0"
 bookmarks = { path = "../../bookmarks", version = "0.1.0" }
 metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-anyhow = "1.0"
-ascii = "1.0"
 thiserror = "1.0"
 
 [dev-dependencies]
-mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
 maplit = "1.0"
+mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }

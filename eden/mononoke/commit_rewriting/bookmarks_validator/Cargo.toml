@@ -1,28 +1,28 @@
 [package]
 name = "bookmarks_validator"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 bookmarks = { path = "../../bookmarks", version = "0.1.0" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 cmdlib = { path = "../../cmdlib", version = "0.1.0" }
 cmdlib_x_repo = { path = "../../cmdlib/x_repo", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 cross_repo_sync = { path = "../cross_repo_sync", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1.30" }
 live_commit_sync_config = { path = "../live_commit_sync_config", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 pushredirect_enable = { path = "../../../../configerator/structs/scm/mononoke/pushredirect", version = "0.1.0" }
 scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
-synced_commit_mapping = { path = "../synced_commit_mapping", version = "0.1.0" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.30" }
 slog = { version = "2.5", features = ["max_level_debug"] }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+synced_commit_mapping = { path = "../synced_commit_mapping", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]

@@ -1,18 +1,18 @@
 [package]
 name = "reachabilityindex"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
-blobrepo_errors = { path = "../blobrepo/errors", version = "0.1.0" }
-changeset_fetcher = { path = "../blobrepo/changeset_fetcher", version = "0.1.0" }
-context = { path = "../server/context", version = "0.1.0" }
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
-uniqueheap = { path = "../common/uniqueheap", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 auto_impl = "0.4"
+blobrepo_errors = { path = "../blobrepo/errors", version = "0.1.0" }
+changeset_fetcher = { path = "../blobrepo/changeset_fetcher", version = "0.1.0" }
+context = { path = "../server/context", version = "0.1.0" }
 maplit = "1.0"
+mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 thiserror = "1.0"
+uniqueheap = { path = "../common/uniqueheap", version = "0.1.0" }

@@ -1,16 +1,22 @@
 [package]
 name = "blobstore_factory"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
 blobstore = { path = "..", version = "0.1.0" }
 blobstore_sync_queue = { path = "../../blobstore_sync_queue", version = "0.1.0" }
 cacheblob = { path = "../cacheblob", version = "0.1.0" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 chaosblob = { path = "../chaosblob", version = "0.1.0" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fileblob = { path = "../fileblob", version = "0.1.0" }
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1.30" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 logblob = { path = "../logblob", version = "0.1.0" }
 metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
 multiplexedblob = { path = "../multiplexedblob", version = "0.1.0" }
@@ -18,15 +24,9 @@ packblob = { path = "../packblob", version = "0.1.0" }
 prefixblob = { path = "../prefixblob", version = "0.1.0" }
 readonlyblob = { path = "../readonlyblob", version = "0.1.0" }
 scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
+slog = { version = "2.5", features = ["max_level_debug"] }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
 sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
 sqlblob = { path = "../sqlblob", version = "0.1.0" }
 throttledblob = { path = "../throttledblob", version = "0.1.0" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-anyhow = "1.0"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.30" }
-slog = { version = "2.5", features = ["max_level_debug"] }

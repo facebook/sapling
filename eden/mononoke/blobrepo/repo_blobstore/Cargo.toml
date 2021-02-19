@@ -1,16 +1,16 @@
 [package]
 name = "repo_blobstore"
-edition = "2018"
 version = "0.1.0"
-authors = ['Facebook']
+authors = ["Facebook"]
+edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
+anyhow = "1.0"
+async-trait = "0.1.29"
 blobstore = { path = "../../blobstore", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 prefixblob = { path = "../../blobstore/prefixblob", version = "0.1.0" }
 redactedblobstore = { path = "../../blobstore/redactedblobstore", version = "0.1.0" }
 scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
-anyhow = "1.0"
-async-trait = "0.1.29"
