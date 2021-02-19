@@ -24,7 +24,6 @@ edenapi = { path = "../edenapi" }
 edenapi_types = { path = "../edenapi/types" }
 edenfs-client = { path = "../edenfs-client"}
 encoding = { path = "../encoding" }
-env_logger = "0.7"
 flate2 = "1"
 fsyncglob = { path = "../fsyncglob" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }

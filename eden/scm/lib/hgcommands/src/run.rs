@@ -9,6 +9,7 @@ use crate::{commands, HgPython};
 use anyhow::Result;
 use blackbox::serde_json;
 use clidispatch::global_flags::HgGlobalOpts;
+use clidispatch::io::IO;
 use clidispatch::{dispatch, errors};
 use parking_lot::Mutex;
 use std::env;
@@ -23,11 +24,16 @@ use std::time::SystemTime;
 use tracing::dispatcher::{self, Dispatch};
 use tracing::Level;
 use tracing_collector::TracingData;
+use tracing_subscriber::fmt::format::FmtSpan;
+use tracing_subscriber::fmt::Layer as FmtLayer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::Layer;
 
 /// Run a Rust or Python command.
 ///
 /// Have side effect on `io` and return the command exit code.
-pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
+pub fn run_command(args: Vec<String>, io: &mut IO) -> i32 {
     let now = SystemTime::now();
 
     // The chgserver does not want tracing or blackbox setup, or going through
@@ -44,7 +50,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
 
     // Setup tracing early since "log_start" will use it immediately.
     // The tracing clock starts ticking from here.
-    let (_tracing_level, tracing_data) = match setup_tracing(&global_opts) {
+    let (_tracing_level, tracing_data) = match setup_tracing(&global_opts, io) {
         Err(_) => {
             // With our current architecture it is common to see this path in our tests due to
             // trying to set a global collector a second time. Ignore the error and return some
@@ -82,10 +88,6 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
         }
         Ok(dir) => dir,
     };
-
-    // env_logger cannot be inited twice. So this will fail (as expected)
-    // if hgcommands is nested (ex. for "hg continue").
-    let _ = env_logger::builder().format_timestamp_millis().try_init();
 
     let exit_code = {
         let _guard = span.enter();
@@ -145,7 +147,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
 /// Similar to `std::env::current_dir`. But does some extra things:
 /// - Attempt to autofix issues when running under a typical shell (which
 ///   sets $PWD), and a directory is deleted and then recreated.
-fn current_dir(io: &mut clidispatch::io::IO) -> io::Result<PathBuf> {
+fn current_dir(io: &mut IO) -> io::Result<PathBuf> {
     let result = env::current_dir();
     if let Err(ref err) = result {
         match err.kind() {
@@ -166,7 +168,10 @@ fn current_dir(io: &mut clidispatch::io::IO) -> io::Result<PathBuf> {
     result
 }
 
-fn setup_tracing(global_opts: &Option<HgGlobalOpts>) -> Result<(Level, Arc<Mutex<TracingData>>)> {
+fn setup_tracing(
+    global_opts: &Option<HgGlobalOpts>,
+    io: &mut IO,
+) -> Result<(Level, Arc<Mutex<TracingData>>)> {
     // Setup TracingData singleton (currently owned by pytracing).
     {
         let mut data = pytracing::DATA.lock();
@@ -191,13 +196,38 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>) -> Result<(Level, Arc<Mutex
             }
             Level::INFO
         });
-    tracing_collector::init(data.clone(), level.clone())?;
+
+
+    let collector = tracing_collector::default_collector(data.clone(), level.clone());
+    let is_test = is_inside_test();
+    let log_env_name = ["EDENSCM_LOG", "LOG"]
+        .iter()
+        .take(if is_test { 2 } else { 1 }) /* Only consider $LOG in tests */
+        .find(|s| std::env::var_os(s).is_some());
+    if let Some(env_name) = log_env_name {
+        let env_filter = EnvFilter::from_env(env_name);
+        let error = io.error();
+        let env_logger = FmtLayer::new()
+            .with_span_events(FmtSpan::ACTIVE)
+            .with_writer(move || error.clone());
+        if is_test {
+            // In tests, disable timestamps for cleaner output.
+            let env_logger = env_logger.without_time();
+            let collector = collector.with(env_filter.and_then(env_logger));
+            tracing::subscriber::set_global_default(collector)?;
+        } else {
+            let collector = collector.with(env_filter.and_then(env_logger));
+            tracing::subscriber::set_global_default(collector)?;
+        }
+    } else {
+        tracing::subscriber::set_global_default(collector)?;
+    }
 
     Ok((level, data))
 }
 
 fn maybe_write_trace(
-    io: &mut clidispatch::io::IO,
+    io: &mut IO,
     tracing_data: &Arc<Mutex<TracingData>>,
     path: Option<String>,
 ) -> Result<()> {
@@ -215,11 +245,7 @@ fn maybe_write_trace(
     Ok(())
 }
 
-pub(crate) fn write_trace(
-    io: &mut clidispatch::io::IO,
-    path: &str,
-    data: &TracingData,
-) -> Result<()> {
+pub(crate) fn write_trace(io: &mut IO, path: &str, data: &TracingData) -> Result<()> {
     enum Format {
         ASCII,
         TraceEventJSON,
