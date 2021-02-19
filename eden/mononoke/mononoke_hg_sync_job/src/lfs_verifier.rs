@@ -17,7 +17,7 @@ use filestore::{fetch_stream, FetchKey};
 use futures::{
     compat::Future01CompatExt, pin_mut, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
 };
-use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
+use futures_01_ext::{try_boxfuture, FutureExt as OldFutureExt};
 use futures_old::{future, stream, Future, IntoFuture, Stream};
 use http::{status::StatusCode, uri::Uri};
 use hyper::{client::HttpConnector, Client};

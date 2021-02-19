@@ -10,7 +10,7 @@ use bookmarks::BookmarkName;
 use cloned::cloned;
 use failure_ext::FutureFailureErrorExt;
 use futures::future::{FutureExt as _, TryFutureExt};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_01_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::future::{self, err, ok, Either, Future, IntoFuture};
 use mercurial_types::HgChangesetId;
 use mononoke_hg_sync_job_helper_lib::{lines_after, read_file_contents, wait_till_more_lines};

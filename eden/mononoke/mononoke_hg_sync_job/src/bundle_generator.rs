@@ -19,7 +19,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;
 use futures::{stream, Future as NewFuture, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
-use futures_ext::{try_boxfuture, FutureExt as _, StreamExt as _};
+use futures_01_ext::{try_boxfuture, FutureExt as _, StreamExt as _};
 use futures_old::{future::IntoFuture, stream as stream_old, Future, Stream};
 use getbundle_response::{
     create_filenodes, create_manifest_entries_stream, get_manifests_and_filenodes,
