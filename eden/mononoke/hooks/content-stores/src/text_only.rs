@@ -10,6 +10,7 @@ use crate::{ErrorKind, FileChange, FileContentManager, PathContent};
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
+use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, ContentId, MPath};
 use std::collections::HashMap;
@@ -81,6 +82,15 @@ impl<T: FileContentManager + 'static> FileContentManager for TextOnlyFileContent
         old_cs_id: ChangesetId,
     ) -> Result<Vec<(MPath, FileChange)>, ErrorKind> {
         self.inner.file_changes(ctx, new_cs_id, old_cs_id).await
+    }
+
+    async fn latest_changes<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bookmark: BookmarkName,
+        paths: Vec<MPath>,
+    ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind> {
+        self.inner.latest_changes(ctx, bookmark, paths).await
     }
 }
 

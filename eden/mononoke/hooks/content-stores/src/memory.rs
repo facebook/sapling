@@ -11,6 +11,7 @@ use anyhow::format_err;
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
+use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, ContentId, MPath};
 use std::collections::HashMap;
@@ -95,6 +96,18 @@ impl FileContentManager for InMemoryFileContentManager {
     ) -> Result<Vec<(MPath, FileChange)>, ErrorKind> {
         Err(
             format_err!("`file_changes` is not implemented for `InMemoryFileContentManager`")
+                .into(),
+        )
+    }
+
+    async fn latest_changes<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+        _bookmark: BookmarkName,
+        _paths: Vec<MPath>,
+    ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind> {
+        Err(
+            format_err!("`latest_changes` is not implemented for `InMemoryFileContentManager`")
                 .into(),
         )
     }

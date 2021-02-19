@@ -10,6 +10,7 @@ use crate::ErrorKind;
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
+use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, ContentId, MPath};
 use std::collections::HashMap;
@@ -41,6 +42,13 @@ pub trait FileContentManager: Send + Sync {
         new_cs_id: ChangesetId,
         old_cs_id: ChangesetId,
     ) -> Result<Vec<(MPath, FileChange)>, ErrorKind>;
+
+    async fn latest_changes<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bookmark: BookmarkName,
+        paths: Vec<MPath>,
+    ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind>;
 }
 
 #[derive(Clone, Debug)]

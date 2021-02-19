@@ -15,8 +15,8 @@ use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future;
 use futures::stream::{futures_unordered, TryStreamExt};
+use futures::{future, TryFutureExt};
 use hooks::{
     hook_loader::load_hooks, ChangesetHook, CrossRepoPushSource, ErrorKind, FileHook,
     HookExecution, HookManager, HookRejectionInfo,
@@ -27,7 +27,9 @@ use hooks_content_stores::{
 };
 use maplit::{btreemap, hashmap, hashset};
 use metaconfig_types::{BookmarkParams, HookConfig, HookManagerParams, HookParams, RepoConfig};
-use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileType, MPath};
+use mononoke_types::{
+    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, MPath,
+};
 use mononoke_types_mocks::contentid::{ONES_CTID, THREES_CTID, TWOS_CTID};
 use regex::Regex;
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -156,6 +158,37 @@ impl ChangesetHook for FileChangesChangesetHook {
 #[derive(Clone, Debug)]
 struct FileContentMatchingChangesetHook {
     expected_content: HashMap<MPath, Option<String>>,
+}
+
+#[derive(Clone)]
+struct LatestChangesChangesetHook(HashMap<MPath, Option<ChangesetId>>);
+
+#[async_trait]
+impl ChangesetHook for LatestChangesChangesetHook {
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+        &'this self,
+        ctx: &'ctx CoreContext,
+        _bookmark: &BookmarkName,
+        _changeset: &'cs BonsaiChangeset,
+        content_manager: &'fetcher dyn FileContentManager,
+        _cross_repo_push_source: CrossRepoPushSource,
+    ) -> Result<HookExecution, Error> {
+        let paths = self.0.keys().cloned().collect();
+        let res = content_manager
+            .latest_changes(ctx, BookmarkName::new("master")?, paths)
+            .map_err(Error::from)
+            .await?;
+
+        for (path, linknode) in self.0.iter() {
+            let found_linknode = res.get(&path).map(|info| info.changeset_id());
+            if linknode.as_ref() != found_linknode {
+                return Ok(HookExecution::Rejected(HookRejectionInfo::new(
+                    "found linknode doesn't match the expected one",
+                )));
+            }
+        }
+        Ok(HookExecution::Accepted)
+    }
 }
 
 #[async_trait]
@@ -904,160 +937,193 @@ fn test_file_hook_length(fb: FacebookInit) {
     });
 }
 
-#[fbinit::test]
-fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) {
-    async_unit::tokio_unit_test(async move {
-        let ctx = CoreContext::test_mock(fb);
-        // set up a blobrepo
-        let repo = new_memblob_empty(None).unwrap();
-        let root_id = CreateCommitContext::new_root(&ctx, &repo)
-            .add_file("dir/file", "dir/file")
-            .add_file("dir-2/file", "dir-2/file")
-            .commit()
-            .await
-            .unwrap();
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![root_id])
-            .add_file("dir/sub/file", "dir/sub/file")
-            .add_file("dir-2", "dir-2 is a file now")
-            .commit()
-            .await
-            .unwrap();
+#[fbinit::compat_test]
+async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    // set up a blobrepo
+    let repo = new_memblob_empty(None)?;
+    let root_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("dir/file", "dir/file")
+        .add_file("dir-2/file", "dir-2/file")
+        .commit()
+        .await?;
+    let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![root_id])
+        .add_file("dir/sub/file", "dir/sub/file")
+        .add_file("dir-2", "dir-2 is a file now")
+        .commit()
+        .await?;
 
-        // find simple file
-        let hook_name1 = "hook1".to_string();
-        let hook1 = Box::new(FindFilesChangesetHook {
-            filename: "dir/sub/file".to_string(),
-        });
-
-        // find non-existent file
-        let hook_name2 = "hook2".to_string();
-        let hook2 = Box::new(FindFilesChangesetHook {
-            filename: "dir-2/file".to_string(),
-        });
-
-        // run first hook on a repo without master bookmark
-        // the hook should reject the commit
-        let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
-            hook_name1.clone() => hook1.clone() as Box<dyn ChangesetHook>,
-        };
-        let bookmarks = hashmap! {
-            "bm1".to_string() => vec![hook_name1.clone()]
-        };
-        let regexes = hashmap! {};
-        let expected = hashmap! {
-            hook_name1.clone() => HookExecution::Rejected(HookRejectionInfo::new("no master bookmark found")),
-        };
-
-        run_changeset_hooks_with_mgr(
-            ctx.clone(),
-            None,
-            "bm1",
-            hooks,
-            bookmarks,
-            regexes.clone(),
-            expected,
-            ContentFetcherType::Blob(repo.clone()),
-        )
-        .await;
-
-        // set master bookmark
-        let mut txn = repo.update_bookmark_transaction(ctx.clone());
-        txn.force_set(
-            &BookmarkName::new("master").unwrap(),
-            bcs_id,
-            BookmarkUpdateReason::TestMove,
-            None,
-        )
-        .unwrap();
-        txn.commit().await.unwrap();
-
-        // run hooks again
-        let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
-            hook_name1.clone() => hook1 as Box<dyn ChangesetHook>,
-            hook_name2.clone() => hook2 as Box<dyn ChangesetHook>,
-        };
-        let bookmarks = hashmap! {
-            "bm1".to_string() => vec![hook_name1.clone(), hook_name2.clone()]
-        };
-        let regexes = hashmap! {};
-        let expected = hashmap! {
-            hook_name1 => HookExecution::Accepted,
-            hook_name2 => HookExecution::Rejected(HookRejectionInfo::new("there is no such file")),
-        };
-        run_changeset_hooks_with_mgr(
-            ctx.clone(),
-            None,
-            "bm1",
-            hooks,
-            bookmarks,
-            regexes.clone(),
-            expected,
-            ContentFetcherType::Blob(repo),
-        )
-        .await;
+    // find simple file
+    let hook_name1 = "hook1".to_string();
+    let hook1 = Box::new(FindFilesChangesetHook {
+        filename: "dir/sub/file".to_string(),
     });
+
+    // find non-existent file
+    let hook_name2 = "hook2".to_string();
+    let hook2 = Box::new(FindFilesChangesetHook {
+        filename: "dir-2/file".to_string(),
+    });
+
+    // run first hook on a repo without master bookmark
+    // the hook should reject the commit
+    let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
+        hook_name1.clone() => hook1.clone() as Box<dyn ChangesetHook>,
+    };
+    let bookmarks = hashmap! {
+        "bm1".to_string() => vec![hook_name1.clone()]
+    };
+    let regexes = hashmap! {};
+    let expected = hashmap! {
+        hook_name1.clone() => HookExecution::Rejected(HookRejectionInfo::new("no master bookmark found")),
+    };
+
+    run_changeset_hooks_with_mgr(
+        ctx.clone(),
+        None,
+        "bm1",
+        hooks,
+        bookmarks,
+        regexes.clone(),
+        expected,
+        ContentFetcherType::Blob(repo.clone()),
+    )
+    .await;
+
+    // set master bookmark
+    let mut txn = repo.update_bookmark_transaction(ctx.clone());
+    txn.force_set(
+        &BookmarkName::new("master")?,
+        bcs_id,
+        BookmarkUpdateReason::TestMove,
+        None,
+    )?;
+    txn.commit().await?;
+
+    // run hooks again
+    let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
+        hook_name1.clone() => hook1 as Box<dyn ChangesetHook>,
+        hook_name2.clone() => hook2 as Box<dyn ChangesetHook>,
+    };
+    let bookmarks = hashmap! {
+        "bm1".to_string() => vec![hook_name1.clone(), hook_name2.clone()]
+    };
+    let regexes = hashmap! {};
+    let expected = hashmap! {
+        hook_name1 => HookExecution::Accepted,
+        hook_name2 => HookExecution::Rejected(HookRejectionInfo::new("there is no such file")),
+    };
+    run_changeset_hooks_with_mgr(
+        ctx.clone(),
+        None,
+        "bm1",
+        hooks,
+        bookmarks,
+        regexes.clone(),
+        expected,
+        ContentFetcherType::Blob(repo),
+    )
+    .await;
+
+    Ok(())
 }
 
-#[fbinit::test]
-fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) {
-    async_unit::tokio_unit_test(async move {
-        let ctx = CoreContext::test_mock(fb);
-        // set up a blobrepo
-        let repo = new_memblob_empty(None).unwrap();
-        let root_id = CreateCommitContext::new_root(&ctx, &repo)
-            .add_file("file", "file")
-            .add_file("dir/file", "dir/file")
-            .add_file("dir/sub/file", "dir/sub/file")
-            .add_file("dir-2/file", "dir-2/file")
-            .commit()
-            .await
-            .unwrap();
-        // set master bookmark
-        bookmark(&ctx, &repo, "master")
-            .set_to(root_id)
-            .await
-            .unwrap();
+#[fbinit::compat_test]
+async fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    // set up a blobrepo
+    let repo = new_memblob_empty(None)?;
+    let root_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file", "file")
+        .add_file("dir/file", "dir/file")
+        .add_file("dir/sub/file", "dir/sub/file")
+        .add_file("dir-2/file", "dir-2/file")
+        .commit()
+        .await?;
+    // set master bookmark
+    bookmark(&ctx, &repo, "master").set_to(root_id).await?;
 
-        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![root_id])
-            .delete_file("file")
-            .add_file("dir", "dir to file")
-            .add_file("dir-2/file", "updated dir-2/file")
-            .add_file("dir-3/sub/file-1", "dir-3/sub/file-1")
-            .add_file("dir-3/sub/file-2", "dir-3/sub/file-2")
-            .commit()
-            .await
-            .unwrap();
-        let changeset = bcs_id.load(&ctx, &repo.get_blobstore()).await.unwrap();
+    let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![root_id])
+        .delete_file("file")
+        .add_file("dir", "dir to file")
+        .add_file("dir-2/file", "updated dir-2/file")
+        .add_file("dir-3/sub/file-1", "dir-3/sub/file-1")
+        .add_file("dir-3/sub/file-2", "dir-3/sub/file-2")
+        .commit()
+        .await?;
+    let changeset = bcs_id.load(&ctx, &repo.get_blobstore()).await?;
 
-        let hook_name = "hook".to_string();
-        let hook = Box::new(FileChangesChangesetHook {
-            added: 3,
-            changed: 1,
-            removed: 3,
-        });
-
-        let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
-            hook_name.clone() => hook as Box<dyn ChangesetHook>,
-        };
-        let bookmarks = hashmap! {
-            "bm1".to_string() => vec![hook_name.clone()]
-        };
-        let regexes = hashmap! {};
-        let expected = hashmap! {
-            hook_name => HookExecution::Accepted,
-        };
-        run_changeset_hooks_with_mgr(
-            ctx.clone(),
-            Some(changeset),
-            "bm1",
-            hooks,
-            bookmarks,
-            regexes.clone(),
-            expected,
-            ContentFetcherType::Blob(repo),
-        )
-        .await;
+    let hook_name = "hook".to_string();
+    let hook = Box::new(FileChangesChangesetHook {
+        added: 3,
+        changed: 1,
+        removed: 3,
     });
+
+    let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
+        hook_name.clone() => hook as Box<dyn ChangesetHook>,
+    };
+    let bookmarks = hashmap! {
+        "bm1".to_string() => vec![hook_name.clone()]
+    };
+    let regexes = hashmap! {};
+    let expected = hashmap! {
+        hook_name => HookExecution::Accepted,
+    };
+    run_changeset_hooks_with_mgr(
+        ctx.clone(),
+        Some(changeset),
+        "bm1",
+        hooks,
+        bookmarks,
+        regexes.clone(),
+        expected,
+        ContentFetcherType::Blob(repo),
+    )
+    .await;
+
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_cs_latest_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    // set up a blobrepo
+    let repo = new_memblob_empty(None)?;
+    let root_id = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("file", "file")
+        .commit()
+        .await?;
+    // set master bookmark
+    bookmark(&ctx, &repo, "master").set_to(root_id).await?;
+
+    let hook_name = "hook".to_string();
+    let expected = hashmap! { to_mpath("file") => Some(root_id), to_mpath("non_existent") => None };
+    let hook = Box::new(LatestChangesChangesetHook(expected));
+
+    let hooks: HashMap<String, Box<dyn ChangesetHook>> = hashmap! {
+        hook_name.clone() => hook as Box<dyn ChangesetHook>,
+    };
+    let bookmarks = hashmap! {
+        "bm1".to_string() => vec![hook_name.clone()]
+    };
+    let regexes = hashmap! {};
+    let expected = hashmap! {
+        hook_name => HookExecution::Accepted,
+    };
+    run_changeset_hooks_with_mgr(
+        ctx.clone(),
+        None,
+        "bm1",
+        hooks,
+        bookmarks,
+        regexes.clone(),
+        expected,
+        ContentFetcherType::Blob(repo),
+    )
+    .await;
+
+    Ok(())
 }
 
 #[fbinit::test]

@@ -10,11 +10,14 @@ blobrepo = { path = "../../blobrepo", version = "0.1.0" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
 blobstore = { path = "../../blobstore", version = "0.1.0" }
 bookmarks = { path = "../../bookmarks", version = "0.1.0" }
+changeset_info = { path = "../../derived_data/changeset_info", version = "0.1.0" }
 context = { path = "../../server/context", version = "0.1.0" }
+derived_data = { path = "../../derived_data", version = "0.1.0" }
 filestore = { path = "../../filestore", version = "0.1.0" }
 manifest = { path = "../../manifest", version = "0.1.0" }
 mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+unodes = { path = "../../derived_data/unodes", version = "0.1.0" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }

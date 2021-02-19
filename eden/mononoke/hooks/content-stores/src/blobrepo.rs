@@ -12,13 +12,16 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
+use changeset_info::ChangesetInfo;
 use context::CoreContext;
+use derived_data::BonsaiDerived;
 use futures::{future, stream::TryStreamExt};
 use futures_util::future::TryFutureExt;
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
-use mononoke_types::{ChangesetId, ContentId, MPath};
+use mononoke_types::{ChangesetId, ContentId, MPath, ManifestUnodeId};
 use std::collections::HashMap;
+use unodes::RootUnodeManifestId;
 
 use crate::{ErrorKind, FileChange, FileContentManager, PathContent};
 
@@ -135,6 +138,50 @@ impl FileContentManager for BlobRepoFileContentManager {
             .try_collect()
             .await
     }
+
+    async fn latest_changes<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bookmark: BookmarkName,
+        paths: Vec<MPath>,
+    ) -> Result<HashMap<MPath, ChangesetInfo>, ErrorKind> {
+        let changeset_id = self
+            .repo
+            .get_bonsai_bookmark(ctx.clone(), &bookmark)
+            .await
+            .with_context(|| format!("Error fetching bookmark: {}", bookmark))?
+            .ok_or_else(|| format_err!("Bookmark {} does not exist", bookmark))?;
+
+        let master_mf = derive_unode_manifest(ctx, &self.repo, changeset_id).await?;
+        master_mf
+            .find_entries(ctx.clone(), self.repo.get_blobstore(), paths)
+            .map_ok(|(mb_path, entry)| async move {
+                if let Some(path) = mb_path {
+                    let unode = entry
+                        .load(ctx, &self.repo.get_blobstore())
+                        .await
+                        .with_context(|| format!("Error loading unode entry: {:?}", entry))?;
+                    let linknode = match unode {
+                        Entry::Leaf(file) => file.linknode().clone(),
+                        Entry::Tree(tree) => tree.linknode().clone(),
+                    };
+
+                    let cs_info = ChangesetInfo::derive(ctx, &self.repo, linknode)
+                        .await
+                        .with_context(|| {
+                            format!("Error deriving changeset info for bonsai: {}", linknode)
+                        })?;
+                    Ok(Some((path, cs_info)))
+                } else {
+                    Ok(None)
+                }
+            })
+            .try_buffer_unordered(100)
+            .try_filter_map(future::ok)
+            .try_collect::<HashMap<_, _>>()
+            .map_err(ErrorKind::from)
+            .await
+    }
 }
 
 impl BlobRepoFileContentManager {
@@ -159,6 +206,19 @@ async fn derive_hg_manifest(
         .with_context(|| format!("Error loading hg changeset: {}", hg_changeset_id))?;
 
     Ok(hg_mf_id)
+}
+
+async fn derive_unode_manifest(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    changeset_id: ChangesetId,
+) -> Result<ManifestUnodeId, ErrorKind> {
+    let unode_mf = RootUnodeManifestId::derive(ctx, repo, changeset_id.clone())
+        .await
+        .with_context(|| format!("Error deriving unode manifest for bonsai: {}", changeset_id))?
+        .manifest_unode_id()
+        .clone();
+    Ok(unode_mf)
 }
 
 async fn resolve_content_id(
