@@ -20,6 +20,10 @@ pub struct IO {
     inner: Arc<Mutex<Inner>>,
 }
 
+/// Implements `io::Write` on the error stream.
+#[derive(Clone)]
+pub struct IOError(IO);
+
 struct Inner {
     input: Box<dyn Read>,
     output: Box<dyn Write>,
@@ -60,6 +64,26 @@ impl io::Write for IO {
     }
 }
 
+// Write to error.
+impl io::Write for IOError {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let mut inner = self.0.inner.lock();
+        if let Some(error) = inner.error.as_mut() {
+            error.write(buf)
+        } else {
+            Ok(buf.len())
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        let mut inner = self.0.inner.lock();
+        if let Some(error) = inner.error.as_mut() {
+            error.flush()?;
+        }
+        Ok(())
+    }
+}
+
 impl IO {
     pub fn with_input<R>(&self, f: impl FnOnce(&dyn Read) -> R) -> R {
         f(self.inner.lock().input.as_ref())
@@ -71,6 +95,13 @@ impl IO {
 
     pub fn with_error<R>(&self, f: impl FnOnce(Option<&dyn Write>) -> R) -> R {
         f(self.inner.lock().error.as_deref())
+    }
+
+    /// Returns a clonable value that impls [`io::Write`] to `error` stream.
+    /// The output is associated with the `IO` so if the `IO` starts a pager,
+    /// the error stream will be properly redirected to the pager.
+    pub fn error(&self) -> IOError {
+        IOError(self.clone())
     }
 
     pub fn new<IS, OS, ES>(input: IS, output: OS, error: Option<ES>) -> Self
