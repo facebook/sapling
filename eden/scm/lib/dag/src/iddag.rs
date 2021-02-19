@@ -52,8 +52,6 @@ use tracing::{debug_span, field, trace};
 #[derive(Clone, Serialize, Deserialize)]
 pub struct IdDag<Store> {
     store: Store,
-    #[serde(skip, default = "default_max_level")]
-    max_level: Level,
     #[serde(skip, default = "default_seg_size")]
     new_seg_size: usize,
     #[serde(skip, default = "VerLink::new")]
@@ -104,7 +102,6 @@ impl TryClone for IdDag<IndexedLogStore> {
         let store = self.store.try_clone()?;
         Ok(Self {
             store,
-            max_level: self.max_level,
             new_seg_size: self.new_seg_size,
             version: self.version.clone(),
         })
@@ -118,7 +115,6 @@ impl IdDag<InProcessStore> {
         let store = InProcessStore::new();
         Self {
             store,
-            max_level: 0,
             new_seg_size: DEFAULT_SEG_SIZE,
             version: VerLink::new(),
         }
@@ -127,10 +123,8 @@ impl IdDag<InProcessStore> {
 
 impl<Store: IdDagStore> IdDag<Store> {
     pub(crate) fn open_from_store(store: Store) -> Result<Self> {
-        let max_level = store.max_level()?;
         let dag = Self {
             store,
-            max_level,
             new_seg_size: DEFAULT_SEG_SIZE, // see D16660078 for this default setting
             version: VerLink::new(),
         };
@@ -139,10 +133,6 @@ impl<Store: IdDagStore> IdDag<Store> {
 }
 
 impl<Store: IdDagStore> IdDag<Store> {
-    pub(crate) fn max_level(&self) -> Result<Level> {
-        self.store.max_level()
-    }
-
     /// Find segment by level and head.
     pub(crate) fn find_segment_by_head_and_level(
         &self,
@@ -479,7 +469,7 @@ impl<Store: IdDagStore> IdDag<Store> {
 
         // No point to introduce new levels if it has the same segment count
         // as the lower level.
-        if level > self.max_level
+        if level > self.max_level()?
             && new_segments_per_group
                 .iter()
                 .fold(0, |acc, s| acc + s.len())
@@ -510,10 +500,6 @@ impl<Store: IdDagStore> IdDag<Store> {
                 );
                 self.insert(flags, level, low, high, &parents)?;
             }
-        }
-
-        if level > self.max_level && insert_count > 0 {
-            self.max_level = level;
         }
 
         Ok(insert_count)
@@ -1471,7 +1457,7 @@ impl<Store: Persist> Persist for IdDag<Store> {
 impl<Store: IdDagStore> Debug for IdDag<Store> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let mut first = true;
-        for level in 0..=self.max_level {
+        for level in 0..=self.max_level().unwrap_or_default() {
             if !first {
                 write!(f, "\n")?;
             }
@@ -1546,10 +1532,6 @@ impl<P: Fn(Id) -> Result<bool>> LazyPredicate<P> {
 
 fn default_seg_size() -> usize {
     DEFAULT_SEG_SIZE
-}
-
-fn default_max_level() -> Level {
-    MAX_MEANINGFUL_LEVEL
 }
 
 #[cfg(test)]
@@ -1636,7 +1618,7 @@ mod tests {
 
         syncable.sync().unwrap();
 
-        assert_eq!(dag.max_level, 3);
+        assert_eq!(dag.max_level().unwrap(), 3);
         assert_eq!(
             dag.children(Id(1000).into())
                 .unwrap()
@@ -1674,7 +1656,7 @@ mod tests {
             .build_segments_volatile_from_prepared_flat_segments(&flat_segments)
             .unwrap();
 
-        assert_eq!(test_dag.max_level, 3);
+        assert_eq!(test_dag.max_level().unwrap(), 3);
         assert_eq!(test_dag.all().unwrap().count(), 1002);
     }
 }
