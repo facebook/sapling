@@ -734,8 +734,10 @@ mod tests {
         let log2 = Arc::new(log2);
 
         let fallback = Arc::new(FallbackStore {
-            preferred: log1,
+            preferred: log1.clone(),
             fallback: log2,
+            write_store: log1,
+            write: false,
         });
 
         let mut fetched: Vec<_> = block_on_stream(block_on(

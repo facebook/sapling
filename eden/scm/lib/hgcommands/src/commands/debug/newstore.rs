@@ -58,8 +58,10 @@ pub fn run(_opts: NoOpts, io: &mut IO, repo: Repo) -> Result<u8> {
 
     // Fallback store combinator
     let fallback = Arc::new(FallbackStore {
-        preferred: indexedstore,
-        fallback: edenapi,
+        preferred: indexedstore.clone(),
+        fallback: edenapi.clone(),
+        write_store: indexedstore.clone(),
+        write: true,
     });
 
     // Test trees
