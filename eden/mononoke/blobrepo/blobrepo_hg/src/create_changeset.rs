@@ -20,7 +20,7 @@ use futures::{
     future::{self, BoxFuture, FutureExt, TryFutureExt},
     stream::BoxStream,
 };
-use futures_ext::FbFutureExt;
+use futures_ext::FbTryFutureExt;
 use futures_stats::TimedTryFutureExt;
 use mercurial_types::{
     blobs::{ChangesetMetadata, HgBlobChangeset},

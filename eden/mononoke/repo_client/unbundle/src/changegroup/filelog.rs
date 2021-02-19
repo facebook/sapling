@@ -13,7 +13,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{future::BoxFuture, Future, FutureExt, Stream, TryFutureExt, TryStreamExt};
-use futures_ext::{future::TryShared, FbFutureExt};
+use futures_ext::{future::TryShared, FbTryFutureExt};
 use quickcheck::{Arbitrary, Gen};
 
 use blobrepo::BlobRepo;

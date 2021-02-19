@@ -14,7 +14,7 @@ use futures::{
     stream::{self, BoxStream, TryStreamExt},
     StreamExt,
 };
-use futures_ext::{future::TryShared, FbFutureExt};
+use futures_ext::{future::TryShared, FbTryFutureExt};
 use futures_stats::TimedTryFutureExt;
 use scuba_ext::MononokeScubaSampleBuilder;
 use stats::prelude::*;

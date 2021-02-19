@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use anyhow::{ensure, Result};
 use futures::{compat::Future01CompatExt, future::BoxFuture, FutureExt, Stream, TryStreamExt};
-use futures_ext::{future::TryShared, FbFutureExt};
+use futures_ext::{future::TryShared, FbTryFutureExt};
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
