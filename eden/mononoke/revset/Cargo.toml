@@ -34,4 +34,3 @@ ascii = "1.0"
 async-trait = "0.1.29"
 quickcheck = "0.9"
 rand = { version = "0.7", features = ["small_rng"] }
-tokio = "0.1"

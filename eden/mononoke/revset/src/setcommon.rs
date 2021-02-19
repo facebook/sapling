@@ -72,9 +72,9 @@ mod test_utils {
     use super::*;
 
     use anyhow::bail;
+    use futures_old::task;
     use mercurial_types::HgNodeHash;
     use std::marker::PhantomData;
-    use tokio::prelude::task;
 
     pub struct NotReadyEmptyStream<T> {
         pub poll_count: usize,
