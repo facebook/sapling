@@ -66,6 +66,5 @@ slog-kvfilter = "0.7"
 slog-term = "2.4.2"
 thiserror = "1.0"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-old = { package = "tokio", version = "0.1" }
 tokio-openssl = "0.4"
 tokio-util = { version = "0.2", features = ["codec", "udp"] }
