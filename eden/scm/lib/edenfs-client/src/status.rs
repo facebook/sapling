@@ -841,16 +841,18 @@ mod test {
                 &mut io,
             )
             .unwrap();
-        let actual_output = io.output.as_any().downcast_ref::<Vec<u8>>().unwrap();
-        assert_eq!(str::from_utf8(actual_output).unwrap(), test_case.stdout);
-        let actual_error = io
-            .error
-            .as_ref()
-            .unwrap()
-            .as_any()
-            .downcast_ref::<Vec<u8>>()
-            .unwrap();
-        assert_eq!(str::from_utf8(actual_error).unwrap(), test_case.stderr);
+        let actual_output =
+            io.with_output(|o| o.as_any().downcast_ref::<Vec<u8>>().unwrap().clone());
+        assert_eq!(str::from_utf8(&actual_output).unwrap(), test_case.stdout);
+        let actual_error = io.with_error(|e| {
+            e.as_ref()
+                .unwrap()
+                .as_any()
+                .downcast_ref::<Vec<u8>>()
+                .unwrap()
+                .clone()
+        });
+        assert_eq!(str::from_utf8(&actual_error).unwrap(), test_case.stderr);
         assert_eq!(return_code, test_case.return_code);
     }
 

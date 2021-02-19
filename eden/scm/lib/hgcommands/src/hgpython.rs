@@ -86,12 +86,12 @@ impl HgPython {
         let entry_point_mod =
             info_span!("import edenscm").in_scope(|| py.import(HGPYENTRYPOINT_MOD))?;
         let call_args = {
-            let fin = read_to_py_object(py, &io.input);
-            let fout = write_to_py_object(py, &io.output);
-            let ferr = match io.error {
+            let fin = io.with_input(|i| read_to_py_object(py, i));
+            let fout = io.with_output(|o| write_to_py_object(py, o));
+            let ferr = io.with_error(|e| match e {
                 None => fout.clone_ref(py),
-                Some(ref error) => write_to_py_object(py, error),
-            };
+                Some(error) => write_to_py_object(py, error),
+            });
             let args: Vec<Str> = args.into_iter().map(Str::from).collect();
             (args, fin, fout, ferr).to_py_object(py)
         };
@@ -177,8 +177,8 @@ impl Drop for HgPython {
     }
 }
 
-fn read_to_py_object(py: Python, reader: &Box<dyn clidispatch::io::Read>) -> PyObject {
-    let any = Box::as_ref(reader).as_any();
+fn read_to_py_object(py: Python, reader: &dyn clidispatch::io::Read) -> PyObject {
+    let any = reader.as_any();
     if let Some(_) = any.downcast_ref::<std::io::Stdin>() {
         // The Python code accepts None, and will use its default input stream.
         py.None()
@@ -189,8 +189,8 @@ fn read_to_py_object(py: Python, reader: &Box<dyn clidispatch::io::Read>) -> PyO
     }
 }
 
-fn write_to_py_object(py: Python, writer: &Box<dyn clidispatch::io::Write>) -> PyObject {
-    let any = Box::as_ref(writer).as_any();
+fn write_to_py_object(py: Python, writer: &dyn clidispatch::io::Write) -> PyObject {
+    let any = writer.as_any();
     if let Some(_) = any.downcast_ref::<std::io::Stdout>() {
         py.None()
     } else if let Some(_) = any.downcast_ref::<std::io::Stderr>() {

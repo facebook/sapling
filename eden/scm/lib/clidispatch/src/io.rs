@@ -14,10 +14,10 @@ use std::thread::{spawn, JoinHandle};
 use streampager::{config::InterfaceMode, Pager};
 
 pub struct IO {
-    pub input: Box<dyn Read>,
-    pub output: Box<dyn Write>,
-    pub error: Option<Box<dyn Write>>,
-    pub progress: Option<Box<dyn Write>>,
+    input: Box<dyn Read>,
+    output: Box<dyn Write>,
+    error: Option<Box<dyn Write>>,
+    progress: Option<Box<dyn Write>>,
 
     pager_handle: Option<JoinHandle<streampager::Result<()>>>,
 }
@@ -42,7 +42,30 @@ impl<T: io::Write + Any + Send> Write for T {
     }
 }
 
+// Write to output.
+impl io::Write for IO {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.output.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.output.flush()
+    }
+}
+
 impl IO {
+    pub fn with_input<R>(&self, f: impl FnOnce(&dyn Read) -> R) -> R {
+        f(self.input.as_ref())
+    }
+
+    pub fn with_output<R>(&self, f: impl FnOnce(&dyn Write) -> R) -> R {
+        f(self.output.as_ref())
+    }
+
+    pub fn with_error<R>(&self, f: impl FnOnce(Option<&dyn Write>) -> R) -> R {
+        f(self.error.as_deref())
+    }
+
     pub fn new<IS, OS, ES>(input: IS, output: OS, error: Option<ES>) -> Self
     where
         IS: Read + 'static,
