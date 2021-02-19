@@ -10,6 +10,7 @@ use crate::errors::bug;
 use crate::id::{Group, Id};
 use crate::ops::Persist;
 use crate::segment::Segment;
+use crate::segment::SegmentFlags;
 use crate::Level;
 use crate::Result;
 use byteorder::{BigEndian, WriteBytesExt};
@@ -28,6 +29,7 @@ pub struct IndexedLogStore {
     log: log::Log,
     path: PathBuf,
     cached_max_level: AtomicU8,
+    merge_segments: bool,
 }
 
 const MAX_LEVEL_UNKNOWN: u8 = 0;
@@ -86,6 +88,24 @@ impl IdDagStore for IndexedLogStore {
     fn insert_segment(&mut self, segment: Segment) -> Result<()> {
         let level = segment.level()?;
         self.cached_max_level.fetch_max(level, AcqRel);
+        // When inserting a new flat segment, consider merging it with the last
+        // flat segment on disk.
+        //
+        // Turn:
+        //
+        //   [last segment] [(new) segment]
+        //
+        // Into:
+        //
+        //   [------------]
+        //    (removed)
+        //   [(new, merged) segment       ]
+        //    (in memory)
+        if level == 0 {
+            if self.maybe_insert_merged_flat_segment(&segment)? {
+                return Ok(());
+            }
+        }
         self.log.append(&segment.0)?;
         Ok(())
     }
@@ -275,6 +295,95 @@ impl Persist for IndexedLogStore {
 }
 
 impl IndexedLogStore {
+    /// Attempt to merge the flat `segment` with the last flat segment to reduce
+    /// fragmentation.
+    ///
+    /// ```plain,ignore
+    /// [---last segment---] [---segment---]
+    ///                    ^---- the only parent of segment
+    /// [---merged segment-----------------]
+    /// ```
+    ///
+    /// Return true if the merged segment was inserted.
+    fn maybe_insert_merged_flat_segment(&mut self, segment: &Segment) -> Result<bool> {
+        if !self.merge_segments {
+            return Ok(false);
+        }
+        let level = segment.level()?;
+        if level != 0 {
+            // Only applies to flat segments.
+            return Ok(false);
+        }
+        if segment.has_root()? {
+            // Cannot merge if segment has roots (implies no parent for a flat segment).
+            return Ok(false);
+        }
+        let span = segment.span()?;
+        let group = span.low.group();
+        if group != Group::MASTER {
+            // Do not merge non-master groups for simplicity.
+            return Ok(false);
+        }
+        let parents = segment.parents()?;
+        if parents.len() != 1 || parents[0] + 1 != span.low {
+            // Cannot merge - span.low dos not have parent [low-1] (non linear).
+            return Ok(false);
+        }
+        let last_segment = match self.iter_segments_descending(group.max_id(), 0)?.next() {
+            Some(Ok(s)) => s,
+            _ => return Ok(false), // Cannot merge - No last flat segment.
+        };
+        let last_span = last_segment.span()?;
+        if last_span.high + 1 != span.low {
+            // Cannot merge - Two spans are not connected.
+            return Ok(false);
+        }
+
+        // Can merge!
+
+        // Sanity check: No high-level segments should cover "last_span".
+        for lv in 1..=self.max_level()? {
+            if self
+                .find_segment_by_head_and_level(last_span.high, lv)?
+                .is_some()
+            {
+                return bug(format!(
+                    "lv{} segment should not cover last flat segment {:?}! ({})",
+                    lv, last_span, "check build_high_level_segments"
+                ));
+            }
+        }
+
+        // Calculate the merged segment.
+        let merged = {
+            let last_parents = last_segment.parents()?;
+            let flags = {
+                let last_flags = last_segment.flags()?;
+                let flags = segment.flags()?;
+                (flags & SegmentFlags::ONLY_HEAD) | (last_flags & SegmentFlags::HAS_ROOT)
+            };
+            Segment::new(flags, level, last_span.low, span.high, &last_parents)
+        };
+
+        tracing::debug!(
+            "merge flat segments {:?} + {:?} => {:?}",
+            &last_segment,
+            &segment,
+            &merged
+        );
+
+        let mut bytes = Vec::with_capacity(merged.0.len() + 10);
+        bytes.extend_from_slice(IndexedLogStore::MAGIC_REWRITE_LAST_FLAT);
+        bytes.extend_from_slice(&Self::serialize_head_level_lookup_key(
+            last_span.high,
+            level,
+        ));
+        bytes.extend_from_slice(&merged.0);
+        self.log.append(&bytes)?;
+
+        Ok(true)
+    }
+
     // Used internally to generate the index key for lookup
     fn serialize_head_level_lookup_key(value: Id, level: u8) -> [u8; Self::KEY_LEVEL_HEAD_LEN] {
         let mut buf = [0u8; Self::KEY_LEVEL_HEAD_LEN];
@@ -288,6 +397,12 @@ impl IndexedLogStore {
     }
 
     fn segment_from_slice(&self, bytes: &[u8]) -> Segment {
+        let bytes = if bytes.starts_with(IndexedLogStore::MAGIC_REWRITE_LAST_FLAT) {
+            let start = Self::MAGIC_REWRITE_LAST_FLAT.len() + Self::KEY_LEVEL_HEAD_LEN;
+            &bytes[start..]
+        } else {
+            bytes
+        };
         Segment(self.log.slice_to_bytes(bytes))
     }
 }
@@ -303,6 +418,18 @@ impl IndexedLogStore {
     /// not conflict with this.
     const MAGIC_CLEAR_NON_MASTER: &'static [u8] = b"CLRNM";
 
+    /// Magic bytes in `Log` that this entry replaces a previous flat segment.
+    ///
+    /// Format:
+    ///
+    /// ```plain,ignore
+    /// MAGIC_CLEAR_NON_MASTER + LEVEL (0u8) + PREVIOUS_HEAD (u64) + SEGMENT
+    /// ```
+    ///
+    /// The `LEVEL + PREVIOUS_HEAD` part is used to remove the segment from the
+    /// `(level, head)` index.
+    const MAGIC_REWRITE_LAST_FLAT: &'static [u8] = &[0xf0];
+
     pub fn log_open_options() -> log::OpenOptions {
         log::OpenOptions::new()
             .create(true)
@@ -310,20 +437,34 @@ impl IndexedLogStore {
                 // (level, high)
                 assert!(Self::MAGIC_CLEAR_NON_MASTER.len() < Segment::OFFSET_DELTA);
                 assert!(Group::BITS == 8);
-                if data.len() < Segment::OFFSET_DELTA {
-                    if data == Self::MAGIC_CLEAR_NON_MASTER {
-                        let max_level = 255;
-                        (0..=max_level)
-                            .map(|level| {
-                                log::IndexOutput::RemovePrefix(Box::new([
-                                    level,
-                                    Group::NON_MASTER.0 as u8,
-                                ]))
-                            })
-                            .collect()
-                    } else {
-                        panic!("bug: invalid segment {:?}", &data);
-                    }
+                assert_ne!(
+                    SegmentFlags::all().bits()
+                        & Self::MAGIC_REWRITE_LAST_FLAT[Segment::OFFSET_FLAGS],
+                    Self::MAGIC_REWRITE_LAST_FLAT[Segment::OFFSET_FLAGS],
+                    "MAGIC_REWRITE_LAST_FLAT should not conflict with possible flags"
+                );
+                if data == Self::MAGIC_CLEAR_NON_MASTER {
+                    let max_level = 255;
+                    (0..=max_level)
+                        .map(|level| {
+                            log::IndexOutput::RemovePrefix(Box::new([
+                                level,
+                                Group::NON_MASTER.0 as u8,
+                            ]))
+                        })
+                        .collect()
+                } else if data.starts_with(Self::MAGIC_REWRITE_LAST_FLAT) {
+                    // See MAGIC_REWRITE_LAST_FLAT for format.
+                    let start = Self::MAGIC_REWRITE_LAST_FLAT.len();
+                    let end = start + Segment::OFFSET_DELTA - Segment::OFFSET_LEVEL;
+                    let previous_index = &data[start..end];
+                    vec![
+                        log::IndexOutput::Remove(previous_index.to_vec().into_boxed_slice()),
+                        log::IndexOutput::Reference(
+                            (end + Segment::OFFSET_LEVEL) as u64
+                                ..(end + Segment::OFFSET_DELTA) as u64,
+                        ),
+                    ]
                 } else {
                     vec![log::IndexOutput::Reference(
                         Segment::OFFSET_LEVEL as u64..Segment::OFFSET_DELTA as u64,
@@ -337,12 +478,19 @@ impl IndexedLogStore {
                 //
                 //  The "child-group" prefix is used for invalidating index when
                 //  non-master Ids get re-assigned.
-                if data.len() < Segment::OFFSET_DELTA && data == Self::MAGIC_CLEAR_NON_MASTER {
+                if data == Self::MAGIC_CLEAR_NON_MASTER {
                     // Invalidate child-group == 1 entries
                     return vec![log::IndexOutput::RemovePrefix(Box::new([
                         Group::NON_MASTER.0 as u8,
                     ]))];
                 }
+
+                if data.starts_with(Self::MAGIC_REWRITE_LAST_FLAT) {
+                    // No need to create new indexes. The existing parent -> child
+                    // indexes for the old segment is applicable for the new segment.
+                    return Vec::new();
+                }
+
                 let seg = Segment(Bytes::copy_from_slice(data));
                 let mut result = Vec::new();
                 if seg.level().ok() == Some(0) {
@@ -379,6 +527,7 @@ impl IndexedLogStore {
             log,
             path,
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
+            merge_segments: false,
         })
     }
 
@@ -388,6 +537,7 @@ impl IndexedLogStore {
             log,
             path,
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
+            merge_segments: false,
         }
     }
 
@@ -397,6 +547,7 @@ impl IndexedLogStore {
             log,
             path: self.path.clone(),
             cached_max_level: AtomicU8::new(self.cached_max_level.load(Acquire)),
+            merge_segments: self.merge_segments,
         };
         Ok(store)
     }
@@ -407,7 +558,93 @@ impl IndexedLogStore {
             log,
             path: self.path.clone(),
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
+            merge_segments: self.merge_segments,
         };
         Ok(store)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_merge_persisted_segments() -> Result<()> {
+        // Test that a persisted segment can still be mutable and merged.
+        //
+        // Persisted                    | Not persisted
+        // [0..=5] [6..=10, parents=[3]] [11..=20, parents=[10]]
+        //         [6..                       =20, parents=[3] ] <- merged
+        let tmp = tempfile::tempdir()?;
+        let mut iddag = IndexedLogStore::open(tmp.path())?;
+        iddag.merge_segments = true;
+        let seg1 = Segment::new(SegmentFlags::HAS_ROOT, 0, Id(0), Id(5), &[]);
+        let seg2 = Segment::new(SegmentFlags::empty(), 0, Id(6), Id(10), &[Id(3)]);
+        iddag.insert_segment(seg1)?;
+        iddag.insert_segment(seg2)?;
+        let locked = iddag.lock()?;
+        iddag.persist(&locked)?;
+
+        let seg3 = Segment::new(SegmentFlags::ONLY_HEAD, 0, Id(11), Id(20), &[Id(10)]);
+        iddag.insert_segment(seg3)?;
+        iddag.persist(&locked)?;
+
+        // Reload.
+        let iddag2 = IndexedLogStore::open(tmp.path())?;
+
+        // Check the merged segments.
+        assert_eq!(
+            dbg_iter(iddag2.iter_segments_descending(Id(20), 0)?),
+            "[H6-20[3], R0-5[]]"
+        );
+
+        // Check parent -> child index.
+        // 10 -> 11 parent index wasn't inserted.
+        assert_eq!(
+            dbg_iter(iddag2.iter_flat_segments_with_parent(Id(10))?),
+            "[]"
+        );
+        // 3 -> 6 parent index only returns the new segment.
+        assert_eq!(
+            dbg_iter(iddag2.iter_flat_segments_with_parent(Id(3))?),
+            "[6-10[3]]"
+        );
+
+        // Check (level, head) -> segment index.
+        // Check lookup by "including_id". Should all return the new merged segment.
+        assert_eq!(
+            dbg(iddag2.find_flat_segment_including_id(Id(7))?),
+            "Some(H6-20[3])"
+        );
+        assert_eq!(
+            dbg(iddag2.find_flat_segment_including_id(Id(13))?),
+            "Some(H6-20[3])"
+        );
+        assert_eq!(
+            dbg(iddag2.find_flat_segment_including_id(Id(20))?),
+            "Some(H6-20[3])"
+        );
+        // Check lookup by head.
+        // By head 20 returns the new merged segment.
+        assert_eq!(
+            dbg(iddag2.find_segment_by_head_and_level(Id(20), 0)?),
+            "Some(H6-20[3])"
+        );
+        // By head 10 does not return the old segment.
+        assert_eq!(
+            dbg(iddag2.find_segment_by_head_and_level(Id(10), 0)?),
+            "None"
+        );
+
+        Ok(())
+    }
+
+    fn dbg_iter<'a>(iter: Box<dyn Iterator<Item = Result<Segment>> + 'a>) -> String {
+        let v = iter.map(|s| s.unwrap()).collect::<Vec<_>>();
+        dbg(v)
+    }
+
+    fn dbg<T: std::fmt::Debug>(t: T) -> String {
+        format!("{:?}", t)
     }
 }
