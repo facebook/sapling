@@ -179,6 +179,10 @@ impl Entry {
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }
+
+    pub fn key(&self) -> &Key {
+        &self.key
+    }
 }
 
 impl IndexedLogHgIdDataStore {

@@ -20,9 +20,9 @@ use tokio::task::spawn_blocking;
 use types::Key;
 
 use crate::{
-    datastore::{HgIdDataStore, StoreResult},
+    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, StoreResult},
     indexedlogdatastore::Entry,
-    newstore::{FetchStream, KeyStream, ReadStore},
+    newstore::{FetchStream, KeyStream, ReadStore, WriteResults, WriteStore, WriteStream},
     types::StoreKey,
 };
 
@@ -63,6 +63,44 @@ where
                 };
 
                 Ok(Entry::new(key, blob, meta))
+            })
+            .map(move |spawn_res| {
+                match spawn_res {
+                    Ok(Ok(entry)) => Ok(entry),
+                    Ok(Err(e)) => Err(e),
+                    Err(e) => Err((Some(key), e.into())),
+                }
+            })
+        }))
+    }
+}
+
+#[async_trait]
+impl<T> WriteStore<Key, Entry> for LegacyDatastore<T>
+where
+    T: HgIdMutableDeltaStore + 'static,
+{
+    async fn write_stream(self: Arc<Self>, values: WriteStream<Entry>) -> WriteResults<Key> {
+        Box::pin(values.then(move |mut value| {
+            let self_ = self.clone();
+            let key = value.key().clone();
+            spawn_blocking(move || {
+                let key = value.key().clone();
+                let content = match value.content() {
+                    Ok(c) => c,
+                    Err(e) => {
+                        return Err((Some(key), e));
+                    }
+                };
+                let delta = Delta {
+                    data: content,
+                    base: None,
+                    key: key.clone(),
+                };
+                match self_.0.add(&delta, value.metadata()) {
+                    Ok(()) => Ok(key),
+                    Err(e) => Err((Some(key), e)),
+                }
             })
             .map(move |spawn_res| {
                 match spawn_res {
@@ -126,6 +164,61 @@ mod tests {
 
         let entries = vec![entry];
 
+        let fetched: Vec<_> = block_on_stream(block_on(
+            log.fetch_stream(Box::pin(stream::iter(vec![entry_key]))),
+        ))
+        .collect();
+
+        assert_eq!(
+            fetched
+                .into_iter()
+                .map(|r| r.expect("failed to fetch from test read store"))
+                .collect::<Vec<_>>(),
+            entries
+        );
+    }
+
+    #[test]
+    fn test_legacy_shim_write() {
+        let tempdir = TempDir::new().unwrap();
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
+
+        let entry_key = key("a", "1");
+        let content = Bytes::from(&[1, 2, 3, 4][..]);
+        let metadata = Metadata::default();
+        let entry = Entry::new(entry_key.clone(), content, metadata.clone());
+
+        // Wrap to direct new API to call into old API
+        let legacy = LegacyDatastore(log);
+        let log = Arc::new(legacy);
+
+        let entries = vec![entry];
+
+        // Write test data
+        let written: Vec<_> = block_on_stream(block_on(
+            log.clone()
+                .write_stream(Box::pin(stream::iter(entries.clone()))),
+        ))
+        .collect();
+
+        assert_eq!(
+            written
+                .into_iter()
+                .map(|r| r.expect("failed to write to test write store"))
+                .collect::<Vec<_>>(),
+            vec![entry_key.clone()]
+        );
+
+        // TODO: Add "flush" support to WriteStore trait
+        log.0.flush().unwrap();
+
+        // Read, also using legacy wrapper
         let fetched: Vec<_> = block_on_stream(block_on(
             log.fetch_stream(Box::pin(stream::iter(vec![entry_key]))),
         ))
