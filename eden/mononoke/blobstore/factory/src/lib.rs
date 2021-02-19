@@ -20,7 +20,7 @@ pub use packblob::PackOptions;
 pub use throttledblob::ThrottleOptions;
 
 pub use crate::blobstore::{make_blobstore, make_sql_blobstore, BlobstoreOptions};
-pub use crate::sql::{make_metadata_sql_factory, MetadataSqlFactory};
+pub use crate::sql::{make_metadata_sql_factory, MetadataSqlFactory, SqlTierInfo};
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct ReadOnlyStorage(pub bool);

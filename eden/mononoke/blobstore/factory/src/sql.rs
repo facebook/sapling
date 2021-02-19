@@ -39,6 +39,14 @@ pub struct MetadataSqlFactory {
     readonly: ReadOnlyStorage,
 }
 
+#[derive(Clone)]
+pub struct SqlTierInfo {
+    pub tier_name: String,
+    /// Returns None for unsharded, Some(number of shards) otherwise.
+    /// NB does not tell you if shards are 0 or 1 based, just the overall number
+    pub shard_num: Option<usize>,
+}
+
 impl MetadataSqlFactory {
     pub async fn open<T: SqlConstructFromMetadataDatabaseConfig>(&self) -> Result<T, Error> {
         T::with_metadata_database_config(
@@ -62,21 +70,26 @@ impl MetadataSqlFactory {
         .await
     }
 
-    pub fn tier_name_shardable<T: SqlShardableConstructFromMetadataDatabaseConfig>(
+    pub fn tier_info_shardable<T: SqlShardableConstructFromMetadataDatabaseConfig>(
         &self,
-    ) -> Result<String, Error> {
-        match &self.dbconfig {
-            MetadataDatabaseConfig::Local(_) => Ok("sqlite".to_string()),
+    ) -> Result<SqlTierInfo, Error> {
+        Ok(match &self.dbconfig {
+            MetadataDatabaseConfig::Local(_) => SqlTierInfo {
+                tier_name: "sqlite".to_string(),
+                shard_num: None,
+            },
             MetadataDatabaseConfig::Remote(remote) => match T::remote_database_config(remote) {
-                Some(ShardableRemoteDatabaseConfig::Unsharded(config)) => {
-                    Ok(config.db_address.clone())
-                }
-                Some(ShardableRemoteDatabaseConfig::Sharded(config)) => {
-                    Ok(config.shard_map.clone())
-                }
+                Some(ShardableRemoteDatabaseConfig::Unsharded(config)) => SqlTierInfo {
+                    tier_name: config.db_address.clone(),
+                    shard_num: None,
+                },
+                Some(ShardableRemoteDatabaseConfig::Sharded(config)) => SqlTierInfo {
+                    tier_name: config.shard_map.clone(),
+                    shard_num: Some(config.shard_num.get()),
+                },
                 None => bail!("missing tier name in configuration"),
             },
-        }
+        })
     }
 
     /// Make connections to the primary metadata database

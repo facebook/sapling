@@ -687,7 +687,7 @@ async fn new_production(
     let phases_cache_pool = get_volatile_pool("phases")?;
     let derived_data_lease = MemcacheOps::new(fb, "derived-data-lease", "")?;
 
-    let filenodes_tier = sql_factory.tier_name_shardable::<NewFilenodesBuilder>()?;
+    let filenodes_tier = sql_factory.tier_info_shardable::<NewFilenodesBuilder>()?;
     let filenodes_builder = sql_factory.open_shardable::<NewFilenodesBuilder>();
     let bookmarks = async {
         let builder = sql_factory.open::<SqlBookmarksBuilder>().await?;
@@ -753,7 +753,7 @@ async fn new_production(
         filenodes_pool,
         filenodes_history_pool,
         "newfilenodes",
-        &filenodes_tier,
+        &filenodes_tier.tier_name,
     );
 
     let bookmarks = Arc::new(bookmarks);
