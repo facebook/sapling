@@ -28,13 +28,13 @@ use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, select, Either, FutureExt, TryFutureExt},
     pin_mut,
-    stream::{FuturesUnordered, StreamExt, TryStreamExt},
+    stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_01_ext::{
-    spawn_future, try_boxstream, BoxFuture, BoxStream, BufferedParams, FutureExt as OldFutureExt,
-    StreamExt as OldStreamExt, StreamTimeoutError,
+    try_boxstream, BoxFuture, BoxStream, FutureExt as OldFutureExt, StreamExt as OldStreamExt,
+    StreamTimeoutError,
 };
-use futures_ext::{FbFutureExt, FbTryFutureExt};
+use futures_ext::{BufferedParams, FbFutureExt, FbStreamExt, FbTryFutureExt, FbTryStreamExt};
 use futures_old::future::ok;
 use futures_old::{
     future as future_old, stream as stream_old, try_ready, Async, Future, IntoFuture, Poll, Stream,
@@ -704,91 +704,110 @@ impl RepoClient {
             let validate_hash =
                 rand::thread_rng().gen_ratio(hash_validation_percentage as u32, 100);
             let getpack_buffer_size = 500;
-            // Let's fetch the whole request before responding.
-            // That's prevents deadlocks, because hg client doesn't start reading the response
-            // before all the arguments were sent.
+
             let request_stream = move || {
-                cloned!(ctx);
-                let s = params
-                    .collect()
-                    .map({
-                        cloned!(ctx);
-                        move |params| {
-                            ctx.scuba()
-                                .clone()
-                                .add("getpack_paths", params.len())
-                                .log_with_msg("Getpack Params", None);
-                            stream_old::iter_ok(params.into_iter())
-                        }
-                    })
-                    .flatten_stream()
-                    .map({
-                        cloned!(ctx, getpack_params, repo, lfs_params);
-                        move |(path, filenodes)| {
-                            {
-                                let mut getpack_params = getpack_params.lock().unwrap();
-                                getpack_params.push((path.clone(), filenodes.clone()));
-                            }
+                let content_stream = {
+                    cloned!(ctx, getpack_params, lfs_params, undesired_path_logger);
 
-                            ctx.session().bump_load(Metric::EgressGetpackFiles, 1.0);
+                    async move {
+                        let buffered_params = BufferedParams {
+                            weight_limit: 100_000_000,
+                            buffer_size: getpack_buffer_size,
+                        };
 
-                            let blob_futs: Vec<_> = filenodes
-                                .iter()
-                                .map(|filenode| {
-                                    handler(
-                                        ctx.clone(),
-                                        repo.clone(),
-                                        *filenode,
-                                        lfs_params.clone(),
-                                        validate_hash,
+                        // Let's fetch the whole request before responding.
+                        // That's prevents deadlocks, because hg client doesn't start reading the response
+                        // before all the arguments were sent.
+                        let params = params.compat().try_collect::<Vec<_>>().await?;
+
+                        ctx.scuba()
+                            .clone()
+                            .add("getpack_paths", params.len())
+                            .log_with_msg("Getpack Params", None);
+
+                        let res = stream::iter(params.into_iter())
+                            .map({
+                                cloned!(ctx, getpack_params, repo, lfs_params);
+                                move |(path, filenodes)| {
+                                    {
+                                        let mut getpack_params = getpack_params.lock().unwrap();
+                                        getpack_params.push((path.clone(), filenodes.clone()));
+                                    }
+
+                                    ctx.session().bump_load(Metric::EgressGetpackFiles, 1.0);
+
+                                    let blob_futs: Vec<_> = filenodes
+                                        .iter()
+                                        .map(|filenode| {
+                                            handler(
+                                                ctx.clone(),
+                                                repo.clone(),
+                                                *filenode,
+                                                lfs_params.clone(),
+                                                validate_hash,
+                                            )
+                                            .compat()
+                                        })
+                                        .collect();
+
+                                    // NOTE: We don't otherwise await history_fut until we have the results
+                                    // from blob_futs, so we need to spawn this to start fetching history
+                                    // before we have resoved hg filenodes.
+                                    let history_fut = tokio::task::spawn(
+                                        get_unordered_file_history_for_multiple_nodes(
+                                            ctx.clone(),
+                                            repo.clone(),
+                                            filenodes.into_iter().collect(),
+                                            &path,
+                                            allow_short_getpack_history,
+                                        )
+                                        .compat()
+                                        .try_collect::<Vec<_>>(),
                                     )
-                                })
-                                .collect();
+                                    .flatten_err();
 
-                            // NOTE: We don't otherwise await history_fut until we have the results
-                            // from blob_futs, so we need to spawn this to start fetching history
-                            // before we have resoved hg filenodes.
-                            let history_fut = spawn_future(
-                                get_unordered_file_history_for_multiple_nodes(
-                                    ctx.clone(),
-                                    repo.clone(),
-                                    filenodes.into_iter().collect(),
-                                    &path,
-                                    allow_short_getpack_history,
-                                )
-                                .collect(),
-                            );
+                                    cloned!(undesired_path_logger);
 
-                            future_old::join_all(blob_futs.into_iter()).map({
-                                cloned!(undesired_path_logger);
-                                move |blobs| {
-                                    undesired_path_logger.maybe_log_file(
-                                        Some(&path),
-                                        blobs.iter().map(|(blobinfo, _)| blobinfo.filesize),
-                                    );
+                                    async move {
+                                        let blobs =
+                                            future::try_join_all(blob_futs.into_iter()).await?;
 
-                                    let total_weight =
-                                        blobs.iter().map(|(blob_info, _)| blob_info.weight).sum();
-                                    let content_futs = blobs.into_iter().map(|(_, fut)| fut);
-                                    let contents_and_history = future_old::join_all(content_futs)
-                                        .join(history_fut)
-                                        .map(move |(contents, history)| (path, contents, history));
+                                        undesired_path_logger.maybe_log_file(
+                                            Some(&path),
+                                            blobs.iter().map(|(blobinfo, _)| blobinfo.filesize),
+                                        );
 
-                                    (contents_and_history, total_weight)
+                                        let total_weight = blobs
+                                            .iter()
+                                            .map(|(blob_info, _)| blob_info.weight)
+                                            .sum();
+                                        let content_futs =
+                                            blobs.into_iter().map(|(_, fut)| fut.compat());
+                                        let contents_and_history = future::try_join(
+                                            future::try_join_all(content_futs),
+                                            history_fut,
+                                        )
+                                        .map_ok(move |(contents, history)| {
+                                            (path, contents, history)
+                                        });
+
+                                        Result::<_, Error>::Ok((contents_and_history, total_weight))
+                                    }
                                 }
                             })
-                        }
-                    })
-                    .buffered(getpack_buffer_size);
+                            .buffered(getpack_buffer_size)
+                            .try_buffered_weight_limited(buffered_params);
 
-                let params = BufferedParams {
-                    weight_limit: 100_000_000,
-                    buffer_size: getpack_buffer_size,
-                };
-                let s = s
-                    .buffered_weight_limited(params)
+                        Result::<_, Error>::Ok(res)
+                    }
+                }
+                .try_flatten_stream();
+
+                let serialized_stream = content_stream
                     .whole_stream_timeout(getpack_timeout())
-                    .map_err(process_stream_timeout_error)
+                    .flatten_err()
+                    .boxed()
+                    .compat()
                     .map({
                         cloned!(ctx);
                         move |(path, contents, history)| {
@@ -858,7 +877,7 @@ impl RepoClient {
                     .flatten()
                     .chain(stream_old::once(Ok(wirepack::Part::End)));
 
-                wirepack::packer::WirePackPacker::new(s, wirepack::Kind::File)
+                wirepack::packer::WirePackPacker::new(serialized_stream, wirepack::Kind::File)
                     .and_then(|chunk| chunk.into_bytes())
                     .inspect({
                         cloned!(ctx);
