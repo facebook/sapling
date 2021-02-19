@@ -59,4 +59,13 @@ py_class!(class checkoutplan |py| {
         Ok(PyNone)
     }
 
+    def __str__(&self) -> PyResult<PyString> {
+        if let Some(plan) = self.plan(py).borrow().as_ref() {
+            Ok(PyString::new(py, &plan.to_string()))
+        } else {
+            // Not returning error since ideally __str_ should not fail
+            Ok(PyString::new(py, "checkoutplan was already applied"))
+        }
+    }
+
 });

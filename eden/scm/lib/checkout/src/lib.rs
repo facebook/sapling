@@ -9,6 +9,7 @@ use anyhow::{bail, format_err, Result};
 use futures::{stream, try_join, Stream, StreamExt};
 use manifest::{DiffEntry, DiffType, FileMetadata, FileType};
 use revisionstore::{HgIdDataStore, RemoteDataStore, StoreKey, StoreResult};
+use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use types::{HgId, Key, RepoPathBuf};
@@ -549,5 +550,26 @@ mod test {
 
     fn hgid_file(hgid: &HgId) -> Vec<u8> {
         hgid.to_string().into_bytes()
+    }
+}
+
+impl fmt::Display for CheckoutPlan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for r in &self.remove {
+            writeln!(f, "rm {}", r)?;
+        }
+        for u in &self.update_content {
+            let ft = match u.file_type {
+                FileType::Executable => "(x)",
+                FileType::Symlink => "(s)",
+                FileType::Regular => "",
+            };
+            writeln!(f, "up {}=>{}{}", u.path, u.content_hgid, ft)?;
+        }
+        for u in &self.update_meta {
+            let ch = if u.set_x_flag { "+x" } else { "-x" };
+            writeln!(f, "{} {}", ch, u.path)?;
+        }
+        Ok(())
     }
 }
