@@ -182,12 +182,19 @@ async fn get_blob<'a>(
         (CMD_MANIFOLD, Some(sub)) => {
             #[cfg(fbcode_build)]
             {
-                use manifoldblob::ManifoldBlob;
+                use manifoldblob::{ManifoldBlob, ManifoldClientType};
                 use prefixblob::PrefixBlobstore;
 
+                let manifold_client_type =
+                    if args::parse_blobstore_options(matches)?.manifold_use_cpp_client {
+                        ManifoldClientType::CppThriftHybrid
+                    } else {
+                        ManifoldClientType::ThriftOnly
+                    };
                 let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
-                let manifold = ManifoldBlob::new(fb, bucket, None, put_behaviour)
-                    .map_err(|e| -> Error { e })?;
+                let manifold =
+                    ManifoldBlob::new(fb, bucket, None, put_behaviour, manifold_client_type)
+                        .map_err(|e| -> Error { e })?;
                 let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
                 Arc::new(blobstore)
             }

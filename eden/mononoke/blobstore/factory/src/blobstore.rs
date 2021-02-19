@@ -44,6 +44,7 @@ pub struct BlobstoreOptions {
     pub chaos_options: ChaosOptions,
     pub throttle_options: ThrottleOptions,
     pub manifold_api_key: Option<String>,
+    pub manifold_use_cpp_client: bool,
     pub pack_options: PackOptions,
     pub cachelib_options: CachelibBlobstoreOptions,
     pub put_behaviour: PutBehaviour,
@@ -55,6 +56,7 @@ impl BlobstoreOptions {
         chaos_options: ChaosOptions,
         throttle_options: ThrottleOptions,
         manifold_api_key: Option<String>,
+        manifold_use_cpp_client: bool,
         pack_options: PackOptions,
         cachelib_options: CachelibBlobstoreOptions,
         put_behaviour: Option<PutBehaviour>,
@@ -63,6 +65,7 @@ impl BlobstoreOptions {
             chaos_options,
             throttle_options,
             manifold_api_key,
+            manifold_use_cpp_client,
             pack_options,
             cachelib_options,
             // If not specified, maintain status quo, which is overwrite
@@ -104,6 +107,7 @@ impl Default for BlobstoreOptions {
             ChaosOptions::new(None, None),
             ThrottleOptions::default(),
             None,
+            false,
             PackOptions::default(),
             CachelibBlobstoreOptions::default(),
             None,
@@ -257,7 +261,7 @@ pub async fn make_sql_blobstore<'a>(
     }
 }
 
-// Constructs the BlobstorePutOps store implementations for low level blobsore access
+// Constructs the BlobstorePutOps store implementations for low level blobstore access
 fn make_blobstore_put_ops<'a>(
     fb: FacebookInit,
     blobconfig: BlobConfig,
@@ -349,6 +353,7 @@ fn make_blobstore_put_ops<'a>(
                         bucket.clone(),
                         None,
                         blobstore_options.manifold_api_key.clone(),
+                        blobstore_options.manifold_use_cpp_client,
                         blobstore_options.put_behaviour,
                     )
                     .compat()
@@ -373,6 +378,7 @@ fn make_blobstore_put_ops<'a>(
                         bucket.clone(),
                         Some(ttl),
                         blobstore_options.manifold_api_key.clone(),
+                        blobstore_options.manifold_use_cpp_client,
                         blobstore_options.put_behaviour,
                     )
                     .compat()
