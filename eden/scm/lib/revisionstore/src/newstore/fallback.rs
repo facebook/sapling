@@ -6,16 +6,18 @@
  */
 
 use std::convert::From;
+use std::fmt;
 use std::sync::Arc;
 
-use anyhow::Error;
 use async_trait::async_trait;
 use futures::{channel::mpsc::channel, SinkExt, StreamExt, TryStreamExt};
 use tracing::error;
 
 use streams::select_drop;
 
-use crate::newstore::{BoxedReadStore, BoxedWriteStore, FetchStream, KeyStream, ReadStore};
+use crate::newstore::{
+    BoxedReadStore, BoxedWriteStore, FetchError, FetchStream, KeyStream, ReadStore,
+};
 
 /// A combinator which queries a preferred store, then falls back to a fallback store
 /// if a key is not found in the preferred store.
@@ -41,7 +43,7 @@ const CHANNEL_BUFFER: usize = 200;
 #[async_trait]
 impl<K, VP, VF> ReadStore<K, VP> for FallbackStore<K, VP, VF>
 where
-    K: Send + Sync + Clone + Unpin + 'static,
+    K: fmt::Display + fmt::Debug + Send + Sync + Clone + Unpin + 'static,
     VF: Send + Sync + 'static,
     VP: Send + Sync + Clone + From<VF> + 'static,
 {
@@ -57,19 +59,17 @@ where
                 .filter_map(move |res| {
                     let mut sender = sender.clone();
                     async move {
+                        use FetchError::*;
                         match res {
                             Ok(v) => Some(Ok(v)),
-                            Err((None, e)) => Some(Err((None, e))),
-                            Err((Some(k), _e)) => {
-                                // TODO(meyer): We should really only fallback for "not found" errors, and pass through others.
-                                // Otherwise swallowing this error here could lose us valuable information.
-                                // TODO(meyer): Looks like we aren't up to date with futures crate, missing "feed" method, which is probably better here.
-                                // I think this might serialize the fallback stream as-written.
-                                match sender.send(k.clone()).await {
-                                    Ok(()) => None,
-                                    Err(e) => Some(Err((Some(k), e.into()))),
-                                }
-                            }
+                            // TODO(meyer): Looks like we aren't up to date with futures crate, missing "feed" method, which is probably better here.
+                            // I think this might serialize the fallback stream as-written.
+                            Err(NotFound(k)) => match sender.send(k.clone()).await {
+                                Ok(()) => None,
+                                Err(e) => Some(Err(FetchError::with_key(k, e))),
+                            },
+                            // TODO(meyer): Should we also fall back on KeyedError, but also log an error?
+                            Err(e) => Some(Err(e)),
                         }
                     }
                 });
@@ -104,9 +104,7 @@ where
             .write_stream(Box::pin(write_receiver))
             .await
             // TODO(meyer): Don't swallow all write errors here.
-            .filter_map(|_res| {
-                futures::future::ready(Option::<Result<VP, (Option<K>, Error)>>::None)
-            });
+            .filter_map(|_res| futures::future::ready(None));
 
         // TODO(meyer): Implement `select_all_drop` if we continue with this approach
         Box::pin(select_drop(

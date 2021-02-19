@@ -11,7 +11,6 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::anyhow;
 use anyhow::{bail, ensure, Result};
 use async_trait::async_trait;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
@@ -30,7 +29,9 @@ use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::{ExtStoredPolicy, LocalStore},
-    newstore::{FetchStream, KeyStream, ReadStore, WriteResults, WriteStore, WriteStream},
+    newstore::{
+        FetchError, FetchStream, KeyStream, ReadStore, WriteResults, WriteStore, WriteStream,
+    },
     repack::ToKeys,
     sliceext::SliceExt,
     types::StoreKey,
@@ -279,17 +280,16 @@ impl ReadStore<Key, Entry> for IndexedLogHgIdDataStore {
             spawn_blocking(move || {
                 let inner = self_.inner.read();
                 match Entry::from_log(&key, &inner.log) {
-                    // TODO(meyer): NotFound error should be strongly typed.
-                    Ok(None) => Err((Some(key.clone()), anyhow!("key not found in indexedlog"))),
+                    Ok(None) => Err(FetchError::not_found(key.clone())),
                     Ok(Some(entry)) => Ok(entry),
-                    Err(e) => Err((Some(key.clone()), e)),
+                    Err(e) => Err(FetchError::with_key(key.clone(), e)),
                 }
             })
             .map(move |spawn_res| {
                 match spawn_res {
                     Ok(Ok(entry)) => Ok(entry),
                     Ok(Err(e)) => Err(e),
-                    Err(e) => Err((Some(key_), e.into())),
+                    Err(e) => Err(FetchError::with_key(key_, e)),
                 }
             })
         }))

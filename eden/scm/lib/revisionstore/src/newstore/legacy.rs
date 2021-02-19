@@ -12,7 +12,6 @@
 
 use std::sync::Arc;
 
-use anyhow::{anyhow, Error};
 use async_trait::async_trait;
 use futures::{FutureExt, StreamExt};
 use tokio::task::spawn_blocking;
@@ -22,7 +21,9 @@ use types::Key;
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, StoreResult},
     indexedlogdatastore::Entry,
-    newstore::{FetchStream, KeyStream, ReadStore, WriteResults, WriteStore, WriteStream},
+    newstore::{
+        FetchError, FetchStream, KeyStream, ReadStore, WriteResults, WriteStore, WriteStream,
+    },
     types::StoreKey,
 };
 
@@ -37,30 +38,20 @@ where
         Box::pin(keys.then(move |key| {
             let self_ = self.clone();
             let key_ = key.clone();
-            spawn_blocking(move || -> Result<Entry, (Option<Key>, Error)> {
+            spawn_blocking(move || {
                 use StoreResult::*;
                 let key = key_;
                 let store_key = StoreKey::HgId(key.clone());
                 let blob = match self_.0.get(store_key.clone()) {
-                    Ok(Found(v)) => v.into(),
-                    // TODO: Add type-safe "not found" to new storage traits. We now have two sets
-                    // of adapters that support this being downgraded to non-type-safe "not found".
-                    Ok(NotFound(_k)) => {
-                        return Err((Some(key.clone()), anyhow!("key not found")));
-                    }
-                    Err(e) => {
-                        return Err((Some(key.clone()), e));
-                    }
-                };
+                    Ok(Found(v)) => Ok(v.into()),
+                    Ok(NotFound(_k)) => Err(FetchError::not_found(key.clone())),
+                    Err(e) => Err(FetchError::with_key(key.clone(), e)),
+                }?;
                 let meta = match self_.0.get_meta(store_key) {
-                    Ok(Found(v)) => v,
-                    Ok(NotFound(_k)) => {
-                        return Err((Some(key.clone()), anyhow!("key not found")));
-                    }
-                    Err(e) => {
-                        return Err((Some(key.clone()), e));
-                    }
-                };
+                    Ok(Found(v)) => Ok(v),
+                    Ok(NotFound(_k)) => Err(FetchError::not_found(key.clone())),
+                    Err(e) => Err(FetchError::with_key(key.clone(), e)),
+                }?;
 
                 Ok(Entry::new(key, blob, meta))
             })
@@ -68,7 +59,7 @@ where
                 match spawn_res {
                     Ok(Ok(entry)) => Ok(entry),
                     Ok(Err(e)) => Err(e),
-                    Err(e) => Err((Some(key), e.into())),
+                    Err(e) => Err(FetchError::with_key(key, e)),
                 }
             })
         }))

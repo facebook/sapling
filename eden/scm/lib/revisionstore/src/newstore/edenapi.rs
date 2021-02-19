@@ -8,7 +8,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Error;
 use async_trait::async_trait;
 use futures::StreamExt;
 use futures_batch::ChunksTimeoutStreamExt;
@@ -17,7 +16,7 @@ use edenapi::EdenApi;
 use edenapi_types::{FileEntry, TreeAttributes, TreeEntry};
 use types::Key;
 
-use crate::newstore::{fetch_error, FetchStream, KeyStream, ReadStore};
+use crate::newstore::{fetch_error, FetchError, FetchStream, KeyStream, ReadStore};
 
 // TODO(meyer): These should be configurable
 // EdenApi's API is batch-based and async, and it will split a large batch into multiple requests to send in parallel
@@ -55,10 +54,11 @@ where
                             .map_or_else(fetch_error, |s| {
                                 Box::pin(s.entries.map(|v| match v {
                                     Ok(Ok(v)) => Ok(v),
-                                    // TODO: We could eliminate this redundant key clone with a FetchError trait.
-                                    Ok(Err(e)) => Err((e.key.clone(), Error::new(e))),
+                                    // TODO: Separate out NotFound errors from EdenApi
+                                    // TODO: We could eliminate this redundant key clone with a trait, I think.
+                                    Ok(Err(e)) => Err(FetchError::maybe_with_key(e.key.clone(), e)),
                                     // TODO: What should happen when an entire batch fails?
-                                    Err(e) => Err((None, Error::new(e))),
+                                    Err(e) => Err(FetchError::from(e)),
                                 })) as FetchStream<Key, TreeEntry>
                             })
                     }
@@ -84,7 +84,8 @@ where
                             .files(self_.repo.clone(), keys, None)
                             .await
                             .map_or_else(fetch_error, |s| {
-                                Box::pin(s.entries.map(|v| v.map_err(|e| (None, Error::new(e)))))
+                                // TODO: Add per-item errors to EdenApi `files`
+                                Box::pin(s.entries.map(|v| v.map_err(FetchError::from)))
                                     as FetchStream<Key, FileEntry>
                             })
                     }
