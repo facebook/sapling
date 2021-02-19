@@ -12,7 +12,7 @@ use blobstore::Loadable;
 use chashmap::CHashMap;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{FutureExt, TryFutureExt};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use futures_ext::{send_discard, BoxFuture};
 use futures_old::{
     sync::mpsc::{self, Sender},
@@ -89,7 +89,7 @@ where
         // Start off with follow_limit + 1 because that's logically the previous follow_remaining.
         let visit_one = VisitOne::new(ctx.clone(), &inner, changeset_id, follow_limit, &mut sender);
         if let Some(visit_one) = visit_one {
-            tokio_old::spawn(visit_one.visit());
+            tokio::spawn(visit_one.visit().compat());
         }
     }
 
@@ -199,7 +199,7 @@ where
                     if let Some(visit_one) = visit_one {
                         // Avoid unbounded recursion by spawning separate futures for each parent
                         // directly on the executor.
-                        tokio_old::spawn(visit_one.visit());
+                        tokio::spawn(visit_one.visit().compat());
                     }
                 }
             }

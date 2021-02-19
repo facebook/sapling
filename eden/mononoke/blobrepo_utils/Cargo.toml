@@ -31,7 +31,7 @@ futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
-tokio-old = { package = "tokio", version = "0.1" }
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]
 fixtures = { path = "../tests/fixtures", version = "0.1.0" }
