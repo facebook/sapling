@@ -196,6 +196,11 @@ mod tests {
             .unwrap();
         assert_eq!(&segment, LEVEL1_HEAD13.deref());
 
+        let opt_segment = store
+            .find_segment_by_head_and_level(Id(2), 0 as Level)
+            .unwrap();
+        assert!(opt_segment.is_none());
+
         let segment = store
             .find_segment_by_head_and_level(Id(5), 0 as Level)
             .unwrap()
@@ -218,6 +223,18 @@ mod tests {
 
         let segment = store
             .find_flat_segment_including_id(Id(0))
+            .unwrap()
+            .unwrap();
+        assert_eq!(&segment, MERGED_LEVEL0_HEAD5.deref());
+
+        let segment = store
+            .find_flat_segment_including_id(Id(2))
+            .unwrap()
+            .unwrap();
+        assert_eq!(&segment, MERGED_LEVEL0_HEAD5.deref());
+
+        let segment = store
+            .find_flat_segment_including_id(Id(5))
             .unwrap()
             .unwrap();
         assert_eq!(&segment, MERGED_LEVEL0_HEAD5.deref());
