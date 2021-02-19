@@ -332,6 +332,11 @@ impl UploadChangesets {
 
         let event_id = EventId::new();
 
+        let mut scuba_logger = ctx.scuba().clone();
+        scuba_logger
+            .add("Repo Id", format!("{}", blobrepo.get_repoid()))
+            .add("Repo name", format!("{}", blobrepo.name()));
+
         let lfs_uploader = Arc::new(try_boxstream!(JobProcessor::new(
             {
                 cloned!(ctx, blobrepo);
@@ -515,7 +520,8 @@ impl UploadChangesets {
                     must_check_case_conflicts: false,
                     create_bonsai_changeset_hook: Some(create_and_verify_bonsai.clone()),
                 };
-                let cshandle = create_changeset.create(ctx.clone(), &blobrepo, ctx.scuba().clone());
+                let cshandle =
+                    create_changeset.create(ctx.clone(), &blobrepo, scuba_logger.clone());
                 parent_changeset_handles.insert(csid, cshandle.clone());
 
                 cloned!(ctx);
