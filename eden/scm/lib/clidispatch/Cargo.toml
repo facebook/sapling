@@ -10,6 +10,7 @@ blackbox = { path = "../blackbox" }
 cliparser = { path = "../cliparser" }
 configparser = { path = "../configparser" }
 indexedlog = { path = "../indexedlog" }
+parking_lot = "0.10"
 pipe = "0.2"
 streampager = "0.8"
 taggederror = { path = "../taggederror" }
