@@ -15,7 +15,6 @@ use types::{HgId, Key, RepoPathBuf};
 use vfs::{UpdateFlag, VFS};
 
 /// Contains lists of files to be removed / updated during checkout.
-#[allow(dead_code)]
 pub struct CheckoutPlan {
     /// Files to be removed.
     remove: Vec<RepoPathBuf>,
@@ -26,7 +25,6 @@ pub struct CheckoutPlan {
 }
 
 /// Update content and (possibly) metadata on the file
-#[allow(dead_code)]
 struct UpdateContentAction {
     /// Path to file.
     path: RepoPathBuf,
@@ -37,7 +35,6 @@ struct UpdateContentAction {
 }
 
 /// Only update metadata on the file, do not update content
-#[allow(dead_code)]
 struct UpdateMetaAction {
     /// Path to file.
     path: RepoPathBuf,
@@ -96,7 +93,6 @@ impl CheckoutPlan {
         })
     }
 
-    // todo - tests
     /// Applies plan to the root using store to fetch data.
     /// This async function offloads file system operation to tokio blocking thread pool.
     /// It limits number of concurrent fs operations to PARALLEL_CHECKOUT.
