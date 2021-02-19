@@ -462,109 +462,8 @@ impl WalkState {
             NodeType::UnodeMapping => self.visited_unode_mapping.clear(),
         }
     }
-}
 
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    EnumIter,
-    EnumString,
-    EnumVariantNames
-)]
-pub enum InternedType {
-    // No ChangesetId as that is not flushable as it is used to maintain deferred_bcs
-    FileUnodeId,
-    HgChangesetId,
-    HgFileNodeId,
-    HgManifestId,
-    ManifestUnodeId,
-    MPathHash,
-}
-
-#[async_trait]
-impl VisitOne for WalkState {
-    fn in_chunk(&self, bcs_id: &ChangesetId) -> bool {
-        if self.chunk_bcs.is_empty() {
-            true
-        } else {
-            let id = self.bcs_ids.interned(bcs_id);
-            self.chunk_bcs.contains_key(&id)
-        }
-    }
-
-    async fn defer_from_hg(
-        &self,
-        ctx: &CoreContext,
-        repo_id: RepositoryId,
-        bonsai_hg_mapping: &dyn BonsaiHgMapping,
-        hg_cs_id: &HgChangesetId,
-    ) -> Result<Option<ChangesetId>, Error> {
-        if self.chunk_bcs.is_empty() {
-            return Ok(None);
-        }
-        let hg_int = self.hg_cs_ids.interned(hg_cs_id);
-        let bcs_id = if let Some(bcs_id) = self.hg_to_bcs.get(&hg_int) {
-            *bcs_id
-        } else {
-            let bcs_id = bonsai_hg_mapping
-                .get_bonsai_from_hg(ctx, repo_id, hg_cs_id.clone())
-                .await?;
-            if let Some(bcs_id) = bcs_id {
-                self.hg_to_bcs.insert(hg_int, bcs_id);
-                bcs_id
-            } else {
-                bail!("Can't have hg without bonsai for {}", hg_cs_id);
-            }
-        };
-        let id = self.bcs_ids.interned(&bcs_id);
-        if self.chunk_bcs.contains_key(&id) {
-            Ok(None)
-        } else {
-            Ok(Some(bcs_id))
-        }
-    }
-
-    async fn is_public(
-        &self,
-        ctx: &CoreContext,
-        phases_store: &dyn Phases,
-        bcs_id: &ChangesetId,
-    ) -> Result<bool, Error> {
-        // Short circuit if we already know its public
-        if let Some(id) = self.bcs_ids.get(bcs_id) {
-            if self.visited_bcs_phase.contains_key(&id) || self.public_not_visited.contains_key(&id)
-            {
-                return Ok(true);
-            }
-        }
-
-        let public_not_visited = &self.public_not_visited;
-        let id = self.bcs_ids.interned(bcs_id);
-
-        let is_public = phases_store
-            .get_public(
-                ctx.clone(),
-                vec![*bcs_id],
-                !self.enable_derive, /* emphemeral_derive */
-            )
-            .map_ok(move |public| public.contains(bcs_id))
-            .await?;
-
-        // Only record visit in public_not_visited if it is public, as state can't change from that point
-        // NB, this puts it in public_not_visited rather than visited_bcs_phase so that we still emit a Phase
-        // entry from the stream
-        if is_public {
-            public_not_visited.insert(id, ());
-        }
-        Ok(is_public)
-    }
-
-    /// If the set did not have this value present, true is returned.
-    fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
+    fn needs_visit_impl(&self, outgoing: &OutgoingEdge) -> bool {
         let target_node: &Node = &outgoing.target;
         let k = target_node.get_type();
         self.visit_count[k as usize].fetch_add(1, Ordering::Release);
@@ -708,6 +607,111 @@ impl VisitOne for WalkState {
                 }
             }
         }
+    }
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    Hash,
+    EnumIter,
+    EnumString,
+    EnumVariantNames
+)]
+pub enum InternedType {
+    // No ChangesetId as that is not flushable as it is used to maintain deferred_bcs
+    FileUnodeId,
+    HgChangesetId,
+    HgFileNodeId,
+    HgManifestId,
+    ManifestUnodeId,
+    MPathHash,
+}
+
+#[async_trait]
+impl VisitOne for WalkState {
+    fn in_chunk(&self, bcs_id: &ChangesetId) -> bool {
+        if self.chunk_bcs.is_empty() {
+            true
+        } else {
+            let id = self.bcs_ids.interned(bcs_id);
+            self.chunk_bcs.contains_key(&id)
+        }
+    }
+
+    async fn defer_from_hg(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        bonsai_hg_mapping: &dyn BonsaiHgMapping,
+        hg_cs_id: &HgChangesetId,
+    ) -> Result<Option<ChangesetId>, Error> {
+        if self.chunk_bcs.is_empty() {
+            return Ok(None);
+        }
+        let hg_int = self.hg_cs_ids.interned(hg_cs_id);
+        let bcs_id = if let Some(bcs_id) = self.hg_to_bcs.get(&hg_int) {
+            *bcs_id
+        } else {
+            let bcs_id = bonsai_hg_mapping
+                .get_bonsai_from_hg(ctx, repo_id, hg_cs_id.clone())
+                .await?;
+            if let Some(bcs_id) = bcs_id {
+                self.hg_to_bcs.insert(hg_int, bcs_id);
+                bcs_id
+            } else {
+                bail!("Can't have hg without bonsai for {}", hg_cs_id);
+            }
+        };
+        let id = self.bcs_ids.interned(&bcs_id);
+        if self.chunk_bcs.contains_key(&id) {
+            Ok(None)
+        } else {
+            Ok(Some(bcs_id))
+        }
+    }
+
+    async fn is_public(
+        &self,
+        ctx: &CoreContext,
+        phases_store: &dyn Phases,
+        bcs_id: &ChangesetId,
+    ) -> Result<bool, Error> {
+        // Short circuit if we already know its public
+        if let Some(id) = self.bcs_ids.get(bcs_id) {
+            if self.visited_bcs_phase.contains_key(&id) || self.public_not_visited.contains_key(&id)
+            {
+                return Ok(true);
+            }
+        }
+
+        let public_not_visited = &self.public_not_visited;
+        let id = self.bcs_ids.interned(bcs_id);
+
+        let is_public = phases_store
+            .get_public(
+                ctx.clone(),
+                vec![*bcs_id],
+                !self.enable_derive, /* emphemeral_derive */
+            )
+            .map_ok(move |public| public.contains(bcs_id))
+            .await?;
+
+        // Only record visit in public_not_visited if it is public, as state can't change from that point
+        // NB, this puts it in public_not_visited rather than visited_bcs_phase so that we still emit a Phase
+        // entry from the stream
+        if is_public {
+            public_not_visited.insert(id, ());
+        }
+        Ok(is_public)
+    }
+
+    /// If the set did not have this value present, true is returned.
+    fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
+        self.needs_visit_impl(outgoing)
     }
 }
 
