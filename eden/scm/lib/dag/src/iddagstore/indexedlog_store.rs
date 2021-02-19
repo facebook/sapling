@@ -56,7 +56,7 @@ impl IdDagStore for IndexedLogStore {
         let key = Self::serialize_head_level_lookup_key(head, level);
         match self.log.lookup(Self::INDEX_LEVEL_HEAD, &key)?.nth(0) {
             None => Ok(None),
-            Some(bytes) => Ok(Some(Segment(self.log.slice_to_bytes(bytes?)))),
+            Some(bytes) => Ok(Some(self.segment_from_slice(bytes?))),
         }
     }
 
@@ -71,7 +71,7 @@ impl IdDagStore for IndexedLogStore {
             let (_, entries) = entry?;
             for entry in entries {
                 let entry = entry?;
-                let seg = Segment(self.log.slice_to_bytes(entry));
+                let seg = self.segment_from_slice(entry);
                 if seg.span()?.low > id {
                     return Ok(None);
                 }
@@ -109,7 +109,7 @@ impl IdDagStore for IndexedLogStore {
                 // break the logic here. If perf is really needed, we can change
                 // logic here to not checking values.
                 if let Some(bytes) = values.next() {
-                    let seg = Segment(self.log.slice_to_bytes(bytes?));
+                    let seg = self.segment_from_slice(bytes?);
                     Ok(seg.high()? + 1)
                 } else {
                     bug(format!("key {:?} should have values in next_free_id", key))
@@ -128,7 +128,7 @@ impl IdDagStore for IndexedLogStore {
         {
             let (_, values) = entry?;
             for value in values {
-                result.push(Segment(self.log.slice_to_bytes(value?)));
+                result.push(self.segment_from_slice(value?));
             }
         }
         Ok(result)
@@ -151,7 +151,7 @@ impl IdDagStore for IndexedLogStore {
                     .into_iter()
                     .map(|value| {
                         let value = value?;
-                        Ok(Segment(self.log.slice_to_bytes(value)))
+                        Ok(self.segment_from_slice(value))
                     })
                     .collect(),
                 Err(err) => vec![Err(err.into())],
@@ -175,7 +175,7 @@ impl IdDagStore for IndexedLogStore {
                 Ok((_key, values)) => values
                     .map(|value| {
                         let value = value?;
-                        Ok(Segment(self.log.slice_to_bytes(value)))
+                        Ok(self.segment_from_slice(value))
                     })
                     .collect(),
                 Err(err) => vec![Err(err.into())],
@@ -195,7 +195,7 @@ impl IdDagStore for IndexedLogStore {
         let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
         let iter = iter.map(move |result| {
             match result {
-                Ok(bytes) => Ok(Segment(self.log.slice_to_bytes(bytes))),
+                Ok(bytes) => Ok(self.segment_from_slice(bytes)),
                 Err(err) => Err(err.into()),
             }
         });
@@ -213,7 +213,7 @@ impl IdDagStore for IndexedLogStore {
             let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
             let iter = iter.map(move |result| {
                 match result {
-                    Ok(bytes) => Ok(Segment(self.log.slice_to_bytes(bytes))),
+                    Ok(bytes) => Ok(self.segment_from_slice(bytes)),
                     Err(err) => Err(err.into()),
                 }
             });
@@ -285,6 +285,10 @@ impl IndexedLogStore {
             debug_assert_eq!(cur.position(), Self::KEY_LEVEL_HEAD_LEN as u64);
         }
         buf
+    }
+
+    fn segment_from_slice(&self, bytes: &[u8]) -> Segment {
+        Segment(self.log.slice_to_bytes(bytes))
     }
 }
 
