@@ -12,7 +12,7 @@ path = "lib.rs"
 mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
 sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_01_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"

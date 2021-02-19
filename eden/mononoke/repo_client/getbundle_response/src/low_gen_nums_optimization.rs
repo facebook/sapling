@@ -428,7 +428,7 @@ mod test {
     use blobrepo::BlobRepo;
     use fbinit::FacebookInit;
     use futures::{compat::Stream01CompatExt, FutureExt};
-    use futures_ext::StreamExt as OldStreamExt;
+    use futures_01_ext::StreamExt as OldStreamExt;
     use futures_old::stream as old_stream;
     use maplit::hashmap;
     use mononoke_types_mocks::changesetid::{FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID};

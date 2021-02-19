@@ -8,7 +8,7 @@
 #![deny(warnings)]
 
 use anyhow::Error;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_01_ext::{BoxFuture, FutureExt};
 use futures_old::future::{err, ok};
 use futures_old::Future;
 use metaconfig_types::HgsqlName;

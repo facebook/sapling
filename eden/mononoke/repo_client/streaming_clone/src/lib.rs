@@ -13,7 +13,7 @@ use anyhow::Error;
 use bytes::Bytes;
 use cloned::cloned;
 use futures::future::{FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures_01_ext::{BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{future::lazy, Future};
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};

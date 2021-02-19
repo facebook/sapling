@@ -9,7 +9,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use futures_ext::FutureExt;
+use futures_01_ext::FutureExt;
 use futures_util::compat::Future01CompatExt;
 use mononoke_types::{MononokeId, RawBundle2Id};
 use sql::{queries, Connection};

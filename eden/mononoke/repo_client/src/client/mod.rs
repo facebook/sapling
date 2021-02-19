@@ -29,7 +29,7 @@ use futures::{
     future::{self, select, Either, FutureExt, TryFutureExt},
     pin_mut, StreamExt, TryStreamExt,
 };
-use futures_ext::{
+use futures_01_ext::{
     spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,
     FutureExt as OldFutureExt, StreamExt as OldStreamExt, StreamTimeoutError,
 };

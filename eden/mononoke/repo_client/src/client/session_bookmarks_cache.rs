@@ -14,7 +14,7 @@ use bookmarks::{
 };
 use context::CoreContext;
 use futures::{compat::Stream01CompatExt, Stream, StreamExt, TryFutureExt, TryStreamExt};
-use futures_ext::{FutureExt, StreamExt as OldStreamExt};
+use futures_01_ext::{FutureExt, StreamExt as OldStreamExt};
 use futures_old::{future as future_old, Future, Stream as OldStream};
 use mercurial_types::HgChangesetId;
 use mononoke_repo::MononokeRepo;

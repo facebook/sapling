@@ -12,7 +12,7 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounters, SessionId};
 use fbinit::FacebookInit;
 use futures::{FutureExt, TryFutureExt};
-use futures_ext::FutureExt as _;
+use futures_01_ext::FutureExt as _;
 use futures_old::{future, Future};
 use futures_stats::{FutureStats, StreamStats};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};

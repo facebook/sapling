@@ -24,7 +24,7 @@ use futures::{
     future::{self, FutureExt, TryFutureExt},
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
-use futures_ext::{
+use futures_01_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, BufferedParams, FutureExt as _,
     StreamExt as OldStreamExt,
 };

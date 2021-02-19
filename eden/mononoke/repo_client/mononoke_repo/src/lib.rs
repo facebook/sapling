@@ -12,7 +12,7 @@ use blobrepo::BlobRepo;
 
 use blobrepo_factory::ReadOnlyStorage;
 use fbinit::FacebookInit;
-use futures_ext::BoxFuture;
+use futures_01_ext::BoxFuture;
 use getbundle_response::SessionLfsParams;
 use hooks::HookManager;
 use live_commit_sync_config::LiveCommitSyncConfig;

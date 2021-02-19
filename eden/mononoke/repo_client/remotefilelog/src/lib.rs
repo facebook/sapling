@@ -20,7 +20,7 @@ use cloned::cloned;
 use context::CoreContext;
 use filestore::FetchKey;
 use futures::{future::BoxFuture, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
-use futures_ext::select_all;
+use futures_01_ext::select_all;
 use futures_old::{Future, Stream};
 use getbundle_response::SessionLfsParams;
 use mercurial_types::{
