@@ -29,7 +29,6 @@ pub struct IndexedLogStore {
     log: log::Log,
     path: PathBuf,
     cached_max_level: AtomicU8,
-    merge_segments: bool,
 }
 
 const MAX_LEVEL_UNKNOWN: u8 = 0;
@@ -306,9 +305,6 @@ impl IndexedLogStore {
     ///
     /// Return true if the merged segment was inserted.
     fn maybe_insert_merged_flat_segment(&mut self, segment: &Segment) -> Result<bool> {
-        if !self.merge_segments {
-            return Ok(false);
-        }
         let level = segment.level()?;
         if level != 0 {
             // Only applies to flat segments.
@@ -527,7 +523,6 @@ impl IndexedLogStore {
             log,
             path,
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
-            merge_segments: true,
         })
     }
 
@@ -537,7 +532,6 @@ impl IndexedLogStore {
             log,
             path,
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
-            merge_segments: true,
         }
     }
 
@@ -547,7 +541,6 @@ impl IndexedLogStore {
             log,
             path: self.path.clone(),
             cached_max_level: AtomicU8::new(self.cached_max_level.load(Acquire)),
-            merge_segments: self.merge_segments,
         };
         Ok(store)
     }
@@ -558,7 +551,6 @@ impl IndexedLogStore {
             log,
             path: self.path.clone(),
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
-            merge_segments: self.merge_segments,
         };
         Ok(store)
     }
@@ -577,7 +569,6 @@ mod tests {
         //         [6..                       =20, parents=[3] ] <- merged
         let tmp = tempfile::tempdir()?;
         let mut iddag = IndexedLogStore::open(tmp.path())?;
-        iddag.merge_segments = true;
         let seg1 = Segment::new(SegmentFlags::HAS_ROOT, 0, Id(0), Id(5), &[]);
         let seg2 = Segment::new(SegmentFlags::empty(), 0, Id(6), Id(10), &[Id(3)]);
         iddag.insert_segment(seg1)?;

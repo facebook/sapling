@@ -32,7 +32,6 @@ pub struct InProcessStore {
     level_head_index: Vec<BTreeMap<Id, StoreId>>,
     // (child-group, parent) -> serialized Segment
     parent_index: BTreeMap<(Group, Id), BTreeSet<StoreId>>,
-    merge_segments: bool,
 }
 
 impl IdDagStore for InProcessStore {
@@ -66,8 +65,7 @@ impl IdDagStore for InProcessStore {
 
         // Can we merge the segment with the last flat segment in "master_segments"?
         for _ in Some(()) {
-            if !self.merge_segments
-                || level != 0
+            if level != 0
                 || group != Group::MASTER
                 || parents.len() != 1
                 || parents[0] + 1 != span.low
@@ -322,7 +320,6 @@ impl InProcessStore {
             non_master_segments: Vec::new(),
             level_head_index: Vec::new(),
             parent_index: BTreeMap::new(),
-            merge_segments: true,
         }
     }
 }
