@@ -5,47 +5,44 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{bail, format_err, Context as _, Error, Result};
 use bookmarks::BookmarkName;
-use cloned::cloned;
-use failure_ext::FutureFailureErrorExt;
-use futures::future::{FutureExt as _, TryFutureExt};
-use futures_01_ext::{try_boxfuture, BoxFuture, FutureExt};
-use futures_old::future::{self, err, ok, Either, Future, IntoFuture};
+use futures::future::{self, Future, FutureExt, TryFuture};
+use futures_ext::future::{FbFutureExt, FbTryFutureExt};
 use mercurial_types::HgChangesetId;
 use mononoke_hg_sync_job_helper_lib::{lines_after, read_file_contents, wait_till_more_lines};
-use parking_lot::Mutex;
+use pin_project::pin_project;
+use shared_error::anyhow::{IntoSharedError, SharedError};
 use slog::{debug, info, Logger};
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
-use std::process::{Command, Stdio};
+use std::pin::Pin;
+use std::process::{ExitStatus, Stdio};
 use std::str::FromStr;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::task::{Context, Poll};
 use std::time::Duration;
 use tempfile::NamedTempFile;
-use tokio_io::io::{flush, write_all};
-use tokio_old::prelude::FutureExt as TokioFutureExt;
-use tokio_old::timer::timeout::Error as TimeoutError;
-use tokio_process::{Child, ChildStdin, CommandExt};
-use tokio_timer::sleep;
+use tokio::{
+    io::AsyncWriteExt,
+    process::{Child, ChildStdin, Command},
+    sync::Mutex,
+};
 
 const BOOKMARK_LOCATION_LOOKUP_TIMEOUT_MS: u64 = 10_000;
 const LIST_SERVER_BOOKMARKS_EXTENSION: &str = include_str!("listserverbookmarks.py");
 const SEND_UNBUNDLE_REPLAY_EXTENSION: &str = include_str!("sendunbundlereplay.py");
 
-pub fn list_hg_server_bookmarks(
+pub async fn list_hg_server_bookmarks(
     hg_repo_path: String,
-) -> BoxFuture<HashMap<BookmarkName, HgChangesetId>, Error> {
-    let extension_file = try_boxfuture!(NamedTempFile::new());
-    let file_path = try_boxfuture!(
-        extension_file
-            .path()
-            .to_str()
-            .ok_or(Error::msg("Temp file path contains non-unicode chars"))
-    );
-    try_boxfuture!(fs::write(file_path, LIST_SERVER_BOOKMARKS_EXTENSION));
+) -> Result<HashMap<BookmarkName, HgChangesetId>, Error> {
+    let extension_file = NamedTempFile::new()?;
+    let file_path = extension_file
+        .path()
+        .to_str()
+        .ok_or(Error::msg("Temp file path contains non-unicode chars"))?;
+    fs::write(file_path, LIST_SERVER_BOOKMARKS_EXTENSION)?;
     let ext = format!("extensions.listserverbookmarks={}", file_path);
 
     let full_args = vec![
@@ -55,35 +52,32 @@ pub fn list_hg_server_bookmarks(
         "--path",
         &hg_repo_path,
     ];
-    let cmd = get_hg_command(&full_args).output();
 
-    cmd.into_future()
-        .from_err()
-        .into_future()
-        .and_then(|output| {
-            let mut res = HashMap::new();
-            for keyvalue in output.stdout.split(|x| x == &0) {
-                if keyvalue.is_empty() {
-                    continue;
-                }
-                let mut iter = keyvalue.split(|x| x == &1);
-                match (iter.next(), iter.next()) {
-                    (Some(key), Some(value)) => {
-                        let key = String::from_utf8(key.to_vec()).map_err(Error::from)?;
-                        let value = String::from_utf8(value.to_vec()).map_err(Error::from)?;
-                        res.insert(BookmarkName::new(key)?, HgChangesetId::from_str(&value)?);
-                    }
-                    _ => {
-                        let stdout = String::from_utf8_lossy(&output.stdout);
-                        bail!("invalid format returned from server: {}", stdout);
-                    }
-                }
+    let output = get_hg_command(&full_args)
+        .output()
+        .await
+        .context("Error listing server bookmarks")?;
+
+    let mut res = HashMap::new();
+    for keyvalue in output.stdout.split(|x| x == &0) {
+        if keyvalue.is_empty() {
+            continue;
+        }
+        let mut iter = keyvalue.split(|x| x == &1);
+        match (iter.next(), iter.next()) {
+            (Some(key), Some(value)) => {
+                let key = String::from_utf8(key.to_vec()).map_err(Error::from)?;
+                let value = String::from_utf8(value.to_vec()).map_err(Error::from)?;
+                res.insert(BookmarkName::new(key)?, HgChangesetId::from_str(&value)?);
             }
-            Ok(res)
-        })
-        .context("While listing server bookmarks")
-        .from_err()
-        .boxify()
+            _ => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                bail!("invalid format returned from server: {}", stdout);
+            }
+        }
+    }
+
+    Ok(res)
 }
 
 fn expected_location_string_arg(maybe_hgcsid: Option<HgChangesetId>) -> String {
@@ -113,11 +107,9 @@ where
     child
 }
 
-#[derive(Clone)]
 struct AsyncProcess {
-    child: Arc<Mutex<Option<Child>>>,
-    stdin: Arc<Mutex<Option<ChildStdin>>>,
-    can_be_used: Arc<AtomicBool>,
+    child: ChildWrapper,
+    stdin: ChildStdin,
 }
 
 impl AsyncProcess {
@@ -132,123 +124,83 @@ impl AsyncProcess {
     fn from_command(mut command: Command) -> Result<Self> {
         let mut child = command
             .stdin(Stdio::piped())
-            .spawn_async()
-            .map_err(|e| format_err!("Couldn't spawn hg command: {:?}", e))?;
+            .spawn()
+            .context("Failed to spawn hg command")?;
         let stdin = child
-            .stdin()
+            .stdin
             .take()
             .ok_or(Error::msg("ChildStdin unexpectedly not captured"))?;
         Ok(Self {
-            child: Arc::new(Mutex::new(Some(child))),
-            stdin: Arc::new(Mutex::new(Some(stdin))),
-            can_be_used: Arc::new(AtomicBool::new(true)),
+            child: ChildWrapper::new(child),
+            stdin,
         })
     }
 
-    pub fn write_line(&self, line: Vec<u8>) -> BoxFuture<(), Error> {
-        let stdin = try_boxfuture!(self.stdin.lock().take().ok_or(Error::msg(
-            "AsyncProcess unexpectedly does not contain stdin."
-        )));
-        let stdin_arc = self.stdin.clone();
-        let process = self.clone();
-        write_all(stdin, line)
-            .and_then(move |(stdin, _)| flush(stdin))
-            .map(move |stdin| {
-                // Need to put stdin back
-                stdin_arc.lock().replace(stdin);
-            })
-            .map_err(move |e| {
-                // If we failed for whichever reason, we can't reuse the
-                // same process. The failure might've been related to the process
-                // itself, rather than the bundle. Let's err on the safe side
-                process.invalidate();
-                format_err!("{}", e)
-            })
-            .boxify()
-    }
-
-    pub fn invalidate(&self) {
-        self.can_be_used.store(false, Ordering::SeqCst);
+    pub async fn write_line(&mut self, line: Vec<u8>) -> Result<(), Error> {
+        self.stdin
+            .write_all(&line)
+            .await
+            .context("Failed to write")?;
+        Ok(())
     }
 
     pub fn is_valid(&self) -> bool {
-        self.can_be_used.load(Ordering::SeqCst)
+        !self.child.is_finished()
     }
 
-    pub fn kill(&self, logger: Logger) {
-        self.child.lock().as_mut().map(|child| {
-            child
-                .kill()
-                .unwrap_or_else(|e| debug!(logger, "failed to kill the hg process: {}", e))
-        });
+    pub fn kill(&mut self, logger: &Logger) {
+        if let Err(e) = self.child.as_inner_mut().kill() {
+            debug!(logger, "failed to kill the hg process: {}", e);
+        }
     }
 
     /// Make sure child is still alive while provided future is being executed
     /// If `grace_period` is specified, future will be given additional time
     /// to resolve even if peer has already been terminated.
-    pub fn ensure_alive<F: Future<Error = Error>>(
-        &self,
+    pub async fn ensure_alive<F>(
+        &mut self,
         fut: F,
         grace_period: Option<Duration>,
-    ) -> impl Future<Item = F::Item, Error = Error> {
-        let child = match self.child.lock().take() {
-            None => return future::err(Error::msg("hg peer is dead")).left_future(),
-            Some(child) => child,
-        };
+    ) -> Result<<F as TryFuture>::Ok, <F as TryFuture>::Error>
+    where
+        F: TryFuture<Error = Error> + Unpin + Send,
+    {
+        if self.child.is_finished() {
+            return Err(Error::msg("hg peer is dead"));
+        }
 
-        let with_grace_period = move |fut: F, error| match grace_period {
-            None => future::err(error).left_future(),
-            Some(grace_period) => fut
-                .select(sleep(grace_period).then(|_| Err(error)))
-                .then(|result| match result {
-                    Ok((ok, _)) => Ok(ok),
-                    Err((err, _)) => Err(err),
-                })
-                .right_future(),
-        };
+        // NOTE: ChildWrapper is Unpin, so this allows us to await this without having to pin it.
+        let child = &mut self.child;
 
-        child
-            .select2(fut)
-            .then({
-                let this = self.clone();
-                move |result| match result {
-                    Ok(Either::A((exit_status, fut))) => {
-                        this.invalidate();
-                        with_grace_period(
-                            fut,
-                            format_err!("hg peer has died unexpectedly: {}", exit_status),
-                        )
-                        .right_future()
-                    }
-                    Err(Either::A((child_err, fut))) => {
-                        this.invalidate();
-                        with_grace_period(fut, child_err.into()).right_future()
-                    }
-                    Ok(Either::B((future_ok, child))) => {
-                        this.child.lock().replace(child);
-                        future::ok(future_ok).left_future()
-                    }
-                    Err(Either::B((future_err, child))) => {
-                        this.child.lock().replace(child);
-                        future::err(future_err).left_future()
-                    }
-                }
-            })
-            .right_future()
+        let watchdog = async {
+            let res = child.await;
+            if let Some(grace_period) = grace_period {
+                tokio::time::delay_for(grace_period).await;
+            }
+            Err(format_err!("hg peer has died unexpectedly: {:?}", res))
+        }
+        .boxed();
+
+        // NOTE: Right can't actually return an Ok variant here (which is why this compiles at
+        // all), but it still needs to be in the match clause.
+        match future::try_select(fut, watchdog).await {
+            Ok(future::Either::Left((res, _))) | Ok(future::Either::Right((res, _))) => Ok(res),
+            Err(future::Either::Left((e, _))) | Err(future::Either::Right((e, _))) => Err(e.into()),
+        }
     }
 }
 
-#[derive(Clone)]
 struct HgPeer {
     process: AsyncProcess,
     reports_file: Arc<NamedTempFile>,
-    bundle_applied: Arc<AtomicUsize>,
+    bundle_applied: usize,
     max_bundles_allowed: usize,
     baseline_bundle_timeout_ms: u64,
+    invalidated: bool,
+    // The extension_file needs to be kept around while we have running instances of the process.
+    #[allow(unused)]
     extension_file: Arc<NamedTempFile>,
 }
-
-impl !Sync for HgPeer {}
 
 impl HgPeer {
     pub fn new(
@@ -284,9 +236,10 @@ impl HgPeer {
         Ok(HgPeer {
             process,
             reports_file: Arc::new(reports_file),
-            bundle_applied: Arc::new(AtomicUsize::new(0)),
+            bundle_applied: 0,
             max_bundles_allowed,
             baseline_bundle_timeout_ms,
+            invalidated: false,
             extension_file: Arc::new(extension_file),
         })
     }
@@ -295,44 +248,43 @@ impl HgPeer {
         Arc::new(Mutex::new(self))
     }
 
-    pub fn still_good(&self, logger: Logger) -> bool {
-        let can_be_used: bool = self.process.is_valid();
-        let bundle_applied: usize = self.bundle_applied.load(Ordering::SeqCst);
-        let can_write_more = bundle_applied < self.max_bundles_allowed;
+    pub fn still_good(&self, logger: &Logger) -> bool {
+        let can_be_used: bool = !self.invalidated & self.process.is_valid();
+        let can_write_more = self.bundle_applied < self.max_bundles_allowed;
         debug!(
             logger,
             "can be used: {}, bundle_applied: {}, max bundles allowed: {}",
             can_be_used,
-            bundle_applied,
+            self.bundle_applied,
             self.max_bundles_allowed
         );
         can_be_used && can_write_more
     }
 
-    pub fn kill(&self, logger: Logger) {
+    pub fn kill(&mut self, logger: &Logger) {
         self.process.kill(logger);
     }
 
-    pub fn apply_bundle(
-        &self,
-        bundle_path: &str,
-        timestamps_path: &str,
+    pub async fn apply_bundle<'a>(
+        &'a mut self,
+        bundle_path: &'a str,
+        timestamps_path: &'a str,
         onto_bookmark: BookmarkName,
         expected_bookmark_position: Option<HgChangesetId>,
         attempt: usize,
-        logger: Logger,
-    ) -> impl Future<Item = (), Error = Error> {
+        logger: &Logger,
+    ) -> Result<(), Error> {
         let mut log_file = match NamedTempFile::new() {
             Ok(log_file) => log_file,
             Err(e) => {
-                return err(format_err!("could not create log file: {:?}", e)).left_future();
+                return Err(format_err!("could not create log file: {:?}", e));
             }
         };
 
         let log_path = match log_file.path().to_str() {
             Some(log_path) => log_path,
             None => {
-                return err(Error::msg("log_file path was not a valid string")).left_future();
+                return Err(Error::msg("log_file path was not a valid string"));
             }
         };
 
@@ -345,63 +297,46 @@ impl HgPeer {
         );
         let path = self.reports_file.path().to_path_buf();
         let bundle_timeout_ms = self.baseline_bundle_timeout_ms * 2_u64.pow(attempt as u32 - 1);
-        {
-            cloned!(path);
-            async move { lines_after(&path, 0).await }.boxed().compat()
-        }
-        .map(|v| v.len())
-        .and_then({
-            cloned!(self.process);
-            move |line_num_in_reports_file| {
-                process
-                    .write_line(input_line.into_bytes())
-                    .map(move |_| line_num_in_reports_file)
-            }
-        })
-        .and_then({
-            cloned!(logger, bundle_timeout_ms, self.bundle_applied, self.process);
-            move |line_num_in_reports_file| {
-                bundle_applied.fetch_add(1, Ordering::SeqCst);
-                let response = async move {
-                    wait_till_more_lines(path, line_num_in_reports_file, bundle_timeout_ms).await
-                }
-                .boxed()
-                .compat()
-                .and_then({
-                    cloned!(process, logger);
-                    move |report_lines| {
-                        let full_report = report_lines.join("\n");
-                        let success = !full_report.contains("failed");
-                        debug!(logger, "sync report: {}", full_report);
-                        if success {
-                            Ok(())
-                        } else {
-                            process.invalidate();
-                            let log = match read_file_contents(&mut log_file) {
-                                Ok(log) => format!("hg logs follow:\n{}", log),
-                                Err(e) => format!("no hg logs available ({:?})", e),
-                            };
-                            Err(format_err!("sync failed: {}", log))
-                        }
-                    }
-                })
-                .map_err({
-                    cloned!(process);
-                    move |err| {
-                        info!(logger, "sync failed. Invalidating process");
-                        process.invalidate();
-                        err
-                    }
-                });
-                process.ensure_alive(
-                    response,
+
+        let line_num_in_reports_file = lines_after(&path, 0).await?.len();
+
+        let res = async {
+            self.process.write_line(input_line.into_bytes()).await?;
+            self.bundle_applied += 1;
+
+            let report_lines = self
+                .process
+                .ensure_alive(
+                    wait_till_more_lines(path, line_num_in_reports_file, bundle_timeout_ms).boxed(),
                     // even if peer process has died, lets wait for additional grace
-                    // period, and trie to collect the report if any.
+                    // period, and try to collect the report if any.
                     Some(Duration::from_secs(1)),
                 )
+                .await?;
+
+            let full_report = report_lines.join("\n");
+            let success = !full_report.contains("failed");
+            debug!(logger, "sync report: {}", full_report);
+
+            if success {
+                return Ok(());
             }
-        })
-        .right_future()
+
+            let log = match read_file_contents(&mut log_file) {
+                Ok(log) => format!("hg logs follow:\n{}", log),
+                Err(e) => format!("no hg logs available ({:?})", e),
+            };
+
+            return Err(format_err!("sync failed: {}", log));
+        }
+        .await;
+
+        if res.is_err() {
+            info!(logger, "sync failed. Invalidating process");
+            self.invalidated = true;
+        }
+
+        res
     }
 }
 
@@ -433,74 +368,80 @@ impl HgRepo {
         })
     }
 
-    pub fn apply_bundle(
+    pub async fn apply_bundle(
         &self,
         bundle_filename: String,
         timestamps_path: String,
         onto_bookmark: BookmarkName,
         expected_bookmark_position: Option<HgChangesetId>,
         attempt: usize,
-        logger: Logger,
-    ) -> impl Future<Item = (), Error = Error> {
-        match self.renew_peer_if_needed(logger.clone()) {
-            Ok(_) => self
-                .peer
-                .lock()
-                .apply_bundle(
-                    &bundle_filename,
-                    &timestamps_path,
-                    onto_bookmark.clone(),
-                    expected_bookmark_position.clone(),
-                    attempt,
-                    logger.clone(),
-                )
-                .or_else({
-                    let this = self.clone();
-                    cloned!(onto_bookmark, expected_bookmark_position, logger);
-                    move |sync_error| {
-                        if !this.verify_server_bookmark_on_failure {
-                            return err(sync_error).left_future();
-                        }
-                        info!(
-                            logger,
-                            "sync failed, let's check if the bookmark is where we want \
-                             it to be anyway"
-                        );
-                        this.verify_server_bookmark_location(
-                            &onto_bookmark,
-                            expected_bookmark_position,
-                        )
-                        .map_err(|_verification_error| sync_error)
-                        .right_future()
-                    }
-                })
-                .boxify(),
-            Err(e) => err(e).boxify(),
+        logger: &Logger,
+    ) -> Result<(), Error> {
+        self.renew_peer_if_needed(logger).await?;
+
+        let mut peer = self.peer.lock().await;
+
+        let res = peer
+            .apply_bundle(
+                &bundle_filename,
+                &timestamps_path,
+                onto_bookmark.clone(),
+                expected_bookmark_position.clone(),
+                attempt,
+                logger,
+            )
+            .await;
+
+        let err = match res {
+            Ok(()) => return Ok(()),
+            Err(err) => err,
+        };
+
+        if !self.verify_server_bookmark_on_failure {
+            return Err(err);
         }
+
+        info!(
+            logger,
+            "sync failed, let's check if the bookmark is where we want it to be anyway",
+        );
+
+        if self
+            .verify_server_bookmark_location(&onto_bookmark, expected_bookmark_position)
+            .await
+            .is_ok()
+        {
+            return Ok(());
+        }
+
+        Err(err)
     }
 
-    fn renew_peer_if_needed(&self, logger: Logger) -> Result<()> {
-        if !self.peer.lock().still_good(logger.clone()) {
-            debug!(logger, "killing the old peer");
-            self.peer.lock().kill(logger.clone());
-            debug!(logger, "renewing hg peer");
-            let new_peer = HgPeer::new(
-                &self.repo_path.clone(),
-                self.max_bundles_per_peer,
-                self.baseline_bundle_timeout_ms,
-            )?;
-            *self.peer.lock() = new_peer;
-            Ok(debug!(logger, "done renewing hg peer"))
-        } else {
-            Ok(debug!(logger, "existing hg peer is still good"))
+    async fn renew_peer_if_needed(&self, logger: &Logger) -> Result<()> {
+        let mut peer = self.peer.lock().await;
+
+        if peer.still_good(logger) {
+            return Ok(debug!(logger, "existing hg peer is still good"));
         }
+
+        debug!(logger, "killing the old peer");
+        peer.kill(logger);
+
+        debug!(logger, "renewing hg peer");
+        let new_peer = HgPeer::new(
+            &self.repo_path.clone(),
+            self.max_bundles_per_peer,
+            self.baseline_bundle_timeout_ms,
+        )?;
+        *peer = new_peer;
+        Ok(debug!(logger, "done renewing hg peer"))
     }
 
-    fn verify_server_bookmark_location(
+    async fn verify_server_bookmark_location(
         &self,
         name: &BookmarkName,
         expected_bookmark_position: Option<HgChangesetId>,
-    ) -> impl Future<Item = (), Error = Error> {
+    ) -> Result<(), Error> {
         let name = name.to_string();
         let mut args: Vec<String> = [
             "checkserverbookmark",
@@ -525,30 +466,68 @@ impl HgRepo {
             }
             None => args.push("--deleted".into()),
         };
-        let proc = match get_hg_command(args).stdin(Stdio::piped()).status_async() {
-            Ok(proc) => proc,
-            Err(_) => return err(Error::msg("failed to start a mercurial process")).left_future(),
-        };
-        proc.map_err(|e| format_err!("process error: {:?}", e))
+
+        let cmd = get_hg_command(args)
+            .stdin(Stdio::piped())
+            .spawn()
+            .context("failed to start a mercurial process")?;
+
+        let exit_status = cmd
             .timeout(Duration::from_millis(BOOKMARK_LOCATION_LOOKUP_TIMEOUT_MS))
-            .map_err(remap_timeout_error)
-            .and_then(|exit_status| {
-                if exit_status.success() {
-                    ok(())
-                } else {
-                    err(Error::msg(
-                        "server does not have a bookmark in the expected location",
-                    ))
-                }
-            })
-            .right_future()
+            .flatten_err()
+            .await?;
+
+        if exit_status.success() {
+            Ok(())
+        } else {
+            Err(Error::msg(
+                "server does not have a bookmark in the expected location",
+            ))
+        }
     }
 }
 
-fn remap_timeout_error(err: TimeoutError<Error>) -> Error {
-    match err.into_inner() {
-        Some(err) => err,
-        None => Error::msg("timed out waiting for process"),
+/// A wrapper around Child that remembers if the Child exited already and can be safely polled
+/// again, while still providing access to the Child itself (this allows us to e.g. call kill on
+/// it). This is a litle bit like Shared, except that Shared doesn't provide this access, and
+/// allows multiple threads to poll the future, which we don't care about.
+#[pin_project]
+pub struct ChildWrapper {
+    #[pin]
+    inner: Child,
+
+    res: Option<Result<ExitStatus, SharedError>>,
+}
+
+impl ChildWrapper {
+    pub fn new(inner: Child) -> Self {
+        Self { inner, res: None }
+    }
+
+    pub fn as_inner_mut(&mut self) -> &mut Child {
+        &mut self.inner
+    }
+
+    pub fn is_finished(&self) -> bool {
+        self.res.is_some()
+    }
+}
+
+impl Future for ChildWrapper {
+    type Output = Result<ExitStatus, SharedError>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        let this = self.project();
+
+        if let Some(res) = this.res.as_ref() {
+            return Poll::Ready(res.clone());
+        }
+
+        let res = futures::ready!(this.inner.poll(cx)).shared_error();
+
+        *this.res = Some(res.clone());
+
+        Poll::Ready(res)
     }
 }
 
@@ -556,54 +535,66 @@ fn remap_timeout_error(err: TimeoutError<Error>) -> Error {
 mod tests {
     use super::*;
     use assert_matches::assert_matches;
-    use futures_old::Future;
-    use tokio_compat::runtime::Runtime;
-    use tokio_timer::sleep;
 
-    #[test]
-    fn ensure_alive_alive_process() -> Result<()> {
-        let mut rt = Runtime::new()?;
-
+    #[tokio::test]
+    async fn ensure_alive_alive_process() -> Result<()> {
         let command = {
             let mut command = Command::new("sleep");
             command.args(vec!["2"]);
             command
         };
-        let proc = AsyncProcess::from_command(command)?;
+        let mut proc = AsyncProcess::from_command(command)?;
 
-        let fut = proc.ensure_alive(sleep(Duration::from_millis(100)).from_err(), None);
-        let res = rt.block_on(fut);
+        let res = proc
+            .ensure_alive(
+                async {
+                    tokio::time::delay_for(Duration::from_millis(100)).await;
+                    Ok(())
+                }
+                .boxed(),
+                None,
+            )
+            .await;
         assert_matches!(res, Ok(()));
 
         assert!(proc.is_valid());
         Ok(())
     }
 
-    #[test]
-    fn ensure_alive_dead_process() -> Result<()> {
-        let mut rt = Runtime::new()?;
+    #[tokio::test]
+    async fn ensure_alive_dead_process() -> Result<()> {
+        let mut proc = AsyncProcess::from_command(Command::new("false"))?;
 
-        let proc = AsyncProcess::from_command(Command::new("false"))?;
-
-        let fut = proc.ensure_alive(sleep(Duration::from_secs(5)).from_err(), None);
-        let res = rt.block_on(fut);
+        let res = proc
+            .ensure_alive(
+                async {
+                    tokio::time::delay_for(Duration::from_secs(5)).await;
+                    Ok(())
+                }
+                .boxed(),
+                None,
+            )
+            .await;
         assert_matches!(res, Err(_));
 
         assert!(!proc.is_valid());
         Ok(())
     }
 
-    #[test]
-    fn ensure_alive_grace_period() -> Result<()> {
-        let mut rt = Runtime::new()?;
+    #[tokio::test]
+    async fn ensure_alive_grace_period() -> Result<()> {
+        let mut proc = AsyncProcess::from_command(Command::new("false"))?;
 
-        let proc = AsyncProcess::from_command(Command::new("false"))?;
-
-        let fut = proc.ensure_alive(
-            sleep(Duration::from_secs(1)).from_err(),
-            Some(Duration::from_secs(10)),
-        );
-        let res = rt.block_on(fut);
+        let res = proc
+            .ensure_alive(
+                async {
+                    tokio::time::delay_for(Duration::from_secs(1)).await;
+                    Ok(())
+                }
+                .boxed(),
+                Some(Duration::from_secs(10)),
+            )
+            .await;
         assert_matches!(res, Ok(()));
 
         assert!(!proc.is_valid());

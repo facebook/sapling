@@ -6,7 +6,6 @@
  */
 
 #![feature(auto_traits)]
-#![feature(negative_impls)]
 #![feature(async_closure)]
 #![deny(warnings)]
 
@@ -397,9 +396,8 @@ async fn try_sync_single_combined_entry(
             combined_entry.bookmark.clone(),
             combined_entry.cs_id.map(|(_bcs_id, hg_cs_id)| hg_cs_id),
             attempt,
-            ctx.logger().clone(),
+            ctx.logger(),
         )
-        .compat()
         .await?;
 
     Ok(())
@@ -694,7 +692,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         // FIXME: this cloned! will go away once HgRepo is asyncified
         cloned!(hg_repo_path);
         let overlay = async move {
-            let bookmarks = list_hg_server_bookmarks(hg_repo_path).compat().await?;
+            let bookmarks = list_hg_server_bookmarks(hg_repo_path).await?;
 
             let bookmarks = stream::iter(bookmarks.into_iter())
                 .map(move |(book, hg_cs_id)| async move {
