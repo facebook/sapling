@@ -32,7 +32,6 @@ use futures::{
 };
 use futures_01_ext::{
     try_boxstream, BoxFuture, BoxStream, FutureExt as OldFutureExt, StreamExt as OldStreamExt,
-    StreamTimeoutError,
 };
 use futures_ext::{BufferedParams, FbFutureExt, FbStreamExt, FbTryFutureExt, FbTryStreamExt};
 use futures_old::future::ok;
@@ -251,13 +250,6 @@ fn getpack_timeout() -> Duration {
         Duration::from_secs(timeout as u64)
     } else {
         Duration::from_secs(5 * 60 * 60)
-    }
-}
-
-fn process_stream_timeout_error(err: StreamTimeoutError) -> Error {
-    match err {
-        StreamTimeoutError::Error(err) => err,
-        StreamTimeoutError::Timeout => Error::msg("timeout"),
     }
 }
 
@@ -2110,25 +2102,22 @@ impl HgCommands for RepoClient {
                 .clone()
                 .add("getcommitdata_nodes", nodes.len())
                 .log_with_msg("GetCommitData Params", None);
-            let s = stream_old::iter_ok::<_, Error>(nodes.into_iter())
+
+            let s = stream::iter(nodes.into_iter())
                 .map({
                     cloned!(ctx, blobrepo);
                     move |hg_cs_id| {
-                        {
-                            cloned!(ctx, blobrepo, hg_cs_id);
-                            async move {
-                                RevlogChangeset::load(&ctx, blobrepo.blobstore(), hg_cs_id).await
-                            }
+                        cloned!(ctx, blobrepo, hg_cs_id);
+                        async move {
+                            let revlog_cs =
+                                RevlogChangeset::load(&ctx, blobrepo.blobstore(), hg_cs_id).await?;
+                            let bytes = serialize_getcommitdata(hg_cs_id, revlog_cs)?;
+                            Result::<_, Error>::Ok(bytes)
                         }
-                        .boxed()
-                        .compat()
-                        .and_then(move |revlog_cs| serialize_getcommitdata(hg_cs_id, revlog_cs))
                     }
                 })
                 .buffered(100)
-                .whole_stream_timeout(default_timeout())
-                .map_err(process_stream_timeout_error)
-                .inspect({
+                .inspect_ok({
                     cloned!(ctx);
                     move |bytes| {
                         ctx.perf_counters().add_to_counter(
@@ -2140,6 +2129,10 @@ impl HgCommands for RepoClient {
                         STATS::getcommitdata_commit_count.add_value(1);
                     }
                 })
+                .whole_stream_timeout(default_timeout())
+                .flatten_err()
+                .boxed()
+                .compat()
                 .timed({
                     move |stats, _| {
                         if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
