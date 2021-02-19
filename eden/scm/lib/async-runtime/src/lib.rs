@@ -28,7 +28,9 @@ use once_cell::sync::Lazy;
 use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
+    let nproc = num_cpus::get();
     RuntimeBuilder::new_multi_thread()
+        .worker_threads(nproc.min(8))
         .enable_all()
         .build()
         .expect("failed to initialize the async runtime")
