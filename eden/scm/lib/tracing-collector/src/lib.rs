@@ -20,6 +20,7 @@ use tracing::span::{Attributes, Record};
 use tracing::subscriber::SetGlobalDefaultError;
 use tracing::{Event, Id, Level, Metadata, Subscriber};
 use tracing_subscriber::layer::{Context, Layer, SubscriberExt};
+use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Registry;
 
 pub fn init(data: Arc<Mutex<TracingData>>, level: Level) -> Result<(), SetGlobalDefaultError> {
@@ -27,7 +28,10 @@ pub fn init(data: Arc<Mutex<TracingData>>, level: Level) -> Result<(), SetGlobal
     tracing::subscriber::set_global_default(collector)
 }
 
-pub fn default_collector(data: Arc<Mutex<TracingData>>, level: Level) -> impl Subscriber {
+pub fn default_collector(
+    data: Arc<Mutex<TracingData>>,
+    level: Level,
+) -> impl Subscriber + for<'a> LookupSpan<'a> {
     let tracing_data_subscriber = TracingCollector::new(data, level);
     Registry::default().with(tracing_data_subscriber)
 }
