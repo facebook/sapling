@@ -16,6 +16,7 @@ use futures::{
 
 pub mod edenapi;
 pub mod fallback;
+pub mod legacy;
 
 /// A pinned, boxed stream of keys to fetch.
 pub type KeyStream<K> = BoxStream<'static, K>;
