@@ -182,11 +182,11 @@ async fn get_blob<'a>(
         (CMD_MANIFOLD, Some(sub)) => {
             #[cfg(fbcode_build)]
             {
-                use manifoldblob::ThriftManifoldBlob;
+                use manifoldblob::ManifoldBlob;
                 use prefixblob::PrefixBlobstore;
 
                 let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
-                let manifold = ThriftManifoldBlob::new(fb, bucket, None, put_behaviour)
+                let manifold = ManifoldBlob::new(fb, bucket, None, put_behaviour)
                     .map_err(|e| -> Error { e })?;
                 let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
                 Arc::new(blobstore)

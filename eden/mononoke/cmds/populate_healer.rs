@@ -23,7 +23,7 @@ use blobstore_sync_queue::{
 use cmdlib::args;
 use context::CoreContext;
 use fileblob::Fileblob;
-use manifoldblob::ThriftManifoldBlob;
+use manifoldblob::ManifoldBlob;
 use metaconfig_types::{
     BlobConfig, BlobstoreId, MetadataDatabaseConfig, MultiplexId, RemoteDatabaseConfig,
     RemoteMetadataDatabaseConfig, StorageConfig,
@@ -383,8 +383,7 @@ fn make_key_source(
     match args {
         BlobConfig::Manifold { bucket, .. } => {
             let res = Arc::new(
-                ThriftManifoldBlob::new(fb, bucket.clone(), None, DEFAULT_PUT_BEHAVIOUR)?
-                    .into_inner(),
+                ManifoldBlob::new(fb, bucket.clone(), None, DEFAULT_PUT_BEHAVIOUR)?.into_inner(),
             );
             Ok(res)
         }
