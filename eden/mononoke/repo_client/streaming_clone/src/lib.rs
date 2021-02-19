@@ -11,10 +11,10 @@ use std::vec::Vec;
 
 use anyhow::Error;
 use bytes::Bytes;
-use cloned::cloned;
-use futures::future::{FutureExt, TryFutureExt};
-use futures_01_ext::{BoxFuture, FutureExt as OldFutureExt};
-use futures_old::{future::lazy, Future};
+use futures::{
+    compat::Future01CompatExt,
+    future::{BoxFuture, FutureExt},
+};
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
@@ -35,8 +35,8 @@ pub enum ErrorKind {
 pub struct RevlogStreamingChunks {
     pub index_size: usize,
     pub data_size: usize,
-    pub index_blobs: Vec<BoxFuture<Bytes, Error>>,
-    pub data_blobs: Vec<BoxFuture<Bytes, Error>>,
+    pub index_blobs: Vec<BoxFuture<'static, Result<Bytes, Error>>>,
+    pub data_blobs: Vec<BoxFuture<'static, Result<Bytes, Error>>>,
 }
 
 impl RevlogStreamingChunks {
@@ -83,63 +83,60 @@ fn fetch_blob(
     blobstore: impl Blobstore + 'static,
     key: &[u8],
     expected_size: usize,
-) -> BoxFuture<Bytes, Error> {
+) -> BoxFuture<'static, Result<Bytes, Error>> {
     let key = String::from_utf8_lossy(key).into_owned();
-    lazy(move || {
-        {
-            cloned!(key);
-            async move { blobstore.get(&ctx, &key).await }
-        }
-        .boxed()
-        .compat()
-        .and_then(move |data| {
-            match data {
-                None => Err(ErrorKind::MissingStreamingBlob(key).into()),
-                Some(data) if data.as_bytes().len() == expected_size => Ok(data.into_raw_bytes()),
-                Some(data) => {
-                    Err(
-                        ErrorKind::CorruptStreamingBlob(key, data.as_bytes().len(), expected_size)
-                            .into(),
-                    )
-                }
+
+    async move {
+        let data = blobstore.get(&ctx, &key).await?;
+
+        match data {
+            None => Err(ErrorKind::MissingStreamingBlob(key).into()),
+            Some(data) if data.as_bytes().len() == expected_size => Ok(data.into_raw_bytes()),
+            Some(data) => {
+                Err(
+                    ErrorKind::CorruptStreamingBlob(key, data.as_bytes().len(), expected_size)
+                        .into(),
+                )
             }
-        })
-    })
-    .boxify()
+        }
+    }
+    .boxed()
 }
 
 impl SqlStreamingChunksFetcher {
-    pub fn fetch_changelog(
+    pub async fn fetch_changelog(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         blobstore: impl Blobstore + Clone + 'static,
-    ) -> BoxFuture<RevlogStreamingChunks, Error> {
-        SelectChunks::query(&self.read_connection, &repo_id)
-            .map(move |rows| {
-                rows.into_iter().fold(
-                    RevlogStreamingChunks::new(),
-                    move |mut res, (idx_blob_name, idx_size, data_blob_name, data_size)| {
-                        let data_size = data_size as usize;
-                        let idx_size = idx_size as usize;
-                        res.data_size += data_size;
-                        res.index_size += idx_size;
-                        res.data_blobs.push(fetch_blob(
-                            ctx.clone(),
-                            blobstore.clone(),
-                            &data_blob_name,
-                            data_size,
-                        ));
-                        res.index_blobs.push(fetch_blob(
-                            ctx.clone(),
-                            blobstore.clone(),
-                            &idx_blob_name,
-                            idx_size,
-                        ));
-                        res
-                    },
-                )
-            })
-            .boxify()
+    ) -> Result<RevlogStreamingChunks, Error> {
+        let rows = SelectChunks::query(&self.read_connection, &repo_id)
+            .compat()
+            .await?;
+
+        let res = rows.into_iter().fold(
+            RevlogStreamingChunks::new(),
+            move |mut res, (idx_blob_name, idx_size, data_blob_name, data_size)| {
+                let data_size = data_size as usize;
+                let idx_size = idx_size as usize;
+                res.data_size += data_size;
+                res.index_size += idx_size;
+                res.data_blobs.push(fetch_blob(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    &data_blob_name,
+                    data_size,
+                ));
+                res.index_blobs.push(fetch_blob(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    &idx_blob_name,
+                    idx_size,
+                ));
+                res
+            },
+        );
+
+        Ok(res)
     }
 }

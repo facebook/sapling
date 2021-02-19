@@ -198,7 +198,6 @@ impl StreamingCloneWarmup {
             let chunks = self
                 .fetcher
                 .fetch_changelog(ctx.clone(), self.repoid, self.blobstore.clone())
-                .compat()
                 .await?;
             info!(
                 ctx.logger(),
@@ -239,21 +238,13 @@ async fn chunks_warmup(ctx: CoreContext, chunks: RevlogStreamingChunks) -> Resul
         data_size: data_size_expected,
     } = chunks;
 
-    let index = stream::iter(
-        index_blobs
-            .into_iter()
-            .map(|f| f.compat().map_ok(|b| b.len())),
-    )
-    .buffer_unordered(100)
-    .try_fold(0usize, |acc, size| future::ok(acc + size));
+    let index = stream::iter(index_blobs.into_iter().map(|f| f.map_ok(|b| b.len())))
+        .buffer_unordered(100)
+        .try_fold(0usize, |acc, size| future::ok(acc + size));
 
-    let data = stream::iter(
-        data_blobs
-            .into_iter()
-            .map(|f| f.compat().map_ok(|b| b.len())),
-    )
-    .buffer_unordered(100)
-    .try_fold(0usize, |acc, size| future::ok(acc + size));
+    let data = stream::iter(data_blobs.into_iter().map(|f| f.map_ok(|b| b.len())))
+        .buffer_unordered(100)
+        .try_fold(0usize, |acc, size| future::ok(acc + size));
 
     let (index_size, data_size) = try_join(index, data).await?;
     if index_size_expected != index_size {
