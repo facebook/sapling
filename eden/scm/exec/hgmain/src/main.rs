@@ -6,6 +6,7 @@
  */
 
 use clidispatch::dispatch;
+use std::io::Write;
 
 mod buildinfo;
 #[cfg(feature = "with_chg")]

@@ -6,14 +6,21 @@
  */
 
 use configparser::config::ConfigSet;
+use parking_lot::Mutex;
 use pipe::pipe;
 use std::any::Any;
 use std::io;
 use std::mem;
+use std::sync::Arc;
 use std::thread::{spawn, JoinHandle};
 use streampager::{config::InterfaceMode, Pager};
 
+#[derive(Clone)]
 pub struct IO {
+    inner: Arc<Mutex<Inner>>,
+}
+
+struct Inner {
     input: Box<dyn Read>,
     output: Box<dyn Write>,
     error: Option<Box<dyn Write>>,
@@ -22,21 +29,21 @@ pub struct IO {
     pager_handle: Option<JoinHandle<streampager::Result<()>>>,
 }
 
-pub trait Read: io::Read + Any + Send {
+pub trait Read: io::Read + Any + Send + Sync {
     fn as_any(&self) -> &dyn Any;
 }
 
-pub trait Write: io::Write + Any + Send {
+pub trait Write: io::Write + Any + Send + Sync {
     fn as_any(&self) -> &dyn Any;
 }
 
-impl<T: io::Read + Any + Send> Read for T {
+impl<T: io::Read + Any + Send + Sync> Read for T {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-impl<T: io::Write + Any + Send> Write for T {
+impl<T: io::Write + Any + Send + Sync> Write for T {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -45,25 +52,25 @@ impl<T: io::Write + Any + Send> Write for T {
 // Write to output.
 impl io::Write for IO {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.output.write(buf)
+        self.inner.lock().output.write(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.output.flush()
+        self.inner.lock().flush()
     }
 }
 
 impl IO {
     pub fn with_input<R>(&self, f: impl FnOnce(&dyn Read) -> R) -> R {
-        f(self.input.as_ref())
+        f(self.inner.lock().input.as_ref())
     }
 
     pub fn with_output<R>(&self, f: impl FnOnce(&dyn Write) -> R) -> R {
-        f(self.output.as_ref())
+        f(self.inner.lock().output.as_ref())
     }
 
     pub fn with_error<R>(&self, f: impl FnOnce(Option<&dyn Write>) -> R) -> R {
-        f(self.error.as_deref())
+        f(self.inner.lock().error.as_deref())
     }
 
     pub fn new<IS, OS, ES>(input: IS, output: OS, error: Option<ES>) -> Self
@@ -72,59 +79,60 @@ impl IO {
         OS: Write + 'static,
         ES: Write + 'static,
     {
-        IO {
+        let inner = Inner {
             input: Box::new(input),
             output: Box::new(output),
             error: error.map(|e| Box::new(e) as Box<dyn Write>),
             progress: None,
             pager_handle: None,
+        };
+        Self {
+            inner: Arc::new(Mutex::new(inner)),
         }
     }
 
     pub fn write(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
-        self.output.write_all(data)?;
+        self.inner.lock().output.write_all(data)?;
         Ok(())
     }
 
     pub fn write_err(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
-        if let Some(ref mut error) = self.error {
+        let mut inner = self.inner.lock();
+        if let Some(ref mut error) = inner.error {
             error.write_all(data)?;
         } else {
-            self.output.write_all(data)?;
+            inner.output.write_all(data)?;
         }
         Ok(())
     }
 
     pub fn write_progress(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
-        if let Some(ref mut progress) = self.progress {
+        let mut inner = self.inner.lock();
+        if let Some(ref mut progress) = inner.progress {
             progress.write_all(data)?;
         }
         Ok(())
     }
 
-    pub fn flush(&mut self) -> io::Result<()> {
-        self.output.flush()?;
-        if let Some(ref mut error) = self.error {
-            error.flush()?;
-        }
-        Ok(())
-    }
-
     pub fn stdio() -> Self {
-        IO {
+        let inner = Inner {
             input: Box::new(io::stdin()),
             output: Box::new(io::stdout()),
             error: Some(Box::new(io::stderr())),
             progress: None,
             pager_handle: None,
+        };
+        Self {
+            inner: Arc::new(Mutex::new(inner)),
         }
     }
 
     pub fn start_pager(&mut self, config: &ConfigSet) -> io::Result<()> {
-        if self.pager_handle.is_some() {
+        let mut inner = self.inner.lock();
+        if inner.pager_handle.is_some() {
             return Ok(());
         }
 
@@ -151,12 +159,12 @@ impl IO {
         let (err_read, err_write) = pipe();
         let (prg_read, prg_write) = pipe();
 
-        self.flush()?;
-        self.output = Box::new(out_write);
-        self.error = Some(Box::new(err_write));
-        self.progress = Some(Box::new(prg_write));
+        inner.flush()?;
+        inner.output = Box::new(out_write);
+        inner.error = Some(Box::new(err_write));
+        inner.progress = Some(Box::new(prg_write));
 
-        self.pager_handle = Some(spawn(|| {
+        inner.pager_handle = Some(spawn(|| {
             pager
                 .add_output_stream(out_read, "")?
                 .add_error_stream(err_read, "")?
@@ -169,7 +177,17 @@ impl IO {
     }
 }
 
-impl Drop for IO {
+impl Inner {
+    pub fn flush(&mut self) -> io::Result<()> {
+        self.output.flush()?;
+        if let Some(ref mut error) = self.error {
+            error.flush()?;
+        }
+        Ok(())
+    }
+}
+
+impl Drop for Inner {
     fn drop(&mut self) {
         let _ = self.flush();
         // Drop the output and error. This sends EOF to pager.

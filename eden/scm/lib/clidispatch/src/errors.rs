@@ -6,6 +6,7 @@
  */
 
 use std::borrow::Cow;
+use std::io::Write;
 use taggederror::FilteredAnyhow;
 use taggederror_util::AnyhowEdenExt;
 use thiserror::Error;
@@ -119,12 +120,14 @@ mod tests {
         print_error(&error, &mut io, &[] as &[String]);
 
         // Make sure error message is formatted correctly.
-        if let Some(actual_error_wrapped) = &io.error {
-            let any = Box::as_ref(&actual_error_wrapped).as_any();
-            if let Some(c) = any.downcast_ref::<std::io::Cursor<Vec<u8>>>() {
-                let actual_error = c.clone().into_inner();
-                assert_eq!(String::from_utf8(actual_error).unwrap(), expected_error);
+        io.with_error(|e| {
+            if let Some(actual_error_wrapped) = e {
+                let any = actual_error_wrapped.as_any();
+                if let Some(c) = any.downcast_ref::<std::io::Cursor<Vec<u8>>>() {
+                    let actual_error = c.clone().into_inner();
+                    assert_eq!(String::from_utf8(actual_error).unwrap(), expected_error);
+                }
             }
-        }
+        });
     }
 }
