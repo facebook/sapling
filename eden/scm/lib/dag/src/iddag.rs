@@ -52,7 +52,9 @@ use tracing::{debug_span, field, trace};
 #[derive(Clone, Serialize, Deserialize)]
 pub struct IdDag<Store> {
     store: Store,
+    #[serde(skip, default = "default_max_level")]
     max_level: Level,
+    #[serde(skip, default = "default_seg_size")]
     new_seg_size: usize,
     #[serde(skip, default = "VerLink::new")]
     version: VerLink,
@@ -1540,6 +1542,14 @@ impl<P: Fn(Id) -> Result<bool>> LazyPredicate<P> {
         }
         Ok(())
     }
+}
+
+fn default_seg_size() -> usize {
+    DEFAULT_SEG_SIZE
+}
+
+fn default_max_level() -> Level {
+    MAX_MEANINGFUL_LEVEL
 }
 
 #[cfg(test)]

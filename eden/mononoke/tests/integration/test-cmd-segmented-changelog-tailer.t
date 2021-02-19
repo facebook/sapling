@@ -58,7 +58,7 @@ Actually run Segmented Changelog Tailer.
   * repo 0: bookmark master_bookmark resolved to * (glob)
   * repo 0: IdMap updated, IdDag updated (glob)
   * repo 0: IdDag rebuilt (glob)
-  * repo 0: segmented changelog dag bundle saved, idmap_version: 1, iddag_version: 5bdcf177* (glob)
+  * repo 0: segmented changelog dag bundle saved, idmap_version: 1, iddag_version: c2e0b7de779239835d449fce6cb049ab559fea6618a164cae7432af1bc83ff8e (glob)
   * repo 0: successful incremental update to segmented changelog (glob)
   * repo 0: SegmentedChangelogTailer is done (glob)
 
