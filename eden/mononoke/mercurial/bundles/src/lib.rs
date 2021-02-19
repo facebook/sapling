@@ -194,20 +194,25 @@ pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
         bundle.add_part(part);
     }
 
-    tokio::spawn(bundle.build().then(move |val| {
-        // Ignore send errors, because they can only happen if receiver was deallocated already
-        match val {
-            Ok(_) => {
-                // Bundle was successfully generated, so there is nothing add.
-                // So just add empty bytes.
-                let _ = result_sender.send(Ok(Bytes::new()));
-            }
-            Err(err) => {
-                let _ = result_sender.send(Err(err));
-            }
-        };
-        Ok(())
-    }));
+    tokio::spawn(
+        bundle
+            .build()
+            .then(move |val| {
+                // Ignore send errors, because they can only happen if receiver was deallocated already
+                match val {
+                    Ok(_) => {
+                        // Bundle was successfully generated, so there is nothing add.
+                        // So just add empty bytes.
+                        let _ = result_sender.send(Ok(Bytes::new()));
+                    }
+                    Err(err) => {
+                        let _ = result_sender.send(Err(err));
+                    }
+                };
+                Result::<_, Error>::Ok(())
+            })
+            .compat(),
+    );
 
     receiver
         .map(|bytes| Ok(bytes))

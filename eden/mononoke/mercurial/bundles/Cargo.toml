@@ -34,7 +34,7 @@ quickcheck = "0.9"
 rand = { version = "0.7", features = ["small_rng"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
-tokio = "0.1"
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tokio-codec = "0.1"
 tokio-io = "0.1"
 

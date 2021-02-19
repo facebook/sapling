@@ -259,14 +259,15 @@ enum DecodeRes<T> {
 mod test {
     use std::io::Cursor;
 
+    use futures::compat::Future01CompatExt;
     use futures_old::{Future, Stream};
     use slog::{o, Discard};
     use tokio_codec::FramedRead;
 
     use super::*;
 
-    #[test]
-    fn test_empty() {
+    #[tokio::test]
+    async fn test_empty() {
         let logger = Logger::root(Discard, o!());
 
         // Absolutely nothing in here.
@@ -308,6 +309,6 @@ mod test {
             })
             .map_err(|err| panic!("{:#?}", err));
 
-        tokio::run(fut);
+        fut.compat().await.unwrap();
     }
 }

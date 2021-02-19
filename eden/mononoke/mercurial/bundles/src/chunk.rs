@@ -157,6 +157,7 @@ mod test {
     use std::io::Cursor;
 
     use assert_matches::assert_matches;
+    use futures::compat::Future01CompatExt;
     use futures_old::{stream, Future, Sink, Stream};
     use quickcheck::{quickcheck, TestResult};
     use tokio_codec::{FramedRead, FramedWrite};
@@ -249,7 +250,8 @@ mod test {
             })
             .map_err(|err| panic!("{:#?}", err));
 
-        tokio::run(encode_fut);
+        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(encode_fut.compat()).unwrap();
 
         TestResult::passed()
     }
