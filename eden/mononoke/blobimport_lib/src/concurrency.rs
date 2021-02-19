@@ -6,12 +6,13 @@
  */
 
 use anyhow::{format_err, Error, Result};
+use futures::compat::Future01CompatExt;
 use futures_01_ext::{BoxFuture, FutureExt};
 use futures_old::{
     sync::{mpsc, oneshot},
     Future, IntoFuture, Stream,
 };
-use tokio::executor::Executor;
+use tokio::runtime::Handle;
 
 type Job<In, Out> = (In, oneshot::Sender<Result<Out>>);
 
@@ -29,10 +30,9 @@ where
     In: Send + 'static,
     Out: Send + 'static,
 {
-    pub fn new<H, E>(handler: H, executor: &mut E, concurrency: usize) -> Result<Self>
+    pub fn new<H>(handler: H, handle: &Handle, concurrency: usize) -> Result<Self>
     where
         H: Fn(In) -> BoxFuture<Out, Error> + Send + 'static,
-        E: Executor,
     {
         // NOTE: This buffer is unbounded, because we allow buffering as many entries as possible
         // on this stream, we just don't process all of them at once. We do implicitly have some
@@ -50,11 +50,9 @@ where
             .buffer_unordered(concurrency)
             .for_each(|()| Ok(()))
             .discard()
-            .boxify();
+            .compat();
 
-        executor
-            .spawn(processor)
-            .map_err(|e| format_err!("Could not spawn: {:?}", e))?;
+        handle.spawn(processor);
 
         Ok(Self { sender })
     }

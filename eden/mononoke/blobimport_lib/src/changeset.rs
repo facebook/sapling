@@ -13,7 +13,7 @@ use anyhow::{anyhow, bail, Context, Error};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::{Compat, FutureFailureErrorExt, FutureFailureExt, StreamFailureErrorExt};
+use failure_ext::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     FutureExt, StreamExt, TryFutureExt,
@@ -22,13 +22,13 @@ use futures_01_ext::{
     spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt as _,
     StreamExt as _,
 };
+use futures_ext::FbTryFutureExt;
 use futures_old::{
     future::{self, SharedItem},
     stream::{self, Stream},
-    sync::oneshot,
     Future, IntoFuture,
 };
-use tokio::executor::DefaultExecutor;
+use tokio::runtime::Handle;
 use tracing::{trace_args, EventId, Traced};
 
 use blobrepo::BlobRepo;
@@ -327,7 +327,7 @@ impl UploadChangesets {
 
         let mut parent_changeset_handles: HashMap<HgNodeHash, ChangesetHandle> = HashMap::new();
 
-        let mut executor = DefaultExecutor::current();
+        let handle = try_boxstream!(Handle::try_current().context("No tokio runtime available"));
 
         let event_id = EventId::new();
 
@@ -347,7 +347,7 @@ impl UploadChangesets {
                         .boxify(),
                 }
             },
-            &mut executor,
+            &handle,
             concurrent_lfs_imports,
         )));
 
@@ -358,7 +358,7 @@ impl UploadChangesets {
                     upload_entry(ctx.clone(), &blobrepo, lfs_uploader.clone(), entry, path).boxify()
                 }
             },
-            &mut executor,
+            &handle,
             concurrent_blobs,
         )));
 
@@ -522,14 +522,15 @@ impl UploadChangesets {
 
                 // Uploading changeset and populate phases
                 // We know they are public.
-                oneshot::spawn(
+                tokio::task::spawn(async move {
                     cshandle
                         .get_completed_changeset()
-                        .compat()
+                        .await
                         .with_context(move || format!("While uploading changeset: {}", csid))
-                        .from_err(),
-                    &executor,
-                )
+                })
+                .flatten_err()
+                .boxed()
+                .compat()
                 .and_then(move |shared| {
                     phases
                         .add_reachable_as_public(ctx, vec![shared.0.get_changeset_id()])
