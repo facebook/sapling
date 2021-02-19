@@ -349,7 +349,9 @@ class Redirection:
         repo_path = self.expand_repo_path(checkout)
         repo_path.unlink()
 
-    def _bind_mount(self, instance: EdenInstance, checkout_path: Path, target: Path):
+    def _bind_mount(
+        self, instance: EdenInstance, checkout_path: Path, target: Path
+    ) -> None:
         """Arrange to set up a bind mount"""
         if sys.platform == "darwin":
             return self._bind_mount_darwin(instance, checkout_path, target)
