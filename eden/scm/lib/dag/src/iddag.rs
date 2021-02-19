@@ -376,8 +376,10 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// (`level - 1`) segments. Each high level segment covers at most `size`
     /// `level - 1` segments.
     ///
-    /// The last segment per level is dropped because it's likely to be
-    /// incomplete. This helps reduce fragmentation.
+    /// The last segment per level per group is dropped because it's likely to
+    /// be incomplete. This helps reduce fragmentation, and also allows the last
+    /// flat segment per group to be mutable, because it will not be included
+    /// in Level 1 segments.
     ///
     /// Return number of segments inserted.
     fn build_high_level_segments(&mut self, level: Level) -> Result<usize> {
@@ -1553,14 +1555,10 @@ mod tests {
         dag.insert(flags, 0, Id(51), Id(100), &vec![Id(50)])
             .unwrap();
         assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 101);
-        dag.insert(flags, 0, Id(101), Id(150), &vec![Id(100)])
-            .unwrap();
+        dag.insert(flags, 0, Id(101), Id(150), &vec![]).unwrap();
         assert_eq!(dag.next_free_id(0, Group::MASTER).unwrap().0, 151);
         assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 0);
-        dag.insert(flags, 1, Id::MIN, Id(100), &vec![]).unwrap();
-        assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 101);
-        dag.insert(flags, 1, Id(101), Id(150), &vec![Id(100)])
-            .unwrap();
+        dag.insert(flags, 1, Id::MIN, Id(150), &vec![]).unwrap();
         assert_eq!(dag.next_free_id(1, Group::MASTER).unwrap().0, 151);
 
         // Helper functions to make the below lines shorter.
@@ -1578,19 +1576,19 @@ mod tests {
 
         assert_eq!(low_by_head(0, 0), -1);
         assert_eq!(low_by_head(49, 0), -1);
-        assert_eq!(low_by_head(50, 0), 0);
+        assert_eq!(low_by_head(50, 0), -1); // 0..=50 is merged into 0..=100.
         assert_eq!(low_by_head(51, 0), -1);
         assert_eq!(low_by_head(150, 0), 101);
-        assert_eq!(low_by_head(100, 1), 0);
+        assert_eq!(low_by_head(100, 1), -1);
 
         assert_eq!(low_by_id(0), 0);
         assert_eq!(low_by_id(30), 0);
         assert_eq!(low_by_id(49), 0);
         assert_eq!(low_by_id(50), 0);
-        assert_eq!(low_by_id(51), 51);
-        assert_eq!(low_by_id(52), 51);
-        assert_eq!(low_by_id(99), 51);
-        assert_eq!(low_by_id(100), 51);
+        assert_eq!(low_by_id(51), 0);
+        assert_eq!(low_by_id(52), 0);
+        assert_eq!(low_by_id(99), 0);
+        assert_eq!(low_by_id(100), 0);
         assert_eq!(low_by_id(101), 101);
         assert_eq!(low_by_id(102), 101);
         assert_eq!(low_by_id(149), 101);

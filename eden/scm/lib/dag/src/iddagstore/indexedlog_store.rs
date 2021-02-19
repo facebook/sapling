@@ -527,7 +527,7 @@ impl IndexedLogStore {
             log,
             path,
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
-            merge_segments: false,
+            merge_segments: true,
         })
     }
 
@@ -537,7 +537,7 @@ impl IndexedLogStore {
             log,
             path,
             cached_max_level: AtomicU8::new(MAX_LEVEL_UNKNOWN),
-            merge_segments: false,
+            merge_segments: true,
         }
     }
 

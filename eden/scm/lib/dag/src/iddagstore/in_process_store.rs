@@ -322,7 +322,7 @@ impl InProcessStore {
             non_master_segments: Vec::new(),
             level_head_index: Vec::new(),
             parent_index: BTreeMap::new(),
-            merge_segments: false,
+            merge_segments: true,
         }
     }
 }

@@ -122,6 +122,16 @@ mod tests {
         )
     });
 
+    static MERGED_LEVEL0_HEAD5: Lazy<Segment> = Lazy::new(|| {
+        Segment::new(
+            SegmentFlags::HAS_ROOT | SegmentFlags::ONLY_HEAD,
+            0 as Level,
+            Id(0),
+            Id(5),
+            &[],
+        )
+    });
+
     static LEVEL0_HEADN2: Lazy<Segment> =
         Lazy::new(|| Segment::new(SegmentFlags::empty(), 0 as Level, nid(0), nid(2), &[Id(13)]));
     static LEVEL0_HEADN4: Lazy<Segment> = Lazy::new(|| {
@@ -190,7 +200,7 @@ mod tests {
             .find_segment_by_head_and_level(Id(5), 0 as Level)
             .unwrap()
             .unwrap();
-        assert_eq!(&segment, LEVEL0_HEAD5.deref());
+        assert_eq!(&segment, MERGED_LEVEL0_HEAD5.deref());
 
         let segment = store
             .find_segment_by_head_and_level(nid(2), 0 as Level)
@@ -210,7 +220,7 @@ mod tests {
             .find_flat_segment_including_id(Id(0))
             .unwrap()
             .unwrap();
-        assert_eq!(&segment, LEVEL0_HEAD2.deref());
+        assert_eq!(&segment, MERGED_LEVEL0_HEAD5.deref());
 
         let segment = store
             .find_flat_segment_including_id(nid(1))
@@ -240,7 +250,7 @@ mod tests {
 
     fn test_next_segments(store: &dyn IdDagStore) {
         let segments = store.next_segments(Id(4), 0 as Level).unwrap();
-        let expected = segments_to_owned(&[&LEVEL0_HEAD5, &LEVEL0_HEAD9, &LEVEL0_HEAD13]);
+        let expected = segments_to_owned(&[&MERGED_LEVEL0_HEAD5, &LEVEL0_HEAD9, &LEVEL0_HEAD13]);
         assert_eq!(segments, expected);
 
         let segments = store.next_segments(Id(14), 0 as Level).unwrap();
@@ -268,7 +278,7 @@ mod tests {
             .unwrap()
             .collect::<Result<Vec<_>>>()
             .unwrap();
-        let expected = segments_to_owned(&[&LEVEL0_HEAD9, &LEVEL0_HEAD5, &LEVEL0_HEAD2]);
+        let expected = segments_to_owned(&[&LEVEL0_HEAD9, &MERGED_LEVEL0_HEAD5]);
         assert_eq!(answer, expected);
 
         let mut answer = store.iter_segments_descending(Id(1), 0).unwrap();
@@ -329,7 +339,9 @@ mod tests {
             .unwrap()
             .collect::<Result<Vec<_>>>()
             .unwrap();
-        let expected = segments_to_owned(&[&LEVEL0_HEAD5, &LEVEL0_HEAD9]);
+        // LEVEL0_HEAD5 is not in answer because it was merged into MERGED_LEVEL0_HEAD5
+        // and MERGED_LEVEL0_HEAD5 no longer has parent 2.
+        let expected = segments_to_owned(&[&LEVEL0_HEAD9]);
         answer.sort_by_key(|s| s.head().unwrap());
         assert_eq!(answer, expected);
 
@@ -355,7 +367,9 @@ mod tests {
         };
 
         let answer = lookup(Id(2));
-        let expected = segments_to_owned(&[&LEVEL0_HEAD5, &LEVEL0_HEAD9]);
+        // LEVEL0_HEAD5 is not in answer because it was merged into MERGED_LEVEL0_HEAD5
+        // and MERGED_LEVEL0_HEAD5 no longer has parent 2.
+        let expected = segments_to_owned(&[&LEVEL0_HEAD9]);
         assert_eq!(answer, expected);
 
         let answer = lookup(Id(13));
@@ -404,12 +418,14 @@ mod tests {
 
     fn for_each_empty_store(f: impl Fn(&mut dyn IdDagStore)) {
         let mut store = InProcessStore::new();
+        tracing::debug!("testing InProcessStore");
         f(&mut store);
 
         #[cfg(feature = "indexedlog-backend")]
         {
             let dir = tempfile::tempdir().unwrap();
             let mut store = IndexedLogStore::open(&dir.path()).unwrap();
+            tracing::debug!("testing IndexedLogStore");
             f(&mut store);
         }
     }
