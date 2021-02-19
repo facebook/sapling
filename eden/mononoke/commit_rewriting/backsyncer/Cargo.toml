@@ -33,7 +33,6 @@ sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
 synced_commit_mapping = { path = "../synced_commit_mapping", version = "0.1.0" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 anyhow = "1.0"
@@ -57,6 +56,7 @@ revset = { path = "../../revset", version = "0.1.0" }
 skiplist = { path = "../../reachabilityindex/skiplist", version = "0.1.0" }
 tests_utils = { path = "../../tests/utils", version = "0.1.0" }
 tunables = { path = "../../tunables", version = "0.1.0" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 assert_matches = "1.5"
 maplit = "1.0"
 pretty_assertions = "0.6"

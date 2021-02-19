@@ -38,8 +38,7 @@ use cross_repo_sync::{
     find_toposorted_unsynced_ancestors, CandidateSelectionHint, CommitSyncContext,
     CommitSyncOutcome, CommitSyncer,
 };
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
-use futures_old::future::Future;
+use futures::{compat::Future01CompatExt, FutureExt, TryStreamExt};
 use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
@@ -431,18 +430,6 @@ pub struct TargetRepoDbs {
     pub bookmarks: Arc<dyn Bookmarks>,
     pub bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
     pub counters: SqlMutableCounters,
-}
-
-pub fn open_backsyncer_dbs_compat(
-    ctx: CoreContext,
-    blobrepo: BlobRepo,
-    db_config: MetadataDatabaseConfig,
-    mysql_options: MysqlOptions,
-    readonly_storage: ReadOnlyStorage,
-) -> impl Future<Item = TargetRepoDbs, Error = Error> {
-    open_backsyncer_dbs(ctx, blobrepo, db_config, mysql_options, readonly_storage)
-        .boxed()
-        .compat()
 }
 
 pub async fn open_backsyncer_dbs(
