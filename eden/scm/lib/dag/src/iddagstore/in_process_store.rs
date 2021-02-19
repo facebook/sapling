@@ -20,7 +20,6 @@ use crate::errors::bug;
 use crate::id::{Group, Id};
 use crate::ops::Persist;
 use crate::segment::Segment;
-use crate::segment::SegmentFlags;
 use crate::Level;
 use crate::Result;
 
@@ -64,59 +63,16 @@ impl IdDagStore for InProcessStore {
         let group = high.group();
 
         // Can we merge the segment with the last flat segment in "master_segments"?
-        for _ in Some(()) {
-            if level != 0
-                || group != Group::MASTER
-                || parents.len() != 1
-                || parents[0] + 1 != span.low
-            {
-                break;
-            }
+        if let Some(merged) = self.maybe_merged_flat_segment(&segment)? {
             let (&last_high, &last_store_id) = match self
                 .get_head_index(0)
+                // This does a duplicated lookup that was done in maybe_merged_flat_segment.
+                // But the overhead is probably okay, and the code is easier to read.
                 .and_then(|index| index.range(..group.max_id()).rev().next())
             {
                 Some(found) => found,
-                None => break, // Cannot merge - No last flat segment.
+                None => return bug("last segment should exist if segments are mergable"),
             };
-
-            let last_segment = self.get_segment(&last_store_id);
-            let last_span = last_segment.span()?;
-            if last_span.high != parents[0] {
-                break;
-            }
-
-            // Can merge!
-            //
-            // Sanity check: No high-level segments should cover "last_span".
-            for lv in 1..self.max_level()? {
-                if self
-                    .find_segment_by_head_and_level(last_span.high, lv)?
-                    .is_some()
-                {
-                    return bug(format!(
-                        "lv{} segment should not cover last flat segment {:?}! ({})",
-                        lv, last_span, "check build_high_level_segments"
-                    ));
-                }
-            }
-
-            let merged = {
-                let last_parents = last_segment.parents()?;
-                let flags = {
-                    let last_flags = last_segment.flags()?;
-                    let flags = segment.flags()?;
-                    (flags & SegmentFlags::ONLY_HEAD) | (last_flags & SegmentFlags::HAS_ROOT)
-                };
-                Segment::new(flags, level, last_span.low, high, &last_parents)
-            };
-
-            tracing::debug!(
-                "merge flat segments {:?} + {:?} => {:?}",
-                &last_segment,
-                &segment,
-                &merged
-            );
 
             // Store the merged segment.
             self.set_segment(&last_store_id, merged);

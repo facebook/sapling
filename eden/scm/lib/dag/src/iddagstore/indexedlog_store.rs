@@ -295,89 +295,25 @@ impl Persist for IndexedLogStore {
 
 impl IndexedLogStore {
     /// Attempt to merge the flat `segment` with the last flat segment to reduce
-    /// fragmentation.
-    ///
-    /// ```plain,ignore
-    /// [---last segment---] [---segment---]
-    ///                    ^---- the only parent of segment
-    /// [---merged segment-----------------]
-    /// ```
+    /// fragmentation. Insert the merged segment.
     ///
     /// Return true if the merged segment was inserted.
     fn maybe_insert_merged_flat_segment(&mut self, segment: &Segment) -> Result<bool> {
-        let level = segment.level()?;
-        if level != 0 {
-            // Only applies to flat segments.
-            return Ok(false);
-        }
-        if segment.has_root()? {
-            // Cannot merge if segment has roots (implies no parent for a flat segment).
-            return Ok(false);
-        }
-        let span = segment.span()?;
-        let group = span.low.group();
-        if group != Group::MASTER {
-            // Do not merge non-master groups for simplicity.
-            return Ok(false);
-        }
-        let parents = segment.parents()?;
-        if parents.len() != 1 || parents[0] + 1 != span.low {
-            // Cannot merge - span.low dos not have parent [low-1] (non linear).
-            return Ok(false);
-        }
-        let last_segment = match self.iter_segments_descending(group.max_id(), 0)?.next() {
-            Some(Ok(s)) => s,
-            _ => return Ok(false), // Cannot merge - No last flat segment.
-        };
-        let last_span = last_segment.span()?;
-        if last_span.high + 1 != span.low {
-            // Cannot merge - Two spans are not connected.
-            return Ok(false);
-        }
+        if let Some(merged) = self.maybe_merged_flat_segment(segment)? {
+            let mut bytes = Vec::with_capacity(merged.0.len() + 10);
+            let span = segment.span()?;
+            bytes.extend_from_slice(IndexedLogStore::MAGIC_REWRITE_LAST_FLAT);
+            bytes.extend_from_slice(&Self::serialize_head_level_lookup_key(
+                span.low - 1, /* = last_segment.high */
+                0,            /* level */
+            ));
+            bytes.extend_from_slice(&merged.0);
+            self.log.append(&bytes)?;
 
-        // Can merge!
-
-        // Sanity check: No high-level segments should cover "last_span".
-        for lv in 1..=self.max_level()? {
-            if self
-                .find_segment_by_head_and_level(last_span.high, lv)?
-                .is_some()
-            {
-                return bug(format!(
-                    "lv{} segment should not cover last flat segment {:?}! ({})",
-                    lv, last_span, "check build_high_level_segments"
-                ));
-            }
+            Ok(true)
+        } else {
+            Ok(false)
         }
-
-        // Calculate the merged segment.
-        let merged = {
-            let last_parents = last_segment.parents()?;
-            let flags = {
-                let last_flags = last_segment.flags()?;
-                let flags = segment.flags()?;
-                (flags & SegmentFlags::ONLY_HEAD) | (last_flags & SegmentFlags::HAS_ROOT)
-            };
-            Segment::new(flags, level, last_span.low, span.high, &last_parents)
-        };
-
-        tracing::debug!(
-            "merge flat segments {:?} + {:?} => {:?}",
-            &last_segment,
-            &segment,
-            &merged
-        );
-
-        let mut bytes = Vec::with_capacity(merged.0.len() + 10);
-        bytes.extend_from_slice(IndexedLogStore::MAGIC_REWRITE_LAST_FLAT);
-        bytes.extend_from_slice(&Self::serialize_head_level_lookup_key(
-            last_span.high,
-            level,
-        ));
-        bytes.extend_from_slice(&merged.0);
-        self.log.append(&bytes)?;
-
-        Ok(true)
     }
 
     // Used internally to generate the index key for lookup

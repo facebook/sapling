@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::errors::bug;
 use crate::id::{Group, Id};
 use crate::segment::{Segment, SegmentFlags};
 use crate::Level;
@@ -86,6 +87,83 @@ pub trait IdDagStore: Send + Sync + 'static {
 
     /// Remove all non master Group identifiers from the DAG.
     fn remove_non_master(&mut self) -> Result<()>;
+
+    /// Attempt to merge the flat `segment` with the last flat segment to reduce
+    /// fragmentation.
+    ///
+    /// ```plain,ignore
+    /// [---last segment---] [---segment---]
+    ///                    ^---- the only parent of segment
+    /// [---merged segment-----------------]
+    /// ```
+    ///
+    /// Return the merged segment if it's meregable.
+    fn maybe_merged_flat_segment(&self, segment: &Segment) -> Result<Option<Segment>> {
+        let level = segment.level()?;
+        if level != 0 {
+            // Only applies to flat segments.
+            return Ok(None);
+        }
+        if segment.has_root()? {
+            // Cannot merge if segment has roots (implies no parent for a flat segment).
+            return Ok(None);
+        }
+        let span = segment.span()?;
+        let group = span.low.group();
+        if group != Group::MASTER {
+            // Do not merge non-master groups for simplicity.
+            return Ok(None);
+        }
+        let parents = segment.parents()?;
+        if parents.len() != 1 || parents[0] + 1 != span.low {
+            // Cannot merge - span.low dos not have parent [low-1] (non linear).
+            return Ok(None);
+        }
+        let last_segment = match self.iter_segments_descending(group.max_id(), 0)?.next() {
+            Some(Ok(s)) => s,
+            _ => return Ok(None), // Cannot merge - No last flat segment.
+        };
+        let last_span = last_segment.span()?;
+        if last_span.high + 1 != span.low {
+            // Cannot merge - Two spans are not connected.
+            return Ok(None);
+        }
+
+        // Can merge!
+
+        // Sanity check: No high-level segments should cover "last_span".
+        for lv in 1..=self.max_level()? {
+            if self
+                .find_segment_by_head_and_level(last_span.high, lv)?
+                .is_some()
+            {
+                return bug(format!(
+                    "lv{} segment should not cover last flat segment {:?}! ({})",
+                    lv, last_span, "check build_high_level_segments"
+                ));
+            }
+        }
+
+        // Calculate the merged segment.
+        let merged = {
+            let last_parents = last_segment.parents()?;
+            let flags = {
+                let last_flags = last_segment.flags()?;
+                let flags = segment.flags()?;
+                (flags & SegmentFlags::ONLY_HEAD) | (last_flags & SegmentFlags::HAS_ROOT)
+            };
+            Segment::new(flags, level, last_span.low, span.high, &last_parents)
+        };
+
+        tracing::debug!(
+            "merge flat segments {:?} + {:?} => {:?}",
+            &last_segment,
+            &segment,
+            &merged
+        );
+
+        Ok(Some(merged))
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
