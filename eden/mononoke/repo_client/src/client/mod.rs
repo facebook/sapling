@@ -37,7 +37,7 @@ use futures_01_ext::{
 use futures_ext::{FbFutureExt, FbTryFutureExt};
 use futures_old::future::ok;
 use futures_old::{
-    future as future_old, stream, try_ready, Async, Future, IntoFuture, Poll, Stream,
+    future as future_old, stream as stream_old, try_ready, Async, Future, IntoFuture, Poll, Stream,
 };
 use futures_stats::{Timed, TimedStreamTrait};
 use getbundle_response::{
@@ -615,7 +615,7 @@ impl RepoClient {
             // (note: just calling &b"bookmarks"[..] doesn't work because https://fburl.com/0p0sq6kp)
             if listkeys.contains(&b"bookmarks".to_vec()) {
                 let items = pull_default_bookmarks
-                    .map(|bookmarks| stream::iter_ok(bookmarks))
+                    .map(|bookmarks| stream_old::iter_ok(bookmarks))
                     .flatten_stream();
                 bundle2_parts.push(parts::listkey_part("bookmarks", items)?);
             }
@@ -718,7 +718,7 @@ impl RepoClient {
                                 .clone()
                                 .add("getpack_paths", params.len())
                                 .log_with_msg("Getpack Params", None);
-                            stream::iter_ok(params.into_iter())
+                            stream_old::iter_ok(params.into_iter())
                         }
                     })
                     .flatten_stream()
@@ -852,11 +852,11 @@ impl RepoClient {
                                     metadata,
                                 }));
                             }
-                            stream::iter_ok(res.into_iter())
+                            stream_old::iter_ok(res.into_iter())
                         }
                     })
                     .flatten()
-                    .chain(stream::once(Ok(wirepack::Part::End)));
+                    .chain(stream_old::once(Ok(wirepack::Part::End)));
 
                 wirepack::packer::WirePackPacker::new(s, wirepack::Kind::File)
                     .and_then(|chunk| chunk.into_bytes())
@@ -1089,7 +1089,7 @@ impl HgCommands for RepoClient {
             // TODO(jsgf): do pairs in parallel?
             // TODO: directly return stream of streams
             cloned!(self.repo);
-            stream::iter_ok(pairs.into_iter())
+            stream_old::iter_ok(pairs.into_iter())
                 .and_then({
                     cloned!(ctx);
                     move |(top, bottom)| {
@@ -1993,7 +1993,7 @@ impl HgCommands for RepoClient {
                         let file_count = 2;
                         let header = format!("{} {}\n", file_count, total_size);
                         response_header.push(header.into_bytes().into());
-                        let response = stream::iter_ok(response_header);
+                        let response = stream_old::iter_ok(response_header);
 
                         fn build_file_stream(
                             name: &str,
@@ -2003,8 +2003,8 @@ impl HgCommands for RepoClient {
                         {
                             let header = format!("{}\0{}\n", name, size);
 
-                            stream::once(Ok(header.into_bytes().into()))
-                                .chain(stream::iter_ok(data.into_iter()).buffered(100))
+                            stream_old::once(Ok(header.into_bytes().into()))
+                                .chain(stream_old::iter_ok(data.into_iter()).buffered(100))
                         }
 
                         response
@@ -2080,7 +2080,7 @@ impl HgCommands for RepoClient {
                 .clone()
                 .add("getcommitdata_nodes", nodes.len())
                 .log_with_msg("GetCommitData Params", None);
-            let s = stream::iter_ok::<_, Error>(nodes.into_iter())
+            let s = stream_old::iter_ok::<_, Error>(nodes.into_iter())
                 .map({
                     cloned!(ctx, blobrepo);
                     move |hg_cs_id| {
@@ -2157,17 +2157,17 @@ pub fn gettreepack_entries(
                 directories.len(),
                 mfnodes.len()
             );
-            return stream::once(Err(e)).boxify();
+            return stream_old::once(Err(e)).boxify();
         }
 
         if rootdir.is_some() {
             let e = Error::msg("rootdir must be empty");
-            return stream::once(Err(e)).boxify();
+            return stream_old::once(Err(e)).boxify();
         }
 
         if !basemfnodes.is_empty() {
             let e = Error::msg("basemfnodes must be empty");
-            return stream::once(Err(e)).boxify();
+            return stream_old::once(Err(e)).boxify();
         }
 
         let entries = mfnodes
@@ -2190,12 +2190,12 @@ pub fn gettreepack_entries(
             entries.len() as i64,
         );
 
-        return stream::iter_ok::<_, Error>(entries).boxify();
+        return stream_old::iter_ok::<_, Error>(entries).boxify();
     }
 
     if !directories.is_empty() {
         // This param is not used by core hg, don't worry about implementing it now
-        return stream::once(Err(Error::msg("directories param is not supported"))).boxify();
+        return stream_old::once(Err(Error::msg("directories param is not supported"))).boxify();
     }
 
     // 65536 matches the default TREE_DEPTH_MAX value from Mercurial
@@ -2206,7 +2206,7 @@ pub fn gettreepack_entries(
     let mut basemfnode = basemfnodes.iter().next().cloned();
 
     cloned!(repo);
-    stream::iter_ok::<_, Error>(
+    stream_old::iter_ok::<_, Error>(
         mfnodes
             .into_iter()
             .filter(move |node| !basemfnodes.contains(&node))
@@ -2244,7 +2244,7 @@ fn get_changed_manifests_stream(
     max_depth: usize,
 ) -> BoxStream<(HgManifestId, Option<MPath>), Error> {
     if max_depth == 1 {
-        return stream::iter_ok(vec![(mfid, rootpath)]).boxify();
+        return stream_old::iter_ok(vec![(mfid, rootpath)]).boxify();
     }
 
     basemfid

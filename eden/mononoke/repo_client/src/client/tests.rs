@@ -351,7 +351,7 @@ async fn run_and_check_if_lfs(
     );
 
     let bytes = repo_client
-        .getpackv2(stream::iter_ok(vec![(path.clone(), vec![*filenode_id])]).boxify())
+        .getpackv2(stream_old::iter_ok(vec![(path.clone(), vec![*filenode_id])]).boxify())
         .concat2()
         .compat()
         .await?;
