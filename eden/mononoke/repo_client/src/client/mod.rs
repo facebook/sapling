@@ -1499,8 +1499,11 @@ impl HgCommands for RepoClient {
 
             let s = self
                 .create_bundle(ctx.clone(), args)
+                .compat()
                 .whole_stream_timeout(getbundle_timeout())
-                .map_err(process_stream_timeout_error)
+                .flatten_err()
+                .boxed()
+                .compat()
                 .traced(self.session.trace(), ops::GETBUNDLE, trace_args!())
                 .timed(move |stats, _| {
                     STATS::getbundle_ms
@@ -1884,8 +1887,11 @@ impl HgCommands for RepoClient {
 
                 let s = self
                     .gettreepack_untimed(ctx.clone(), params)
+                    .compat()
                     .whole_stream_timeout(default_timeout())
-                    .map_err(process_stream_timeout_error)
+                    .flatten_err()
+                    .boxed()
+                    .compat()
                     .traced(self.session.trace(), ops::GETTREEPACK, trace_args!())
                     .inspect({
                         cloned!(ctx);
