@@ -319,7 +319,7 @@ void TakeoverServer::connectionAccepted(
       .ensure([h = std::move(handler)] {});
 }
 
-void TakeoverServer::acceptError(const std::exception& ex) noexcept {
+void TakeoverServer::acceptError(folly::exception_wrapper ex) noexcept {
   XLOG(ERR) << "accept() error on takeover socket: " << exceptionStr(ex);
 }
 } // namespace eden
