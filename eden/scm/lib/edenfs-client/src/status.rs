@@ -400,7 +400,7 @@ impl PrintConfig {
         use_color: bool,
         io: &mut IO,
     ) -> Result<u8> {
-        let groups = group_entries(&repo_root, &status, &dirstate_data)?;
+        let groups = group_entries(&repo_root, &status, &dirstate_data, io)?;
         let endl = self.endl;
 
         let mut print_group =
@@ -530,11 +530,23 @@ fn group_entries(
     repo_root: &Path,
     status: &ScmStatus,
     dirstate_data: &DirstateData,
+    io: &mut IO,
 ) -> Result<GroupedEntries> {
     let mut result = GroupedEntries::default();
     let mut dirstates = dirstate_data.tuples.clone();
     for (path_str, status_code) in &status.entries {
-        let path = Path::new(str::from_utf8(path_str)?);
+        let path_str = match str::from_utf8(path_str) {
+            Ok(s) => s,
+            Err(e) => {
+                io.write_err(format!(
+                    "skipping invalid utf-8 filename: {} ({})\n",
+                    String::from_utf8_lossy(path_str),
+                    e
+                ))?;
+                continue;
+            }
+        };
+        let path = Path::new(path_str);
         let dirstate = dirstates.remove(path);
         use self::DirstateDataStatus::*;
         let group = match (status_code.clone(), dirstate) {
@@ -1110,6 +1122,25 @@ I ignored.txt
             stdout: color_stdout.to_string(),
             stderr: stderr.to_string(),
             return_code: 1,
+            ..Default::default()
+        });
+    }
+
+    #[test]
+    fn status_with_invalid_utf8() {
+        let mut entries = BTreeMap::new();
+        entries.insert(b"\xb0Z\xd0J\x91\x7f.INFO".to_vec(), ScmFileStatus::ADDED);
+        entries.insert(b"modified.txt".to_vec(), ScmFileStatus::MODIFIED);
+        let errors = BTreeMap::new();
+        let stdout = "M modified.txt\n";
+        let stderr = "skipping invalid utf-8 filename: �Z�J�\u{7f}.INFO (invalid utf-8 sequence of 1 bytes from index 0)\n";
+        test_status(StatusTestCase {
+            entries,
+            errors,
+            use_color: false,
+            stdout: stdout.to_string(),
+            stderr: stderr.to_string(),
+            return_code: 0,
             ..Default::default()
         });
     }
