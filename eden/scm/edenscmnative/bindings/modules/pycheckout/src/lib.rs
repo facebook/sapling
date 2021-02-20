@@ -7,7 +7,7 @@
 
 #![allow(non_camel_case_types)]
 
-use anyhow::format_err;
+use anyhow::Result;
 use async_runtime::block_on_exclusive as block_on;
 use checkout::CheckoutPlan;
 use cpython::*;
@@ -17,7 +17,11 @@ use pathmatcher::{AlwaysMatcher, Matcher};
 use pymanifest::treemanifest;
 use pypathmatcher::PythonMatcher;
 use pyrevisionstore::contentstore;
-use std::cell::RefCell;
+use pytreestate::treestate as PyTreeState;
+use std::time::SystemTime;
+use tracing::warn;
+use treestate::filestate::{FileStateV2, StateFlags};
+use types::RepoPath;
 use vfs::VFS;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -28,7 +32,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(class checkoutplan |py| {
-    data plan: RefCell<Option<CheckoutPlan>>;
+    data plan: CheckoutPlan;
 
     def __new__(
         _cls,
@@ -45,27 +49,69 @@ py_class!(class checkoutplan |py| {
         let target = target_manifest.borrow_underlying(py);
         let diff = Diff::new(&current, &target, &matcher);
         let plan = CheckoutPlan::from_diff(diff).map_pyerr(py)?;
-        checkoutplan::create_instance(py, RefCell::new(Some(plan)))
+        checkoutplan::create_instance(py, plan)
     }
 
     def apply(&self, root: PyPathBuf, content_store: &contentstore) -> PyResult<PyNone> {
         let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
         let store = content_store.extract_inner_ref(py);
-        let plan = self.plan(py).borrow_mut()
-            .take()
-            .ok_or_else(|| format_err!("checkoutplan::apply can not be called twice on the same checkoutplan"))
-            .map_pyerr(py)?;
+        let plan = self.plan(py);
         block_on(plan.apply_remote_data_store(&vfs, store)).map_pyerr(py)?;
         Ok(PyNone)
     }
 
-    def __str__(&self) -> PyResult<PyString> {
-        if let Some(plan) = self.plan(py).borrow().as_ref() {
-            Ok(PyString::new(py, &plan.to_string()))
-        } else {
-            // Not returning error since ideally __str_ should not fail
-            Ok(PyString::new(py, "checkoutplan was already applied"))
+    def record_updates(&self, root: PyPathBuf, state: &PyTreeState) -> PyResult<PyNone> {
+        let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
+        let plan = self.plan(py);
+        let state = state.get_state(py);
+        let mut state = state.lock();
+
+        for removed in plan.removed_files() {
+            state.remove(removed).map_pyerr(py)?;
         }
+
+        for updated in plan.updated_content_files().chain(plan.updated_meta_files()) {
+            let fstate = file_state(&vfs, updated).map_pyerr(py)?;
+            state.insert(updated, &fstate).map_pyerr(py)?;
+        }
+
+        Ok(PyNone)
+    }
+
+    def __str__(&self) -> PyResult<PyString> {
+        Ok(PyString::new(py, &self.plan(py).to_string()))
     }
 
 });
+
+fn file_state(vfs: &VFS, path: &RepoPath) -> Result<FileStateV2> {
+    let meta = vfs.metadata(path)?;
+    #[cfg(unix)]
+    let mode = std::os::unix::fs::PermissionsExt::mode(&meta.permissions());
+    #[cfg(windows)]
+    let mode = 0o644; // todo figure this out
+    let mtime = meta
+        .modified()?
+        .duration_since(SystemTime::UNIX_EPOCH)?
+        .as_secs();
+    let mtime = truncate_u64("mtime", path, mtime);
+    let size = meta.len();
+    let size = truncate_u64("size", path, size);
+    let state = StateFlags::EXIST_P1 | StateFlags::EXIST_NEXT;
+    Ok(FileStateV2 {
+        mode,
+        size,
+        mtime,
+        state,
+        copied: None,
+    })
+}
+
+fn truncate_u64(f: &str, path: &RepoPath, v: u64) -> i32 {
+    const RANGE_MASK: u64 = 0x7FFFFFFF;
+    let truncated = v & RANGE_MASK;
+    if truncated != v {
+        warn!("{} for {} is truncated {}=>{}", f, path, v, truncated);
+    }
+    truncated as i32
+}

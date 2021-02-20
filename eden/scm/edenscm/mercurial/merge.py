@@ -2315,8 +2315,10 @@ def update(
                 if not partial and not wc.isinmemory():
                     with repo.dirstate.parentchange():
                         repo.setparents(fp1, fp2)
-                        # todo update status:
-                        # recordupdates(repo, actions, branchmerge)
+                        with progress.spinner(repo.ui, "recording"):
+                            plan.record_updates(
+                                repo.wvfs.base, repo.dirstate._map._tree
+                            )
                         # update completed, clear state
                         repo.localvfs.unlink("updatestate")
 
