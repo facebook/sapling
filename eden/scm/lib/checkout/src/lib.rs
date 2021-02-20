@@ -12,7 +12,7 @@ use revisionstore::{HgIdDataStore, RemoteDataStore, StoreKey, StoreResult};
 use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use types::{HgId, Key, RepoPathBuf};
+use types::{HgId, Key, RepoPath, RepoPathBuf};
 use vfs::{UpdateFlag, VFS};
 
 const PREFETCH_CHUNK_SIZE: usize = 1000;
@@ -114,7 +114,7 @@ impl CheckoutPlan {
         S: Stream<Item = Result<StoreResult<Vec<u8>>>> + Unpin,
         F: FnOnce(Vec<Key>) -> S,
     >(
-        self,
+        &self,
         vfs: &VFS,
         f: F,
     ) -> Result<CheckoutStats> {
@@ -123,7 +123,7 @@ impl CheckoutPlan {
         const PARALLEL_CHECKOUT: usize = 16;
 
         let remove_files =
-            stream::iter(self.remove).map(|path| Self::remove_file(vfs, stats, path));
+            stream::iter(self.remove.iter()).map(|path| Self::remove_file(vfs, stats, path));
         let remove_files = remove_files.buffer_unordered(PARALLEL_CHECKOUT);
 
         Self::process_work_stream(remove_files).await?;
@@ -137,7 +137,7 @@ impl CheckoutPlan {
         let data_stream = f(keys);
 
         let update_content = data_stream
-            .zip(stream::iter(self.update_content.into_iter()))
+            .zip(stream::iter(self.update_content.iter()))
             .map(|(data, action)| async move {
                 let data = data
                     .map_err(|err| format_err!("Failed to fetch {:?}: {:?}", action.path, err))?;
@@ -145,7 +145,7 @@ impl CheckoutPlan {
                     StoreResult::Found(data) => data,
                     StoreResult::NotFound(key) => bail!("Key {:?} not found in data store", key),
                 };
-                let path = action.path;
+                let path = action.path.clone();
                 let flag = type_to_flag(&action.file_type);
 
                 Self::write_file(vfs, stats, path, data, flag).await
@@ -153,8 +153,8 @@ impl CheckoutPlan {
 
         let update_content = update_content.buffer_unordered(PARALLEL_CHECKOUT);
 
-        let update_meta = stream::iter(self.update_meta)
-            .map(|action| Self::set_exec_on_file(vfs, stats, action.path, action.set_x_flag));
+        let update_meta = stream::iter(self.update_meta.iter())
+            .map(|action| Self::set_exec_on_file(vfs, stats, &action.path, action.set_x_flag));
         let update_meta = update_meta.buffer_unordered(PARALLEL_CHECKOUT);
 
         let update_content = Self::process_work_stream(update_content);
@@ -168,7 +168,7 @@ impl CheckoutPlan {
     }
 
     pub async fn apply_data_store<DS: HgIdDataStore>(
-        self,
+        &self,
         vfs: &VFS,
         store: &DS,
     ) -> Result<CheckoutStats> {
@@ -179,7 +179,7 @@ impl CheckoutPlan {
     }
 
     pub async fn apply_remote_data_store<DS: RemoteDataStore>(
-        self,
+        &self,
         vfs: &VFS,
         store: &DS,
     ) -> Result<CheckoutStats> {
@@ -230,7 +230,8 @@ impl CheckoutPlan {
         Ok(())
     }
 
-    async fn remove_file(vfs: &VFS, stats: &Arc<CheckoutStats>, path: RepoPathBuf) -> Result<()> {
+    async fn remove_file(vfs: &VFS, stats: &Arc<CheckoutStats>, path: &RepoPath) -> Result<()> {
+        let path = path.to_owned();
         let vfs = vfs.clone(); // vfs auditor cache is shared
         let stats = Arc::clone(stats);
         tokio::runtime::Handle::current()
@@ -246,11 +247,12 @@ impl CheckoutPlan {
     async fn set_exec_on_file(
         vfs: &VFS,
         stats: &Arc<CheckoutStats>,
-        path: RepoPathBuf,
+        path: &RepoPath,
         flag: bool,
     ) -> Result<()> {
         let vfs = vfs.clone(); // vfs auditor cache is shared
         let stats = Arc::clone(stats);
+        let path = path.to_owned();
         tokio::runtime::Handle::current()
             .spawn_blocking(move || -> Result<()> {
                 vfs.set_executable(path.as_repo_path(), flag)?;
@@ -259,6 +261,18 @@ impl CheckoutPlan {
             })
             .await??;
         Ok(())
+    }
+
+    pub fn removed_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
+        self.remove.iter()
+    }
+
+    pub fn updated_content_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
+        self.update_content.iter().map(|u| &u.path)
+    }
+
+    pub fn updated_meta_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
+        self.update_meta.iter().map(|u| &u.path)
     }
 }
 
