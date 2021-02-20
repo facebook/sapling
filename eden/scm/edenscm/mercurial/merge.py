@@ -17,6 +17,7 @@ import hashlib
 import shutil
 import struct
 
+from bindings import checkout as nativecheckout
 from bindings import worker as rustworker
 
 from . import (
@@ -36,10 +37,10 @@ from . import (
     util,
     worker,
 )
+from . import treestate
 from .i18n import _
 from .node import addednodeid, bin, hex, modifiednodeid, nullhex, nullid, nullrev
 from .pycompat import decodeutf8, encodeutf8
-
 
 _pack = struct.pack
 _unpack = struct.unpack
@@ -2260,14 +2261,75 @@ def update(
         overwrite = force and not branchmerge
 
         p2 = repo[node]
+
+        fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
+
+        if repo.ui.configbool("experimental", "nativecheckout"):
+            if branchmerge:
+                fallbackcheckout = "branchmerge is not supported: %s" % branchmerge
+            elif ancestor is not None:
+                fallbackcheckout = "ancestor is not supported: %s" % ancestor
+            elif wc is not None and wc.isinmemory():
+                fallbackcheckout = "Native checkout does not work inmemory"
+            elif wc.dirty(missing=True):
+                fallbackcheckout = "Working copy is not clean"
+            elif not util.safehasattr(repo.fileslog, "contentstore"):
+                fallbackcheckout = "Repo does not have remotefilelog"
+            elif type(repo.dirstate._map) != treestate.treestatemap:
+                fallbackcheckout = "Repo repo.dirstate._map: %s" % type(
+                    repo.dirstate._map
+                )
+            else:
+                fallbackcheckout = None
+
+            if fallbackcheckout:
+                repo.ui.debug("Not using native checkout: %s\n" % fallbackcheckout)
+            else:
+                repo.ui.debug("Using native checkout\n")
+
+                if matcher is not None and matcher.always():
+                    matcher = None
+
+                with progress.spinner(repo.ui, _("calculating")):
+                    plan = nativecheckout.checkoutplan(
+                        p1.manifest(), p2.manifest(), matcher
+                    )
+
+                if repo.ui.debugflag:
+                    repo.ui.debug("Native checkout plan:\n%s\n" % plan)
+
+                # preserving checks as is, even though wc.isinmemory always false here
+                if not partial and not wc.isinmemory():
+                    repo.hook("preupdate", throw=True, parent1=xp1, parent2=xp2)
+                    # note that we're in the middle of an update
+                    repo.localvfs.writeutf8("updatestate", p2.hex())
+
+                fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ""
+
+                with progress.spinner(repo.ui, _("updating")):
+                    repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
+                    plan.apply(repo.wvfs.base, repo.fileslog.contentstore)
+                    repo.ui.debug("Apply done\n")
+                stats = 0, 0, 0, 0  # todo stats
+
+                if not partial and not wc.isinmemory():
+                    with repo.dirstate.parentchange():
+                        repo.setparents(fp1, fp2)
+                        # todo update status:
+                        # recordupdates(repo, actions, branchmerge)
+                        # update completed, clear state
+                        repo.localvfs.unlink("updatestate")
+
+                if not partial:
+                    repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
+                return stats
+
         if pas[0] is None:
             if repo.ui.configlist("merge", "preferancestor") == ["*"]:
                 cahs = repo.changelog.commonancestorsheads(p1.node(), p2.node())
                 pas = [repo[anc] for anc in (sorted(cahs) or [nullid])]
             else:
                 pas = [p1.ancestor(p2, warn=branchmerge)]
-
-        fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
 
         ### check phase
         if not overwrite:
