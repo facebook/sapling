@@ -2305,12 +2305,24 @@ def update(
                     repo.localvfs.writeutf8("updatestate", p2.hex())
 
                 fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ""
+                cwd = pycompat.getcwdsafe()
 
                 with progress.spinner(repo.ui, _("updating")):
                     repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
                     plan.apply(repo.wvfs.base, repo.fileslog.contentstore)
                     repo.ui.debug("Apply done\n")
                 stats = plan.stats()
+
+                if cwd and not pycompat.getcwdsafe():
+                    # cwd was removed in the course of removing files; print a helpful
+                    # warning.
+                    repo.ui.warn(
+                        _(
+                            "current directory was removed\n"
+                            "(consider changing to repo root: %s)\n"
+                        )
+                        % repo.root
+                    )
 
                 if not partial and not wc.isinmemory():
                     with repo.dirstate.parentchange():

@@ -3,6 +3,8 @@
 Test update logic when there are renames or weird same-name cases between dirs
 and files
 
+  $ setconfig experimental.nativecheckout=true
+
 Setup server
   $ newserver server
 
@@ -80,7 +82,7 @@ Test update when two commits have symlinks that point to different folders
 #if rmcwd
 
 Test that warning is printed if cwd is deleted during update
-  $ newrepo r4
+  $ newremoterepo r4
   $ mkdir dir
   $ cd dir
   $ echo a > a
