@@ -1,3 +1,8 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 # This file will be sourced by all .t tests. Put general purposed functions
 # here.
 
@@ -26,6 +31,16 @@ newrepo() {
   mkdir "$TESTTMP/$reponame"
   cd "$TESTTMP/$reponame"
   hg init
+}
+
+# create repo connected to remote repo ssh://user@dummy/server.
+# `newserver server` needs to be called at least once before this call to setup ssh repo
+newremoterepo() {
+  newrepo "$@"
+  echo remotefilelog >> .hg/requires
+  enable treemanifest remotefilelog pushrebase remotenames
+  setconfig treemanifest.sendtrees=True treemanifest.treeonly=True
+  setconfig paths.default=ssh://user@dummy/server
 }
 
 newserver() {
