@@ -24,7 +24,7 @@ use std::fs;
 use std::io::prelude::*;
 #[cfg(unix)]
 use std::os::unix::fs::MetadataExt;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 /// Configuration for scratch space style. This decides whether the directory
 /// structure is kept exactly as provided subdir or not.
@@ -35,9 +35,9 @@ enum ScratchStyle {
     /// the repository namespace with serialized names.
     Flat,
 
-    /// With nested scratch style, the sub-directories mirror the directory
+    /// With mirror scratch style, the sub-directories mirror the directory
     /// hierarchy of the subdir.
-    Nested,
+    Mirror,
 }
 
 impl Default for ScratchStyle {
@@ -432,6 +432,22 @@ fn create_watchmanconfig(_config: &Config, path: &Path, repo_owner: &str) -> Res
     Ok(())
 }
 
+/// Validates curdir parameter. When using Mirror style scratch space, it is possible to escape the
+/// scratch directory by passing in path with `..` component.
+fn valid_curdir(p: &Path) -> bool {
+    p.components().all(|c| c != Component::ParentDir)
+}
+
+#[test]
+fn test_valid_curdir() {
+    assert!(valid_curdir("a/b/c".as_ref()));
+    assert!(valid_curdir("/a/b/c".as_ref()));
+    assert!(valid_curdir("c:\\abc\\def".as_ref()));
+    assert!(valid_curdir("./abc/./abc".as_ref()));
+    assert!(!valid_curdir("../abc/../abc".as_ref()));
+    assert!(!valid_curdir("abc/../abc".as_ref()));
+}
+
 /// Performs the `path` command
 fn path_command(
     config: &Config,
@@ -462,8 +478,12 @@ fn path_command(
             result.push("watchable");
         }
 
-        if let Some(ScratchStyle::Nested) = config.style {
-            result.push(subdir);
+        if let Some(ScratchStyle::Mirror) = config.style {
+            if valid_curdir(subdir.as_ref()) {
+                result.push(subdir);
+            } else {
+                bail!("subdir path contains parent component: {:?}", subdir);
+            }
         } else {
             result.push(encode(subdir));
         }
