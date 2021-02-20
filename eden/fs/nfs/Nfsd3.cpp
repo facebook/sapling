@@ -94,12 +94,96 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::null(
   return folly::unit;
 }
 
+/**
+ * Convert the POSIX mode to NFS file type.
+ */
+ftype3 modeToFtype3(mode_t mode) {
+  if (S_ISREG(mode)) {
+    return ftype3::NF3REG;
+  } else if (S_ISDIR(mode)) {
+    return ftype3::NF3DIR;
+  } else if (S_ISBLK(mode)) {
+    return ftype3::NF3BLK;
+  } else if (S_ISCHR(mode)) {
+    return ftype3::NF3CHR;
+  } else if (S_ISLNK(mode)) {
+    return ftype3::NF3LNK;
+  } else if (S_ISSOCK(mode)) {
+    return ftype3::NF3SOCK;
+  } else {
+    XDCHECK(S_ISFIFO(mode));
+    return ftype3::NF3FIFO;
+  }
+}
+
+/**
+ * Convert the POSIX mode to NFS mode.
+ *
+ * TODO(xavierd): For now, the owner always has RW access, the group R access
+ * and others no access.
+ */
+uint32_t modeToNfsMode(mode_t mode) {
+  return kReadOwnerBit | kWriteOwnerBit | kReadGroupBit |
+      ((mode & S_IXUSR) ? kExecOwnerBit : 0);
+}
+
+/**
+ * Convert a POSIX timespec to an NFS time.
+ */
+nfstime3 timespecToNfsTime(const struct timespec& time) {
+  return nfstime3{
+      folly::to_narrow(folly::to_unsigned(time.tv_sec)),
+      folly::to_narrow(folly::to_unsigned(time.tv_nsec))};
+}
+
 folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  nfs_fh3 fh = XdrTrait<nfs_fh3>::deserialize(deser);
+
+  // TODO(xavierd): make an NfsRequestContext.
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("getattr");
+
+  return dispatcher_->getattr(fh.ino, *context)
+      .thenTry([ser = std::move(ser)](folly::Try<struct stat>&& try_) mutable {
+        if (try_.hasException()) {
+          GETATTR3res res{{nfsstat3::NFS3ERR_IO, std::monostate{}}};
+          XdrTrait<GETATTR3res>::serialize(ser, res);
+        } else {
+          auto stat = std::move(try_).value();
+
+          GETATTR3res res{
+              {nfsstat3::NFS3_OK,
+               GETATTR3resok{fattr3{
+                   /*type*/ modeToFtype3(stat.st_mode),
+                   /*mode*/ modeToNfsMode(stat.st_mode),
+                   /*nlink*/ folly::to_narrow(stat.st_nlink),
+                   /*uid*/ stat.st_uid,
+                   /*gid*/ stat.st_gid,
+                   /*size*/ folly::to_unsigned(stat.st_size),
+                   /*used*/ folly::to_unsigned(stat.st_blocks) * 512u,
+                   /*rdev*/ specdata3{0, 0}, // TODO(xavierd)
+                   /*fsid*/ folly::to_unsigned(stat.st_dev),
+                   /*fileid*/ stat.st_ino,
+#ifdef __linux__
+                   /*atime*/ timespecToNfsTime(stat.st_atim),
+                   /*mtime*/ timespecToNfsTime(stat.st_mtim),
+                   /*ctime*/ timespecToNfsTime(stat.st_ctim),
+#else
+                   /*atime*/ timespecToNfsTime(stat.st_atimespec),
+                   /*mtime*/ timespecToNfsTime(stat.st_mtimespec),
+                   /*ctime*/ timespecToNfsTime(stat.st_ctimespec),
+#endif
+               }}}};
+          XdrTrait<GETATTR3res>::serialize(ser, res);
+        }
+
+        return folly::unit;
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::setattr(
