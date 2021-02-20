@@ -3,9 +3,12 @@
 Test update logic when there are renames or weird same-name cases between dirs
 and files
 
+Setup server
+  $ newserver server
+
 Update with local changes across a file rename
 
-  $ hg init r1 && cd r1
+  $ newremoterepo r1
 
   $ echo a > a
   $ hg add a
@@ -30,7 +33,7 @@ Update with local changes across a file rename
 
 Test update when local untracked directory exists with the same name as a
 tracked file in a commit we are updating to
-  $ hg init r2 && cd r2
+  $ newremoterepo r2
   $ echo root > root && hg ci -Am root  # rev 0
   adding root
   $ echo text > name && hg ci -Am "name is a file"  # rev 1
@@ -58,7 +61,7 @@ make sure that this does not erase untracked data
 #if symlink
 
 Test update when two commits have symlinks that point to different folders
-  $ hg init r3 && cd r3
+  $ newremoterepo r3
   $ echo root > root && hg ci -Am root
   adding root
   $ mkdir folder1 && mkdir folder2
@@ -77,7 +80,7 @@ Test update when two commits have symlinks that point to different folders
 #if rmcwd
 
 Test that warning is printed if cwd is deleted during update
-  $ hg init r4 && cd r4
+  $ newrepo r4
   $ mkdir dir
   $ cd dir
   $ echo a > a
@@ -86,6 +89,6 @@ Test that warning is printed if cwd is deleted during update
   $ hg ci -m "file and dir"
   $ hg up -q null
   current directory was removed
-  (consider changing to repo root: $TESTTMP/r1/r4)
+  (consider changing to repo root: $TESTTMP/r4)
 
 #endif
