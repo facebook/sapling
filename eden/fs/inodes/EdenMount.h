@@ -774,10 +774,8 @@ class EdenMount {
   FOLLY_NODISCARD folly::Promise<folly::Unit>& beginMount();
 
 #ifdef _WIN32
-  using channelType = PrjfsChannel*;
   using ChannelStopData = PrjfsChannel::StopData;
 #else
-  using channelType = folly::File;
   using ChannelStopData = FuseChannel::StopData;
 #endif
 
@@ -786,12 +784,7 @@ class EdenMount {
   /**
    * Open the platform specific device and mount it.
    */
-  folly::Future<channelType> channelMount(bool readOnly);
-
-  /**
-   * Construct the channel_ member variable.
-   */
-  void createChannel(channelType fuseDevice);
+  folly::Future<folly::Unit> channelMount(bool readOnly);
 
   /**
    * Once the channel has been initialized, set up callbacks to clean up

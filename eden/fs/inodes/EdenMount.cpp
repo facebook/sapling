@@ -1221,16 +1221,34 @@ folly::Future<TakeoverData::MountInfo> EdenMount::getChannelCompletionFuture() {
   return channelCompletionPromise_.getFuture();
 }
 
-folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
+#ifndef _WIN32
+namespace {
+FuseChannel* makeFuseChannel(EdenMount* mount, folly::File fuseFd) {
+  return new FuseChannel(
+      std::move(fuseFd),
+      mount->getPath(),
+      FLAGS_fuseNumThreads,
+      EdenDispatcherFactory::makeFuseDispatcher(mount),
+      &mount->getStraceLogger(),
+      mount->getServerState()->getProcessNameCache(),
+      std::chrono::duration_cast<folly::Duration>(
+          mount->getServerState()
+              ->getReloadableConfig()
+              .getEdenConfig()
+              ->fuseRequestTimeout.getValue()),
+      mount->getServerState()->getNotifications());
+}
+} // namespace
+#endif
+
+folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
   return folly::makeFutureWith([&] { return &beginMount(); })
       .thenValue([this, readOnly](folly::Promise<folly::Unit>* mountPromise) {
         AbsolutePath mountPath = getPath();
 #ifdef _WIN32
         return folly::makeFutureWith(
-                   [this,
-                    mountPath = std::move(mountPath),
-                    readOnly]() -> folly::Future<PrjfsChannel*> {
-                     auto channel = new PrjfsChannel(
+                   [this, mountPath = std::move(mountPath), readOnly]() {
+                     auto channel = std::make_unique<PrjfsChannel>(
                          mountPath,
                          EdenDispatcherFactory::makePrjfsDispatcher(this),
                          &getStraceLogger(),
@@ -1248,17 +1266,19 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                              ->prjfsUseNegativePathCaching.getValue());
                      return channel;
                    })
-            .thenTry([mountPromise](Try<PrjfsChannel*>&& channel) {
+            .thenTry([this, mountPromise](
+                         Try<std::unique_ptr<PrjfsChannel>>&& channel) {
               if (channel.hasException()) {
                 mountPromise->setException(channel.exception());
-                return makeFuture<PrjfsChannel*>(channel.exception());
+                return makeFuture<folly::Unit>(channel.exception());
               }
 
               // TODO(xavierd): similarly to the non-Windows code below, we
               // need to handle the case where mount was cancelled.
 
               mountPromise->setValue();
-              return makeFuture(channel);
+              channel_ = std::move(channel).value();
+              return makeFuture(folly::unit);
             });
 #else
         if (serverState_->getReloadableConfig()
@@ -1293,13 +1313,13 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                 return serverState_->getPrivHelper()
                     ->nfsMount(
                         mountPath.stringPiece(), mountdPort, nfsdPort, readOnly)
-                    .thenTry([mountPromise = std::move(mountPromise),
+                    .thenTry([this,
+                              mountPromise = std::move(mountPromise),
                               channel = std::move(channel)](
                                  Try<folly::Unit>&& try_) mutable {
                       if (try_.hasException()) {
                         mountPromise->setException(try_.exception());
-                        return folly::makeFuture<EdenMount::channelType>(
-                            try_.exception());
+                        return folly::makeFuture<folly::Unit>(try_.exception());
                       }
 
                       // TODO(xavierd): Do something meaningful once nfsMount
@@ -1307,7 +1327,9 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                       XLOG(FATAL) << "Mount should have failed but didn't?";
 
                       mountPromise->setValue();
-                      return makeFuture(folly::File());
+                      // TODO(xavierd): make an NFS channel instead.
+                      channel_.reset(makeFuseChannel(this, folly::File()));
+                      return makeFuture(folly::unit);
                     });
               });
         } else {
@@ -1315,10 +1337,10 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
               ->fuseMount(mountPath.stringPiece(), readOnly)
               .thenTry(
                   [mountPath, mountPromise, this](Try<folly::File>&& fuseDevice)
-                      -> folly::Future<EdenMount::channelType> {
+                      -> folly::Future<folly::Unit> {
                     if (fuseDevice.hasException()) {
                       mountPromise->setException(fuseDevice.exception());
-                      return folly::makeFuture<folly::File>(
+                      return folly::makeFuture<folly::Unit>(
                           fuseDevice.exception());
                     }
                     if (mountingUnmountingState_.rlock()
@@ -1342,35 +1364,19 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                                 FuseDeviceUnmountedDuringInitialization{
                                     mountPath};
                             mountPromise->setException(error);
-                            return folly::makeFuture<folly::File>(error);
+                            return folly::makeFuture<folly::Unit>(error);
                           });
                     }
 
                     mountPromise->setValue();
-                    return folly::makeFuture(std::move(fuseDevice).value());
+                    auto channel =
+                        makeFuseChannel(this, std::move(fuseDevice).value());
+                    channel_.reset(channel);
+                    return folly::makeFuture(folly::unit);
                   });
         }
 #endif
       });
-}
-
-void EdenMount::createChannel(EdenMount::channelType channel) {
-#if _WIN32
-  channel_.reset(channel);
-#else
-  channel_.reset(new FuseChannel(
-      std::move(channel),
-      getPath(),
-      FLAGS_fuseNumThreads,
-      EdenDispatcherFactory::makeFuseDispatcher(this),
-      &straceLogger_,
-      serverState_->getProcessNameCache(),
-      std::chrono::duration_cast<folly::Duration>(
-          serverState_->getReloadableConfig()
-              .getEdenConfig()
-              ->fuseRequestTimeout.getValue()),
-      serverState_->getNotifications()));
-#endif
 }
 
 folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
@@ -1384,8 +1390,7 @@ folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
     boost::filesystem::create_directories(boostMountPath);
 
     return channelMount(readOnly)
-        .thenValue([this](EdenMount::channelType&& channel) {
-          createChannel(std::move(channel));
+        .thenValue([this](auto&&) {
 #ifdef _WIN32
           channelInitSuccessful(channel_->getStopFuture());
 #else
@@ -1475,7 +1480,7 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
   try {
     beginMount().setValue();
 
-    createChannel(std::move(takeoverData.fd));
+    channel_.reset(makeFuseChannel(this, std::move(takeoverData.fd)));
     auto fuseCompleteFuture =
         channel_->initializeFromTakeover(takeoverData.connInfo);
     channelInitSuccessful(std::move(fuseCompleteFuture));

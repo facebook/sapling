@@ -203,7 +203,7 @@ class FuseChannel {
       AbsolutePathPiece mountPath,
       size_t numThreads,
       std::unique_ptr<FuseDispatcher> dispatcher,
-      folly::Logger* straceLogger,
+      const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout = std::chrono::seconds(60),
       Notifications* FOLLY_NULLABLE notifications = nullptr);
@@ -715,7 +715,7 @@ class FuseChannel {
   const size_t bufferSize_{0};
   const size_t numThreads_;
   std::unique_ptr<FuseDispatcher> dispatcher_;
-  folly::Logger* const straceLogger_;
+  const folly::Logger* const straceLogger_;
   const AbsolutePath mountPath_;
   const folly::Duration requestTimeout_;
   Notifications* const notifications_;

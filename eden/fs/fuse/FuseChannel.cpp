@@ -770,7 +770,7 @@ FuseChannel::FuseChannel(
     AbsolutePathPiece mountPath,
     size_t numThreads,
     std::unique_ptr<FuseDispatcher> dispatcher,
-    folly::Logger* straceLogger,
+    const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration requestTimeout,
     Notifications* notifications)
