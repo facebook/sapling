@@ -60,6 +60,14 @@ py_class!(class checkoutplan |py| {
         Ok(PyNone)
     }
 
+    def stats(&self) -> PyResult<(usize, usize, usize, usize)> {
+        let plan = self.plan(py);
+        let (updated, removed) = plan.stats();
+        let (merged, unresolved) = (0, 0);
+
+        Ok((updated, merged, removed, unresolved))
+    }
+
     def record_updates(&self, root: PyPathBuf, state: &PyTreeState) -> PyResult<PyNone> {
         let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
         let plan = self.plan(py);

@@ -274,6 +274,14 @@ impl CheckoutPlan {
     pub fn updated_meta_files(&self) -> impl Iterator<Item = &RepoPathBuf> {
         self.update_meta.iter().map(|u| &u.path)
     }
+
+    /// Returns (updated, removed)
+    pub fn stats(&self) -> (usize, usize) {
+        (
+            self.update_meta.len() + self.update_content.len(),
+            self.remove.len(),
+        )
+    }
 }
 
 // todo: possibly migrate VFS api to use FileType?

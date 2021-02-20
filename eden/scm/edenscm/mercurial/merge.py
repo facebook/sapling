@@ -2310,7 +2310,7 @@ def update(
                     repo.ui.debug("Applying to %s \n" % repo.wvfs.base)
                     plan.apply(repo.wvfs.base, repo.fileslog.contentstore)
                     repo.ui.debug("Apply done\n")
-                stats = 0, 0, 0, 0  # todo stats
+                stats = plan.stats()
 
                 if not partial and not wc.isinmemory():
                     with repo.dirstate.parentchange():
