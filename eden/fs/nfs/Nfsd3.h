@@ -45,7 +45,8 @@ class Nfsd3 {
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout,
-      Notifications* FOLLY_NULLABLE notifications);
+      Notifications* FOLLY_NULLABLE notifications,
+      bool caseSensitive);
 
   /**
    * Obtain the TCP port that this NFSv3 program is listening on.

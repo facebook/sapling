@@ -60,7 +60,8 @@ class NfsServer {
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout,
-      Notifications* FOLLY_NULLABLE notifications);
+      Notifications* FOLLY_NULLABLE notifications,
+      bool caseSensitive);
 
   /**
    * Unregister the mount point matching the path.

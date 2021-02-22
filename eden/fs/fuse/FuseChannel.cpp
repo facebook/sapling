@@ -773,7 +773,8 @@ FuseChannel::FuseChannel(
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration requestTimeout,
-    Notifications* notifications)
+    Notifications* notifications,
+    bool caseSensitive)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       numThreads_(numThreads),
       dispatcher_(std::move(dispatcher)),
@@ -781,6 +782,7 @@ FuseChannel::FuseChannel(
       mountPath_(mountPath),
       requestTimeout_(requestTimeout),
       notifications_(notifications),
+      caseSensitive_(caseSensitive),
       fuseDevice_(std::move(fuseDevice)),
       processAccessLog_(std::move(processNameCache)),
       traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
@@ -816,15 +818,14 @@ FuseChannel::~FuseChannel() {
       << "This shared_ptr should not be copied; see attached comment.";
 }
 
-Future<FuseChannel::StopFuture> FuseChannel::initialize(bool caseSensitive) {
+Future<FuseChannel::StopFuture> FuseChannel::initialize() {
   // Start one worker thread which will perform the initialization,
   // and will then start the remaining worker threads and signal success
   // once initialization completes.
   return folly::makeFutureWith([&] {
     auto state = state_.wlock();
     state->workerThreads.reserve(numThreads_);
-    state->workerThreads.emplace_back(
-        [this, caseSensitive] { initWorkerThread(caseSensitive); });
+    state->workerThreads.emplace_back([this] { initWorkerThread(); });
     return initPromise_.getFuture();
   });
 }
@@ -1162,13 +1163,13 @@ void FuseChannel::setThreadSigmask() {
   folly::checkPosixError(pthread_sigmask(SIG_UNBLOCK, &sigset, &oldset));
 }
 
-void FuseChannel::initWorkerThread(bool caseSensitive) noexcept {
+void FuseChannel::initWorkerThread() noexcept {
   try {
     setThreadSigmask();
     setThreadName(to<std::string>("fuse", mountPath_.basename()));
 
     // Read the INIT packet
-    readInitPacket(caseSensitive);
+    readInitPacket();
 
     // Start the other FUSE worker threads.
     startWorkerThreads();
@@ -1277,7 +1278,7 @@ void FuseChannel::stopInvalidationThread() {
   invalidationThread_.join();
 }
 
-void FuseChannel::readInitPacket(bool caseSensitive) {
+void FuseChannel::readInitPacket() {
   struct {
     fuse_in_header header;
     fuse_init_in init;
@@ -1402,11 +1403,11 @@ void FuseChannel::readInitPacket(bool caseSensitive) {
   want |= FUSE_NO_OPENDIR_SUPPORT;
 #endif
 #ifdef FUSE_CASE_INSENSITIVE
-  if (!caseSensitive) {
+  if (!caseSensitive_) {
     want |= FUSE_CASE_INSENSITIVE;
   }
 #else
-  (void)caseSensitive;
+  (void)caseSensitive_;
 #endif
 
   // Only return the capabilities the kernel supports.

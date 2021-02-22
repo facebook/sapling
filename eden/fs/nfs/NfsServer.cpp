@@ -19,7 +19,8 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration requestTimeout,
-    Notifications* FOLLY_NULLABLE notifications) {
+    Notifications* FOLLY_NULLABLE notifications,
+    bool caseSensitive) {
   auto nfsd = std::make_unique<Nfsd3>(
       false,
       evb_,
@@ -27,7 +28,8 @@ NfsServer::NfsMountInfo NfsServer::registerMount(
       straceLogger,
       std::move(processNameCache),
       requestTimeout,
-      notifications);
+      notifications,
+      caseSensitive);
   mountd_.registerMount(path, rootIno);
 
   auto nfsdPort = nfsd->getPort();

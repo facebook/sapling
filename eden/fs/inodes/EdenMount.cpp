@@ -1236,7 +1236,8 @@ FuseChannel* makeFuseChannel(EdenMount* mount, folly::File fuseFd) {
               ->getReloadableConfig()
               .getEdenConfig()
               ->fuseRequestTimeout.getValue()),
-      mount->getServerState()->getNotifications());
+      mount->getServerState()->getNotifications(),
+      mount->getConfig()->getCaseSensitive());
 }
 } // namespace
 #endif
@@ -1301,7 +1302,8 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                         serverState_->getReloadableConfig()
                             .getEdenConfig()
                             ->prjfsRequestTimeout.getValue()),
-                    serverState_->getNotifications());
+                    serverState_->getNotifications(),
+                    config_->getCaseSensitive());
               });
           return std::move(fut).thenValue(
               [this,
@@ -1394,8 +1396,8 @@ folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
 #ifdef _WIN32
           channelInitSuccessful(channel_->getStopFuture());
 #else
-          return channel_->initialize(config_->getCaseSensitive())
-              .thenValue([this](FuseChannel::StopFuture&& fuseCompleteFuture) {
+          return channel_->initialize().thenValue(
+              [this](FuseChannel::StopFuture&& fuseCompleteFuture) {
                 channelInitSuccessful(std::move(fuseCompleteFuture));
               });
 #endif

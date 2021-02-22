@@ -74,7 +74,10 @@ class FuseChannelTest : public ::testing::Test {
         numThreads,
         std::move(testDispatcher),
         &straceLogger,
-        std::make_shared<ProcessNameCache>()));
+        std::make_shared<ProcessNameCache>(),
+        std::chrono::seconds(60),
+        nullptr,
+        true));
   }
 
   FuseChannel::StopFuture performInit(

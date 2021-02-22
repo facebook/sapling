@@ -130,7 +130,10 @@ int main(int argc, char** argv) {
       FLAGS_numFuseThreads,
       std::move(dispatcher),
       &straceLogger,
-      std::make_shared<ProcessNameCache>()));
+      std::make_shared<ProcessNameCache>(),
+      std::chrono::seconds(60),
+      nullptr,
+      true));
 
   XLOG(INFO) << "Starting FUSE...";
   auto completionFuture = channel->initialize().get();

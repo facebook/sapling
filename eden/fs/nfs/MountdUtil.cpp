@@ -49,7 +49,8 @@ int main(int argc, char** argv) {
       nullptr,
       nullptr,
       std::chrono::duration_cast<folly::Duration>(std::chrono::seconds(0)),
-      nullptr);
+      nullptr,
+      true);
 
   XLOG(INFO) << "Started NfsServer, mountdport=" << mountdport
              << ", nfsdport=" << nfsdport;

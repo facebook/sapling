@@ -205,8 +205,9 @@ class FuseChannel {
       std::unique_ptr<FuseDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,
-      folly::Duration requestTimeout = std::chrono::seconds(60),
-      Notifications* FOLLY_NULLABLE notifications = nullptr);
+      folly::Duration requestTimeout,
+      Notifications* FOLLY_NULLABLE notifications,
+      bool caseSensitive);
 
   /**
    * Destroy the FuseChannel.
@@ -246,8 +247,7 @@ class FuseChannel {
    * Callers should normally use via() to perform any additional work in
    * another executor thread.
    */
-  FOLLY_NODISCARD folly::Future<StopFuture> initialize(
-      bool caseSensitive = true);
+  FOLLY_NODISCARD folly::Future<StopFuture> initialize();
 
   /**
    * Initialize the FuseChannel when taking over an existing FuseDevice.
@@ -662,14 +662,14 @@ class FuseChannel {
 
  private:
   void setThreadSigmask();
-  void initWorkerThread(bool caseSensitive) noexcept;
+  void initWorkerThread() noexcept;
   void fuseWorkerThread() noexcept;
   void invalidationThread() noexcept;
   void stopInvalidationThread();
   void sendInvalidation(InvalidationEntry& entry);
   void sendInvalidateInode(InodeNumber ino, int64_t off, int64_t len);
   void sendInvalidateEntry(InodeNumber parent, PathComponentPiece name);
-  void readInitPacket(bool caseSensitive);
+  void readInitPacket();
   void startWorkerThreads();
 
   /**
@@ -719,6 +719,7 @@ class FuseChannel {
   const AbsolutePath mountPath_;
   const folly::Duration requestTimeout_;
   Notifications* const notifications_;
+  bool caseSensitive_;
 
   /*
    * connInfo_ is modified during the initialization process,

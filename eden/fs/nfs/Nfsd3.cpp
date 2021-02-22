@@ -20,8 +20,11 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
  public:
   explicit Nfsd3ServerProcessor(
       std::unique_ptr<NfsDispatcher> dispatcher,
-      const folly::Logger* straceLogger)
-      : dispatcher_(std::move(dispatcher)), straceLogger_(straceLogger) {}
+      const folly::Logger* straceLogger,
+      bool caseSensitive)
+      : dispatcher_(std::move(dispatcher)),
+        straceLogger_(straceLogger),
+        caseSensitive_(caseSensitive) {}
 
   Nfsd3ServerProcessor(const Nfsd3ServerProcessor&) = delete;
   Nfsd3ServerProcessor(Nfsd3ServerProcessor&&) = delete;
@@ -84,6 +87,7 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
  private:
   std::unique_ptr<NfsDispatcher> dispatcher_;
   const folly::Logger* straceLogger_;
+  bool caseSensitive_;
 };
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::null(
@@ -366,14 +370,13 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::pathconf(
   PATHCONF3res res{
       {nfsstat3::NFS3_OK,
        PATHCONF3resok{
-           // TODO(xavierd): fill up the post_op_attr and make case_insensitive
-           // depends on the configured value for that mount.
+           // TODO(xavierd): fill up the post_op_attr
            post_op_attr{},
            /*linkmax=*/0,
            /*name_max=*/NAME_MAX,
            /*no_trunc=*/true,
            /*chown_restricted=*/true,
-           /*case_insensitive=*/false,
+           /*case_insensitive=*/!caseSensitive_,
            /*case_preserving=*/true,
        }}};
 
@@ -493,11 +496,13 @@ Nfsd3::Nfsd3(
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> /*processNameCache*/,
     folly::Duration /*requestTimeout*/,
-    Notifications* /*notifications*/)
+    Notifications* /*notifications*/,
+    bool caseSensitive)
     : server_(
           std::make_shared<Nfsd3ServerProcessor>(
               std::move(dispatcher),
-              straceLogger),
+              straceLogger,
+              caseSensitive),
           evb) {
   if (registerWithRpcbind) {
     server_.registerService(kNfsdProgNumber, kNfsd3ProgVersion);
