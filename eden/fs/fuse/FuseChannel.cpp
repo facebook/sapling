@@ -185,7 +185,7 @@ std::string access(FuseArg arg) {
 std::string create(FuseArg arg) {
   auto& in = arg.read<fuse_create_in>();
   auto name = arg.readz();
-  return format("name={}, mode={}", name, in.mode);
+  return format("name={}, mode={:#o}", name, in.mode);
 }
 
 constexpr RenderFn bmap = default_render;
