@@ -6,7 +6,6 @@
  */
 
 use std::ops::Deref;
-use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -39,17 +38,17 @@ define_stats_struct! {
     link_err: timeseries(Rate, Sum),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct CountedBlobstore<T> {
     blobstore: T,
-    stats: Arc<CountedBlobstoreStats>,
+    stats: CountedBlobstoreStats,
 }
 
 impl<T> CountedBlobstore<T> {
     pub fn new(name: String, blobstore: T) -> Self {
         Self {
             blobstore,
-            stats: Arc::new(CountedBlobstoreStats::new(name)),
+            stats: CountedBlobstoreStats::new(name),
         }
     }
 
@@ -69,13 +68,11 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        let stats = self.stats.clone();
-        stats.get.add_value(1);
-        let get = self.blobstore.get(ctx, key);
-        let res = get.await;
+        self.stats.get.add_value(1);
+        let res = self.blobstore.get(ctx, key).await;
         match res {
-            Ok(_) => stats.get_ok.add_value(1),
-            Err(_) => stats.get_err.add_value(1),
+            Ok(_) => self.stats.get_ok.add_value(1),
+            Err(_) => self.stats.get_err.add_value(1),
         }
         res
     }
@@ -86,25 +83,21 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()> {
-        let stats = self.stats.clone();
-        stats.put.add_value(1);
-        let put = self.blobstore.put(ctx, key, value);
-        let res = put.await;
+        self.stats.put.add_value(1);
+        let res = self.blobstore.put(ctx, key, value).await;
         match res {
-            Ok(()) => stats.put_ok.add_value(1),
-            Err(_) => stats.put_err.add_value(1),
+            Ok(()) => self.stats.put_ok.add_value(1),
+            Err(_) => self.stats.put_err.add_value(1),
         }
         res
     }
 
     async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
-        let stats = self.stats.clone();
-        stats.is_present.add_value(1);
-        let is_present = self.blobstore.is_present(ctx, key);
-        let res = is_present.await;
+        self.stats.is_present.add_value(1);
+        let res = self.blobstore.is_present(ctx, key).await;
         match res {
-            Ok(_) => stats.is_present_ok.add_value(1),
-            Err(_) => stats.is_present_err.add_value(1),
+            Ok(_) => self.stats.is_present_ok.add_value(1),
+            Err(_) => self.stats.is_present_err.add_value(1),
         }
         res
     }
@@ -118,25 +111,25 @@ impl<T: BlobstorePutOps> CountedBlobstore<T> {
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
     ) -> Result<OverwriteStatus> {
-        let stats = self.stats.clone();
-        stats.put.add_value(1);
-        let put = if let Some(put_behaviour) = put_behaviour {
-            self.blobstore.put_explicit(ctx, key, value, put_behaviour)
+        self.stats.put.add_value(1);
+        let res = if let Some(put_behaviour) = put_behaviour {
+            self.blobstore
+                .put_explicit(ctx, key, value, put_behaviour)
+                .await
         } else {
-            self.blobstore.put_with_status(ctx, key, value)
+            self.blobstore.put_with_status(ctx, key, value).await
         };
-        let res = put.await;
         match res {
             Ok(status) => {
-                stats.put_ok.add_value(1);
+                self.stats.put_ok.add_value(1);
                 match status {
-                    OverwriteStatus::NotChecked => stats.put_not_checked.add_value(1),
-                    OverwriteStatus::New => stats.put_new.add_value(1),
-                    OverwriteStatus::Overwrote => stats.put_overwrote.add_value(1),
-                    OverwriteStatus::Prevented => stats.put_prevented.add_value(1),
+                    OverwriteStatus::NotChecked => self.stats.put_not_checked.add_value(1),
+                    OverwriteStatus::New => self.stats.put_new.add_value(1),
+                    OverwriteStatus::Overwrote => self.stats.put_overwrote.add_value(1),
+                    OverwriteStatus::Prevented => self.stats.put_prevented.add_value(1),
                 };
             }
-            Err(_) => stats.put_err.add_value(1),
+            Err(_) => self.stats.put_err.add_value(1),
         }
         res
     }
@@ -172,13 +165,11 @@ impl<T: BlobstoreWithLink> BlobstoreWithLink for CountedBlobstore<T> {
         existing_key: &'a str,
         link_key: String,
     ) -> Result<()> {
-        let stats = self.stats.clone();
-        stats.link.add_value(1);
-        let res = self.blobstore.link(ctx, existing_key, link_key);
-        let res = res.await;
+        self.stats.link.add_value(1);
+        let res = self.blobstore.link(ctx, existing_key, link_key).await;
         match res {
-            Ok(()) => stats.link_ok.add_value(1),
-            Err(_) => stats.link_err.add_value(1),
+            Ok(()) => self.stats.link_ok.add_value(1),
+            Err(_) => self.stats.link_err.add_value(1),
         }
         res
     }
