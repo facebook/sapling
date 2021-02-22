@@ -38,10 +38,10 @@ impl StatusCmd {
         instance.status_from_lock()
     }
 
-    pub async fn run(self, instance: EdenFsInstance) -> ExitCode {
+    pub async fn run(self, instance: EdenFsInstance) -> Result<ExitCode> {
         let status = self.get_status(&instance).await;
 
-        match status {
+        Ok(match status {
             Ok(pid) => {
                 println!("EdenFS is running normally (pid {})", pid);
                 0
@@ -50,6 +50,6 @@ impl StatusCmd {
                 println!("EdenFS is not healthy: {}", cause);
                 1
             }
-        }
+        })
     }
 }

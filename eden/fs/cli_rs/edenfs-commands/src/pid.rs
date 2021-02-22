@@ -7,6 +7,7 @@
 
 //! edenfsctl pid
 
+use anyhow::Result;
 use structopt::StructOpt;
 
 use edenfs_client::EdenFsInstance;
@@ -17,18 +18,18 @@ use crate::ExitCode;
 pub struct PidCmd {}
 
 impl PidCmd {
-    pub async fn run(self, instance: EdenFsInstance) -> ExitCode {
+    pub async fn run(self, instance: EdenFsInstance) -> Result<ExitCode> {
         let health = instance.get_health(None).await;
 
-        match health {
+        Ok(match health {
             Ok(health) => {
                 println!("{}", health.pid);
                 0
             }
             Err(cause) => {
-                println!("edenfs not healthy: {}", cause);
+                eprintln!("edenfs not healthy: {}", cause);
                 1
             }
-        }
+        })
     }
 }

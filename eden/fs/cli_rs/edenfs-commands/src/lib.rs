@@ -111,12 +111,12 @@ impl Command {
             .build()
             .context("unable to start async runtime")?;
 
-        Ok(runtime.block_on(self.dispatch().compat()))
+        runtime.block_on(self.dispatch().compat())
     }
 
     /// Execute subcommands. This function returns only a return code since all the error handling
     /// should be taken care of by each sub-command.
-    async fn dispatch(self) -> ExitCode {
+    async fn dispatch(self) -> Result<ExitCode> {
         event!(Level::TRACE, cmd = ?self, "Dispatching");
 
         let instance = self.get_instance();

@@ -9,6 +9,7 @@
 
 use std::{fmt, time::Duration};
 
+use anyhow::Result;
 use structopt::StructOpt;
 
 use edenfs_client::{DaemonHealthy, EdenFsInstance};
@@ -74,7 +75,7 @@ impl fmt::Display for HumanTime {
 }
 
 impl UptimeCmd {
-    pub async fn run(self, instance: EdenFsInstance) -> ExitCode {
+    pub async fn run(self, instance: EdenFsInstance) -> Result<ExitCode> {
         let health = instance.get_health(None).await;
 
         match health {
@@ -89,11 +90,11 @@ impl UptimeCmd {
                 } else {
                     println!("edenfs (pid: {}) is not healthy", health.pid);
                 }
-                0
+                Ok(0)
             }
             Err(cause) => {
                 println!("edenfs not healthy: {}", cause);
-                1
+                Ok(1)
             }
         }
     }
