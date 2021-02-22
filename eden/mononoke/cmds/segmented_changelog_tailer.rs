@@ -12,7 +12,6 @@ use std::time::Duration;
 
 use anyhow::{format_err, Context, Error};
 use clap::Arg;
-use futures::compat::Future01CompatExt;
 use futures::future::join_all;
 use slog::{error, info};
 
@@ -142,7 +141,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             readonly_storage,
             ctx.logger().clone(),
         )
-        .compat()
         .await
         .with_context(|| format!("repo {}: constructing metadata sql factory", repo_id))?;
 

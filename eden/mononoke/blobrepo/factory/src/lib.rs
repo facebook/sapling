@@ -144,10 +144,9 @@ impl<'a> BlobrepoBuilder<'a> {
             self.storage_config.metadata,
             self.mysql_options.clone(),
             self.readonly_storage,
-            // FIXME: remove clone when make_metadata_sql_factory is async-await
+            // FIXME: remove clone when myrouter opening is async-await
             self.logger.clone(),
         )
-        .compat()
         .watched(self.logger);
 
         let blobstore = make_blobstore(

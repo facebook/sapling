@@ -28,7 +28,7 @@ use cross_repo_sync::{
 use derived_data::BonsaiDerivable;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
-use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::compat::Stream01CompatExt;
 use futures::stream::{Stream, StreamExt, TryStreamExt};
 use futures::try_join;
 use futures_watchdog::WatchdogExt;
@@ -135,7 +135,6 @@ pub async fn open_synced_commit_mapping(
         readonly_storage,
         logger.clone(),
     )
-    .compat()
     .await?;
 
     Ok(Arc::new(

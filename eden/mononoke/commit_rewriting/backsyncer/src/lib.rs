@@ -446,7 +446,6 @@ pub async fn open_backsyncer_dbs(
         readonly_storage,
         ctx.logger().clone(),
     )
-    .compat()
     .await?;
 
     let connections = sql_factory

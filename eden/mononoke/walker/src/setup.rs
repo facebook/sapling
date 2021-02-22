@@ -34,7 +34,6 @@ use cmdlib::args::{
 use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use itertools::{process_results, Itertools};
 use maplit::hashset;
 use mercurial_derived_data::MappedHgChangesetId;
@@ -1331,7 +1330,6 @@ pub async fn setup_common<'a>(
             readonly_storage,
             logger.clone(),
         )
-        .compat()
         .await?;
 
         // Share the sql factory with the blobstores associated with it

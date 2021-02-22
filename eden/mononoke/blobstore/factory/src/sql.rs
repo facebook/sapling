@@ -8,8 +8,6 @@
 use anyhow::{bail, Error};
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
-use futures_ext::FutureExt as _;
-use futures_old::{future, Future};
 use metaconfig_types::{
     LocalDatabaseConfig, MetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
 };
@@ -134,18 +132,20 @@ impl MetadataSqlFactory {
     }
 }
 
-pub fn make_metadata_sql_factory(
+pub async fn make_metadata_sql_factory(
     fb: FacebookInit,
     dbconfig: MetadataDatabaseConfig,
     mysql_options: MysqlOptions,
     readonly: ReadOnlyStorage,
     logger: Logger,
-) -> impl Future<Item = MetadataSqlFactory, Error = Error> {
-    let ready = match dbconfig.primary_address() {
-        Some(dbaddress) => myrouter_ready(Some(dbaddress), &mysql_options, logger).left_future(),
-        None => future::ok(()).right_future(),
-    };
-    ready.map(move |()| MetadataSqlFactory {
+) -> Result<MetadataSqlFactory, Error> {
+    if let Some(dbaddress) = dbconfig.primary_address() {
+        myrouter_ready(Some(dbaddress), &mysql_options, logger)
+            .compat()
+            .await?
+    }
+
+    Ok(MetadataSqlFactory {
         fb,
         dbconfig,
         mysql_options,
