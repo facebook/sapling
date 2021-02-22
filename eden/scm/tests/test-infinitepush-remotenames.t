@@ -184,3 +184,29 @@ Create new bookmark and try to pull it
   $ hg up remote/scratch/branchtoupdateto2
   pulling 'remote/scratch/branchtoupdateto2', 'scratch/branchtoupdateto2' from 'ssh://user@dummy/repo'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+Test hiding of a bookmark
+  $ enable amend
+  $ setconfig remotenames.selectivepull=True
+  $ hg book --list-subscriptions
+     default/scratch/branchtoupdateto1 2885148f6198
+     default/scratch/mybranch  620472ff5c0c
+     default/scratch/serverbook 64d557aa86fd
+     remote/scratch/branchtoupdateto1 2885148f6198
+     remote/scratch/branchtoupdateto2 1f558bd20eaa
+     remote/scratch/mybranch   620472ff5c0c
+     remote/scratch/serverbook 64d557aa86fd
+  $ hg hide .
+  hiding commit 1f558bd20eaa "newcommittoupdate2"
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  working directory now at 36667a3f76e4
+  1 changeset hidden
+  unsubscribing remote bookmark "remote/scratch/branchtoupdateto2"
+  1 remote bookmark unsubscribed
+  $ hg book --list-subscriptions
+     default/scratch/branchtoupdateto1 2885148f6198
+     default/scratch/mybranch  620472ff5c0c
+     default/scratch/serverbook 64d557aa86fd
+     remote/scratch/branchtoupdateto1 2885148f6198
+     remote/scratch/mybranch   620472ff5c0c
+     remote/scratch/serverbook 64d557aa86fd

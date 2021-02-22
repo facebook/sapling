@@ -201,6 +201,8 @@ Remove these remote bookmarks
   $ hg hide remote/scratch/draft1
   hiding commit d860d2fc26c5 "draft1"
   1 changeset hidden
+  unsubscribing remote bookmark "remote/scratch/draft1"
+  1 remote bookmark unsubscribed
 TODO: make this a command
   $ hg debugshell -c "with repo.wlock(), repo.lock(), repo.transaction(\"deleteremotebookmarks\"): repo._remotenames.applychanges({\"bookmarks\": {key: '0'*40 if key in {'remote/other', 'remote/created'} else edenscm.mercurial.node.hex(value[0]) for key, value in repo._remotenames[\"bookmarks\"].items() }})"
   $ showgraph
@@ -210,12 +212,17 @@ TODO: make this a command
   
   $ hg cloud sync -q
 
-Sync in the first repo
+Sync in the first repo, the bookmarks should be removed.
+They were removed in the client3 ("remote/scratch/draft1" via `hg hide` and "remote/other", "remote/created" via a hack)
   $ cd $TESTTMP/client1
+  $ hg book --list-subs
+     remote/created            ec1dff19c429
+     remote/master             9da34b1aa207
+     remote/other              4c8ee072cf16
+     remote/scratch/draft1     d860d2fc26c5
   $ hg cloud sync -q
   $ hg book --list-subs
      remote/master             9da34b1aa207
-     remote/scratch/draft1     d860d2fc26c5
   $ showgraph
   o  public1: public  remote/master
   │
@@ -231,29 +238,21 @@ Sync in the third repo again
   $ hg cloud sync -q
   $ hg book --list-subs
      remote/master             9da34b1aa207
-     remote/scratch/draft1     d860d2fc26c5
   $ showgraph
   @  public1: public  remote/master
   │
   o  base: public local
   
+
+Bookmark "remote/scratch/draft1" shoudn't come back after a pull
   $ hg pull
   pulling from ssh://user@dummy/server
   no changes found
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 1 changes to 1 files
   $ hg book --list-subs
      remote/master             9da34b1aa207
-     remote/scratch/draft1     d860d2fc26c5
   $ showgraph
-  o  draft1: draft  remote/scratch/draft1
+  @  public1: public  remote/master
   │
-  o  public3: draft
-  │
-  │ @  public1: public  remote/master
-  ├─╯
   o  base: public local
   
 

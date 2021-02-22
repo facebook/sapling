@@ -21,6 +21,7 @@ from edenscm.mercurial import (
     extensions,
     hg,
     hintutil,
+    node as nodemod,
     obsolete,
     registrar,
     scmutil,
@@ -172,6 +173,25 @@ def hide(ui, repo, *revs, **opts):
                 )
                 % len(deletebookmarks)
             )
+        # unsubscribe from the remote bookmarks pointing to hidden changesets
+        # they always will be remote scratch bookmarks because hidectxs are all draft
+        if ui.configbool("remotenames", "selectivepull"):
+            node2marks = repo._remotenames.node2marks()
+            marks = sum([node2marks[node] for node in hnodes if node in node2marks], [])
+            bmremove = {key: nodemod.nullhex for key in marks}
+            if bmremove:
+                for bookmark in sorted(marks):
+                    if not ui.quiet:
+                        ui.status(_('unsubscribing remote bookmark "%s"\n') % bookmark)
+                repo._remotenames.applychanges({"bookmarks": bmremove}, override=False)
+                ui.status(
+                    _n(
+                        "%i remote bookmark unsubscribed\n",
+                        "%i remote bookmarks unsubscribed\n",
+                        len(bmremove),
+                    )
+                    % len(bmremove)
+                )
         hintutil.trigger("undo")
 
 

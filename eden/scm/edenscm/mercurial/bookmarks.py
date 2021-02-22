@@ -1031,7 +1031,7 @@ class remotenames(dict):
         self._node2branch = None
         self._changecount += 1
 
-    def applychanges(self, changes):
+    def applychanges(self, changes, override=True):
         # Only supported for bookmarks
         bmchanges = changes.get("bookmarks", {})
         remotepathbooks = {}
@@ -1040,7 +1040,7 @@ class remotenames(dict):
             remotepathbooks.setdefault(path, {})[name] = node
 
         self._changecount += 1
-        saveremotenames(self._repo, remotepathbooks)
+        saveremotenames(self._repo, remotepathbooks, override)
 
     def mark2nodes(self):
         return self["bookmarks"]
