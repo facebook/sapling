@@ -660,6 +660,22 @@ class HgServer(object):
 
     def _fetch_tree_impl(self, path, manifest_node):
         # type: (str, bytes) -> None
+
+        # The _prefetchtrees function called below will *always* perform
+        # gettreepack-style fetching (even if treemanifest.ondemandfetch is
+        # set to True) because the logic that determines the tree fetching
+        # strategy occurs in Mercurial's `remotetreestore` (which is not
+        # readily accessible here because it is passed into Mercurial's Rust
+        # storage API upon construction.
+        #
+        # As a workaround, let's just check if HTTP fetching is enabled, and
+        # if so, just directly call the appropriate treerepository method to
+        # send the request to EdenAPI's `/trees` endpoint (which only returns
+        # the exact set of trees requested, as desired here).
+        if self.repo._shouldusehttp():
+            self.repo._httpgetdesignatednodes([(path, manifest_node)])
+            return
+
         mfnodes = set([manifest_node])
         depth = str(self._treefetchdepth)
         with self.repo.ui.configoverride(
