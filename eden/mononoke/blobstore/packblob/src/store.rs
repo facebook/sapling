@@ -34,7 +34,7 @@ impl PackOptions {
 }
 
 /// A layer over an existing blobstore that uses thrift blob wrappers to allow packing and compression
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct PackBlob<T> {
     inner: T,
     options: PackOptions,
