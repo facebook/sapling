@@ -43,6 +43,7 @@ from . import (
     scmutil,
     sshpeer,
     ui as uimod,
+    uiconfig,
     url,
     util,
     verify as verifymod,
@@ -447,18 +448,6 @@ def clone(
     anything else is treated as a revision)
     """
 
-    if isinstance(source, str):
-        origsource = ui.expandpath(source)
-        source, mayberevs = parseurl(origsource)
-        if len(mayberevs) == 1:
-            rev = rev or mayberevs[0]
-        srcpeer = peer(ui, peeropts, source)
-    else:
-        srcpeer = source.peer()  # in case we were called with a localrepo
-        origsource = source = srcpeer.url()
-    branch = (None, [])
-    rev, checkout = addbranchrevs(srcpeer, srcpeer, branch, rev)
-
     if dest is None:
         dest = defaultdest(source)
         if dest:
@@ -468,8 +457,6 @@ def clone(
 
     destpeer = None
     dest = util.urllocalpath(dest)
-    source = util.urllocalpath(source)
-
     if not dest:
         raise error.Abort(_("empty destination path is not valid"))
 
@@ -479,6 +466,24 @@ def clone(
             raise error.Abort(_("destination '%s' already exists") % dest)
         elif destvfs.listdir():
             raise error.Abort(_("destination '%s' is not empty") % dest)
+
+    reponame = ui.config("remotefilelog", "reponame", "")
+    repo_ui = ui.copy()
+    uiconfig.applydynamicconfig(repo_ui, reponame, dest)
+
+    if isinstance(source, str):
+        origsource = ui.expandpath(source)
+        source, mayberevs = parseurl(origsource)
+        if len(mayberevs) == 1:
+            rev = rev or mayberevs[0]
+        srcpeer = peer(repo_ui, peeropts, source)
+    else:
+        srcpeer = source.peer()  # in case we were called with a localrepo
+        origsource = source = srcpeer.url()
+    branch = (None, [])
+    rev, checkout = addbranchrevs(srcpeer, srcpeer, branch, rev)
+
+    source = util.urllocalpath(source)
 
     srclock = destlock = destlockw = cleandir = None
     srcrepo = srcpeer.local()
