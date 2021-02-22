@@ -17,6 +17,7 @@ use edenfs_client::{DaemonHealthy, EdenFsInstance};
 use crate::ExitCode;
 
 #[derive(StructOpt, Debug)]
+#[structopt(about = "Check the health of the Eden service")]
 pub struct StatusCmd {
     /// Wait up to TIMEOUT seconds for the daemon to respond
     #[structopt(long, default_value = "3")]

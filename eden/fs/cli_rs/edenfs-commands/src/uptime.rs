@@ -17,6 +17,7 @@ use edenfs_client::{DaemonHealthy, EdenFsInstance};
 use crate::ExitCode;
 
 #[derive(StructOpt, Debug)]
+#[structopt(about = "Determine uptime of running edenfs daemon")]
 pub struct UptimeCmd {}
 
 struct HumanTime {

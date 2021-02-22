@@ -59,14 +59,9 @@ pub struct Command {
 
 #[derive(StructOpt, Debug)]
 pub enum SubCommand {
-    /// Check the health of the Eden service
     #[structopt(alias = "health")]
     Status(crate::status::StatusCmd),
-
-    /// Print the daemon's process ID if running
     Pid(crate::pid::PidCmd),
-
-    /// Determine uptime of running edenfs daemon
     Uptime(crate::uptime::UptimeCmd),
 }
 

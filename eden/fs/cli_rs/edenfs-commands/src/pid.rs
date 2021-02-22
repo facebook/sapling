@@ -15,6 +15,7 @@ use edenfs_client::EdenFsInstance;
 use crate::ExitCode;
 
 #[derive(StructOpt, Debug)]
+#[structopt(about = "Print the daemon's process ID if running")]
 pub struct PidCmd {}
 
 impl PidCmd {
