@@ -26,7 +26,6 @@ import errno
 import os
 import re
 import shutil
-import sys
 import typing
 
 from edenscm.mercurial import (
@@ -39,29 +38,20 @@ from edenscm.mercurial import (
     extensions,
     hg,
     localrepo,
-    lock as lockmod,
     mutation,
     obsutil,
     pycompat,
     registrar,
-    repair,
     revset,
     scmutil,
     setdiscovery,
     smartset,
-    ui as uimod,
     url,
     util,
     vfs as vfsmod,
     visibility,
 )
 from edenscm.mercurial.bookmarks import (
-    _readremotenamesfrom,
-    _selectivepullenabledfile,
-    _selectivepullenabledfilelock,
-    _writesingleremotename,
-    _enableselectivepullforremote,
-    _disableselectivepull,
     joinremotename,
     journalremotebookmarktype,
     readremotenames,
@@ -221,11 +211,6 @@ def _expull(orig, repo, remote, heads=None, force=False, **kwargs):
     with extensions.wrappedfunction(setdiscovery, "findcommonheads", exfindcommonheads):
         res = orig(repo, remote, heads, force, **kwargs)
     pullremotenames(repo, remote, bookmarks)
-
-    if isselectivepull:
-        _enableselectivepullforremote(repo, path)
-    else:
-        _disableselectivepull(repo)
 
     return res
 

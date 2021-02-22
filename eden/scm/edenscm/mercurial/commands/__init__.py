@@ -4788,8 +4788,6 @@ def pull(ui, repo, source="default", **opts):
         # - Does not support named branches.
         modheads, checkout = _newpull(ui, repo, source, **opts)
     else:
-        if not hasselectivepull:
-            bookmarks._disableselectivepull(repo)
         # The legacy pull implementation. Problems:
         # - Remotenames:
         #   - Inefficiency: Call listkey proto twice.
@@ -4971,27 +4969,6 @@ def _newpull(ui, repo, source, **opts):
             if fullname in repo:
                 result[name] = repo[fullname].hex()
         return result
-
-    # Migrating from non-selectivepull (legacy remotenames) to
-    # selectivepull.
-    if not bookmarks._isselectivepullenabledforremote(repo, remotename):
-        namehex = namestonamehex(bmarks)  # {'master': hexnode}
-        # Keep other "selected" bookmarks. Do not delete them.
-        orignamenodes = repo._remotenames["bookmarks"]  # {'remote/master': [binnode]}
-        for name in selected:
-            if name not in namehex:
-                fullname = "%s/%s" % (remotename, name)
-                nodes = orignamenodes.get(fullname)
-                if nodes:
-                    namehex[name] = hex(nodes[0])
-        with repo.wlock(), repo.lock(), repo.transaction("selectivepull"):
-            # Delete other bookmarks if selectivepull is just enabled.
-            # This happens when migrating from legacy remotenames with all
-            # names.  It will be no longer necessary if we do not have
-            # legacy remotenames.
-            bookmarks.saveremotenames(repo, {remotename: namehex}, override=True)
-            # Update the file marking selectivepull is enabled.
-            bookmarks._enableselectivepullforremote(repo, remotename)
 
     # Decide return value.
     if oldlen == newlen:

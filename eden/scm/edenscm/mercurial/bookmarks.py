@@ -41,11 +41,6 @@ activebookmarklabel = "bookmarks.active bookmarks.current"
 # namespace to use when recording an hg journal entry
 journalremotebookmarktype = "remotebookmark"
 
-# name of the file that is used to mark that transition to selectivepull has
-# happened
-_selectivepullenabledfile = "selectivepullenabled"
-_selectivepullenabledfilelock = "selectivepullenabled.lock"
-
 
 def _getbkfile(repo):
     """Hook so that extensions that mess with the store can hook bm storage.
@@ -1383,38 +1378,3 @@ def splitremotename(remote):
 def remotenameforurl(ui, url):
     """Convert an URL to a remote name"""
     return ui.paths.getname(url, forremotenames=True)
-
-
-def _readisselectivepullenabledfile(repo):
-    try:
-        with repo.sharedvfs(_selectivepullenabledfile, "rb") as f:
-            for line in f:
-                yield pycompat.decodeutf8(line.strip())
-    except EnvironmentError as er:
-        if er.errno != errno.ENOENT:
-            raise
-        return
-
-
-def _isselectivepullenabledforremote(repo, remote):
-    for enabledremote in _readisselectivepullenabledfile(repo):
-        if enabledremote == remote:
-            return True
-    return False
-
-
-def _enableselectivepullforremote(repo, remote):
-    vfs = repo.sharedvfs
-    with lockmod.lock(vfs, _selectivepullenabledfilelock):
-        enabledremotes = set(_readisselectivepullenabledfile(repo))
-        enabledremotes.add(remote)
-        with vfs(_selectivepullenabledfile, "wb", atomictemp=True) as f:
-            for renabled in enabledremotes:
-                f.write(pycompat.encodeutf8("%s\n" % renabled))
-
-
-def _disableselectivepull(repo):
-    vfs = repo.sharedvfs
-    if vfs.exists(_selectivepullenabledfile):
-        with lockmod.lock(vfs, _selectivepullenabledfilelock):
-            vfs.unlink(_selectivepullenabledfile)

@@ -225,7 +225,6 @@ By using "default/" the commit gets automatically pulled
 Set two bookmarks in selectivepulldefault, make sure both of them were pulled
   $ setconfig "remotenames.selectivepulldefault=master,thirdbook"
 
-  $ rm .hg/selectivepullenabled
   $ hg pull -q
   $ hg book --list-subscriptions
      default/master            0238718db2b1
