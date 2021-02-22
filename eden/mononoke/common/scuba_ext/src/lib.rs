@@ -9,7 +9,6 @@
 
 use fbinit::FacebookInit;
 use futures_stats::{FutureStats, StreamStats};
-use itertools::join;
 use observability::{ObservabilityContext, ScubaLoggingDecisionFields, ScubaVerbosityLevel};
 use scuba::{builder::ServerData, ScubaSample, ScubaSampleBuilder};
 pub use scuba::{Sampling, ScubaValue};
@@ -108,8 +107,15 @@ impl MononokeScubaSampleBuilder {
     pub fn add_metadata(&mut self, metadata: &Metadata) -> &mut Self {
         self.inner
             .add("session_uuid", metadata.session_id().to_string());
-        self.inner
-            .add("client_identities", join(metadata.identities().iter(), ","));
+
+        self.inner.add(
+            "client_identities",
+            metadata
+                .identities()
+                .iter()
+                .map(|i| i.to_string())
+                .collect::<Vec<_>>(),
+        );
 
         if let Some(client_hostname) = metadata.client_hostname() {
             // "source_hostname" to remain compatible with historical logging
