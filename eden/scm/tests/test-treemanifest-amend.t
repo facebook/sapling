@@ -16,7 +16,7 @@ Crash in histpack code path where the amend destination already exists
   $ enable undo
   $ hg up -q $B
   $ echo foo > msg
-  $ hg commit --amend -l msg
+  $ hg --config dummy.option=dummy commit --amend -l msg
   $ hg undo -q
   hint[undo-uncommit-unamend]: undoing amends discards their changes.
   to restore the changes to the working copy, run 'hg revert -r 220f69710758 --all'

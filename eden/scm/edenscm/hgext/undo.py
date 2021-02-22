@@ -1085,9 +1085,9 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
     commandlist = commandstr.split("\0")[1:]
     commandstr = " ".join(commandlist)
     uimessage = _("undone to %s, before %s\n") % (time, commandstr)
-    if reverseindex == 1 and commandlist[0] in ("commit", "amend"):
-        command = commandlist[0]
-        if command == "commit" and "--amend" in commandlist:
+    if reverseindex == 1 and any(cmd in ("commit", "amend") for cmd in commandlist):
+        command = "commit"
+        if any(cmd in ("amend", "--amend") for cmd in commandlist):
             command = "amend"
         oldcommithash = _readnode(repo, "workingparent.i", nodedict["workingparent"])
         shorthash = short(bin(oldcommithash))
