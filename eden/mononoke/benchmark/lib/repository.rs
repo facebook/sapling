@@ -29,8 +29,9 @@ use delayblob::DelayedBlobstore;
 use fbinit::FacebookInit;
 use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes, PreparedFilenode};
 use filestore::FilestoreConfig;
+use futures::future::{FutureExt as _, TryFutureExt as _};
 use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, Future};
+use futures_old::Future;
 use memblob::Memblob;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
 use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgFileNodeId};
@@ -184,15 +185,16 @@ where
     D: Distribution<f64>,
     F: Future<Error = Error>,
 {
-    future::lazy(move || {
-        let seconds = rand::thread_rng().sample(distribution).abs();
-        tokio_timer::sleep(Duration::new(
-            seconds.trunc() as u64,
-            (seconds.fract() * 1e+9) as u32,
-        ))
-        .from_err()
-        .and_then(move |_| target)
-    })
+    let seconds = rand::thread_rng().sample(distribution).abs();
+
+    tokio_shim::time::sleep(Duration::new(
+        seconds.trunc() as u64,
+        (seconds.fract() * 1e+9) as u32,
+    ))
+    .map(Result::<_, Error>::Ok)
+    .boxed()
+    .compat()
+    .and_then(move |_| target)
 }
 
 async fn delay_v2(distribution: impl Distribution<f64>) {

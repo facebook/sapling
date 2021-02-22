@@ -192,8 +192,8 @@ throttledblob = { path = "blobstore/throttledblob", version = "0.1.0" }
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tokio-compat = "0.1"
-tokio-timer = "0.2"
 tokio-util = { version = "0.2", features = ["codec", "udp"] }
+tokio_shim = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 toml = "=0.5.7"
 unodes = { path = "derived_data/unodes", version = "0.1.0" }
 xdiff = { path = "../scm/lib/xdiff", version = "0.1.0" }

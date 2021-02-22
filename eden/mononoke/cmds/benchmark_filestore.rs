@@ -159,7 +159,7 @@ async fn run_benchmark_filestore<'a>(
 
     match delay {
         Some(delay) => {
-            tokio_timer::sleep(delay).compat().await?;
+            tokio_shim::time::sleep(delay).await;
         }
         None => {}
     }
