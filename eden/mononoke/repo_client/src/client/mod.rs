@@ -1376,10 +1376,15 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
     fn known(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
-        self.command_future(ops::KNOWN, UNSAMPLED, |ctx, command_logger| {
+        self.command_future(ops::KNOWN, UNSAMPLED, |ctx, mut command_logger| {
             let blobrepo = self.repo.blobrepo().clone();
 
             let nodes_len = nodes.len();
+            let args = json!({
+                "nodes_count": nodes_len,
+            });
+
+            command_logger.add_trimmed_scuba_extra("command_args", &args);
             let phases_hint = blobrepo.get_phases().clone();
 
             {
