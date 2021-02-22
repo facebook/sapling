@@ -16,11 +16,7 @@ pub use crate::perf_counters::{PerfCounterType, PerfCounters};
 pub use crate::session::{SessionClass, SessionContainer, SessionContainerBuilder};
 
 mod core;
-#[cfg(fbcode_build)]
-mod facebook;
 mod logging;
-#[cfg(not(fbcode_build))]
-mod oss;
 mod perf_counters;
 mod perf_counters_stack;
 mod session;

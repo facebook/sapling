@@ -13,7 +13,6 @@ use sshrelay::Metadata;
 use std::convert::TryInto;
 use std::num::NonZeroU32;
 use std::sync::Arc;
-use tracing::TraceContext;
 
 use super::{SessionClass, SessionContainer, SessionContainerInner};
 
@@ -36,7 +35,6 @@ impl SessionContainerBuilder {
         Self {
             fb,
             inner: SessionContainerInner {
-                trace: TraceContext::default(),
                 metadata: Metadata::default(),
                 load_limiter: None,
                 blobstore_write_limiter: None,
@@ -44,11 +42,6 @@ impl SessionContainerBuilder {
             },
             session_class: SessionClass::UserWaiting,
         }
-    }
-
-    pub fn trace(mut self, value: TraceContext) -> Self {
-        self.inner.trace = value;
-        self
     }
 
     pub fn metadata(mut self, value: Metadata) -> Self {

@@ -66,5 +66,4 @@ time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", bran
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tokio-openssl = "0.4"
 tokio-util = { version = "0.2", features = ["codec", "udp"] }
-tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tunables = { path = "../../tunables", version = "0.1.0" }

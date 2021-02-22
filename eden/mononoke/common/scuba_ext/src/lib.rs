@@ -8,7 +8,6 @@
 #![deny(warnings)]
 
 use fbinit::FacebookInit;
-use futures_ext::BoxFuture;
 use futures_stats::{FutureStats, StreamStats};
 use itertools::join;
 use observability::{ObservabilityContext, ScubaLoggingDecisionFields, ScubaVerbosityLevel};
@@ -22,11 +21,7 @@ use std::num::NonZeroU64;
 use std::path::Path;
 use std::time::Duration;
 use time_ext::DurationExt;
-use tracing::TraceContext;
 use tunables::tunables;
-
-#[cfg(fbcode_build)]
-mod facebook;
 
 pub use scribe_ext::ScribeClientImplementation;
 
@@ -192,19 +187,6 @@ impl MononokeScubaSampleBuilder {
             );
 
         self
-    }
-
-    pub fn log_with_trace(&mut self, fb: FacebookInit, trace: &TraceContext) -> BoxFuture<(), ()> {
-        #[cfg(not(fbcode_build))]
-        {
-            use futures_ext::FutureExt;
-            let _ = (fb, trace);
-            futures::future::ok(()).boxify()
-        }
-        #[cfg(fbcode_build)]
-        {
-            facebook::log_with_trace(self, fb, trace)
-        }
     }
 
     pub fn is_discard(&self) -> bool {

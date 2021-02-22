@@ -30,9 +30,7 @@ use stats::prelude::*;
 use std::mem;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
 use time_ext::DurationExt;
-use tracing::{trace_args, TraceContext, TraceId, Traced};
 use tunables::tunables;
 
 use crate::repo_handlers::RepoHandler;
@@ -121,14 +119,12 @@ pub async fn request_handler(
 
     // Info per wireproto command within this session
     let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
-    let trace = TraceContext::new(TraceId::from_string(session_id.to_string()), Instant::now());
 
     let priority = metadata.priority();
     scuba.add("priority", priority.to_string());
     scuba.log_with_msg("Connection established", None);
 
     let mut session_builder = SessionContainer::builder(fb)
-        .trace(trace.clone())
         .metadata(metadata.clone())
         .load_limiter(
             load_limiter.map(|l| l.get(metadata.identities(), metadata.client_hostname())),
@@ -178,11 +174,7 @@ pub async fn request_handler(
         .map(|_| ());
 
     // If we got an error at this point, then catch it and print a message
-    let (stats, result) = endres
-        .traced(&trace, "wireproto request", trace_args!())
-        .compat()
-        .timed()
-        .await;
+    let (stats, result) = endres.compat().timed().await;
 
     let wireproto_calls = {
         let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
@@ -223,10 +215,6 @@ pub async fn request_handler(
             "remote" => "true"
         );
     }
-
-    // NOTE: This results a Result that we ignore here. There isn't really anything we can (or
-    // should) do if this errors out.
-    let _ = scuba.log_with_trace(fb, &trace).compat().await;
 
     Ok(())
 }

@@ -15,7 +15,6 @@ use slog::Logger;
 use sshrelay::Metadata;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::TraceContext;
 
 pub use self::builder::SessionContainerBuilder;
 use crate::core::CoreContext;
@@ -42,7 +41,6 @@ pub enum SessionClass {
 }
 
 struct SessionContainerInner {
-    trace: TraceContext,
     metadata: Metadata,
     load_limiter: Option<BoxLoadLimiter>,
     blobstore_write_limiter: Option<AsyncLimiter>,
@@ -78,10 +76,6 @@ impl SessionContainer {
 
     pub fn fb(&self) -> FacebookInit {
         self.fb
-    }
-
-    pub fn trace(&self) -> &TraceContext {
-        &self.inner.trace
     }
 
     pub fn metadata(&self) -> &Metadata {

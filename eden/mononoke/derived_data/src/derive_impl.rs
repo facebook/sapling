@@ -13,7 +13,6 @@ use cacheblob::LeaseOps;
 use context::CoreContext;
 use futures::{
     channel::oneshot,
-    compat::Future01CompatExt,
     future::{try_join, try_join_all, FutureExt, TryFutureExt},
     TryStreamExt,
 };
@@ -32,7 +31,6 @@ use std::{
 };
 use time_ext::DurationExt;
 use topo_sort::sort_topological;
-use tracing::{trace_args, EventId, Traced};
 
 define_stats! {
     prefix = "mononoke.derived_data";
@@ -138,12 +136,11 @@ pub async fn derive_impl<
     if should_log_slow_derivation(stats.completion_time) {
         warn!(
             ctx.logger(),
-            "slow derivation of {} {} for {}, took {:.2?}: mononoke_prod/flat/{}.trace",
+            "slow derivation of {} {} for {}, took {:.2?}",
             count,
             Derivable::NAME,
             start_csid,
             stats.completion_time,
-            ctx.trace().id(),
         );
         ctx.scuba().clone().add_future_stats(&stats).log_with_msg(
             "Slow derivation",
@@ -289,7 +286,6 @@ where
     Derivable: BonsaiDerivable,
     Mapping: BonsaiDerivedMapping<Value = Derivable> + Send + Sync + Clone + 'static,
 {
-    let event_id = EventId::new();
     let changeset_fetcher = repo.get_changeset_fetcher();
     let parents = async {
         let parents = changeset_fetcher.get_parents(ctx.clone(), bcs_id).await?;
@@ -354,18 +350,6 @@ where
                             parents,
                             &options,
                         )
-                        .boxed()
-                        .compat()
-                        .traced_with_id(
-                            &ctx.trace(),
-                            "derive::derive_from_parents",
-                            trace_args! {
-                                "csid" => bcs_id.to_hex().to_string(),
-                                "type" => Derivable::NAME
-                            },
-                            event_id,
-                        )
-                        .compat()
                         .await?;
                         mapping.put(ctx.clone(), bcs_id, derived).await?;
                         let res: Result<_, Error> = Ok(());

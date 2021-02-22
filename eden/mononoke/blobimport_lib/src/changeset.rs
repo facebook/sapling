@@ -28,7 +28,6 @@ use futures_old::{
     Future, IntoFuture,
 };
 use tokio::runtime::Handle;
-use tracing::{trace_args, EventId, Traced};
 
 use blobrepo::BlobRepo;
 use blobrepo_hg::{ChangesetHandle, CreateChangeset};
@@ -330,8 +329,6 @@ impl UploadChangesets {
 
         let handle = try_boxstream!(Handle::try_current().context("No tokio runtime available"));
 
-        let event_id = EventId::new();
-
         let mut scuba_logger = ctx.scuba().clone();
         scuba_logger
             .add("Repo Id", format!("{}", blobrepo.get_repoid()))
@@ -439,12 +436,6 @@ impl UploadChangesets {
                     revlogcs
                         .join3(rootmf, entries.collect())
                         .map(move |(cs, rootmf, entries)| (revidx, csid, cs, rootmf, entries))
-                        .traced_with_id(
-                            &ctx.trace(),
-                            "parse changeset from revlog",
-                            trace_args!(),
-                            event_id,
-                        )
                 }
             })
             .and_then({

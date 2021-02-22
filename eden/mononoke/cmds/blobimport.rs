@@ -15,7 +15,7 @@ use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use clap::Arg;
 use cmdlib::{
     args::{self, get_scuba_sample_builder, MononokeClapApp, MononokeMatches, RepoRequirement},
-    helpers::{block_execute, upload_and_show_trace},
+    helpers::block_execute,
 };
 use context::{CoreContext, SessionContainer};
 use derived_data::BonsaiDerivable;
@@ -25,7 +25,7 @@ use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, try_join4, FutureExt, TryFutureExt},
+    future::{try_join, try_join4, TryFutureExt},
 };
 #[cfg(fbcode_build)]
 use mercurial_revlog::revlog::RevIdx;
@@ -404,10 +404,6 @@ async fn run_blobimport<'a>(
             }
             None => info!(ctx.logger(), "didn't import any commits"),
         };
-        upload_and_show_trace(ctx.clone())
-            .compat()
-            .map(|_| ())
-            .await;
 
         Ok(())
     }

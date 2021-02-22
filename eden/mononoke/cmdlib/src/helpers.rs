@@ -14,10 +14,9 @@ use futures::{
     future::{self, Either},
     FutureExt, StreamExt, TryFutureExt,
 };
-use futures_ext::FutureExt as OldFutureExt;
 use futures_old::{Future as OldFuture, IntoFuture};
 use services::Fb303Service;
-use slog::{debug, error, info, Logger};
+use slog::{error, info, Logger};
 use tokio::{
     signal::unix::{signal, SignalKind},
     time,
@@ -36,15 +35,6 @@ use stats::schedule_stats_aggregation_preview;
 
 pub const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
 pub const ARG_FORCE_SHUTDOWN_PERIOD: &str = "force-shutdown-period";
-
-pub fn upload_and_show_trace(ctx: CoreContext) -> impl OldFuture<Item = (), Error = !> {
-    if !ctx.trace().is_enabled() {
-        debug!(ctx.logger(), "Trace is disabled");
-        return Ok(()).into_future().left_future();
-    }
-
-    ctx.trace_upload().then(|_| Ok(())).right_future()
-}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CreateStorage {

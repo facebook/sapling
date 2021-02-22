@@ -85,7 +85,6 @@ use std::time::{Duration, Instant};
 use streaming_clone::RevlogStreamingChunks;
 use time_ext::DurationExt;
 use tokio::time::delay_for;
-use tracing::{trace_args, Traced};
 use tunables::tunables;
 
 mod logging;
@@ -1125,7 +1124,6 @@ impl HgCommands for RepoClient {
                 .flatten_err()
                 .boxed()
                 .compat()
-                .traced(self.session.trace(), ops::BETWEEN, trace_args!())
                 .timed(move |stats, _| {
                     command_logger.without_wireproto().finalize_command(&stats);
                     Ok(())
@@ -1164,12 +1162,10 @@ impl HgCommands for RepoClient {
                     }
                 }
 
-                future_old::ok(hostname)
-                    .traced(self.session.trace(), ops::CLIENTTELEMETRY, trace_args!())
-                    .timed(move |stats, _| {
-                        command_logger.without_wireproto().finalize_command(&stats);
-                        Ok(())
-                    })
+                future_old::ok(hostname).timed(move |stats, _| {
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    Ok(())
+                })
             },
         )
     }
@@ -1188,7 +1184,6 @@ impl HgCommands for RepoClient {
                 .flatten_err()
                 .boxed()
                 .compat()
-                .traced(self.session.trace(), ops::HEADS, trace_args!())
                 .timed(move |stats, _| {
                     command_logger.without_wireproto().finalize_command(&stats);
                     Ok(())
@@ -1366,7 +1361,6 @@ impl HgCommands for RepoClient {
             .flatten_err()
             .boxed()
             .compat()
-            .traced(self.session.trace(), ops::LOOKUP, trace_args!())
             .timed(move |stats, _| {
                 command_logger.without_wireproto().finalize_command(&stats);
                 Ok(())
@@ -1424,7 +1418,6 @@ impl HgCommands for RepoClient {
             .flatten_err()
             .boxed()
             .compat()
-            .traced(self.session.trace(), ops::KNOWN, trace_args!())
             .timed(move |stats, known_nodes| {
                 if let Ok(known) = known_nodes {
                     ctx.perf_counters()
@@ -1467,7 +1460,6 @@ impl HgCommands for RepoClient {
             .flatten_err()
             .boxed()
             .compat()
-            .traced(self.session.trace(), ops::KNOWNNODES, trace_args!())
             .timed(move |stats, known_nodes| {
                 if let Ok(known) = known_nodes {
                     ctx.perf_counters()
@@ -1501,7 +1493,6 @@ impl HgCommands for RepoClient {
                 .flatten_err()
                 .boxed()
                 .compat()
-                .traced(self.session.trace(), ops::GETBUNDLE, trace_args!())
                 .timed(move |stats, _| {
                     STATS::getbundle_ms
                         .add_value(stats.completion_time.as_millis_unchecked() as i64);
@@ -1527,12 +1518,10 @@ impl HgCommands for RepoClient {
             caps.push(format!("bundle2={}", bundle2caps()));
             res.insert("capabilities".to_string(), caps);
 
-            future_old::ok(res)
-                .traced(self.session.trace(), ops::HELLO, trace_args!())
-                .timed(move |stats, _| {
-                    command_logger.without_wireproto().finalize_command(&stats);
-                    Ok(())
-                })
+            future_old::ok(res).timed(move |stats, _| {
+                command_logger.without_wireproto().finalize_command(&stats);
+                Ok(())
+            })
         })
     }
 
@@ -1541,7 +1530,6 @@ impl HgCommands for RepoClient {
         if namespace == "bookmarks" {
             self.command_future(ops::LISTKEYS, UNSAMPLED, |ctx, command_logger| {
                 self.get_pull_default_bookmarks_maybe_stale(ctx)
-                    .traced(self.session.trace(), ops::LISTKEYS, trace_args!())
                     .timed(move |stats, _| {
                         command_logger.without_wireproto().finalize_command(&stats);
                         Ok(())
@@ -1623,7 +1611,6 @@ impl HgCommands for RepoClient {
                 .flatten_err()
                 .boxed()
                 .compat()
-                .traced(self.session.trace(), ops::LISTKEYS, trace_args!())
                 .timed(move |stats, _| {
                     command_logger.without_wireproto().finalize_command(&stats);
                     Ok(())
@@ -1664,7 +1651,6 @@ impl HgCommands for RepoClient {
             })
             .and_then(move |read_write| {
                 let client = repoclient.clone();
-                let trace = client.session.trace().clone();
                 repoclient.command_future(ops::UNBUNDLE, UNSAMPLED, move |ctx, command_logger| {
                     async move {
                         let blobrepo = client.repo.blobrepo();
@@ -1836,7 +1822,6 @@ impl HgCommands for RepoClient {
                     .flatten_err()
                     .boxed()
                     .compat()
-                    .traced(&trace, ops::UNBUNDLE, trace_args!())
                     .timed(move |stats, _| {
                         command_logger.without_wireproto().finalize_command(&stats);
                         Ok(())
@@ -1889,7 +1874,6 @@ impl HgCommands for RepoClient {
                     .flatten_err()
                     .boxed()
                     .compat()
-                    .traced(self.session.trace(), ops::GETTREEPACK, trace_args!())
                     .inspect({
                         cloned!(ctx);
                         move |bytes| {

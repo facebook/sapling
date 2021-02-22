@@ -187,11 +187,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         }
     };
 
-    #[cfg(fbcode_build)]
-    {
-        tracing_fb303::register(fb);
-    }
-
     // Thread with a thrift service is now detached
     monitoring::start_thrift_service(fb, &root_log, &matches, service);
 

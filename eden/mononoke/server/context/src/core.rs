@@ -12,7 +12,6 @@ use slog::{o, Drain, Level, Logger};
 use slog_glog_fmt::default_drain;
 use sshrelay::Metadata;
 use std::sync::Arc;
-use tracing::TraceContext;
 
 use crate::logging::{LoggingContainer, SamplingKey};
 use crate::perf_counters::PerfCounters;
@@ -112,10 +111,6 @@ impl CoreContext {
 
     pub fn perf_counters(&self) -> &PerfCountersStack {
         &self.logging.perf_counters()
-    }
-
-    pub fn trace(&self) -> &TraceContext {
-        &self.session.trace()
     }
 
     pub fn metadata(&self) -> &Metadata {

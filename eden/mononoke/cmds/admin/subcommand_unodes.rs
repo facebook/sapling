@@ -37,7 +37,6 @@ const COMMAND_VERIFY: &str = "verify";
 const ARG_CSID: &str = "csid";
 const ARG_PATH: &str = "path";
 const ARG_LIMIT: &str = "limit";
-const ARG_TRACE: &str = "trace";
 
 fn path_resolve(path: &str) -> Result<Option<MPath>, Error> {
     match path {
@@ -59,11 +58,6 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 
     SubCommand::with_name(UNODES)
         .about("inspect and interact with unodes")
-        .arg(
-            Arg::with_name(ARG_TRACE)
-                .help("upload trace to manifold")
-                .long("trace"),
-        )
         .subcommand(
             SubCommand::with_name(COMMAND_TREE)
                 .about("recursively list all unode entries starting with prefix")
@@ -89,11 +83,6 @@ pub async fn subcommand_unodes<'a>(
     matches: &'a MononokeMatches<'_>,
     sub_matches: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let tracing_enable = sub_matches.is_present(ARG_TRACE);
-    if tracing_enable {
-        tracing::enable();
-    }
-
     args::init_cachelib(fb, &matches);
 
     let repo = args::open_repo(fb, &logger, &matches).await?;
@@ -127,9 +116,6 @@ pub async fn subcommand_unodes<'a>(
         _ => Err(SubcommandError::InvalidArgs),
     };
 
-    if tracing_enable {
-        ctx.trace_upload().compat().await?;
-    }
     res
 }
 

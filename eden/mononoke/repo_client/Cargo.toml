@@ -54,7 +54,6 @@ streaming_clone = { path = "streaming_clone", version = "0.1.0" }
 thiserror = "1.0"
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 tunables = { path = "../tunables", version = "0.1.0" }
 unbundle = { path = "unbundle", version = "0.1.0" }
 warm_bookmarks_cache = { path = "../bookmarks/warm_bookmarks_cache", version = "0.1.0" }
