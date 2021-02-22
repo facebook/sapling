@@ -25,7 +25,7 @@ prefetch_profile_cmd = subcmd_mod.Decorator()
 
 # consults the global kill switch to check if this user should prefetch their
 # active prefetch profiles.
-def should_prefetch_profiles(instance: EdenInstance):
+def should_prefetch_profiles(instance: EdenInstance) -> bool:
     return instance.get_config_bool("prefetch-profiles.prefetching-enabled", False)
 
 
@@ -229,7 +229,7 @@ def prefetch_profiles(
             return None
 
 
-def print_prefetch_results(results, print_commits):
+def print_prefetch_results(results, print_commits) -> None:
     print("\nFiles Prefetched: ")
     # Can just print names it's clear which commit they come from
     if not print_commits:
