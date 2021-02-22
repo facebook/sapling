@@ -21,8 +21,8 @@ use crate::GitMappingPushrebaseHook;
 
 #[fbinit::test]
 fn pushrebase_populates_git_mapping(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(pushrebase_populates_git_mapping_impl(fb))
+    let mut runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(pushrebase_populates_git_mapping_impl(fb))
 }
 
 async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), Error> {

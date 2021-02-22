@@ -446,7 +446,7 @@ mod test {
         });
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_stack_move(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);

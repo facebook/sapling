@@ -41,4 +41,3 @@ tunables = { path = "../tunables", version = "0.1.0" }
 maplit = "1.0"
 mercurial_types-mocks = { path = "../mercurial/types/mocks", version = "0.1.0" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
-tokio-compat = "0.1"

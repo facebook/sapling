@@ -186,7 +186,7 @@ fn create_entries() -> HashMap<usize, HgMutationEntry> {
     }
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let store = SqlHgMutationStoreBuilder::with_sqlite_in_memory()

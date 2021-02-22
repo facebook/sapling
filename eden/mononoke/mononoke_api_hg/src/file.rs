@@ -201,7 +201,7 @@ mod tests {
 
     use crate::RepoContextHgExt;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_hg_file_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(Repo::new_test(ctx.clone(), many_files_dirs::getrepo(fb).await).await?);
@@ -240,7 +240,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_hg_file_history(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(Repo::new_test(ctx.clone(), many_files_dirs::getrepo(fb).await).await?);

@@ -138,7 +138,7 @@ mod tests {
 
     use crate::RepoContextHgExt;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_hg_tree_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(Repo::new_test(ctx.clone(), linear::getrepo(fb).await).await?);

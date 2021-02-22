@@ -37,4 +37,3 @@ thiserror = "1.0"
 [dev-dependencies]
 mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-compat = "0.1"

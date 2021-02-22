@@ -74,7 +74,7 @@ mod test {
     use mononoke_types::MPath;
     use tests_utils::{list_working_copy_utf8, resolve_cs_id, CreateCommitContext};
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_manual_commit_sync(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 

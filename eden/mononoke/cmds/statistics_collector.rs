@@ -564,21 +564,18 @@ mod tests {
     use borrowed::borrowed;
     use bytes::Bytes;
     use fixtures::linear;
-    use futures::{
-        future::{self, TryFutureExt},
-        stream,
-    };
+    use futures::{future, stream};
     use maplit::btreemap;
     use std::str::FromStr;
     use tests_utils::{create_commit, store_files};
-    use tokio_compat::runtime::Runtime;
+    use tokio::runtime::Runtime;
 
     #[test]
     fn test_number_of_lines_empty_stream() -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
 
         let stream = stream::once(async { Ok(FileBytes(Bytes::from(&b""[..]))) });
-        let result = rt.block_on(number_of_lines(stream).boxed().compat())?;
+        let result = rt.block_on(number_of_lines(stream))?;
         assert_eq!(result, 0);
         Ok(())
     }
@@ -588,7 +585,7 @@ mod tests {
         let mut rt = Runtime::new().unwrap();
 
         let stream = stream::once(async { Ok(FileBytes(Bytes::from(&b"First line\n"[..]))) });
-        let result = rt.block_on(number_of_lines(stream).boxed().compat())?;
+        let result = rt.block_on(number_of_lines(stream))?;
         assert_eq!(result, 1);
         Ok(())
     }
@@ -602,7 +599,7 @@ mod tests {
                 &b"First line\nSecond line\nThird line\n"[..],
             )))
         });
-        let result = rt.block_on(number_of_lines(stream).boxed().compat())?;
+        let result = rt.block_on(number_of_lines(stream))?;
         assert_eq!(result, 3);
         Ok(())
     }
@@ -617,7 +614,7 @@ mod tests {
             FileBytes(Bytes::from(&b"First line\nSecond line\nThird line\n"[..])),
         ];
         let stream = stream::iter(vec.into_iter().map(Ok));
-        let result = rt.block_on(number_of_lines(stream).boxed().compat())?;
+        let result = rt.block_on(number_of_lines(stream))?;
         assert_eq!(result, 4);
         Ok(())
     }
@@ -625,7 +622,7 @@ mod tests {
     #[fbinit::test]
     fn linear_test_get_statistics_from_changeset(fb: FacebookInit) {
         let mut runtime = Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let repo = linear::getrepo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
@@ -677,7 +674,7 @@ mod tests {
     #[fbinit::test]
     fn linear_test_get_statistics_from_entry_tree(fb: FacebookInit) {
         let mut runtime = Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let repo = linear::getrepo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);
@@ -744,7 +741,7 @@ mod tests {
     #[fbinit::test]
     fn linear_test_update_statistics(fb: FacebookInit) {
         let mut runtime = Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let repo = linear::getrepo(fb).await;
 
             let ctx = CoreContext::test_mock(fb);

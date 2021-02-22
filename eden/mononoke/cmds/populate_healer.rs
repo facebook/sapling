@@ -14,7 +14,6 @@ use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use futures_old::{Future, IntoFuture};
 use serde_derive::{Deserialize, Serialize};
-use tokio_compat::runtime;
 
 use blobstore::{Blobstore, BlobstoreKeyParam, BlobstoreKeySource, DEFAULT_PUT_BEHAVIOUR};
 use blobstore_sync_queue::{
@@ -440,8 +439,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     ));
                 }
             };
-            let mut runtime = runtime::Runtime::new()?;
-            runtime.block_on_std(populate_healer_queue(blobstore, queue, config))?;
+            let mut runtime = tokio::runtime::Runtime::new()?;
+            runtime.block_on(populate_healer_queue(blobstore, queue, config))?;
             Ok(())
         }
         Err(error) => Err(error),

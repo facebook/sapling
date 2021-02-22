@@ -296,7 +296,7 @@ mod test {
         }
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_fetch_prefix_no_warm_bookmark_cache(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 

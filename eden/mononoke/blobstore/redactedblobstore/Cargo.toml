@@ -29,4 +29,4 @@ futures = { version = "0.3.5", features = ["async-await", "compat"] }
 maplit = "1.0"
 memblob = { path = "../memblob", version = "0.1.0" }
 prefixblob = { path = "../prefixblob", version = "0.1.0" }
-tokio-compat = "0.1"
+tokio = { version = "0.2.25", features = ["full", "test-util"] }

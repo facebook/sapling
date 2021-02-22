@@ -20,7 +20,7 @@ use mononoke_types::MPath;
 use std::str::FromStr;
 use tests_utils::resolve_cs_id;
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_linear_get_file_history(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo = linear::getrepo(fb).await;

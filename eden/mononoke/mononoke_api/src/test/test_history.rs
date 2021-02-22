@@ -189,7 +189,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, HashMap<&'static s
     Ok((repo_ctx, changesets))
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
@@ -361,7 +361,7 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn commit_history(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;

@@ -366,7 +366,7 @@ fn create_large_to_small_commit_syncer(
     Ok(syncer)
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping()?;
@@ -506,7 +506,7 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
     bcs_id
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1))?;
@@ -576,7 +576,7 @@ fn prepare_repos_and_mapping() -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMap
     Ok((small_repo, megarepo, mapping))
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_empty_commit(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping()?;
@@ -680,7 +680,7 @@ async fn megarepo_copy_file(
     bcs_id
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
@@ -758,7 +758,7 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1))?;
@@ -887,7 +887,7 @@ fn maybe_replace_prefix(
     }
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
@@ -1067,7 +1067,7 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId 
     bcs_id
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_parent_search(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping()?;
@@ -1304,7 +1304,7 @@ async fn get_multiple_master_mapping_setup(
     ))
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), Error> {
     let (
         ctx,
@@ -1357,7 +1357,7 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Result<(), Error> {
     let (
         ctx,
@@ -1394,7 +1394,7 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Result<(), Error> {
     let (
         ctx,
@@ -1441,7 +1441,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (old_version, new_version, large_to_small_syncer) =
@@ -1548,7 +1548,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (old_version, new_version, large_to_small_syncer) =
@@ -1691,7 +1691,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (_, _, large_to_small_syncer) = prepare_commit_syncer_with_mapping_change(fb).await?;
@@ -1735,7 +1735,7 @@ async fn test_disabled_sync(fb: FacebookInit) -> Result<(), Error> {
     }
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_disabled_sync_pushrebase(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
@@ -2127,7 +2127,7 @@ async fn create_merge(
     bcs_id
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_merge_gets_version_from_parents_1(fb: FacebookInit) -> Result<(), Error> {
     let v1 = CommitSyncConfigVersion("v1".to_string());
     let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
@@ -2160,7 +2160,7 @@ async fn test_sync_merge_gets_version_from_parents_1(fb: FacebookInit) -> Result
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_merge_gets_version_from_parents_2(fb: FacebookInit) -> Result<(), Error> {
     let v2 = CommitSyncConfigVersion("v2".to_string());
     let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
@@ -2191,7 +2191,7 @@ async fn test_sync_merge_gets_version_from_parents_2(fb: FacebookInit) -> Result
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_sync_merge_fails_when_parents_have_different_versions(
     fb: FacebookInit,
 ) -> Result<(), Error> {
@@ -2314,7 +2314,7 @@ async fn test_no_accidental_preserved_roots(
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_no_accidental_preserved_roots_large_to_small(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, large_repo, mapping) = prepare_repos_and_mapping().unwrap();
@@ -2325,7 +2325,7 @@ async fn test_no_accidental_preserved_roots_large_to_small(fb: FacebookInit) -> 
     test_no_accidental_preserved_roots(ctx, commit_sync_repos, mapping).await
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_no_accidental_preserved_roots_small_to_large(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (small_repo, large_repo, mapping) = prepare_repos_and_mapping().unwrap();

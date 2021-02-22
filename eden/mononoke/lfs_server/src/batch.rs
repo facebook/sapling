@@ -864,14 +864,14 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_resolve_missing(fb: FacebookInit) -> Result<(), Error> {
         let ctx = RepositoryRequestContext::test_builder(fb)?.build()?;
         assert_eq!(resolve_internal_object(&ctx, ONES_SHA256).await?, None);
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_resolve_present(fb: FacebookInit) -> Result<(), Error> {
         let ctx = RepositoryRequestContext::test_builder(fb)?.build()?;
 
@@ -924,7 +924,7 @@ mod test {
         }
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_resolve_redacted(fb: FacebookInit) -> Result<(), Error> {
         // First, have the filestore tell us what the hash for this blob would be, so we can create
         // a new repo and redact it.

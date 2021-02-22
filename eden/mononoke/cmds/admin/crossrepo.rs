@@ -1460,8 +1460,8 @@ mod test {
 
     #[fbinit::test]
     fn test_bookmark_diff(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new()?;
-        runtime.block_on_std(test_bookmark_diff_impl(fb))
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(test_bookmark_diff_impl(fb))
     }
 
     async fn test_bookmark_diff_impl(fb: FacebookInit) -> Result<(), Error> {

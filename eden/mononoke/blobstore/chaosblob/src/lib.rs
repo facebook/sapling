@@ -175,7 +175,7 @@ mod test {
 
     use memblob::Memblob;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_error_on_write(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -196,7 +196,7 @@ mod test {
         assert!(!base_present);
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_error_on_write_with_status(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -217,7 +217,7 @@ mod test {
         assert!(!base_present);
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_error_on_read(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);

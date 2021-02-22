@@ -48,5 +48,4 @@ sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 strum = "0.19"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-compat = "0.1"
 tunables = { path = "../tunables", version = "0.1.0" }

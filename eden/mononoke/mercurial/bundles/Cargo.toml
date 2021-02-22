@@ -44,4 +44,3 @@ failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", b
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 mercurial_types-mocks = { path = "../types/mocks", version = "0.1.0" }
 partial-io = { git = "https://github.com/lukaspiatkowski/rust-partial-io", rev = "9cab8b8a2b41f2c78aa109dcba5d00212cbe43cf", features = ["quickcheck_types", "tokio"] }
-tokio-compat = "0.1"

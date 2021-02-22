@@ -100,7 +100,7 @@ async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = Arc::new(SqlBonsaiSvnrevMapping::with_sqlite_in_memory()?);

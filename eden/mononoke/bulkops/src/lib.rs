@@ -277,7 +277,7 @@ mod tests {
         .with_step(step_size)
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_fetch_all_public_changesets(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobrepo = get_test_repo(&ctx, fb).await?;
@@ -318,7 +318,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_fetch_ids_completed_bounds(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blobrepo = get_test_repo(&ctx, fb).await?;

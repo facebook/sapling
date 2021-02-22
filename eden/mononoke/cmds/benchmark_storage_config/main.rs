@@ -12,7 +12,7 @@ use std::{sync::Arc, time::Duration};
 use anyhow::{anyhow, Context, Error};
 use clap::Arg;
 use criterion::Criterion;
-use tokio_compat::runtime::Runtime;
+use tokio::runtime::Runtime;
 
 use blobrepo_factory::{get_cachelib_blobstore, Caching};
 use blobstore::Blobstore;
@@ -150,7 +150,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<(), Error> {
         let runtime = &mut runtime;
         let criterion = &mut criterion;
         move |bench: fn(&mut Criterion, CoreContext, Arc<dyn Blobstore>, &mut Runtime)| -> Result<(), Error> {
-            let blobstore = runtime.block_on_std(blobstore())?;
+            let blobstore = runtime.block_on(blobstore())?;
             bench(criterion, ctx.clone(), blobstore, runtime);
             Ok(())
         }

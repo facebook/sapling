@@ -14,7 +14,7 @@ use crate::{
     EMTPY_COMMMIT_SYNC_ALL, EMTPY_COMMMIT_SYNC_CURRENT,
 };
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_empty_configs(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
@@ -39,7 +39,7 @@ async fn test_empty_configs(fb: FacebookInit) {
     );
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_commit_sync_config_groups(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,

@@ -174,7 +174,7 @@ mod test {
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use revset::AncestorsNodeStream;
-    use tokio_compat::runtime::Runtime;
+    use tokio::runtime::Runtime;
 
     async fn fetch_manifest_by_cs_id(
         ctx: &CoreContext,
@@ -239,11 +239,11 @@ mod test {
         F: Future<Output = BlobRepo>,
     {
         let ctx = CoreContext::test_mock(fb);
-        let repo = runtime.block_on_std(repo);
+        let repo = runtime.block_on(repo);
         borrowed!(ctx, repo);
 
         runtime
-            .block_on_std(async move {
+            .block_on(async move {
                 all_commits(ctx, repo)
                     .await
                     .unwrap()

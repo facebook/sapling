@@ -179,5 +179,5 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
         res
     };
 
-    runtime.block_on_std(scrub)
+    runtime.block_on(scrub)
 }

@@ -53,7 +53,7 @@ use synced_commit_mapping::{
 use tests_utils::{
     bookmark, create_commit, list_working_copy_utf8, store_files, store_rename, CreateCommitContext,
 };
-use tokio_compat::runtime::Runtime;
+use tokio::runtime::Runtime;
 use tunables::with_tunables_async;
 
 use pretty_assertions::assert_eq;
@@ -67,7 +67,7 @@ const BRANCHMERGE_FILE: &str = "branchmerge";
 #[fbinit::test]
 fn backsync_linear(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = Runtime::new()?;
-    runtime.block_on_std(async move {
+    runtime.block_on(async move {
         let (commit_syncer, target_repo_dbs) =
             init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
         backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
@@ -81,7 +81,7 @@ fn test_sync_entries(fb: FacebookInit) -> Result<(), Error> {
     // expected, it means that two backsyncers doing the same job in parallel
 
     let mut runtime = Runtime::new()?;
-    runtime.block_on_std(async move {
+    runtime.block_on(async move {
         let (commit_syncer, target_repo_dbs) =
             init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
 
@@ -377,7 +377,7 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     // Initialize source and target repos
     let ctx = CoreContext::test_mock(fb);

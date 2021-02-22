@@ -28,7 +28,6 @@ cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 cmdlib = { path = "../cmdlib", version = "0.1.0" }
 context = { path = "../server/context", version = "0.1.0" }
 dbbookmarks = { path = "../bookmarks/dbbookmarks", version = "0.1.0" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 filestore = { path = "../filestore", version = "0.1.0" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
@@ -52,7 +51,6 @@ mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
 metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 mutable_counters = { path = "../mutable_counters", version = "0.1.0" }
-parking_lot = "0.10.2"
 pin-project = "0.4"
 reachabilityindex = { path = "../reachabilityindex", version = "0.1.0" }
 regex = "1.4.2"
@@ -79,4 +77,3 @@ memblob = { path = "../blobstore/memblob", version = "0.1.0" }
 mercurial_types-mocks = { path = "../mercurial/types/mocks", version = "0.1.0" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
 tests_utils = { path = "../tests/utils", version = "0.1.0" }
-tokio-compat = "0.1"

@@ -352,7 +352,7 @@ mod test {
         bookmark, drawdag::create_from_dag, list_working_copy_utf8, CreateCommitContext,
     };
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_find_all_commits_to_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, pre_deletion_commit, deletion_commits) = create_repo(&ctx).await?;
@@ -370,7 +370,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_find_unmerged_commits(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, pre_deletion_commit, deletion_commits) = create_repo(&ctx).await?;
@@ -455,7 +455,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_gradual_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, pre_deletion_commit, deletion_commits) = create_repo(&ctx).await?;
@@ -505,7 +505,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_gradual_merge_with_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, pre_deletion_commit, deletion_commits) = create_repo(&ctx).await?;
@@ -547,7 +547,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_stack_position(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (repo, pre_deletion_commit, deletion_commits) = create_repo(&ctx).await?;

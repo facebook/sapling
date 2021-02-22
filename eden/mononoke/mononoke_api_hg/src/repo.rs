@@ -359,7 +359,7 @@ mod tests {
 
     use crate::RepoContextHgExt;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_new_hg_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
 
@@ -373,7 +373,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_trees_under_path(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
         let blob_repo = blobrepo_factory::new_memblob_empty(None)?;

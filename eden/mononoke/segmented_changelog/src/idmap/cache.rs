@@ -289,7 +289,7 @@ mod tests {
 
     use crate::builder::SegmentedChangelogBuilder;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_no_key_colisions(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
 

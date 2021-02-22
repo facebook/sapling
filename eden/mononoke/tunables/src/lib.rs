@@ -510,7 +510,7 @@ mod test {
         assert_eq!(test.get_by_repo_repoint2("repo"), None);
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_with_tunables_async(_fb: fbinit::FacebookInit) {
         let res = with_tunables_async(
             MononokeTunables {

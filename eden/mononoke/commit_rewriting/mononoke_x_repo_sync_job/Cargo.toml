@@ -36,7 +36,6 @@ skiplist = { path = "../../reachabilityindex/skiplist", version = "0.1.0" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 synced_commit_mapping = { path = "../synced_commit_mapping", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-compat = "0.1"
 
 [dev-dependencies]
 cross_repo_sync_test_utils = { path = "../cross_repo_sync/test_utils", version = "0.1.0" }

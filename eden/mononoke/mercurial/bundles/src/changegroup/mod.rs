@@ -50,6 +50,7 @@ pub struct CgDeltaChunk {
 mod test {
     use std::io::Cursor;
 
+    use futures::compat::Future01CompatExt;
     use futures_old::{Future, Stream};
     use quickcheck::{QuickCheck, StdGen, TestResult};
     use tokio_codec::{FramedRead, FramedWrite};
@@ -141,9 +142,8 @@ mod test {
                 }
             });
 
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        let result = runtime.block_on(fut);
-        runtime.shutdown_on_idle();
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        let result = runtime.block_on(fut.compat());
         result.unwrap()
     }
 }

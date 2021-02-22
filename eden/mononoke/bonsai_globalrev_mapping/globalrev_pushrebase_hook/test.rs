@@ -32,8 +32,8 @@ use crate::GlobalrevPushrebaseHook;
 
 #[fbinit::test]
 fn pushrebase_assigns_globalrevs(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(pushrebase_assigns_globalrevs_impl(fb))
+    let mut runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(pushrebase_assigns_globalrevs_impl(fb))
 }
 
 async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Error> {
@@ -143,8 +143,8 @@ async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Erro
 
 #[fbinit::test]
 fn test_pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(pushrebase_race_assigns_monotonic_globalrevs(fb))
+    let mut runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(pushrebase_race_assigns_monotonic_globalrevs(fb))
 }
 
 async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Result<(), Error> {

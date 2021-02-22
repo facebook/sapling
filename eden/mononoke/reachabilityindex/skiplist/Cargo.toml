@@ -38,4 +38,3 @@ futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookex
 revset = { path = "../../revset", version = "0.1.0" }
 test-helpers = { path = "../test-helpers", version = "0.1.0" }
 tests_utils = { path = "../../tests/utils", version = "0.1.0" }
-tokio-compat = "0.1"

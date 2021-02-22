@@ -140,10 +140,12 @@ pub fn get_root_manifest_id(
 pub fn create_runtime(
     log_thread_name_prefix: Option<&str>,
     core_threads: Option<usize>,
-) -> io::Result<tokio_compat::runtime::Runtime> {
-    let mut builder = tokio_compat::runtime::Builder::new();
+) -> io::Result<tokio::runtime::Runtime> {
+    let mut builder = tokio::runtime::Builder::new();
+    builder.threaded_scheduler();
+    builder.enable_all();
     builder.no_coop();
-    builder.name_prefix(log_thread_name_prefix.unwrap_or("tk"));
+    builder.thread_name(log_thread_name_prefix.unwrap_or("tk"));
     if let Some(core_threads) = core_threads {
         builder.core_threads(core_threads);
     } else {
@@ -246,7 +248,7 @@ where
 /// Same as "serve_forever_async", but blocks using the provided runtime,
 /// for compatibility with existing sync code using it.
 pub fn serve_forever<Server, QuiesceFn, ShutdownFut>(
-    mut runtime: tokio_compat::runtime::Runtime,
+    mut runtime: tokio::runtime::Runtime,
     server: Server,
     logger: &Logger,
     quiesce: QuiesceFn,
@@ -259,7 +261,7 @@ where
     QuiesceFn: FnOnce(),
     ShutdownFut: Future<Output = ()>,
 {
-    runtime.block_on_std(serve_forever_async(
+    runtime.block_on(serve_forever_async(
         server,
         logger,
         quiesce,
@@ -293,7 +295,7 @@ pub fn block_execute_on_runtime<F, Out, S: Fb303Service + Sync + Send + 'static>
     logger: &Logger,
     matches: &MononokeMatches,
     service: S,
-    runtime: tokio_compat::runtime::Runtime,
+    runtime: tokio::runtime::Runtime,
 ) -> Result<Out, Error>
 where
     F: Future<Output = Result<Out, Error>>,
@@ -309,14 +311,14 @@ fn block_execute_impl<F, Out, S: Fb303Service + Sync + Send + 'static>(
     logger: &Logger,
     matches: &MononokeMatches,
     service: S,
-    mut runtime: tokio_compat::runtime::Runtime,
+    mut runtime: tokio::runtime::Runtime,
 ) -> Result<Out, Error>
 where
     F: Future<Output = Result<Out, Error>>,
 {
     monitoring::start_fb303_server(fb, app_name, logger, matches, service)?;
 
-    let result = runtime.block_on_std(async {
+    let result = runtime.block_on(async {
         #[cfg(not(test))]
         {
             let stats_agg = schedule_stats_aggregation_preview()
@@ -328,10 +330,6 @@ where
 
         future.await
     });
-
-    // Only needed while we have a compat runtime - this waits for futures without
-    // a handle to stop
-    runtime.shutdown_on_idle();
 
     // Log error in glog format (main will log, but not with glog)
     result.map_err(move |e| {

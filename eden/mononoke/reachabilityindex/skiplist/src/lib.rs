@@ -3061,7 +3061,7 @@ mod test {
         });
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_max_skips(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = Arc::new(linear::getrepo(fb).await);

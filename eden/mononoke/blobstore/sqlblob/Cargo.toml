@@ -29,4 +29,3 @@ xdb_gc_structs = { path = "../../../../configerator/structs/scm/mononoke/xdb_gc"
 
 [dev-dependencies]
 borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-tokio-compat = "0.1"

@@ -98,7 +98,7 @@ mod tests {
 
     use crate::builder::SegmentedChangelogBuilder;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_get_set_get(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
@@ -114,7 +114,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_more_than_one_repo(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?;

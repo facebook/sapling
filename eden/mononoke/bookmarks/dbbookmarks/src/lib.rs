@@ -33,9 +33,9 @@ mod test {
     use quickcheck::quickcheck;
     use sql_construct::SqlConstruct;
     use std::collections::{BTreeMap, HashSet};
-    use tokio_compat::runtime::Runtime;
+    use tokio::runtime::Runtime;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_update_kind_compatibility(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let store = SqlBookmarksBuilder::with_sqlite_in_memory()
@@ -185,7 +185,7 @@ mod test {
             .map(|(bookmark, (kind, changeset_id))| (&repo_id, bookmark, changeset_id, kind))
             .collect();
 
-        rt.block_on_std(crate::transaction::insert_bookmarks(&conn, rows.as_slice()))
+        rt.block_on(crate::transaction::insert_bookmarks(&conn, rows.as_slice()))
             .expect("insert failed");
 
         let response = store
@@ -199,7 +199,7 @@ mod test {
             )
             .try_collect::<Vec<_>>();
 
-        rt.block_on_std(response).expect("query failed")
+        rt.block_on(response).expect("query failed")
     }
 
     quickcheck! {

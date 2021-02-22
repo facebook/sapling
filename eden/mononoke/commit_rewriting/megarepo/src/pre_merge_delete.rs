@@ -79,7 +79,7 @@ mod test {
     use std::collections::HashSet;
     use tests_utils::{resolve_cs_id, CreateCommitContext};
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_create_pre_merge_delete(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -153,7 +153,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_create_pre_merge_delete_with_base(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);

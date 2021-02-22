@@ -127,6 +127,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         backfill(ctx, repo, in_filename, mode).await
     };
 
-    runtime.block_on_std(run)?;
+    runtime.block_on(run)?;
     Ok(())
 }

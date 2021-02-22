@@ -26,7 +26,7 @@ mod test {
 
                 use crate::$repo;
 
-                #[fbinit::compat_test]
+                #[fbinit::test]
                 async fn test(fb: FacebookInit) {
                     let ctx = CoreContext::test_mock(fb);
 

@@ -220,7 +220,7 @@ mod test {
 
     const PATH_REGEX: &'static str = "^(unchanged/.*|changed/.*|toremove/.*)";
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_find_files_that_needs_to_be_deleted(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = prepare_repo(&ctx).await?;
@@ -250,7 +250,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_find_changed_files_with_revert(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
@@ -292,7 +292,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_create_deletion_head_commits(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = prepare_repo(&ctx).await?;

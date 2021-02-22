@@ -953,7 +953,7 @@ mod tests {
         (graph, nodes)
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_build_derive_graph(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = merge_even::getrepo(fb).await;
@@ -1124,7 +1124,7 @@ mod tests {
         }
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_find_underived_many(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
@@ -1191,7 +1191,7 @@ mod tests {
         Ok::<_, Error>(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn multiple_independent_mappings(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;

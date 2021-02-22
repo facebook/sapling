@@ -255,7 +255,7 @@ async fn test_closest_globalrev(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mapping = Arc::new(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?);

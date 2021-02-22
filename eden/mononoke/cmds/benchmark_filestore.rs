@@ -421,11 +421,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let config_store = args::init_config_store(fb, &logger, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let mut runtime = tokio_compat::runtime::Runtime::new().map_err(Error::from)?;
+    let mut runtime = tokio::runtime::Runtime::new().map_err(Error::from)?;
 
-    let blob = runtime.block_on_std(get_blob(fb, &matches, config_store, DEFAULT_PUT_BEHAVIOUR))?;
+    let blob = runtime.block_on(get_blob(fb, &matches, config_store, DEFAULT_PUT_BEHAVIOUR))?;
 
-    runtime.block_on_std(run_benchmark_filestore(&ctx, &matches, blob))?;
+    runtime.block_on(run_benchmark_filestore(&ctx, &matches, blob))?;
 
     Ok(())
 }

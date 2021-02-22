@@ -44,7 +44,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
     Ok((repo_ctx, changesets))
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
@@ -85,7 +85,7 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;
@@ -140,7 +140,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;

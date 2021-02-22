@@ -37,4 +37,3 @@ mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
 pretty_assertions = "0.6"
 revset = { path = "../../revset", version = "0.1.0" }
 tests_utils = { path = "../../tests/utils", version = "0.1.0" }
-tokio-compat = "0.1"

@@ -104,7 +104,7 @@ mod test {
     use crate::InMemoryFileContentManager;
     use fbinit::FacebookInit;
     use mononoke_types_mocks::contentid::ONES_CTID;
-    use tokio_compat::runtime::Runtime;
+    use tokio::runtime::Runtime;
 
     #[fbinit::test]
     fn test_acceptable_file(fb: FacebookInit) {
@@ -115,13 +115,9 @@ mod test {
         inner.insert(ONES_CTID, "foobar");
 
         let store = TextOnlyFileContentManager::new(inner, 10);
-        let ret = rt
-            .block_on_std(store.get_file_text(&ctx, ONES_CTID))
-            .unwrap();
+        let ret = rt.block_on(store.get_file_text(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, Some("foobar".into()));
-        let ret = rt
-            .block_on_std(store.get_file_size(&ctx, ONES_CTID))
-            .unwrap();
+        let ret = rt.block_on(store.get_file_size(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, 6);
     }
 
@@ -134,14 +130,10 @@ mod test {
         inner.insert(ONES_CTID, "foobar");
 
         let store = TextOnlyFileContentManager::new(inner, 2);
-        let ret = rt
-            .block_on_std(store.get_file_text(&ctx, ONES_CTID))
-            .unwrap();
+        let ret = rt.block_on(store.get_file_text(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, None);
 
-        let ret = rt
-            .block_on_std(store.get_file_size(&ctx, ONES_CTID))
-            .unwrap();
+        let ret = rt.block_on(store.get_file_size(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, 6);
     }
 
@@ -154,13 +146,9 @@ mod test {
         inner.insert(ONES_CTID, "foo\0");
 
         let store = TextOnlyFileContentManager::new(inner, 10);
-        let ret = rt
-            .block_on_std(store.get_file_text(&ctx, ONES_CTID))
-            .unwrap();
+        let ret = rt.block_on(store.get_file_text(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, None);
-        let ret = rt
-            .block_on_std(store.get_file_size(&ctx, ONES_CTID))
-            .unwrap();
+        let ret = rt.block_on(store.get_file_size(&ctx, ONES_CTID)).unwrap();
         assert_eq!(ret, 4);
     }
 }

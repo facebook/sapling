@@ -1462,7 +1462,7 @@ mod tests {
     use fixtures::{linear, merge_even};
     use std::str::FromStr;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_try_find_child(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = Repo::new_test(ctx.clone(), linear::getrepo(fb).await).await?;
@@ -1489,7 +1489,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_try_find_child_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = Repo::new_test(ctx.clone(), merge_even::getrepo(fb).await).await?;

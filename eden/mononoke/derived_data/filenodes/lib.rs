@@ -527,8 +527,8 @@ mod tests {
 
     #[fbinit::test]
     fn generate_filenodes_simple(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new()?;
-        runtime.block_on_std(test_generate_filenodes_simple(fb))
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(test_generate_filenodes_simple(fb))
     }
 
     async fn test_generate_filenodes_merge(fb: FacebookInit) -> Result<(), Error> {
@@ -556,8 +556,8 @@ mod tests {
 
     #[fbinit::test]
     fn generate_filenodes_merge(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new()?;
-        runtime.block_on_std(test_generate_filenodes_merge(fb))
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(test_generate_filenodes_merge(fb))
     }
 
     async fn test_generate_type_change(fb: FacebookInit) -> Result<(), Error> {
@@ -581,8 +581,8 @@ mod tests {
 
     #[fbinit::test]
     fn generate_filenodes_type_change(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new()?;
-        runtime.block_on_std(test_generate_type_change(fb))
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(test_generate_type_change(fb))
     }
 
     async fn test_many_parents(fb: FacebookInit) -> Result<(), Error> {
@@ -622,8 +622,8 @@ mod tests {
 
     #[fbinit::test]
     fn many_parents(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new()?;
-        runtime.block_on_std(test_many_parents(fb))
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(test_many_parents(fb))
     }
 
     async fn test_derive_empty_commits(fb: FacebookInit) -> Result<(), Error> {
@@ -649,8 +649,8 @@ mod tests {
 
     #[fbinit::test]
     fn derive_empty_commits(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new()?;
-        runtime.block_on_std(test_derive_empty_commits(fb))
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(test_derive_empty_commits(fb))
     }
 
     async fn test_derive_only_empty_commits(fb: FacebookInit) -> Result<(), Error> {
@@ -675,8 +675,8 @@ mod tests {
 
     #[fbinit::test]
     fn derive_only_empty_commits(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new()?;
-        runtime.block_on_std(test_derive_only_empty_commits(fb))
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(test_derive_only_empty_commits(fb))
     }
 
     #[fbinit::test]
@@ -685,8 +685,8 @@ mod tests {
         tunables.update_bools(&hashmap! {"filenodes_disabled".to_string() => true});
 
         with_tunables(tunables, || {
-            let mut runtime = tokio_compat::runtime::Runtime::new()?;
-            runtime.block_on_std(test_derive_disabled_filenodes(fb))
+            let mut runtime = tokio::runtime::Runtime::new()?;
+            runtime.block_on(test_derive_disabled_filenodes(fb))
         })
     }
 

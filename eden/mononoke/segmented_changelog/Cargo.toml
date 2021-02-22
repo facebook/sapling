@@ -44,4 +44,3 @@ mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
 phases = { path = "../phases", version = "0.1.0" }
 revset = { path = "../revset", version = "0.1.0" }
 tests_utils = { path = "../tests/utils", version = "0.1.0" }
-tokio-compat = "0.1"

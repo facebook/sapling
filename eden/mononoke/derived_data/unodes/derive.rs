@@ -401,7 +401,7 @@ mod tests {
     use std::collections::{HashSet, VecDeque};
     use tests_utils::{resolve_cs_id, CreateCommitContext};
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn linear_test(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -485,7 +485,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_same_content_different_paths(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -532,7 +532,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_same_content_no_change(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -669,12 +669,12 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
         diamond_merge_unodes_v2(fb).await
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_parent_order(fb: FacebookInit) -> Result<(), Error> {
         let repo = new_memblob_empty(None).unwrap();
         let ctx = CoreContext::test_mock(fb);

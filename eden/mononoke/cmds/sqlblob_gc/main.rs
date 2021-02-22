@@ -169,7 +169,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = BlobstoreOptions::default();
 
-    runtime.block_on_std(async move {
+    runtime.block_on(async move {
         let blobstore = make_sql_blobstore(
             fb,
             blobstore_config,

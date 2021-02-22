@@ -75,7 +75,7 @@ async fn is_public(
     Ok(public.contains(&csid))
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
     let repo = linear::getrepo(fb).await;
     //  @  79a13814c5ce7330173ec04d279bf95ab3f652fb
@@ -223,7 +223,7 @@ async fn get_phase_hint_test(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
     let repo = fixtures::branch_even::getrepo(fb).await;
     // @  4f7f3fd428bec1a48f9314414b063c706d9c1aed (6)

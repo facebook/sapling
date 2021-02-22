@@ -763,7 +763,7 @@ mod tests {
 
     const TEST_LOOP_SLEEP: Duration = Duration::from_millis(1);
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -787,7 +787,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_find_derived(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let repo = repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
@@ -839,7 +839,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_a_lot_of_moves(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -869,7 +869,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_derived_right_after_threshold(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -906,7 +906,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_spawn_bookmarks_coordinator_simple(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -958,7 +958,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_single_bookmarks_coordinator_many_updates(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -1045,7 +1045,7 @@ mod tests {
         res
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_spawn_bookmarks_coordinator_failing_warmer(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -1158,7 +1158,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_spawn_bookmarks_coordinator_check_single_updater(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -1252,7 +1252,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_spawn_bookmarks_coordinator_with_publishing_bookmarks(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -1319,7 +1319,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_blobimport_warmer(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -1380,7 +1380,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_single_bookmarks_no_history(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);

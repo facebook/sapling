@@ -406,7 +406,7 @@ mod test {
         Ok(kind)
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_prepare_blob(fb: FacebookInit) -> Result<(), Error> {
         let repo = blobrepo_factory::new_memblob_empty(None)?;
         let blob = roundtrip_blob(fb, &repo, "foo", Some(3)).await?;
@@ -414,7 +414,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_prepare_blob_chunked(fb: FacebookInit) -> Result<(), Error> {
         let repo = blobrepo_factory::new_memblob_empty(None)?.dangerous_override(
             |mut config: FilestoreConfig| {
@@ -428,7 +428,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_prepare_blob_lfs(fb: FacebookInit) -> Result<(), Error> {
         let repo = blobrepo_factory::new_memblob_empty(None)?;
         let blob = roundtrip_blob(fb, &repo, "foo", Some(2)).await?;

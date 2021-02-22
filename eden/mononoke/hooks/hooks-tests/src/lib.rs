@@ -937,7 +937,7 @@ fn test_file_hook_length(fb: FacebookInit) {
     });
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     // set up a blobrepo
@@ -1028,7 +1028,7 @@ async fn test_cs_find_content_hook_with_blob_store(fb: FacebookInit) -> Result<(
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     // set up a blobrepo
@@ -1085,7 +1085,7 @@ async fn test_cs_file_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_cs_latest_changes_hook_with_blob_store(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     // set up a blobrepo

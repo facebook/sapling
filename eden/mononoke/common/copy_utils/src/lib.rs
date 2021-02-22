@@ -319,7 +319,7 @@ mod test {
     use mononoke_types::RepositoryId;
     use tests_utils::{list_working_copy_utf8, CreateCommitContext};
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_list_directory(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
@@ -340,7 +340,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_rsync_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
@@ -384,7 +384,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_rsync_with_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
@@ -462,7 +462,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_rsync_with_excludes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
@@ -513,7 +513,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_rsync_with_file_size_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
@@ -593,7 +593,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_rsync_with_file_size_limit_and_lfs_threshold(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -642,7 +642,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_rsync_with_overwrite(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
@@ -730,7 +730,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_delete_excessive_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
@@ -767,7 +767,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_delete_excessive_files_xrepo(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let source_repo = new_memblob_empty_with_id(None, RepositoryId::new(0))?;
@@ -809,7 +809,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_xrepo_rsync_with_overwrite(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let source_repo = new_memblob_empty_with_id(None, RepositoryId::new(0))?;

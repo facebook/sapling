@@ -830,8 +830,8 @@ mod test {
 
     #[fbinit::test]
     fn test_bookmark_diff_with_renamer(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new()?;
-        runtime.block_on_std(test_bookmark_diff_with_renamer_impl(fb))
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(test_bookmark_diff_with_renamer_impl(fb))
     }
 
     async fn test_bookmark_diff_with_renamer_impl(fb: FacebookInit) -> Result<(), Error> {
@@ -872,8 +872,8 @@ mod test {
 
     #[fbinit::test]
     fn test_bookmark_small_to_large(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new()?;
-        runtime.block_on_std(test_bookmark_small_to_large_impl(fb))
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(test_bookmark_small_to_large_impl(fb))
     }
 
     async fn test_bookmark_small_to_large_impl(fb: FacebookInit) -> Result<(), Error> {
@@ -901,8 +901,8 @@ mod test {
 
     #[fbinit::test]
     fn test_bookmark_no_sync_outcome(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new()?;
-        runtime.block_on_std(test_bookmark_no_sync_outcome_impl(fb))
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        runtime.block_on(test_bookmark_no_sync_outcome_impl(fb))
     }
 
     async fn test_bookmark_no_sync_outcome_impl(fb: FacebookInit) -> Result<(), Error> {
@@ -935,7 +935,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_verify_working_copy(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let source = blobrepo_factory::new_memblob_empty(None)?;
@@ -971,7 +971,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_verify_working_copy_with_prefixes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let source = blobrepo_factory::new_memblob_empty(None)?;
@@ -1025,7 +1025,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_verify_working_copy_fast_path(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let source = blobrepo_factory::new_memblob_empty(None)?;

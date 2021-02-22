@@ -169,7 +169,7 @@ mod test {
     use mononoke_types::FileType;
     use tests_utils::CreateCommitContext;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::TestRepoBuilder::new().build()?;
@@ -230,7 +230,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_merge(fb: FacebookInit) -> Result<(), Error> {
         let repo = blobrepo_factory::TestRepoBuilder::new().build()?;
         let ctx = CoreContext::test_mock(fb);
@@ -290,7 +290,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_replace_dir_with_file(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -329,7 +329,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_delete_file(fb: FacebookInit) -> Result<(), Error> {
         let repo = blobrepo_factory::TestRepoBuilder::new().build()?;
         let ctx = CoreContext::test_mock(fb);
@@ -362,7 +362,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_split_batch_in_linear_stacks_add_same_file(
         fb: FacebookInit,
     ) -> Result<(), Error> {

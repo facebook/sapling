@@ -20,7 +20,7 @@ use context::CoreContext;
 use failure_ext::DisplayChain;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Stream01CompatExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
@@ -117,7 +117,7 @@ fn subcommand_round_trip(
 ) -> Result<()> {
     args::init_cachelib(ctx.fb, matches);
     let mut runtime = args::init_runtime(matches)?;
-    let repo = runtime.block_on_std(args::open_repo(ctx.fb, &logger, matches))?;
+    let repo = runtime.block_on(args::open_repo(ctx.fb, &logger, matches))?;
 
     let config = config::get_config(matches).expect("getting configuration failed");
     let start_points = get_start_points(sub_m);
@@ -234,7 +234,7 @@ fn subcommand_round_trip(
             .collect()
     });
 
-    let _ = runtime.block_on(verify_fut);
+    let _ = runtime.block_on(verify_fut.compat());
 
     let end_points: Vec<_> = end_receiver.into_iter().collect();
     process::exit(summarize(
@@ -408,5 +408,5 @@ fn subcommmand_hg_manifest_verify(
     };
 
     let mut runtime = args::init_runtime(&matches)?;
-    runtime.block_on_std(run)
+    runtime.block_on(run)
 }

@@ -21,7 +21,7 @@ use crate::{
     MononokePath, RepoWriteContext,
 };
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn create_commit(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
@@ -78,7 +78,7 @@ async fn create_commit(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(

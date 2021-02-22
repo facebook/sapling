@@ -14,10 +14,10 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use assert_matches::assert_matches;
-use futures::{stream::BoxStream, TryStreamExt};
+use futures::{compat::Future01CompatExt, stream::BoxStream, TryStreamExt};
 use futures_old::stream::Stream;
 use futures_old::stream::{self, Stream as OldStream};
-use tokio_compat::runtime::Runtime;
+use tokio::runtime::Runtime;
 use tokio_io::AsyncRead;
 
 use crate::parts::phases_part;
@@ -126,13 +126,13 @@ fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
     let encode_fut = builder.build();
 
     let mut runtime = Runtime::new().unwrap();
-    let mut buf = runtime.block_on(encode_fut).unwrap();
+    let mut buf = runtime.block_on(encode_fut.compat()).unwrap();
     buf.set_position(0);
 
     // Now decode it.
     let logger = Logger::root(Discard, o!());
     let stream = Bundle2Stream::new(logger, buf);
-    let (item, stream) = runtime.block_on(stream.into_future()).unwrap();
+    let (item, stream) = runtime.block_on(stream.into_future().compat()).unwrap();
 
     let mut mparams = HashMap::new();
     let mut aparams = HashMap::new();
@@ -149,10 +149,10 @@ fn empty_bundle_roundtrip(ct: Option<CompressorType>) {
         Some(StreamEvent::Next(Bundle2Item::Start(ref header))) if header == &expected_header
     );
 
-    let (item, stream) = runtime.block_on(stream.into_future()).unwrap();
+    let (item, stream) = runtime.block_on(stream.into_future().compat()).unwrap();
     assert_matches!(item, Some(StreamEvent::Done(_)));
 
-    let (item, _stream) = runtime.block_on(stream.into_future()).unwrap();
+    let (item, _stream) = runtime.block_on(stream.into_future().compat()).unwrap();
     assert!(item.is_none());
 }
 
@@ -181,7 +181,10 @@ fn test_phases_part_encording(fb: FacebookInit) {
     let part = phases_part(ctx, phases_entries).unwrap();
     builder.add_part(part);
 
-    let mut cursor = Runtime::new().unwrap().block_on(builder.build()).unwrap();
+    let mut cursor = Runtime::new()
+        .unwrap()
+        .block_on(builder.build().compat())
+        .unwrap();
     cursor.set_position(0);
     let buf = cursor.fill_buf().unwrap();
 
@@ -220,7 +223,7 @@ fn unknown_part(ct: Option<CompressorType>) {
     let encode_fut = builder.build();
 
     let mut runtime = Runtime::new().unwrap();
-    let mut buf = runtime.block_on(encode_fut).unwrap();
+    let mut buf = runtime.block_on(encode_fut.compat()).unwrap();
     buf.set_position(0);
 
     let logger = Logger::root(Discard, o!());
@@ -230,7 +233,7 @@ fn unknown_part(ct: Option<CompressorType>) {
     let decode_fut = stream
         .map_err(|e| -> () { panic!("unexpected error: {:?}", e) })
         .forward(parts);
-    let (stream, parts) = runtime.block_on(decode_fut).unwrap();
+    let (stream, parts) = runtime.block_on(decode_fut.compat()).unwrap();
 
     // Only the stream header should have been returned.
     let mut m_stream_params = HashMap::new();
@@ -456,7 +459,7 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
         match res {
             Some(StreamEvent::Next(Bundle2Item::Changegroup(_, cg2s))) => {
                 runtime
-                    .block_on(cg2s.compat().for_each(|_| Ok(())))
+                    .block_on(cg2s.compat().for_each(|_| Ok(())).compat())
                     .unwrap();
             }
             bad => panic!("Unexpected Bundle2Item: {:?}", bad),
@@ -600,7 +603,7 @@ fn parse_stream_start<R: AsyncRead + BufRead + 'static + Send>(
 
     let logger = Logger::root(Discard, o!());
     let stream = Bundle2Stream::new(logger, reader);
-    match runtime.block_on(stream.into_future()) {
+    match runtime.block_on(stream.into_future().compat()) {
         Ok((item, stream)) => {
             let stream_start = item.unwrap();
             assert_eq!(stream_start.into_next().unwrap().unwrap_start(), expected);
@@ -643,7 +646,7 @@ impl RuntimeExt for Runtime {
         <S as OldStream>::Item: Send,
         <S as OldStream>::Error: Debug + Send,
     {
-        match self.block_on(stream.into_future()) {
+        match self.block_on(stream.into_future().compat()) {
             Ok((res, stream)) => (res, stream),
             Err((e, _)) => {
                 panic!("stream failed to produce the next value! {:?}", e);

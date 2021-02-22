@@ -10,7 +10,8 @@
 use anyhow::{Error, Result};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::Future;
+use futures::compat::Future01CompatExt;
+use futures_old::Future;
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use sql_construct::SqlConstruct;
@@ -19,17 +20,17 @@ fn create_db() -> SqlMutableCounters {
     SqlMutableCounters::with_sqlite_in_memory().unwrap()
 }
 
-fn run_future<F, I>(runtime: &mut tokio_compat::runtime::Runtime, future: F) -> Result<I>
+fn run_future<F, I>(runtime: &mut tokio::runtime::Runtime, future: F) -> Result<I>
 where
     F: Future<Item = I, Error = Error> + Send + 'static,
     I: Send + 'static,
 {
-    runtime.block_on(future)
+    runtime.block_on(future.compat())
 }
 
 #[fbinit::test]
 fn test_counter_simple(fb: FacebookInit) {
-    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
     let ctx = CoreContext::test_mock(fb);
     let mutable_counters = create_db();
@@ -87,7 +88,7 @@ fn test_counter_simple(fb: FacebookInit) {
 
 #[fbinit::test]
 fn test_counter_conditional_update(fb: FacebookInit) {
-    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
+    let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
     let ctx = CoreContext::test_mock(fb);
     let mutable_counters = create_db();

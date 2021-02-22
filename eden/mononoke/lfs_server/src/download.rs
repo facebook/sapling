@@ -154,7 +154,7 @@ mod test {
     use mononoke_types_mocks::contentid::ONES_CTID;
     use redactedblobstore::RedactedMetadata;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_redacted_fetch(fb: FacebookInit) -> Result<(), Error> {
         let content_id = ONES_CTID;
         let reason = "test reason";

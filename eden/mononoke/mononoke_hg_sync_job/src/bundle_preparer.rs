@@ -569,7 +569,7 @@ mod test {
     use skiplist::SkiplistIndex;
     use tests_utils::drawdag::create_from_dag;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_split_in_batches_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
@@ -605,7 +605,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_split_in_batches_all_in_one_batch(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
@@ -642,7 +642,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_split_in_batches_different_bookmarks(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
@@ -694,7 +694,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_split_in_batches_non_forward_move(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
@@ -741,7 +741,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_split_in_batches_weird_move(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;

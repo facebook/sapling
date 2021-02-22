@@ -197,7 +197,7 @@ mod test {
     use assert_matches::assert_matches;
     use futures::stream;
     use quickcheck::quickcheck;
-    use tokio_compat::runtime::Runtime;
+    use tokio::runtime::Runtime;
 
     #[test]
     fn test_make_chunks_no_chunk_size() {
@@ -434,7 +434,7 @@ mod test {
         fn check_chunk_stream(in_chunks: Vec<Vec<u8>>, size: usize) -> bool {
             let size = size + 1; // Don't allow 0 as the size.
             let mut rt = Runtime::new().unwrap();
-            rt.block_on_std(do_check_chunk_stream(in_chunks, size))
+            rt.block_on(do_check_chunk_stream(in_chunks, size))
         }
 
         fn check_make_chunks_fut_joins(in_chunks: Vec<Vec<u8>>) -> bool {
@@ -455,7 +455,7 @@ mod test {
                 c => panic!("Did not expect {:?}", c),
             };
 
-            let out_bytes = rt.block_on_std(fut).unwrap();
+            let out_bytes = rt.block_on(fut).unwrap();
             out_bytes == expected_bytes
         }
     }

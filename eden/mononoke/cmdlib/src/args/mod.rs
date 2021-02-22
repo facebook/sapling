@@ -299,7 +299,7 @@ impl<'a> MononokeMatches<'a> {
     pub fn init_mononoke(
         &'a self,
         fb: FacebookInit,
-    ) -> Result<(Caching, Logger, tokio_compat::runtime::Runtime)> {
+    ) -> Result<(Caching, Logger, tokio::runtime::Runtime)> {
         init_mononoke_with_cache_settings(fb, self, self.app_data.cachelib_settings.clone())
     }
 
@@ -2023,7 +2023,7 @@ pub fn parse_disabled_hooks_no_repo_prefix<'a>(
 pub fn init_mononoke<'a>(
     fb: FacebookInit,
     matches: &'a MononokeMatches<'a>,
-) -> Result<(Caching, Logger, tokio_compat::runtime::Runtime)> {
+) -> Result<(Caching, Logger, tokio::runtime::Runtime)> {
     init_mononoke_with_cache_settings(fb, matches, CachelibSettings::default())
 }
 
@@ -2032,7 +2032,7 @@ fn init_mononoke_with_cache_settings<'a>(
     fb: FacebookInit,
     matches: &'a MononokeMatches<'a>,
     cachelib_settings: CachelibSettings,
-) -> Result<(Caching, Logger, tokio_compat::runtime::Runtime)> {
+) -> Result<(Caching, Logger, tokio::runtime::Runtime)> {
     let logger = init_logging(fb, matches)?;
 
     debug!(logger, "Initialising cachelib...");
@@ -2064,8 +2064,8 @@ pub fn init_tunables<'a>(
 
     init_tunables_worker(logger, config_handle)
 }
-/// Initialize a new `tokio_compat::runtime::Runtime` with thread number parsed from the CLI
-pub fn init_runtime(matches: &MononokeMatches) -> io::Result<tokio_compat::runtime::Runtime> {
+/// Initialize a new `tokio::runtime::Runtime` with thread number parsed from the CLI
+pub fn init_runtime(matches: &MononokeMatches) -> io::Result<tokio::runtime::Runtime> {
     let core_threads = get_usize_opt(matches, RUNTIME_THREADS);
     create_runtime(None, core_threads)
 }

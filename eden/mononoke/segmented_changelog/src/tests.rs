@@ -78,7 +78,7 @@ pub async fn new_build_all_from_blobrepo(
     Ok(dag)
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_iddag_save_store(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
@@ -116,7 +116,7 @@ async fn test_iddag_save_store(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_build_idmap(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     validate_build_idmap(
@@ -166,7 +166,7 @@ async fn validate_location_to_changeset_ids(
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     validate_location_to_changeset_ids(
@@ -203,7 +203,7 @@ async fn test_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_location_to_changeset_id_invalid_req(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = unshared_merge_even::getrepo(fb).await;
@@ -269,7 +269,7 @@ async fn validate_changeset_id_to_location(
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_dag_chanset_id_to_location(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     validate_changeset_id_to_location(
@@ -320,7 +320,7 @@ async fn test_dag_chanset_id_to_location(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_dag_chanset_id_to_location_random_hash(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
@@ -341,7 +341,7 @@ async fn test_dag_chanset_id_to_location_random_hash(fb: FacebookInit) -> Result
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -383,7 +383,7 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_build_calls_together(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
@@ -415,7 +415,7 @@ async fn test_build_calls_together(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_two_repo_dags(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -450,7 +450,7 @@ async fn test_two_repo_dags(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
@@ -473,7 +473,7 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<()> {
     // In this test we first build a dag from scratch and then we reuse the idmap in an ondemand
     // dag that starts off with an empty iddag.
@@ -512,7 +512,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_clone_data(fb: FacebookInit) -> Result<()> {
     // In this test we first build a dag from scratch and then we reuse the idmap in an ondemand
     // dag that starts off with an empty iddag.
@@ -540,7 +540,7 @@ async fn test_clone_data(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_full_idmap_clone_data(fb: FacebookInit) -> Result<()> {
     // In this test we first build a dag from scratch and then we reuse the idmap in an ondemand
     // dag that starts off with an empty iddag.
@@ -559,7 +559,7 @@ async fn test_full_idmap_clone_data(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_caching(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;

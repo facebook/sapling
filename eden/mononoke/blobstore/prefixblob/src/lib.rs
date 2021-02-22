@@ -109,7 +109,7 @@ mod test {
 
     use memblob::Memblob;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_prefix(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);

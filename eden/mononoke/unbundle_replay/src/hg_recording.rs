@@ -255,7 +255,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_next_entry_by_id(fb: FacebookInit) -> Result<(), Error> {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);
@@ -272,7 +272,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_no_entry_by_id(fb: FacebookInit) -> Result<(), Error> {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);
@@ -281,7 +281,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_excluded_entry_by_id(fb: FacebookInit) -> Result<(), Error> {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);
@@ -292,7 +292,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_error_entry_by_id(fb: FacebookInit) -> Result<(), Error> {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);
@@ -306,7 +306,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_conflict_entry_by_id(fb: FacebookInit) -> Result<(), Error> {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);
@@ -320,7 +320,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_select_onto(fb: FacebookInit) -> Result<(), Error> {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);
@@ -339,7 +339,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_error_entry_onto(fb: FacebookInit) -> Result<(), Error> {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);
@@ -361,7 +361,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_conflict_entry_onto(fb: FacebookInit) -> Result<(), Error> {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);

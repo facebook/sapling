@@ -105,14 +105,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let (_, logger, mut rt) = args::init_mononoke(fb, &matches)?;
 
     let repo_fut = args::open_repo(fb, &logger, &matches);
-    let repo = rt.block_on_std(repo_fut).unwrap();
+    let repo = rt.block_on(repo_fut).unwrap();
 
     let ctx = CoreContext::test_mock(fb);
 
     let inputfile = matches.value_of("file").expect("input file is not set");
     let inputfile = File::open(inputfile).expect("cannot open input file");
     let file = BufReader::new(&inputfile);
-    rt.block_on_std(
+    rt.block_on(
         regenerate_all_manifests(
             ctx,
             repo,

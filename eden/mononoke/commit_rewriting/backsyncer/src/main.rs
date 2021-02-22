@@ -260,7 +260,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let commit_syncer = {
         let scuba_sample = MononokeScubaSampleBuilder::with_discard();
         let ctx = session_container.new_context(logger.clone(), scuba_sample);
-        runtime.block_on_std(create_commit_syncer_from_matches(&ctx, &matches))?
+        runtime.block_on(create_commit_syncer_from_matches(&ctx, &matches))?
     };
 
     let mysql_options = args::parse_mysql_options(&matches);
@@ -279,7 +279,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let scuba_sample = MononokeScubaSampleBuilder::with_discard();
             let ctx = session_container.new_context(logger.clone(), scuba_sample);
             let db_config = target_repo_config.storage_config.metadata;
-            let target_repo_dbs = runtime.block_on_std(
+            let target_repo_dbs = runtime.block_on(
                 open_backsyncer_dbs(
                     ctx.clone(),
                     commit_syncer.get_target_repo().clone(),
@@ -291,7 +291,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             )?;
 
             // TODO(ikostia): why do we use discarding ScubaSample for BACKSYNC_ALL?
-            runtime.block_on_std(
+            runtime.block_on(
                 backsync_latest(ctx, commit_syncer, target_repo_dbs, BacksyncLimit::NoLimit)
                     .boxed(),
             )?;
@@ -300,7 +300,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let db_config = target_repo_config.storage_config.metadata;
             let ctx = session_container
                 .new_context(logger.clone(), MononokeScubaSampleBuilder::with_discard());
-            let target_repo_dbs = runtime.block_on_std(
+            let target_repo_dbs = runtime.block_on(
                 open_backsyncer_dbs(
                     ctx,
                     commit_syncer.get_target_repo().clone(),
@@ -337,7 +337,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 &matches,
                 monitoring::AliveService,
             )?;
-            runtime.block_on_std(f)?;
+            runtime.block_on(f)?;
         }
         (ARG_MODE_BACKSYNC_COMMITS, Some(sub_m)) => {
             let ctx =
@@ -417,7 +417,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         })
                 });
 
-            runtime.block_on_std(f)?;
+            runtime.block_on(f)?;
         }
         _ => {
             bail!("unknown subcommand");

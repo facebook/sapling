@@ -39,4 +39,3 @@ mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 sqlblob = { path = "sqlblob", version = "0.1.0" }
 tempdir = "0.3"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-compat = "0.1"

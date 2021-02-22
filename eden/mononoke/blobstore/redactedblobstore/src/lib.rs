@@ -232,7 +232,7 @@ mod test {
     use memblob::Memblob;
     use prefixblob::PrefixBlobstore;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_redacted_key(fb: FacebookInit) {
         let unredacted_key = "foo";
         let redacted_key = "bar";
@@ -294,7 +294,7 @@ mod test {
         assert!(res.is_ok(), "the key should be found and available");
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_log_only_redacted_key(fb: FacebookInit) -> Result<()> {
         let redacted_log_only_key = "bar";
         let redacted_task = "bar task";

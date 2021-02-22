@@ -20,4 +20,3 @@ blobrepo = { path = "../blobrepo", version = "0.1.0" }
 bookmarks = { path = "../bookmarks", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 fixtures = { path = "../tests/fixtures", version = "0.1.0" }
-tokio-compat = "0.1"

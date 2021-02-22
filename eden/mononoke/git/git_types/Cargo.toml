@@ -30,4 +30,4 @@ fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
 futures-util = "0.3.7"
 git2 = "0.13"
 tempdir = "0.3"
-tokio-compat = "0.1"
+tokio = { version = "0.2.25", features = ["full", "test-util"] }

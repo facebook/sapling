@@ -29,7 +29,7 @@ use mononoke_types::ChangesetId;
 use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
 use std::sync::Arc;
-use tokio_compat::runtime::Runtime;
+use tokio::runtime::Runtime;
 use unodes::RootUnodeManifestId;
 
 const HG_CHANGESET_TYPE: &str = "hg-changeset";
@@ -184,5 +184,5 @@ fn main(fb: FacebookInit) -> Result<()> {
     let derive = derive_fn(ctx.clone(), repo.clone(), matches.value_of(ARG_TYPE))?;
 
     let mut runtime = Runtime::new()?;
-    runtime.block_on_std(run(ctx, repo, seed, stack_size, derive))
+    runtime.block_on(run(ctx, repo, seed, stack_size, derive))
 }

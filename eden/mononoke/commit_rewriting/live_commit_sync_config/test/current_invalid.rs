@@ -121,7 +121,7 @@ const CURRENT_COMMIT_SYNC_CONFIG_INVALID_SMALL_IN_ONE_LARGE_IN_OTHER: &str = r#"
     }
 }"#;
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_unknown_repo(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
@@ -140,7 +140,7 @@ async fn test_unknown_repo(fb: FacebookInit) {
     ));
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_large_repo_part_of_multiple_configs(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
@@ -158,7 +158,7 @@ async fn test_large_repo_part_of_multiple_configs(fb: FacebookInit) {
     ));
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_small_repo_part_of_multiple_configs(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
@@ -176,7 +176,7 @@ async fn test_small_repo_part_of_multiple_configs(fb: FacebookInit) {
     ));
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_repo_is_small_in_one_config_and_large_in_the_other(fb: FacebookInit) {
     let (ctx, _test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,

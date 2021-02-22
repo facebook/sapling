@@ -59,7 +59,7 @@ const CURRENT_COMMIT_SYNC_CONFIG_V2: &str = r#"{
     }
 }"#;
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_changing_commit_sync_config(fb: FacebookInit) {
     let (ctx, test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,

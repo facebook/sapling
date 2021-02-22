@@ -357,22 +357,22 @@ async fn caching<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
     assert_eq!(gets.load(Ordering::Relaxed), 2);
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_add_and_get(fb: FacebookInit) {
     add_and_get(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap()).await;
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_missing(fb: FacebookInit) {
     missing(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap()).await;
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_caching(fb: FacebookInit) {
     caching(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap()).await;
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_get_many_hg_by_prefix(fb: FacebookInit) {
     get_many_hg_by_prefix(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap()).await;
 }

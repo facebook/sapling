@@ -28,4 +28,3 @@ maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
 tests_utils = { path = "../../tests/utils", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-compat = "0.1"

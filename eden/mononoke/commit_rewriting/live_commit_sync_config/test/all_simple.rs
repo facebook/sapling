@@ -89,7 +89,7 @@ const ALL_COMMIT_SYNC_CONFIG_V1: &str = r#"{
     }
 }"#;
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_different_repos_same_group(fb: FacebookInit) {
     let (_ctx, _test_source, _store, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(
@@ -132,7 +132,7 @@ async fn test_different_repos_same_group(fb: FacebookInit) {
     assert_ne!(av0, av3);
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_version_counts(fb: FacebookInit) {
     let (_ctx, _test_source, _store, live_commit_sync_config) =
         get_ctx_source_store_and_live_config(

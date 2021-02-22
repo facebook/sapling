@@ -230,7 +230,7 @@ const ALL_COMMIT_SYNC_CONFIG_V3: &str = r#"{
     }
 }"#;
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_adding_a_new_version(fb: FacebookInit) {
     let (_ctx, test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,
@@ -310,7 +310,7 @@ async fn test_adding_a_new_version(fb: FacebookInit) {
     assert!(av3.contains_key(&vr31));
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_query_by_version_name(fb: FacebookInit) {
     let (_ctx, test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,

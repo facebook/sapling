@@ -858,12 +858,12 @@ async fn caching_shared<C: Changesets + 'static>(
 // CachingChangesets.
 macro_rules! testify {
     ($plain_name: ident, $caching_name: ident, $input: ident) => {
-        #[fbinit::compat_test]
+        #[fbinit::test]
         async fn $plain_name(fb: FacebookInit) -> Result<(), Error> {
             run_test(fb, $input).await
         }
 
-        #[fbinit::compat_test]
+        #[fbinit::test]
         async fn $caching_name(fb: FacebookInit) -> Result<(), Error> {
             run_caching_test(fb, $input).await
         }
@@ -896,12 +896,12 @@ testify!(
     get_many_missing
 );
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_caching_fill(fb: FacebookInit) -> Result<(), Error> {
     run_test(fb, caching_fill).await
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_caching_shared(fb: FacebookInit) -> Result<(), Error> {
     run_test(fb, caching_shared).await
 }

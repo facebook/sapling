@@ -15,7 +15,7 @@ use futures::{
     future,
     stream::{Stream, StreamExt, TryStreamExt},
 };
-use tokio_compat::runtime::Runtime;
+use tokio::runtime::Runtime;
 
 use bulkops::{Direction, PublicChangesetBulkFetch, MAX_FETCH_STEP};
 use cmdlib::args;
@@ -56,7 +56,7 @@ pub fn bench_stream<'a, F, S, O, E>(
                             .await
                             .expect("no stream errors");
                     };
-                    b.iter(|| runtime.block_on_std(async { test().await }));
+                    b.iter(|| runtime.block_on(async { test().await }));
                 },
             );
         }
@@ -119,7 +119,7 @@ fn main(fb: fbinit::FacebookInit) {
 
     let setup = {
         |runtime: &mut Runtime| {
-            runtime.block_on_std(async move {
+            runtime.block_on(async move {
                 let blobrepo = blobrepo.await.expect("blobrepo should open");
                 (
                     blobrepo.name().to_string(),

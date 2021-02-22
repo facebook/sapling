@@ -656,7 +656,7 @@ mod test {
     use std::collections::HashSet;
     use tests_utils::{bookmark, drawdag::create_from_dag};
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_find_draft_ancestors_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;
@@ -708,7 +708,7 @@ mod test {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_find_draft_ancestors_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = new_memblob_empty(None)?;

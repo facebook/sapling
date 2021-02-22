@@ -432,7 +432,7 @@ mod test {
     use fbinit::FacebookInit;
     use futures::{future, stream};
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_upload_from_client_discard_upstream(fb: FacebookInit) -> Result<(), Error> {
         let ctx = RepositoryRequestContext::test_builder(fb)?
             .upstream_uri(None)

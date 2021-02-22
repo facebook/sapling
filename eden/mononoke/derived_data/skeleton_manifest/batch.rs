@@ -114,7 +114,7 @@ mod test {
     use revset::AncestorsNodeStream;
     use tests_utils::resolve_cs_id;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let batch = {

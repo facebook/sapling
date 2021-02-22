@@ -77,8 +77,8 @@ fn test_parsing_caps_simple() {
 
 #[fbinit::test]
 fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(get_changed_manifests_stream_test_impl(fb))
+    let mut runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(get_changed_manifests_stream_test_impl(fb))
 }
 
 async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), Error> {
@@ -144,8 +144,8 @@ async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), 
 
 #[fbinit::test]
 fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(get_changed_manifests_stream_test_depth_impl(fb))
+    let mut runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(get_changed_manifests_stream_test_depth_impl(fb))
 }
 
 async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Result<(), Error> {
@@ -204,8 +204,8 @@ async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Resul
 
 #[fbinit::test]
 fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
-    runtime.block_on_std(get_changed_manifests_stream_test_base_path_impl(fb))
+    let mut runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(get_changed_manifests_stream_test_base_path_impl(fb))
 }
 
 async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> Result<(), Error> {
@@ -243,7 +243,7 @@ async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> R
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo = blobrepo_factory::new_memblob_empty(None)?;

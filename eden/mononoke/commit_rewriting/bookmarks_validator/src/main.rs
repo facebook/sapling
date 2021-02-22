@@ -52,7 +52,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     // Backsyncer works in large -> small direction, however
     // for bookmarks vaidator it's simpler to have commits syncer in small -> large direction
     // Hence here we are creating a reverse syncer
-    let syncers = runtime.block_on_std(create_commit_syncers_from_matches(&ctx, &matches))?;
+    let syncers = runtime.block_on(create_commit_syncers_from_matches(&ctx, &matches))?;
     if syncers.large_to_small.get_large_repo().get_repoid() != source_repo_id {
         return Err(format_err!("Source repo must be a large repo!"));
     }
@@ -327,7 +327,7 @@ mod tests {
     use mononoke_types::DateTime;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_simple_check_large_bookmark_history(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _) = init_small_large_repo(&ctx).await?;
@@ -402,7 +402,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_another_repo_check_large_bookmark_history(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (syncers, _) = init_small_large_repo(&ctx).await?;
@@ -473,7 +473,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_recently_created_check_large_bookmark_history(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -526,7 +526,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_deleted_added_back_created_check_large_bookmark_history(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -557,7 +557,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_check_large_bookmark_history_after_bookmark_moved(
         fb: FacebookInit,
     ) -> Result<(), Error> {

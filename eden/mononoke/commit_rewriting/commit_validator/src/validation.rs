@@ -1515,7 +1515,7 @@ mod tests {
     use maplit::hashmap;
     use skiplist::SkiplistIndex;
     use tests_utils::{CommitIdentifier, CreateCommitContext};
-    use tokio_compat::runtime::Runtime;
+    use tokio::runtime::Runtime;
 
     async fn add_commits_to_repo(
         ctx: &CoreContext,
@@ -1608,7 +1608,7 @@ mod tests {
         //    0    -------------    0
         //   ..                     ..
         let mut runtime = Runtime::new()?;
-        runtime.block_on_std(async {
+        runtime.block_on(async {
             let validation_result = test_topological_order_validation(
                 fb,
                 vec![
@@ -1640,7 +1640,7 @@ mod tests {
         //    0      --/   \--      0
         //   ..                     ..
         let mut runtime = Runtime::new()?;
-        runtime.block_on_std(async {
+        runtime.block_on(async {
             let validation_result = test_topological_order_validation(
                 fb,
                 vec![
@@ -1671,7 +1671,7 @@ mod tests {
         //    0      --/   \--      0
         //   ..                     ..
         let mut runtime = Runtime::new()?;
-        runtime.block_on_std(async {
+        runtime.block_on(async {
             let validation_result = test_topological_order_validation(
                 fb,
                 vec![
@@ -1705,7 +1705,7 @@ mod tests {
         //    0                     0
         //   ..                     ..
         let mut runtime = Runtime::new()?;
-        runtime.block_on_std(async {
+        runtime.block_on(async {
             let validation_result = test_topological_order_validation(
                 fb,
                 vec![

@@ -444,7 +444,7 @@ mod tests {
     use quickcheck::quickcheck;
     use std::collections::HashSet;
     use std::fmt::Debug;
-    use tokio_compat::runtime::Runtime;
+    use tokio::runtime::Runtime;
 
     fn bookmark(name: impl AsRef<str>) -> Bookmark {
         Bookmark::new(
@@ -635,7 +635,7 @@ mod tests {
         S: Stream<Item = T> + Send + Unpin + 'static,
         F: Future<Output = (Option<T>, S)> + Send + Unpin + 'static,
     {
-        rt.block_on_std(async move {
+        rt.block_on(async move {
             let timeout = Duration::from_millis(timeout_ms);
             let delay = tokio::time::delay_for(timeout);
 
@@ -660,7 +660,7 @@ mod tests {
         T: Debug + Send + 'static,
         F: Future<Output = T> + Send + Unpin + 'static,
     {
-        rt.block_on_std(async move {
+        rt.block_on(async move {
             let timeout = Duration::from_millis(timeout_ms);
             let delay = tokio::time::delay_for(timeout);
 
@@ -695,10 +695,9 @@ mod tests {
                     std::u64::MAX,
                 )
                 .try_collect()
-                .map_ok(move |r: Vec<_>| sender.send(r).unwrap())
-                .map(|_| Ok(()));
+                .map_ok(move |r: Vec<_>| sender.send(r).unwrap());
 
-            rt.spawn(fut.compat());
+            rt.spawn(fut);
 
             receiver
         };
@@ -724,12 +723,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            rt.block_on(res0.compat()).unwrap(),
+            rt.block_on(res0).unwrap(),
             vec![(bookmark("a0"), ONES_CSID)]
         );
 
         assert_eq!(
-            rt.block_on(res1.compat()).unwrap(),
+            rt.block_on(res1).unwrap(),
             vec![(bookmark("b0"), TWOS_CSID), (bookmark("b1"), THREES_CSID)]
         );
 
@@ -738,14 +737,14 @@ mod tests {
 
         // Create a non dirty transaction and make sure that no requests go to master.
         let transaction = bookmarks.create_transaction(ctx.clone());
-        rt.block_on(transaction.commit().compat()).unwrap();
+        rt.block_on(transaction.commit()).unwrap();
 
         let _ = spawn_query("c", &mut rt);
         let requests = assert_no_pending_requests(requests, &mut rt, 100);
 
         // successfull transaction should redirect further requests to master
         let transaction = create_dirty_transaction(&bookmarks, ctx.clone());
-        rt.block_on(transaction.commit().compat()).unwrap();
+        rt.block_on(transaction.commit()).unwrap();
 
         let res = spawn_query("a", &mut rt);
 
@@ -757,8 +756,7 @@ mod tests {
             .send(Err(Error::msg("request to master failed")))
             .unwrap();
 
-        rt.block_on(res.compat())
-            .expect_err("cache did not bubble up error");
+        rt.block_on(res).expect_err("cache did not bubble up error");
 
         // If request to master failed, next request should go to master too
         let res = spawn_query("a", &mut rt);
@@ -774,10 +772,7 @@ mod tests {
             ]))
             .unwrap();
 
-        assert_eq!(
-            rt.block_on(res.compat()).unwrap(),
-            vec![(bookmark("a"), ONES_CSID)]
-        );
+        assert_eq!(rt.block_on(res).unwrap(), vec![(bookmark("a"), ONES_CSID)]);
 
         // No further requests should be made.
         let requests = assert_no_pending_requests(requests, &mut rt, 100);
@@ -785,10 +780,7 @@ mod tests {
         // request should be resolved with cache
         let res = spawn_query("b", &mut rt);
 
-        assert_eq!(
-            rt.block_on(res.compat()).unwrap(),
-            vec![(bookmark("b"), TWOS_CSID)]
-        );
+        assert_eq!(rt.block_on(res).unwrap(), vec![(bookmark("b"), TWOS_CSID)]);
 
         // No requests should have been made.
         let requests = assert_no_pending_requests(requests, &mut rt, 100);
@@ -807,7 +799,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            rt.block_on(res.compat()).unwrap(),
+            rt.block_on(res).unwrap(),
             vec![(bookmark("b"), THREES_CSID)]
         );
 
@@ -871,9 +863,8 @@ mod tests {
                 query_limit,
             )
             .try_collect()
-            .map_ok(|r: Vec<_>| sender.send(r).unwrap())
-            .map(|_| Ok(()));
-        rt.spawn(fut.compat());
+            .map_ok(|r: Vec<_>| sender.send(r).unwrap());
+        rt.spawn(fut);
 
         // Wait for the underlying MockBookmarks to receive the request. We
         // expect it to have a freshness consistent with the one we send.
@@ -892,7 +883,7 @@ mod tests {
         );
         request.response.send(Ok(response)).unwrap();
 
-        rt.block_on_std(receiver).expect("query failed")
+        rt.block_on(receiver).expect("query failed")
     }
 
     quickcheck! {

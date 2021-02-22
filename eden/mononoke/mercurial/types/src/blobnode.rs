@@ -189,9 +189,10 @@ mod test {
     use super::*;
     use crate::blob::HgBlob;
     use bytes::BytesMut;
+    use futures::compat::Future01CompatExt;
     use futures_old::stream;
     use quickcheck::quickcheck;
-    use tokio_compat::runtime::Runtime;
+    use tokio::runtime::Runtime;
 
     #[test]
     fn test_node_none() {
@@ -262,7 +263,7 @@ mod test {
             }).freeze();
 
             let out_inplace = calculate_hg_node_id(bytes.as_ref(), &hg_parents);
-            let out_stream = rt.block_on(calculate_hg_node_id_stream(stream, &hg_parents)).unwrap();
+            let out_stream = rt.block_on(calculate_hg_node_id_stream(stream, &hg_parents).compat()).unwrap();
 
             out_inplace == out_stream
         }

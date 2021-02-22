@@ -62,4 +62,3 @@ sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
 sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
 tests_utils = { path = "../../tests/utils", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-compat = "0.1"

@@ -1422,8 +1422,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_one_commit(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             // Bottom commit of the repo
@@ -1546,8 +1546,8 @@ mod tests {
             }
         }
 
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             // Bottom commit of the repo
@@ -1626,9 +1626,9 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_stack(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             // Bottom commit of the repo
@@ -1681,9 +1681,9 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_stack_with_renames(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             // Bottom commit of the repo
@@ -1751,9 +1751,9 @@ mod tests {
         //           |/
         //  root0 -> o
         //
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             let config = PushrebaseFlags::default();
@@ -1864,9 +1864,9 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_conflict(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             let root = repo
@@ -1935,8 +1935,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_caseconflicting_rename(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             let root = repo
@@ -1986,8 +1986,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_caseconflicting_dirs(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             let root = repo
@@ -2033,8 +2033,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_recursion_limit(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             let root = repo
@@ -2116,8 +2116,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_rewritedates(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             let root = repo
@@ -2173,8 +2173,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_case_conflict(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = many_files_dirs::getrepo(fb).await;
             let root = repo
@@ -2258,8 +2258,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_executable_bit_change(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             let path_1 = MPath::new("1")?;
@@ -2415,9 +2415,9 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_simultaneously(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
 
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             // Bottom commit of the repo
@@ -2491,8 +2491,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_create_new_bookmark(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             // Bottom commit of the repo
@@ -2528,8 +2528,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_simultaneously_and_create_new(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             // Bottom commit of the repo
@@ -2593,8 +2593,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_one_commit_with_bundle_id(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             // Bottom commit of the repo
@@ -2644,8 +2644,8 @@ mod tests {
     fn pushrebase_timezone(fb: FacebookInit) -> Result<(), Error> {
         // We shouldn't change timezone even if timestamp changes
 
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
             // Bottom commit of the repo
@@ -2706,8 +2706,8 @@ mod tests {
 
     #[fbinit::test]
     fn forbid_p2_root_rebases(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = linear::getrepo(fb).await;
 
@@ -2767,8 +2767,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_over_merge(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = blobrepo_factory::new_memblob_empty(None)?;
 
@@ -2849,8 +2849,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_over_merge_even(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = merge_even::getrepo(fb).await;
 
@@ -2914,8 +2914,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_of_branch_merge(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = blobrepo_factory::new_memblob_empty(None)?;
 
@@ -3011,8 +3011,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_of_branch_merge_with_removal(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = blobrepo_factory::new_memblob_empty(None)?;
 
@@ -3099,8 +3099,8 @@ mod tests {
 
     #[fbinit::test]
     fn pushrebase_of_branch_merge_with_rename(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
+        let mut runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
             let repo = blobrepo_factory::new_memblob_empty(None)?;
 
@@ -3197,7 +3197,7 @@ mod tests {
         })
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_pushrebase_new_repo_merge_no_new_file_changes(
         fb: FacebookInit,
     ) -> Result<(), Error> {
@@ -3264,7 +3264,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_commit_validation(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
@@ -3366,7 +3366,7 @@ mod tests {
         }
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn pushrebase_test_failpushrebase_extra(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;

@@ -651,12 +651,12 @@ mod test {
     use mutable_counters::SqlMutableCounters;
     use sql_construct::SqlConstruct;
     use synced_commit_mapping::SqlSyncedCommitMapping;
-    use tokio_compat::runtime::Runtime;
+    use tokio::runtime::Runtime;
 
     #[fbinit::test]
     fn test_simple(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = Runtime::new()?;
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
             let ctx = CoreContext::test_mock(fb);
@@ -742,7 +742,7 @@ mod test {
     #[fbinit::test]
     fn test_simple_merge(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = Runtime::new()?;
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
             let ctx = CoreContext::test_mock(fb);
@@ -792,7 +792,7 @@ mod test {
     #[fbinit::test]
     fn test_merge_added_in_single_bookmark_update(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = Runtime::new()?;
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
             let ctx = CoreContext::test_mock(fb);
@@ -826,7 +826,7 @@ mod test {
     #[fbinit::test]
     fn test_merge_of_a_merge_one_step(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = Runtime::new()?;
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
             let ctx = CoreContext::test_mock(fb);
@@ -865,7 +865,7 @@ mod test {
     #[fbinit::test]
     fn test_merge_of_a_merge_two_steps(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = Runtime::new()?;
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
             let ctx = CoreContext::test_mock(fb);
@@ -906,7 +906,7 @@ mod test {
     #[fbinit::test]
     fn test_merge_non_shared_bookmark(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = Runtime::new()?;
-        runtime.block_on_std(async move {
+        runtime.block_on(async move {
             let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
 
             let ctx = CoreContext::test_mock(fb);
@@ -938,7 +938,7 @@ mod test {
         })
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_merge_different_versions(fb: FacebookInit) -> Result<(), Error> {
         let mutable_counters = SqlMutableCounters::with_sqlite_in_memory()?;
 

@@ -14,8 +14,8 @@
 /// for example, we can have conditional updates.
 use anyhow::Error;
 use context::{CoreContext, PerfCounterType};
-use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, Future};
 use mononoke_types::RepositoryId;
 use sql::{queries, Connection, Transaction as SqlTransaction};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};

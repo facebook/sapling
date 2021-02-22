@@ -15,7 +15,7 @@ use std::time::Duration;
 
 const UPDATE_WAIT_TIME: Duration = Duration::from_millis(3);
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn read_write(fb: FacebookInit) {
     let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
@@ -49,7 +49,7 @@ async fn read_write(fb: FacebookInit) {
     );
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn double_put(fb: FacebookInit) {
     let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
@@ -86,7 +86,7 @@ async fn double_put(fb: FacebookInit) {
     );
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn overwrite(fb: FacebookInit) -> Result<()> {
     let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
@@ -118,7 +118,7 @@ async fn overwrite(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn dedup(fb: FacebookInit) {
     let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
@@ -176,7 +176,7 @@ async fn dedup(fb: FacebookInit) {
     );
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn link(fb: FacebookInit) {
     let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
@@ -240,7 +240,7 @@ async fn link(fb: FacebookInit) {
     );
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn generations(fb: FacebookInit) -> Result<()> {
     let (test_source, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);

@@ -115,7 +115,7 @@ mod test {
     use std::str::FromStr;
     use tests_utils::resolve_cs_id;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn derive_info_test(fb: FacebookInit) -> Result<(), Error> {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
@@ -150,7 +150,7 @@ mod test {
         );
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn batch_derive(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;

@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use criterion::{BenchmarkId, Criterion, Throughput};
 use rand::{thread_rng, Rng, RngCore};
-use tokio_compat::runtime::Runtime;
+use tokio::runtime::Runtime;
 
 use blobstore::{Blobstore, BlobstoreBytes};
 use context::CoreContext;
@@ -38,9 +38,7 @@ pub fn benchmark(
                     blobstore.put(&ctx, key, block).await.expect("Put failed");
                 }
             };
-            b.iter(|| {
-                runtime.block_on_std(async { test(ctx.clone(), Arc::clone(&blobstore)).await })
-            });
+            b.iter(|| runtime.block_on(async { test(ctx.clone(), Arc::clone(&blobstore)).await }));
         });
     }
     group.finish();

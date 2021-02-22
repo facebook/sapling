@@ -322,10 +322,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             }
         });
 
-    let repos: HashMap<_, _> = runtime
-        .block_on_std(try_join_all(futs))?
-        .into_iter()
-        .collect();
+    let repos: HashMap<_, _> = runtime.block_on(try_join_all(futs))?.into_iter().collect();
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
@@ -379,7 +376,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     start_fb303_server(fb, SERVICE_NAME, &logger, &matches, AliveService)?;
 
     let mut listener = runtime
-        .block_on_std(TcpListener::bind(&addr))
+        .block_on(TcpListener::bind(&addr))
         .context(Error::msg("Could not start TCP listener"))?;
 
     let protocol = Arc::new(Http::new());

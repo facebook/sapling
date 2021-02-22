@@ -964,7 +964,7 @@ filenodes_tests!(uncached_sharded_test, create_sharded, no_caching);
 filenodes_tests!(cached_unsharded_test, create_unsharded, with_caching);
 filenodes_tests!(cached_sharded_test, create_sharded, with_caching);
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -1042,7 +1042,7 @@ async fn get_all_filenodes_maybe_stale_with_disabled(fb: FacebookInit) -> Result
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_get_filenode_with_disabled(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -1097,7 +1097,7 @@ async fn test_get_filenode_with_disabled(fb: FacebookInit) -> Result<(), Error> 
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_all_filenodes_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
@@ -1140,7 +1140,7 @@ async fn test_all_filenodes_caching(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_point_filenode_caching(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 

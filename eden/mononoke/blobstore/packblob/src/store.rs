@@ -220,7 +220,7 @@ mod tests {
     use rand_xorshift::XorShiftRng;
     use std::sync::Arc;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn simple_roundtrip_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -233,7 +233,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn compressible_roundtrip_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -252,7 +252,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn incompressible_roundtrip_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
@@ -309,7 +309,7 @@ mod tests {
         Ok(inner_key.to_owned())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn simple_pack_test(fb: FacebookInit) -> Result<()> {
         let mut input_entries = vec![];
         let mut input_values = vec![];

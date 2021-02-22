@@ -34,7 +34,7 @@ async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, C
     Ok((repo_ctx, changesets))
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn file_diff(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, changesets) = init_repo(&ctx).await?;

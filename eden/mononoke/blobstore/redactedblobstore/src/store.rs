@@ -120,7 +120,7 @@ mod test {
     use super::*;
     use futures::compat::Future01CompatExt;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_redacted_store(_fb: fbinit::FacebookInit) {
         let key_a = "aaaaaaaaaaaaaaaaaaaa".to_string();
         let key_b = "bbbbbbbbbbbbbbbbbbbb".to_string();

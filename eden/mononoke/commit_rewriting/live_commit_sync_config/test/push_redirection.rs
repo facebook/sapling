@@ -32,7 +32,7 @@ const PUSHREDIRECTOR_BOTH_ENABLED: &str = r#"{
     }
 }"#;
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_enabling_push_redirection(fb: FacebookInit) {
     let (_ctx, test_source, _store, live_commit_sync_config) = get_ctx_source_store_and_live_config(
         fb,

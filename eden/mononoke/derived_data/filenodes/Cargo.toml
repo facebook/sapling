@@ -32,5 +32,5 @@ fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 maplit = "1.0"
 slog = { version = "2.5", features = ["max_level_debug"] }
 tests_utils = { path = "../../tests/utils", version = "0.1.0" }
-tokio-compat = "0.1"
+tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tunables = { path = "../../tunables", version = "0.1.0" }

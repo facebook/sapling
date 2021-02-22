@@ -104,7 +104,7 @@ fn main(fb: FacebookInit) -> ExitCode {
     let debug = matches.is_present("debug");
 
     let mut runtime = args::init_runtime(&matches).expect("failed to initialize Tokio runtime");
-    let res = runtime.block_on_std(async {
+    let res = runtime.block_on(async {
         match matches.subcommand() {
             (blobstore_fetch::BLOBSTORE_FETCH, Some(sub_m)) => {
                 subcommand_blobstore_fetch(fb, logger, &matches, sub_m).await

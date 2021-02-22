@@ -561,7 +561,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let (ctx, matches) = context_and_matches(fb, create_app())?;
     args::init_config_store(fb, ctx.logger(), &matches)?;
 
-    let mut runtime = tokio_compat::runtime::Runtime::new()?;
+    let mut runtime = tokio::runtime::Runtime::new()?;
     monitoring::start_fb303_and_stats_agg(
         fb,
         &mut runtime,
@@ -570,7 +570,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         &matches,
         monitoring::AliveService,
     )?;
-    let res = runtime.block_on_std(run(fb, ctx.clone(), &matches));
+    let res = runtime.block_on(run(fb, ctx.clone(), &matches));
     if let Err(ref err) = res {
         print_error(ctx, err);
     }

@@ -396,7 +396,7 @@ mod tests {
         builder.build_sql_idmap()
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_get_last_entry(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let idmap = new_sql_idmap()?;
@@ -416,7 +416,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_insert_many(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let idmap = new_sql_idmap()?;
@@ -470,7 +470,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_find_many_changeset_ids(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let idmap = new_sql_idmap()?;
@@ -516,7 +516,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_find_many_changeset_ids_leader_fallback(fb: FacebookInit) -> Result<()> {
         fn conn() -> Result<Connection> {
             let con = SqliteConnection::open_in_memory()?;
@@ -551,7 +551,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_find_many_vertexes(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let idmap = new_sql_idmap()?;
@@ -593,7 +593,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_many_repo_id_many_versions(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?;

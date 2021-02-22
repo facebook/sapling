@@ -104,7 +104,7 @@ mod tests {
     use maplit::hashset;
     use mononoke_types_mocks::changesetid::*;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn add_get_phase_sql_test(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);

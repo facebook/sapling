@@ -38,7 +38,7 @@ use slog::info;
 use synced_commit_mapping::SyncedCommitMapping;
 use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
@@ -62,7 +62,7 @@ async fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
@@ -88,7 +88,7 @@ async fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
@@ -116,7 +116,7 @@ async fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn commit_hg_changeset_ids(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
@@ -149,7 +149,7 @@ async fn commit_hg_changeset_ids(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
@@ -209,7 +209,7 @@ async fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
@@ -293,7 +293,7 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
@@ -328,7 +328,7 @@ async fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
@@ -451,7 +451,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
@@ -518,7 +518,7 @@ async fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn file_contents(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
@@ -543,7 +543,7 @@ async fn file_contents(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (mononoke, _cfg_src) = init_x_repo(&ctx).await?;
@@ -583,7 +583,7 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (mononoke, _cfg_src) = init_x_repo(&ctx).await?;
@@ -639,7 +639,7 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (mononoke, _cfg_src) = init_x_repo(&ctx).await?;
@@ -695,7 +695,7 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (mononoke, cfg_src) = init_x_repo(&ctx).await?;
@@ -831,7 +831,7 @@ async fn init_x_repo(
     .await
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn resolve_changeset_id_prefix(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(
@@ -899,7 +899,7 @@ async fn resolve_changeset_id_prefix(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = new_memblob_empty(None)?;
@@ -947,7 +947,7 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let mononoke = Mononoke::new_test(

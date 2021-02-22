@@ -93,7 +93,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .value_of("mononoke-config-path")
         .expect("must set config path");
 
-    let exec = runtime.executor();
+    let exec = runtime.handle().clone();
 
     let config_store = args::init_config_store(fb, &logger, &matches)?;
     let repo_configs = load_repo_configs(config_path, config_store)?;
@@ -115,7 +115,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         warm_bookmarks_cache_delay: BookmarkUpdateDelay::Allow,
     };
 
-    let mononoke = Arc::new(runtime.block_on_std(Mononoke::new(&env, repo_configs))?);
+    let mononoke = Arc::new(runtime.block_on(Mononoke::new(&env, repo_configs))?);
 
     let will_exit = Arc::new(AtomicBool::new(false));
 

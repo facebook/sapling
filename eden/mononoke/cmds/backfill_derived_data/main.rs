@@ -1181,7 +1181,7 @@ mod tests {
     use tests_utils::resolve_cs_id;
     use unodes::RootUnodeManifestId;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_tail_one_iteration(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
@@ -1194,7 +1194,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_single(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
@@ -1228,7 +1228,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_backfill_data_latest(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
@@ -1245,7 +1245,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_backfill_data_batch(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
@@ -1277,7 +1277,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_backfill_data_failing_blobstore(fb: FacebookInit) -> Result<()> {
         // The test exercises that derived data mapping entries are written only after
         // all other blobstore writes were successful i.e. mapping entry shouldn't exist

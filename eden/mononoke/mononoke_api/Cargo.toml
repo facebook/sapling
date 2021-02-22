@@ -67,4 +67,4 @@ assert_matches = "1.5"
 cross_repo_sync_test_utils = { path = "../commit_rewriting/cross_repo_sync/test_utils", version = "0.1.0" }
 fixtures = { path = "../tests/fixtures", version = "0.1.0" }
 tests_utils = { path = "../tests/utils", version = "0.1.0" }
-tokio-compat = "0.1"
+tokio = { version = "0.2.25", features = ["full", "test-util"] }

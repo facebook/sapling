@@ -112,7 +112,7 @@ mod tests {
         }
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_move_bookmark(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
@@ -174,7 +174,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_move_bookmark_with_existing_bookmark(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
@@ -251,7 +251,7 @@ mod tests {
         Move bookmark   2               1                        inifite loop -> timeout
         Set counter     2               2                        Ok(())
     */
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_hg_sync_check(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
@@ -357,7 +357,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_merge_push_commit(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = create_repo(1)?;
@@ -458,7 +458,7 @@ mod tests {
         repo1: push-redirects to repo0 => Some(repo_config)
         repo2: draft push-redirects => None
     */
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_get_large_repo_config_if_pushredirected(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let test_source = Arc::new(TestSource::new());
@@ -596,7 +596,7 @@ mod tests {
         variables for a large repo setting given small repo settings.
         -> bookmarks are prepended with the bookmark_prefixes given in the configs
     */
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_get_large_repo_setting(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
@@ -669,7 +669,7 @@ mod tests {
         and B into random_dir/B places. When we backsync to small_repo, we should get
         dest_path_prefix/A and dest_path_prefix/B paths, respectively.
     */
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_rewrite_file_paths_and_backsync(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let large_repo = create_repo(0)?;
@@ -784,7 +784,7 @@ mod tests {
         Given two repos and their changesets, we check if we have derived all the
         data types for the changesets
     */
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_derive_bonsais_multiple_repos(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo_0 = create_repo(0)?;
@@ -825,7 +825,7 @@ mod tests {
         Given a large repo that backsyncs to small_repo, we check if we have
         derived all the data types for both repos.
     */
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_rewrite_and_derive(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let large_repo = create_repo(0)?;
@@ -896,7 +896,7 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_find_version_and_backsync(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let large_repo = create_repo(0)?;
