@@ -14,7 +14,7 @@ mod errors;
 pub use crate::errors::ErrorKind;
 
 /// A layer over an existing blobstore that prevents writes.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ReadOnlyBlobstore<T> {
     blobstore: T,
 }
