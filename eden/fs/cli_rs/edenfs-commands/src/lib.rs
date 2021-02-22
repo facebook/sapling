@@ -35,7 +35,7 @@ type ExitCode = i32;
 #[structopt(
     name = "edenfsctl",
     setting = AppSettings::DisableVersion,
-    setting = AppSettings::DisableHelpFlags
+    setting = AppSettings::VersionlessSubcommands,
 )]
 pub struct Command {
     /// The path to the directory where edenfs stores its internal state.
