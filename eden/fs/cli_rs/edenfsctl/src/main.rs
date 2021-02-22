@@ -71,17 +71,24 @@ fn setup_logging() {
     }
 }
 
+fn rust_main(cmd: edenfs_commands::Command) -> Result<()> {
+    if cmd.debug {
+        setup_logging();
+    }
+    match cmd.run() {
+        Ok(code) => std::process::exit(code),
+        Err(e) => Err(e),
+    }
+}
+
 fn main() -> Result<()> {
-    if std::env::var("EDENFSCTL_SKIP_RUST").is_ok() {
+    if std::env::var("EDENFSCTL_ONLY_RUST").is_ok() {
+        let cmd = edenfs_commands::Command::from_args();
+        rust_main(cmd)
+    } else if std::env::var("EDENFSCTL_SKIP_RUST").is_ok() {
         fallback()
     } else if let Ok(cmd) = edenfs_commands::Command::from_args_safe() {
-        if cmd.debug {
-            setup_logging();
-        }
-        match cmd.run() {
-            Ok(code) => std::process::exit(code),
-            Err(e) => Err(e),
-        }
+        rust_main(cmd)
     } else {
         fallback()
     }
