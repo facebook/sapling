@@ -995,6 +995,7 @@ fi
 
 if [[ -n "${SEGMENTED_CHANGELOG_ENABLE:-}" ]] || \
    [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE:-}" ]] || \
+   [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE_START_SAVE:-}" ]] || \
    [[ -n "${SEGMENTED_CHANGELOG_ALWAYS_DOWNLOAD_SAVE:-}" ]];
 then
   cat >> "repos/$reponame/server.toml" <<CONFIG
@@ -1004,6 +1005,11 @@ CONFIG
   if [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE:-}" ]]; then
     cat >> "repos/$reponame/server.toml" <<CONFIG
 update_algorithm="ondemand"
+CONFIG
+  fi
+  if [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE_START_SAVE:-}" ]]; then
+    cat >> "repos/$reponame/server.toml" <<CONFIG
+update_algorithm="ondemand_start_from_save"
 CONFIG
   fi
   if [[ -n "${SEGMENTED_CHANGELOG_ALWAYS_DOWNLOAD_SAVE:-}" ]]; then

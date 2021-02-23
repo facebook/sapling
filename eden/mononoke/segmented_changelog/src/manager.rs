@@ -20,7 +20,9 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use crate::bundle::SqlBundleStore;
 use crate::dag::Dag;
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{CacheHandlers, CachedIdMap, IdMap, SqlIdMapFactory};
+use crate::idmap::{
+    CacheHandlers, CachedIdMap, ConcurrentMemIdMap, IdMap, OverlayIdMap, SqlIdMapFactory,
+};
 use crate::logging::log_new_bundle;
 use crate::types::{DagBundle, IdMapVersion};
 use crate::{CloneData, SegmentedChangelog, StreamCloneData};
@@ -31,6 +33,7 @@ pub struct SegmentedChangelogManager {
     iddag_save_store: IdDagSaveStore,
     idmap_factory: SqlIdMapFactory,
     cache_handlers: Option<CacheHandlers>,
+    with_in_memory_write_idmap: bool,
 }
 
 impl SegmentedChangelogManager {
@@ -40,6 +43,7 @@ impl SegmentedChangelogManager {
         iddag_save_store: IdDagSaveStore,
         idmap_factory: SqlIdMapFactory,
         cache_handlers: Option<CacheHandlers>,
+        with_in_memory_write_idmap: bool,
     ) -> Self {
         Self {
             repo_id,
@@ -47,6 +51,7 @@ impl SegmentedChangelogManager {
             iddag_save_store,
             idmap_factory,
             cache_handlers,
+            with_in_memory_write_idmap,
         }
     }
 
@@ -122,6 +127,12 @@ impl SegmentedChangelogManager {
                 cache_handlers.clone(),
                 self.repo_id,
                 idmap_version,
+            ));
+        }
+        if self.with_in_memory_write_idmap {
+            idmap = Arc::new(OverlayIdMap::new(
+                Arc::new(ConcurrentMemIdMap::new()),
+                idmap,
             ));
         }
         idmap

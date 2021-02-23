@@ -29,6 +29,7 @@ use cached_config::ConfigStore;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changeset_info::ChangesetInfo;
 use changesets::{CachingChangesets, Changesets, SqlChangesets};
+use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerivable;
@@ -173,6 +174,7 @@ impl<'a> BlobrepoBuilder<'a> {
             self.readonly_storage,
             self.reponame,
             self.blobstore_options.cachelib_options,
+            self.logger,
         )
         .watched(self.logger)
         .await
@@ -191,6 +193,7 @@ pub async fn open_blobrepo_given_datasources<'a>(
     readonly_storage: ReadOnlyStorage,
     reponame: String,
     cachelib_options: CachelibBlobstoreOptions,
+    logger: &'a Logger,
 ) -> Result<BlobRepo, Error> {
     let redacted_blobs = match redaction {
         Redaction::Enabled => {
@@ -234,6 +237,7 @@ pub async fn open_blobrepo_given_datasources<'a>(
                 repo_config.derived_data_config.clone(),
                 repo_config.segmented_changelog_config.clone(),
                 reponame,
+                logger,
             )
             .await?
         }
@@ -257,6 +261,7 @@ pub async fn open_blobrepo_given_datasources<'a>(
                 repo_config.derived_data_config.clone(),
                 repo_config.segmented_changelog_config.clone(),
                 reponame,
+                logger,
             )
             .await?
         }
@@ -497,9 +502,9 @@ pub fn new_memblob_with_connection_with_id(
     ))
 }
 
-async fn new_development(
+async fn new_development<'a>(
     fb: FacebookInit,
-    sql_factory: &MetadataSqlFactory,
+    sql_factory: &'a MetadataSqlFactory,
     blobstore: Arc<dyn Blobstore>,
     redacted_blobs: Option<HashMap<String, RedactedMetadata>>,
     censored_scuba_params: CensoredScubaParams,
@@ -509,6 +514,7 @@ async fn new_development(
     derived_data_config: DerivedDataConfig,
     segmented_changelog_config: SegmentedChangelogConfig,
     reponame: String,
+    logger: &'a Logger,
 ) -> Result<BlobRepo, Error> {
     let bookmarks = async {
         let sql_bookmarks = Arc::new(
@@ -631,7 +637,13 @@ async fn new_development(
     let segmented_changelog: Arc<dyn SegmentedChangelog> = if !segmented_changelog_config.enabled {
         Arc::new(segmented_changelog_builder.build_disabled())
     } else {
-        if segmented_changelog_config.is_update_ondemand() {
+        if segmented_changelog_config.is_update_ondemand_start_from_save() {
+            let ctx = CoreContext::new_with_logger(fb, logger.clone());
+            let dag = segmented_changelog_builder
+                .build_on_demand_update_start_from_save(&ctx)
+                .await?;
+            Arc::new(dag)
+        } else if segmented_changelog_config.is_update_ondemand() {
             Arc::new(segmented_changelog_builder.build_on_demand_update()?)
         } else if segmented_changelog_config.is_update_always_download_save() {
             Arc::new(segmented_changelog_builder.build_manager()?)
@@ -663,9 +675,9 @@ async fn new_development(
 
 /// If the DB is remote then set up for a full production configuration.
 /// In theory this could be with a local blobstore, but that would just be weird.
-async fn new_production(
+async fn new_production<'a>(
     fb: FacebookInit,
-    sql_factory: &MetadataSqlFactory,
+    sql_factory: &'a MetadataSqlFactory,
     blobstore: Arc<dyn Blobstore>,
     redacted_blobs: Option<HashMap<String, RedactedMetadata>>,
     censored_scuba_params: CensoredScubaParams,
@@ -676,6 +688,7 @@ async fn new_production(
     derived_data_config: DerivedDataConfig,
     segmented_changelog_config: SegmentedChangelogConfig,
     reponame: String,
+    logger: &'a Logger,
 ) -> Result<BlobRepo, Error> {
     let filenodes_pool = get_volatile_pool("filenodes")?;
     let filenodes_history_pool = get_volatile_pool("filenodes_history")?;
@@ -803,7 +816,13 @@ async fn new_production(
             .with_changeset_fetcher(changeset_fetcher.clone())
             .with_blobstore(Arc::new(repo_blobstore_args.repo_blobstore_clone()))
             .with_caching(fb, get_volatile_pool("segmented_changelog")?);
-        if segmented_changelog_config.is_update_ondemand() {
+        if segmented_changelog_config.is_update_ondemand_start_from_save() {
+            let ctx = CoreContext::new_with_logger(fb, logger.clone());
+            let dag = segmented_changelog_builder
+                .build_on_demand_update_start_from_save(&ctx)
+                .await?;
+            Arc::new(dag)
+        } else if segmented_changelog_config.is_update_ondemand() {
             Arc::new(segmented_changelog_builder.build_on_demand_update()?)
         } else if segmented_changelog_config.is_update_always_download_save() {
             Arc::new(segmented_changelog_builder.build_manager()?)

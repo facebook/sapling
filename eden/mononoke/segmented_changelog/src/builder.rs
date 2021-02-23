@@ -55,6 +55,7 @@ pub struct SegmentedChangelogBuilder {
     bookmarks: Option<Arc<dyn Bookmarks>>,
     bookmark_name: Option<BookmarkName>,
     cache_handlers: Option<CacheHandlers>,
+    with_in_memory_write_idmap: bool,
 }
 
 impl SqlConstruct for SegmentedChangelogBuilder {
@@ -74,6 +75,7 @@ impl SqlConstruct for SegmentedChangelogBuilder {
             bookmarks: None,
             bookmark_name: None,
             cache_handlers: None,
+            with_in_memory_write_idmap: false,
         }
     }
 }
@@ -96,6 +98,7 @@ impl SegmentedChangelogBuilder {
             iddag_save_store,
             idmap_factory,
             self.cache_handlers.take(),
+            self.with_in_memory_write_idmap,
         ))
     }
 
@@ -106,6 +109,17 @@ impl SegmentedChangelogBuilder {
     pub fn build_on_demand_update(mut self) -> Result<OnDemandUpdateDag> {
         let dag = self.build_dag()?;
         let changeset_fetcher = self.changeset_fetcher()?;
+        Ok(OnDemandUpdateDag::from_dag(dag, changeset_fetcher))
+    }
+
+    pub async fn build_on_demand_update_start_from_save(
+        mut self,
+        ctx: &CoreContext,
+    ) -> Result<OnDemandUpdateDag> {
+        let changeset_fetcher = self.changeset_fetcher()?;
+        self.with_in_memory_write_idmap = true;
+        let manager = self.build_manager()?;
+        let (_, dag) = manager.load_dag(ctx).await?;
         Ok(OnDemandUpdateDag::from_dag(dag, changeset_fetcher))
     }
 

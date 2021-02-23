@@ -23,6 +23,7 @@ cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", bran
 changeset_fetcher = { path = "../changeset_fetcher", version = "0.1.0" }
 changeset_info = { path = "../../derived_data/changeset_info", version = "0.1.0" }
 changesets = { path = "../../changesets", version = "0.1.0" }
+context = { path = "../../server/context", version = "0.1.0" }
 dbbookmarks = { path = "../../bookmarks/dbbookmarks", version = "0.1.0" }
 deleted_files_manifest = { path = "../../derived_data/deleted_files_manifest", version = "0.1.0" }
 derived_data = { path = "../../derived_data", version = "0.1.0" }

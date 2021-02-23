@@ -1351,6 +1351,14 @@ impl SegmentedChangelogConfig {
         self.update_algorithm.as_deref() == Some("ondemand")
     }
 
+    /// Returns whether `update_algorithm` is set to 'ondemand' and at startup a save should be
+    /// loaded.
+    // Names are not great here. "ondemand" without loading from save is useful for tests where
+    // we don't have the seeder process running.
+    pub fn is_update_ondemand_start_from_save(&self) -> bool {
+        self.update_algorithm.as_deref() == Some("ondemand_start_from_save")
+    }
+
     /// Returns whether `update_algorithm` is set to 'always_download_save'
     pub fn is_update_always_download_save(&self) -> bool {
         self.update_algorithm.as_deref() == Some("always_download_save")

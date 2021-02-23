@@ -1493,6 +1493,7 @@ async fn setup_repo<'a>(
         readonly_storage,
         resolved.name.clone(),
         cachelib_blobstore_options,
+        &logger,
     );
 
     scuba_builder.add(REPO, resolved.name.clone());
