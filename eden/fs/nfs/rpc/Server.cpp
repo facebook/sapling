@@ -181,7 +181,7 @@ class RpcTcpHandler : public folly::DelayedDestruction {
   }
 
   std::shared_ptr<RpcServerProcessor> proc_;
-  std::unique_ptr<AsyncSocket, ReleasableDestructor> sock_;
+  AsyncSocket::UniquePtr sock_;
   std::unique_ptr<Reader> reader_;
   Writer writer_;
   folly::IOBufQueue readBuf_;
@@ -268,6 +268,17 @@ void RpcServer::RpcAcceptCallback::connectionAccepted(
   handler->setup();
 }
 
+void RpcServer::RpcAcceptCallback::acceptError(
+    const std::exception& ex) noexcept {
+  XLOG(ERR) << "acceptError: " << folly::exceptionStr(ex);
+}
+
+void RpcServer::RpcAcceptCallback::acceptStopped() noexcept {
+  // We won't ever be accepting any connection, it is now safe to delete
+  // ourself, release the guard.
+  guard_.reset();
+}
+
 auth_stat RpcServerProcessor::checkAuthentication(
     const call_body& /*call_body*/) {
   // Completely ignore authentication.
@@ -289,13 +300,13 @@ RpcServer::RpcServer(
     std::shared_ptr<RpcServerProcessor> proc,
     folly::EventBase* evb)
     : evb_(evb),
-      acceptCb_(proc, evb_),
-      serverSocket_(AsyncServerSocket::newSocket(evb_)) {
+      acceptCb_(new RpcServer::RpcAcceptCallback(proc, evb_)),
+      serverSocket_(new AsyncServerSocket(evb_)) {
   // Ask kernel to assign us a port on the loopback interface
   serverSocket_->bind(SocketAddress("127.0.0.1", 0));
   serverSocket_->listen(1024);
 
-  serverSocket_->addAcceptCallback(&acceptCb_, evb_);
+  serverSocket_->addAcceptCallback(acceptCb_.get(), evb_);
   serverSocket_->startAccepting();
 }
 

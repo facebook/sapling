@@ -11,7 +11,6 @@
 
 #include <folly/SocketAddress.h>
 #include <folly/io/async/AsyncServerSocket.h>
-#include <folly/logging/xlog.h>
 #include <folly/net/NetworkSocket.h>
 #include "eden/fs/nfs/portmap/PortmapClient.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
@@ -32,26 +31,6 @@ class RpcServerProcessor {
 };
 
 class RpcServer {
-  class RpcAcceptCallback : public folly::AsyncServerSocket::AcceptCallback {
-   public:
-    explicit RpcAcceptCallback(
-        std::shared_ptr<RpcServerProcessor> proc,
-        folly::EventBase* evb)
-        : evb_(evb), proc_(proc) {}
-
-    void connectionAccepted(
-        folly::NetworkSocket fd,
-        const folly::SocketAddress& clientAddr) noexcept override;
-
-    void acceptError(const std::exception& ex) noexcept override {
-      XLOG(ERR) << "acceptError: " << folly::exceptionStr(ex);
-    }
-
-   private:
-    folly::EventBase* evb_;
-    std::shared_ptr<RpcServerProcessor> proc_;
-  };
-
  public:
   RpcServer(std::shared_ptr<RpcServerProcessor> proc, folly::EventBase* evb);
   ~RpcServer();
@@ -71,9 +50,41 @@ class RpcServer {
   uint16_t getPort() const;
 
  private:
+  class RpcAcceptCallback : public folly::AsyncServerSocket::AcceptCallback,
+                            public folly::DelayedDestruction {
+   public:
+    using UniquePtr = std::
+        unique_ptr<RpcAcceptCallback, folly::DelayedDestruction::Destructor>;
+
+    explicit RpcAcceptCallback(
+        std::shared_ptr<RpcServerProcessor> proc,
+        folly::EventBase* evb)
+        : evb_(evb), proc_(proc), guard_(this) {}
+
+   private:
+    void connectionAccepted(
+        folly::NetworkSocket fd,
+        const folly::SocketAddress& clientAddr) noexcept override;
+
+    void acceptError(const std::exception& ex) noexcept override;
+
+    void acceptStopped() noexcept override;
+
+    ~RpcAcceptCallback() override = default;
+
+    folly::EventBase* evb_;
+    std::shared_ptr<RpcServerProcessor> proc_;
+
+    /**
+     * Hold a guard to ourself to avoid being deleted until the callback is
+     * removed from the AsyncServerSocket.
+     */
+    std::optional<folly::DelayedDestruction::DestructorGuard> guard_;
+  };
+
   folly::EventBase* evb_;
-  RpcAcceptCallback acceptCb_;
-  std::shared_ptr<folly::AsyncServerSocket> serverSocket_;
+  RpcAcceptCallback::UniquePtr acceptCb_;
+  folly::AsyncServerSocket::UniquePtr serverSocket_;
   PortmapClient portMap_;
   std::vector<PortmapMapping> mappedPorts_;
   std::shared_ptr<RpcServerProcessor> proc_;
