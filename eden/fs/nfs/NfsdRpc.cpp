@@ -27,7 +27,11 @@ EDEN_XDR_SERDE_IMPL(
     atime,
     mtime,
     ctime);
+EDEN_XDR_SERDE_IMPL(diropargs3, dir, name);
 EDEN_XDR_SERDE_IMPL(GETATTR3resok, obj_attributes);
+EDEN_XDR_SERDE_IMPL(LOOKUP3args, what);
+EDEN_XDR_SERDE_IMPL(LOOKUP3resok, object, obj_attributes, dir_attributes);
+EDEN_XDR_SERDE_IMPL(LOOKUP3resfail, dir_attributes);
 EDEN_XDR_SERDE_IMPL(ACCESS3args, object, access);
 EDEN_XDR_SERDE_IMPL(ACCESS3resok, obj_attributes, access);
 EDEN_XDR_SERDE_IMPL(ACCESS3resfail, obj_attributes);

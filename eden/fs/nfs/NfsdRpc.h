@@ -199,6 +199,12 @@ struct XdrTrait<post_op_attr> : public XdrTrait<post_op_attr::Base> {
   }
 };
 
+struct diropargs3 {
+  nfs_fh3 dir;
+  std::string name;
+};
+EDEN_XDR_SERDE_DECL(diropargs3, dir, name);
+
 // GETATTR Procedure:
 
 struct GETATTR3resok {
@@ -215,6 +221,45 @@ struct XdrTrait<GETATTR3res> : public XdrTrait<GETATTR3res::Base> {
     ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
     if (ret.tag == nfsstat3::NFS3_OK) {
       ret.v = XdrTrait<GETATTR3resok>::deserialize(cursor);
+    }
+    return ret;
+  }
+};
+
+// LOOKUP Procedure:
+
+struct LOOKUP3args {
+  diropargs3 what;
+};
+EDEN_XDR_SERDE_DECL(LOOKUP3args, what);
+
+struct LOOKUP3resok {
+  nfs_fh3 object;
+  post_op_attr obj_attributes;
+  post_op_attr dir_attributes;
+};
+EDEN_XDR_SERDE_DECL(LOOKUP3resok, object, obj_attributes, dir_attributes);
+
+struct LOOKUP3resfail {
+  post_op_attr dir_attributes;
+};
+EDEN_XDR_SERDE_DECL(LOOKUP3resfail, dir_attributes);
+
+struct LOOKUP3res : public XdrVariant<nfsstat3, LOOKUP3resok, LOOKUP3resfail> {
+};
+
+template <>
+struct XdrTrait<LOOKUP3res> : public XdrTrait<LOOKUP3res::Base> {
+  static LOOKUP3res deserialize(folly::io::Cursor& cursor) {
+    LOOKUP3res ret;
+    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
+    switch (ret.tag) {
+      case nfsstat3::NFS3_OK:
+        ret.v = XdrTrait<LOOKUP3resok>::deserialize(cursor);
+        break;
+      default:
+        ret.v = XdrTrait<LOOKUP3resfail>::deserialize(cursor);
+        break;
     }
     return ret;
   }
