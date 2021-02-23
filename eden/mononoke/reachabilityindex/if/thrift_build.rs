@@ -11,8 +11,8 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "skiplist crate
-mononoke_types_thrift mononoke_types_thrift",
+        "mononoke_types_thrift mononoke_types_thrift
+skiplist crate",
     ).expect("Failed to write cratemap");
 
     let conf = {

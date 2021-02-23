@@ -29,7 +29,7 @@ indicatif = { version = "0.15", features = ["with_rayon"] }
 itertools = "0.8"
 log = { version = "0.4.8", features = ["kv_unstable"] }
 percent-encoding = "2.1"
-serde = { version = "1.0", features = ["derive", "rc"] }
+serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_cbor = "0.11"
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 structopt = "0.3.21"

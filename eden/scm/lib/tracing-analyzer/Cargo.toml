@@ -5,6 +5,6 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive", "rc"] }
+serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 tracing-collector = { path = "../tracing-collector" }

@@ -11,7 +11,7 @@ lru-cache = "0.1.2"
 mincode = { path = "../mincode" }
 minibytes = { path = "../minibytes", features = ["frombytes"] }
 parking_lot = "0.10.2"
-serde = { version = "1.0", features = ["derive", "rc"] }
+serde = { version = "=1.0.118", features = ["derive", "rc"] }
 sha-1 = "0.8"
 tracing = "0.1"
 types = { path = "../types" }
