@@ -144,7 +144,7 @@ pub fn parse_global_opts(args: &[String]) -> Result<HgGlobalOpts> {
     early_result.try_into()
 }
 
-pub fn dispatch(command_table: &CommandTable, args: &[String], io: &mut IO) -> Result<u8> {
+pub fn dispatch(command_table: &CommandTable, args: &[String], io: &IO) -> Result<u8> {
     let version_args = vec!["version".to_string()];
     let mut args = &args[..];
     if args.get(0).map(|s| s.as_ref()) == Some("--version") {

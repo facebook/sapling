@@ -10,7 +10,7 @@ use super::Repo;
 use super::Result;
 use super::IO;
 
-pub fn run(_opts: NoOpts, _io: &mut IO, repo: Repo) -> Result<u8> {
+pub fn run(_opts: NoOpts, _io: &IO, repo: Repo) -> Result<u8> {
     let store_path = repo.store_path();
     let patterns = [
         "00changelog.*",

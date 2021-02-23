@@ -33,7 +33,7 @@ use tracing_subscriber::Layer;
 /// Run a Rust or Python command.
 ///
 /// Have side effect on `io` and return the command exit code.
-pub fn run_command(args: Vec<String>, io: &mut IO) -> i32 {
+pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
     let now = SystemTime::now();
 
     // The chgserver does not want tracing or blackbox setup, or going through
@@ -147,7 +147,7 @@ pub fn run_command(args: Vec<String>, io: &mut IO) -> i32 {
 /// Similar to `std::env::current_dir`. But does some extra things:
 /// - Attempt to autofix issues when running under a typical shell (which
 ///   sets $PWD), and a directory is deleted and then recreated.
-fn current_dir(io: &mut IO) -> io::Result<PathBuf> {
+fn current_dir(io: &IO) -> io::Result<PathBuf> {
     let result = env::current_dir();
     if let Err(ref err) = result {
         match err.kind() {
@@ -170,7 +170,7 @@ fn current_dir(io: &mut IO) -> io::Result<PathBuf> {
 
 fn setup_tracing(
     global_opts: &Option<HgGlobalOpts>,
-    io: &mut IO,
+    io: &IO,
 ) -> Result<(Level, Arc<Mutex<TracingData>>)> {
     // Setup TracingData singleton (currently owned by pytracing).
     {
@@ -227,7 +227,7 @@ fn setup_tracing(
 }
 
 fn maybe_write_trace(
-    io: &mut IO,
+    io: &IO,
     tracing_data: &Arc<Mutex<TracingData>>,
     path: Option<String>,
 ) -> Result<()> {
@@ -245,7 +245,7 @@ fn maybe_write_trace(
     Ok(())
 }
 
-pub(crate) fn write_trace(io: &mut IO, path: &str, data: &TracingData) -> Result<()> {
+pub(crate) fn write_trace(io: &IO, path: &str, data: &TracingData) -> Result<()> {
     enum Format {
         ASCII,
         TraceEventJSON,

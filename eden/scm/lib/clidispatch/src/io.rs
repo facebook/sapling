@@ -180,7 +180,7 @@ impl IO {
     }
 
     /// Stop the pager and restore outputs to stdio.
-    pub fn wait_pager(&mut self) -> io::Result<()> {
+    pub fn wait_pager(&self) -> io::Result<()> {
         let mut inner = self.inner.lock();
         inner.flush()?;
 
@@ -202,13 +202,13 @@ impl IO {
     }
 
 
-    pub fn write(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
+    pub fn write(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
         self.inner.lock().output.write_all(data)?;
         Ok(())
     }
 
-    pub fn write_err(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
+    pub fn write_err(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
         let mut inner = self.inner.lock();
         if let Some(ref mut error) = inner.error {
@@ -219,7 +219,7 @@ impl IO {
         Ok(())
     }
 
-    pub fn write_progress(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
+    pub fn write_progress(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
         let mut inner = self.inner.lock();
         if let Some(ref mut progress) = inner.progress {
@@ -281,7 +281,7 @@ impl IO {
         *main_io_ref = Some(Arc::downgrade(&self.inner));
     }
 
-    pub fn start_pager(&mut self, config: &ConfigSet) -> io::Result<()> {
+    pub fn start_pager(&self, config: &ConfigSet) -> io::Result<()> {
         let mut inner = self.inner.lock();
         if inner.pager_handle.is_some() {
             return Ok(());

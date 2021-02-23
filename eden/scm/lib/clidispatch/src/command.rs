@@ -14,9 +14,9 @@ use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
 
 pub enum CommandFunc {
-    NoRepo(Box<dyn Fn(ParseOutput, &mut IO, ConfigSet) -> Result<u8>>),
-    OptionalRepo(Box<dyn Fn(ParseOutput, &mut IO, Option<Repo>) -> Result<u8>>),
-    Repo(Box<dyn Fn(ParseOutput, &mut IO, Repo) -> Result<u8>>),
+    NoRepo(Box<dyn Fn(ParseOutput, &IO, ConfigSet) -> Result<u8>>),
+    OptionalRepo(Box<dyn Fn(ParseOutput, &IO, Option<Repo>) -> Result<u8>>),
+    Repo(Box<dyn Fn(ParseOutput, &IO, Repo) -> Result<u8>>),
 }
 
 pub struct CommandDefinition {
@@ -107,13 +107,12 @@ pub trait Register<FN, T> {
 impl<S, FN> Register<FN, (S,)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(S, &mut IO, ConfigSet) -> Result<u8> + 'static,
+    FN: Fn(S, &IO, ConfigSet) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         self.insert_aliases(name);
-        let func = move |opts: ParseOutput, io: &mut IO, config: ConfigSet| {
-            f(opts.try_into()?, io, config)
-        };
+        let func =
+            move |opts: ParseOutput, io: &IO, config: ConfigSet| f(opts.try_into()?, io, config);
         let func = CommandFunc::NoRepo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);
@@ -124,12 +123,12 @@ where
 impl<S, FN> Register<FN, ((), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(S, &mut IO, Option<Repo>) -> Result<u8> + 'static,
+    FN: Fn(S, &IO, Option<Repo>) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         self.insert_aliases(name);
         let func =
-            move |opts: ParseOutput, io: &mut IO, repo: Option<Repo>| f(opts.try_into()?, io, repo);
+            move |opts: ParseOutput, io: &IO, repo: Option<Repo>| f(opts.try_into()?, io, repo);
         let func = CommandFunc::OptionalRepo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);
@@ -140,11 +139,11 @@ where
 impl<S, FN> Register<FN, ((), (), S)> for CommandTable
 where
     S: TryFrom<ParseOutput, Error = anyhow::Error> + StructFlags,
-    FN: Fn(S, &mut IO, Repo) -> Result<u8> + 'static,
+    FN: Fn(S, &IO, Repo) -> Result<u8> + 'static,
 {
     fn register(&mut self, f: FN, name: &str, doc: &str) {
         self.insert_aliases(name);
-        let func = move |opts: ParseOutput, io: &mut IO, repo: Repo| f(opts.try_into()?, io, repo);
+        let func = move |opts: ParseOutput, io: &IO, repo: Repo| f(opts.try_into()?, io, repo);
         let func = CommandFunc::Repo(Box::new(func));
         let def = CommandDefinition::new(name, doc, S::flags, func);
         self.commands.insert(name.to_string(), def);

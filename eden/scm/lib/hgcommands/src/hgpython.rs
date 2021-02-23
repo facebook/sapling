@@ -81,7 +81,7 @@ impl HgPython {
         &self,
         py: Python<'_>,
         args: Vec<String>,
-        io: &mut clidispatch::io::IO,
+        io: &clidispatch::io::IO,
     ) -> PyResult<()> {
         let entry_point_mod =
             info_span!("import edenscm").in_scope(|| py.import(HGPYENTRYPOINT_MOD))?;
@@ -100,7 +100,7 @@ impl HgPython {
     }
 
     /// Run an hg command defined in Python.
-    pub fn run_hg(&self, args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
+    pub fn run_hg(&self, args: Vec<String>, io: &clidispatch::io::IO) -> i32 {
         let gil = Python::acquire_gil();
         let py = gil.python();
         match self.run_hg_py(py, args, io) {
@@ -150,7 +150,7 @@ impl HgPython {
     }
 
     /// Run the Python interpreter.
-    pub fn run_python(&mut self, args: &[String], io: &mut clidispatch::io::IO) -> u8 {
+    pub fn run_python(&mut self, args: &[String], io: &clidispatch::io::IO) -> u8 {
         let args = Self::args_to_local_cstrings(&args);
         if self.py_initialized_by_us {
             // Py_Main will call Py_Finalize. Therefore skip Py_Finalize here.
@@ -220,8 +220,8 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
         let fout = wrap_pyio(fout);
         let ferr = ferr.map(wrap_pyio);
 
-        let mut io = IO::new(fin, fout, ferr);
-        Ok(crate::run_command(args, &mut io))
+        let io = IO::new(fin, fout, ferr);
+        Ok(crate::run_command(args, &io))
     }
 
     fn table_py(py: Python) -> PyResult<PyDict> {

@@ -34,7 +34,7 @@ define_flags! {
         dest: String,
     }
 }
-pub fn run(opts: StatusOpts, _io: &mut IO, config: ConfigSet) -> Result<u8> {
+pub fn run(opts: StatusOpts, _io: &IO, config: ConfigSet) -> Result<u8> {
     let reponame = opts.reponame;
     let destination = PathBuf::from(&opts.dest);
 

@@ -28,7 +28,7 @@ use super::Repo;
 use super::Result;
 use super::IO;
 
-pub fn run(_opts: NoOpts, io: &mut IO, repo: Repo) -> Result<u8> {
+pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
     let config = repo.config();
 
     let reponame = match config.get("remotefilelog", "reponame") {

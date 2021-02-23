@@ -11,7 +11,7 @@ use super::Result;
 use super::IO;
 use edenapi::EdenApiBlocking;
 
-pub fn run(_opts: NoOpts, io: &mut IO, repo: Repo) -> Result<u8> {
+pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
     let client = edenapi::Builder::from_config(repo.config())?.build()?;
     let meta = client.health_blocking()?;
     io.write(format!("{:#?}\n", &meta))?;

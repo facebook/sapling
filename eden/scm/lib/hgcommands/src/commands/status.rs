@@ -79,7 +79,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: StatusOpts, io: &mut IO, repo: Repo) -> Result<u8> {
+pub fn run(opts: StatusOpts, io: &IO, repo: Repo) -> Result<u8> {
     let rev_check = opts.rev.is_empty() || (opts.rev.len() == 1 && opts.rev[0] == ".");
 
     let args_check = opts.args.is_empty() || (opts.args.len() == 1 && opts.args[0] == "re:.");

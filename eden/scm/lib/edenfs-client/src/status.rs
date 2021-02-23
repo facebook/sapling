@@ -55,7 +55,7 @@ pub fn maybe_status_fastpath(
     repo_root: &Path,
     cwd: &Path,
     print_config: PrintConfig,
-    io: &mut IO,
+    io: &IO,
 ) -> Result<u8> {
     let mut rt = tokio::runtime::Runtime::new()?;
 
@@ -67,7 +67,7 @@ async fn maybe_status_fastpath_internal(
     repo_root: &Path,
     cwd: &Path,
     print_config: PrintConfig,
-    io: &mut IO,
+    io: &IO,
 ) -> Result<u8> {
     Err(FallbackToPython.into())
 }
@@ -77,7 +77,7 @@ async fn maybe_status_fastpath_internal(
     repo_root: &Path,
     cwd: &Path,
     print_config: PrintConfig,
-    io: &mut IO,
+    io: &IO,
 ) -> Result<u8> {
     // Look up the mount point name where Eden thinks this repository is
     // located.  This may be different from repo_root if a parent directory
@@ -398,12 +398,12 @@ impl PrintConfig {
         dirstate_data: &DirstateData,
         relativizer: &HgStatusPathRelativizer,
         use_color: bool,
-        io: &mut IO,
+        io: &IO,
     ) -> Result<u8> {
         let groups = group_entries(&repo_root, &status, &dirstate_data, io)?;
         let endl = self.endl;
 
-        let mut print_group =
+        let print_group =
             |print_group, enabled: bool, group: &Vec<PathBuf>| -> Result<(), io::Error> {
                 if !enabled {
                     return Ok(());
@@ -530,7 +530,7 @@ fn group_entries(
     repo_root: &Path,
     status: &ScmStatus,
     dirstate_data: &DirstateData,
-    io: &mut IO,
+    io: &IO,
 ) -> Result<GroupedEntries> {
     let mut result = GroupedEntries::default();
     let mut dirstates = dirstate_data.tuples.clone();

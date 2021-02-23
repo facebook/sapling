@@ -18,7 +18,7 @@ define_flags! {
     }
 }
 
-pub fn run(opts: DebugDynamicConfigOpts, _io: &mut IO, repo: Repo) -> Result<u8> {
+pub fn run(opts: DebugDynamicConfigOpts, _io: &IO, repo: Repo) -> Result<u8> {
     let repo_name: String = repo
         .repo_name()
         .map_or_else(|| "".to_string(), |s| s.to_string());

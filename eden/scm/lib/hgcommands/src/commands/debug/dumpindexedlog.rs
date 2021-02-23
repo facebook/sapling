@@ -12,10 +12,10 @@ use super::IO;
 use std::io::Write;
 use std::path::Path;
 
-pub fn run(opts: DebugArgsOpts, io: &mut IO, _config: ConfigSet) -> Result<u8> {
+pub fn run(opts: DebugArgsOpts, io: &IO, _config: ConfigSet) -> Result<u8> {
     let mut ferr = io.error();
     for path in opts.args {
-        let _ = io.write(format!("{}\n", path));
+        let _ = IO::write(&io, format!("{}\n", path));
         let path = Path::new(&path);
         if let Ok(meta) = indexedlog::log::LogMetadata::read_file(path) {
             write!(ferr, "Metadata File {:?}\n{:?}\n", path, meta)?;
