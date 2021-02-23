@@ -24,7 +24,7 @@ py_class!(pub class future |py| {
         std::mem::swap(&mut inner, &mut self.inner(py).borrow_mut());
 
         match inner {
-            Some(future) => async_runtime::block_on_future(future),
+            Some(future) => py.allow_threads(|| async_runtime::block_on_future(future)),
             None => Err(PyErr::new::<exc::ValueError, _>(py, "future was already waited")),
         }
     }
