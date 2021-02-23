@@ -6,7 +6,7 @@
  */
 
 use anyhow::{bail, format_err, Result};
-use futures::{stream, try_join, Stream, StreamExt, TryStreamExt};
+use futures::{stream, try_join, Stream, StreamExt};
 use manifest::{DiffEntry, DiffType, FileMetadata, FileType};
 use revisionstore::{HgIdDataStore, RemoteDataStore, StoreKey, StoreResult};
 use std::fmt;
@@ -178,19 +178,35 @@ impl CheckoutPlan {
         .await
     }
 
-    pub async fn apply_remote_data_store<DS: RemoteDataStore>(
+    pub async fn apply_remote_data_store<DS: RemoteDataStore + Clone + 'static>(
         &self,
         vfs: &VFS,
         store: &DS,
     ) -> Result<CheckoutStats> {
+        use futures::channel::mpsc;
         self.apply_stream(vfs, |keys| {
-            stream::iter(keys.into_iter().map(StoreKey::HgId))
-                .chunks(PREFETCH_CHUNK_SIZE)
-                .map(|chunk| -> Result<_> {
-                    store.prefetch(&chunk)?;
-                    Ok(stream::iter(chunk.into_iter().map(|key| store.get(key))))
-                })
-                .try_flatten()
+            let (tx, rx) = mpsc::unbounded();
+            let store = store.clone();
+            tokio::runtime::Handle::current().spawn_blocking(move || {
+                let keys: Vec<_> = keys.into_iter().map(StoreKey::HgId).collect();
+                for chunk in keys.chunks(PREFETCH_CHUNK_SIZE) {
+                    match store.prefetch(chunk) {
+                        Err(e) => {
+                            if tx.unbounded_send(Err(e)).is_err() {
+                                return;
+                            }
+                        }
+                        Ok(_) => {
+                            for key in chunk {
+                                if tx.unbounded_send(store.get(key.clone())).is_err() {
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            rx
         })
         .await
     }
