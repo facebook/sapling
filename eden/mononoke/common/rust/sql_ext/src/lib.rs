@@ -101,6 +101,25 @@ pub mod facebook {
         Mysql(SharedConnectionPool, PoolConfig),
     }
 
+    impl MysqlConnectionType {
+        pub fn per_key_limit(&self) -> Option<usize> {
+            match self {
+                Self::Myrouter(_) => None,
+                Self::RawXDB => None,
+                Self::Mysql(_, pool_config) => {
+                    #[cfg(fbcode_build)]
+                    {
+                        Some(pool_config.per_key_limit as usize)
+                    }
+                    #[cfg(not(fbcode_build))]
+                    {
+                        None
+                    }
+                }
+            }
+        }
+    }
+
     impl Debug for MysqlConnectionType {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             match &self {
