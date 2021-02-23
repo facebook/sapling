@@ -18,7 +18,9 @@ use std::sync::Weak;
 use std::thread::{spawn, JoinHandle};
 use streampager::{config::InterfaceMode, Pager};
 
-#[derive(Clone)]
+// IO is not Clone. But IO::error() and IO::output() can be cloned.
+// This ensures that there is only one strong reference, and dropping
+// that IO triggers Drop clean-ups properly.
 pub struct IO {
     inner: Arc<Mutex<Inner>>,
 }
