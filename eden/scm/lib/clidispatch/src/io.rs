@@ -25,7 +25,7 @@ pub struct IO {
 
 /// Implements `io::Write` on the error stream.
 #[derive(Clone)]
-pub struct IOError(IO);
+pub struct IOError(Weak<Mutex<Inner>>);
 
 struct Inner {
     input: Box<dyn Read>,
@@ -89,7 +89,11 @@ impl io::Write for IO {
 // Write to error.
 impl io::Write for IOError {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let mut inner = self.0.inner.lock();
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return Ok(buf.len()),
+        };
+        let mut inner = inner.lock();
         if let Some(error) = inner.error.as_mut() {
             error.write(buf)
         } else {
@@ -98,7 +102,11 @@ impl io::Write for IOError {
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        let mut inner = self.0.inner.lock();
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return Ok(()),
+        };
+        let mut inner = inner.lock();
         if let Some(error) = inner.error.as_mut() {
             error.flush()?;
         }
@@ -122,8 +130,10 @@ impl IO {
     /// Returns a clonable value that impls [`io::Write`] to `error` stream.
     /// The output is associated with the `IO` so if the `IO` starts a pager,
     /// the error stream will be properly redirected to the pager.
+    ///
+    /// If this IO is dropped, the IOError stream will be redirected to null.
     pub fn error(&self) -> IOError {
-        IOError(self.clone())
+        IOError(Arc::downgrade(&self.inner))
     }
 
     pub fn new<IS, OS, ES>(input: IS, output: OS, error: Option<ES>) -> Self
