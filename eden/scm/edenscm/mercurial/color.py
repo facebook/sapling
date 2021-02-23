@@ -295,9 +295,11 @@ def _activeeffects(ui):
 
 def valideffect(ui, effect):
     "Determine if the effect is valid or not."
-    return (
-        isinstance(_activeeffects(ui), truecoloreffects) and _truecolorre.match(effect)
-    ) or (effect in _activeeffects(ui))
+    return all(
+        (isinstance(_activeeffects(ui), truecoloreffects) and _truecolorre.match(e))
+        or (e in _activeeffects(ui))
+        for e in effect.split("+")
+    )
 
 
 def _mergeeffects(text, start, stop, usebytes=False):
@@ -333,7 +335,8 @@ def _render_effects(ui, text, effects, usebytes=False):
     if not text:
         return text
     activeeffects = _activeeffects(ui)
-    start = [pycompat.bytestr(activeeffects[e]) for e in ["none"] + effects.split()]
+    effects = ["none"] + [e for effect in effects.split() for e in effect.split("+")]
+    start = [pycompat.bytestr(activeeffects[e]) for e in effects]
     start = "\033[" + ";".join(start) + "m"
     stop = "\033[" + pycompat.bytestr(activeeffects["none"]) + "m"
     return _mergeeffects(text, start, stop, usebytes=usebytes)
