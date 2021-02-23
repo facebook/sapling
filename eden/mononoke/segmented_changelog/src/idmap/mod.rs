@@ -194,7 +194,7 @@ mod tests {
 
     use mononoke_types_mocks::changesetid::{AS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID};
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_write_a_read_ab(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
 

@@ -144,7 +144,7 @@ mod test {
 
     use mononoke_types_mocks::changesetid::{AS_CSID, ONES_CSID, TWOS_CSID};
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_concurrent_mem_idmap(fb: FacebookInit) -> Result<()> {
         let idmap = ConcurrentMemIdMap::new();
         let ctx = CoreContext::test_mock(fb);
