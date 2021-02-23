@@ -7,7 +7,7 @@
 
 use crate::graph::{
     AliasKey, ChangesetKey, EdgeType, FastlogKey, FileContentData, Node, NodeData, NodeType,
-    PathKey, UnodeFlags, UnodeKey, UnodeManifestEntry, WrappedPath,
+    PathKey, SqlShardInfo, UnodeFlags, UnodeKey, UnodeManifestEntry, WrappedPath,
 };
 use crate::setup::JobWalkParams;
 use crate::state::InternedType;
@@ -22,7 +22,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness};
-use bounded_traversal::bounded_traversal_unique;
+use bounded_traversal::limited_by_key_shardable;
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
@@ -1578,6 +1578,7 @@ pub struct RepoWalkParams {
     pub logger: Logger,
     pub scuba_builder: MononokeScubaSampleBuilder,
     pub scheduled_max: usize,
+    pub sql_shard_info: SqlShardInfo,
     pub walk_roots: Vec<OutgoingEdge>,
     pub include_node_types: HashSet<NodeType>,
     pub include_edge_types: HashSet<EdgeType>,
@@ -1638,7 +1639,8 @@ where
         cloned!(
             repo_params.repo,
             repo_params.include_edge_types,
-            repo_params.include_node_types
+            repo_params.include_node_types,
+            repo_params.sql_shard_info,
         );
 
         let checker = Arc::new(Checker {
@@ -1663,17 +1665,20 @@ where
             repo_id: repo.get_repoid(),
         });
 
-        Ok(bounded_traversal_unique(
+        Ok(limited_by_key_shardable(
             repo_params.scheduled_max,
             walk_roots,
             move |(via, walk_item): (Option<Route>, OutgoingEdge)| {
-                let ctx =
-                    if let Some(ctx) = visitor.start_step(ctx.clone(), via.as_ref(), &walk_item) {
-                        ctx
-                    } else {
-                        info!(ctx.logger(), "Suppressing edge {:?}", walk_item);
-                        return future::ready((walk_item.target, Ok(None))).left_future();
-                    };
+                cloned!(repo_params.sql_shard_info);
+                let shard_key = walk_item.target.sql_shard(&sql_shard_info);
+                let ctx = if let Some(ctx) =
+                    visitor.start_step(ctx.clone(), via.as_ref(), &walk_item)
+                {
+                    ctx
+                } else {
+                    info!(ctx.logger(), "Suppressing edge {:?}", walk_item);
+                    return future::ready((walk_item.target, shard_key, Ok(None))).left_future();
+                };
 
                 cloned!(
                     job_params.error_as_data_node_types,
@@ -1686,6 +1691,7 @@ where
                     checker,
                     walk_item.target,
                 );
+
                 // Each step returns the walk result, and next steps
                 async move {
                     let next = walk_one(
@@ -1705,10 +1711,22 @@ where
                     let handle = tokio::task::spawn(next);
                     handle.await?
                 }
-                .map(move |v| (target, v))
+                .map(move |v| (target, shard_key, v))
                 .right_future()
             },
-            |(_route, edge)| &edge.target,
+            move |(_route, edge)| {
+                (
+                    &edge.target,
+                    sql_shard_info
+                        .active_keys_per_shard
+                        .as_ref()
+                        .and_then(|per_shard| {
+                            edge.target
+                                .sql_shard(&sql_shard_info)
+                                .map(|v| (v, *per_shard))
+                        }),
+                )
+            },
         ))
     }
     .try_flatten_stream()

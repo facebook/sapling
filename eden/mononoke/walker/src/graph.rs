@@ -9,6 +9,7 @@ use ahash::RandomState;
 use anyhow::Error;
 use bitflags::bitflags;
 use blame::BlameRoot;
+use blobstore_factory::SqlTierInfo;
 use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
 use deleted_files_manifest::RootDeletedManifestId;
@@ -35,9 +36,10 @@ use mononoke_types::{
     skeleton_manifest::SkeletonManifest,
     unode::{FileUnode, ManifestUnode},
     BlameId, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, DeletedManifestId,
-    FastlogBatchId, FileUnodeId, FsnodeId, MPath, MPathHash, ManifestUnodeId, MononokeId,
+    FastlogBatchId, FileUnodeId, FsnodeId, MPath, MPathHash, ManifestUnodeId, MononokeId, RepoPath,
     SkeletonManifestId,
 };
+use newfilenodes::PathHash;
 use once_cell::sync::OnceCell;
 use phases::Phase;
 use skeleton_manifest::RootSkeletonManifestId;
@@ -651,7 +653,71 @@ pub enum NodeData {
     UnodeMapping(Option<ManifestUnodeId>),
 }
 
+#[derive(Clone)]
+pub struct SqlShardInfo {
+    pub filenodes: SqlTierInfo,
+    pub active_keys_per_shard: Option<usize>,
+}
+
+// Which type of non-blobstore Mononoke sql shard this node needs access to
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum SqlShard {
+    Metadata,
+    HgFileNode(usize),
+}
+
 impl Node {
+    /// Map node to an SqlShard if any
+    pub fn sql_shard(&self, shard_info: &SqlShardInfo) -> Option<SqlShard> {
+        // Only report shards if there is a limit of keys per shard
+        shard_info.active_keys_per_shard?;
+
+        match self {
+            Node::Root(_) => None,
+            // Bonsai
+            Node::Bookmark(_) => Some(SqlShard::Metadata),
+            Node::Changeset(_) => None,
+            Node::BonsaiHgMapping(_) => Some(SqlShard::Metadata),
+            Node::PhaseMapping(_) => Some(SqlShard::Metadata),
+            Node::PublishedBookmarks(_) => Some(SqlShard::Metadata),
+            // Hg
+            Node::HgBonsaiMapping(_) => Some(SqlShard::Metadata),
+            Node::HgChangeset(_) => None,
+            Node::HgChangesetViaBonsai(_) => Some(SqlShard::Metadata),
+            Node::HgManifest(PathKey { id: _, path: _ }) => None,
+            Node::HgFileEnvelope(_) => None,
+            Node::HgFileNode(PathKey { id: _, path }) => {
+                let path = path
+                    .as_ref()
+                    // TODO(ahornby) walk isn't handling manifest filenodes yet, so only RootPath and FilePath
+                    .map_or(RepoPath::RootPath, |p| RepoPath::FilePath(p.clone()));
+                let path_hash = PathHash::from_repo_path(&path);
+                let shard_num = path_hash.shard_number(shard_info.filenodes.shard_num.unwrap_or(1));
+                Some(SqlShard::HgFileNode(shard_num))
+            }
+            // Content
+            Node::FileContent(_) => None,
+            Node::FileContentMetadata(_) => None,
+            Node::AliasContentMapping(_) => None,
+            // Derived data
+            Node::Blame(_) => None,
+            Node::ChangesetInfo(_) => None,
+            Node::ChangesetInfoMapping(_) => None,
+            Node::DeletedManifest(_) => None,
+            Node::DeletedManifestMapping(_) => None,
+            Node::FastlogBatch(_) => None,
+            Node::FastlogDir(_) => None,
+            Node::FastlogFile(_) => None,
+            Node::Fsnode(_) => None,
+            Node::FsnodeMapping(_) => None,
+            Node::SkeletonManifest(_) => None,
+            Node::SkeletonManifestMapping(_) => None,
+            Node::UnodeFile(_) => None,
+            Node::UnodeManifest(_) => None,
+            Node::UnodeMapping(_) => None,
+        }
+    }
+
     pub fn stats_key(&self) -> String {
         match self {
             Node::Root(_) => "root".to_string(),

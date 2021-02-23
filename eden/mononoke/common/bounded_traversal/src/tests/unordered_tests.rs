@@ -18,7 +18,7 @@ use tokio::task::yield_now;
 use super::utils::{StateLog, Tick};
 use crate::{
     bounded_traversal, bounded_traversal_dag, bounded_traversal_stream, bounded_traversal_stream2,
-    bounded_traversal_unique,
+    limited_by_key_shardable,
 };
 
 // Tree for test purposes
@@ -503,9 +503,9 @@ async fn test_bounded_traversal_stream_parents() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_bounded_traversal_unique_ticks() -> Result<(), Error> {
+async fn test_limited_by_key_shardable_ticks() -> Result<(), Error> {
     check_stream_unfold_ticks(|tree, tick, log| {
-        bounded_traversal_unique(
+        limited_by_key_shardable(
             2,
             Some(tree),
             {
@@ -514,20 +514,20 @@ async fn test_bounded_traversal_unique_ticks() -> Result<(), Error> {
                     cloned!(log);
                     tick.sleep(1).map(move |now| {
                         log.unfold(id, now);
-                        (id, Ok::<_, Error>(Some((id, children))))
+                        (id, None::<()>, Ok::<_, Error>(Some((id, children))))
                     })
                 }
             },
-            |item| &item.id,
+            |item| (&item.id, None),
         )
     })
     .await
 }
 
 #[tokio::test]
-async fn test_bounded_traversal_unique_duplicate_ticks() -> Result<(), Error> {
+async fn test_limited_by_key_shardable_duplicate_ticks() -> Result<(), Error> {
     check_duplicate_stream_unfold_ticks(|tree, tick, log| {
-        bounded_traversal_unique(
+        limited_by_key_shardable(
             2,
             Some(tree),
             {
@@ -536,20 +536,43 @@ async fn test_bounded_traversal_unique_duplicate_ticks() -> Result<(), Error> {
                     cloned!(log);
                     tick.sleep(1).map(move |now| {
                         log.unfold(id, now);
-                        (id, Ok::<_, Error>(Some((id, children))))
+                        (id, None::<()>, Ok::<_, Error>(Some((id, children))))
                     })
                 }
             },
-            |item| &item.id,
+            |item| (&item.id, None),
         )
     })
     .await
 }
 
 #[tokio::test]
-async fn test_bounded_traversal_unique_parents() -> Result<(), Error> {
+async fn test_limited_by_key_shardable_duplicate_ticks_sharded() -> Result<(), Error> {
+    check_duplicate_stream_unfold_ticks(|tree, tick, log| {
+        limited_by_key_shardable(
+            10, // This has a wide executor
+            Some(tree),
+            {
+                cloned!(tick, log);
+                move |Tree { id, children }| {
+                    cloned!(log);
+                    tick.sleep(1).map(move |now| {
+                        log.unfold(id, now);
+                        (id, Some(()), Ok::<_, Error>(Some((id, children))))
+                    })
+                }
+            },
+            // But max 2 active keys per shard means it matches same log as test_limited_by_key_shardable_duplicate_ticks
+            |item| (&item.id, Some(((), 2))),
+        )
+    })
+    .await
+}
+
+#[tokio::test]
+async fn test_limited_by_key_shardable_parents() -> Result<(), Error> {
     check_stream_unfold_parents(|tree, tick, log| {
-        bounded_traversal_unique(
+        limited_by_key_shardable(
             2,
             Some((tree, 0)),
             {
@@ -560,12 +583,13 @@ async fn test_bounded_traversal_unique_parents() -> Result<(), Error> {
                         log.unfold(id, parent);
                         (
                             id,
+                            None::<()>,
                             Ok::<_, Error>(Some((id, children.into_iter().map(move |i| (i, id))))),
                         )
                     })
                 }
             },
-            |(item, _parent)| &item.id,
+            |(item, _parent)| (&item.id, None),
         )
     })
     .await

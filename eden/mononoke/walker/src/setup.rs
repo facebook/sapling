@@ -7,7 +7,7 @@
 
 use crate::blobstore;
 use crate::checkpoint::{CheckpointsByName, SqlCheckpoints};
-use crate::graph::{EdgeType, Node, NodeType};
+use crate::graph::{EdgeType, Node, NodeType, SqlShardInfo};
 use crate::log;
 use crate::parse_node::parse_node;
 use crate::progress::{
@@ -39,6 +39,7 @@ use maplit::hashset;
 use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_types::{BlobConfig, CensoredScubaParams, MetadataDatabaseConfig, Redaction};
 use multiplexedblob::ScrubHandler;
+use newfilenodes::NewFilenodesBuilder;
 use once_cell::sync::Lazy;
 use samplingblob::{SamplingBlobstore, SamplingHandler};
 use scuba_ext::MononokeScubaSampleBuilder;
@@ -1332,6 +1333,11 @@ pub async fn setup_common<'a>(
         )
         .await?;
 
+        let sql_shard_info = SqlShardInfo {
+            filenodes: sql_factory.tier_info_shardable::<NewFilenodesBuilder>()?,
+            active_keys_per_shard: mysql_options.connection_type.per_key_limit(),
+        };
+
         // Share the sql factory with the blobstores associated with it
         for blobconfig in blobconfigs {
             let repos = blob_config_to_repos.get(&blobconfig);
@@ -1375,6 +1381,7 @@ pub async fn setup_common<'a>(
                     scuba_builder.clone(),
                     blobstore.clone(),
                     &sql_factory,
+                    sql_shard_info.clone(),
                     readonly_storage,
                     caching,
                     blobstore_options.cachelib_options.clone(),
@@ -1415,6 +1422,7 @@ async fn setup_repo<'a>(
     mut scuba_builder: MononokeScubaSampleBuilder,
     blobstore: Arc<dyn Blobstore>,
     sql_factory: &'a MetadataSqlFactory,
+    sql_shard_info: SqlShardInfo,
     readonly_storage: ReadOnlyStorage,
     caching: Caching,
     cachelib_blobstore_options: CachelibBlobstoreOptions,
@@ -1521,6 +1529,7 @@ async fn setup_repo<'a>(
             repo: repo.await?,
             logger: logger.clone(),
             scheduled_max,
+            sql_shard_info,
             walk_roots,
             include_node_types,
             include_edge_types,

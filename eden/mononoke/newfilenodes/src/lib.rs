@@ -32,6 +32,7 @@ use thiserror::Error as DeriveError;
 pub use builder::NewFilenodesBuilder;
 use reader::FilenodesReader;
 pub use sql_timeout_knobs::disable_sql_timeouts;
+pub use structs::PathHash;
 use writer::FilenodesWriter;
 
 #[derive(Debug, DeriveError)]

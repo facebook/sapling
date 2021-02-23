@@ -75,7 +75,8 @@ where
 /// This function is similar to `bounded_traversal_stream` but:
 ///   - prevents items with duplicate keys executing concurrently
 ///   - allows an item to have no stream output by returning None
-pub fn bounded_traversal_unique<In, InsInit, Ins, Out, Unfold, UFut, UErr, Key, KeyFn>(
+///   - optionally allows to restrict the number of keys executing concurrently by a ShardKey
+pub fn limited_by_key_shardable<In, InsInit, Ins, Out, Unfold, UFut, UErr, Key, KeyFn, ShardKey>(
     scheduled_max: usize,
     init: InsInit,
     mut unfold: Unfold,
@@ -83,15 +84,17 @@ pub fn bounded_traversal_unique<In, InsInit, Ins, Out, Unfold, UFut, UErr, Key, 
 ) -> impl Stream<Item = Result<Out, UErr>>
 where
     Unfold: FnMut(In) -> UFut,
-    UFut: Future<Output = (Key, Result<Option<(Out, Ins)>, UErr>)>,
+    UFut: Future<Output = (Key, Option<ShardKey>, Result<Option<(Out, Ins)>, UErr>)>,
     InsInit: IntoIterator<Item = In>,
     Ins: IntoIterator<Item = In>,
     Key: Clone + Eq + Hash,
-    KeyFn: Fn(&In) -> &Key,
+    KeyFn: Fn(&In) -> (&Key, Option<(ShardKey, usize)>),
+    ShardKey: Clone + Eq + Hash,
 {
     let mut unscheduled = VecDeque::from_iter(init);
     let mut scheduled = FuturesUnordered::new();
-    let mut waiting_for_inflight: HashMap<Key, VecDeque<_>> = HashMap::new();
+    let mut waiting_for_key: HashMap<Key, VecDeque<_>> = HashMap::new();
+    let mut waiting_for_shard: HashMap<ShardKey, (usize, VecDeque<_>)> = HashMap::new();
 
     stream::poll_fn(move |cx| {
         loop {
@@ -103,25 +106,47 @@ where
                 for item in unscheduled
                     .drain(..std::cmp::min(unscheduled.len(), scheduled_max - scheduled.len()))
                 {
-                    let key = key_fn(&item);
-                    if let Some(inflight) = waiting_for_inflight.get_mut(key) {
+                    let (key, shard_info) = key_fn(&item);
+                    if let Some(inflight) = waiting_for_key.get_mut(key) {
+                        // Exact duplicate, it needs to wait
                         inflight.push_back(item);
-                    } else {
-                        waiting_for_inflight.insert(key.clone(), VecDeque::new());
-                        let unfolded = unfold(item);
-                        scheduled.push(unfolded);
+                        continue;
                     }
+
+                    if let Some((shard_key, max_per_shard)) = shard_info {
+                        let (inflight, queued) = waiting_for_shard.entry(shard_key).or_default();
+                        if *inflight > max_per_shard {
+                            // Shard is too busy, so queue more
+                            queued.push_back(item);
+                            continue;
+                        } else {
+                            *inflight += 1;
+                        }
+                    }
+
+                    waiting_for_key.insert(key.clone(), VecDeque::new());
+                    scheduled.push(unfold(item));
                 }
             }
 
-            if let Some((key, unfolded)) = ready!(scheduled.poll_next_unpin(cx)) {
-                if let Some((reinsert_key, mut queue)) = waiting_for_inflight.remove_entry(&key) {
+            if let Some((key, shard_key, unfolded)) = ready!(scheduled.poll_next_unpin(cx)) {
+                if let Some((key, mut queue)) = waiting_for_key.remove_entry(&key) {
                     if let Some(item) = queue.pop_front() {
                         let unfolded = unfold(item);
                         scheduled.push(unfolded);
                     }
                     if !queue.is_empty() {
-                        waiting_for_inflight.insert(reinsert_key, queue);
+                        waiting_for_key.insert(key, queue);
+                    }
+                }
+
+                if let Some(shard_key) = shard_key {
+                    if let Some((inflight, queue)) = waiting_for_shard.get_mut(&shard_key) {
+                        *inflight = inflight.saturating_sub(1);
+                        if let Some(item) = queue.pop_front() {
+                            // Don't directly schedule as could be a duplicate key
+                            unscheduled.push_front(item);
+                        }
                     }
                 }
 
