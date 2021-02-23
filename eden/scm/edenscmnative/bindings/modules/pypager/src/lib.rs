@@ -11,7 +11,7 @@ use clidispatch::io::IO;
 use cpython::*;
 use cpython_ext::{PyNone, ResultPyErrExt};
 use pyconfigparser::config as PyConfig;
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "pager"].join(".");
@@ -21,16 +21,14 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 }
 
 py_class!(class pager |py| {
-    data io: RefCell<IO>;
     data closed: Cell<bool>;
 
     def __new__(_cls, config: PyConfig) -> PyResult<pager> {
-        let mut io = IO::stdio();
+        let mut io = IO::main().map_pyerr(py)?;
         let config = &config.get_cfg(py);
         io.start_pager(config).map_pyerr(py)?;
         Self::create_instance(
             py,
-            RefCell::new(io),
             Cell::new(false),
         )
     }
@@ -38,29 +36,32 @@ py_class!(class pager |py| {
     /// Write to pager's main buffer. Text should be in utf-8.
     def write(&self, bytes: PyBytes) -> PyResult<PyNone> {
         self.check_closed(py)?;
-        self.io(py).borrow_mut().write(bytes.data(py)).map_pyerr(py)?;
+        let mut io = IO::main().map_pyerr(py)?;
+        io.write(bytes.data(py)).map_pyerr(py)?;
         Ok(PyNone)
     }
 
     /// Write to pager's stderr buffer. Text should be in utf-8.
     def write_err(&self, bytes: PyBytes) -> PyResult<PyNone> {
         self.check_closed(py)?;
-        self.io(py).borrow_mut().write_err(bytes.data(py)).map_pyerr(py)?;
+        let mut io = IO::main().map_pyerr(py)?;
+        io.write_err(bytes.data(py)).map_pyerr(py)?;
         Ok(PyNone)
     }
 
     /// Write to pager's progress buffer.  Text should be in utf-8.
     def write_progress(&self, bytes: PyBytes) -> PyResult<PyNone> {
         self.check_closed(py)?;
-        self.io(py).borrow_mut().write_progress(bytes.data(py)).map_pyerr(py)?;
+        let mut io = IO::main().map_pyerr(py)?;
+        io.write_progress(bytes.data(py)).map_pyerr(py)?;
         Ok(PyNone)
     }
 
     /// Wait for the pager to end.
     def close(&self) -> PyResult<PyNone> {
         self.closed(py).set(true);
-        // Drop values by replacing them. This sends EOF to the pager.
-        *self.io(py).borrow_mut() = IO::stdio();
+        let mut io = IO::main().map_pyerr(py)?;
+        io.wait_pager().map_pyerr(py)?;
         Ok(PyNone)
     }
 });
