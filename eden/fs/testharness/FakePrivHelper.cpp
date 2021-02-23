@@ -101,6 +101,12 @@ Future<Unit> FakePrivHelper::nfsMount(
       runtime_error("FakePrivHelper::nfsMount() not implemented"));
 }
 
+folly::Future<folly::Unit> FakePrivHelper::nfsUnmount(
+    folly::StringPiece /*mountPath*/) {
+  return makeFuture<Unit>(
+      runtime_error("FakePrivHelper::nfsUnmount() not implemented"));
+}
+
 Future<Unit> FakePrivHelper::fuseUnmount(folly::StringPiece mountPath) {
   return folly::makeFutureWith(
       [&] { return getMountDelegate(mountPath)->fuseUnmount(); });

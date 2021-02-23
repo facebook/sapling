@@ -177,6 +177,23 @@ void PrivHelperConn::parseUnmountRequest(Cursor& cursor, string& mountPoint) {
   checkAtEnd(cursor, "unmount request");
 }
 
+UnixSocket::Message PrivHelperConn::serializeNfsUnmountRequest(
+    uint32_t xid,
+    StringPiece mountPoint) {
+  auto msg = serializeHeader(xid, REQ_UNMOUNT_NFS);
+  Appender appender(&msg.data, kDefaultBufferSize);
+
+  serializeString(appender, mountPoint);
+  return msg;
+}
+
+void PrivHelperConn::parseNfsUnmountRequest(
+    Cursor& cursor,
+    string& mountPoint) {
+  mountPoint = deserializeString(cursor);
+  checkAtEnd(cursor, "unmount request");
+}
+
 UnixSocket::Message PrivHelperConn::serializeTakeoverShutdownRequest(
     uint32_t xid,
     StringPiece mountPoint) {

@@ -80,6 +80,9 @@ class PrivHelper {
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> fuseUnmount(
       folly::StringPiece mountPath) = 0;
 
+  FOLLY_NODISCARD virtual folly::Future<folly::Unit> nfsUnmount(
+      folly::StringPiece mountPath) = 0;
+
   /**
    * @param clientPath Absolute path to the existing directory where the "real"
    *     storage is.

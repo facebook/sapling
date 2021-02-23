@@ -615,9 +615,9 @@ void PrivHelperServer::bindMount(
 #endif
 }
 
-void PrivHelperServer::fuseUnmount(const char* mountPath) {
+void PrivHelperServer::unmount(const char* mountPath) {
 #ifdef __APPLE__
-  auto rc = unmount(mountPath, MNT_FORCE);
+  auto rc = ::unmount(mountPath, MNT_FORCE);
 #else
   // UMOUNT_NOFOLLOW prevents us from following symlinks.
   // This is needed for security, to ensure that we are only unmounting mount
@@ -705,7 +705,23 @@ UnixSocket::Message PrivHelperServer::processUnmountMsg(Cursor& cursor) {
         folly::to<string>("No FUSE mount found for ", mountPath));
   }
 
-  fuseUnmount(mountPath.c_str());
+  unmount(mountPath.c_str());
+  mountPoints_.erase(mountPath);
+  return makeResponse();
+}
+
+UnixSocket::Message PrivHelperServer::processNfsUnmountMsg(Cursor& cursor) {
+  string mountPath;
+  PrivHelperConn::parseNfsUnmountRequest(cursor, mountPath);
+  XLOG(DBG3) << "unmount \"" << mountPath << "\"";
+
+  const auto it = mountPoints_.find(mountPath);
+  if (it == mountPoints_.end()) {
+    throw std::domain_error(
+        folly::to<string>("No NFS mount found for ", mountPath));
+  }
+
+  unmount(mountPath.c_str());
   mountPoints_.erase(mountPath);
   return makeResponse();
 }
@@ -829,7 +845,7 @@ void PrivHelperServer::bindUnmount(const char* mountPath) {
   // so we can confirm that it has been unmounted afterwards.
   const auto origFSID = getFSID(mountPath);
 
-  fuseUnmount(mountPath);
+  unmount(mountPath);
 
   // Empirically, the unmount may not be complete when umount2() returns.
   // To work around this, we repeatedly invoke statvfs() on the bind mount
@@ -973,6 +989,8 @@ UnixSocket::Message PrivHelperServer::processMessage(
       return processBindMountMsg(cursor);
     case PrivHelperConn::REQ_UNMOUNT_FUSE:
       return processUnmountMsg(cursor);
+    case PrivHelperConn::REQ_UNMOUNT_NFS:
+      return processNfsUnmountMsg(cursor);
     case PrivHelperConn::REQ_TAKEOVER_SHUTDOWN:
       return processTakeoverShutdownMsg(cursor);
     case PrivHelperConn::REQ_TAKEOVER_STARTUP:
@@ -1011,7 +1029,7 @@ void PrivHelperServer::receiveError(
 void PrivHelperServer::cleanupMountPoints() {
   for (const auto& mountPoint : mountPoints_) {
     try {
-      fuseUnmount(mountPoint.c_str());
+      unmount(mountPoint.c_str());
     } catch (const std::exception& ex) {
       XLOG(ERR) << "error unmounting \"" << mountPoint
                 << "\": " << folly::exceptionStr(ex);

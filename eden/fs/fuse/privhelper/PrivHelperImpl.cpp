@@ -103,6 +103,7 @@ class PrivHelperClientImpl : public PrivHelper,
       uint16_t nfsdPort,
       bool readOnly) override;
   Future<Unit> fuseUnmount(StringPiece mountPath) override;
+  Future<Unit> nfsUnmount(StringPiece mountPath) override;
   Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
       override;
   folly::Future<folly::Unit> bindUnMount(folly::StringPiece mountPath) override;
@@ -386,6 +387,16 @@ Future<Unit> PrivHelperClientImpl::fuseUnmount(StringPiece mountPath) {
       .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(
             PrivHelperConn::REQ_UNMOUNT_FUSE, response);
+      });
+}
+
+Future<Unit> PrivHelperClientImpl::nfsUnmount(StringPiece mountPath) {
+  auto xid = getNextXid();
+  auto request = PrivHelperConn::serializeNfsUnmountRequest(xid, mountPath);
+  return sendAndRecv(xid, std::move(request))
+      .thenValue([](UnixSocket::Message&& response) {
+        PrivHelperConn::parseEmptyResponse(
+            PrivHelperConn::REQ_UNMOUNT_NFS, response);
       });
 }
 

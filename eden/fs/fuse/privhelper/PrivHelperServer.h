@@ -81,6 +81,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
   UnixSocket::Message processMountMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processMountNfsMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processUnmountMsg(folly::io::Cursor& cursor);
+  UnixSocket::Message processNfsUnmountMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processBindMountMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processBindUnMountMsg(folly::io::Cursor& cursor);
   UnixSocket::Message processTakeoverShutdownMsg(folly::io::Cursor& cursor);
@@ -104,7 +105,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       uint16_t mountdPort,
       uint16_t nfsdPort,
       bool readOnly);
-  virtual void fuseUnmount(const char* mountPath);
+  virtual void unmount(const char* mountPath);
   // Both clientPath and mountPath must be existing directories.
   virtual void bindMount(const char* clientPath, const char* mountPath);
   virtual void bindUnmount(const char* mountPath);

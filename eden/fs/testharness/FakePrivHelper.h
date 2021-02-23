@@ -60,6 +60,7 @@ class FakePrivHelper : public PrivHelper {
       uint16_t nfsdPort,
       bool readOnly) override;
   folly::Future<folly::Unit> fuseUnmount(folly::StringPiece mountPath) override;
+  folly::Future<folly::Unit> nfsUnmount(folly::StringPiece mountPath) override;
   folly::Future<folly::Unit> bindMount(
       folly::StringPiece clientPath,
       folly::StringPiece mountPath) override;
