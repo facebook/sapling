@@ -331,6 +331,16 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * The maximum time duration allowed for a NFS request. If a request exceeds
+   * this amount of time, an NFS3ERR_JUKEBOX error will be returned to the
+   * client to avoid blocking forever.
+   */
+  ConfigSetting<std::chrono::nanoseconds> nfsRequestTimeout{
+      "nfs:request-timeout",
+      std::chrono::minutes(1),
+      this};
+
+  /**
    * The maximum time duration allowed for a ProjectedFS callback. If a request
    * exceeds this amount of time, the request will fail to avoid blocking
    * forever. A notification will also be shown to alert the user of the

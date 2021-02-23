@@ -1313,7 +1313,7 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                     std::chrono::duration_cast<folly::Duration>(
                         serverState_->getReloadableConfig()
                             .getEdenConfig()
-                            ->prjfsRequestTimeout.getValue()),
+                            ->nfsRequestTimeout.getValue()),
                     serverState_->getNotifications(),
                     config_->getCaseSensitive());
               });
