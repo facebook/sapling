@@ -130,6 +130,29 @@ impl IO {
         }
     }
 
+    /// Stop the pager and restore outputs to stdio.
+    pub fn wait_pager(&mut self) -> io::Result<()> {
+        let mut inner = self.inner.lock();
+        inner.flush()?;
+
+        // Drop the piped streams. This sends EOF to pager.
+        // XXX: Stdio is hard-coded for wait_pager.
+        inner.input = Box::new(io::stdin());
+        inner.output = Box::new(io::stdout());
+        inner.error = Some(Box::new(io::stderr()));
+        inner.progress = None;
+
+        // Wait for the pager (if running).
+        let mut handle = None;
+        mem::swap(&mut handle, &mut inner.pager_handle);
+        if let Some(handle) = handle {
+            let _ = handle.join();
+        }
+
+        Ok(())
+    }
+
+
     pub fn write(&mut self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
         self.inner.lock().output.write_all(data)?;
