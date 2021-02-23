@@ -41,6 +41,9 @@ pub use ::dag::{CloneData, FlatSegment, Id as Vertex, Location, PreparedFlatSegm
 
 pub use crate::builder::SegmentedChangelogBuilder;
 
+// public for benchmarking
+pub use crate::idmap::{ConcurrentMemIdMap, IdMap};
+
 // TODO(T74420661): use `thiserror` to represent error case
 
 pub struct StreamCloneData<T> {

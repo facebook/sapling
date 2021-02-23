@@ -370,6 +370,7 @@ members = [
     "revset",
     "revset/revset-test-helper",
     "segmented_changelog",
+    "segmented_changelog/bench/concurrent_idmap",
     "server",
     "server/context",
     "server/monitoring",
