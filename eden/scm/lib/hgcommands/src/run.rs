@@ -50,12 +50,12 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
     // Setup tracing early since "log_start" will use it immediately.
     // The tracing clock starts ticking from here.
-    let (_tracing_level, tracing_data) = match setup_tracing(&global_opts, io) {
+    let tracing_data = match setup_tracing(&global_opts, io) {
         Err(_) => {
             // With our current architecture it is common to see this path in our tests due to
             // trying to set a global collector a second time. Ignore the error and return some
             // dummy values. FIXME!
-            (Level::INFO, Arc::new(Mutex::new(TracingData::new())))
+            Arc::new(Mutex::new(TracingData::new()))
         }
         Ok(res) => res,
     };
@@ -168,10 +168,7 @@ fn current_dir(io: &IO) -> io::Result<PathBuf> {
     result
 }
 
-fn setup_tracing(
-    global_opts: &Option<HgGlobalOpts>,
-    io: &IO,
-) -> Result<(Level, Arc<Mutex<TracingData>>)> {
+fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mutex<TracingData>>> {
     // Setup TracingData singleton (currently owned by pytracing).
     {
         let mut data = pytracing::DATA.lock();
@@ -185,26 +182,14 @@ fn setup_tracing(
     }
     let data = pytracing::DATA.clone();
 
-    let level = std::env::var("EDENSCM_TRACE_LEVEL")
-        .ok()
-        .and_then(|s| Level::from_str(&s).ok())
-        .unwrap_or_else(|| {
-            if let Some(opts) = global_opts {
-                if opts.trace {
-                    return Level::DEBUG;
-                }
-            }
-            Level::INFO
-        });
-
-
-    let collector = tracing_collector::default_collector(data.clone(), level.clone());
     let is_test = is_inside_test();
     let log_env_name = ["EDENSCM_LOG", "LOG"]
         .iter()
         .take(if is_test { 2 } else { 1 }) /* Only consider $LOG in tests */
         .find(|s| std::env::var_os(s).is_some());
     if let Some(env_name) = log_env_name {
+        // The env_filter does the actual filtering. No need to filter by level.
+        let collector = tracing_collector::default_collector(data.clone(), Level::TRACE);
         let env_filter = EnvFilter::from_env(env_name);
         let error = io.error();
         let env_logger = FmtLayer::new()
@@ -220,10 +205,23 @@ fn setup_tracing(
             tracing::subscriber::set_global_default(collector)?;
         }
     } else {
+        let level = std::env::var("EDENSCM_TRACE_LEVEL")
+            .ok()
+            .and_then(|s| Level::from_str(&s).ok())
+            .unwrap_or_else(|| {
+                if let Some(opts) = global_opts {
+                    if opts.trace {
+                        return Level::DEBUG;
+                    }
+                }
+                Level::INFO
+            });
+
+        let collector = tracing_collector::default_collector(data.clone(), level);
         tracing::subscriber::set_global_default(collector)?;
     }
 
-    Ok((level, data))
+    Ok(data)
 }
 
 fn maybe_write_trace(
