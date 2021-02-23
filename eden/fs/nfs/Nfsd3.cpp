@@ -140,6 +140,30 @@ nfstime3 timespecToNfsTime(const struct timespec& time) {
       folly::to_narrow(folly::to_unsigned(time.tv_nsec))};
 }
 
+fattr3 statToFattr3(const struct stat& stat) {
+  return fattr3{
+      /*type*/ modeToFtype3(stat.st_mode),
+      /*mode*/ modeToNfsMode(stat.st_mode),
+      /*nlink*/ folly::to_narrow(stat.st_nlink),
+      /*uid*/ stat.st_uid,
+      /*gid*/ stat.st_gid,
+      /*size*/ folly::to_unsigned(stat.st_size),
+      /*used*/ folly::to_unsigned(stat.st_blocks) * 512u,
+      /*rdev*/ specdata3{0, 0}, // TODO(xavierd)
+      /*fsid*/ folly::to_unsigned(stat.st_dev),
+      /*fileid*/ stat.st_ino,
+#ifdef __linux__
+      /*atime*/ timespecToNfsTime(stat.st_atim),
+      /*mtime*/ timespecToNfsTime(stat.st_mtim),
+      /*ctime*/ timespecToNfsTime(stat.st_ctim),
+#else
+      /*atime*/ timespecToNfsTime(stat.st_atimespec),
+      /*mtime*/ timespecToNfsTime(stat.st_mtimespec),
+      /*ctime*/ timespecToNfsTime(stat.st_ctimespec),
+#endif
+  };
+}
+
 folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
     folly::io::Cursor deser,
     folly::io::Appender ser,
@@ -161,28 +185,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
           auto stat = std::move(try_).value();
 
           GETATTR3res res{
-              {nfsstat3::NFS3_OK,
-               GETATTR3resok{fattr3{
-                   /*type*/ modeToFtype3(stat.st_mode),
-                   /*mode*/ modeToNfsMode(stat.st_mode),
-                   /*nlink*/ folly::to_narrow(stat.st_nlink),
-                   /*uid*/ stat.st_uid,
-                   /*gid*/ stat.st_gid,
-                   /*size*/ folly::to_unsigned(stat.st_size),
-                   /*used*/ folly::to_unsigned(stat.st_blocks) * 512u,
-                   /*rdev*/ specdata3{0, 0}, // TODO(xavierd)
-                   /*fsid*/ folly::to_unsigned(stat.st_dev),
-                   /*fileid*/ stat.st_ino,
-#ifdef __linux__
-                   /*atime*/ timespecToNfsTime(stat.st_atim),
-                   /*mtime*/ timespecToNfsTime(stat.st_mtim),
-                   /*ctime*/ timespecToNfsTime(stat.st_ctim),
-#else
-                   /*atime*/ timespecToNfsTime(stat.st_atimespec),
-                   /*mtime*/ timespecToNfsTime(stat.st_mtimespec),
-                   /*ctime*/ timespecToNfsTime(stat.st_ctimespec),
-#endif
-               }}}};
+              {nfsstat3::NFS3_OK, GETATTR3resok{statToFattr3(stat)}}};
           XdrTrait<GETATTR3res>::serialize(ser, res);
         }
 
@@ -206,12 +209,48 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
   return folly::unit;
 }
 
+uint32_t getEffectiveAccessRights(
+    const struct stat& /*stat*/,
+    uint32_t desiredAccess) {
+  // TODO(xavierd): we should look at the uid/gid of the user doing the
+  // request. This should be part of the RPC credentials.
+  return desiredAccess;
+}
+
 folly::Future<folly::Unit> Nfsd3ServerProcessor::access(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<ACCESS3args>::deserialize(deser);
+
+  // TODO(xavierd): make an NfsRequestContext.
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("access");
+
+  return dispatcher_->getattr(args.object.ino, *context)
+      .thenTry([ser = std::move(ser), desiredAccess = args.access](
+                   folly::Try<struct stat>&& try_) mutable {
+        if (try_.hasException()) {
+          ACCESS3res res{
+              {nfsstat3::NFS3ERR_IO,
+               ACCESS3resfail{post_op_attr{{false, std::monostate{}}}}}};
+          XdrTrait<ACCESS3res>::serialize(ser, res);
+        } else {
+          auto stat = std::move(try_).value();
+
+          ACCESS3res res{
+              {nfsstat3::NFS3_OK,
+               ACCESS3resok{
+                   post_op_attr{{true, statToFattr3(stat)}},
+                   /*access*/ getEffectiveAccessRights(stat, desiredAccess),
+               }}};
+          XdrTrait<ACCESS3res>::serialize(ser, res);
+        }
+
+        return folly::unit;
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::readlink(
