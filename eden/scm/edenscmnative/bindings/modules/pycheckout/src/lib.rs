@@ -56,7 +56,7 @@ py_class!(class checkoutplan |py| {
         let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
         let store = content_store.extract_inner_ref(py);
         let plan = self.plan(py);
-        block_on(plan.apply_remote_data_store(&vfs, store)).map_pyerr(py)?;
+        py.allow_threads(|| block_on(plan.apply_remote_data_store(&vfs, store))).map_pyerr(py)?;
         Ok(PyNone)
     }
 
