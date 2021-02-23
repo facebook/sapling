@@ -28,6 +28,9 @@ EDEN_XDR_SERDE_IMPL(
     mtime,
     ctime);
 EDEN_XDR_SERDE_IMPL(GETATTR3resok, obj_attributes);
+EDEN_XDR_SERDE_IMPL(ACCESS3args, object, access);
+EDEN_XDR_SERDE_IMPL(ACCESS3resok, obj_attributes, access);
+EDEN_XDR_SERDE_IMPL(ACCESS3resfail, obj_attributes);
 EDEN_XDR_SERDE_IMPL(
     FSINFO3resok,
     obj_attributes,

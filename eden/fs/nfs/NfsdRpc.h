@@ -220,6 +220,52 @@ struct XdrTrait<GETATTR3res> : public XdrTrait<GETATTR3res::Base> {
   }
 };
 
+// ACCESS Procedure:
+
+const uint32_t ACCESS3_READ = 0x0001;
+const uint32_t ACCESS3_LOOKUP = 0x0002;
+const uint32_t ACCESS3_MODIFY = 0x0004;
+const uint32_t ACCESS3_EXTEND = 0x0008;
+const uint32_t ACCESS3_DELETE = 0x0010;
+const uint32_t ACCESS3_EXECUTE = 0x0020;
+
+struct ACCESS3args {
+  nfs_fh3 object;
+  uint32_t access;
+};
+EDEN_XDR_SERDE_DECL(ACCESS3args, object, access);
+
+struct ACCESS3resok {
+  post_op_attr obj_attributes;
+  uint32_t access;
+};
+EDEN_XDR_SERDE_DECL(ACCESS3resok, obj_attributes, access);
+
+struct ACCESS3resfail {
+  post_op_attr obj_attributes;
+};
+EDEN_XDR_SERDE_DECL(ACCESS3resfail, obj_attributes);
+
+struct ACCESS3res : public XdrVariant<nfsstat3, ACCESS3resok, ACCESS3resfail> {
+};
+
+template <>
+struct XdrTrait<ACCESS3res> : public XdrTrait<ACCESS3res::Base> {
+  static ACCESS3res deserialize(folly::io::Cursor& cursor) {
+    ACCESS3res ret;
+    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
+    switch (ret.tag) {
+      case nfsstat3::NFS3_OK:
+        ret.v = XdrTrait<ACCESS3resok>::deserialize(cursor);
+        break;
+      default:
+        ret.v = XdrTrait<ACCESS3resfail>::deserialize(cursor);
+        break;
+    }
+    return ret;
+  }
+};
+
 // FSINFO Procedure:
 
 const uint32_t FSF3_LINK = 0x0001;
