@@ -48,12 +48,21 @@ class Nfsd3 {
       Notifications* FOLLY_NULLABLE notifications,
       bool caseSensitive);
 
+  ~Nfsd3();
+
   /**
    * Obtain the TCP port that this NFSv3 program is listening on.
    */
   uint16_t getPort() const {
     return server_.getPort();
   }
+
+  struct StopData {};
+
+  /**
+   * Return a future that will be triggered on unmount.
+   */
+  folly::SemiFuture<StopData> getStopFuture();
 
   Nfsd3(const Nfsd3&) = delete;
   Nfsd3(Nfsd3&&) = delete;
@@ -62,6 +71,7 @@ class Nfsd3 {
 
  private:
   RpcServer server_;
+  folly::Promise<StopData> stopPromise_;
 };
 
 } // namespace facebook::eden

@@ -636,11 +636,8 @@ folly::Future<folly::Unit> EdenMount::unmount() {
               .via(serverState_->getThreadPool().get())
               .ensure([this] { channel_.reset(); });
 #else
-          if (serverState_->getReloadableConfig()
-                  .getEdenConfig()
-                  ->enableNfsServer.getValue() &&
-              getConfig()->getMountProtocol() == MountProtocol::NFS) {
-            // TODO(xavierd): We need to actually do the unmount here.
+          if (getNfsdChannel() != nullptr) {
+            XLOG(FATAL) << "Unmount is not yet finished for NFS";
             serverState_->getNfsServer()->unregisterMount(getPath());
             return folly::makeFuture();
           } else {
@@ -671,11 +668,22 @@ InodeMetadataTable* EdenMount::getInodeMetadataTable() const {
   return overlay_->getInodeMetadataTable();
 }
 
-FuseChannel* EdenMount::getFuseChannel() const {
-  return channel_.get();
+FuseChannel* FOLLY_NULLABLE EdenMount::getFuseChannel() const {
+  if (auto channel = std::get_if<EdenMount::FuseChannelVariant>(&channel_)) {
+    return channel->get();
+  }
+  return nullptr;
 }
+
+Nfsd3* FOLLY_NULLABLE EdenMount::getNfsdChannel() const {
+  if (auto channel = std::get_if<EdenMount::NfsdChannelVariant>(&channel_)) {
+    return channel->get();
+  }
+  return nullptr;
+}
+
 #else
-PrjfsChannel* EdenMount::getPrjfsChannel() const {
+PrjfsChannel* FOLLY_NULLABLE EdenMount::getPrjfsChannel() const {
   return channel_.get();
 }
 #endif
@@ -1223,8 +1231,11 @@ folly::Future<TakeoverData::MountInfo> EdenMount::getChannelCompletionFuture() {
 
 #ifndef _WIN32
 namespace {
-FuseChannel* makeFuseChannel(EdenMount* mount, folly::File fuseFd) {
-  return new FuseChannel(
+std::unique_ptr<FuseChannel, FuseChannelDeleter> makeFuseChannel(
+    EdenMount* mount,
+    folly::File fuseFd) {
+  std::unique_ptr<FuseChannel, FuseChannelDeleter> ret;
+  ret.reset(new FuseChannel(
       std::move(fuseFd),
       mount->getPath(),
       FLAGS_fuseNumThreads,
@@ -1237,7 +1248,8 @@ FuseChannel* makeFuseChannel(EdenMount* mount, folly::File fuseFd) {
               .getEdenConfig()
               ->fuseRequestTimeout.getValue()),
       mount->getServerState()->getNotifications(),
-      mount->getConfig()->getCaseSensitive());
+      mount->getConfig()->getCaseSensitive()));
+  return ret;
 }
 } // namespace
 #endif
@@ -1324,13 +1336,8 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                         return folly::makeFuture<folly::Unit>(try_.exception());
                       }
 
-                      // TODO(xavierd): Do something meaningful once nfsMount
-                      // succeeds, and return the channel.
-                      XLOG(FATAL) << "Mount should have failed but didn't?";
-
                       mountPromise->setValue();
-                      // TODO(xavierd): make an NFS channel instead.
-                      channel_.reset(makeFuseChannel(this, folly::File()));
+                      channel_ = std::move(channel);
                       return makeFuture(folly::unit);
                     });
               });
@@ -1371,9 +1378,8 @@ folly::Future<folly::Unit> EdenMount::channelMount(bool readOnly) {
                     }
 
                     mountPromise->setValue();
-                    auto channel =
+                    channel_ =
                         makeFuseChannel(this, std::move(fuseDevice).value());
-                    channel_.reset(channel);
                     return folly::makeFuture(folly::unit);
                   });
         }
@@ -1396,10 +1402,40 @@ folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
 #ifdef _WIN32
           channelInitSuccessful(channel_->getStopFuture());
 #else
-          return channel_->initialize().thenValue(
-              [this](FuseChannel::StopFuture&& fuseCompleteFuture) {
-                channelInitSuccessful(std::move(fuseCompleteFuture));
-              });
+          return std::visit(
+              [this](auto&& variant) {
+                using T = std::decay_t<decltype(variant)>;
+
+                if constexpr (std::
+                                  is_same_v<T, EdenMount::FuseChannelVariant>) {
+                  return variant->initialize().thenValue(
+                      [this](FuseChannel::StopFuture&& fuseCompleteFuture) {
+                        auto stopFuture =
+                            std::move(fuseCompleteFuture)
+                                .deferValue(
+                                    [](FuseChannel::StopData&& stopData)
+                                        -> EdenMount::ChannelStopData {
+                                      return std::move(stopData);
+                                    });
+                        channelInitSuccessful(std::move(stopFuture));
+                      });
+                } else if constexpr (std::is_same_v<
+                                         T,
+                                         EdenMount::NfsdChannelVariant>) {
+                  auto stopFuture = variant->getStopFuture().deferValue(
+                      [](Nfsd3::StopData&& stopData)
+                          -> EdenMount::ChannelStopData {
+                        return std::move(stopData);
+                      });
+                  channelInitSuccessful(std::move(stopFuture));
+                  return makeFuture(folly::unit);
+                } else {
+                  static_assert(std::is_same_v<T, std::monostate>);
+                  return EDEN_BUG_FUTURE(folly::Unit)
+                      << "EdenMount::channel_ is not constructed.";
+                }
+              },
+              channel_);
 #endif
         })
         .thenError([this](folly::exception_wrapper&& ew) {
@@ -1451,22 +1487,46 @@ void EdenMount::channelInitSuccessful(
             SerializedInodeMap{} // placeholder
             ));
 #else
-        // If the FUSE device is no longer valid then the mount point has
-        // been unmounted.
-        if (!stopData.fuseDevice) {
-          inodeMap_->setUnmounted();
-        }
+        std::visit(
+            [this](auto&& variant) {
+              using T = std::decay_t<decltype(variant)>;
 
-        std::vector<AbsolutePath> bindMounts;
+              if constexpr (std::is_same_v<T, EdenMount::FuseStopData>) {
+                // If the FUSE device is no longer valid then the mount point
+                // has been unmounted.
+                if (!variant.fuseDevice) {
+                  inodeMap_->setUnmounted();
+                }
 
-        channelCompletionPromise_.setValue(TakeoverData::MountInfo(
-            getPath(),
-            config_->getClientDirectory(),
-            bindMounts,
-            std::move(stopData.fuseDevice),
-            stopData.fuseSettings,
-            SerializedInodeMap{} // placeholder
-            ));
+                std::vector<AbsolutePath> bindMounts;
+
+                channelCompletionPromise_.setValue(TakeoverData::MountInfo(
+                    getPath(),
+                    config_->getClientDirectory(),
+                    bindMounts,
+                    std::move(variant.fuseDevice),
+                    variant.fuseSettings,
+                    SerializedInodeMap{} // placeholder
+                    ));
+              } else {
+                static_assert(std::is_same_v<T, EdenMount::NfsdStopData>);
+
+                XLOG(FATAL) << "Unmount is not yet finished for NFS";
+
+                inodeMap_->setUnmounted();
+                std::vector<AbsolutePath> bindMounts;
+                channelCompletionPromise_.setValue(TakeoverData::MountInfo(
+                    getPath(),
+                    config_->getClientDirectory(),
+                    bindMounts,
+                    // TODO(xavierd): the next 2 fields should be a variant too.
+                    folly::File(),
+                    fuse_init_out{},
+                    SerializedInodeMap{} // placeholder
+                    ));
+              }
+            },
+            stopData);
 #endif
       })
       .thenError([this](folly::exception_wrapper&& ew) {
@@ -1482,9 +1542,15 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
   try {
     beginMount().setValue();
 
-    channel_.reset(makeFuseChannel(this, std::move(takeoverData.fd)));
+    auto channel = makeFuseChannel(this, std::move(takeoverData.fd));
     auto fuseCompleteFuture =
-        channel_->initializeFromTakeover(takeoverData.connInfo);
+        channel->initializeFromTakeover(takeoverData.connInfo)
+            .deferValue(
+                [](FuseChannel::StopData&& stopData)
+                    -> EdenMount::ChannelStopData {
+                  return std::move(stopData);
+                });
+    channel_ = std::move(channel);
     channelInitSuccessful(std::move(fuseCompleteFuture));
   } catch (const std::exception&) {
     transitionToFuseInitializationErrorState();

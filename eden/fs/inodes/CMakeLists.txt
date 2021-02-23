@@ -46,6 +46,7 @@ target_link_libraries(
     eden_journal
     eden_model_git
     eden_nfs_dispatcher
+    eden_nfs_nfsd3
     eden_overlay_thrift_cpp
     eden_service_thrift_util
     eden_sqlite

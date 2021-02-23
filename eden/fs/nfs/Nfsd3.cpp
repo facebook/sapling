@@ -508,6 +508,17 @@ Nfsd3::Nfsd3(
     server_.registerService(kNfsdProgNumber, kNfsd3ProgVersion);
   }
 }
+
+Nfsd3::~Nfsd3() {
+  // TODO(xavierd): wait for the pending requests, and the sockets being tore
+  // down
+  stopPromise_.setValue(Nfsd3::StopData{});
+}
+
+folly::SemiFuture<Nfsd3::StopData> Nfsd3::getStopFuture() {
+  return stopPromise_.getSemiFuture();
+}
+
 } // namespace facebook::eden
 
 #endif

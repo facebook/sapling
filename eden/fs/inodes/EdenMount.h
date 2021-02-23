@@ -35,6 +35,7 @@
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
+#include "eden/fs/nfs/Nfsd3.h"
 #else
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #endif
@@ -271,9 +272,10 @@ class EdenMount {
    * no internal synchronization of its own.)
    */
 #ifdef _WIN32
-  PrjfsChannel* getPrjfsChannel() const;
+  PrjfsChannel* FOLLY_NULLABLE getPrjfsChannel() const;
 #else
-  FuseChannel* getFuseChannel() const;
+  FuseChannel* FOLLY_NULLABLE getFuseChannel() const;
+  Nfsd3* FOLLY_NULLABLE getNfsdChannel() const;
 #endif
 
   ProcessAccessLog& getProcessAccessLog() const {
@@ -776,7 +778,9 @@ class EdenMount {
 #ifdef _WIN32
   using ChannelStopData = PrjfsChannel::StopData;
 #else
-  using ChannelStopData = FuseChannel::StopData;
+  using FuseStopData = FuseChannel::StopData;
+  using NfsdStopData = Nfsd3::StopData;
+  using ChannelStopData = std::variant<FuseStopData, NfsdStopData>;
 #endif
 
   using StopFuture = folly::SemiFuture<ChannelStopData>;
@@ -959,10 +963,13 @@ class EdenMount {
    */
   std::unique_ptr<PrjfsChannel> channel_;
 #else
+  using FuseChannelVariant = std::unique_ptr<FuseChannel, FuseChannelDeleter>;
+  using NfsdChannelVariant = std::unique_ptr<Nfsd3>;
+
   /**
    * The associated fuse channel to the kernel.
    */
-  std::unique_ptr<FuseChannel, FuseChannelDeleter> channel_;
+  std::variant<std::monostate, FuseChannelVariant, NfsdChannelVariant> channel_;
 #endif // !_WIN32
 
   /**
