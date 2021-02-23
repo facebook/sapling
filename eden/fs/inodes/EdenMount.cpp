@@ -637,9 +637,15 @@ folly::Future<folly::Unit> EdenMount::unmount() {
               .ensure([this] { channel_.reset(); });
 #else
           if (getNfsdChannel() != nullptr) {
-            XLOG(FATAL) << "Unmount is not yet finished for NFS";
             serverState_->getNfsServer()->unregisterMount(getPath());
-            return folly::makeFuture();
+            return serverState_->getPrivHelper()
+                ->nfsUnmount(getPath().stringPiece())
+                // Make sure that the Nfsd3 is destroyed in the EventBase that
+                // it was created on. This is necessary as the various async
+                // sockets cannot be used in multiple threads and can only be
+                // manipulated in the EventBase they are attached to.
+                .via(serverState_->getNfsServer()->getEventBase())
+                .thenValue([this](auto&&) { channel_ = std::monostate{}; });
           } else {
             return serverState_->getPrivHelper()->fuseUnmount(
                 getPath().stringPiece());
@@ -1510,8 +1516,6 @@ void EdenMount::channelInitSuccessful(
                     ));
               } else {
                 static_assert(std::is_same_v<T, EdenMount::NfsdStopData>);
-
-                XLOG(FATAL) << "Unmount is not yet finished for NFS";
 
                 inodeMap_->setUnmounted();
                 std::vector<AbsolutePath> bindMounts;
