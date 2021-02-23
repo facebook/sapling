@@ -109,7 +109,7 @@ impl SegmentedChangelogBuilder {
     pub fn build_on_demand_update(mut self) -> Result<OnDemandUpdateDag> {
         let dag = self.build_dag()?;
         let changeset_fetcher = self.changeset_fetcher()?;
-        Ok(OnDemandUpdateDag::new(dag, changeset_fetcher))
+        Ok(OnDemandUpdateDag::from_dag(dag, changeset_fetcher))
     }
 
     pub async fn build_seeder(mut self, ctx: &CoreContext) -> Result<SegmentedChangelogSeeder> {

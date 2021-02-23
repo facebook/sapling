@@ -10,9 +10,14 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
+use futures::future::BoxFuture;
+use futures::{FutureExt, TryFutureExt};
+use parking_lot::Mutex;
 use tokio::sync::RwLock;
 
-use dag::{self, CloneData, Location};
+use cloned::cloned;
+use dag::{self, CloneData, InProcessIdDag, Location};
+use futures_ext::future::{FbTryFutureExt, TryShared};
 use stats::prelude::*;
 
 use changeset_fetcher::ChangesetFetcher;
@@ -21,27 +26,136 @@ use mononoke_types::ChangesetId;
 
 use crate::dag::{Dag, ReadDag};
 use crate::idmap::IdMap;
-use crate::update::build_incremental;
+use crate::update::{prepare_incremental_iddag_update, update_iddag};
 use crate::{SegmentedChangelog, StreamCloneData};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.ondemand";
     location_to_changeset_id: timeseries(Sum),
     changeset_id_to_location: timeseries(Sum),
+    missing_notification_handle: timeseries(Sum),
 }
 
 pub struct OnDemandUpdateDag {
-    dag: RwLock<Dag>,
+    iddag: Arc<RwLock<InProcessIdDag>>,
+    idmap: Arc<dyn IdMap>,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    ongoing_update: Arc<Mutex<Option<TryShared<BoxFuture<'static, Result<()>>>>>>,
 }
 
 impl OnDemandUpdateDag {
-    pub fn new(dag: Dag, changeset_fetcher: Arc<dyn ChangesetFetcher>) -> Self {
+    pub fn new(
+        iddag: InProcessIdDag,
+        idmap: Arc<dyn IdMap>,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    ) -> Self {
         Self {
-            dag: RwLock::new(dag),
+            iddag: Arc::new(RwLock::new(iddag)),
+            idmap,
             changeset_fetcher,
+            ongoing_update: Arc::new(Mutex::new(None)),
         }
     }
+
+    pub fn from_dag(dag: Dag, changeset_fetcher: Arc<dyn ChangesetFetcher>) -> Self {
+        Self::new(dag.iddag, dag.idmap, changeset_fetcher)
+    }
+
+    // Updating the Dag has 3 phases:
+    // * loading the data that is required for the update;
+    // * updating the IdMap;
+    // * updating the IdDag;
+    //
+    // The Dag can function well for serving requests as long as the commits involved have been
+    // built so we want to have easy read access to both the IdMap and the IdDag. The IdMap is a
+    // very simple structure and because it's described as an Arc<dyn IdMap> we push the update
+    // locking logic to the storage.  The IdDag is a complicated structure that we ask to update
+    // itself. Those functions take mutable references. Updating the storage of the iddag to hide
+    // the complexities of locking is more difficult. We deal with the IdDag directly by wrapping
+    // it in a RwLock. The RwLock allows for easy read access which we expect to be the predominant
+    // access pattern.
+    //
+    // Updates to the dag are not completely stable so racing updates can have conflicting results.
+    // In case of conflics one of the update processes would have to restart. It's easier to reason
+    // about the process if we just allow one "thread" to start an update process. The update
+    // process is locked by a sync mutex. The "threads" that fail the race to update are asked to
+    // wait until the ongoing update is complete. The waiters will poll on a shared future that
+    // tracks the ongoing dag update. After the update is complete the waiters will go back to
+    // checking if the data they have is available in the dag. It is possible that the dag is
+    // updated in between determining that the an update is needed and acquiring the ongoing_update
+    // lock. This is fine because the update building process checks the state of dag before the
+    // dag and updates only what is necessary if necessary.
+    /// Update the Dag to incorporate the commit pointed to by head.
+    /// Returns true if it performed an actual update false if it simply waited for ongoing update
+    /// to finish.
+    async fn try_update(&self, ctx: &CoreContext, head: ChangesetId) -> Result<bool> {
+        let to_wait = {
+            let mut ongoing_update = self.ongoing_update.lock();
+
+            if let Some(fut) = &*ongoing_update {
+                fut.clone().map(|_| Ok(false)).boxed()
+            } else {
+                cloned!(ctx, self.iddag, self.idmap, self.changeset_fetcher);
+                let task_ongoing_update = self.ongoing_update.clone();
+                let update_task = async move {
+                    let result =
+                        the_actual_update(ctx, iddag, idmap, changeset_fetcher, head).await;
+                    let mut ongoing_update = task_ongoing_update.lock();
+                    *ongoing_update = None;
+                    result
+                }
+                .boxed()
+                .try_shared();
+
+                *ongoing_update = Some(update_task.clone());
+
+                update_task.map_ok(|_| true).boxed()
+            }
+        };
+        Ok(to_wait.await?)
+    }
+
+    async fn build_up_to_cs(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<()> {
+        loop {
+            if let Some(vertex) = self
+                .idmap
+                .find_vertex(ctx, cs_id)
+                .await
+                .context("fetching vertex for csid")?
+            {
+                // Note. This will result in two read locks being acquired for functions that call
+                // into build_up. It would be nice to get to one lock being acquired. I tried but
+                // had some issues with lifetimes :).
+                let iddag = self.iddag.read().await;
+                if iddag.contains_id(vertex)? {
+                    return Ok(());
+                }
+            }
+            if self.try_update(ctx, cs_id).await? {
+                return Ok(());
+            }
+        }
+    }
+}
+
+async fn the_actual_update(
+    ctx: CoreContext,
+    iddag: Arc<RwLock<InProcessIdDag>>,
+    idmap: Arc<dyn IdMap>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    head: ChangesetId,
+) -> Result<()> {
+    let (head_vertex, idmap_update_state) = {
+        let iddag = iddag.read().await;
+        prepare_incremental_iddag_update(&ctx, &iddag, &idmap, &changeset_fetcher, head)
+            .await
+            .context("error preparing an incremental update for iddag")?
+    };
+    if let Some((start_state, mem_idmap)) = idmap_update_state {
+        let mut iddag = iddag.write().await;
+        update_iddag(&ctx, &mut iddag, &start_state, &mem_idmap, head_vertex)?;
+    }
+    Ok(())
 }
 
 #[async_trait]
@@ -53,33 +167,15 @@ impl SegmentedChangelog for OnDemandUpdateDag {
         count: u64,
     ) -> Result<Vec<ChangesetId>> {
         STATS::location_to_changeset_id.add_value(1);
-        {
-            let dag = self.dag.read().await;
-            if let Some(known_vertex) = dag
-                .idmap
-                .find_vertex(ctx, location.descendant)
-                .await
-                .context("fetching vertex for csid")?
-            {
-                if dag.iddag.contains_id(known_vertex)? {
-                    let location = location.with_descendant(known_vertex);
-                    let read_dag = ReadDag::new(&dag.iddag, dag.idmap.clone());
-                    return read_dag
-                        .known_location_to_many_changeset_ids(ctx, location, count)
-                        .await
-                        .context("ondemand first known_location_many_changest_ids");
-                }
-            }
-        }
-        let known_vertex = {
-            let mut dag = self.dag.write().await;
-            build_incremental(ctx, &mut dag, &self.changeset_fetcher, location.descendant).await?
-        };
-        let dag = self.dag.read().await;
-        let location = Location::new(known_vertex, location.distance);
-        let read_dag = ReadDag::new(&dag.iddag, dag.idmap.clone());
+        // Location descendant may not be the ideal entry to build up to, it could be a good idea
+        // to have client_head here too.
+        self.build_up_to_cs(ctx, location.descendant)
+            .await
+            .context("error while getting an up to date dag")?;
+        let iddag = self.iddag.read().await;
+        let read_dag = ReadDag::new(&iddag, self.idmap.clone());
         read_dag
-            .known_location_to_many_changeset_ids(ctx, location, count)
+            .location_to_many_changeset_ids(ctx, location, count)
             .await
     }
 
@@ -90,41 +186,28 @@ impl SegmentedChangelog for OnDemandUpdateDag {
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
         STATS::changeset_id_to_location.add_value(1);
-        {
-            let dag = self.dag.read().await;
-            if let Some(_vertex) = dag
-                .idmap
-                .find_vertex(ctx, client_head)
-                .await
-                .context("fetching vertex for csid")?
-            {
-                return dag
-                    .many_changeset_ids_to_locations(ctx, client_head, cs_ids)
-                    .await
-                    .context("failed ondemand read many_changeset_ids_to_locations");
-            }
-        }
-        {
-            let mut dag = self.dag.write().await;
-            build_incremental(ctx, &mut dag, &self.changeset_fetcher, client_head).await?
-        };
-        let dag = self.dag.read().await;
-        return dag
+        self.build_up_to_cs(ctx, client_head)
+            .await
+            .context("error while getting an up to date dag")?;
+        let iddag = self.iddag.read().await;
+        let read_dag = ReadDag::new(&iddag, self.idmap.clone());
+        read_dag
             .many_changeset_ids_to_locations(ctx, client_head, cs_ids)
             .await
-            .context("failed ondemand read many_changeset_ids_to_locations");
     }
 
     async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
-        let dag = self.dag.read().await;
-        dag.clone_data(ctx).await
+        let iddag = self.iddag.read().await;
+        let read_dag = ReadDag::new(&iddag, self.idmap.clone());
+        read_dag.clone_data(ctx).await
     }
 
     async fn full_idmap_clone_data(
         &self,
         ctx: &CoreContext,
     ) -> Result<StreamCloneData<ChangesetId>> {
-        let dag = self.dag.read().await;
-        dag.full_idmap_clone_data(ctx).await
+        let iddag = self.iddag.read().await;
+        let read_dag = ReadDag::new(&iddag, self.idmap.clone());
+        read_dag.full_idmap_clone_data(ctx).await
     }
 }

@@ -20,7 +20,7 @@ lz4-pyframe = { path = "../../../scm/lib/lz4-pyframe", version = "0.1.0" }
 memmap = "0.7"
 mercurial_types = { path = "../types", version = "0.1.0" }
 mononoke_types_thrift = { path = "../../mononoke_types/if", version = "0.1.0" }
-nom = { version = "3", features = ["verbose-errors"] }
+nom = { version = "3", features = [ "verbose-errors" ] }
 thiserror = "1.0"
 
 [dev-dependencies]

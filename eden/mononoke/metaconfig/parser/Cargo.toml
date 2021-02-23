@@ -16,7 +16,7 @@ mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
 nonzero_ext = "0.2"
 regex = "1.4.2"
 repos = { path = "../../../../configerator/structs/scm/mononoke/repos/repos", version = "0.1.0" }
-serde = { version = "1.0", features = ["derive", "rc"] }
+serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_ignored = "0.1"
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 thiserror = "1.0"

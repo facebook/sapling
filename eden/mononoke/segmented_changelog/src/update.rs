@@ -229,7 +229,7 @@ pub async fn build_incremental(
     Ok(head_vertex)
 }
 
-async fn prepare_incremental_iddag_update<'a>(
+pub async fn prepare_incremental_iddag_update<'a>(
     ctx: &'a CoreContext,
     iddag: &'a InProcessIdDag,
     idmap: &'a dyn IdMap,

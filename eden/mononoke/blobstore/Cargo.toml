@@ -21,7 +21,7 @@ auto_impl = "0.4"
 bytes = { version = "0.5", features = ["serde"] }
 context = { path = "../server/context", version = "0.1.0" }
 futures-old = { package = "futures", version = "0.1.30" }
-serde = { version = "1.0", features = ["derive", "rc"] }
+serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_derive = "1.0"
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 strum = "0.19"

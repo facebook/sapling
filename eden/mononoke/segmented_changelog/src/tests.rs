@@ -403,7 +403,7 @@ async fn test_build_calls_together(fb: FacebookInit) -> Result<()> {
     let known_cs =
         resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
     setup_phases(&ctx, &blobrepo, known_cs).await?;
-    let on_demand_update_dag = OnDemandUpdateDag::new(dag, blobrepo.get_changeset_fetcher());
+    let on_demand_update_dag = OnDemandUpdateDag::from_dag(dag, blobrepo.get_changeset_fetcher());
     let distance: u64 = 3;
     let answer = on_demand_update_dag
         .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
@@ -455,20 +455,48 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
 
-    let known_cs =
-        resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+    // commit modified10 (11)
+    let cs11 = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+    // commit 10
+    let cs10 = resolve_cs_id(&ctx, &blobrepo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await?;
+    // commit 6
+    let cs6 = resolve_cs_id(&ctx, &blobrepo, "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b").await?;
+
+    // commit 5
+    let cs5 = resolve_cs_id(&ctx, &blobrepo, "cb15ca4a43a59acff5388cea9648c162afde8372").await?;
 
     let dag = SegmentedChangelogBuilder::with_sqlite_in_memory()?
         .with_blobrepo(&blobrepo)
         .build_on_demand_update()?;
 
-    let distance: u64 = 4;
-    let answer = dag
-        .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
-        .await?;
-    let expected_cs =
-        resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
-    assert_eq!(answer, expected_cs);
+    let answer = try_join_all(vec![
+        dag.location_to_changeset_id(&ctx, Location::new(cs10, 5)),
+        dag.location_to_changeset_id(&ctx, Location::new(cs6, 1)),
+        dag.location_to_changeset_id(&ctx, Location::new(cs11, 6)),
+    ])
+    .await?;
+    assert_eq!(answer, vec![cs5, cs5, cs5]);
+
+    let dag = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+        .with_blobrepo(&blobrepo)
+        .build_on_demand_update()?;
+
+    let answer = try_join_all(vec![
+        dag.changeset_id_to_location(&ctx, cs10, cs5),
+        dag.changeset_id_to_location(&ctx, cs6, cs5),
+        dag.changeset_id_to_location(&ctx, cs11, cs5),
+        dag.changeset_id_to_location(&ctx, cs11, mononoke_types_mocks::changesetid::ONES_CSID),
+    ])
+    .await?;
+    assert_eq!(
+        answer,
+        vec![
+            Some(Location::new(cs10, 5)),
+            Some(Location::new(cs6, 1)),
+            Some(Location::new(cs11, 6)),
+            None,
+        ]
+    );
 
     Ok(())
 }

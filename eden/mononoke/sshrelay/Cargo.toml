@@ -14,7 +14,7 @@ futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookex
 maplit = "1.0"
 netstring = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 permission_checker = { path = "../permission_checker", version = "0.1.0" }
-serde = { version = "1.0", features = ["derive", "rc"] }
+serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 session_id = { path = "../server/session_id", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

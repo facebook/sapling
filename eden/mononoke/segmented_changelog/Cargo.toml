@@ -25,11 +25,13 @@ context = { path = "../server/context", version = "0.1.0" }
 dag = { path = "../../scm/lib/dag", features = ["for-tests"], version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 maplit = "1.0"
 memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 mincode = { path = "../../scm/lib/mincode", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+parking_lot = "0.10.2"
 scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }

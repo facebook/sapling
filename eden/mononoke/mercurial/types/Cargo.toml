@@ -35,7 +35,7 @@ percent-encoding = "2.1"
 quickcheck = "0.9"
 rand = { version = "0.7", features = ["small_rng"] }
 rand_distr = "0.2"
-serde = { version = "1.0", features = ["derive", "rc"] }
+serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_derive = "1.0"
 sha-1 = "0.8"
 slog = { version = "2.5", features = ["max_level_debug"] }
