@@ -11,7 +11,7 @@ mod sql;
 mod version;
 
 pub use self::cache::{CacheHandlers, CachedIdMap};
-pub use self::mem::MemIdMap;
+pub use self::mem::{ConcurrentMemIdMap, MemIdMap};
 pub use self::sql::{SqlIdMap, SqlIdMapFactory};
 pub use self::version::SqlIdMapVersionStore;
 

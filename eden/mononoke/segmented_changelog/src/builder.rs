@@ -25,7 +25,8 @@ use crate::bundle::SqlBundleStore;
 use crate::dag::Dag;
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::{
-    CacheHandlers, CachedIdMap, IdMap, SqlIdMap, SqlIdMapFactory, SqlIdMapVersionStore,
+    CacheHandlers, CachedIdMap, ConcurrentMemIdMap, IdMap, SqlIdMap, SqlIdMapFactory,
+    SqlIdMapVersionStore,
 };
 use crate::manager::SegmentedChangelogManager;
 use crate::on_demand::OnDemandUpdateDag;
@@ -100,10 +101,6 @@ impl SegmentedChangelogBuilder {
 
     pub fn build_disabled(self) -> DisabledSegmentedChangelog {
         DisabledSegmentedChangelog::new()
-    }
-
-    pub fn build_read_only(mut self) -> Result<Dag> {
-        self.build_dag()
     }
 
     pub fn build_on_demand_update(mut self) -> Result<OnDemandUpdateDag> {
@@ -224,10 +221,11 @@ impl SegmentedChangelogBuilder {
 
     pub(crate) fn build_dag(&mut self) -> Result<Dag> {
         let iddag = InProcessIdDag::new_in_process();
-        let idmap: Arc<dyn IdMap> = self.build_idmap()?;
+        let idmap: Arc<dyn IdMap> = Arc::new(ConcurrentMemIdMap::new());
         Ok(Dag::new(iddag, idmap))
     }
 
+    #[allow(dead_code)]
     pub(crate) fn build_idmap(&mut self) -> Result<Arc<dyn IdMap>> {
         let mut idmap: Arc<dyn IdMap> = Arc::new(self.build_sql_idmap()?);
         if let Some(cache_handlers) = self.cache_handlers.take() {
@@ -241,6 +239,7 @@ impl SegmentedChangelogBuilder {
         Ok(idmap)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn build_sql_idmap(&mut self) -> Result<SqlIdMap> {
         let connections = self.connections_clone()?;
         let replica_lag_monitor = self.replica_lag_monitor();

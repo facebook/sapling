@@ -636,7 +636,7 @@ async fn new_development(
         } else if segmented_changelog_config.is_update_always_download_save() {
             Arc::new(segmented_changelog_builder.build_manager()?)
         } else {
-            Arc::new(segmented_changelog_builder.build_read_only()?)
+            Arc::new(segmented_changelog_builder.build_disabled())
         }
     };
 
@@ -808,7 +808,7 @@ async fn new_production(
         } else if segmented_changelog_config.is_update_always_download_save() {
             Arc::new(segmented_changelog_builder.build_manager()?)
         } else {
-            Arc::new(segmented_changelog_builder.build_read_only()?)
+            Arc::new(segmented_changelog_builder.build_disabled())
         }
     };
 
