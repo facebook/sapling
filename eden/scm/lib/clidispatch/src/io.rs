@@ -23,6 +23,10 @@ pub struct IO {
     inner: Arc<Mutex<Inner>>,
 }
 
+/// Implements `io::Write` on the output stream.
+#[derive(Clone)]
+pub struct IOOutput(Weak<Mutex<Inner>>);
+
 /// Implements `io::Write` on the error stream.
 #[derive(Clone)]
 pub struct IOError(Weak<Mutex<Inner>>);
@@ -75,17 +79,6 @@ impl<T: io::Write + Any + Send + Sync> Write for T {
     }
 }
 
-// Write to output.
-impl io::Write for IO {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.inner.lock().output.write(buf)
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        self.inner.lock().flush()
-    }
-}
-
 // Write to error.
 impl io::Write for IOError {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
@@ -114,6 +107,27 @@ impl io::Write for IOError {
     }
 }
 
+// Write to output.
+impl io::Write for IOOutput {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return Ok(buf.len()),
+        };
+        let mut inner = inner.lock();
+        inner.output.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return Ok(()),
+        };
+        let mut inner = inner.lock();
+        inner.output.flush()
+    }
+}
+
 impl IO {
     pub fn with_input<R>(&self, f: impl FnOnce(&dyn Read) -> R) -> R {
         f(self.inner.lock().input.as_ref())
@@ -134,6 +148,15 @@ impl IO {
     /// If this IO is dropped, the IOError stream will be redirected to null.
     pub fn error(&self) -> IOError {
         IOError(Arc::downgrade(&self.inner))
+    }
+
+    /// Returns a clonable value that impls [`io::Write`] to `output` stream.
+    /// The output is associated with the `IO` so if the `IO` starts a pager,
+    /// the error stream will be properly redirected to the pager.
+    ///
+    /// If this IO is dropped, the IOError stream will be redirected to null.
+    pub fn output(&self) -> IOOutput {
+        IOOutput(Arc::downgrade(&self.inner))
     }
 
     pub fn new<IS, OS, ES>(input: IS, output: OS, error: Option<ES>) -> Self
@@ -201,6 +224,11 @@ impl IO {
             progress.write_all(data)?;
         }
         Ok(())
+    }
+
+    pub fn flush(&self) -> io::Result<()> {
+        let mut inner = self.inner.lock();
+        inner.flush()
     }
 
     pub fn stdio() -> Self {
@@ -299,7 +327,7 @@ impl IO {
 }
 
 impl Inner {
-    pub fn flush(&mut self) -> io::Result<()> {
+    pub(crate) fn flush(&mut self) -> io::Result<()> {
         self.output.flush()?;
         if let Some(ref mut error) = self.error {
             error.flush()?;

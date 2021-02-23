@@ -6,7 +6,6 @@
  */
 
 use std::borrow::Cow;
-use std::io::Write;
 use taggederror::FilteredAnyhow;
 use taggederror_util::AnyhowEdenExt;
 use thiserror::Error;

@@ -266,7 +266,7 @@ pub(crate) fn write_trace(io: &mut IO, path: &str, data: &TracingData) -> Result
     };
 
     let mut out: Box<dyn Write> = if path == "-" || path.is_empty() {
-        Box::new(io)
+        Box::new(io.error())
     } else {
         Box::new(BufWriter::new(File::create(&path)?))
     };
