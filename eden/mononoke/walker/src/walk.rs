@@ -48,7 +48,7 @@ use mononoke_types::{
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::MononokeScubaSampleBuilder;
 use skeleton_manifest::RootSkeletonManifestId;
-use slog::{warn, Logger};
+use slog::{info, warn, Logger};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
@@ -141,13 +141,13 @@ pub trait VisitOne {
 // partially derived types (it can see the node_data)
 #[auto_impl(Arc)]
 pub trait WalkVisitor<VOut, Route>: VisitOne {
-    // Called before the step is attempted
+    // Called before the step is attempted, returns None if step not needed
     fn start_step(
         &self,
         ctx: CoreContext,
         route: Option<&Route>,
         step: &OutgoingEdge,
-    ) -> CoreContext;
+    ) -> Option<CoreContext>;
 
     // This can mutate the internal state.  Takes ownership and returns data, plus next step
     fn visit(
@@ -1667,7 +1667,14 @@ where
             repo_params.scheduled_max,
             walk_roots,
             move |(via, walk_item): (Option<Route>, OutgoingEdge)| {
-                let ctx = visitor.start_step(ctx.clone(), via.as_ref(), &walk_item);
+                let ctx =
+                    if let Some(ctx) = visitor.start_step(ctx.clone(), via.as_ref(), &walk_item) {
+                        ctx
+                    } else {
+                        info!(ctx.logger(), "Suppressing edge {:?}", walk_item);
+                        return future::ready((walk_item.target, Ok(None))).left_future();
+                    };
+
                 cloned!(
                     job_params.error_as_data_node_types,
                     job_params.error_as_data_edge_types,
@@ -1699,6 +1706,7 @@ where
                     handle.await?
                 }
                 .map(move |v| (target, v))
+                .right_future()
             },
             |(_route, edge)| &edge.target,
         ))
@@ -1719,10 +1727,10 @@ async fn walk_one<V, VOut, Route>(
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
     checker: Arc<Checker<V>>,
 ) -> Result<
-    (
+    Option<(
         VOut,
         impl IntoIterator<Item = (Option<Route>, OutgoingEdge)>,
-    ),
+    )>,
     Error,
 >
 where
@@ -1905,5 +1913,5 @@ where
     };
     let via = Some(via);
     let next = next.into_iter().map(move |e| (via.clone(), e));
-    Ok((vout, next))
+    Ok(Some((vout, next)))
 }

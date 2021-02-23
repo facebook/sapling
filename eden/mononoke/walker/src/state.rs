@@ -463,18 +463,23 @@ impl WalkState {
         }
     }
 
-    fn needs_visit_impl(&self, outgoing: &OutgoingEdge) -> bool {
+    fn needs_visit_impl(&self, outgoing: &OutgoingEdge, executing_step: bool) -> bool {
         let target_node: &Node = &outgoing.target;
         let k = target_node.get_type();
-        self.visit_count[k as usize].fetch_add(1, Ordering::Release);
+        if !executing_step {
+            self.visit_count[k as usize].fetch_add(1, Ordering::Release);
+        }
 
-        match &target_node {
+        // For types handled by record_resolved_visit logic is same when executing or checking a step
+        // For types handled by record() and record_with_path, executing_step returns true.
+        match (&target_node, executing_step) {
             // Entry points
-            Node::Root(_) => true,
-            Node::Bookmark(_) => true,
-            Node::PublishedBookmarks(_) => true,
+            (Node::Root(_), _) => true,
+            (Node::Bookmark(_), _) => true,
+            (Node::PublishedBookmarks(_), _) => true,
             // Bonsai
-            Node::Changeset(k) => {
+            (Node::Changeset(_), true) => true,
+            (Node::Changeset(k), false) => {
                 let id = self.bcs_ids.interned(&k.inner);
                 if self.chunk_contains(id) {
                     self.record(&self.visited_bcs, &id)
@@ -485,7 +490,7 @@ impl WalkState {
                     false
                 }
             }
-            Node::BonsaiHgMapping(k) => {
+            (Node::BonsaiHgMapping(k), _) => {
                 if let Some(id) = self.bcs_ids.get(&k.inner) {
                     // Does not insert, see record_resolved_visit
                     !self.visited_bcs_mapping.contains_key(&id)
@@ -493,7 +498,7 @@ impl WalkState {
                     true
                 }
             }
-            Node::PhaseMapping(bcs_id) => {
+            (Node::PhaseMapping(bcs_id), _) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     // Does not insert, as can only prune visits once data resolved, see record_resolved_visit
                     !self.visited_bcs_phase.contains_key(&id)
@@ -502,39 +507,48 @@ impl WalkState {
                 }
             }
             // Hg
-            Node::HgBonsaiMapping(k) => self.record(
+            (Node::HgBonsaiMapping(_), true) => true,
+            (Node::HgBonsaiMapping(k), false) => self.record(
                 &self.visited_hg_cs_mapping,
                 &self.hg_cs_ids.interned(&k.inner),
             ),
-            Node::HgChangeset(k) => {
+            (Node::HgChangeset(_), true) => true,
+            (Node::HgChangeset(k), false) => {
                 self.record(&self.visited_hg_cs, &self.hg_cs_ids.interned(&k.inner))
             }
-            Node::HgChangesetViaBonsai(k) => self.record(
+            (Node::HgChangesetViaBonsai(_), true) => true,
+            (Node::HgChangesetViaBonsai(k), false) => self.record(
                 &self.visited_hg_cs_via_bonsai,
                 &self.hg_cs_ids.interned(&k.inner),
             ),
-            Node::HgManifest(k) => self.record_with_path(
+            (Node::HgManifest(_), true) => true,
+            (Node::HgManifest(k), false) => self.record_with_path(
                 &self.visited_hg_manifest,
                 (&k.path, &self.hg_manifest_ids.interned(&k.id)),
             ),
-            Node::HgFileNode(k) => self.record_with_path(
+            (Node::HgFileNode(_), true) => true,
+            (Node::HgFileNode(k), false) => self.record_with_path(
                 &self.visited_hg_filenode,
                 (&k.path, &self.hg_filenode_ids.interned(&k.id)),
             ),
-            Node::HgFileEnvelope(id) => self.record(
+            (Node::HgFileEnvelope(_), true) => true,
+            (Node::HgFileEnvelope(id), false) => self.record(
                 &self.visited_hg_file_envelope,
                 &self.hg_filenode_ids.interned(id),
             ),
             // Content
-            Node::FileContent(content_id) => self.record(&self.visited_file, content_id),
-            Node::FileContentMetadata(_) => true, // reached via expand_checked_nodes
-            Node::AliasContentMapping(_) => true, // reached via expand_checked_nodes
+            (Node::FileContent(_), true) => true,
+            (Node::FileContent(content_id), false) => self.record(&self.visited_file, content_id),
+            (Node::FileContentMetadata(_), _) => true, // reached via expand_checked_nodes
+            (Node::AliasContentMapping(_), _) => true, // reached via expand_checked_nodes
             // Derived
-            Node::Blame(k) => self.record(
+            (Node::Blame(_), true) => true,
+            (Node::Blame(k), false) => self.record(
                 &self.visited_blame,
                 &self.unode_file_ids.interned(k.as_ref()),
             ),
-            Node::ChangesetInfo(bcs_id) => {
+            (Node::ChangesetInfo(_), true) => true,
+            (Node::ChangesetInfo(bcs_id), false) => {
                 let id = self.bcs_ids.interned(bcs_id);
                 if self.chunk_contains(id) {
                     self.record(&self.visited_changeset_info, &id)
@@ -545,61 +559,71 @@ impl WalkState {
                     false
                 }
             }
-            Node::ChangesetInfoMapping(bcs_id) => {
+            (Node::ChangesetInfoMapping(bcs_id), _) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_changeset_info_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {
                     true
                 }
             }
-            Node::DeletedManifest(id) => self.record(&self.visited_deleted_manifest, &id),
-            Node::DeletedManifestMapping(bcs_id) => {
+            (Node::DeletedManifest(_), true) => true,
+            (Node::DeletedManifest(id), false) => self.record(&self.visited_deleted_manifest, &id),
+            (Node::DeletedManifestMapping(bcs_id), _) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_deleted_manifest_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {
                     true
                 }
             }
-            Node::FastlogBatch(k) => self.record(&self.visited_fastlog_batch, &k),
-            Node::FastlogDir(k) => self.record(
+            (Node::FastlogBatch(_), true) => true,
+            (Node::FastlogBatch(k), false) => self.record(&self.visited_fastlog_batch, &k),
+            (Node::FastlogDir(_), true) => true,
+            (Node::FastlogDir(k), false) => self.record(
                 &self.visited_fastlog_dir,
                 &self.unode_manifest_ids.interned(&k.inner),
             ),
-            Node::FastlogFile(k) => self.record(
+            (Node::FastlogFile(_), true) => true,
+            (Node::FastlogFile(k), false) => self.record(
                 &self.visited_fastlog_file,
                 &self.unode_file_ids.interned(&k.inner),
             ),
-            Node::Fsnode(id) => self.record(&self.visited_fsnode, &id),
-            Node::FsnodeMapping(bcs_id) => {
+            (Node::Fsnode(_), true) => true,
+            (Node::Fsnode(id), false) => self.record(&self.visited_fsnode, &id),
+            (Node::FsnodeMapping(bcs_id), _) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_fsnode_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {
                     true
                 }
             }
-            Node::SkeletonManifest(id) => self.record(&self.visited_skeleton_manifest, &id),
-            Node::SkeletonManifestMapping(bcs_id) => {
+            (Node::SkeletonManifest(_), true) => true,
+            (Node::SkeletonManifest(id), false) => {
+                self.record(&self.visited_skeleton_manifest, &id)
+            }
+            (Node::SkeletonManifestMapping(bcs_id), _) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_skeleton_manifest_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {
                     true
                 }
             }
-            Node::UnodeFile(k) => self.record(
+            (Node::UnodeFile(_), true) => true,
+            (Node::UnodeFile(k), false) => self.record(
                 &self.visited_unode_file,
                 &UnodeInterned {
                     id: self.unode_file_ids.interned(&k.inner),
                     flags: k.flags,
                 },
             ),
-            Node::UnodeManifest(k) => self.record(
+            (Node::UnodeManifest(_), true) => true,
+            (Node::UnodeManifest(k), false) => self.record(
                 &self.visited_unode_manifest,
                 &UnodeInterned {
                     id: self.unode_manifest_ids.interned(&k.inner),
                     flags: k.flags,
                 },
             ),
-            Node::UnodeMapping(bcs_id) => {
+            (Node::UnodeMapping(bcs_id), _) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_unode_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {
@@ -711,7 +735,7 @@ impl VisitOne for WalkState {
 
     /// If the set did not have this value present, true is returned.
     fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
-        self.needs_visit_impl(outgoing)
+        self.needs_visit_impl(outgoing, false)
     }
 }
 
@@ -809,10 +833,18 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
     fn start_step(
         &self,
         ctx: CoreContext,
-        _route: Option<&EmptyRoute>,
-        _step: &OutgoingEdge,
-    ) -> CoreContext {
-        ctx
+        route: Option<&EmptyRoute>,
+        step: &OutgoingEdge,
+    ) -> Option<CoreContext> {
+        if route.is_none() // is it a root
+            || step.label.incoming_type().is_none() // is it from a root?
+            || self.always_emit_edge_types.contains(&step.label) // always emit?
+            || self.needs_visit_impl(&step, true)
+        {
+            Some(ctx)
+        } else {
+            None
+        }
     }
 
     fn visit(

@@ -362,7 +362,7 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
         ctx: CoreContext,
         route: Option<&ValidateRoute>,
         step: &OutgoingEdge,
-    ) -> CoreContext {
+    ) -> Option<CoreContext> {
         self.inner
             .start_step(ctx, route.map(|_| &EmptyRoute {}), step)
     }

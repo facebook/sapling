@@ -72,7 +72,9 @@ where
     })
 }
 
-/// This function is similar to `bounded_traversal_stream` but prevents items with duplicate keys executing in parallel.
+/// This function is similar to `bounded_traversal_stream` but:
+///   - prevents items with duplicate keys executing concurrently
+///   - allows an item to have no stream output by returning None
 pub fn bounded_traversal_unique<In, InsInit, Ins, Out, Unfold, UFut, UErr, Key, KeyFn>(
     scheduled_max: usize,
     init: InsInit,
@@ -81,7 +83,7 @@ pub fn bounded_traversal_unique<In, InsInit, Ins, Out, Unfold, UFut, UErr, Key, 
 ) -> impl Stream<Item = Result<Out, UErr>>
 where
     Unfold: FnMut(In) -> UFut,
-    UFut: Future<Output = (Key, Result<(Out, Ins), UErr>)>,
+    UFut: Future<Output = (Key, Result<Option<(Out, Ins)>, UErr>)>,
     InsInit: IntoIterator<Item = In>,
     Ins: IntoIterator<Item = In>,
     Key: Clone + Eq + Hash,
@@ -113,8 +115,6 @@ where
             }
 
             if let Some((key, unfolded)) = ready!(scheduled.poll_next_unpin(cx)) {
-                let (out, children) = unfolded?;
-
                 if let Some((reinsert_key, mut queue)) = waiting_for_inflight.remove_entry(&key) {
                     if let Some(item) = queue.pop_front() {
                         let unfolded = unfold(item);
@@ -125,10 +125,13 @@ where
                     }
                 }
 
-                for child in children {
-                    unscheduled.push_front(child);
+                if let Some((out, children)) = unfolded? {
+                    // there is output on this unfold
+                    for child in children {
+                        unscheduled.push_front(child);
+                    }
+                    return Poll::Ready(Some(Ok(out)));
                 }
-                return Poll::Ready(Some(Ok(out)));
             }
         }
     })

@@ -514,7 +514,7 @@ async fn test_bounded_traversal_unique_ticks() -> Result<(), Error> {
                     cloned!(log);
                     tick.sleep(1).map(move |now| {
                         log.unfold(id, now);
-                        (id, Ok::<_, Error>((id, children)))
+                        (id, Ok::<_, Error>(Some((id, children))))
                     })
                 }
             },
@@ -536,7 +536,7 @@ async fn test_bounded_traversal_unique_duplicate_ticks() -> Result<(), Error> {
                     cloned!(log);
                     tick.sleep(1).map(move |now| {
                         log.unfold(id, now);
-                        (id, Ok::<_, Error>((id, children)))
+                        (id, Ok::<_, Error>(Some((id, children))))
                     })
                 }
             },
@@ -560,7 +560,7 @@ async fn test_bounded_traversal_unique_parents() -> Result<(), Error> {
                         log.unfold(id, parent);
                         (
                             id,
-                            Ok::<_, Error>((id, children.into_iter().map(move |i| (i, id)))),
+                            Ok::<_, Error>(Some((id, children.into_iter().map(move |i| (i, id))))),
                         )
                     })
                 }

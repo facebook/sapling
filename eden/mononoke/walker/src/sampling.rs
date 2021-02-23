@@ -260,7 +260,7 @@ where
         mut ctx: CoreContext,
         route: Option<&PathTrackingRoute>,
         step: &OutgoingEdge,
-    ) -> CoreContext {
+    ) -> Option<CoreContext> {
         if self.options.node_types.contains(&step.target.get_type()) {
             let repo_path = PathTrackingRoute::evolve_path(
                 route.and_then(|r| r.path.as_ref()),
@@ -382,7 +382,7 @@ where
         mut ctx: CoreContext,
         route: Option<&EmptyRoute>,
         step: &OutgoingEdge,
-    ) -> CoreContext {
+    ) -> Option<CoreContext> {
         if self.options.node_types.contains(&step.target.get_type()) {
             let should_sample = match self.options.sample_rate {
                 0 => false,
