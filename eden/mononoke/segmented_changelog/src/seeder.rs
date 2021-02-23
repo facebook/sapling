@@ -105,7 +105,15 @@ impl SegmentedChangelogSeeder {
         let low_vertex = dag::Group::MASTER.min_id();
         let idmap = self.manager.new_idmap(self.idmap_version);
         let mut dag = Dag::new(InProcessIdDag::new_in_process(), idmap);
-        let last_vertex = dag.build(ctx, low_vertex, head, start_state).await?;
+        let last_vertex = crate::update::build(
+            ctx,
+            &mut dag.iddag,
+            &dag.idmap,
+            &start_state,
+            head,
+            low_vertex,
+        )
+        .await?;
         Ok((dag, last_vertex))
     }
 }

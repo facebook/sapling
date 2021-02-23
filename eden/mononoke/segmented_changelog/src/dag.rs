@@ -22,7 +22,6 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::IdMap;
-use crate::update::StartState;
 use crate::{SegmentedChangelog, StreamCloneData};
 
 const IDMAP_CHANGESET_FETCH_BATCH: usize = 500;
@@ -219,24 +218,5 @@ impl Dag {
         } else {
             Err(format_err!("error generating clone data for empty iddag"))
         }
-    }
-
-
-    pub(crate) async fn build(
-        &mut self,
-        ctx: &CoreContext,
-        low_vertex: Vertex,
-        head: ChangesetId,
-        start_state: StartState,
-    ) -> Result<Vertex> {
-        crate::update::build(
-            ctx,
-            &mut self.iddag,
-            &self.idmap,
-            &start_state,
-            head,
-            low_vertex,
-        )
-        .await
     }
 }

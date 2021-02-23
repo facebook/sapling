@@ -5,22 +5,27 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use anyhow::{format_err, Context, Result};
+use anyhow::{bail, format_err, Context, Result};
+use futures::stream::{FuturesOrdered, StreamExt};
+use futures::try_join;
 use maplit::hashset;
-use slog::{debug, trace};
+use slog::{debug, trace, warn};
 
 use dag::{Id as Vertex, InProcessIdDag};
 use stats::prelude::*;
 
+use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
+use crate::dag::Dag;
 use crate::idmap::{IdMap, MemIdMap};
 
 define_stats! {
     build: timeseries(Sum),
+    build_incremental: timeseries(Sum),
 }
 
 pub async fn build<'a>(
@@ -31,6 +36,8 @@ pub async fn build<'a>(
     head: ChangesetId,
     low_vertex: Vertex,
 ) -> Result<Vertex> {
+    STATS::build.add_value(1);
+
     let mem_idmap = assign_ids(ctx, &start_state, head, low_vertex);
 
     let head_vertex = mem_idmap
@@ -195,4 +202,121 @@ pub fn update_iddag(
         "successfully finished building building iddag"
     );
     Ok(())
+}
+
+// The goal is to update the Dag. We need a parents function, provided by changeset_fetcher, and a
+// place to start, provided by head. The IdMap assigns Vertexes and the IdDag constructs Segments
+// in the Vertex space using the parents function. `Dag::build` expects to be given all the data
+// that is needs to do assignments and construct Segments in `StartState`. Special care is taken
+// for situations where IdMap has more commits processed than the IdDag. Note that parents of
+// commits that are unassigned may have been assigned. This means that IdMap assignments are
+// expected in `StartState` whenever we are not starting from scratch.
+pub async fn build_incremental(
+    ctx: &CoreContext,
+    dag: &mut Dag,
+    changeset_fetcher: &dyn ChangesetFetcher,
+    head: ChangesetId,
+) -> Result<Vertex> {
+    let (head_vertex, maybe_iddag_update) =
+        prepare_incremental_iddag_update(ctx, &dag.iddag, &dag.idmap, changeset_fetcher, head)
+            .await
+            .context("error preparing an incremental update for iddag")?;
+
+    if let Some((start_state, mem_idmap)) = maybe_iddag_update {
+        update_iddag(ctx, &mut dag.iddag, &start_state, &mem_idmap, head_vertex)?;
+    }
+
+    Ok(head_vertex)
+}
+
+async fn prepare_incremental_iddag_update<'a>(
+    ctx: &'a CoreContext,
+    iddag: &'a InProcessIdDag,
+    idmap: &'a dyn IdMap,
+    changeset_fetcher: &'a dyn ChangesetFetcher,
+    head: ChangesetId,
+) -> Result<(Vertex, Option<(StartState, MemIdMap)>)> {
+    let mut visited = HashSet::new();
+    let mut start_state = StartState::new();
+
+    let id_dag_next_id = iddag
+        .next_free_id(0, dag::Group::MASTER)
+        .context("fetching next free id")?;
+    let id_map_next_id = idmap
+        .get_last_entry(ctx)
+        .await?
+        .map_or_else(|| dag::Group::MASTER.min_id(), |(vertex, _)| vertex + 1);
+    if id_dag_next_id > id_map_next_id {
+        bail!("id_dag_next_id > id_map_next_id; unexpected state, re-seed the repository");
+    }
+    if id_dag_next_id < id_map_next_id {
+        warn!(
+            ctx.logger(),
+            "id_dag_next_id < id_map_next_id; this suggests that constructing and saving the iddag \
+            is failing or that the idmap generation is racing"
+        );
+    }
+
+    {
+        let mut queue = FuturesOrdered::new();
+        queue.push(get_parents_and_vertex(ctx, idmap, changeset_fetcher, head));
+
+        while let Some(entry) = queue.next().await {
+            let (cs_id, parents, vertex) = entry?;
+            start_state.insert_parents(cs_id, parents.clone());
+            if let Some(v) = vertex {
+                start_state.insert_vertex_assignment(cs_id, v);
+            }
+            let vertex_missing_from_iddag = match vertex {
+                Some(v) => !iddag.contains_id(v)?,
+                None => true,
+            };
+            if vertex_missing_from_iddag {
+                for parent in parents {
+                    if visited.insert(parent) {
+                        queue.push(get_parents_and_vertex(
+                            ctx,
+                            idmap,
+                            changeset_fetcher,
+                            parent,
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    if id_dag_next_id == id_map_next_id {
+        if let Some(head_vertex) = start_state.assignments.find_vertex(head) {
+            debug!(
+                ctx.logger(),
+                "idmap and iddags already contain head {}, skipping incremental build", head
+            );
+            return Ok((head_vertex, None));
+        }
+    }
+
+    let mem_idmap = assign_ids(ctx, &start_state, head, id_map_next_id);
+
+    let head_vertex = mem_idmap
+        .find_vertex(head)
+        .or_else(|| start_state.assignments.find_vertex(head))
+        .ok_or_else(|| format_err!("error building IdMap; failed to assign head {}", head))?;
+
+    update_idmap(ctx, idmap, &mem_idmap).await?;
+
+    Ok((head_vertex, Some((start_state, mem_idmap))))
+}
+
+async fn get_parents_and_vertex(
+    ctx: &CoreContext,
+    idmap: &dyn IdMap,
+    changeset_fetcher: &dyn ChangesetFetcher,
+    cs_id: ChangesetId,
+) -> Result<(ChangesetId, Vec<ChangesetId>, Option<Vertex>)> {
+    let (parents, vertex) = try_join!(
+        changeset_fetcher.get_parents(ctx.clone(), cs_id),
+        idmap.find_vertex(ctx, cs_id)
+    )?;
+    Ok((cs_id, parents, vertex))
 }

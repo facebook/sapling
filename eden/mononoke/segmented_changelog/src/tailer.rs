@@ -22,7 +22,7 @@ use mononoke_types::RepositoryId;
 
 use crate::dag::Dag;
 use crate::manager::SegmentedChangelogManager;
-use crate::on_demand::build_incremental;
+use crate::update::build_incremental;
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.update";
