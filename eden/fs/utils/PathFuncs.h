@@ -23,6 +23,8 @@
 #include <optional>
 #include <type_traits>
 
+#include "eden/fs/utils/Utf8.h"
+
 #ifdef _WIN32
 #include <eden/fs/utils/StringConv.h>
 #endif
@@ -167,6 +169,15 @@ class PathComponentContainsDirectorySeparator
     : public PathComponentValidationError {
  public:
   explicit PathComponentContainsDirectorySeparator(const std::string& s)
+      : PathComponentValidationError(s) {}
+};
+
+/**
+ * Thrown when a PathComponent isn't valid utf-8.
+ */
+class PathComponentNotUtf8 : public PathComponentValidationError {
+ public:
+  explicit PathComponentNotUtf8(const std::string& s)
       : PathComponentValidationError(s) {}
 };
 
@@ -483,6 +494,12 @@ struct PathComponentSanityCheck {
           throw PathComponentValidationError("PathComponent must not be ..");
         }
         break;
+    }
+
+    if (!isValidUtf8(val)) {
+      throw PathComponentNotUtf8(folly::to<std::string>(
+          "attempt to construct a PathComponent from non valid UTF8 data: ",
+          val));
     }
   }
 };

@@ -116,6 +116,11 @@ class CheckoutConfig {
   /** Whether this repository is mounted in case-sensitive mode */
   bool getCaseSensitive() const;
 
+  /** Whether this repository should allow non-utf8 path */
+  bool getRequireUtf8Path() const {
+    return requireUtf8Path_;
+  }
+
 #ifdef _WIN32
   /** Guid for that repository */
   Guid getRepoGuid() const {
@@ -130,6 +135,7 @@ class CheckoutConfig {
   std::string repoSource_;
   MountProtocol mountProtocol_;
   bool caseSensitive_{!folly::kIsWindows};
+  bool requireUtf8Path_{true};
 #ifdef _WIN32
   Guid repoGuid_;
 #endif

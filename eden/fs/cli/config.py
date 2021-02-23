@@ -126,6 +126,8 @@ class CheckoutConfig(typing.NamedTuple):
     - mount_protocol: "fuse", "nfs" or "prjfs"
     - case_sensitive: whether the mount point is case sensitive. Default to
       false on Windows and macOS.
+    - require_utf8_path: whether the mount point will disallow non-utf8 paths
+      to be written to it.
     - guid: Used on Windows by ProjectedFS to identify this checkout.
     - redirections: dict where keys are relative pathnames in the EdenFS mount
       and the values are RedirectionType enum values that describe the type of
@@ -137,6 +139,7 @@ class CheckoutConfig(typing.NamedTuple):
     guid: str
     mount_protocol: str
     case_sensitive: bool
+    require_utf8_path: bool
     default_revision: str
     redirections: Dict[str, "RedirectionType"]
     active_prefetch_profiles: List[str]
@@ -930,6 +933,7 @@ class EdenCheckout:
                 "guid": checkout_config.guid,
                 "protocol": checkout_config.mount_protocol,
                 "case-sensitive": checkout_config.case_sensitive,
+                "require-utf8-path": checkout_config.require_utf8_path,
             },
             "redirections": redirections,
             "profiles": {"active": checkout_config.active_prefetch_profiles},
@@ -987,6 +991,11 @@ class EdenCheckout:
             # For existing repositories, keep it case sensitive
             case_sensitive = sys.platform != "win32"
 
+        require_utf8_path = repository.get("require-utf8-path")
+        if not isinstance(require_utf8_path, bool):
+            # Existing repositories may have non-utf8 files, thus allow them.
+            require_utf8_path = True
+
         redirections = {}
         redirections_dict = config.get("redirections")
 
@@ -1033,6 +1042,7 @@ class EdenCheckout:
             scm_type=scm_type,
             guid=guid,
             case_sensitive=case_sensitive,
+            require_utf8_path=require_utf8_path,
             mount_protocol=mount_protocol,
             redirections=redirections,
             default_revision=(
@@ -1082,6 +1092,7 @@ class EdenCheckout:
             scm_type=old_config.scm_type,
             guid=old_config.guid,
             case_sensitive=old_config.case_sensitive,
+            require_utf8_path=old_config.require_utf8_path,
             mount_protocol=old_config.mount_protocol,
             redirections=old_config.redirections,
             default_revision=old_config.default_revision,
@@ -1114,6 +1125,7 @@ class EdenCheckout:
             scm_type=old_config.scm_type,
             guid=old_config.guid,
             case_sensitive=old_config.case_sensitive,
+            require_utf8_path=old_config.require_utf8_path,
             mount_protocol=old_config.mount_protocol,
             redirections=old_config.redirections,
             default_revision=old_config.default_revision,

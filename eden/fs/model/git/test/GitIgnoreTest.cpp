@@ -177,7 +177,6 @@ TEST(GitIgnore, testUTF8BOM) {
       "/test.txt\n");
 
   EXPECT_IGNORE(ignore, NO_MATCH, "xyz");
-  EXPECT_IGNORE(ignore, EXCLUDE, "\xef\xbb\xffxyz");
   EXPECT_IGNORE(ignore, EXCLUDE, "test.txt");
 }
 
@@ -282,13 +281,11 @@ TEST(GitIgnore, testStarStar) {
   EXPECT_IGNORE(ignore, EXCLUDE, "abc/def.txt");
   EXPECT_IGNORE(ignore, EXCLUDE, "x/abc/def.txt");
   EXPECT_IGNORE(ignore, EXCLUDE, "x/y/z/abc/def.txt");
-  EXPECT_IGNORE(ignore, EXCLUDE, "x/\xff\xff/abc/def.txt");
   EXPECT_IGNORE(ignore, NO_MATCH, "def.txt");
   EXPECT_IGNORE(ignore, NO_MATCH, "abc");
   EXPECT_IGNORE(ignore, EXCLUDE, "foo.txt");
   EXPECT_IGNORE(ignore, EXCLUDE, "x/foo.txt");
   EXPECT_IGNORE(ignore, EXCLUDE, "x/y/z/foo.txt");
-  EXPECT_IGNORE(ignore, EXCLUDE, "x/\xff\xff/foo.txt");
 
   // Test trailing "/**"
   ignore.loadFile(
@@ -370,7 +367,6 @@ TEST(GitIgnore, testQMark) {
   EXPECT_IGNORE(ignore, EXCLUDE, "t");
   EXPECT_IGNORE(ignore, EXCLUDE, "?");
   EXPECT_IGNORE(ignore, EXCLUDE, "_");
-  EXPECT_IGNORE(ignore, EXCLUDE, "\xff");
   EXPECT_IGNORE(ignore, EXCLUDE, "txt");
   EXPECT_IGNORE(ignore, EXCLUDE, "...");
   EXPECT_IGNORE(ignore, NO_MATCH, "tt");

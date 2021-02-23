@@ -31,6 +31,7 @@ constexpr folly::StringPiece kRepoSourceKey{"path"};
 constexpr folly::StringPiece kRepoTypeKey{"type"};
 constexpr folly::StringPiece kRepoCaseSensitiveKey{"case-sensitive"};
 constexpr folly::StringPiece kMountProtocol{"protocol"};
+constexpr folly::StringPiece kRequireUtf8Path{"require-utf8-path"};
 #ifdef _WIN32
 constexpr folly::StringPiece kRepoGuid{"guid"};
 #endif
@@ -199,6 +200,9 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   auto caseSensitive = repository->get_as<bool>(kRepoCaseSensitiveKey.str());
   config->caseSensitive_ =
       caseSensitive ? *caseSensitive : kPathMapDefaultCaseSensitive;
+
+  auto requireUtf8Path = repository->get_as<bool>(kRequireUtf8Path.str());
+  config->requireUtf8Path_ = requireUtf8Path ? *requireUtf8Path : true;
 
 #ifdef _WIN32
   auto guid = repository->get_as<std::string>(kRepoGuid.str());

@@ -774,7 +774,8 @@ FuseChannel::FuseChannel(
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration requestTimeout,
     Notifications* notifications,
-    bool caseSensitive)
+    bool caseSensitive,
+    bool requireUtf8Path)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       numThreads_(numThreads),
       dispatcher_(std::move(dispatcher)),
@@ -783,6 +784,7 @@ FuseChannel::FuseChannel(
       requestTimeout_(requestTimeout),
       notifications_(notifications),
       caseSensitive_(caseSensitive),
+      requireUtf8Path_(requireUtf8Path),
       fuseDevice_(std::move(fuseDevice)),
       processAccessLog_(std::move(processNameCache)),
       traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
@@ -1795,11 +1797,26 @@ folly::Future<folly::Unit> FuseChannel::fuseWrite(
       });
 }
 
+namespace {
+PathComponentPiece extractPathComponent(const char* s, bool requireUtf8Path) {
+  try {
+    return PathComponentPiece(s);
+  } catch (const PathComponentNotUtf8& ex) {
+    if (requireUtf8Path) {
+      throw std::system_error(EILSEQ, std::system_category(), ex.what());
+    }
+
+    return PathComponentPiece(s, detail::SkipPathSanityCheck());
+  }
+}
+} // namespace
+
 folly::Future<folly::Unit> FuseChannel::fuseLookup(
     FuseRequestContext& request,
     const fuse_in_header& header,
     ByteRange arg) {
-  PathComponentPiece name{reinterpret_cast<const char*>(arg.data())};
+  const auto name = extractPathComponent(
+      reinterpret_cast<const char*>(arg.data()), requireUtf8Path_);
   const auto parent = InodeNumber{header.nodeid};
 
   XLOG(DBG7) << "FUSE_LOOKUP parent=" << parent << " name=" << name;
@@ -1866,7 +1883,7 @@ folly::Future<folly::Unit> FuseChannel::fuseSymlink(
     ByteRange arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg.data());
   XLOG(DBG7) << "FUSE_SYMLINK";
-  const PathComponentPiece name{nameStr};
+  const auto name = extractPathComponent(nameStr, requireUtf8Path_);
   const StringPiece link{nameStr + name.stringPiece().size() + 1};
 
   InodeNumber parent{header.nodeid};
@@ -1892,7 +1909,7 @@ folly::Future<folly::Unit> FuseChannel::fuseMknod(
         reinterpret_cast<const char*>(arg.data()) + FUSE_COMPAT_MKNOD_IN_SIZE;
   }
 
-  const PathComponentPiece name{nameStr};
+  const auto name = extractPathComponent(nameStr, requireUtf8Path_);
   XLOG(DBG7) << "FUSE_MKNOD " << name;
 
   InodeNumber parent{header.nodeid};
@@ -1907,7 +1924,7 @@ folly::Future<folly::Unit> FuseChannel::fuseMkdir(
     ByteRange arg) {
   const auto dir = reinterpret_cast<const fuse_mkdir_in*>(arg.data());
   const auto nameStr = reinterpret_cast<const char*>(dir + 1);
-  const PathComponentPiece name{nameStr};
+  const auto name = extractPathComponent(nameStr, requireUtf8Path_);
 
   XLOG(DBG7) << "FUSE_MKDIR " << name;
 
@@ -1929,7 +1946,7 @@ folly::Future<folly::Unit> FuseChannel::fuseUnlink(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg.data());
-  const PathComponentPiece name{nameStr};
+  const auto name = extractPathComponent(nameStr, requireUtf8Path_);
 
   XLOG(DBG7) << "FUSE_UNLINK " << name;
 
@@ -1944,7 +1961,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRmdir(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg.data());
-  const PathComponentPiece name{nameStr};
+  const auto name = extractPathComponent(nameStr, requireUtf8Path_);
 
   XLOG(DBG7) << "FUSE_RMDIR " << name;
   InodeNumber parent{header.nodeid};
@@ -1959,9 +1976,9 @@ folly::Future<folly::Unit> FuseChannel::fuseRename(
     ByteRange arg) {
   const auto rename = reinterpret_cast<const fuse_rename_in*>(arg.data());
   const auto oldNameStr = reinterpret_cast<const char*>(rename + 1);
-  const PathComponentPiece oldName{oldNameStr};
-  const PathComponentPiece newName{
-      oldNameStr + oldName.stringPiece().size() + 1};
+  const auto oldName = extractPathComponent(oldNameStr, requireUtf8Path_);
+  const auto newName = extractPathComponent(
+      oldNameStr + oldName.stringPiece().size() + 1, requireUtf8Path_);
 
   InodeNumber parent{header.nodeid};
   InodeNumber newParent{rename->newdir};
@@ -1976,7 +1993,7 @@ folly::Future<folly::Unit> FuseChannel::fuseLink(
     ByteRange arg) {
   const auto link = reinterpret_cast<const fuse_link_in*>(arg.data());
   const auto nameStr = reinterpret_cast<const char*>(link + 1);
-  const PathComponentPiece newName{nameStr};
+  const auto newName = extractPathComponent(nameStr, requireUtf8Path_);
 
   XLOG(DBG7) << "FUSE_LINK " << newName;
 
@@ -2226,7 +2243,8 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
     const fuse_in_header& header,
     ByteRange arg) {
   const auto create = reinterpret_cast<const fuse_create_in*>(arg.data());
-  const PathComponentPiece name{reinterpret_cast<const char*>(create + 1)};
+  const auto name = extractPathComponent(
+      reinterpret_cast<const char*>(create + 1), requireUtf8Path_);
   XLOG(DBG7) << "FUSE_CREATE " << name;
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_->create(ino, name, create->mode, create->flags)

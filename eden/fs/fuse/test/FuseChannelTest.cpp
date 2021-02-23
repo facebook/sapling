@@ -77,6 +77,7 @@ class FuseChannelTest : public ::testing::Test {
         std::make_shared<ProcessNameCache>(),
         std::chrono::seconds(60),
         nullptr,
+        true,
         true));
   }
 

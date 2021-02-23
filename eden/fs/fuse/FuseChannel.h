@@ -207,7 +207,8 @@ class FuseChannel {
       std::shared_ptr<ProcessNameCache> processNameCache,
       folly::Duration requestTimeout,
       Notifications* FOLLY_NULLABLE notifications,
-      bool caseSensitive);
+      bool caseSensitive,
+      bool requireUtf8Path);
 
   /**
    * Destroy the FuseChannel.
@@ -720,6 +721,7 @@ class FuseChannel {
   const folly::Duration requestTimeout_;
   Notifications* const notifications_;
   bool caseSensitive_;
+  bool requireUtf8Path_;
 
   /*
    * connInfo_ is modified during the initialization process,

@@ -133,6 +133,7 @@ int main(int argc, char** argv) {
       std::make_shared<ProcessNameCache>(),
       std::chrono::seconds(60),
       nullptr,
+      true,
       true));
 
   XLOG(INFO) << "Starting FUSE...";

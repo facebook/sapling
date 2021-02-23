@@ -855,6 +855,7 @@ re-run `eden clone` with --allow-empty-repo"""
             guid=str(uuid.uuid4()),
             mount_protocol=mount_protocol,
             case_sensitive=case_sensitive,
+            require_utf8_path=True,
             default_revision=config_mod.DEFAULT_REVISION[repo.type],
             redirections={},
             active_prefetch_profiles=[],

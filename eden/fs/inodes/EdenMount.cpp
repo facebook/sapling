@@ -1254,7 +1254,8 @@ std::unique_ptr<FuseChannel, FuseChannelDeleter> makeFuseChannel(
               .getEdenConfig()
               ->fuseRequestTimeout.getValue()),
       mount->getServerState()->getNotifications(),
-      mount->getConfig()->getCaseSensitive()));
+      mount->getConfig()->getCaseSensitive(),
+      mount->getConfig()->getRequireUtf8Path()));
   return ret;
 }
 } // namespace
