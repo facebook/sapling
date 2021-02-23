@@ -35,10 +35,18 @@ struct Inner {
 
 pub trait Read: io::Read + Any + Send + Sync {
     fn as_any(&self) -> &dyn Any;
+
+    fn type_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
 }
 
 pub trait Write: io::Write + Any + Send + Sync {
     fn as_any(&self) -> &dyn Any;
+
+    fn type_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
 }
 
 impl<T: io::Read + Any + Send + Sync> Read for T {

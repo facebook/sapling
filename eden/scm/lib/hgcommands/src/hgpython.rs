@@ -185,7 +185,10 @@ fn read_to_py_object(py: Python, reader: &dyn clidispatch::io::Read) -> PyObject
     } else if let Some(obj) = any.downcast_ref::<WrappedIO>() {
         obj.0.clone_ref(py)
     } else {
-        unimplemented!("converting non-stdio Read from Rust to Python is not implemented")
+        unimplemented!(
+            "converting non-stdio Read ({}) from Rust to Python is not implemented",
+            reader.type_name()
+        )
     }
 }
 
@@ -198,7 +201,10 @@ fn write_to_py_object(py: Python, writer: &dyn clidispatch::io::Write) -> PyObje
     } else if let Some(obj) = any.downcast_ref::<WrappedIO>() {
         obj.0.clone_ref(py)
     } else {
-        unimplemented!("converting non-stdio Write from Rust to Python is not implemented")
+        unimplemented!(
+            "converting non-stdio Write ({}) from Rust to Python is not implemented",
+            writer.type_name()
+        )
     }
 }
 
