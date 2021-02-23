@@ -78,6 +78,7 @@ fn main() {
     disable_standard_handle_inheritability().unwrap();
 
     let mut io = clidispatch::io::IO::stdio();
+    io.set_main();
     let mut code = hgcommands::run_command(full_args, &mut io);
     if io.flush().is_err() {
         if code == 0 {
