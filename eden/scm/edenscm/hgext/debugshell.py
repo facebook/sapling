@@ -160,6 +160,7 @@ Available IPython magics (auto magic is on, `%` is optional):
     shell = InteractiveShellEmbed.instance(config=config)
     _configipython(ui, shell)
 
+    locals().update(globals())
     shell()
 
 
