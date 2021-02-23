@@ -22,8 +22,9 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
-use crate::dag::{Dag, StartState};
+use crate::dag::Dag;
 use crate::idmap::IdMap;
+use crate::update::StartState;
 use crate::{SegmentedChangelog, StreamCloneData};
 
 define_stats! {

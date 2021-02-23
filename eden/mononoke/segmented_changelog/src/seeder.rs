@@ -19,10 +19,11 @@ use changesets::ChangesetEntry;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
-use crate::dag::{Dag, StartState};
+use crate::dag::Dag;
 use crate::idmap::SqlIdMapVersionStore;
 use crate::manager::SegmentedChangelogManager;
 use crate::types::IdMapVersion;
+use crate::update::StartState;
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.seeder";

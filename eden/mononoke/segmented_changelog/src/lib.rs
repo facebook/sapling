@@ -32,6 +32,7 @@ mod seeder;
 mod sql_types;
 mod tailer;
 mod types;
+mod update;
 
 #[cfg(test)]
 mod tests;
