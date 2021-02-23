@@ -133,7 +133,7 @@ pub async fn open_synced_commit_mapping(
         config.storage_config.metadata,
         mysql_options.clone(),
         readonly_storage,
-        logger.clone(),
+        logger,
     )
     .await?;
 

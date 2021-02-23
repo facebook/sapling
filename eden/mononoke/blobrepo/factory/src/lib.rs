@@ -145,8 +145,7 @@ impl<'a> BlobrepoBuilder<'a> {
             self.storage_config.metadata,
             self.mysql_options.clone(),
             self.readonly_storage,
-            // FIXME: remove clone when myrouter opening is async-await
-            self.logger.clone(),
+            self.logger,
         )
         .watched(self.logger);
 

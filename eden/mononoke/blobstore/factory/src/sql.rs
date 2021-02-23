@@ -137,12 +137,10 @@ pub async fn make_metadata_sql_factory(
     dbconfig: MetadataDatabaseConfig,
     mysql_options: MysqlOptions,
     readonly: ReadOnlyStorage,
-    logger: Logger,
+    logger: &Logger,
 ) -> Result<MetadataSqlFactory, Error> {
     if let Some(dbaddress) = dbconfig.primary_address() {
-        myrouter_ready(Some(dbaddress), &mysql_options, logger)
-            .compat()
-            .await?
+        myrouter_ready(Some(dbaddress), &mysql_options, &logger).await?
     }
 
     Ok(MetadataSqlFactory {

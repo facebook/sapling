@@ -20,7 +20,6 @@ use cmdlib::{
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
     future::{self, try_join, try_join_all, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
@@ -104,9 +103,8 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     myrouter_ready(
         Some("xdb.mononoke_production".to_string()),
         &mysql_options,
-        ctx.logger().clone(),
+        ctx.logger(),
     )
-    .compat()
     .await?;
 
     let mut warmers = Vec::new();

@@ -444,7 +444,7 @@ pub async fn open_backsyncer_dbs(
         db_config,
         mysql_options,
         readonly_storage,
-        ctx.logger().clone(),
+        ctx.logger(),
     )
     .await?;
 

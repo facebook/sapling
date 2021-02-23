@@ -26,7 +26,7 @@ use cmdlib::{
 use context::{CoreContext, SessionContainer};
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future};
+use futures::future;
 use futures_03_ext::BufferedParams;
 use healer::Healer;
 use lazy_static::lazy_static;
@@ -90,13 +90,7 @@ async fn maybe_schedule_healer_for_storage(
             s => bail!("Storage doesn't use Multiplexed blobstore, got {:?}", s),
         };
 
-    myrouter_ready(
-        queue_db.remote_address(),
-        &mysql_options,
-        ctx.logger().clone(),
-    )
-    .compat()
-    .await?;
+    myrouter_ready(queue_db.remote_address(), &mysql_options, ctx.logger()).await?;
 
     let sync_queue = SqlBlobstoreSyncQueue::with_database_config(
         fb,

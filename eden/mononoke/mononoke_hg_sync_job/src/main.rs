@@ -804,9 +804,8 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             myrouter_ready(
                 repo_config.primary_metadata_db_address(),
                 &mysql_options,
-                ctx.logger().clone(),
+                ctx.logger(),
             )
-            .compat()
             .await
         } else {
             // connection goes via Mysql client

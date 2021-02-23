@@ -109,19 +109,19 @@ where
     fb_unimplemented!()
 }
 
-pub fn myrouter_ready(
+pub async fn myrouter_ready(
     db_addr_opt: Option<String>,
     mysql_options: &MysqlOptions,
-    _: Logger,
-) -> BoxFuture<(), Error> {
+    _: &Logger,
+) -> Result<(), Error> {
     if db_addr_opt.is_none() {
-        return ok(()).boxify();
+        return Ok(());
     };
 
     match mysql_options.connection_type {
         MysqlConnectionType::Myrouter(_) => {}
         _ => {
-            return ok(()).boxify();
+            return Ok(());
         }
     }
 

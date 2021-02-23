@@ -1328,7 +1328,7 @@ pub async fn setup_common<'a>(
             metadatadb_config,
             mysql_options.clone(),
             readonly_storage,
-            logger.clone(),
+            logger,
         )
         .await?;
 
