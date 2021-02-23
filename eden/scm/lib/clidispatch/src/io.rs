@@ -6,12 +6,15 @@
  */
 
 use configparser::config::ConfigSet;
+use once_cell::sync::Lazy;
 use parking_lot::Mutex;
+use parking_lot::RwLock;
 use pipe::pipe;
 use std::any::Any;
 use std::io;
 use std::mem;
 use std::sync::Arc;
+use std::sync::Weak;
 use std::thread::{spawn, JoinHandle};
 use streampager::{config::InterfaceMode, Pager};
 
@@ -32,6 +35,17 @@ struct Inner {
 
     pager_handle: Option<JoinHandle<streampager::Result<()>>>,
 }
+
+/// The "main" IO used by the process.
+///
+/// This global state makes it easier for Python bindings
+/// (ex. "pypager") to obtain the IO state without needing
+/// to pass the state across layers. This is similar to
+/// `std::io::stdout` etc being globally accessible.
+///
+/// Use `IO::set_main()` to set the main IO, and `IO::main()`
+/// to obtain the "main" `IO`.
+static MAIN_IO_REF: Lazy<RwLock<Option<Weak<Mutex<Inner>>>>> = Lazy::new(Default::default);
 
 pub trait Read: io::Read + Any + Send + Sync {
     fn as_any(&self) -> &dyn Any;
@@ -190,6 +204,41 @@ impl IO {
         Self {
             inner: Arc::new(Mutex::new(inner)),
         }
+    }
+
+    /// Obtain the main IO.
+    ///
+    /// The main IO must be set via `set_main` and is still alive.
+    /// Otherwise, this function will return an error.
+    pub fn main() -> io::Result<Self> {
+        let opt_main_io = MAIN_IO_REF.read();
+        let main_io = match opt_main_io.as_ref() {
+            Some(io) => io,
+            None => {
+                return Err(io::Error::new(
+                    io::ErrorKind::NotConnected,
+                    "IO::main() is not available (call set_main first)",
+                ));
+            }
+        };
+
+        if let Some(inner) = Weak::upgrade(&*main_io) {
+            Ok(Self { inner })
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::NotConnected,
+                "IO::main() is not available (dropped)",
+            ))
+        }
+    }
+
+    /// Set the current IO as the main IO.
+    ///
+    /// Note: If the current IO gets dropped then the main IO will be dropped
+    /// too and [`IO::main`] will return an error.
+    pub fn set_main(&self) {
+        let mut main_io_ref = MAIN_IO_REF.write();
+        *main_io_ref = Some(Arc::downgrade(&self.inner));
     }
 
     pub fn start_pager(&mut self, config: &ConfigSet) -> io::Result<()> {
