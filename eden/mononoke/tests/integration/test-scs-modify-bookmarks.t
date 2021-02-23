@@ -192,8 +192,11 @@ creating a bookmark on a commit where the hook-failing commit is already in trun
   newindigo                                5477b0d87a7c76537e4c1da51d601564f42e94cc
   newkilo                                  9ff3b7f3228023fe93f2bb7f033da2541f78e725
 
-the bookmarks have all moved
+the bookmarks have all moved if you pull from the repo (note: mononoke server
+might be a little behind the source control service server, so flush the bookmarks
+cache so it catches up).
   $ cd "$TESTTMP/repo2"
+  $ flush_mononoke_bookmarks
   $ hgmn pull -q
   devel-warn: applied empty changegroup * (glob)
   $ hg bookmark --remote
