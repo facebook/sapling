@@ -19,7 +19,7 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
-use crate::dag::Dag;
+use crate::dag::{Dag, ReadDag};
 use crate::idmap::IdMap;
 use crate::update::build_incremental;
 use crate::{SegmentedChangelog, StreamCloneData};
@@ -63,7 +63,8 @@ impl SegmentedChangelog for OnDemandUpdateDag {
             {
                 if dag.iddag.contains_id(known_vertex)? {
                     let location = location.with_descendant(known_vertex);
-                    return dag
+                    let read_dag = ReadDag::new(&dag.iddag, dag.idmap.clone());
+                    return read_dag
                         .known_location_to_many_changeset_ids(ctx, location, count)
                         .await
                         .context("ondemand first known_location_many_changest_ids");
@@ -76,7 +77,9 @@ impl SegmentedChangelog for OnDemandUpdateDag {
         };
         let dag = self.dag.read().await;
         let location = Location::new(known_vertex, location.distance);
-        dag.known_location_to_many_changeset_ids(ctx, location, count)
+        let read_dag = ReadDag::new(&dag.iddag, dag.idmap.clone());
+        read_dag
+            .known_location_to_many_changeset_ids(ctx, location, count)
             .await
     }
 

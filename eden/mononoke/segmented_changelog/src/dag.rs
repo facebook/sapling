@@ -31,14 +31,13 @@ define_stats! {
     location_to_changeset_id: timeseries(Sum),
 }
 
-// Note. The equivalent graph in the scm/lib/dag crate is `NameDag`.
-pub struct Dag {
-    pub(crate) iddag: InProcessIdDag,
+pub struct ReadDag<'a> {
+    pub(crate) iddag: &'a InProcessIdDag,
     pub(crate) idmap: Arc<dyn IdMap>,
 }
 
 #[async_trait]
-impl SegmentedChangelog for Dag {
+impl<'a> SegmentedChangelog for ReadDag<'a> {
     async fn location_to_many_changeset_ids(
         &self,
         ctx: &CoreContext,
@@ -165,8 +164,8 @@ impl SegmentedChangelog for Dag {
     }
 }
 
-impl Dag {
-    pub fn new(iddag: InProcessIdDag, idmap: Arc<dyn IdMap>) -> Self {
+impl<'a> ReadDag<'a> {
+    pub fn new(iddag: &'a InProcessIdDag, idmap: Arc<dyn IdMap>) -> Self {
         Self { iddag, idmap }
     }
 
@@ -218,5 +217,75 @@ impl Dag {
         } else {
             Err(format_err!("error generating clone data for empty iddag"))
         }
+    }
+}
+
+#[async_trait]
+pub trait SegmentedChangelogDelegate {
+    async fn segmented_changelog_delegate<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+    ) -> Result<ReadDag<'a>>;
+}
+
+#[async_trait]
+impl<T: SegmentedChangelogDelegate + Sync + Send> SegmentedChangelog for T {
+    async fn location_to_many_changeset_ids(
+        &self,
+        ctx: &CoreContext,
+        location: Location<ChangesetId>,
+        count: u64,
+    ) -> Result<Vec<ChangesetId>> {
+        let delegate = self.segmented_changelog_delegate(ctx).await?;
+        delegate
+            .location_to_many_changeset_ids(ctx, location, count)
+            .await
+    }
+
+    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+        let delegate = self.segmented_changelog_delegate(ctx).await?;
+        delegate.clone_data(ctx).await
+    }
+
+    async fn full_idmap_clone_data(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<StreamCloneData<ChangesetId>> {
+        let delegate = self.segmented_changelog_delegate(ctx).await?;
+        delegate.full_idmap_clone_data(ctx).await
+    }
+
+    async fn many_changeset_ids_to_locations(
+        &self,
+        ctx: &CoreContext,
+        client_head: ChangesetId,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
+        let delegate = self.segmented_changelog_delegate(ctx).await?;
+        delegate
+            .many_changeset_ids_to_locations(ctx, client_head, cs_ids)
+            .await
+    }
+}
+
+// Note. The equivalent graph in the scm/lib/dag crate is `NameDag`.
+pub struct Dag {
+    pub(crate) iddag: InProcessIdDag,
+    pub(crate) idmap: Arc<dyn IdMap>,
+}
+
+impl Dag {
+    pub fn new(iddag: InProcessIdDag, idmap: Arc<dyn IdMap>) -> Self {
+        Self { iddag, idmap }
+    }
+}
+
+#[async_trait]
+impl SegmentedChangelogDelegate for Dag {
+    async fn segmented_changelog_delegate<'a>(
+        &'a self,
+        _ctx: &'a CoreContext,
+    ) -> Result<ReadDag<'a>> {
+        Ok(ReadDag::new(&self.iddag, self.idmap.clone()))
     }
 }
