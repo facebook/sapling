@@ -85,12 +85,13 @@ void FuseRequestContext::timeoutErrorHandler(
 }
 
 void FuseRequestContext::replyError(int err) {
-  error_ = err;
+  XCHECK(err >= 0) << "errno values are positive";
+  result_ = -err;
   channel_->replyError(stealReq(), err);
 }
 
 void FuseRequestContext::replyNone() {
-  error_ = 0;
+  result_ = 0;
   stealReq();
 }
 

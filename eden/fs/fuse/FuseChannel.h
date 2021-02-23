@@ -50,6 +50,24 @@ struct FuseTraceEvent : TraceEventBase {
     FINISH,
   };
 
+  /**
+   * Contains the useful fields of fuse_in_header to save TraceBus memory.
+   */
+  struct RequestHeader {
+    explicit RequestHeader(const fuse_in_header& header)
+        : nodeid{header.nodeid},
+          opcode{header.opcode},
+          uid{header.uid},
+          gid{header.gid},
+          pid{header.pid} {}
+
+    uint64_t nodeid;
+    uint32_t opcode;
+    uint32_t uid;
+    uint32_t gid;
+    uint32_t pid;
+  };
+
   FuseTraceEvent() = delete;
 
   static FuseTraceEvent start(uint64_t unique, const fuse_in_header& request) {
@@ -68,7 +86,7 @@ struct FuseTraceEvent : TraceEventBase {
   static FuseTraceEvent finish(
       uint64_t unique,
       const fuse_in_header& request,
-      std::optional<int32_t> result) {
+      std::optional<int64_t> result) {
     return FuseTraceEvent{unique, request, FinishDetails{result}};
   }
 
@@ -81,7 +99,7 @@ struct FuseTraceEvent : TraceEventBase {
     return unique_;
   }
 
-  const fuse_in_header& getRequest() const {
+  const RequestHeader& getRequest() const {
     return request_;
   }
 
@@ -89,7 +107,7 @@ struct FuseTraceEvent : TraceEventBase {
     return std::get<StartDetails>(details_).arguments;
   }
 
-  const std::optional<int32_t> getResult() const {
+  const std::optional<int64_t>& getResponseCode() const {
     return std::get<FinishDetails>(details_).result;
   }
 
@@ -110,10 +128,15 @@ struct FuseTraceEvent : TraceEventBase {
 
   struct FinishDetails {
     /**
-     * Contains the fuse_out_header::error value if a response was sent to the
-     * kernel.
+     * If set, a response code was sent to the kernel.
+     *
+     * Negative values indicate errors, and non-negative success.  Errors map to
+     * the fuse_out_header::error value, negated.
+     *
+     * For requests where the kernel will maintain a reference to the returned
+     * inode, result will contain fuse_entry_out::nodeid.
      */
-    std::optional<int32_t> result;
+    std::optional<int64_t> result;
   };
 
   using Details = std::variant<StartDetails, FinishDetails>;
@@ -129,11 +152,7 @@ struct FuseTraceEvent : TraceEventBase {
    * include our own permanently-unique IDs too.
    */
   uint64_t unique_;
-
-  // Not all of these fields are necessary. We could save some memory by only
-  // including the fields we use.
-  fuse_in_header request_;
-
+  RequestHeader request_;
   Details details_;
 };
 
@@ -184,7 +203,7 @@ class FuseChannel {
 
   struct OutstandingRequest {
     uint64_t unique;
-    fuse_in_header request;
+    FuseTraceEvent::RequestHeader request;
   };
 
   /**

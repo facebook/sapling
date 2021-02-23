@@ -44,22 +44,34 @@ class FuseRequestContext : public RequestContext {
     return static_cast<pid_t>(fuseHeader_.pid);
   }
 
-  std::optional<int32_t> getResult() const {
-    return error_;
+  /**
+   * After sendReply or replyError, this returns the error code we returned to
+   * the kernel, negated.
+   *
+   * After sendReplyWithInode, this returns the inode number that the kernel
+   * will reference until it sends FORGET.
+   */
+  const std::optional<int64_t>& getResult() const {
+    return result_;
   }
 
-  // Returns the underlying fuse request, throwing an error if it has
-  // already been released
+  /**
+   * Returns the underlying fuse request, throwing an error if it has
+   * already been released
+   */
   const fuse_in_header& getReq() const;
 
-  // Returns the underlying fuse request. Unlike getReq this function doesn't
-  // throw. The caller is responsible to verify that the fuse_in_header is
-  // valid by checking if (fuseHeader.opcode != 0)
+  /**
+   * Returns the underlying fuse request. Unlike getReq this function doesn't
+   * throw. The caller is responsible to verify that the fuse_in_header is
+   * valid by checking if (fuseHeader.opcode != 0)
+   */
   const fuse_in_header& examineReq() const;
 
-  /** Append error handling clauses to a future chain
-   * These clauses result in reporting a fuse request error back to the
-   * kernel. */
+  /**
+   * Append error handling clauses to a future chain. These clauses result in
+   * reporting a fuse request error back to the kernel.
+   */
   folly::Future<folly::Unit> catchErrors(
       folly::Future<folly::Unit>&& fut,
       Notifications* FOLLY_NULLABLE notifications) {
@@ -94,16 +106,21 @@ class FuseRequestContext : public RequestContext {
       const folly::FutureTimeout& err,
       Notifications* FOLLY_NULLABLE notifications);
 
-  template <typename T>
-  void sendReply(const T& payload) {
-    error_ = 0;
-    channel_->sendReply(stealReq(), payload);
+  template <typename... T>
+  void sendReply(T&&... payload) {
+    result_ = 0;
+    channel_->sendReply(stealReq(), std::forward<T>(payload)...);
   }
 
+  /**
+   * Same as sendReply, but is called when the kernel will take a reference to
+   * the returned inode. The returned inode value will be logged to make trace
+   * logs more useful.
+   */
   template <typename T>
-  void sendReply(T&& payload) {
-    error_ = 0;
-    channel_->sendReply(stealReq(), std::forward<T>(payload));
+  void sendReplyWithInode(uint64_t nodeid, T&& reply) {
+    result_ = nodeid;
+    channel_->sendReply(stealReq(), std::forward<T>(reply));
   }
 
   // Reply with a negative errno value or 0 for success
@@ -118,7 +135,7 @@ class FuseRequestContext : public RequestContext {
   FuseChannel* channel_;
   fuse_in_header fuseHeader_;
 
-  std::optional<int32_t> error_;
+  std::optional<int64_t> result_;
 };
 
 } // namespace eden

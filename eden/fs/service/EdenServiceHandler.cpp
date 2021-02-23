@@ -680,10 +680,9 @@ RequestInfo thriftRequestInfo(pid_t pid, ProcessNameCache& processNameCache) {
 namespace {
 FuseCall populateFuseCall(
     uint64_t unique,
-    const fuse_in_header& request,
+    const FuseTraceEvent::RequestHeader& request,
     ProcessNameCache& processNameCache) {
   FuseCall fc;
-  fc.len_ref() = request.len;
   fc.opcode_ref() = request.opcode;
   fc.unique_ref() = unique;
   fc.nodeid_ref() = request.nodeid;
@@ -800,7 +799,7 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
                 break;
               case FuseTraceEvent::FINISH:
                 te.type_ref() = FsEventType::FINISH;
-                te.result_ref().from_optional(event.getResult());
+                te.result_ref().from_optional(event.getResponseCode());
                 break;
             }
 

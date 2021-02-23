@@ -698,7 +698,6 @@ class FuseCallsCmd(Subcmd):
         out.write(b"Outstanding FUSE calls: %d\n" % len(outstanding_call))
         for count, call in enumerate(outstanding_call):
             out.write(b"Call %d\n" % (count + 1))
-            out.write(b"\tlen: %d\n" % call.len)
             out.write(b"\topcode: %d\n" % call.opcode)
             out.write(b"\tunique: %d\n" % call.unique)
             out.write(b"\tnodeid: %d\n" % call.nodeid)

@@ -205,10 +205,11 @@ std::string fallocate(FuseArg arg) {
 
 // These static asserts exist to make explicit the memory usage of the per-mount
 // FUSE TraceBus. TraceBus uses 2 * capacity * sizeof(TraceEvent) memory usage,
-// so limit total memory usage to 4 MB per mount.
+// so limit total memory usage to around 4 MB per mount.
 constexpr size_t kTraceBusCapacity = 25000;
-static_assert(sizeof(FuseTraceEvent) == 80);
-static_assert(kTraceBusCapacity * sizeof(FuseTraceEvent) == 2000000);
+static_assert(sizeof(FuseTraceEvent) >= 72);
+static_assert(sizeof(FuseTraceEvent) <= 72);
+static_assert(kTraceBusCapacity * sizeof(FuseTraceEvent) == 1800000);
 
 // This is the minimum size used by libfuse so we use it too!
 constexpr size_t MIN_BUFSIZE = 0x21000;
@@ -1822,8 +1823,9 @@ folly::Future<folly::Unit> FuseChannel::fuseLookup(
   XLOG(DBG7) << "FUSE_LOOKUP parent=" << parent << " name=" << name;
 
   return dispatcher_->lookup(header.unique, parent, name, request)
-      .thenValue(
-          [&request](fuse_entry_out param) { request.sendReply(param); });
+      .thenValue([&request](fuse_entry_out entry) {
+        request.sendReplyWithInode(entry.nodeid, entry);
+      });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseForget(
@@ -1888,8 +1890,9 @@ folly::Future<folly::Unit> FuseChannel::fuseSymlink(
 
   InodeNumber parent{header.nodeid};
   return dispatcher_->symlink(parent, name, link)
-      .thenValue(
-          [&request](fuse_entry_out param) { request.sendReply(param); });
+      .thenValue([&request](fuse_entry_out entry) {
+        request.sendReplyWithInode(entry.nodeid, entry);
+      });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseMknod(
@@ -1914,8 +1917,9 @@ folly::Future<folly::Unit> FuseChannel::fuseMknod(
 
   InodeNumber parent{header.nodeid};
   return dispatcher_->mknod(parent, name, nod->mode, nod->rdev)
-      .thenValue(
-          [&request](fuse_entry_out entry) { request.sendReply(entry); });
+      .thenValue([&request](fuse_entry_out entry) {
+        request.sendReplyWithInode(entry.nodeid, entry);
+      });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseMkdir(
@@ -1937,8 +1941,9 @@ folly::Future<folly::Unit> FuseChannel::fuseMkdir(
   InodeNumber parent{header.nodeid};
   mode_t mode = dir->mode & ~dir->umask;
   return dispatcher_->mkdir(parent, name, mode)
-      .thenValue(
-          [&request](fuse_entry_out entry) { request.sendReply(entry); });
+      .thenValue([&request](fuse_entry_out entry) {
+        request.sendReplyWithInode(entry.nodeid, entry);
+      });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseUnlink(
@@ -2000,8 +2005,9 @@ folly::Future<folly::Unit> FuseChannel::fuseLink(
   InodeNumber ino{link->oldnodeid};
   InodeNumber newParent{header.nodeid};
   return dispatcher_->link(ino, newParent, newName)
-      .thenValue(
-          [&request](fuse_entry_out param) { request.sendReply(param); });
+      .thenValue([&request](fuse_entry_out entry) {
+        request.sendReplyWithInode(entry.nodeid, entry);
+      });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseOpen(
@@ -2261,7 +2267,7 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
         vec.push_back(make_iovec(entry));
         vec.push_back(make_iovec(out));
 
-        request.sendReply(std::move(vec));
+        request.sendReplyWithInode(entry.nodeid, std::move(vec));
       });
 }
 
