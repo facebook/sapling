@@ -33,13 +33,11 @@ file(GLOB SERVICE_SRCS "*.cpp")
 # eden/fs/thrift/ subdirectory, perhaps along with eden.thrift too.
 list(
   REMOVE_ITEM SERVICE_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/EdenError.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/PrettyPrinters.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/PrivHelperMain.cpp
 )
 add_library(
   eden_service_thrift_util STATIC
-  EdenError.cpp
   PrettyPrinters.cpp
 )
 target_link_libraries(

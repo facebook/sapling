@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/service/EdenError.h"
+#include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/SystemError.h"
 #include "eden/fs/utils/WinError.h"
 

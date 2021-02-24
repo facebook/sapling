@@ -22,8 +22,8 @@
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
-#include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/utils/EdenError.h"
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 

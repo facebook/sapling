@@ -12,8 +12,8 @@
 #include <string>
 
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/utils/EdenError.h"
 
 namespace facebook {
 namespace eden {

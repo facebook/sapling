@@ -6,7 +6,7 @@
  */
 
 #pragma once
-#include "eden/fs/service/EdenError.h"
+#include "eden/fs/utils/EdenError.h"
 
 namespace facebook {
 namespace eden {
