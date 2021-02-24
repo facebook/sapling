@@ -25,7 +25,7 @@
 Check if ":hg:`help TOPIC`" is valid:
 (use "xargs -n1 -t" to see which help commands are executed)
 
-  $ NPROC=`hg debugsh -c 'import multiprocessing; ui.write(str(multiprocessing.cpu_count()))'`
+  $ NPROC=`hg debugpython -- -c 'import multiprocessing; print(str(multiprocessing.cpu_count()))'`
   $ testrepohg files 'glob:edenscm/**/*.py' \
   > | sed 's|\\|/|g' \
   > | xargs $PYTHON "$TESTTMP/scanhelptopics.py" > $TESTTMP/topics

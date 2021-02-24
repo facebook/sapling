@@ -77,11 +77,7 @@ def _newchgui(srcui, csystem, attachio):
             # captured (to self._buffers), or the output stream is not stdout
             # (e.g. stderr, cStringIO), because the chg client is not aware of
             # these situations and will behave differently (write to stdout).
-            if (
-                out is not self.fout
-                or not util.safehasattr(self.fout, "fileno")
-                or self.fout.fileno() != util.stdout.fileno()
-            ):
+            if out is not self.fout or self._buffers:
                 return util.system(cmd, environ=environ, cwd=cwd, out=out)
             self.flush()
             return self._csystem.runsystem(cmd, util.shellenviron(environ), cwd)
@@ -174,10 +170,10 @@ class channeledsystem(object):
 
 
 _iochannels = [
-    # server.ch, ui.fp, mode
-    ("cin", "fin", "rb"),
-    ("cout", "fout", "wb"),
-    ("cerr", "ferr", "wb"),
+    # server.ch, fileno, mode
+    ("cin", 0, "rb"),
+    ("cout", 1, "wb"),
+    ("cerr", 2, "wb"),
 ]
 
 
@@ -209,29 +205,12 @@ class chgcmdserver(commandserver.server):
 
         ui = self.ui
         ui.flush()
-        first = not self._ioattached
-        for fd, (cn, fn, mode) in zip(clientfds, _iochannels):
+        for fd, (cn, fileno, mode) in zip(clientfds, _iochannels):
+            # Changing the raw fds directly.
+            # This will affect Rust std::io::{Stdin, Stdout, Stderr}.
             assert fd > 0
-            fp = getattr(ui, fn)
-            os.dup2(fd, fp.fileno())
+            os.dup2(fd, fileno)
             os.close(fd)
-            if not first:
-                continue
-            # reset buffering mode when client is first attached. as we want
-            # to see output immediately on pager, the mode stays unchanged
-            # when client re-attached. ferr is unchanged because it should
-            # be unbuffered no matter if it is a tty or not.
-            if fn == "ferr":
-                newfp = fp
-            else:
-                try:
-                    newfp = util.fdopen(fp.fileno(), mode)
-                except OSError:
-                    # fdopen can fail with EINVAL. For example, run
-                    # with nohup. Do not set buffer size in that case.
-                    newfp = fp
-                setattr(ui, fn, newfp)
-            setattr(self, cn, newfp)
 
         self.cresult.write(struct.pack(">i", len(clientfds)))
         self._ioattached = True
