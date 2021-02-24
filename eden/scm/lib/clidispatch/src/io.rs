@@ -48,7 +48,7 @@ struct Inner {
 /// The "main" IO used by the process.
 ///
 /// This global state makes it easier for Python bindings
-/// (ex. "pypager") to obtain the IO state without needing
+/// (ex. "pyio") to obtain the IO state without needing
 /// to pass the state across layers. This is similar to
 /// `std::io::stdout` etc being globally accessible.
 ///

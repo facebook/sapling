@@ -14,7 +14,7 @@ use pyconfigparser::config as PyConfig;
 use std::cell::Cell;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
-    let name = [package, "pager"].join(".");
+    let name = [package, "io"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<pager>(py)?;
     Ok(m)

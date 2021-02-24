@@ -875,7 +875,7 @@ class ui(object):
         self.flush()
 
         # This will start the pager using the system terminal immediately.
-        pager = bindings.pager.pager(self._rcfg._rcfg)
+        pager = bindings.io.pager(self._rcfg._rcfg)
 
         # The Rust pager wants utf-8 unconditionally.
         encoding.outputencoding = "utf-8"
