@@ -379,7 +379,6 @@ class commandline(object):
     def run(self, cmd, *args, **kwargs):
         p = self._run(cmd, *args, **kwargs)
         output = p.communicate()[0]
-        self.ui.debug(output)
         return output, p.returncode
 
     def runlines(self, cmd, *args, **kwargs):

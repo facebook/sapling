@@ -326,7 +326,6 @@
   .hg/merge/state2
   $ hg snapshot create --clean
   snapshot eae93e849afe8c057f1832a2266720c1c530400e created
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status --verbose
   $ test -d .hg/merge
   [1]

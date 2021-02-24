@@ -2,7 +2,6 @@
   > import os
   > def uisetup(ui):
   >     # make the test slightly more interesting
-  >     ui.fout = os.fdopen(ui.fout.fileno(), "wb", 0)
   >     @ui.atexit
   >     def printlines():
   >         ui.write("line1\n")
@@ -24,7 +23,6 @@ Try again, using a pager:
   $ cat > b.py << EOF
   > import os
   > def uisetup(ui):
-  >     ui.fout = os.fdopen(ui.fout.fileno(), "wb", 0)
   >     @ui.atexit
   >     def printlines():
   >         # This is hacky. But it makes sure pager is running.

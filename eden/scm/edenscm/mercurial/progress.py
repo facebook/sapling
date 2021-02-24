@@ -156,18 +156,12 @@ class baserenderer(object):
         self.configwidth = bar._ui.config("progress", "width", default=None)
 
     def _writeprogress(self, msg, flush=False):
-        ui = self._bar._ui
-        if ui.streampager is not None:
-            msg = msg.strip("\r\n")
-            try:
-                ui.streampager.set_progress(msg)
-            except IOError:
-                # IOError can happen if the pager has just exited.  Ignore it.
-                pass
-        else:
-            _eintrretry(ui.ferr.write, pycompat.encodeutf8(msg))
-            if flush:
-                _eintrretry(ui.ferr.flush)
+        msg = msg.strip("\r\n")
+        # The Rust set_progress handles both the stderr (no pager),
+        # and streampager cases.
+        # If there is an external pager running, then the progress
+        # is not expected to be rendered.
+        util.mainio.set_progress(msg)
 
     def width(self):
         ui = self._bar._ui
@@ -183,14 +177,13 @@ class baserenderer(object):
     def clear(self):
         if not self.printed:
             return
-        self._writeprogress("\r%s\r" % (" " * self.width()))
-        self._bar._ui.ferr.flush()
+        self._writeprogress("")
 
     def complete(self):
         if not self.printed:
             return
         self.show(time.time())
-        self._writeprogress("\n")
+        self._writeprogress("")
 
 
 class classicrenderer(baserenderer):

@@ -115,6 +115,10 @@ if pycompat.iswindows:
 else:
     from . import posix as platform
 
+
+# The main Rust IO. It handles progress and streampager.
+mainio = bindings.io.IO.main()
+
 _ = i18n._
 
 

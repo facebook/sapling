@@ -101,11 +101,14 @@ def snapshotcreate(ui, repo, *args, **opts):
         ui.status(_("snapshot %s created\n") % node)
         if opts.get("clean"):
             try:
+                # Avoid EPIPE errors (ex. with "| head -1").
+                ui.pushbuffer()
                 # We want to bring the working copy to the p1 state
                 rev = repo[None].p1()
                 hg.updatetotally(ui, repo, rev, rev, clean=True)
                 removesnapshotfiles(ui, repo, metadata)
             except (KeyboardInterrupt, Exception) as exc:
+                ui.popbuffer()
                 ui.warn(_("failed to clean the working copy: %s\n") % exc)
 
 

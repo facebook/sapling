@@ -210,7 +210,6 @@ class ui(object):
             self._tweaked = src._tweaked
             self._outputui = src._outputui
             self._terminaloutput = src._terminaloutput
-            self.streampager = src.streampager
 
             self.environ = src.environ
             self.callhooks = src.callhooks
@@ -226,13 +225,12 @@ class ui(object):
         else:
             self._uiconfig = uiconfig.uiconfig()
 
-            self.fout = util.refcell(util.stdout)
-            self.ferr = util.refcell(util.stderr)
+            self.fout = util.refcell(util.mainio.output())
+            self.ferr = util.refcell(util.mainio.error())
             self.fin = util.refcell(util.stdin)
             self.pageractive = False
             self._disablepager = False
             self._tweaked = False
-            self.streampager = None
 
             # shared read-only environment
             self.environ = encoding.environ
@@ -875,45 +873,15 @@ class ui(object):
         self.flush()
 
         # This will start the pager using the system terminal immediately.
-        pager = bindings.io.IO.main()
-        pager.start_pager(self._rcfg._rcfg)
+        util.mainio.start_pager(self._rcfg._rcfg)
 
         # The Rust pager wants utf-8 unconditionally.
         encoding.outputencoding = "utf-8"
 
-        # Pass through whether output was a terminal
-        istty = self.terminaloutput()
-
-        # Replace stream with write functions from the Rust pager.
-        class stream(object):
-            def __init__(self, writefunc):
-                self._write = writefunc
-
-            def write(self, content):
-                return self._write(content)
-
-            def flush(self):
-                pass
-
-            def close(self):
-                pass
-
-            def isatty(self):
-                return istty
-
-        assert isinstance(self.fout, util.refcell)
-        assert isinstance(self.ferr, util.refcell)
-        origfout = self.fout.swap(stream(pager.write))
-        origferr = self.ferr.swap(stream(pager.write_err))
-        self.streampager = pager
-
         @self.atexit
         def waitpager():
             with self.timeblockedsection("pager"):
-                pager.wait_pager()
-            self.streampager = None
-            self.fout.swap(origfout)
-            self.ferr.swap(origferr)
+                util.mainio.wait_pager()
             encoding.outputencoding = origencoding
 
         self.pageractive = True

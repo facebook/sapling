@@ -50,9 +50,7 @@ Writes to stdio succeed and fail appropriately
   A a
 
   $ hg status >/dev/full
-  abort: No space left on device
-  Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='*'> (glob) (no-py2 !)
-  OSError: [Errno 28] No space left on device (no-py2 !)
+  abort: No space left on device* (glob)
   [255]
 #endif
 
