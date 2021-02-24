@@ -93,7 +93,7 @@ fn convert_ioerr(mut pyerr: PyErr) -> io::Error {
 }
 
 py_class!(pub class PyRustWrite |py| {
-    data io: RefCell<Box<dyn io::Write + Send>>;
+    data io: RefCell<Box<dyn ::io::Write + Send>>;
 
     def write(&self, bytes: PyBytes) -> PyResult<usize> {
         let mut io = self.io(py).borrow_mut();
@@ -107,9 +107,45 @@ py_class!(pub class PyRustWrite |py| {
         io.flush().map_pyerr(py)?;
         Ok(PyNone)
     }
+
+    def isatty(&self) -> PyResult<bool> {
+        let io = self.io(py).borrow();
+        Ok(io.is_tty())
+    }
+
+    def close(&self) -> PyResult<PyNone> {
+        let mut io = self.io(py).borrow_mut();
+        io.flush().map_pyerr(py)?;
+        *io = Box::new(ClosedIO);
+        Ok(PyNone)
+    }
 });
 
+struct ClosedIO;
+
+impl io::Write for ClosedIO {
+    fn write(&mut self, _buf: &[u8]) -> io::Result<usize> {
+        Err(io::Error::new(
+            io::ErrorKind::NotConnected,
+            "stream was closed",
+        ))
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Err(io::Error::new(
+            io::ErrorKind::NotConnected,
+            "stream was closed",
+        ))
+    }
+}
+
+impl ::io::IsTty for ClosedIO {
+    fn is_tty(&self) -> bool {
+        false
+    }
+}
+
 /// Wrap a Rust Write trait object into a Python object.
-pub fn wrap_rust_write(py: Python, w: impl io::Write + Send + 'static) -> PyResult<PyRustWrite> {
+pub fn wrap_rust_write(py: Python, w: impl ::io::Write + Send + 'static) -> PyResult<PyRustWrite> {
     PyRustWrite::create_instance(py, RefCell::new(Box::new(w)))
 }
