@@ -222,6 +222,8 @@ impl IO {
     pub fn write_progress(&self, data: &str) -> io::Result<()> {
         let mut inner = self.inner.lock();
         if let Some(ref mut progress) = inner.progress {
+            // \x0c (\f) is defined by streampager.
+            let data = format!("{}\x0c", data);
             progress.write_all(data.as_bytes())?;
         }
         Ok(())

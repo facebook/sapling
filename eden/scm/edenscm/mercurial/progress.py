@@ -158,7 +158,7 @@ class baserenderer(object):
     def _writeprogress(self, msg, flush=False):
         ui = self._bar._ui
         if ui.streampager is not None:
-            msg = msg.strip("\r\n") + "\f"
+            msg = msg.strip("\r\n")
             try:
                 ui.streampager.write_progress(msg)
             except IOError:
