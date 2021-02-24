@@ -5,34 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use observability_config::types::{
-    ScubaObservabilityConfig, ScubaVerbosityLevel as CfgrScubaVerbosityLevel,
-};
-
+use regex::Regex;
 use scuba::ScubaValue;
+use std::sync::RwLock;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum ScubaVerbosityLevel {
-    Normal,
-    Verbose,
-}
+use crate::config::{ScubaObservabilityConfig, ScubaVerbosityLevel};
 
 #[derive(Clone)]
 pub struct ScubaLoggingDecisionFields<'a> {
     pub maybe_session_id: Option<&'a ScubaValue>,
     pub maybe_unix_username: Option<&'a ScubaValue>,
     pub maybe_source_hostname: Option<&'a ScubaValue>,
-}
-
-fn cfgr_level_to_scuba_verbosity_level(level: &CfgrScubaVerbosityLevel) -> ScubaVerbosityLevel {
-    match *level {
-        CfgrScubaVerbosityLevel::Normal => ScubaVerbosityLevel::Normal,
-        CfgrScubaVerbosityLevel::Verbose => ScubaVerbosityLevel::Verbose,
-        // Let's default to normal verbosity if unknown value is parsed
-        // (this can only happen if the interface was changed in configerator,
-        // not synced here, and the newly added value was used)
-        _ => ScubaVerbosityLevel::Normal,
-    }
 }
 
 fn is_verbose(maybe_value: Option<&ScubaValue>, verbose_values: &[String]) -> bool {
@@ -48,15 +31,26 @@ fn is_verbose(maybe_value: Option<&ScubaValue>, verbose_values: &[String]) -> bo
     }
 }
 
-pub fn should_log_scuba_sample(
-    sample_verbosity_level: ScubaVerbosityLevel,
-    scuba_observability_config: &ScubaObservabilityConfig,
-    logging_decision_fields: ScubaLoggingDecisionFields,
-) -> bool {
-    let current_system_verbosity_level =
-        cfgr_level_to_scuba_verbosity_level(&scuba_observability_config.level);
+fn is_verbose_by_regexes(maybe_value: Option<&ScubaValue>, regexes: &RwLock<Vec<Regex>>) -> bool {
+    if let Some(ScubaValue::Normal(this_value)) = maybe_value {
+        regexes
+            .read()
+            .expect("poisoned rwlock")
+            .iter()
+            .any(|regex| regex.is_match(this_value))
+    } else {
+        false
+    }
+}
 
-    if sample_verbosity_level <= current_system_verbosity_level {
+pub fn should_log_scuba_sample<'a>(
+    sample_verbosity_level: ScubaVerbosityLevel,
+    scuba_observability_config: &'a ScubaObservabilityConfig,
+    logging_decision_fields: ScubaLoggingDecisionFields<'a>,
+) -> bool {
+    let current_system_verbosity_level = &scuba_observability_config.level;
+
+    if sample_verbosity_level <= *current_system_verbosity_level {
         // This sample should be logged regardless of its fields
         return true;
     }
@@ -69,15 +63,25 @@ pub fn should_log_scuba_sample(
     ) || is_verbose(
         logging_decision_fields.maybe_unix_username,
         &scuba_observability_config.verbose_unixnames,
-    ) || is_verbose(
+    ) || is_verbose_by_regexes(
         logging_decision_fields.maybe_source_hostname,
-        &scuba_observability_config.verbose_source_hostnames,
+        &scuba_observability_config.verbose_source_hostname_regexes,
     )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::RwLock;
+
+    fn normal_scuba_cfg() -> ScubaObservabilityConfig {
+        ScubaObservabilityConfig {
+            level: ScubaVerbosityLevel::Normal,
+            verbose_sessions: Vec::new(),
+            verbose_unixnames: Vec::new(),
+            verbose_source_hostname_regexes: RwLock::new(Vec::new()),
+        }
+    }
 
     #[test]
     fn test_always_log_normal_samples() {
@@ -87,12 +91,7 @@ mod tests {
             maybe_source_hostname: None,
         };
 
-        let observability_config = ScubaObservabilityConfig {
-            level: CfgrScubaVerbosityLevel::Normal,
-            verbose_sessions: Vec::new(),
-            verbose_unixnames: Vec::new(),
-            verbose_source_hostnames: Vec::new(),
-        };
+        let observability_config = normal_scuba_cfg();
 
         assert!(should_log_scuba_sample(
             ScubaVerbosityLevel::Normal,
@@ -101,10 +100,8 @@ mod tests {
         ));
 
         let observability_config = ScubaObservabilityConfig {
-            level: CfgrScubaVerbosityLevel::Verbose,
-            verbose_sessions: Vec::new(),
-            verbose_unixnames: Vec::new(),
-            verbose_source_hostnames: Vec::new(),
+            level: ScubaVerbosityLevel::Verbose,
+            ..normal_scuba_cfg()
         };
 
         assert!(should_log_scuba_sample(
@@ -123,10 +120,8 @@ mod tests {
         };
 
         let observability_config = ScubaObservabilityConfig {
-            level: CfgrScubaVerbosityLevel::Verbose,
-            verbose_sessions: Vec::new(),
-            verbose_unixnames: Vec::new(),
-            verbose_source_hostnames: Vec::new(),
+            level: ScubaVerbosityLevel::Verbose,
+            ..normal_scuba_cfg()
         };
 
         assert!(should_log_scuba_sample(
@@ -145,10 +140,8 @@ mod tests {
     #[test]
     fn test_session_filtering() {
         let observability_config = ScubaObservabilityConfig {
-            level: CfgrScubaVerbosityLevel::Normal,
             verbose_sessions: vec!["verbose_session".to_string()],
-            verbose_unixnames: Vec::new(),
-            verbose_source_hostnames: Vec::new(),
+            ..normal_scuba_cfg()
         };
 
         let verbose_session = ScubaValue::Normal("verbose_session".to_string());
@@ -193,10 +186,8 @@ mod tests {
     #[test]
     fn test_unixname_filtering() {
         let observability_config = ScubaObservabilityConfig {
-            level: CfgrScubaVerbosityLevel::Normal,
-            verbose_sessions: Vec::new(),
             verbose_unixnames: vec!["verbose_user".to_string()],
-            verbose_source_hostnames: Vec::new(),
+            ..normal_scuba_cfg()
         };
 
         let verbose_user = ScubaValue::Normal("verbose_user".to_string());
@@ -240,11 +231,10 @@ mod tests {
 
     #[test]
     fn test_hostname_filtering() {
+        let r = RwLock::new(vec![Regex::new("verbose_host.com").unwrap()]);
         let observability_config = ScubaObservabilityConfig {
-            level: CfgrScubaVerbosityLevel::Normal,
-            verbose_sessions: Vec::new(),
-            verbose_unixnames: Vec::new(),
-            verbose_source_hostnames: vec!["verbose_host.com".to_string()],
+            verbose_source_hostname_regexes: r,
+            ..normal_scuba_cfg()
         };
 
         let verbose_host = ScubaValue::Normal("verbose_host.com".to_string());

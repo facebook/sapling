@@ -7,10 +7,12 @@
 
 #![deny(warnings)]
 
+mod config;
 mod context;
 mod drain;
 mod scuba;
 
-pub use crate::scuba::{ScubaLoggingDecisionFields, ScubaVerbosityLevel};
+pub use crate::config::ScubaVerbosityLevel;
+pub use crate::scuba::ScubaLoggingDecisionFields;
 pub use context::ObservabilityContext;
 pub use drain::DynamicLevelDrain;

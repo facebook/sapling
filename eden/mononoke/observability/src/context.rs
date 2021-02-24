@@ -7,25 +7,13 @@
 
 use anyhow::Error;
 use cached_config::{ConfigHandle, ConfigStore};
-use observability_config::types::{ObservabilityConfig, SlogLoggingLevel as CfgrLoggingLevel};
 use slog::Level;
 use std::sync::{Arc, Mutex};
 
-use crate::scuba::{should_log_scuba_sample, ScubaLoggingDecisionFields, ScubaVerbosityLevel};
+use crate::config::{ObservabilityConfig, ScubaVerbosityLevel};
+use crate::scuba::{should_log_scuba_sample, ScubaLoggingDecisionFields};
 
 const CONFIGERATOR_OBSERVABILITY_CONFIG: &str = "scm/mononoke/observability/observability_config";
-
-fn cfgr_to_slog_level(level: CfgrLoggingLevel) -> Level {
-    match level {
-        CfgrLoggingLevel::Trace => Level::Trace,
-        CfgrLoggingLevel::Debug => Level::Debug,
-        CfgrLoggingLevel::Info => Level::Info,
-        CfgrLoggingLevel::Warning => Level::Warning,
-        CfgrLoggingLevel::Error => Level::Error,
-        CfgrLoggingLevel::Critical => Level::Critical,
-        other => panic!("unexpected SlogLoggingLevel: {:?}", other),
-    }
-}
 
 struct CfgrObservabilityContextInner {
     config_handle: ConfigHandle<ObservabilityConfig>,
@@ -41,8 +29,7 @@ impl CfgrObservabilityContextInner {
 
     fn get_logging_level(&self) -> Level {
         let config = self.config_handle.get();
-        let cfgr_level = config.slog_config.level;
-        cfgr_to_slog_level(cfgr_level)
+        config.slog_config.level
     }
 
     fn should_log_scuba_sample(
