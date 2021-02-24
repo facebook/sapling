@@ -466,7 +466,6 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
             if dopatch:
                 try:
                     ui.debug("applying patch\n")
-                    ui.debug(fp.getvalue())
                     patch.internalpatch(ui, repo, fp, 1, eolmode=None)
                 except error.PatchError as err:
                     raise error.Abort(str(err))

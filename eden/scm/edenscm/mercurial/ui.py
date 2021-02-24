@@ -31,6 +31,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import bindings
 from bindings import configparser
+from edenscm import tracing
 
 from . import (
     blackbox,
@@ -1301,9 +1302,11 @@ class ui(object):
 
         This adds an output label of "ui.debug".
         """
+        msg = "".join(msg)
         if self.debugflag:
             opts[r"label"] = opts.get(r"label", "") + " ui.debug"
-            self.write_err(*msg, **opts)
+            self.write_err(msg, **opts)
+        tracing.debug(msg.rstrip("\n"), depth=1)
 
     def edit(
         self,
