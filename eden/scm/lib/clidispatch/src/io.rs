@@ -219,11 +219,10 @@ impl IO {
         Ok(())
     }
 
-    pub fn write_progress(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
-        let data = data.as_ref();
+    pub fn write_progress(&self, data: &str) -> io::Result<()> {
         let mut inner = self.inner.lock();
         if let Some(ref mut progress) = inner.progress {
-            progress.write_all(data)?;
+            progress.write_all(data.as_bytes())?;
         }
         Ok(())
     }

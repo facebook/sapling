@@ -160,9 +160,7 @@ class baserenderer(object):
         if ui.streampager is not None:
             msg = msg.strip("\r\n") + "\f"
             try:
-                ui.streampager.write_progress(
-                    pycompat.encodeutf8(msg, errors="replace")
-                )
+                ui.streampager.write_progress(msg)
             except IOError:
                 # IOError can happen if the pager has just exited.  Ignore it.
                 pass
