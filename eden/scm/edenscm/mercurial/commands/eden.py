@@ -676,7 +676,7 @@ class HgServer(object):
             self.repo._httpgetdesignatednodes([(path, manifest_node)])
             return
 
-        mfnodes = set([manifest_node])
+        mfnodes = [manifest_node]
         depth = str(self._treefetchdepth)
         with self.repo.ui.configoverride(
             {("treemanifest", "fetchdepth"): depth}, "forcesinglefetch"
