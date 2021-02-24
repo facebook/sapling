@@ -12,7 +12,7 @@ use std::{
 };
 
 use anyhow::Result;
-use serde::{de::Deserializer, Deserialize, Serialize};
+use serde::{de::Deserializer, Deserialize, Serialize, Serializer};
 use thiserror::Error;
 
 use crate::parents::Parents;
@@ -36,9 +36,9 @@ struct HgIdError(String);
 /// # Serde Serialization
 ///
 /// The `serde_with` module allows customization on `HgId` serialization:
-/// - `#[serde(with = "types::serde_with::hgid::bytes")]`
+/// - `#[serde(with = "types::serde_with::hgid::bytes")]` (current default)
 /// - `#[serde(with = "types::serde_with::hgid::hex")]`
-/// - `#[serde(with = "types::serde_with::hgid::tuple")]` (current default)
+/// - `#[serde(with = "types::serde_with::hgid::tuple")]`
 ///
 /// Using them can change the size or the type of serialization result:
 ///
@@ -51,8 +51,7 @@ struct HgIdError(String);
 ///
 /// In general,
 /// - `hgid::tuple` only works best for `mincode`.
-/// - `hgid::bytes` works best for cbor, python and probably should be the
-///   default.
+/// - `hgid::bytes` works best for cbor, python.
 /// - `hgid::hex` is useful for `json`, or other text-only formats.
 ///
 /// Compatibility note:
@@ -65,17 +64,23 @@ struct HgIdError(String);
 ///   `hgid::tuple` data; cbor adds framing for tuples, so `hgid::bytes`
 ///   can decode `hgid::tuple` data.
 ///
-/// NOTE: Consider switching the default from `hgid::tuple` to `hgid::bytes`,
-/// or dropping the default serialization implementation.
-///
 /// [1]: Depends on actual data of `HgId`.
 /// [2]: JSON only supports utf-8 data.
-#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct HgId([u8; HgId::len()]);
 
 impl<'de> Deserialize<'de> for HgId {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         crate::serde_with::hgid::bytes::deserialize(deserializer)
+    }
+}
+
+impl Serialize for HgId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        crate::serde_with::hgid::bytes::serialize(self, serializer)
     }
 }
 
