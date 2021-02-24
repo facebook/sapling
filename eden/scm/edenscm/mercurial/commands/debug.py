@@ -3368,7 +3368,7 @@ def debugprogress(
                 if sleep:
                     time.sleep(sleep)
                 if outputfreq and i % outputfreq == 0:
-                    ui.write(_x("processed %d items") % i)
+                    ui.write(_x("processed %d items\n") % i)
     elif nototal:
         with progress.bar(ui, _spinning, formatfunc=formatfunc) as p:
             for i in range(num):
@@ -3379,7 +3379,7 @@ def debugprogress(
                     time.sleep(sleep)
                 p.value = (i, "item %s" % i)
                 if outputfreq and i % outputfreq == 0:
-                    ui.write(_x("processed %d items") % i)
+                    ui.write(_x("processed %d items\n") % i)
     else:
         with progress.bar(ui, _spinning, total=num, formatfunc=formatfunc) as p:
             for i in range(num):
