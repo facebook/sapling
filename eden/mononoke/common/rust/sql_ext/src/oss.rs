@@ -11,8 +11,7 @@ use crate::{facebook::*, *};
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use fbinit::FacebookInit;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::ok;
+use futures_ext::BoxFuture;
 use slog::Logger;
 use std::time::Duration;
 
