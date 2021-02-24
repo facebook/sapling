@@ -61,6 +61,18 @@ impl io::Write for WrappedIO {
     }
 }
 
+impl ::io::IsTty for WrappedIO {
+    fn is_tty(&self) -> bool {
+        (|| -> PyResult<bool> {
+            let gil = Python::acquire_gil();
+            let py = gil.python();
+            let result = self.0.call_method(py, "isatty", NoArgs, None)?;
+            result.extract(py)
+        })()
+        .unwrap_or(false)
+    }
+}
+
 /// Convert a Python `IOError` to Rust `io::Error`.
 fn convert_ioerr(mut pyerr: PyErr) -> io::Error {
     let gil = Python::acquire_gil();

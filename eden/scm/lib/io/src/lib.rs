@@ -56,7 +56,11 @@ struct Inner {
 /// to obtain the "main" `IO`.
 static MAIN_IO_REF: Lazy<RwLock<Option<Weak<Mutex<Inner>>>>> = Lazy::new(Default::default);
 
-pub trait Read: io::Read + Any + Send + Sync {
+pub trait IsTty {
+    fn is_tty(&self) -> bool;
+}
+
+pub trait Read: io::Read + IsTty + Any + Send + Sync {
     fn as_any(&self) -> &dyn Any;
 
     fn type_name(&self) -> &'static str {
@@ -64,7 +68,7 @@ pub trait Read: io::Read + Any + Send + Sync {
     }
 }
 
-pub trait Write: io::Write + Any + Send + Sync {
+pub trait Write: io::Write + IsTty + Any + Send + Sync {
     fn as_any(&self) -> &dyn Any;
 
     fn type_name(&self) -> &'static str {
@@ -72,17 +76,19 @@ pub trait Write: io::Write + Any + Send + Sync {
     }
 }
 
-impl<T: io::Read + Any + Send + Sync> Read for T {
+impl<T: io::Read + IsTty + Any + Send + Sync> Read for T {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-impl<T: io::Write + Any + Send + Sync> Write for T {
+impl<T: io::Write + IsTty + Any + Send + Sync> Write for T {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
+
+mod impls;
 
 // Write to error.
 impl io::Write for IOError {
@@ -336,10 +342,18 @@ impl IO {
         let (err_read, err_write) = pipe();
         let (prg_read, prg_write) = pipe();
 
+        use impls::PipeWriterWithTty;
+        let out_is_tty = inner.output.is_tty();
+        let err_is_tty = inner
+            .error
+            .as_ref()
+            .map(|e| e.is_tty())
+            .unwrap_or_else(|| out_is_tty);
+
         inner.flush()?;
-        inner.output = Box::new(out_write);
-        inner.error = Some(Box::new(err_write));
-        inner.progress = Some(Box::new(prg_write));
+        inner.output = Box::new(PipeWriterWithTty::new(out_write, out_is_tty));
+        inner.error = Some(Box::new(PipeWriterWithTty::new(err_write, err_is_tty)));
+        inner.progress = Some(Box::new(PipeWriterWithTty::new(prg_write, false)));
 
         inner.pager_handle = Some(spawn(|| {
             pager
