@@ -160,7 +160,7 @@ class baserenderer(object):
         if ui.streampager is not None:
             msg = msg.strip("\r\n")
             try:
-                ui.streampager.write_progress(msg)
+                ui.streampager.set_progress(msg)
             except IOError:
                 # IOError can happen if the pager has just exited.  Ignore it.
                 pass

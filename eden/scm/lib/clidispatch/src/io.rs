@@ -228,7 +228,7 @@ impl IO {
         Ok(())
     }
 
-    pub fn write_progress(&self, data: &str) -> io::Result<()> {
+    pub fn set_progress(&self, data: &str) -> io::Result<()> {
         let mut inner = self.inner.lock();
         if let Some(ref mut progress) = inner.progress {
             // \x0c (\f) is defined by streampager.

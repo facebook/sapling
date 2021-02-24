@@ -49,11 +49,11 @@ py_class!(class pager |py| {
         Ok(PyNone)
     }
 
-    /// Write to pager's progress buffer.  Text should be in utf-8.
-    def write_progress(&self, message: &str) -> PyResult<PyNone> {
+    /// Set the progress content.
+    def set_progress(&self, message: &str) -> PyResult<PyNone> {
         self.check_closed(py)?;
         let io = IO::main().map_pyerr(py)?;
-        io.write_progress(message).map_pyerr(py)?;
+        io.set_progress(message).map_pyerr(py)?;
         Ok(PyNone)
     }
 
