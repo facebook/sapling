@@ -59,6 +59,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/store/PathLoader.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/Bug.h"
@@ -1151,6 +1152,8 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
   // if none are specified. The results will be collected here.
   std::vector<folly::Future<std::vector<GlobNode::GlobResult>>> globResults{};
 
+  RelativePath searchRoot{*params->searchRoot_ref()};
+
   auto rootHashes = params->revisions_ref();
   if (!rootHashes->empty()) {
     // Note that we MUST reserve here, otherwise while emplacing we might
@@ -1160,32 +1163,53 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     for (auto& rootHash : *rootHashes) {
       const Hash& originHash =
           originHashes->emplace_back(hashFromThrift(rootHash));
-      globResults.emplace_back(edenMount->getObjectStore()
-                                   ->getTreeForCommit(originHash, fetchContext)
-                                   .thenValue([edenMount,
-                                               globRoot,
-                                               &fetchContext,
-                                               fileBlobsToPrefetch,
-                                               &originHash](auto&& rootTree) {
-                                     return globRoot->evaluate(
-                                         edenMount->getObjectStore(),
-                                         fetchContext,
-                                         RelativePathPiece(),
-                                         rootTree,
-                                         fileBlobsToPrefetch,
-                                         originHash);
-                                   }));
+
+      globResults.emplace_back(
+          edenMount->getObjectStore()
+              ->getTreeForCommit(originHash, fetchContext)
+              .thenValue([edenMount,
+                          globRoot,
+                          &fetchContext,
+                          fileBlobsToPrefetch,
+                          searchRoot](std::shared_ptr<const Tree>&& rootTree) {
+                return resolveTree(
+                    *edenMount->getObjectStore(),
+                    fetchContext,
+                    std::move(rootTree),
+                    searchRoot);
+              })
+              .thenValue([edenMount,
+                          globRoot,
+                          &fetchContext,
+                          fileBlobsToPrefetch,
+                          &originHash](std::shared_ptr<const Tree>&& tree) {
+                return globRoot->evaluate(
+                    edenMount->getObjectStore(),
+                    fetchContext,
+                    RelativePathPiece(),
+                    tree,
+                    fileBlobsToPrefetch,
+                    originHash);
+              }));
     }
   } else {
     const Hash& originHash =
         originHashes->emplace_back(edenMount->getParentCommits().parent1());
-    globResults.emplace_back(globRoot->evaluate(
-        edenMount->getObjectStore(),
-        fetchContext,
-        RelativePathPiece(),
-        edenMount->getRootInode(),
-        fileBlobsToPrefetch,
-        originHash));
+    globResults.emplace_back(
+        edenMount->getInode(searchRoot, helper->getFetchContext())
+            .thenValue([helper = helper.get(),
+                        globRoot,
+                        edenMount,
+                        fileBlobsToPrefetch,
+                        &originHash](InodePtr inode) {
+              return globRoot->evaluate(
+                  edenMount->getObjectStore(),
+                  helper->getFetchContext(),
+                  RelativePathPiece(),
+                  inode.asTreePtr(),
+                  fileBlobsToPrefetch,
+                  originHash);
+            }));
   }
 
   return wrapFuture(

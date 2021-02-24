@@ -27,7 +27,7 @@ from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import check_health_using_lockfile, wait_for_instance_healthy
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
 from facebook.eden import EdenService
-from facebook.eden.ttypes import GlobParams, MountInfo as ThriftMountInfo, MountState
+from facebook.eden.ttypes import MountInfo as ThriftMountInfo, MountState
 from fb303_core.ttypes import fb303_status
 
 from . import (
@@ -2068,6 +2068,7 @@ def create_parser() -> argparse.ArgumentParser:
         stats_mod.StatsCmd,
         trace_mod.TraceCmd,
         redirect_mod.RedirectCmd,
+        prefetch_mod.GlobCmd,
         prefetch_mod.PrefetchCmd,
         prefetch_profile_mod.PrefetchProfileCmd,
     ]
