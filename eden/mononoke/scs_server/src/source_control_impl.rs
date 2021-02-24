@@ -574,6 +574,38 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::RepoLandStackParams,
         ) -> Result<thrift::RepoLandStackResponse, service::RepoLandStackExn>;
 
+        async fn megarepo_add_sync_target_config(
+            params: thrift::MegarepoAddConfigParams,
+        ) -> Result<thrift::MegarepoAddConfigResponse, service::MegarepoAddSyncTargetConfigExn>;
+
+        async fn megarepo_add_sync_target(
+            params: thrift::MegarepoAddTargetParams,
+        ) -> Result<thrift::MegarepoAddTargetResponse, service::MegarepoAddSyncTargetExn>;
+
+        async fn megarepo_change_target_config(
+            params: thrift::MegarepoChangeTargetConfigParams,
+        ) -> Result<thrift::MegarepoChangeConfigToken, service::MegarepoChangeTargetConfigExn>;
+
+        async fn megarepo_change_target_config_poll(
+            token: thrift::MegarepoChangeConfigToken,
+        ) -> Result<thrift::MegarepoChangeTargetConfigResponse, service::MegarepoChangeTargetConfigPollExn>;
+
+        async fn megarepo_sync_changeset(
+            params: thrift::MegarepoSyncChangesetParams,
+        ) -> Result<thrift::MegarepoSyncChangesetToken, service::MegarepoSyncChangesetExn>;
+
+        async fn megarepo_sync_changeset_poll(
+            token: thrift::MegarepoSyncChangesetToken,
+        ) -> Result<thrift::MegarepoSyncChangesetResponse, service::MegarepoSyncChangesetPollExn>;
+
+        async fn megarepo_remerge_source(
+            params: thrift::MegarepoRemergeSourceParams,
+        ) -> Result<thrift::MegarepoRemergeSourceToken, service::MegarepoRemergeSourceExn>;
+
+        async fn megarepo_remerge_source_poll(
+            token: thrift::MegarepoRemergeSourceToken,
+        ) -> Result<thrift::MegarepoRemergeSourceResponse, service::MegarepoRemergeSourcePollExn>;
+
         async fn repo_list_hg_manifest(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoListHgManifestParams,

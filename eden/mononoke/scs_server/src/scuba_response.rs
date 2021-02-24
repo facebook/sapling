@@ -74,3 +74,18 @@ impl AddScubaResponse for thrift::FileDiffResponse {}
 impl AddScubaResponse for thrift::TreeListResponse {}
 
 impl AddScubaResponse for thrift::RepoListHgManifestResponse {}
+
+// MegarepoRemergeSourceToken, MegarepoChangeConfigToken
+// MegarepoSyncChangesetToken are all just aliases for String
+impl AddScubaResponse for String {}
+
+// TODO: report cs_ids where possible
+impl AddScubaResponse for thrift::MegarepoRemergeSourceResponse {}
+
+impl AddScubaResponse for thrift::MegarepoSyncChangesetResponse {}
+
+impl AddScubaResponse for thrift::MegarepoChangeTargetConfigResponse {}
+
+impl AddScubaResponse for thrift::MegarepoAddTargetResponse {}
+
+impl AddScubaResponse for thrift::MegarepoAddConfigResponse {}

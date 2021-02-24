@@ -303,3 +303,16 @@ impl AddScubaParams for thrift::RepoListHgManifestParams {
         );
     }
 }
+
+// Various Megarepo polling tokens are just aliases for String
+impl AddScubaParams for String {}
+
+impl AddScubaParams for thrift::MegarepoSyncChangesetParams {}
+
+impl AddScubaParams for thrift::MegarepoRemergeSourceParams {}
+
+impl AddScubaParams for thrift::MegarepoChangeTargetConfigParams {}
+
+impl AddScubaParams for thrift::MegarepoAddTargetParams {}
+
+impl AddScubaParams for thrift::MegarepoAddConfigParams {}

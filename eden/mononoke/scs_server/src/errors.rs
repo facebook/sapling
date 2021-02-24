@@ -127,6 +127,14 @@ impl_into_thrift_error!(service::FileContentChunkExn);
 impl_into_thrift_error!(service::FileDiffExn);
 impl_into_thrift_error!(service::CommitLookupXrepoExn);
 impl_into_thrift_error!(service::RepoListHgManifestExn);
+impl_into_thrift_error!(service::MegarepoAddSyncTargetConfigExn);
+impl_into_thrift_error!(service::MegarepoAddSyncTargetExn);
+impl_into_thrift_error!(service::MegarepoChangeTargetConfigExn);
+impl_into_thrift_error!(service::MegarepoChangeTargetConfigPollExn);
+impl_into_thrift_error!(service::MegarepoSyncChangesetExn);
+impl_into_thrift_error!(service::MegarepoSyncChangesetPollExn);
+impl_into_thrift_error!(service::MegarepoRemergeSourceExn);
+impl_into_thrift_error!(service::MegarepoRemergeSourcePollExn);
 
 pub(crate) fn invalid_request(reason: impl ToString) -> thrift::RequestError {
     thrift::RequestError {
@@ -207,5 +215,12 @@ pub(crate) fn not_available(reason: String) -> thrift::RequestError {
     thrift::RequestError {
         kind: thrift::RequestErrorKind::NOT_AVAILABLE,
         reason,
+    }
+}
+
+pub(crate) fn not_implemented(reason: impl ToString) -> thrift::RequestError {
+    thrift::RequestError {
+        kind: thrift::RequestErrorKind::NOT_IMPLEMENTED,
+        reason: reason.to_string(),
     }
 }
