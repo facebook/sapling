@@ -15,6 +15,7 @@ use tracing::{event, Level};
 use edenfs_client::EdenFsInstance;
 use util::path::expand_path;
 
+mod gc;
 mod pid;
 mod status;
 mod uptime;
@@ -63,6 +64,7 @@ pub enum SubCommand {
     Status(crate::status::StatusCmd),
     Pid(crate::pid::PidCmd),
     Uptime(crate::uptime::UptimeCmd),
+    Gc(crate::gc::GcCmd),
 }
 
 impl Command {
@@ -119,6 +121,7 @@ impl Command {
             SubCommand::Status(status) => status.run(instance).await,
             SubCommand::Pid(pid_cmd) => pid_cmd.run(instance).await,
             SubCommand::Uptime(uptime_cmd) => uptime_cmd.run(instance).await,
+            SubCommand::Gc(gc_cmd) => gc_cmd.run(instance).await,
         }
     }
 }
