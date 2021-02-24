@@ -1,7 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
-# GNU General Public License version 2 or any later version.
+# GNU General Public License version 2.
 
 from __future__ import absolute_import
 
@@ -28,8 +28,16 @@ sh % "hg up D1234" == r"""
     [255]"""
 
 sh % "drawdag" << "A"
-sh % "setconfig phrevset.mock-D1234=$A phrevset.callsign=R"
+sh % "setconfig phrevset.mock-D1234=$A phrevset.callsign=CALLSIGN"
 sh % "hg log -r D1234 -T '{desc}\n'" == "A"
+
+# Callsign is invalid
+sh % "hg log -r D1234 --config phrevset.callsign=C -T '{desc}\n'" == r"""
+    abort: Diff callsign 'CALLSIGN' is different from repo callsigns '['C']'
+    [255]"""
+
+# Now we have two callsigns, and one of them is correct. Make sure it works
+sh % "hg log -r D1234 --config phrevset.callsign=C,CALLSIGN -T '{desc}\n'" == "A"
 
 # Phabricator provides an unknown commit hash.
 sh % "setconfig phrevset.mock-D1234=6008bb23d775556ff6c3528541ca5a2177b4bb92"

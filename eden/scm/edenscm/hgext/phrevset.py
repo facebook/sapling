@@ -74,7 +74,7 @@ def graphqlgetdiff(repo, diffid):
         if hexnode:
             return {
                 "source_control_system": "hg",
-                "description": "mock",
+                "description": "Commit rCALLSIGN{}".format(hexnode),
                 "phabricator_version_properties": {
                     "edges": [
                         {
@@ -190,12 +190,12 @@ def parsedesc(repo, resp, ignoreparsefailure):
             raise error.Abort("Cannot parse Conduit description '%s'" % desc)
 
     callsign = match.group("callsign")
-    repo_callsign = repo.ui.config("phrevset", "callsign")
+    repo_callsigns = repo.ui.configlist("phrevset", "callsign")
 
-    if callsign != repo_callsign:
+    if callsign not in repo_callsigns:
         raise error.Abort(
             "Diff callsign '%s' is different from repo"
-            " callsign '%s'" % (callsign, repo_callsign)
+            " callsigns '%s'" % (callsign, repo_callsigns)
         )
 
     return match.group("id")
@@ -209,8 +209,8 @@ def diffidtonode(repo, diffid):
     This function does not raise.
     """
 
-    repo_callsign = repo.ui.config("phrevset", "callsign")
-    if repo_callsign is None:
+    repo_callsigns = repo.ui.configlist("phrevset", "callsign")
+    if not repo_callsigns:
         msg = _("phrevset.callsign is not set - doing a linear search\n")
         hint = _("This will be slow if the diff was not committed recently\n")
         repo.ui.warn(msg)
