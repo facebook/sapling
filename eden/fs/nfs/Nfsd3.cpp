@@ -12,6 +12,7 @@
 #include <folly/Utility.h>
 #include <folly/futures/Future.h>
 #include "eden/fs/nfs/NfsdRpc.h"
+#include "eden/fs/utils/SystemError.h"
 
 namespace facebook::eden {
 
@@ -89,6 +90,70 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
   const folly::Logger* straceLogger_;
   bool caseSensitive_;
 };
+
+/**
+ * Convert a exception to the appropriate NFS error value.
+ */
+nfsstat3 exceptionToNfsError(const folly::exception_wrapper& ex) {
+  if (auto* err = ex.get_exception<std::system_error>()) {
+    if (!isErrnoError(*err)) {
+      return nfsstat3::NFS3ERR_SERVERFAULT;
+    }
+
+    switch (err->code().value()) {
+      case EPERM:
+        return nfsstat3::NFS3ERR_PERM;
+      case ENOENT:
+        return nfsstat3::NFS3ERR_NOENT;
+      case EIO:
+      case ETXTBSY:
+        return nfsstat3::NFS3ERR_IO;
+      case ENXIO:
+        return nfsstat3::NFS3ERR_NXIO;
+      case EACCES:
+        return nfsstat3::NFS3ERR_ACCES;
+      case EEXIST:
+        return nfsstat3::NFS3ERR_EXIST;
+      case EXDEV:
+        return nfsstat3::NFS3ERR_XDEV;
+      case ENODEV:
+        return nfsstat3::NFS3ERR_NODEV;
+      case ENOTDIR:
+        return nfsstat3::NFS3ERR_NOTDIR;
+      case EISDIR:
+        return nfsstat3::NFS3ERR_ISDIR;
+      case EINVAL:
+        return nfsstat3::NFS3ERR_INVAL;
+      case EFBIG:
+        return nfsstat3::NFS3ERR_FBIG;
+      case EROFS:
+        return nfsstat3::NFS3ERR_ROFS;
+      case EMLINK:
+        return nfsstat3::NFS3ERR_MLINK;
+      case ENAMETOOLONG:
+        return nfsstat3::NFS3ERR_NAMETOOLONG;
+      case ENOTEMPTY:
+        return nfsstat3::NFS3ERR_NOTEMPTY;
+      case EDQUOT:
+        return nfsstat3::NFS3ERR_DQUOT;
+      case ESTALE:
+        return nfsstat3::NFS3ERR_STALE;
+      case ETIMEDOUT:
+      case EAGAIN:
+      case ENOMEM:
+        return nfsstat3::NFS3ERR_JUKEBOX;
+      case ENOTSUP:
+        return nfsstat3::NFS3ERR_NOTSUPP;
+      case ENFILE:
+        return nfsstat3::NFS3ERR_SERVERFAULT;
+    }
+    return nfsstat3::NFS3ERR_SERVERFAULT;
+  } else if (ex.get_exception<folly::FutureTimeout>()) {
+    return nfsstat3::NFS3ERR_JUKEBOX;
+  } else {
+    return nfsstat3::NFS3ERR_SERVERFAULT;
+  }
+}
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::null(
     folly::io::Cursor /*deser*/,
@@ -179,7 +244,8 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
   return dispatcher_->getattr(fh.ino, *context)
       .thenTry([ser = std::move(ser)](folly::Try<struct stat>&& try_) mutable {
         if (try_.hasException()) {
-          GETATTR3res res{{nfsstat3::NFS3ERR_IO, std::monostate{}}};
+          GETATTR3res res{
+              {exceptionToNfsError(try_.exception()), std::monostate{}}};
           XdrTrait<GETATTR3res>::serialize(ser, res);
         } else {
           auto stat = std::move(try_).value();
