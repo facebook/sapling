@@ -39,6 +39,9 @@ struct Inner {
     error: Option<Box<dyn Write>>,
     progress: Option<Box<dyn Write>>,
 
+    // Used to decide how to clear the progress.
+    progress_lines: usize,
+
     pager_handle: Option<JoinHandle<streampager::Result<()>>>,
 }
 
@@ -117,6 +120,7 @@ impl io::Write for IOOutput {
             None => return Ok(buf.len()),
         };
         let mut inner = inner.lock();
+        inner.clear_progress()?;
         inner.output.write(buf)
     }
 
@@ -126,6 +130,7 @@ impl io::Write for IOOutput {
             None => return Ok(()),
         };
         let mut inner = inner.lock();
+        inner.clear_progress()?;
         inner.output.flush()
     }
 }
@@ -173,6 +178,7 @@ impl IO {
             error: error.map(|e| Box::new(e) as Box<dyn Write>),
             progress: None,
             pager_handle: None,
+            progress_lines: 0,
         };
         Self {
             inner: Arc::new(Mutex::new(inner)),
@@ -204,13 +210,16 @@ impl IO {
 
     pub fn write(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
-        self.inner.lock().output.write_all(data)?;
+        let mut inner = self.inner.lock();
+        inner.clear_progress()?;
+        inner.output.write_all(data)?;
         Ok(())
     }
 
     pub fn write_err(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
         let mut inner = self.inner.lock();
+        inner.clear_progress()?;
         if let Some(ref mut error) = inner.error {
             error.write_all(data)?;
         } else {
@@ -225,6 +234,20 @@ impl IO {
             // \x0c (\f) is defined by streampager.
             let data = format!("{}\x0c", data);
             progress.write_all(data.as_bytes())?;
+        } else {
+            let clear_progress_str = inner.clear_progress_str();
+            if let Some(ref mut error) = inner.error {
+                // Write progress to stderr.
+                let data = data.trim_end();
+                // Write the progress clear sequences within one syscall if possible, to reduce flash.
+                let message = format!("{}{}", clear_progress_str, data);
+                error.write_all(message.as_bytes())?;
+                if data.is_empty() {
+                    inner.progress_lines = 0;
+                } else {
+                    inner.progress_lines = data.chars().filter(|&c| c == '\n').count() + 1;
+                }
+            }
         }
         Ok(())
     }
@@ -241,6 +264,7 @@ impl IO {
             error: Some(Box::new(io::stderr())),
             progress: None,
             pager_handle: None,
+            progress_lines: 0,
         };
         Self {
             inner: Arc::new(Mutex::new(inner)),
@@ -287,6 +311,7 @@ impl IO {
         if inner.pager_handle.is_some() {
             return Ok(());
         }
+        inner.clear_progress()?;
 
         let mut pager =
             Pager::new_using_stdio().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
@@ -337,10 +362,33 @@ impl Inner {
         }
         Ok(())
     }
+
+    /// Calculate the sequences to clear the progress bar.
+    fn clear_progress_str(&self) -> String {
+        // See https://en.wikipedia.org/wiki/ANSI_escape_code
+        match self.progress_lines {
+            0 => String::new(),
+            1 => "\r\x1b[K".to_string(),
+            n => format!("\r\x1b[{}A\x1b[J", n - 1),
+        }
+    }
+
+    /// Clear the progress bar.
+    fn clear_progress(&mut self) -> io::Result<()> {
+        if self.progress_lines > 0 {
+            let s = self.clear_progress_str();
+            if let Some(ref mut error) = self.error {
+                error.write_all(s.as_bytes())?;
+            }
+            self.progress_lines = 0;
+        }
+        Ok(())
+    }
 }
 
 impl Drop for Inner {
     fn drop(&mut self) {
+        let _ = self.clear_progress();
         let _ = self.flush();
         // Drop the output and error. This sends EOF to pager.
         self.output = Box::new(Vec::new());
