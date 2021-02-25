@@ -2112,7 +2112,10 @@ class TTest(Test):
             while lout:
                 if not lout.endswith(b"\n"):
                     if b"\x1b" in lout or b"\r" in lout:
-                        lout = lout.replace(b"\x1b", br"\x1b").replace(b"\r", br"\r") + b" (no-eol) (esc)\n"
+                        lout = (
+                            lout.replace(b"\x1b", br"\x1b").replace(b"\r", br"\r")
+                            + b" (no-eol) (esc)\n"
+                        )
                     else:
                         lout += b" (no-eol)\n"
 
