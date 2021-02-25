@@ -46,7 +46,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .arg(
             Arg::with_name(HEAD_ARG)
                 .long(HEAD_ARG)
-                .default_value("master")
+                .takes_value(true)
                 .help("What head to use for Segmented Changelog."),
         );
     let matches = app.get_matches();
@@ -127,7 +127,9 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         repo.name()
     );
 
-    let head_arg = matches.value_of(HEAD_ARG).unwrap();
+    let head_arg = matches
+        .value_of(HEAD_ARG)
+        .unwrap_or(&config.segmented_changelog_config.master_bookmark);
     let head = helpers::csid_resolve(ctx.clone(), repo.clone(), head_arg)
         .compat()
         .await
