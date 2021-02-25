@@ -235,8 +235,6 @@ optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     const auto& name = iter.first;
     const auto& value = iter.second;
 
-    bool isMaterialized =
-        !value.hash_ref() || value.hash_ref().value_unchecked().empty();
     InodeNumber ino;
     if (*value.inodeNumber_ref()) {
       ino = InodeNumber::fromThrift(*value.inodeNumber_ref());
@@ -245,12 +243,12 @@ optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
       shouldMigrateToNewFormat = true;
     }
 
-    if (isMaterialized) {
-      result.emplace(PathComponentPiece{name}, *value.mode_ref(), ino);
-    } else {
-      auto hash = Hash{folly::ByteRange{
-          folly::StringPiece{value.hash_ref().value_unchecked()}}};
+    if (value.hash_ref() && !value.hash_ref()->empty()) {
+      auto hash = Hash{folly::ByteRange{folly::StringPiece{*value.hash_ref()}}};
       result.emplace(PathComponentPiece{name}, *value.mode_ref(), ino, hash);
+    } else {
+      // The inode is materialized
+      result.emplace(PathComponentPiece{name}, *value.mode_ref(), ino);
     }
   }
 
@@ -290,8 +288,7 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
     // is loaded, the initial mode bits must persist until the first load.
     *oent.mode_ref() = ent.getInitialMode();
     *oent.inodeNumber_ref() = ent.getInodeNumber().get();
-    bool isMaterialized = ent.isMaterialized();
-    if (!isMaterialized) {
+    if (!ent.isMaterialized()) {
       auto entHash = ent.getHash();
       auto bytes = entHash.getBytes();
       oent.hash_ref() = std::string{
