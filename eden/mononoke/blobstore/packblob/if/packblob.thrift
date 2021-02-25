@@ -5,10 +5,13 @@
  * GNU General Public License version 2.
  */
 
+
+typedef binary (rust.type = "bytes::Bytes") bytes
+
 // Independent single data value.
 union SingleValue {
-    1: binary Raw,
-    2: binary Zstd,
+    1: bytes Raw,
+    2: bytes Zstd,
 }
 
 // Represents dictionary encoded Zstandard blob. dict_key must point to a
@@ -27,7 +30,7 @@ union SingleValue {
 //
 struct ZstdFromDictValue {
     1: string dict_key,
-    2: binary zstd,
+    2: bytes zstd,
 }
 
 // Packed values might not take any advantage of delta compression, but its

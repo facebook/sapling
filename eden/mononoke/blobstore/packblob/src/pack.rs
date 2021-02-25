@@ -152,7 +152,7 @@ mod tests {
 
         // Prepare a compressed blob
         let input = Cursor::new(bytes_in.clone());
-        let bytes = zstd::encode_all(input, 0 /* default */)?;
+        let bytes = Bytes::from(zstd::encode_all(input, 0 /* default */)?);
         assert!(bytes.len() < bytes_in.len());
 
         // Test the decoder
@@ -174,7 +174,7 @@ mod tests {
         let mut next_version = base_version.clone();
         rng.fill_bytes(&mut next_version[60000..]);
 
-        let diff = zstdelta::diff(&base_version, &next_version)?;
+        let diff = Bytes::from(zstdelta::diff(&base_version, &next_version)?);
 
         let base_key = "base".to_string();
 
@@ -209,7 +209,7 @@ mod tests {
         let base_key = "0".to_string();
         entries.push(PackedEntry {
             key: base_key.clone(),
-            data: PackedValue::Single(SingleValue::Raw(base_version.clone())),
+            data: PackedValue::Single(SingleValue::Raw(Bytes::copy_from_slice(&base_version))),
         });
         raw_data.push(base_version.clone());
 
@@ -222,13 +222,13 @@ mod tests {
             rng.fill(&mut this_version[start..end]);
             raw_data.push(this_version.clone());
             // Keep deltaing vs base version
-            let diff = zstdelta::diff(&base_version, &this_version)?;
+            let diff = Bytes::from(zstdelta::diff(&base_version, &this_version)?);
             prev_version = this_version;
             let entry = PackedEntry {
                 key: i.to_string(),
                 data: PackedValue::ZstdFromDict(ZstdFromDictValue {
                     dict_key: base_key.clone(),
-                    zstd: diff.to_vec(),
+                    zstd: diff,
                 }),
             };
             entries.push(entry);
@@ -245,7 +245,10 @@ mod tests {
         // Test reads roundtrip back to the raw form
         for i in 0..20 {
             let value = decode_pack(BlobstoreMetadata::new(None), packed.clone(), &i.to_string())?;
-            assert_eq!(value.as_bytes().as_bytes().to_vec(), raw_data[i]);
+            assert_eq!(
+                value.as_bytes().as_bytes(),
+                &Bytes::copy_from_slice(&raw_data[i])
+            );
         }
 
         Ok(())
@@ -262,7 +265,7 @@ mod tests {
                 rng.fill(&mut test_data);
                 PackedEntry {
                     key: i.to_string(),
-                    data: PackedValue::Single(SingleValue::Raw(test_data.to_vec())),
+                    data: PackedValue::Single(SingleValue::Raw(Bytes::copy_from_slice(&test_data))),
                 }
             })
             .collect();

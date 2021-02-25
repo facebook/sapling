@@ -51,9 +51,9 @@ fn compress_if_worthwhile(value: Bytes, zstd_level: i32) -> Result<SingleValue> 
     let cursor = Cursor::new(value.clone());
     let compressed = zstd::encode_all(cursor, zstd_level)?;
     if compressed.len() < value.len() {
-        Ok(SingleValue::Zstd(compressed))
+        Ok(SingleValue::Zstd(Bytes::from(compressed)))
     } else {
-        Ok(SingleValue::Raw(value.to_vec()))
+        Ok(SingleValue::Raw(value))
     }
 }
 
@@ -127,7 +127,7 @@ impl<T: BlobstorePutOps> PackBlob<T> {
         let single = if let Some(zstd_level) = self.options.put_compress_level {
             compress_if_worthwhile(value, zstd_level)
         } else {
-            Ok(SingleValue::Raw(value.to_vec()))
+            Ok(SingleValue::Raw(value))
         }?;
 
         // Wrap in thrift encoding
@@ -323,7 +323,7 @@ mod tests {
 
             input_entries.push(PackedEntry {
                 key: app_key,
-                data: PackedValue::Single(SingleValue::Raw(app_data.into_bytes().to_vec())),
+                data: PackedValue::Single(SingleValue::Raw(app_data.into_bytes())),
             })
         }
 
