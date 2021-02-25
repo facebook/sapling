@@ -1642,15 +1642,19 @@ static int index_slice_del(indexObject* self, PyObject* item) {
   if (PySlice_GetIndicesEx(
           item,
           length,
-#else
-  if (PySlice_GetIndicesEx(
-          (PySliceObject*)item,
-          length,
-#endif
           &start,
           &stop,
           &step,
           &slicelength) < 0)
+#else
+  if (PySlice_GetIndicesEx(
+          (PySliceObject*)item,
+          length,
+          &start,
+          &stop,
+          &step,
+          &slicelength) < 0)
+#endif
     return -1;
 
   if (slicelength <= 0)
