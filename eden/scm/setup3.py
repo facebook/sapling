@@ -14,6 +14,12 @@
 # 'python setup.py --help' for more options
 
 # isort:skip_file
+import os
+import sys
+# If we're executing inside an embedded Python instance, it won't load
+# modules outside the embedded python. So let's add our directory manually,
+# before we import things.
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 import contextlib
 import ctypes
@@ -22,7 +28,6 @@ import errno
 import glob
 import hashlib
 import imp
-import os
 import py_compile
 import re
 import shutil
@@ -30,7 +35,6 @@ import socket
 import stat
 import struct
 import subprocess
-import sys
 import tarfile
 import tempfile
 import time
@@ -38,6 +42,9 @@ import zipfile
 
 if sys.version_info.major == 2:
     raise RuntimeError("This setup.py is Python 3 only!")
+
+
+PY_VERSION = "38"
 
 
 def ensureenv():
@@ -749,7 +756,8 @@ class fetchbuilddeps(Command):
     pyassets = [
         asset(url=url)
         for url in [
-            "https://files.pythonhosted.org/packages/a2/12/ced7105d2de62fa7c8fb5fce92cc4ce66b57c95fb875e9318dba7f8c5db0/toml-0.10.0-py2.py3-none-any.whl"
+            "https://files.pythonhosted.org/packages/a2/12/ced7105d2de62fa7c8fb5fce92cc4ce66b57c95fb875e9318dba7f8c5db0/toml-0.10.0-py2.py3-none-any.whl",
+            "https://files.pythonhosted.org/packages/67/4b/141a581104b1f6397bfa78ac9d43d8ad29a7ca43ea90a2d863fe3056e86a/six-1.11.0-py2.py3-none-any.whl",
         ]
     ]
 
@@ -949,20 +957,28 @@ class buildembedded(Command):
 
     def _copy_py_lib(self, dirtocopy):
         """Copy main Python shared library"""
-        pylib = "python27" if iswindows else "python2.7"
+        pyroot = os.path.realpath(pjoin(sys.executable, ".."))
+        pylib = f"python{PY_VERSION}"
         pylibext = pylib + (".dll" if iswindows else ".so")
         # First priority is the python lib that lives alongside the executable
-        pylibpath = os.path.realpath(pjoin(sys.executable, "..", pylibext))
+        pylibpath = pjoin(pyroot, pylibext)
         if not os.path.exists(pylibpath):
             # a fallback option
             pylibpath = ctypes.util.find_library(pylib)
         log.debug("Python dynamic library is copied from: %s" % pylibpath)
         copy_to(pylibpath, pjoin(dirtocopy, os.path.basename(pylibpath)))
-        # Copy python27.zip
+        # Copy pythonXX.zip
         pyzipname = pylib + ".zip"
-        pyzippath = os.path.realpath(pjoin(sys.executable, "..", pyzipname))
+        pyzippath = pjoin(pyroot, pyzipname)
         if os.path.exists(pyzippath):
             copy_to(pyzippath, pjoin(dirtocopy, pyzipname))
+
+        # Copy native python modules
+        for pylibpath in glob.glob(os.path.join(pyroot, "*.pyd")):
+            copy_to(pylibpath, dirtocopy)
+        for pylibpath in glob.glob(os.path.join(pyroot, "*.dll")):
+            copy_to(pylibpath, dirtocopy)
+
 
     def _copy_hg_exe(self, dirtocopy):
         """Copy main mercurial executable which would load the embedded Python"""
@@ -1004,8 +1020,8 @@ class buildembedded(Command):
         # has the first priority in dynamic linker search path.
         self._copy_py_lib(embdir)
 
-        # Build everything into python27.zip, which is in the default sys.path.
-        zippath = pjoin(embdir, "python27.zip")
+        # Build everything into pythonXX.zip, which is in the default sys.path.
+        zippath = pjoin(embdir, f"python{PY_VERSION}.zip")
         buildpyzip(self.distribution).run(appendzippath=zippath)
         self._zip_pyc_files(zippath)
         self._copy_hg_exe(embdir)
@@ -1796,7 +1812,9 @@ rustextbinaries = [
         manifest="exec/hgmain/Cargo.toml",
         rename=hgname,
         features=hgmainfeatures,
-    )
+    ),
+    RustBinary("mkscratch", manifest="exec/scratch/Cargo.toml"),
+    RustBinary("scm_daemon", manifest="exec/scm_daemon/Cargo.toml"),
 ]
 
 
