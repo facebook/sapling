@@ -7,7 +7,7 @@
 
 use anyhow::{bail, format_err, Context as _, Error, Result};
 use bookmarks::BookmarkName;
-use futures::future::{self, Future, FutureExt, TryFuture};
+use futures::future::{self, Future, FutureExt, TryFuture, TryFutureExt};
 use futures_ext::future::{FbFutureExt, FbTryFutureExt};
 use mercurial_types::HgChangesetId;
 use mononoke_hg_sync_job_helper_lib::{lines_after, read_file_contents, wait_till_more_lines};
@@ -473,6 +473,7 @@ impl HgRepo {
             .context("failed to start a mercurial process")?;
 
         let exit_status = cmd
+            .map_err(Error::from)
             .timeout(Duration::from_millis(BOOKMARK_LOCATION_LOOKUP_TIMEOUT_MS))
             .flatten_err()
             .await?;

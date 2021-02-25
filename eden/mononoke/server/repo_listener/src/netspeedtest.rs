@@ -98,10 +98,12 @@ fn download(headers: &HeaderMap<HeaderValue>) -> Result<Response<Body>, HttpErro
 
 async fn upload(body: Body) -> Result<Response<Body>, HttpError> {
     let mut size = 0;
-    let mut body = body
+    let body = body
         .map_err(RequestError::Hangup)
         .whole_stream_timeout(NETSPEEDTEST_TIMEOUT)
         .flatten_err();
+
+    futures::pin_mut!(body);
 
     while let Some(chunk) = body
         .try_next()

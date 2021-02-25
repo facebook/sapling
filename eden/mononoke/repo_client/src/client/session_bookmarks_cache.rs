@@ -12,8 +12,10 @@ use bookmarks::{
     Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness,
 };
 use context::CoreContext;
-use futures::{compat::Stream01CompatExt, future, Stream, StreamExt, TryFutureExt, TryStreamExt};
-use futures_01_ext::{FutureExt, StreamExt as OldStreamExt};
+use futures::{
+    compat::Stream01CompatExt, future, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
+};
+use futures_01_ext::{FutureExt as OldFutureExt, StreamExt as OldStreamExt};
 use futures_ext::{FbFutureExt, FbTryFutureExt};
 use futures_old::{future as future_old, Future};
 use mercurial_types::HgChangesetId;
@@ -254,6 +256,7 @@ where
             })
             .timeout(bookmarks_timeout())
             .flatten_err()
+            .boxed()
             .compat()
     }
 }
