@@ -17,7 +17,7 @@ use stats::prelude::*;
 use tokio::sync::watch;
 
 // This can be tweaked later.
-const MAX_LAG: Duration = Duration::from_secs(5);
+pub(crate) const MAX_LAG: Duration = Duration::from_secs(5);
 
 define_stats! {
     prefix = "mononoke.sqlblob.lag_delay";
