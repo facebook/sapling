@@ -28,10 +28,8 @@ use segmented_changelog::SegmentedChangelogBuilder;
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 
-const DELAY_ARG: &str = "delay";
 const ONCE_ARG: &str = "once";
 const REPO_ARG: &str = "repo";
-const TRACK_BOOKMARK_ARG: &str = "track-bookmark";
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
@@ -49,27 +47,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .help("Repository name to warm-up"),
         )
         .arg(
-            // it would make sense to pair the delay with the repository
-            Arg::with_name(DELAY_ARG)
-                .long(DELAY_ARG)
-                .takes_value(true)
-                .required(false)
-                .help("Delay period in seconds between incremental build runs."),
-        )
-        .arg(
             Arg::with_name(ONCE_ARG)
                 .long(ONCE_ARG)
                 .takes_value(false)
                 .required(false)
                 .help("When set, the tailer will perform a single incremental build run."),
-        )
-        .arg(
-            // it would make sense to pair the bookmark with the repository
-            Arg::with_name(TRACK_BOOKMARK_ARG)
-                .long(TRACK_BOOKMARK_ARG)
-                .takes_value(true)
-                .required(false)
-                .help("What bookmark to use as the head of the Segmented Changelog."),
         );
     let matches = app.get_matches();
 
@@ -102,18 +84,22 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     let configs = args::load_repo_configs(config_store, matches)?;
     let readonly_storage = ReadOnlyStorage(false);
 
-    let track_bookmark =
-        BookmarkName::new(matches.value_of(TRACK_BOOKMARK_ARG).unwrap_or("master"))
-            .context("parsing the name of the bookmark to track")?;
-
     let mut tasks = Vec::new();
-    let repo_count = reponames.len() as u32;
     for (index, reponame) in reponames.into_iter().enumerate() {
         let config = configs
             .repos
             .get(&reponame)
             .ok_or_else(|| format_err!("unknown repository: {}", reponame))?;
         let repo_id = config.repoid;
+
+        let bookmark_name = &config.segmented_changelog_config.master_bookmark;
+        let track_bookmark = BookmarkName::new(bookmark_name).with_context(|| {
+            format!(
+                "error parsing the name of the bookmark to track: {}",
+                bookmark_name,
+            )
+        })?;
+
         info!(
             ctx.logger(),
             "repo name '{}' translates to id {}", reponame, repo_id
@@ -177,14 +163,13 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 ctx.logger(),
                 "repo {}: SegmentedChangelogTailer is done", repo_id,
             );
-        } else {
-            let delay = Duration::from_secs(args::get_u64(matches, DELAY_ARG, 300));
-            // spread out repo operations
-            let offset_delay = delay / repo_count;
+        } else if let Some(period) = config.segmented_changelog_config.tailer_update_period {
+            // spread out update operations, start updates on another repo after 7 seconds
+            let wait_to_start = Duration::from_secs(7 * index as u64);
             let ctx = ctx.clone();
             tasks.push(async move {
-                tokio::time::delay_for(offset_delay * index as u32).await;
-                segmented_changelog_tailer.run(&ctx, delay).await;
+                tokio::time::delay_for(wait_to_start).await;
+                segmented_changelog_tailer.run(&ctx, period).await;
             });
         }
     }

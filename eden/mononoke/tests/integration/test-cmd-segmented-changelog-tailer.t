@@ -40,7 +40,11 @@ Setup repository
 
 Run Segmented Changelog Tailer. Error because there was no seeding.
 
-  $ segmented_changelog_tailer --repo repo --track-bookmark=master_bookmark &>"$TESTTMP/error.log"
+  $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
+  > [segmented_changelog_config]
+  > master_bookmark="master_bookmark"
+  > CONFIG
+  $ segmented_changelog_tailer --repo repo &>"$TESTTMP/error.log"
   [1]
   $ grep seeded "$TESTTMP/error.log"
   * maybe repo is not seeded (glob)
@@ -50,7 +54,7 @@ Seed repository.
 
 Actually run Segmented Changelog Tailer.
 
-  $ quiet segmented_changelog_tailer --repo repo --track-bookmark=master_bookmark
+  $ quiet segmented_changelog_tailer --repo repo
   $ grep segmented_changelog "$TESTTMP/quiet.last.log"
   * repo name 'repo' translates to id 0 (glob)
   * repo 0: SegmentedChangelogTailer initialized (glob)
@@ -64,7 +68,7 @@ Actually run Segmented Changelog Tailer.
 
 Run Segmented Changelog Tailer. Nothing to do.
 
-  $ quiet segmented_changelog_tailer --repo repo --track-bookmark=master_bookmark
+  $ quiet segmented_changelog_tailer --repo repo
   $ grep segmented_changelog "$TESTTMP/quiet.last.log"
   * repo name 'repo' translates to id 0 (glob)
   * repo 0: SegmentedChangelogTailer initialized (glob)

@@ -65,11 +65,15 @@ impl SegmentedChangelogTailer {
         }
     }
 
-    pub async fn run(&self, ctx: &CoreContext, delay: Duration) {
+    pub async fn run(&self, ctx: &CoreContext, period: Duration) {
         STATS::success.add_value(0);
         STATS::success_per_repo.add_value(0, (self.repo_id.id(),));
 
+        let mut interval = tokio::time::interval(period);
         loop {
+            let _ = interval.tick().await;
+            debug!(ctx.logger(), "repo {}: woke up to update", self.repo_id,);
+
             STATS::count.add_value(1);
             STATS::count_per_repo.add_value(1, (self.repo_id.id(),));
 
@@ -94,13 +98,6 @@ impl SegmentedChangelogTailer {
                 STATS::success.add_value(1);
                 STATS::success_per_repo.add_value(1, (self.repo_id.id(),));
             }
-            debug!(
-                ctx.logger(),
-                "repo {}: sleeping for {} seconds",
-                self.repo_id,
-                delay.as_secs()
-            );
-            tokio::time::delay_for(delay).await;
         }
     }
 

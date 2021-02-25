@@ -11,7 +11,7 @@
   $ . "${TEST_FIXTURES}/library-commit.sh"
 
 Setup repository
-  $ SEGMENTED_CHANGELOG_ALWAYS_DOWNLOAD_SAVE=1 BLOB_TYPE="blob_files" default_setup
+  $ BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   │
@@ -26,11 +26,19 @@ Setup repository
 Seed repository.
   $ quiet segmented_changelog_seeder --head=$A
 
+  $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
+  > [segmented_changelog_config]
+  > enabled=true
+  > master_bookmark="master_bookmark"
+  > update_algorithm="always_download_save"
+  > tailer_update_period_secs=1
+  > CONFIG
+
 Run many Segmented Changelog Tailer processes.
 
-  $ background_segmented_changelog_tailer tail_1.out --repo repo --track-bookmark=master_bookmark
-  $ background_segmented_changelog_tailer tail_2.out --repo repo --track-bookmark=master_bookmark
-  $ background_segmented_changelog_tailer tail_3.out --repo repo --track-bookmark=master_bookmark
+  $ background_segmented_changelog_tailer tail_1.out --repo repo
+  $ background_segmented_changelog_tailer tail_2.out --repo repo
+  $ background_segmented_changelog_tailer tail_3.out --repo repo
 
   $ hgmn up master_bookmark
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

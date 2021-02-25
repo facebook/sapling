@@ -1001,6 +1001,7 @@ then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [segmented_changelog_config]
 enabled=true
+master_bookmark="master_bookmark"
 CONFIG
   if [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE:-}" ]]; then
     cat >> "repos/$reponame/server.toml" <<CONFIG
@@ -1897,7 +1898,6 @@ function background_segmented_changelog_tailer() {
   "$MONONOKE_SEGMENTED_CHANGELOG_TAILER" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
-    --delay 1 \
     "$@" >> "$TESTTMP/$out_file" 2>&1 &
   pid=$!
   echo "$pid" >> "$DAEMON_PIDS"
