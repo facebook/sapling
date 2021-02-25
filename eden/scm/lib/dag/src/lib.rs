@@ -62,6 +62,9 @@ pub use nameset::NameIter as SetIter;
 pub type Vertex = VertexName;
 
 #[cfg(feature = "indexedlog-backend")]
+pub use iddagstore::indexedlog_store::describe_indexedlog_entry;
+
+#[cfg(feature = "indexedlog-backend")]
 pub mod tests;
 
 pub use errors::DagError as Error;

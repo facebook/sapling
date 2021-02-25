@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 mod in_process_store;
 
 #[cfg(any(test, feature = "indexedlog-backend"))]
-mod indexedlog_store;
+pub(crate) mod indexedlog_store;
 
 pub(crate) use in_process_store::InProcessStore;
 

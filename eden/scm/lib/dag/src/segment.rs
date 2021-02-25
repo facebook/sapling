@@ -20,6 +20,7 @@ use crate::IdSpan;
 use crate::Level;
 use crate::Result;
 use bitflags::bitflags;
+use byteorder::ReadBytesExt;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use minibytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -178,6 +179,51 @@ impl Debug for Segment {
     }
 }
 
+/// Describe bytes of a Segment.
+/// This is only for troubleshooting purpose.
+pub fn describe_segment_bytes(data: &[u8]) -> String {
+    let mut message = String::new();
+    let mut cur = Cursor::new(data);
+    let mut start = 0;
+    let mut explain = |cur: &Cursor<_>, m: String| {
+        let end = cur.position() as usize;
+        message += &format!("# {}: {}\n", hex(&data[start..end]), m);
+        start = end;
+    };
+    if let Ok(flags) = cur.read_u8() {
+        let flags = SegmentFlags::from_bits_truncate(flags);
+        explain(&cur, format!("Flags = {:?}", flags));
+    }
+    if let Ok(lv) = cur.read_u8() {
+        explain(&cur, format!("Level = {:?}", lv));
+    }
+    if let Ok(head) = cur.read_u64::<BigEndian>() {
+        explain(&cur, format!("High = {}", Id(head)));
+        if let Ok(delta) = VLQDecode::<u64>::read_vlq(&mut cur) {
+            let low = head - delta;
+            explain(&cur, format!("Delta = {} (Low = {})", delta, Id(low)));
+        }
+    }
+    if let Ok(count) = VLQDecode::<usize>::read_vlq(&mut cur) {
+        explain(&cur, format!("Parent count = {}", count));
+        for i in 0..count {
+            if let Ok(p) = VLQDecode::<u64>::read_vlq(&mut cur) {
+                explain(&cur, format!("Parents[{}] = {}", i, Id(p)));
+            }
+        }
+    }
+    message
+}
+
+pub(crate) fn hex(bytes: &[u8]) -> String {
+    bytes
+        .iter()
+        .cloned()
+        .map(|b| format!("{:02x}", b))
+        .collect::<Vec<String>>()
+        .join(" ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,5 +248,27 @@ mod tests {
                 && node.parents().unwrap() == parents
         }
         quickcheck(prop as fn(bool, Level, u64, u64, Vec<u64>) -> bool);
+    }
+
+    #[test]
+    fn test_describe() {
+        let seg = Segment::new(
+            SegmentFlags::ONLY_HEAD,
+            3,
+            Id(101),
+            Id(202),
+            &[Id(90), Id(80)],
+        );
+        assert_eq!(
+            describe_segment_bytes(&seg.0),
+            r#"# 02: Flags = ONLY_HEAD
+# 03: Level = 3
+# 00 00 00 00 00 00 00 ca: High = 202
+# 65: Delta = 101 (Low = 101)
+# 02: Parent count = 2
+# 5a: Parents[0] = 90
+# 50: Parents[1] = 80
+"#
+        );
     }
 }

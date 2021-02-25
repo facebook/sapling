@@ -37,5 +37,17 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     // maximum Id
     m.add(py, "MAX_ID", dag::Id::MAX.0)?;
 
+    // Explain bytes in indexedlog IdDag. For troubleshotting purpose.
+    m.add(
+        py,
+        "describebytes",
+        py_fn!(py, describe_bytes(bytes: PyBytes)),
+    )?;
+
     Ok(m)
+}
+
+fn describe_bytes(py: Python, bytes: PyBytes) -> PyResult<String> {
+    let data = bytes.data(py);
+    Ok(dag::describe_indexedlog_entry(data))
 }

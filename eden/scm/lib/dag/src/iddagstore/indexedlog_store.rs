@@ -9,10 +9,13 @@ use super::IdDagStore;
 use crate::errors::bug;
 use crate::id::{Group, Id};
 use crate::ops::Persist;
+use crate::segment::describe_segment_bytes;
+use crate::segment::hex;
 use crate::segment::Segment;
 use crate::segment::SegmentFlags;
 use crate::Level;
 use crate::Result;
+use byteorder::ReadBytesExt;
 use byteorder::{BigEndian, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
@@ -339,6 +342,37 @@ impl IndexedLogStore {
     }
 }
 
+/// Describe bytes of an indexedlog entry.
+/// This is only for troubleshooting purpose.
+pub fn describe_indexedlog_entry(data: &[u8]) -> String {
+    let mut message = String::new();
+    if data == IndexedLogStore::MAGIC_CLEAR_NON_MASTER {
+        message += &format!("# {}: MAGIC_CLEAR_NON_MASTER\n", hex(data),);
+    } else if data.starts_with(IndexedLogStore::MAGIC_REWRITE_LAST_FLAT) {
+        message += &format!(
+            "# {}: MAGIC_REWRITE_LAST_FLAT\n",
+            hex(IndexedLogStore::MAGIC_REWRITE_LAST_FLAT)
+        );
+        let start = IndexedLogStore::MAGIC_REWRITE_LAST_FLAT.len();
+        let end = start + Segment::OFFSET_DELTA - Segment::OFFSET_LEVEL;
+        let previous_index = &data[start..end];
+        let previous_level = previous_index[0];
+        let previous_head = (&previous_index[1..]).read_u64::<BigEndian>().unwrap_or(0);
+
+        message += &format!(
+            "# {}: Previous index Level = {}, Head = {}\n",
+            hex(&data[start..end]),
+            previous_level,
+            Id(previous_head),
+        );
+
+        message += &describe_indexedlog_entry(&data[end..]);
+    } else {
+        message += &describe_segment_bytes(data);
+    }
+    message
+}
+
 // Implementation details
 impl IndexedLogStore {
     const INDEX_LEVEL_HEAD: usize = 0;
@@ -563,6 +597,29 @@ mod tests {
             "None"
         );
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_describe() -> Result<()> {
+        let tmp = tempfile::tempdir()?;
+        let mut iddag = IndexedLogStore::open(tmp.path())?;
+        let seg1 = Segment::new(SegmentFlags::HAS_ROOT, 0, Id(0), Id(5), &[]);
+        let seg2 = Segment::new(SegmentFlags::empty(), 0, Id(6), Id(10), &[Id(5)]);
+        iddag.insert_segment(seg1)?;
+        iddag.insert_segment(seg2)?;
+        let bytes = iddag.log.iter_dirty().nth(1).unwrap()?;
+        assert_eq!(
+            describe_indexedlog_entry(&bytes),
+            r#"# f0: MAGIC_REWRITE_LAST_FLAT
+# 00 00 00 00 00 00 00 00 05: Previous index Level = 0, Head = 5
+# 01: Flags = HAS_ROOT
+# 00: Level = 0
+# 00 00 00 00 00 00 00 0a: High = 10
+# 0a: Delta = 10 (Low = 0)
+# 00: Parent count = 0
+"#
+        );
         Ok(())
     }
 
