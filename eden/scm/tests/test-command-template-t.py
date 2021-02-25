@@ -4112,3 +4112,10 @@ sh % "hg debugtemplate '{truncate(\"a\\nb\\nc\\n\", 2)}'" == r"""
 sh % 'hg debugtemplate \'{truncate("a\\nb\\nc\\n", 2, "truncated\\n")}\'' == r"""
     a
     truncated"""
+
+# Test case expressions
+
+sh % "hg debugtemplate \"{case('a', 'a', 'A', 'b', 'B', 'c', 'C')}\"" == "A"
+sh % "hg debugtemplate \"{case('b', 'a', 'A', 'b', 'B', 'c', 'C', 'D')}\"" == "B"
+sh % "hg debugtemplate \"{case('x', 'a', 'A', 'b', 'B', 'c', 'C')}\"" == ""
+sh % "hg debugtemplate \"{case('x', 'a', 'A', 'b', 'B', 'c', 'C', 'D')}\"" == "D"

@@ -975,6 +975,24 @@ def ifgt(context, mapping, args):
         yield evalrawexp(context, mapping, args[3])
 
 
+@templatefunc("case(expr, case1, then1[, case2, then2 ...][, else])")
+def case(context, mapping, args):
+    """Conditionally execute based on whether the expression matches
+    any of the cases."""
+    if len(args) < 2:
+        # i18n: "case" is a keyword
+        raise error.ParseError(_("case expects at least two arguments"))
+
+    test = evalstring(context, mapping, args[0])
+    for index in range(1, len(args) - 1, 2):
+        match = evalstring(context, mapping, args[index])
+        if test == match:
+            yield evalrawexp(context, mapping, args[index + 1])
+            return
+    if len(args) % 2 == 0:
+        yield evalrawexp(context, mapping, args[-1])
+
+
 @templatefunc("join(list, sep)")
 def join(context, mapping, args):
     """Join items in a list with a delimiter."""
