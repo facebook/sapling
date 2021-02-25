@@ -303,7 +303,7 @@ if buckpath:
     PYTHON = buckpath("//eden/scm:hgpython", buckruletype.SH_BINARY)
 else:
     PYTHON = _bytespath(
-        os.environ.get("PYTHON_SYS_EXECUTABLE", sys.executable).replace("\\", "/")
+        os.environ.get("PYTHON_SYS_EXECUTABLE", sys.executable)
     )
 IMPL_PATH = b"PYTHONPATH"
 if "java" in sys.platform:
