@@ -10,12 +10,12 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "1.0"
-blobrepo = { path = "../../blobrepo", version = "0.1.0" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
-blobstore = { path = "../../blobstore", version = "0.1.0" }
-bounded_traversal = { path = "../../common/bounded_traversal", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
+bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
+context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-manifest = { path = "../../manifest", version = "0.1.0" }
-mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+manifest = { version = "0.1.0", path = "../../manifest" }
+mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

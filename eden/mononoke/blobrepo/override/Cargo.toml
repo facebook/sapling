@@ -6,14 +6,14 @@ edition = "2018"
 license = "GPLv2+"
 
 [dependencies]
-blobrepo = { path = "..", version = "0.1.0" }
-blobstore = { path = "../../blobstore", version = "0.1.0" }
-bonsai_hg_mapping = { path = "../../bonsai_hg_mapping", version = "0.1.0" }
-bookmarks = { path = "../../bookmarks", version = "0.1.0" }
-cacheblob = { path = "../../blobstore/cacheblob", version = "0.1.0" }
-changeset_fetcher = { path = "../changeset_fetcher", version = "0.1.0" }
-changesets = { path = "../../changesets", version = "0.1.0" }
-filenodes = { path = "../../filenodes", version = "0.1.0" }
-filestore = { path = "../../filestore", version = "0.1.0" }
-metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
-repo_blobstore = { path = "../repo_blobstore", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = ".." }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
+changeset_fetcher = { version = "0.1.0", path = "../changeset_fetcher" }
+changesets = { version = "0.1.0", path = "../../changesets" }
+filenodes = { version = "0.1.0", path = "../../filenodes" }
+filestore = { version = "0.1.0", path = "../../filestore" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }

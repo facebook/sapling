@@ -8,25 +8,25 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-blobrepo = { path = "../../blobrepo", version = "0.1.0" }
-blobstore = { path = "../../blobstore", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-derived_data = { path = "../../derived_data", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { version = "0.1.0", path = "../../server/context" }
+derived_data = { version = "0.1.0", path = "../../derived_data" }
 digest = "0.8"
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
-filestore = { path = "../../filestore", version = "0.1.0" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-git_types_thrift = { path = "if", version = "0.1.0" }
-manifest = { path = "../../manifest", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+git_types_thrift = { version = "0.1.0", path = "if" }
+manifest = { version = "0.1.0", path = "../../manifest" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sha-1 = "0.8"
 thiserror = "1.0"
 
 [dev-dependencies]
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 futures-util = "0.3.7"
 git2 = "0.13"
 tempdir = "0.3"

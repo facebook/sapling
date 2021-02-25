@@ -8,49 +8,49 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-blobrepo = { path = "../blobrepo", version = "0.1.0" }
-blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
-blobstore = { path = "../blobstore", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = "../blobrepo" }
+blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
+blobstore = { version = "0.1.0", path = "../blobstore" }
 bytes = { version = "0.5", features = ["serde"] }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 clap = "2.33"
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cmdlib = { path = "../cmdlib", version = "0.1.0" }
-context = { path = "../server/context", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-filestore = { path = "../filestore", version = "0.1.0" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cmdlib = { version = "0.1.0", path = "../cmdlib" }
+context = { version = "0.1.0", path = "../server/context" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 gotham = { version = "=0.5.0", default-features = false }
 gotham_derive = "=0.5.0"
-gotham_ext = { path = "../gotham_ext", version = "0.1.0" }
+gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
 http = "0.2"
 hyper = "0.13.10"
 hyper-openssl = "0.8"
 itertools = "0.8"
-lfs_protocol = { path = "../lfs_protocol", version = "0.1.0" }
-lfs_server_config = { path = "../../../configerator/structs/scm/mononoke/lfs_server", version = "0.1.0" }
+lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
+lfs_server_config = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/lfs_server" }
 maplit = "1.0"
-metaconfig_parser = { path = "../metaconfig/parser", version = "0.1.0" }
-metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
+metaconfig_parser = { version = "0.1.0", path = "../metaconfig/parser" }
+metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
 mime = "0.3.14"
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
-permission_checker = { path = "../permission_checker", version = "0.1.0" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+permission_checker = { version = "0.1.0", path = "../permission_checker" }
 pin-project = "0.4"
 rand = { version = "0.7", features = ["small_rng"] }
-redactedblobstore = { path = "../blobstore/redactedblobstore", version = "0.1.0" }
-scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
-secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+redactedblobstore = { version = "0.1.0", path = "../blobstore/redactedblobstore" }
+scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
+secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 thiserror = "1.0"
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-time_window_counter = { path = "../time_window_counter", version = "0.1.0" }
+time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+time_window_counter = { version = "0.1.0", path = "../time_window_counter" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]
-blobrepo_override = { path = "../blobrepo/override", version = "0.1.0" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
+blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
+mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 pretty_assertions = "0.6"

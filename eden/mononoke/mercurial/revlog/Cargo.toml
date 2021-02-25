@@ -15,15 +15,15 @@ bitflags = "1.2"
 bytes = { version = "0.5", features = ["serde"] }
 flate2 = { version = "1.0", features = ["rust_backend", "tokio"], default-features = false }
 futures = "0.1.30"
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-lz4-pyframe = { path = "../../../scm/lib/lz4-pyframe", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+lz4-pyframe = { version = "0.1.0", path = "../../../scm/lib/lz4-pyframe" }
 memmap = "0.7"
-mercurial_types = { path = "../types", version = "0.1.0" }
-mononoke_types_thrift = { path = "../../mononoke_types/if", version = "0.1.0" }
+mercurial_types = { version = "0.1.0", path = "../types" }
+mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 nom = { version = "3", features = [ "verbose-errors" ] }
 thiserror = "1.0"
 
 [dev-dependencies]
 assert_matches = "1.5"
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-mercurial_types-mocks = { path = "../types/mocks", version = "0.1.0" }
+failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+mercurial_types-mocks = { version = "0.1.0", path = "../types/mocks" }

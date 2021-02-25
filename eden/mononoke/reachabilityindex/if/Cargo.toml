@@ -14,16 +14,16 @@ doctest = false
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-codegen_includer_proc_macro = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+codegen_includer_proc_macro = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 const-cstr = "0.3.0"
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 lazy_static = "1.0"
-mononoke_types_thrift = { path = "../../mononoke_types/if", version = "0.1.0" }
+mononoke_types_thrift = { version = "0.1.0", path = "../../mononoke_types/if" }
 ref-cast = "1.0.2"
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_derive = "1.0"
 thiserror = "1.0"
 
 [build-dependencies]
-thrift_compiler = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+thrift_compiler = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

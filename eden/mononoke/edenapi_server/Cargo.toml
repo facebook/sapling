@@ -7,15 +7,15 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
+blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
 clap = "2.33"
-cmdlib = { path = "../cmdlib", version = "0.1.0" }
-edenapi_service = { path = "../edenapi_service", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cmdlib = { version = "0.1.0", path = "../cmdlib" }
+edenapi_service = { version = "0.1.0", path = "../edenapi_service" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-gotham_ext = { path = "../gotham_ext", version = "0.1.0" }
-mononoke_api = { path = "../mononoke_api", version = "0.1.0" }
-permission_checker = { path = "../permission_checker", version = "0.1.0" }
-secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
+mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
+permission_checker = { version = "0.1.0", path = "../permission_checker" }
+secure_utils = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

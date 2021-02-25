@@ -16,64 +16,64 @@ path = "src/main.rs"
 anyhow = "1.0"
 async-stream = "0.3"
 base64 = "0.11.0"
-blobrepo = { path = "../blobrepo", version = "0.1.0" }
-blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
-blobstore = { path = "../blobstore", version = "0.1.0" }
-bookmarks = { path = "../bookmarks", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = "../blobrepo" }
+blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
+blobstore = { version = "0.1.0", path = "../blobstore" }
+bookmarks = { version = "0.1.0", path = "../bookmarks" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 bytes = { version = "0.5", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
 clap = "2.33"
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cmdlib = { path = "../cmdlib", version = "0.1.0" }
-context = { path = "../server/context", version = "0.1.0" }
-dbbookmarks = { path = "../bookmarks/dbbookmarks", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-filestore = { path = "../filestore", version = "0.1.0" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cmdlib = { version = "0.1.0", path = "../cmdlib" }
+context = { version = "0.1.0", path = "../server/context" }
+dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+filestore = { version = "0.1.0", path = "../filestore" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
-futures_01_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-getbundle_response = { path = "../repo_client/getbundle_response", version = "0.1.0" }
-gotham_ext = { path = "../gotham_ext", version = "0.1.0" }
-hgserver_config = { path = "../../../configerator/structs/scm/mononoke/hgserverconf", version = "0.1.0" }
+futures_01_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+getbundle_response = { version = "0.1.0", path = "../repo_client/getbundle_response" }
+gotham_ext = { version = "0.1.0", path = "../gotham_ext" }
+hgserver_config = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/hgserverconf" }
 http = "0.2"
 hyper = "0.13.10"
 hyper-openssl = "0.8"
 itertools = "0.8"
-lfs_protocol = { path = "../lfs_protocol", version = "0.1.0" }
+lfs_protocol = { version = "0.1.0", path = "../lfs_protocol" }
 maplit = "1.0"
-mercurial_bundle_replay_data = { path = "../mercurial/bundle_replay_data", version = "0.1.0" }
-mercurial_bundles = { path = "../mercurial/bundles", version = "0.1.0" }
-mercurial_revlog = { path = "../mercurial/revlog", version = "0.1.0" }
-mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
-metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
-mutable_counters = { path = "../mutable_counters", version = "0.1.0" }
+mercurial_bundle_replay_data = { version = "0.1.0", path = "../mercurial/bundle_replay_data" }
+mercurial_bundles = { version = "0.1.0", path = "../mercurial/bundles" }
+mercurial_revlog = { version = "0.1.0", path = "../mercurial/revlog" }
+mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
+metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 pin-project = "0.4"
-reachabilityindex = { path = "../reachabilityindex", version = "0.1.0" }
+reachabilityindex = { version = "0.1.0", path = "../reachabilityindex" }
 regex = "1.4.2"
-repo_read_write_status = { path = "../repo_client/repo_read_write_status", version = "0.1.0" }
-revset = { path = "../revset", version = "0.1.0" }
-scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+repo_read_write_status = { version = "0.1.0", path = "../repo_client/repo_read_write_status" }
+revset = { version = "0.1.0", path = "../revset" }
+scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
-shared_error = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-skiplist = { path = "../reachabilityindex/skiplist", version = "0.1.0" }
+shared_error = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+skiplist = { version = "0.1.0", path = "../reachabilityindex/skiplist" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 tempfile = "3.1"
 thiserror = "1.0"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]
 assert_matches = "1.5"
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
-bonsai_globalrev_mapping = { path = "../bonsai_globalrev_mapping", version = "0.1.0" }
-memblob = { path = "../blobstore/memblob", version = "0.1.0" }
-mercurial_types-mocks = { path = "../mercurial/types/mocks", version = "0.1.0" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
-tests_utils = { path = "../tests/utils", version = "0.1.0" }
+async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
+bonsai_globalrev_mapping = { version = "0.1.0", path = "../bonsai_globalrev_mapping" }
+memblob = { version = "0.1.0", path = "../blobstore/memblob" }
+mercurial_types-mocks = { version = "0.1.0", path = "../mercurial/types/mocks" }
+mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
+tests_utils = { version = "0.1.0", path = "../tests/utils" }

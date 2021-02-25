@@ -7,9 +7,9 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-observability_config = { path = "../../../configerator/structs/scm/mononoke/observability", version = "0.1.0" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+observability_config = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/observability" }
 regex = "1.4.2"
-scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+scuba = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
 slog = { version = "2.5", features = ["max_level_debug"] }

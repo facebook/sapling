@@ -7,48 +7,48 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-backsyncer = { path = "../commit_rewriting/backsyncer", version = "0.1.0" }
-blobrepo = { path = "../blobrepo", version = "0.1.0" }
-blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
-blobstore = { path = "../blobstore", version = "0.1.0" }
-bookmarks = { path = "../bookmarks", version = "0.1.0" }
-bookmarks_movement = { path = "../bookmarks/bookmarks_movement", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+backsyncer = { version = "0.1.0", path = "../commit_rewriting/backsyncer" }
+blobrepo = { version = "0.1.0", path = "../blobrepo" }
+blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
+blobstore = { version = "0.1.0", path = "../blobstore" }
+bookmarks = { version = "0.1.0", path = "../bookmarks" }
+bookmarks_movement = { version = "0.1.0", path = "../bookmarks/bookmarks_movement" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 clap = "2.33"
-cmdlib = { path = "../cmdlib", version = "0.1.0" }
-context = { path = "../server/context", version = "0.1.0" }
-cross_repo_sync = { path = "../commit_rewriting/cross_repo_sync", version = "0.1.0" }
-derived_data_utils = { path = "../derived_data/utils", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cmdlib = { version = "0.1.0", path = "../cmdlib" }
+context = { version = "0.1.0", path = "../server/context" }
+cross_repo_sync = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync" }
+derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-import_tools = { path = "../git/import_tools", version = "0.1.0" }
+import_tools = { version = "0.1.0", path = "../git/import_tools" }
 itertools = "0.8"
-live_commit_sync_config = { path = "../commit_rewriting/live_commit_sync_config", version = "0.1.0" }
-manifest = { path = "../manifest", version = "0.1.0" }
+live_commit_sync_config = { version = "0.1.0", path = "../commit_rewriting/live_commit_sync_config" }
+manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
-mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
-metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
-mononoke_hg_sync_job_helper_lib = { path = "../mononoke_hg_sync_job", version = "0.1.0" }
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
-movers = { path = "../commit_rewriting/movers", version = "0.1.0" }
-mutable_counters = { path = "../mutable_counters", version = "0.1.0" }
-pushrebase = { path = "../pushrebase", version = "0.1.0" }
+mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
+metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+mononoke_hg_sync_job_helper_lib = { version = "0.1.0", path = "../mononoke_hg_sync_job" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+movers = { version = "0.1.0", path = "../commit_rewriting/movers" }
+mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
+pushrebase = { version = "0.1.0", path = "../pushrebase" }
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
-synced_commit_mapping = { path = "../commit_rewriting/synced_commit_mapping", version = "0.1.0" }
+synced_commit_mapping = { version = "0.1.0", path = "../commit_rewriting/synced_commit_mapping" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-topo_sort = { path = "../common/topo_sort", version = "0.1.0" }
+topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
 
 [dev-dependencies]
 ascii = "1.0"
-blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
-blobrepo_override = { path = "../blobrepo/override", version = "0.1.0" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-derived_data = { path = "../derived_data", version = "0.1.0" }
-git_types = { path = "../git/git_types", version = "0.1.0" }
-mercurial_types-mocks = { path = "../mercurial/types/mocks", version = "0.1.0" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
-tests_utils = { path = "../tests/utils", version = "0.1.0" }
+blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
+blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+derived_data = { version = "0.1.0", path = "../derived_data" }
+git_types = { version = "0.1.0", path = "../git/git_types" }
+mercurial_types-mocks = { version = "0.1.0", path = "../mercurial/types/mocks" }
+mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
+tests_utils = { version = "0.1.0", path = "../tests/utils" }

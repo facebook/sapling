@@ -7,40 +7,40 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-blobrepo = { path = "../../blobrepo", version = "0.1.0" }
-blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
-blobstore = { path = "../../blobstore", version = "0.1.0" }
-bookmarks = { path = "../../bookmarks", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
+blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 clap = "2.33"
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cmdlib = { path = "../../cmdlib", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-cross_repo_sync = { path = "../cross_repo_sync", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cmdlib = { version = "0.1.0", path = "../../cmdlib" }
+context = { version = "0.1.0", path = "../../server/context" }
+cross_repo_sync = { version = "0.1.0", path = "../cross_repo_sync" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-live_commit_sync_config = { path = "../live_commit_sync_config", version = "0.1.0" }
-manifest = { path = "../../manifest", version = "0.1.0" }
-mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
-metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-movers = { path = "../movers", version = "0.1.0" }
-mutable_counters = { path = "../../mutable_counters", version = "0.1.0" }
-reachabilityindex = { path = "../../reachabilityindex", version = "0.1.0" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+live_commit_sync_config = { version = "0.1.0", path = "../live_commit_sync_config" }
+manifest = { version = "0.1.0", path = "../../manifest" }
+mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+movers = { version = "0.1.0", path = "../movers" }
+mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
+reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 ref-cast = "1.0.2"
-revset = { path = "../../revset", version = "0.1.0" }
-scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
-skiplist = { path = "../../reachabilityindex/skiplist", version = "0.1.0" }
+revset = { version = "0.1.0", path = "../../revset" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
+skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-synced_commit_mapping = { path = "../synced_commit_mapping", version = "0.1.0" }
+sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]
-cross_repo_sync_test_utils = { path = "../cross_repo_sync/test_utils", version = "0.1.0" }
+cross_repo_sync_test_utils = { version = "0.1.0", path = "../cross_repo_sync/test_utils" }
 maplit = "1.0"
-tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+tests_utils = { version = "0.1.0", path = "../../tests/utils" }

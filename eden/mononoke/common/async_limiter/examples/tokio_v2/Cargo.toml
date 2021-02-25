@@ -11,7 +11,7 @@ path = "main.rs"
 
 [dependencies]
 anyhow = "1.0"
-async_limiter = { path = "../..", version = "0.1.0" }
+async_limiter = { version = "0.1.0", path = "../.." }
 chrono = { version = "0.4", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 nonzero_ext = "0.2"

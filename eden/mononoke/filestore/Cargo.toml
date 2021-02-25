@@ -8,14 +8,14 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-blobstore = { path = "../blobstore", version = "0.1.0" }
+blobstore = { version = "0.1.0", path = "../blobstore" }
 bytes = { version = "0.5", features = ["serde"] }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-context = { path = "../server/context", version = "0.1.0" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { version = "0.1.0", path = "../server/context" }
 digest = "0.8"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 itertools = "0.8"
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 pin-project = "0.4"
 sha-1 = "0.8"
 sha2 = "0.8"
@@ -25,11 +25,11 @@ tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]
 assert_matches = "1.5"
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lazy_static = "1.0"
-memblob = { path = "../blobstore/memblob", version = "0.1.0" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
+memblob = { version = "0.1.0", path = "../blobstore/memblob" }
+mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 quickcheck = "0.9"
 rand = { version = "0.7", features = ["small_rng"] }

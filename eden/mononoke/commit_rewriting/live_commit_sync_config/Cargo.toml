@@ -15,19 +15,19 @@ path = "test/main.rs"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-commitsync = { path = "../../../../configerator/structs/scm/mononoke/repos/commitsync", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-iterhelpers = { path = "../../common/iterhelpers", version = "0.1.0" }
-metaconfig_parser = { path = "../../metaconfig/parser", version = "0.1.0" }
-metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-pushredirect_enable = { path = "../../../../configerator/structs/scm/mononoke/pushredirect", version = "0.1.0" }
-repos = { path = "../../../../configerator/structs/scm/mononoke/repos/repos", version = "0.1.0" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+commitsync = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/commitsync" }
+context = { version = "0.1.0", path = "../../server/context" }
+iterhelpers = { version = "0.1.0", path = "../../common/iterhelpers" }
+metaconfig_parser = { version = "0.1.0", path = "../../metaconfig/parser" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+pushredirect_enable = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/pushredirect" }
+repos = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/repos/repos" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 
 [dev-dependencies]
 ascii = "1.0"
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

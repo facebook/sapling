@@ -8,8 +8,8 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-blobstore = { path = "..", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
+blobstore = { version = "0.1.0", path = ".." }
+context = { version = "0.1.0", path = "../../server/context" }
 governor = "0.3.2"
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 nonzero_ext = "0.2"

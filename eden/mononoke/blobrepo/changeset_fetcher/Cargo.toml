@@ -9,6 +9,6 @@ license = "GPLv2+"
 anyhow = "1.0"
 async-trait = "0.1.29"
 auto_impl = "0.4"
-changesets = { path = "../../changesets", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+changesets = { version = "0.1.0", path = "../../changesets" }
+context = { version = "0.1.0", path = "../../server/context" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

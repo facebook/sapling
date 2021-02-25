@@ -9,21 +9,21 @@ license = "GPLv2+"
 anyhow = "1.0"
 async-stream = "0.3"
 async-trait = "0.1.29"
-blobstore = { path = "../blobstore", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-bounded_traversal = { path = "../common/bounded_traversal", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-context = { path = "../server/context", version = "0.1.0" }
+blobstore = { version = "0.1.0", path = "../blobstore" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { version = "0.1.0", path = "../server/context" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 maplit = "1.0"
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 nonzero_ext = "0.2"
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_derive = "1.0"
 
 [dev-dependencies]
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-memblob = { path = "../blobstore/memblob", version = "0.1.0" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+memblob = { version = "0.1.0", path = "../blobstore/memblob" }
 pretty_assertions = "0.6"
 serde_cbor = "0.11"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

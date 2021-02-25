@@ -8,39 +8,39 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-blobrepo = { path = "../blobrepo", version = "0.1.0" }
-blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
-blobrepo_utils = { path = "../blobrepo_utils", version = "0.1.0" }
-blobstore = { path = "../blobstore", version = "0.1.0" }
-bookmarks = { path = "../bookmarks", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-context = { path = "../server/context", version = "0.1.0" }
-derived_data = { path = "../derived_data", version = "0.1.0" }
-derived_data_filenodes = { path = "../derived_data/filenodes", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = "../blobrepo" }
+blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
+blobrepo_utils = { version = "0.1.0", path = "../blobrepo_utils" }
+blobstore = { version = "0.1.0", path = "../blobstore" }
+bookmarks = { version = "0.1.0", path = "../bookmarks" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { version = "0.1.0", path = "../server/context" }
+derived_data = { version = "0.1.0", path = "../derived_data" }
+derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-manifest = { path = "../manifest", version = "0.1.0" }
+manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
-mercurial_bundle_replay_data = { path = "../mercurial/bundle_replay_data", version = "0.1.0" }
-mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
-metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
-revset = { path = "../revset", version = "0.1.0" }
+mercurial_bundle_replay_data = { version = "0.1.0", path = "../mercurial/bundle_replay_data" }
+mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
+metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+revset = { version = "0.1.0", path = "../revset" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 thiserror = "1.0"
-tunables = { path = "../tunables", version = "0.1.0" }
+tunables = { version = "0.1.0", path = "../tunables" }
 
 [dev-dependencies]
-blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
-blobrepo_override = { path = "../blobrepo/override", version = "0.1.0" }
-dbbookmarks = { path = "../bookmarks/dbbookmarks", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-filestore = { path = "../filestore", version = "0.1.0" }
-fixtures = { path = "../tests/fixtures", version = "0.1.0" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
-mutable_counters = { path = "../mutable_counters", version = "0.1.0" }
+blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
+blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
+dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+filestore = { version = "0.1.0", path = "../filestore" }
+fixtures = { version = "0.1.0", path = "../tests/fixtures" }
+mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
+mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 rand = { version = "0.7", features = ["small_rng"] }
-sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
-tests_utils = { path = "../tests/utils", version = "0.1.0" }
+sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
+tests_utils = { version = "0.1.0", path = "../tests/utils" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

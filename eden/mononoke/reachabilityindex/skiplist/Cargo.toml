@@ -8,33 +8,33 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-blobstore = { path = "../../blobstore", version = "0.1.0" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
 bytes = { version = "0.5", features = ["serde"] }
-changeset_fetcher = { path = "../../blobrepo/changeset_fetcher", version = "0.1.0" }
+changeset_fetcher = { version = "0.1.0", path = "../../blobrepo/changeset_fetcher" }
 chashmap = "2.2"
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-common = { path = "../common", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+common = { version = "0.1.0", path = "../common" }
+context = { version = "0.1.0", path = "../../server/context" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 maplit = "1.0"
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-reachabilityindex = { path = "..", version = "0.1.0" }
-skiplist_thrift = { path = "../if", version = "0.1.0" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+reachabilityindex = { version = "0.1.0", path = ".." }
+skiplist_thrift = { version = "0.1.0", path = "../if" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tunables = { path = "../../tunables", version = "0.1.0" }
+tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-blobrepo = { path = "../../blobrepo", version = "0.1.0" }
-blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
-bookmarks = { path = "../../bookmarks", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
+async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 futures-old = { package = "futures", version = "0.1.30" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-revset = { path = "../../revset", version = "0.1.0" }
-test-helpers = { path = "../test-helpers", version = "0.1.0" }
-tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+revset = { version = "0.1.0", path = "../../revset" }
+test-helpers = { version = "0.1.0", path = "../test-helpers" }
+tests_utils = { version = "0.1.0", path = "../../tests/utils" }

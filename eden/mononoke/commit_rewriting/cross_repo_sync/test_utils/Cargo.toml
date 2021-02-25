@@ -11,22 +11,22 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0"
 ascii = "1.0"
-blobrepo = { path = "../../../blobrepo", version = "0.1.0" }
-blobrepo_factory = { path = "../../../blobrepo/factory", version = "0.1.0" }
-blobrepo_hg = { path = "../../../blobrepo/blobrepo_hg", version = "0.1.0" }
-blobstore = { path = "../../../blobstore", version = "0.1.0" }
-bookmarks = { path = "../../../bookmarks", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-context = { path = "../../../server/context", version = "0.1.0" }
-cross_repo_sync = { path = "..", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = "../../../blobrepo" }
+blobrepo_factory = { version = "0.1.0", path = "../../../blobrepo/factory" }
+blobrepo_hg = { version = "0.1.0", path = "../../../blobrepo/blobrepo_hg" }
+blobstore = { version = "0.1.0", path = "../../../blobstore" }
+bookmarks = { version = "0.1.0", path = "../../../bookmarks" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { version = "0.1.0", path = "../../../server/context" }
+cross_repo_sync = { version = "0.1.0", path = ".." }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-live_commit_sync_config = { path = "../../live_commit_sync_config", version = "0.1.0" }
+live_commit_sync_config = { version = "0.1.0", path = "../../live_commit_sync_config" }
 maplit = "1.0"
-megarepolib = { path = "../../megarepo", version = "0.1.0" }
-metaconfig_types = { path = "../../../metaconfig/types", version = "0.1.0" }
-mononoke_types = { path = "../../../mononoke_types", version = "0.1.0" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql_construct = { path = "../../../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../../../common/rust/sql_ext", version = "0.1.0" }
-synced_commit_mapping = { path = "../../synced_commit_mapping", version = "0.1.0" }
-tests_utils = { path = "../../../tests/utils", version = "0.1.0" }
+megarepolib = { version = "0.1.0", path = "../../megarepo" }
+metaconfig_types = { version = "0.1.0", path = "../../../metaconfig/types" }
+mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql_construct = { version = "0.1.0", path = "../../../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../../../common/rust/sql_ext" }
+synced_commit_mapping = { version = "0.1.0", path = "../../synced_commit_mapping" }
+tests_utils = { version = "0.1.0", path = "../../../tests/utils" }

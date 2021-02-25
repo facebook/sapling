@@ -18,24 +18,24 @@ abomonation_derive = "0.5"
 anyhow = "1.0"
 async-trait = "0.1.29"
 auto_impl = "0.4"
-bonsai_globalrev_mapping_thrift = { path = "if", version = "0.1.0" }
+bonsai_globalrev_mapping_thrift = { version = "0.1.0", path = "if" }
 bytes = { version = "0.5", features = ["serde"] }
-cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-caching_ext = { path = "../common/rust/caching_ext", version = "0.1.0" }
-context = { path = "../server/context", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
+cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
+context = { version = "0.1.0", path = "../server/context" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
 thiserror = "1.0"
 
 [dev-dependencies]
 assert_matches = "1.5"
-mercurial_types-mocks = { path = "../mercurial/types/mocks", version = "0.1.0" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
+mercurial_types-mocks = { version = "0.1.0", path = "../mercurial/types/mocks" }
+mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

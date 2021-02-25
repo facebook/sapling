@@ -7,26 +7,26 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-blobstore = { path = "..", version = "0.1.0" }
-blobstore_sync_queue = { path = "../../blobstore_sync_queue", version = "0.1.0" }
-cacheblob = { path = "../cacheblob", version = "0.1.0" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-chaosblob = { path = "../chaosblob", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fileblob = { path = "../fileblob", version = "0.1.0" }
+blobstore = { version = "0.1.0", path = ".." }
+blobstore_sync_queue = { version = "0.1.0", path = "../../blobstore_sync_queue" }
+cacheblob = { version = "0.1.0", path = "../cacheblob" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+chaosblob = { version = "0.1.0", path = "../chaosblob" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fileblob = { version = "0.1.0", path = "../fileblob" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-logblob = { path = "../logblob", version = "0.1.0" }
-metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
-multiplexedblob = { path = "../multiplexedblob", version = "0.1.0" }
-packblob = { path = "../packblob", version = "0.1.0" }
-prefixblob = { path = "../prefixblob", version = "0.1.0" }
-readonlyblob = { path = "../readonlyblob", version = "0.1.0" }
-scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+logblob = { version = "0.1.0", path = "../logblob" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+multiplexedblob = { version = "0.1.0", path = "../multiplexedblob" }
+packblob = { version = "0.1.0", path = "../packblob" }
+prefixblob = { version = "0.1.0", path = "../prefixblob" }
+readonlyblob = { version = "0.1.0", path = "../readonlyblob" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
-sqlblob = { path = "../sqlblob", version = "0.1.0" }
-throttledblob = { path = "../throttledblob", version = "0.1.0" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
+sqlblob = { version = "0.1.0", path = "../sqlblob" }
+throttledblob = { version = "0.1.0", path = "../throttledblob" }

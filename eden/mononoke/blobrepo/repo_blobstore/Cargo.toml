@@ -8,9 +8,9 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-blobstore = { path = "../../blobstore", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-prefixblob = { path = "../../blobstore/prefixblob", version = "0.1.0" }
-redactedblobstore = { path = "../../blobstore/redactedblobstore", version = "0.1.0" }
-scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
+context = { version = "0.1.0", path = "../../server/context" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+prefixblob = { version = "0.1.0", path = "../../blobstore/prefixblob" }
+redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }

@@ -11,38 +11,38 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-blame = { path = "../blame", version = "0.1.0" }
-blobrepo = { path = "../../blobrepo", version = "0.1.0" }
-blobrepo_override = { path = "../../blobrepo/override", version = "0.1.0" }
-blobstore = { path = "../../blobstore", version = "0.1.0" }
-bounded_traversal = { path = "../../common/bounded_traversal", version = "0.1.0" }
-cacheblob = { path = "../../blobstore/cacheblob", version = "0.1.0" }
-changeset_info = { path = "../changeset_info", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-deleted_files_manifest = { path = "../deleted_files_manifest", version = "0.1.0" }
-derived_data = { path = "..", version = "0.1.0" }
-derived_data_filenodes = { path = "../filenodes", version = "0.1.0" }
-fastlog = { path = "../fastlog", version = "0.1.0" }
-fsnodes = { path = "../fsnodes", version = "0.1.0" }
+blame = { version = "0.1.0", path = "../blame" }
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
+bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }
+cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
+changeset_info = { version = "0.1.0", path = "../changeset_info" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { version = "0.1.0", path = "../../server/context" }
+deleted_files_manifest = { version = "0.1.0", path = "../deleted_files_manifest" }
+derived_data = { version = "0.1.0", path = ".." }
+derived_data_filenodes = { version = "0.1.0", path = "../filenodes" }
+fastlog = { version = "0.1.0", path = "../fastlog" }
+fsnodes = { version = "0.1.0", path = "../fsnodes" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 lazy_static = "1.0"
-lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-mercurial_derived_data = { path = "../mercurial_derived_data", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
-skeleton_manifest = { path = "../skeleton_manifest", version = "0.1.0" }
+lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+mercurial_derived_data = { version = "0.1.0", path = "../mercurial_derived_data" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
+skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-topo_sort = { path = "../../common/topo_sort", version = "0.1.0" }
-tunables = { path = "../../tunables", version = "0.1.0" }
-unodes = { path = "../unodes", version = "0.1.0" }
+topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
+tunables = { version = "0.1.0", path = "../../tunables" }
+unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]
-blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
-bookmarks = { path = "../../bookmarks", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
+blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 maplit = "1.0"
-metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
-tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

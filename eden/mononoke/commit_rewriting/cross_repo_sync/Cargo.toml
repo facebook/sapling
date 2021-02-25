@@ -15,50 +15,50 @@ path = "test/main.rs"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-blobrepo = { path = "../../blobrepo", version = "0.1.0" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
-blobstore = { path = "../../blobstore", version = "0.1.0" }
-blobsync = { path = "../../blobrepo/blobsync", version = "0.1.0" }
-bookmark_renaming = { path = "../bookmark_renaming", version = "0.1.0" }
-bookmarks = { path = "../../bookmarks", version = "0.1.0" }
-changeset_info = { path = "../../derived_data/changeset_info", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-derived_data = { path = "../../derived_data", version = "0.1.0" }
-fsnodes = { path = "../../derived_data/fsnodes", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
+blobsync = { version = "0.1.0", path = "../../blobrepo/blobsync" }
+bookmark_renaming = { version = "0.1.0", path = "../bookmark_renaming" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { version = "0.1.0", path = "../../server/context" }
+derived_data = { version = "0.1.0", path = "../../derived_data" }
+fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-live_commit_sync_config = { path = "../live_commit_sync_config", version = "0.1.0" }
-manifest = { path = "../../manifest", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+live_commit_sync_config = { version = "0.1.0", path = "../live_commit_sync_config" }
+manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
-mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
-metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-movers = { path = "../movers", version = "0.1.0" }
-pushrebase = { path = "../../pushrebase", version = "0.1.0" }
-reachabilityindex = { path = "../../reachabilityindex", version = "0.1.0" }
+mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+movers = { version = "0.1.0", path = "../movers" }
+pushrebase = { version = "0.1.0", path = "../../pushrebase" }
+reachabilityindex = { version = "0.1.0", path = "../../reachabilityindex" }
 ref-cast = "1.0.2"
-scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-synced_commit_mapping = { path = "../synced_commit_mapping", version = "0.1.0" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
 thiserror = "1.0"
-topo_sort = { path = "../../common/topo_sort", version = "0.1.0" }
-tunables = { path = "../../tunables", version = "0.1.0" }
+topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
+tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
 ascii = "1.0"
 assert_matches = "1.5"
-blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
+blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 bytes = { version = "0.5", features = ["serde"] }
-cross_repo_sync_test_utils = { path = "test_utils", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fixtures = { path = "../../tests/fixtures", version = "0.1.0" }
-mononoke_types-mocks = { path = "../../mononoke_types/mocks", version = "0.1.0" }
-revset = { path = "../../revset", version = "0.1.0" }
-skiplist = { path = "../../reachabilityindex/skiplist", version = "0.1.0" }
-sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
-tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+cross_repo_sync_test_utils = { version = "0.1.0", path = "test_utils" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
+mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
+revset = { version = "0.1.0", path = "../../revset" }
+skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
+sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
+tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

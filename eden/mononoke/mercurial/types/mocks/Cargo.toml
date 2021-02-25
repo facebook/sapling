@@ -15,12 +15,12 @@ path = "../tests/src/lib.rs"
 [dependencies]
 byteorder = "1.3"
 futures-old = { package = "futures", version = "0.1.30" }
-mercurial_types = { path = "..", version = "0.1.0" }
-mononoke_types-mocks = { path = "../../../mononoke_types/mocks", version = "0.1.0" }
+mercurial_types = { version = "0.1.0", path = ".." }
+mononoke_types-mocks = { version = "0.1.0", path = "../../../mononoke_types/mocks" }
 thiserror = "1.0"
 
 [dev-dependencies]
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
-mononoke_types = { path = "../../../mononoke_types", version = "0.1.0" }
+mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 quickcheck = "0.9"

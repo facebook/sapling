@@ -13,7 +13,7 @@ pin-project = "0.4"
 ratelimit_meter = "5"
 thiserror = "1.0"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio_shim = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+tokio_shim = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 
 [dev-dependencies]
 nonzero_ext = "0.2"

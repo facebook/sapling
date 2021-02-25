@@ -10,23 +10,23 @@ path = "src/cache_warmup.rs"
 
 [dependencies]
 anyhow = "1.0"
-blobrepo = { path = "../blobrepo", version = "0.1.0" }
-blobrepo_hg = { path = "../blobrepo/blobrepo_hg", version = "0.1.0" }
-blobstore = { path = "../blobstore", version = "0.1.0" }
-bookmarks = { path = "../bookmarks", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-context = { path = "../server/context", version = "0.1.0" }
-derived_data = { path = "../derived_data", version = "0.1.0" }
-derived_data_filenodes = { path = "../derived_data/filenodes", version = "0.1.0" }
-filenodes = { path = "../filenodes", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = "../blobrepo" }
+blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
+blobstore = { version = "0.1.0", path = "../blobstore" }
+bookmarks = { version = "0.1.0", path = "../bookmarks" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { version = "0.1.0", path = "../server/context" }
+derived_data = { version = "0.1.0", path = "../derived_data" }
+derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
+filenodes = { version = "0.1.0", path = "../filenodes" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-manifest = { path = "../manifest", version = "0.1.0" }
-mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
-metaconfig_types = { path = "../metaconfig/types", version = "0.1.0" }
-microwave = { path = "../microwave", version = "0.1.0" }
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
-revset = { path = "../revset", version = "0.1.0" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+manifest = { version = "0.1.0", path = "../manifest" }
+mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
+metaconfig_types = { version = "0.1.0", path = "../metaconfig/types" }
+microwave = { version = "0.1.0", path = "../microwave" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+revset = { version = "0.1.0", path = "../revset" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

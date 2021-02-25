@@ -14,22 +14,22 @@ path = "tests/main.rs"
 
 [dependencies]
 anyhow = "1.0"
-bookmarks = { path = "..", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
+bookmarks = { version = "0.1.0", path = ".." }
+context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 
 [dev-dependencies]
 ascii = "1.0"
-ascii_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+ascii_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures-old = { package = "futures", version = "0.1.30" }
 maplit = "1.0"
-mononoke_types-mocks = { path = "../../mononoke_types/mocks", version = "0.1.0" }
+mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }
 quickcheck = "0.9"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

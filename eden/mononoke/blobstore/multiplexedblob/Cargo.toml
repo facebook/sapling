@@ -8,33 +8,33 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-blobstore = { path = "..", version = "0.1.0" }
-blobstore_stats = { path = "../blobstore_stats", version = "0.1.0" }
-blobstore_sync_queue = { path = "../../blobstore_sync_queue", version = "0.1.0" }
+blobstore = { version = "0.1.0", path = ".." }
+blobstore_stats = { version = "0.1.0", path = "../blobstore_stats" }
+blobstore_sync_queue = { version = "0.1.0", path = "../../blobstore_sync_queue" }
 chrono = { version = "0.4", features = ["serde"] }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { version = "0.1.0", path = "../../server/context" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 itertools = "0.8"
-metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 once_cell = "1.4"
-scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 strum = "0.19"
 strum_macros = "0.19"
 thiserror = "1.0"
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 twox-hash = "1.5"
 
 [dev-dependencies]
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 bytes = { version = "0.5", features = ["serde"] }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-memblob = { path = "../memblob", version = "0.1.0" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+memblob = { version = "0.1.0", path = "../memblob" }
 nonzero_ext = "0.2"
-readonlyblob = { path = "../readonlyblob", version = "0.1.0" }
-sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
+readonlyblob = { version = "0.1.0", path = "../readonlyblob" }
+sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }

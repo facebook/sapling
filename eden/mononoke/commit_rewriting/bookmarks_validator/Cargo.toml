@@ -7,24 +7,24 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-bookmarks = { path = "../../bookmarks", version = "0.1.0" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cmdlib = { path = "../../cmdlib", version = "0.1.0" }
-cmdlib_x_repo = { path = "../../cmdlib/x_repo", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-cross_repo_sync = { path = "../cross_repo_sync", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cmdlib = { version = "0.1.0", path = "../../cmdlib" }
+cmdlib_x_repo = { version = "0.1.0", path = "../../cmdlib/x_repo" }
+context = { version = "0.1.0", path = "../../server/context" }
+cross_repo_sync = { version = "0.1.0", path = "../cross_repo_sync" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
-live_commit_sync_config = { path = "../live_commit_sync_config", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-pushredirect_enable = { path = "../../../../configerator/structs/scm/mononoke/pushredirect", version = "0.1.0" }
-scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
+live_commit_sync_config = { version = "0.1.0", path = "../live_commit_sync_config" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+pushredirect_enable = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/pushredirect" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-synced_commit_mapping = { path = "../synced_commit_mapping", version = "0.1.0" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+synced_commit_mapping = { version = "0.1.0", path = "../synced_commit_mapping" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]
-cross_repo_sync_test_utils = { path = "../cross_repo_sync/test_utils", version = "0.1.0" }
-tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+cross_repo_sync_test_utils = { version = "0.1.0", path = "../cross_repo_sync/test_utils" }
+tests_utils = { version = "0.1.0", path = "../../tests/utils" }

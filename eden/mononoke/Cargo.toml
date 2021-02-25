@@ -97,303 +97,120 @@ path = "cmds/upload_globalrevs.rs"
 anyhow = "1.0"
 ascii = "1.0"
 async-trait = "0.1.29"
-backsyncer = { path = "commit_rewriting/backsyncer", version = "0.1.0" }
-blame = { path = "derived_data/blame", version = "0.1.0" }
-blobimport_lib = { path = "blobimport_lib", version = "0.1.0" }
-blobrepo = { path = "blobrepo", version = "0.1.0" }
-blobrepo_factory = { path = "blobrepo/factory", version = "0.1.0" }
-blobrepo_hg = { path = "blobrepo/blobrepo_hg", version = "0.1.0" }
-blobrepo_override = { path = "blobrepo/override", version = "0.1.0" }
-blobrepo_utils = { path = "blobrepo_utils", version = "0.1.0" }
-blobstore = { path = "blobstore", version = "0.1.0" }
-blobstore_factory = { path = "blobstore/factory", version = "0.1.0" }
-blobstore_sync_queue = { path = "blobstore_sync_queue", version = "0.1.0" }
-bonsai_globalrev_mapping = { path = "bonsai_globalrev_mapping", version = "0.1.0" }
-bookmark_renaming = { path = "commit_rewriting/bookmark_renaming", version = "0.1.0" }
-bookmarks = { path = "bookmarks", version = "0.1.0" }
-bookmarks_movement = { path = "bookmarks/bookmarks_movement", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-bounded_traversal = { path = "common/bounded_traversal", version = "0.1.0" }
-bulkops = { path = "bulkops", version = "0.1.0" }
+backsyncer = { version = "0.1.0", path = "commit_rewriting/backsyncer" }
+blame = { version = "0.1.0", path = "derived_data/blame" }
+blobimport_lib = { version = "0.1.0", path = "blobimport_lib" }
+blobrepo = { version = "0.1.0", path = "blobrepo" }
+blobrepo_factory = { version = "0.1.0", path = "blobrepo/factory" }
+blobrepo_hg = { version = "0.1.0", path = "blobrepo/blobrepo_hg" }
+blobrepo_override = { version = "0.1.0", path = "blobrepo/override" }
+blobrepo_utils = { version = "0.1.0", path = "blobrepo_utils" }
+blobstore = { version = "0.1.0", path = "blobstore" }
+blobstore_factory = { version = "0.1.0", path = "blobstore/factory" }
+blobstore_sync_queue = { version = "0.1.0", path = "blobstore_sync_queue" }
+bonsai_globalrev_mapping = { version = "0.1.0", path = "bonsai_globalrev_mapping" }
+bookmark_renaming = { version = "0.1.0", path = "commit_rewriting/bookmark_renaming" }
+bookmarks = { version = "0.1.0", path = "bookmarks" }
+bookmarks_movement = { version = "0.1.0", path = "bookmarks/bookmarks_movement" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+bounded_traversal = { version = "0.1.0", path = "common/bounded_traversal" }
+bulkops = { version = "0.1.0", path = "bulkops" }
 bytes = { version = "0.5", features = ["serde"] }
 bytesize = "1.0"
-cacheblob = { path = "blobstore/cacheblob", version = "0.1.0" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-changeset_fetcher = { path = "blobrepo/changeset_fetcher", version = "0.1.0" }
-changesets = { path = "changesets", version = "0.1.0" }
+cacheblob = { version = "0.1.0", path = "blobstore/cacheblob" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+changeset_fetcher = { version = "0.1.0", path = "blobrepo/changeset_fetcher" }
+changesets = { version = "0.1.0", path = "changesets" }
 chrono = { version = "0.4", features = ["serde"] }
 clap = "2.33"
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cmdlib = { path = "cmdlib", version = "0.1.0" }
-context = { path = "server/context", version = "0.1.0" }
-copy_utils = { path = "common/copy_utils", version = "0.1.0" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cmdlib = { version = "0.1.0", path = "cmdlib" }
+context = { version = "0.1.0", path = "server/context" }
+copy_utils = { version = "0.1.0", path = "common/copy_utils" }
 criterion = "=0.3.1"
-cross_repo_sync = { path = "commit_rewriting/cross_repo_sync", version = "0.1.0" }
-dbbookmarks = { path = "bookmarks/dbbookmarks", version = "0.1.0" }
-deleted_files_manifest = { path = "derived_data/deleted_files_manifest", version = "0.1.0" }
-derived_data = { path = "derived_data", version = "0.1.0" }
-derived_data_filenodes = { path = "derived_data/filenodes", version = "0.1.0" }
-derived_data_utils = { path = "derived_data/utils", version = "0.1.0" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fastlog = { path = "derived_data/fastlog", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master", version = "0.0.1+unstable" }
-filenodes = { path = "filenodes", version = "0.1.0" }
-filestore = { path = "filestore", version = "0.1.0" }
-fsnodes = { path = "derived_data/fsnodes", version = "0.1.0" }
+cross_repo_sync = { version = "0.1.0", path = "commit_rewriting/cross_repo_sync" }
+dbbookmarks = { version = "0.1.0", path = "bookmarks/dbbookmarks" }
+deleted_files_manifest = { version = "0.1.0", path = "derived_data/deleted_files_manifest" }
+derived_data = { version = "0.1.0", path = "derived_data" }
+derived_data_filenodes = { version = "0.1.0", path = "derived_data/filenodes" }
+derived_data_utils = { version = "0.1.0", path = "derived_data/utils" }
+failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fastlog = { version = "0.1.0", path = "derived_data/fastlog" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+filenodes = { version = "0.1.0", path = "filenodes" }
+filestore = { version = "0.1.0", path = "filestore" }
+fsnodes = { version = "0.1.0", path = "derived_data/fsnodes" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1.30" }
 futures-util = "0.3.7"
-futures_03_ext = { package = "futures_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-git_types = { path = "git/git_types", version = "0.1.0" }
+futures_03_ext = { package = "futures_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+git_types = { version = "0.1.0", path = "git/git_types" }
 humantime = "1.3"
 itertools = "0.8"
 lazy_static = "1.0"
-lfs_import_lib = { path = "lfs_import_lib", version = "0.1.0" }
-live_commit_sync_config = { path = "commit_rewriting/live_commit_sync_config", version = "0.1.0" }
-lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-manifest = { path = "manifest", version = "0.1.0" }
+lfs_import_lib = { version = "0.1.0", path = "lfs_import_lib" }
+live_commit_sync_config = { version = "0.1.0", path = "commit_rewriting/live_commit_sync_config" }
+lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+manifest = { version = "0.1.0", path = "manifest" }
 maplit = "1.0"
-memblob = { path = "blobstore/memblob", version = "0.1.0" }
-mercurial_bundle_replay_data = { path = "mercurial/bundle_replay_data", version = "0.1.0" }
-mercurial_derived_data = { path = "derived_data/mercurial_derived_data", version = "0.1.0" }
-mercurial_revlog = { path = "mercurial/revlog", version = "0.1.0" }
-mercurial_types = { path = "mercurial/types", version = "0.1.0" }
-metaconfig_types = { path = "metaconfig/types", version = "0.1.0" }
-mononoke_hg_sync_job_helper_lib = { path = "mononoke_hg_sync_job", version = "0.1.0" }
-mononoke_types = { path = "mononoke_types", version = "0.1.0" }
-mutable_counters = { path = "mutable_counters", version = "0.1.0" }
-prefixblob = { path = "blobstore/prefixblob", version = "0.1.0" }
-pushrebase = { path = "pushrebase", version = "0.1.0" }
+memblob = { version = "0.1.0", path = "blobstore/memblob" }
+mercurial_bundle_replay_data = { version = "0.1.0", path = "mercurial/bundle_replay_data" }
+mercurial_derived_data = { version = "0.1.0", path = "derived_data/mercurial_derived_data" }
+mercurial_revlog = { version = "0.1.0", path = "mercurial/revlog" }
+mercurial_types = { version = "0.1.0", path = "mercurial/types" }
+metaconfig_types = { version = "0.1.0", path = "metaconfig/types" }
+mononoke_hg_sync_job_helper_lib = { version = "0.1.0", path = "mononoke_hg_sync_job" }
+mononoke_types = { version = "0.1.0", path = "mononoke_types" }
+mutable_counters = { version = "0.1.0", path = "mutable_counters" }
+prefixblob = { version = "0.1.0", path = "blobstore/prefixblob" }
+pushrebase = { version = "0.1.0", path = "pushrebase" }
 rand = { version = "0.7", features = ["small_rng"] }
-redactedblobstore = { path = "blobstore/redactedblobstore", version = "0.1.0" }
+redactedblobstore = { version = "0.1.0", path = "blobstore/redactedblobstore" }
 regex = "1.4.2"
-revset = { path = "revset", version = "0.1.0" }
-scuba_ext = { path = "common/scuba_ext", version = "0.1.0" }
-segmented_changelog = { path = "segmented_changelog", version = "0.1.0" }
+revset = { version = "0.1.0", path = "revset" }
+scuba_ext = { version = "0.1.0", path = "common/scuba_ext" }
+segmented_changelog = { version = "0.1.0", path = "segmented_changelog" }
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_derive = "1.0"
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 sha2 = "0.8"
-skeleton_manifest = { path = "derived_data/skeleton_manifest", version = "0.1.0" }
-skiplist = { path = "reachabilityindex/skiplist", version = "0.1.0" }
+skeleton_manifest = { version = "0.1.0", path = "derived_data/skeleton_manifest" }
+skiplist = { version = "0.1.0", path = "reachabilityindex/skiplist" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sql_construct = { path = "common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "common/rust/sql_ext", version = "0.1.0" }
-sqlblob = { path = "blobstore/sqlblob", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-streaming_clone = { path = "repo_client/streaming_clone", version = "0.1.0" }
-synced_commit_mapping = { path = "commit_rewriting/synced_commit_mapping", version = "0.1.0" }
+sql_construct = { version = "0.1.0", path = "common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "common/rust/sql_ext" }
+sqlblob = { version = "0.1.0", path = "blobstore/sqlblob" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+streaming_clone = { version = "0.1.0", path = "repo_client/streaming_clone" }
+synced_commit_mapping = { version = "0.1.0", path = "commit_rewriting/synced_commit_mapping" }
 thiserror = "1.0"
-throttledblob = { path = "blobstore/throttledblob", version = "0.1.0" }
-time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+throttledblob = { version = "0.1.0", path = "blobstore/throttledblob" }
+time_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 tokio-util = { version = "0.3", features = ["codec", "udp"] }
-tokio_shim = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+tokio_shim = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 toml = "=0.5.7"
-unodes = { path = "derived_data/unodes", version = "0.1.0" }
-xdiff = { path = "../scm/lib/xdiff", version = "0.1.0" }
+unodes = { version = "0.1.0", path = "derived_data/unodes" }
+xdiff = { version = "0.1.0", path = "../scm/lib/xdiff" }
 
 [dev-dependencies]
-fixtures = { path = "tests/fixtures", version = "0.1.0" }
-tests_utils = { path = "tests/utils", version = "0.1.0" }
-
-[workspace]
-
-members = [
-    ".",
-    "alpn",
-    "benchmark",
-    "blobimport_lib",
-    "blobimport_lib/consts",
-    "blobrepo",
-    "blobrepo/blobrepo_hg",
-    "blobrepo/blobsync",
-    "blobrepo/changeset_fetcher",
-    "blobrepo/common",
-    "blobrepo/errors",
-    "blobrepo/factory",
-    "blobrepo/override",
-    "blobrepo/repo_blobstore",
-    "blobrepo_utils",
-    "blobstore",
-    "blobstore/blobstore_stats",
-    "blobstore/cacheblob",
-    "blobstore/chaosblob",
-    "blobstore/delayblob",
-    "blobstore/factory",
-    "blobstore/fileblob",
-    "blobstore/if",
-    "blobstore/logblob",
-    "blobstore/memblob",
-    "blobstore/multiplexedblob",
-    "blobstore/packblob",
-    "blobstore/packblob/if",
-    "blobstore/prefixblob",
-    "blobstore/readonlyblob",
-    "blobstore/redactedblobstore",
-    "blobstore/samplingblob",
-    "blobstore/sqlblob",
-    "blobstore/throttledblob",
-    "blobstore/virtually_sharded_blobstore",
-    "blobstore_sync_queue",
-    "bonsai_git_mapping",
-    "bonsai_git_mapping/git_mapping_pushrebase_hook",
-    "bonsai_globalrev_mapping",
-    "bonsai_globalrev_mapping/globalrev_pushrebase_hook",
-    "bonsai_globalrev_mapping/if",
-    "bonsai_hg_mapping",
-    "bonsai_hg_mapping/if",
-    "bonsai_svnrev_mapping",
-    "bonsai_svnrev_mapping/if",
-    "bookmarks",
-    "bookmarks/bookmarks_movement",
-    "bookmarks/bookmarks_types",
-    "bookmarks/dbbookmarks",
-    "bookmarks/warm_bookmarks_cache",
-    "bulkops",
-    "bulkops/bench",
-    "cache_warmup",
-    "changesets",
-    "changesets/if",
-    "cmdlib",
-    "cmdlib/x_repo",
-    "commit_rewriting/backsyncer",
-    "commit_rewriting/bookmark_renaming",
-    "commit_rewriting/bookmarks_validator",
-    "commit_rewriting/commit_validator",
-    "commit_rewriting/cross_repo_sync",
-    "commit_rewriting/cross_repo_sync/test_utils",
-    "commit_rewriting/live_commit_sync_config",
-    "commit_rewriting/megarepo",
-    "commit_rewriting/mononoke_x_repo_sync_job",
-    "commit_rewriting/movers",
-    "commit_rewriting/synced_commit_mapping",
-    "common/allocation_tracing",
-    "common/async_limiter",
-    "common/async_limiter/examples/tokio_v2",
-    "common/bounded_traversal",
-    "common/copy_utils",
-    "common/dedupmap",
-    "common/futures_watchdog",
-    "common/iterhelpers",
-    "common/rust/caching_ext",
-    "common/rust/slog_ext",
-    "common/rust/sql_ext",
-    "common/scribe_ext",
-    "common/scuba_ext",
-    "common/sql_construct",
-    "common/topo_sort",
-    "common/type_map",
-    "common/uniqueheap",
-    "derived_data",
-    "derived_data/blame",
-    "derived_data/changeset_info",
-    "derived_data/changeset_info/if",
-    "derived_data/deleted_files_manifest",
-    "derived_data/fastlog",
-    "derived_data/filenodes",
-    "derived_data/fsnodes",
-    "derived_data/mercurial_derived_data",
-    "derived_data/skeleton_manifest",
-    "derived_data/test_utils",
-    "derived_data/unodes",
-    "derived_data/utils",
-    "edenapi_server",
-    "edenapi_service",
-    "fastreplay",
-    "filenodes",
-    "filenodes/if",
-    "filestore",
-    "git/git-pool",
-    "git/git_types",
-    "git/git_types/if",
-    "git/gitimport",
-    "git/import_tools",
-    "gotham_ext",
-    "hgcli",
-    "hgproto",
-    "hook_tailer",
-    "hooks",
-    "hooks/content-stores",
-    "hooks/hook_manager_factory",
-    "lfs_import_lib",
-    "lfs_protocol",
-    "lfs_server",
-    "load_limiter",
-    "manifest",
-    "mercurial/bundle_replay_data",
-    "mercurial/bundles",
-    "mercurial/mutation",
-    "mercurial/revlog",
-    "mercurial/types",
-    "mercurial/types/if",
-    "mercurial/types/mocks",
-    "metaconfig/parser",
-    "metaconfig/types",
-    "microwave",
-    "microwave/builder",
-    "microwave/if",
-    "mononoke_api",
-    "mononoke_api_hg",
-    "mononoke_hg_sync_job",
-    "mononoke_types",
-    "mononoke_types/if",
-    "mononoke_types/mocks",
-    "mutable_counters",
-    "newfilenodes",
-    "observability",
-    "permission_checker",
-    "phases",
-    "pushrebase",
-    "reachabilityindex",
-    "reachabilityindex/common",
-    "reachabilityindex/if",
-    "reachabilityindex/skiplist",
-    "reachabilityindex/test-helpers",
-    "regenerate_hg_filenodes",
-    "repo_client",
-    "repo_client/getbundle_response",
-    "repo_client/mononoke_repo",
-    "repo_client/obsolete",
-    "repo_client/remotefilelog",
-    "repo_client/repo_read_write_status",
-    "repo_client/reverse_filler_queue",
-    "repo_client/scribe_commit_queue",
-    "repo_client/streaming_clone",
-    "repo_client/unbundle",
-    "repo_client/wirepack",
-    "repo_import",
-    "revset",
-    "revset/revset-test-helper",
-    "segmented_changelog",
-    "segmented_changelog/bench/concurrent_idmap",
-    "server",
-    "server/context",
-    "server/monitoring",
-    "server/repo_listener",
-    "server/session_id",
-    "sshrelay",
-    "tests/fixtures",
-    "tests/utils",
-    "tests/write_stub_log_entry",
-    "time_window_counter",
-    "tunables",
-    "tunables/tunables-derive",
-    "unbundle_replay",
-    "walker",
-]
+fixtures = { version = "0.1.0", path = "tests/fixtures" }
+tests_utils = { version = "0.1.0", path = "tests/utils" }
 
 [patch.crates-io]
-addr2line = { git ="https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }
+addr2line = { git = "https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b5b252a18e628fba03885f7d21844b3c" }
 bytecount = { git = "https://github.com/llogiq/bytecount", rev = "469eaf8395c99397cd64d059737a9054aa014088" }
 chashmap = { git = "https://gitlab.redox-os.org/ahornby/chashmap", rev = "901ace2ca3cdbc2095adb1af111d211e254e2aae" }
 const-random = { git = "https://github.com/fbsource/const-random", rev = "374c5b46427fe2ffbf6acbd9c1687e0f1a809f95" }
-gotham = { git = "https://github.com/krallin/gotham.git", rev = "59f7f3fe8958837cc4343c67ee5c2c1f11ce65ab"}
-gotham_derive = { git = "https://github.com/krallin/gotham.git", rev = "59f7f3fe8958837cc4343c67ee5c2c1f11ce65ab"}
+cursive_buffered_backend = { git = "https://github.com/chengxiong-ruan/cursive_buffered_backend", branch = "upgrade_cursive_core_from_v0.4.1" }
+enumset = { git = "https://github.com/danobi/enumset", rev = "4c01c583c27a725948fededbfb3461c572a669a4" }
+gotham = { git = "https://github.com/krallin/gotham.git", rev = "da0b85605f5bf84988309446ceb87a4b87870334" }
+gotham_derive = { git = "https://github.com/krallin/gotham.git", rev = "da0b85605f5bf84988309446ceb87a4b87870334" }
+hyper-02 = { package = "hyper", version = "0.13.10", git = "https://github.com/krallin/hyper.git", rev = "9c9453c5ae3e92de4ba30edd81bb45371b8fa8d6" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
 prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-build = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
@@ -401,11 +218,193 @@ prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "proto
 prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 r2d2_sqlite = { git = "https://github.com/jsgf/r2d2-sqlite.git", rev = "6d77a828ca0a3c507a3f58561532a1b6c66c7918" }
 rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
-smallvec = { git = "https://github.com/ahornby/rust-smallvec.git", rev = "708e6f09ced4ed211a7c63f53bce7dfe2bbda478"}
+smallvec = { git = "https://github.com/ahornby/rust-smallvec.git", rev = "708e6f09ced4ed211a7c63f53bce7dfe2bbda478" }
+tokio-02 = { package = "tokio", version = "0.2.25", git = "https://github.com/krallin/tokio.git", rev = "818f943db36e32b7c928351c32fe69ac913409f9" }
+tokio-compat = { package = "tokio-compat", version = "0.1.6", git = "https://github.com/krallin/tokio-compat.git", rev = "c2330c2a0141353e467cc5861988daa2eae7cb54" }
 tokio-core = { git = "https://github.com/bolinfest/tokio-core", rev = "5f37aa3c627d56ee49154bc851d6930f5ab4398f" }
 toml = { git = "https://github.com/jsgf/toml-rs", branch = "dotted-table-0.5.7" }
-enumset = { git = "https://github.com/danobi/enumset", rev = "4c01c583c27a725948fededbfb3461c572a669a4" }
-cursive_buffered_backend = { git = "https://github.com/chengxiong-ruan/cursive_buffered_backend", branch = "upgrade_cursive_core_from_v0.4.1"}
-hyper-02 = { git = "https://github.com/krallin/hyper.git", rev = "9c9453c5ae3e92de4ba30edd81bb45371b8fa8d6", package = "hyper", version = "0.13.10" }
-tokio-02 = { git = "https://github.com/krallin/tokio.git", rev = "818f943db36e32b7c928351c32fe69ac913409f9", package = "tokio", version = "0.2.25" }
-tokio-compat = { git = "https://github.com/krallin/tokio-compat.git", rev = "c2330c2a0141353e467cc5861988daa2eae7cb54", package = "tokio-compat", version = "0.1.6" }
+
+[workspace]
+members = [
+  ".",
+  "alpn",
+  "benchmark",
+  "blobimport_lib",
+  "blobimport_lib/consts",
+  "blobrepo",
+  "blobrepo/blobrepo_hg",
+  "blobrepo/blobsync",
+  "blobrepo/changeset_fetcher",
+  "blobrepo/common",
+  "blobrepo/errors",
+  "blobrepo/factory",
+  "blobrepo/override",
+  "blobrepo/repo_blobstore",
+  "blobrepo_utils",
+  "blobstore",
+  "blobstore/blobstore_stats",
+  "blobstore/cacheblob",
+  "blobstore/chaosblob",
+  "blobstore/delayblob",
+  "blobstore/factory",
+  "blobstore/fileblob",
+  "blobstore/if",
+  "blobstore/logblob",
+  "blobstore/memblob",
+  "blobstore/multiplexedblob",
+  "blobstore/packblob",
+  "blobstore/packblob/if",
+  "blobstore/prefixblob",
+  "blobstore/readonlyblob",
+  "blobstore/redactedblobstore",
+  "blobstore/samplingblob",
+  "blobstore/sqlblob",
+  "blobstore/throttledblob",
+  "blobstore/virtually_sharded_blobstore",
+  "blobstore_sync_queue",
+  "bonsai_git_mapping",
+  "bonsai_git_mapping/git_mapping_pushrebase_hook",
+  "bonsai_globalrev_mapping",
+  "bonsai_globalrev_mapping/globalrev_pushrebase_hook",
+  "bonsai_globalrev_mapping/if",
+  "bonsai_hg_mapping",
+  "bonsai_hg_mapping/if",
+  "bonsai_svnrev_mapping",
+  "bonsai_svnrev_mapping/if",
+  "bookmarks",
+  "bookmarks/bookmarks_movement",
+  "bookmarks/bookmarks_types",
+  "bookmarks/dbbookmarks",
+  "bookmarks/warm_bookmarks_cache",
+  "bulkops",
+  "bulkops/bench",
+  "cache_warmup",
+  "changesets",
+  "changesets/if",
+  "cmdlib",
+  "cmdlib/x_repo",
+  "commit_rewriting/backsyncer",
+  "commit_rewriting/bookmark_renaming",
+  "commit_rewriting/bookmarks_validator",
+  "commit_rewriting/commit_validator",
+  "commit_rewriting/cross_repo_sync",
+  "commit_rewriting/cross_repo_sync/test_utils",
+  "commit_rewriting/live_commit_sync_config",
+  "commit_rewriting/megarepo",
+  "commit_rewriting/mononoke_x_repo_sync_job",
+  "commit_rewriting/movers",
+  "commit_rewriting/synced_commit_mapping",
+  "common/allocation_tracing",
+  "common/async_limiter",
+  "common/async_limiter/examples/tokio_v2",
+  "common/bounded_traversal",
+  "common/copy_utils",
+  "common/dedupmap",
+  "common/futures_watchdog",
+  "common/iterhelpers",
+  "common/rust/caching_ext",
+  "common/rust/slog_ext",
+  "common/rust/sql_ext",
+  "common/scribe_ext",
+  "common/scuba_ext",
+  "common/sql_construct",
+  "common/topo_sort",
+  "common/type_map",
+  "common/uniqueheap",
+  "derived_data",
+  "derived_data/blame",
+  "derived_data/changeset_info",
+  "derived_data/changeset_info/if",
+  "derived_data/deleted_files_manifest",
+  "derived_data/fastlog",
+  "derived_data/filenodes",
+  "derived_data/fsnodes",
+  "derived_data/mercurial_derived_data",
+  "derived_data/skeleton_manifest",
+  "derived_data/test_utils",
+  "derived_data/unodes",
+  "derived_data/utils",
+  "edenapi_server",
+  "edenapi_service",
+  "fastreplay",
+  "filenodes",
+  "filenodes/if",
+  "filestore",
+  "git/git-pool",
+  "git/git_types",
+  "git/git_types/if",
+  "git/gitimport",
+  "git/import_tools",
+  "gotham_ext",
+  "hgcli",
+  "hgproto",
+  "hook_tailer",
+  "hooks",
+  "hooks/content-stores",
+  "hooks/hook_manager_factory",
+  "lfs_import_lib",
+  "lfs_protocol",
+  "lfs_server",
+  "load_limiter",
+  "manifest",
+  "mercurial/bundle_replay_data",
+  "mercurial/bundles",
+  "mercurial/mutation",
+  "mercurial/revlog",
+  "mercurial/types",
+  "mercurial/types/if",
+  "mercurial/types/mocks",
+  "metaconfig/parser",
+  "metaconfig/types",
+  "microwave",
+  "microwave/builder",
+  "microwave/if",
+  "mononoke_api",
+  "mononoke_api_hg",
+  "mononoke_hg_sync_job",
+  "mononoke_types",
+  "mononoke_types/if",
+  "mononoke_types/mocks",
+  "mutable_counters",
+  "newfilenodes",
+  "observability",
+  "permission_checker",
+  "phases",
+  "pushrebase",
+  "reachabilityindex",
+  "reachabilityindex/common",
+  "reachabilityindex/if",
+  "reachabilityindex/skiplist",
+  "reachabilityindex/test-helpers",
+  "regenerate_hg_filenodes",
+  "repo_client",
+  "repo_client/getbundle_response",
+  "repo_client/mononoke_repo",
+  "repo_client/obsolete",
+  "repo_client/remotefilelog",
+  "repo_client/repo_read_write_status",
+  "repo_client/reverse_filler_queue",
+  "repo_client/scribe_commit_queue",
+  "repo_client/streaming_clone",
+  "repo_client/unbundle",
+  "repo_client/wirepack",
+  "repo_import",
+  "revset",
+  "revset/revset-test-helper",
+  "segmented_changelog",
+  "segmented_changelog/bench/concurrent_idmap",
+  "server",
+  "server/context",
+  "server/monitoring",
+  "server/repo_listener",
+  "server/session_id",
+  "sshrelay",
+  "tests/fixtures",
+  "tests/utils",
+  "tests/write_stub_log_entry",
+  "time_window_counter",
+  "tunables",
+  "tunables/tunables-derive",
+  "unbundle_replay",
+  "walker",
+]

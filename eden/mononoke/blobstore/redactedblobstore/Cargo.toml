@@ -8,25 +8,25 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-blobstore = { path = "..", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
+blobstore = { version = "0.1.0", path = ".." }
+context = { version = "0.1.0", path = "../../server/context" }
 futures-old = { package = "futures", version = "0.1.30" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 thiserror = "1.0"
-tunables = { path = "../../tunables", version = "0.1.0" }
+tunables = { version = "0.1.0", path = "../../tunables" }
 
 [dev-dependencies]
 assert_matches = "1.5"
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 maplit = "1.0"
-memblob = { path = "../memblob", version = "0.1.0" }
-prefixblob = { path = "../prefixblob", version = "0.1.0" }
+memblob = { version = "0.1.0", path = "../memblob" }
+prefixblob = { version = "0.1.0", path = "../prefixblob" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

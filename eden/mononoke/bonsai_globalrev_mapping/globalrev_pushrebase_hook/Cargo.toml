@@ -11,20 +11,20 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-bonsai_globalrev_mapping = { path = "..", version = "0.1.0" }
-bookmarks = { path = "../../bookmarks", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-pushrebase = { path = "../../pushrebase", version = "0.1.0" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+bonsai_globalrev_mapping = { version = "0.1.0", path = ".." }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+context = { version = "0.1.0", path = "../../server/context" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+pushrebase = { version = "0.1.0", path = "../../pushrebase" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 
 [dev-dependencies]
-blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
-blobstore = { path = "../../blobstore", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
-tests_utils = { path = "../../tests/utils", version = "0.1.0" }
+tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

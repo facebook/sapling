@@ -11,38 +11,38 @@ abomonation_derive = "0.5"
 anyhow = "1.0"
 async-trait = "0.1.29"
 auto_impl = "0.4"
-blobrepo = { path = "../blobrepo", version = "0.1.0" }
-blobstore = { path = "../blobstore", version = "0.1.0" }
-bookmarks = { path = "../bookmarks", version = "0.1.0" }
-bulkops = { path = "../bulkops", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = "../blobrepo" }
+blobstore = { version = "0.1.0", path = "../blobstore" }
+bookmarks = { version = "0.1.0", path = "../bookmarks" }
+bulkops = { version = "0.1.0", path = "../bulkops" }
 bytes = { version = "0.5", features = ["serde"] }
-cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-caching_ext = { path = "../common/rust/caching_ext", version = "0.1.0" }
-changeset_fetcher = { path = "../blobrepo/changeset_fetcher", version = "0.1.0" }
-changesets = { path = "../changesets", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-context = { path = "../server/context", version = "0.1.0" }
-dag = { path = "../../scm/lib/dag", features = ["for-tests"], version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+caching_ext = { version = "0.1.0", path = "../common/rust/caching_ext" }
+changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }
+changesets = { version = "0.1.0", path = "../changesets" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { version = "0.1.0", path = "../server/context" }
+dag = { version = "0.1.0", path = "../../scm/lib/dag", features = ["for-tests"] }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"
-memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-mincode = { path = "../../scm/lib/mincode", version = "0.1.0" }
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+mincode = { version = "0.1.0", path = "../../scm/lib/mincode" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 parking_lot = "0.10.2"
-scuba_ext = { path = "../common/scuba_ext", version = "0.1.0" }
+scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql_construct = { path = "../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../common/rust/sql_ext", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../common/rust/sql_ext" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]
-fixtures = { path = "../tests/fixtures", version = "0.1.0" }
-mononoke_types-mocks = { path = "../mononoke_types/mocks", version = "0.1.0" }
-phases = { path = "../phases", version = "0.1.0" }
-revset = { path = "../revset", version = "0.1.0" }
-tests_utils = { path = "../tests/utils", version = "0.1.0" }
+fixtures = { version = "0.1.0", path = "../tests/fixtures" }
+mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
+phases = { version = "0.1.0", path = "../phases" }
+revset = { version = "0.1.0", path = "../revset" }
+tests_utils = { version = "0.1.0", path = "../tests/utils" }

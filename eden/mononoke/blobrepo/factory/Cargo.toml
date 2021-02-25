@@ -7,54 +7,54 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-blame = { path = "../../derived_data/blame", version = "0.1.0" }
-blobrepo = { path = "..", version = "0.1.0" }
-blobrepo_errors = { path = "../errors", version = "0.1.0" }
-blobstore = { path = "../../blobstore", version = "0.1.0" }
-blobstore_factory = { path = "../../blobstore/factory", version = "0.1.0" }
-bonsai_git_mapping = { path = "../../bonsai_git_mapping", version = "0.1.0" }
-bonsai_globalrev_mapping = { path = "../../bonsai_globalrev_mapping", version = "0.1.0" }
-bonsai_hg_mapping = { path = "../../bonsai_hg_mapping", version = "0.1.0" }
-bonsai_svnrev_mapping = { path = "../../bonsai_svnrev_mapping", version = "0.1.0" }
-bookmarks = { path = "../../bookmarks", version = "0.1.0" }
-cacheblob = { path = "../../blobstore/cacheblob", version = "0.1.0" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-changeset_fetcher = { path = "../changeset_fetcher", version = "0.1.0" }
-changeset_info = { path = "../../derived_data/changeset_info", version = "0.1.0" }
-changesets = { path = "../../changesets", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-dbbookmarks = { path = "../../bookmarks/dbbookmarks", version = "0.1.0" }
-deleted_files_manifest = { path = "../../derived_data/deleted_files_manifest", version = "0.1.0" }
-derived_data = { path = "../../derived_data", version = "0.1.0" }
-derived_data_filenodes = { path = "../../derived_data/filenodes", version = "0.1.0" }
-fastlog = { path = "../../derived_data/fastlog", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-filenodes = { path = "../../filenodes", version = "0.1.0" }
-filestore = { path = "../../filestore", version = "0.1.0" }
-fsnodes = { path = "../../derived_data/fsnodes", version = "0.1.0" }
+blame = { version = "0.1.0", path = "../../derived_data/blame" }
+blobrepo = { version = "0.1.0", path = ".." }
+blobrepo_errors = { version = "0.1.0", path = "../errors" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
+blobstore_factory = { version = "0.1.0", path = "../../blobstore/factory" }
+bonsai_git_mapping = { version = "0.1.0", path = "../../bonsai_git_mapping" }
+bonsai_globalrev_mapping = { version = "0.1.0", path = "../../bonsai_globalrev_mapping" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
+bonsai_svnrev_mapping = { version = "0.1.0", path = "../../bonsai_svnrev_mapping" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cachelib = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+changeset_fetcher = { version = "0.1.0", path = "../changeset_fetcher" }
+changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info" }
+changesets = { version = "0.1.0", path = "../../changesets" }
+context = { version = "0.1.0", path = "../../server/context" }
+dbbookmarks = { version = "0.1.0", path = "../../bookmarks/dbbookmarks" }
+deleted_files_manifest = { version = "0.1.0", path = "../../derived_data/deleted_files_manifest" }
+derived_data = { version = "0.1.0", path = "../../derived_data" }
+derived_data_filenodes = { version = "0.1.0", path = "../../derived_data/filenodes" }
+fastlog = { version = "0.1.0", path = "../../derived_data/fastlog" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+filenodes = { version = "0.1.0", path = "../../filenodes" }
+filestore = { version = "0.1.0", path = "../../filestore" }
+fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures_watchdog = { path = "../../common/futures_watchdog", version = "0.1.0" }
-git_types = { path = "../../git/git_types", version = "0.1.0" }
+futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
+git_types = { version = "0.1.0", path = "../../git/git_types" }
 maplit = "1.0"
-memblob = { path = "../../blobstore/memblob", version = "0.1.0" }
-mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data", version = "0.1.0" }
-mercurial_mutation = { path = "../../mercurial/mutation", version = "0.1.0" }
-metaconfig_types = { path = "../../metaconfig/types", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-newfilenodes = { path = "../../newfilenodes", version = "0.1.0" }
-phases = { path = "../../phases", version = "0.1.0" }
-readonlyblob = { path = "../../blobstore/readonlyblob", version = "0.1.0" }
-redactedblobstore = { path = "../../blobstore/redactedblobstore", version = "0.1.0" }
-repo_blobstore = { path = "../repo_blobstore", version = "0.1.0" }
-scuba_ext = { path = "../../common/scuba_ext", version = "0.1.0" }
-segmented_changelog = { path = "../../segmented_changelog", version = "0.1.0" }
-skeleton_manifest = { path = "../../derived_data/skeleton_manifest", version = "0.1.0" }
+memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
+mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
+mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+newfilenodes = { version = "0.1.0", path = "../../newfilenodes" }
+phases = { version = "0.1.0", path = "../../phases" }
+readonlyblob = { version = "0.1.0", path = "../../blobstore/readonlyblob" }
+redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
+repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
+scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
+segmented_changelog = { version = "0.1.0", path = "../../segmented_changelog" }
+skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-sql_construct = { path = "../../common/sql_construct", version = "0.1.0" }
-sql_ext = { path = "../../common/rust/sql_ext", version = "0.1.0" }
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
+sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-type_map = { path = "../../common/type_map", version = "0.1.0" }
-unodes = { path = "../../derived_data/unodes", version = "0.1.0" }
-virtually_sharded_blobstore = { path = "../../blobstore/virtually_sharded_blobstore", version = "0.1.0" }
+type_map = { version = "0.1.0", path = "../../common/type_map" }
+unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
+virtually_sharded_blobstore = { version = "0.1.0", path = "../../blobstore/virtually_sharded_blobstore" }

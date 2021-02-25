@@ -7,9 +7,9 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-context = { path = "../server/context", version = "0.1.0" }
-filenodes_if = { path = "if", version = "0.1.0" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
-mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
+context = { version = "0.1.0", path = "../server/context" }
+filenodes_if = { version = "0.1.0", path = "if" }
+futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
+mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 quickcheck = "0.9"

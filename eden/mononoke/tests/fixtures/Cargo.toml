@@ -7,19 +7,19 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-blobrepo = { path = "../../blobrepo", version = "0.1.0" }
-blobrepo_factory = { path = "../../blobrepo/factory", version = "0.1.0" }
-blobrepo_hg = { path = "../../blobrepo/blobrepo_hg", version = "0.1.0" }
-bookmarks = { path = "../../bookmarks", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
+blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
+bookmarks = { version = "0.1.0", path = "../../bookmarks" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 bytes = { version = "0.5", features = ["serde"] }
-context = { path = "../../server/context", version = "0.1.0" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-filestore = { path = "../../filestore", version = "0.1.0" }
+context = { version = "0.1.0", path = "../../server/context" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+filestore = { version = "0.1.0", path = "../../filestore" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 maplit = "1.0"
-mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
+mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 
 [dev-dependencies]
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

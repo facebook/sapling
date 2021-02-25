@@ -11,17 +11,17 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0"
 async-trait = "0.1.29"
-blobrepo = { path = "../../blobrepo", version = "0.1.0" }
-blobrepo_common = { path = "../../blobrepo/common", version = "0.1.0" }
-blobrepo_errors = { path = "../../blobrepo/errors", version = "0.1.0" }
-blobstore = { path = "../../blobstore", version = "0.1.0" }
-bonsai_hg_mapping = { path = "../../bonsai_hg_mapping", version = "0.1.0" }
-borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
-context = { path = "../../server/context", version = "0.1.0" }
-derived_data = { path = "..", version = "0.1.0" }
+blobrepo = { version = "0.1.0", path = "../../blobrepo" }
+blobrepo_common = { version = "0.1.0", path = "../../blobrepo/common" }
+blobrepo_errors = { version = "0.1.0", path = "../../blobrepo/errors" }
+blobstore = { version = "0.1.0", path = "../../blobstore" }
+bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }
+borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+context = { version = "0.1.0", path = "../../server/context" }
+derived_data = { version = "0.1.0", path = ".." }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-manifest = { path = "../../manifest", version = "0.1.0" }
-mercurial_types = { path = "../../mercurial/types", version = "0.1.0" }
-mononoke_types = { path = "../../mononoke_types", version = "0.1.0" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
+manifest = { version = "0.1.0", path = "../../manifest" }
+mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
