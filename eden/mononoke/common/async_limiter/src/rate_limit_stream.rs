@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use futures::{ready, task::Context, FutureExt, Stream};
+use futures::{ready, task::Context, Future, Stream};
+use pin_project::pin_project;
 use ratelimit_meter::{
     algorithms::{leaky_bucket::TooEarly, Algorithm},
     clock::Clock,
@@ -15,7 +16,9 @@ use ratelimit_meter::{
 use std::pin::Pin;
 use std::task::Poll;
 use std::time::Instant;
+use tokio_shim::time::Sleep;
 
+#[pin_project]
 #[must_use = "streams do nothing unless you poll them"]
 pub struct RateLimitStream<A, C>
 where
@@ -23,7 +26,8 @@ where
     C: Clock + Send + 'static,
 {
     limiter: DirectRateLimiter<A, C>,
-    pending: Option<tokio::time::Delay>,
+    #[pin]
+    pending: Option<Sleep>,
 }
 
 impl<A, C> RateLimitStream<A, C>
@@ -39,15 +43,6 @@ where
     }
 }
 
-/// This is normally implemented automatically for us, but we don't get this here because of the
-/// generic bounds on A.
-impl<A, C> Unpin for RateLimitStream<A, C>
-where
-    A: Algorithm<C::Instant> + 'static,
-    C: Clock + Send + 'static,
-{
-}
-
 impl<A, C> Stream for RateLimitStream<A, C>
 where
     A: Algorithm<C::Instant> + 'static,
@@ -56,21 +51,21 @@ where
 {
     type Item = ();
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        let mut this = self.project();
+
         loop {
-            if let Some(ref mut pending) = self.pending {
-                let _ = ready!(pending.poll_unpin(cx));
-                self.pending = None;
+            if let Some(ref mut pending) = this.pending.as_mut().as_pin_mut() {
+                let _ = ready!(pending.as_mut().poll(cx));
+                this.pending.set(None);
             }
 
-            match self.limiter.check() {
+            match this.limiter.check() {
                 Ok(()) => return Poll::Ready(Some(())),
                 Err(nc) => {
                     let instant = nc.earliest_possible();
-                    self.pending = Some({
-                        let instant = tokio::time::Instant::from_std(instant);
-                        tokio::time::delay_until(instant)
-                    });
+                    this.pending
+                        .set(Some(tokio_shim::time::sleep_until(instant)));
                 }
             }
         }
