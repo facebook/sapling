@@ -19,6 +19,7 @@ import msvcrt
 import os
 import random
 import subprocess
+import sys
 
 from . import encoding, pycompat
 from .pycompat import range
@@ -39,6 +40,7 @@ _DWORD = ctypes.c_ulong
 _UINT = ctypes.c_uint
 _LONG = ctypes.c_long
 _LPCSTR = _LPSTR = ctypes.c_char_p
+_LPCWSTR = ctypes.c_wchar_p
 _HANDLE = ctypes.c_void_p
 _HWND = _HANDLE
 _PCCERT_CONTEXT = ctypes.c_void_p
@@ -242,8 +244,8 @@ _crypt32.CertFreeCertificateChain.restype = None
 _crypt32.CertFreeCertificateContext.argtypes = [_PCCERT_CONTEXT]
 _crypt32.CertFreeCertificateContext.restype = _BOOL
 
-_kernel32.CreateFileA.argtypes = [
-    _LPCSTR,
+_kernel32.CreateFileW.argtypes = [
+    _LPCWSTR,
     _DWORD,
     _DWORD,
     ctypes.c_void_p,
@@ -251,7 +253,7 @@ _kernel32.CreateFileA.argtypes = [
     _DWORD,
     _HANDLE,
 ]
-_kernel32.CreateFileA.restype = _HANDLE
+_kernel32.CreateFileW.restype = _HANDLE
 
 _kernel32.GetFileInformationByHandle.argtypes = [_HANDLE, ctypes.c_void_p]
 _kernel32.GetFileInformationByHandle.restype = _BOOL
@@ -260,13 +262,13 @@ _kernel32.CloseHandle.argtypes = [_HANDLE]
 _kernel32.CloseHandle.restype = _BOOL
 
 try:
-    _kernel32.CreateHardLinkA.argtypes = [_LPCSTR, _LPCSTR, ctypes.c_void_p]
-    _kernel32.CreateHardLinkA.restype = _BOOL
+    _kernel32.CreateHardLinkW.argtypes = [_LPCWSTR, _LPCWSTR, ctypes.c_void_p]
+    _kernel32.CreateHardLinkW.restype = _BOOL
 except AttributeError:
     pass
 
-_kernel32.SetFileAttributesA.argtypes = [_LPCSTR, _DWORD]
-_kernel32.SetFileAttributesA.restype = _BOOL
+_kernel32.SetFileAttributesW.argtypes = [_LPCWSTR, _DWORD]
+_kernel32.SetFileAttributesW.restype = _BOOL
 
 _DRIVE_UNKNOWN = 0
 _DRIVE_NO_ROOT_DIR = 1
@@ -377,8 +379,8 @@ _kernel32.PeekNamedPipe.argtypes = [
 ]
 _kernel32.PeekNamedPipe.restype = _BOOL
 
-_kernel32.MoveFileExA.argtypes = [_LPCSTR, _LPCSTR, _DWORD]
-_kernel32.MoveFileExA.restype = _BOOL
+_kernel32.MoveFileExW.argtypes = [_LPCWSTR, _LPCWSTR, _DWORD]
+_kernel32.MoveFileExW.restype = _BOOL
 
 _kernel32.GetOEMCP.argtypes = []
 _kernel32.GetOEMCP.restype = _UINT
@@ -395,8 +397,8 @@ def _raiseoserror(name):
 
 
 def getfileinfo(name):
-    fh = _kernel32.CreateFileA(
-        name,
+    fh = _kernel32.CreateFileW(
+        pathtowin32W(name),
         0,
         _FILE_SHARE_READ | _FILE_SHARE_WRITE | _FILE_SHARE_DELETE,
         None,
@@ -421,7 +423,7 @@ def movefileex(src, dst):
     Note that this is not a contractual atomicity, but it is atomic
     in practice if the rename happens within a volume."""
     MOVEFILE_REPLACE_EXISTING = 0x1
-    if not _kernel32.MoveFileExA(src, dst, MOVEFILE_REPLACE_EXISTING):
+    if not _kernel32.MoveFileExW(pathtowin32W(src), pathtowin32W(dst), MOVEFILE_REPLACE_EXISTING):
         _raiseoserror(dst)
 
 
@@ -513,7 +515,7 @@ def checkcertificatechain(cert, build=True):
 
 def oslink(src, dst):
     try:
-        if not _kernel32.CreateHardLinkA(dst, src, None):
+        if not _kernel32.CreateHardLinkW(pathtowin32W(dst), pathtowin32W(src), None):
             _raiseoserror(src)
     except AttributeError:  # Wine doesn't support this function
         _raiseoserror(src)
@@ -587,7 +589,7 @@ def getuser():
     buf = ctypes.create_string_buffer(size.value + 1)
     if not _advapi32.GetUserNameA(ctypes.byref(buf), ctypes.byref(size)):
         raise ctypes.WinError()
-    return buf.value
+    return pycompat.decodeutf8(buf.value)
 
 
 _signalhandler = []
@@ -710,7 +712,7 @@ def unlink(f):
         # The unlink might have failed because the READONLY attribute may have
         # been set on the original file. Rename works fine with READONLY set,
         # but not os.unlink. Reset all attributes and try again.
-        _kernel32.SetFileAttributesA(temp, _FILE_ATTRIBUTE_NORMAL)
+        _kernel32.SetFileAttributesW(pathtowin32W(temp), _FILE_ATTRIBUTE_NORMAL)
         try:
             os.unlink(temp)
         except OSError:
@@ -728,7 +730,7 @@ def unlink(f):
 def makedir(path, notindexed):
     os.mkdir(path)
     if notindexed:
-        _kernel32.SetFileAttributesA(path, _FILE_ATTRIBUTE_NOT_CONTENT_INDEXED)
+        _kernel32.SetFileAttributesW(pathtowin32W(path), _FILE_ATTRIBUTE_NOT_CONTENT_INDEXED)
 
 
 def getmaxmemoryusage():
@@ -743,3 +745,9 @@ def getoemcp():
     """Returns the OEM codepage, which is the codepage that should be used for
     output to the console."""
     return "cp%d" % _kernel32.GetOEMCP()
+
+def pathtowin32W(path):
+    if sys.version_info[0] >= 3:
+        return _LPCWSTR(path)
+    else:
+        return _LPCWSTR(path.decode("utf-8"))

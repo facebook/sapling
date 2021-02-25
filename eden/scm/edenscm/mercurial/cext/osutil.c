@@ -164,6 +164,128 @@ static int to_python_time(const FILETIME* tm) {
       int)((((__int64)tm->dwHighDateTime << 32) + tm->dwLowDateTime) / a1 - a0);
 }
 
+#ifdef IS_PY3K
+
+static PyObject* make_item(const WIN32_FIND_DATAW* fd, int wantstat) {
+  PyObject* py_st;
+  struct hg_stat* stp;
+
+  int kind = (fd->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+      ? ((fd->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) ? S_IFLNK
+                                                               : _S_IFDIR)
+      : _S_IFREG;
+  if (!wantstat) {
+    PyObject* unicode = PyUnicode_FromWideChar(fd->cFileName, wcslen(fd->cFileName));
+    if (!unicode) {
+      return NULL;
+    }
+    return Py_BuildValue("Ni", unicode, kind);
+  }
+
+  py_st = PyObject_CallObject((PyObject*)&listdir_stat_type, NULL);
+  if (!py_st)
+    return NULL;
+
+  stp = &((struct listdir_stat*)py_st)->st;
+  /*
+  use kind as st_mode
+  rwx bits on Win32 are meaningless
+  and Hg does not use them anyway
+  */
+  stp->st_mode = kind;
+  stp->st_mtime = to_python_time(&fd->ftLastWriteTime);
+  stp->st_ctime = to_python_time(&fd->ftCreationTime);
+  if (kind == _S_IFREG)
+    stp->st_size = ((__int64)fd->nFileSizeHigh << 32) + fd->nFileSizeLow;
+
+  PyObject* unicode =  PyUnicode_FromWideChar(fd->cFileName, wcslen(fd->cFileName));
+  if (!unicode) {
+    return NULL;
+  }
+
+  return Py_BuildValue("NiN", unicode, kind, py_st);
+}
+
+static PyObject*
+_listdir(const wchar_t* path, Py_ssize_t plen, int wantstat, const wchar_t* skip) {
+  PyObject* rval = NULL; /* initialize - return value */
+  PyObject* list;
+  HANDLE fh;
+  WIN32_FIND_DATAW fd;
+
+  /* build the path + \* pattern string */
+  wchar_t* pattern;
+  pattern = PyMem_Malloc((plen + 3) * sizeof(wchar_t)); /* wchar_path + \* + \0 */
+  if (!pattern) {
+    PyErr_NoMemory();
+    goto error_nomem;
+  }
+  memcpy(pattern, path, plen * sizeof(wchar_t));
+
+  if (plen > 0) {
+    wchar_t c = path[plen - 1];
+    if (c != L':' && c != L'/' && c != L'\\')
+      pattern[plen++] = L'\\';
+  }
+  pattern[plen++] = L'*';
+  pattern[plen] = L'\0';
+
+  fh = FindFirstFileW(pattern, &fd);
+  if (fh == INVALID_HANDLE_VALUE) {
+    PyErr_SetFromWindowsErrWithFilename(GetLastError(), path);
+    goto error_file;
+  }
+
+  list = PyList_New(0);
+  if (!list)
+    goto error_list;
+
+  do {
+    PyObject* item;
+
+    if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+      if (!wcscmp(fd.cFileName, L".") || !wcscmp(fd.cFileName, L".."))
+        continue;
+
+      if (skip && !wcscmp(fd.cFileName, skip)) {
+        rval = PyList_New(0);
+        goto error;
+      }
+    }
+
+    item = make_item(&fd, wantstat);
+    if (!item) {
+      goto error;
+    }
+
+    if (PyList_Append(list, item)) {
+      Py_XDECREF(item);
+      goto error;
+    }
+
+    Py_XDECREF(item);
+  } while (FindNextFileW(fh, &fd));
+
+  if (GetLastError() != ERROR_NO_MORE_FILES) {
+    PyErr_SetFromWindowsErrWithFilename(GetLastError(), path);
+    goto error;
+  }
+
+  rval = list;
+  Py_XINCREF(rval);
+error:
+  Py_XDECREF(list);
+error_list:
+  FindClose(fh);
+error_file:
+  PyMem_Free(pattern);
+error_nomem:
+  return rval;
+}
+
+// Else is python 2
+#else
+
 static PyObject* make_item(const WIN32_FIND_DATAA* fd, int wantstat) {
   PyObject* py_st;
   struct hg_stat* stp;
@@ -272,6 +394,8 @@ error_file:
 error_nomem:
   return rval;
 }
+
+#endif
 
 #else
 
@@ -856,8 +980,13 @@ static PyObject* unblocksignal(PyObject* self, PyObject* args) {
 
 static PyObject* listdir(PyObject* self, PyObject* args, PyObject* kwargs) {
   PyObject* statobj = NULL; /* initialize - optional arg */
+  PyObject* pathobj = NULL; /* initialize - optional arg */
   PyObject* skipobj = NULL; /* initialize - optional arg */
+#if defined IS_PY3K && defined _WIN32
+  const wchar_t *path = NULL, *skip = NULL;
+#else
   const char *path = NULL, *skip = NULL;
+#endif
   Py_ssize_t plen;
   int wantstat;
 
@@ -866,19 +995,34 @@ static PyObject* listdir(PyObject* self, PyObject* args, PyObject* kwargs) {
   if (!PyArg_ParseTupleAndKeywords(
           args,
           kwargs,
-          "s#|OO:listdir",
+          "O|OO:listdir",
           kwlist,
-          &path,
-          &plen,
+          &pathobj,
           &statobj,
           &skipobj))
     return NULL;
 
   wantstat = statobj && PyObject_IsTrue(statobj);
 
+#ifdef IS_PY3K
+#ifdef _WIN32
+  path = PyUnicode_AsWideCharString(pathobj, &plen);
+#else
+  path = PyUnicode_AsUTF8AndSize(pathobj, &plen);
+#endif
+#else
+  PyBytes_AsStringAndSize(pathobj, &path, &plen);
+#endif
+  if (!path)
+    return NULL;
+
   if (skipobj && skipobj != Py_None) {
 #ifdef IS_PY3K
+#ifdef _WIN32
+    skip = PyUnicode_AsWideCharString(skipobj, NULL);
+#else
     skip = PyUnicode_AsUTF8(skipobj);
+#endif
 #else
     skip = PyBytes_AsString(skipobj);
 #endif
@@ -886,14 +1030,21 @@ static PyObject* listdir(PyObject* self, PyObject* args, PyObject* kwargs) {
       return NULL;
   }
 
-  return _listdir(path, plen, wantstat, skip);
+  PyObject* result = _listdir(path, plen, wantstat, skip);
+#ifdef IS_PY3K
+#ifdef _WIN32
+  PyMem_Free(path);
+  PyMem_Free(skip);
+#endif
+#endif
+  return result;
 }
 
 #ifdef _WIN32
-// TODO(py3): Fix posixfile for Windows.
 static PyObject* posixfile(PyObject* self, PyObject* args, PyObject* kwds) {
   static char* kwlist[] = {"name", "mode", "buffering", NULL};
   PyObject* file_obj = NULL;
+  PyObject* name_obj = NULL;
   char* name = NULL;
   char* mode = "rb";
   DWORD access = 0;
@@ -906,14 +1057,12 @@ static PyObject* posixfile(PyObject* self, PyObject* args, PyObject* kwds) {
   int fppos = 0;
   int plus;
   FILE* fp;
-
   if (!PyArg_ParseTupleAndKeywords(
           args,
           kwds,
-          "et|si:posixfile",
+          "O|si:posixfile",
           kwlist,
-          Py_FileSystemDefaultEncoding,
-          &name,
+          &name_obj,
           &mode,
           &bufsize))
     return NULL;
@@ -963,14 +1112,44 @@ static PyObject* posixfile(PyObject* self, PyObject* args, PyObject* kwds) {
       goto bail;
   }
 
-  handle = CreateFile(
-      name,
-      access,
-      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-      NULL,
-      creation,
-      FILE_ATTRIBUTE_NORMAL,
-      0);
+#ifdef IS_PY3K
+  wchar_t* wname;
+
+  if (!PyUnicode_Check(name_obj)) {
+    goto bail;
+  }
+
+  // This apparently encodes in utf-16. PyUnicode_AsUTF16String doesn't work
+  // here for some reason.
+  wname = PyUnicode_AsWideCharString(name_obj, NULL);
+  if (!wname) {
+    goto bail;
+  }
+
+  size_t name_max = wcslen(wname) * 4;
+  name = PyMem_Malloc(name_max);
+  wcstombs(name, wname, name_max);
+
+  handle = CreateFileW(
+    wname,
+    access,
+    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+    NULL,
+    creation,
+    FILE_ATTRIBUTE_NORMAL,
+    0);
+  PyMem_Free(wname);
+#else
+  name = PyBytes_AsString(name_obj);
+  handle = CreateFileA(
+    name,
+    access,
+    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+    NULL,
+    creation,
+    FILE_ATTRIBUTE_NORMAL,
+    0);
+#endif
 
   if (handle == INVALID_HANDLE_VALUE) {
     PyErr_SetFromWindowsErrWithFilename(GetLastError(), name);
@@ -1005,7 +1184,9 @@ static PyObject* posixfile(PyObject* self, PyObject* args, PyObject* kwds) {
     goto bail;
 #endif
 bail:
+#ifdef IS_PY3K
   PyMem_Free(name);
+#endif
   return file_obj;
 }
 #endif
