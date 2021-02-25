@@ -63,19 +63,30 @@ fn getauth(
         .map_or_else(
             || Ok(PyNone.to_py_object(py).into_object()),
             |group| {
-                let cert = group.cert.as_ref().map(|path| path.to_string_lossy());
-                let key = group.key.as_ref().map(|path| path.to_string_lossy());
-                let cacerts = group.cacerts.as_ref().map(|path| path.to_string_lossy());
-
                 let dict = PyDict::new(py);
 
-                dict.set_item(py, "cert", cert)?;
-                dict.set_item(py, "key", key)?;
-                dict.set_item(py, "cacerts", cacerts)?;
                 dict.set_item(py, "prefix", &group.prefix)?;
-                dict.set_item(py, "username", &group.username)?;
                 dict.set_item(py, "schemes", &group.schemes)?;
-                dict.set_item(py, "priority", &group.priority)?;
+
+                if let Some(cert) = group.cert {
+                    dict.set_item(py, "cert", cert.to_string_lossy())?;
+                }
+
+                if let Some(key) = group.key {
+                    dict.set_item(py, "key", key.to_string_lossy())?;
+                }
+
+                if let Some(cacerts) = group.cacerts {
+                    dict.set_item(py, "cacerts", cacerts.to_string_lossy())?;
+                }
+
+                if let Some(username) = group.username {
+                    dict.set_item(py, "username", username)?;
+                }
+
+                if group.priority > 0 {
+                    dict.set_item(py, "priority", group.priority)?;
+                }
 
                 for (k, v) in &group.extras {
                     dict.set_item(py, k, v)?;
