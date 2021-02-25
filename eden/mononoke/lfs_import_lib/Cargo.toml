@@ -18,4 +18,4 @@ mercurial_types = { path = "../mercurial/types", version = "0.1.0" }
 mononoke_types = { path = "../mononoke_types", version = "0.1.0" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-util = { version = "0.2", features = ["codec", "udp"] }
+tokio-util = { version = "0.3", features = ["codec", "udp"] }

@@ -307,8 +307,7 @@ impl SshEncoder {
     }
 }
 
-impl Encoder for SshEncoder {
-    type Item = SshMsg;
+impl Encoder<SshMsg> for SshEncoder {
     type Error = io::Error;
 
     fn encode(&mut self, msg: SshMsg, buf: &mut BytesMut) -> io::Result<()> {

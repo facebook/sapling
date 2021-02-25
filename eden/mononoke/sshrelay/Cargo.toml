@@ -18,5 +18,5 @@ serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 session_id = { path = "../server/session_id", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-util = { version = "0.2", features = ["codec", "udp"] }
+tokio-util = { version = "0.3", features = ["codec", "udp"] }
 trust-dns-resolver = "0.19"
