@@ -15,23 +15,21 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{
     channel::oneshot,
-    future::{self, lazy, select, try_join_all},
-    stream::StreamExt,
+    future::{lazy, select, try_join_all},
     FutureExt, TryFutureExt,
 };
 use futures_util::try_join;
-use gotham::ConnectedGothamService;
 use gotham_ext::{
     handler::MononokeHttpHandler,
     middleware::{
         ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, PostRequestMiddleware,
         ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware, TlsSessionDataMiddleware,
     },
-    socket_data::TlsSocketData,
+    serve,
 };
-use hyper::{header::HeaderValue, server::conn::Http};
+use hyper::header::HeaderValue;
 use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
-use slog::{info, warn};
+use slog::info;
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::str::FromStr;
@@ -247,9 +245,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches, &logger)?;
 
-    let trusted_proxy_idents = Arc::new(idents_from_values(
-        matches.values_of(ARG_TRUSTED_PROXY_IDENTITY),
-    )?);
+    let trusted_proxy_idents = idents_from_values(matches.values_of(ARG_TRUSTED_PROXY_IDENTITY))?;
 
     scuba_logger.add_common_server_data();
 
@@ -375,102 +371,33 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     start_fb303_server(fb, SERVICE_NAME, &logger, &matches, AliveService)?;
 
-    let mut listener = runtime
+    let listener = runtime
         .block_on(TcpListener::bind(&addr))
         .context(Error::msg("Could not start TCP listener"))?;
 
-    let protocol = Arc::new(Http::new());
-    let handler = Arc::new(handler);
-
     let server = match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
         (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {
-            let acceptor = Arc::new(
-                secure_utils::SslConfig::new(
-                    tls_ca,
-                    tls_certificate,
-                    tls_private_key,
-                    tls_ticket_seeds,
-                )
-                .build_tls_acceptor(logger.clone())?,
-            );
+            let acceptor = secure_utils::SslConfig::new(
+                tls_ca,
+                tls_certificate,
+                tls_private_key,
+                tls_ticket_seeds,
+            )
+            .build_tls_acceptor(logger.clone())?;
 
             let capture_session_data = tls_session_data_log.is_some();
 
-            cloned!(logger);
-
-            async move {
-                listener
-                    .incoming()
-                    .for_each(move |socket| {
-                        cloned!(acceptor, logger, protocol, handler, trusted_proxy_idents);
-
-                        let task = async move {
-                            let socket = socket.context("Error obtaining socket")?;
-                            let addr = socket.peer_addr().context("Error reading peer_addr()")?;
-                            let ssl_socket = tokio_openssl::accept(&acceptor, socket)
-                                .await
-                                .context("Error performing TLS handshake")?;
-
-                            let socket_data = TlsSocketData::from_ssl(
-                                ssl_socket.ssl(),
-                                trusted_proxy_idents.as_ref(),
-                                capture_session_data,
-                            );
-
-                            let service =
-                                ConnectedGothamService::connect(handler, addr, socket_data);
-
-                            protocol
-                                .serve_connection(ssl_socket, service)
-                                .await
-                                .context("Error serving connection")?;
-
-                            Result::<_, Error>::Ok(())
-                        };
-
-                        tokio::spawn(task.map_err(move |e| {
-                            warn!(&logger, "HTTPS Server error: {:?}", e);
-                        }));
-
-                        future::ready(())
-                    })
-                    .await;
-            }
+            serve::https(
+                logger.clone(),
+                listener,
+                acceptor,
+                capture_session_data,
+                trusted_proxy_idents,
+                handler,
+            )
             .left_future()
         }
-        (None, None, None, None) => {
-            cloned!(logger);
-
-            async move {
-                listener
-                    .incoming()
-                    .for_each(move |socket| {
-                        cloned!(logger, protocol, handler);
-
-                        let task = async move {
-                            let socket = socket.context("Error obtaining socket")?;
-                            let addr = socket.peer_addr().context("Error reading peer_addr()")?;
-
-                            let service = ConnectedGothamService::connect(handler, addr, ());
-
-                            protocol
-                                .serve_connection(socket, service)
-                                .await
-                                .context("Error serving connection")?;
-
-                            Result::<_, Error>::Ok(())
-                        };
-
-                        tokio::spawn(task.map_err(move |e| {
-                            warn!(&logger, "HTTP Server error: {:?}", e);
-                        }));
-
-                        future::ready(())
-                    })
-                    .await;
-            }
-            .right_future()
-        }
+        (None, None, None, None) => serve::http(logger.clone(), listener, handler).right_future(),
         _ => bail!("TLS flags must be passed together"),
     };
 

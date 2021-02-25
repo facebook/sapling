@@ -7,7 +7,6 @@
 
 use anyhow::{Context, Error, Result};
 use futures::future::{BoxFuture, FutureExt};
-use gotham::ConnectedGothamService;
 use gotham_ext::socket_data::TlsSocketData;
 use http::{HeaderMap, HeaderValue, Method, Request, Response, Uri};
 use hyper::{service::Service, Body};
@@ -17,7 +16,7 @@ use sshrelay::Metadata;
 use std::io::Cursor;
 use std::marker::PhantomData;
 use std::str::FromStr;
-use std::sync::{atomic::Ordering, Arc};
+use std::sync::atomic::Ordering;
 use std::task;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
@@ -271,22 +270,23 @@ where
             .context("Error translating EdenAPI request")
             .map_err(HttpError::internal)?;
 
-        let socket_data = if self.conn.is_trusted {
+        let tls_socket_data = if self.conn.is_trusted {
             TlsSocketData::trusted_proxy()
         } else {
             TlsSocketData::authenticated_identities((*self.conn.identities).clone())
         };
 
-        let mut gotham = ConnectedGothamService::connect(
-            Arc::new(self.acceptor().edenapi.clone()),
-            self.conn.pending.addr,
-            socket_data,
-        );
+        let req = Request::from_parts(req, body);
 
-        return gotham
-            .call(Request::from_parts(req, body))
-            .await
-            .map_err(HttpError::internal);
+        let res = self
+            .acceptor()
+            .edenapi
+            .clone()
+            .into_service(self.conn.pending.addr, Some(tls_socket_data))
+            .call_gotham(req)
+            .await;
+
+        Ok(res)
     }
 
     fn acceptor(&self) -> &Acceptor {

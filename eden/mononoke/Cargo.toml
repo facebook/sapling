@@ -392,8 +392,8 @@ addr2line = { git ="https://github.com/gimli-rs/addr2line.git", rev = "0b6b6018b
 bytecount = { git = "https://github.com/llogiq/bytecount", rev = "469eaf8395c99397cd64d059737a9054aa014088" }
 chashmap = { git = "https://gitlab.redox-os.org/ahornby/chashmap", rev = "901ace2ca3cdbc2095adb1af111d211e254e2aae" }
 const-random = { git = "https://github.com/fbsource/const-random", rev = "374c5b46427fe2ffbf6acbd9c1687e0f1a809f95" }
-gotham = { git = "https://github.com/krallin/gotham.git", rev = "da0b85605f5bf84988309446ceb87a4b87870334"}
-gotham_derive = { git = "https://github.com/krallin/gotham.git", rev = "da0b85605f5bf84988309446ceb87a4b87870334"}
+gotham = { git = "https://github.com/krallin/gotham.git", rev = "59f7f3fe8958837cc4343c67ee5c2c1f11ce65ab"}
+gotham_derive = { git = "https://github.com/krallin/gotham.git", rev = "59f7f3fe8958837cc4343c67ee5c2c1f11ce65ab"}
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
 openssl = { git = "https://github.com/KapJI/rust-openssl", rev = "e0d808e27fec1818b1eecf362f69764ed860aa34" }
 openssl-sys = { git = "https://github.com/KapJI/rust-openssl", rev = "e0d808e27fec1818b1eecf362f69764ed860aa34" }

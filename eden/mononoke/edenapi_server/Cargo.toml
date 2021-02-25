@@ -9,16 +9,13 @@ license = "GPLv2+"
 anyhow = "1.0"
 blobrepo_factory = { path = "../blobrepo/factory", version = "0.1.0" }
 clap = "2.33"
-cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 cmdlib = { path = "../cmdlib", version = "0.1.0" }
 edenapi_service = { path = "../edenapi_service", version = "0.1.0" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-gotham = { version = "=0.5.0", default-features = false }
 gotham_ext = { path = "../gotham_ext", version = "0.1.0" }
 mononoke_api = { path = "../mononoke_api", version = "0.1.0" }
 permission_checker = { path = "../permission_checker", version = "0.1.0" }
 secure_utils = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-openssl = "0.4"

@@ -11,6 +11,7 @@ pub mod error;
 pub mod handler;
 pub mod middleware;
 pub mod response;
+pub mod serve;
 pub mod signal_stream;
 pub mod socket_data;
 pub mod stream_ext;

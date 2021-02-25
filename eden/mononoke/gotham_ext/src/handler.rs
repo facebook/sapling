@@ -5,22 +5,41 @@
  * GNU General Public License version 2.
  */
 
-use futures::future::FutureExt;
+use futures::{
+    future::{BoxFuture, FutureExt},
+    task,
+};
 use gotham::{
     handler::{Handler, HandlerFuture, IntoResponse, NewHandler},
     state::State,
 };
-use hyper::{Body, Response};
+use hyper::{service::Service, Body, Request, Response};
+use std::net::SocketAddr;
 use std::panic::RefUnwindSafe;
 use std::pin::Pin;
 use std::sync::Arc;
 
 use crate::middleware::Middleware;
+use crate::socket_data::TlsSocketData;
 
 #[derive(Clone)]
 pub struct MononokeHttpHandler<H> {
     inner: H,
     middleware: Arc<Vec<Box<dyn Middleware>>>,
+}
+
+impl<H> MononokeHttpHandler<H> {
+    pub fn into_service(
+        self,
+        addr: SocketAddr,
+        tls_socket_data: Option<TlsSocketData>,
+    ) -> MononokeHttpHandlerAsService<H> {
+        MononokeHttpHandlerAsService {
+            handler: self,
+            addr,
+            tls_socket_data,
+        }
+    }
 }
 
 // This trait is boilerplate to let us bind this in Gotham as the service. This is essentially
@@ -116,6 +135,53 @@ impl MononokeHttpHandlerBuilder {
             inner,
             middleware: Arc::new(self.middleware),
         }
+    }
+}
+
+/// This is an instance of MononokeHttpHandlerAsService that is connected to a client. We can use
+/// it to call into Gotham explicitly, or use it as a Hyper service.
+#[derive(Clone)]
+pub struct MononokeHttpHandlerAsService<H> {
+    handler: MononokeHttpHandler<H>,
+    addr: SocketAddr,
+    tls_socket_data: Option<TlsSocketData>,
+}
+
+impl<H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe> MononokeHttpHandlerAsService<H> {
+    pub async fn call_gotham(self, req: Request<Body>) -> Response<Body> {
+        let mut state = State::from_request(req, self.addr);
+        if let Some(tls_socket_data) = self.tls_socket_data {
+            tls_socket_data.populate_state(&mut state);
+        }
+
+        let res = match self.handler.handle(state).await {
+            Ok((_state, res)) => res,
+            Err((state, err)) => err.into_response(&state),
+        };
+
+        res
+    }
+}
+
+impl<H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe> Service<Request<Body>>
+    for MononokeHttpHandlerAsService<H>
+{
+    type Response = Response<Body>;
+    type Error = anyhow::Error;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
+
+    fn poll_ready(&mut self, _cx: &mut task::Context<'_>) -> task::Poll<Result<(), Self::Error>> {
+        task::Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, req: Request<Body>) -> Self::Future {
+        let this = self.clone();
+
+        async move {
+            let res = this.call_gotham(req).await;
+            Ok(res)
+        }
+        .boxed()
     }
 }
 

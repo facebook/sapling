@@ -49,7 +49,6 @@ thiserror = "1.0"
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master", version = "0.1.0" }
 time_window_counter = { path = "../time_window_counter", version = "0.1.0" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
-tokio-openssl = "0.4"
 
 [dev-dependencies]
 blobrepo_override = { path = "../blobrepo/override", version = "0.1.0" }

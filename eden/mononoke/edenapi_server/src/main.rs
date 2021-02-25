@@ -16,13 +16,11 @@ use std::sync::{
 
 use anyhow::{anyhow, Context, Result};
 use clap::Arg;
-use cloned::cloned;
 use futures::{
     channel::oneshot,
     future::{lazy, select, FutureExt, TryFutureExt},
 };
-use gotham::{bind_server, bind_server_with_socket_data};
-use slog::{debug, info, warn, Logger};
+use slog::{debug, info, Logger};
 use tokio::net::TcpListener;
 
 use blobrepo_factory::Caching;
@@ -32,7 +30,7 @@ use cmdlib::{
     monitoring::{start_fb303_server, AliveService},
 };
 use fbinit::FacebookInit;
-use gotham_ext::socket_data::TlsSocketData;
+use gotham_ext::serve;
 use mononoke_api::{
     BookmarkUpdateDelay, Mononoke, MononokeEnvironment, WarmBookmarksCacheDerivedData,
 };
@@ -105,7 +103,7 @@ async fn start(
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches)?;
     let disabled_hooks = args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?;
-    let trusted_proxy_idents = Arc::new(parse_identities(&matches)?);
+    let trusted_proxy_idents = parse_identities(&matches)?;
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
     let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches, &logger)?;
 
@@ -153,35 +151,19 @@ async fn start(
     let scheme = if acceptor.is_some() { "https" } else { "http" };
     let server = match acceptor {
         Some(acceptor) => {
-            let acceptor = Arc::new(acceptor);
             let capture_session_data = tls_session_data_log.is_some();
 
-            bind_server_with_socket_data(listener, handler, {
-                cloned!(logger);
-                move |socket| {
-                    cloned!(acceptor, logger, trusted_proxy_idents);
-                    async move {
-                        let ssl_socket = match tokio_openssl::accept(&acceptor, socket).await {
-                            Ok(ssl_socket) => ssl_socket,
-                            Err(e) => {
-                                warn!(&logger, "TLS handshake failed: {:?}", e);
-                                return Err(());
-                            }
-                        };
-
-                        let socket_data = TlsSocketData::from_ssl(
-                            ssl_socket.ssl(),
-                            trusted_proxy_idents.as_ref(),
-                            capture_session_data,
-                        );
-
-                        Ok((socket_data, ssl_socket))
-                    }
-                }
-            })
+            serve::https(
+                logger.clone(),
+                listener,
+                acceptor,
+                capture_session_data,
+                trusted_proxy_idents,
+                handler,
+            )
             .left_future()
         }
-        None => bind_server(listener, handler, |socket| async move { Ok(socket) }).right_future(),
+        None => serve::http(logger.clone(), listener, handler).right_future(),
     };
 
     // Spawn a basic FB303 Thrift server for stats reporting.
@@ -192,7 +174,7 @@ async fn start(
     let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
     serve_forever_async(
         select(
-            server.boxed().map_err(|()| anyhow!("unexpected error")),
+            server.map(Ok).boxed(),
             shutdown_rx.map_err(|err| anyhow!("Cancelled channel: {}", err)),
         )
         .map(|res| res.factor_first().0),

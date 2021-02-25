@@ -6,11 +6,12 @@
  */
 
 use bytes::Bytes;
-use gotham::{socket_data::SocketData, state::State};
+use gotham::state::State;
 use gotham_derive::StateData;
 use openssl::ssl::SslRef;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 
+#[derive(Clone)]
 pub struct TlsSocketData {
     identities: Option<TlsCertificateIdentities>,
     session_data: Option<TlsSessionData>,
@@ -49,16 +50,14 @@ impl TlsSocketData {
             session_data: None,
         }
     }
-}
 
-impl SocketData for TlsSocketData {
-    fn populate_state(&self, state: &mut State) {
-        if let Some(ref identities) = self.identities {
-            state.put(identities.clone());
+    pub fn populate_state(self, state: &mut State) {
+        if let Some(identities) = self.identities {
+            state.put(identities);
         }
 
-        if let Some(ref session_data) = self.session_data {
-            state.put(session_data.clone());
+        if let Some(session_data) = self.session_data {
+            state.put(session_data);
         }
     }
 }
