@@ -39,7 +39,7 @@ pub struct Segment(pub(crate) Bytes);
 // Serialization format for Segment:
 //
 // ```plain,ignore
-// SEGMENT := LEVEL (1B) + HIGH (8B) + vlq(HIGH-LOW) + vlq(PARENT_COUNT) + vlq(VLQ, PARENTS)
+// SEGMENT := FLAG (1B) + LEVEL (1B) + HIGH (8B) + vlq(HIGH-LOW) + vlq(PARENT_COUNT) + vlq(VLQ, PARENTS)
 // ```
 //
 // The reason HIGH is not stored in VLQ is because it's used by range lookup,
