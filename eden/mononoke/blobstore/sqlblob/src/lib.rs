@@ -37,6 +37,7 @@ use futures_ext::{try_boxfuture, BoxFuture as BoxFuture01, FutureExt as _};
 use futures_old::future::join_all;
 use futures_old::prelude::*;
 use mononoke_types::{hash::Context as HashContext, BlobstoreBytes};
+use nonzero_ext::nonzero;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
     facebook::{
@@ -61,7 +62,8 @@ use xdb_gc_structs::XdbGc;
 const MAX_KEY_SIZE: usize = 200;
 // MySQL wants multiple chunks, each around 1 MiB, as a tradeoff between query latency and replication lag
 const CHUNK_SIZE: usize = 1024 * 1024;
-const SQLITE_SHARD_NUM: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(2) };
+const SQLITE_SHARD_NUM: NonZeroUsize = nonzero!(2_usize);
+const SINGLE_SHARD_NUM: NonZeroUsize = nonzero!(1_usize);
 const GC_GENERATION_PATH: &str = "scm/mononoke/xdb_gc/default";
 
 // Test setup data
@@ -92,7 +94,11 @@ impl Sqlblob {
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
-        let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
+        let delay = if readonly {
+            BlobDelay::dummy(shard_num)
+        } else {
+            try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num))
+        };
         Self::with_connection_factory(
             delay,
             shardmap.clone(),
@@ -124,11 +130,15 @@ impl Sqlblob {
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
-        let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
+        let delay = if readonly {
+            BlobDelay::dummy(SINGLE_SHARD_NUM)
+        } else {
+            try_boxfuture!(myadmin_delay::single(fb, db_address.clone()))
+        };
         Self::with_connection_factory(
             delay,
             db_address.clone(),
-            NonZeroUsize::new(1).expect("One should be greater than zero"),
+            SINGLE_SHARD_NUM,
             put_behaviour,
             move |_shard_id| {
                 Ok(create_myrouter_connections(
@@ -158,10 +168,14 @@ impl Sqlblob {
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
-        let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
+        let delay = if readonly {
+            BlobDelay::dummy(shard_num)
+        } else {
+            try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num))
+        };
         let config_handle = try_boxfuture!(get_gc_config_handle(config_store));
-
         let shard_count = shard_num.clone().get();
+
         create_mysql_connections_sharded(
             fb,
             global_connection_pool,
@@ -219,11 +233,15 @@ impl Sqlblob {
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
-        let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
+        let delay = if readonly {
+            BlobDelay::dummy(SINGLE_SHARD_NUM)
+        } else {
+            try_boxfuture!(myadmin_delay::single(fb, db_address.clone()))
+        };
         Self::with_connection_factory(
             delay,
             db_address.clone(),
-            NonZeroUsize::new(1).expect("One should be greater than zero"),
+            SINGLE_SHARD_NUM,
             put_behaviour,
             move |_shard_id| {
                 create_mysql_connections_unsharded(
@@ -250,7 +268,11 @@ impl Sqlblob {
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
-        let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
+        let delay = if readonly {
+            BlobDelay::dummy(shard_num)
+        } else {
+            try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num))
+        };
         Self::with_connection_factory(
             delay,
             shardmap.clone(),
@@ -277,11 +299,15 @@ impl Sqlblob {
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
-        let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
+        let delay = if readonly {
+            BlobDelay::dummy(SINGLE_SHARD_NUM)
+        } else {
+            try_boxfuture!(myadmin_delay::single(fb, db_address.clone()))
+        };
         Self::with_connection_factory(
             delay,
             db_address.clone(),
-            NonZeroUsize::new(1).expect("One should be greater than zero"),
+            SINGLE_SHARD_NUM,
             put_behaviour,
             move |_shard_id| {
                 create_raw_xdb_connections(fb, db_address.clone(), read_con_type, readonly).boxify()
