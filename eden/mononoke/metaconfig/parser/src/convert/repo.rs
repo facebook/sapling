@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
 use bookmarks_types::BookmarkName;
@@ -416,9 +417,36 @@ impl Convert for RawSegmentedChangelogConfig {
     type Output = SegmentedChangelogConfig;
 
     fn convert(self) -> Result<Self::Output> {
-        let mut config = SegmentedChangelogConfig::default();
-        config.enabled = self.enabled.unwrap_or(config.enabled);
-        config.update_algorithm = self.update_algorithm.or(config.update_algorithm);
-        Ok(config)
+        fn maybe_secs_to_duration(
+            maybe_secs: Option<i64>,
+            default: Option<Duration>,
+        ) -> Result<Option<Duration>> {
+            match maybe_secs {
+                Some(secs) if secs == 0 => Ok(None),
+                Some(secs) => Ok(Some(Duration::from_secs(secs.try_into()?))),
+                None => Ok(default),
+            }
+        }
+        let default = SegmentedChangelogConfig::default();
+        Ok(SegmentedChangelogConfig {
+            enabled: self.enabled.unwrap_or(default.enabled),
+            update_algorithm: self.update_algorithm.or(default.update_algorithm),
+            master_bookmark: self.master_bookmark.unwrap_or(default.master_bookmark),
+            tailer_update_period: maybe_secs_to_duration(
+                self.tailer_update_period_secs,
+                default.tailer_update_period,
+            )?,
+            skip_dag_load_at_startup: self
+                .skip_dag_load_at_startup
+                .unwrap_or(default.skip_dag_load_at_startup),
+            reload_dag_save_period: maybe_secs_to_duration(
+                self.reload_dag_save_period_secs,
+                default.reload_dag_save_period,
+            )?,
+            update_to_master_bookmark_period: maybe_secs_to_duration(
+                self.update_to_master_bookmark_period_secs,
+                default.update_to_master_bookmark_period,
+            )?,
+        })
     }
 }

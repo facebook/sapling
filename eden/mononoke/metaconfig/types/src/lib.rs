@@ -1334,6 +1334,22 @@ pub struct SegmentedChangelogConfig {
     /// Specifies which update algorithm segmented changelog should be instantiate with. Check
     /// SegmentedChangelogBuilder for valid options.
     pub update_algorithm: Option<String>,
+    /// The bookmark that is followed to construct the Master group of the Dag.
+    pub master_bookmark: String,
+    /// How often the tailer should check for updates on the master_bookmark.
+    /// Defaults to 5 minutes.
+    pub tailer_update_period: Option<Duration>,
+    /// By default a mononoke process will look for Dags to load from blobstore.  In tests we may
+    /// not have prebuilt Dags to load so we have this setting to allow us to skip that step and
+    /// initialize with an empty Dag.
+    /// We don't want to set this in production.
+    pub skip_dag_load_at_startup: bool,
+    /// How often an Dag will be reloaded from saves.
+    /// The Dag will not reload when unset.
+    pub reload_dag_save_period: Option<Duration>,
+    /// How often the in process Dag will check the master bookmark to update itself.
+    /// The Dag will not check master when unset.
+    pub update_to_master_bookmark_period: Option<Duration>,
 }
 
 impl Default for SegmentedChangelogConfig {
@@ -1341,6 +1357,11 @@ impl Default for SegmentedChangelogConfig {
         SegmentedChangelogConfig {
             enabled: false,
             update_algorithm: None,
+            master_bookmark: String::from("master"),
+            tailer_update_period: Some(Duration::from_secs(300)),
+            skip_dag_load_at_startup: false,
+            reload_dag_save_period: None,
+            update_to_master_bookmark_period: None,
         }
     }
 }
