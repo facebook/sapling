@@ -91,7 +91,7 @@ HgQueuedBackingStore::~HgQueuedBackingStore() {
 }
 
 void HgQueuedBackingStore::processBlobImportRequests(
-    std::vector<HgImportRequest>&& requests) {
+    std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
   std::vector<Hash> hashes;
   std::vector<HgProxyHash> proxyHashes;
   std::vector<folly::Promise<HgImportRequest::BlobImport::Response>*> promises;
@@ -104,12 +104,13 @@ void HgQueuedBackingStore::processBlobImportRequests(
   XLOG(DBG4) << "Processing blob import batch size=" << requests.size();
 
   for (auto& request : requests) {
-    auto* blobImport = request.getRequest<HgImportRequest::BlobImport>();
+    auto* blobImport = request->getRequest<HgImportRequest::BlobImport>();
     auto& hash = blobImport->hash;
-    auto* promise = request.getPromise<HgImportRequest::BlobImport::Response>();
+    auto* promise =
+        request->getPromise<HgImportRequest::BlobImport::Response>();
 
     traceBus_->publish(HgImportTraceEvent::start(
-        request.getUnique(), HgImportTraceEvent::BLOB, blobImport->proxyHash));
+        request->getUnique(), HgImportTraceEvent::BLOB, blobImport->proxyHash));
 
     XLOGF(
         DBG4,
@@ -143,11 +144,11 @@ void HgQueuedBackingStore::processBlobImportRequests(
               .defer([request = std::move(*request), watch, stats = stats_](
                          auto&& result) mutable {
                 auto hash =
-                    request.getRequest<HgImportRequest::BlobImport>()->hash;
+                    request->getRequest<HgImportRequest::BlobImport>()->hash;
                 XLOG(DBG4) << "Imported blob from HgImporter for " << hash;
                 stats->getHgBackingStoreStatsForCurrentThread()
                     .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
-                request.getPromise<HgImportRequest::BlobImport::Response>()
+                request->getPromise<HgImportRequest::BlobImport::Response>()
                     ->setTry(std::forward<decltype(result)>(result));
               }));
     }
@@ -157,14 +158,14 @@ void HgQueuedBackingStore::processBlobImportRequests(
 }
 
 void HgQueuedBackingStore::processTreeImportRequests(
-    std::vector<HgImportRequest>&& requests) {
+    std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
   for (auto& request : requests) {
-    auto treeImport = request.getRequest<HgImportRequest::TreeImport>();
+    auto treeImport = request->getRequest<HgImportRequest::TreeImport>();
 
     traceBus_->publish(HgImportTraceEvent::start(
-        request.getUnique(), HgImportTraceEvent::TREE, treeImport->proxyHash));
+        request->getUnique(), HgImportTraceEvent::TREE, treeImport->proxyHash));
 
-    request.getPromise<HgImportRequest::TreeImport::Response>()->setWith(
+    request->getPromise<HgImportRequest::TreeImport::Response>()->setWith(
         [store = backingStore_.get(),
          hash = treeImport->hash,
          proxyHash = treeImport->proxyHash,
@@ -181,10 +182,10 @@ void HgQueuedBackingStore::processTreeImportRequests(
 }
 
 void HgQueuedBackingStore::processPrefetchRequests(
-    std::vector<HgImportRequest>&& requests) {
+    std::vector<std::shared_ptr<HgImportRequest>>&& requests) {
   for (auto& request : requests) {
-    auto parameter = request.getRequest<HgImportRequest::Prefetch>();
-    request.getPromise<HgImportRequest::Prefetch::Response>()->setWith(
+    auto parameter = request->getRequest<HgImportRequest::Prefetch>();
+    request->getPromise<HgImportRequest::Prefetch::Response>()->setWith(
         [store = backingStore_.get(),
          proxyHashes = parameter->proxyHashes]() mutable {
           return store
@@ -206,11 +207,11 @@ void HgQueuedBackingStore::processRequest() {
 
     const auto& first = requests.at(0);
 
-    if (first.isType<HgImportRequest::BlobImport>()) {
+    if (first->isType<HgImportRequest::BlobImport>()) {
       processBlobImportRequests(std::move(requests));
-    } else if (first.isType<HgImportRequest::TreeImport>()) {
+    } else if (first->isType<HgImportRequest::TreeImport>()) {
       processTreeImportRequests(std::move(requests));
-    } else if (first.isType<HgImportRequest::Prefetch>()) {
+    } else if (first->isType<HgImportRequest::Prefetch>()) {
       processPrefetchRequests(std::move(requests));
     }
   }

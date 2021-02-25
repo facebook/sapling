@@ -30,14 +30,22 @@ void HgImportRequestQueue::enqueue(HgImportRequest request) {
       return;
     }
 
-    state->queue.emplace_back(std::move(request));
-    std::push_heap(state->queue.begin(), state->queue.end());
+    state->queue.emplace_back(
+        std::make_shared<HgImportRequest>(std::move(request)));
+    std::push_heap(
+        state->queue.begin(),
+        state->queue.end(),
+        [](const std::shared_ptr<HgImportRequest>& lhs,
+           const std::shared_ptr<HgImportRequest>& rhs) {
+          return (*lhs) < (*rhs);
+        });
   }
 
   queueCV_.notify_one();
 }
 
-std::vector<HgImportRequest> HgImportRequestQueue::dequeue(size_t count) {
+std::vector<std::shared_ptr<HgImportRequest>> HgImportRequestQueue::dequeue(
+    size_t count) {
   auto state = state_.lock();
 
   while (state->running && state->queue.empty()) {
@@ -46,13 +54,13 @@ std::vector<HgImportRequest> HgImportRequestQueue::dequeue(size_t count) {
 
   if (!state->running) {
     state->queue.clear();
-    return std::vector<HgImportRequest>();
+    return std::vector<std::shared_ptr<HgImportRequest>>();
   }
 
   auto& queue = state->queue;
 
-  std::vector<HgImportRequest> result;
-  std::vector<HgImportRequest> putback;
+  std::vector<std::shared_ptr<HgImportRequest>> result;
+  std::vector<std::shared_ptr<HgImportRequest>> putback;
   std::optional<size_t> type;
 
   for (size_t i = 0; i < count * 3; i++) {
@@ -60,16 +68,22 @@ std::vector<HgImportRequest> HgImportRequestQueue::dequeue(size_t count) {
       break;
     }
 
-    std::pop_heap(queue.begin(), queue.end());
+    std::pop_heap(
+        queue.begin(),
+        queue.end(),
+        [](const std::shared_ptr<HgImportRequest>& lhs,
+           const std::shared_ptr<HgImportRequest>& rhs) {
+          return (*lhs) < (*rhs);
+        });
 
     auto request = std::move(queue.back());
     queue.pop_back();
 
     if (!type) {
-      type = request.getType();
+      type = request->getType();
       result.emplace_back(std::move(request));
     } else {
-      if (*type == request.getType()) {
+      if (*type == request->getType()) {
         result.emplace_back(std::move(request));
       } else {
         putback.emplace_back(std::move(request));
@@ -79,7 +93,13 @@ std::vector<HgImportRequest> HgImportRequestQueue::dequeue(size_t count) {
 
   for (auto& item : putback) {
     queue.emplace_back(std::move(item));
-    std::push_heap(queue.begin(), queue.end());
+    std::push_heap(
+        queue.begin(),
+        queue.end(),
+        [](const std::shared_ptr<HgImportRequest>& lhs,
+           const std::shared_ptr<HgImportRequest>& rhs) {
+          return (*lhs) < (*rhs);
+        });
   }
 
   return result;

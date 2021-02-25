@@ -157,9 +157,12 @@ class HgQueuedBackingStore : public BackingStore {
   HgQueuedBackingStore(const HgQueuedBackingStore&) = delete;
   HgQueuedBackingStore& operator=(const HgQueuedBackingStore&) = delete;
 
-  void processBlobImportRequests(std::vector<HgImportRequest>&& requests);
-  void processTreeImportRequests(std::vector<HgImportRequest>&& requests);
-  void processPrefetchRequests(std::vector<HgImportRequest>&& requests);
+  void processBlobImportRequests(
+      std::vector<std::shared_ptr<HgImportRequest>>&& requests);
+  void processTreeImportRequests(
+      std::vector<std::shared_ptr<HgImportRequest>>&& requests);
+  void processPrefetchRequests(
+      std::vector<std::shared_ptr<HgImportRequest>>&& requests);
 
   /**
    * The worker runloop function.

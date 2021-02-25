@@ -34,7 +34,7 @@ class HgImportRequestQueue {
    * The returned vector may have fewer requests than it requested, and all
    * requests in the vector are guaranteed to be the same type.
    */
-  std::vector<HgImportRequest> dequeue(size_t count);
+  std::vector<std::shared_ptr<HgImportRequest>> dequeue(size_t count);
 
   void stop();
 
@@ -44,7 +44,7 @@ class HgImportRequestQueue {
 
   struct State {
     bool running = true;
-    std::vector<HgImportRequest> queue;
+    std::vector<std::shared_ptr<HgImportRequest>> queue;
   };
 
   folly::Synchronized<State, std::mutex> state_;
