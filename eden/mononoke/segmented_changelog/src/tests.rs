@@ -6,6 +6,7 @@
  */
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::Result;
 use fbinit::FacebookInit;
@@ -15,10 +16,11 @@ use futures::stream::TryStreamExt;
 use futures::StreamExt;
 
 use blobrepo::BlobRepo;
+use bookmarks::BookmarkName;
 use caching_ext::{CachelibHandler, MemcacheHandler};
 use context::CoreContext;
 use dag::{InProcessIdDag, Location};
-use fixtures::{linear, merge_even, merge_uneven, unshared_merge_even};
+use fixtures::{linear, merge_even, merge_uneven, set_bookmark, unshared_merge_even};
 use mononoke_types::ChangesetId;
 use phases::mark_reachable_as_public;
 use revset::AncestorsNodeStream;
@@ -646,6 +648,46 @@ async fn test_caching(fb: FacebookInit) -> Result<()> {
 
     assert_eq!(dag_to_cs_stats().gets, 2);
     assert_eq!(dag_to_cs_stats().hits, 1);
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_periodic_update_dag(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = linear::getrepo(fb).await;
+    let bookmark_name = BookmarkName::new("periodic_update")?;
+
+    let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281";
+    let start_cs = resolve_cs_id(&ctx, &blobrepo, start_hg_id).await?;
+    set_bookmark(fb, blobrepo.clone(), start_hg_id, bookmark_name.clone()).await;
+
+    tokio::time::pause();
+
+    let dag = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+        .with_blobrepo(&blobrepo)
+        .with_update_to_bookmark_period(Duration::from_secs(10))
+        .with_bookmark_name(bookmark_name.clone())
+        .build_periodic_update(&ctx)?;
+
+    tokio::time::advance(Duration::from_secs(5)).await;
+    dag.wait_for_update().await;
+
+    // We assume that clone_data will not update the dag in any form.
+
+    let clone_data = dag.clone_data(&ctx).await?;
+    assert_eq!(
+        *clone_data.idmap.get(&clone_data.head_id).unwrap(),
+        start_cs
+    );
+
+    let new_hg_id = "79a13814c5ce7330173ec04d279bf95ab3f652fb";
+    let new_cs = resolve_cs_id(&ctx, &blobrepo, new_hg_id).await?;
+    set_bookmark(fb, blobrepo.clone(), new_hg_id, bookmark_name.clone()).await;
+    tokio::time::advance(Duration::from_secs(10)).await;
+    dag.wait_for_update().await;
+    let clone_data = dag.clone_data(&ctx).await?;
+    assert_eq!(*clone_data.idmap.get(&clone_data.head_id).unwrap(), new_cs,);
 
     Ok(())
 }

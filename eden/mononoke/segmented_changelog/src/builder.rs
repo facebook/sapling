@@ -6,6 +6,7 @@
  */
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{format_err, Context, Result};
 use blobrepo::BlobRepo;
@@ -29,7 +30,7 @@ use crate::idmap::{
     SqlIdMapVersionStore,
 };
 use crate::manager::SegmentedChangelogManager;
-use crate::on_demand::OnDemandUpdateDag;
+use crate::on_demand::{OnDemandUpdateDag, PeriodicUpdateDag};
 use crate::seeder::SegmentedChangelogSeeder;
 use crate::tailer::SegmentedChangelogTailer;
 use crate::types::IdMapVersion;
@@ -56,6 +57,7 @@ pub struct SegmentedChangelogBuilder {
     bookmark_name: Option<BookmarkName>,
     cache_handlers: Option<CacheHandlers>,
     with_in_memory_write_idmap: bool,
+    update_to_bookmark_period: Option<Duration>,
 }
 
 impl SqlConstruct for SegmentedChangelogBuilder {
@@ -76,6 +78,7 @@ impl SqlConstruct for SegmentedChangelogBuilder {
             bookmark_name: None,
             cache_handlers: None,
             with_in_memory_write_idmap: false,
+            update_to_bookmark_period: None,
         }
     }
 }
@@ -121,6 +124,19 @@ impl SegmentedChangelogBuilder {
         let manager = self.build_manager()?;
         let (_, dag) = manager.load_dag(ctx).await?;
         Ok(OnDemandUpdateDag::from_dag(dag, changeset_fetcher))
+    }
+
+    pub fn build_periodic_update(mut self, ctx: &CoreContext) -> Result<PeriodicUpdateDag> {
+        let dag = self.build_dag()?;
+        let changeset_fetcher = self.changeset_fetcher()?;
+        let dag = PeriodicUpdateDag::for_bookmark(
+            ctx,
+            Arc::new(OnDemandUpdateDag::from_dag(dag, changeset_fetcher)),
+            self.bookmarks()?,
+            self.bookmark_name()?,
+            self.update_to_bookmark_period()?,
+        );
+        Ok(dag)
     }
 
     pub async fn build_seeder(mut self, ctx: &CoreContext) -> Result<SegmentedChangelogSeeder> {
@@ -218,6 +234,11 @@ impl SegmentedChangelogBuilder {
 
     pub fn with_cache_handlers(mut self, cache_handlers: CacheHandlers) -> Self {
         self.cache_handlers = Some(cache_handlers);
+        self
+    }
+
+    pub fn with_update_to_bookmark_period(mut self, period: Duration) -> Self {
+        self.update_to_bookmark_period = Some(period);
         self
     }
 
@@ -352,6 +373,15 @@ impl SegmentedChangelogBuilder {
     fn bookmark_name(&mut self) -> Result<BookmarkName> {
         self.bookmark_name.take().ok_or_else(|| {
             format_err!("SegmentedChangelog cannot be built without BookmarkName being specified.")
+        })
+    }
+
+    fn update_to_bookmark_period(&mut self) -> Result<Duration> {
+        self.update_to_bookmark_period.take().ok_or_else(|| {
+            format_err!(
+                "SegmentedChangelog cannot be built without \
+                update_to_bookmark_period being specified."
+            )
         })
     }
 }

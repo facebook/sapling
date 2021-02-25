@@ -7,19 +7,21 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
-use anyhow::{Context, Result};
+use anyhow::{format_err, Context, Result};
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::{FutureExt, TryFutureExt};
 use parking_lot::Mutex;
-use tokio::sync::RwLock;
+use tokio::sync::{Notify, RwLock};
 
 use cloned::cloned;
 use dag::{self, CloneData, InProcessIdDag, Location};
-use futures_ext::future::{FbTryFutureExt, TryShared};
+use futures_ext::future::{spawn_controlled, ControlledHandle, FbTryFutureExt, TryShared};
 use stats::prelude::*;
 
+use bookmarks::{BookmarkName, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
@@ -59,6 +61,16 @@ impl OnDemandUpdateDag {
 
     pub fn from_dag(dag: Dag, changeset_fetcher: Arc<dyn ChangesetFetcher>) -> Self {
         Self::new(dag.iddag, dag.idmap, changeset_fetcher)
+    }
+
+    pub fn with_periodic_update_to_bookmark(
+        self: Arc<Self>,
+        ctx: &CoreContext,
+        bookmarks: Arc<dyn Bookmarks>,
+        bookmark_name: BookmarkName,
+        period: Duration,
+    ) -> PeriodicUpdateDag {
+        PeriodicUpdateDag::for_bookmark(ctx, self, bookmarks, bookmark_name, period)
     }
 
     // Updating the Dag has 3 phases:
@@ -209,5 +221,111 @@ impl SegmentedChangelog for OnDemandUpdateDag {
         let iddag = self.iddag.read().await;
         let read_dag = ReadDag::new(&iddag, self.idmap.clone());
         read_dag.full_idmap_clone_data(ctx).await
+    }
+}
+
+pub struct PeriodicUpdateDag {
+    on_demand_update_dag: Arc<OnDemandUpdateDag>,
+    _handle: ControlledHandle,
+    #[allow(dead_code)] // useful for testing
+    notify: Arc<Notify>,
+}
+
+impl PeriodicUpdateDag {
+    pub fn for_bookmark(
+        ctx: &CoreContext,
+        on_demand_update_dag: Arc<OnDemandUpdateDag>,
+        bookmarks: Arc<dyn Bookmarks>,
+        bookmark_name: BookmarkName,
+        period: Duration,
+    ) -> Self {
+        let notify = Arc::new(Notify::new());
+        let _handle = spawn_controlled({
+            let ctx = ctx.clone();
+            let my_dag = Arc::clone(&on_demand_update_dag);
+            let notify = Arc::clone(&notify);
+            async move {
+                let mut interval = tokio::time::interval(period);
+                loop {
+                    let _ = interval.tick().await;
+                    if let Err(err) =
+                        update_dag_from_bookmark(&ctx, &my_dag, &*bookmarks, &bookmark_name).await
+                    {
+                        slog::error!(
+                            ctx.logger(),
+                            "failed to update segmented changelog dag: {:?}",
+                            err
+                        );
+                    }
+                    notify.notify();
+                }
+            }
+        });
+        Self {
+            on_demand_update_dag,
+            _handle,
+            notify,
+        }
+    }
+
+    #[cfg(test)]
+    pub async fn wait_for_update(&self) {
+        self.notify.notified().await;
+    }
+}
+
+async fn update_dag_from_bookmark(
+    ctx: &CoreContext,
+    on_demand_update_dag: &OnDemandUpdateDag,
+    bookmarks: &dyn Bookmarks,
+    bookmark_name: &BookmarkName,
+) -> Result<()> {
+    let bookmark_cs = bookmarks
+        .get(ctx.clone(), bookmark_name)
+        .await
+        .with_context(|| {
+            format!(
+                "error while fetching changeset for bookmark {}",
+                bookmark_name
+            )
+        })?
+        .ok_or_else(|| format_err!("'{}' bookmark could not be found", bookmark_name))?;
+    on_demand_update_dag.try_update(&ctx, bookmark_cs).await?;
+    Ok(())
+}
+
+#[async_trait]
+impl SegmentedChangelog for PeriodicUpdateDag {
+    async fn location_to_many_changeset_ids(
+        &self,
+        ctx: &CoreContext,
+        location: Location<ChangesetId>,
+        count: u64,
+    ) -> Result<Vec<ChangesetId>> {
+        self.on_demand_update_dag
+            .location_to_many_changeset_ids(ctx, location, count)
+            .await
+    }
+
+    async fn many_changeset_ids_to_locations(
+        &self,
+        ctx: &CoreContext,
+        client_head: ChangesetId,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
+        self.on_demand_update_dag
+            .many_changeset_ids_to_locations(ctx, client_head, cs_ids)
+            .await
+    }
+
+    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+        self.on_demand_update_dag.clone_data(ctx).await
+    }
+
+    async fn full_idmap_clone_data(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<StreamCloneData<ChangesetId>> {
+        self.on_demand_update_dag.full_idmap_clone_data(ctx).await
     }
 }
