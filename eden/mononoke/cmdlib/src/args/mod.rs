@@ -2054,28 +2054,44 @@ pub fn init_tunables<'a>(
         return Ok(());
     }
 
-    let config_store = init_config_store(fb, &logger, matches)?;
-
     let tunables_spec = matches
         .value_of(TUNABLES_CONFIG)
         .unwrap_or(DEFAULT_TUNABLES_PATH);
 
-    let config_handle = get_config_handle(config_store, &logger, Some(tunables_spec))?;
+    let tunables_spec = parse_source_spec(tunables_spec)?;
 
-    init_tunables_worker(logger, config_handle)
+    let config_store = init_config_store(fb, &logger, matches)?;
+    let mut custom_config_store = None;
+
+    let config_handle = match tunables_spec {
+        SourceSpec::Configerator(source) => config_store.get_config_handle(source.to_string())?,
+        SourceSpec::File(file) => {
+            custom_config_store = Some(create_file_store(&logger));
+            custom_config_store
+                .as_ref()
+                .unwrap()
+                .get_config_handle(file.to_string())?
+        }
+        SourceSpec::DefaultHandle => ConfigHandle::default(),
+    };
+
+    init_tunables_worker(logger, config_handle, custom_config_store)
 }
+
 /// Initialize a new `tokio::runtime::Runtime` with thread number parsed from the CLI
 pub fn init_runtime(matches: &MononokeMatches) -> io::Result<tokio::runtime::Runtime> {
     let core_threads = get_usize_opt(matches, RUNTIME_THREADS);
     create_runtime(None, core_threads)
 }
 
-/// Extract a ConfigHandle<T> from a source_spec str that has one ofthe folowing formats:
+/// Extract a ConfigHandle<T> from a source_spec str that has one of the folowing formats:
 /// - configerator:PATH
 /// - file:PATH
 /// - default
 /// NB: Outside tests, using file:PATH is not recommended because it is inefficient - instead
 /// use a local configerator path and configerator:PATH
+/// NOTE: This is deprecated and is going to be removed.
+/// Simply use `your_config_store.get_config_handle`
 pub fn get_config_handle<T>(
     config_store: &ConfigStore,
     logger: &Logger,
@@ -2086,28 +2102,48 @@ where
 {
     match source_spec {
         Some(source_spec) => {
-            // NOTE: This means we don't support file paths with ":" in them, but it also means we can
-            // add other options after the first ":" later if we want.
-            let mut iter = source_spec.split(":");
-
-            // NOTE: We match None as the last element to make sure the input doesn't contain
-            // disallowed trailing parts.
-            match (iter.next(), iter.next(), iter.next()) {
-                (Some("configerator"), Some(source), None) => {
+            let source_spec = parse_source_spec(source_spec)?;
+            match source_spec {
+                SourceSpec::Configerator(source) => {
                     config_store.get_config_handle(source.to_string())
                 }
-                (Some("file"), Some(file), None) => ConfigStore::file(
-                    logger.clone(),
-                    PathBuf::new(),
-                    String::new(),
-                    Duration::from_secs(1),
-                )
-                .get_config_handle(file.to_string()),
-                (Some("default"), None, None) => Ok(ConfigHandle::default()),
-                _ => Err(format_err!("Invalid configuration spec: {:?}", source_spec)),
+                SourceSpec::File(file) => {
+                    create_file_store(logger).get_config_handle(file.to_string())
+                }
+                SourceSpec::DefaultHandle => Ok(ConfigHandle::default()),
             }
         }
         None => Ok(ConfigHandle::default()),
+    }
+}
+
+fn create_file_store(logger: &Logger) -> ConfigStore {
+    ConfigStore::file(
+        logger.clone(),
+        PathBuf::new(),
+        String::new(),
+        Duration::from_secs(1),
+    )
+}
+
+enum SourceSpec<'a> {
+    Configerator(&'a str),
+    File(&'a str),
+    DefaultHandle,
+}
+
+fn parse_source_spec(source_spec: &str) -> Result<SourceSpec, Error> {
+    // NOTE: This means we don't support file paths with ":" in them, but it also means we can
+    // add other options after the first ":" later if we want.
+    let mut iter = source_spec.split(':');
+
+    // NOTE: We match None as the last element to make sure the input doesn't contain
+    // disallowed trailing parts.
+    match (iter.next(), iter.next(), iter.next()) {
+        (Some("configerator"), Some(source), None) => Ok(SourceSpec::Configerator(source)),
+        (Some("file"), Some(file), None) => Ok(SourceSpec::File(file)),
+        (Some("default"), None, None) => Ok(SourceSpec::DefaultHandle),
+        _ => Err(format_err!("Invalid configuration spec: {:?}", source_spec)),
     }
 }
 

@@ -20,7 +20,7 @@ use std::sync::atomic::Ordering;
 use std::task;
 use thiserror::Error;
 use tokio::io::AsyncReadExt;
-use tunables::tunables;
+use tunables::{force_update_tunables, tunables};
 
 use crate::connection_acceptor::{
     self, AcceptedConnection, Acceptor, ChannelConn, FramedConn, MononokeStream,
@@ -242,6 +242,16 @@ where
                 handler.repo.blobrepo().bookmarks().drop_caches();
             }
 
+            return Ok(ok);
+        }
+
+        if path == "/force_update_configerator" {
+            self.acceptor().config_store.force_update_configs();
+            return Ok(ok);
+        }
+
+        if path == "/force_update_tunables" {
+            force_update_tunables();
             return Ok(ok);
         }
 

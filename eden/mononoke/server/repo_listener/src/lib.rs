@@ -113,6 +113,7 @@ pub async fn create_repo_listeners<'a>(
         scribe,
         edenapi,
         will_exit,
+        config_store,
     )
     .await
 }

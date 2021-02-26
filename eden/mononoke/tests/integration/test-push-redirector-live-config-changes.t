@@ -192,7 +192,7 @@ Live change of the config, without Mononoke restart
   $ update_commit_sync_map_second_option
 
 -- let LiveCommitSyncConfig pick up the changes
-  $ sleep 2
+  $ force_update_configerator
 
   $ cd "$TESTTMP"/small-hg-client-1
   $ REPONAME=small-mon-1 hgmn up master_bookmark -q

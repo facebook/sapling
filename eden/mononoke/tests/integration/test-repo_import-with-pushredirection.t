@@ -32,7 +32,7 @@ Before the change
   > }
   > EOF
 
-  $ sleep 2
+  $ force_update_configerator
 
   $ cd "$TESTTMP/small-hg-client"
   $ REPONAME=small-mon hgmn up -q master_bookmark
@@ -79,7 +79,7 @@ Before the change
   >   }
   > }
   > EOF
-  $ sleep 3
+  $ force_update_configerator
 
 -- Setup git repository
   $ cd "$TESTTMP"

@@ -101,8 +101,7 @@ Let's check that disabling running pushredirected hooks work
   > }
   > EOF
 
-Give a chance for tunable change to propagate
-  $ sleep 5
+  $ force_update_tunables
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark
   pushing rev 6e6a22d48eb5 to destination ssh://user@dummy/small-mon bookmark master_bookmark
   searching for changes

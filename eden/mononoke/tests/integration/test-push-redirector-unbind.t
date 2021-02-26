@@ -61,7 +61,7 @@
   >   }
   > }
   > EOF
-  $ sleep 3
+  $ force_update_configerator
 
 -- do a push from small repo, make sure it is not pushredirected to large repo
   $ cd "$TESTTMP/small-hg-client"
@@ -150,7 +150,7 @@
   >   }
   > }
   > EOF
-  $ sleep 3
+  $ force_update_configerator
 
 -- Verify it works fine
 -- Do a new push from small repo from one of the

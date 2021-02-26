@@ -60,7 +60,7 @@ Before config change
 Config change
   $ update_commit_sync_map_first_option
 -- let LiveCommitSyncConfig pick up the changes
-  $ sleep 2
+  $ force_update_configerator
 
   $ cd "$TESTTMP"/large-hg-client
   $ REPONAME=large-mon hgmn up master_bookmark -q

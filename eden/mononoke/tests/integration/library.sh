@@ -422,6 +422,14 @@ function flush_mononoke_bookmarks {
   sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/drop_bookmarks_cache"
 }
 
+function force_update_tunables {
+  sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/force_update_tunables"
+}
+
+function force_update_configerator {
+  sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/force_update_configerator"
+}
+
 # Wait until cache warmup finishes
 function wait_for_mononoke_cache_warmup {
   local attempts=150

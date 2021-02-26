@@ -19,6 +19,7 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Context, Error, Result};
 use bytes::Bytes;
+use cached_config::ConfigStore;
 use edenapi_service::EdenApi;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
@@ -96,6 +97,7 @@ pub async fn connection_acceptor(
     scribe: Scribe,
     edenapi: EdenApi,
     will_exit: Arc<AtomicBool>,
+    config_store: &ConfigStore,
 ) -> Result<()> {
     let enable_http_control_api = common_config.enable_http_control_api;
 
@@ -123,6 +125,7 @@ pub async fn connection_acceptor(
         enable_http_control_api,
         server_hostname: get_hostname().unwrap_or_else(|_| "unknown_hostname".to_string()),
         will_exit,
+        config_store: config_store.clone(),
     });
 
     loop {
@@ -158,6 +161,7 @@ pub struct Acceptor {
     pub enable_http_control_api: bool,
     pub server_hostname: String,
     pub will_exit: Arc<AtomicBool>,
+    pub config_store: ConfigStore,
 }
 
 /// Details for a socket we've just opened.
