@@ -82,6 +82,58 @@ enum class nfsstat3 : uint32_t {
   NFS3ERR_JUKEBOX = 10008
 };
 
+namespace detail {
+
+/**
+ * Shorthand struct to inherit from for variant over nfsstat3. The following XDR
+ * definition:
+ *
+ *     union COMMIT3res switch (nfsstat3 status) {
+ *      case NFS3_OK:
+ *        COMMIT3resok   resok;
+ *      default:
+ *        COMMIT3resfail resfail;
+ *     };
+ *
+ * Can simply be written as:
+ *
+ *     struct COMMIT3res
+ *         : public detail::Nfsstat3Variant<COMMIT3resok, COMMIT3resfail> {};
+ *
+ */
+template <typename ResOkT, typename DefaultT = std::monostate>
+struct Nfsstat3Variant : public std::conditional_t<
+                             std::is_same_v<DefaultT, std::monostate>,
+                             XdrVariant<nfsstat3, ResOkT>,
+                             XdrVariant<nfsstat3, ResOkT, DefaultT>> {
+  using ResOk = ResOkT;
+  using Default = DefaultT;
+};
+} // namespace detail
+
+template <typename T>
+struct XdrTrait<
+    T,
+    std::enable_if_t<std::is_base_of_v<
+        detail::Nfsstat3Variant<typename T::ResOk, typename T::Default>,
+        T>>> : public XdrTrait<typename T::Base> {
+  static T deserialize(folly::io::Cursor& cursor) {
+    T ret;
+    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
+    switch (ret.tag) {
+      case nfsstat3::NFS3_OK:
+        ret.v = XdrTrait<typename T::ResOk>::deserialize(cursor);
+        break;
+      default:
+        if constexpr (!std::is_same_v<typename T::Default, std::monostate>) {
+          ret.v = XdrTrait<typename T::Default>::deserialize(cursor);
+        }
+        break;
+    }
+    return ret;
+  }
+};
+
 enum class ftype3 : uint32_t {
   NF3REG = 1,
   NF3DIR = 2,
@@ -217,19 +269,7 @@ struct GETATTR3resok {
 };
 EDEN_XDR_SERDE_DECL(GETATTR3resok, obj_attributes);
 
-struct GETATTR3res : public XdrVariant<nfsstat3, GETATTR3resok> {};
-
-template <>
-struct XdrTrait<GETATTR3res> : public XdrTrait<GETATTR3res::Base> {
-  static GETATTR3res deserialize(folly::io::Cursor& cursor) {
-    GETATTR3res ret;
-    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
-    if (ret.tag == nfsstat3::NFS3_OK) {
-      ret.v = XdrTrait<GETATTR3resok>::deserialize(cursor);
-    }
-    return ret;
-  }
-};
+struct GETATTR3res : public detail::Nfsstat3Variant<GETATTR3resok> {};
 
 // LOOKUP Procedure:
 
@@ -250,25 +290,8 @@ struct LOOKUP3resfail {
 };
 EDEN_XDR_SERDE_DECL(LOOKUP3resfail, dir_attributes);
 
-struct LOOKUP3res : public XdrVariant<nfsstat3, LOOKUP3resok, LOOKUP3resfail> {
-};
-
-template <>
-struct XdrTrait<LOOKUP3res> : public XdrTrait<LOOKUP3res::Base> {
-  static LOOKUP3res deserialize(folly::io::Cursor& cursor) {
-    LOOKUP3res ret;
-    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
-    switch (ret.tag) {
-      case nfsstat3::NFS3_OK:
-        ret.v = XdrTrait<LOOKUP3resok>::deserialize(cursor);
-        break;
-      default:
-        ret.v = XdrTrait<LOOKUP3resfail>::deserialize(cursor);
-        break;
-    }
-    return ret;
-  }
-};
+struct LOOKUP3res
+    : public detail::Nfsstat3Variant<LOOKUP3resok, LOOKUP3resfail> {};
 
 // ACCESS Procedure:
 
@@ -296,25 +319,8 @@ struct ACCESS3resfail {
 };
 EDEN_XDR_SERDE_DECL(ACCESS3resfail, obj_attributes);
 
-struct ACCESS3res : public XdrVariant<nfsstat3, ACCESS3resok, ACCESS3resfail> {
-};
-
-template <>
-struct XdrTrait<ACCESS3res> : public XdrTrait<ACCESS3res::Base> {
-  static ACCESS3res deserialize(folly::io::Cursor& cursor) {
-    ACCESS3res ret;
-    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
-    switch (ret.tag) {
-      case nfsstat3::NFS3_OK:
-        ret.v = XdrTrait<ACCESS3resok>::deserialize(cursor);
-        break;
-      default:
-        ret.v = XdrTrait<ACCESS3resfail>::deserialize(cursor);
-        break;
-    }
-    return ret;
-  }
-};
+struct ACCESS3res
+    : public detail::Nfsstat3Variant<ACCESS3resok, ACCESS3resfail> {};
 
 // READLINK Procedure:
 
@@ -335,24 +341,7 @@ struct READLINK3resfail {
 EDEN_XDR_SERDE_DECL(READLINK3resfail, symlink_attributes);
 
 struct READLINK3res
-    : public XdrVariant<nfsstat3, READLINK3resok, READLINK3resfail> {};
-
-template <>
-struct XdrTrait<READLINK3res> : public XdrTrait<READLINK3res::Base> {
-  static READLINK3res deserialize(folly::io::Cursor& cursor) {
-    READLINK3res ret;
-    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
-    switch (ret.tag) {
-      case nfsstat3::NFS3_OK:
-        ret.v = XdrTrait<READLINK3resok>::deserialize(cursor);
-        break;
-      default:
-        ret.v = XdrTrait<READLINK3resfail>::deserialize(cursor);
-        break;
-    }
-    return ret;
-  }
-};
+    : public detail::Nfsstat3Variant<READLINK3resok, READLINK3resfail> {};
 
 // FSINFO Procedure:
 
@@ -398,25 +387,8 @@ struct FSINFO3resfail {
 };
 EDEN_XDR_SERDE_DECL(FSINFO3resfail, obj_attributes);
 
-struct FSINFO3res : public XdrVariant<nfsstat3, FSINFO3resok, FSINFO3resfail> {
-};
-
-template <>
-struct XdrTrait<FSINFO3res> : public XdrTrait<FSINFO3res::Base> {
-  static FSINFO3res deserialize(folly::io::Cursor& cursor) {
-    FSINFO3res ret;
-    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
-    switch (ret.tag) {
-      case nfsstat3::NFS3_OK:
-        ret.v = XdrTrait<FSINFO3resok>::deserialize(cursor);
-        break;
-      default:
-        ret.v = XdrTrait<FSINFO3resfail>::deserialize(cursor);
-        break;
-    }
-    return ret;
-  }
-};
+struct FSINFO3res
+    : public detail::Nfsstat3Variant<FSINFO3resok, FSINFO3resfail> {};
 
 // PATHCONF Procedure:
 
@@ -450,24 +422,7 @@ struct PATHCONF3resfail {
 EDEN_XDR_SERDE_DECL(PATHCONF3resfail, obj_attributes);
 
 struct PATHCONF3res
-    : public XdrVariant<nfsstat3, PATHCONF3resok, PATHCONF3resfail> {};
-
-template <>
-struct XdrTrait<PATHCONF3res> : public XdrTrait<PATHCONF3res::Base> {
-  static PATHCONF3res deserialize(folly::io::Cursor& cursor) {
-    PATHCONF3res ret;
-    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
-    switch (ret.tag) {
-      case nfsstat3::NFS3_OK:
-        ret.v = XdrTrait<PATHCONF3resok>::deserialize(cursor);
-        break;
-      default:
-        ret.v = XdrTrait<PATHCONF3resfail>::deserialize(cursor);
-        break;
-    }
-    return ret;
-  }
-};
+    : public detail::Nfsstat3Variant<PATHCONF3resok, PATHCONF3resfail> {};
 
 } // namespace facebook::eden
 

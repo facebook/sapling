@@ -253,13 +253,13 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
       .thenTry([ser = std::move(ser)](folly::Try<struct stat>&& try_) mutable {
         if (try_.hasException()) {
           GETATTR3res res{
-              {exceptionToNfsError(try_.exception()), std::monostate{}}};
+              {{exceptionToNfsError(try_.exception()), std::monostate{}}}};
           XdrTrait<GETATTR3res>::serialize(ser, res);
         } else {
           auto stat = std::move(try_).value();
 
           GETATTR3res res{
-              {nfsstat3::NFS3_OK, GETATTR3resok{statToFattr3(stat)}}};
+              {{nfsstat3::NFS3_OK, GETATTR3resok{statToFattr3(stat)}}}};
           XdrTrait<GETATTR3res>::serialize(ser, res);
         }
 
@@ -297,23 +297,23 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
     // The filename is too long, let's try to get the attributes of the
     // directory and fail.
     return std::move(dirAttrFut)
-        .thenTry(
-            [ser = std::move(ser)](folly::Try<struct stat>&& try_) mutable {
-              if (try_.hasException()) {
-                LOOKUP3res res{
-                    {nfsstat3::NFS3ERR_NAMETOOLONG,
-                     LOOKUP3resfail{post_op_attr{{false, std::monostate{}}}}}};
-                XdrTrait<LOOKUP3res>::serialize(ser, res);
-              } else {
-                LOOKUP3res res{
-                    {nfsstat3::NFS3ERR_NAMETOOLONG,
-                     LOOKUP3resfail{
-                         post_op_attr{{true, statToFattr3(try_.value())}}}}};
-                XdrTrait<LOOKUP3res>::serialize(ser, res);
-              }
+        .thenTry([ser =
+                      std::move(ser)](folly::Try<struct stat>&& try_) mutable {
+          if (try_.hasException()) {
+            LOOKUP3res res{
+                {{nfsstat3::NFS3ERR_NAMETOOLONG,
+                  LOOKUP3resfail{post_op_attr{{false, std::monostate{}}}}}}};
+            XdrTrait<LOOKUP3res>::serialize(ser, res);
+          } else {
+            LOOKUP3res res{
+                {{nfsstat3::NFS3ERR_NAMETOOLONG,
+                  LOOKUP3resfail{
+                      post_op_attr{{true, statToFattr3(try_.value())}}}}}};
+            XdrTrait<LOOKUP3res>::serialize(ser, res);
+          }
 
-              return folly::unit;
-            });
+          return folly::unit;
+        });
   }
 
   return folly::makeFutureWith([this, args = std::move(args)]() mutable {
@@ -347,20 +347,20 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
                          folly::Try<struct stat>&& dirStat) mutable {
               if (lookupTry.hasException()) {
                 LOOKUP3res res{
-                    {exceptionToNfsError(lookupTry.exception()),
-                     LOOKUP3resfail{statToPostOpAttr(std::move(dirStat))}}};
+                    {{exceptionToNfsError(lookupTry.exception()),
+                      LOOKUP3resfail{statToPostOpAttr(std::move(dirStat))}}}};
                 XdrTrait<LOOKUP3res>::serialize(ser, res);
               } else {
                 auto& [ino, stat] = lookupTry.value();
                 LOOKUP3res res{
-                    {nfsstat3::NFS3_OK,
-                     LOOKUP3resok{
-                         /*object*/ nfs_fh3{ino},
-                         /*obj_attributes*/
-                         post_op_attr{{true, statToFattr3(stat)}},
-                         /*dir_attributes*/
-                         statToPostOpAttr(std::move(dirStat)),
-                     }}};
+                    {{nfsstat3::NFS3_OK,
+                      LOOKUP3resok{
+                          /*object*/ nfs_fh3{ino},
+                          /*obj_attributes*/
+                          post_op_attr{{true, statToFattr3(stat)}},
+                          /*dir_attributes*/
+                          statToPostOpAttr(std::move(dirStat)),
+                      }}}};
                 XdrTrait<LOOKUP3res>::serialize(ser, res);
               }
               return folly::unit;
@@ -393,18 +393,18 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::access(
                    folly::Try<struct stat>&& try_) mutable {
         if (try_.hasException()) {
           ACCESS3res res{
-              {exceptionToNfsError(try_.exception()),
-               ACCESS3resfail{post_op_attr{{false, std::monostate{}}}}}};
+              {{exceptionToNfsError(try_.exception()),
+                ACCESS3resfail{post_op_attr{{false, std::monostate{}}}}}}};
           XdrTrait<ACCESS3res>::serialize(ser, res);
         } else {
           auto stat = std::move(try_).value();
 
           ACCESS3res res{
-              {nfsstat3::NFS3_OK,
-               ACCESS3resok{
-                   post_op_attr{{true, statToFattr3(stat)}},
-                   /*access*/ getEffectiveAccessRights(stat, desiredAccess),
-               }}};
+              {{nfsstat3::NFS3_OK,
+                ACCESS3resok{
+                    post_op_attr{{true, statToFattr3(stat)}},
+                    /*access*/ getEffectiveAccessRights(stat, desiredAccess),
+                }}}};
           XdrTrait<ACCESS3res>::serialize(ser, res);
         }
 
@@ -432,19 +432,19 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::readlink(
                 folly::Try<struct stat> tryAttr) mutable {
               if (tryReadlink.hasException()) {
                 READLINK3res res{
-                    {exceptionToNfsError(tryReadlink.exception()),
-                     READLINK3resfail{statToPostOpAttr(std::move(tryAttr))}}};
+                    {{exceptionToNfsError(tryReadlink.exception()),
+                      READLINK3resfail{statToPostOpAttr(std::move(tryAttr))}}}};
                 XdrTrait<READLINK3res>::serialize(ser, res);
               } else {
                 auto link = std::move(tryReadlink).value();
 
                 READLINK3res res{
-                    {nfsstat3::NFS3_OK,
-                     READLINK3resok{
-                         /*symlink_attributes*/ statToPostOpAttr(
-                             std::move(tryAttr)),
-                         /*data*/ std::move(link),
-                     }}};
+                    {{nfsstat3::NFS3_OK,
+                      READLINK3resok{
+                          /*symlink_attributes*/ statToPostOpAttr(
+                              std::move(tryAttr)),
+                          /*data*/ std::move(link),
+                      }}}};
                 XdrTrait<READLINK3res>::serialize(ser, res);
               }
 
@@ -567,22 +567,22 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::fsinfo(
   (void)args;
 
   FSINFO3res res{
-      {nfsstat3::NFS3_OK,
-       FSINFO3resok{
-           // TODO(xavierd): fill the post_op_attr and check the values chosen
-           // randomly below.
-           post_op_attr{},
-           /*rtmax=*/1024 * 1024,
-           /*rtpref=*/1024 * 1024,
-           /*rtmult=*/1,
-           /*wtmax=*/1024 * 1024,
-           /*wtpref=*/1024 * 1024,
-           /*wtmult=*/1,
-           /*dtpref=*/1024 * 1024,
-           /*maxfilesize=*/std::numeric_limits<uint64_t>::max(),
-           nfstime3{0, 1},
-           /*properties*/ FSF3_SYMLINK | FSF3_HOMOGENEOUS | FSF3_CANSETTIME,
-       }}};
+      {{nfsstat3::NFS3_OK,
+        FSINFO3resok{
+            // TODO(xavierd): fill the post_op_attr and check the values chosen
+            // randomly below.
+            post_op_attr{},
+            /*rtmax=*/1024 * 1024,
+            /*rtpref=*/1024 * 1024,
+            /*rtmult=*/1,
+            /*wtmax=*/1024 * 1024,
+            /*wtpref=*/1024 * 1024,
+            /*wtmult=*/1,
+            /*dtpref=*/1024 * 1024,
+            /*maxfilesize=*/std::numeric_limits<uint64_t>::max(),
+            nfstime3{0, 1},
+            /*properties*/ FSF3_SYMLINK | FSF3_HOMOGENEOUS | FSF3_CANSETTIME,
+        }}}};
 
   XdrTrait<FSINFO3res>::serialize(ser, res);
 
@@ -599,17 +599,17 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::pathconf(
   (void)args;
 
   PATHCONF3res res{
-      {nfsstat3::NFS3_OK,
-       PATHCONF3resok{
-           // TODO(xavierd): fill up the post_op_attr
-           post_op_attr{},
-           /*linkmax=*/0,
-           /*name_max=*/NAME_MAX,
-           /*no_trunc=*/true,
-           /*chown_restricted=*/true,
-           /*case_insensitive=*/!caseSensitive_,
-           /*case_preserving=*/true,
-       }}};
+      {{nfsstat3::NFS3_OK,
+        PATHCONF3resok{
+            // TODO(xavierd): fill up the post_op_attr
+            post_op_attr{},
+            /*linkmax=*/0,
+            /*name_max=*/NAME_MAX,
+            /*no_trunc=*/true,
+            /*chown_restricted=*/true,
+            /*case_insensitive=*/!caseSensitive_,
+            /*case_preserving=*/true,
+        }}}};
 
   XdrTrait<PATHCONF3res>::serialize(ser, res);
 
