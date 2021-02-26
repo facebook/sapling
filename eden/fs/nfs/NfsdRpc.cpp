@@ -35,6 +35,8 @@ EDEN_XDR_SERDE_IMPL(LOOKUP3resfail, dir_attributes);
 EDEN_XDR_SERDE_IMPL(ACCESS3args, object, access);
 EDEN_XDR_SERDE_IMPL(ACCESS3resok, obj_attributes, access);
 EDEN_XDR_SERDE_IMPL(ACCESS3resfail, obj_attributes);
+EDEN_XDR_SERDE_IMPL(READLINK3resok, symlink_attributes, data);
+EDEN_XDR_SERDE_IMPL(READLINK3resfail, symlink_attributes);
 EDEN_XDR_SERDE_IMPL(
     FSINFO3resok,
     obj_attributes,

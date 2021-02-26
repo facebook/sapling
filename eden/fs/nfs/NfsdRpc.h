@@ -311,6 +311,39 @@ struct XdrTrait<ACCESS3res> : public XdrTrait<ACCESS3res::Base> {
   }
 };
 
+// READLINK Procedure:
+
+struct READLINK3resok {
+  post_op_attr symlink_attributes;
+  std::string data;
+};
+EDEN_XDR_SERDE_DECL(READLINK3resok, symlink_attributes, data);
+
+struct READLINK3resfail {
+  post_op_attr symlink_attributes;
+};
+EDEN_XDR_SERDE_DECL(READLINK3resfail, symlink_attributes);
+
+struct READLINK3res
+    : public XdrVariant<nfsstat3, READLINK3resok, READLINK3resfail> {};
+
+template <>
+struct XdrTrait<READLINK3res> : public XdrTrait<READLINK3res::Base> {
+  static READLINK3res deserialize(folly::io::Cursor& cursor) {
+    READLINK3res ret;
+    ret.tag = XdrTrait<nfsstat3>::deserialize(cursor);
+    switch (ret.tag) {
+      case nfsstat3::NFS3_OK:
+        ret.v = XdrTrait<READLINK3resok>::deserialize(cursor);
+        break;
+      default:
+        ret.v = XdrTrait<READLINK3resfail>::deserialize(cursor);
+        break;
+    }
+    return ret;
+  }
+};
+
 // FSINFO Procedure:
 
 const uint32_t FSF3_LINK = 0x0001;
