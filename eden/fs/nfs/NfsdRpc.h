@@ -239,6 +239,52 @@ constexpr uint32_t kExecOtherBit = 0x1;
 
 struct post_op_attr : public XdrOptionalVariant<fattr3> {};
 
+struct wcc_attr {
+  uint64_t size;
+  nfstime3 mtime;
+  nfstime3 ctime;
+};
+EDEN_XDR_SERDE_DECL(wcc_attr, size, mtime, ctime);
+
+struct pre_op_attr : public XdrOptionalVariant<wcc_attr> {};
+
+struct wcc_data {
+  pre_op_attr before;
+  post_op_attr after;
+};
+EDEN_XDR_SERDE_DECL(wcc_data, before, after);
+
+struct post_op_fh3 : public XdrOptionalVariant<nfs_fh3> {};
+
+enum class time_how {
+  DONT_CHANGE = 0,
+  SET_TO_SERVER_TIME = 1,
+  SET_TO_CLIENT_TIME = 2
+};
+
+struct set_mode3 : public XdrOptionalVariant<uint32_t> {};
+struct set_uid3 : public XdrOptionalVariant<uint32_t> {};
+struct set_gid3 : public XdrOptionalVariant<uint32_t> {};
+struct set_size3 : public XdrOptionalVariant<uint64_t> {};
+struct set_atime : public XdrOptionalVariant<
+                       nfstime3,
+                       time_how,
+                       time_how::SET_TO_CLIENT_TIME> {};
+struct set_mtime : public XdrOptionalVariant<
+                       nfstime3,
+                       time_how,
+                       time_how::SET_TO_CLIENT_TIME> {};
+
+struct sattr3 {
+  set_mode3 mode;
+  set_uid3 uid;
+  set_gid3 gid;
+  set_size3 size;
+  set_atime atime;
+  set_mtime mtime;
+};
+EDEN_XDR_SERDE_DECL(sattr3, mode, uid, gid, size, atime, mtime);
+
 struct diropargs3 {
   nfs_fh3 dir;
   std::string name;
@@ -330,6 +376,29 @@ EDEN_XDR_SERDE_DECL(READLINK3resfail, symlink_attributes);
 
 struct READLINK3res
     : public detail::Nfsstat3Variant<READLINK3resok, READLINK3resfail> {};
+
+// MKDIR Procedure:
+
+struct MKDIR3args {
+  diropargs3 where;
+  sattr3 attributes;
+};
+EDEN_XDR_SERDE_DECL(MKDIR3args, where, attributes);
+
+struct MKDIR3resok {
+  post_op_fh3 obj;
+  post_op_attr obj_attributes;
+  wcc_data dir_wcc;
+};
+EDEN_XDR_SERDE_DECL(MKDIR3resok, obj, obj_attributes, dir_wcc);
+
+struct MKDIR3resfail {
+  wcc_data dir_wcc;
+};
+EDEN_XDR_SERDE_DECL(MKDIR3resfail, dir_wcc);
+
+struct MKDIR3res : public detail::Nfsstat3Variant<MKDIR3resok, MKDIR3resfail> {
+};
 
 // FSINFO Procedure:
 
