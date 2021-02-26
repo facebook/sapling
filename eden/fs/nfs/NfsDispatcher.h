@@ -57,6 +57,13 @@ class NfsDispatcher {
   virtual folly::Future<std::tuple<InodeNumber, struct stat>>
   lookup(InodeNumber dir, PathComponent name, ObjectFetchContext& context) = 0;
 
+  /**
+   * For a symlink, return its destination, fail otherwise.
+   */
+  virtual folly::Future<std::string> readlink(
+      InodeNumber ino,
+      ObjectFetchContext& context) = 0;
+
  private:
   EdenStats* stats_{nullptr};
 };

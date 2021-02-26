@@ -11,6 +11,7 @@
 
 #include <folly/futures/Future.h>
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -52,6 +53,15 @@ folly::Future<std::tuple<InodeNumber, struct stat>> NfsDispatcherImpl::lookup(
                 struct stat stat) -> std::tuple<InodeNumber, struct stat> {
               return {ino, stat};
             });
+      });
+}
+
+folly::Future<std::string> NfsDispatcherImpl::readlink(
+    InodeNumber ino,
+    ObjectFetchContext& context) {
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [&context](const FileInodePtr& inode) {
+        return inode->readlink(context);
       });
 }
 

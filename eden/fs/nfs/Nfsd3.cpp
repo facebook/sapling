@@ -229,6 +229,14 @@ fattr3 statToFattr3(const struct stat& stat) {
   };
 }
 
+post_op_attr statToPostOpAttr(folly::Try<struct stat>&& stat) {
+  if (stat.hasException()) {
+    return post_op_attr{{false, std::monostate{}}};
+  } else {
+    return post_op_attr{{true, statToFattr3(stat.value())}};
+  }
+}
+
 folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
     folly::io::Cursor deser,
     folly::io::Appender ser,
@@ -337,18 +345,10 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
         return std::move(dirAttrFut)
             .thenTry([ser = std::move(ser), lookupTry = std::move(lookupTry)](
                          folly::Try<struct stat>&& dirStat) mutable {
-              auto dirStatToPostOpAttr = [&]() {
-                if (dirStat.hasException()) {
-                  return post_op_attr{{false, std::monostate{}}};
-                } else {
-                  return post_op_attr{{true, statToFattr3(dirStat.value())}};
-                }
-              };
-
               if (lookupTry.hasException()) {
                 LOOKUP3res res{
                     {exceptionToNfsError(lookupTry.exception()),
-                     LOOKUP3resfail{dirStatToPostOpAttr()}}};
+                     LOOKUP3resfail{statToPostOpAttr(std::move(dirStat))}}};
                 XdrTrait<LOOKUP3res>::serialize(ser, res);
               } else {
                 auto& [ino, stat] = lookupTry.value();
@@ -358,7 +358,8 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
                          /*object*/ nfs_fh3{ino},
                          /*obj_attributes*/
                          post_op_attr{{true, statToFattr3(stat)}},
-                         /*dir_attributes*/ dirStatToPostOpAttr(),
+                         /*dir_attributes*/
+                         statToPostOpAttr(std::move(dirStat)),
                      }}};
                 XdrTrait<LOOKUP3res>::serialize(ser, res);
               }
@@ -412,11 +413,44 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::access(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::readlink(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  nfs_fh3 fh = XdrTrait<nfs_fh3>::deserialize(deser);
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("readlink");
+
+  auto getattr = dispatcher_->getattr(fh.ino, *context);
+  return dispatcher_->readlink(fh.ino, *context)
+      .thenTry([ser = std::move(ser), getattr = std::move(getattr)](
+                   folly::Try<std::string> tryReadlink) mutable {
+        return std::move(getattr).thenTry(
+            [ser = std::move(ser), tryReadlink = std::move(tryReadlink)](
+                folly::Try<struct stat> tryAttr) mutable {
+              if (tryReadlink.hasException()) {
+                READLINK3res res{
+                    {exceptionToNfsError(tryReadlink.exception()),
+                     READLINK3resfail{statToPostOpAttr(std::move(tryAttr))}}};
+                XdrTrait<READLINK3res>::serialize(ser, res);
+              } else {
+                auto link = std::move(tryReadlink).value();
+
+                READLINK3res res{
+                    {nfsstat3::NFS3_OK,
+                     READLINK3resok{
+                         /*symlink_attributes*/ statToPostOpAttr(
+                             std::move(tryAttr)),
+                         /*data*/ std::move(link),
+                     }}};
+                XdrTrait<READLINK3res>::serialize(ser, res);
+              }
+
+              return folly::unit;
+            });
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::read(

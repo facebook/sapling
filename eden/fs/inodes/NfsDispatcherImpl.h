@@ -32,6 +32,10 @@ class NfsDispatcherImpl : public NfsDispatcher {
       PathComponent name,
       ObjectFetchContext& context) override;
 
+  folly::Future<std::string> readlink(
+      InodeNumber ino,
+      ObjectFetchContext& context) override;
+
  private:
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;
