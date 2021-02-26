@@ -104,6 +104,18 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
     const Hash& id,
     ObjectFetchContext& fetchContext) const {
   // Check in the LocalStore first
+
+  // TODO: We should consider checking if we have in flight BackingStore
+  // requests on this layer instead of only in the BackingStore. Consider the
+  // case in which thread A and thread B both request a Tree at the same time.
+  // Let's say thread A checks the LocalStore, then thread B checks the
+  // LocalStore, gets the file from the BackingStore (making a request to the
+  // server), then writes the Tree to the LocalStore. Now when thread A checks
+  // for in flight requests in the BackingStore, it will not see any since
+  // thread B has completely finished, so thread A will make a duplicate
+  // request. If we we're to mark here that we got a request on this layer, then
+  // we could avoid that case.
+
   return localStore_->getTree(id).thenValue([self = shared_from_this(),
                                              id,
                                              &fetchContext](
@@ -118,16 +130,6 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
     }
 
     self->deprioritizeWhenFetchHeavy(fetchContext);
-
-    // Note: We don't currently have logic here to avoid duplicate work if
-    // multiple callers request the same tree at once.  We could store a map
-    // of pending lookups as (Hash --> std::list<Promise<unique_ptr<Tree>>),
-    // and just add a new Promise to the list if this Hash already exists in
-    // the pending list.
-    //
-    // However, de-duplication of object loads will already be done at the
-    // Inode layer.  Therefore we currently don't bother de-duping loads at
-    // this layer.
 
     // Load the tree from the BackingStore.
     return self->backingStore_->getTree(id, fetchContext)

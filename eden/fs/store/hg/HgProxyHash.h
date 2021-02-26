@@ -37,6 +37,8 @@ namespace eden {
  */
 class HgProxyHash {
  public:
+  HgProxyHash() : value_{} {}
+
   /**
    * Load HgProxyHash data for the given eden blob hash from the LocalStore.
    */
@@ -69,6 +71,13 @@ class HgProxyHash {
    * is used as the object ID throughout EdenFS.
    */
   Hash sha1() const;
+
+  bool operator==(const HgProxyHash&) const;
+  bool operator<(const HgProxyHash&) const;
+
+  const std::string& getValue() const {
+    return value_;
+  }
 
   static folly::Future<std::vector<HgProxyHash>> getBatch(
       LocalStore* store,
@@ -136,3 +145,12 @@ class HgProxyHash {
 
 } // namespace eden
 } // namespace facebook
+
+namespace std {
+template <>
+struct hash<facebook::eden::HgProxyHash> {
+  size_t operator()(const facebook::eden::HgProxyHash& hash) const noexcept {
+    return std::hash<std::string>{}(hash.getValue());
+  }
+};
+} // namespace std

@@ -9,6 +9,7 @@
 
 #include <folly/futures/Future.h>
 #include <algorithm>
+#include <complex>
 
 namespace facebook {
 namespace eden {
@@ -32,6 +33,48 @@ void HgImportRequestQueue::enqueue(HgImportRequest request) {
 
     state->queue.emplace_back(
         std::make_shared<HgImportRequest>(std::move(request)));
+    auto& requestPtr = state->queue.back();
+
+    // Put our request in the request tracker if the request not a
+    // PrefetchRequest
+    if (requestPtr->isType<HgImportRequest::BlobImport>()) {
+      auto* blobImport = requestPtr->getRequest<HgImportRequest::BlobImport>();
+      auto& proxyHash = blobImport->proxyHash;
+
+      auto& trackedRequest = state->requestTracker[proxyHash];
+      auto* trackedBlobImport =
+          trackedRequest->getRequest<HgImportRequest::BlobImport>();
+
+      // If we get multiple requests at once, it is possible that we call
+      // checkImportInProgress multiple times before we enqueue the request. In
+      // this case, we "send away" the duplicate requests, but we still keep
+      // track of the highest priority we've seen. We need to update the
+      // enqueued request's priority with the highest priority we've seen so far
+      if (requestPtr->getPriority() < trackedRequest->getPriority()) {
+        requestPtr->setPriority(trackedRequest->getPriority());
+      }
+
+      // std::move the vector of already generated promises from the dummy
+      // request to the new "real" request. The dummy request collects promises
+      // for duplicate requests that come in before we enqueue the first request
+      blobImport->promises = std::move(trackedBlobImport->promises);
+      trackedRequest = requestPtr;
+    } else if (requestPtr->isType<HgImportRequest::TreeImport>()) {
+      auto* treeImport = requestPtr->getRequest<HgImportRequest::TreeImport>();
+      auto& proxyHash = treeImport->proxyHash;
+
+      auto& trackedRequest = state->requestTracker[proxyHash];
+      auto* trackedTreeImport =
+          trackedRequest->getRequest<HgImportRequest::TreeImport>();
+
+      if (requestPtr->getPriority() < trackedRequest->getPriority()) {
+        requestPtr->setPriority(trackedRequest->getPriority());
+      }
+
+      treeImport->promises = std::move(trackedTreeImport->promises);
+      trackedRequest = requestPtr;
+    }
+
     std::push_heap(
         state->queue.begin(),
         state->queue.end(),

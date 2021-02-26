@@ -154,6 +154,14 @@ Hash HgProxyHash::sha1() const {
   return hash;
 }
 
+bool HgProxyHash::operator==(const HgProxyHash& otherHash) const {
+  return value_ == otherHash.value_;
+}
+
+bool HgProxyHash::operator<(const HgProxyHash& otherHash) const {
+  return value_ < otherHash.value_;
+}
+
 void HgProxyHash::validate(Hash edenBlobHash) {
   ByteRange infoBytes = StringPiece(value_);
   // Make sure the data is long enough to contain the rev hash and path length

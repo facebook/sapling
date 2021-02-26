@@ -26,25 +26,47 @@ namespace eden {
 /**
  * Represents an Hg import request. This class contains all the necessary
  * information needed to fulfill the request as well as a promise that will be
- * resolved after the requested data is imported.
+ * resolved after the requested data is imported. Blobs and Trees also contain
+ * a vector of promises to fulfill, corresponding to duplicate requests
  */
 class HgImportRequest {
  public:
   struct BlobImport {
     using Response = std::unique_ptr<Blob>;
+    BlobImport(Hash hash, HgProxyHash proxyHash, bool realRequest = true)
+        : hash(hash), proxyHash(proxyHash), realRequest(realRequest) {}
 
     Hash hash;
     HgProxyHash proxyHash;
+
+    // These two variables are used in the HgQueuedBackingStore while
+    // deduplicating requests
+    bool realRequest;
+    std::vector<folly::Promise<Response>> promises;
   };
 
   struct TreeImport {
     using Response = std::unique_ptr<Tree>;
+    TreeImport(
+        Hash hash,
+        HgProxyHash proxyHash,
+        bool prefetchMetadata = true,
+        bool realRequest = true)
+        : hash(hash),
+          proxyHash(proxyHash),
+          prefetchMetadata(prefetchMetadata),
+          realRequest(realRequest) {}
 
     Hash hash;
     HgProxyHash proxyHash;
     // we normally want to prefetch metadata, there are only a few cases where
     // we do not want to
-    bool prefetchMetadata = true;
+    bool prefetchMetadata;
+
+    // These two variables are used in the HgQueuedBackingStore while
+    // deduplicating requests
+    bool realRequest;
+    std::vector<folly::Promise<Response>> promises;
   };
 
   struct Prefetch {
@@ -89,7 +111,7 @@ class HgImportRequest {
   HgImportRequest& operator=(HgImportRequest&&) = default;
 
   template <typename T>
-  const T* getRequest() noexcept {
+  T* getRequest() noexcept {
     return std::get_if<T>(&request_);
   }
 
@@ -100,6 +122,14 @@ class HgImportRequest {
 
   size_t getType() const noexcept {
     return request_.index();
+  }
+
+  ImportPriority getPriority() const noexcept {
+    return priority_;
+  }
+
+  void setPriority(ImportPriority priority) noexcept {
+    priority_ = priority;
   }
 
   template <typename T>
