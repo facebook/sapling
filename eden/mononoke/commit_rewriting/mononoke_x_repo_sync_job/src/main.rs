@@ -26,7 +26,7 @@ use cached_config::ConfigStore;
 use clap::ArgMatches;
 use cmdlib::{
     args::{self, MononokeClapApp, MononokeMatches},
-    monitoring,
+    helpers, monitoring,
 };
 use cmdlib_x_repo::create_commit_syncer_from_matches;
 use context::CoreContext;
@@ -561,16 +561,15 @@ fn main(fb: FacebookInit) -> Result<()> {
     let (ctx, matches) = context_and_matches(fb, create_app())?;
     args::init_config_store(fb, ctx.logger(), &matches)?;
 
-    let mut runtime = tokio::runtime::Runtime::new()?;
-    monitoring::start_fb303_and_stats_agg(
+    let res = helpers::block_execute(
+        run(fb, ctx.clone(), &matches),
         fb,
-        &mut runtime,
         "x_repo_sync_job",
         ctx.logger(),
         &matches,
         monitoring::AliveService,
-    )?;
-    let res = runtime.block_on(run(fb, ctx.clone(), &matches));
+    );
+
     if let Err(ref err) = res {
         print_error(ctx, err);
     }

@@ -201,7 +201,6 @@ Push diamond commit
 Try to sync it automatically, it's expected to fail
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit with_merge_master 2>&1 | grep 'unsupported merge'
   * unsupported merge - only merges of new repos are supported (glob)
-  * unsupported merge - only merges of new repos are supported (glob)
 
 Now sync with the tool
   $ cd "$TESTTMP"

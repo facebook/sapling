@@ -15,7 +15,7 @@ use blobrepo_hg::BlobRepoHg;
 use bookmarks::Freshness;
 use clap::{Arg, SubCommand};
 use cloned::cloned;
-use cmdlib::{args, monitoring};
+use cmdlib::{args, helpers, monitoring};
 use cmdlib_x_repo::create_commit_syncer_from_matches;
 use context::{CoreContext, SessionContainer};
 use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer};
@@ -329,15 +329,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             )
             .boxed();
 
-            monitoring::start_fb303_and_stats_agg(
+            helpers::block_execute_on_runtime(
+                f,
                 fb,
-                &mut runtime,
                 app_name,
                 &logger,
                 &matches,
                 monitoring::AliveService,
+                runtime,
             )?;
-            runtime.block_on(f)?;
         }
         (ARG_MODE_BACKSYNC_COMMITS, Some(sub_m)) => {
             let ctx =

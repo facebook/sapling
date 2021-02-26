@@ -9,11 +9,10 @@
 
 use std::thread::{self};
 
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use fbinit::FacebookInit;
 use services::{self, Fb303Service, FbStatus};
 use slog::{info, Logger};
-use stats::schedule_stats_aggregation_preview;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -51,26 +50,6 @@ impl Fb303Service for ReadyFlagService {
             FbStatus::Starting
         }
     }
-}
-
-/// `service_name` should match tupperware to avoid confusion.
-/// e.g. for mononoke/blobstore_healer, pass blobstore_healer
-pub fn start_fb303_and_stats_agg<S: Fb303Service + Sync + Send + 'static>(
-    fb: FacebookInit,
-    runtime: &mut tokio::runtime::Runtime,
-    service_name: &str,
-    logger: &Logger,
-    matches: &MononokeMatches,
-    service: S,
-) -> Result<(), Error> {
-    let service_name = service_name.to_string();
-    if let Some(()) = start_fb303_server(fb, &service_name, logger, matches, service)? {
-        let scheduler = schedule_stats_aggregation_preview()
-            .map_err(|e| format_err!("Failed to start stats aggregation {:?}", e))?;
-
-        runtime.spawn(scheduler);
-    }
-    Ok(())
 }
 
 /// This is a lower-level function that requires you to spawn the stats aggregation future
