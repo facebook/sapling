@@ -8,7 +8,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use fbinit::FacebookInit;
 use futures::compat::Stream01CompatExt;
 use futures::future::try_join_all;
@@ -34,6 +34,26 @@ use crate::idmap::CacheHandlers;
 use crate::on_demand::OnDemandUpdateDag;
 use crate::types::IdDagVersion;
 use crate::SegmentedChangelog;
+
+#[async_trait::async_trait]
+trait SegmentedChangelogExt {
+    async fn head(&self, ctx: &CoreContext) -> Result<ChangesetId>;
+}
+
+#[async_trait::async_trait]
+impl<T> SegmentedChangelogExt for T
+where
+    T: SegmentedChangelog,
+{
+    async fn head(&self, ctx: &CoreContext) -> Result<ChangesetId> {
+        let clone_data = self.clone_data(ctx).await?;
+        let cs_id = *clone_data
+            .idmap
+            .get(&clone_data.head_id)
+            .ok_or_else(|| format_err!("error with clone data, missing idmap entry for head_id"))?;
+        Ok(cs_id)
+    }
+}
 
 async fn validate_build_idmap(
     ctx: CoreContext,
@@ -675,19 +695,14 @@ async fn test_periodic_update_dag(fb: FacebookInit) -> Result<()> {
 
     // We assume that clone_data will not update the dag in any form.
 
-    let clone_data = dag.clone_data(&ctx).await?;
-    assert_eq!(
-        *clone_data.idmap.get(&clone_data.head_id).unwrap(),
-        start_cs
-    );
+    assert_eq!(dag.head(&ctx).await?, start_cs);
 
     let new_hg_id = "79a13814c5ce7330173ec04d279bf95ab3f652fb";
     let new_cs = resolve_cs_id(&ctx, &blobrepo, new_hg_id).await?;
     set_bookmark(fb, blobrepo.clone(), new_hg_id, bookmark_name.clone()).await;
     tokio::time::advance(Duration::from_secs(10)).await;
     dag.wait_for_update().await;
-    let clone_data = dag.clone_data(&ctx).await?;
-    assert_eq!(*clone_data.idmap.get(&clone_data.head_id).unwrap(), new_cs,);
+    assert_eq!(dag.head(&ctx).await?, new_cs);
 
     Ok(())
 }
