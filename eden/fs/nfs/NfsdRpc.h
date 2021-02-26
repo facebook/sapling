@@ -377,6 +377,54 @@ EDEN_XDR_SERDE_DECL(READLINK3resfail, symlink_attributes);
 struct READLINK3res
     : public detail::Nfsstat3Variant<READLINK3resok, READLINK3resfail> {};
 
+// CREATE Procedure:
+
+enum class createmode3 { UNCHECKED = 0, GUARDED = 1, EXCLUSIVE = 2 };
+
+constexpr inline size_t NFS3_CREATEVERFSIZE = 8;
+using createverf3 = std::array<uint8_t, NFS3_CREATEVERFSIZE>;
+
+struct createhow3 : public XdrVariant<createmode3, sattr3, createverf3> {};
+
+template <>
+struct XdrTrait<createhow3> : public XdrTrait<createhow3::Base> {
+  static createhow3 deserialize(folly::io::Cursor& cursor) {
+    createhow3 ret;
+    ret.tag = XdrTrait<createmode3>::deserialize(cursor);
+    switch (ret.tag) {
+      case createmode3::UNCHECKED:
+      case createmode3::GUARDED:
+        ret.v = XdrTrait<sattr3>::deserialize(cursor);
+        break;
+      case createmode3::EXCLUSIVE:
+        ret.v = XdrTrait<createverf3>::deserialize(cursor);
+        break;
+    }
+    return ret;
+  }
+};
+
+struct CREATE3args {
+  diropargs3 where;
+  createhow3 how;
+};
+EDEN_XDR_SERDE_DECL(CREATE3args, where, how);
+
+struct CREATE3resok {
+  post_op_fh3 obj;
+  post_op_attr obj_attributes;
+  wcc_data dir_wcc;
+};
+EDEN_XDR_SERDE_DECL(CREATE3resok, obj, obj_attributes, dir_wcc);
+
+struct CREATE3resfail {
+  wcc_data dir_wcc;
+};
+EDEN_XDR_SERDE_DECL(CREATE3resfail, dir_wcc);
+
+struct CREATE3res
+    : public detail::Nfsstat3Variant<CREATE3resok, CREATE3resfail> {};
+
 // MKDIR Procedure:
 
 struct MKDIR3args {
