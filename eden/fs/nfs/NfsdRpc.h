@@ -237,19 +237,7 @@ constexpr uint32_t kReadOtherBit = 0x4;
 constexpr uint32_t kWriteOtherBit = 0x2;
 constexpr uint32_t kExecOtherBit = 0x1;
 
-struct post_op_attr : public XdrVariant<bool, fattr3> {};
-
-template <>
-struct XdrTrait<post_op_attr> : public XdrTrait<post_op_attr::Base> {
-  static post_op_attr deserialize(folly::io::Cursor& cursor) {
-    post_op_attr ret;
-    ret.tag = XdrTrait<bool>::deserialize(cursor);
-    if (ret.tag) {
-      ret.v = XdrTrait<fattr3>::deserialize(cursor);
-    }
-    return ret;
-  }
-};
+struct post_op_attr : public XdrOptionalVariant<fattr3> {};
 
 struct diropargs3 {
   nfs_fh3 dir;

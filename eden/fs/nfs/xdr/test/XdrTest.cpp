@@ -123,6 +123,34 @@ TEST(XdrSerialize, variant) {
   roundtrip(var2, sizeof(uint32_t));
 }
 
+struct OptionalVariant : public XdrOptionalVariant<uint32_t> {};
+
+enum class TestEnum {
+  FOO = 0,
+  BAR = 1,
+};
+
+struct OptionalEnumVariant
+    : public XdrOptionalVariant<uint32_t, TestEnum, TestEnum::BAR> {};
+
+TEST(XdrSerialize, optionalVariant) {
+  OptionalVariant var1{{42}};
+  roundtrip(var1, 2 * sizeof(uint32_t));
+
+  OptionalVariant var2;
+  roundtrip(var2, sizeof(uint32_t));
+
+  OptionalEnumVariant opt1{42u};
+  EXPECT_EQ(opt1.tag, TestEnum::BAR);
+  EXPECT_EQ(std::get<uint32_t>(opt1.v), 42u);
+  roundtrip(opt1, 2 * sizeof(uint32_t));
+
+  OptionalEnumVariant opt2;
+  EXPECT_EQ(opt2.tag, TestEnum::FOO);
+  EXPECT_EQ(std::get<std::monostate>(opt2.v), std::monostate{});
+  roundtrip(opt2, sizeof(uint32_t));
+}
+
 } // namespace facebook::eden
 
 #endif

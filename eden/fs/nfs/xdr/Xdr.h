@@ -265,6 +265,73 @@ struct XdrTrait<XdrVariant<Enum, Vars...>> {
   }
 };
 
+/**
+ * Shorthand for variant with a single boolean case where the TRUE expands onto
+ * TrueVariantT. The following XDR definition:
+ *
+ *     union post_op_fh3 switch (bool handle_follows) {
+ *       case TRUE:
+ *         nfs_fh3  handle;
+ *       case FALSE:
+ *         void;
+ *     };
+ *
+ * Can simply be written as:
+ *
+ *     struct post_op_fh3 : public XdrOptionalVariant<nfs_fh3> {};
+ *
+ * For non-boolean variant but with a single case, UnionTypeT can be used as
+ * the variant tag TrueVariantT will be deserialized when the tag is equal to
+ * TestValueV. For instance, the following Xdr definition:
+ *
+ *     union set_atime switch (time_how set_it) {
+ *       case SET_TO_CLIENT_TIME:
+ *         nfstime3  atime;
+ *       default:
+ *         void;
+ *     };
+ *
+ * Can be written as:
+ *
+ *     struct set_atime : public XdrOptionalVariant<
+ *                            nfstime3,
+ *                            time_how,
+ *                            time_how::SET_TO_CLIENT_TIME> {};
+ *
+ */
+template <
+    typename TrueVariantT,
+    typename UnionTypeT = bool,
+    UnionTypeT TestValueV = true>
+struct XdrOptionalVariant : public XdrVariant<UnionTypeT, TrueVariantT> {
+  using TrueVariant = TrueVariantT;
+  using UnionType = UnionTypeT;
+  static constexpr UnionType TestValue = TestValueV;
+
+  XdrOptionalVariant() = default;
+  /* implicit */ XdrOptionalVariant(TrueVariant&& set)
+      : XdrVariant<UnionType, TrueVariantT>{TestValue, std::move(set)} {}
+};
+
+template <typename T>
+struct XdrTrait<
+    T,
+    std::enable_if_t<std::is_base_of_v<
+        XdrOptionalVariant<
+            typename T::TrueVariant,
+            typename T::UnionType,
+            T::TestValue>,
+        T>>> : public XdrTrait<typename T::Base> {
+  static T deserialize(folly::io::Cursor& cursor) {
+    T ret;
+    ret.tag = XdrTrait<typename T::UnionType>::deserialize(cursor);
+    if (ret.tag == T::TestValue) {
+      ret.v = XdrTrait<typename T::TrueVariant>::deserialize(cursor);
+    }
+    return ret;
+  }
+};
+
 } // namespace facebook::eden
 
 #endif

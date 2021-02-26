@@ -231,9 +231,9 @@ fattr3 statToFattr3(const struct stat& stat) {
 
 post_op_attr statToPostOpAttr(folly::Try<struct stat>&& stat) {
   if (stat.hasException()) {
-    return post_op_attr{{false, std::monostate{}}};
+    return post_op_attr{};
   } else {
-    return post_op_attr{{true, statToFattr3(stat.value())}};
+    return post_op_attr{statToFattr3(stat.value())};
   }
 }
 
@@ -302,13 +302,12 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
           if (try_.hasException()) {
             LOOKUP3res res{
                 {{nfsstat3::NFS3ERR_NAMETOOLONG,
-                  LOOKUP3resfail{post_op_attr{{false, std::monostate{}}}}}}};
+                  LOOKUP3resfail{post_op_attr{}}}}};
             XdrTrait<LOOKUP3res>::serialize(ser, res);
           } else {
             LOOKUP3res res{
                 {{nfsstat3::NFS3ERR_NAMETOOLONG,
-                  LOOKUP3resfail{
-                      post_op_attr{{true, statToFattr3(try_.value())}}}}}};
+                  LOOKUP3resfail{post_op_attr{statToFattr3(try_.value())}}}}};
             XdrTrait<LOOKUP3res>::serialize(ser, res);
           }
 
@@ -357,7 +356,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
                       LOOKUP3resok{
                           /*object*/ nfs_fh3{ino},
                           /*obj_attributes*/
-                          post_op_attr{{true, statToFattr3(stat)}},
+                          post_op_attr{statToFattr3(stat)},
                           /*dir_attributes*/
                           statToPostOpAttr(std::move(dirStat)),
                       }}}};
@@ -394,7 +393,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::access(
         if (try_.hasException()) {
           ACCESS3res res{
               {{exceptionToNfsError(try_.exception()),
-                ACCESS3resfail{post_op_attr{{false, std::monostate{}}}}}}};
+                ACCESS3resfail{post_op_attr{}}}}};
           XdrTrait<ACCESS3res>::serialize(ser, res);
         } else {
           auto stat = std::move(try_).value();
@@ -402,7 +401,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::access(
           ACCESS3res res{
               {{nfsstat3::NFS3_OK,
                 ACCESS3resok{
-                    post_op_attr{{true, statToFattr3(stat)}},
+                    post_op_attr{statToFattr3(stat)},
                     /*access*/ getEffectiveAccessRights(stat, desiredAccess),
                 }}}};
           XdrTrait<ACCESS3res>::serialize(ser, res);
