@@ -534,9 +534,7 @@ folly::Future<bool> FileInode::isSameAsSlow(
   return getSha1(fetchContext)
       .thenTry([expectedBlobSha1](folly::Try<Hash>&& try_) {
         if (try_.hasException()) {
-          XLOG(DBG2) << "Assuming changed: "
-                     << folly::exceptionStr(
-                            try_.tryGetExceptionObject<std::exception>());
+          XLOG(DBG2) << "Assuming changed: " << try_.exception();
           return false;
         } else {
           return try_.value() == expectedBlobSha1;
@@ -584,9 +582,7 @@ folly::Future<bool> FileInode::isSameAs(
   return folly::collectUnsafe(f1, f2).thenTry(
       [](folly::Try<std::tuple<Hash, Hash>>&& try_) {
         if (try_.hasException()) {
-          XLOG(DBG2) << "Assuming changed: "
-                     << folly::exceptionStr(
-                            try_.tryGetExceptionObject<std::exception>());
+          XLOG(DBG2) << "Assuming changed: " << try_.exception();
           return false;
         } else {
           auto hashes = std::move(try_).value();
