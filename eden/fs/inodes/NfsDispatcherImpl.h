@@ -23,6 +23,15 @@ class NfsDispatcherImpl : public NfsDispatcher {
       InodeNumber ino,
       ObjectFetchContext& context) override;
 
+  folly::Future<InodeNumber> getParent(
+      InodeNumber ino,
+      ObjectFetchContext& context) override;
+
+  folly::Future<std::tuple<InodeNumber, struct stat>> lookup(
+      InodeNumber dir,
+      PathComponent name,
+      ObjectFetchContext& context) override;
+
  private:
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;

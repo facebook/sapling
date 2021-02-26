@@ -13,6 +13,7 @@
 
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
 template <class T>
@@ -39,6 +40,22 @@ class NfsDispatcher {
   virtual folly::Future<struct stat> getattr(
       InodeNumber ino,
       ObjectFetchContext& context) = 0;
+
+  /**
+   * Racily obtain the parent directory of the passed in directory.
+   *
+   * Can be used to handle a ".." filename.
+   */
+  virtual folly::Future<InodeNumber> getParent(
+      InodeNumber ino,
+      ObjectFetchContext& context) = 0;
+
+  /**
+   * Find the given file in the passed in directory. It's InodeNumber and
+   * attributes are returned.
+   */
+  virtual folly::Future<std::tuple<InodeNumber, struct stat>>
+  lookup(InodeNumber dir, PathComponent name, ObjectFetchContext& context) = 0;
 
  private:
   EdenStats* stats_{nullptr};

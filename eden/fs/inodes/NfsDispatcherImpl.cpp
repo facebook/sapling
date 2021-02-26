@@ -29,6 +29,32 @@ folly::Future<struct stat> NfsDispatcherImpl::getattr(
       [&context](const InodePtr& inode) { return inode->stat(context); });
 }
 
+folly::Future<InodeNumber> NfsDispatcherImpl::getParent(
+    InodeNumber ino,
+    ObjectFetchContext& /*context*/) {
+  return inodeMap_->lookupTreeInode(ino).thenValue(
+      [](const TreeInodePtr& inode) {
+        return inode->getParentRacy()->getNodeId();
+      });
+}
+
+folly::Future<std::tuple<InodeNumber, struct stat>> NfsDispatcherImpl::lookup(
+    InodeNumber dir,
+    PathComponent name,
+    ObjectFetchContext& context) {
+  return inodeMap_->lookupTreeInode(dir)
+      .thenValue([name = std::move(name), &context](const TreeInodePtr& inode) {
+        return inode->getOrLoadChild(name, context);
+      })
+      .thenValue([&context](const InodePtr& inode) {
+        return inode->stat(context).thenValue(
+            [ino = inode->getNodeId()](
+                struct stat stat) -> std::tuple<InodeNumber, struct stat> {
+              return {ino, stat};
+            });
+      });
+}
+
 } // namespace facebook::eden
 
 #endif

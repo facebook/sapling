@@ -268,11 +268,103 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::setattr(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<LOOKUP3args>::deserialize(deser);
+
+  // TODO(xavierd): make an NfsRequestContext.
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("lookup");
+
+  // TODO(xavierd): the lifetime of this future is a bit tricky and it needs to
+  // be consumed in this function to avoid use-after-free. This future may also
+  // need to be executed after the lookup call to conform to fill the "post-op"
+  // attributes
+  auto dirAttrFut = dispatcher_->getattr(args.what.dir.ino, *context);
+
+  if (args.what.name.length() > NAME_MAX) {
+    // The filename is too long, let's try to get the attributes of the
+    // directory and fail.
+    return std::move(dirAttrFut)
+        .thenTry(
+            [ser = std::move(ser)](folly::Try<struct stat>&& try_) mutable {
+              if (try_.hasException()) {
+                LOOKUP3res res{
+                    {nfsstat3::NFS3ERR_NAMETOOLONG,
+                     LOOKUP3resfail{post_op_attr{{false, std::monostate{}}}}}};
+                XdrTrait<LOOKUP3res>::serialize(ser, res);
+              } else {
+                LOOKUP3res res{
+                    {nfsstat3::NFS3ERR_NAMETOOLONG,
+                     LOOKUP3resfail{
+                         post_op_attr{{true, statToFattr3(try_.value())}}}}};
+                XdrTrait<LOOKUP3res>::serialize(ser, res);
+              }
+
+              return folly::unit;
+            });
+  }
+
+  return folly::makeFutureWith([this, args = std::move(args)]() mutable {
+           if (args.what.name == ".") {
+             return dispatcher_->getattr(args.what.dir.ino, *context)
+                 .thenValue(
+                     [ino = args.what.dir.ino](struct stat && stat)
+                         -> std::tuple<InodeNumber, struct stat> {
+                       return {ino, std::move(stat)};
+                     });
+           } else if (args.what.name == "..") {
+             return dispatcher_->getParent(args.what.dir.ino, *context)
+                 .thenValue([this](InodeNumber ino) {
+                   return dispatcher_->getattr(ino, *context)
+                       .thenValue(
+                           [ino](struct stat && stat)
+                               -> std::tuple<InodeNumber, struct stat> {
+                             return {ino, std::move(stat)};
+                           });
+                 });
+           } else {
+             return dispatcher_->lookup(
+                 args.what.dir.ino, PathComponent(args.what.name), *context);
+           }
+         })
+      .thenTry([ser = std::move(ser), dirAttrFut = std::move(dirAttrFut)](
+                   folly::Try<std::tuple<InodeNumber, struct stat>>&&
+                       lookupTry) mutable {
+        return std::move(dirAttrFut)
+            .thenTry([ser = std::move(ser), lookupTry = std::move(lookupTry)](
+                         folly::Try<struct stat>&& dirStat) mutable {
+              auto dirStatToPostOpAttr = [&]() {
+                if (dirStat.hasException()) {
+                  return post_op_attr{{false, std::monostate{}}};
+                } else {
+                  return post_op_attr{{true, statToFattr3(dirStat.value())}};
+                }
+              };
+
+              if (lookupTry.hasException()) {
+                LOOKUP3res res{
+                    {exceptionToNfsError(lookupTry.exception()),
+                     LOOKUP3resfail{dirStatToPostOpAttr()}}};
+                XdrTrait<LOOKUP3res>::serialize(ser, res);
+              } else {
+                auto& [ino, stat] = lookupTry.value();
+                LOOKUP3res res{
+                    {nfsstat3::NFS3_OK,
+                     LOOKUP3resok{
+                         /*object*/ nfs_fh3{ino},
+                         /*obj_attributes*/
+                         post_op_attr{{true, statToFattr3(stat)}},
+                         /*dir_attributes*/ dirStatToPostOpAttr(),
+                     }}};
+                XdrTrait<LOOKUP3res>::serialize(ser, res);
+              }
+              return folly::unit;
+            });
+      });
 }
 
 uint32_t getEffectiveAccessRights(
@@ -300,7 +392,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::access(
                    folly::Try<struct stat>&& try_) mutable {
         if (try_.hasException()) {
           ACCESS3res res{
-              {nfsstat3::NFS3ERR_IO,
+              {exceptionToNfsError(try_.exception()),
                ACCESS3resfail{post_op_attr{{false, std::monostate{}}}}}};
           XdrTrait<ACCESS3res>::serialize(ser, res);
         } else {
