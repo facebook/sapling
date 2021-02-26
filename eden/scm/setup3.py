@@ -16,6 +16,7 @@
 # isort:skip_file
 import os
 import sys
+
 # If we're executing inside an embedded Python instance, it won't load
 # modules outside the embedded python. So let's add our directory manually,
 # before we import things.
@@ -978,7 +979,6 @@ class buildembedded(Command):
             copy_to(pylibpath, dirtocopy)
         for pylibpath in glob.glob(os.path.join(pyroot, "*.dll")):
             copy_to(pylibpath, dirtocopy)
-
 
     def _copy_hg_exe(self, dirtocopy):
         """Copy main mercurial executable which would load the embedded Python"""

@@ -423,7 +423,9 @@ def movefileex(src, dst):
     Note that this is not a contractual atomicity, but it is atomic
     in practice if the rename happens within a volume."""
     MOVEFILE_REPLACE_EXISTING = 0x1
-    if not _kernel32.MoveFileExW(pathtowin32W(src), pathtowin32W(dst), MOVEFILE_REPLACE_EXISTING):
+    if not _kernel32.MoveFileExW(
+        pathtowin32W(src), pathtowin32W(dst), MOVEFILE_REPLACE_EXISTING
+    ):
         _raiseoserror(dst)
 
 
@@ -730,7 +732,9 @@ def unlink(f):
 def makedir(path, notindexed):
     os.mkdir(path)
     if notindexed:
-        _kernel32.SetFileAttributesW(pathtowin32W(path), _FILE_ATTRIBUTE_NOT_CONTENT_INDEXED)
+        _kernel32.SetFileAttributesW(
+            pathtowin32W(path), _FILE_ATTRIBUTE_NOT_CONTENT_INDEXED
+        )
 
 
 def getmaxmemoryusage():
@@ -745,6 +749,7 @@ def getoemcp():
     """Returns the OEM codepage, which is the codepage that should be used for
     output to the console."""
     return "cp%d" % _kernel32.GetOEMCP()
+
 
 def pathtowin32W(path):
     if sys.version_info[0] >= 3:
