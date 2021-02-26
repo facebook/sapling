@@ -9,13 +9,15 @@
 
 #include <folly/Range.h>
 #include <string>
+#include <utility>
 
 namespace folly {
 class IOBuf;
 }
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
+
+class KeySpace;
 
 /*
  * StoreResult contains the result of a LocalStore lookup.
@@ -33,18 +35,28 @@ namespace eden {
 class StoreResult {
  public:
   /**
-   * Construct an invalid StoreResult, representing a key that was not found.
+   * Construct an invalid StoreResult containing the reason why it's invalid.
    */
-  StoreResult() {}
+  static StoreResult missing(KeySpace keySpace, folly::ByteRange key);
 
   /**
-   * Construct a StoreResult from a std::string.
+   * Construct a StoreResult from payload data.
    */
-  explicit StoreResult(std::string&& data)
-      : valid_(true), data_(std::move(data)) {}
+  explicit StoreResult(std::string data) : StoreResult{true, std::move(data)} {}
 
-  StoreResult(StoreResult&&) = default;
-  StoreResult& operator=(StoreResult&&) = default;
+  StoreResult(StoreResult&& that) noexcept
+      : valid_{false}, data_{"moved-from"} {
+    std::swap(valid_, that.valid_);
+    std::swap(data_, that.data_);
+  }
+
+  StoreResult& operator=(StoreResult&& that) noexcept {
+    std::string data{"moved-from"};
+    // Allocate the new std::string before performing the no-except swaps.
+    valid_ = std::exchange(that.valid_, false);
+    data_ = std::exchange(that.data_, std::move(data));
+    return *this;
+  }
 
   /**
    * Returns true if the value was found in the store,
@@ -125,17 +137,22 @@ class StoreResult {
   }
 
  private:
+  StoreResult(bool valid, std::string data)
+      : valid_{valid}, data_{std::move(data)} {}
+
   // Forbidden copy constructor and assignment operator
   StoreResult(StoreResult const&) = delete;
   StoreResult& operator=(StoreResult const&) = delete;
 
   [[noreturn]] void throwInvalidError() const;
 
-  // Whether or not the result is value
-  // If the key was not found in the store, valid_ will be false.
+  /**
+   * If true, data_ contains the payload from the store.
+   * If false, it contains an error message that includes context about what was
+   * looked up.
+   */
   bool valid_{false};
-  // The std::string containing the data
   std::string data_;
 };
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

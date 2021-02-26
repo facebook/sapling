@@ -68,7 +68,7 @@ StoreResult MemoryLocalStore::get(KeySpace keySpace, folly::ByteRange key)
   auto store = storage_.rlock();
   auto it = (*store)[keySpace->index].find(StringPiece(key));
   if (it == (*store)[keySpace->index].end()) {
-    return StoreResult();
+    return StoreResult::missing(keySpace, key);
   }
   return StoreResult(std::string(it->second));
 }

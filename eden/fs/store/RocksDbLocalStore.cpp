@@ -383,7 +383,7 @@ StoreResult RocksDbLocalStore::get(KeySpace keySpace, ByteRange key) const {
   if (!status.ok()) {
     if (status.IsNotFound()) {
       // Return an empty StoreResult
-      return StoreResult();
+      return StoreResult::missing(keySpace, key);
     }
 
     // TODO: RocksDB can return a "TryAgain" error.
@@ -461,7 +461,9 @@ RocksDbLocalStore::getBatch(
                 if (!status.ok()) {
                   if (status.IsNotFound()) {
                     // Return an empty StoreResult
-                    results.emplace_back(); // StoreResult();
+                    results.push_back(StoreResult::missing(
+                        keySpace,
+                        folly::ByteRange{folly::StringPiece{keys->at(i)}}));
                     continue;
                   }
 

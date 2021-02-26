@@ -51,8 +51,8 @@ class NullLocalStore final : public LocalStore {
   void clearKeySpace(KeySpace) override {}
   void compactKeySpace(KeySpace) override {}
 
-  StoreResult get(KeySpace, folly::ByteRange) const override {
-    return StoreResult{};
+  StoreResult get(KeySpace keySpace, folly::ByteRange key) const override {
+    return StoreResult::missing(keySpace, key);
   }
 
   bool hasKey(KeySpace, folly::ByteRange) const override {

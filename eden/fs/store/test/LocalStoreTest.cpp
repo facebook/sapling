@@ -132,6 +132,20 @@ TEST_P(LocalStoreTest, testGetResult) {
   EXPECT_THROW(result2.piece(), std::domain_error);
 }
 
+TEST_P(LocalStoreTest, StoreResult_contains_keyspace_name_and_key) {
+  auto key = kEmptySha1;
+  auto result = store_->get(KeySpace::BlobFamily, key);
+  try {
+    result.asString();
+    FAIL();
+  } catch (std::domain_error& e) {
+    EXPECT_EQ(
+        std::string{
+            "value not present in store: key da39a3ee5e6b4b0d3255bfef95601890afd80709 missing from blob keyspace"},
+        e.what());
+  }
+}
+
 TEST_P(LocalStoreTest, testMultipleBlobWriters) {
   StringPiece key1_1 = "foo";
   StringPiece key1_2 = "bar";

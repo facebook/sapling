@@ -6,6 +6,8 @@
  */
 
 #include "StoreResult.h"
+#include "eden/fs/store/KeySpace.h"
+#include "folly/String.h"
 
 #include <folly/io/IOBuf.h>
 
@@ -18,8 +20,16 @@ void freeString(void* /* buffer */, void* userData) {
 }
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
+
+StoreResult StoreResult::missing(KeySpace keySpace, folly::ByteRange key) {
+  return StoreResult{
+      false,
+      fmt::format(
+          "key {} missing from {} keyspace",
+          folly::hexlify(key),
+          keySpace->name)};
+}
 
 IOBuf StoreResult::iobufWrapper() const {
   ensureValid();
@@ -45,7 +55,7 @@ folly::IOBuf StoreResult::extractIOBuf() {
 
 [[noreturn]] void StoreResult::throwInvalidError() const {
   // Maybe we should define our own more specific error type in the future
-  throw std::domain_error("value not present in store");
+  throw std::domain_error("value not present in store: " + data_);
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

@@ -155,7 +155,7 @@ StoreResult SqliteLocalStore::get(KeySpace keySpace, ByteRange key) const {
   }
 
   // the key does not exist
-  return StoreResult();
+  return StoreResult::missing(keySpace, key);
 }
 
 bool SqliteLocalStore::hasKey(KeySpace keySpace, ByteRange key) const {
