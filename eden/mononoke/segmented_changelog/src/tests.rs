@@ -706,3 +706,30 @@ async fn test_periodic_update_dag(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
+#[fbinit::test]
+async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = linear::getrepo(fb).await;
+    let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+        .with_blobrepo(&blobrepo)
+        .with_bookmark_name(BookmarkName::new("master").unwrap());
+
+    let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281"; // commit 4
+    let start_cs_id = resolve_cs_id(&ctx, &blobrepo, start_hg_id).await?;
+
+    setup_phases(&ctx, &blobrepo, start_cs_id).await?;
+
+    let seeder = builder.clone().build_seeder(&ctx).await?;
+    let _ = seeder.run(&ctx, start_cs_id).await?;
+    let manager = builder.clone().build_manager()?;
+    let (_, dag) = manager.load_dag(&ctx).await?;
+    assert_eq!(dag.head(&ctx).await?, start_cs_id);
+
+    let tailer = builder.clone().build_tailer()?;
+    let _ = tailer.once(&ctx).await?;
+    let (_, dag) = manager.load_dag(&ctx).await?;
+    let master = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+    assert_eq!(dag.head(&ctx).await?, master);
+    Ok(())
+}
