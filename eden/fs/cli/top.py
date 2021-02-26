@@ -678,7 +678,7 @@ class Top:
         # split the section between the number of imports and
         # the duration of the longest import
         request_count_size = section_size // 2
-        request_time_size = section_size - request_count_size
+        request_time_size = max(3, section_size - request_count_size)
 
         # number of requests
         requests_for_type = metrics[RequestMetric.COUNT]
