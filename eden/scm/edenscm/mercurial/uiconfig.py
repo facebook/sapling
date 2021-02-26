@@ -659,6 +659,12 @@ def validatedynamicconfig(ui):
 
 
 def applydynamicconfig(ui, reponame, sharedpath):
+    pinned = sorted(ui._uiconfig._pinnedconfigs)
+    values = [ui.config(s, n) for (s, n) in pinned]
+
     configparser.applydynamicconfig(ui._uiconfig._rcfg._rcfg, reponame, sharedpath)
 
     validatedynamicconfig(ui)
+
+    for (section, name), value in zip(pinned, values):
+        ui.setconfig(section, name, value)
