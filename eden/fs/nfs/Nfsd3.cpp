@@ -243,13 +243,13 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
-  nfs_fh3 fh = XdrTrait<nfs_fh3>::deserialize(deser);
+  auto args = XdrTrait<GETATTR3args>::deserialize(deser);
 
   // TODO(xavierd): make an NfsRequestContext.
   static auto context =
       ObjectFetchContext::getNullContextWithCauseDetail("getattr");
 
-  return dispatcher_->getattr(fh.ino, *context)
+  return dispatcher_->getattr(args.object.ino, *context)
       .thenTry([ser = std::move(ser)](folly::Try<struct stat>&& try_) mutable {
         if (try_.hasException()) {
           GETATTR3res res{
@@ -418,13 +418,13 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::readlink(
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
-  nfs_fh3 fh = XdrTrait<nfs_fh3>::deserialize(deser);
+  auto args = XdrTrait<READLINK3args>::deserialize(deser);
 
   static auto context =
       ObjectFetchContext::getNullContextWithCauseDetail("readlink");
 
-  auto getattr = dispatcher_->getattr(fh.ino, *context);
-  return dispatcher_->readlink(fh.ino, *context)
+  auto getattr = dispatcher_->getattr(args.symlink.ino, *context);
+  return dispatcher_->readlink(args.symlink.ino, *context)
       .thenTry([ser = std::move(ser), getattr = std::move(getattr)](
                    folly::Try<std::string> tryReadlink) mutable {
         return std::move(getattr).thenTry(
@@ -563,8 +563,8 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::fsinfo(
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
-  nfs_fh3 fh = XdrTrait<nfs_fh3>::deserialize(deser);
-  (void)fh;
+  auto args = XdrTrait<FSINFO3args>::deserialize(deser);
+  (void)args;
 
   FSINFO3res res{
       {nfsstat3::NFS3_OK,
@@ -595,8 +595,8 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::pathconf(
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
-  nfs_fh3 fh = XdrTrait<nfs_fh3>::deserialize(deser);
-  (void)fh;
+  auto args = XdrTrait<PATHCONF3args>::deserialize(deser);
+  (void)args;
 
   PATHCONF3res res{
       {nfsstat3::NFS3_OK,

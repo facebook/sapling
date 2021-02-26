@@ -28,6 +28,7 @@ EDEN_XDR_SERDE_IMPL(
     mtime,
     ctime);
 EDEN_XDR_SERDE_IMPL(diropargs3, dir, name);
+EDEN_XDR_SERDE_IMPL(GETATTR3args, object);
 EDEN_XDR_SERDE_IMPL(GETATTR3resok, obj_attributes);
 EDEN_XDR_SERDE_IMPL(LOOKUP3args, what);
 EDEN_XDR_SERDE_IMPL(LOOKUP3resok, object, obj_attributes, dir_attributes);
@@ -35,8 +36,10 @@ EDEN_XDR_SERDE_IMPL(LOOKUP3resfail, dir_attributes);
 EDEN_XDR_SERDE_IMPL(ACCESS3args, object, access);
 EDEN_XDR_SERDE_IMPL(ACCESS3resok, obj_attributes, access);
 EDEN_XDR_SERDE_IMPL(ACCESS3resfail, obj_attributes);
+EDEN_XDR_SERDE_IMPL(READLINK3args, symlink);
 EDEN_XDR_SERDE_IMPL(READLINK3resok, symlink_attributes, data);
 EDEN_XDR_SERDE_IMPL(READLINK3resfail, symlink_attributes);
+EDEN_XDR_SERDE_IMPL(FSINFO3args, fsroot);
 EDEN_XDR_SERDE_IMPL(
     FSINFO3resok,
     obj_attributes,
@@ -51,6 +54,7 @@ EDEN_XDR_SERDE_IMPL(
     time_delta,
     properties);
 EDEN_XDR_SERDE_IMPL(FSINFO3resfail, obj_attributes);
+EDEN_XDR_SERDE_IMPL(PATHCONF3args, object);
 EDEN_XDR_SERDE_IMPL(
     PATHCONF3resok,
     obj_attributes,

@@ -207,6 +207,11 @@ EDEN_XDR_SERDE_DECL(diropargs3, dir, name);
 
 // GETATTR Procedure:
 
+struct GETATTR3args {
+  nfs_fh3 object;
+};
+EDEN_XDR_SERDE_DECL(GETATTR3args, object);
+
 struct GETATTR3resok {
   fattr3 obj_attributes;
 };
@@ -313,6 +318,11 @@ struct XdrTrait<ACCESS3res> : public XdrTrait<ACCESS3res::Base> {
 
 // READLINK Procedure:
 
+struct READLINK3args {
+  nfs_fh3 symlink;
+};
+EDEN_XDR_SERDE_DECL(READLINK3args, symlink);
+
 struct READLINK3resok {
   post_op_attr symlink_attributes;
   std::string data;
@@ -350,6 +360,11 @@ const uint32_t FSF3_LINK = 0x0001;
 const uint32_t FSF3_SYMLINK = 0x0002;
 const uint32_t FSF3_HOMOGENEOUS = 0x0008;
 const uint32_t FSF3_CANSETTIME = 0x0010;
+
+struct FSINFO3args {
+  nfs_fh3 fsroot;
+};
+EDEN_XDR_SERDE_DECL(FSINFO3args, fsroot);
 
 struct FSINFO3resok {
   post_op_attr obj_attributes;
@@ -404,6 +419,11 @@ struct XdrTrait<FSINFO3res> : public XdrTrait<FSINFO3res::Base> {
 };
 
 // PATHCONF Procedure:
+
+struct PATHCONF3args {
+  nfs_fh3 object;
+};
+EDEN_XDR_SERDE_DECL(PATHCONF3args, object);
 
 struct PATHCONF3resok {
   post_op_attr obj_attributes;
