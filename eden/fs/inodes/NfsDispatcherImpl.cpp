@@ -65,6 +65,25 @@ folly::Future<std::string> NfsDispatcherImpl::readlink(
       });
 }
 
+folly::Future<NfsDispatcher::MkdirRes> NfsDispatcherImpl::mkdir(
+    InodeNumber dir,
+    PathComponent name,
+    mode_t mode,
+    ObjectFetchContext& context) {
+  return inodeMap_->lookupTreeInode(dir).thenValue(
+      [&context, name = std::move(name), mode](const TreeInodePtr& inode) {
+        // TODO(xavierd): Modify mkdir to obtain the pre and post stat of the
+        // directory.
+        auto newDir = inode->mkdir(name, mode, InvalidationRequired::No);
+        auto statFut = newDir->stat(context);
+        return std::move(statFut).thenValue([newDir = std::move(newDir)](
+                                                struct stat&& stat) {
+          return MkdirRes{
+              newDir->getNodeId(), std::move(stat), std::nullopt, std::nullopt};
+        });
+      });
+}
+
 } // namespace facebook::eden
 
 #endif

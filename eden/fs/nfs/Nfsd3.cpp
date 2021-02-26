@@ -237,6 +237,19 @@ post_op_attr statToPostOpAttr(folly::Try<struct stat>&& stat) {
   }
 }
 
+pre_op_attr statToPreOpAttr(struct stat& stat) {
+  return pre_op_attr{wcc_attr{
+      /*size*/ folly::to_unsigned(stat.st_size),
+#ifdef __linux__
+      /*mtime*/ timespecToNfsTime(stat.st_mtim),
+      /*ctime*/ timespecToNfsTime(stat.st_ctim),
+#else
+      /*mtime*/ timespecToNfsTime(stat.st_mtimespec),
+      /*ctime*/ timespecToNfsTime(stat.st_ctimespec),
+#endif
+  }};
+}
+
 folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
     folly::io::Cursor deser,
     folly::io::Appender ser,
@@ -477,11 +490,63 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::create(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::mkdir(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<MKDIR3args>::deserialize(deser);
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("mkdir");
+
+  // Don't allow creating this directory and its parent.
+  if (args.where.name == "." || args.where.name == "..") {
+    MKDIR3res res{{{nfsstat3::NFS3ERR_EXIST, MKDIR3resfail{}}}};
+    XdrTrait<MKDIR3res>::serialize(ser, res);
+    return folly::unit;
+  }
+
+  // If the mode isn't set, make it writable by the owner, readable by the
+  // group and traversable by other.
+  auto mode = args.attributes.mode.tag
+      ? std::get<uint32_t>(args.attributes.mode.v)
+      : (S_IFDIR | 0751);
+
+  // TODO(xavierd): For now, all the other args.attributes are ignored, is it
+  // OK?
+
+  return dispatcher_
+      ->mkdir(
+          args.where.dir.ino, PathComponent{args.where.name}, mode, *context)
+      .thenTry([ser = std::move(ser)](
+                   folly::Try<NfsDispatcher::MkdirRes> try_) mutable {
+        if (try_.hasException()) {
+          MKDIR3res res{
+              {{exceptionToNfsError(try_.exception()), MKDIR3resfail{}}}};
+          XdrTrait<MKDIR3res>::serialize(ser, res);
+        } else {
+          auto mkdirRes = std::move(try_).value();
+
+          MKDIR3res res{
+              {{nfsstat3::NFS3_OK,
+                MKDIR3resok{
+                    /*obj*/ post_op_fh3{nfs_fh3{mkdirRes.ino}},
+                    /*obj_attributes*/
+                    post_op_attr{statToFattr3(mkdirRes.stat)},
+                    wcc_data{
+                        /*before*/ mkdirRes.preDirStat.has_value()
+                            ? statToPreOpAttr(mkdirRes.preDirStat.value())
+                            : pre_op_attr{},
+                        /*after*/ mkdirRes.postDirStat.has_value()
+                            ? post_op_attr{statToFattr3(
+                                  mkdirRes.postDirStat.value())}
+                            : post_op_attr{},
+                    }}}}};
+          XdrTrait<MKDIR3res>::serialize(ser, res);
+        }
+        return folly::unit;
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::symlink(

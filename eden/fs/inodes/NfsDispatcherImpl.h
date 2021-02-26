@@ -36,6 +36,12 @@ class NfsDispatcherImpl : public NfsDispatcher {
       InodeNumber ino,
       ObjectFetchContext& context) override;
 
+  folly::Future<NfsDispatcher::MkdirRes> mkdir(
+      InodeNumber ino,
+      PathComponent name,
+      mode_t mode,
+      ObjectFetchContext& context) override;
+
  private:
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;
