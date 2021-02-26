@@ -71,10 +71,10 @@ mod windows {
     use winapi::um::winbase::CREATE_NO_WINDOW;
     use winapi::um::winbase::HANDLE_FLAG_INHERIT;
 
-    // Practically MAX_HANDLE < 1000 seems to be enough.
     // A larger value like 8192 adds visible overhead (ex. >5ms).
-    // 2048 has about 2ms overhead and seems reasonable.
-    const MAX_HANDLE: usize = 2048;
+    // At first we had 2048, however it wasn't enough in some cases
+    // https://fburl.com/px16lb62. We bumped it to 4096.
+    const MAX_HANDLE: usize = 4096;
 
     pub fn avoid_inherit_handles(command: &mut Command) {
         // Attempt to mark handles as "not inheritable".
@@ -90,7 +90,9 @@ mod windows {
         //
         // [1]: https://github.com/processhacker/processhacker/
         for handle in 1..=MAX_HANDLE {
-            let handle = unsafe { std::mem::transmute(handle) };
+            // According to https://devblogs.microsoft.com/oldnewthing/20050121-00/?p=36633
+            // kernel handles are always a multiple of 4
+            let handle = unsafe { std::mem::transmute(handle * 4) };
             unsafe {
                 SetHandleInformation(handle, HANDLE_FLAG_INHERIT, 0)
             };
