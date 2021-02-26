@@ -131,7 +131,7 @@ class EdenFS(object):
             return
         self.shutdown()
 
-    def get_thrift_client(self, timeout=None) -> EdenClient:
+    def get_thrift_client(self, timeout: Optional[float] = None) -> EdenClient:
         return create_thrift_client(str(self._eden_dir), timeout=timeout)
 
     def run_cmd(
@@ -377,7 +377,7 @@ class EdenFS(object):
         self.shutdown()
         self.start()
 
-    def get_pid_via_thrift(self):
+    def get_pid_via_thrift(self) -> int:
         with self.get_thrift_client() as client:
             return client.getDaemonInfo().pid
 
