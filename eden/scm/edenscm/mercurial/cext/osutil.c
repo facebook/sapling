@@ -175,7 +175,8 @@ static PyObject* make_item(const WIN32_FIND_DATAW* fd, int wantstat) {
                                                                : _S_IFDIR)
       : _S_IFREG;
   if (!wantstat) {
-    PyObject* unicode = PyUnicode_FromWideChar(fd->cFileName, wcslen(fd->cFileName));
+    PyObject* unicode =
+        PyUnicode_FromWideChar(fd->cFileName, wcslen(fd->cFileName));
     if (!unicode) {
       return NULL;
     }
@@ -198,7 +199,8 @@ static PyObject* make_item(const WIN32_FIND_DATAW* fd, int wantstat) {
   if (kind == _S_IFREG)
     stp->st_size = ((__int64)fd->nFileSizeHigh << 32) + fd->nFileSizeLow;
 
-  PyObject* unicode =  PyUnicode_FromWideChar(fd->cFileName, wcslen(fd->cFileName));
+  PyObject* unicode =
+      PyUnicode_FromWideChar(fd->cFileName, wcslen(fd->cFileName));
   if (!unicode) {
     return NULL;
   }
@@ -206,8 +208,11 @@ static PyObject* make_item(const WIN32_FIND_DATAW* fd, int wantstat) {
   return Py_BuildValue("NiN", unicode, kind, py_st);
 }
 
-static PyObject*
-_listdir(const wchar_t* path, Py_ssize_t plen, int wantstat, const wchar_t* skip) {
+static PyObject* _listdir(
+    const wchar_t* path,
+    Py_ssize_t plen,
+    int wantstat,
+    const wchar_t* skip) {
   PyObject* rval = NULL; /* initialize - return value */
   PyObject* list;
   HANDLE fh;
@@ -215,7 +220,8 @@ _listdir(const wchar_t* path, Py_ssize_t plen, int wantstat, const wchar_t* skip
 
   /* build the path + \* pattern string */
   wchar_t* pattern;
-  pattern = PyMem_Malloc((plen + 3) * sizeof(wchar_t)); /* wchar_path + \* + \0 */
+  pattern =
+      PyMem_Malloc((plen + 3) * sizeof(wchar_t)); /* wchar_path + \* + \0 */
   if (!pattern) {
     PyErr_NoMemory();
     goto error_nomem;
@@ -993,13 +999,7 @@ static PyObject* listdir(PyObject* self, PyObject* args, PyObject* kwargs) {
   static char* kwlist[] = {"path", "stat", "skip", NULL};
 
   if (!PyArg_ParseTupleAndKeywords(
-          args,
-          kwargs,
-          "O|OO:listdir",
-          kwlist,
-          &pathobj,
-          &statobj,
-          &skipobj))
+          args, kwargs, "O|OO:listdir", kwlist, &pathobj, &statobj, &skipobj))
     return NULL;
 
   wantstat = statobj && PyObject_IsTrue(statobj);
@@ -1058,13 +1058,7 @@ static PyObject* posixfile(PyObject* self, PyObject* args, PyObject* kwds) {
   int plus;
   FILE* fp;
   if (!PyArg_ParseTupleAndKeywords(
-          args,
-          kwds,
-          "O|si:posixfile",
-          kwlist,
-          &name_obj,
-          &mode,
-          &bufsize))
+          args, kwds, "O|si:posixfile", kwlist, &name_obj, &mode, &bufsize))
     return NULL;
 
   m0 = mode[0];
@@ -1131,24 +1125,24 @@ static PyObject* posixfile(PyObject* self, PyObject* args, PyObject* kwds) {
   wcstombs(name, wname, name_max);
 
   handle = CreateFileW(
-    wname,
-    access,
-    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-    NULL,
-    creation,
-    FILE_ATTRIBUTE_NORMAL,
-    0);
+      wname,
+      access,
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+      NULL,
+      creation,
+      FILE_ATTRIBUTE_NORMAL,
+      0);
   PyMem_Free(wname);
 #else
   name = PyBytes_AsString(name_obj);
   handle = CreateFileA(
-    name,
-    access,
-    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-    NULL,
-    creation,
-    FILE_ATTRIBUTE_NORMAL,
-    0);
+      name,
+      access,
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+      NULL,
+      creation,
+      FILE_ATTRIBUTE_NORMAL,
+      0);
 #endif
 
   if (handle == INVALID_HANDLE_VALUE) {
