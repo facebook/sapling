@@ -29,7 +29,7 @@ use crate::idmap::{
     CacheHandlers, CachedIdMap, ConcurrentMemIdMap, IdMap, SqlIdMap, SqlIdMapFactory,
     SqlIdMapVersionStore,
 };
-use crate::manager::SegmentedChangelogManager;
+use crate::manager::{PeriodicReloadDag, SegmentedChangelogManager};
 use crate::on_demand::{OnDemandUpdateDag, PeriodicUpdateDag};
 use crate::seeder::SegmentedChangelogSeeder;
 use crate::tailer::SegmentedChangelogTailer;
@@ -58,6 +58,7 @@ pub struct SegmentedChangelogBuilder {
     cache_handlers: Option<CacheHandlers>,
     with_in_memory_write_idmap: bool,
     update_to_bookmark_period: Option<Duration>,
+    reload_dag_period: Option<Duration>,
 }
 
 impl SqlConstruct for SegmentedChangelogBuilder {
@@ -79,6 +80,7 @@ impl SqlConstruct for SegmentedChangelogBuilder {
             cache_handlers: None,
             with_in_memory_write_idmap: false,
             update_to_bookmark_period: None,
+            reload_dag_period: None,
         }
     }
 }
@@ -137,6 +139,12 @@ impl SegmentedChangelogBuilder {
             self.update_to_bookmark_period()?,
         );
         Ok(dag)
+    }
+
+    pub async fn build_periodic_reload(mut self, ctx: &CoreContext) -> Result<PeriodicReloadDag> {
+        let reload_dag_period = self.reload_dag_period()?;
+        let manager = self.build_manager()?;
+        PeriodicReloadDag::start(ctx, manager, reload_dag_period).await
     }
 
     pub async fn build_seeder(mut self, ctx: &CoreContext) -> Result<SegmentedChangelogSeeder> {
@@ -239,6 +247,11 @@ impl SegmentedChangelogBuilder {
 
     pub fn with_update_to_bookmark_period(mut self, period: Duration) -> Self {
         self.update_to_bookmark_period = Some(period);
+        self
+    }
+
+    pub fn with_reload_dag_period(mut self, period: Duration) -> Self {
+        self.reload_dag_period = Some(period);
         self
     }
 
@@ -381,6 +394,15 @@ impl SegmentedChangelogBuilder {
             format_err!(
                 "SegmentedChangelog cannot be built without \
                 update_to_bookmark_period being specified."
+            )
+        })
+    }
+
+    fn reload_dag_period(&mut self) -> Result<Duration> {
+        self.reload_dag_period.take().ok_or_else(|| {
+            format_err!(
+                "SegmentedChangelog cannot be built without \
+                reload_dag_period being specified."
             )
         })
     }

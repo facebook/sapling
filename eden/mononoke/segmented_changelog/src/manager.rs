@@ -7,12 +7,17 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{format_err, Context, Result};
+use arc_swap::ArcSwap;
 use async_trait::async_trait;
 use slog::{debug, info};
+use tokio::sync::Notify;
+use tokio::time::Instant;
 
 use dag::{InProcessIdDag, Location};
+use futures_ext::future::{spawn_controlled, ControlledHandle};
 
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -192,5 +197,96 @@ impl SegmentedChangelog for SegmentedChangelogManager {
             .await
             .context("error loading segmented changelog from save")?;
         dag.full_idmap_clone_data(ctx).await
+    }
+}
+
+pub struct PeriodicReloadDag {
+    dag: Arc<ArcSwap<Dag>>,
+    _handle: ControlledHandle,
+    #[allow(dead_code)] // useful for testing
+    update_notify: Arc<Notify>,
+}
+
+impl PeriodicReloadDag {
+    #[allow(dead_code)]
+    pub async fn start(
+        ctx: &CoreContext,
+        manager: SegmentedChangelogManager,
+        period: Duration,
+    ) -> Result<Self> {
+        let (_, dag) = manager.load_dag(&ctx).await?;
+        let dag = Arc::new(ArcSwap::from_pointee(dag));
+        let update_notify = Arc::new(Notify::new());
+        let _handle = spawn_controlled({
+            let ctx = ctx.clone();
+            let my_dag = Arc::clone(&dag);
+            let my_notify = Arc::clone(&update_notify);
+            async move {
+                let start = Instant::now() + period;
+                let mut interval = tokio::time::interval_at(start, period);
+                loop {
+                    interval.tick().await;
+                    match manager.load_dag(&ctx).await {
+                        Ok((_, dag)) => my_dag.store(Arc::new(dag)),
+                        Err(err) => {
+                            slog::error!(
+                                ctx.logger(),
+                                "failed to load segmented changelog dag: {:?}",
+                                err
+                            );
+                        }
+                    }
+                    my_notify.notify();
+                }
+            }
+        });
+        Ok(Self {
+            dag,
+            _handle,
+            update_notify,
+        })
+    }
+
+    #[cfg(test)]
+    pub async fn wait_for_update(&self) {
+        self.update_notify.notified().await;
+    }
+}
+
+#[async_trait]
+impl SegmentedChangelog for PeriodicReloadDag {
+    async fn location_to_many_changeset_ids(
+        &self,
+        ctx: &CoreContext,
+        location: Location<ChangesetId>,
+        count: u64,
+    ) -> Result<Vec<ChangesetId>> {
+        self.dag
+            .load()
+            .location_to_many_changeset_ids(ctx, location, count)
+            .await
+    }
+
+    async fn many_changeset_ids_to_locations(
+        &self,
+        ctx: &CoreContext,
+        client_head: ChangesetId,
+        cs_ids: Vec<ChangesetId>,
+    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
+        self.dag
+            .load()
+            .many_changeset_ids_to_locations(ctx, client_head, cs_ids)
+            .await
+    }
+
+    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+        self.dag.load().clone_data(ctx).await
+    }
+
+    async fn full_idmap_clone_data(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<StreamCloneData<ChangesetId>> {
+        self.dag.load().full_idmap_clone_data(ctx).await
     }
 }

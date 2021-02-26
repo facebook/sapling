@@ -9,6 +9,7 @@ license = "GPLv2+"
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
+arc-swap = "1.1"
 async-trait = "0.1.29"
 auto_impl = "0.4"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
