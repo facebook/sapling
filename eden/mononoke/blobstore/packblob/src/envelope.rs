@@ -76,7 +76,7 @@ impl TryFrom<BlobstoreBytes> for PackEnvelope {
         let mut bytes = bytes.into_bytes();
         let header: HeaderType = HeaderType::try_from(bytes.get_u32())?;
         let t: StorageEnvelope = match header {
-            HeaderType::PackBlobCompactFormat => compact_protocol::deserialize(bytes)?,
+            HeaderType::PackBlobCompactFormat => compact_protocol::deserialize(&bytes)?,
         };
         Ok(PackEnvelope(t))
     }
@@ -117,7 +117,7 @@ mod tests {
         let mut bytes = compact_serialize_with_header(magic, value.clone());
         let header = bytes.get_u32();
         assert_eq!(magic, header);
-        let roundtripped: String = compact_protocol::deserialize(&bytes)?;
+        let roundtripped: String = compact_protocol::deserialize(bytes)?;
         assert_eq!(value, roundtripped);
         Ok(())
     }
