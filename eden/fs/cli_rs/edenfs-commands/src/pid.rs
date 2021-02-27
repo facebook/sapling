@@ -7,10 +7,10 @@
 
 //! edenfsctl pid
 
-use anyhow::Result;
 use structopt::StructOpt;
 
 use edenfs_client::EdenFsInstance;
+use edenfs_error::Result;
 
 use crate::ExitCode;
 

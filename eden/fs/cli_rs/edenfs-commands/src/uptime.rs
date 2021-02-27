@@ -9,10 +9,10 @@
 
 use std::{fmt, time::Duration};
 
-use anyhow::Result;
 use structopt::StructOpt;
 
 use edenfs_client::{DaemonHealthy, EdenFsInstance};
+use edenfs_error::Result;
 
 use crate::ExitCode;
 

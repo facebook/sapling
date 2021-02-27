@@ -9,10 +9,10 @@
 
 use std::time::Duration;
 
-use anyhow::Result;
 use structopt::StructOpt;
 
 use edenfs_client::{DaemonHealthy, EdenFsInstance};
+use edenfs_error::Result;
 
 use crate::ExitCode;
 
@@ -36,7 +36,7 @@ impl StatusCmd {
             }
         }
 
-        instance.status_from_lock()
+        Ok(instance.status_from_lock()?)
     }
 
     pub async fn run(self, instance: EdenFsInstance) -> Result<ExitCode> {

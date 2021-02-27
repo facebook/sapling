@@ -7,12 +7,13 @@
 
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
 use structopt::{clap::AppSettings, StructOpt};
 use tokio_compat_02::FutureExt;
 use tracing::{event, Level};
 
 use edenfs_client::EdenFsInstance;
+use edenfs_error::Result;
 use util::path::expand_path;
 
 mod gc;

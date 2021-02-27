@@ -77,7 +77,7 @@ fn rust_main(cmd: edenfs_commands::Command) -> Result<()> {
     }
     match cmd.run() {
         Ok(code) => std::process::exit(code),
-        Err(e) => Err(e),
+        Err(e) => Err(e.into()),
     }
 }
 

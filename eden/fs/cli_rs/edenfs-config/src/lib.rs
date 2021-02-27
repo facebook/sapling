@@ -7,10 +7,12 @@
 
 use std::path::Path;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use serde::Deserialize;
 use stack_config::StackConfig;
 use tracing::{event, Level};
+
+use edenfs_error::EdenFsError;
 
 #[derive(Deserialize, StackConfig, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -80,7 +82,10 @@ fn load_user(loader: &mut EdenFsConfigLoader, home_dir: &Path) -> Result<()> {
     load_path(loader, &home_rc)
 }
 
-pub fn load_config(etc_eden_dir: &Path, home_dir: Option<&Path>) -> Result<EdenFsConfig> {
+pub fn load_config(
+    etc_eden_dir: &Path,
+    home_dir: Option<&Path>,
+) -> Result<EdenFsConfig, EdenFsError> {
     let mut loader = EdenFsConfig::loader();
 
     if let Err(e) = load_system(&mut loader, &etc_eden_dir) {
@@ -102,7 +107,9 @@ pub fn load_config(etc_eden_dir: &Path, home_dir: Option<&Path>) -> Result<EdenF
     }
 
     if let Some(home) = home_dir {
-        load_user(&mut loader, &home)?;
+        if let Err(e) = load_user(&mut loader, &home) {
+            event!(Level::INFO, home = ?home, "Unable to load user configuration, skipped: {:?}", e);
+        }
     } else {
         event!(
             Level::INFO,
@@ -110,5 +117,5 @@ pub fn load_config(etc_eden_dir: &Path, home_dir: Option<&Path>) -> Result<EdenF
         );
     }
 
-    Ok(loader.build().map_err(|e| anyhow!("{}", e))?)
+    Ok(loader.build().map_err(EdenFsError::ConfigurationError)?)
 }

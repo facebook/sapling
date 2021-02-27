@@ -9,10 +9,10 @@
 
 use std::io::{stderr, Write};
 
-use anyhow::Result;
 use structopt::StructOpt;
 
 use edenfs_client::EdenFsInstance;
+use edenfs_error::{Result, ResultExt};
 
 use crate::ExitCode;
 
@@ -27,8 +27,8 @@ impl GcCmd {
         // TODO: unload inodes
 
         eprint!("Clearing and compacting local caches...");
-        stderr().flush()?;
-        client.clearAndCompactLocalStore().await?;
+        stderr().flush().from_err()?;
+        client.clearAndCompactLocalStore().await.from_err()?;
         eprintln!();
 
         // TODO: clear kernel caches here

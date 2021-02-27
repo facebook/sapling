@@ -11,10 +11,11 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Context};
 use tokio::net::UnixStream;
 
 use edenfs_config::EdenFsConfig;
+use edenfs_error::{EdenFsError, Result, ResultExt};
 use fb303_core::types::fb303_status;
 use fbthrift_socket::SocketTransport;
 use thrift_types::edenfs::{client::EdenService, types::DaemonInfo};
@@ -49,7 +50,7 @@ impl EdenFsInstance {
     async fn _connect(&self, socket_path: &PathBuf) -> Result<EdenFsClient> {
         let stream = UnixStream::connect(&socket_path)
             .await
-            .with_context(|| format!("unable to connect to '{}'", socket_path.display()))?;
+            .map_err(EdenFsError::ThriftIoError)?;
         let transport = SocketTransport::new(stream);
         let client = EdenService::new(BinaryProtocol, transport);
 
@@ -63,17 +64,12 @@ impl EdenFsInstance {
         let res = if let Some(timeout) = timeout {
             tokio::time::timeout(timeout, connect)
                 .await
-                .with_context(|| {
-                    format!(
-                        "Timed out while trying to connect to '{}'",
-                        socket_path.display()
-                    )
-                })?
+                .map_err(|_| EdenFsError::ThriftConnectionTimeout(socket_path))?
         } else {
             connect.await
         };
 
-        res.with_context(|| format!("failed to connect to socket at {}", socket_path.display()))
+        res
     }
 
     #[cfg(windows)]
@@ -87,7 +83,7 @@ impl EdenFsInstance {
     }
 
     /// Read the pid from the Eden lockfile
-    fn pid(&self) -> Result<sysinfo::Pid> {
+    fn pid(&self) -> Result<sysinfo::Pid, anyhow::Error> {
         let pidfile = self.pidfile();
         let pid_bytes = std::fs::read(&pidfile)
             .with_context(|| format!("Unable to read from pid file '{}'", pidfile.display()))?;
@@ -101,7 +97,7 @@ impl EdenFsInstance {
     }
 
     /// Retrieving running EdenFS process status based on lock file
-    pub fn status_from_lock(&self) -> Result<i32> {
+    pub fn status_from_lock(&self) -> Result<i32, anyhow::Error> {
         let pid = self.pid()?;
 
         let exe = get_executable(pid).ok_or_else(|| anyhow!("EdenFS is not running as {}", pid))?;
@@ -124,7 +120,7 @@ impl EdenFsInstance {
         let client = self
             .connect(timeout.or_else(|| Some(Duration::from_secs(3))))
             .await?;
-        Ok(client.getDaemonInfo().await?)
+        client.getDaemonInfo().await.from_err()
     }
 }
 
