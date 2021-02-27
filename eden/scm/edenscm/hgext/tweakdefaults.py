@@ -443,15 +443,13 @@ def blame(orig, ui, repo, *pats, **opts):
             pass
         return res
 
-    if ui.plain():
-        return orig(ui, repo, *pats, **opts)
-
-    # changeset is the new default
-    if all(
-        not opts.get(f)
-        for f in ["changeset", "number", "phabdiff", "user", "date", "file"]
-    ):
-        opts["changeset"] = True
+    if not ui.plain():
+        # changeset is the new default
+        if all(
+            not opts.get(f)
+            for f in ["changeset", "number", "phabdiff", "user", "date", "file"]
+        ):
+            opts["changeset"] = True
 
     # without --phabdiff or with -T, use the default formatter
     if not opts.get("phabdiff") or opts.get("template"):
