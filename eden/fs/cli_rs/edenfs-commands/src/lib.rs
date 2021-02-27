@@ -16,6 +16,7 @@ use edenfs_client::EdenFsInstance;
 use edenfs_error::Result;
 use util::path::expand_path;
 
+mod config;
 mod gc;
 mod pid;
 mod status;
@@ -66,6 +67,7 @@ pub enum SubCommand {
     Pid(crate::pid::PidCmd),
     Uptime(crate::uptime::UptimeCmd),
     Gc(crate::gc::GcCmd),
+    Config(crate::config::ConfigCmd),
 }
 
 impl Command {
@@ -123,6 +125,7 @@ impl Command {
             SubCommand::Pid(pid_cmd) => pid_cmd.run(instance).await,
             SubCommand::Uptime(uptime_cmd) => uptime_cmd.run(instance).await,
             SubCommand::Gc(gc_cmd) => gc_cmd.run(instance).await,
+            SubCommand::Config(config_cmd) => config_cmd.run(instance),
         }
     }
 }

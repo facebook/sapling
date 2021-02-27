@@ -5,25 +5,33 @@
  * GNU General Public License version 2.
  */
 
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 use anyhow::{Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use stack_config::StackConfig;
 use tracing::{event, Level};
 
 use edenfs_error::EdenFsError;
 
-#[derive(Deserialize, StackConfig, Debug)]
+#[derive(Serialize, Deserialize, StackConfig, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Core {
     eden_directory: String,
 }
 
-#[derive(Deserialize, StackConfig, Debug)]
+#[derive(Serialize, Deserialize, StackConfig, Debug)]
 pub struct EdenFsConfig {
     #[stack(nested)]
     core: Core,
+
+    #[stack(merge = "merge_hashmap")]
+    #[serde(flatten)]
+    other: HashMap<String, toml::Value>,
+}
+
+fn merge_hashmap(lhs: &mut HashMap<String, toml::Value>, rhs: HashMap<String, toml::Value>) {
+    lhs.extend(rhs);
 }
 
 fn load_path(loader: &mut EdenFsConfigLoader, path: &Path) -> Result<()> {
