@@ -9,6 +9,7 @@
 
 use std::{fmt, time::Duration};
 
+use async_trait::async_trait;
 use structopt::StructOpt;
 
 use edenfs_client::{DaemonHealthy, EdenFsInstance};
@@ -75,8 +76,9 @@ impl fmt::Display for HumanTime {
     }
 }
 
-impl UptimeCmd {
-    pub async fn run(self, instance: EdenFsInstance) -> Result<ExitCode> {
+#[async_trait]
+impl crate::Subcommand for UptimeCmd {
+    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
         let health = instance.get_health(None).await;
 
         match health {

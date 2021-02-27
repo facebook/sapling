@@ -14,4 +14,4 @@ mod utils;
 
 pub use instance::{DaemonHealthy, EdenFsInstance};
 
-pub type EdenFsClient = Arc<dyn EdenService>;
+pub type EdenFsClient = Arc<dyn EdenService + Sync>;

@@ -7,6 +7,7 @@
 
 //! edenfsctl pid
 
+use async_trait::async_trait;
 use structopt::StructOpt;
 
 use edenfs_client::EdenFsInstance;
@@ -18,8 +19,9 @@ use crate::ExitCode;
 #[structopt(about = "Print the daemon's process ID if running")]
 pub struct PidCmd {}
 
-impl PidCmd {
-    pub async fn run(self, instance: EdenFsInstance) -> Result<ExitCode> {
+#[async_trait]
+impl crate::Subcommand for PidCmd {
+    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
         let health = instance.get_health(None).await;
 
         Ok(match health {

@@ -9,6 +9,7 @@
 
 use std::time::Duration;
 
+use async_trait::async_trait;
 use structopt::StructOpt;
 
 use edenfs_client::{DaemonHealthy, EdenFsInstance};
@@ -38,8 +39,11 @@ impl StatusCmd {
 
         Ok(instance.status_from_lock()?)
     }
+}
 
-    pub async fn run(self, instance: EdenFsInstance) -> Result<ExitCode> {
+#[async_trait]
+impl crate::Subcommand for StatusCmd {
+    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
         let status = self.get_status(&instance).await;
 
         Ok(match status {

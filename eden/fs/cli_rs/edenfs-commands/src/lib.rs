@@ -8,6 +8,7 @@
 use std::path::PathBuf;
 
 use anyhow::Context;
+use async_trait::async_trait;
 use structopt::{clap::AppSettings, StructOpt};
 use tokio_compat_02::FutureExt;
 use tracing::{event, Level};
@@ -40,7 +41,7 @@ type ExitCode = i32;
     setting = AppSettings::DisableVersion,
     setting = AppSettings::VersionlessSubcommands,
 )]
-pub struct Command {
+pub struct MainCommand {
     /// The path to the directory where edenfs stores its internal state.
     #[structopt(long, parse(from_str = expand_path))]
     config_dir: Option<PathBuf>,
@@ -57,11 +58,12 @@ pub struct Command {
     pub debug: bool,
 
     #[structopt(subcommand)]
-    subcommand: SubCommand,
+    subcommand: TopLevelSubcommand,
 }
 
+/// The first level of edenfsctl subcommands.
 #[derive(StructOpt, Debug)]
-pub enum SubCommand {
+pub enum TopLevelSubcommand {
     #[structopt(alias = "health")]
     Status(crate::status::StatusCmd),
     Pid(crate::pid::PidCmd),
@@ -70,7 +72,27 @@ pub enum SubCommand {
     Config(crate::config::ConfigCmd),
 }
 
-impl Command {
+#[async_trait]
+pub trait Subcommand: Send + Sync {
+    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode>;
+}
+
+#[async_trait]
+impl Subcommand for TopLevelSubcommand {
+    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
+        use TopLevelSubcommand::*;
+        let sc: &(dyn Subcommand) = match self {
+            Status(cmd) => cmd,
+            Pid(cmd) => cmd,
+            Uptime(cmd) => cmd,
+            Gc(cmd) => cmd,
+            Config(cmd) => cmd,
+        };
+        sc.run(instance).await
+    }
+}
+
+impl MainCommand {
     fn get_etc_eden_dir(&self) -> PathBuf {
         if let Some(etc_eden_dir) = &self.etc_eden_dir {
             etc_eden_dir.clone()
@@ -120,12 +142,6 @@ impl Command {
         event!(Level::TRACE, cmd = ?self, "Dispatching");
 
         let instance = self.get_instance();
-        match self.subcommand {
-            SubCommand::Status(status) => status.run(instance).await,
-            SubCommand::Pid(pid_cmd) => pid_cmd.run(instance).await,
-            SubCommand::Uptime(uptime_cmd) => uptime_cmd.run(instance).await,
-            SubCommand::Gc(gc_cmd) => gc_cmd.run(instance).await,
-            SubCommand::Config(config_cmd) => config_cmd.run(instance),
-        }
+        self.subcommand.run(instance).await
     }
 }

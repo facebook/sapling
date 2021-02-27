@@ -7,6 +7,7 @@
 
 //! edenfsctl config
 
+use async_trait::async_trait;
 use structopt::StructOpt;
 
 use edenfs_client::EdenFsInstance;
@@ -15,11 +16,12 @@ use edenfs_error::Result;
 use crate::ExitCode;
 
 #[derive(StructOpt, Debug)]
-/// Query Eden configuration
+#[structopt(about = "Query Eden configuration")]
 pub struct ConfigCmd {}
 
-impl ConfigCmd {
-    pub fn run(self, instance: EdenFsInstance) -> Result<ExitCode> {
+#[async_trait]
+impl crate::Subcommand for ConfigCmd {
+    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
         let config = match instance.get_config() {
             Ok(config) => config,
             Err(e) => {

@@ -9,6 +9,7 @@
 
 use std::io::{stderr, Write};
 
+use async_trait::async_trait;
 use structopt::StructOpt;
 
 use edenfs_client::EdenFsInstance;
@@ -20,8 +21,9 @@ use crate::ExitCode;
 #[structopt(about = "Minimize disk and memory usage by freeing caches")]
 pub struct GcCmd {}
 
-impl GcCmd {
-    pub async fn run(self, instance: EdenFsInstance) -> Result<ExitCode> {
+#[async_trait]
+impl crate::Subcommand for GcCmd {
+    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode> {
         let client = instance.connect(None).await?;
 
         // TODO: unload inodes
