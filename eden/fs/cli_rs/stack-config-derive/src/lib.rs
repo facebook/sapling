@@ -77,6 +77,7 @@ impl VisitMut for StackConfig {
                 if let Some(last) = path.path.segments.last_mut() {
                     last.ident = opt_ident(&last.ident);
                 }
+                field.attrs.push(parse_quote! { #[serde(default)] })
             } else {
                 abort!(field.ty, "can't use nested flag with this type");
             }

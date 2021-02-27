@@ -18,6 +18,9 @@ struct MetaArgsFlag {
 
     #[darling(default)]
     nested: darling::util::Flag,
+
+    #[darling(default)]
+    merge: Option<String>,
 }
 
 #[derive(Debug, FromMeta)]
@@ -26,6 +29,9 @@ struct MetaArgsFunc {
 
     #[darling(default)]
     nested: darling::util::Flag,
+
+    #[darling(default)]
+    merge: Option<String>,
 }
 
 pub struct ConfigField {
@@ -39,6 +45,8 @@ pub struct ConfigField {
     pub default: Option<Option<Path>>,
 
     pub nested: bool,
+
+    pub merge: Option<Path>,
 }
 
 impl ConfigField {
@@ -47,6 +55,14 @@ impl ConfigField {
             name,
             default: None,
             nested: false,
+            merge: None,
+        }
+    }
+
+    fn to_path(meta: &Meta, field: &str, st: &str) -> Path {
+        match syn::parse_str::<Path>(st) {
+            Ok(path) => path,
+            Err(e) => abort!(meta, "{} must be a path: {}", field, e),
         }
     }
 
@@ -60,10 +76,17 @@ impl ConfigField {
                 abort!(meta, "can't use nested and default at the same time");
             }
 
+            if args.merge.is_some() && nested {
+                abort!(meta, "can't use nested and merge at the same time");
+            }
+
+            let merge = args.merge.map(|x| Self::to_path(meta, "merge", &x));
+
             Self {
                 name,
                 default: args.default.map(|_| None),
                 nested,
+                merge,
             }
         } else if let Ok(args) = MetaArgsFunc::from_meta(&meta) {
             let nested = args.nested.is_some();
@@ -72,15 +95,13 @@ impl ConfigField {
                 abort!(meta, "can't use nested and default at the same time");
             }
 
-            let path = match syn::parse_str::<Path>(&args.default) {
-                Ok(path) => path,
-                Err(e) => abort!(meta, "default function must be a path: {}", e),
-            };
+            let merge = args.merge.map(|x| Self::to_path(meta, "merge", &x));
 
             Self {
                 name,
-                default: Some(Some(path)),
+                default: Some(Some(Self::to_path(meta, "default", &args.default))),
                 nested,
+                merge,
             }
         } else {
             abort!(meta, "uanble to parse attribute");
@@ -136,9 +157,21 @@ impl ConfigField {
                 self.#field.merge(other.#field);
             }
         } else {
-            quote! {
-                if let Some(val) = other.#field {
-                    self.#field = Some(val);
+            if let Some(merge) = &self.merge {
+                quote! {
+                    if let Some(val) = other.#field {
+                        if let Some(current) = self.#field.as_mut() {
+                            #merge(current, val);
+                        } else {
+                            self.#field = Some(val);
+                        }
+                    }
+                }
+            } else {
+                quote! {
+                    if let Some(val) = other.#field {
+                        self.#field = Some(val);
+                    }
                 }
             }
         }
