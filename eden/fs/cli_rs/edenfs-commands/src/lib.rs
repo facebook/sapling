@@ -18,6 +18,7 @@ use edenfs_error::Result;
 use util::path::expand_path;
 
 mod config;
+mod debug;
 mod gc;
 mod pid;
 mod status;
@@ -62,6 +63,14 @@ pub struct MainCommand {
 }
 
 /// The first level of edenfsctl subcommands.
+#[async_trait]
+pub trait Subcommand: Send + Sync {
+    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode>;
+}
+
+/**
+ * The first level of edenfsctl subcommands.
+ */
 #[derive(StructOpt, Debug)]
 pub enum TopLevelSubcommand {
     #[structopt(alias = "health")]
@@ -70,11 +79,7 @@ pub enum TopLevelSubcommand {
     Uptime(crate::uptime::UptimeCmd),
     Gc(crate::gc::GcCmd),
     Config(crate::config::ConfigCmd),
-}
-
-#[async_trait]
-pub trait Subcommand: Send + Sync {
-    async fn run(&self, instance: EdenFsInstance) -> Result<ExitCode>;
+    Debug(crate::debug::DebugCmd),
 }
 
 #[async_trait]
@@ -87,6 +92,7 @@ impl Subcommand for TopLevelSubcommand {
             Uptime(cmd) => cmd,
             Gc(cmd) => cmd,
             Config(cmd) => cmd,
+            Debug(cmd) => cmd,
         };
         sc.run(instance).await
     }
