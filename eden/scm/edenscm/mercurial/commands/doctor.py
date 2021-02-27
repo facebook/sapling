@@ -105,6 +105,7 @@ def doctor(ui, **opts):
             )
 
     ui.write(_("checking commit references\n"))
+    _try(ui, checkmissingmaster, repo)
     _try(ui, checklaggingremotename, repo)
     _try(ui, checktoomanynames, repo)
     _try(ui, checknoisybranches, repo)
@@ -267,7 +268,7 @@ def repairvisibleheads(ui, metalog, cl):
         for hexnode in oldlines[1:]
         if len(hexnode) == 40 and bin(hexnode) in nodemap
     ]
-    removedcount = len(oldlines) - len(newlines)
+    removedcount = max(len(oldlines), 1) - len(newlines)
     if removedcount or oldlines[:1] != ["v1"]:
         # Also add the "tip" node.
         hextip = hex(cl.tip())
@@ -366,6 +367,69 @@ def _try(ui, func, *args, **kwargs):
         return func(*args, **kwargs)
     except Exception as ex:
         ui.warn(_("exception %r ignored during %s\n") % (ex, func.__name__))
+
+
+def checkmissingmaster(repo, source="default"):
+    ml = getattr(repo.svfs, "metalog", None)
+    if ml is None:
+        # Does not support non-metalog repo.
+        return
+
+    ui = repo.ui
+    if source not in ui.paths:
+        # No such remote.
+        return
+
+    mainname = bookmod.mainbookmark(repo)
+    # Respect remotenames mapping, "default/" -> "remote/"
+    mainremote = ui.config("remotenames", "rename.%s" % source) or source
+    mainfullname = "%s/%s" % (mainremote, mainname)
+
+    if mainfullname not in repo.svfs.readutf8("remotenames"):
+        # remote does not have the bookmark
+        return
+
+    if mainfullname in repo:
+        return
+
+    ui.write_err(
+        _("%s points to an unknown commit - trying to move it to a known commit\n")
+        % mainfullname
+    )
+
+    # roots is sorted from old to new
+    roots = ml.roots()
+    found = None
+    with progress.bar(ui, _("reading repo history"), "", len(roots)) as prog:
+        for rootid in reversed(roots):
+            prog.value += 1
+            oldml = ml.checkout(rootid)
+            remotenames = oldml.get("remotenames")
+            if not remotenames:
+                continue
+            for line in decodeutf8(remotenames).splitlines():
+                hexnode, _type, fullname = line.split(" ", 2)
+                if fullname != mainfullname:
+                    continue
+                if hexnode in repo:
+                    found = hexnode
+                break
+            if found:
+                break
+
+    if not found:
+        ui.write_err(_("cannot find %s from repo history\n") % mainfullname)
+        return
+
+    ui.write_err(_("setting %s to %s\n") % (fullname, hexnode))
+    newremotenames = ""
+    for line in (ml["remotenames"] or "").splitlines(True):
+        hexnode, typename, fullname = line.split(" ", 2)
+        if fullname != mainfullname:
+            newremotenames += line
+    newremotenames += "%s bookmarks %s\n" % (found, mainfullname)
+    ml["remotenames"] = decodeutf8(newremotenames)
+    ml.commit("doctor\nTransaction: checkmissingmaster\n")
 
 
 def checklaggingremotename(repo, master=None, source="default"):

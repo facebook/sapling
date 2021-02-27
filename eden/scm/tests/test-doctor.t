@@ -1,7 +1,6 @@
 #chg-compatible
 
-(This test needs to re-run the hg process. Therefore hard to use single-process Python test)
-
+  $ configure modern
   $ setconfig format.use-symlink-atomic-write=1
 
 Enable writing to hgcommits/v1:
@@ -232,3 +231,43 @@ Try other kinds of dirstate corruptions:
   ? C
   ? Y
   ? Z
+
+Prepare new server repos
+
+  $ newserver server
+  $ clone server client1
+
+  $ cd client1
+  $ drawdag << 'EOS'
+  > B
+  > |
+  > A
+  > EOS
+  $ hg push -r $A --to master --create -q
+
+Test fixing master bookmark. Need the metalog (contains remotenames) to point
+to commits unknown to the changelog. To do it, we "fork" the repo, and "pull"
+on the forked repo, then replace the metalog from the old repo with the metalog
+in the new repo, while keeping changelog unchanged.
+
+  $ cd $TESTTMP
+  $ clone server client2
+
+  $ hg push --cwd client1 -r $B --to master -q
+
+  $ cp -R client2 client3
+  $ hg pull --cwd client3 -q
+
+  $ cp -R client3/.hg/store/metalog/* client2/.hg/store/metalog/
+
+  $ cd client2
+  $ hg doctor
+  checking internal storage
+  visibleheads: removed 0 heads, added tip
+  checking commit references
+  remote/master points to an unknown commit - trying to move it to a known commit
+  setting remote/master to 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+
+  $ hg log -GT '{desc}\n'
+  @  A
+  
