@@ -553,6 +553,37 @@ TEST_F(JournalTest, update_transitions_are_all_recorded) {
   EXPECT_EQ(hash3, summed->snapshotTransitions[2]);
 }
 
+TEST_F(JournalTest, update_transitions_are_coalesced) {
+  Hash hash1{"0000000000000000000000000000000000000001"};
+  Hash hash2{"0000000000000000000000000000000000000002"};
+  Hash hash3{"0000000000000000000000000000000000000003"};
+  journal.recordHashUpdate(hash1, hash2);
+  journal.recordHashUpdate(hash2, hash2);
+  journal.recordHashUpdate(hash2, hash3);
+
+  auto summed = journal.accumulateRange();
+  EXPECT_EQ(3, summed->snapshotTransitions.size());
+  EXPECT_EQ(hash1, summed->snapshotTransitions[0]);
+  EXPECT_EQ(hash2, summed->snapshotTransitions[1]);
+  EXPECT_EQ(hash3, summed->snapshotTransitions[2]);
+}
+
+TEST_F(JournalTest, update_transitions_with_unclean_files_are_not_coalesced) {
+  Hash hash1{"0000000000000000000000000000000000000001"};
+  Hash hash2{"0000000000000000000000000000000000000002"};
+  Hash hash3{"0000000000000000000000000000000000000003"};
+  journal.recordHashUpdate(hash1, hash2);
+  journal.recordUncleanPaths(hash2, hash2, {RelativePath{"foo"}});
+  journal.recordHashUpdate(hash2, hash3);
+
+  auto summed = journal.accumulateRange();
+  EXPECT_EQ(4, summed->snapshotTransitions.size());
+  EXPECT_EQ(hash1, summed->snapshotTransitions[0]);
+  EXPECT_EQ(hash2, summed->snapshotTransitions[1]);
+  EXPECT_EQ(hash2, summed->snapshotTransitions[2]);
+  EXPECT_EQ(hash3, summed->snapshotTransitions[3]);
+}
+
 TEST_F(JournalTest, subscribers_are_notified_of_changes) {
   unsigned calls = 0;
   auto sub = journal.registerSubscriber([&] { ++calls; });

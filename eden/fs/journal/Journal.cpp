@@ -133,6 +133,9 @@ void Journal::recordHashUpdate(Hash toHash) {
 }
 
 void Journal::recordHashUpdate(Hash fromHash, Hash toHash) {
+  if (fromHash == toHash) {
+    return;
+  }
   HashUpdateJournalDelta delta;
   delta.fromHash = fromHash;
   addDelta(std::move(delta), toHash);
@@ -142,6 +145,9 @@ void Journal::recordUncleanPaths(
     Hash fromHash,
     Hash toHash,
     std::unordered_set<RelativePath> uncleanPaths) {
+  if (fromHash == toHash && uncleanPaths.empty()) {
+    return;
+  }
   HashUpdateJournalDelta delta;
   delta.fromHash = fromHash;
   delta.uncleanPaths = std::move(uncleanPaths);
