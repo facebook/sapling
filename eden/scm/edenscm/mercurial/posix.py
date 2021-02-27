@@ -678,7 +678,7 @@ if pycompat.isdarwin:
                 encoding.asciilower(bytepath)
             )  # exception for non-ASCII
         except UnicodeDecodeError:
-            return normcasefallback(path)
+            return pycompat.decodeutf8(normcasefallback(path))
 
     normcasespec = encoding.normcasespecs.lower
 

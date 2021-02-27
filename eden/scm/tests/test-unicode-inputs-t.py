@@ -17,14 +17,16 @@ sh % "setmodernconfig"
 sh % "hg init repo"
 sh % "cd repo"
 sh % "echo xxx" > "file"
+sh % "echo yyy" > "Æ"
 sh % "hg add file"
+sh % "hg add Æ"
 sh % "hg commit -m 'Æ'"
 
 sh % "hg log -v" == """
-commit:      4bb70d3b3100
+commit:      a69886dc9c87
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
-files:       file
+files:       file Æ
 description:
 Æ
 """
