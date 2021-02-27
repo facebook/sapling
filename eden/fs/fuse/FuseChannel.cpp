@@ -10,6 +10,7 @@
 #include "eden/fs/fuse/FuseChannel.h"
 
 #include <boost/cast.hpp>
+#include <fmt/core.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
@@ -546,7 +547,7 @@ std::string capsFlagsToLabel(uint32_t flags) {
   if (flags == 0) {
     return str;
   }
-  return folly::format("{} unknown:0x{:x}", str, flags).str();
+  return fmt::format("{} unknown:0x{:x}", str, flags);
 }
 
 void sigusr2Handler(int /* signum */) {

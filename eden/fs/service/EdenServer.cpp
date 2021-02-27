@@ -17,6 +17,7 @@
 #include <sstream>
 
 #include <fb303/ServiceData.h>
+#include <fmt/core.h>
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/SocketAddress.h>
@@ -459,13 +460,12 @@ void EdenServer::ProgressManager::printProgresses(
       content += folly::to<std::string>("Remounting ", it.mountPath, "\n");
       printedFinished++;
     } else {
-      content += folly::format(
-                     "[{:21}] {:>3}%: fsck on {}{}",
-                     std::string(it.fsckPercentComplete * 2, '=') + ">",
-                     it.fsckPercentComplete * 10,
-                     it.localDir,
-                     "\n")
-                     .str();
+      content += fmt::format(
+          "[{:21}] {:>3}%: fsck on {}{}",
+          std::string(it.fsckPercentComplete * 2, '=') + ">",
+          it.fsckPercentComplete * 10,
+          it.localDir,
+          "\n");
       printedInProgress++;
     }
     totalLinesPrinted++;
