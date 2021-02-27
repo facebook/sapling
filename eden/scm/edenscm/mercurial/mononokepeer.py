@@ -229,7 +229,7 @@ class mononokepeer(stdiopeer.stdiopeer):
 
         if tlserror or isinstance(ex, ssl.SSLError):
             msg += "\n"
-            msg += self.ui.config("help", "tlsauthhelp")
+            msg += self.ui.config("help", "tlsauthhelp") or ""
 
         self._abort(error.BadResponseError(msg))
 
