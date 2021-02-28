@@ -54,12 +54,12 @@ pub struct CreateChangeset {
     pub create_bonsai_changeset_hook: Option<
         Arc<
             dyn Fn(
-                CoreContext,
-                HgBlobChangeset,
-                Vec<HgManifestId>,
-                Vec<ChangesetId>,
-                BlobRepo,
-            ) -> BoxFuture<'static, Result<BonsaiChangeset>>
+                    CoreContext,
+                    HgBlobChangeset,
+                    Vec<HgManifestId>,
+                    Vec<ChangesetId>,
+                    BlobRepo,
+                ) -> BoxFuture<'static, Result<BonsaiChangeset>>
                 + Send
                 + Sync,
         >,

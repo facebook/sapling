@@ -59,11 +59,7 @@ pub struct WarmBookmarksCache {
 pub type WarmerFn =
     dyn Fn(CoreContext, BlobRepo, ChangesetId) -> OldBoxFuture<(), Error> + Send + Sync + 'static;
 
-pub type IsWarmFn = dyn for<'a> Fn(
-    &'a CoreContext,
-    &'a BlobRepo,
-    &'a ChangesetId,
-) -> BoxFuture<'a, Result<bool, Error>>
+pub type IsWarmFn = dyn for<'a> Fn(&'a CoreContext, &'a BlobRepo, &'a ChangesetId) -> BoxFuture<'a, Result<bool, Error>>
     + Send
     + Sync;
 

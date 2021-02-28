@@ -217,7 +217,7 @@ impl From<Vertex> for VertexWrapper {
 
 impl MemcacheEntity for VertexWrapper {
     fn serialize(&self) -> Bytes {
-        Bytes::copy_from_slice(&self.0 .0.to_be_bytes())
+        Bytes::copy_from_slice(&self.0.0.to_be_bytes())
     }
 
     fn deserialize(bytes: Bytes) -> Result<Self, ()> {

@@ -77,7 +77,8 @@ mod test {
         //   isn't yet supported in partial-io.
         quickcheck.quickcheck(
             roundtrip
-                as fn(
+                as
+                fn(
                     CgPartSequence,
                     PartialWithErrors<GenWouldBlock>,
                     PartialWithErrors<GenWouldBlock>,
@@ -92,7 +93,8 @@ mod test {
         let mut quickcheck = QuickCheck::new().gen(rng).tests(1);
         quickcheck.quickcheck(
             roundtrip
-                as fn(
+                as
+                fn(
                     CgPartSequence,
                     PartialWithErrors<GenWouldBlock>,
                     PartialWithErrors<GenWouldBlock>,

@@ -674,10 +674,9 @@ impl RepoClient {
         WeightedContent: Future<Item = (GetpackBlobInfo, Content), Error = Error> + Send + 'static,
         Content:
             Future<Item = (HgFileNodeId, Bytes, Option<Metadata>), Error = Error> + Send + 'static,
-        GetpackHandler:
-            Fn(CoreContext, BlobRepo, HgFileNodeId, SessionLfsParams, bool) -> WeightedContent
-                + Send
-                + 'static,
+        GetpackHandler: Fn(CoreContext, BlobRepo, HgFileNodeId, SessionLfsParams, bool) -> WeightedContent
+            + Send
+            + 'static,
     {
         let allow_short_getpack_history = self.knobs.allow_short_getpack_history;
         self.command_stream(name, UNSAMPLED, |ctx, command_logger| {

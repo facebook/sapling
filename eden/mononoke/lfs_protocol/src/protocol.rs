@@ -342,11 +342,10 @@ mod test {
             serde_json::from_str::<ResponseObject>(&j.to_string()),
             Ok(ResponseObject {
                 object: RequestObject { oid: _, size: 123 },
-                status:
-                    ObjectStatus::Ok {
-                        authenticated: false,
-                        actions: _,
-                    },
+                status: ObjectStatus::Ok {
+                    authenticated: false,
+                    actions: _,
+                },
             })
         )
     }
@@ -366,14 +365,12 @@ mod test {
             serde_json::from_str::<ResponseObject>(&j.to_string()),
             Ok(ResponseObject {
                 object: RequestObject { oid: _, size: 123 },
-                status:
-                    ObjectStatus::Err {
-                        error:
-                            ObjectError {
-                                code: 404,
-                                message: _,
-                            },
+                status: ObjectStatus::Err {
+                    error: ObjectError {
+                        code: 404,
+                        message: _,
                     },
+                },
             })
         )
     }

@@ -616,9 +616,11 @@ impl<'a> Display for FilteredAnyhow<'a> {
         use PrintMode::*;
         let mut filtered_chain = match self.mode {
             Anyhow => Box::new(self.err.chain())
-                as Box<dyn Iterator<Item = &(dyn std::error::Error + 'static)>>,
+                as
+                Box<dyn Iterator<Item = &(dyn std::error::Error + 'static)>>,
             NoTags | SeparateTags => Box::new(self.err.chain().filter(|e| !e.is::<TaggedError>()))
-                as Box<dyn Iterator<Item = &(dyn std::error::Error + 'static)>>,
+                as
+                Box<dyn Iterator<Item = &(dyn std::error::Error + 'static)>>,
         };
 
         // You can't construct an empty anyhow or an empty TaggedError, so
@@ -651,9 +653,11 @@ impl<'a> Debug for FilteredAnyhow<'a> {
         use PrintMode::*;
         let mut filtered_chain = match self.mode {
             Anyhow => Box::new(self.err.chain())
-                as Box<dyn Iterator<Item = &(dyn std::error::Error + 'static)>>,
+                as
+                Box<dyn Iterator<Item = &(dyn std::error::Error + 'static)>>,
             NoTags | SeparateTags => Box::new(self.err.chain().filter(|e| !e.is::<TaggedError>()))
-                as Box<dyn Iterator<Item = &(dyn std::error::Error + 'static)>>,
+                as
+                Box<dyn Iterator<Item = &(dyn std::error::Error + 'static)>>,
         }
         .peekable();
 

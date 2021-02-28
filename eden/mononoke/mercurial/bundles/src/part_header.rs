@@ -481,7 +481,8 @@ mod test {
     fn test_roundtrip() {
         quickcheck(
             roundtrip
-                as fn(
+                as
+                fn(
                     PartHeaderType,
                     bool,
                     PartId,

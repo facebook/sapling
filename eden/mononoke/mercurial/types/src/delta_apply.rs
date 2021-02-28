@@ -12,8 +12,8 @@ use std::cmp;
 use crate::delta::{Delta, Fragment};
 
 /*
-* Algorithm is taken from fbcode/scm/hg/mercurial/mpatch.c
-*/
+ * Algorithm is taken from fbcode/scm/hg/mercurial/mpatch.c
+ */
 
 /// Wrap all Fragments and return FragmentWrapperIterator.
 /// Gather all contents hold fragments contents in one vector.

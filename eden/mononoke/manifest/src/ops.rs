@@ -279,8 +279,8 @@ where
     ) -> BoxStream<'static, Result<Out, Error>>
     where
         FilterMap: Fn(
-            Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>>,
-        ) -> Option<Out>
+                Diff<Entry<Self, <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId>>,
+            ) -> Option<Out>
             + Clone
             + Send
             + 'static,

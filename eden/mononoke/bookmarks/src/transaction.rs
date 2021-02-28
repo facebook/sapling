@@ -35,9 +35,9 @@ pub enum BookmarkTransactionError {
 
 pub type BookmarkTransactionHook = Arc<
     dyn Fn(
-        CoreContext,
-        Transaction,
-    ) -> BoxFuture<'static, Result<Transaction, BookmarkTransactionError>>
+            CoreContext,
+            Transaction,
+        ) -> BoxFuture<'static, Result<Transaction, BookmarkTransactionError>>
         + Sync
         + Send,
 >;
