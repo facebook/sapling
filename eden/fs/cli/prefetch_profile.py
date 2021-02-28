@@ -185,7 +185,7 @@ def prefetch_profiles(
         # we might write to a log at which point we would want to forward
         # the verbose flag
         fetch_sub_command = get_eden_cli_cmd() + [
-            "prefetch_profile",
+            "prefetch-profile",
             "fetch",
             "--checkout",
             str(checkout.path),
@@ -223,7 +223,6 @@ def prefetch_profiles(
                 fetch_sub_command,
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
                 creationflags=creation_flags,
             )
             return None
