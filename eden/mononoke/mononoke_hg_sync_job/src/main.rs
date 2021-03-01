@@ -41,7 +41,6 @@ use futures::{
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
 use http::Uri;
 use lfs_verifier::LfsVerifier;
-use maplit::hashmap;
 use mercurial_types::HgChangesetId;
 use metaconfig_types::HgsqlName;
 use metaconfig_types::RepoReadOnly;
@@ -82,6 +81,7 @@ const ARG_BOOKMARK_MOVE_ANY_DIRECTION: &str = "bookmark-move-any-direction";
 const ARG_USE_HG_SERVER_BOOKMARK_VALUE_IF_MISMATCH: &str =
     "use-hg-server-bookmark-value-if-mismatch";
 const ARG_DARKSTORM_BACKUP_REPO_ID: &str = "darkstorm-backup-repo-id";
+const ARG_BYPASS_READONLY: &str = "bypass-readonly";
 const GENERATE_BUNDLES: &str = "generate-bundles";
 const MODE_SYNC_ONCE: &str = "sync-once";
 const MODE_SYNC_LOOP: &str = "sync-loop";
@@ -636,13 +636,16 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         .value_of(ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS)
         .map(Regex::new)
         .transpose()?;
-    let push_vars = {
-        if matches.is_present(ARG_BOOKMARK_MOVE_ANY_DIRECTION) {
-            Some(hashmap! { "NON_FAST_FORWARD".to_string() => Bytes::from("true")})
-        } else {
-            None
-        }
-    };
+
+    let mut vars = HashMap::new();
+    if matches.is_present(ARG_BOOKMARK_MOVE_ANY_DIRECTION) {
+        vars.insert("NON_FAST_FORWARD".to_string(), Bytes::from("true"));
+    }
+    if matches.is_present(ARG_BYPASS_READONLY) {
+        vars.insert("BYPASS_READONLY".to_string(), Bytes::from("true"));
+    }
+
+    let push_vars = if vars.is_empty() { None } else { Some(vars) };
 
     let lfs_params = repo_config.lfs.clone();
 
@@ -1187,11 +1190,19 @@ fn main(fb: FacebookInit) -> Result<()> {
         )
         .arg(
             Arg::with_name(ARG_DARKSTORM_BACKUP_REPO_ID)
-                .long(ARG_DARKSTORM_BACKUP_REPO_ID)
-                .takes_value(true)
+            .long(ARG_DARKSTORM_BACKUP_REPO_ID)
+            .takes_value(true)
+            .required(false)
+            .help("Start hg-sync-job for syncing prod repo and darkstorm backup mononoke repo \
+            and use darkstorm-backup-repo-id value as a target for sync."),
+        )
+        .arg(
+            Arg::with_name(ARG_BYPASS_READONLY)
+                .long(ARG_BYPASS_READONLY)
+                .takes_value(false)
                 .required(false)
-                .help("Start hg-sync-job for syncing prod repo and darkstorm backup mononoke repo \
-                and use darkstorm-backup-repo-id value as a target for sync."),
+                .help("This flag make it possible to push bundle into readonly repos \
+                (by adding pushvar BYPASS_READONLY=true)."),
         )
         .about(
             "Special job that takes bundles that were sent to Mononoke and \
