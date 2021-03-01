@@ -136,7 +136,8 @@ Test that --exact on a bad header doesn't corrupt the repo (issue3616)
   $ echo b>>a
   $ echo a>>a
   $ hg ci -m3
-  $ hg export 'desc(2)' | head -7 > ../a.patch
+  $ hg export 'desc(2)' > $TESTTMP/p
+  $ head -7 $TESTTMP/p > ../a.patch
   $ hg export tip > out
   >>> apatch = open("../a.patch", "ab")
   >>> _ = apatch.write(b"".join(open("out", "rb").readlines()[7:]))
