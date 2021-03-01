@@ -138,7 +138,12 @@ pub async fn gitimport(
     let repo_name = if let Some(name) = &prefs.gitrepo_name {
         String::from(name)
     } else {
-        String::from(path.file_name().unwrap_or_default().to_string_lossy())
+        let name_path = if path.ends_with(".git") {
+            path.parent().unwrap_or(path)
+        } else {
+            path
+        };
+        String::from(name_path.to_string_lossy())
     };
     let repo_name_ref = &repo_name;
 

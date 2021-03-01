@@ -49,11 +49,11 @@
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO" --derive-trees full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * GitRepo:repo-git commit 1 of 5 - Oid:* => Bid:* (glob)
-  * GitRepo:repo-git commit 2 of 5 - Oid:* => Bid:* (glob)
-  * GitRepo:repo-git commit 3 of 5 - Oid:* => Bid:* (glob)
-  * GitRepo:repo-git commit 4 of 5 - Oid:* => Bid:* (glob)
-  * GitRepo:repo-git commit 5 of 5 - Oid:* => Bid:* (glob)
+  * GitRepo:*repo-git commit 1 of 5 - Oid:* => Bid:* (glob)
+  * GitRepo:*repo-git commit 2 of 5 - Oid:* => Bid:* (glob)
+  * GitRepo:*repo-git commit 3 of 5 - Oid:* => Bid:* (glob)
+  * GitRepo:*repo-git commit 4 of 5 - Oid:* => Bid:* (glob)
+  * GitRepo:*repo-git commit 5 of 5 - Oid:* => Bid:* (glob)
   * 5 tree(s) are valid! (glob)
   * Ref: Some("refs/heads/branch1"): Some(ChangesetId(Blake2(*))) (glob)
   * Ref: Some("refs/heads/branch2"): Some(ChangesetId(Blake2(*))) (glob)
