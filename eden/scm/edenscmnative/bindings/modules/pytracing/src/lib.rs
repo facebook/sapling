@@ -802,7 +802,10 @@ fn new_callsite<K: KindType>(
 
         CallsiteInfo {
             name: name.unwrap_or_default(),
-            target: target.unwrap_or_else(|| module.clone().unwrap_or_default()),
+            // Rewrite Python module "foo.bar" to Rust form "foo::bar". The `.` is not supported
+            // by env filter syntax.
+            target: target
+                .unwrap_or_else(|| module.as_deref().unwrap_or_default().replace('.', "::")),
             level: usize_to_level(level),
             file,
             line: line.map(|l| l as u32),
