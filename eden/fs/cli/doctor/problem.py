@@ -78,7 +78,7 @@ class UnexpectedCheckError(Problem):
     """A helper class for reporting about unexpected exceptions that occur
     when running checks."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         import traceback
 
         tb = traceback.format_exc()
