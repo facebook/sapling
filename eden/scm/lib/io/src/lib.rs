@@ -334,9 +334,8 @@ impl IO {
         if let Ok(Some(past_eof)) = config.get_opt("pager", "scroll-past-eof") {
             scroll_past_eof = past_eof;
         }
-        pager
-            .set_scroll_past_eof(scroll_past_eof)
-            .set_interface_mode(interface_mode);
+        pager.set_scroll_past_eof(scroll_past_eof);
+        pager.set_interface_mode(interface_mode);
 
         let (out_read, out_write) = pipe();
         let (err_read, err_write) = pipe();
@@ -356,10 +355,9 @@ impl IO {
         inner.progress = Some(Box::new(PipeWriterWithTty::new(prg_write, false)));
 
         inner.pager_handle = Some(spawn(|| {
-            pager
-                .add_output_stream(out_read, "")?
-                .add_error_stream(err_read, "")?
-                .set_progress_stream(prg_read);
+            pager.add_stream(out_read, "")?;
+            pager.add_error_stream(err_read, "")?;
+            pager.set_progress_stream(prg_read);
             pager.run()?;
             Ok(())
         }));

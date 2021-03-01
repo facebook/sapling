@@ -10,4 +10,4 @@ configparser = { path = "../configparser" }
 once_cell = "1"
 parking_lot = "0.10"
 pipe = "0.2"
-streampager = "0.8"
+streampager = "0.9.3"
