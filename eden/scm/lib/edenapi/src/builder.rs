@@ -230,6 +230,19 @@ impl Builder {
         self.correlator = correlator.map(|s| s.to_string());
         self
     }
+
+    /// Set the HTTP version that the client should use.
+    pub fn http_version(mut self, version: HttpVersion) -> Self {
+        self.http_version = Some(version);
+        self
+    }
+
+    /// Specify whether the client should validate the user's client certificate
+    /// before each request.
+    pub fn validate_certs(mut self, validate_certs: bool) -> Self {
+        self.validate_certs = validate_certs;
+        self
+    }
 }
 
 /// Configuration for a `Client`. Essentially has the same fields as a
