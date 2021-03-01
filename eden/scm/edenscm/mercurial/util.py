@@ -1213,14 +1213,6 @@ def _sethgexecutable(path):
     _hgexecutable = path
 
 
-def _isstdout(f):
-    try:
-        fileno = getattr(f, "fileno", None)
-        return fileno and fileno() == sys.__stdout__.fileno()
-    except Exception:
-        return False
-
-
 def shellenviron(environ=None):
     """return environ with optional override, useful for shelling out"""
 
@@ -1251,7 +1243,8 @@ def system(cmd, environ=None, cwd=None, out=None):
         pass
     cmd = quotecommand(cmd)
     env = shellenviron(environ)
-    if out is None or _isstdout(out):
+    if out is None or out.isatty():
+        # If out is a tty (most likely stdout), then do not use subprocess.PIPE.
         rc = subprocess.call(cmd, shell=True, close_fds=closefds, env=env, cwd=cwd)
     else:
         proc = subprocess.Popen(
