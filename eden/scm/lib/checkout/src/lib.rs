@@ -16,6 +16,7 @@ use types::{HgId, Key, RepoPath, RepoPathBuf};
 use vfs::{UpdateFlag, VFS};
 
 const PREFETCH_CHUNK_SIZE: usize = 1000;
+const VFS_BATCH_SIZE: usize = 100;
 
 /// Contains lists of files to be removed / updated during checkout.
 pub struct CheckoutPlan {
@@ -122,8 +123,9 @@ impl CheckoutPlan {
         let stats = &stats_arc;
         const PARALLEL_CHECKOUT: usize = 16;
 
-        let remove_files =
-            stream::iter(self.remove.iter()).map(|path| Self::remove_file(vfs, stats, path));
+        let remove_files = stream::iter(self.remove.iter())
+            .chunks(VFS_BATCH_SIZE)
+            .map(|paths| Self::remove_files(vfs, stats, paths));
         let remove_files = remove_files.buffer_unordered(PARALLEL_CHECKOUT);
 
         Self::process_work_stream(remove_files).await?;
@@ -138,7 +140,7 @@ impl CheckoutPlan {
 
         let update_content = data_stream
             .zip(stream::iter(self.update_content.iter()))
-            .map(|(data, action)| async move {
+            .map(|(data, action)| {
                 let data = data
                     .map_err(|err| format_err!("Failed to fetch {:?}: {:?}", action.path, err))?;
                 let data = match data {
@@ -147,8 +149,14 @@ impl CheckoutPlan {
                 };
                 let path = action.path.clone();
                 let flag = type_to_flag(&action.file_type);
+                Ok((path, data, flag))
+            });
 
-                Self::write_file(vfs, stats, path, data, flag).await
+        let update_content = update_content
+            .chunks(VFS_BATCH_SIZE)
+            .map(|actions| async move {
+                let actions: Result<Vec<_>, _> = actions.into_iter().collect();
+                Self::write_files(vfs, stats, actions?).await
             });
 
         let update_content = update_content.buffer_unordered(PARALLEL_CHECKOUT);
@@ -225,35 +233,41 @@ impl CheckoutPlan {
     // As of today tokio::fs operations do the same.
     // Since we do multiple fs calls inside, it is beneficial to 'pack'
     // all of them into single spawn_blocking.
-    async fn write_file(
+    async fn write_files(
         vfs: &VFS,
         stats: &Arc<CheckoutStats>,
-        path: RepoPathBuf,
-        data: Vec<u8>,
-        flag: Option<UpdateFlag>,
+        actions: Vec<(RepoPathBuf, Vec<u8>, Option<UpdateFlag>)>,
     ) -> Result<()> {
         let vfs = vfs.clone(); // vfs auditor cache is shared
         let stats = Arc::clone(stats);
         tokio::runtime::Handle::current()
             .spawn_blocking(move || -> Result<()> {
-                let repo_path = path.as_repo_path();
-                let w = vfs.write(repo_path, &data, flag)?;
-                stats.updated.fetch_add(1, Ordering::Relaxed);
-                stats.written_bytes.fetch_add(w, Ordering::Relaxed);
+                for (path, data, flag) in actions {
+                    let repo_path = path.as_repo_path();
+                    let w = vfs.write(repo_path, &data, flag)?;
+                    stats.updated.fetch_add(1, Ordering::Relaxed);
+                    stats.written_bytes.fetch_add(w, Ordering::Relaxed);
+                }
                 Ok(())
             })
             .await??;
         Ok(())
     }
 
-    async fn remove_file(vfs: &VFS, stats: &Arc<CheckoutStats>, path: &RepoPath) -> Result<()> {
-        let path = path.to_owned();
+    async fn remove_files(
+        vfs: &VFS,
+        stats: &Arc<CheckoutStats>,
+        paths: Vec<&RepoPathBuf>,
+    ) -> Result<()> {
+        let paths: Vec<RepoPathBuf> = paths.into_iter().map(Clone::clone).collect();
         let vfs = vfs.clone(); // vfs auditor cache is shared
         let stats = Arc::clone(stats);
         tokio::runtime::Handle::current()
             .spawn_blocking(move || -> Result<()> {
-                vfs.remove(path.as_repo_path())?;
-                stats.removed.fetch_add(1, Ordering::Relaxed);
+                for path in paths {
+                    vfs.remove(path.as_repo_path())?;
+                    stats.removed.fetch_add(1, Ordering::Relaxed);
+                }
                 Ok(())
             })
             .await??;
