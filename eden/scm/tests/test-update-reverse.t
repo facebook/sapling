@@ -1,7 +1,8 @@
 #chg-compatible
+  $ setconfig experimental.nativecheckout=true
+  $ newserver server
 
-  $ hg init repo
-  $ cd repo
+  $ newremoterepo repo
 
   $ touch a
   $ hg add a
@@ -64,15 +65,14 @@
   side2
 
   $ hg update --debug -C 71a760306cafb582ff672db4d4beb9625f34022d
-  resolving manifests
-   branchmerge: False, force: True, partial: False
-   ancestor: 91ebc10ed028+, local: 91ebc10ed028+, remote: 71a760306caf
-   side1: other deleted -> r
-  removing side1
-   side2: other deleted -> r
-  removing side2
-   main: remote created -> g
-  getting main
+  Using native checkout
+  Native checkout plan:
+  rm side1
+  rm side2
+  up main=>b80de5d138758541c5f05265ad144ab9fa86d1db
+  
+  Applying to $TESTTMP/repo 
+  Apply done
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
   $ ls

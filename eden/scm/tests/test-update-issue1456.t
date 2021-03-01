@@ -1,10 +1,12 @@
 #chg-compatible
 
 #require execbit
+  $ setconfig experimental.nativecheckout=true
+
+  $ newserver server
 
   $ rm -rf a
-  $ hg init a
-  $ cd a
+  $ newremoterepo a
 
   $ echo foo > foo
   $ hg ci -qAm0
