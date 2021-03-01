@@ -17,7 +17,7 @@ import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import IO, List, Tuple
+from typing import Generator, IO, List, Tuple
 
 from . import (
     debug as debug_mod,
@@ -137,7 +137,7 @@ def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:
         out.write(traceback.format_exc().encode("utf-8") + b"\n")
 
 
-def read_chunk(logfile: IO[bytes]):
+def read_chunk(logfile: IO[bytes]) -> Generator[bytes, None, None]:
     CHUNK_SIZE = 20 * 1024
     while True:
         data = logfile.read(CHUNK_SIZE)
