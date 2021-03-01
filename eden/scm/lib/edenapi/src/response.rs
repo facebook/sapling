@@ -8,7 +8,7 @@
 use std::pin::Pin;
 
 use futures::prelude::*;
-use http::{HeaderMap, StatusCode, Version};
+use http::{header, HeaderMap, StatusCode, Version};
 
 use async_runtime::block_on_exclusive as block_on_future;
 use http_client::{AsyncResponse, Response, Stats};
@@ -95,6 +95,7 @@ pub struct ResponseMeta {
     pub tw_task_version: Option<String>,
     pub tw_canary_id: Option<String>,
     pub server_load: Option<usize>,
+    pub content_length: Option<usize>,
 }
 
 impl ResponseMeta {
@@ -108,6 +109,8 @@ impl ResponseMeta {
             tw_task_version: get_header(headers, TW_VERSION_HEADER),
             tw_canary_id: get_header(headers, TW_CANARY_HEADER),
             server_load: get_header(headers, SERVER_LOAD_HEADER).and_then(|l| l.parse().ok()),
+            content_length: get_header(headers, header::CONTENT_LENGTH.as_str())
+                .and_then(|l| l.parse().ok()),
         }
     }
 }
