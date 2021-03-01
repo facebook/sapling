@@ -196,8 +196,8 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
             .with_span_events(FmtSpan::ACTIVE)
             .with_writer(move || error.clone());
         if is_test {
-            // In tests, disable timestamps for cleaner output.
-            let env_logger = env_logger.without_time();
+            // In tests, disable color and timestamps for cleaner output.
+            let env_logger = env_logger.without_time().with_ansi(false);
             let collector = collector.with(env_filter.and_then(env_logger));
             tracing::subscriber::set_global_default(collector)?;
         } else {
