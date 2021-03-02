@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{bail, format_err, Result};
 use futures::{stream, try_join, Stream, StreamExt};
 use manifest::{DiffEntry, DiffType, FileMetadata, FileType, Manifest};
 use pathmatcher::{Matcher, XorMatcher};
@@ -105,24 +105,9 @@ impl CheckoutPlan {
         new_matcher: &impl Matcher,
         new_manifest: &impl Manifest,
     ) -> Result<Self> {
-        let mut error: Option<Error> = None;
         // First - remove all the files that were scheduled for update, but actually aren't in new sparse profile
-        // todo handle self.update_meta
-        self.update_content.retain(|update| {
-            if error.is_some() {
-                return true;
-            }
-            match new_matcher.matches_file(&update.path) {
-                Ok(v) => v,
-                Err(err) => {
-                    error = Some(err);
-                    true
-                }
-            }
-        });
-        if let Some(error) = error {
-            return Err(error);
-        }
+        retain_paths(&mut self.update_content, new_matcher)?;
+        retain_paths(&mut self.update_meta, new_matcher)?;
 
         // Second - handle files in a new manifest, that were affected by sparse profile change
         let xor_matcher = XorMatcher::new(old_matcher, new_matcher);
@@ -385,6 +370,35 @@ impl UpdateContentAction {
     }
 }
 
+fn retain_paths<T: AsRef<RepoPath>>(v: &mut Vec<T>, matcher: impl Matcher) -> Result<()> {
+    let mut result = Ok(());
+    v.retain(|p| {
+        if result.is_err() {
+            return true;
+        }
+        match matcher.matches_file(p.as_ref()) {
+            Ok(v) => v,
+            Err(err) => {
+                result = Err(err);
+                true
+            }
+        }
+    });
+    result
+}
+
+impl AsRef<RepoPath> for UpdateContentAction {
+    fn as_ref(&self) -> &RepoPath {
+        &self.path
+    }
+}
+
+impl AsRef<RepoPath> for UpdateMetaAction {
+    fn as_ref(&self) -> &RepoPath {
+        &self.path
+    }
+}
+
 #[cfg(test)]
 // todo - consider moving some of this code to vfs / separate test create
 // todo parallel execution for the test
@@ -480,6 +494,10 @@ mod test {
             rp("b"),
             FileMetadata::regular(hgid(10)),
         ));
+        plan.update_meta.push(UpdateMetaAction {
+            path: rp("b"),
+            set_x_flag: true,
+        });
         let plan = plan.with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
         assert_eq!(
             "rm b\nup c=>0300000000000000000000000000000000000000\n",
