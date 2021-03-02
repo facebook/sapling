@@ -39,6 +39,7 @@ struct DirContents;
 class InodeMap;
 class SerializedInodeMap;
 class IOverlay;
+class DirEntry;
 
 #ifndef _WIN32
 struct InodeMetadata;
@@ -219,6 +220,25 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   struct statfs statFs();
 #endif // !_WIN32
+
+  void addChild(
+      InodeNumber parent,
+      const std::pair<PathComponent, DirEntry>& childEntry,
+      const DirContents& content);
+
+  void removeChild(
+      InodeNumber parent,
+      PathComponentPiece childName,
+      const DirContents& content);
+
+  void renameChild(
+      InodeNumber src,
+      InodeNumber dst,
+      PathComponentPiece srcName,
+      PathComponentPiece dstName,
+      const DirContents& srcContent,
+      const DirContents& dstContent);
+
  private:
   explicit Overlay(
       AbsolutePathPiece localDir,
@@ -256,6 +276,13 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   void gcThread() noexcept;
   void handleGCRequest(GCRequest& request);
 
+  // Serialize EdenFS overlay data structure into Thrift data structure
+  overlay::OverlayEntry serializeOverlayEntry(const DirEntry& entry);
+
+  overlay::OverlayDir serializeOverlayDir(
+      InodeNumber inodeNumber,
+      const DirContents& dir);
+
   bool tryIncOutstandingIORequests();
   void decOutstandingIORequests();
   void closeAndWaitForOutstandingIO();
@@ -271,6 +298,12 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   std::atomic<uint64_t> nextInodeNumber_{0};
 
   std::unique_ptr<IOverlay> backingOverlay_;
+
+  /**
+   * Indicates if the backing overlay supports semantic operations, see
+   * `IOverlay::supportsSemanticOperations` for mor information.
+   */
+  bool supportsSemanticOperations_;
 
 #ifndef _WIN32
   /**

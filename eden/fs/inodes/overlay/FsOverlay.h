@@ -41,6 +41,11 @@ class InodePath;
 class FsOverlay : public IOverlay {
  public:
   explicit FsOverlay(AbsolutePathPiece localDir) : localDir_{localDir} {}
+
+  bool supportsSemanticOperations() const override {
+    return false;
+  }
+
   /**
    * Initialize the overlay, acquire the "info" file lock and load the
    * nextInodeNumber. The "close" method should be used to release these

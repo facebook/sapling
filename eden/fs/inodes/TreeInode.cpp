@@ -976,7 +976,7 @@ FileInodePtr TreeInode::createImpl(
         "createInodeSaveOverlay", name.stringPiece());
 #endif
 
-    saveOverlayDir(contents->entries);
+    getOverlay()->addChild(getNodeId(), *insertion.first, contents->entries);
   }
 
   if (InvalidationRequired::Yes == invalidate) {
@@ -1121,7 +1121,8 @@ TreeInodePtr TreeInode::mkdir(
 #ifndef _WIN32
     updateMtimeAndCtimeLocked(contents->entries, now);
 #endif
-    saveOverlayDir(contents->entries);
+    getOverlay()->addChild(
+        getNodeId(), *emplaceResult.first, contents->entries);
   }
 
   getMount()->getJournal().recordCreated(targetName);
@@ -1328,7 +1329,7 @@ int TreeInode::tryRemoveChild(
 #ifndef _WIN32
     updateMtimeAndCtimeLocked(contents->entries, getNow());
 #endif
-    saveOverlayDir(contents->entries);
+    getOverlay()->removeChild(getNodeId(), name, contents->entries);
   }
   deletedInode.reset();
 
@@ -1695,11 +1696,13 @@ Future<Unit> TreeInode::doRename(
   }
 #endif
 
-  // Save the overlay data
-  saveOverlayDir(*locks.srcContents());
-  if (destParent.get() != this) {
-    saveOverlayDir(destParent->getNodeId(), *locks.destContents());
-  }
+  getOverlay()->renameChild(
+      getNodeId(),
+      destParent->getNodeId(),
+      srcName,
+      destName,
+      *locks.srcContents(),
+      *locks.destContents());
 
   // Release the TreeInode locks before we write a journal entry.
   // We keep holding the mount point rename lock for now though.  This ensures

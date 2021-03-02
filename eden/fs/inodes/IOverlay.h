@@ -16,6 +16,8 @@
 #include <sys/vfs.h>
 #endif
 
+#include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -24,12 +26,6 @@ class IOBuf;
 } // namespace folly
 
 namespace facebook::eden {
-
-namespace overlay {
-class OverlayDir;
-}
-
-struct InodeNumber;
 
 /**
  * Overlay interface for different overlay implementations.
@@ -44,6 +40,15 @@ class IOverlay {
   IOverlay& operator=(const IOverlay&) = delete;
   IOverlay(IOverlay&&) = delete;
   IOverlay&& operator=(IOverlay&&) = delete;
+
+  // Older overlay implementation only care about data storage but has little
+  // understanding of the content it stores. A set of methods are added to allow
+  // overlay implementation to optimize based on the semantic changes over the
+  // data it stores.
+  //
+  // This method is used to indicate if the implementation supports these type
+  // of operations (`*Child` methods).
+  virtual bool supportsSemanticOperations() const = 0;
 
   /**
    * Initialize the overlay, run necessary operations to bootstrap the overlay.
@@ -135,5 +140,20 @@ class IOverlay {
    * We can remove this once we can reliable get inode number.
    */
   virtual void updateUsedInodeNumber(uint64_t /* usedInodeNumber */) {}
+
+  virtual void addChild(
+      InodeNumber /* parent */,
+      PathComponentPiece /* name */,
+      overlay::OverlayEntry /* entry */) {}
+
+  virtual void removeChild(
+      InodeNumber /* parent */,
+      PathComponentPiece /* childName */) {}
+
+  virtual void renameChild(
+      InodeNumber /* src */,
+      InodeNumber /* dst */,
+      PathComponentPiece /* srcName */,
+      PathComponentPiece /* destName */) {}
 };
 } // namespace facebook::eden

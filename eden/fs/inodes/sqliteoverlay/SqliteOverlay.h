@@ -34,6 +34,10 @@ class SqliteOverlay : public IOverlay {
   SqliteOverlay(SqliteOverlay&&) = delete;
   SqliteOverlay&& operator=(SqliteOverlay&&) = delete;
 
+  bool supportsSemanticOperations() const override {
+    return false;
+  }
+
   /**
    * Initialize the overlay, and load the nextInodeNumber. The "close"
    * method should be used to release these resources and persist the

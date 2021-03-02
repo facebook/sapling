@@ -68,6 +68,8 @@ Overlay::Overlay(
     bool caseSensitive,
     std::shared_ptr<StructuredLogger> logger)
     : backingOverlay_{makeOverlay(localDir)},
+      supportsSemanticOperations_{
+          backingOverlay_->supportsSemanticOperations()},
       caseSensitive_{caseSensitive},
       structuredLogger_{logger} {}
 
@@ -270,11 +272,30 @@ optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   return optional<DirContents>{std::move(result)};
 }
 
-void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
+overlay::OverlayEntry Overlay::serializeOverlayEntry(const DirEntry& ent) {
+  overlay::OverlayEntry entry;
+
+  // TODO: Eventually, we should only serialize the child entry's dtype into
+  // the Overlay. But, as of now, it's possible to create an inode under a
+  // tree, serialize that tree into the overlay, then restart Eden. Since
+  // writing mode bits into the InodeMetadataTable only occurs when the inode
+  // is loaded, the initial mode bits must persist until the first load.
+  entry.mode_ref() = ent.getInitialMode();
+  entry.inodeNumber_ref() = ent.getInodeNumber().get();
+  if (!ent.isMaterialized()) {
+    entry.hash_ref() = ent.getHash().toByteString();
+  }
+
+  return entry;
+}
+
+overlay::OverlayDir Overlay::serializeOverlayDir(
+    InodeNumber inodeNumber,
+    const DirContents& dir) {
   IORequest req{this};
   auto nextInodeNumber = nextInodeNumber_.load(std::memory_order_relaxed);
   XCHECK_LT(inodeNumber.get(), nextInodeNumber)
-      << "saveOverlayDir called with unallocated inode number";
+      << "serializeOverlayDir called with unallocated inode number";
 
   // TODO: T20282158 clean up access of child inode information.
   //
@@ -286,33 +307,21 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
     const auto& ent = entIter.second;
 
     XCHECK_NE(entName, "")
-        << "saveOverlayDir called with entry with an empty path for directory with inodeNumber="
+        << "serializeOverlayDir called with entry with an empty path for directory with inodeNumber="
         << inodeNumber;
     XCHECK_LT(ent.getInodeNumber().get(), nextInodeNumber)
-        << "saveOverlayDir called with entry using unallocated inode number";
+        << "serializeOverlayDir called with entry using unallocated inode number";
 
-    overlay::OverlayEntry oent;
-    // TODO: Eventually, we should merely serialize the child entry's dtype
-    // into the Overlay. But, as of now, it's possible to create an inode under
-    // a tree, serialize that tree into the overlay, then restart Eden. Since
-    // writing mode bits into the InodeMetadataTable only occurs when the inode
-    // is loaded, the initial mode bits must persist until the first load.
-    *oent.mode_ref() = ent.getInitialMode();
-    *oent.inodeNumber_ref() = ent.getInodeNumber().get();
-    if (!ent.isMaterialized()) {
-      auto entHash = ent.getHash();
-      auto bytes = entHash.getBytes();
-      oent.hash_ref() = std::string{
-          reinterpret_cast<const char*>(bytes.data()),
-
-          bytes.size()};
-    }
-
-    odir.entries_ref()->emplace(
-        std::make_pair(entName.stringPiece().str(), std::move(oent)));
+    odir.entries_ref()->emplace(std::make_pair(
+        entName.stringPiece().str(), serializeOverlayEntry(ent)));
   }
 
-  backingOverlay_->saveOverlayDir(inodeNumber, odir);
+  return odir;
+}
+
+void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
+  backingOverlay_->saveOverlayDir(
+      inodeNumber, serializeOverlayDir(inodeNumber, dir));
 }
 
 void Overlay::removeOverlayData(InodeNumber inodeNumber) {
@@ -555,5 +564,44 @@ void Overlay::handleGCRequest(GCRequest& request) {
 }
 #endif // !1
 
+void Overlay::addChild(
+    InodeNumber parent,
+    const std::pair<PathComponent, DirEntry>& childEntry,
+    const DirContents& content) {
+  if (supportsSemanticOperations_) {
+    backingOverlay_->addChild(
+        parent, childEntry.first, serializeOverlayEntry(childEntry.second));
+  } else {
+    saveOverlayDir(parent, content);
+  }
+}
+
+void Overlay::removeChild(
+    InodeNumber parent,
+    PathComponentPiece childName,
+    const DirContents& content) {
+  if (supportsSemanticOperations_) {
+    backingOverlay_->removeChild(parent, childName);
+  } else {
+    saveOverlayDir(parent, content);
+  }
+}
+
+void Overlay::renameChild(
+    InodeNumber src,
+    InodeNumber dst,
+    PathComponentPiece srcName,
+    PathComponentPiece dstName,
+    const DirContents& srcContent,
+    const DirContents& dstContent) {
+  if (supportsSemanticOperations_) {
+    backingOverlay_->renameChild(src, dst, srcName, dstName);
+  } else {
+    saveOverlayDir(src, srcContent);
+    if (dst.get() != src.get()) {
+      saveOverlayDir(dst, dstContent);
+    }
+  }
+}
 } // namespace eden
 } // namespace facebook
