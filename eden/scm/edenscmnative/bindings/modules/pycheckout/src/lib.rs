@@ -79,16 +79,20 @@ py_class!(class checkoutplan |py| {
         let vfs = VFS::new(root.to_path_buf()).map_pyerr(py)?;
         let plan = self.plan(py);
         let state = state.get_state(py);
-        let mut state = state.lock();
+        py.allow_threads(move || -> Result<()> {
+            let mut state = state.lock();
 
-        for removed in plan.removed_files() {
-            state.remove(removed).map_pyerr(py)?;
-        }
+            for removed in plan.removed_files() {
+                state.remove(removed)?;
+            }
 
-        for updated in plan.updated_content_files().chain(plan.updated_meta_files()) {
-            let fstate = file_state(&vfs, updated).map_pyerr(py)?;
-            state.insert(updated, &fstate).map_pyerr(py)?;
-        }
+            for updated in plan.updated_content_files().chain(plan.updated_meta_files()) {
+                let fstate = file_state(&vfs, updated)?;
+                state.insert(updated, &fstate)?;
+            }
+
+            Ok(())
+        }).map_pyerr(py)?;
 
         Ok(PyNone)
     }
