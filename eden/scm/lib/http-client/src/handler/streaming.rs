@@ -97,6 +97,14 @@ impl<R: Receiver> HandlerExt for Streaming<R> {
     fn monitor_progress(&mut self, updater: ProgressUpdater) {
         self.updater = Some(updater);
     }
+
+    fn request_context_mut(&mut self) -> &mut RequestContext {
+        &mut self.request_context
+    }
+
+    fn request_context(&self) -> &RequestContext {
+        &self.request_context
+    }
 }
 
 #[cfg(test)]

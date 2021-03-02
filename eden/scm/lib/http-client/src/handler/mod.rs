@@ -8,6 +8,7 @@
 use curl::easy::Handler;
 
 use crate::progress::ProgressUpdater;
+use crate::RequestContext;
 
 mod buffered;
 mod streaming;
@@ -33,4 +34,10 @@ pub(crate) trait HandlerExt: Handler {
     /// through a mutable reference while the handler is
     /// owned by an Easy2 handle.
     fn monitor_progress(&mut self, updater: ProgressUpdater);
+
+    /// Obtain the mutable `RequestContext` state.
+    fn request_context_mut(&mut self) -> &mut RequestContext;
+
+    /// Obtain the immutable `RequestContext` state.
+    fn request_context(&self) -> &RequestContext;
 }
