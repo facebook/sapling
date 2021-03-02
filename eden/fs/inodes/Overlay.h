@@ -168,7 +168,11 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   void saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir);
 
-  std::optional<DirContents> loadOverlayDir(InodeNumber inodeNumber);
+  /*
+   * Load content of the directory from overlay. If the directory does not
+   * exist, this function will return an empty `DirContents`.
+   */
+  DirContents loadOverlayDir(InodeNumber inodeNumber);
 
   void removeOverlayData(InodeNumber inodeNumber);
 

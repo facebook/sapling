@@ -233,17 +233,17 @@ InodeNumber Overlay::allocateInodeNumber() {
   return InodeNumber{previous};
 }
 
-optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
+DirContents Overlay::loadOverlayDir(InodeNumber inodeNumber) {
+  DirContents result(caseSensitive_);
   IORequest req{this};
   auto dirData = backingOverlay_->loadOverlayDir(inodeNumber);
   if (!dirData.has_value()) {
-    return std::nullopt;
+    return result;
   }
   const auto& dir = dirData.value();
 
   bool shouldMigrateToNewFormat = false;
 
-  DirContents result(caseSensitive_);
   for (auto& iter : *dir.entries_ref()) {
     const auto& name = iter.first;
     const auto& value = iter.second;
@@ -269,7 +269,7 @@ optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     saveOverlayDir(inodeNumber, result);
   }
 
-  return optional<DirContents>{std::move(result)};
+  return result;
 }
 
 overlay::OverlayEntry Overlay::serializeOverlayEntry(const DirEntry& ent) {

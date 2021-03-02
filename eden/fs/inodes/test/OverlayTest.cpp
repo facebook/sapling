@@ -82,13 +82,13 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   auto emptyDir = overlay->loadOverlayDir(4_ino);
   auto hello = overlay->openFile(5_ino, FsOverlay::kHeaderIdentifierFile);
 
-  ASSERT_TRUE(rootTree);
-  EXPECT_EQ(2, rootTree->size());
-  const auto& fileEntry = rootTree->at("file"_pc);
+  ASSERT_TRUE(!rootTree.empty());
+  EXPECT_EQ(2, rootTree.size());
+  const auto& fileEntry = rootTree.at("file"_pc);
   EXPECT_EQ(2_ino, fileEntry.getInodeNumber());
   EXPECT_EQ(hash1, fileEntry.getHash());
   EXPECT_EQ(S_IFREG | 0644, fileEntry.getInitialMode());
-  const auto& subdirEntry = rootTree->at("subdir"_pc);
+  const auto& subdirEntry = rootTree.at("subdir"_pc);
   EXPECT_EQ(3_ino, subdirEntry.getInodeNumber());
   EXPECT_EQ(hash2, subdirEntry.getHash());
   EXPECT_EQ(S_IFDIR | 0755, subdirEntry.getInitialMode());
@@ -98,19 +98,18 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   EXPECT_FALSE(result.hasError());
   EXPECT_EQ("contents", result.value());
 
-  ASSERT_TRUE(subdir);
-  EXPECT_EQ(2, subdir->size());
-  const auto& emptyEntry = subdir->at("empty"_pc);
+  ASSERT_TRUE(!subdir.empty());
+  EXPECT_EQ(2, subdir.size());
+  const auto& emptyEntry = subdir.at("empty"_pc);
   EXPECT_EQ(4_ino, emptyEntry.getInodeNumber());
   EXPECT_EQ(hash3, emptyEntry.getHash());
   EXPECT_EQ(S_IFDIR | 0755, emptyEntry.getInitialMode());
-  const auto& helloEntry = subdir->at("hello"_pc);
+  const auto& helloEntry = subdir.at("hello"_pc);
   EXPECT_EQ(5_ino, helloEntry.getInodeNumber());
   EXPECT_EQ(hash4, helloEntry.getHash());
   EXPECT_EQ(S_IFREG | 0644, helloEntry.getInitialMode());
 
-  ASSERT_TRUE(emptyDir);
-  EXPECT_EQ(0, emptyDir->size());
+  ASSERT_TRUE(emptyDir.empty());
 
   EXPECT_TRUE(hello.lseek(FsOverlay::kHeaderLength, SEEK_SET).hasValue());
   result = file.readFile();
@@ -230,12 +229,11 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
   overlay->saveOverlayDir(ino1, dir);
 
   auto result = overlay->loadOverlayDir(ino1);
-  ASSERT_TRUE(result);
-  const auto* newDir = &*result;
+  ASSERT_TRUE(!result.empty());
 
-  EXPECT_EQ(2, newDir->size());
-  const auto& one = newDir->find("one"_pc)->second;
-  const auto& two = newDir->find("two"_pc)->second;
+  EXPECT_EQ(2, result.size());
+  const auto& one = result.find("one"_pc)->second;
+  const auto& two = result.find("two"_pc)->second;
   EXPECT_EQ(ino2, one.getInodeNumber());
   EXPECT_FALSE(one.isMaterialized());
   EXPECT_EQ(ino3, two.getInodeNumber());
@@ -841,7 +839,8 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_unsaved_subdirectory) {
       "  Entries (1 total):\n"
       "            2 d  755 directory_does_not_exist\n"
       "/directory_does_not_exist\n"
-      "  Inode number: 2\n",
+      "  Inode number: 2\n"
+      "  Entries (0 total):\n",
       debugDumpOverlayInodes(*overlay, rootIno));
 }
 
@@ -938,32 +937,29 @@ void debugDumpOverlayInodes(
   out << "  Inode number: " << rootInode << "\n";
 
   auto dir = overlay.loadOverlayDir(rootInode);
-  if (dir) {
-    auto& dirContents = *dir;
-    out << "  Entries (" << dirContents.size() << " total):\n";
+  out << "  Entries (" << dir.size() << " total):\n";
 
-    auto dtypeToString = [](dtype_t dtype) noexcept -> const char* {
-      switch (dtype) {
-        case dtype_t::Dir:
-          return "d";
-        case dtype_t::Regular:
-          return "f";
-        default:
-          return "?";
-      }
-    };
-
-    for (const auto& [entryPath, entry] : dirContents) {
-      auto permissions = entry.getInitialMode() & ~S_IFMT;
-      out << "  " << std::dec << std::setw(11) << entry.getInodeNumber() << " "
-          << dtypeToString(entry.getDtype()) << " " << std::oct << std::setw(4)
-          << permissions << " " << entryPath << "\n";
+  auto dtypeToString = [](dtype_t dtype) noexcept -> const char* {
+    switch (dtype) {
+      case dtype_t::Dir:
+        return "d";
+      case dtype_t::Regular:
+        return "f";
+      default:
+        return "?";
     }
-    for (const auto& [entryPath, entry] : dirContents) {
-      if (entry.getDtype() == dtype_t::Dir) {
-        debugDumpOverlayInodes(
-            overlay, entry.getInodeNumber(), path + entryPath, out);
-      }
+  };
+
+  for (const auto& [entryPath, entry] : dir) {
+    auto permissions = entry.getInitialMode() & ~S_IFMT;
+    out << "  " << std::dec << std::setw(11) << entry.getInodeNumber() << " "
+        << dtypeToString(entry.getDtype()) << " " << std::oct << std::setw(4)
+        << permissions << " " << entryPath << "\n";
+  }
+  for (const auto& [entryPath, entry] : dir) {
+    if (entry.getDtype() == dtype_t::Dir) {
+      debugDumpOverlayInodes(
+          overlay, entry.getInodeNumber(), path + entryPath, out);
     }
   }
 }

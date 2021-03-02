@@ -54,10 +54,11 @@ void traverseTreeInodeChildren(
         if (callbacks.shouldRecurse(entry)) {
           // If we are able to load a child directory from the overlay, then
           // this child entry has been allocated, and can be traversed.
-          if (auto contents = overlay->loadOverlayDir(ino)) {
+          auto contents = overlay->loadOverlayDir(ino);
+          if (!contents.empty()) {
             traverseTreeInodeChildren(
                 overlay,
-                parseDirContents(*contents),
+                parseDirContents(contents),
                 childPath,
                 entry.ino,
                 entry.hash,

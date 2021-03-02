@@ -411,7 +411,7 @@ void TreeInode::loadUnlinkedChildInode(
         // Note that the .value() call will throw if we couldn't
         // load the dir data; we'll catch and propagate that in
         // the containing try/catch block.
-        if (!overlayContents.value().empty()) {
+        if (!overlayContents.empty()) {
           // Should be impossible, but worth checking for
           // defensive purposes!
           throw new std::runtime_error(
@@ -425,9 +425,7 @@ void TreeInode::loadUnlinkedChildInode(
           name,
           mode,
           std::nullopt,
-          std::move(overlayContents)
-              .value_or(
-                  DirContents(getMount()->getConfig()->getCaseSensitive())),
+          std::move(overlayContents),
           hash);
       promises = getInodeMap()->inodeLoadComplete(tree.get());
       inodePtr = InodePtr::takeOwnership(std::move(tree));
@@ -653,11 +651,16 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
               // Even if the inode is not materialized, it may have inode
               // numbers stored in the overlay.
               auto overlayDir = self->loadOverlayDir(number);
-              if (overlayDir) {
+
+              // If the directory we loaded from overlay is empty, there is no
+              // need to compare them and we can just use the version from
+              // backing store. The differences between nonexistent overlay and
+              // empty directory does not matter here.
+              if (!overlayDir.empty()) {
                 // Compare the Tree and the Dir from the overlay.  If they
                 // differ, something is wrong, so log the difference.
                 if (auto differences =
-                        findEntryDifferences(*overlayDir, *tree)) {
+                        findEntryDifferences(overlayDir, *tree)) {
                   std::string diffString;
                   for (const auto& diff : *differences) {
                     diffString += diff;
@@ -679,7 +682,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
                     childName,
                     entryMode,
                     std::nullopt,
-                    std::move(*overlayDir),
+                    std::move(overlayDir),
                     treeHash);
               }
 
@@ -690,17 +693,13 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
 
   // The entry is materialized, so data must exist in the overlay.
   auto overlayDir = loadOverlayDir(entry.getInodeNumber());
-  if (!overlayDir) {
-    return EDEN_BUG_FUTURE(unique_ptr<InodeBase>)
-        << "missing overlay for " << getLogPath() << " / " << name;
-  }
   return make_unique<TreeInode>(
       entry.getInodeNumber(),
       inodePtrFromThis(),
       name,
       entry.getInitialMode(),
       std::nullopt,
-      std::move(*overlayDir),
+      std::move(overlayDir),
       std::nullopt);
 }
 
@@ -844,8 +843,7 @@ Overlay* TreeInode::getOverlay() const {
   return getMount()->getOverlay();
 }
 
-std::optional<DirContents> TreeInode::loadOverlayDir(
-    InodeNumber inodeNumber) const {
+DirContents TreeInode::loadOverlayDir(InodeNumber inodeNumber) const {
   return getOverlay()->loadOverlayDir(inodeNumber);
 }
 
