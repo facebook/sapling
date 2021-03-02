@@ -62,6 +62,7 @@ pub struct RequestContext {
     id: RequestId,
     url: Url,
     method: Method,
+    pub(crate) body: Option<Vec<u8>>,
 }
 
 /// Identity of a request.
@@ -74,7 +75,6 @@ pub struct RequestId(usize);
 pub struct Request {
     pub(crate) ctx: RequestContext,
     headers: Vec<(String, String)>,
-    body: Option<Vec<u8>>,
     cert: Option<PathBuf>,
     key: Option<PathBuf>,
     cainfo: Option<PathBuf>,
@@ -88,7 +88,12 @@ impl RequestContext {
     pub fn new(url: Url, method: Method) -> Self {
         static ID: AtomicUsize = AtomicUsize::new(0);
         let id = RequestId(ID.fetch_add(1, AcqRel));
-        Self { id, url, method }
+        Self {
+            id,
+            url,
+            method,
+            body: None,
+        }
     }
 
     /// Obtain the HTTP url of the request.
@@ -108,6 +113,12 @@ impl RequestContext {
     pub fn id(&self) -> RequestId {
         self.id
     }
+
+    /// Set the data to be uploaded in the request body.
+    pub fn body<B: Into<Vec<u8>>>(mut self, data: B) -> Self {
+        self.body = Some(data.into());
+        self
+    }
 }
 
 impl Request {
@@ -118,7 +129,6 @@ impl Request {
             // Always set Expect so we can disable curl automatically expecting "100-continue".
             // That would require two response reads, which breaks the http_client model.
             headers: vec![("Expect".to_string(), "".to_string())],
-            body: None,
             cert: None,
             key: None,
             cainfo: None,
@@ -159,11 +169,9 @@ impl Request {
     }
 
     /// Set the data to be uploaded in the request body.
-    pub fn body<B: Into<Vec<u8>>>(self, data: B) -> Self {
-        Self {
-            body: Some(data.into()),
-            ..self
-        }
+    pub fn body<B: Into<Vec<u8>>>(mut self, data: B) -> Self {
+        self.ctx = self.ctx.body(data);
+        self
     }
 
     /// Set the http version for this request. Defaults to HTTP/2.
@@ -287,9 +295,9 @@ impl Request {
         self,
         create_handler: impl FnOnce(RequestContext) -> H,
     ) -> Result<Easy2<H>, HttpClientError> {
-        let body_size = self.body.as_ref().map(|body| body.len() as u64);
+        let body_size = self.ctx.body.as_ref().map(|body| body.len() as u64);
         let url = self.ctx.url.clone();
-        let handler = create_handler(self.ctx).with_payload(self.body);
+        let handler = create_handler(self.ctx);
 
         let mut easy = Easy2::new(handler);
         easy.url(url.as_str())?;

@@ -22,10 +22,6 @@ pub use streaming::Streaming;
 /// All of the handlers used by the HTTP client need to implement this
 /// trait so that they can be properly configured prior to use.
 pub(crate) trait HandlerExt: Handler {
-    /// Specify the payload to be sent to the server in
-    /// the request body.
-    fn with_payload(self, payload: Option<Vec<u8>>) -> Self;
-
     /// Configure the `Handler` to provide progress updates
     /// using the given `ProgressUpdater`.
     ///

@@ -29,7 +29,6 @@ pub struct Buffered {
     version: Option<Version>,
     status: Option<StatusCode>,
     headers: HeaderMap,
-    payload: Option<Vec<u8>>,
     bytes_sent: usize,
     updater: Option<ProgressUpdater>,
     request_context: RequestContext,
@@ -43,7 +42,6 @@ impl Buffered {
             version: Default::default(),
             status: Default::default(),
             headers: Default::default(),
-            payload: Default::default(),
             bytes_sent: Default::default(),
             updater: Default::default(),
             request_context,
@@ -80,7 +78,7 @@ impl Handler for Buffered {
     }
 
     fn read(&mut self, data: &mut [u8]) -> Result<usize, ReadError> {
-        Ok(if let Some(payload) = self.payload.as_mut() {
+        Ok(if let Some(payload) = self.request_context.body.as_mut() {
             let sent = (&payload[self.bytes_sent..])
                 .read(data)
                 .expect("Failed to read from payload buffer");
@@ -129,10 +127,6 @@ impl Handler for Buffered {
 }
 
 impl HandlerExt for Buffered {
-    fn with_payload(self, payload: Option<Vec<u8>>) -> Self {
-        Self { payload, ..self }
-    }
-
     fn monitor_progress(&mut self, updater: ProgressUpdater) {
         self.updater = Some(updater);
     }
@@ -162,7 +156,7 @@ mod tests {
         let mut buf2 = [0xFF; 3];
         let mut buf3 = [0xFF; 4];
 
-        let mut handler = Buffered::new(RequestContext::dummy()).with_payload(Some(data.into()));
+        let mut handler = Buffered::new(RequestContext::dummy().body(data));
 
         assert_eq!(handler.read(&mut buf1[..]).unwrap(), 5);
         assert_eq!(handler.read(&mut buf2[..]).unwrap(), 3);
