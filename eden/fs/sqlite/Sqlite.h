@@ -151,6 +151,9 @@ class SqliteStatement {
 
   void bind(size_t paramNo, uint32_t id);
 
+  /** Reset SqliteStement and its bindings so it can be used again. */
+  void reset();
+
   /** Reference a blob column in the current row returned by the statement.
    * This is only valid to call once `step()` has returned true.  The
    * return value is invalidated by a subsequent `step()` call or by the

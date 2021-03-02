@@ -142,6 +142,12 @@ void SqliteStatement::bind(size_t paramNo, uint32_t id) {
   checkSqliteResult(db_, sqlite3_bind_int(stmt_, unsignedNoToInt(paramNo), id));
 }
 
+void SqliteStatement::reset() {
+  XLOG(DBG9) << "reset bindings";
+  checkSqliteResult(db_, sqlite3_reset(stmt_));
+  checkSqliteResult(db_, sqlite3_clear_bindings(stmt_));
+}
+
 StringPiece SqliteStatement::columnBlob(size_t colNo) const {
   auto col = unsignedNoToInt(colNo);
   return StringPiece(
