@@ -6,6 +6,6 @@
   $ cd "$TESTDIR"/..
 
   $ testrepohg files . > $TESTTMP/filelist
-  $ testrepohgenv; PYTHONPATH= ./contrib/fix-code.py --dry-run `cat $TESTTMP/filelist`
+  $ PYTHONPATH= ./contrib/fix-code.py --dry-run `cat $TESTTMP/filelist`
 # In case the above list is not empty, run 'contrib/fix-code.py FILE...' to
 # fix them.

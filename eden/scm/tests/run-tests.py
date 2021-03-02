@@ -1467,7 +1467,7 @@ class Test(unittest.TestCase):
         name_regex = re.compile("^[a-zA-Z][a-zA-Z0-9_]*$")
 
         # Do not restore these variables; otherwise tests would fail.
-        reqnames = {"PYTHON", "TESTDIR", "TESTTMP"}
+        reqnames = {}
 
         with open(scriptpath, "w") as envf:
             for name, value in origenviron.items():
