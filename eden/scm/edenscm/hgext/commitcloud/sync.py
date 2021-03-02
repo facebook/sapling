@@ -757,10 +757,12 @@ def _updateremotebookmarks(repo, tr, updates):
     unfi = repo
 
     # Filter out any deletions of default names.  These are protected and shouldn't
-    # be deleted.
+    # be deleted if this is the default remote
     for remotename, node in pycompat.iteritems(updates):
         remote, name = bookmarks.splitremotename(remotename)
-        if node == nodemod.nullhex and name in protectednames:
+        if node == nodemod.nullhex and (
+            name in protectednames and remote in {"default", "remote"}
+        ):
             newremotebookmarks[remotename] = oldremotebookmarks.get(
                 remotename, nodemod.nullhex
             )
