@@ -39,6 +39,8 @@ py_class!(class checkoutplan |py| {
         current_manifest: &treemanifest,
         target_manifest: &treemanifest,
         matcher: Option<PyObject> = None,
+        // If sparse profile changes, contains Some((old_sparse_matcher, new_sparse_matcher))
+        sparse_change: Option<(PyObject, PyObject)> = None,
     ) -> PyResult<checkoutplan> {
         let matcher: Box<dyn Matcher> = match matcher {
             None => Box::new(AlwaysMatcher::new()),
@@ -48,7 +50,12 @@ py_class!(class checkoutplan |py| {
         let current = current_manifest.borrow_underlying(py);
         let target = target_manifest.borrow_underlying(py);
         let diff = Diff::new(&current, &target, &matcher);
-        let plan = CheckoutPlan::from_diff(diff).map_pyerr(py)?;
+        let mut plan = CheckoutPlan::from_diff(diff).map_pyerr(py)?;
+        if let Some((old_sparse_matcher, new_sparse_matcher)) = sparse_change {
+            let old_matcher = Box::new(PythonMatcher::new(py, old_sparse_matcher));
+            let new_matcher = Box::new(PythonMatcher::new(py, new_sparse_matcher));
+            plan = plan.with_sparse_profile_change(&old_matcher, &new_matcher, &*target).map_pyerr(py)?;
+        }
         checkoutplan::create_instance(py, plan)
     }
 

@@ -1,11 +1,12 @@
 #chg-compatible
 #testcases treematcher non-treematcher
+  $ setconfig experimental.nativecheckout=true
+  $ newserver server
 
 test sparse
 
+  $ newremoterepo myrepo
   $ enable sparse
-  $ hg init myrepo
-  $ cd myrepo
 #if treematcher
   $ cat >> .hg/hgrc <<EOF
   > [experimental]
