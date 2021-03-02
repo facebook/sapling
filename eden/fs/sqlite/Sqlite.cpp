@@ -64,6 +64,19 @@ Synchronized<sqlite3*>::LockedPtr SqliteDatabase::lock() {
   return db_.wlock();
 }
 
+void SqliteDatabase::transaction(const std::function<void(Connection&)>& func) {
+  auto conn = lock();
+  try {
+    SqliteStatement(conn, "BEGIN TRANSACTION").step();
+    func(conn);
+    SqliteStatement(conn, "COMMIT").step();
+  } catch (const std::exception& ex) {
+    SqliteStatement(conn, "ROLLBACK").step();
+    XLOG(WARN) << "SQLite transaction failed: " << ex.what();
+    throw;
+  }
+}
+
 SqliteStatement::SqliteStatement(
     folly::Synchronized<sqlite3*>::LockedPtr& db,
     folly::StringPiece query)
@@ -115,6 +128,5 @@ uint64_t SqliteStatement::columnUint64(size_t colNo) const {
 SqliteStatement::~SqliteStatement() {
   sqlite3_finalize(stmt_);
 }
-
 } // namespace eden
 } // namespace facebook

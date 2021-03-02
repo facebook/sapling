@@ -10,6 +10,7 @@
 #include <folly/Synchronized.h>
 #include <sqlite3.h>
 #include "eden/fs/utils/PathFuncs.h"
+
 namespace facebook {
 namespace eden {
 
@@ -57,6 +58,22 @@ class SqliteDatabase {
    * to the SqliteStatement class. */
   Connection lock();
 
+  /**
+   * Executes a SQLite transaction. If the lambda body throws any error, the
+   * transaction will be rolled back. This function re-throws any exception
+   * thrown by the closure.
+   *
+   * Example usage:
+   *
+   * ```
+   * db_->transaction([](auto& conn) {
+   *   SqliteStatement(conn, "SELECT * ...").step();
+   *   SqliteStatement(conn, "INSERT INTO ...").step();
+   * };
+   * ```
+   */
+  void transaction(const std::function<void(Connection&)>& func);
+
  private:
   explicit SqliteDatabase(const char* address);
 
@@ -78,10 +95,10 @@ class SqliteStatement {
 
   /** Join together the arguments as a single query string and prepare a
    * statement to execute them.
-   * Note: the `first` and `second` parameters are present to avoid a delegation
-   * cycle for the otherwise amgiguous case of a single parameter.  It is
-   * desirable to do this because it saves an extraneous heap allocation in the
-   * cases where the query string is known at compile time. */
+   * Note: the `first` and `second` parameters are present to avoid a
+   * delegation cycle for the otherwise amgiguous case of a single parameter.
+   * It is desirable to do this because it saves an extraneous heap allocation
+   * in the cases where the query string is known at compile time. */
   template <typename Arg1, typename Arg2, typename... Args>
   SqliteStatement(
       SqliteDatabase::Connection& db,
@@ -164,6 +181,5 @@ class SqliteStatement {
   /** The statement handle */
   sqlite3_stmt* stmt_;
 };
-
 } // namespace eden
 } // namespace facebook
