@@ -1974,7 +1974,16 @@ class workingfilectx(committablefilectx):
 
         returns True if different than fctx.
         """
-        # fctx should be a filectx (not a workingfilectx)
+        if isinstance(fctx, workingfilectx):
+            if self.size() != fctx.size():
+                return True
+            if self.flags() != fctx.flags():
+                return True
+            if self.data() != fctx.data():
+                return True
+            return False
+
+        # fctx is not a workingfilectx
         # invert comparison to reuse the same code path
         return fctx.cmp(self)
 
