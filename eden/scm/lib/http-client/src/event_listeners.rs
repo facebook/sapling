@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use crate::stats::Stats;
+use crate::Progress;
 use crate::RequestContext;
 
 /// Generate a struct for holding event listeners (callbacks).
@@ -47,6 +48,11 @@ macro_rules! gen_event_listeners {
                     #[doc=$event_doc]
                     pub fn [< on_ $event_name >](&mut self, f: impl Fn( $($arg_ty,)* ) + Send + Sync + 'static) {
                         self. [< $event_name _listeners >].push(Arc::new(f));
+                    }
+
+                    /// Returns true if there are callbacks registered on the event.
+                    pub(crate) fn [< should_trigger_ $event_name >](&self) -> bool {
+                        !self. [< $event_name _listeners >] .is_empty()
                     }
 
                     /// Call all registered callbacks for the given event type.
@@ -89,6 +95,9 @@ gen_event_listeners! {
 
         /// Received Content-Length as `n`.
         content_length(req: &RequestContext, n: usize),
+
+        /// On progress update. Note: this is called periodically even if there is no progress.
+        progress(req: &RequestContext, progress: Progress),
     }
 }
 

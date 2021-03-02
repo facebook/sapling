@@ -12,7 +12,7 @@ use curl::easy::{Handler, ReadError, WriteError};
 use http::{header, HeaderMap, StatusCode, Version};
 
 use crate::header::Header;
-use crate::progress::{Progress, ProgressUpdater};
+use crate::progress::Progress;
 use crate::RequestContext;
 
 use super::HandlerExt;
@@ -30,7 +30,6 @@ pub struct Buffered {
     status: Option<StatusCode>,
     headers: HeaderMap,
     bytes_sent: usize,
-    updater: Option<ProgressUpdater>,
     request_context: RequestContext,
 }
 
@@ -43,7 +42,6 @@ impl Buffered {
             status: Default::default(),
             headers: Default::default(),
             bytes_sent: Default::default(),
-            updater: Default::default(),
             request_context,
         }
     }
@@ -130,18 +128,16 @@ impl Handler for Buffered {
     }
 
     fn progress(&mut self, dltotal: f64, dlnow: f64, ultotal: f64, ulnow: f64) -> bool {
-        if let Some(ref mut updater) = self.updater {
-            updater.update(Progress::from_curl(dltotal, dlnow, ultotal, ulnow));
+        let listeners = &self.request_context.event_listeners;
+        if listeners.should_trigger_progress() {
+            let progress = Progress::from_curl(dltotal, dlnow, ultotal, ulnow);
+            listeners.trigger_progress(self.request_context(), progress)
         }
         true
     }
 }
 
 impl HandlerExt for Buffered {
-    fn monitor_progress(&mut self, updater: ProgressUpdater) {
-        self.updater = Some(updater);
-    }
-
     fn request_context_mut(&mut self) -> &mut RequestContext {
         &mut self.request_context
     }
@@ -233,7 +229,13 @@ mod tests {
         let reporter = ProgressReporter::with_callback(|_| ());
 
         let mut handler = Buffered::new(RequestContext::dummy());
-        handler.monitor_progress(reporter.updater());
+        handler
+            .request_context_mut()
+            .event_listeners()
+            .on_progress({
+                let updater = reporter.updater();
+                move |_req, p| updater.update(p)
+            });
         let _ = handler.progress(1.0, 2.0, 3.0, 4.0);
 
         // Note that Progress struct has different argument order.

@@ -7,7 +7,6 @@
 
 use curl::easy::Handler;
 
-use crate::progress::ProgressUpdater;
 use crate::RequestContext;
 
 mod buffered;
@@ -22,15 +21,6 @@ pub use streaming::Streaming;
 /// All of the handlers used by the HTTP client need to implement this
 /// trait so that they can be properly configured prior to use.
 pub(crate) trait HandlerExt: Handler {
-    /// Configure the `Handler` to provide progress updates
-    /// using the given `ProgressUpdater`.
-    ///
-    /// XXX: Note that we can't use a builder-like pattern
-    /// for this method since it will typically called
-    /// through a mutable reference while the handler is
-    /// owned by an Easy2 handle.
-    fn monitor_progress(&mut self, updater: ProgressUpdater);
-
     /// Obtain the mutable `RequestContext` state.
     fn request_context_mut(&mut self) -> &mut RequestContext;
 

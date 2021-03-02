@@ -10,7 +10,7 @@ use std::io::Read;
 use curl::easy::{Handler, ReadError, WriteError};
 
 use crate::header::Header;
-use crate::progress::{Progress, ProgressUpdater};
+use crate::progress::Progress;
 use crate::receiver::Receiver;
 use crate::RequestContext;
 
@@ -19,7 +19,6 @@ use super::HandlerExt;
 pub struct Streaming<R> {
     receiver: Option<R>,
     bytes_sent: usize,
-    updater: Option<ProgressUpdater>,
     request_context: RequestContext,
 }
 
@@ -28,7 +27,6 @@ impl<R> Streaming<R> {
         Self {
             receiver: Some(receiver),
             bytes_sent: 0,
-            updater: None,
             request_context,
         }
     }
@@ -85,8 +83,9 @@ impl<R: Receiver> Handler for Streaming<R> {
             receiver.progress(progress);
         }
 
-        if let Some(ref mut updater) = self.updater {
-            updater.update(progress);
+        let listeners = &self.request_context.event_listeners;
+        if listeners.should_trigger_progress() {
+            listeners.trigger_progress(self.request_context(), progress)
         }
 
         true
@@ -94,10 +93,6 @@ impl<R: Receiver> Handler for Streaming<R> {
 }
 
 impl<R: Receiver> HandlerExt for Streaming<R> {
-    fn monitor_progress(&mut self, updater: ProgressUpdater) {
-        self.updater = Some(updater);
-    }
-
     fn request_context_mut(&mut self) -> &mut RequestContext {
         &mut self.request_context
     }
@@ -176,8 +171,13 @@ mod tests {
         let mut handler = Streaming::new(receiver.clone(), RequestContext::dummy());
 
         let reporter = ProgressReporter::with_callback(|_| ());
-
-        handler.monitor_progress(reporter.updater());
+        handler
+            .request_context_mut()
+            .event_listeners()
+            .on_progress({
+                let updater = reporter.updater();
+                move |_req, p| updater.update(p)
+            });
         let _ = handler.progress(0.0, 0.0, 0.0, 0.0);
         let _ = handler.progress(1.0, 2.0, 3.0, 4.0);
 

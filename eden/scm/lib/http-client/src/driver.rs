@@ -84,7 +84,13 @@ where
     pub(crate) fn add(&self, mut easy: Easy2<H>) -> Result<(), HttpClientError> {
         // Register this Easy2 handle's Handler with our ProgressReporter
         // so we can aggregate progress across all transfers in the stack.
-        easy.get_mut().monitor_progress(self.progress.updater());
+        easy.get_mut()
+            .request_context_mut()
+            .event_listeners()
+            .on_progress({
+                let updater = self.progress.updater();
+                move |_req, progress| updater.update(progress)
+            });
 
         // Assign a token to this Easy2 handle so we can correlate messages
         // for this handle with the corresponding Easy2Handle while the
