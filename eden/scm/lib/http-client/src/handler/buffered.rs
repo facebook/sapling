@@ -130,7 +130,7 @@ impl Handler for Buffered {
     }
 
     fn progress(&mut self, dltotal: f64, dlnow: f64, ultotal: f64, ulnow: f64) -> bool {
-        if let Some(ref updater) = self.updater {
+        if let Some(ref mut updater) = self.updater {
             updater.update(Progress::from_curl(dltotal, dlnow, ultotal, ulnow));
         }
         true

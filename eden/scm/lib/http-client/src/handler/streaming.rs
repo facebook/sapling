@@ -85,7 +85,7 @@ impl<R: Receiver> Handler for Streaming<R> {
             receiver.progress(progress);
         }
 
-        if let Some(ref updater) = self.updater {
+        if let Some(ref mut updater) = self.updater {
             updater.update(progress);
         }
 

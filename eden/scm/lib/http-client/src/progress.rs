@@ -9,7 +9,7 @@ use std::{
     cell::RefCell,
     fmt,
     iter::Sum,
-    ops::{Add, AddAssign},
+    ops::{Add, AddAssign, Sub},
     rc::Rc,
     time::Instant,
 };
@@ -93,6 +93,19 @@ impl AddAssign for Progress {
     }
 }
 
+impl Sub for Progress {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Self {
+            downloaded: self.downloaded.saturating_sub(other.downloaded),
+            total_downloaded: self.total_downloaded.saturating_sub(other.total_downloaded),
+            uploaded: self.uploaded.saturating_sub(other.uploaded),
+            total_uploaded: self.total_uploaded.saturating_sub(other.total_uploaded),
+        }
+    }
+}
+
 impl Sum for Progress {
     fn sum<I: Iterator<Item = Progress>>(iter: I) -> Progress {
         iter.fold(Default::default(), Add::add)
@@ -124,8 +137,10 @@ impl<P: FnMut(Progress)> ProgressReporter<P> {
     /// can update the values as the transfer makes progress.
     pub(crate) fn updater(&self) -> ProgressUpdater {
         let inner = Rc::clone(&self.inner);
-        let index = inner.borrow_mut().new_slot();
-        ProgressUpdater { inner, index }
+        ProgressUpdater {
+            inner,
+            last_progress: Default::default(),
+        }
     }
 
     /// Sum all of the progress values across all slots.
@@ -156,12 +171,13 @@ impl<P: FnMut(Progress)> ProgressReporter<P> {
 /// individual transfer with the reporter.
 pub(crate) struct ProgressUpdater {
     inner: Rc<RefCell<ProgressInner>>,
-    index: usize,
+    last_progress: Progress,
 }
 
 impl ProgressUpdater {
-    pub fn update(&self, progress: Progress) {
-        self.inner.borrow_mut().update(self.index, progress);
+    pub fn update(&mut self, progress: Progress) {
+        self.inner.borrow_mut().update(self.last_progress, progress);
+        self.last_progress = progress;
     }
 }
 
@@ -171,28 +187,22 @@ impl ProgressUpdater {
 /// are free to take exclusive references to self.
 #[derive(Default)]
 struct ProgressInner {
-    progress: Vec<Progress>,
+    total_progress: Progress,
     first_byte_received: Option<Instant>,
     updated_since_last_report: bool,
 }
 
 impl ProgressInner {
-    fn new_slot(&mut self) -> usize {
-        let index = self.progress.len();
-        self.progress.push(Default::default());
-        index
-    }
-
-    fn update(&mut self, index: usize, progress: Progress) {
-        self.progress[index] = progress;
+    fn update(&mut self, last_progress: Progress, progress: Progress) {
         if self.first_byte_received.is_none() && progress.downloaded > 0 {
             self.first_byte_received = Some(Instant::now());
         }
+        self.total_progress += progress - last_progress;
         self.updated_since_last_report = true;
     }
 
     fn aggregate(&self) -> Progress {
-        self.progress.iter().cloned().sum()
+        self.total_progress
     }
 }
 
@@ -212,8 +222,8 @@ mod tests {
         };
 
         let reporter = ProgressReporter::with_callback(callback);
-        let updater1 = reporter.updater();
-        let updater2 = reporter.updater();
+        let mut updater1 = reporter.updater();
+        let mut updater2 = reporter.updater();
 
         reporter.report_if_updated(); // No-op.
         assert_eq!(reporter.first_byte_received(), None);
@@ -230,11 +240,11 @@ mod tests {
         reporter.report_if_updated();
         reporter.report_if_updated(); // No-op.
 
-        updater2.update(p(4, 3, 2, 1));
+        updater2.update(p(4, 3, 102, 101));
 
         reporter.report_if_updated();
 
-        let expected = vec![p(2, 4, 6, 8), p(5, 5, 5, 5)];
+        let expected = vec![p(2, 4, 6, 8), p(5, 5, 105, 105)];
         assert_eq!(&expected, &reported);
     }
 }
