@@ -8,7 +8,7 @@
 #pragma once
 #include <folly/Synchronized.h>
 
-#include "eden/fs/inodes/overlay/IOverlay.h"
+#include "eden/fs/inodes/IOverlay.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/sqlite/Sqlite.h"
 
