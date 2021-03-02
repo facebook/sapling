@@ -258,6 +258,8 @@ in the new repo, while keeping changelog unchanged.
   $ cp -R client2 client3
   $ hg pull --cwd client3 -q
 
+# Wipe it first, due to OSX disliking copying over symlinks
+  $ rm -rf client2/.hg/store/metalog/*
   $ cp -R client3/.hg/store/metalog/* client2/.hg/store/metalog/
 
   $ cd client2
