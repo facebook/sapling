@@ -218,13 +218,14 @@ impl<P: FnMut(Progress)> ProgressReporter<P> {
 /// individual transfer with the reporter.
 pub(crate) struct ProgressUpdater {
     inner: Arc<ProgressInner>,
-    last_progress: Progress,
+    last_progress: MutableProgress,
 }
 
 impl ProgressUpdater {
-    pub fn update(&mut self, progress: Progress) {
-        self.inner.update(self.last_progress, progress);
-        self.last_progress = progress;
+    pub fn update(&self, progress: Progress) {
+        self.inner
+            .update(self.last_progress.to_progress(), progress);
+        self.last_progress.set(progress);
     }
 }
 
@@ -267,8 +268,8 @@ mod tests {
         };
 
         let reporter = ProgressReporter::with_callback(callback);
-        let mut updater1 = reporter.updater();
-        let mut updater2 = reporter.updater();
+        let updater1 = reporter.updater();
+        let updater2 = reporter.updater();
 
         reporter.report_if_updated(); // No-op.
         assert_eq!(reporter.first_byte_received(), None);
