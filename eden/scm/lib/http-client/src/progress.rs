@@ -11,6 +11,8 @@ use std::{
     iter::Sum,
     ops::{Add, AddAssign, Sub},
     rc::Rc,
+    sync::atomic::AtomicUsize,
+    sync::atomic::Ordering::{AcqRel, Acquire, Relaxed},
     time::Instant,
 };
 
@@ -22,6 +24,14 @@ pub struct Progress {
     pub total_downloaded: usize,
     pub uploaded: usize,
     pub total_uploaded: usize,
+}
+
+#[derive(Default, Debug)]
+struct MutableProgress {
+    downloaded: AtomicUsize,
+    total_downloaded: AtomicUsize,
+    uploaded: AtomicUsize,
+    total_uploaded: AtomicUsize,
 }
 
 impl Progress {
@@ -63,6 +73,30 @@ impl Progress {
             self.uploaded,
             self.total_uploaded,
         )
+    }
+}
+
+impl MutableProgress {
+    fn to_progress(&self) -> Progress {
+        let downloaded = self.downloaded.load(Relaxed);
+        let uploaded = self.uploaded.load(Relaxed);
+        let total_downloaded = self.total_downloaded.load(Acquire);
+        let total_uploaded = self.total_uploaded.load(Acquire);
+        Progress {
+            downloaded,
+            total_downloaded,
+            uploaded,
+            total_uploaded,
+        }
+    }
+
+    fn add_assign(&self, progress: Progress) {
+        self.total_downloaded
+            .fetch_add(progress.total_downloaded, AcqRel);
+        self.downloaded.fetch_add(progress.downloaded, Relaxed);
+        self.total_uploaded
+            .fetch_add(progress.total_uploaded, AcqRel);
+        self.uploaded.fetch_add(progress.uploaded, Relaxed);
     }
 }
 
@@ -189,7 +223,7 @@ impl ProgressUpdater {
 /// are free to take exclusive references to self.
 #[derive(Default)]
 struct ProgressInner {
-    total_progress: Progress,
+    total_progress: MutableProgress,
     first_byte_received: OnceCell<Instant>,
     updated_since_last_report: bool,
 }
@@ -199,12 +233,12 @@ impl ProgressInner {
         if progress.downloaded > 0 {
             self.first_byte_received.get_or_init(Instant::now);
         }
-        self.total_progress += progress - last_progress;
+        self.total_progress.add_assign(progress - last_progress);
         self.updated_since_last_report = true;
     }
 
     fn aggregate(&self) -> Progress {
-        self.total_progress
+        self.total_progress.to_progress()
     }
 }
 
