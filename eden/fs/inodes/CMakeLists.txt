@@ -54,6 +54,7 @@ target_link_libraries(
     eden_takeover_thrift
     eden_telemetry
     eden_utils
+    eden_tree_overlay
     Folly::folly
   PRIVATE
     eden_nfs_server

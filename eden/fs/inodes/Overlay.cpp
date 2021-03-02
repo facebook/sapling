@@ -22,6 +22,7 @@
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -29,6 +30,8 @@
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #endif // !_WIN32
+
+DEFINE_bool(use_tree_overlay, false, "[experimental] use TreeOverlay");
 
 namespace facebook {
 namespace eden {
@@ -38,6 +41,9 @@ constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
 constexpr uint64_t ioClosedMask = 1ull << 63;
 
 std::unique_ptr<IOverlay> makeOverlay(AbsolutePathPiece localDir) {
+  if (FLAGS_use_tree_overlay) {
+    return std::make_unique<TreeOverlay>(localDir);
+  }
 #ifdef _WIN32
   return std::make_unique<SqliteOverlay>(localDir);
 #else
