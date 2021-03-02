@@ -17,10 +17,10 @@ Make requests
 
 Wait for requests to be logged
   $ wait_for_json_record_count "$WIREPROTO_LOGGING_PATH" 3
-  $ jq -r .normal.command "$WIREPROTO_LOGGING_PATH"
+  $ jq -r .normal.command "$WIREPROTO_LOGGING_PATH" | sort
   getbundle
-  gettreepack
   getpackv1
+  gettreepack
 
 Replay traffic using the ephemeral blobstore
   $ fastreplay_log="$TESTTMP/fastreplay.json"
