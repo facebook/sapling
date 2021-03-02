@@ -9,6 +9,7 @@ use super::NoOpts;
 use super::Repo;
 use super::Result;
 use super::IO;
+use std::path::Path;
 
 pub fn run(_opts: NoOpts, _io: &IO, repo: Repo) -> Result<u8> {
     let store_path = repo.store_path();
@@ -26,6 +27,15 @@ pub fn run(_opts: NoOpts, _io: &IO, repo: Repo) -> Result<u8> {
     let dot_hg_path = repo.dot_hg_path();
     let patterns = ["treestate/*", "dirstate"];
     fsyncglob::fsync_glob(dot_hg_path, &patterns, None);
+
+    if let Some(Some(cache_path)) = repo
+        .config()
+        .get_opt::<String>("remotefilelog", "cachepath")
+        .ok()
+    {
+        let patterns = ["*/indexedlog*/*", "*/lfs/*"];
+        fsyncglob::fsync_glob(Path::new(&cache_path), &patterns, None);
+    }
 
     Ok(0)
 }
