@@ -285,16 +285,17 @@ impl Request {
     /// the given `Handler` to process the response.
     pub(crate) fn into_handle<H: HandlerExt>(
         self,
-        handler: H,
+        create_handler: impl FnOnce(RequestContext) -> H,
     ) -> Result<Easy2<H>, HttpClientError> {
         let body_size = self.body.as_ref().map(|body| body.len() as u64);
-        let handler = handler.with_payload(self.body);
+        let url = self.ctx.url.clone();
+        let handler = create_handler(self.ctx).with_payload(self.body);
 
         let mut easy = Easy2::new(handler);
-        easy.url(self.ctx.url.as_str())?;
+        easy.url(url.as_str())?;
 
         // Configure the handle for the desired HTTP method.
-        match self.ctx.method {
+        match easy.get_ref().request_context().method {
             Method::Get => {}
             Method::Head => {
                 easy.nobody(true)?;
@@ -365,8 +366,7 @@ impl TryFrom<Request> for Easy2<Buffered> {
     type Error = HttpClientError;
 
     fn try_from(req: Request) -> Result<Self, Self::Error> {
-        let ctx = req.ctx.clone();
-        req.into_handle(Buffered::new(ctx))
+        req.into_handle(Buffered::new)
     }
 }
 
@@ -393,8 +393,7 @@ impl<R: Receiver> TryFrom<StreamRequest<R>> for Easy2<Streaming<R>> {
 
     fn try_from(req: StreamRequest<R>) -> Result<Self, Self::Error> {
         let StreamRequest { request, receiver } = req;
-        let ctx = request.ctx.clone();
-        request.into_handle(Streaming::new(receiver, ctx))
+        request.into_handle(|ctx| Streaming::new(receiver, ctx))
     }
 }
 
