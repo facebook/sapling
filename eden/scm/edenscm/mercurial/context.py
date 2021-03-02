@@ -885,6 +885,10 @@ class basefilectx(object):
             )
             or self.size() == fctx.size()
         ):
+            if self._filenode is None:
+                # Both self and fctx are in-memory. Do a content check.
+                # PERF: This might be improved for LFS cases.
+                return self.data() != fctx.data()
             return self._filelog.cmp(self._filenode, fctx.data())
 
         return True
