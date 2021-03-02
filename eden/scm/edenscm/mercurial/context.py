@@ -2539,8 +2539,7 @@ class memctx(committablectx):
         parents = [(p or nullid) for p in parents]
         p1, p2 = parents
         self._parents = [changectx(self._repo, p) for p in (p1, p2)]
-        files = sorted(set(files))
-        self._files = files
+        self._filesset = set(files)
         if branch is not None:
             self._extra["branch"] = encoding.fromlocal(branch)
 
@@ -2553,6 +2552,9 @@ class memctx(committablectx):
         # memoizing increases performance for e.g. vcs convert scenarios.
         self._filectxfn = makecachingfilectxfn(filectxfn)
 
+        # used by __setitem__
+        self._fctxoverrides = {}
+
         if editor:
             self._text = editor(self._repo, self)
             self._repo.savecommitmessage(self._text)
@@ -2561,6 +2563,8 @@ class memctx(committablectx):
         """get a file context from the working directory
 
         Returns None if file doesn't exist and should be removed."""
+        if path in self._fctxoverrides:
+            return self._fctxoverrides[path]
         return self._filectxfn(self._repo, self, path)
 
     def commit(self):
@@ -2609,7 +2613,7 @@ class memctx(committablectx):
             managing = lambda f: f in man1
 
         modified, added, removed = [], [], []
-        for f in self._files:
+        for f in sorted(self._filesset):
             if not managing(f):
                 added.append(f)
             elif self[f]:
@@ -2618,6 +2622,36 @@ class memctx(committablectx):
                 removed.append(f)
 
         return scmutil.status(modified, added, removed, [], [], [], [])
+
+    def __setitem__(self, path, fctx):
+        """Set a path to the given fctx.
+
+        This invalidates caches of `status` and `manifest`. For performance,
+        avoid mixing `__setitem__` and read operation like `__contains__`,
+        `added`, etc in loops.
+        """
+        # This API is intended to be used in "dirsync" cases. For example, the
+        # following code copies the file from srcpath to dstpath in-memory:
+        #
+        #    ctx[dstpath] = ctx[srcpath]
+        #
+        # Note: There are no checks for all fields in `fctx`. For
+        # `repo.commitctx` to work correctly, the `path`, `data`, `renamed` of
+        # `fctx` need to be correct, and other fields like `p1`, `p2`, `ctx` do
+        # not really matter.
+        #
+        # This function intentionally avoids updating the `ctx` field to `self`
+        # so LFS fast paths can still work.
+        self._filesset.add(path)
+
+        # invalidate cache
+        self.__dict__.pop("_status", None)
+        self.__dict__.pop("_manifest", None)
+
+        if fctx is not None and fctx.path() != path:
+            # fix "path" automatically.
+            fctx = overlayfilectx(fctx, path=path)
+        self._fctxoverrides[path] = fctx
 
 
 class memfilectx(committablefilectx):
