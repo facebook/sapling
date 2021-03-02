@@ -53,12 +53,19 @@ impl fmt::Display for Method {
     }
 }
 
+/// A subset of the `Request` builder. Preserved in curl types.
+/// Expose the request in curl handler callback context.
+#[derive(Clone, Debug)]
+pub struct RequestContext {
+    url: Url,
+    method: Method,
+}
+
 /// A builder struct for HTTP requests, designed to be
 /// a more egonomic API for setting up a curl handle.
 #[derive(Clone, Debug)]
 pub struct Request {
-    url: Url,
-    method: Method,
+    pub(crate) ctx: RequestContext,
     headers: Vec<(String, String)>,
     body: Option<Vec<u8>>,
     cert: Option<PathBuf>,
@@ -69,11 +76,28 @@ pub struct Request {
     min_transfer_speed: Option<MinTransferSpeed>,
 }
 
+impl RequestContext {
+    /// Create a [`RequestContext`].
+    pub fn new(url: Url, method: Method) -> Self {
+        Self { url, method }
+    }
+
+    /// Obtain the HTTP url of the request.
+    pub fn url(&self) -> &Url {
+        &self.url
+    }
+
+    /// Obtain the HTTP method of the request.
+    pub fn method(&self) -> &Method {
+        &self.method
+    }
+}
+
 impl Request {
     pub fn new(url: Url, method: Method) -> Self {
+        let ctx = RequestContext::new(url, method);
         Self {
-            url,
-            method,
+            ctx,
             // Always set Expect so we can disable curl automatically expecting "100-continue".
             // That would require two response reads, which breaks the http_client model.
             headers: vec![("Expect".to_string(), "".to_string())],
@@ -239,10 +263,10 @@ impl Request {
         let handler = handler.with_payload(self.body);
 
         let mut easy = Easy2::new(handler);
-        easy.url(self.url.as_str())?;
+        easy.url(self.ctx.url.as_str())?;
 
         // Configure the handle for the desired HTTP method.
-        match self.method {
+        match self.ctx.method {
             Method::Get => {}
             Method::Head => {
                 easy.nobody(true)?;
@@ -564,5 +588,22 @@ mod tests {
         assert_eq!(res.status, StatusCode::CREATED);
 
         Ok(())
+    }
+
+    const DUMMY_URL_STR: &str = "https://a.example.com/b";
+    const DUMMY_METOD: Method = Method::Get;
+
+    impl RequestContext {
+        /// Dummy RequestContext for testing.
+        pub(crate) fn dummy() -> Self {
+            Self::new(Url::parse(DUMMY_URL_STR).unwrap(), DUMMY_METOD)
+        }
+    }
+
+    #[test]
+    fn test_request_context() {
+        let req = RequestContext::dummy();
+        assert_eq!(req.url().as_str(), DUMMY_URL_STR);
+        assert_eq!(req.method(), &DUMMY_METOD);
     }
 }
