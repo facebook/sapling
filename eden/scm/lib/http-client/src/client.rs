@@ -212,18 +212,7 @@ impl HttpClient {
         }
 
         driver
-            .perform(|res| {
-                match &res {
-                    Ok(ref easy) => self
-                        .event_listeners
-                        .trigger_succeeded_request(easy.get_ref().request_context()),
-                    Err((ref easy, _)) => self
-                        .event_listeners
-                        .trigger_failed_request(easy.get_ref().request_context()),
-                }
-
-                report_result_and_drop_receiver(res)
-            })
+            .perform(|res| self.report_result_and_drop_receiver(res))
             .map(|stats| {
                 self.event_listeners.trigger_stats(&stats);
                 stats
@@ -240,31 +229,40 @@ impl HttpClient {
         f(&mut self.event_listeners);
         self
     }
-}
 
-/// Callback for `MultiDriver::perform` when working with
-/// a `Streaming` handler. Reports the result of the
-/// completed request to the handler's `Receiver`.
-fn report_result_and_drop_receiver<R: Receiver>(
-    res: Result<Easy2<Streaming<R>>, (Easy2<Streaming<R>>, curl::Error)>,
-) -> Result<(), Abort> {
-    // We need to get the `Easy2` handle in both the
-    // success and error cases since we ultimately
-    // need to pass the result to the handler contained
-    // therein.
-    let (mut easy, res) = match res {
-        Ok(easy) => (easy, Ok(())),
-        Err((easy, e)) => (easy, Err(e.into())),
-    };
+    /// Callback for `MultiDriver::perform` when working with
+    /// a `Streaming` handler. Reports the result of the
+    /// completed request to the handler's `Receiver`.
+    fn report_result_and_drop_receiver<R: Receiver>(
+        &self,
+        res: Result<Easy2<Streaming<R>>, (Easy2<Streaming<R>>, curl::Error)>,
+    ) -> Result<(), Abort> {
+        // We need to get the `Easy2` handle in both the
+        // success and error cases since we ultimately
+        // need to pass the result to the handler contained
+        // therein.
+        let (mut easy, res) = match res {
+            Ok(easy) => {
+                self.event_listeners
+                    .trigger_succeeded_request(easy.get_ref().request_context());
+                (easy, Ok(()))
+            }
+            Err((easy, e)) => {
+                self.event_listeners
+                    .trigger_failed_request(easy.get_ref().request_context());
+                (easy, Err(e.into()))
+            }
+        };
 
-    // Extract the `Receiver` from the `Streaming` handler
-    // inside the Easy2 handle. If it's already gone, just
-    // log it and move on. (This shouldn't normally happen.)
-    if let Some(receiver) = easy.get_mut().take_receiver() {
-        receiver.done(res)
-    } else {
-        tracing::error!("Cannot report status because receiver is missing");
-        Ok(())
+        // Extract the `Receiver` from the `Streaming` handler
+        // inside the Easy2 handle. If it's already gone, just
+        // log it and move on. (This shouldn't normally happen.)
+        if let Some(receiver) = easy.get_mut().take_receiver() {
+            receiver.done(res)
+        } else {
+            tracing::error!("Cannot report status because receiver is missing");
+            Ok(())
+        }
     }
 }
 
