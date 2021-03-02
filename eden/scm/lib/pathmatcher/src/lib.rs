@@ -86,6 +86,35 @@ impl Matcher for NeverMatcher {
     }
 }
 
+pub struct XorMatcher<A, B> {
+    a: A,
+    b: B,
+}
+
+impl<A, B> XorMatcher<A, B> {
+    pub fn new(a: A, b: B) -> Self {
+        XorMatcher { a, b }
+    }
+}
+
+impl<A: Matcher, B: Matcher> Matcher for XorMatcher<A, B> {
+    fn matches_directory(&self, path: &RepoPath) -> Result<DirectoryMatch> {
+        let matches_a = self.a.matches_directory(path)?;
+        let matches_b = self.b.matches_directory(path)?;
+        Ok(match (matches_a, matches_b) {
+            (DirectoryMatch::Everything, DirectoryMatch::Everything) => DirectoryMatch::Nothing,
+            (DirectoryMatch::Nothing, DirectoryMatch::Nothing) => DirectoryMatch::Nothing,
+            (DirectoryMatch::Everything, DirectoryMatch::Nothing) => DirectoryMatch::Everything,
+            (DirectoryMatch::Nothing, DirectoryMatch::Everything) => DirectoryMatch::Everything,
+            _ => DirectoryMatch::ShouldTraverse,
+        })
+    }
+
+    fn matches_file(&self, path: &RepoPath) -> Result<bool> {
+        Ok(self.a.matches_file(path)? ^ self.b.matches_file(path)?)
+    }
+}
+
 pub use gitignore_matcher::GitignoreMatcher;
 pub use tree_matcher::TreeMatcher;
 pub use utils::{expand_curly_brackets, normalize_glob, plain_to_glob};
