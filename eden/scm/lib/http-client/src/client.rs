@@ -7,7 +7,6 @@
 
 use std::convert::{TryFrom, TryInto};
 use std::pin::Pin;
-use std::sync::Arc;
 
 use curl::easy::Easy2;
 use futures::prelude::*;
@@ -42,7 +41,6 @@ pub type StatsFuture =
 #[derive(Clone)]
 pub struct HttpClient {
     pool: Pool,
-    report_stats: Option<Arc<dyn Fn(&Stats) + Send + Sync + 'static>>,
     verbose: bool,
     event_listeners: HttpClientEventListeners,
 }
@@ -51,25 +49,8 @@ impl HttpClient {
     pub fn new() -> Self {
         Self {
             pool: Pool::new(),
-            report_stats: None,
             verbose: false,
             event_listeners: Default::default(),
-        }
-    }
-
-    /// Automatically report stats using the provided function.
-    ///
-    /// For all functions that return `Stats`, the `report_stats`
-    /// function will be called with the same `Stats` struct that
-    /// is returned. `report_stats` will be invoked just before
-    /// the struct is handed to the caller.
-    pub fn with_stats_reporting<F>(self, report_stats: F) -> Self
-    where
-        F: Fn(&Stats) + Send + Sync + 'static,
-    {
-        Self {
-            report_stats: Some(Arc::new(report_stats)),
-            ..self
         }
     }
 
@@ -132,9 +113,7 @@ impl HttpClient {
             response_cb(res)
         })?;
 
-        if let Some(report_stats) = &self.report_stats {
-            report_stats(&stats);
-        }
+        self.event_listeners.trigger_stats(&stats);
 
         Ok(stats)
     }
@@ -246,9 +225,7 @@ impl HttpClient {
                 report_result_and_drop_receiver(res)
             })
             .map(|stats| {
-                if let Some(report_stats) = &self.report_stats {
-                    report_stats(&stats);
-                }
+                self.event_listeners.trigger_stats(&stats);
                 stats
             })
     }
@@ -478,7 +455,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_report_stats() -> Result<()> {
+    async fn test_event_listeners() -> Result<()> {
         let server_url = Url::parse(&mockito::server_url())?;
 
         // this is actually used, it changes how mockito behaves
@@ -492,8 +469,8 @@ mod tests {
 
         let (tx, rx) = crossbeam::channel::unbounded();
 
-        let client = HttpClient::new().with_stats_reporting(move |stats| {
-            tx.send(stats.clone()).expect("send stats over channel")
+        let client = HttpClient::new().with_event_listeners(|l| {
+            l.on_stats(move |stats| tx.send(stats.clone()).expect("send stats over channel"));
         });
 
         let stats = client.send(vec![request.clone()], |_| Ok(()))?;

@@ -17,7 +17,9 @@ pub fn http_client(client_id: impl ToString) -> HttpClient {
     let reporter = move |stats: &Stats| {
         bump_counters(&client_id, stats);
     };
-    HttpClient::new().with_stats_reporting(reporter)
+    HttpClient::new().with_event_listeners(|l| {
+        l.on_stats(reporter);
+    })
 }
 
 fn bump_counters(client_id: &str, stats: &Stats) {

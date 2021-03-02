@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 
+use crate::stats::Stats;
 use crate::RequestContext;
 
 /// Generate a struct for holding event listeners (callbacks).
@@ -71,6 +72,9 @@ gen_event_listeners! {
 
         /// A request is failed.
         failed_request(req: &RequestContext),
+
+        /// One or more requests have completed with statistics.
+        stats(stats: &Stats),
     }
 }
 
