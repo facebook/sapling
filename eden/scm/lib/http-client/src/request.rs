@@ -389,7 +389,8 @@ impl<R: Receiver> TryFrom<StreamRequest<R>> for Easy2<Streaming<R>> {
 
     fn try_from(req: StreamRequest<R>) -> Result<Self, Self::Error> {
         let StreamRequest { request, receiver } = req;
-        request.into_handle(Streaming::with_receiver(receiver))
+        let ctx = request.ctx.clone();
+        request.into_handle(Streaming::new(receiver, ctx))
     }
 }
 

@@ -12,6 +12,7 @@ use curl::easy::{Handler, ReadError, WriteError};
 use crate::header::Header;
 use crate::progress::{Progress, ProgressUpdater};
 use crate::receiver::Receiver;
+use crate::RequestContext;
 
 use super::Configure;
 
@@ -20,15 +21,17 @@ pub struct Streaming<R> {
     payload: Option<Vec<u8>>,
     bytes_sent: usize,
     updater: Option<ProgressUpdater>,
+    request_context: RequestContext,
 }
 
 impl<R> Streaming<R> {
-    pub fn with_receiver(receiver: R) -> Self {
+    pub(crate) fn new(receiver: R, request_context: RequestContext) -> Self {
         Self {
             receiver: Some(receiver),
             payload: None,
             bytes_sent: 0,
             updater: None,
+            request_context,
         }
     }
 
@@ -113,7 +116,8 @@ mod tests {
         let mut buf2 = [0xFF; 3];
         let mut buf3 = [0xFF; 4];
 
-        let mut handler = Streaming::with_receiver(NullReceiver).with_payload(Some(data.into()));
+        let mut handler =
+            Streaming::new(NullReceiver, RequestContext::dummy()).with_payload(Some(data.into()));
 
         assert_eq!(handler.read(&mut buf1[..]).unwrap(), 5);
         assert_eq!(handler.read(&mut buf2[..]).unwrap(), 3);
@@ -127,7 +131,7 @@ mod tests {
     #[test]
     fn test_write() {
         let receiver = TestReceiver::new();
-        let mut handler = Streaming::with_receiver(receiver.clone());
+        let mut handler = Streaming::new(receiver.clone(), RequestContext::dummy());
 
         let chunks = vec![vec![1, 2, 3], vec![5, 6], vec![7, 8, 9, 0]];
 
@@ -141,7 +145,7 @@ mod tests {
     #[test]
     fn test_headers() {
         let receiver = TestReceiver::new();
-        let mut handler = Streaming::with_receiver(receiver.clone());
+        let mut handler = Streaming::new(receiver.clone(), RequestContext::dummy());
 
         assert!(handler.header(&b"Content-Length: 1234\r\n"[..]));
         assert!(handler.header(&[1, 2, 58, 3, 4][..])); // Valid UTF-8 but not alphanumeric.
@@ -162,7 +166,7 @@ mod tests {
     #[test]
     fn test_progress() {
         let receiver = TestReceiver::new();
-        let mut handler = Streaming::with_receiver(receiver.clone());
+        let mut handler = Streaming::new(receiver.clone(), RequestContext::dummy());
 
         let reporter = ProgressReporter::with_callback(|_| ());
 
