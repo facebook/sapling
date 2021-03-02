@@ -140,22 +140,17 @@ class SqliteStatement {
 
   /** Identical to the StringPiece variant of `bind` defined above,
    * but accepts a ByteRange parameter instead */
-  inline void bind(
+  void bind(
       size_t paramNo,
       folly::ByteRange blob,
-      void (*bindType)(void*) = SQLITE_STATIC) {
-    bind(paramNo, folly::StringPiece(blob), bindType);
-  }
+      void (*bindType)(void*) = SQLITE_STATIC);
 
-  inline void bind(size_t paramNo, uint64_t id) {
-    checkSqliteResult(
-        db_, sqlite3_bind_int64(stmt_, unsignedNoToInt(paramNo), id));
-  }
+  void bind(size_t paramNo, int64_t id);
 
-  inline void bind(size_t paramNo, uint32_t id) {
-    checkSqliteResult(
-        db_, sqlite3_bind_int(stmt_, unsignedNoToInt(paramNo), id));
-  }
+  void bind(size_t paramNo, uint64_t id);
+
+  void bind(size_t paramNo, uint32_t id);
+
   /** Reference a blob column in the current row returned by the statement.
    * This is only valid to call once `step()` has returned true.  The
    * return value is invalidated by a subsequent `step()` call or by the

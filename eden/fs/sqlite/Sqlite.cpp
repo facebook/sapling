@@ -25,17 +25,20 @@ void checkSqliteResult(sqlite3* db, int result) {
   }
   // Sometimes the db instance holds more useful context
   if (db) {
-    throw std::runtime_error(to<string>(
-        "sqlite error: ",
+    auto error = fmt::format(
+        "sqlite error ({}): {} {}",
         result,
-        ": ",
         sqlite3_errstr(result),
-        " ",
-        sqlite3_errmsg(db)));
+        sqlite3_errmsg(db));
+    XLOG(DBG6) << error;
+    throw std::runtime_error(error);
+  } else {
+    auto error =
+        fmt::format("sqlite error ({}): {}", result, sqlite3_errstr(result));
+    XLOG(DBG6) << error;
+    // otherwise resort to a simpler number->string mapping
+    throw std::runtime_error(error);
   }
-  // otherwise resort to a simpler number->string mapping
-  throw std::runtime_error(
-      to<string>("sqlite error: ", result, ": ", sqlite3_errstr(result)));
 }
 
 SqliteDatabase::SqliteDatabase(const char* addr) {
@@ -108,10 +111,35 @@ void SqliteStatement::bind(
     folly::StringPiece blob,
     void (*bindType)(void*)) {
   auto param = unsignedNoToInt(paramNo);
+  XLOGF(DBG9, "?{} = {}", paramNo, blob);
   checkSqliteResult(
       db_,
       sqlite3_bind_blob64(
           stmt_, param, blob.data(), sqlite3_uint64(blob.size()), bindType));
+}
+
+void SqliteStatement::bind(
+    size_t paramNo,
+    folly::ByteRange blob,
+    void (*bindType)(void*)) {
+  auto sp = folly::StringPiece(blob);
+  bind(paramNo, sp, bindType);
+}
+
+void SqliteStatement::bind(size_t paramNo, int64_t id) {
+  XLOGF(DBG9, "?{} = {}", paramNo, id);
+  checkSqliteResult(db_, sqlite3_bind_int64(stmt_, paramNo, id));
+}
+
+void SqliteStatement::bind(size_t paramNo, uint64_t id) {
+  XLOGF(DBG9, "?{} = {}", paramNo, id);
+  checkSqliteResult(
+      db_, sqlite3_bind_int64(stmt_, unsignedNoToInt(paramNo), id));
+}
+
+void SqliteStatement::bind(size_t paramNo, uint32_t id) {
+  XLOGF(DBG9, "?{} = {}", paramNo, id);
+  checkSqliteResult(db_, sqlite3_bind_int(stmt_, unsignedNoToInt(paramNo), id));
 }
 
 StringPiece SqliteStatement::columnBlob(size_t colNo) const {
@@ -122,7 +150,7 @@ StringPiece SqliteStatement::columnBlob(size_t colNo) const {
 }
 
 uint64_t SqliteStatement::columnUint64(size_t colNo) const {
-  return sqlite3_column_int64(stmt_, unsignedNoToInt(colNo));
+  return sqlite3_column_int64(stmt_, folly::to_signed(colNo));
 }
 
 SqliteStatement::~SqliteStatement() {
