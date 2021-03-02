@@ -15,7 +15,8 @@ use futures::prelude::*;
 use crate::{
     driver::MultiDriver,
     errors::{Abort, HttpClientError},
-    handler::{Buffered, Streaming},
+    event_listeners::HttpClientEventListeners,
+    handler::{Buffered, HandlerExt, Streaming},
     pool::Pool,
     progress::Progress,
     receiver::{ChannelReceiver, Receiver},
@@ -43,6 +44,7 @@ pub struct HttpClient {
     pool: Pool,
     report_stats: Option<Arc<dyn Fn(&Stats) + Send + Sync + 'static>>,
     verbose: bool,
+    event_listeners: HttpClientEventListeners,
 }
 
 impl HttpClient {
@@ -51,6 +53,7 @@ impl HttpClient {
             pool: Pool::new(),
             report_stats: None,
             verbose: false,
+            event_listeners: Default::default(),
         }
     }
 
@@ -108,15 +111,24 @@ impl HttpClient {
         let multi = self.pool.multi();
         let driver = MultiDriver::new(multi.get(), progress_cb, self.verbose);
 
-        for request in requests {
+        for mut request in requests {
+            self.event_listeners.trigger_new_request(&mut request.ctx);
             let handle: Easy2<Buffered> = request.try_into()?;
             driver.add(handle)?;
         }
 
         let stats = driver.perform(|res| {
             let res = res
-                .map_err(|(_, e)| e.into())
-                .and_then(|mut easy| Response::try_from(easy.get_mut()));
+                .map_err(|(easy, e)| {
+                    let ctx = easy.get_ref().request_context();
+                    self.event_listeners.trigger_failed_request(ctx);
+                    e.into()
+                })
+                .and_then(|mut easy| {
+                    let ctx = easy.get_ref().request_context();
+                    self.event_listeners.trigger_succeeded_request(ctx);
+                    Response::try_from(easy.get_mut())
+                });
             response_cb(res)
         })?;
 
@@ -213,19 +225,43 @@ impl HttpClient {
         let multi = self.pool.multi();
         let driver = MultiDriver::new(multi.get(), progress_cb, self.verbose);
 
-        for request in requests {
+        for mut request in requests {
+            self.event_listeners
+                .trigger_new_request(&mut request.request.ctx);
             let handle: Easy2<Streaming<R>> = request.try_into()?;
             driver.add(handle)?;
         }
 
         driver
-            .perform(report_result_and_drop_receiver)
+            .perform(|res| {
+                match &res {
+                    Ok(ref easy) => self
+                        .event_listeners
+                        .trigger_succeeded_request(easy.get_ref().request_context()),
+                    Err((ref easy, _)) => self
+                        .event_listeners
+                        .trigger_failed_request(easy.get_ref().request_context()),
+                }
+
+                report_result_and_drop_receiver(res)
+            })
             .map(|stats| {
                 if let Some(report_stats) = &self.report_stats {
                     report_stats(&stats);
                 }
                 stats
             })
+    }
+
+    /// Obtain the `HttpClientEventListeners` to register callbacks.
+    pub fn event_listeners(&mut self) -> &mut HttpClientEventListeners {
+        &mut self.event_listeners
+    }
+
+    /// Easier way to register event callbacks using the builder pattern.
+    pub fn with_event_listeners(mut self, f: impl FnOnce(&mut HttpClientEventListeners)) -> Self {
+        f(&mut self.event_listeners);
+        self
     }
 }
 
