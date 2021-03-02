@@ -8,6 +8,8 @@
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::AcqRel;
 use std::time::Duration;
 
 use curl::{
@@ -57,9 +59,14 @@ impl fmt::Display for Method {
 /// Expose the request in curl handler callback context.
 #[derive(Clone, Debug)]
 pub struct RequestContext {
+    id: RequestId,
     url: Url,
     method: Method,
 }
+
+/// Identity of a request.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct RequestId(usize);
 
 /// A builder struct for HTTP requests, designed to be
 /// a more egonomic API for setting up a curl handle.
@@ -79,7 +86,9 @@ pub struct Request {
 impl RequestContext {
     /// Create a [`RequestContext`].
     pub fn new(url: Url, method: Method) -> Self {
-        Self { url, method }
+        static ID: AtomicUsize = AtomicUsize::new(0);
+        let id = RequestId(ID.fetch_add(1, AcqRel));
+        Self { id, url, method }
     }
 
     /// Obtain the HTTP url of the request.
@@ -90,6 +99,14 @@ impl RequestContext {
     /// Obtain the HTTP method of the request.
     pub fn method(&self) -> &Method {
         &self.method
+    }
+
+    /// Obtain the request Id.
+    ///
+    /// The Id is automatically assigned and uniquely identifies the requests
+    /// in this process.
+    pub fn id(&self) -> RequestId {
+        self.id
     }
 }
 
@@ -111,6 +128,14 @@ impl Request {
             http_version: HttpVersion::V2,
             min_transfer_speed: None,
         }
+    }
+
+    /// Obtain the request Id.
+    ///
+    /// The Id is automatically assigned and uniquely identifies the requests
+    /// in this process.
+    pub fn id(&self) -> RequestId {
+        self.ctx.id()
     }
 
     /// Create a GET request.
@@ -605,5 +630,8 @@ mod tests {
         let req = RequestContext::dummy();
         assert_eq!(req.url().as_str(), DUMMY_URL_STR);
         assert_eq!(req.method(), &DUMMY_METOD);
+
+        let req2 = RequestContext::dummy();
+        assert_ne!(req.id(), req2.id());
     }
 }
