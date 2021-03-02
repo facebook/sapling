@@ -12,7 +12,7 @@ use std::{
     ops::{Add, AddAssign, Sub},
     rc::Rc,
     sync::atomic::AtomicUsize,
-    sync::atomic::Ordering::{AcqRel, Acquire, Relaxed},
+    sync::atomic::Ordering::{AcqRel, Acquire, Relaxed, Release},
     time::Instant,
 };
 
@@ -90,6 +90,14 @@ impl MutableProgress {
         }
     }
 
+    fn set(&self, progress: Progress) {
+        self.total_downloaded
+            .store(progress.total_downloaded, Release);
+        self.downloaded.store(progress.downloaded, Relaxed);
+        self.total_uploaded.store(progress.total_uploaded, Release);
+        self.uploaded.store(progress.uploaded, Relaxed);
+    }
+
     fn add_assign(&self, progress: Progress) {
         self.total_downloaded
             .fetch_add(progress.total_downloaded, AcqRel);
@@ -155,6 +163,7 @@ impl Sum for Progress {
 pub(crate) struct ProgressReporter<P> {
     inner: Rc<RefCell<ProgressInner>>,
     callback: RefCell<P>,
+    last_progress: MutableProgress,
 }
 
 impl<P: FnMut(Progress)> ProgressReporter<P> {
@@ -165,6 +174,7 @@ impl<P: FnMut(Progress)> ProgressReporter<P> {
         Self {
             inner: Rc::new(RefCell::new(ProgressInner::default())),
             callback: RefCell::new(callback),
+            last_progress: Default::default(),
         }
     }
 
@@ -194,10 +204,11 @@ impl<P: FnMut(Progress)> ProgressReporter<P> {
     /// the transfers have made progress since the last time
     /// this method was called.
     pub(crate) fn report_if_updated(&self) {
-        let mut inner = self.inner.borrow_mut();
-        if inner.updated_since_last_report {
+        let inner = self.inner.borrow_mut();
+        let progress = inner.aggregate();
+        if progress != self.last_progress.to_progress() {
             (&mut *self.callback.borrow_mut())(inner.aggregate());
-            inner.updated_since_last_report = false;
+            self.last_progress.set(progress);
         }
     }
 }
@@ -225,7 +236,6 @@ impl ProgressUpdater {
 struct ProgressInner {
     total_progress: MutableProgress,
     first_byte_received: OnceCell<Instant>,
-    updated_since_last_report: bool,
 }
 
 impl ProgressInner {
@@ -234,7 +244,6 @@ impl ProgressInner {
             self.first_byte_received.get_or_init(Instant::now);
         }
         self.total_progress.add_assign(progress - last_progress);
-        self.updated_since_last_report = true;
     }
 
     fn aggregate(&self) -> Progress {
