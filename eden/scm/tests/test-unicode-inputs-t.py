@@ -23,7 +23,7 @@ sh % "hg add Æ"
 sh % "hg commit -m 'Æ'"
 
 sh % "hg log -v" == """
-commit:      a69886dc9c87
+commit:      * (glob)
 user:        test
 date:        Thu Jan 01 00:00:00 1970 +0000
 files:       file Æ
