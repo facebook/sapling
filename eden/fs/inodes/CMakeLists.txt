@@ -91,4 +91,5 @@ target_link_libraries(
 )
 
 add_subdirectory(overlay)
+add_subdirectory(treeoverlay)
 add_subdirectory(test)

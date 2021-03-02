@@ -1,0 +1,103 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+#include "eden/fs/inodes/treeoverlay/TreeOverlay.h"
+
+#include <folly/File.h>
+#include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/utils/Bug.h"
+
+namespace facebook::eden {
+
+TreeOverlay::TreeOverlay(AbsolutePathPiece path)
+    : path_{path.copy()}, store_{path_} {}
+
+std::optional<InodeNumber> TreeOverlay::initOverlay(bool createIfNonExisting) {
+  if (createIfNonExisting) {
+    store_.createTableIfNonExisting();
+  }
+  initialized_ = true;
+  return store_.loadCounters();
+}
+
+void TreeOverlay::close(std::optional<InodeNumber> /*nextInodeNumber*/) {
+  store_.close();
+}
+
+const AbsolutePath& TreeOverlay::getLocalDir() const {
+  return path_;
+}
+
+std::optional<overlay::OverlayDir> TreeOverlay::loadOverlayDir(
+    InodeNumber inodeNumber) {
+  return store_.loadTree(inodeNumber);
+}
+
+void TreeOverlay::saveOverlayDir(
+    InodeNumber inodeNumber,
+    const overlay::OverlayDir& odir) {
+  return store_.saveTree(inodeNumber, odir);
+}
+
+#ifndef _WIN32
+folly::File TreeOverlay::createOverlayFile(
+    InodeNumber /*inodeNumber*/,
+    folly::ByteRange /*contents*/) {
+  EDEN_BUG() << "UNIMPLEMENTED";
+}
+
+folly::File TreeOverlay::createOverlayFile(
+    InodeNumber /*inodeNumber*/,
+    const folly::IOBuf& /*contents*/) {
+  EDEN_BUG() << "UNIMPLEMENTED";
+}
+
+folly::File TreeOverlay::openFile(
+    InodeNumber /*inodeNumber*/,
+    folly::StringPiece /*headerId*/) {
+  EDEN_BUG() << "UNIMPLEMENTED";
+}
+
+folly::File TreeOverlay::openFileNoVerify(InodeNumber /*inodeNumber*/) {
+  EDEN_BUG() << "UNIMPLEMENTED";
+}
+
+struct statfs TreeOverlay::statFs() const {
+  EDEN_BUG() << "UNIMPLEMENTED";
+}
+#endif
+
+void TreeOverlay::removeOverlayData(InodeNumber inodeNumber) {
+  store_.removeTree(inodeNumber);
+}
+
+bool TreeOverlay::hasOverlayData(InodeNumber inodeNumber) {
+  return store_.hasTree(inodeNumber);
+}
+
+void TreeOverlay::addChild(
+    InodeNumber parent,
+    PathComponentPiece name,
+    overlay::OverlayEntry entry) {
+  return store_.addChild(parent, name, entry);
+}
+
+void TreeOverlay::removeChild(
+    InodeNumber parent,
+    PathComponentPiece childName) {
+  return store_.removeChild(parent, childName);
+}
+
+void TreeOverlay::renameChild(
+    InodeNumber src,
+    InodeNumber dst,
+    PathComponentPiece srcName,
+    PathComponentPiece dstName) {
+  return store_.renameChild(src, dst, srcName, dstName);
+}
+} // namespace facebook::eden
