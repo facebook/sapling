@@ -58,7 +58,8 @@ impl fmt::Display for Method {
 
 /// A subset of the `Request` builder. Preserved in curl types.
 /// Expose the request in curl handler callback context.
-#[derive(Clone, Debug)]
+#[cfg_attr(test, derive(Clone))]
+#[derive(Debug)]
 pub struct RequestContext {
     id: RequestId,
     url: Url,
@@ -73,7 +74,8 @@ pub struct RequestId(usize);
 
 /// A builder struct for HTTP requests, designed to be
 /// a more egonomic API for setting up a curl handle.
-#[derive(Clone, Debug)]
+#[cfg_attr(test, derive(Clone))]
+#[derive(Debug)]
 pub struct Request {
     pub(crate) ctx: RequestContext,
     headers: Vec<(String, String)>,
