@@ -511,7 +511,7 @@ TEST(Fsck, testMissingDirData) {
   SimpleOverlayLayout layout(root);
 
   // Remove the overlay file for the "src/" directory
-  overlay->fs().removeOverlayFile(layout.src.number());
+  overlay->fs().removeOverlayData(layout.src.number());
   // To help fully exercise the code that copies orphan subtrees to lost+found,
   // also corrupt the file for "src/foo/test.txt", which will need to be copied
   // out as part of the orphaned src/ children subdirectories.  This makes sure
@@ -520,7 +520,7 @@ TEST(Fsck, testMissingDirData) {
   overlay->corruptInodeHeader(layout.src_foo_testTxt.number(), badHeader);
   // And remove the "src/foo/x" subdirectory that is also part of the orphaned
   // subtree.
-  overlay->fs().removeOverlayFile(layout.src_foo_x.number());
+  overlay->fs().removeOverlayData(layout.src_foo_x.number());
 
   OverlayChecker checker(&overlay->fs(), std::nullopt);
   checker.scanForErrors();

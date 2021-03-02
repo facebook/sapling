@@ -38,6 +38,7 @@ class OverlayDir;
 struct DirContents;
 class InodeMap;
 class SerializedInodeMap;
+class IOverlay;
 
 #ifndef _WIN32
 struct InodeMetadata;
@@ -269,11 +270,9 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   std::atomic<uint64_t> nextInodeNumber_{0};
 
-#ifdef _WIN32
-  SqliteOverlay backingOverlay_;
-#else
-  FsOverlay backingOverlay_;
+  std::unique_ptr<IOverlay> backingOverlay_;
 
+#ifndef _WIN32
   /**
    * Disk-backed mapping from inode number to InodeMetadata.
    * Defined below backingOverlay_ because it acquires its own file lock, which

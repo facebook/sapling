@@ -614,7 +614,7 @@ void FsOverlay::validateHeader(
   }
 }
 
-void FsOverlay::removeOverlayFile(InodeNumber inodeNumber) {
+void FsOverlay::removeOverlayData(InodeNumber inodeNumber) {
   auto path = getFilePath(inodeNumber);
   int result = ::unlinkat(dirFile_.fd(), path.c_str(), 0);
   if (result == 0) {

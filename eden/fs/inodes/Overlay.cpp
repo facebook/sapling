@@ -36,6 +36,14 @@ namespace eden {
 namespace {
 constexpr uint64_t ioCountMask = 0x7FFFFFFFFFFFFFFFull;
 constexpr uint64_t ioClosedMask = 1ull << 63;
+
+std::unique_ptr<IOverlay> makeOverlay(AbsolutePathPiece localDir) {
+#ifdef _WIN32
+  return std::make_unique<SqliteOverlay>(localDir);
+#else
+  return std::make_unique<FsOverlay>(localDir);
+#endif
+}
 } // namespace
 
 using folly::Unit;
@@ -59,7 +67,7 @@ Overlay::Overlay(
     AbsolutePathPiece localDir,
     bool caseSensitive,
     std::shared_ptr<StructuredLogger> logger)
-    : backingOverlay_{localDir},
+    : backingOverlay_{makeOverlay(localDir)},
       caseSensitive_{caseSensitive},
       structuredLogger_{logger} {}
 
@@ -78,7 +86,7 @@ void Overlay::close() {
 
   // Make sure everything is shut down in reverse of construction order.
   // Cleanup is not necessary if overlay was not initialized
-  if (!backingOverlay_.initialized()) {
+  if (!backingOverlay_->initialized()) {
     return;
   }
 
@@ -97,7 +105,7 @@ void Overlay::close() {
   inodeMetadataTable_.reset();
 #endif // !_WIN32
 
-  backingOverlay_.close(optNextInodeNumber);
+  backingOverlay_->close(optNextInodeNumber);
 }
 
 bool Overlay::isClosed() {
@@ -107,7 +115,7 @@ bool Overlay::isClosed() {
 #ifndef _WIN32
 struct statfs Overlay::statFs() {
   IORequest req{this};
-  return backingOverlay_.statFs();
+  return backingOverlay_->statFs();
 }
 #endif // !_WIN32
 
@@ -128,7 +136,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
       initOverlay(progressCallback);
     } catch (std::exception& ex) {
       XLOG(ERR) << "overlay initialization failed for "
-                << backingOverlay_.getLocalDir() << ": " << ex.what();
+                << backingOverlay_->getLocalDir() << ": " << ex.what();
       promise.setException(
           folly::exception_wrapper(std::current_exception(), ex));
       return;
@@ -147,7 +155,7 @@ folly::SemiFuture<Unit> Overlay::initialize(
 void Overlay::initOverlay(
     const OverlayChecker::ProgressCallback& progressCallback) {
   IORequest req{this};
-  auto optNextInodeNumber = backingOverlay_.initOverlay(true);
+  auto optNextInodeNumber = backingOverlay_->initOverlay(true);
   if (!optNextInodeNumber.has_value()) {
 #ifndef _WIN32
     // If the next-inode-number data is missing it means that this overlay was
@@ -157,10 +165,13 @@ void Overlay::initOverlay(
     //
     // Use OverlayChecker to scan the overlay for any issues, and also compute
     // correct next inode number as it does so.
-    XLOG(WARN) << "Overlay " << backingOverlay_.getLocalDir()
+    XLOG(WARN) << "Overlay " << backingOverlay_->getLocalDir()
                << " was not shut down cleanly.  Performing fsck scan.";
 
-    OverlayChecker checker(&backingOverlay_, std::nullopt);
+    // TODO(zeyi): `OverlayCheck` should be associated with the specific
+    // Overlay implementation. `reinterpret_cast` is a temporary workaround.
+    OverlayChecker checker(
+        reinterpret_cast<FsOverlay*>(backingOverlay_.get()), std::nullopt);
     folly::stop_watch<> fsckRuntime;
     checker.scanForErrors(progressCallback);
     auto result = checker.repairErrors();
@@ -192,7 +203,7 @@ void Overlay::initOverlay(
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
   // its own lock, which should be released prior to infoFile_.
   inodeMetadataTable_ =
-      InodeMetadataTable::open((backingOverlay_.getLocalDir() +
+      InodeMetadataTable::open((backingOverlay_->getLocalDir() +
                                 PathComponentPiece{FsOverlay::kMetadataFile})
                                    .c_str());
 #endif // !_WIN32
@@ -214,7 +225,7 @@ InodeNumber Overlay::allocateInodeNumber() {
   // might on ARM.
   auto previous = nextInodeNumber_++;
 #ifdef _WIN32
-  backingOverlay_.updateUsedInodeNumber(previous);
+  backingOverlay_->updateUsedInodeNumber(previous);
 #endif
   XDCHECK_NE(0u, previous) << "allocateInodeNumber called before initialize";
   return InodeNumber{previous};
@@ -222,7 +233,7 @@ InodeNumber Overlay::allocateInodeNumber() {
 
 optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   IORequest req{this};
-  auto dirData = backingOverlay_.loadOverlayDir(inodeNumber);
+  auto dirData = backingOverlay_->loadOverlayDir(inodeNumber);
   if (!dirData.has_value()) {
     return std::nullopt;
   }
@@ -301,7 +312,7 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
         std::make_pair(entName.stringPiece().str(), std::move(oent)));
   }
 
-  backingOverlay_.saveOverlayDir(inodeNumber, odir);
+  backingOverlay_->saveOverlayDir(inodeNumber, odir);
 }
 
 void Overlay::removeOverlayData(InodeNumber inodeNumber) {
@@ -310,16 +321,14 @@ void Overlay::removeOverlayData(InodeNumber inodeNumber) {
 #ifndef _WIN32
   // TODO: batch request during GC
   getInodeMetadataTable()->freeInode(inodeNumber);
-  backingOverlay_.removeOverlayFile(inodeNumber);
-#else
-  backingOverlay_.removeOverlayData(inodeNumber);
 #endif // !_WIN32
+  backingOverlay_->removeOverlayData(inodeNumber);
 }
 
 #ifndef _WIN32
 void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
   IORequest req{this};
-  auto dirData = backingOverlay_.loadOverlayDir(inodeNumber);
+  auto dirData = backingOverlay_->loadOverlayDir(inodeNumber);
 
   // This inode's data must be removed from the overlay before
   // recursivelyRemoveOverlayData returns to avoid a race condition if
@@ -348,7 +357,7 @@ folly::Future<folly::Unit> Overlay::flushPendingAsync() {
 
 bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
   IORequest req{this};
-  return backingOverlay_.hasOverlayData(inodeNumber);
+  return backingOverlay_->hasOverlayData(inodeNumber);
 }
 
 #ifndef _WIN32
@@ -359,13 +368,13 @@ OverlayFile Overlay::openFile(
     folly::StringPiece headerId) {
   IORequest req{this};
   return OverlayFile(
-      backingOverlay_.openFile(inodeNumber, headerId), weak_from_this());
+      backingOverlay_->openFile(inodeNumber, headerId), weak_from_this());
 }
 
 OverlayFile Overlay::openFileNoVerify(InodeNumber inodeNumber) {
   IORequest req{this};
   return OverlayFile(
-      backingOverlay_.openFileNoVerify(inodeNumber), weak_from_this());
+      backingOverlay_->openFileNoVerify(inodeNumber), weak_from_this());
 }
 
 OverlayFile Overlay::createOverlayFile(
@@ -375,7 +384,7 @@ OverlayFile Overlay::createOverlayFile(
   XCHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
   return OverlayFile(
-      backingOverlay_.createOverlayFile(inodeNumber, contents),
+      backingOverlay_->createOverlayFile(inodeNumber, contents),
       weak_from_this());
 }
 
@@ -386,7 +395,7 @@ OverlayFile Overlay::createOverlayFile(
   XCHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
   return OverlayFile(
-      backingOverlay_.createOverlayFile(inodeNumber, contents),
+      backingOverlay_->createOverlayFile(inodeNumber, contents),
       weak_from_this());
 }
 
@@ -527,7 +536,7 @@ void Overlay::handleGCRequest(GCRequest& request) {
 
     overlay::OverlayDir dir;
     try {
-      auto dirData = backingOverlay_.loadOverlayDir(ino);
+      auto dirData = backingOverlay_->loadOverlayDir(ino);
       if (!dirData.has_value()) {
         XLOG(DBG7) << "no dir data for inode " << ino;
         continue;

@@ -7,9 +7,10 @@
 
 #pragma once
 #include <folly/Synchronized.h>
-#include "eden/fs/sqlite/Sqlite.h"
 
+#include "eden/fs/inodes/overlay/IOverlay.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/sqlite/Sqlite.h"
 
 namespace facebook {
 namespace eden {
@@ -22,10 +23,16 @@ using LockedDbPtr = folly::Synchronized<sqlite3*>::LockedPtr;
  * functionality. This is only used on Windows right now.
  */
 
-class SqliteOverlay {
+class SqliteOverlay : public IOverlay {
  public:
   explicit SqliteOverlay(AbsolutePathPiece localDir);
+
   ~SqliteOverlay();
+
+  SqliteOverlay(const SqliteOverlay&) = delete;
+  SqliteOverlay& operator=(const SqliteOverlay&) = delete;
+  SqliteOverlay(SqliteOverlay&&) = delete;
+  SqliteOverlay&& operator=(SqliteOverlay&&) = delete;
 
   /**
    * Initialize the overlay, and load the nextInodeNumber. The "close"
@@ -36,29 +43,32 @@ class SqliteOverlay {
    * DB and the tables are created or opened in the contructor and are closed in
    * the destructor.
    */
-  std::optional<InodeNumber> initOverlay(bool createIfNonExisting);
+  std::optional<InodeNumber> initOverlay(bool createIfNonExisting) override;
 
   /**
    *  Gracefully, shutdown the overlay, persisting the overlay's
    * nextInodeNumber.
    */
-  void close(std::optional<InodeNumber> nextInodeNumber);
+  void close(std::optional<InodeNumber> nextInodeNumber) override;
 
-  const AbsolutePath& getLocalDir() const {
+  const AbsolutePath& getLocalDir() const override {
     return localDir_;
   }
 
   /**
    * Was FsOverlay initialized - i.e., is cleanup (close) necessary.
    */
-  bool initialized() const {
+  bool initialized() const override {
     return bool(db_);
   }
 
-  void saveOverlayDir(InodeNumber inodeNumber, const overlay::OverlayDir& odir);
-  std::optional<overlay::OverlayDir> loadOverlayDir(InodeNumber inodeNumber);
-  void removeOverlayData(InodeNumber inodeNumber);
-  bool hasOverlayData(InodeNumber inodeNumber);
+  void saveOverlayDir(InodeNumber inodeNumber, const overlay::OverlayDir& odir)
+      override;
+  std::optional<overlay::OverlayDir> loadOverlayDir(
+      InodeNumber inodeNumber) override;
+
+  void removeOverlayData(InodeNumber inodeNumber) override;
+  bool hasOverlayData(InodeNumber inodeNumber) override;
 
   /**
    * Update the last used Inode number to a new value. This is a stop gap
@@ -74,7 +84,7 @@ class SqliteOverlay {
    * the Inode number stored in the Sqlite.
    *
    */
-  void updateUsedInodeNumber(uint64_t usedInodeNumber);
+  void updateUsedInodeNumber(uint64_t usedInodeNumber) override;
 
  private:
   std::optional<std::string> load(uint64_t inodeNumber) const;

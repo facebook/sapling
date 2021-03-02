@@ -585,7 +585,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
 
   void tryRemoveInode(RepairState& repair, InodeNumber number) const {
     try {
-      repair.fs()->removeOverlayFile(number);
+      repair.fs()->removeOverlayData(number);
     } catch (const std::system_error& ex) {
       // If we fail to remove the file log an error, but proceed with the rest
       // of the fsck repairs rather than letting the exception propagate up
