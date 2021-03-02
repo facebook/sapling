@@ -39,6 +39,12 @@ pub struct SamplingBlobstore<T> {
     handler: Arc<dyn SamplingHandler>,
 }
 
+impl<T: std::fmt::Display> std::fmt::Display for SamplingBlobstore<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "SamplingBlobstore<{}>", &self.inner)
+    }
+}
+
 impl<T> SamplingBlobstore<T> {
     pub fn new(inner: T, handler: Arc<dyn SamplingHandler>) -> Self {
         Self { inner, handler }

@@ -21,6 +21,7 @@ use tunables::tunables;
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
 
 const BLOBSTORE_ID: &str = "blobstore_id";
+const BLOBSTORE_TYPE: &str = "blobstore_type";
 const COMPLETION_TIME: &str = "completion_time";
 const ERROR: &str = "error";
 const KEY: &str = "key";
@@ -56,11 +57,13 @@ fn add_common_values(
     stats: FutureStats,
     operation: OperationType,
     blobstore_id: Option<BlobstoreId>,
+    blobstore_type: impl ToString,
 ) {
     scuba
         .add(KEY, key)
         .add(OPERATION, operation)
-        .add(COMPLETION_TIME, stats.completion_time.as_micros_unchecked());
+        .add(COMPLETION_TIME, stats.completion_time.as_micros_unchecked())
+        .add(BLOBSTORE_TYPE, blobstore_type.to_string());
 
     pc.insert_nonzero_perf_counters(scuba);
 
@@ -82,8 +85,18 @@ pub fn record_get_stats(
     session: &str,
     operation: OperationType,
     blobstore_id: Option<BlobstoreId>,
+    blobstore_type: impl ToString,
 ) {
-    add_common_values(scuba, pc, key, session, stats, operation, blobstore_id);
+    add_common_values(
+        scuba,
+        pc,
+        key,
+        session,
+        stats,
+        operation,
+        blobstore_id,
+        blobstore_type,
+    );
 
     match result {
         Ok(Some(data)) => {
@@ -115,9 +128,19 @@ pub fn record_put_stats(
     operation: OperationType,
     size: usize,
     blobstore_id: Option<BlobstoreId>,
+    blobstore_type: impl ToString,
     write_order: Option<usize>,
 ) {
-    add_common_values(scuba, pc, key, session, stats, operation, blobstore_id);
+    add_common_values(
+        scuba,
+        pc,
+        key,
+        session,
+        stats,
+        operation,
+        blobstore_id,
+        blobstore_type,
+    );
     scuba.add(SIZE, size);
 
     match result {

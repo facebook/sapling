@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::ops::Deref;
+use std::{fmt::Display, ops::Deref};
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -42,6 +42,12 @@ define_stats_struct! {
 pub struct CountedBlobstore<T> {
     blobstore: T,
     stats: CountedBlobstoreStats,
+}
+
+impl<T: Display> Display for CountedBlobstore<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CountedBlob<{}>", &self.blobstore)
+    }
 }
 
 impl<T> CountedBlobstore<T> {

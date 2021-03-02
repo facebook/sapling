@@ -19,6 +19,12 @@ pub struct ReadOnlyBlobstore<T> {
     blobstore: T,
 }
 
+impl<T: std::fmt::Display> std::fmt::Display for ReadOnlyBlobstore<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ReadOnlyBlobstore<{}>", &self.blobstore)
+    }
+}
+
 impl<T> ReadOnlyBlobstore<T> {
     pub fn new(blobstore: T) -> Self {
         Self { blobstore }

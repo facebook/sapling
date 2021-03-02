@@ -27,6 +27,12 @@ pub struct DelayedBlobstore<B> {
     put_dist: Normal,
 }
 
+impl<B: std::fmt::Display> std::fmt::Display for DelayedBlobstore<B> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "DelayedBlobstore<{}>", &self.inner)
+    }
+}
+
 impl<B> DelayedBlobstore<B> {
     pub fn new(inner: B, get_dist: Normal, put_dist: Normal) -> Self {
         Self {

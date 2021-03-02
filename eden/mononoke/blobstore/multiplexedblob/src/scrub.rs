@@ -128,6 +128,12 @@ pub struct ScrubBlobstore {
     queue: Arc<dyn BlobstoreSyncQueue>,
 }
 
+impl fmt::Display for ScrubBlobstore {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "ScrubBlobstore[{}]", self.inner.blobstore.as_ref())
+    }
+}
+
 impl ScrubBlobstore {
     pub fn new(
         multiplex_id: MultiplexId,

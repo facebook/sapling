@@ -18,6 +18,12 @@ pub struct TracingBlobstore<T> {
     gets: Arc<Mutex<Vec<String>>>,
 }
 
+impl<T: std::fmt::Display> std::fmt::Display for TracingBlobstore<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "TracingBlobstore<{}>", &self.inner)
+    }
+}
+
 impl<T> TracingBlobstore<T> {
     pub fn new(inner: T) -> Self {
         let gets = Arc::new(Mutex::new(vec![]));

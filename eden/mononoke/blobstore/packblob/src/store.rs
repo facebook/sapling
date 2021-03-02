@@ -40,6 +40,12 @@ pub struct PackBlob<T> {
     options: PackOptions,
 }
 
+impl<T: std::fmt::Display> std::fmt::Display for PackBlob<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "PackBlob<{}>", &self.inner)
+    }
+}
+
 impl<T> PackBlob<T> {
     pub fn new(inner: T, options: PackOptions) -> Self {
         Self { inner, options }

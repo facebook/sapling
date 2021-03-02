@@ -57,6 +57,12 @@ pub struct CachelibOps {
     options: CachelibBlobstoreOptions,
 }
 
+impl std::fmt::Display for CachelibOps {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "CachelibOps")
+    }
+}
+
 impl CachelibOps {
     pub fn new(
         blob_pool: Arc<LruCachePool>,

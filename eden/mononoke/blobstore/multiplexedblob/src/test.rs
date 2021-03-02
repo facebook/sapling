@@ -56,6 +56,12 @@ impl<T: fmt::Debug> fmt::Debug for Tickable<T> {
     }
 }
 
+impl<T> fmt::Display for Tickable<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Tickable")
+    }
+}
+
 impl<T> Tickable<T> {
     pub fn new() -> Self {
         Self {

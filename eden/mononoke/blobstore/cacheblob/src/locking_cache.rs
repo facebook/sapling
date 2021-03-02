@@ -65,7 +65,7 @@ pub trait CacheBlobstoreExt: Blobstore {
 /// Caches that do not support LeaseOps do not have the Leased state.
 #[async_trait]
 #[auto_impl(Arc)]
-pub trait CacheOps: fmt::Debug + Send + Sync {
+pub trait CacheOps: fmt::Display + fmt::Debug + Send + Sync {
     const HIT_COUNTER: Option<PerfCounterType> = None;
     const MISS_COUNTER: Option<PerfCounterType> = None;
     const CACHE_NAME: &'static str = "unknown";
@@ -92,7 +92,7 @@ pub trait CacheOps: fmt::Debug + Send + Sync {
 /// store.
 #[async_trait]
 #[auto_impl(Arc)]
-pub trait LeaseOps: fmt::Debug + Send + Sync {
+pub trait LeaseOps: fmt::Display + fmt::Debug + Send + Sync {
     /// Ask the cache to attempt to lock out other users of this cache for a particular key.
     /// This is an atomic test-and-set of the cache entry; it tests that the entry is Empty, and if
     /// the entry is Empty, it changes it to the Leased state.
@@ -128,6 +128,21 @@ where
     cache: C,
     lease: L,
     lazy_cache_put: bool,
+}
+
+impl<C, L, T> fmt::Display for CacheBlobstore<C, L, T>
+where
+    C: CacheOps + Clone,
+    L: LeaseOps + Clone,
+    T: Blobstore,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "CacheBlobstore<{}, {}, {}>",
+            &self.cache, &self.lease, &self.blobstore
+        )
+    }
 }
 
 impl<C, L, T> CacheBlobstore<C, L, T>

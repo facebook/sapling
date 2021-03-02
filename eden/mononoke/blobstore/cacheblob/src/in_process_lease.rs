@@ -25,6 +25,12 @@ pub struct InProcessLease {
     leases: Arc<Mutex<HashMap<String, (Sender<()>, Shared<Receiver<()>>)>>>,
 }
 
+impl std::fmt::Display for InProcessLease {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "InProcessLease")
+    }
+}
+
 impl InProcessLease {
     pub fn new() -> Self {
         Self {

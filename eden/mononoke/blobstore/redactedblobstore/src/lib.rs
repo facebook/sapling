@@ -70,11 +70,23 @@ pub struct RedactedBlobstoreInner<T> {
     config: RedactedBlobstoreConfig,
 }
 
+impl<T: std::fmt::Display> std::fmt::Display for RedactedBlobstoreInner<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RedactedBlobstoreInner<{}>", &self.blobstore)
+    }
+}
+
 // A wrapper for any blobstore, which provides a verification layer for the redacted blobs.
 // The goal is to deny access to fetch sensitive data from the repository.
 #[derive(Debug, Clone)]
 pub struct RedactedBlobstore<T> {
     inner: Arc<RedactedBlobstoreInner<T>>,
+}
+
+impl<T: std::fmt::Display> std::fmt::Display for RedactedBlobstore<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RedactedBlobstore<{}>", &self.inner.blobstore)
+    }
 }
 
 impl<T> Deref for RedactedBlobstore<T> {

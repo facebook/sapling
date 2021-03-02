@@ -33,6 +33,12 @@ type RepoBlobstoreStack<T> = RedactedBlobstore<PrefixBlobstore<T>>;
 #[derive(Clone, Debug)]
 pub struct AbstractRepoBlobstore<T>(RepoBlobstoreStack<T>);
 
+impl<T: std::fmt::Display> std::fmt::Display for AbstractRepoBlobstore<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "AbstractRepoBlobstore<{}>", self.0)
+    }
+}
+
 impl<T: Blobstore + Clone> AbstractRepoBlobstore<T> {
     pub fn as_parts(&self) -> (T, RedactedBlobstoreConfig) {
         let (blobstore, redacted_blobstore_config) = self.0.as_parts();

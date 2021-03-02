@@ -28,6 +28,12 @@ pub struct MemWritesBlobstore<T> {
     cache: Arc<Mutex<HashMap<String, BlobstoreBytes>>>,
 }
 
+impl<T: std::fmt::Display> std::fmt::Display for MemWritesBlobstore<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "MemWritesBlobstore<{}>", self.inner)
+    }
+}
+
 impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
     pub fn new(blobstore: T) -> Self {
         Self {

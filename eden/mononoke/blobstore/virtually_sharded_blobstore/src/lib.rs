@@ -162,6 +162,12 @@ pub struct VirtuallyShardedBlobstore<T> {
     inner: Arc<Inner<T>>,
 }
 
+impl<T: fmt::Display> fmt::Display for VirtuallyShardedBlobstore<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "VirtuallyShardedBlobstore<{}>", &self.inner.blobstore)
+    }
+}
+
 impl<T> VirtuallyShardedBlobstore<T> {
     pub fn new(
         blobstore: T,
@@ -599,6 +605,12 @@ mod test {
             data: Arc<Mutex<HashMap<String, Blob>>>,
         }
 
+        impl std::fmt::Display for TestBlobstore {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(f, "TestBlobstore")
+            }
+        }
+
         impl TestBlobstore {
             fn new() -> Self {
                 Self {
@@ -1015,6 +1027,12 @@ mod test {
         impl DummyBlob {
             fn new() -> Self {
                 Self
+            }
+        }
+
+        impl std::fmt::Display for DummyBlob {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(f, "DummyBlob")
             }
         }
 

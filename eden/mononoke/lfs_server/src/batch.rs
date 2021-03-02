@@ -900,6 +900,12 @@ mod test {
         hits: Arc<AtomicU64>,
     }
 
+    impl<B: std::fmt::Display> std::fmt::Display for HideBlob<B> {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "HideBlob<{}>", &self.inner)
+        }
+    }
+
     #[async_trait]
     impl<B: Blobstore> Blobstore for HideBlob<B> {
         async fn get<'a>(

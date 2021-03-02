@@ -71,6 +71,12 @@ pub struct ThrottledBlob<T: fmt::Debug> {
     options: ThrottleOptions,
 }
 
+impl<T: fmt::Display + fmt::Debug> fmt::Display for ThrottledBlob<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ReadOnlyBlobstore<{}>", &self.blobstore)
+    }
+}
+
 static JITTER_MAX: Duration = Duration::from_millis(5);
 
 fn jitter() -> Jitter {

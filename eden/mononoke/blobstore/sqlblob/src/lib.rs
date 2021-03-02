@@ -79,6 +79,12 @@ pub struct Sqlblob {
     put_behaviour: PutBehaviour,
 }
 
+impl std::fmt::Display for Sqlblob {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Sqlblob")
+    }
+}
+
 fn get_gc_config_handle(config_store: &ConfigStore) -> Result<ConfigHandle<XdbGc>> {
     config_store.get_config_handle(GC_GENERATION_PATH.to_string())
 }

@@ -34,6 +34,12 @@ impl<B> FailingBlobstore<B> {
     }
 }
 
+impl<B: std::fmt::Display> std::fmt::Display for FailingBlobstore<B> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "FailingBlobstore<{}>", &self.inner)
+    }
+}
+
 #[async_trait]
 impl<B: Blobstore> Blobstore for FailingBlobstore<B> {
     async fn get<'a>(

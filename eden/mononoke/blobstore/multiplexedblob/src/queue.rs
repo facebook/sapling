@@ -52,6 +52,12 @@ impl MultiplexedBlobstore {
     }
 }
 
+impl fmt::Display for MultiplexedBlobstore {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "MultiplexedBlobstore[{}]", self.blobstore.as_ref())
+    }
+}
+
 impl fmt::Debug for MultiplexedBlobstore {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MultiplexedBlobstore")

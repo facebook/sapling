@@ -52,6 +52,12 @@ pub struct ChaosBlobstore<T> {
     options: ChaosOptions,
 }
 
+impl<T: std::fmt::Display> std::fmt::Display for ChaosBlobstore<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ChaosBlobstore<{}>", &self.blobstore)
+    }
+}
+
 fn derive_threshold(sample_rate: Option<NonZeroU32>) -> f32 {
     sample_rate
         .map(|rate| {

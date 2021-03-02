@@ -1331,6 +1331,12 @@ mod tests {
         }
     }
 
+    impl std::fmt::Display for FailingBlobstore {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "FailingBlobstore")
+        }
+    }
+
     #[async_trait]
     impl Blobstore for FailingBlobstore {
         async fn put<'a>(
@@ -1360,6 +1366,12 @@ mod tests {
     struct CountingBlobstore {
         count: AtomicUsize,
         inner: Arc<dyn Blobstore>,
+    }
+
+    impl std::fmt::Display for CountingBlobstore {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "CountingBlobstore")
+        }
     }
 
     impl CountingBlobstore {

@@ -25,7 +25,7 @@ pub struct LogBlob<B> {
     scuba_sample_rate: NonZeroU64,
 }
 
-impl<B> LogBlob<B> {
+impl<B: std::fmt::Debug> LogBlob<B> {
     pub fn new(
         inner: B,
         mut scuba: MononokeScubaSampleBuilder,
@@ -37,6 +37,12 @@ impl<B> LogBlob<B> {
             scuba,
             scuba_sample_rate,
         }
+    }
+}
+
+impl<T: std::fmt::Display> std::fmt::Display for LogBlob<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LogBlob<{}>", &self.inner)
     }
 }
 
@@ -67,6 +73,7 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
             ctx.metadata().session_id().as_str(),
             OperationType::Get,
             None,
+            &self.inner,
         );
         result
     }
@@ -122,6 +129,7 @@ impl<B: BlobstorePutOps> LogBlob<B> {
             OperationType::Put,
             size,
             None,
+            &self.inner,
             None,
         );
         result

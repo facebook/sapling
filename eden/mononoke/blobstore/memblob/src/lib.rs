@@ -90,6 +90,12 @@ pub struct Memblob {
     put_behaviour: PutBehaviour,
 }
 
+impl std::fmt::Display for Memblob {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Memblob")
+    }
+}
+
 impl Memblob {
     pub fn new(put_behaviour: PutBehaviour) -> Self {
         Self {

@@ -69,6 +69,12 @@ impl Fileblob {
     }
 }
 
+impl std::fmt::Display for Fileblob {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Fileblob")
+    }
+}
+
 async fn ctime(file: &File) -> Option<i64> {
     let meta = file.metadata().await.ok()?;
     let ctime = meta.modified().ok()?;

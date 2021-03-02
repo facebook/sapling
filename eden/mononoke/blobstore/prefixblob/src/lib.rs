@@ -24,6 +24,12 @@ pub struct PrefixBlobstore<T> {
     blobstore: T,
 }
 
+impl<T: std::fmt::Display> std::fmt::Display for PrefixBlobstore<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "PrefixBlobstore<{}>", &self.blobstore)
+    }
+}
+
 impl<T> PrefixBlobstore<T> {
     pub fn into_inner(self) -> T {
         self.blobstore

@@ -279,7 +279,7 @@ impl From<BlobstoreBytesSerialisable> for BlobstoreBytes {
 /// uses of Blobstores
 #[async_trait]
 #[auto_impl(&, Arc, Box)]
-pub trait Blobstore: fmt::Debug + Send + Sync {
+pub trait Blobstore: fmt::Display + fmt::Debug + Send + Sync {
     /// Fetch the value associated with `key`, or None if no value is present
     async fn get<'a>(
         &'a self,

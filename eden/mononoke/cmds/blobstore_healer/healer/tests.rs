@@ -25,6 +25,12 @@ pub struct PutFailingMemblob {
     fail_puts: Arc<Mutex<bool>>,
 }
 
+impl std::fmt::Display for PutFailingMemblob {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "PutFailingMemblob")
+    }
+}
+
 impl PutFailingMemblob {
     pub fn new() -> Self {
         Self {

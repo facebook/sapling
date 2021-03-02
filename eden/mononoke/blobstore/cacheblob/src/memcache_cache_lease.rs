@@ -76,6 +76,12 @@ pub struct MemcacheOps {
     hostname: String,
 }
 
+impl std::fmt::Display for MemcacheOps {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "MemcacheOps")
+    }
+}
+
 const MEMCACHE_MAX_SIZE: usize = 1024000;
 const MC_CODEVER: u32 = 0;
 const MC_SITEVER: u32 = 1;

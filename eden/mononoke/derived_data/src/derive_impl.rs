@@ -923,6 +923,12 @@ mod test {
     #[derive(Debug)]
     struct FailingLease;
 
+    impl std::fmt::Display for FailingLease {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "FailingLease")
+        }
+    }
+
     #[async_trait]
     impl LeaseOps for FailingLease {
         async fn try_add_put_lease(&self, _key: &str) -> Result<bool> {

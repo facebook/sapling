@@ -18,6 +18,12 @@ use crate::{CacheOps, LeaseOps};
 #[derive(Clone, Debug)]
 pub struct DummyLease {}
 
+impl std::fmt::Display for DummyLease {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "DummyLease")
+    }
+}
+
 #[async_trait]
 impl LeaseOps for DummyLease {
     async fn try_add_put_lease(&self, _key: &str) -> Result<bool> {
@@ -34,6 +40,12 @@ impl LeaseOps for DummyLease {
 /// A dummy implementation of CacheOps that meets the letter of the spec, but uselessly
 #[derive(Clone, Debug)]
 pub struct DummyCache {}
+
+impl std::fmt::Display for DummyCache {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "DummyCache")
+    }
+}
 
 #[async_trait]
 impl CacheOps for DummyCache {

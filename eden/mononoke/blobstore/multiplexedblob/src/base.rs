@@ -105,6 +105,22 @@ pub struct MultiplexedBlobstoreBase {
     scuba_sample_rate: NonZeroU64,
 }
 
+impl std::fmt::Display for MultiplexedBlobstoreBase {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let blobstores: Vec<_> = self.blobstores.iter().map(|(id, _)| *id).collect();
+        let write_mostly_blobstores: Vec<_> = self
+            .write_mostly_blobstores
+            .iter()
+            .map(|(id, _)| *id)
+            .collect();
+        write!(
+            f,
+            "Normal {:?}, write mostly {:?}",
+            blobstores, write_mostly_blobstores
+        )
+    }
+}
+
 fn write_mostly_error(
     blobstores: &[(BlobstoreId, Arc<dyn BlobstorePutOps>)],
     errors: HashMap<BlobstoreId, Error>,
@@ -270,6 +286,7 @@ pub async fn inner_put(
         OperationType::Put,
         size,
         Some(blobstore_id),
+        blobstore,
         Some(write_order.fetch_add(1, Ordering::Relaxed) + 1),
     );
     (blobstore_id, result)
@@ -678,6 +695,7 @@ async fn multiplexed_get_one<'a>(
         ctx.metadata().session_id().as_str(),
         operation,
         Some(blobstore_id),
+        blobstore,
     );
     (blobstore_id, result)
 }
