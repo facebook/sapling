@@ -20,6 +20,8 @@ void checkSqliteResult(sqlite3* db, int result);
 /** A helper class for managing a handle to a sqlite database. */
 class SqliteDatabase {
  public:
+  using Connection = folly::Synchronized<sqlite3*>::LockedPtr;
+
   constexpr static struct InMemory {
   } inMemory{};
 
@@ -53,7 +55,7 @@ class SqliteDatabase {
 
   /** Obtain a locked database pointer suitable for passing
    * to the SqliteStatement class. */
-  folly::Synchronized<sqlite3*>::LockedPtr lock();
+  Connection lock();
 
  private:
   explicit SqliteDatabase(const char* address);
@@ -72,9 +74,7 @@ class SqliteDatabase {
 class SqliteStatement {
  public:
   /** Prepare to execute the statement described by the `query` parameter */
-  SqliteStatement(
-      folly::Synchronized<sqlite3*>::LockedPtr& db,
-      folly::StringPiece query);
+  SqliteStatement(SqliteDatabase::Connection& db, folly::StringPiece query);
 
   /** Join together the arguments as a single query string and prepare a
    * statement to execute them.
@@ -84,7 +84,7 @@ class SqliteStatement {
    * cases where the query string is known at compile time. */
   template <typename Arg1, typename Arg2, typename... Args>
   SqliteStatement(
-      folly::Synchronized<sqlite3*>::LockedPtr& db,
+      SqliteDatabase::Connection& db,
       Arg1&& first,
       Arg2&& second,
       Args&&... args)
