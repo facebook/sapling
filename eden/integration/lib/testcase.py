@@ -10,6 +10,7 @@ import inspect
 import logging
 import os
 import pathlib
+import sys
 import time
 import typing
 import unittest
@@ -300,6 +301,16 @@ class EdenTestCase(EdenTestCaseBase):
         the tests that restart to override this and pick something else.
         """
         return "memory"
+
+    @staticmethod
+    def unix_only(fn):
+        """
+        Decorator that only runs this test on unix platforms.
+        """
+        if sys.platform == "win32":
+            return None
+        else:
+            return fn
 
 
 # pyre-ignore[13]: T62487924

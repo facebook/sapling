@@ -6,6 +6,8 @@
 
 import binascii
 import os
+import stat
+from typing import Dict
 
 from eden.integration.lib.hgrepo import HgRepository
 from facebook.eden.ttypes import (
@@ -207,6 +209,75 @@ enforce-parents = false
             self.assert_status({"subdir/file.txt": "M"})
         finally:
             os.close(fd)
+
+    def test_irrelevant_chmod_is_ignored_by_status(self) -> None:
+        path = os.path.join(self.mount, "hello.txt")
+        mode = os.lstat(path).st_mode
+        mode |= stat.S_IXGRP
+        os.chmod(path, mode)
+        self.assert_status_empty()
+
+
+@hg_test("TreeOnly")
+# pyre-ignore[13]: T62487924
+class StatusEdgeCaseTest(EdenHgTestCase):
+    commit1: str
+    commit2: str
+
+    def populate_backing_repo(self, repo: HgRepository) -> None:
+        repo.write_file("subdir/file.txt", "contents")
+        self.commit1 = repo.commit("commit 1")
+        repo.write_file("subdir/file.txt", "contents", mode=0o775)
+        self.commit2 = repo.commit("commit 2")
+        self.assertNotEqual(self.commit1, self.commit2)
+
+    def select_storage_engine(self) -> str:
+        """ we need to persist data across restarts """
+        return "sqlite"
+
+    def edenfs_logging_settings(self) -> Dict[str, str]:
+        return {
+            "eden.strace": "DBG7",
+            "eden.fs.inodes.TreeInode": "DBG9",
+        }
+
+    @EdenHgTestCase.unix_only
+    def test_file_created_with_relevant_mode_difference_and_then_fixed_is_ignored(
+        self,
+    ) -> None:
+        self.repo.update(self.commit1)
+        path = os.path.join(self.mount, "subdir", "file.txt")
+        os.unlink(path)
+        fd = os.open(path, os.O_CREAT | os.O_WRONLY, mode=0o775)
+        try:
+            os.write(fd, b"contents")
+        finally:
+            os.close(fd)
+
+        self.assert_status({"subdir/file.txt": "M"})
+        os.chmod(path, 0o664)
+        self.assert_status_empty()
+        self.repo.update(self.commit2)
+        self.eden.restart()
+        self.assert_status_empty()
+
+    @EdenHgTestCase.unix_only
+    def test_dematerialized_file_created_with_different_mode_is_unchanged(self) -> None:
+        path = os.path.join(self.mount, "subdir", "file.txt")
+        # save inode numbers and initial dtype
+        os.lstat(path)
+        # materialize and remove executable bit
+        os.chmod(path, 0o664)
+        self.assert_status({"subdir/file.txt": "M"})
+        # make an untracked file so the checkout doesn't reallocate inodes
+        os.close(os.open(os.path.join(self.mount, "subdir", "sibling"), os.O_CREAT))
+        self.repo.update(self.commit1, merge=True)
+        # put the old contents back
+        os.unlink(os.path.join(self.mount, "subdir", "sibling"))
+        self.assert_status_empty()
+        self.eden.restart()
+        os.chmod(os.path.join(self.mount, "subdir"), 0o664)
+        self.assert_status_empty()
 
 
 # Define a separate TestCase class purely to test with different initial
