@@ -2559,6 +2559,70 @@ class memctx(committablectx):
             self._text = editor(self._repo, self)
             self._repo.savecommitmessage(self._text)
 
+    @classmethod
+    def mirror(
+        cls,
+        ctx,
+        user=None,
+        date=None,
+        text=None,
+        extra=None,
+        parentnodes=None,
+        mutinfo=None,
+        loginfo=None,
+        editor=False,
+    ):
+        """mirror another ctx, make it "mutable"
+
+        Note: This is different from overlayworkingctx in 2 ways:
+
+        1. memctx does not deep copy file contexts. So if the ctx has LFS
+           files that are lazily loaded, those files are still lazily loaded
+           with the new memctx.
+
+        2. memctx.mirror is for "amend", while overlayworkingctx.setbase is for
+           "commit on top of". memctx.mirror can also be used for "commit", if
+           passing in workingctx or another memctx. overlayworkingctx would
+           require deep copying for the "amend" use-case.
+        """
+        repo = ctx.repo()
+        if parentnodes is None:
+            parentnodes = ([p.node() for p in ctx.parents()] + [nullid, nullid])[:2]
+        if text is None:
+            text = ctx.description()
+        if user is None:
+            user = ctx.user()
+        if date is None:
+            date = ctx.date()
+        if extra is None:
+            extra = ctx.extra()
+
+        def filectxfn(_repo, _ctx, path, ctx=ctx):
+            if path in ctx:
+                return ctx[path]
+            else:
+                # deleted file
+                return None
+
+        mctx = cls(
+            repo,
+            parents=parentnodes,
+            text=text,
+            files=ctx.files(),
+            filectxfn=filectxfn,
+            user=user,
+            date=date,
+            extra=extra,
+            loginfo=loginfo,
+            mutinfo=mutinfo,
+        )
+
+        if editor:
+            mctx._text = editor(repo, mctx)
+            repo.savecommitmessage(mctx._text)
+
+        return mctx
+
     def filectx(self, path, filelog=None):
         """get a file context from the working directory
 
