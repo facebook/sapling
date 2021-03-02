@@ -149,6 +149,8 @@ pub mod types {
         pub removedPaths: ::std::vec::Vec<crate::types::PathString>,
         #[serde(default)]
         pub uncleanPaths: ::std::vec::Vec<crate::types::PathString>,
+        #[serde(default)]
+        pub snapshotTransitions: ::std::vec::Vec<crate::types::BinaryHash>,
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
@@ -350,8 +352,6 @@ pub mod types {
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct FuseCall {
         #[serde(default)]
-        pub len: ::std::primitive::i32,
-        #[serde(default)]
         pub opcode: ::std::primitive::i32,
         #[serde(default)]
         pub unique: ::std::primitive::i64,
@@ -392,6 +392,8 @@ pub mod types {
         pub revisions: ::std::vec::Vec<crate::types::BinaryHash>,
         #[serde(default)]
         pub prefetchMetadata: ::std::primitive::bool,
+        #[serde(default)]
+        pub searchRoot: crate::types::PathString,
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
@@ -2339,6 +2341,7 @@ pub mod types {
                 createdPaths: ::std::default::Default::default(),
                 removedPaths: ::std::default::Default::default(),
                 uncleanPaths: ::std::default::Default::default(),
+                snapshotTransitions: ::std::default::Default::default(),
             }
         }
     }
@@ -2374,6 +2377,9 @@ pub mod types {
             p.write_field_begin("uncleanPaths", ::fbthrift::TType::List, 6);
             ::fbthrift::Serialize::write(&self.uncleanPaths, p);
             p.write_field_end();
+            p.write_field_begin("snapshotTransitions", ::fbthrift::TType::List, 7);
+            ::fbthrift::Serialize::write(&self.snapshotTransitions, p);
+            p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -2389,6 +2395,7 @@ pub mod types {
                 ::fbthrift::Field::new("createdPaths", ::fbthrift::TType::List, 4),
                 ::fbthrift::Field::new("fromPosition", ::fbthrift::TType::Struct, 1),
                 ::fbthrift::Field::new("removedPaths", ::fbthrift::TType::List, 5),
+                ::fbthrift::Field::new("snapshotTransitions", ::fbthrift::TType::List, 7),
                 ::fbthrift::Field::new("toPosition", ::fbthrift::TType::Struct, 2),
                 ::fbthrift::Field::new("uncleanPaths", ::fbthrift::TType::List, 6),
             ];
@@ -2398,6 +2405,7 @@ pub mod types {
             let mut field_createdPaths = ::std::option::Option::None;
             let mut field_removedPaths = ::std::option::Option::None;
             let mut field_uncleanPaths = ::std::option::Option::None;
+            let mut field_snapshotTransitions = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
@@ -2409,6 +2417,7 @@ pub mod types {
                     (::fbthrift::TType::List, 4) => field_createdPaths = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::List, 5) => field_removedPaths = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::List, 6) => field_uncleanPaths = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::List, 7) => field_snapshotTransitions = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -2421,6 +2430,7 @@ pub mod types {
                 createdPaths: field_createdPaths.unwrap_or_default(),
                 removedPaths: field_removedPaths.unwrap_or_default(),
                 uncleanPaths: field_uncleanPaths.unwrap_or_default(),
+                snapshotTransitions: field_snapshotTransitions.unwrap_or_default(),
             })
         }
     }
@@ -3835,7 +3845,6 @@ pub mod types {
     impl ::std::default::Default for self::FuseCall {
         fn default() -> Self {
             Self {
-                len: ::std::default::Default::default(),
                 opcode: ::std::default::Default::default(),
                 unique: ::std::default::Default::default(),
                 nodeid: ::std::default::Default::default(),
@@ -3861,9 +3870,6 @@ pub mod types {
     {
         fn write(&self, p: &mut P) {
             p.write_struct_begin("FuseCall");
-            p.write_field_begin("len", ::fbthrift::TType::I32, 1);
-            ::fbthrift::Serialize::write(&self.len, p);
-            p.write_field_end();
             p.write_field_begin("opcode", ::fbthrift::TType::I32, 2);
             ::fbthrift::Serialize::write(&self.opcode, p);
             p.write_field_end();
@@ -3902,7 +3908,6 @@ pub mod types {
         fn read(p: &mut P) -> ::anyhow::Result<Self> {
             static FIELDS: &[::fbthrift::Field] = &[
                 ::fbthrift::Field::new("gid", ::fbthrift::TType::I32, 6),
-                ::fbthrift::Field::new("len", ::fbthrift::TType::I32, 1),
                 ::fbthrift::Field::new("nodeid", ::fbthrift::TType::I64, 4),
                 ::fbthrift::Field::new("opcode", ::fbthrift::TType::I32, 2),
                 ::fbthrift::Field::new("opcodeName", ::fbthrift::TType::String, 8),
@@ -3911,7 +3916,6 @@ pub mod types {
                 ::fbthrift::Field::new("uid", ::fbthrift::TType::I32, 5),
                 ::fbthrift::Field::new("unique", ::fbthrift::TType::I64, 3),
             ];
-            let mut field_len = ::std::option::Option::None;
             let mut field_opcode = ::std::option::Option::None;
             let mut field_unique = ::std::option::Option::None;
             let mut field_nodeid = ::std::option::Option::None;
@@ -3925,7 +3929,6 @@ pub mod types {
                 let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
                 match (fty, fid as ::std::primitive::i32) {
                     (::fbthrift::TType::Stop, _) => break,
-                    (::fbthrift::TType::I32, 1) => field_len = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::I32, 2) => field_opcode = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::I64, 3) => field_unique = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::I64, 4) => field_nodeid = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
@@ -3940,7 +3943,6 @@ pub mod types {
             }
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
-                len: field_len.unwrap_or_default(),
                 opcode: field_opcode.unwrap_or_default(),
                 unique: field_unique.unwrap_or_default(),
                 nodeid: field_nodeid.unwrap_or_default(),
@@ -4021,6 +4023,7 @@ pub mod types {
                 wantDtype: ::std::default::Default::default(),
                 revisions: ::std::default::Default::default(),
                 prefetchMetadata: true,
+                searchRoot: ::std::default::Default::default(),
             }
         }
     }
@@ -4062,6 +4065,9 @@ pub mod types {
             p.write_field_begin("prefetchMetadata", ::fbthrift::TType::Bool, 8);
             ::fbthrift::Serialize::write(&self.prefetchMetadata, p);
             p.write_field_end();
+            p.write_field_begin("searchRoot", ::fbthrift::TType::String, 9);
+            ::fbthrift::Serialize::write(&self.searchRoot, p);
+            p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -4079,6 +4085,7 @@ pub mod types {
                 ::fbthrift::Field::new("prefetchFiles", ::fbthrift::TType::Bool, 4),
                 ::fbthrift::Field::new("prefetchMetadata", ::fbthrift::TType::Bool, 8),
                 ::fbthrift::Field::new("revisions", ::fbthrift::TType::List, 7),
+                ::fbthrift::Field::new("searchRoot", ::fbthrift::TType::String, 9),
                 ::fbthrift::Field::new("suppressFileList", ::fbthrift::TType::Bool, 5),
                 ::fbthrift::Field::new("wantDtype", ::fbthrift::TType::Bool, 6),
             ];
@@ -4090,6 +4097,7 @@ pub mod types {
             let mut field_wantDtype = ::std::option::Option::None;
             let mut field_revisions = ::std::option::Option::None;
             let mut field_prefetchMetadata = ::std::option::Option::None;
+            let mut field_searchRoot = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
@@ -4103,6 +4111,7 @@ pub mod types {
                     (::fbthrift::TType::Bool, 6) => field_wantDtype = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::List, 7) => field_revisions = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::Bool, 8) => field_prefetchMetadata = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::String, 9) => field_searchRoot = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -4117,6 +4126,7 @@ pub mod types {
                 wantDtype: field_wantDtype.unwrap_or_default(),
                 revisions: field_revisions.unwrap_or_default(),
                 prefetchMetadata: field_prefetchMetadata.unwrap_or_else(|| true),
+                searchRoot: field_searchRoot.unwrap_or_default(),
             })
         }
     }

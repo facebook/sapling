@@ -33,6 +33,7 @@ pub mod types {
         shard(::std::primitive::i32),
         user_shard(::std::primitive::i32),
         time_shard(crate::types::TimeShard),
+        host_prefixes(::std::vec::Vec<::std::string::String>),
         UnknownField(::std::primitive::i32),
     }
 
@@ -192,6 +193,11 @@ pub mod types {
                     ::fbthrift::Serialize::write(inner, p);
                     p.write_field_end();
                 }
+                Condition::host_prefixes(inner) => {
+                    p.write_field_begin("host_prefixes", ::fbthrift::TType::List, 13);
+                    ::fbthrift::Serialize::write(inner, p);
+                    p.write_field_end();
+                }
                 Condition::UnknownField(x) => {
                     p.write_field_begin("UnknownField", ::fbthrift::TType::I32, *x as ::std::primitive::i16);
                     x.write(p);
@@ -212,6 +218,7 @@ pub mod types {
                 ::fbthrift::Field::new("and_condition", ::fbthrift::TType::List, 2),
                 ::fbthrift::Field::new("domains", ::fbthrift::TType::List, 6),
                 ::fbthrift::Field::new("group", ::fbthrift::TType::String, 9),
+                ::fbthrift::Field::new("host_prefixes", ::fbthrift::TType::List, 13),
                 ::fbthrift::Field::new("hosts", ::fbthrift::TType::List, 8),
                 ::fbthrift::Field::new("not_condition", ::fbthrift::TType::Struct, 1),
                 ::fbthrift::Field::new("or_condition", ::fbthrift::TType::List, 3),
@@ -276,6 +283,10 @@ pub mod types {
                     (::fbthrift::TType::Struct, 12, false) => {
                         once = true;
                         alt = ::std::option::Option::Some(Condition::time_shard(::fbthrift::Deserialize::read(p)?));
+                    }
+                    (::fbthrift::TType::List, 13, false) => {
+                        once = true;
+                        alt = ::std::option::Option::Some(Condition::host_prefixes(::fbthrift::Deserialize::read(p)?));
                     }
                     (fty, _, false) => p.skip(fty)?,
                     (badty, badid, true) => return ::std::result::Result::Err(::std::convert::From::from(::fbthrift::ApplicationException::new(

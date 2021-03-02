@@ -19,6 +19,7 @@ use anyhow::Error;
 use anyhow::{anyhow, bail, Result};
 use hostname;
 use minibytes::Text;
+use regex::Regex;
 use serde_json::{self, Value};
 
 use hgtime::HgTime;
@@ -131,6 +132,7 @@ pub struct Generator {
     platform: Platform,
     domain: Domain,
     hostname: String,
+    hostname_prefix: String,
     pass_all_shards: bool,
 }
 
@@ -161,6 +163,13 @@ impl Generator {
             .to_string()
             .to_lowercase();
 
+        let re: Regex = Regex::new(r"([a-zA-Z\-]+)\d+.*").unwrap();
+        let hostname_prefix = re
+            .captures(&hostname)
+            .map(|c| c.get(1))
+            .flatten()
+            .map_or("".to_string(), |m| m.as_str().to_string());
+
         let shard = get_shard(&hostname);
         let user_shard = get_shard(&user_name);
 
@@ -187,6 +196,7 @@ impl Generator {
             platform,
             domain,
             hostname,
+            hostname_prefix,
             pass_all_shards,
         })
     }
@@ -214,6 +224,11 @@ impl Generator {
         self.tiers = tiers;
         self.group = group;
         self.shard = shard;
+    }
+
+    #[allow(dead_code)]
+    pub fn hostname_prefix(&self) -> &str {
+        &self.hostname_prefix
     }
 
     #[allow(dead_code)]

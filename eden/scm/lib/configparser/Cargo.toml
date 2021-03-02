@@ -15,6 +15,7 @@ os_info = "2.0.1"
 parking_lot = "0.9"
 pest = "2.1.0"
 pest_derive = "2.1.0"
+regex = "1.4.2"
 reqwest = { version = "0.10", features = ["blocking"], optional = true }
 serde_json = { version = "1.0" }
 sha2 = { version = "0.8", optional = true }
