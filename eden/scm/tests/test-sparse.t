@@ -1,10 +1,13 @@
 #chg-compatible
 
+  $ setconfig experimental.nativecheckout=true
+  $ newserver server
+
 test sparse
 
   $ enable sparse
-  $ hg init myrepo
-  $ cd myrepo
+  $ newremoterepo myrepo
+  $ enable sparse
 
   $ echo a > show
   $ echo x > hide

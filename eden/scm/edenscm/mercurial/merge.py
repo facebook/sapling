@@ -2287,6 +2287,15 @@ def update(
             else:
                 repo.ui.debug("Using native checkout\n")
 
+                sparsematch = getattr(repo, "sparsematch", None)
+                if sparsematch is not None:
+                    revs = {fp1, fp2}
+                    revs -= {nullid}
+                    sparsematcher = sparsematch(*list(revs))
+                    # Ignore files that are not in either source or target sparse match
+                    # This is not enough if sparse profile changes, but works for checkout within same sparse profile
+                    matcher = matchmod.intersectmatchers(matcher, sparsematcher)
+
                 if matcher is not None and matcher.always():
                     matcher = None
 
