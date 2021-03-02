@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, format_err, Result};
+use anyhow::{bail, format_err, Error, Result};
 use futures::{stream, try_join, Stream, StreamExt};
-use manifest::{DiffEntry, DiffType, FileMetadata, FileType};
+use manifest::{DiffEntry, DiffType, FileMetadata, FileType, Manifest};
+use pathmatcher::{Matcher, XorMatcher};
 use revisionstore::{HgIdDataStore, RemoteDataStore, StoreKey, StoreResult};
 use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -67,7 +68,7 @@ impl CheckoutPlan {
             match item.diff_type {
                 DiffType::LeftOnly(_) => remove.push(item.path),
                 DiffType::RightOnly(meta) => {
-                    update_content.push(UpdateContentAction::new(item, meta))
+                    update_content.push(UpdateContentAction::new(item.path, meta))
                 }
                 DiffType::Changed(old, new) => {
                     match (old.hgid == new.hgid, old.file_type, new.file_type) {
@@ -84,7 +85,7 @@ impl CheckoutPlan {
                             });
                         }
                         _ => {
-                            update_content.push(UpdateContentAction::new(item, new));
+                            update_content.push(UpdateContentAction::new(item.path, new));
                         }
                     }
                 }
@@ -95,6 +96,49 @@ impl CheckoutPlan {
             update_content,
             update_meta,
         })
+    }
+
+    // todo - tests
+    /// Updates current plan to account for sparse profile change
+    pub fn with_sparse_profile_change(
+        mut self,
+        old_matcher: &impl Matcher,
+        new_matcher: &impl Matcher,
+        new_manifest: &impl Manifest,
+    ) -> Result<Self> {
+        let mut error: Option<Error> = None;
+        // First - remove all the files that were scheduled for update, but actually aren't in new sparse profile
+        // todo handle self.update_meta
+        self.update_content.retain(|update| {
+            if error.is_some() {
+                return true;
+            }
+            match new_matcher.matches_file(&update.path) {
+                Ok(v) => v,
+                Err(err) => {
+                    error = Some(err);
+                    true
+                }
+            }
+        });
+        if let Some(error) = error {
+            return Err(error);
+        }
+
+        // Second - handle files in a new manifest, that were affected by sparse profile change
+        let xor_matcher = XorMatcher::new(old_matcher, new_matcher);
+        for file in new_manifest.files(&xor_matcher) {
+            let file = file?;
+            if new_matcher.matches_file(&file.path)? {
+                self.update_content
+                    .push(UpdateContentAction::new(file.path, file.meta));
+            } else {
+                // by definition of xor matcher this means old_matcher.matches_file==true
+                self.remove.push(file.path);
+            }
+        }
+
+        Ok(self)
     }
 
     /// Applies plan to the root using store to fetch data.
@@ -324,9 +368,9 @@ fn type_to_flag(ft: &FileType) -> Option<UpdateFlag> {
 }
 
 impl UpdateContentAction {
-    pub fn new(item: DiffEntry, meta: FileMetadata) -> Self {
+    pub fn new(path: RepoPathBuf, meta: FileMetadata) -> Self {
         Self {
-            path: item.path,
+            path,
             content_hgid: meta.hgid,
             file_type: meta.file_type,
         }
