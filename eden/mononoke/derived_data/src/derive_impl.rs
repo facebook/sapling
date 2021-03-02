@@ -374,7 +374,7 @@ where
                         &mut derived_data_scuba,
                         &bcs_id,
                         &stats,
-                        res.is_ok(),
+                        &res,
                     );
                     let _ = sender.send(());
                     res?;
@@ -469,28 +469,35 @@ fn log_derivation_end<Derivable>(
     derived_data_scuba: &mut MononokeScubaSampleBuilder,
     bcs_id: &ChangesetId,
     stats: &FutureStats,
-    success: bool,
+    res: &Result<(), Error>,
 ) where
     Derivable: BonsaiDerivable,
 {
-    let tag = if success {
+    let tag = if res.is_ok() {
         "Generated derived data"
     } else {
         "Failed to generate derived data"
     };
 
     let msg = Some(format!("{} {}", Derivable::NAME, bcs_id));
-    ctx.scuba()
-        .clone()
-        .add_future_stats(&stats)
-        .log_with_msg(tag, msg.clone());
+    let mut scuba_sample = ctx.scuba().clone();
+    scuba_sample.add_future_stats(&stats);
+    if let Err(err) = res {
+        scuba_sample.add("Derive error", format!("{:#}", err));
+    };
+    scuba_sample.log_with_msg(tag, msg.clone());
 
     ctx.perf_counters().insert_perf_counters(derived_data_scuba);
+
+    let msg = match res {
+        Ok(_) => None,
+        Err(err) => Some(format!("{:#}", err)),
+    };
 
     derived_data_scuba
         .add_future_stats(&stats)
         // derived data name and bcs_id already logged as separate fields
-        .log_with_msg(tag, None);
+        .log_with_msg(tag, msg);
 
     STATS::derived_data_latency.add_value(
         stats.completion_time.as_millis_unchecked() as i64,
