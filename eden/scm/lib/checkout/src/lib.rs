@@ -98,7 +98,6 @@ impl CheckoutPlan {
         })
     }
 
-    // todo - tests
     /// Updates current plan to account for sparse profile change
     pub fn with_sparse_profile_change(
         mut self,
@@ -356,6 +355,15 @@ impl CheckoutPlan {
             self.remove.len(),
         )
     }
+
+    #[cfg(test)]
+    pub fn empty() -> Self {
+        Self {
+            remove: vec![],
+            update_content: vec![],
+            update_meta: vec![],
+        }
+    }
 }
 
 // todo: possibly migrate VFS api to use FileType?
@@ -386,7 +394,7 @@ mod test {
     use anyhow::Context;
     use manifest_tree::testutil::make_tree_manifest_from_meta;
     use manifest_tree::Diff;
-    use pathmatcher::AlwaysMatcher;
+    use pathmatcher::{AlwaysMatcher, TreeMatcher};
     use quickcheck::{Arbitrary, StdGen};
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
@@ -438,6 +446,46 @@ mod test {
                 assert_checkout(a, b).await?;
             }
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_with_sparse_profile_change() -> Result<()> {
+        let a = (rp("a"), FileMetadata::regular(hgid(1)));
+        let b = (rp("b"), FileMetadata::regular(hgid(2)));
+        let c = (rp("c"), FileMetadata::regular(hgid(3)));
+        let ab_profile = TreeMatcher::from_rules(["a/**", "b/**"].iter())?;
+        let ac_profile = TreeMatcher::from_rules(["a/**", "c/**"].iter())?;
+        let manifest = make_tree_manifest_from_meta(vec![a, b, c]);
+
+        let plan = CheckoutPlan::empty().with_sparse_profile_change(
+            &ab_profile,
+            &ab_profile,
+            &manifest,
+        )?;
+        assert_eq!("", &plan.to_string());
+
+        let plan = CheckoutPlan::empty().with_sparse_profile_change(
+            &ab_profile,
+            &ac_profile,
+            &manifest,
+        )?;
+        assert_eq!(
+            "rm b\nup c=>0300000000000000000000000000000000000000\n",
+            &plan.to_string()
+        );
+
+        let mut plan = CheckoutPlan::empty();
+        plan.update_content.push(UpdateContentAction::new(
+            rp("b"),
+            FileMetadata::regular(hgid(10)),
+        ));
+        let plan = plan.with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
+        assert_eq!(
+            "rm b\nup c=>0300000000000000000000000000000000000000\n",
+            &plan.to_string()
+        );
+
         Ok(())
     }
 
