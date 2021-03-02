@@ -21,6 +21,7 @@ use url::Url;
 
 use crate::{
     errors::HttpClientError,
+    event_listeners::RequestEventListeners,
     handler::{Buffered, HandlerExt, Streaming},
     receiver::{ChannelReceiver, Receiver},
     response::{AsyncResponse, Response},
@@ -63,6 +64,7 @@ pub struct RequestContext {
     url: Url,
     method: Method,
     pub(crate) body: Option<Vec<u8>>,
+    pub(crate) event_listeners: RequestEventListeners,
 }
 
 /// Identity of a request.
@@ -93,6 +95,7 @@ impl RequestContext {
             url,
             method,
             body: None,
+            event_listeners: Default::default(),
         }
     }
 
@@ -118,6 +121,11 @@ impl RequestContext {
     pub fn body<B: Into<Vec<u8>>>(mut self, data: B) -> Self {
         self.body = Some(data.into());
         self
+    }
+
+    /// Provide a way to register event callbacks.
+    pub fn event_listeners(&mut self) -> &mut RequestEventListeners {
+        &mut self.event_listeners
     }
 }
 

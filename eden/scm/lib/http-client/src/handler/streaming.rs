@@ -40,6 +40,9 @@ impl<R> Streaming<R> {
 
 impl<R: Receiver> Handler for Streaming<R> {
     fn write(&mut self, data: &[u8]) -> Result<usize, WriteError> {
+        self.request_context
+            .event_listeners
+            .trigger_download_bytes(self.request_context(), data.len());
         if let Some(ref mut receiver) = self.receiver {
             receiver.chunk(data.into());
         }
@@ -52,6 +55,9 @@ impl<R: Receiver> Handler for Streaming<R> {
                 .read(data)
                 .expect("Failed to read from payload buffer");
             self.bytes_sent += sent;
+            self.request_context
+                .event_listeners
+                .trigger_download_bytes(self.request_context(), sent);
             sent
         } else {
             0

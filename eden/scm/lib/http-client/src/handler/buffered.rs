@@ -69,6 +69,9 @@ impl Buffered {
 
 impl Handler for Buffered {
     fn write(&mut self, data: &[u8]) -> Result<usize, WriteError> {
+        self.request_context
+            .event_listeners
+            .trigger_download_bytes(self.request_context(), data.len());
         // Set the buffer size based on the received Content-Length
         // header, or a default if we didn't get a Content-Length.
         self.received
@@ -83,6 +86,9 @@ impl Handler for Buffered {
                 .read(data)
                 .expect("Failed to read from payload buffer");
             self.bytes_sent += sent;
+            self.request_context
+                .event_listeners
+                .trigger_download_bytes(self.request_context(), sent);
             sent
         } else {
             0
@@ -105,6 +111,11 @@ impl Handler for Buffered {
                 if name == header::CONTENT_LENGTH {
                     // Set the initial buffer capacity using the Content-Length header.
                     self.capacity = value.to_str().ok().and_then(|v| v.parse().ok());
+                    if let Some(len) = self.capacity {
+                        self.request_context
+                            .event_listeners
+                            .trigger_content_length(self.request_context(), len);
+                    }
                 }
                 self.headers.insert(name, value);
             }
