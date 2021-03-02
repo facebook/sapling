@@ -13,6 +13,7 @@ use http::{header, HeaderMap, StatusCode, Version};
 
 use crate::header::Header;
 use crate::progress::{Progress, ProgressUpdater};
+use crate::RequestContext;
 
 use super::Configure;
 
@@ -22,7 +23,6 @@ use super::Configure;
 const DEFAULT_CAPACITY: usize = 1000;
 
 /// A simple curl Handler that buffers all received data.
-#[derive(Default)]
 pub struct Buffered {
     received: Vec<u8>,
     capacity: Option<usize>,
@@ -32,11 +32,22 @@ pub struct Buffered {
     payload: Option<Vec<u8>>,
     bytes_sent: usize,
     updater: Option<ProgressUpdater>,
+    request_context: RequestContext,
 }
 
 impl Buffered {
-    pub(crate) fn new() -> Self {
-        Default::default()
+    pub(crate) fn new(request_context: RequestContext) -> Self {
+        Self {
+            received: Default::default(),
+            capacity: Default::default(),
+            version: Default::default(),
+            status: Default::default(),
+            headers: Default::default(),
+            payload: Default::default(),
+            bytes_sent: Default::default(),
+            updater: Default::default(),
+            request_context,
+        }
     }
 
     pub(crate) fn version(&self) -> Option<Version> {
@@ -143,7 +154,7 @@ mod tests {
         let mut buf2 = [0xFF; 3];
         let mut buf3 = [0xFF; 4];
 
-        let mut handler = Buffered::new().with_payload(Some(data.into()));
+        let mut handler = Buffered::new(RequestContext::dummy()).with_payload(Some(data.into()));
 
         assert_eq!(handler.read(&mut buf1[..]).unwrap(), 5);
         assert_eq!(handler.read(&mut buf2[..]).unwrap(), 3);
@@ -156,7 +167,7 @@ mod tests {
 
     #[test]
     fn test_write() {
-        let mut handler = Buffered::new();
+        let mut handler = Buffered::new(RequestContext::dummy());
 
         let expected = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
 
@@ -171,7 +182,7 @@ mod tests {
 
     #[test]
     fn test_headers() {
-        let mut handler = Buffered::new();
+        let mut handler = Buffered::new(RequestContext::dummy());
 
         assert!(handler.header(&b"Content-Length: 1234\r\n"[..]));
         assert!(handler.header(&[0xFF, 0xFF][..])); // Invalid UTF-8 sequence.
@@ -191,11 +202,11 @@ mod tests {
 
     #[test]
     fn test_capacity() {
-        let mut handler = Buffered::new();
+        let mut handler = Buffered::new(RequestContext::dummy());
         let _ = handler.write(&[1, 2, 3][..]).unwrap();
         assert_eq!(handler.received.capacity(), DEFAULT_CAPACITY);
 
-        let mut handler = Buffered::new();
+        let mut handler = Buffered::new(RequestContext::dummy());
 
         let _ = handler.header(&b"Content-Length: 42\r\n"[..]);
         assert_eq!(handler.capacity, Some(42));
@@ -208,7 +219,7 @@ mod tests {
     fn test_progress() {
         let reporter = ProgressReporter::with_callback(|_| ());
 
-        let mut handler = Buffered::new();
+        let mut handler = Buffered::new(RequestContext::dummy());
         handler.monitor_progress(reporter.updater());
         let _ = handler.progress(1.0, 2.0, 3.0, 4.0);
 

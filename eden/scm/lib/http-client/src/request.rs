@@ -362,7 +362,8 @@ impl TryFrom<Request> for Easy2<Buffered> {
     type Error = HttpClientError;
 
     fn try_from(req: Request) -> Result<Self, Self::Error> {
-        req.into_handle(Buffered::new())
+        let ctx = req.ctx.clone();
+        req.into_handle(Buffered::new(ctx))
     }
 }
 
