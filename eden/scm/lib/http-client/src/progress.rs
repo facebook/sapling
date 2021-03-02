@@ -14,6 +14,8 @@ use std::{
     time::Instant,
 };
 
+use once_cell::sync::OnceCell;
+
 #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Progress {
     pub downloaded: usize,
@@ -151,7 +153,7 @@ impl<P: FnMut(Progress)> ProgressReporter<P> {
     /// Report the instant at which the first byte
     /// of any of the transfers was received.
     pub(crate) fn first_byte_received(&self) -> Option<Instant> {
-        self.inner.borrow().first_byte_received.clone()
+        self.inner.borrow().first_byte_received.get().cloned()
     }
 
     /// Call the user-provided progress callback if any of
@@ -188,14 +190,14 @@ impl ProgressUpdater {
 #[derive(Default)]
 struct ProgressInner {
     total_progress: Progress,
-    first_byte_received: Option<Instant>,
+    first_byte_received: OnceCell<Instant>,
     updated_since_last_report: bool,
 }
 
 impl ProgressInner {
     fn update(&mut self, last_progress: Progress, progress: Progress) {
-        if self.first_byte_received.is_none() && progress.downloaded > 0 {
-            self.first_byte_received = Some(Instant::now());
+        if progress.downloaded > 0 {
+            self.first_byte_received.get_or_init(Instant::now);
         }
         self.total_progress += progress - last_progress;
         self.updated_since_last_report = true;
