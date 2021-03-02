@@ -2687,12 +2687,16 @@ class memctx(committablectx):
 
         modified, added, removed = [], [], []
         for f in sorted(self._filesset):
-            if not managing(f):
-                added.append(f)
-            elif self[f]:
-                modified.append(f)
+            inparents = managing(f)
+            inself = self[f] is not None
+            if inparents:
+                if inself:
+                    modified.append(f)
+                else:
+                    removed.append(f)
             else:
-                removed.append(f)
+                if inself:
+                    added.append(f)
 
         return scmutil.status(modified, added, removed, [], [], [], [])
 
