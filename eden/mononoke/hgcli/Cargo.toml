@@ -5,6 +5,10 @@ authors = ["Facebook"]
 edition = "2018"
 license = "GPLv2+"
 
+[[bin]]
+name = "hgcli"
+test = false
+
 [dependencies]
 alpn = { version = "0.1.0", path = "../alpn" }
 anyhow = "1.0"

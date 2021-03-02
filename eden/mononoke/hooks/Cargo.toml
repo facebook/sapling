@@ -6,7 +6,6 @@ edition = "2018"
 license = "GPLv2+"
 
 [lib]
-path = "src/lib.rs"
 test = false
 doctest = false
 

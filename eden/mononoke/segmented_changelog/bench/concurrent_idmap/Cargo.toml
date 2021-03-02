@@ -8,6 +8,7 @@ license = "GPLv2+"
 [[bin]]
 name = "benchmark_concurrent_idmap"
 path = "main.rs"
+test = false
 
 [dependencies]
 context = { version = "0.1.0", path = "../../../server/context" }

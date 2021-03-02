@@ -6,9 +6,6 @@ edition = "2018"
 license = "GPLv2+"
 autotests = false
 
-[lib]
-path = "src/lib.rs"
-
 [[test]]
 name = "tests"
 path = "tests/src/main.rs"

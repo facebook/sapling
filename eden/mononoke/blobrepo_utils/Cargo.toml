@@ -5,9 +5,6 @@ authors = ["Facebook"]
 edition = "2018"
 license = "GPLv2+"
 
-[lib]
-path = "src/lib.rs"
-
 [[test]]
 name = "blobrepo_utils_test"
 path = "test/main.rs"

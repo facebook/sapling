@@ -5,9 +5,6 @@ authors = ["Facebook"]
 edition = "2018"
 license = "GPLv2+"
 
-[lib]
-path = "src/lib.rs"
-
 [[test]]
 name = "bonsai_hg_mapping_test"
 path = "test/main.rs"

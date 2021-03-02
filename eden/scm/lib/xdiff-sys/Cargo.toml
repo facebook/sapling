@@ -4,9 +4,6 @@ name = "xdiff-sys"
 version = "0.1.0"
 edition = "2018"
 
-[lib]
-path = "src/lib.rs"
-
 [[bin]]
 name = "xdiff_sys_bin"
 path = "src/bin/xdiff-sys-bin.rs"

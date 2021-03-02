@@ -24,6 +24,7 @@ path = "cmds/backfill_mapping.rs"
 [[bin]]
 name = "benchmark_filestore"
 path = "cmds/benchmark_filestore.rs"
+test = false
 
 [[bin]]
 name = "benchmark_storage_config"
@@ -40,6 +41,7 @@ path = "cmds/blobstore_healer/main.rs"
 [[bin]]
 name = "bonsai_verify"
 path = "cmds/bonsai_verify/main.rs"
+test = false
 
 [[bin]]
 name = "configlint"
@@ -48,14 +50,17 @@ path = "cmds/configlint.rs"
 [[bin]]
 name = "dumprev"
 path = "cmds/dumprev.rs"
+test = false
 
 [[bin]]
 name = "idxdump"
 path = "cmds/idxdump.rs"
+test = false
 
 [[bin]]
 name = "lfs_import"
 path = "cmds/lfs_import.rs"
+test = false
 
 [[bin]]
 name = "manual_scrub"

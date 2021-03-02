@@ -5,9 +5,6 @@ authors = ["Facebook"]
 edition = "2018"
 license = "GPLv2+"
 
-[lib]
-path = "src/lib.rs"
-
 [[bin]]
 name = "benchmark"
 path = "benchmark/main.rs"

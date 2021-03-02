@@ -5,9 +5,6 @@ authors = ["Facebook"]
 edition = "2018"
 license = "GPLv2+"
 
-[lib]
-path = "src/lib.rs"
-
 [[test]]
 name = "dbbookmarks_test"
 path = "tests/main.rs"

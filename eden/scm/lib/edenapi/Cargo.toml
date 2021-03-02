@@ -4,9 +4,6 @@ name = "edenapi"
 version = "0.1.0"
 edition = "2018"
 
-[lib]
-path = "src/lib.rs"
-
 [[bin]]
 name = "edenapi_cli"
 path = "src/bin/cli.rs"

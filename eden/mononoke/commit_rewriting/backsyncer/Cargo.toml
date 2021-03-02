@@ -5,9 +5,6 @@ authors = ["Facebook"]
 edition = "2018"
 license = "GPLv2+"
 
-[lib]
-path = "src/lib.rs"
-
 [[bin]]
 name = "backsyncer_cmd"
 path = "src/main.rs"
