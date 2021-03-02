@@ -17,7 +17,7 @@ limited_async_read = { version = "0.1.0", git = "https://github.com/facebookexpe
 mercurial_bundles = { version = "0.1.0", path = "../mercurial/bundles" }
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
-nom = { version = "3", features = [ "verbose-errors" ] }
+nom = { version = "3", features = ["verbose-errors"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio-io = "0.1"
