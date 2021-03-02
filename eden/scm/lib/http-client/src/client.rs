@@ -280,6 +280,8 @@ mod tests {
     use url::Url;
 
     use crate::receiver::testutil::TestReceiver;
+    use crate::Method;
+    use crate::RequestContext;
 
     #[test]
     fn test_client() -> Result<()> {
@@ -459,41 +461,115 @@ mod tests {
         let server_url = Url::parse(&mockito::server_url())?;
 
         // this is actually used, it changes how mockito behaves
+        const BODY: &[u8] = b"body";
         let _mock1 = mock("GET", "/test1")
             .with_status(201)
-            .with_body(&b"body")
+            .with_body(BODY)
             .create();
 
         let url = server_url.join("test1")?;
         let request = Request::get(url);
 
         let (tx, rx) = crossbeam::channel::unbounded();
+        let (msg_tx, msg_rx) = crossbeam::channel::unbounded();
 
         let client = HttpClient::new().with_event_listeners(|l| {
             l.on_stats(move |stats| tx.send(stats.clone()).expect("send stats over channel"));
+
+            let check_request = &|r: &RequestContext| assert!(matches!(r.method(), Method::Get));
+
+            l.on_new_request({
+                let msg_tx = msg_tx.clone();
+                move |r| {
+                    check_request(r);
+                    msg_tx.send("on_new_request").unwrap();
+
+                    let l = r.event_listeners();
+                    l.on_download_bytes({
+                        let msg_tx = msg_tx.clone();
+                        move |req, n| {
+                            assert_eq!(n, BODY.len());
+                            check_request(req);
+                            msg_tx.send("on_download_bytes").unwrap();
+                        }
+                    });
+                    l.on_upload_bytes({
+                        let msg_tx = msg_tx.clone();
+                        move |req, n| {
+                            assert_eq!(n, 0);
+                            check_request(req);
+                            msg_tx.send("on_upload_bytes").unwrap();
+                        }
+                    });
+                    l.on_content_length({
+                        let msg_tx = msg_tx.clone();
+                        move |req, n| {
+                            assert_eq!(n, BODY.len());
+                            check_request(req);
+                            msg_tx.send("on_content_length").unwrap();
+                        }
+                    });
+                }
+            });
+
+            l.on_failed_request({
+                let msg_tx = msg_tx.clone();
+                move |r| {
+                    check_request(r);
+                    msg_tx.send("on_failed_request").unwrap();
+                }
+            });
+
+            l.on_succeeded_request({
+                let msg_tx = msg_tx.clone();
+                move |r| {
+                    check_request(r);
+                    msg_tx.send("on_succeeded_request").unwrap();
+                }
+            });
         });
+
+        let check_events = |has_content_length: bool| {
+            assert_eq!(msg_rx.recv().unwrap(), "on_new_request");
+            if has_content_length {
+                assert_eq!(msg_rx.recv().unwrap(), "on_content_length");
+            }
+            assert_eq!(msg_rx.recv().unwrap(), "on_download_bytes");
+            assert_eq!(msg_rx.recv().unwrap(), "on_succeeded_request");
+        };
 
         let stats = client.send(vec![request.clone()], |_| Ok(()))?;
         assert_eq!(stats, rx.recv()?);
+        check_events(true);
 
         let stats = client.send_with_progress(vec![request.clone()], |_| Ok(()), |_| ())?;
         assert_eq!(stats, rx.recv()?);
+        check_events(true);
 
         let (_stream, stats) = client.send_async(vec![request.clone()])?;
         let stats = stats.await?;
         assert_eq!(stats, rx.recv()?);
+        check_events(false);
 
         let (_stream, stats) = client.send_async_with_progress(vec![request.clone()], |_| ())?;
         let stats = stats.await?;
         assert_eq!(stats, rx.recv()?);
+        check_events(false);
 
         let my_stream_req = || request.clone().into_streaming(TestReceiver::new());
 
         let stats = client.stream(vec![my_stream_req()])?;
         assert_eq!(stats, rx.recv()?);
+        check_events(false);
 
         let stats = client.stream_with_progress(vec![my_stream_req()], |_| ())?;
         assert_eq!(stats, rx.recv()?);
+        check_events(false);
+
+        drop((client, msg_tx));
+
+        // All msg_tx should be dropped. recv() should not be blocking.
+        msg_rx.recv().unwrap_err();
 
         Ok(())
     }
