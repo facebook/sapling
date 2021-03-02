@@ -13,6 +13,7 @@
 mod client;
 mod driver;
 mod errors;
+mod event_listeners;
 mod handler;
 mod header;
 mod pool;
