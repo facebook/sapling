@@ -21,7 +21,7 @@ use url::Url;
 
 use crate::{
     errors::HttpClientError,
-    handler::{Buffered, Configure, Streaming},
+    handler::{Buffered, HandlerExt, Streaming},
     receiver::{ChannelReceiver, Receiver},
     response::{AsyncResponse, Response},
 };
@@ -283,7 +283,10 @@ impl Request {
 
     /// Turn this `Request` into a `curl::Easy2` handle using
     /// the given `Handler` to process the response.
-    pub(crate) fn into_handle<H: Configure>(self, handler: H) -> Result<Easy2<H>, HttpClientError> {
+    pub(crate) fn into_handle<H: HandlerExt>(
+        self,
+        handler: H,
+    ) -> Result<Easy2<H>, HttpClientError> {
         let body_size = self.body.as_ref().map(|body| body.len() as u64);
         let handler = handler.with_payload(self.body);
 

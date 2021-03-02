@@ -15,7 +15,7 @@ use crate::header::Header;
 use crate::progress::{Progress, ProgressUpdater};
 use crate::RequestContext;
 
-use super::Configure;
+use super::HandlerExt;
 
 /// Initial buffer capacity to allocate if we don't get a Content-Length header.
 /// Usually, the lack of a Content-Length header indicates a streaming response,
@@ -128,7 +128,7 @@ impl Handler for Buffered {
     }
 }
 
-impl Configure for Buffered {
+impl HandlerExt for Buffered {
     fn with_payload(self, payload: Option<Vec<u8>>) -> Self {
         Self { payload, ..self }
     }

@@ -14,7 +14,7 @@ use crate::progress::{Progress, ProgressUpdater};
 use crate::receiver::Receiver;
 use crate::RequestContext;
 
-use super::Configure;
+use super::HandlerExt;
 
 pub struct Streaming<R> {
     receiver: Option<R>,
@@ -89,7 +89,7 @@ impl<R: Receiver> Handler for Streaming<R> {
     }
 }
 
-impl<R: Receiver> Configure for Streaming<R> {
+impl<R: Receiver> HandlerExt for Streaming<R> {
     fn with_payload(self, payload: Option<Vec<u8>>) -> Self {
         Self { payload, ..self }
     }
