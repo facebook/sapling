@@ -10,9 +10,9 @@ use std::{
     fmt,
     iter::Sum,
     ops::{Add, AddAssign, Sub},
-    rc::Rc,
     sync::atomic::AtomicUsize,
     sync::atomic::Ordering::{AcqRel, Acquire, Relaxed, Release},
+    sync::Arc,
     time::Instant,
 };
 
@@ -161,7 +161,7 @@ impl Sum for Progress {
 /// to report the aggregate progress of these transfers
 /// as if they were a single transfer.
 pub(crate) struct ProgressReporter<P> {
-    inner: Rc<RefCell<ProgressInner>>,
+    inner: Arc<ProgressInner>,
     callback: RefCell<P>,
     last_progress: MutableProgress,
 }
@@ -172,7 +172,7 @@ impl<P: FnMut(Progress)> ProgressReporter<P> {
     /// progress.
     pub(crate) fn with_callback(callback: P) -> Self {
         Self {
-            inner: Rc::new(RefCell::new(ProgressInner::default())),
+            inner: Arc::new(ProgressInner::default()),
             callback: RefCell::new(callback),
             last_progress: Default::default(),
         }
@@ -182,7 +182,7 @@ impl<P: FnMut(Progress)> ProgressReporter<P> {
     /// and return an updater so that the transfer handler
     /// can update the values as the transfer makes progress.
     pub(crate) fn updater(&self) -> ProgressUpdater {
-        let inner = Rc::clone(&self.inner);
+        let inner = Arc::clone(&self.inner);
         ProgressUpdater {
             inner,
             last_progress: Default::default(),
@@ -191,20 +191,20 @@ impl<P: FnMut(Progress)> ProgressReporter<P> {
 
     /// Sum all of the progress values across all slots.
     pub(crate) fn aggregate(&self) -> Progress {
-        self.inner.borrow().aggregate()
+        self.inner.aggregate()
     }
 
     /// Report the instant at which the first byte
     /// of any of the transfers was received.
     pub(crate) fn first_byte_received(&self) -> Option<Instant> {
-        self.inner.borrow().first_byte_received.get().cloned()
+        self.inner.first_byte_received.get().cloned()
     }
 
     /// Call the user-provided progress callback if any of
     /// the transfers have made progress since the last time
     /// this method was called.
     pub(crate) fn report_if_updated(&self) {
-        let inner = self.inner.borrow_mut();
+        let inner = &self.inner;
         let progress = inner.aggregate();
         if progress != self.last_progress.to_progress() {
             (&mut *self.callback.borrow_mut())(inner.aggregate());
@@ -217,13 +217,13 @@ impl<P: FnMut(Progress)> ProgressReporter<P> {
 /// The handle may be used to update the status of an
 /// individual transfer with the reporter.
 pub(crate) struct ProgressUpdater {
-    inner: Rc<RefCell<ProgressInner>>,
+    inner: Arc<ProgressInner>,
     last_progress: Progress,
 }
 
 impl ProgressUpdater {
     pub fn update(&mut self, progress: Progress) {
-        self.inner.borrow_mut().update(self.last_progress, progress);
+        self.inner.update(self.last_progress, progress);
         self.last_progress = progress;
     }
 }
@@ -239,7 +239,7 @@ struct ProgressInner {
 }
 
 impl ProgressInner {
-    fn update(&mut self, last_progress: Progress, progress: Progress) {
+    fn update(&self, last_progress: Progress, progress: Progress) {
         if progress.downloaded > 0 {
             self.first_byte_received.get_or_init(Instant::now);
         }
