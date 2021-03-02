@@ -116,8 +116,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
-
-  FuseDispatcher::Attr getAttrLocked(const DirContents& contents);
 #endif // !_WIN32
 
   /**

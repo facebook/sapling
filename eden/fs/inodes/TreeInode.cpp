@@ -203,20 +203,6 @@ folly::Future<struct stat> TreeInode::stat(ObjectFetchContext& /*context*/) {
   return st;
 }
 
-#ifndef _WIN32
-FuseDispatcher::Attr TreeInode::getAttrLocked(const DirContents& contents) {
-  FuseDispatcher::Attr attr(getMount()->initStatData());
-
-  attr.st.st_ino = getNodeId().get();
-  getMetadataLocked(contents).applyToStat(attr.st);
-
-  // For directories, nlink is the number of entries including the
-  // "." and ".." links.
-  attr.st.st_nlink = contents.size() + 2;
-  return attr;
-}
-#endif // !_WIN32
-
 Future<InodePtr> TreeInode::getOrLoadChild(
     PathComponentPiece name,
     ObjectFetchContext& context) {
