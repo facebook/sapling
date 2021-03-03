@@ -302,6 +302,29 @@ Test that rebasing applies the same change to both
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > dir1/a
   $ hg commit --config extensions.dirsync=! -m "edit dir1/a with sync on"
+  $ cp -R . ../repo1
+  $ hg rebase --config extensions.rebase= -d 'max(desc(add))'
+  rebasing 70b4edc7f658 "edit dir1/a with sync on"
+  mirrored changes in 'dir1/a' to 'dir2/a'
+  $ hg diff --git -r ".^" -r .
+  diff --git a/dir1/a b/dir1/a
+  --- a/dir1/a
+  +++ b/dir1/a
+  @@ -1,1 +1,1 @@
+  -a
+  +b
+  diff --git a/dir2/a b/dir2/a
+  --- a/dir2/a
+  +++ b/dir2/a
+  @@ -1,1 +1,1 @@
+  -a
+  +b
+
+  $ cd ..
+
+The same test as the above. But uses in-memory rebase
+  $ cd repo1
+  $ setconfig rebase.experimental.inmemory=True
   $ hg rebase --config extensions.rebase= -d 'max(desc(add))'
   rebasing 70b4edc7f658 "edit dir1/a with sync on"
   mirrored changes in 'dir1/a' to 'dir2/a'
