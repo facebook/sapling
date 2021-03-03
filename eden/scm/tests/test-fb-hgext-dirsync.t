@@ -198,8 +198,8 @@ Test syncing a edit + rename
 Test amending a change where there has already been a sync before
   $ echo c > dir1/b
   $ hg commit --amend -m "amend b in dir1"
-  mirrored changes in 'dir1/b' to 'dir2/subdir/b'
   amending changeset a6e4f018e982
+  mirrored changes in 'dir1/b' to 'dir2/subdir/b'
   committing files:
   dir1/b
   dir2/subdir/b
@@ -443,7 +443,7 @@ Test deleting file with missing mirror
   $ hg status
   R dir1/a
   $ hg commit -m 'rm dir1/a'
-  not mirroring remove of 'dir1/a' to 'dir2/a'; it is already removed
+  mirrored remove of 'dir1/a' to 'dir2/a'
   $ hg diff --git -r '.^' -r .
   diff --git a/dir1/a b/dir1/a
   deleted file mode 100644

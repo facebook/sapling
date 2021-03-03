@@ -70,8 +70,8 @@ sh % "hg diff --git -r null -r ." == r"""
 sh % "echo a" >> "dir1/a"
 sh % "echo b" >> "dir1/b"
 sh % "hg commit --amend -I dir1/a" == r"""
-    mirrored changes in 'dir1/a' to 'dir2/subdir/a'
     amending changeset 32bc2a06fd26
+    mirrored changes in 'dir1/a' to 'dir2/subdir/a'
     committing files:
     dir1/a
     dir1/b
@@ -111,8 +111,8 @@ sh % "hg diff --git -r null -r ." == r"""
 
 sh % "echo a" >> "dir1/a"
 sh % "hg commit --amend dir1/b" == r"""
-    mirrored changes in 'dir1/b' to 'dir2/subdir/b'
     amending changeset e9cce3b53a7c
+    mirrored changes in 'dir1/b' to 'dir2/subdir/b'
     committing files:
     dir1/a
     dir1/b
@@ -155,8 +155,8 @@ sh % "hg diff --git -r null -r ." == r"""
 # Exclude changes to particular file
 sh % "echo b" >> "dir1/b"
 sh % "hg commit --amend -X dir1/a" == r"""
-    mirrored changes in 'dir1/b' to 'dir2/subdir/b'
     amending changeset a70e8a6cacdd
+    mirrored changes in 'dir1/b' to 'dir2/subdir/b'
     committing files:
     dir1/a
     dir1/b
@@ -201,11 +201,11 @@ sh % "hg diff --git -r null -r ." == r"""
 sh % "echo c" > "dir1/c"
 sh % "rm dir1/a"
 sh % "hg commit --amend -A" == r"""
+    amending changeset 4af805a433df
     removing dir1/a
     adding dir1/c
     mirrored adding 'dir1/c' to 'dir2/subdir/c'
     mirrored remove of 'dir1/a' to 'dir2/subdir/a'
-    amending changeset 4af805a433df
     committing files:
     dir1/b
     dir1/c
