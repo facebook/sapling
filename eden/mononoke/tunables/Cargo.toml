@@ -18,5 +18,5 @@ tunables_structs = { version = "0.1.0", path = "../../../configerator/structs/sc
 
 [dev-dependencies]
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"
-tokio = { version = "0.2.25", features = ["full", "test-util"] }

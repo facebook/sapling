@@ -60,6 +60,7 @@ warm_bookmarks_cache = { version = "0.1.0", path = "../bookmarks/warm_bookmarks_
 
 [dev-dependencies]
 blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }

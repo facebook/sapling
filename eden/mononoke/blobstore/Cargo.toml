@@ -30,9 +30,9 @@ zstd = "=0.5.3+zstd.1.4.5"
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cacheblob = { version = "0.1.0", path = "cacheblob" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fileblob = { version = "0.1.0", path = "fileblob" }
 memblob = { version = "0.1.0", path = "memblob" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 sqlblob = { version = "0.1.0", path = "sqlblob" }
 tempdir = "0.3"
-tokio = { version = "0.2.25", features = ["full", "test-util"] }

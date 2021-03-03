@@ -42,6 +42,7 @@ tokio = { version = "0.2.25", features = ["full", "test-util"] }
 unbundle = { version = "0.1.0", path = "../repo_client/unbundle" }
 
 [dev-dependencies]
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"
 mercurial_types-mocks = { version = "0.1.0", path = "../mercurial/types/mocks" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }

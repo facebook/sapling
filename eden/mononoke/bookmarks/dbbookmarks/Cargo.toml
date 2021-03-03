@@ -25,6 +25,7 @@ ascii = "1.0"
 ascii_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures-old = { package = "futures", version = "0.1.30" }
 maplit = "1.0"
 mononoke_types-mocks = { version = "0.1.0", path = "../../mononoke_types/mocks" }

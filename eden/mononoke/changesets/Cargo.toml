@@ -30,5 +30,5 @@ thiserror = "1.0"
 
 [dev-dependencies]
 assert_matches = "1.5"
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }

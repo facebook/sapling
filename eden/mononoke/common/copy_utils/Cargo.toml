@@ -22,6 +22,6 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }

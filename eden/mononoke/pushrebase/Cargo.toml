@@ -35,6 +35,7 @@ blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
 blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
 dbbookmarks = { version = "0.1.0", path = "../bookmarks/dbbookmarks" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 filestore = { version = "0.1.0", path = "../filestore" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }

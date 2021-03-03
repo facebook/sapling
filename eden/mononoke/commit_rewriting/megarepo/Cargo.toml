@@ -53,5 +53,6 @@ unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 cross_repo_sync_test_utils = { version = "0.1.0", path = "../cross_repo_sync/test_utils" }
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

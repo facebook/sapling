@@ -28,6 +28,7 @@ twox-hash = "1.5"
 [dev-dependencies]
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 nonzero_ext = "0.2"
 once_cell = "1.4"
 ratelimit_meter = "5"

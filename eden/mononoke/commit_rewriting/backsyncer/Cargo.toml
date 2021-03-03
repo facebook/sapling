@@ -46,6 +46,7 @@ blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bookmark_renaming = { version = "0.1.0", path = "../bookmark_renaming" }
 dbbookmarks = { version = "0.1.0", path = "../../bookmarks/dbbookmarks" }
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

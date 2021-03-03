@@ -30,7 +30,7 @@ blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
-tokio = { version = "0.2.25", features = ["full", "test-util"] }
