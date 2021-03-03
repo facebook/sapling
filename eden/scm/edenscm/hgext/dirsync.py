@@ -119,7 +119,7 @@ def reposetup(ui, repo):
                 if wf.exists():
                     wf.remove()
                     dirstate.delete(path)
-                    tracin.debug("remove mirrored %s" % path)
+                    tracing.debug("remove mirrored %s" % path)
         # The working copy is in sync. No need to fixup again.
         _nodemirrored.clear()
 

@@ -1145,6 +1145,27 @@ def saveremotenames(repo, remotebookmarks, override=True):
             repo.invalidatevolatilesets()
 
 
+def decoderemotenames(data):
+    # type: (bytes) -> typing.Dict[str, bytes]
+    """Decode remotenames into {fullname: node}
+
+    The fullname can further be split by `splitremotename`.
+    """
+    result = {}
+    for line in decodeutf8(data).splitlines():
+        try:
+            hexnode, nametype, fullname = line.split(" ", 2)
+        except ValueError:
+            raise error.CorruptedState(_("corrupt entry in remotenames: %s") % (line,))
+        # Ignore 'default-push' names. See https://fburl.com/1rft34i8.
+        if fullname.startswith("default-push/"):
+            continue
+        if nametype != "bookmarks":
+            continue
+        result[fullname] = bin(hexnode)
+    return result
+
+
 class lazyremotenamedict(pycompat.Mapping):
     """Read-only dict-like Class to lazily resolve remotename entries
 
@@ -1281,50 +1302,9 @@ def readremotenames(repo=None, svfs=None):
 
 
 def _readremotenamesfrom(vfs, filename):
-    try:
-        fileobj = vfs(filename)
-    except EnvironmentError as er:
-        if er.errno != errno.ENOENT:
-            raise
-        return
-
-    with fileobj as f:
-        for line in f:
-            nametype = None
-            line = line.strip()
-            if not line:
-                continue
-            line = pycompat.decodeutf8(line)
-            nametype = None
-            remote, rname = None, None
-
-            try:
-                node, name = line.split(" ", 1)
-            except ValueError:
-                raise error.CorruptedState(
-                    _("corrupt entry in file %s: %s") % (filename, line)
-                )
-
-            # check for nametype being written into the file format
-            if " " in name:
-                try:
-                    nametype, name = name.split(" ", 1)
-                except ValueError:
-                    raise error.CorruptedState(
-                        _("corrupt entry in file %s: %s") % (filename, line)
-                    )
-
-            remote, rname = splitremotename(name)
-
-            # Ignore 'default-push' names. See https://fburl.com/1rft34i8.
-            if remote == "default-push":
-                continue
-
-            # skip old data that didn't write the name (only wrote the alias)
-            if not rname:
-                continue
-
-            yield node, nametype, remote, rname
+    for fullname, node in decoderemotenames(vfs.tryread(filename)).items():
+        remote, name = splitremotename(fullname)
+        yield (hex(node), "bookmarks", remote, name)
 
 
 def mainbookmark(repo):
