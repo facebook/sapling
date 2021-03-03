@@ -213,58 +213,19 @@ def getfilestack(stack, path, seenfctxs=None):
     return uniq(fctxs), fctxmap
 
 
-class overlaystore(patch.filestore):
-    """read-only, hybrid store based on a dict and ctx.
-    memworkingcopy: {path: content}, overrides file contents.
-    """
-
-    def __init__(self, basectx, memworkingcopy):
-        self.basectx = basectx
-        self.memworkingcopy = memworkingcopy
-
-    def getfile(self, path):
-        """comply with mercurial.patch.filestore.getfile"""
-        if path not in self.basectx:
-            return None, None, None
-        fctx = self.basectx[path]
-        if path in self.memworkingcopy:
-            content = self.memworkingcopy[path]
-        else:
-            content = fctx.data()
-        mode = (fctx.islink(), fctx.isexec())
-        renamed = fctx.renamed()  # False or (path, node)
-        return content, mode, (renamed and renamed[0])
-
-
 def overlaycontext(
     memworkingcopy, ctx, parents=None, extra=None, loginfo=None, mutinfo=None
 ):
     """({path: content}, ctx, (p1node, p2node)?, {}?) -> memctx
     memworkingcopy overrides file contents.
     """
-    # parents must contain 2 items: (node1, node2)
-    if parents is None:
-        parents = ctx.repo().changelog.parents(ctx.node())
-    if extra is None:
-        extra = ctx.extra()
-    date = ctx.date()
-    desc = ctx.description()
-    user = ctx.user()
-    files = set(ctx.files()).union(pycompat.iterkeys(memworkingcopy))
-    store = overlaystore(ctx, memworkingcopy)
-    return context.memctx(
-        repo=ctx.repo(),
-        parents=parents,
-        text=desc,
-        files=files,
-        filectxfn=store,
-        user=user,
-        date=date,
-        branch=None,
-        extra=extra,
-        loginfo=loginfo,
-        mutinfo=mutinfo,
+    mctx = context.memctx.mirror(
+        ctx, parentnodes=parents, extra=extra, loginfo=loginfo, mutinfo=mutinfo
     )
+    for path, data in memworkingcopy.items():
+        fctx = context.overlayfilectx(ctx[path], datafunc=lambda data=data: data)
+        mctx[path] = fctx
+    return mctx
 
 
 class filefixupstate(object):
