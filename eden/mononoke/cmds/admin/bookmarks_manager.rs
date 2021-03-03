@@ -263,7 +263,7 @@ async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
                         }
                     }
                 })
-                .try_buffer_unordered(100)
+                .try_buffered(100)
                 .map_ok(move |rows| {
                     let (entry_id, cs_id, reason, timestamp) = rows;
                     let cs_id_str = match cs_id {
