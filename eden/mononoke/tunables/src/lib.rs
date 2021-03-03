@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use arc_swap::ArcSwap;
-use cached_config::{ConfigHandle, ConfigStore};
+use cached_config::ConfigHandle;
 use futures::{future::poll_fn, Future, FutureExt};
 use once_cell::sync::OnceCell;
 use slog::{debug, warn, Logger};
@@ -149,7 +149,6 @@ fn log_tunables(tunables: &TunablesStruct) -> String {
 pub fn init_tunables_worker(
     logger: Logger,
     config_handle: ConfigHandle<TunablesStruct>,
-    custom_config_store: Option<ConfigStore>,
 ) -> Result<()> {
     let init_tunables = config_handle.get();
     debug!(
@@ -161,7 +160,6 @@ pub fn init_tunables_worker(
 
     if TUNABLES_WORKER_STATE
         .set(Mutex::new(TunablesWorkerState {
-            custom_config_store,
             config_handle,
             old_tunables: Some(init_tunables),
             logger,
@@ -183,11 +181,10 @@ pub fn init_tunables_worker(
 /// Meant to be used in tests.
 /// NOTE: if tunables are fetched from Configerator, you need to force update it as well.
 pub fn force_update_tunables() {
-    worker_iteration(true);
+    worker_iteration();
 }
 
 struct TunablesWorkerState {
-    custom_config_store: Option<ConfigStore>,
     config_handle: ConfigHandle<TunablesStruct>,
     // Previous value of the tunables.  If we fail to update tunables,
     // this will be `None`.
@@ -199,24 +196,17 @@ fn worker() {
     loop {
         // TODO: Instead of refreshing tunables every loop iteration,
         // update cached_config to notify us when our config has changed.
-        worker_iteration(false);
+        worker_iteration();
         thread::sleep(REFRESH_INTERVAL);
     }
 }
 
-fn worker_iteration(force_update_config_store: bool) {
+fn worker_iteration() {
     let mut state = TUNABLES_WORKER_STATE
         .get()
         .expect("Tunables worker state uninitialised")
         .lock()
         .expect("Poisoned lock");
-
-    if force_update_config_store {
-        match &state.custom_config_store {
-            Some(store) => store.force_update_configs(),
-            None => {}
-        }
-    }
 
     let new_tunables = state.config_handle.get();
     if Some(&new_tunables) != state.old_tunables.as_ref() {

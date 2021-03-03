@@ -14,7 +14,7 @@
 # Create a repository with ACL checking enforcement
   $ ENFORCE_LFS_ACL_CHECK=1 REPOID=2 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo2
 
-  $ LIVE_CONFIG="${TESTTMP}/live.json"
+  $ LIVE_CONFIG="${LOCAL_CONFIGERATOR_PATH}/live.json"
   $ cat > "$LIVE_CONFIG" << EOF
   > {
   >   "track_bytes_sent": true,
@@ -28,7 +28,7 @@
 
 # Start an LFS server
   $ LFS_LOG="$TESTTMP/lfs.log"
-  $ LFS_ROOT="$(lfs_server --log "$LFS_LOG" --tls --live-config "file:${LIVE_CONFIG}" --allowed-test-identity USER:test --trusted-proxy-identity USER:myusername0)"
+  $ LFS_ROOT="$(lfs_server --log "$LFS_LOG" --tls --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")" --allowed-test-identity USER:test --trusted-proxy-identity USER:myusername0)"
   $ LFS_URI="$LFS_ROOT/repo1"
   $ LFS_URI_REPO_ENFORCE_ACL="$LFS_ROOT/repo2"
 

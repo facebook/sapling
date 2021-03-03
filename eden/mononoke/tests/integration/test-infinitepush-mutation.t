@@ -9,7 +9,7 @@
 setup configuration
   $ INFINITEPUSH_NAMESPACE_REGEX='^scratch/.+$' setup_common_config
   $ cd $TESTTMP
-  $ cat > $TESTTMP/mononoke_tunables.json <<EOF
+  $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
   > {
   >   "killswitches": {
   >     "mutation_advertise_for_infinitepush": true,

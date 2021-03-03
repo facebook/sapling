@@ -9,7 +9,7 @@
 # Create a repository
   $ setup_mononoke_config
   $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo1
-  $ LIVE_CONFIG="${TESTTMP}/live.json"
+  $ LIVE_CONFIG="${LOCAL_CONFIGERATOR_PATH}/live.json"
   $ cat > "$LIVE_CONFIG" << EOF
   > {
   >   "track_bytes_sent": true,
@@ -23,7 +23,7 @@
 
 # Start an LFS server
   $ lfs_log="$TESTTMP/lfs.log"
-  $ lfs_root="$(lfs_server --log "$lfs_log" --live-config "file:${LIVE_CONFIG}")"
+  $ lfs_root="$(lfs_server --log "$lfs_log" --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")")"
 
 # Get the config
   $ curl -fs "${lfs_root}/config" | jq -S .
@@ -53,8 +53,8 @@
 
 # Wait for it to be updated
   $ sleep 2
-  $ grep "$LIVE_CONFIG" "$lfs_log"
-  * Updated path $TESTTMP/live.json (glob)
+  $ grep "live.json" "$lfs_log"
+  * Updated path live.json (glob)
 
 # Get the updated config
   $ curl -fs "${lfs_root}/config" | jq -S .

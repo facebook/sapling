@@ -10,6 +10,7 @@
 #![deny(warnings)]
 
 use anyhow::{anyhow, bail, Context, Error};
+use cached_config::ConfigHandle;
 use clap::{Arg, Values};
 use cloned::cloned;
 use fbinit::FacebookInit;
@@ -39,7 +40,7 @@ use tokio::net::TcpListener;
 use blobrepo::BlobRepo;
 use blobrepo_factory::BlobrepoBuilder;
 use cmdlib::{
-    args::{self, get_config_handle, CachelibSettings},
+    args::{self, parse_config_spec_to_path, CachelibSettings},
     helpers::serve_forever,
     monitoring::{start_fb303_server, AliveService},
 };
@@ -161,7 +162,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .long(ARG_LIVE_CONFIG)
                 .takes_value(true)
                 .required(false)
-                .help("Source for live config (configerator:SPEC, file:SPEC, default)"),
+                .help("Path to config in configerator"),
         )
         .arg(
             Arg::with_name(ARG_LIVE_CONFIG_FETCH_INTERVAL)
@@ -322,8 +323,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
-    let config_handle = get_config_handle(config_store, &logger, matches.value_of(ARG_LIVE_CONFIG))
-        .context(Error::msg("Failed to load configuration"))?;
+    let config_handle = match matches.value_of(ARG_LIVE_CONFIG) {
+        Some(spec) => config_store.get_config_handle(parse_config_spec_to_path(spec)?),
+        None => Ok(ConfigHandle::default()),
+    };
+
+    let config_handle = config_handle.context(Error::msg("Failed to load configuration"))?;
 
     let max_upload_size: Option<u64> = matches
         .value_of(ARG_MAX_UPLOAD_SIZE)

@@ -247,10 +247,6 @@ where
 
         if path == "/force_update_configerator" {
             self.acceptor().config_store.force_update_configs();
-            return Ok(ok);
-        }
-
-        if path == "/force_update_tunables" {
             force_update_tunables();
             return Ok(ok);
         }

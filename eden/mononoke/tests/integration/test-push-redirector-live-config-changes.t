@@ -11,7 +11,7 @@ setup configuration
   $ REPOTYPE="blob_files"
   $ REPOID=0 REPONAME=large-mon setup_common_config $REPOTYPE
   $ REPOID=1 REPONAME=small-mon-1 setup_common_config $REPOTYPE
-  $ cat > $TESTTMP/mononoke_tunables.json <<EOF
+  $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
   > {
   >   "killswitches": {
   >     "allow_change_xrepo_mapping_extra": true

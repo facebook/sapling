@@ -24,7 +24,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{bail, format_err, Context, Error, Result};
-use cached_config::{ConfigHandle, ConfigStore};
+use cached_config::ConfigStore;
 use clap::{App, Arg, ArgGroup, ArgMatches, Values};
 use fbinit::FacebookInit;
 use maybe_owned::MaybeOwned;
@@ -83,7 +83,7 @@ const RUNTIME_THREADS: &str = "runtime-threads";
 const TUNABLES_CONFIG: &str = "tunables-config";
 const DISABLE_TUNABLES: &str = "disable-tunables";
 
-const DEFAULT_TUNABLES_PATH: &str = "configerator:scm/mononoke/tunables/default";
+const DEFAULT_TUNABLES_PATH: &str = "scm/mononoke/tunables/default";
 
 const READ_QPS_ARG: &str = "blobstore-read-qps";
 const WRITE_QPS_ARG: &str = "blobstore-write-qps";
@@ -2058,24 +2058,12 @@ pub fn init_tunables<'a>(
         .value_of(TUNABLES_CONFIG)
         .unwrap_or(DEFAULT_TUNABLES_PATH);
 
-    let tunables_spec = parse_source_spec(tunables_spec)?;
-
     let config_store = init_config_store(fb, &logger, matches)?;
-    let mut custom_config_store = None;
 
-    let config_handle = match tunables_spec {
-        SourceSpec::Configerator(source) => config_store.get_config_handle(source.to_string())?,
-        SourceSpec::File(file) => {
-            custom_config_store = Some(create_file_store(&logger));
-            custom_config_store
-                .as_ref()
-                .unwrap()
-                .get_config_handle(file.to_string())?
-        }
-        SourceSpec::DefaultHandle => ConfigHandle::default(),
-    };
+    let config_handle =
+        config_store.get_config_handle(parse_config_spec_to_path(tunables_spec)?)?;
 
-    init_tunables_worker(logger, config_handle, custom_config_store)
+    init_tunables_worker(logger, config_handle)
 }
 
 /// Initialize a new `tokio::runtime::Runtime` with thread number parsed from the CLI
@@ -2084,55 +2072,9 @@ pub fn init_runtime(matches: &MononokeMatches) -> io::Result<tokio::runtime::Run
     create_runtime(None, core_threads)
 }
 
-/// Extract a ConfigHandle<T> from a source_spec str that has one of the folowing formats:
-/// - configerator:PATH
-/// - file:PATH
-/// - default
-/// NB: Outside tests, using file:PATH is not recommended because it is inefficient - instead
-/// use a local configerator path and configerator:PATH
-/// NOTE: This is deprecated and is going to be removed.
-/// Simply use `your_config_store.get_config_handle`
-pub fn get_config_handle<T>(
-    config_store: &ConfigStore,
-    logger: &Logger,
-    source_spec: Option<&str>,
-) -> Result<ConfigHandle<T>, Error>
-where
-    T: Default + Send + Sync + 'static + serde::de::DeserializeOwned,
-{
-    match source_spec {
-        Some(source_spec) => {
-            let source_spec = parse_source_spec(source_spec)?;
-            match source_spec {
-                SourceSpec::Configerator(source) => {
-                    config_store.get_config_handle(source.to_string())
-                }
-                SourceSpec::File(file) => {
-                    create_file_store(logger).get_config_handle(file.to_string())
-                }
-                SourceSpec::DefaultHandle => Ok(ConfigHandle::default()),
-            }
-        }
-        None => Ok(ConfigHandle::default()),
-    }
-}
-
-fn create_file_store(logger: &Logger) -> ConfigStore {
-    ConfigStore::file(
-        logger.clone(),
-        PathBuf::new(),
-        String::new(),
-        Duration::from_secs(1),
-    )
-}
-
-enum SourceSpec<'a> {
-    Configerator(&'a str),
-    File(&'a str),
-    DefaultHandle,
-}
-
-fn parse_source_spec(source_spec: &str) -> Result<SourceSpec, Error> {
+/// NOTE: Don't use this. "configerator:" prefix don't need to exist and is going to be removed.
+/// Pass raw path instead.
+pub fn parse_config_spec_to_path(source_spec: &str) -> Result<String, Error> {
     // NOTE: This means we don't support file paths with ":" in them, but it also means we can
     // add other options after the first ":" later if we want.
     let mut iter = source_spec.split(':');
@@ -2140,9 +2082,8 @@ fn parse_source_spec(source_spec: &str) -> Result<SourceSpec, Error> {
     // NOTE: We match None as the last element to make sure the input doesn't contain
     // disallowed trailing parts.
     match (iter.next(), iter.next(), iter.next()) {
-        (Some("configerator"), Some(source), None) => Ok(SourceSpec::Configerator(source)),
-        (Some("file"), Some(file), None) => Ok(SourceSpec::File(file)),
-        (Some("default"), None, None) => Ok(SourceSpec::DefaultHandle),
+        (Some("configerator"), Some(path), None) => Ok(path.to_string()),
+        (Some(path), None, None) => Ok(path.to_string()),
         _ => Err(format_err!("Invalid configuration spec: {:?}", source_spec)),
     }
 }

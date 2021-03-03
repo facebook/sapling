@@ -93,7 +93,7 @@ Note that the node is from the small repo, even though the hook is in the large 
   [255]
 
 Let's check that disabling running pushredirected hooks work
-  $ cat > $TESTTMP/mononoke_tunables.json <<EOF
+  $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
   > {
   >   "killswitches": {
   >     "disable_running_hooks_in_pushredirected_repo": true
@@ -101,7 +101,7 @@ Let's check that disabling running pushredirected hooks work
   > }
   > EOF
 
-  $ force_update_tunables
+  $ force_update_configerator
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark
   pushing rev 6e6a22d48eb5 to destination ssh://user@dummy/small-mon bookmark master_bookmark
   searching for changes

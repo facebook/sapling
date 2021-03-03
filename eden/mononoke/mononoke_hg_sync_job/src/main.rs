@@ -98,7 +98,7 @@ const DEFAULT_RETRY_NUM: usize = 3;
 const DEFAULT_BATCH_SIZE: usize = 10;
 const DEFAULT_SINGLE_BUNDLE_TIMEOUT_MS: u64 = 5 * 60 * 1000;
 
-const CONFIGERATOR_HGSERVER_PATH: &str = "configerator:scm/mononoke/hgserverconf/hgserver";
+const CONFIGERATOR_HGSERVER_PATH: &str = "scm/mononoke/hgserverconf/hgserver";
 
 #[derive(Copy, Clone)]
 struct QueueSize(usize);
@@ -1043,8 +1043,7 @@ fn get_repo_sqldb_address<'a>(
     if !matches.is_present("lock-on-failure") {
         return Ok(None);
     }
-    let handle =
-        args::get_config_handle(config_store, ctx.logger(), Some(CONFIGERATOR_HGSERVER_PATH))?;
+    let handle = config_store.get_config_handle(CONFIGERATOR_HGSERVER_PATH.to_string())?;
     let config: Arc<ServerConfig> = handle.get();
     match config.sql_confs.get(AsRef::<str>::as_ref(repo_name)) {
         Some(sql_conf) => Ok(Some(sql_conf.db_tier.clone())),

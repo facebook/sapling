@@ -25,7 +25,7 @@ Setup config repo:
   $ setconfig infinitepush.server=false infinitepush.branchpattern="re:scratch/.+"
 
 start SCS server and mononoke
-  $ cat > $TESTTMP/mononoke_tunables.json <<EOF
+  $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
   > {
   >   "killswitches": {
   >     "allow_change_xrepo_mapping_extra": true

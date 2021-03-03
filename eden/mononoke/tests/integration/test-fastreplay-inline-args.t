@@ -74,7 +74,7 @@ Check repo client Scuba logging
 
 # Check that replaying with admission rate = 0 does not replay
   $ truncate -s 0 "$fastreplay_log"
-  $ live_config="$TESTTMP/live.json"
+  $ live_config="${LOCAL_CONFIGERATOR_PATH}/live.json"
   $ cat > "$live_config" << EOF
   > {
   >   "admission_rate": 0,
@@ -83,14 +83,14 @@ Check repo client Scuba logging
   >   "skipped_repos": []
   > }
   > EOF
-  $ fastreplay --live-config "file:${live_config}" --debug < "$WIREPROTO_LOGGING_PATH" 2>&1 | grep "not admitted"
+  $ fastreplay --live-config "$(get_configerator_relative_path "${live_config}")" --debug < "$WIREPROTO_LOGGING_PATH" 2>&1 | grep "not admitted"
   * Request was not admitted (glob)
   * Request was not admitted (glob)
   * Request was not admitted (glob)
 
 # Check that replaying with max_concurrency = 1 replays in oder
   $ truncate -s 0 "$fastreplay_log"
-  $ live_config="$TESTTMP/live.json"
+  $ live_config="${LOCAL_CONFIGERATOR_PATH}/live.json"
   $ cat > "$live_config" << EOF
   > {
   >   "admission_rate": 100,
@@ -99,7 +99,7 @@ Check repo client Scuba logging
   >   "skipped_repos": []
   > }
   > EOF
-  $ quiet fastreplay  --live-config "file:${live_config}" --debug --scuba-log-file "$fastreplay_log" < "$WIREPROTO_LOGGING_PATH"
+  $ quiet fastreplay  --live-config "$(get_configerator_relative_path "${live_config}")" --debug --scuba-log-file "$fastreplay_log" < "$WIREPROTO_LOGGING_PATH"
   $ grep "Replay Succeeded" "$fastreplay_log" | jq .normal.command
   "getbundle"
   "gettreepack"
@@ -115,7 +115,7 @@ Check repo client Scuba logging
 
 # Check that replaying with skipped_repos does not replay
   $ truncate -s 0 "$fastreplay_log"
-  $ live_config="$TESTTMP/live.json"
+  $ live_config="${LOCAL_CONFIGERATOR_PATH}/live.json"
   $ cat > "$live_config" << EOF
   > {
   >   "admission_rate": 100,
@@ -124,5 +124,5 @@ Check repo client Scuba logging
   >   "skipped_repos": ["repo"]
   > }
   > EOF
-  $ quiet fastreplay  --live-config "file:${live_config}" --debug --scuba-log-file "$fastreplay_log" < "$WIREPROTO_LOGGING_PATH"
+  $ quiet fastreplay  --live-config "$(get_configerator_relative_path "${live_config}")" --debug --scuba-log-file "$fastreplay_log" < "$WIREPROTO_LOGGING_PATH"
   $ grep "Replay Succeeded" "$fastreplay_log" | jq .normal.command

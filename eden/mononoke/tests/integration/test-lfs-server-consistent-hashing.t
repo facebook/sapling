@@ -9,7 +9,7 @@
 # Create a repository
   $ setup_mononoke_config
   $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config repo1
-  $ LIVE_CONFIG="${TESTTMP}/live.json"
+  $ LIVE_CONFIG="${LOCAL_CONFIGERATOR_PATH}/live.json"
   $ cat > "$LIVE_CONFIG" << EOF
   > {
   >   "track_bytes_sent": false,
@@ -24,7 +24,7 @@
 
 # Start a LFS server, without an upstream
   $ LFS_LOG="$TESTTMP/lfs.log"
-  $ LFS_ROOT="$(lfs_server --log "$LFS_LOG" --live-config "file:${LIVE_CONFIG}")"
+  $ LFS_ROOT="$(lfs_server --log "$LFS_LOG" --live-config "$(get_configerator_relative_path "${LIVE_CONFIG}")")"
   $ LFS_URI="$LFS_ROOT/repo1"
 
 # Upload a blob

@@ -18,7 +18,7 @@ use cached_config::ConfigHandle;
 use clap::Arg;
 use cloned::cloned;
 use cmdlib::{
-    args::{self, MononokeMatches},
+    args::{self, parse_config_spec_to_path, MononokeMatches},
     monitoring::ReadyFlagService,
 };
 use context::SessionContainer;
@@ -393,12 +393,13 @@ impl ReplayOpts {
 
         let config_store = cmdlib::args::init_config_store(fb, &logger, matches)?;
 
-        let config = cmdlib::args::get_config_handle(
-            config_store,
-            &logger,
-            matches.value_of(ARG_LIVE_CONFIG),
-        )
-        .with_context(|| format!("While parsing --{}", ARG_LIVE_CONFIG))?;
+        let config_handle = match matches.value_of(ARG_LIVE_CONFIG) {
+            Some(spec) => config_store.get_config_handle(parse_config_spec_to_path(spec)?),
+            None => Ok(ConfigHandle::default()),
+        };
+
+        let config =
+            config_handle.with_context(|| format!("While parsing --{}", ARG_LIVE_CONFIG))?;
 
         Ok(Self { aliases, config })
     }

@@ -37,7 +37,7 @@
   >   ]
   > CONFIG
 
-  $ cat > $TESTTMP/mononoke_tunables.json <<EOF
+  $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
   > {
   >   "killswitches": {
   >     "run_hooks_on_additional_changesets": true

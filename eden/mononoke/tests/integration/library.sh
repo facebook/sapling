@@ -24,11 +24,19 @@ fi
 REPOID=0
 REPONAME=${REPONAME:-repo}
 
+export LOCAL_CONFIGERATOR_PATH="$TESTTMP/configerator"
+mkdir -p "${LOCAL_CONFIGERATOR_PATH}"
+export MONONOKE_TUNABLES_PATH="${LOCAL_CONFIGERATOR_PATH}/mononoke_tunables.json"
+
+function get_configerator_relative_path {
+  realpath --relative-to "${LOCAL_CONFIGERATOR_PATH}" "$1"
+}
+
 COMMON_ARGS=(
   --skip-caching
   --mysql-master-only
-  --tunables-config "file:$TESTTMP/mononoke_tunables.json"
-  --local-configerator-path "$TESTTMP/configerator"
+  --tunables-config "$(get_configerator_relative_path "${MONONOKE_TUNABLES_PATH}")"
+  --local-configerator-path "${LOCAL_CONFIGERATOR_PATH}"
   --log-exclude-tag "futures_watchdog"
 )
 if [[ -n "$MYSQL_CLIENT" ]]; then
@@ -422,10 +430,6 @@ function flush_mononoke_bookmarks {
   sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/drop_bookmarks_cache"
 }
 
-function force_update_tunables {
-  sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/force_update_tunables"
-}
-
 function force_update_configerator {
   sslcurl -X POST -fsS "https://localhost:$MONONOKE_SOCKET/control/force_update_configerator"
 }
@@ -536,9 +540,9 @@ function get_bonsai_globalrev_mapping {
 function setup_mononoke_config {
   cd "$TESTTMP" || exit
   if [[ -z "$MONONOKE_TUNABLES" ]]; then
-    echo "{}" > "$TESTTMP/mononoke_tunables.json"
+    echo "{}" > "${MONONOKE_TUNABLES_PATH}"
   else
-    echo "$MONONOKE_TUNABLES" > "$TESTTMP/mononoke_tunables.json"
+    echo "$MONONOKE_TUNABLES" > "${MONONOKE_TUNABLES_PATH}"
   fi
 
   mkdir -p mononoke-config
@@ -664,10 +668,9 @@ function setup_commitsyncmap {
   cp "$TEST_FIXTURES/commitsync/current.toml" "$TESTTMP/mononoke-config/common/commitsyncmap.toml"
 }
 
-
 function setup_configerator_configs {
   export LOADSHED_CONF
-  LOADSHED_CONF="$TESTTMP/configerator/scm/mononoke/loadshedding"
+  LOADSHED_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/loadshedding"
   mkdir -p "$LOADSHED_CONF"
 
   if [[ ! -f "$LOADSHED_CONF/limits" ]]; then
@@ -693,7 +696,7 @@ EOF
   fi
 
   export PUSHREDIRECT_CONF
-  PUSHREDIRECT_CONF="$TESTTMP/configerator/scm/mononoke/pushredirect"
+  PUSHREDIRECT_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/pushredirect"
   mkdir -p "$PUSHREDIRECT_CONF"
 
   if [[ ! -f "$PUSHREDIRECT_CONF/enable" ]]; then
@@ -705,7 +708,7 @@ EOF
   fi
 
   export COMMIT_SYNC_CONF
-  COMMIT_SYNC_CONF="$TESTTMP/configerator/scm/mononoke/repos/commitsyncmaps"
+  COMMIT_SYNC_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/repos/commitsyncmaps"
   mkdir -p "$COMMIT_SYNC_CONF"
   if [[ ! -f "$COMMIT_SYNC_CONF/all" ]]; then
     cp "$TEST_FIXTURES/commitsync/all.json" "$COMMIT_SYNC_CONF/all"
@@ -715,7 +718,7 @@ EOF
   fi
 
   export XDB_GC_CONF
-  XDB_GC_CONF="$TESTTMP/configerator/scm/mononoke/xdb_gc"
+  XDB_GC_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/xdb_gc"
   mkdir -p "$XDB_GC_CONF"
   if [[ ! -f "$XDB_GC_CONF/default" ]]; then
     cat >> "$XDB_GC_CONF/default" <<EOF
@@ -728,7 +731,7 @@ EOF
   fi
 
   export OBSERVABILITY_CONF
-  OBSERVABILITY_CONF="$TESTTMP/configerator/scm/mononoke/observability"
+  OBSERVABILITY_CONF="${LOCAL_CONFIGERATOR_PATH}/scm/mononoke/observability"
   mkdir -p "$OBSERVABILITY_CONF"
   if [[ ! -f "$OBSERVABILITY_CONF/observability_config" ]]; then
   cat >> "$OBSERVABILITY_CONF/observability_config" <<EOF

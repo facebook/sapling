@@ -17,7 +17,7 @@ setup configuration
   > hooks_skip_ancestors_of=["main"]
   > CONFIG
 
-  $ cat > $TESTTMP/mononoke_tunables.json <<EOF
+  $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
   > {
   >   "killswitches": {
   >     "check_case_conflicts_on_bookmark_movement": true,
