@@ -923,7 +923,7 @@ class HgServer(object):
             files.append((pycompat.decodeutf8(files_data[idx]), files_data[idx + 1]))
 
         logging.debug("will prefetch %d files" % len(files))
-        self.repo.fileservice.prefetch(files)
+        self.repo.fileservice.prefetch(files, fetchdata=True, fetchhistory=False)
 
 
 def always_allow_pending(root):
