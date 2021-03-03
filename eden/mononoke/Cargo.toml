@@ -217,6 +217,8 @@ gotham = { git = "https://github.com/krallin/gotham.git", rev = "59f7f3fe8958837
 gotham_derive = { git = "https://github.com/krallin/gotham.git", rev = "59f7f3fe8958837cc4343c67ee5c2c1f11ce65ab" }
 hyper-02 = { package = "hyper", version = "0.13.10", git = "https://github.com/krallin/hyper.git", rev = "9c9453c5ae3e92de4ba30edd81bb45371b8fa8d6" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
+openssl = { git = "https://github.com/sfackler/rust-openssl", rev = "68fc8ba890d77986b06ca5ce29d1089285fbbcf9" }
+openssl-sys = { git = "https://github.com/sfackler/rust-openssl", rev = "68fc8ba890d77986b06ca5ce29d1089285fbbcf9" }
 prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-build = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
