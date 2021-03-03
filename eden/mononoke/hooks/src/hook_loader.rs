@@ -53,7 +53,7 @@ pub async fn load_hooks(
             .await?
             {
                 ChangesetHook(hook)
-            } else if let Some(hook) = hook_name_to_file_hook(&hook.name, &hook.config)? {
+            } else if let Some(hook) = hook_name_to_file_hook(fb, &hook.name, &hook.config)? {
                 FileHook(hook)
             } else {
                 return Err(ErrorKind::InvalidRustHook(hook.name.clone()).into());

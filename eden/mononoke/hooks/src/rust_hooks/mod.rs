@@ -60,6 +60,7 @@ pub fn hook_name_to_changeset_hook<'a>(
 }
 
 pub fn hook_name_to_file_hook(
+    _fb: FacebookInit,
     name: &str,
     config: &HookConfig,
 ) -> Result<Option<Box<dyn FileHook + 'static>>> {
