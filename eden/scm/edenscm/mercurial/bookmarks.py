@@ -1103,37 +1103,46 @@ def saveremotenames(repo, remotebookmarks, override=True):
         oldbooks = {}
 
         remotepaths = remotebookmarks.keys()
-        f = svfs("remotenames", "w", atomictemp=True)
-        for node, nametype, remote, rname in olddata:
+        newremotenamenodes = {}
+        for hexnode, nametype, remote, rname in olddata:
+            # Do not write 'default-push' names. See https://fburl.com/1rft34i8.
+            if remote == "default-push":
+                continue
+            fullname = joinremotename(remote, rname)
             if remote not in remotepaths:
-                _writesingleremotename(f, remote, nametype, rname, node)
+                newremotenamenodes[fullname] = bin(hexnode)
             elif nametype == "bookmarks":
-                oldbooks[(remote, rname)] = node
+                oldbooks[(remote, rname)] = hexnode
                 if not override and rname not in remotebookmarks[remote]:
-                    _writesingleremotename(f, remote, nametype, rname, node)
+                    newremotenamenodes[fullname] = bin(hexnode)
 
         journal = []
         nm = repo.changelog.nodemap
         missingnode = False
         for remote, rmbookmarks in pycompat.iteritems(remotebookmarks):
+            # Do not write 'default-push' names. See https://fburl.com/1rft34i8.
+            if remote == "default-push":
+                continue
             rmbookmarks = {} if rmbookmarks is None else rmbookmarks
-            for name, node in pycompat.iteritems(rmbookmarks):
+            for name, hexnode in pycompat.iteritems(rmbookmarks):
                 oldnode = oldbooks.get((remote, name), hex(nullid))
-                newnode = node
+                newnode = hexnode
                 if not bin(newnode) in nm:
                     # node is unknown locally, don't change the bookmark
                     missingnode = True
                     newnode = oldnode
                 if newnode != hex(nullid):
-                    _writesingleremotename(f, remote, "bookmarks", name, newnode)
+                    fullname = joinremotename(remote, name)
+                    newremotenamenodes[fullname] = bin(newnode)
                     if newnode != oldnode:
                         journal.append(
                             (joinremotename(remote, name), bin(oldnode), bin(newnode))
                         )
         repo.ui.log("remotenamesmissingnode", remotenamesmissingnode=str(missingnode))
 
+        repo.svfs.write("remotenames", encoderemotenames(newremotenamenodes))
+
         _recordbookmarksupdate(repo, journal)
-        f.close()
 
         # Old paths have been deleted, refresh remotenames
         if util.safehasattr(repo, "_remotenames"):
@@ -1164,6 +1173,16 @@ def decoderemotenames(data):
             continue
         result[fullname] = bin(hexnode)
     return result
+
+
+def encoderemotenames(fullnamenodes):
+    # type: typing.List[typing.Tuple[str, bytes]] -> (bytes)
+    """Encode {fullname: node} to remotenames format."""
+    content = "".join(
+        "%s bookmarks %s\n" % (hex(node), name)
+        for name, node in sorted(fullnamenodes.items())
+    )
+    return encodeutf8(content)
 
 
 class lazyremotenamedict(pycompat.Mapping):
@@ -1283,14 +1302,6 @@ def transition(repo, ui):
         message = ui.config("remotenames", "transitionmessage")
         if message:
             ui.warn(message + "\n")
-
-
-def _writesingleremotename(fd, remote, nametype, name, node):
-    # Do not write 'default-push' names. See https://fburl.com/1rft34i8.
-    if remote == "default-push":
-        return
-    remotename = joinremotename(remote, name)
-    fd.write(pycompat.encodeutf8("%s %s %s\n" % (node, nametype, remotename)))
 
 
 def readremotenames(repo=None, svfs=None):
