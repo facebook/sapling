@@ -44,6 +44,7 @@ from __future__ import absolute_import
 
 import errno
 
+import bindings
 from edenscm import tracing
 from edenscm.mercurial import (
     cmdutil,
@@ -160,6 +161,20 @@ def getconfigs(wctx):
             maps[name] = []
         maps[name].append(value)
     return maps
+
+
+def configstomatcher(configs):
+    """returns a matcher matching files need to be dirsynced
+
+    configs is the return value of getconfigs()
+    """
+    rules = set()
+    for mirrors in configs.values():
+        for mirror in mirrors:
+            assert mirror.endswith("/"), "getconfigs() ensures this"
+            rules.add("%s**" % mirror)
+    m = bindings.pathmatcher.treematcher(sorted(rules))
+    return m
 
 
 def getmirrors(maps, filename):
@@ -286,6 +301,7 @@ def dirsyncctx(ctx, matcher=None):
     if not maps:
         return resultctx, resultmirrored
 
+    needsync = configstomatcher(maps)
     repo = ctx.repo()
     mctx, status = _mctxstatus(ctx)
 
@@ -302,7 +318,7 @@ def dirsyncctx(ctx, matcher=None):
         ("r", status.removed),
     ):
         for src in paths:
-            if not matcher(src):
+            if not needsync.matches(src) or not matcher(src):
                 continue
             srcmirror, mirrors = getmirrors(maps, src)
             if not mirrors:
