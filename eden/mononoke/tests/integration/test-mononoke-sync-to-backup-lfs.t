@@ -11,6 +11,7 @@ setup configuration
 
   $ LFS_THRESHOLD="1000" REPOID=0 REPONAME=orig setup_common_config blob_files
   $ REPOID=1 REPONAME=backup setup_common_config blob_files
+  $ export BACKUP_REPO_ID=1
   $ cd $TESTTMP
 
 Setup hg repo, create a commit there. No LFS blobs yet.
@@ -99,7 +100,7 @@ Check LFS is not in backup
 
 Sync to backup
   $ cd "$TESTTMP"
-  $ mononoke_backup_sync backup sync-once 2 --generate-bundles --darkstorm-backup-repo-id 1 2>&1 | grep "successful sync"
+  $ mononoke_backup_sync backup sync-once 2 --generate-bundles 2>&1 | grep "successful sync"
   * successful sync of entries [3] (glob)
 
 Check LFS is in backup

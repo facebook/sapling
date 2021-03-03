@@ -15,12 +15,14 @@
 /// of truth. All writes to Mononoke are replayed to Mercurial using this job. That can be used
 /// to verify Mononoke's correctness and/or use hg as a disaster recovery mechanism.
 use anyhow::{bail, format_err, Error, Result};
+use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshness};
 use borrowed::borrowed;
 use bundle_generator::FilenodeVerifier;
 use bundle_preparer::BundlePreparer;
 use bytes::Bytes;
+use cached_config::ConfigStore;
 use clap::{Arg, SubCommand};
 use cloned::cloned;
 use cmdlib::{
@@ -51,7 +53,9 @@ use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{error, info};
-use sql_construct::{facebook::FbSqlConstruct, SqlConstruct};
+use sql_construct::{
+    facebook::FbSqlConstruct, SqlConstruct, SqlConstructFromMetadataDatabaseConfig,
+};
 use sql_ext::facebook::{myrouter_ready, MysqlConnectionType, MysqlOptions};
 
 use std::collections::HashMap;
@@ -604,6 +608,68 @@ impl BookmarkOverlay {
     }
 }
 
+struct LatestReplayedSyncCounter {
+    mutable_counters: SqlMutableCounters,
+    repo_id: RepositoryId,
+}
+
+impl LatestReplayedSyncCounter {
+    async fn new(
+        ctx: &CoreContext,
+        source_repo: &BlobRepo,
+        darkstorm_backup_repo: &Option<BlobRepo>,
+        config_store: &ConfigStore,
+        matches: &MononokeMatches<'_>,
+    ) -> Result<Self, Error> {
+        let (mutable_counters, repo_id) = if let Some(backup_repo) = darkstorm_backup_repo {
+            let repo_id = backup_repo.get_repoid();
+
+            let (_, config) = args::get_config_by_repoid(config_store, matches, repo_id)?;
+            let mysql_options = args::parse_mysql_options(matches);
+            let readonly_storage = args::parse_readonly_storage(matches);
+            let mutable_counters = SqlMutableCounters::with_metadata_database_config(
+                ctx.fb,
+                &config.storage_config.metadata,
+                &mysql_options,
+                readonly_storage.0,
+            )
+            .await?;
+
+            (mutable_counters, repo_id)
+        } else {
+            let mutable_counters =
+                args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches).await?;
+            (mutable_counters, source_repo.get_repoid())
+        };
+
+        Ok(Self {
+            mutable_counters,
+            repo_id,
+        })
+    }
+
+    async fn get_counter(&self, ctx: &CoreContext) -> Result<Option<i64>, Error> {
+        self.mutable_counters
+            .get_counter(ctx.clone(), self.repo_id, LATEST_REPLAYED_REQUEST_KEY)
+            .compat()
+            .await
+    }
+
+    async fn set_counter(&self, ctx: &CoreContext, value: i64) -> Result<bool, Error> {
+        self.mutable_counters
+            .set_counter(
+                ctx.clone(),
+                self.repo_id,
+                LATEST_REPLAYED_REQUEST_KEY,
+                value,
+                // TODO(stash): do we need conditional updates here?
+                None,
+            )
+            .compat()
+            .await
+    }
+}
+
 async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(), Error> {
     let hg_repo_path = match matches.value_of("hg-repo-ssh-path") {
         Some(hg_repo_path) => hg_repo_path.to_string(),
@@ -655,7 +721,15 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
     let use_hg_server_bookmark_value_if_mismatch =
         matches.is_present(ARG_USE_HG_SERVER_BOOKMARK_VALUE_IF_MISMATCH);
-    let darkstorm_backup_repo_id = matches.value_of(ARG_DARKSTORM_BACKUP_REPO_ID);
+    let maybe_darkstorm_backup_repo = if matches.value_of(ARG_DARKSTORM_BACKUP_REPO_ID).is_some() {
+        let backup_repo_id =
+            args::get_repo_id_from_value(config_store, &matches, ARG_DARKSTORM_BACKUP_REPO_ID)?;
+        let backup_repo =
+            args::open_repo_by_id(ctx.fb, &ctx.logger(), &matches, backup_repo_id).await?;
+        Some(backup_repo)
+    } else {
+        None
+    };
 
     let hgsql_use_sqlite = matches.is_present(HGSQL_GLOBALREVS_USE_SQLITE);
     let hgsql_db_addr = matches
@@ -673,22 +747,17 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 let verifier = LfsVerifier::new(uri, Arc::new(repo.get_blobstore()))?;
                 FilenodeVerifier::LfsVerifier(verifier)
             }
-            None if darkstorm_backup_repo_id.is_some() => {
-                let backup_repo_id = args::get_repo_id_from_value(
-                    config_store,
-                    &matches,
-                    ARG_DARKSTORM_BACKUP_REPO_ID,
-                )?;
-                let backup_repo =
-                    args::open_repo_by_id(ctx.fb, &ctx.logger(), &matches, backup_repo_id).await?;
-                let verifier = DarkstormVerifier::new(
-                    Arc::new(repo.get_blobstore()),
-                    Arc::new(backup_repo.get_blobstore()),
-                    backup_repo.filestore_config(),
-                );
-                FilenodeVerifier::DarkstormVerifier(verifier)
-            }
-            None => FilenodeVerifier::NoopVerifier,
+            None => match maybe_darkstorm_backup_repo {
+                Some(ref backup_repo) => {
+                    let verifier = DarkstormVerifier::new(
+                        Arc::new(repo.get_blobstore()),
+                        Arc::new(backup_repo.get_blobstore()),
+                        backup_repo.filestore_config(),
+                    );
+                    FilenodeVerifier::DarkstormVerifier(verifier)
+                }
+                None => FilenodeVerifier::NoopVerifier,
+            },
         };
 
         borrowed!(ctx, repo);
@@ -891,8 +960,14 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 args::get_usize_opt(&sub_m, "bundle-prefetch").unwrap_or(0) + 1;
             let combine_bundles = args::get_u64_opt(&sub_m, "combine-bundles").unwrap_or(1);
             let loop_forever = sub_m.is_present("loop-forever");
-            let mutable_counters =
-                args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches).await?;
+            let mutable_counters = LatestReplayedSyncCounter::new(
+                &ctx,
+                &repo,
+                &maybe_darkstorm_backup_repo,
+                &config_store,
+                matches,
+            )
+            .await?;
             let exit_path = sub_m
                 .value_of("exit-file")
                 .map(|name| Path::new(name).to_path_buf());
@@ -914,8 +989,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             };
 
             let counter = mutable_counters
-                .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
-                .compat()
+                .get_counter(&ctx)
                 .and_then(move |maybe_counter| {
                     future::ready(maybe_counter.or(start_id).ok_or_else(|| {
                         format_err!(
@@ -1002,17 +1076,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
                 retry(
                     &ctx.logger(),
                     |_| async {
-                        let success = mutable_counters
-                            .set_counter(
-                                ctx.clone(),
-                                repo_id,
-                                LATEST_REPLAYED_REQUEST_KEY,
-                                next_id,
-                                // TODO(stash): do we need conditional updates here?
-                                None,
-                            )
-                            .compat()
-                            .await?;
+                        let success = mutable_counters.set_counter(&ctx, next_id).await?;
 
                         if success {
                             Ok(())

@@ -10,6 +10,7 @@ setup configuration
 
   $ REPOID=0 REPONAME=orig setup_common_config blob_files
   $ REPOID=1 REPONAME=backup setup_common_config blob_files
+  $ export BACKUP_REPO_ID=1
   $ cd $TESTTMP
 
 setup repo
@@ -139,3 +140,7 @@ Do a manual move
   adding remote bookmark master_bookmark
   $ hgmn log -r master_bookmark -T '{node}\n'
   f5fb745185a2d197d092e7dfffe147f36de1af76
+
+Make sure correct mutable counter is used (it should be repoid = 1)
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters" | grep latest
+  1|latest-replayed-request|15

@@ -159,6 +159,7 @@ function mononoke_backup_sync {
     --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --verify-server-bookmark-on-failure \
+    --darkstorm-backup-repo-id "$BACKUP_REPO_ID" \
     "mononoke://$(mononoke_address)/$HG_REPO" "$@" "$SYNC_MODE" --start-id "$START_ID"
 }
 

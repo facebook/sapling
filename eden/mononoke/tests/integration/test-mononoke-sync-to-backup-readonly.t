@@ -11,6 +11,7 @@ setup configuration
   $ REPOID=0 REPONAME=orig setup_common_config blob_files
   $ export READ_ONLY_REPO=1
   $ REPOID=1 REPONAME=backup setup_common_config blob_files
+  $ export BACKUP_REPO_ID=1
   $ cd $TESTTMP
 
 setup repo
