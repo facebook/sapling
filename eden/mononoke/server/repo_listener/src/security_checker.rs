@@ -93,7 +93,7 @@ impl ConnectionsSecurityChecker {
     }
 
     pub async fn check_if_trusted(&self, identities: &MononokeIdentitySet) -> Result<bool> {
-        let action = "tupperware";
+        let action = "trusted_parties";
         Ok(self.allowlisted_checker.is_member(&identities).await?
             || self
                 .tier_permchecker
