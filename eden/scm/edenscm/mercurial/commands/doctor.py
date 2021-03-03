@@ -385,8 +385,9 @@ def checkmissingmaster(repo, source="default"):
     mainremote = ui.config("remotenames", "rename.%s" % source) or source
     mainfullname = "%s/%s" % (mainremote, mainname)
 
-    if mainfullname not in repo.svfs.readutf8("remotenames"):
-        # remote does not have the bookmark
+    namenodes = bookmod.decoderemotenames(ml["remotenames"])
+    if mainfullname not in namenodes:
+        # remote does not have the bookmark (in tests)
         return
 
     if mainfullname in repo:
@@ -404,31 +405,18 @@ def checkmissingmaster(repo, source="default"):
         for rootid in reversed(roots):
             prog.value += 1
             oldml = ml.checkout(rootid)
-            remotenames = oldml.get("remotenames")
-            if not remotenames:
-                continue
-            for line in decodeutf8(remotenames).splitlines():
-                hexnode, _type, fullname = line.split(" ", 2)
-                if fullname != mainfullname:
-                    continue
-                if hexnode in repo:
-                    found = hexnode
-                break
-            if found:
+            node = bookmod.decoderemotenames(oldml["remotenames"]).get(mainfullname)
+            if node and node in repo:
+                found = node
                 break
 
     if not found:
         ui.write_err(_("cannot find %s from repo history\n") % mainfullname)
         return
 
-    ui.write_err(_("setting %s to %s\n") % (fullname, hexnode))
-    newremotenames = ""
-    for line in (ml["remotenames"] or "").splitlines(True):
-        hexnode, typename, fullname = line.split(" ", 2)
-        if fullname != mainfullname:
-            newremotenames += line
-    newremotenames += "%s bookmarks %s\n" % (found, mainfullname)
-    ml["remotenames"] = decodeutf8(newremotenames)
+    ui.write_err(_("setting %s to %s\n") % (mainfullname, hex(found)))
+    namenodes[mainfullname] = found
+    ml["remotenames"] = bookmod.encoderemotenames(namenodes)
     ml.commit("doctor\nTransaction: checkmissingmaster\n")
 
 
@@ -462,7 +450,8 @@ def checktoomanynames(repo, source="default"):
     """Check if there are too many remotenames."""
     ui = repo.ui
     threshold = ui.configint("doctor", "check-too-many-names-threshold")
-    count = len(repo.svfs.read("remotenames").splitlines())
+    namenodes = bookmod.decoderemotenames(repo.svfs.read("remotenames"))
+    count = len(namenodes)
     # Exclude accessed bookmarks because the accessed bookmarks might also be
     # "too many".
     selected = set(
@@ -485,13 +474,12 @@ def checktoomanynames(repo, source="default"):
     ):
         return
     with repo.wlock(), repo.lock(), repo.transaction("doctor"):
-        newremotenames = ""
-        for line in (repo.svfs.tryreadutf8("remotenames") or "").splitlines(True):
-            hexnode, typename, fullname = line.split(" ", 2)
+        newnamenodes = {}
+        for fullname, node in namenodes.items():
             remotename, name = bookmod.splitremotename(fullname)
             if remotename == defaultname and name.strip() in selected:
-                newremotenames += line
-        repo.svfs.writeutf8("remotenames", newremotenames)
+                newnamenodes[fullname] = node
+        repo.svfs.write("remotenames", bookmod.encoderemotenames(newnamenodes))
 
 
 def checknoisybranches(repo):
