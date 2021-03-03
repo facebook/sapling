@@ -1037,7 +1037,14 @@ def remoteui(src, opts):
         dst.setconfig("bundle", "mainreporoot", r, "copied")
 
     # copy selected local settings to the remote ui
-    for sect in ("auth", "hostfingerprints", "hostsecurity", "http_proxy"):
+    for sect in (
+        "auth",
+        "hostfingerprints",
+        "hostsecurity",
+        "http_proxy",
+        "help",
+        "edenapi",
+    ):
         for key, val in src.configitems(sect):
             dst.setconfig(sect, key, val, "copied")
     v = src.config("web", "cacerts")
