@@ -8,6 +8,7 @@
 #![deny(warnings)]
 
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::ops::RangeBounds;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
@@ -15,7 +16,7 @@ use anyhow::{anyhow, Context as _, Error};
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, Freshness};
-use bookmarks_types::{Bookmark, BookmarkKind};
+use bookmarks_types::{Bookmark, BookmarkKind, BookmarkPagination, BookmarkPrefix};
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
@@ -74,10 +75,21 @@ pub struct Warmer {
     is_warm: Box<IsWarmFn>,
 }
 
+/// Initialization mode for the warm bookmarks cache.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum InitMode {
+    /// Rewind each bookmark until a warm changeset is found.
+    Rewind,
+
+    /// Warm up the bookmark at its current location.
+    Warm,
+}
+
 pub struct WarmBookmarksCacheBuilder<'a> {
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     warmers: Vec<Warmer>,
+    init_mode: InitMode,
 }
 
 impl<'a> WarmBookmarksCacheBuilder<'a> {
@@ -86,6 +98,7 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
             ctx,
             repo,
             warmers: vec![],
+            init_mode: InitMode::Rewind,
         }
     }
 
@@ -151,11 +164,26 @@ impl<'a> WarmBookmarksCacheBuilder<'a> {
         self.warmers.push(warmer);
     }
 
+    /// For use in tests to avoid having to wait for the warm bookmark cache
+    /// to finish its initial warming cycle.  When initializing the warm
+    /// bookmarks cache, wait until all current bookmark values have been
+    /// warmed before returning.
+    pub fn wait_until_warmed(&mut self) {
+        self.init_mode = InitMode::Warm;
+    }
+
     pub async fn build(
         self,
         bookmark_update_delay: BookmarkUpdateDelay,
     ) -> Result<WarmBookmarksCache, Error> {
-        WarmBookmarksCache::new(&self.ctx, &self.repo, bookmark_update_delay, self.warmers).await
+        WarmBookmarksCache::new(
+            &self.ctx,
+            &self.repo,
+            bookmark_update_delay,
+            self.warmers,
+            self.init_mode,
+        )
+        .await
     }
 }
 
@@ -165,12 +193,13 @@ impl WarmBookmarksCache {
         repo: &BlobRepo,
         bookmark_update_delay: BookmarkUpdateDelay,
         warmers: Vec<Warmer>,
+        init_mode: InitMode,
     ) -> Result<Self, Error> {
         let warmers = Arc::new(warmers);
         let (sender, receiver) = oneshot::channel();
 
         info!(ctx.logger(), "Starting warm bookmark cache updater");
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
+        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, init_mode).await?;
         let bookmarks = Arc::new(RwLock::new(bookmarks));
 
         let loop_sleep = Duration::from_millis(1000);
@@ -201,6 +230,40 @@ impl WarmBookmarksCache {
     pub fn get_all(&self) -> HashMap<BookmarkName, (ChangesetId, BookmarkKind)> {
         self.bookmarks.read().unwrap().clone()
     }
+
+    pub fn list(
+        &self,
+        prefix: &BookmarkPrefix,
+        pagination: &BookmarkPagination,
+        limit: Option<u64>,
+    ) -> Vec<(BookmarkName, (ChangesetId, BookmarkKind))> {
+        let bookmarks = self.bookmarks.read().unwrap();
+
+        if prefix.is_empty() && *pagination == BookmarkPagination::FromStart && limit.is_none() {
+            // Simple case: return all bookmarks
+            bookmarks
+                .iter()
+                .map(|(name, (cs_id, kind))| (name.clone(), (*cs_id, *kind)))
+                .collect()
+        } else {
+            // Filter based on prefix and pagination
+            let range = prefix.to_range().with_pagination(pagination.clone());
+            let mut matches = bookmarks
+                .iter()
+                .filter(|(name, _)| range.contains(name))
+                .map(|(name, (cs_id, kind))| (name.clone(), (*cs_id, *kind)))
+                .collect::<Vec<_>>();
+            // Release the read lock.
+            drop(bookmarks);
+            if let Some(limit) = limit {
+                // We must sort and truncate if there is a limit so that the
+                // client can paginate in order.
+                matches.sort_by(|(name1, _), (name2, _)| name1.cmp(name2));
+                matches.truncate(limit as usize);
+            }
+            matches
+        }
+    }
 }
 
 impl Drop for WarmBookmarksCache {
@@ -216,6 +279,7 @@ async fn init_bookmarks(
     ctx: &CoreContext,
     repo: &BlobRepo,
     warmers: &Arc<Vec<Warmer>>,
+    mode: InitMode,
 ) -> Result<HashMap<BookmarkName, (ChangesetId, BookmarkKind)>, Error> {
     let all_bookmarks = repo
         .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
@@ -235,18 +299,28 @@ async fn init_bookmarks(
             let kind = *book.kind();
             if !is_warm(ctx, repo, &cs_id, warmers).await {
                 let book_name = book.into_name();
-                let maybe_cs_id =
-                    move_bookmark_back_in_history_until_derived(&ctx, &repo, &book_name, &warmers)
+                match mode {
+                    InitMode::Rewind => {
+                        let maybe_cs_id = move_bookmark_back_in_history_until_derived(
+                            &ctx, &repo, &book_name, &warmers,
+                        )
                         .await?;
 
-                info!(
-                    ctx.logger(),
-                    "moved {} back in history to {:?}", book_name, maybe_cs_id
-                );
-                Ok((
-                    remaining,
-                    maybe_cs_id.map(|cs_id| (book_name, (cs_id, kind))),
-                ))
+                        info!(
+                            ctx.logger(),
+                            "moved {} back in history to {:?}", book_name, maybe_cs_id
+                        );
+                        Ok((
+                            remaining,
+                            maybe_cs_id.map(|cs_id| (book_name, (cs_id, kind))),
+                        ))
+                    }
+                    InitMode::Warm => {
+                        info!(ctx.logger(), "warmed bookmark {} at {}", book_name, cs_id);
+                        warm_all(ctx, repo, &cs_id, warmers).await?;
+                        Ok((remaining, Some((book_name, (cs_id, kind)))))
+                    }
+                }
             } else {
                 Ok((remaining, Some((book.into_name(), (cs_id, kind)))))
             }
@@ -769,13 +843,13 @@ mod tests {
         let warmers = Arc::new(warmers);
 
         // Unodes haven't been derived at all - so we should get an empty set of bookmarks
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
+        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, InitMode::Rewind).await?;
         assert_eq!(bookmarks, HashMap::new());
 
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         RootUnodeManifestId::derive(&ctx, &repo, master_cs_id).await?;
 
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
+        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, InitMode::Rewind).await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (master_cs_id, BookmarkKind::PullDefaultPublishing)}
@@ -819,14 +893,14 @@ mod tests {
             master = new_master;
         }
 
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
+        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, InitMode::Rewind).await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
         );
 
         RootUnodeManifestId::derive(&ctx, &repo, master).await?;
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
+        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, InitMode::Rewind).await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (master, BookmarkKind::PullDefaultPublishing)}
@@ -856,7 +930,7 @@ mod tests {
             bookmark(&ctx, &repo, "master").set_to(new_master).await?;
         }
 
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
+        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, InitMode::Rewind).await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
@@ -893,7 +967,7 @@ mod tests {
             bookmark(&ctx, &repo, "master").set_to(new_master).await?;
         }
 
-        let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
+        let bookmarks = init_bookmarks(&ctx, &repo, &warmers, InitMode::Rewind).await?;
         assert_eq!(
             bookmarks,
             hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}

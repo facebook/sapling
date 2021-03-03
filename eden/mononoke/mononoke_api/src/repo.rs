@@ -29,7 +29,7 @@ use derived_data::BonsaiDerivable;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use futures::compat::Stream01CompatExt;
-use futures::stream::{Stream, StreamExt, TryStreamExt};
+use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use futures::try_join;
 use futures_watchdog::WatchdogExt;
 use hook_manager_factory::make_hook_manager;
@@ -354,6 +354,9 @@ impl Repo {
 
         let mut warm_bookmarks_cache_builder = WarmBookmarksCacheBuilder::new(&ctx, &blob_repo);
         warm_bookmarks_cache_builder.add_all_derived_data_warmers()?;
+        // We are constructing a test repo, so ensure the warm bookmark cache
+        // is fully warmed, so that tests see up-to-date bookmarks.
+        warm_bookmarks_cache_builder.wait_until_warmed();
         let warm_bookmarks_cache = warm_bookmarks_cache_builder
             .build(BookmarkUpdateDelay::Allow)
             .await?;
@@ -990,9 +993,9 @@ impl RepoContext {
         prefix: Option<&str>,
         after: Option<&str>,
         limit: Option<u64>,
-    ) -> Result<impl Stream<Item = Result<(String, ChangesetId), MononokeError>>, MononokeError>
+    ) -> Result<impl Stream<Item = Result<(String, ChangesetId), MononokeError>> + '_, MononokeError>
     {
-        let kinds = if include_scratch {
+        if include_scratch {
             if prefix.is_none() {
                 return Err(MononokeError::InvalidRequest(
                     "prefix required to list scratch bookmarks".to_string(),
@@ -1003,11 +1006,7 @@ impl RepoContext {
                     "limit required to list scratch bookmarks".to_string(),
                 ));
             }
-
-            BookmarkKind::ALL
-        } else {
-            BookmarkKind::ALL_PUBLISHING
-        };
+        }
 
         let prefix = match prefix {
             Some(prefix) => BookmarkPrefix::new(prefix).map_err(|e| {
@@ -1032,21 +1031,46 @@ impl RepoContext {
             None => BookmarkPagination::FromStart,
         };
 
-        let blob_repo = self.blob_repo();
-        let bookmarks = blob_repo
-            .attribute_expected::<dyn Bookmarks>()
-            .list(
-                self.ctx.clone(),
-                BookmarkFreshness::MaybeStale,
-                &prefix,
-                kinds,
-                &pagination,
-                limit.unwrap_or(std::u64::MAX),
-            )
-            .map_ok(|(bookmark, cs_id)| (bookmark.into_name().into_string(), cs_id))
-            .map_err(MononokeError::from)
-            .boxed();
-        Ok(bookmarks)
+        if include_scratch {
+            // Scratch bookmarks must be queried directly from the blobrepo as
+            // they are not stored in the cache.  To maintain ordering with
+            // public bookmarks, query all the bookmarks we are interested in.
+            let blob_repo = self.blob_repo();
+            let cache = self.warm_bookmarks_cache();
+            let bookmarks = blob_repo
+                .attribute_expected::<dyn Bookmarks>()
+                .list(
+                    self.ctx.clone(),
+                    BookmarkFreshness::MaybeStale,
+                    &prefix,
+                    &BookmarkKind::ALL,
+                    &pagination,
+                    limit.unwrap_or(std::u64::MAX),
+                )
+                .try_filter_map(move |(bookmark, cs_id)| async move {
+                    if bookmark.kind() == &BookmarkKind::Scratch {
+                        Ok(Some((bookmark.into_name().into_string(), cs_id)))
+                    } else {
+                        // For non-scratch bookmarks, always return the value
+                        // from the cache so that clients only ever see the
+                        // warm value.  If the bookmark is newly created and
+                        // has no warm value, this might mean we have to
+                        // filter this bookmark out.
+                        let bookmark_name = bookmark.into_name();
+                        let maybe_cs_id = cache.get(&bookmark_name);
+                        Ok(maybe_cs_id.map(|cs_id| (bookmark_name.into_string(), cs_id)))
+                    }
+                })
+                .map_err(MononokeError::from)
+                .boxed();
+            Ok(bookmarks)
+        } else {
+            // Public bookmarks can be fetched from the warm bookmarks cache.
+            let cache = self.warm_bookmarks_cache();
+            Ok(stream::iter(cache.list(&prefix, &pagination, limit))
+                .map(|(bookmark, (cs_id, _kind))| Ok((bookmark.into_string(), cs_id)))
+                .boxed())
+        }
     }
 
     /// Get a stack for the list of heads (up to the first public commit).
