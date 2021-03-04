@@ -23,7 +23,7 @@ class RpcServerProcessor {
   virtual auth_stat checkAuthentication(const call_body& call_body);
   virtual folly::Future<folly::Unit> dispatchRpc(
       folly::io::Cursor deser,
-      folly::io::Appender ser,
+      folly::io::QueueAppender ser,
       uint32_t xid,
       uint32_t progNumber,
       uint32_t progVersion,

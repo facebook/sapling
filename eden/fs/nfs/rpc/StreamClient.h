@@ -30,13 +30,13 @@ class StreamClient {
   explicit StreamClient(folly::SocketAddress&& addr);
   void connect();
 
-  std::pair<std::unique_ptr<folly::IOBuf>, folly::io::Appender>
+  std::pair<std::unique_ptr<folly::IOBufQueue>, folly::io::QueueAppender>
   serializeCallHeader(
       uint32_t progNumber,
       uint32_t progVersion,
       uint32_t procNumber);
 
-  uint32_t fillFrameAndSend(std::unique_ptr<folly::IOBuf> buf);
+  uint32_t fillFrameAndSend(std::unique_ptr<folly::IOBufQueue> buf);
 
   template <class T>
   uint32_t serializeCall(
@@ -46,11 +46,11 @@ class StreamClient {
       const T& request) {
     auto [buf, appender] =
         serializeCallHeader(progNumber, progVersion, procNumber);
-    XLOG(DBG9) << "header: " << buf->length() << " request memory size is "
+    XLOG(DBG9) << "header: " << buf->chainLength() << " request memory size is "
                << sizeof(request);
 
     XdrTrait<T>::serialize(appender, request);
-    XLOG(DBG9) << "after req : " << buf->length();
+    XLOG(DBG9) << "after req : " << buf->chainLength();
     return fillFrameAndSend(std::move(buf));
   }
 

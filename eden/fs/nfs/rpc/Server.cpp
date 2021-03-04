@@ -89,8 +89,8 @@ class RpcTcpHandler : public folly::DelayedDestruction {
       folly::io::Cursor deser(input.get());
       rpc_msg_call call = XdrTrait<rpc_msg_call>::deserialize(deser);
 
-      auto resultBuf = IOBuf::create(1024);
-      folly::io::Appender ser(resultBuf.get(), 1024);
+      auto resultBuf = std::make_unique<folly::IOBufQueue>();
+      folly::io::QueueAppender ser(resultBuf.get(), 1024);
       XdrTrait<uint32_t>::serialize(
           ser, 0); // reserve space for fragment header
 
@@ -159,11 +159,11 @@ class RpcTcpHandler : public folly::DelayedDestruction {
     })
         .via(this->sock_->getEventBase())
         .then([this, guard = std::move(guard)](
-                  folly::Try<std::unique_ptr<folly::IOBuf>> result) {
+                  folly::Try<std::unique_ptr<folly::IOBufQueue>> result) {
           if (result.hasException()) {
             // XXX: This should never happen.
           } else {
-            auto resultBuffer = std::move(result).value();
+            auto resultBuffer = std::move(result).value()->move();
 
             // Fill out the fragment header.
             auto len = uint32_t(
@@ -288,7 +288,7 @@ auth_stat RpcServerProcessor::checkAuthentication(
 
 Future<folly::Unit> RpcServerProcessor::dispatchRpc(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender /*ser*/,
+    folly::io::QueueAppender /*ser*/,
     uint32_t /*xid*/,
     uint32_t /*progNumber*/,
     uint32_t /*progVersion*/,

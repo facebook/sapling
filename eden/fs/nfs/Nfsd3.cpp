@@ -34,56 +34,58 @@ class Nfsd3ServerProcessor final : public RpcServerProcessor {
 
   folly::Future<folly::Unit> dispatchRpc(
       folly::io::Cursor deser,
-      folly::io::Appender ser,
+      folly::io::QueueAppender ser,
       uint32_t xid,
       uint32_t progNumber,
       uint32_t progVersion,
       uint32_t procNumber) override;
 
   folly::Future<folly::Unit>
-  null(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  null(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  getattr(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  getattr(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  setattr(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  setattr(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  lookup(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  lookup(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  access(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  access(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  readlink(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  readlink(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  read(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  read(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  write(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  write(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  create(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  create(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  mkdir(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  mkdir(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  symlink(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  symlink(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  mknod(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  mknod(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  remove(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  remove(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  rmdir(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  rmdir(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  rename(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  rename(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  link(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  link(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  readdir(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  readdir(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
+  folly::Future<folly::Unit> readdirplus(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      uint32_t xid);
   folly::Future<folly::Unit>
-  readdirplus(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  fsstat(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  fsstat(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  fsinfo(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  fsinfo(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  pathconf(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  pathconf(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
-  folly::Future<folly::Unit>
-  commit(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  commit(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
 
  private:
   std::unique_ptr<NfsDispatcher> dispatcher_;
@@ -157,7 +159,7 @@ nfsstat3 exceptionToNfsError(const folly::exception_wrapper& ex) {
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::null(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
   return folly::unit;
@@ -252,7 +254,7 @@ pre_op_attr statToPreOpAttr(struct stat& stat) {
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
@@ -282,7 +284,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::setattr(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -290,7 +292,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::setattr(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
@@ -390,7 +392,7 @@ uint32_t getEffectiveAccessRights(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::access(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
@@ -426,7 +428,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::access(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::readlink(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
@@ -467,7 +469,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::readlink(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::read(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -475,7 +477,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::read(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::write(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -493,7 +495,7 @@ bool isEexist(const folly::exception_wrapper& ex) {
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::create(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
@@ -575,7 +577,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::create(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::mkdir(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
@@ -635,7 +637,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::mkdir(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::symlink(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -643,7 +645,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::symlink(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::mknod(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -651,7 +653,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::mknod(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::remove(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -659,7 +661,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::remove(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::rmdir(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -667,7 +669,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::rmdir(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::rename(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -675,7 +677,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::rename(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::link(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -683,7 +685,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::link(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::readdir(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -691,7 +693,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::readdir(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::readdirplus(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -699,7 +701,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::readdirplus(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::fsstat(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -707,7 +709,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::fsstat(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::fsinfo(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
@@ -739,7 +741,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::fsinfo(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::pathconf(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
@@ -766,7 +768,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::pathconf(
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::commit(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -774,7 +776,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::commit(
 
 using Handler = folly::Future<folly::Unit> (Nfsd3ServerProcessor::*)(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid);
 
 struct HandlerEntry {
@@ -838,7 +840,7 @@ constexpr auto kNfs3dHandlers = [] {
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid,
     uint32_t progNumber,
     uint32_t progVersion,

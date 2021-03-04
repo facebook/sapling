@@ -20,7 +20,7 @@ EDEN_XDR_SERDE_IMPL(accepted_reply, verf, stat);
 EDEN_XDR_SERDE_IMPL(authsys_parms, stamp, machinename, uid, gid, gids);
 
 void serializeReply(
-    folly::io::Appender& ser,
+    folly::io::QueueAppender& ser,
     accept_stat status,
     uint32_t xid) {
   rpc_msg_reply reply{

@@ -19,7 +19,7 @@ namespace facebook::eden {
  *
  * A struct that needs serializing will need to implement the 2 functions:
  *
- * `static void serialize(folly::io::Appender& appender, const T& value)`
+ * `static void serialize(folly::io::QueueAppender& appender, const T& value)`
  * `static T deserialize(folly::io::Cursor& cursor)`
  *
  * The encoding follows:
@@ -45,7 +45,7 @@ struct IsXdrIntegral
  */
 template <typename T>
 struct XdrTrait<T, typename std::enable_if_t<detail::IsXdrIntegral<T>::value>> {
-  static void serialize(folly::io::Appender& appender, T value) {
+  static void serialize(folly::io::QueueAppender& appender, T value) {
     appender.writeBE<T>(value);
   }
 
@@ -59,7 +59,7 @@ struct XdrTrait<T, typename std::enable_if_t<detail::IsXdrIntegral<T>::value>> {
  */
 template <>
 struct XdrTrait<bool> {
-  static void serialize(folly::io::Appender& appender, bool value) {
+  static void serialize(folly::io::QueueAppender& appender, bool value) {
     XdrTrait<int32_t>::serialize(appender, value ? 1 : 0);
   }
 
@@ -73,7 +73,7 @@ struct XdrTrait<bool> {
  */
 template <typename T>
 struct XdrTrait<T, typename std::enable_if_t<std::is_enum_v<T>>> {
-  static void serialize(folly::io::Appender& appender, const T& value) {
+  static void serialize(folly::io::QueueAppender& appender, const T& value) {
     XdrTrait<int32_t>::serialize(appender, static_cast<int32_t>(value));
   }
 
@@ -96,20 +96,26 @@ inline size_t roundUp(size_t value) {
  * Serialize a fixed size byte array. Their content is serialized as is, padded
  * with NUL bytes to align on a 4-byte boundary.
  */
-void serialize_fixed(folly::io::Appender& appender, folly::ByteRange value);
+void serialize_fixed(
+    folly::io::QueueAppender& appender,
+    folly::ByteRange value);
 
 /**
  * Serialize a variable size byte array. The size of the array is written
  * first, followed by the content of the array, this is also aligned on a
  * 4-byte boundary.
  */
-void serialize_variable(folly::io::Appender& appender, folly::ByteRange value);
+void serialize_variable(
+    folly::io::QueueAppender& appender,
+    folly::ByteRange value);
 
 /**
  * Serialize an IOBuf chain. This is serialized like a variable sized array,
  * ie: size first, followed by the content and aligned on a 4-byte boundary.
  */
-void serialize_iobuf(folly::io::Appender& appender, const folly::IOBuf& buf);
+void serialize_iobuf(
+    folly::io::QueueAppender& appender,
+    const folly::IOBuf& buf);
 
 /**
  * Skip the padding bytes that were written during serialization.
@@ -126,7 +132,7 @@ inline void skipPadding(folly::io::Cursor& cursor, size_t len) {
 template <size_t N>
 struct XdrTrait<std::array<uint8_t, N>> {
   static void serialize(
-      folly::io::Appender& appender,
+      folly::io::QueueAppender& appender,
       const std::array<uint8_t, N>& value) {
     detail::serialize_fixed(appender, folly::ByteRange(value));
   }
@@ -144,7 +150,7 @@ struct XdrTrait<
     std::array<T, N>,
     typename std::enable_if_t<!std::is_same_v<T, uint8_t>>> {
   static void serialize(
-      folly::io::Appender& appender,
+      folly::io::QueueAppender& appender,
       const std::array<T, N>& value) {
     for (const auto& item : value) {
       XdrTrait<T>::serialize(appender, item);
@@ -167,7 +173,7 @@ struct XdrTrait<
 template <>
 struct XdrTrait<std::vector<uint8_t>> {
   static void serialize(
-      folly::io::Appender& appender,
+      folly::io::QueueAppender& appender,
       const std::vector<uint8_t>& value) {
     detail::serialize_variable(appender, folly::ByteRange(value));
   }
@@ -186,15 +192,11 @@ struct XdrTrait<std::vector<uint8_t>> {
  * should be preferred to a vector when the data to serialize/deserialize is
  * potentially large, a vector would copy all the data, while an IOBuf would
  * clone the existing cursor.
- *
- * TODO(xavierd): folly::io::Appender doesn't have a way to zero-copy append to
- * it, maybe a folly::io::QueueAppender would be better fit than
- * folly::io::Appender?
  */
 template <>
 struct XdrTrait<std::unique_ptr<folly::IOBuf>> {
   static void serialize(
-      folly::io::Appender& appender,
+      folly::io::QueueAppender& appender,
       const std::unique_ptr<folly::IOBuf>& buf) {
     detail::serialize_iobuf(appender, *buf);
   }
@@ -213,7 +215,7 @@ struct XdrTrait<
     std::vector<T>,
     typename std::enable_if_t<!std::is_same_v<T, uint8_t>>> {
   static void serialize(
-      folly::io::Appender& appender,
+      folly::io::QueueAppender& appender,
       const std::vector<T>& value) {
     XdrTrait<uint32_t>::serialize(appender, value.size());
     for (const auto& item : value) {
@@ -238,7 +240,7 @@ struct XdrTrait<
 template <>
 struct XdrTrait<std::string> {
   static void serialize(
-      folly::io::Appender& appender,
+      folly::io::QueueAppender& appender,
       const std::string& value) {
     detail::serialize_variable(
         appender, folly::ByteRange(folly::StringPiece(value)));
@@ -284,7 +286,7 @@ bool operator==(
 template <typename Enum, class... Vars>
 struct XdrTrait<XdrVariant<Enum, Vars...>> {
   static void serialize(
-      folly::io::Appender& appender,
+      folly::io::QueueAppender& appender,
       const XdrVariant<Enum, Vars...>& value) {
     XdrTrait<Enum>::serialize(appender, value.tag);
     std::visit(

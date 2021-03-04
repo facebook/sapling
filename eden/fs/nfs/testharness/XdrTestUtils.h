@@ -17,18 +17,20 @@
 
 namespace facebook::eden {
 
+using folly::IOBuf;
+
 template <typename T>
-folly::IOBuf ser(const T& t) {
+std::unique_ptr<IOBuf> ser(const T& t) {
   constexpr size_t kDefaultBufferSize = 1024;
-  folly::IOBuf buf(folly::IOBuf::CREATE, kDefaultBufferSize);
-  folly::io::Appender appender(&buf, kDefaultBufferSize);
+  folly::IOBufQueue buf;
+  folly::io::QueueAppender appender(&buf, kDefaultBufferSize);
   XdrTrait<T>::serialize(appender, t);
-  return buf;
+  return buf.move();
 }
 
 template <typename T>
-T de(folly::IOBuf buf) {
-  folly::io::Cursor cursor(&buf);
+T de(std::unique_ptr<IOBuf> buf) {
+  folly::io::Cursor cursor(buf.get());
   auto ret = XdrTrait<T>::deserialize(cursor);
   if (!cursor.isAtEnd()) {
     throw std::runtime_error(fmt::format(
@@ -43,8 +45,8 @@ T de(folly::IOBuf buf) {
 template <typename T>
 void roundtrip(T value, size_t encodedSize) {
   auto encoded = ser(value);
-  EXPECT_EQ(encoded.coalesce().size(), encodedSize);
-  auto decoded = de<T>(encoded);
+  EXPECT_EQ(encoded->coalesce().size(), encodedSize);
+  auto decoded = de<T>(std::move(encoded));
   EXPECT_EQ(value, decoded);
 }
 

@@ -168,7 +168,7 @@ struct nfs_fh3 {
 
 template <>
 struct XdrTrait<nfs_fh3> {
-  static void serialize(folly::io::Appender& appender, const nfs_fh3& fh) {
+  static void serialize(folly::io::QueueAppender& appender, const nfs_fh3& fh) {
     XdrTrait<uint32_t>::serialize(appender, sizeof(nfs_fh3));
     XdrTrait<uint64_t>::serialize(appender, fh.ino.get());
   }

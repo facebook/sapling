@@ -50,7 +50,7 @@ struct MySerializableStruct {
 template <>
 struct XdrTrait<MySerializableStruct> {
   static void serialize(
-      folly::io::Appender& appender,
+      folly::io::QueueAppender& appender,
       const MySerializableStruct& value) {
     XdrTrait<int32_t>::serialize(appender, value.number);
     XdrTrait<std::string>::serialize(appender, value.str);
@@ -133,7 +133,7 @@ struct IOBufStruct {
 template <>
 struct XdrTrait<IOBufStruct> {
   static void serialize(
-      folly::io::Appender& appender,
+      folly::io::QueueAppender& appender,
       const IOBufStruct& value) {
     XdrTrait<uint32_t>::serialize(appender, value.before);
     XdrTrait<std::unique_ptr<folly::IOBuf>>::serialize(appender, value.buf);

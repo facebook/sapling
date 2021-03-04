@@ -31,13 +31,14 @@ void StreamClient::connect() {
       folly::netops::connect(s_, (sockaddr*)&socketAddress, len), "connect");
 }
 
-std::pair<std::unique_ptr<IOBuf>, folly::io::Appender>
+std::pair<std::unique_ptr<folly::IOBufQueue>, folly::io::QueueAppender>
 StreamClient::serializeCallHeader(
     uint32_t progNumber,
     uint32_t progVersion,
     uint32_t procNumber) {
-  auto buf = IOBuf::create(kDefaultBufferSize);
-  folly::io::Appender appender(buf.get(), kDefaultBufferSize);
+  auto buf = std::make_unique<folly::IOBufQueue>(
+      folly::IOBufQueue::cacheChainLength());
+  folly::io::QueueAppender appender(buf.get(), kDefaultBufferSize);
 
   XdrTrait<uint32_t>::serialize(
       appender, 0); // reserve space for fragment header
@@ -62,8 +63,9 @@ StreamClient::serializeCallHeader(
   return {std::move(buf), std::move(appender)};
 }
 
-uint32_t StreamClient::fillFrameAndSend(std::unique_ptr<IOBuf> buf) {
-  auto bytes = buf->coalesce();
+uint32_t StreamClient::fillFrameAndSend(
+    std::unique_ptr<folly::IOBufQueue> buf) {
+  auto bytes = buf->move()->coalesce();
 
   // Populate the TCP transport fragment header that was previous reserved in
   // serializeCallHeader.  The MSB is set if this is the final fragment.  The

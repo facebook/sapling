@@ -39,18 +39,20 @@
 // This macro declares the XDR serializer and deserializer functions
 // for a given type.
 // See EDEN_XDR_SERDE_IMPL above for an example.
-#define EDEN_XDR_SERDE_DECL(STRUCT, ...)                                    \
-  bool operator==(const STRUCT& a, const STRUCT& b);                        \
-  template <>                                                               \
-  struct XdrTrait<STRUCT> {                                                 \
-    static void serialize(folly::io::Appender& appender, const STRUCT& a) { \
-      FOLLY_PP_FOR_EACH(EDEN_XDR_SER, __VA_ARGS__)                          \
-    }                                                                       \
-    static STRUCT deserialize(folly::io::Cursor& cursor) {                  \
-      STRUCT ret;                                                           \
-      FOLLY_PP_FOR_EACH(EDEN_XDR_DE, __VA_ARGS__)                           \
-      return ret;                                                           \
-    }                                                                       \
+#define EDEN_XDR_SERDE_DECL(STRUCT, ...)                   \
+  bool operator==(const STRUCT& a, const STRUCT& b);       \
+  template <>                                              \
+  struct XdrTrait<STRUCT> {                                \
+    static void serialize(                                 \
+        folly::io::QueueAppender& appender,                \
+        const STRUCT& a) {                                 \
+      FOLLY_PP_FOR_EACH(EDEN_XDR_SER, __VA_ARGS__)         \
+    }                                                      \
+    static STRUCT deserialize(folly::io::Cursor& cursor) { \
+      STRUCT ret;                                          \
+      FOLLY_PP_FOR_EACH(EDEN_XDR_DE, __VA_ARGS__)          \
+      return ret;                                          \
+    }                                                      \
   }
 
 #define EDEN_XDR_SERDE_IMPL(STRUCT, ...)                  \
@@ -227,7 +229,10 @@ struct rpc_msg_reply {
 };
 EDEN_XDR_SERDE_DECL(rpc_msg_reply, xid, mtype, rbody);
 
-void serializeReply(folly::io::Appender& ser, accept_stat status, uint32_t xid);
+void serializeReply(
+    folly::io::QueueAppender& ser,
+    accept_stat status,
+    uint32_t xid);
 
 struct authsys_parms {
   uint32_t stamp;

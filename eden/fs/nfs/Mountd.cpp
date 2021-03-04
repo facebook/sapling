@@ -31,24 +31,26 @@ class MountdServerProcessor final : public RpcServerProcessor {
 
   folly::Future<folly::Unit> dispatchRpc(
       folly::io::Cursor deser,
-      folly::io::Appender ser,
+      folly::io::QueueAppender ser,
       uint32_t xid,
       uint32_t progNumber,
       uint32_t progVersion,
       uint32_t procNumber) override;
 
   folly::Future<folly::Unit>
-  null(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  null(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  mount(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  mount(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  dump(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  dump(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
   folly::Future<folly::Unit>
-  umount(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  umount(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
+  folly::Future<folly::Unit> umountAll(
+      folly::io::Cursor deser,
+      folly::io::QueueAppender ser,
+      uint32_t xid);
   folly::Future<folly::Unit>
-  umountAll(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
-  folly::Future<folly::Unit>
-  exprt(folly::io::Cursor deser, folly::io::Appender ser, uint32_t xid);
+  exprt(folly::io::Cursor deser, folly::io::QueueAppender ser, uint32_t xid);
 
   void registerMount(AbsolutePathPiece path, InodeNumber rootIno);
   void unregisterMount(AbsolutePathPiece path);
@@ -62,7 +64,7 @@ namespace {
 
 using Handler = folly::Future<folly::Unit> (MountdServerProcessor::*)(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid);
 
 struct HandlerEntry {
@@ -96,7 +98,7 @@ constexpr auto kMountHandlers = [] {
 
 folly::Future<folly::Unit> MountdServerProcessor::null(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
   return folly::unit;
@@ -104,7 +106,7 @@ folly::Future<folly::Unit> MountdServerProcessor::null(
 
 folly::Future<folly::Unit> MountdServerProcessor::mount(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
 
@@ -125,7 +127,7 @@ folly::Future<folly::Unit> MountdServerProcessor::mount(
 
 folly::Future<folly::Unit> MountdServerProcessor::dump(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -133,7 +135,7 @@ folly::Future<folly::Unit> MountdServerProcessor::dump(
 
 folly::Future<folly::Unit> MountdServerProcessor::umount(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -141,7 +143,7 @@ folly::Future<folly::Unit> MountdServerProcessor::umount(
 
 folly::Future<folly::Unit> MountdServerProcessor::umountAll(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
   return folly::unit;
@@ -149,7 +151,7 @@ folly::Future<folly::Unit> MountdServerProcessor::umountAll(
 
 folly::Future<folly::Unit> MountdServerProcessor::exprt(
     folly::io::Cursor /*deser*/,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid) {
   serializeReply(ser, accept_stat::SUCCESS, xid);
   /*
@@ -167,7 +169,7 @@ folly::Future<folly::Unit> MountdServerProcessor::exprt(
 
 folly::Future<folly::Unit> MountdServerProcessor::dispatchRpc(
     folly::io::Cursor deser,
-    folly::io::Appender ser,
+    folly::io::QueueAppender ser,
     uint32_t xid,
     uint32_t progNumber,
     uint32_t progVersion,
