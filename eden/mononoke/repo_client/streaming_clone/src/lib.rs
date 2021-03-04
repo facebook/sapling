@@ -11,10 +11,7 @@ use std::vec::Vec;
 
 use anyhow::Error;
 use bytes::Bytes;
-use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt},
-};
+use futures::future::{BoxFuture, FutureExt};
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
@@ -110,9 +107,7 @@ impl SqlStreamingChunksFetcher {
         repo_id: RepositoryId,
         blobstore: impl Blobstore + Clone + 'static,
     ) -> Result<RevlogStreamingChunks, Error> {
-        let rows = SelectChunks::query(&self.read_connection, &repo_id)
-            .compat()
-            .await?;
+        let rows = SelectChunks::query(&self.read_connection, &repo_id).await?;
 
         let res = rows.into_iter().fold(
             RevlogStreamingChunks::new(),

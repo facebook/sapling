@@ -19,7 +19,7 @@ use futures::future::{self, BoxFuture, Future, FutureExt, TryFutureExt};
 use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
 use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
-use sql::queries;
+use sql01::queries;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 

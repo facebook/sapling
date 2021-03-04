@@ -14,7 +14,6 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{
     channel::{mpsc, oneshot},
-    compat::Future01CompatExt,
     future::{self, BoxFuture, FutureExt, Shared, TryFutureExt},
     stream::StreamExt,
 };
@@ -339,9 +338,7 @@ async fn insert_entries(
         .map(|(a, b, c, d, e, f)| (a, b, c, d, e, f)) // &(a, b, ...) into (&a, &b, ...)
         .collect();
 
-    InsertEntry::query(write_connection, entries_ref.as_ref())
-        .compat()
-        .await?;
+    InsertEntry::query(write_connection, entries_ref.as_ref()).await?;
     Ok(())
 }
 
@@ -395,7 +392,6 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
                     &older_than.into(),
                     &limit,
                 )
-                .compat()
                 .await
             }
             None => {
@@ -405,7 +401,6 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
                     &older_than.into(),
                     &limit,
                 )
-                .compat()
                 .await
             }
         }?;
@@ -453,9 +448,7 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
             .collect::<Result<_, _>>()?;
 
         for chunk in ids.chunks(10_000) {
-            let deletion_result = DeleteEntries::query(&self.write_connection, chunk)
-                .compat()
-                .await?;
+            let deletion_result = DeleteEntries::query(&self.write_connection, chunk).await?;
             STATS::dels.add_value(deletion_result.affected_rows() as i64);
         }
         Ok(())
@@ -467,7 +460,6 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
         key: &'a str,
     ) -> Result<Vec<BlobstoreSyncQueueEntry>, Error> {
         let rows = GetByKey::query(&self.read_master_connection, &key.to_owned())
-            .compat()
             .await
             .with_context(|| ErrorKind::BlobKeyError(key.to_owned()))?;
         Ok(rows

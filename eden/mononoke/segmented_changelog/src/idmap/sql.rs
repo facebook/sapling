@@ -11,7 +11,7 @@ use std::sync::Arc;
 use anyhow::{format_err, Context, Result};
 use async_trait::async_trait;
 use futures::{compat::Future01CompatExt, future, TryFutureExt};
-use sql::{queries, Connection};
+use sql01::{queries, Connection};
 use sql_ext::{
     replication::{ReplicaLagMonitor, WaitForReplicationConfig},
     SqlConnections,

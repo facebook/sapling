@@ -11,7 +11,6 @@ use anyhow::{format_err, Error};
 use bytes::BytesMut;
 use cached_config::ConfigHandle;
 use futures::{
-    compat::Future01CompatExt,
     future::TryFutureExt,
     stream::{self, Stream},
 };
@@ -192,13 +191,9 @@ impl DataSqlStore {
         let shard_id = self.shard(key);
 
         let rows = {
-            let rows = SelectData::query(&self.read_connection[shard_id], &key)
-                .compat()
-                .await?;
+            let rows = SelectData::query(&self.read_connection[shard_id], &key).await?;
             if rows.is_empty() {
-                SelectData::query(&self.read_master_connection[shard_id], &key)
-                    .compat()
-                    .await?
+                SelectData::query(&self.read_master_connection[shard_id], &key).await?
             } else {
                 rows
             }
@@ -231,7 +226,6 @@ impl DataSqlStore {
             &self.write_connection[shard_id],
             &[(&key, &ctime, &chunk_id, &chunk_count, &chunking_method)],
         )
-        .compat()
         .await?;
         if res.affected_rows() == 0 {
             UpdateData::query(
@@ -242,7 +236,6 @@ impl DataSqlStore {
                 &chunk_count,
                 &chunking_method,
             )
-            .compat()
             .await?;
         }
         Ok(())
@@ -252,13 +245,9 @@ impl DataSqlStore {
         let shard_id = self.shard(key);
 
         let rows = {
-            let rows = SelectIsDataPresent::query(&self.read_connection[shard_id], &key)
-                .compat()
-                .await?;
+            let rows = SelectIsDataPresent::query(&self.read_connection[shard_id], &key).await?;
             if rows.is_empty() {
-                SelectIsDataPresent::query(&self.read_master_connection[shard_id], &key)
-                    .compat()
-                    .await?
+                SelectIsDataPresent::query(&self.read_master_connection[shard_id], &key).await?
             } else {
                 rows
             }
@@ -270,15 +259,15 @@ impl DataSqlStore {
         &self,
         shard_num: usize,
     ) -> impl Stream<Item = Result<String, Error>> {
-        GetAllKeys::query(&self.read_master_connection[shard_num])
-            .compat()
-            .map_ok(|keys| {
-                stream::iter(
-                    keys.into_iter()
-                        .map(|(id,)| Ok(String::from_utf8_lossy(&id).to_string())),
-                )
-            })
-            .try_flatten_stream()
+        let conn = self.read_master_connection[shard_num].clone();
+        async move {
+            let keys = GetAllKeys::query(&conn).await?;
+            Ok(stream::iter(
+                keys.into_iter()
+                    .map(|(id,)| Ok(String::from_utf8_lossy(&id).to_string())),
+            ))
+        }
+        .try_flatten_stream()
     }
 
     fn shard(&self, key: &str) -> usize {
@@ -326,13 +315,9 @@ impl ChunkSqlStore {
         let shard_id = self.shard(id, chunk_num, chunking_method);
 
         let rows = {
-            let rows = SelectChunk::query(&self.read_connection[shard_id], &id, &chunk_num)
-                .compat()
-                .await?;
+            let rows = SelectChunk::query(&self.read_connection[shard_id], &id, &chunk_num).await?;
             if rows.is_empty() {
-                SelectChunk::query(&self.read_master_connection[shard_id], &id, &chunk_num)
-                    .compat()
-                    .await?
+                SelectChunk::query(&self.read_master_connection[shard_id], &id, &chunk_num).await?
             } else {
                 rows
             }
@@ -358,13 +343,11 @@ impl ChunkSqlStore {
             &key,
             &(self.gc_generations.get().put_generation as u64),
         )
-        .compat()
         .await?;
         InsertChunk::query(
             &self.write_connection[shard_id],
             &[(&key, &chunk_num, &value)],
         )
-        .compat()
         .await?;
         Ok(())
     }
@@ -383,7 +366,6 @@ impl ChunkSqlStore {
             &key,
             &(self.gc_generations.get().put_generation as u64),
         )
-        .compat()
         .await?;
         Ok(())
     }
@@ -396,13 +378,9 @@ impl ChunkSqlStore {
     ) -> Result<Option<u64>, Error> {
         let shard_id = self.shard(key, chunk_num, chunking_method);
         let rows = {
-            let rows = GetChunkGeneration::query(&self.read_connection[shard_id], &key)
-                .compat()
-                .await?;
+            let rows = GetChunkGeneration::query(&self.read_connection[shard_id], &key).await?;
             if rows.is_empty() {
-                GetChunkGeneration::query(&self.read_master_connection[shard_id], &key)
-                    .compat()
-                    .await?
+                GetChunkGeneration::query(&self.read_master_connection[shard_id], &key).await?
             } else {
                 rows
             }
@@ -423,7 +401,6 @@ impl ChunkSqlStore {
         // Short-circuit if we have a generation in replica, and that generation is >=
         // mark_generation
         let replica_generation = GetChunkGeneration::query(&self.read_connection[shard_id], &key)
-            .compat()
             .await?
             .into_iter()
             .next();
@@ -435,13 +412,10 @@ impl ChunkSqlStore {
         // First set the generation if unset, so that future writers will update it.
         if replica_generation.is_none() {
             InsertGeneration::query(&self.write_connection[shard_id], &[(&key, &put_generation)])
-                .compat()
                 .await?;
         }
         // Then update it in case it already existed
-        UpdateGeneration::query(&self.write_connection[shard_id], &key, &mark_generation)
-            .compat()
-            .await?;
+        UpdateGeneration::query(&self.write_connection[shard_id], &key, &mark_generation).await?;
         Ok(())
     }
 
@@ -450,7 +424,6 @@ impl ChunkSqlStore {
         shard_num: usize,
     ) -> Result<HashMap<Option<u64>, u64>, Error> {
         GetGenerationSizes::query(&self.read_master_connection[shard_num])
-            .compat()
             .await
             .map(|s| s.into_iter().collect::<HashMap<_, _>>())
     }
@@ -460,9 +433,7 @@ impl ChunkSqlStore {
 
         self.delay.delay(shard_num).await;
 
-        SetInitialGeneration::query(&self.write_connection[shard_num], &put_generation)
-            .compat()
-            .await?;
+        SetInitialGeneration::query(&self.write_connection[shard_num], &put_generation).await?;
         Ok(())
     }
 

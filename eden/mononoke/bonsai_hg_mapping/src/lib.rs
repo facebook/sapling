@@ -18,7 +18,7 @@ use sql_ext::SqlConnections;
 use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
 use context::{CoreContext, PerfCounterType};
-use futures::{compat::Future01CompatExt, future};
+use futures::future;
 use mercurial_types::{
     HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgNodeHash,
 };
@@ -226,11 +226,12 @@ impl SqlBonsaiHgMapping {
             bcs_id,
         } = entry.clone();
 
-        let by_hg = SelectMappingByHg::query(&self.read_master_connection, &repo_id, &[hg_cs_id]);
-        let by_bcs =
-            SelectMappingByBonsai::query(&self.read_master_connection, &repo_id, &[bcs_id]);
+        let hg_ids = &[hg_cs_id];
+        let by_hg = SelectMappingByHg::query(&self.read_master_connection, &repo_id, hg_ids);
+        let bcs_ids = &[bcs_id];
+        let by_bcs = SelectMappingByBonsai::query(&self.read_master_connection, &repo_id, bcs_ids);
 
-        let (by_hg_rows, by_bcs_rows) = future::try_join(by_hg.compat(), by_bcs.compat()).await?;
+        let (by_hg_rows, by_bcs_rows) = future::try_join(by_hg, by_bcs).await?;
 
         match by_hg_rows.into_iter().chain(by_bcs_rows.into_iter()).next() {
             Some(entry) if entry == (hg_cs_id, bcs_id) => Ok(()),
@@ -262,9 +263,7 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         } = entry.clone();
 
         let result =
-            InsertMapping::query(&self.write_connection, &[(&repo_id, &hg_cs_id, &bcs_id)])
-                .compat()
-                .await?;
+            InsertMapping::query(&self.write_connection, &[(&repo_id, &hg_cs_id, &bcs_id)]).await?;
 
         if result.affected_rows() == 1 {
             Ok(true)
@@ -338,7 +337,6 @@ async fn fetch_many_hg_by_prefix(
         &cs_prefix.max_as_ref(),
         &(limit + 1),
     )
-    .compat()
     .await?;
 
     let mut fetched_cs: Vec<HgChangesetId> = rows.into_iter().map(|row| row.0).collect();
@@ -407,14 +405,10 @@ async fn select_mapping(
 
     let rows = match cs_id {
         BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..])
-                .compat()
-                .await?
+            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..]).await?
         }
         BonsaiOrHgChangesetIds::Hg(hg_cs_ids) => {
-            SelectMappingByHg::query(&connection, &repo_id, &hg_cs_ids[..])
-                .compat()
-                .await?
+            SelectMappingByHg::query(&connection, &repo_id, &hg_cs_ids[..]).await?
         }
     };
 

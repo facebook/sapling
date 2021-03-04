@@ -17,7 +17,7 @@ use futures::compat::Future01CompatExt;
 use futures::future::{self, BoxFuture, FutureExt};
 use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
-use sql::{queries, Connection, Transaction as SqlTransaction};
+use sql01::{queries, Connection, Transaction as SqlTransaction};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;

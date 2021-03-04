@@ -9,8 +9,6 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use futures_01_ext::FutureExt;
-use futures_util::compat::Future01CompatExt;
 use mononoke_types::{MononokeId, RawBundle2Id};
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
@@ -60,10 +58,7 @@ impl ReverseFillerQueue for SqlReverseFillerQueue {
     async fn insert_bundle(&self, reponame: &String, raw_bundle2_id: &RawBundle2Id) -> Result<()> {
         let raw_bundle2_id = raw_bundle2_id.blobstore_key();
         STATS::insert_bundle.add_value(1, (reponame.to_owned(),));
-        InsertBundle::query(&self.write_connection, &[(reponame, &raw_bundle2_id)])
-            .boxify()
-            .compat()
-            .await?;
+        InsertBundle::query(&self.write_connection, &[(reponame, &raw_bundle2_id)]).await?;
         Ok(())
     }
 }

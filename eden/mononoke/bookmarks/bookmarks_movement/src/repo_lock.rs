@@ -13,7 +13,6 @@ use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use metaconfig_types::RepoReadOnly;
 use mononoke_types::{BonsaiChangesetMut, ChangesetId};
 use pushrebase::{
@@ -49,7 +48,6 @@ pub(crate) async fn check_repo_lock(
     if should_check_repo_lock(kind, pushvars) {
         let state = repo_read_write_fetcher
             .readonly()
-            .compat()
             .await
             .context("Failed to fetch repo lock state")?;
         if let RepoReadOnly::ReadOnly(reason) = state {
@@ -124,7 +122,6 @@ impl PushrebaseTransactionHook for RepoLockCommitTransactionHook {
         let state = self
             .repo_read_write_fetcher
             .readonly()
-            .compat()
             .await
             .context("Failed to fetch repo lock state")?;
         if let RepoReadOnly::ReadOnly(reason) = state {

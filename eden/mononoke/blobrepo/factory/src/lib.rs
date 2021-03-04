@@ -39,7 +39,7 @@ use fbinit::FacebookInit;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
-use futures::{compat::Future01CompatExt, future, try_join};
+use futures::{future, try_join};
 use futures_watchdog::WatchdogExt;
 use git_types::TreeHandle;
 use maplit::hashset;
@@ -200,7 +200,6 @@ pub async fn open_blobrepo_given_datasources<'a>(
                 .open::<SqlRedactedContentStore>()
                 .await?
                 .get_all_redacted_blobs()
-                .compat()
                 .await?;
             Some(redacted_blobs)
         }

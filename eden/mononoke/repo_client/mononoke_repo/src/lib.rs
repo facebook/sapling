@@ -12,7 +12,8 @@ use blobrepo::BlobRepo;
 
 use blobrepo_factory::ReadOnlyStorage;
 use fbinit::FacebookInit;
-use futures_01_ext::BoxFuture;
+use futures::future::{FutureExt, TryFutureExt};
+use futures_01_ext::{BoxFuture, FutureExt as _};
 use getbundle_response::SessionLfsParams;
 use hooks::HookManager;
 use live_commit_sync_config::LiveCommitSyncConfig;
@@ -270,7 +271,11 @@ impl MononokeRepo {
     }
 
     pub fn readonly(&self) -> BoxFuture<RepoReadOnly, Error> {
-        self.repo.readonly_fetcher().readonly()
+        let repo = self.repo.clone();
+        async move { repo.readonly_fetcher().readonly().await }
+            .boxed()
+            .compat()
+            .boxify()
     }
 
     pub fn readonly_fetcher(&self) -> &RepoReadWriteFetcher {

@@ -7,7 +7,7 @@
 
 use anyhow::{Context, Result};
 use futures::compat::Future01CompatExt;
-use sql::queries;
+use sql01::queries;
 use sql_ext::SqlConnections;
 
 use stats::prelude::*;

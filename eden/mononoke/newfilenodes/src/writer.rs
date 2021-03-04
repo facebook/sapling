@@ -19,7 +19,6 @@ use thiserror::Error as DeriveError;
 use tunables::tunables;
 
 use crate::structs::{PathBytes, PathHash, PathHashBytes};
-use futures::compat::Future01CompatExt;
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -119,7 +118,6 @@ async fn ensure_paths_exists(
         .collect::<Vec<_>>();
 
     let mut paths_present = SelectAllPaths::query(&read_conn, &repo_id, &path_hashes[..])
-        .compat()
         .await?
         .into_iter()
         .map(|r| r.0)
@@ -141,9 +139,7 @@ async fn ensure_paths_exists(
     // queries solves that. So we do it here.
     paths_to_insert.sort();
 
-    InsertPaths::query(&write_conn, &paths_to_insert[..])
-        .compat()
-        .await?;
+    InsertPaths::query(&write_conn, &paths_to_insert[..]).await?;
 
     Ok(())
 }
@@ -201,19 +197,13 @@ async fn insert_filenodes(
         .collect::<Vec<_>>();
 
     if replace {
-        ReplaceFilenodes::query(&write_conn, &filenode_rows[..])
-            .compat()
-            .await?;
+        ReplaceFilenodes::query(&write_conn, &filenode_rows[..]).await?;
     } else {
-        InsertFilenodes::query(&write_conn, &filenode_rows[..])
-            .compat()
-            .await?;
+        InsertFilenodes::query(&write_conn, &filenode_rows[..]).await?;
     }
 
     if !copydata_rows.is_empty() {
-        InsertFixedcopyinfo::query(&write_conn, &copydata_rows[..])
-            .compat()
-            .await?;
+        InsertFixedcopyinfo::query(&write_conn, &copydata_rows[..]).await?;
     }
 
     Ok(())

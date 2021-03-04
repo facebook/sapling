@@ -292,13 +292,12 @@ async fn unlock_repo_if_locked(
     ctx: &CoreContext,
     read_write_fetcher: &RepoReadWriteFetcher,
 ) -> Result<(), Error> {
-    let repo_state = read_write_fetcher.readonly().compat().await?;
+    let repo_state = read_write_fetcher.readonly().await?;
 
     match repo_state {
         RepoReadOnly::ReadOnly(ref lock_msg) if lock_msg == LOCK_REASON => {
             let updated = read_write_fetcher
                 .set_mononoke_read_write(&UNLOCK_REASON.to_string())
-                .compat()
                 .await?;
             if updated {
                 info!(ctx.logger(), "repo is unlocked");
@@ -314,13 +313,12 @@ async fn lock_repo_if_unlocked(
     read_write_fetcher: &RepoReadWriteFetcher,
 ) -> Result<(), Error> {
     info!(ctx.logger(), "locking repo...");
-    let repo_state = read_write_fetcher.readonly().compat().await?;
+    let repo_state = read_write_fetcher.readonly().await?;
 
     match repo_state {
         RepoReadOnly::ReadWrite => {
             let updated = read_write_fetcher
                 .set_read_only(&LOCK_REASON.to_string())
-                .compat()
                 .await?;
             if updated {
                 info!(ctx.logger(), "repo is locked now");

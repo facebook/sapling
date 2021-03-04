@@ -295,7 +295,6 @@ impl Changesets for SqlChangesets {
                 Vec::new()
             } else {
                 SelectChangesets::query(&self.write_connection, &cs.repo_id, &cs.parents[..])
-                    .compat()
                     .await?
             }
         };
@@ -304,7 +303,6 @@ impl Changesets for SqlChangesets {
         let transaction = self.write_connection.start_transaction().compat().await?;
         let (transaction, result) =
             InsertChangeset::query_with_transaction(transaction, &[(&cs.repo_id, &cs.cs_id, &gen)])
-                .compat()
                 .await?;
 
         if result.affected_rows() == 1 && result.last_insert_id().is_some() {
@@ -426,7 +424,6 @@ async fn fetch_many_by_prefix(
         &cs_prefix.max_as_ref(),
         &(limit + 1),
     )
-    .compat()
     .await?;
     let mut fetched_cs: Vec<ChangesetId> = rows.into_iter().map(|row| row.0).collect();
     let result = match fetched_cs.len() {
@@ -461,17 +458,13 @@ impl SqlChangesets {
 
         let conn = self.read_conn(read_from_master);
 
-        async move {
-            SelectAllChangesetsIdsInRange::query(&conn, &repo_id, &min_id, &max_id)
-                .compat()
-                .await
-        }
-        .map_ok(move |rows| {
-            let changesets_ids = rows.into_iter().map(|row| Ok(row.0));
-            stream::iter(changesets_ids)
-        })
-        .try_flatten_stream()
-        .boxed()
+        async move { SelectAllChangesetsIdsInRange::query(&conn, &repo_id, &min_id, &max_id).await }
+            .map_ok(move |rows| {
+                let changesets_ids = rows.into_iter().map(|row| Ok(row.0));
+                stream::iter(changesets_ids)
+            })
+            .try_flatten_stream()
+            .boxed()
     }
 
     pub fn get_list_bs_cs_id_in_range_exclusive_limit(
@@ -494,13 +487,11 @@ impl SqlChangesets {
                 SelectAllChangesetsIdsInRangeLimitAsc::query(
                     &conn, &repo_id, &min_id, &max_id, &limit,
                 )
-                .compat()
                 .await
             } else {
                 SelectAllChangesetsIdsInRangeLimitDesc::query(
                     &conn, &repo_id, &min_id, &max_id, &limit,
                 )
-                .compat()
                 .await
             }
         }
@@ -518,9 +509,7 @@ impl SqlChangesets {
         read_from_master: bool,
     ) -> Result<(Option<u64>, Option<u64>), Error> {
         let conn = self.read_conn(read_from_master);
-        let rows = SelectChangesetsIdsBounds::query(conn, &repo_id)
-            .compat()
-            .await?;
+        let rows = SelectChangesetsIdsBounds::query(conn, &repo_id).await?;
         if rows.is_empty() {
             Ok((None, None))
         } else {
@@ -585,9 +574,7 @@ async fn insert_parents(
         .collect();
 
     let (transaction, _) =
-        InsertParents::query_with_transaction(transaction, &ref_parent_inserts[..])
-            .compat()
-            .await?;
+        InsertParents::query_with_transaction(transaction, &ref_parent_inserts[..]).await?;
     transaction.commit().compat().await?;
     Ok(())
 }
@@ -616,9 +603,7 @@ async fn select_changeset(
     repo_id: RepositoryId,
     cs_id: ChangesetId,
 ) -> Result<Option<ChangesetEntry>, Error> {
-    let rows = SelectChangeset::query(&connection, &repo_id, &cs_id)
-        .compat()
-        .await?;
+    let rows = SelectChangeset::query(&connection, &repo_id, &cs_id).await?;
     let result = if rows.is_empty() {
         None
     } else {
@@ -638,9 +623,8 @@ async fn select_many_changesets(
     repo_id: RepositoryId,
     cs_ids: &Vec<ChangesetId>,
 ) -> Result<Vec<ChangesetEntry>, Error> {
-    let fetched_changesets = SelectManyChangesets::query(&connection, &repo_id, &cs_ids[..])
-        .compat()
-        .await?;
+    let fetched_changesets =
+        SelectManyChangesets::query(&connection, &repo_id, &cs_ids[..]).await?;
     let mut cs_id_to_cs_entry = HashMap::new();
     for (cs_id, gen, maybe_parent, _) in fetched_changesets {
         cs_id_to_cs_entry

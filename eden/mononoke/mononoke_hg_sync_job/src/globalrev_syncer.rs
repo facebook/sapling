@@ -10,7 +10,6 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use metaconfig_types::HgsqlGlobalrevsName;
 use mononoke_types::ChangesetId;
 use sql::{queries, Connection};
@@ -117,7 +116,6 @@ impl SqlGlobalrevSyncer {
 
         let rows =
             IncreaseGlobalrevCounter::query(&self.hgsql.connection, self.hgsql_name.as_ref(), &rev)
-                .compat()
                 .await?
                 .affected_rows();
 
@@ -134,7 +132,6 @@ impl SqlGlobalrevSyncer {
         // easier to unit test.
 
         let db_rev = GetGlobalrevCounter::query(&self.hgsql.connection, self.hgsql_name.as_ref())
-            .compat()
             .await?
             .into_iter()
             .next()
@@ -242,9 +239,7 @@ mod test {
 
             // Now, set the counter
 
-            InitGlobalrevCounter::query(&connection, hgsql_name.as_ref(), &0)
-                .compat()
-                .await?;
+            InitGlobalrevCounter::query(&connection, hgsql_name.as_ref(), &0).await?;
 
             // Now, try again to set the globalrev
 
@@ -252,7 +247,6 @@ mod test {
 
             assert_eq!(
                 GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
-                    .compat()
                     .await?
                     .into_iter()
                     .next()
@@ -271,7 +265,6 @@ mod test {
 
             assert_eq!(
                 GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
-                    .compat()
                     .await?
                     .into_iter()
                     .next()
@@ -286,7 +279,6 @@ mod test {
 
             assert_eq!(
                 GetGlobalrevCounter::query(&connection, hgsql_name.as_ref())
-                    .compat()
                     .await?
                     .into_iter()
                     .next()

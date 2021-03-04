@@ -190,18 +190,10 @@ impl SqlHgMutationStore {
             })
             .collect();
 
-        let (txn, _) = AddChangesets::query_with_transaction(txn, db_csets.as_slice())
-            .compat()
-            .await?;
-        let (txn, _) = AddEntries::query_with_transaction(txn, ref_db_entries.as_slice())
-            .compat()
-            .await?;
-        let (txn, _) = AddPreds::query_with_transaction(txn, ref_db_preds.as_slice())
-            .compat()
-            .await?;
-        let (txn, _) = AddSplits::query_with_transaction(txn, ref_db_splits.as_slice())
-            .compat()
-            .await?;
+        let (txn, _) = AddChangesets::query_with_transaction(txn, db_csets.as_slice()).await?;
+        let (txn, _) = AddEntries::query_with_transaction(txn, ref_db_entries.as_slice()).await?;
+        let (txn, _) = AddPreds::query_with_transaction(txn, ref_db_preds.as_slice()).await?;
+        let (txn, _) = AddSplits::query_with_transaction(txn, ref_db_splits.as_slice()).await?;
 
         txn.commit().compat().await?;
 
@@ -247,7 +239,6 @@ impl SqlHgMutationStore {
             &self.repo_id,
             changeset_ids.as_slice(),
         )
-        .compat()
         .await?;
         if let Some((count,)) = count.into_iter().next() {
             if count as usize == changeset_ids.len() {
@@ -326,7 +317,6 @@ impl SqlHgMutationStore {
                 &self.repo_id,
                 to_fetch_split.as_slice(),
             )
-            .compat()
             .await?;
             for (successor, seq, split_successor) in rows {
                 if let Some(entry) = entry_set.entries.get_mut(&successor) {
@@ -356,9 +346,8 @@ impl SqlHgMutationStore {
             .filter(|hg_cs_id| !entry_set.entries.contains_key(hg_cs_id))
             .collect();
         if !to_fetch.is_empty() {
-            let rows = SelectBySuccessor::query(connection, &self.repo_id, to_fetch.as_slice())
-                .compat()
-                .await?;
+            let rows =
+                SelectBySuccessor::query(connection, &self.repo_id, to_fetch.as_slice()).await?;
             self.collect_entries(connection, entry_set, rows).await?;
         }
         Ok(())
@@ -386,8 +375,8 @@ impl SqlHgMutationStore {
             // mutation entries which extend the history of a commit backwards
             // beyond the original primordial.
             let (primordial_rows, successor_rows) = future::try_join(
-                SelectByPrimordial::query(connection, &self.repo_id, to_fetch.as_slice()).compat(),
-                SelectBySuccessor::query(connection, &self.repo_id, to_fetch.as_slice()).compat(),
+                SelectByPrimordial::query(connection, &self.repo_id, to_fetch.as_slice()),
+                SelectBySuccessor::query(connection, &self.repo_id, to_fetch.as_slice()),
             )
             .await?;
             let rows = primordial_rows

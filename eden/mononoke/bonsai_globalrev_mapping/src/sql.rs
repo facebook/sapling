@@ -11,7 +11,6 @@ use ::sql::{queries, Connection, Transaction};
 use anyhow::Error;
 use async_trait::async_trait;
 use context::{CoreContext, PerfCounterType};
-use futures::compat::Future01CompatExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, Globalrev, RepositoryId};
 use slog::warn;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
@@ -117,9 +116,7 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             )
             .collect();
 
-        DangerouslyAddGlobalrevs::query(&self.write_connection, &entries[..])
-            .compat()
-            .await?;
+        DangerouslyAddGlobalrevs::query(&self.write_connection, &entries[..]).await?;
 
         Ok(())
     }
@@ -160,7 +157,6 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         let row = SelectClosestGlobalrev::query(&self.read_connection, &repo_id, &globalrev)
-            .compat()
             .await?
             .into_iter()
             .next();
@@ -177,7 +173,6 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
             .increment_counter(PerfCounterType::SqlReadsMaster);
 
         let row = SelectMaxEntry::query(&self.read_master_connection, &repo_id)
-            .compat()
             .await?
             .into_iter()
             .next();
@@ -237,14 +232,10 @@ async fn select_mapping(
 
     let rows = match objects {
         BonsaisOrGlobalrevs::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..])
-                .compat()
-                .await?
+            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..]).await?
         }
         BonsaisOrGlobalrevs::Globalrev(globalrevs) => {
-            SelectMappingByGlobalrev::query(&connection, &repo_id, &globalrevs[..])
-                .compat()
-                .await?
+            SelectMappingByGlobalrev::query(&connection, &repo_id, &globalrevs[..]).await?
         }
     };
 
@@ -324,9 +315,7 @@ pub async fn add_globalrevs(
     // rows.
 
     let (transaction, res) =
-        DangerouslyAddGlobalrevs::query_with_transaction(transaction, &rows[..])
-            .compat()
-            .await?;
+        DangerouslyAddGlobalrevs::query_with_transaction(transaction, &rows[..]).await?;
 
     if res.affected_rows() != rows.len() as u64 {
         return Err(AddGlobalrevsErrorKind::Conflict);

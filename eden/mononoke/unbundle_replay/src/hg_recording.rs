@@ -11,7 +11,6 @@ use cached_config::ConfigStore;
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{RepositoryId, Timestamp};
 use sql::{queries, Connection};
@@ -102,7 +101,6 @@ impl HgRecordingClient {
     ) -> Result<Option<HgRecordingEntry>, Error> {
         let entry =
             SelectNextSuccessfulHgRecordingEntryById::query(&self.sql.0, &self.repo_id, &min_id)
-                .compat()
                 .await?
                 .into_iter()
                 .next();
@@ -122,7 +120,6 @@ impl HgRecordingClient {
             onto,
             onto_rev,
         )
-        .compat()
         .await?
         .into_iter()
         .next();
@@ -235,7 +232,6 @@ mod test {
             &json!({ ONES_CSID.to_string(): [123.0, 0] }).to_string(),
             &json!([TWOS_CSID.to_string()]).to_string(),
         )
-        .compat()
         .await?;
 
         Ok(())
@@ -298,9 +294,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
 
         insert_test_entry(&client).await?;
-        SetPushrebaseErrMsgOnAllEntries::query(&client.sql.0)
-            .compat()
-            .await?;
+        SetPushrebaseErrMsgOnAllEntries::query(&client.sql.0).await?;
 
         assert!(client.next_entry_by_id(&ctx, 0).await?.is_none());
         Ok(())
@@ -312,9 +306,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
 
         insert_test_entry(&client).await?;
-        SetConflictsOnAllEntries::query(&client.sql.0)
-            .compat()
-            .await?;
+        SetConflictsOnAllEntries::query(&client.sql.0).await?;
 
         assert!(client.next_entry_by_id(&ctx, 0).await?.is_none());
         Ok(())
@@ -345,9 +337,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
 
         insert_test_entry(&client).await?;
-        SetPushrebaseErrMsgOnAllEntries::query(&client.sql.0)
-            .compat()
-            .await?;
+        SetPushrebaseErrMsgOnAllEntries::query(&client.sql.0).await?;
 
         let book = BookmarkName::try_from("book123")?;
 
@@ -367,9 +357,7 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
 
         insert_test_entry(&client).await?;
-        SetConflictsOnAllEntries::query(&client.sql.0)
-            .compat()
-            .await?;
+        SetConflictsOnAllEntries::query(&client.sql.0).await?;
 
         let book = BookmarkName::try_from("book123")?;
 

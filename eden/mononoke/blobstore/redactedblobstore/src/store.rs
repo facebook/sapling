@@ -7,8 +7,6 @@
 
 #![deny(warnings)]
 use anyhow::Error;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::Future;
 use mononoke_types::Timestamp;
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
@@ -71,30 +69,27 @@ pub struct RedactedMetadata {
 }
 
 impl SqlRedactedContentStore {
-    pub fn get_all_redacted_blobs(&self) -> BoxFuture<HashMap<String, RedactedMetadata>, Error> {
-        GetAllRedactedBlobs::query(&self.read_connection)
-            .map(|redacted_blobs| {
-                redacted_blobs
-                    .into_iter()
-                    .map(|(key, task, log_only)| {
-                        let redacted_metadata = RedactedMetadata {
-                            task,
-                            log_only: log_only.unwrap_or(false),
-                        };
-                        (key, redacted_metadata)
-                    })
-                    .collect()
+    pub async fn get_all_redacted_blobs(&self) -> Result<HashMap<String, RedactedMetadata>, Error> {
+        let redacted_blobs = GetAllRedactedBlobs::query(&self.read_connection).await?;
+        Ok(redacted_blobs
+            .into_iter()
+            .map(|(key, task, log_only)| {
+                let redacted_metadata = RedactedMetadata {
+                    task,
+                    log_only: log_only.unwrap_or(false),
+                };
+                (key, redacted_metadata)
             })
-            .boxify()
+            .collect())
     }
 
-    pub fn insert_redacted_blobs(
+    pub async fn insert_redacted_blobs(
         &self,
         content_keys: &Vec<String>,
         task: &String,
         add_timestamp: &Timestamp,
         log_only: bool,
-    ) -> impl Future<Item = (), Error = Error> {
+    ) -> Result<(), Error> {
         let log_only = &log_only;
         let redacted_inserts: Vec<_> = content_keys
             .iter()
@@ -102,23 +97,22 @@ impl SqlRedactedContentStore {
             .collect();
 
         InsertRedactedBlobs::query(&self.write_connection, &redacted_inserts[..])
+            .await
             .map_err(Error::from)
             .map(|_| ())
-            .boxify()
     }
 
-    pub fn delete_redacted_blobs(&self, content_keys: &[String]) -> BoxFuture<(), Error> {
+    pub async fn delete_redacted_blobs(&self, content_keys: &[String]) -> Result<(), Error> {
         DeleteRedactedBlobs::query(&self.write_connection, &content_keys[..])
+            .await
             .map_err(Error::from)
             .map(|_| ())
-            .boxify()
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures::compat::Future01CompatExt;
 
     #[fbinit::test]
     async fn test_redacted_store(_fb: fbinit::FacebookInit) {
@@ -135,20 +129,14 @@ mod test {
 
         store
             .insert_redacted_blobs(&redacted_keys1, &task1, &Timestamp::now(), false)
-            .compat()
             .await
             .expect("insert failed");
         store
             .insert_redacted_blobs(&redacted_keys2, &task2, &Timestamp::now(), true)
-            .compat()
             .await
             .expect("insert failed");
 
-        let res = store
-            .get_all_redacted_blobs()
-            .compat()
-            .await
-            .expect("select failed");
+        let res = store.get_all_redacted_blobs().await.expect("select failed");
         assert_eq!(res.len(), 4);
         assert!(!res.get(&key_a).unwrap().log_only);
         assert!(!res.get(&key_b).unwrap().log_only);
@@ -157,27 +145,17 @@ mod test {
 
         store
             .insert_redacted_blobs(&redacted_keys1, &task1, &Timestamp::now(), true)
-            .compat()
             .await
             .expect("insert failed");
-        let res = store
-            .get_all_redacted_blobs()
-            .compat()
-            .await
-            .expect("select failed");
+        let res = store.get_all_redacted_blobs().await.expect("select failed");
         assert!(res.get(&key_a).unwrap().log_only);
         assert!(res.get(&key_b).unwrap().log_only);
 
         store
             .delete_redacted_blobs(&redacted_keys1)
-            .compat()
             .await
             .expect("delete failed");
-        let res = store
-            .get_all_redacted_blobs()
-            .compat()
-            .await
-            .expect("select failed");
+        let res = store.get_all_redacted_blobs().await.expect("select failed");
 
         assert_eq!(res.contains_key(&key_c), true);
         assert_eq!(res.contains_key(&key_d), true);

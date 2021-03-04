@@ -13,7 +13,6 @@ use caching_ext::{
     KeyedEntityStore, MemcacheEntity, MemcacheHandler,
 };
 use context::{CoreContext, PerfCounterType};
-use futures::compat::Future01CompatExt;
 use maplit::hashset;
 use memcache::KeyGen;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -130,9 +129,7 @@ impl SqlPhasesStore {
 
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        InsertPhase::query(&self.write_connection, &phases)
-            .compat()
-            .await?;
+        InsertPhase::query(&self.write_connection, &phases).await?;
 
         {
             let ctx = (ctx, repoid, self);
@@ -154,9 +151,7 @@ impl SqlPhasesStore {
         STATS::list_all.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let ans = SelectAllPublic::query(&self.read_connection, &repo_id)
-            .compat()
-            .await?;
+        let ans = SelectAllPublic::query(&self.read_connection, &repo_id).await?;
         Ok(ans.into_iter().map(|x| x.0).collect())
     }
 }
@@ -220,9 +215,7 @@ impl KeyedEntityStore<ChangesetId, Phase> for CacheRequest<'_> {
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
         // NOTE: We only track public phases in the DB.
-        let public = SelectPhases::query(&mapping.read_connection, &repo_id, &cs_ids)
-            .compat()
-            .await?;
+        let public = SelectPhases::query(&mapping.read_connection, &repo_id, &cs_ids).await?;
 
         Result::<_, Error>::Ok(public.into_iter().collect())
     }

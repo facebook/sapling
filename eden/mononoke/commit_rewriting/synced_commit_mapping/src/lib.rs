@@ -20,7 +20,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, Future};
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::{ChangesetId, RepositoryId};
-use sql::queries;
+use sql01::queries;
 use stats::prelude::*;
 use thiserror::Error;
 
@@ -224,9 +224,9 @@ queries! {
         target_repo_id: RepositoryId,
     ) -> (RepositoryId, ChangesetId, RepositoryId, ChangesetId, Option<CommitSyncConfigVersion>) {
         "SELECT large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name
-         FROM synced_commit_mapping
-         WHERE (large_repo_id = {source_repo_id} AND large_bcs_id = {bcs_id} AND small_repo_id = {target_repo_id}) OR
-         (small_repo_id = {source_repo_id} AND small_bcs_id = {bcs_id} AND large_repo_id = {target_repo_id})"
+          FROM synced_commit_mapping
+          WHERE (large_repo_id = {source_repo_id} AND large_bcs_id = {bcs_id} AND small_repo_id = {target_repo_id}) OR
+          (small_repo_id = {source_repo_id} AND small_bcs_id = {bcs_id} AND large_repo_id = {target_repo_id})"
     }
 
     write InsertWorkingCopyEquivalence(values: (
@@ -238,9 +238,9 @@ queries! {
     )) {
         insert_or_ignore,
         "{insert_or_ignore}
-        INTO synced_working_copy_equivalence
-        (large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name)
-        VALUES {values}"
+         INTO synced_working_copy_equivalence
+         (large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name)
+         VALUES {values}"
     }
 
     read SelectWorkingCopyEquivalence(
@@ -249,12 +249,12 @@ queries! {
         target_repo_id: RepositoryId,
     ) -> (RepositoryId, ChangesetId, RepositoryId, Option<ChangesetId>, Option<CommitSyncConfigVersion>) {
         "SELECT large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name
-         FROM synced_working_copy_equivalence
-         WHERE (large_repo_id = {source_repo_id} AND small_repo_id = {target_repo_id} AND large_bcs_id = {bcs_id})
-         OR (large_repo_id = {target_repo_id} AND small_repo_id = {source_repo_id} AND small_bcs_id = {bcs_id})
-         ORDER BY mapping_id ASC
-         LIMIT 1
-         "
+          FROM synced_working_copy_equivalence
+          WHERE (large_repo_id = {source_repo_id} AND small_repo_id = {target_repo_id} AND large_bcs_id = {bcs_id})
+          OR (large_repo_id = {target_repo_id} AND small_repo_id = {source_repo_id} AND small_bcs_id = {bcs_id})
+          ORDER BY mapping_id ASC
+          LIMIT 1
+          "
     }
 }
 

@@ -9,7 +9,6 @@ use anyhow::{format_err, Error};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, PreparedFilenode};
-use futures::compat::Future01CompatExt;
 use futures::FutureExt;
 use maplit::hashmap;
 use mercurial_types::HgFileNodeId;
@@ -213,7 +212,7 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
     .do_not_handle_disabled_filenodes()?;
 
     // Now, delete the copy info from the replica.
-    DeleteCopyInfo::query(&replica).compat().await?;
+    DeleteCopyInfo::query(&replica).await?;
 
     let reader = FilenodesReader::new(vec![replica], vec![master]);
     let prepared = copied_filenode();
@@ -267,7 +266,7 @@ async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
     .do_not_handle_disabled_filenodes()?;
 
     // Now, delete the copy info from the replica.
-    DeletePaths::query(&replica).compat().await?;
+    DeletePaths::query(&replica).await?;
 
     let reader = FilenodesReader::new(vec![replica], vec![master]);
     let prepared = copied_filenode();

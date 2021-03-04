@@ -8,10 +8,7 @@
 use anyhow::Error;
 use context::{CoreContext, PerfCounterType};
 use faster_hex::hex_encode;
-use futures::{
-    compat::Future01CompatExt,
-    future::{self, Future},
-};
+use futures::future::{self, Future};
 use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId};
 use mononoke_types::{RepoPath, RepositoryId};
@@ -436,16 +433,13 @@ async fn select_partial_filenode(
 
     recorder.increment();
 
-    let rows = enforce_sql_timeout(
-        SelectFilenode::query(
-            &connection,
-            &repo_id,
-            &pwh.hash,
-            pwh.sql_is_tree(),
-            &filenode,
-        )
-        .compat(),
-    )
+    let rows = enforce_sql_timeout(SelectFilenode::query(
+        &connection,
+        &repo_id,
+        &pwh.hash,
+        pwh.sql_is_tree(),
+        &filenode,
+    ))
     .await?;
 
     match rows.into_iter().next() {
@@ -516,16 +510,13 @@ async fn select_partial_history(
     let limit = limit.map(|l| l + 1);
     let rows = match limit {
         Some(limit) => {
-            let rows = enforce_sql_timeout(
-                SelectLimitedFilenodes::query(
-                    &connection,
-                    &repo_id,
-                    &pwh.hash,
-                    pwh.sql_is_tree(),
-                    &limit,
-                )
-                .compat(),
-            )
+            let rows = enforce_sql_timeout(SelectLimitedFilenodes::query(
+                &connection,
+                &repo_id,
+                &pwh.hash,
+                pwh.sql_is_tree(),
+                &limit,
+            ))
             .await?;
             if rows.len() >= limit as usize {
                 STATS::too_big_history.add_value(1);
@@ -534,10 +525,12 @@ async fn select_partial_history(
             rows
         }
         None => {
-            enforce_sql_timeout(
-                SelectAllFilenodes::query(&connection, &repo_id, &pwh.hash, pwh.sql_is_tree())
-                    .compat(),
-            )
+            enforce_sql_timeout(SelectAllFilenodes::query(
+                &connection,
+                &repo_id,
+                &pwh.hash,
+                pwh.sql_is_tree(),
+            ))
             .await?
         }
     };
@@ -648,12 +641,11 @@ async fn select_paths<I: Iterator<Item = PathHashBytes>>(
 
                 let connection = connections.checkout_by_shard_id(shard_id, AcquireReason::Paths);
 
-                let output = enforce_sql_timeout(
-                    SelectPaths::query(&connection, &repo_id, &group[..]).compat(),
-                )
-                .await?
-                .into_iter()
-                .collect::<HashMap<_, _>>();
+                let output =
+                    enforce_sql_timeout(SelectPaths::query(&connection, &repo_id, &group[..]))
+                        .await?
+                        .into_iter()
+                        .collect::<HashMap<_, _>>();
 
                 Result::<_, ErrorKind>::Ok(output)
             }

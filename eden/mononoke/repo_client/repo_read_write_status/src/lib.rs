@@ -8,9 +8,6 @@
 #![deny(warnings)]
 
 use anyhow::Error;
-use futures_01_ext::{BoxFuture, FutureExt};
-use futures_old::future::{err, ok};
-use futures_old::Future;
 use metaconfig_types::HgsqlName;
 use sql::mysql;
 use sql::{queries, Connection};
@@ -105,24 +102,26 @@ impl SqlConstruct for SqlRepoReadWriteStatus {
 impl SqlConstructFromMetadataDatabaseConfig for SqlRepoReadWriteStatus {}
 
 impl SqlRepoReadWriteStatus {
-    fn query_read_write_state(
+    async fn query_read_write_state(
         &self,
         hgsql_name: &HgsqlName,
-    ) -> impl Future<Item = Option<(HgMononokeReadWrite, Option<String>)>, Error = Error> {
+    ) -> Result<Option<(HgMononokeReadWrite, Option<String>)>, Error> {
         GetReadWriteStatus::query(&self.read_connection, hgsql_name.as_ref())
+            .await
             .map(|rows| rows.into_iter().next())
     }
 
-    fn set_state(
+    async fn set_state(
         &self,
         hgsql_name: &HgsqlName,
         state: &HgMononokeReadWrite,
         reason: &String,
-    ) -> impl Future<Item = bool, Error = Error> {
+    ) -> Result<bool, Error> {
         SetReadWriteStatus::query(
             &self.write_connection,
             &[(hgsql_name.as_ref(), &state, &reason)],
         )
+        .await
         .map(|res| res.affected_rows() > 0)
     }
 }
@@ -147,64 +146,53 @@ impl RepoReadWriteFetcher {
         }
     }
 
-    fn query_read_write_state(&self) -> impl Future<Item = RepoReadOnly, Error = Error> {
+    async fn query_read_write_state(&self) -> Result<RepoReadOnly, Error> {
         match &self.sql_repo_read_write_status {
             Some(status) => status
                 .query_read_write_state(&self.hgsql_name)
+                .await
                 .map(|item| match item {
                     Some((HgMononokeReadWrite::MononokeWrite, _)) => RepoReadOnly::ReadWrite,
                     Some((_, reason)) => {
                         RepoReadOnly::ReadOnly(reason.unwrap_or_else(|| DB_MSG.to_string()))
                     }
                     None => RepoReadOnly::ReadOnly(DEFAULT_MSG.to_string()),
-                })
-                .left_future(),
-            None => ok(RepoReadOnly::ReadOnly(NOT_CONNECTED_MSG.to_string())).right_future(),
+                }),
+            None => Ok(RepoReadOnly::ReadOnly(NOT_CONNECTED_MSG.to_string())),
         }
     }
 
-    pub fn readonly(&self) -> BoxFuture<RepoReadOnly, Error> {
+    pub async fn readonly(&self) -> Result<RepoReadOnly, Error> {
         if self.sql_repo_read_write_status.is_some() {
             match self.readonly_config {
-                RepoReadOnly::ReadOnly(ref reason) => {
-                    ok(RepoReadOnly::ReadOnly(reason.clone())).boxify()
-                }
-                RepoReadOnly::ReadWrite => self.query_read_write_state().boxify(),
+                RepoReadOnly::ReadOnly(ref reason) => Ok(RepoReadOnly::ReadOnly(reason.clone())),
+                RepoReadOnly::ReadWrite => self.query_read_write_state().await,
             }
         } else {
-            ok(self.readonly_config.clone()).boxify()
+            Ok(self.readonly_config.clone())
         }
     }
 
-    fn set_state(
-        &self,
-        state: &HgMononokeReadWrite,
-        reason: &String,
-    ) -> impl Future<Item = bool, Error = Error> {
+    async fn set_state(&self, state: &HgMononokeReadWrite, reason: &String) -> Result<bool, Error> {
         match &self.sql_repo_read_write_status {
-            Some(status) => status
-                .set_state(&self.hgsql_name, &state, &reason)
-                .left_future(),
-            None => err(Error::msg("db name is not specified")).right_future(),
+            Some(status) => status.set_state(&self.hgsql_name, &state, &reason).await,
+            None => Err(Error::msg("db name is not specified")),
         }
     }
 
-    pub fn set_mononoke_read_write(
-        &self,
-        reason: &String,
-    ) -> impl Future<Item = bool, Error = Error> {
+    pub async fn set_mononoke_read_write(&self, reason: &String) -> Result<bool, Error> {
         self.set_state(&HgMononokeReadWrite::MononokeWrite, &reason)
+            .await
     }
 
-    pub fn set_read_only(&self, reason: &String) -> impl Future<Item = bool, Error = Error> {
-        self.set_state(&HgMononokeReadWrite::NoWrite, &reason)
+    pub async fn set_read_only(&self, reason: &String) -> Result<bool, Error> {
+        self.set_state(&HgMononokeReadWrite::NoWrite, &reason).await
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures::compat::Future01CompatExt;
     use metaconfig_types::RepoReadOnly::*;
 
     static CONFIG_MSG: &str = "Set by config option";
@@ -233,7 +221,7 @@ mod test {
             );
 
             assert_eq!(
-                fetcher.readonly().compat().await.unwrap(),
+                fetcher.readonly().await.unwrap(),
                 ReadOnly(CONFIG_MSG.to_string())
             );
         })
@@ -243,7 +231,7 @@ mod test {
     fn test_readwrite_config_no_sqlite() {
         async_unit::tokio_unit_test(async move {
             let fetcher = RepoReadWriteFetcher::new(None, ReadWrite, HgsqlName("repo".to_string()));
-            assert_eq!(fetcher.readonly().compat().await.unwrap(), ReadWrite);
+            assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
         });
     }
 
@@ -258,7 +246,7 @@ mod test {
                 HgsqlName("repo".to_string()),
             );
             assert_eq!(
-                fetcher.readonly().compat().await.unwrap(),
+                fetcher.readonly().await.unwrap(),
                 ReadOnly(CONFIG_MSG.to_string())
             );
         });
@@ -276,7 +264,7 @@ mod test {
             );
             // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
             assert_eq!(
-                fetcher.readonly().compat().await.unwrap(),
+                fetcher.readonly().await.unwrap(),
                 ReadOnly(DEFAULT_MSG.to_string())
             );
 
@@ -288,11 +276,10 @@ mod test {
                     .write_connection,
                 &[("repo", &HgMononokeReadWrite::MononokeWrite)],
             )
-            .compat()
             .await
             .unwrap();
 
-            assert_eq!(fetcher.readonly().compat().await.unwrap(), ReadWrite);
+            assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
 
             InsertState::query(
                 &fetcher
@@ -302,12 +289,11 @@ mod test {
                     .write_connection,
                 &[("repo", &HgMononokeReadWrite::HgWrite)],
             )
-            .compat()
             .await
             .unwrap();
 
             assert_eq!(
-                fetcher.readonly().compat().await.unwrap(),
+                fetcher.readonly().await.unwrap(),
                 ReadOnly(DB_MSG.to_string())
             );
         });
@@ -332,12 +318,11 @@ mod test {
                     .write_connection,
                 &[("repo", &HgMononokeReadWrite::HgWrite, "reason123")],
             )
-            .compat()
             .await
             .unwrap();
 
             assert_eq!(
-                fetcher.readonly().compat().await.unwrap(),
+                fetcher.readonly().await.unwrap(),
                 ReadOnly("reason123".to_string())
             );
         });
@@ -355,7 +340,7 @@ mod test {
             );
             // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
             assert_eq!(
-                fetcher.readonly().compat().await.unwrap(),
+                fetcher.readonly().await.unwrap(),
                 ReadOnly(DEFAULT_MSG.to_string())
             );
 
@@ -367,12 +352,11 @@ mod test {
                     .write_connection,
                 &[("other_repo", &HgMononokeReadWrite::MononokeWrite)],
             )
-            .compat()
             .await
             .unwrap();
 
             assert_eq!(
-                fetcher.readonly().compat().await.unwrap(),
+                fetcher.readonly().await.unwrap(),
                 ReadOnly(DEFAULT_MSG.to_string())
             );
 
@@ -384,11 +368,10 @@ mod test {
                     .write_connection,
                 &[("repo", &HgMononokeReadWrite::MononokeWrite)],
             )
-            .compat()
             .await
             .unwrap();
 
-            assert_eq!(fetcher.readonly().compat().await.unwrap(), ReadWrite);
+            assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
         })
     }
 
@@ -404,16 +387,15 @@ mod test {
             );
             // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
             assert_eq!(
-                fetcher.readonly().compat().await.unwrap(),
+                fetcher.readonly().await.unwrap(),
                 ReadOnly(DEFAULT_MSG.to_string())
             );
 
             fetcher
                 .set_mononoke_read_write(&"repo is locked".to_string())
-                .compat()
                 .await
                 .unwrap();
-            assert_eq!(fetcher.readonly().compat().await.unwrap(), ReadWrite);
+            assert_eq!(fetcher.readonly().await.unwrap(), ReadWrite);
         });
     }
 }

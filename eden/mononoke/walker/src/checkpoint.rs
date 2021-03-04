@@ -6,7 +6,6 @@
  */
 
 use anyhow::{bail, Error};
-use futures::compat::Future01CompatExt;
 use mononoke_types::{RepositoryId, Timestamp};
 use sql::queries;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
@@ -129,7 +128,6 @@ impl SqlCheckpoints {
             &repo_id,
             &checkpoint_name,
         )
-        .compat()
         .await?;
 
         Ok(rows.into_iter().next().map(|row| Checkpoint {
@@ -158,7 +156,6 @@ impl SqlCheckpoints {
                 &checkpoint.update_timestamp,
             )],
         )
-        .compat()
         .await?;
         Ok(())
     }
@@ -179,7 +176,6 @@ impl SqlCheckpoints {
             &checkpoint.create_timestamp,
             &checkpoint.update_timestamp,
         )
-        .compat()
         .await?;
         Ok(())
     }

@@ -11,7 +11,6 @@ use ::sql::{queries, Connection};
 use anyhow::Error;
 use async_trait::async_trait;
 use context::{CoreContext, PerfCounterType};
-use futures::compat::Future01CompatExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId, Svnrev};
 use slog::warn;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
@@ -97,9 +96,7 @@ impl BonsaiSvnrevMapping for SqlBonsaiSvnrevMapping {
             )
             .collect();
 
-        DangerouslyAddSvnrevs::query(&self.write_connection, &entries[..])
-            .compat()
-            .await?;
+        DangerouslyAddSvnrevs::query(&self.write_connection, &entries[..]).await?;
 
         Ok(())
     }
@@ -182,14 +179,10 @@ async fn select_mapping(
 
     let rows = match objects {
         BonsaisOrSvnrevs::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..])
-                .compat()
-                .await?
+            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..]).await?
         }
         BonsaisOrSvnrevs::Svnrev(svnrevs) => {
-            SelectMappingBySvnrev::query(&connection, &repo_id, &svnrevs[..])
-                .compat()
-                .await?
+            SelectMappingBySvnrev::query(&connection, &repo_id, &svnrevs[..]).await?
         }
     };
 

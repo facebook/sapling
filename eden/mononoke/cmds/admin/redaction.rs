@@ -312,7 +312,6 @@ async fn redaction_add<'a, 'b>(
     let timestamp = Timestamp::now();
     redacted_blobs
         .insert_redacted_blobs(&blobstore_keys, &task, &timestamp, log_only)
-        .compat()
         .await?;
 
     Ok(())
@@ -332,7 +331,7 @@ async fn redaction_list<'a>(
     );
     info!(logger, "Please be patient.");
     let (redacted_blobs, hg_cs) = futures::try_join!(
-        redacted_blobs.get_all_redacted_blobs().compat(),
+        redacted_blobs.get_all_redacted_blobs(),
         cs_id.load(&ctx, blobrepo.blobstore()).map_err(Error::from),
     )?;
     let redacted_keys = redacted_blobs.iter().map(|(key, _)| key).collect();
@@ -376,7 +375,6 @@ async fn redaction_remove<'a>(
         .collect();
     redacted_blobs
         .delete_redacted_blobs(&blobstore_keys)
-        .compat()
         .await
         .map_err(SubcommandError::Error)
 }

@@ -12,7 +12,7 @@ use std::sync::Arc;
 use anyhow::{format_err, Error, Result};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future::try_join};
+use futures::future::try_join;
 
 use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
@@ -190,7 +190,6 @@ pub async fn subcommand_blobstore_fetch<'a>(
                     args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches).await?;
                 redacted_blobs
                     .get_all_redacted_blobs()
-                    .compat()
                     .await
                     .map_err(Error::from)
                     .map(HashMap::from_iter)
