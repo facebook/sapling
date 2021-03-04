@@ -8,45 +8,10 @@
 #ifndef _WIN32
 
 #include "eden/fs/nfs/NfsdRpc.h"
-#include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#include "eden/fs/nfs/testharness/XdrTestUtils.h"
 
 namespace facebook::eden {
-
-using folly::IOBuf;
-
-namespace {
-template <typename T>
-IOBuf ser(const T& t) {
-  constexpr size_t kDefaultBufferSize = 1024;
-  IOBuf buf(IOBuf::CREATE, kDefaultBufferSize);
-  folly::io::Appender appender(&buf, kDefaultBufferSize);
-  XdrTrait<T>::serialize(appender, t);
-  return buf;
-}
-
-template <typename T>
-T de(IOBuf buf) {
-  folly::io::Cursor cursor(&buf);
-  auto ret = XdrTrait<T>::deserialize(cursor);
-  if (!cursor.isAtEnd()) {
-    throw std::runtime_error(folly::to<std::string>(
-        "unexpected trailing bytes (", cursor.totalLength(), ")"));
-  }
-  return ret;
-}
-
-// Validates that `T` can be serialized into something of an expected
-// encoded size and deserialized back to something that compares
-// equal to the original value
-template <typename T>
-void roundtrip(T value, size_t encodedSize) {
-  auto encoded = ser(value);
-  EXPECT_EQ(encoded.coalesce().size(), encodedSize);
-  auto decoded = de<T>(encoded);
-  EXPECT_EQ(value, decoded);
-}
-} // namespace
 
 struct ResOk {
   int a;

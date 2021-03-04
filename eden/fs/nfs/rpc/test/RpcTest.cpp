@@ -8,43 +8,10 @@
 #ifndef _WIN32
 
 #include "eden/fs/nfs/rpc/Rpc.h"
-#include <folly/container/Array.h>
-#include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
+#include "eden/fs/nfs/testharness/XdrTestUtils.h"
 
-using namespace facebook::eden;
-using folly::IOBuf;
-
-template <typename T>
-IOBuf ser(const T& t) {
-  constexpr size_t kDefaultBufferSize = 1024;
-  IOBuf buf(IOBuf::CREATE, kDefaultBufferSize);
-  folly::io::Appender appender(&buf, kDefaultBufferSize);
-  XdrTrait<T>::serialize(appender, t);
-  return buf;
-}
-
-template <typename T>
-T de(IOBuf buf) {
-  folly::io::Cursor cursor(&buf);
-  auto ret = XdrTrait<T>::deserialize(cursor);
-  if (!cursor.isAtEnd()) {
-    throw std::runtime_error(folly::to<std::string>(
-        "unexpected trailing bytes (", cursor.totalLength(), ")"));
-  }
-  return ret;
-}
-
-// Validates that `T` can be serialized into something of an expected
-// encoded size and deserialized back to something that compares
-// equal to the original value
-template <typename T>
-void roundtrip(T value, size_t encodedSize) {
-  auto encoded = ser(value);
-  EXPECT_EQ(encoded.coalesce().size(), encodedSize);
-  auto decoded = de<T>(encoded);
-  EXPECT_EQ(value, decoded);
-}
+namespace facebook::eden {
 
 TEST(RpcTest, enums) {
   roundtrip(auth_flavor::AUTH_NONE, sizeof(int32_t));
@@ -57,5 +24,7 @@ TEST(RpcTest, enums) {
       rejected_reply{{reject_stat::AUTH_ERROR, auth_stat::AUTH_FAILED}},
       sizeof(auth_stat) + sizeof(uint32_t));
 }
+
+} // namespace facebook::eden
 
 #endif
