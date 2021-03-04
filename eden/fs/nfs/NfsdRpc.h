@@ -377,6 +377,38 @@ EDEN_XDR_SERDE_DECL(READLINK3resfail, symlink_attributes);
 struct READLINK3res
     : public detail::Nfsstat3Variant<READLINK3resok, READLINK3resfail> {};
 
+// WRITE Procedure:
+
+constexpr inline size_t NFS3_WRITEVERFSIZE = 8;
+using writeverf3 = std::array<uint8_t, NFS3_WRITEVERFSIZE>;
+
+enum class stable_how { UNSTABLE = 0, DATA_SYNC = 1, FILE_SYNC = 2 };
+
+struct WRITE3args {
+  nfs_fh3 file;
+  uint64_t offset;
+  uint32_t count;
+  stable_how stable;
+  std::unique_ptr<folly::IOBuf> data;
+};
+EDEN_XDR_SERDE_DECL(WRITE3args, file, offset, count, stable, data);
+
+struct WRITE3resok {
+  wcc_data file_wcc;
+  uint32_t count;
+  stable_how committed;
+  writeverf3 verf;
+};
+EDEN_XDR_SERDE_DECL(WRITE3resok, file_wcc, count, committed, verf);
+
+struct WRITE3resfail {
+  wcc_data file_wcc;
+};
+EDEN_XDR_SERDE_DECL(WRITE3resfail, file_wcc);
+
+struct WRITE3res : public detail::Nfsstat3Variant<WRITE3resok, WRITE3resfail> {
+};
+
 // CREATE Procedure:
 
 enum class createmode3 { UNCHECKED = 0, GUARDED = 1, EXCLUSIVE = 2 };
