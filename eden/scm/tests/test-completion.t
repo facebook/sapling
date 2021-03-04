@@ -96,6 +96,7 @@ Show debug commands if there are no other candidates
   debugcheckcasecollisions
   debugcheckoutidentifier
   debugcheckstate
+  debugcleanremotenames
   debugcolor
   debugcommands
   debugcomplete
@@ -386,6 +387,7 @@ Show all commands + options
   debugcheckcasecollisions: rev
   debugcheckoutidentifier: 
   debugcheckstate: 
+  debugcleanremotenames: 
   debugcolor: style
   debugcommands: 
   debugcomplete: options

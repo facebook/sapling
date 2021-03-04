@@ -550,6 +550,20 @@ def debugcheckstate(ui, repo):
         raise error.Abort(msg)
 
 
+@command("debugcleanremotenames", [], "")
+def debugcleanremotenames(ui, repo):
+    """remove non-essential remote bookmarks
+
+    A remote bookmark is not essential if it is not an ancestor of a visible
+    draft commit, or if it is not listed in the
+    'remotenames.selectivepulldefault' config.
+    """
+    removednames = bookmarks.cleanupremotenames(repo)
+    if not removednames:
+        # Nothing changed
+        return 1
+
+
 @command(
     "debugcolor",
     [("", "style", None, _("show all configured styles"))],

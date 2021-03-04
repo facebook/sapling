@@ -2950,6 +2950,9 @@ class localrepository(object):
             )
         return self._smallcommitmetadata
 
+    def metalog(self):
+        return getattr(self.svfs, "metalog", None)
+
 
 # used to avoid circular references so destructors work
 def aftertrans(files):

@@ -948,6 +948,8 @@ Test list of internal help commands
                  display the current checkout unique identifier
    debugcheckstate
                  validate the correctness of the current dirstate
+   debugcleanremotenames
+                 remove non-essential remote bookmarks
    debugcolor    show available color, effects or style
    debugcommands
                  list all available commands and options

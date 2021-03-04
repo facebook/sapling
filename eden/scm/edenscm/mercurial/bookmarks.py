@@ -1351,6 +1351,48 @@ def selectivepullbookmarknames(repo, remote=None, includeaccessed=True):
     return initbooks
 
 
+def cleanupremotenames(repo):
+    """Remove non-critical remotenames that do not have draft descendants
+
+    Return a list of removed names.
+    """
+    if not repo.changelog.userust():
+        raise error.Abort(_("legacy changelog backend is not supported"))
+    metalog = repo.metalog()
+    if metalog is None:
+        raise error.Abort(_("metalog is required"))
+    referrednodes = repo.dageval(lambda: ancestors(draft()))
+    essentialnames = selectivepullinitbookmarknames(repo)
+    namenodes = decoderemotenames(metalog["remotenames"])
+    newnamenodes = {
+        fullname: node
+        for fullname, node in namenodes.items()
+        if splitremotename(fullname)[-1] in essentialnames or node in referrednodes
+    }
+    removednames = sorted(set(namenodes) - set(newnamenodes))
+    if removednames:
+        metalog["remotenames"] = encoderemotenames(newnamenodes)
+        metalog.commit("cleanupremotenames")
+        threshold = 10
+        if len(removednames) > threshold:
+            partialnames = ", ".join(removednames[:threshold])
+            names = "%s and %d others" % (
+                partialnames,
+                len(removednames) - threshold,
+            )
+        else:
+            names = ", ".join(removednames)
+        repo.ui.status_err(
+            _("removed %s non-essential remote bookmarks: %s\n")
+            % (
+                len(removednames),
+                names,
+            )
+        )
+        repo.invalidatevolatilesets()
+    return removednames
+
+
 def _recordbookmarksupdate(repo, changes):
     """writes remotebookmarks changes to the journal
 
