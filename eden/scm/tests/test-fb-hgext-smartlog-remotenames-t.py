@@ -48,8 +48,6 @@ sh % "hg push --non-forward-move -q --to master"
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     @  2  default/master
     │
-    │ o  1
-    ├─╯
     o  0 mybook"""
 
 # Test configuration of "interesting" bookmarks
@@ -63,16 +61,12 @@ sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     │
     │ @  3  default/project/bookmark
     ├─╯
-    │ o  1
-    ├─╯
     o  0 mybook"""
 
 sh % "hg up '.^'" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  2  default/master
     │
-    │ o  1
-    ├─╯
     @  0 mybook"""
 sh % "cat" << r"""
 [smartlog]
@@ -82,8 +76,6 @@ names=project/bookmark
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  3  default/project/bookmark
     │
-    │ o  1
-    ├─╯
     @  0 mybook"""
 sh % "cat" << r"""
 [smartlog]
@@ -93,7 +85,5 @@ sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  2  default/master
     │
     │ o  3  default/project/bookmark
-    ├─╯
-    │ o  1
     ├─╯
     @  0 mybook"""

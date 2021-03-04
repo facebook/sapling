@@ -1567,6 +1567,14 @@ class localrepository(object):
 
             repo.hook("pretxnclose", throw=True, txnname=desc, **(tr.hookargs))
 
+            # Remove visible heads that become public, since we now have
+            # up-to-date remotenames.
+            cl = repo.changelog
+            if cl.userust():
+                heads = cl._visibleheads.heads
+                draftheads = list(repo.dageval(lambda: heads - public()))
+                cl._visibleheads.heads = draftheads
+
         def flushchangelog(tr):
             repo = reporef()
             cl = repo.changelog

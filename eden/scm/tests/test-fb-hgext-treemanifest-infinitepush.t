@@ -265,8 +265,6 @@ treemanifest data for the public commits.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 02c12aef64ff
-  1 trees fetched over * (glob)
 
   $ hg log -G -T '{node|short} {phase} {desc}'
   o  02c12aef64ff draft add subdir/a
@@ -300,9 +298,9 @@ treemanifest data for the public commits.
 
 # Merge the root into master and push the merge as a backup
   $ hg up -q f027ebc7ba78
-  fetching tree '' 92ea8e774335a78205d4837583cf4224b5fc5c33, based on bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via f027ebc7ba78
-  6 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 92ea8e774335a78205d4837583cf4224b5fc5c33, found via f027ebc7ba78
+  6 trees fetched over * (glob)
   $ hg merge d32fd17cb041
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

@@ -25,7 +25,7 @@
   $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
-  visibility: read 1 heads: df4f53cec30a
+  visibility: read 0 heads: 
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   commitcloud_sync: synced to workspace user/test/default version 1: 0 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
   commitcloud: commits synchronized
@@ -40,7 +40,7 @@
   $ setconfig extensions.lockdelay="$TESTDIR/lockdelay.py"
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
-  visibility: read 1 heads: df4f53cec30a
+  visibility: read 0 heads: 
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   commitcloud_sync: synced to workspace user/test/default version 1: 0 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
   commitcloud: commits synchronized
@@ -50,8 +50,8 @@
   $ cd client1
   $ touch 1
   $ hg commit -Aqm commit1
-  visibility: read 1 heads: df4f53cec30a
-  visibility: removed 1 heads [df4f53cec30a]; added 1 heads [79089e97b9e7]
+  visibility: read 0 heads: 
+  visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
   visibility: wrote 1 heads: 79089e97b9e7
   $ hg cloud sync
   visibility: read 1 heads: 79089e97b9e7
@@ -75,8 +75,8 @@ While that is getting started, create a new commit locally.
   $ sleep 1
   $ touch 2
   $ hg commit -Aqm commit2
-  visibility: read 1 heads: df4f53cec30a
-  visibility: removed 1 heads [df4f53cec30a]; added 1 heads [1292cc1f1c17]
+  visibility: read 0 heads: 
+  visibility: removed 0 heads []; added 1 heads [1292cc1f1c17]
   visibility: wrote 1 heads: 1292cc1f1c17
   $ hg up -q 'desc(base)'
   visibility: read 1 heads: 1292cc1f1c17
@@ -121,7 +121,7 @@ Wait for the background backup to finish and check its output.
 
   $ hg debugwaitbackup
   $ cat $TESTTMP/bgsync.out
-  visibility: read 1 heads: df4f53cec30a
+  visibility: read 0 heads: 
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   visibility: read 1 heads: 1292cc1f1c17
   abort: commitcloud: failed to synchronize commits: 'repo changed while backing up'
