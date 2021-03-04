@@ -124,6 +124,14 @@ folly::Future<NfsDispatcher::MkdirRes> NfsDispatcherImpl::mkdir(
       });
 }
 
+folly::Future<struct statfs> NfsDispatcherImpl::statfs(
+    InodeNumber /*dir*/,
+    ObjectFetchContext& /*context*/) {
+  // See the comment in FuseDispatcherImpl::statfs for why we gather the statFs
+  // from the overlay.
+  return mount_->getOverlay()->statFs();
+}
+
 } // namespace facebook::eden
 
 #endif

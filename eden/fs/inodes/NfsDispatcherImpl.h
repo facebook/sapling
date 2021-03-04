@@ -54,6 +54,10 @@ class NfsDispatcherImpl : public NfsDispatcher {
       mode_t mode,
       ObjectFetchContext& context) override;
 
+  folly::Future<struct statfs> statfs(
+      InodeNumber ino,
+      ObjectFetchContext& context) override;
+
  private:
   // The EdenMount associated with this dispatcher.
   EdenMount* const mount_;

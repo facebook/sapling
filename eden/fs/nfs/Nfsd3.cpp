@@ -763,11 +763,49 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::readdirplus(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::fsstat(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<FSSTAT3args>::deserialize(deser);
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("fsstat");
+
+  return dispatcher_->statfs(args.fsroot.ino, *context)
+      .thenTry([this, ser = std::move(ser), ino = args.fsroot.ino](
+                   folly::Try<struct statfs> statFsTry) mutable {
+        return dispatcher_->getattr(ino, *context)
+            .thenTry([ser = std::move(ser), statFsTry = std::move(statFsTry)](
+                         folly::Try<struct stat> statTry) mutable {
+              if (statFsTry.hasException()) {
+                FSSTAT3res res{
+                    {{exceptionToNfsError(statFsTry.exception()),
+                      FSSTAT3resfail{statToPostOpAttr(std::move(statTry))}}}};
+                XdrTrait<FSSTAT3res>::serialize(ser, res);
+              } else {
+                auto statfs = std::move(statFsTry).value();
+
+                FSSTAT3res res{
+                    {{nfsstat3::NFS3_OK,
+                      FSSTAT3resok{
+                          /*obj_attributes*/ statToPostOpAttr(
+                              std::move(statTry)),
+                          /*tbytes*/ statfs.f_blocks * statfs.f_bsize,
+                          /*fbytes*/ statfs.f_bfree * statfs.f_bsize,
+                          /*abytes*/ statfs.f_bavail * statfs.f_bavail,
+                          /*tfiles*/ statfs.f_files,
+                          /*ffiles*/ statfs.f_ffree,
+                          /*afiles*/ statfs.f_ffree,
+                          /*invarsec*/ 0,
+                      }}}};
+                XdrTrait<FSSTAT3res>::serialize(ser, res);
+              }
+
+              return folly::unit;
+            });
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::fsinfo(
