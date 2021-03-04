@@ -20,7 +20,7 @@ use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshness};
 use borrowed::borrowed;
 use bundle_generator::FilenodeVerifier;
-use bundle_preparer::BundlePreparer;
+use bundle_preparer::{maybe_adjust_batch, BundlePreparer};
 use bytes::Bytes;
 use cached_config::ConfigStore;
 use clap::{Arg, SubCommand};
@@ -1028,7 +1028,29 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             })
             .buffered(bundle_buffer_size)
             .map_err(|cause| AnonymousError { cause })
-            .map_ok(move |batches| bundle_preparer.prepare_bundles(&ctx, batches, &mut overlay))
+            .map({
+                let mut seen_first_batch = false;
+                move |res_batches| {
+                    let batches = res_batches?;
+                    let mut batches = batches.into_iter();
+                    let mut first = batches.next();
+                    if !seen_first_batch {
+                        // In case sync job failed to update "latest-replayed-request"
+                        // counter during its previous run, the first batch might contain
+                        // entries that were already synced to hg server. Syncing them again
+                        // would result in an error. Let's try to detect this case and
+                        // fix the first batch if possible.
+                        if let Some(batch) = first {
+                            first = maybe_adjust_batch(&ctx, batch, &overlay)
+                                .map_err(|cause| AnonymousError { cause })?;
+                            seen_first_batch = true;
+                        }
+                    }
+
+                    let batches = first.into_iter().chain(batches);
+                    Ok(bundle_preparer.prepare_bundles(&ctx, batches.collect(), &mut overlay))
+                }
+            })
             .map(|res| async move {
                 let f = res?;
                 f.await

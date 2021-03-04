@@ -10,8 +10,8 @@ use crate::errors::{
     ErrorKind::{BookmarkMismatchInBundleCombining, ReplayDataMissing, UnexpectedBookmarkMove},
     PipelineError,
 };
-use crate::{bind_sync_err, CombinedBookmarkUpdateLogEntry};
-use anyhow::Error;
+use crate::{bind_sync_err, BookmarkOverlay, CombinedBookmarkUpdateLogEntry};
+use anyhow::{anyhow, Error};
 use blobrepo::{BlobRepo, ChangesetFetcher};
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, BookmarkUpdateReason, RawBundleReplayData};
@@ -457,6 +457,7 @@ async fn save_timestamps_to_file(
     write_to_named_temp_file(encoded_timestamps).await
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BookmarkLogEntryBatch {
     entries: Vec<BookmarkUpdateLogEntry>,
     bookmark_name: BookmarkName,
@@ -526,10 +527,37 @@ impl BookmarkLogEntryBatch {
         if self.to_cs_id != entry.from_changeset_id {
             return Ok(Err(entry));
         }
+        
+        self.push(entry);
+        Ok(Ok(()))
+    }
 
+    fn push(
+      &mut self,
+      entry: BookmarkUpdateLogEntry,
+    ) {
         self.to_cs_id = entry.to_changeset_id;
         self.entries.push(entry);
-        Ok(Ok(()))
+    }
+
+    pub fn remove_first_entries(
+        mut self,
+        num_entries_to_remove: usize,
+    ) -> Result<Option<Self>, Error> {
+        if num_entries_to_remove > self.entries.len() {
+            return Err(anyhow!(
+                "Programmer error: tried to skip more entries that the batch has"
+            ));
+        }
+
+        let last_entries = self.entries.split_off(num_entries_to_remove);
+        self.entries = last_entries;
+        if let Some(entry) = self.entries.get(0) {
+            self.from_cs_id = entry.from_changeset_id;
+            Ok(Some(self))
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -560,11 +588,76 @@ async fn split_in_batches(
     Ok(batches)
 }
 
+// This function might remove a few first bookmark log entries from the batch.
+// It can be useful to modify the very first batch sync job is trying to sync. There can be
+// mismatches in what was actually synced to hg servers and the value of "latest-replayed-request"
+// counter, and this function can help removing these mismatches.
+//
+// To be precise:
+// 1) If a value of the bookmark in overlay points to from_cs_id in the batch, then batch is not
+//    modified. Everything is ok, counter is correct.
+// 2) If a value of the bookmark in overlay points to to_changeset_id for the middle bookmark
+//    log entry in the batch (say, entry X), then all bookmark log entries up to and including
+//    entry X are removed.
+//    Usually it means that the everything up to entry X was successfully synced, but sync job failed to
+//    update "latest-replayed-request" counter.
+// 3) If overlay doesn't point to any commit in the batch, then the batch is not modified.
+//    Usually it means that hg server is out of date with hgsql, and we don't need to do anything
+pub fn maybe_adjust_batch(
+    ctx: &CoreContext,
+    batch: BookmarkLogEntryBatch,
+    overlay: &BookmarkOverlay,
+) -> Result<Option<BookmarkLogEntryBatch>, Error> {
+    let book_name = &batch.bookmark_name;
+
+    // No adjustment needed
+    let overlay_value = overlay.get_value(book_name);
+    if overlay_value == batch.from_cs_id {
+        return Ok(Some(batch));
+    }
+
+    info!(
+        ctx.logger(),
+        "trying to adjust first batch for bookmark {}. \
+        First batch starts points to {:?}",
+        book_name,
+        batch.from_cs_id
+    );
+
+    let mut found = false;
+    let mut entries_to_skip = vec![];
+    for entry in &batch.entries {
+        entries_to_skip.push(entry.id);
+        if overlay_value == entry.to_changeset_id {
+            found = true;
+            break;
+        }
+    }
+
+    if found {
+        warn!(
+            ctx.logger(),
+            "adjusting first batch - skipping first entries {:?}", entries_to_skip
+        );
+        batch.remove_first_entries(entries_to_skip.len())
+    } else {
+        warn!(
+            ctx.logger(),
+            "could not adjust first batch, because bookmark hg \
+            server bookmark doesn't point to any commit from the batch. This might \
+            be expected in a repo with high commit rate in case hg server is out of \
+            sync with hgsql."
+        );
+        Ok(Some(batch))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
+    use maplit::hashmap;
     use mononoke_types::RepositoryId;
     use skiplist::SkiplistIndex;
     use tests_utils::drawdag::create_from_dag;
@@ -781,6 +874,82 @@ mod test {
 
         Ok(())
     }
+
+    #[fbinit::test]
+    async fn test_maybe_adjust_batch(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = new_memblob_empty(None)?;
+
+        let commits = create_from_dag(
+            &ctx,
+            &repo,
+            r##"
+                A-B-C
+                D
+            "##,
+        )
+        .await?;
+
+        let main = BookmarkName::new("main")?;
+        let commit_a = commits.get("A").cloned().unwrap();
+        let commit_b = commits.get("B").cloned().unwrap();
+        let commit_c = commits.get("C").cloned().unwrap();
+        let commit_d = commits.get("D").cloned().unwrap();
+        let log_entry_1 = create_bookmark_log_entry(0, main.clone(), None, Some(commit_a));
+        let log_entry_2 =
+            create_bookmark_log_entry(1, main.clone(), Some(commit_a), Some(commit_b));
+        let log_entry_3 =
+            create_bookmark_log_entry(1, main.clone(), Some(commit_b), Some(commit_c));
+
+        let mut batch = BookmarkLogEntryBatch::new(log_entry_1.clone());
+        batch.push(log_entry_2.clone());
+        batch.push(log_entry_3.clone());
+
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {}));
+        let adjusted = maybe_adjust_batch(&ctx, batch.clone(), &overlay)?;
+        assert_eq!(Some(batch.clone()), adjusted);
+
+        // Skip a single entry
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
+          main.clone() => commit_a,
+        }));
+        let adjusted = maybe_adjust_batch(&ctx, batch.clone(), &overlay)?;
+        assert!(adjusted.is_some());
+        assert_ne!(Some(batch.clone()), adjusted);
+        let adjusted = adjusted.unwrap();
+        assert_eq!(adjusted.from_cs_id, Some(commit_a));
+        assert_eq!(adjusted.to_cs_id, Some(commit_c));
+        assert_eq!(adjusted.entries, vec![log_entry_2, log_entry_3.clone()]);
+
+        // Skip two entries
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
+          main.clone() => commit_b,
+        }));
+        let adjusted = maybe_adjust_batch(&ctx, batch.clone(), &overlay)?;
+        assert!(adjusted.is_some());
+        assert_ne!(Some(batch.clone()), adjusted);
+        let adjusted = adjusted.unwrap();
+        assert_eq!(adjusted.from_cs_id, Some(commit_b));
+        assert_eq!(adjusted.to_cs_id, Some(commit_c));
+        assert_eq!(adjusted.entries, vec![log_entry_3]);
+
+        // The whole batch was already synced - nothing to do!
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
+          main.clone() => commit_c,
+        }));
+        let adjusted = maybe_adjust_batch(&ctx, batch.clone(), &overlay)?;
+        assert_eq!(None, adjusted);
+
+        // Bookmark is not in the batch at all - in that case just do nothing and
+        // return existing bundle
+        let overlay = BookmarkOverlay::new(Arc::new(hashmap! {
+          main.clone() => commit_d,
+        }));
+        let adjusted = maybe_adjust_batch(&ctx, batch.clone(), &overlay)?;
+        assert_eq!(Some(batch), adjusted);
+        Ok(())
+    }
+
     fn create_bookmark_log_entry(
         id: i64,
         bookmark_name: BookmarkName,
