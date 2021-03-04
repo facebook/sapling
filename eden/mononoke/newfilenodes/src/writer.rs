@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
-use context::CoreContext;
+use anyhow::{Context, Error};
+use context::{CoreContext, PerfCounterType};
 use filenodes::{FilenodeResult, PreparedFilenode};
 use futures::future;
 use itertools::Itertools;
@@ -53,7 +53,7 @@ impl FilenodesWriter {
 
     pub async fn insert_filenodes(
         &self,
-        _context: &CoreContext,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         filenodes: Vec<PreparedFilenode>,
         replace: bool,
@@ -68,7 +68,7 @@ impl FilenodesWriter {
             .group_by(|(path_with_hash, _)| path_with_hash.shard_number(shard_count))
             .into_iter()
             .map(|(shard_number, group)| {
-                self.insert_filenode_group(repo_id, shard_number, group.collect(), replace)
+                self.insert_filenode_group(ctx, repo_id, shard_number, group.collect(), replace)
             })
             .collect::<Vec<_>>();
 
@@ -85,6 +85,7 @@ impl FilenodesWriter {
 
     async fn insert_filenode_group(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         shard_number: usize,
         filenodes: Vec<(PathHash, PreparedFilenode)>,
@@ -98,8 +99,12 @@ impl FilenodesWriter {
         for chunk in filenodes.chunks(self.chunk_size) {
             let read_conn = &self.read_connections[shard_number];
             let write_conn = &self.write_connections[shard_number];
-            ensure_paths_exists(&read_conn, &write_conn, repo_id, chunk).await?;
-            insert_filenodes(&write_conn, repo_id, chunk, replace).await?;
+            ensure_paths_exists(ctx, &read_conn, &write_conn, repo_id, chunk)
+                .await
+                .context("Error ensuring filenode paths exist")?;
+            insert_filenodes(ctx, &write_conn, repo_id, chunk, replace)
+                .await
+                .context("Error inserting filenodes")?;
         }
 
         Ok(FilenodeResult::Present(()))
@@ -107,6 +112,7 @@ impl FilenodesWriter {
 }
 
 async fn ensure_paths_exists(
+    ctx: &CoreContext,
     read_conn: &Connection,
     write_conn: &Connection,
     repo_id: RepositoryId,
@@ -117,6 +123,8 @@ async fn ensure_paths_exists(
         .map(|(pwh, _)| pwh.hash.clone())
         .collect::<Vec<_>>();
 
+    ctx.perf_counters()
+        .increment_counter(PerfCounterType::SqlReadsMaster);
     let mut paths_present = SelectAllPaths::query(&read_conn, &repo_id, &path_hashes[..])
         .await?
         .into_iter()
@@ -139,12 +147,17 @@ async fn ensure_paths_exists(
     // queries solves that. So we do it here.
     paths_to_insert.sort();
 
-    InsertPaths::query(&write_conn, &paths_to_insert[..]).await?;
+    ctx.perf_counters()
+        .increment_counter(PerfCounterType::SqlWrites);
+    InsertPaths::query(&write_conn, &paths_to_insert[..])
+        .await
+        .with_context(|| format!("Error inserting {} filenode paths", paths_to_insert.len()))?;
 
     Ok(())
 }
 
 async fn insert_filenodes(
+    ctx: &CoreContext,
     write_conn: &Connection,
     repo_id: RepositoryId,
     filenodes: &[(PathHash, PreparedFilenode)],
@@ -196,6 +209,8 @@ async fn insert_filenodes(
         )
         .collect::<Vec<_>>();
 
+    ctx.perf_counters()
+        .increment_counter(PerfCounterType::SqlWrites);
     if replace {
         ReplaceFilenodes::query(&write_conn, &filenode_rows[..]).await?;
     } else {
@@ -203,6 +218,8 @@ async fn insert_filenodes(
     }
 
     if !copydata_rows.is_empty() {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
         InsertFixedcopyinfo::query(&write_conn, &copydata_rows[..]).await?;
     }
 
