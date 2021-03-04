@@ -16,7 +16,6 @@ blobrepo_factory = { version = "0.1.0", path = "../../../blobrepo/factory" }
 blobrepo_hg = { version = "0.1.0", path = "../../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../../bookmarks" }
-cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = ".." }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }

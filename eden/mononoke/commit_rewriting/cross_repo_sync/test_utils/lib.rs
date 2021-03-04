@@ -14,7 +14,6 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
-use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
     rewrite_commit,
@@ -22,7 +21,7 @@ use cross_repo_sync::{
     update_mapping_with_version, upload_commits, CommitSyncContext, CommitSyncDataProvider,
     CommitSyncRepos, CommitSyncer, SyncData, Syncers,
 };
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use futures::compat::Future01CompatExt;
 use live_commit_sync_config::{LiveCommitSyncConfig, TestLiveCommitSyncConfig};
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
@@ -71,38 +70,23 @@ where
     let bookmark_val = maybe_bookmark_val.ok_or(format_err!("master not found"))?;
     let source_bcs_mut = source_bcs.into_mut();
     let maybe_rewritten = {
-        cloned!(ctx);
-        async move {
-            let map = HashMap::new();
-            let mover = commit_syncer
-                .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()))
-                .await?;
-            rewrite_commit(&ctx, source_bcs_mut, &map, mover, source_repo.clone()).await
-        }
-    }
-    .boxed()
-    .compat()
-    .compat()
-    .await?;
+        let map = HashMap::new();
+        let mover = commit_syncer
+            .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()))
+            .await?;
+        rewrite_commit(&ctx, source_bcs_mut, &map, mover, source_repo.clone()).await?
+    };
     let mut target_bcs_mut = maybe_rewritten.unwrap();
     target_bcs_mut.parents = vec![bookmark_val];
 
     let target_bcs = target_bcs_mut.freeze()?;
-    {
-        cloned!(ctx, target_bcs);
-        async move {
-            upload_commits(
-                &ctx,
-                vec![target_bcs],
-                commit_syncer.get_source_repo(),
-                commit_syncer.get_target_repo(),
-            )
-            .await
-        }
-    }
-    .boxed()
-    .compat()
-    .compat()
+
+    upload_commits(
+        &ctx,
+        vec![target_bcs.clone()],
+        commit_syncer.get_source_repo(),
+        commit_syncer.get_target_repo(),
+    )
     .await?;
 
     let mut txn = target_repo.update_bookmark_transaction(ctx.clone());
