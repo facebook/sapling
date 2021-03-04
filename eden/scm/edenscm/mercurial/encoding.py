@@ -107,6 +107,7 @@ _encodingfixers = {"646": lambda: "ascii", "ANSI_X3.4-1968": lambda: "ascii"}
 # cp65001 is a Windows variant of utf-8, which isn't supported on Python 2.
 # No idea if it should be rewritten to the canonical name 'utf-8' on Python 3.
 # https://bugs.python.org/issue13216
+# pyre-fixme[58]: `<` is not supported for operand types `Union[int, str]` and `int`.
 if pycompat.iswindows and sys.version_info[0] < 3:
     _encodingfixers["cp65001"] = lambda: "utf-8"
 
