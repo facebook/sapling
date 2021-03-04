@@ -6,8 +6,7 @@
  */
 
 use anyhow::{Context, Result};
-use futures::compat::Future01CompatExt;
-use sql01::queries;
+use sql::queries;
 use sql_ext::SqlConnections;
 
 use stats::prelude::*;
@@ -50,7 +49,6 @@ impl SqlIdMapVersionStore {
             &self.connections.write_connection,
             &[(&self.repo_id, &idmap_version)],
         )
-        .compat()
         .await
         .context("inserting segmented changelog idmap version")?;
 
@@ -63,9 +61,7 @@ impl SqlIdMapVersionStore {
         STATS::get.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let rows = SelectVersion::query(&self.connections.read_connection, &self.repo_id)
-            .compat()
-            .await?;
+        let rows = SelectVersion::query(&self.connections.read_connection, &self.repo_id).await?;
         Ok(rows.into_iter().next().map(|(v,)| v))
     }
 }

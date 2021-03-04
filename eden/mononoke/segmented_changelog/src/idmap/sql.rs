@@ -8,10 +8,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use anyhow::{format_err, Context, Result};
+use anyhow::{format_err, Context, Error, Result};
 use async_trait::async_trait;
-use futures::{compat::Future01CompatExt, future, TryFutureExt};
-use sql01::{queries, Connection};
+use futures::compat::Future01CompatExt;
+use sql::{queries, Connection};
 use sql_ext::{
     replication::{ReplicaLagMonitor, WaitForReplicationConfig},
     SqlConnections,
@@ -146,6 +146,25 @@ impl SqlIdMap {
             version,
         }
     }
+
+    async fn select_many_changesetids(
+        &self,
+        conn: &Connection,
+        vertexes: &[u64],
+    ) -> Result<HashMap<Vertex, ChangesetId>, Error> {
+        let rows =
+            SelectManyChangesetIds::query(conn, &self.repo_id, &self.version, vertexes).await?;
+        Ok::<_, Error>(rows.into_iter().map(|row| (Vertex(row.0), row.1)).collect())
+    }
+
+    async fn select_many_vertexes(
+        &self,
+        conn: &Connection,
+        cs_ids: &[ChangesetId],
+    ) -> Result<HashMap<ChangesetId, Vertex>, Error> {
+        let rows = SelectManyVertexes::query(conn, &self.repo_id, &self.version, cs_ids).await?;
+        Ok(rows.into_iter().map(|row| (row.0, Vertex(row.1))).collect())
+    }
 }
 
 #[async_trait]
@@ -245,9 +264,8 @@ impl IdMap for SqlIdMap {
                 .start_transaction()
                 .compat()
                 .await?;
-            let query_result = InsertIdMapEntry::query_with_transaction(transaction, &to_insert)
-                .compat()
-                .await;
+            let query_result =
+                InsertIdMapEntry::query_with_transaction(transaction, &to_insert).await;
             match query_result {
                 Err(err) => {
                     // transaction is "lost" to the query
@@ -280,22 +298,13 @@ impl IdMap for SqlIdMap {
         ctx: &CoreContext,
         vertexes: Vec<Vertex>,
     ) -> Result<HashMap<Vertex, ChangesetId>> {
-        let select_vertexes = |connection: &Connection, vertexes: &[u64]| {
-            SelectManyChangesetIds::query(connection, &self.repo_id, &self.version, vertexes)
-                .compat()
-                .and_then(|rows| {
-                    future::ok(
-                        rows.into_iter()
-                            .map(|row| (Vertex(row.0), row.1))
-                            .collect::<HashMap<_, _>>(),
-                    )
-                })
-        };
         STATS::find_changeset_id.add_value(vertexes.len() as i64);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let to_query: Vec<_> = vertexes.iter().map(|v| v.0).collect();
-        let mut cs_ids = select_vertexes(&self.connections.read_connection, &to_query).await?;
+        let mut cs_ids = self
+            .select_many_changesetids(&self.connections.read_connection, &to_query)
+            .await?;
         let not_found_in_replica: Vec<_> = vertexes
             .iter()
             .filter(|x| !cs_ids.contains_key(x))
@@ -304,11 +313,12 @@ impl IdMap for SqlIdMap {
         if !not_found_in_replica.is_empty() {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            let from_master = select_vertexes(
-                &self.connections.read_master_connection,
-                &not_found_in_replica,
-            )
-            .await?;
+            let from_master = self
+                .select_many_changesetids(
+                    &self.connections.read_master_connection,
+                    &not_found_in_replica,
+                )
+                .await?;
             for (k, v) in from_master {
                 cs_ids.insert(k, v);
             }
@@ -316,26 +326,19 @@ impl IdMap for SqlIdMap {
         Ok(cs_ids)
     }
 
+
+
     async fn find_many_vertexes(
         &self,
         ctx: &CoreContext,
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Vertex>> {
-        let select_vertexes = |connection: &Connection, cs_ids: &[ChangesetId]| {
-            SelectManyVertexes::query(connection, &self.repo_id, &self.version, cs_ids)
-                .compat()
-                .and_then(|rows| {
-                    future::ok(
-                        rows.into_iter()
-                            .map(|row| (row.0, Vertex(row.1)))
-                            .collect::<HashMap<_, _>>(),
-                    )
-                })
-        };
         STATS::find_vertex.add_value(cs_ids.len() as i64);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let mut vertexes = select_vertexes(&self.connections.read_connection, &cs_ids).await?;
+        let mut vertexes = self
+            .select_many_vertexes(&self.connections.read_connection, &cs_ids)
+            .await?;
         let not_found_in_replica: Vec<_> = cs_ids
             .iter()
             .filter(|x| !vertexes.contains_key(x))
@@ -344,11 +347,12 @@ impl IdMap for SqlIdMap {
         if !not_found_in_replica.is_empty() {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            let from_master = select_vertexes(
-                &self.connections.read_master_connection,
-                &not_found_in_replica,
-            )
-            .await?;
+            let from_master = self
+                .select_many_vertexes(
+                    &self.connections.read_master_connection,
+                    &not_found_in_replica,
+                )
+                .await?;
             for (k, v) in from_master {
                 vertexes.insert(k, v);
             }
@@ -368,7 +372,6 @@ impl IdMap for SqlIdMap {
             &self.repo_id,
             &self.version,
         )
-        .compat()
         .await?;
         Ok(rows.into_iter().next().map(|r| (Vertex(r.0), r.1)))
     }

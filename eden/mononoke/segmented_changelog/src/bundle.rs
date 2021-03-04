@@ -6,8 +6,7 @@
  */
 
 use anyhow::{Context, Result};
-use futures::compat::Future01CompatExt;
-use sql01::queries;
+use sql::queries;
 use sql_ext::SqlConnections;
 
 use stats::prelude::*;
@@ -47,7 +46,6 @@ impl SqlBundleStore {
             &self.connections.write_connection,
             &[(&self.repo_id, &bundle.iddag_version, &bundle.idmap_version)],
         )
-        .compat()
         .await
         .context("inserting segmented changelog bundle")?;
         Ok(())
@@ -57,9 +55,7 @@ impl SqlBundleStore {
         STATS::get.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let rows = SelectBundle::query(&self.connections.read_connection, &self.repo_id)
-            .compat()
-            .await?;
+        let rows = SelectBundle::query(&self.connections.read_connection, &self.repo_id).await?;
         Ok(rows.into_iter().next().map(|r| r.into()))
     }
 }
