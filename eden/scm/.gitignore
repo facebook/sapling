@@ -44,6 +44,7 @@ doc/*.[0-9].txt
 doc/*.[0-9].gendoc.txt
 doc/*.[0-9].xml
 doc/*.[0-9].html
+!Makefile
 MANIFEST
 MANIFEST.in
 patches
