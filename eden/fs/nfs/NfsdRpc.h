@@ -379,8 +379,7 @@ struct READLINK3res
 
 // WRITE Procedure:
 
-constexpr inline size_t NFS3_WRITEVERFSIZE = 8;
-using writeverf3 = std::array<uint8_t, NFS3_WRITEVERFSIZE>;
+using writeverf3 = uint64_t;
 
 enum class stable_how { UNSTABLE = 0, DATA_SYNC = 1, FILE_SYNC = 2 };
 

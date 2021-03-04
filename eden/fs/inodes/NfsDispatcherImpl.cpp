@@ -65,6 +65,21 @@ folly::Future<std::string> NfsDispatcherImpl::readlink(
       });
 }
 
+folly::Future<NfsDispatcher::WriteRes> NfsDispatcherImpl::write(
+    InodeNumber ino,
+    std::unique_ptr<folly::IOBuf> data,
+    off_t offset,
+    ObjectFetchContext& /*context*/) {
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [data = std::move(data), offset](const FileInodePtr& inode) mutable {
+        // TODO(xavierd): Modify write to obtain pre and post stat of the file.
+        return inode->write(std::move(data), offset)
+            .thenValue([](size_t written) {
+              return WriteRes{written, std::nullopt, std::nullopt};
+            });
+      });
+}
+
 folly::Future<NfsDispatcher::CreateRes> NfsDispatcherImpl::create(
     InodeNumber dir,
     PathComponent name,

@@ -36,6 +36,12 @@ class NfsDispatcherImpl : public NfsDispatcher {
       InodeNumber ino,
       ObjectFetchContext& context) override;
 
+  folly::Future<NfsDispatcher::WriteRes> write(
+      InodeNumber ino,
+      std::unique_ptr<folly::IOBuf> data,
+      off_t offset,
+      ObjectFetchContext& context) override;
+
   folly::Future<NfsDispatcher::CreateRes> create(
       InodeNumber ino,
       PathComponent name,

@@ -475,12 +475,75 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::read(
   return folly::unit;
 }
 
+/**
+ * Generate a unique per-EdenFS instance write cookie.
+ *
+ * TODO(xavierd): Note that for now this will always be 0 as this is to handle
+ * the case where the server restart while the client isn't aware.
+ */
+writeverf3 makeWriteVerf() {
+  return 0;
+}
+
 folly::Future<folly::Unit> Nfsd3ServerProcessor::write(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<WRITE3args>::deserialize(deser);
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("write");
+
+  // I have no idea why NFS sent us data that we shouldn't write to the file,
+  // but here it is, let's only take up to count bytes from the data.
+  auto queue = folly::IOBufQueue();
+  queue.append(std::move(args.data));
+  auto data = queue.split(args.count);
+
+  return dispatcher_
+      ->write(args.file.ino, std::move(data), args.offset, *context)
+      .thenTry([ser = std::move(ser)](
+                   folly::Try<NfsDispatcher::WriteRes> writeTry) mutable {
+        if (writeTry.hasException()) {
+          WRITE3res res{
+              {{exceptionToNfsError(writeTry.exception()), WRITE3resfail{}}}};
+          XdrTrait<WRITE3res>::serialize(ser, res);
+        } else {
+          auto writeRes = std::move(writeTry).value();
+
+          // NFS is limited to writing a maximum of 4GB (2^32) of data
+          // per write call, so despite write returning a size_t, it
+          // should always fit in a uint32_t.
+          XDCHECK_LE(
+              writeRes.written, size_t{std::numeric_limits<uint32_t>::max()});
+
+          WRITE3res res{
+              {{nfsstat3::NFS3_OK,
+                WRITE3resok{
+                    wcc_data{
+                        /*before*/ writeRes.preStat.has_value()
+                            ? statToPreOpAttr(writeRes.preStat.value())
+                            : pre_op_attr{},
+                        /*after*/ writeRes.postStat.has_value()
+                            ? post_op_attr{statToFattr3(
+                                  writeRes.postStat.value())}
+                            : post_op_attr{}},
+                    /*count*/ folly::to_narrow(writeRes.written),
+                    // TODO(xavierd): the following is a total lie and we
+                    // should call inode->fdatasync() in the case where
+                    // args.stable is anything other than
+                    // stable_how::UNSTABLE. For testing purpose, this is
+                    // OK.
+                    /*committed*/ stable_how::FILE_SYNC,
+                    /*verf*/ makeWriteVerf(),
+                }}}};
+          XdrTrait<WRITE3res>::serialize(ser, res);
+        }
+
+        return folly::unit;
+      });
 }
 
 /**

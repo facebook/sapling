@@ -65,6 +65,31 @@ class NfsDispatcher {
       ObjectFetchContext& context) = 0;
 
   /**
+   * Return value of the write method.
+   */
+  struct WriteRes {
+    /** Number of bytes written */
+    size_t written;
+
+    /** Attributes of the directory prior to creating the file */
+    std::optional<struct stat> preStat;
+    /** Attributes of the directory after creating the file */
+    std::optional<struct stat> postStat;
+  };
+
+  /**
+   * Write data at offset to the file referenced by the InodeNumber ino.
+   *
+   * See the comment on the create method below for the meaning of the returned
+   * pre and post stat.
+   */
+  virtual folly::Future<WriteRes> write(
+      InodeNumber ino,
+      std::unique_ptr<folly::IOBuf> data,
+      off_t offset,
+      ObjectFetchContext& context) = 0;
+
+  /**
    * Return value of the create method.
    */
   struct CreateRes {
