@@ -7,4 +7,5 @@
 
 mod test_cache_fill;
 mod test_reader;
+mod test_writer;
 mod util;

@@ -9,7 +9,6 @@ use anyhow::{Context, Error};
 use context::{CoreContext, PerfCounterType};
 use filenodes::{FilenodeResult, PreparedFilenode};
 use futures::future;
-use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
 use mononoke_types::RepositoryId;
 use sql::{queries, Connection};
@@ -62,13 +61,22 @@ impl FilenodesWriter {
 
         let shard_count = self.write_connections.len();
 
-        let futs = filenodes
+        let mut groups = Vec::with_capacity(shard_count);
+        for _ in 0..shard_count {
+            groups.push(Vec::new());
+        }
+
+        for filenode in filenodes {
+            let pwh = PathHash::from_repo_path(&filenode.path);
+            let shard_number = pwh.shard_number(shard_count);
+            groups[shard_number].push((pwh, filenode));
+        }
+
+        let futs = groups
             .into_iter()
-            .map(|filenode| (PathHash::from_repo_path(&filenode.path), filenode))
-            .group_by(|(path_with_hash, _)| path_with_hash.shard_number(shard_count))
-            .into_iter()
+            .enumerate()
             .map(|(shard_number, group)| {
-                self.insert_filenode_group(ctx, repo_id, shard_number, group.collect(), replace)
+                self.insert_filenode_group(ctx, repo_id, shard_number, group, replace)
             })
             .collect::<Vec<_>>();
 
