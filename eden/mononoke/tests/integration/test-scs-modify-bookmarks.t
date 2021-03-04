@@ -13,12 +13,28 @@ Bookmark moves are asynchronous.  Function to wait for the move to happen.
   >   local target=$3
   >   local attempt=1
   >   sleep 1
-  >   while [[ "$(scsc lookup -R $repo -B $bookmark)" != "$target" ]]
+  >   while ! scsc list-bookmarks -R $repo --prefix $bookmark 2>/dev/null | grep -q "^$bookmark *$target$"
   >   do
   >     attempt=$((attempt + 1))
   >     if [[ $attempt -gt 5 ]]
   >     then
   >        echo "bookmark move of $bookmark to $target has not happened"
+  >        return 1
+  >     fi
+  >     sleep 1
+  >   done
+  > }
+  $ wait_for_bookmark_delete() {
+  >   local repo=$1
+  >   local bookmark=$2
+  >   local attempt=1
+  >   sleep 1
+  >   while scsc lookup -R $repo -B $bookmark 2>/dev/null
+  >   do
+  >     attempt=$((attempt + 1))
+  >     if [[ $attempt -gt 5 ]]
+  >     then
+  >        echo "bookmark deletion of $bookmark has not happened"
   >        return 1
   >     fi
   >     sleep 1
@@ -273,6 +289,9 @@ restricted services can't if they don't have the method permission
   $ scsc delete-bookmark -R repo --name other --service-id restricted-service
   error: SourceControlService::repo_delete_bookmark failed with RequestError { kind: RequestErrorKind::PERMISSION_DENIED, reason: "permission denied: service restricted-service is not permitted to call method delete_bookmark in repo" }
   [1]
+
+wait for the warm bookmark cache to update (last successful delete was for newindigo)
+  $ wait_for_bookmark_delete repo newindigo
 
   $ scsc list-bookmarks -R repo
   newgolf                                  6fa3874a3b67598ec503160c8925af79d98522d6
