@@ -31,6 +31,17 @@ void serialize_variable(folly::io::Appender& appender, folly::ByteRange value) {
   serialize_fixed(appender, value);
 }
 
+void serialize_iobuf(folly::io::Appender& appender, const folly::IOBuf& buf) {
+  auto len = buf.computeChainDataLength();
+  if (len > std::numeric_limits<uint32_t>::max()) {
+    throw std::length_error(
+        "XDR cannot encode variable sized array bigger than 4GB");
+  }
+  XdrTrait<uint32_t>::serialize(appender, folly::to_narrow(len));
+  appender.push(folly::io::Cursor(&buf), len);
+  addPadding(appender, len);
+}
+
 } // namespace detail
 
 } // namespace facebook::eden

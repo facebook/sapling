@@ -106,6 +106,12 @@ void serialize_fixed(folly::io::Appender& appender, folly::ByteRange value);
 void serialize_variable(folly::io::Appender& appender, folly::ByteRange value);
 
 /**
+ * Serialize an IOBuf chain. This is serialized like a variable sized array,
+ * ie: size first, followed by the content and aligned on a 4-byte boundary.
+ */
+void serialize_iobuf(folly::io::Appender& appender, const folly::IOBuf& buf);
+
+/**
  * Skip the padding bytes that were written during serialization.
  */
 inline void skipPadding(folly::io::Cursor& cursor, size_t len) {
@@ -170,6 +176,33 @@ struct XdrTrait<std::vector<uint8_t>> {
     auto len = XdrTrait<uint32_t>::deserialize(cursor);
     std::vector<uint8_t> ret(len);
     cursor.pull(ret.data(), len);
+    detail::skipPadding(cursor, len);
+    return ret;
+  }
+};
+
+/**
+ * IOBuf are encoded as a variable sized array, similarly to a vector. IOBuf
+ * should be preferred to a vector when the data to serialize/deserialize is
+ * potentially large, a vector would copy all the data, while an IOBuf would
+ * clone the existing cursor.
+ *
+ * TODO(xavierd): folly::io::Appender doesn't have a way to zero-copy append to
+ * it, maybe a folly::io::QueueAppender would be better fit than
+ * folly::io::Appender?
+ */
+template <>
+struct XdrTrait<std::unique_ptr<folly::IOBuf>> {
+  static void serialize(
+      folly::io::Appender& appender,
+      const std::unique_ptr<folly::IOBuf>& buf) {
+    detail::serialize_iobuf(appender, *buf);
+  }
+
+  static std::unique_ptr<folly::IOBuf> deserialize(folly::io::Cursor& cursor) {
+    auto len = XdrTrait<uint32_t>::deserialize(cursor);
+    auto ret = std::make_unique<folly::IOBuf>();
+    cursor.clone(ret, len);
     detail::skipPadding(cursor, len);
     return ret;
   }

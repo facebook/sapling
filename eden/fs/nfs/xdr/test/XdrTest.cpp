@@ -151,6 +151,44 @@ TEST(XdrSerialize, optionalVariant) {
   roundtrip(opt2, sizeof(uint32_t));
 }
 
+struct IOBufStruct {
+  uint32_t before;
+  std::unique_ptr<folly::IOBuf> buf;
+  uint32_t after;
+
+  bool operator==(const IOBufStruct& other) const {
+    return before == other.before && after == other.after &&
+        folly::IOBufEqualTo()(buf, other.buf);
+  }
+};
+
+template <>
+struct XdrTrait<IOBufStruct> {
+  static void serialize(
+      folly::io::Appender& appender,
+      const IOBufStruct& value) {
+    XdrTrait<uint32_t>::serialize(appender, value.before);
+    XdrTrait<std::unique_ptr<folly::IOBuf>>::serialize(appender, value.buf);
+    XdrTrait<uint32_t>::serialize(appender, value.after);
+  }
+
+  static IOBufStruct deserialize(folly::io::Cursor& cursor) {
+    IOBufStruct ret;
+    ret.before = XdrTrait<uint32_t>::deserialize(cursor);
+    ret.buf = XdrTrait<std::unique_ptr<folly::IOBuf>>::deserialize(cursor);
+    ret.after = XdrTrait<uint32_t>::deserialize(cursor);
+    return ret;
+  }
+};
+
+TEST(XdrSerialize, iobuf) {
+  struct IOBufStruct buf {
+    42, folly::IOBuf::copyBuffer("This is a test"), 10
+  };
+  auto bufLen = buf.buf->computeChainDataLength();
+  roundtrip(std::move(buf), 3 * sizeof(uint32_t) + bufLen + 2 /*padding*/);
+}
+
 } // namespace facebook::eden
 
 #endif
