@@ -591,7 +591,7 @@ class asset(object):
             lfspypath = os.environ.get(
                 "LFSPY_PATH", pjoin(scriptdir, "../../tools/lfs/lfs.py")
             )
-            args = ["python2", lfspypath, "-q", "download", destpath]
+            args = [sys.executable, lfspypath, "-q", "download", destpath]
         else:
             # via external URL
             assert self.url, "Cannot download %s - no URL provided" % self.name
