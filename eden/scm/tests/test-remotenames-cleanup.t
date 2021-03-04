@@ -6,6 +6,7 @@
   $ clone server client1
   $ clone server client2
   $ clone server client3
+  $ clone server client4
 
 Push 3 branches to the server.
 
@@ -58,6 +59,17 @@ selectivepull default:
   removed 2 non-essential remote bookmarks: remote/another, remote/other
 
   $ hg log -T '{desc} {remotenames} {phase}' -Gr 'all()'
+  o  B remote/master public
+  │
+  o  A  public
+  
+Auto cleanup triggered by remotenames.autocleanupthreshold:
+
+  $ cd $TESTTMP/client4
+  $ hg pull -B other -B master -B another -q
+  $ hg log -T '{desc} {remotenames} {phase}' -Gr 'all()' --config remotenames.autocleanupthreshold=1
+  attempt to clean up remote bookmarks since they exceed threshold 1
+  removed 2 non-essential remote bookmarks: remote/another, remote/other
   o  B remote/master public
   │
   o  A  public

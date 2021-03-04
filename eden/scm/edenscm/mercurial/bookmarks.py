@@ -1209,7 +1209,29 @@ class lazyremotenamedict(pycompat.Mapping):
         self.loaded = True
         repo = self._repo
         alias_default = repo.ui.configbool("remotenames", "alias.default")
-        for node, nametype, remote, rname in readremotenames(repo):
+        entries = list(readremotenames(repo))
+        threshold = repo.ui.configint("remotenames", "autocleanupthreshold") or 0
+        if threshold > 0 and len(entries) > threshold:
+            repo.ui.status_err(
+                _(
+                    "attempt to clean up remote bookmarks since they exceed threshold %s\n"
+                )
+                % threshold
+            )
+            try:
+                removednames = cleanupremotenames(repo)
+                if removednames:
+                    repo.ui.log(
+                        "features",
+                        fullargs=repr(pycompat.sysargv),
+                        feature="auto-clean-remotenames",
+                    )
+                    entries = list(readremotenames(repo))
+            except Exception as ex:
+                # happens if metalog is not used, etc.
+                # not fatal
+                repo.ui.warn(_("failed to clean up remote bookmarks: %s\n") % ex)
+        for node, nametype, remote, rname in entries:
             if nametype != self._kind:
                 continue
             # handle alias_default here

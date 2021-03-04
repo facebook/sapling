@@ -610,6 +610,7 @@ coreconfigitem("rebase", "singletransaction", default=False)
 coreconfigitem("rebase", "experimental.inmemory", default=False)
 
 # Remote names.
+coreconfigitem("remotenames", "autocleanupthreshold", default=50)
 coreconfigitem("remotenames", "selectivepulldefault", default=["master"])
 coreconfigitem("remotenames", "selectivepulldiscovery", default=True)
 coreconfigitem("remotenames", "autopullhoistpattern", default="")
