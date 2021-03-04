@@ -38,6 +38,9 @@ impl BackingStore {
             .local_path(&store_path)
             .suffix(Path::new("manifests"));
 
+        // Memcache takes 30s to initialize on debug builds slowing down tests significantly, let's
+        // not even try to initialize it then.
+        #[cfg(not(debug_assertions))]
         match MemcacheStore::new(&config, NullProgressFactory::arc()) {
             Ok(memcache) => {
                 // XXX: Add the memcachestore for the treestore.
