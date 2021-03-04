@@ -479,6 +479,28 @@ EDEN_XDR_SERDE_DECL(MKDIR3resfail, dir_wcc);
 struct MKDIR3res : public detail::Nfsstat3Variant<MKDIR3resok, MKDIR3resfail> {
 };
 
+// LINK Procedure:
+
+struct LINK3args {
+  nfs_fh3 file;
+  diropargs3 link;
+};
+EDEN_XDR_SERDE_DECL(LINK3args, file, link);
+
+struct LINK3resok {
+  post_op_attr file_attributes;
+  wcc_data linkdir_wcc;
+};
+EDEN_XDR_SERDE_DECL(LINK3resok, file_attributes, linkdir_wcc);
+
+struct LINK3resfail {
+  post_op_attr file_attributes;
+  wcc_data linkdir_wcc;
+};
+EDEN_XDR_SERDE_DECL(LINK3resfail, file_attributes, linkdir_wcc);
+
+struct LINK3res : public detail::Nfsstat3Variant<LINK3resok, LINK3resfail> {};
+
 // FSSTAT Procedure:
 
 struct FSSTAT3args {

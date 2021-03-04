@@ -51,6 +51,9 @@ EDEN_XDR_SERDE_IMPL(CREATE3resfail, dir_wcc);
 EDEN_XDR_SERDE_IMPL(MKDIR3args, where, attributes);
 EDEN_XDR_SERDE_IMPL(MKDIR3resok, obj, obj_attributes, dir_wcc);
 EDEN_XDR_SERDE_IMPL(MKDIR3resfail, dir_wcc);
+EDEN_XDR_SERDE_IMPL(LINK3args, file, link);
+EDEN_XDR_SERDE_IMPL(LINK3resok, file_attributes, linkdir_wcc);
+EDEN_XDR_SERDE_IMPL(LINK3resfail, file_attributes, linkdir_wcc);
 EDEN_XDR_SERDE_IMPL(FSSTAT3args, fsroot);
 EDEN_XDR_SERDE_IMPL(
     FSSTAT3resok,
