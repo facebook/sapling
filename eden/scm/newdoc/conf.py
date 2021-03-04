@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# FB Mercurial Developer Guide build configuration file.
+# FB Mercurial Documentation configuration file.
 #
 # -- General configuration -----------------------------------------------------
 
@@ -9,16 +9,13 @@
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = []
+extensions = ["recommonmark"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = []
 
 # The suffix of source filenames.
 source_suffix = [".rst", ".md"]
-
-# External Markdown support
-source_parsers = {".md": "recommonmark.parser.CommonMarkParser"}
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
@@ -27,7 +24,7 @@ source_parsers = {".md": "recommonmark.parser.CommonMarkParser"}
 master_doc = "index"
 
 # General information about the project.
-project = u"FB Mercurial Developer Guide"
+project = u"FB Mercurial Documentation"
 copyright = u"2018 Facebook, Inc"
 
 # The version info for the project you're documenting, acts as replacement for
@@ -148,7 +145,7 @@ html_show_sourcelink = False
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "FBMercurialDeveloperGuide"
+htmlhelp_basename = "FBMercurialDocumentation"
 
 
 # -- Options for LaTeX output --------------------------------------------------
