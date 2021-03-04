@@ -665,9 +665,7 @@ def islocked(pathname):
     return os.path.exists(pathname)
 
 
-# Set outputencoding from the OEM code page.
+# Set outputencoding to UTF-8
 if not encoding.outputencoding:
-    encoding.outputencoding = win32.getoemcp()
-    encoding.outputencoding = encoding._encodingfixers.get(
-        encoding.outputencoding, lambda: encoding.outputencoding
-    )()
+    # The Rust IO requires UTF-8 output.
+    encoding.outputencoding = "utf-8"
