@@ -15,7 +15,6 @@ use bytes::Bytes;
 use context::{CoreContext, PerfCounterType};
 use fbthrift::compact_protocol;
 use futures::{
-    compat::Future01CompatExt,
     stream::{self, BoxStream, StreamExt},
     TryFutureExt,
 };
@@ -300,7 +299,7 @@ impl Changesets for SqlChangesets {
         };
         check_missing_rows(&cs.parents, &parent_rows)?;
         let gen = parent_rows.iter().map(|row| row.2).max().unwrap_or(0) + 1;
-        let transaction = self.write_connection.start_transaction().compat().await?;
+        let transaction = self.write_connection.start_transaction().await?;
         let (transaction, result) =
             InsertChangeset::query_with_transaction(transaction, &[(&cs.repo_id, &cs.cs_id, &gen)])
                 .await?;
@@ -315,7 +314,7 @@ impl Changesets for SqlChangesets {
             .await?;
             Ok(true)
         } else {
-            transaction.rollback().compat().await?;
+            transaction.rollback().await?;
             check_changeset_matches(&self.write_connection, cs).await?;
             Ok(false)
         }
@@ -575,7 +574,7 @@ async fn insert_parents(
 
     let (transaction, _) =
         InsertParents::query_with_transaction(transaction, &ref_parent_inserts[..]).await?;
-    transaction.commit().compat().await?;
+    transaction.commit().await?;
     Ok(())
 }
 

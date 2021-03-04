@@ -282,12 +282,15 @@ impl SqlSyncedCommitMapping {
         &self,
         entries: Vec<SyncedCommitMappingEntry>,
     ) -> impl Future01<Item = u64, Error = Error> {
-        self.write_connection
-            .start_transaction()
-            .and_then(move |txn| {
-                add_many_in_txn(txn, entries)
-                    .and_then(|(txn, affected_rows)| txn.commit().map(move |()| affected_rows))
-            })
+        let conn = self.write_connection.clone();
+        async move {
+            let txn = conn.start_transaction().await?;
+            let (txn, affected_rows) = add_many_in_txn(txn, entries).await?;
+            txn.commit().await?;
+            Ok(affected_rows)
+        }
+        .boxed()
+        .compat()
     }
 }
 
@@ -489,49 +492,45 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
     }
 }
 
-pub fn add_many_in_txn(
+pub async fn add_many_in_txn(
     txn: Transaction,
     entries: Vec<SyncedCommitMappingEntry>,
-) -> impl Future01<Item = (Transaction, u64), Error = Error> {
+) -> Result<(Transaction, u64), Error> {
     STATS::add_many_in_txn.add_value(1);
 
-    async move {
-        let insert_entries: Vec<_> = entries
-            .iter()
-            .map(|entry| {
-                (
-                    &entry.large_repo_id,
-                    &entry.large_bcs_id,
-                    &entry.small_repo_id,
-                    &entry.small_bcs_id,
-                    &entry.version_name,
-                )
-            })
-            .collect();
+    let insert_entries: Vec<_> = entries
+        .iter()
+        .map(|entry| {
+            (
+                &entry.large_repo_id,
+                &entry.large_bcs_id,
+                &entry.small_repo_id,
+                &entry.small_bcs_id,
+                &entry.version_name,
+            )
+        })
+        .collect();
 
-        let (txn, _result) = InsertMapping::query_with_transaction(txn, &insert_entries).await?;
-        let owned_entries: Vec<_> = entries
-            .into_iter()
-            .map(|entry| entry.into_equivalent_working_copy_entry())
-            .collect();
+    let (txn, _result) = InsertMapping::query_with_transaction(txn, &insert_entries).await?;
+    let owned_entries: Vec<_> = entries
+        .into_iter()
+        .map(|entry| entry.into_equivalent_working_copy_entry())
+        .collect();
 
-        let ref_entries: Vec<_> = owned_entries
-            .iter()
-            .map(|entry| {
-                (
-                    &entry.large_repo_id,
-                    &entry.large_bcs_id,
-                    &entry.small_repo_id,
-                    &entry.small_bcs_id,
-                    &entry.version_name,
-                )
-            })
-            .collect();
+    let ref_entries: Vec<_> = owned_entries
+        .iter()
+        .map(|entry| {
+            (
+                &entry.large_repo_id,
+                &entry.large_bcs_id,
+                &entry.small_repo_id,
+                &entry.small_bcs_id,
+                &entry.version_name,
+            )
+        })
+        .collect();
 
-        let (txn, result) =
-            InsertWorkingCopyEquivalence::query_with_transaction(txn, &ref_entries).await?;
-        Ok((txn, result.affected_rows()))
-    }
-    .boxed()
-    .compat()
+    let (txn, result) =
+        InsertWorkingCopyEquivalence::query_with_transaction(txn, &ref_entries).await?;
+    Ok((txn, result.affected_rows()))
 }

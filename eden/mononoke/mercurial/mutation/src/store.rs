@@ -10,7 +10,6 @@ use std::collections::{hash_map, HashMap, HashSet};
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use context::{CoreContext, PerfCounterType};
-use futures::compat::Future01CompatExt;
 use futures::future;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{DateTime, RepositoryId};
@@ -70,7 +69,6 @@ impl SqlHgMutationStore {
             .connections
             .write_connection
             .start_transaction()
-            .compat()
             .await?;
 
         let mut db_csets = Vec::new();
@@ -195,7 +193,7 @@ impl SqlHgMutationStore {
         let (txn, _) = AddPreds::query_with_transaction(txn, ref_db_preds.as_slice()).await?;
         let (txn, _) = AddSplits::query_with_transaction(txn, ref_db_splits.as_slice()).await?;
 
-        txn.commit().compat().await?;
+        txn.commit().await?;
 
         debug!(
             ctx.logger(),

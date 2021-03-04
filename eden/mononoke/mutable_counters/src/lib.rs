@@ -16,7 +16,6 @@ use anyhow::Error;
 use context::{CoreContext, PerfCounterType};
 use futures::future::{FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::{future, Future};
 use mononoke_types::RepositoryId;
 use sql::{queries, Connection, Transaction as SqlTransaction};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
@@ -168,23 +167,23 @@ impl MutableCounters for SqlMutableCounters {
         value: i64,
         prev_value: Option<i64>,
     ) -> BoxFuture<bool, Error> {
-        self.write_connection
-            .start_transaction()
-            .and_then({
-                let name = name.to_string();
-                move |txn| {
-                    async move {
-                        Self::set_counter_on_txn(ctx, repoid, &name, value, prev_value, txn).await
-                    }
-                    .boxed()
-                    .compat()
+        let conn = self.write_connection.clone();
+        let name = name.to_string();
+        async move {
+            let txn = conn.start_transaction().await?;
+            let txn_result =
+                Self::set_counter_on_txn(ctx, repoid, &name, value, prev_value, txn).await?;
+            match txn_result {
+                TransactionResult::Succeeded(txn) => {
+                    txn.commit().await?;
+                    Ok(true)
                 }
-            })
-            .and_then(|txn_result| match txn_result {
-                TransactionResult::Succeeded(txn) => txn.commit().map(|()| true).left_future(),
-                TransactionResult::Failed => future::ok(false).right_future(),
-            })
-            .boxify()
+                TransactionResult::Failed => Ok(false),
+            }
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 
     fn get_all_counters(

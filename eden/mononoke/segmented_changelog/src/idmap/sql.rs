@@ -10,7 +10,6 @@ use std::sync::Arc;
 
 use anyhow::{format_err, Context, Error, Result};
 use async_trait::async_trait;
-use futures::compat::Future01CompatExt;
 use sql::{queries, Connection};
 use sql_ext::{
     replication::{ReplicaLagMonitor, WaitForReplicationConfig},
@@ -262,7 +261,6 @@ impl IdMap for SqlIdMap {
                 .connections
                 .write_connection
                 .start_transaction()
-                .compat()
                 .await?;
             let query_result =
                 InsertIdMapEntry::query_with_transaction(transaction, &to_insert).await;
@@ -277,7 +275,7 @@ impl IdMap for SqlIdMap {
                 Ok((t, insert_result)) => {
                     transaction = t;
                     if insert_result.affected_rows() != chunk.len() as u64 {
-                        transaction.rollback().compat().await?;
+                        transaction.rollback().await?;
                         return Err(format_err!(
                             "repo {}: failed insert race, total entries {}, batch {}",
                             self.repo_id,
@@ -285,7 +283,7 @@ impl IdMap for SqlIdMap {
                             i
                         ));
                     } else {
-                        transaction.commit().compat().await?;
+                        transaction.commit().await?;
                     }
                 }
             }

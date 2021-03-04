@@ -11,7 +11,6 @@ use anyhow::Error;
 use assert_matches::assert_matches;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use mercurial_types_mocks::globalrev::*;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
@@ -155,9 +154,9 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
         globalrev: GLOBALREV_ONE,
     };
 
-    let txn = conn.start_transaction().compat().await?;
+    let txn = conn.start_transaction().await?;
     let txn = add_globalrevs(txn, &[e0.clone()]).await?;
-    txn.commit().compat().await?;
+    txn.commit().await?;
 
     assert_eq!(
         Some(GLOBALREV_ZERO),
@@ -166,9 +165,9 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
             .await?
     );
 
-    let txn = conn.start_transaction().compat().await?;
+    let txn = conn.start_transaction().await?;
     let txn = add_globalrevs(txn, &[e1.clone()]).await?;
-    txn.commit().compat().await?;
+    txn.commit().await?;
 
     assert_eq!(
         Some(GLOBALREV_ONE),
@@ -179,10 +178,10 @@ async fn test_add_globalrevs(fb: FacebookInit) -> Result<(), Error> {
 
     // Inserting duplicates fails
 
-    let txn = conn.start_transaction().compat().await?;
+    let txn = conn.start_transaction().await?;
     let res = async move {
         let txn = add_globalrevs(txn, &[e1.clone()]).await?;
-        txn.commit().compat().await?;
+        txn.commit().await?;
         Result::<_, AddGlobalrevsErrorKind>::Ok(())
     }
     .await;

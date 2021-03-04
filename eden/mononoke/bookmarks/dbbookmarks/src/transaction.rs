@@ -13,7 +13,6 @@ use bookmarks::{
     BookmarkTransactionHook, BookmarkUpdateReason, BundleReplay, RawBundleReplayData,
 };
 use context::{CoreContext, PerfCounterType};
-use futures::compat::Future01CompatExt;
 use futures::future::{self, BoxFuture, FutureExt};
 use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -522,7 +521,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
             let result = loop {
                 attempt += 1;
 
-                let mut txn = write_connection.start_transaction().compat().await?;
+                let mut txn = write_connection.start_transaction().await?;
 
                 txn = match txn_hook(ctx.clone(), txn).await {
                     Ok(txn) => txn,
@@ -549,7 +548,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
                     STATS::bookmarks_update_log_insert_success.add_value(1);
                     STATS::bookmarks_update_log_insert_success_attempt_count
                         .add_value(attempt as i64);
-                    txn.commit().compat().await?;
+                    txn.commit().await?;
                     Ok(true)
                 }
                 Err(BookmarkTransactionError::LogicError) => {

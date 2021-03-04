@@ -11,7 +11,6 @@ use anyhow;
 use ascii::AsciiStr;
 use async_trait::async_trait;
 use context::{CoreContext, PerfCounterType};
-use futures::compat::Future01CompatExt;
 use mononoke_types::{hash::GitSha1, BonsaiChangeset, ChangesetId, RepositoryId};
 use slog::warn;
 use sql::queries;
@@ -231,11 +230,11 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         ctx: &CoreContext,
         entries: &[BonsaiGitMappingEntry],
     ) -> Result<(), AddGitMappingErrorKind> {
-        let txn = self.write_connection.start_transaction().compat().await?;
+        let txn = self.write_connection.start_transaction().await?;
         let txn = self
             .bulk_add_git_mapping_in_transaction(ctx, entries, txn)
             .await?;
-        txn.commit().compat().await?;
+        txn.commit().await?;
         Ok(())
     }
 

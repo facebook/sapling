@@ -15,7 +15,6 @@ use bonsai_git_mapping::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::hash::*;
 use mononoke_types_mocks::repo::REPO_ZERO;
@@ -184,12 +183,11 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
         git_sha1: TWOS_GIT_SHA1,
     };
 
-    let txn = conn.start_transaction().compat().await?;
+    let txn = conn.start_transaction().await?;
     mapping
         .bulk_add_git_mapping_in_transaction(&ctx, &[entry1.clone()], txn)
         .await?
         .commit()
-        .compat()
         .await?;
 
     assert_eq!(
@@ -199,12 +197,11 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
             .await?
     );
 
-    let txn = conn.start_transaction().compat().await?;
+    let txn = conn.start_transaction().await?;
     mapping
         .bulk_add_git_mapping_in_transaction(&ctx, &[entry2.clone()], txn)
         .await?
         .commit()
-        .compat()
         .await?;
 
     assert_eq!(
@@ -215,7 +212,7 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
     );
 
     // Inserting duplicates fails
-    let txn = conn.start_transaction().compat().await?;
+    let txn = conn.start_transaction().await?;
     let res = {
         let ctx = ctx.clone();
         let mapping = mapping.clone();
@@ -228,7 +225,6 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
                 .bulk_add_git_mapping_in_transaction(&ctx, &[entry_conflict], txn)
                 .await?
                 .commit()
-                .compat()
                 .await?;
             Result::<_, AddGitMappingErrorKind>::Ok(())
         }

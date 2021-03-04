@@ -9,7 +9,6 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use pushrebase::{
@@ -95,9 +94,7 @@ impl PushrebaseTransactionHook for CrossRepoSyncTransactionHook {
             let e: Error = ErrorKind::XRepoSyncDisabled.into();
             return Err(e.into());
         }
-        let (txn, _) = add_many_in_txn(txn, vec![self.entry.clone()])
-            .compat()
-            .await?;
+        let (txn, _) = add_many_in_txn(txn, vec![self.entry.clone()]).await?;
         Ok(txn)
     }
 }
