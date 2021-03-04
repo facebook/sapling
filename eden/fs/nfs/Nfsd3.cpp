@@ -739,11 +739,26 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::rename(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::link(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<LINK3args>::deserialize(deser);
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("link");
+
+  // EdenFS doesn't support hardlinks, let's just collect the attributes for
+  // the file and fail.
+  return dispatcher_->getattr(args.file.ino, *context)
+      .thenTry([ser = std::move(ser)](folly::Try<struct stat> try_) mutable {
+        LINK3res res{
+            {{nfsstat3::NFS3ERR_NOTSUPP,
+              LINK3resfail{statToPostOpAttr(std::move(try_)), wcc_data{}}}}};
+        XdrTrait<LINK3res>::serialize(ser, res);
+        return folly::unit;
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::readdir(
