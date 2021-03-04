@@ -19,7 +19,7 @@ borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/r
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = ".." }
 filenodes = { version = "0.1.0", path = "../../filenodes" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 itertools = "0.8"
 manifest = { version = "0.1.0", path = "../../manifest" }

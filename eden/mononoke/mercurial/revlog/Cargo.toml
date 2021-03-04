@@ -14,7 +14,7 @@ ascii = "1.0"
 bitflags = "1.2"
 bytes = { version = "0.5", features = ["serde"] }
 flate2 = { version = "1.0", features = ["rust_backend", "tokio"], default-features = false }
-futures = "0.1.30"
+futures = "0.1.31"
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lz4-pyframe = { version = "0.1.0", path = "../../../scm/lib/lz4-pyframe" }
 memmap = "0.7"

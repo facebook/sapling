@@ -9,7 +9,7 @@ anyhow = "1.0"
 async-trait = "0.1.29"
 dag = { path = "../dag", features = ["for-tests", "indexedlog-backend"] }
 edenapi = { path = "../edenapi" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 gitdag = { path = "../dag/gitdag" }
 metalog = { path = "../metalog" }
 minibytes = { path = "../minibytes", features = ["frombytes"] }

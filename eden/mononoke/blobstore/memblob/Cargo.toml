@@ -10,6 +10,6 @@ anyhow = "1.0"
 async-trait = "0.1.29"
 blobstore = { version = "0.1.0", path = ".." }
 context = { version = "0.1.0", path = "../../server/context" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.30" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1.31" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

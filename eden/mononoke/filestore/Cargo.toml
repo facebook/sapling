@@ -13,7 +13,7 @@ bytes = { version = "0.5", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../server/context" }
 digest = "0.8"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 itertools = "0.8"
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 pin-project = "0.4"

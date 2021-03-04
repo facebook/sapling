@@ -18,7 +18,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = ".." }
 filestore = { version = "0.1.0", path = "../../filestore" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 thiserror = "1.0"

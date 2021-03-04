@@ -14,7 +14,7 @@ atty = "0.2"
 curl = { version = "0.4", features = ["http2"] }
 curl-sys = "0.4"
 env_logger = "0.7"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 http = "0.2"
 once_cell = "1.4"
 parking_lot = "0.10.2"

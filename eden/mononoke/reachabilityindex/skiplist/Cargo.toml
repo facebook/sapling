@@ -16,7 +16,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 common = { version = "0.1.0", path = "../common" }
 context = { version = "0.1.0", path = "../../server/context" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 maplit = "1.0"
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
@@ -34,7 +34,7 @@ bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
-futures-old = { package = "futures", version = "0.1.30" }
+futures-old = { package = "futures", version = "0.1.31" }
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 revset = { version = "0.1.0", path = "../../revset" }
 test-helpers = { version = "0.1.0", path = "../test-helpers" }

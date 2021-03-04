@@ -17,7 +17,7 @@ changeset_info = { version = "0.1.0", path = "../../derived_data/changeset_info"
 context = { version = "0.1.0", path = "../../server/context" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
 filestore = { version = "0.1.0", path = "../../filestore" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-util = "0.3.7"
 manifest = { version = "0.1.0", path = "../../manifest" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }

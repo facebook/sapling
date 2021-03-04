@@ -20,8 +20,8 @@ consts = { version = "0.1.0", path = "consts" }
 context = { version = "0.1.0", path = "../server/context" }
 derived_data_utils = { version = "0.1.0", path = "../derived_data/utils" }
 failure_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.30" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1.31" }
 futures_01_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lfs_import_lib = { version = "0.1.0", path = "../lfs_import_lib" }

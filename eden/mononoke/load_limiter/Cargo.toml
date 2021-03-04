@@ -10,7 +10,7 @@ anyhow = "1.0"
 async-trait = "0.1.29"
 cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 limits = { version = "0.1.0", path = "../../../configerator/structs/scm/mononoke/loadshedding" }
 permission_checker = { version = "0.1.0", path = "../permission_checker" }
 serde = { version = "=1.0.118", features = ["derive", "rc"] }

@@ -15,7 +15,7 @@ configparser = { path = "../configparser" }
 crossbeam = "0.7"
 edenapi = { path = "../edenapi" }
 edenapi_types = { path = "../edenapi/types" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures-batch = "0.6"
 hex = "0.4"
 hg-http = { path = "../hg-http" }

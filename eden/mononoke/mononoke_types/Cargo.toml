@@ -22,7 +22,7 @@ context = { version = "0.1.0", path = "../server/context" }
 edenapi_types = { version = "0.1.0", path = "../../scm/lib/edenapi/types" }
 faster-hex = "0.4"
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 itertools = "0.8"
 lazy_static = "1.0"
 mononoke_types_thrift = { version = "0.1.0", path = "if" }

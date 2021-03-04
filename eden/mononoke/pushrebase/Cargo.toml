@@ -17,7 +17,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 context = { version = "0.1.0", path = "../server/context" }
 derived_data = { version = "0.1.0", path = "../derived_data" }
 derived_data_filenodes = { version = "0.1.0", path = "../derived_data/filenodes" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../manifest" }
 maplit = "1.0"
 mercurial_bundle_replay_data = { version = "0.1.0", path = "../mercurial/bundle_replay_data" }

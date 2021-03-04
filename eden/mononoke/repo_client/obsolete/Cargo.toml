@@ -10,8 +10,8 @@ anyhow = "1.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 context = { version = "0.1.0", path = "../../server/context" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.30" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1.31" }
 mercurial_bundles = { version = "0.1.0", path = "../../mercurial/bundles" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

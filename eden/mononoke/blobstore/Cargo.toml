@@ -17,7 +17,7 @@ async-trait = "0.1.29"
 auto_impl = "0.4"
 bytes = { version = "0.5", features = ["serde"] }
 context = { version = "0.1.0", path = "../server/context" }
-futures-old = { package = "futures", version = "0.1.30" }
+futures-old = { package = "futures", version = "0.1.31" }
 serde = { version = "=1.0.118", features = ["derive", "rc"] }
 serde_derive = "1.0"
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

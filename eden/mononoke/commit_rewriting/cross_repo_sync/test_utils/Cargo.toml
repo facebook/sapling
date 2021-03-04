@@ -18,7 +18,7 @@ blobstore = { version = "0.1.0", path = "../../../blobstore" }
 bookmarks = { version = "0.1.0", path = "../../../bookmarks" }
 context = { version = "0.1.0", path = "../../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = ".." }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 live_commit_sync_config = { version = "0.1.0", path = "../../live_commit_sync_config" }
 maplit = "1.0"
 megarepolib = { version = "0.1.0", path = "../../megarepo" }

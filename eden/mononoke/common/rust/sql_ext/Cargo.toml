@@ -9,8 +9,8 @@ license = "GPLv2+"
 anyhow = "1.0"
 async-trait = "0.1.29"
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.30" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1.31" }
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 once_cell = "1.4"
 slog = { version = "2.5", features = ["max_level_debug"] }

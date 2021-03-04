@@ -18,7 +18,7 @@ configparser = { path = "../configparser" }
 dirs = "2.0"
 edenapi_types = { path = "types" }
 env_logger = "0.7"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 hg-http = { path = "../hg-http" }
 http = "0.2"
 http-client = { path = "../http-client" }

@@ -20,7 +20,7 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 context = { version = "0.1.0", path = "../../server/context" }
 cross_repo_sync = { version = "0.1.0", path = "../../commit_rewriting/cross_repo_sync" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 git_mapping_pushrebase_hook = { version = "0.1.0", path = "../../bonsai_git_mapping/git_mapping_pushrebase_hook" }
 globalrev_pushrebase_hook = { version = "0.1.0", path = "../../bonsai_globalrev_mapping/globalrev_pushrebase_hook" }

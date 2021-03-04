@@ -33,7 +33,7 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 fsnodes = { version = "0.1.0", path = "../../derived_data/fsnodes" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 maplit = "1.0"

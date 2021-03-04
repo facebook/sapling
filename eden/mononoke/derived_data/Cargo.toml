@@ -14,7 +14,7 @@ blobstore = { version = "0.1.0", path = "../blobstore" }
 bounded_traversal = { version = "0.1.0", path = "../common/bounded_traversal" }
 cacheblob = { version = "0.1.0", path = "../blobstore/cacheblob" }
 context = { version = "0.1.0", path = "../server/context" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 itertools = "0.8"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

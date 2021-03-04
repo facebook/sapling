@@ -9,7 +9,7 @@ license = "GPLv2+"
 anyhow = "1.0"
 bookmarks_types = { version = "0.1.0", path = "bookmarks_types" }
 context = { version = "0.1.0", path = "../server/context" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

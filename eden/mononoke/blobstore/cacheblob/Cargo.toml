@@ -16,8 +16,8 @@ cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 context = { version = "0.1.0", path = "../../server/context" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1.30" }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1.31" }
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 hostname = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

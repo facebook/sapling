@@ -12,7 +12,7 @@ blobstore = { version = "0.1.0", path = "../../blobstore" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../../server/context" }
 filenodes = { version = "0.1.0", path = "../../filenodes" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { version = "0.1.0", path = "../../manifest" }
 maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }

@@ -14,7 +14,7 @@ blobstore_sync_queue = { version = "0.1.0", path = "../../blobstore_sync_queue" 
 chrono = { version = "0.4", features = ["serde"] }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../../server/context" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 itertools = "0.8"
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }

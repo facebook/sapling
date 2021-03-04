@@ -25,7 +25,7 @@ derived_data = { version = "0.1.0", path = ".." }
 derived_data_filenodes = { version = "0.1.0", path = "../filenodes" }
 fastlog = { version = "0.1.0", path = "../fastlog" }
 fsnodes = { version = "0.1.0", path = "../fsnodes" }
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
 lazy_static = "1.0"
 lock_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mercurial_derived_data = { version = "0.1.0", path = "../mercurial_derived_data" }
