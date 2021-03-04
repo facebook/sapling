@@ -84,6 +84,8 @@ def extsetup(ui):
 
 
 def reposetup(ui, repo):
+    if not repo.local() or not util.safehasattr(repo, "dirstate"):
+        return
 
     # If dirstate is updated to a commit that has 'mirrored' paths without
     # going though regular checkout code path, write the mirrored files to disk
