@@ -481,12 +481,96 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::write(
   return folly::unit;
 }
 
+/**
+ * Test if the exception was raised due to a EEXIST condition.
+ */
+bool isEexist(const folly::exception_wrapper& ex) {
+  if (auto* err = ex.get_exception<std::system_error>()) {
+    return isErrnoError(*err) && err->code().value() == EEXIST;
+  }
+  return false;
+}
+
 folly::Future<folly::Unit> Nfsd3ServerProcessor::create(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::Appender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<CREATE3args>::deserialize(deser);
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("create");
+
+  if (args.how.tag == createmode3::EXCLUSIVE) {
+    // Exclusive file creation is complicated, for now let's not support it.
+    CREATE3res res{{{nfsstat3::NFS3ERR_NOTSUPP, CREATE3resfail{wcc_data{}}}}};
+    XdrTrait<CREATE3res>::serialize(ser, res);
+    return folly::unit;
+  }
+
+  auto& attr = std::get<sattr3>(args.how.v);
+
+  // If the mode isn't set, make it writable by the owner, readable by the
+  // group and other. This is consistent with creating a file with a default
+  // umask of 022.
+  auto mode =
+      attr.mode.tag ? std::get<uint32_t>(attr.mode.v) : (S_IFREG | 0644);
+
+  return dispatcher_
+      ->create(
+          args.where.dir.ino, PathComponent{args.where.name}, mode, *context)
+      .thenTry([ser = std::move(ser), createmode = args.how.tag](
+                   folly::Try<NfsDispatcher::CreateRes> try_) mutable {
+        if (try_.hasException()) {
+          if (createmode == createmode3::UNCHECKED &&
+              isEexist(try_.exception())) {
+            XLOG(WARN) << "Unchecked file creation returned EEXIST";
+            // A file already exist at that location, since this is an
+            // UNCHECKED creation, just pretend the file was created just fine.
+            // Since no fields are populated, this forces the client to issue a
+            // LOOKUP RPC to gather the InodeNumber and attributes for this
+            // file. This is probably fine as creating a file that already
+            // exists should be a rare event.
+            // TODO(xavierd): We should change the file attributes based on
+            // the requested args.how.obj_attributes.
+            CREATE3res res{
+                {{nfsstat3::NFS3_OK,
+                  CREATE3resok{
+                      /*obj*/ post_op_fh3{},
+                      /*obj_attributes*/ post_op_attr{},
+                      wcc_data{
+                          /*before*/ pre_op_attr{},
+                          /*after*/ post_op_attr{},
+                      }}}}};
+            XdrTrait<CREATE3res>::serialize(ser, res);
+          } else {
+            CREATE3res res{
+                {{exceptionToNfsError(try_.exception()), CREATE3resfail{}}}};
+            XdrTrait<CREATE3res>::serialize(ser, res);
+          }
+        } else {
+          auto createRes = std::move(try_).value();
+
+          CREATE3res res{
+              {{nfsstat3::NFS3_OK,
+                CREATE3resok{
+                    /*obj*/ post_op_fh3{nfs_fh3{createRes.ino}},
+                    /*obj_attributes*/
+                    post_op_attr{statToFattr3(createRes.stat)},
+                    wcc_data{
+                        /*before*/ createRes.preDirStat.has_value()
+                            ? statToPreOpAttr(createRes.preDirStat.value())
+                            : pre_op_attr{},
+                        /*after*/ createRes.postDirStat.has_value()
+                            ? post_op_attr{statToFattr3(
+                                  createRes.postDirStat.value())}
+                            : post_op_attr{},
+                    }}}}};
+          XdrTrait<CREATE3res>::serialize(ser, res);
+        }
+        return folly::unit;
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::mkdir(

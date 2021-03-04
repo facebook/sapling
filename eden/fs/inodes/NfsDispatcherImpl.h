@@ -36,6 +36,12 @@ class NfsDispatcherImpl : public NfsDispatcher {
       InodeNumber ino,
       ObjectFetchContext& context) override;
 
+  folly::Future<NfsDispatcher::CreateRes> create(
+      InodeNumber ino,
+      PathComponent name,
+      mode_t mode,
+      ObjectFetchContext& context) override;
+
   folly::Future<NfsDispatcher::MkdirRes> mkdir(
       InodeNumber ino,
       PathComponent name,

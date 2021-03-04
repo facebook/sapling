@@ -65,6 +65,31 @@ folly::Future<std::string> NfsDispatcherImpl::readlink(
       });
 }
 
+folly::Future<NfsDispatcher::CreateRes> NfsDispatcherImpl::create(
+    InodeNumber dir,
+    PathComponent name,
+    mode_t mode,
+    ObjectFetchContext& context) {
+  // Make sure that we're attempting to create a file.
+  mode = S_IFREG | (0777 & mode);
+  return inodeMap_->lookupTreeInode(dir).thenValue(
+      [&context, name = std::move(name), mode](const TreeInodePtr& inode) {
+        // TODO(xavierd): Modify mknod to obtain the pre and post stat of the
+        // directory.
+        // Set dev to 0 as this is unused for a regular file.
+        auto newFile = inode->mknod(name, mode, 0, InvalidationRequired::No);
+        auto statFut = newFile->stat(context);
+        return std::move(statFut).thenValue(
+            [newFile = std::move(newFile)](struct stat&& stat) {
+              return CreateRes{
+                  newFile->getNodeId(),
+                  std::move(stat),
+                  std::nullopt,
+                  std::nullopt};
+            });
+      });
+}
+
 folly::Future<NfsDispatcher::MkdirRes> NfsDispatcherImpl::mkdir(
     InodeNumber dir,
     PathComponent name,
