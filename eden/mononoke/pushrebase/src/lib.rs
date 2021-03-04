@@ -1536,7 +1536,6 @@ mod tests {
 
                 let ret =
                     SqlMutableCounters::set_counter_on_txn(ctx.clone(), self.0, &key, 1, None, txn)
-                        .compat()
                         .await?;
 
                 match ret {

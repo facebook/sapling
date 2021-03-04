@@ -14,10 +14,11 @@
 /// for example, we can have conditional updates.
 use anyhow::Error;
 use context::{CoreContext, PerfCounterType};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::future::{FutureExt, TryFutureExt};
+use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::{future, Future};
 use mononoke_types::RepositoryId;
-use sql01::{queries, Connection, Transaction as SqlTransaction};
+use sql::{queries, Connection, Transaction as SqlTransaction};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::{SqlConnections, TransactionResult};
 
@@ -129,9 +130,15 @@ impl MutableCounters for SqlMutableCounters {
     ) -> BoxFuture<Option<i64>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
-        GetCounter::query(&self.read_master_connection, &repoid, &name)
-            .map(|counter| counter.first().map(|entry| entry.0))
-            .boxify()
+        let conn = self.read_master_connection.clone();
+        let name = name.to_string();
+        async move {
+            let counter = GetCounter::query(&conn, &repoid, &name.as_str()).await?;
+            Ok(counter.first().map(|entry| entry.0))
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 
     fn get_maybe_stale_counter(
@@ -142,9 +149,15 @@ impl MutableCounters for SqlMutableCounters {
     ) -> BoxFuture<Option<i64>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        GetCounter::query(&self.read_connection, &repoid, &name)
-            .map(|counter| counter.first().map(|entry| entry.0))
-            .boxify()
+        let conn = self.read_connection.clone();
+        let name = name.to_string();
+        async move {
+            let counter = GetCounter::query(&conn, &repoid, &name.as_str()).await?;
+            Ok(counter.first().map(|entry| entry.0))
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 
     fn set_counter(
@@ -159,7 +172,13 @@ impl MutableCounters for SqlMutableCounters {
             .start_transaction()
             .and_then({
                 let name = name.to_string();
-                move |txn| Self::set_counter_on_txn(ctx, repoid, &name, value, prev_value, txn)
+                move |txn| {
+                    async move {
+                        Self::set_counter_on_txn(ctx, repoid, &name, value, prev_value, txn).await
+                    }
+                    .boxed()
+                    .compat()
+                }
             })
             .and_then(|txn_result| match txn_result {
                 TransactionResult::Succeeded(txn) => txn.commit().map(|()| true).left_future(),
@@ -175,42 +194,45 @@ impl MutableCounters for SqlMutableCounters {
     ) -> BoxFuture<Vec<(String, i64)>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
-        GetCountersForRepo::query(&self.read_master_connection, &repoid)
-            .map(|counters| counters.into_iter().collect())
-            .boxify()
+        let conn = self.read_master_connection.clone();
+        async move {
+            let counters = GetCountersForRepo::query(&conn, &repoid).await?;
+            Ok(counters.into_iter().collect())
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 }
 
 impl SqlMutableCounters {
-    pub fn set_counter_on_txn(
+    pub async fn set_counter_on_txn(
         ctx: CoreContext,
         repoid: RepositoryId,
         name: &str,
         value: i64,
         prev_value: Option<i64>,
         txn: SqlTransaction,
-    ) -> BoxFuture<TransactionResult, Error> {
+    ) -> Result<TransactionResult, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        let f = match prev_value {
-            Some(prev_value) => SetCounterConditionally::query_with_transaction(
+        let (txn, result) = if let Some(prev_value) = prev_value {
+            SetCounterConditionally::query_with_transaction(
                 txn,
                 &repoid,
                 &name,
                 &value,
                 &prev_value,
             )
-            .left_future(),
-            None => SetCounter::query_with_transaction(txn, &repoid, &name, &value).right_future(),
+            .await?
+        } else {
+            SetCounter::query_with_transaction(txn, &repoid, &name, &value).await?
         };
 
-        f.map(|(txn, result)| {
-            if result.affected_rows() >= 1 {
-                TransactionResult::Succeeded(txn)
-            } else {
-                TransactionResult::Failed
-            }
+        Ok(if result.affected_rows() >= 1 {
+            TransactionResult::Succeeded(txn)
+        } else {
+            TransactionResult::Failed
         })
-        .boxify()
     }
 }

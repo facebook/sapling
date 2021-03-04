@@ -318,7 +318,6 @@ where
                     prev_counter,
                     txn,
                 )
-                .compat()
                 .await?;
 
                 match txn {
