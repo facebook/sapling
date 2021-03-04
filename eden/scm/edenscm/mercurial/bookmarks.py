@@ -1223,14 +1223,20 @@ class lazyremotenamedict(pycompat.Mapping):
         """Check that the node for potentialentry exists and return it"""
         if not potentialentry in self.potentialentries:
             return None
-        node, nametype, remote, rname = self.potentialentries[potentialentry]
+        hexnode, nametype, remote, rname = self.potentialentries[potentialentry]
         repo = self._repo
-        binnode = bin(node)
-        # if the node doesn't exist, skip it
+        binnode = bin(hexnode)
         try:
             repo.changelog.rev(binnode)
-        except LookupError:
-            return None
+        except LookupError as e:
+            if rname not in selectivepullinitbookmarknames(repo):
+                # Not a critical bookmark.
+                return None
+            raise error.RepoLookupError(
+                _("remotename entry %s (%s) cannot be found: %s")
+                % (potentialentry, hexnode, e),
+                hint=_("try '@prog@ doctor' to attempt to fix it"),
+            )
         # Skip closed branches
         if nametype == "branches" and repo[binnode].closesbranch():
             return None

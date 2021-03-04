@@ -102,9 +102,20 @@ make sure we can list remote bookmarks with --all
 
 Verify missing node doesnt break remotenames
 
-  $ echo "18f8e0f8ba54270bf158734c781327581cf43634 bookmarks beta/foo" >> .hg/store/remotenames
+  $ hg dbsh << 'EOS'
+  > ml["remotenames"] = ml["remotenames"] + b"18f8e0f8ba54270bf158734c781327581cf43634 bookmarks beta/foo\n"
+  > ml.commit("add unknown ref to remotenames")
+  > EOS
   $ hg book --remote --config remotenames.resolvenodes=False
      beta/babar                47d2a3944de8
+
+But does break if the missing node is considered essential:
+
+  $ hg book --remote --config remotenames.selectivepulldefault=foo
+     beta/babar                47d2a3944de8
+  abort: remotename entry beta/foo (18f8e0f8ba54270bf158734c781327581cf43634) cannot be found: 00changelog.i@18f8e0f8ba54: no node!
+  (try 'hg doctor' to attempt to fix it)
+  [255]
 
 make sure bogus revisions in .hg/store/remotenames do not break hg
   $ echo deadbeefdeadbeefdeadbeefdeadbeefdeadbeef default/default >> \
