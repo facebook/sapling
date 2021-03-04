@@ -68,6 +68,27 @@ pub fn fsync_glob(dir: &Path, patterns: &[&str], newer_than: Option<SystemTime>)
         }
     }
     result.sort_unstable();
+
+    // Also fsync parent directories on *nix. This syncs metadata about the file.
+    // On Windows directories cannot be opened.
+    #[cfg(unix)]
+    {
+        let dirs: Vec<&Path> = {
+            let mut dirs: Vec<_> = result.iter().filter_map(|p| p.parent()).collect();
+            dirs.dedup();
+            dirs
+        };
+        for path in dirs {
+            let path = dir.join(path);
+            match fs::OpenOptions::new().read(true).open(&path) {
+                Ok(file) => match file.sync_all() {
+                    Ok(_) => debug!("fsynced dir: {}", path.display()),
+                    Err(e) => warn!("cannot fsync dir {}: {}", path.display(), e),
+                },
+                Err(e) => warn!("cannot open dir {}: {}", path.display(), e),
+            }
+        }
+    }
     result
 }
 
