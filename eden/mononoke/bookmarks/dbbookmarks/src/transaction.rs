@@ -17,7 +17,7 @@ use futures::compat::Future01CompatExt;
 use futures::future::{self, BoxFuture, FutureExt};
 use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
-use sql01::{queries, Connection, Transaction as SqlTransaction};
+use sql::{queries, Connection, Transaction as SqlTransaction};
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -183,9 +183,7 @@ impl SqlBookmarksTransactionPayload {
     }
 
     async fn find_next_update_log_id(txn: SqlTransaction) -> Result<(SqlTransaction, u64)> {
-        let (txn, max_id_entries) = FindMaxBookmarkLogId::query_with_transaction(txn)
-            .compat()
-            .await?;
+        let (txn, max_id_entries) = FindMaxBookmarkLogId::query_with_transaction(txn).await?;
 
         let next_id = match &max_id_entries[..] {
             [(None,)] => 1,
@@ -214,7 +212,6 @@ impl SqlBookmarksTransactionPayload {
                 &timestamp,
             )];
             txn = AddBookmarkLog::query_with_transaction(txn, &data[..])
-                .compat()
                 .await?
                 .0;
             if let Some(data) = &log_entry.bundle_replay_data {
@@ -222,7 +219,6 @@ impl SqlBookmarksTransactionPayload {
                     txn,
                     &[(&next_id, &data.bundle_handle, &data.commit_timestamps_json)],
                 )
-                .compat()
                 .await?
                 .0;
             }
@@ -239,9 +235,7 @@ impl SqlBookmarksTransactionPayload {
         for (bookmark, cs_id) in self.force_sets.iter() {
             data.push((&self.repo_id, bookmark, cs_id));
         }
-        let (txn, _) = ReplaceBookmarks::query_with_transaction(txn, data.as_slice())
-            .compat()
-            .await?;
+        let (txn, _) = ReplaceBookmarks::query_with_transaction(txn, data.as_slice()).await?;
         Ok(txn)
     }
 
@@ -254,9 +248,7 @@ impl SqlBookmarksTransactionPayload {
             data.push((&self.repo_id, bookmark, cs_id, kind))
         }
         let rows_to_insert = data.len() as u64;
-        let (txn, result) = InsertBookmarks::query_with_transaction(txn, data.as_slice())
-            .compat()
-            .await?;
+        let (txn, result) = InsertBookmarks::query_with_transaction(txn, data.as_slice()).await?;
         if result.affected_rows() != rows_to_insert {
             return Err(BookmarkTransactionError::LogicError);
         }
@@ -273,9 +265,7 @@ impl SqlBookmarksTransactionPayload {
                 // points to the correct commit.  If it doesn't, abort the
                 // transaction.
                 let (txn_, result) =
-                    SelectBookmark::query_with_transaction(txn, &self.repo_id, bookmark)
-                        .compat()
-                        .await?;
+                    SelectBookmark::query_with_transaction(txn, &self.repo_id, bookmark).await?;
                 txn = txn_;
                 if result.get(0).map(|row| row.0).as_ref() != Some(new_cs_id) {
                     return Err(BookmarkTransactionError::LogicError);
@@ -289,7 +279,6 @@ impl SqlBookmarksTransactionPayload {
                     new_cs_id,
                     kinds,
                 )
-                .compat()
                 .await?;
                 txn = txn_;
                 if result.affected_rows() != 1 {
@@ -305,9 +294,8 @@ impl SqlBookmarksTransactionPayload {
         mut txn: SqlTransaction,
     ) -> Result<SqlTransaction, BookmarkTransactionError> {
         for bookmark in self.force_deletes.iter() {
-            let (txn_, _) = DeleteBookmark::query_with_transaction(txn, &self.repo_id, &bookmark)
-                .compat()
-                .await?;
+            let (txn_, _) =
+                DeleteBookmark::query_with_transaction(txn, &self.repo_id, &bookmark).await?;
             txn = txn_;
         }
         Ok(txn)
@@ -320,7 +308,6 @@ impl SqlBookmarksTransactionPayload {
         for (bookmark, old_cs_id) in self.deletes.iter() {
             let (txn_, result) =
                 DeleteBookmarkIf::query_with_transaction(txn, &self.repo_id, bookmark, old_cs_id)
-                    .compat()
                     .await?;
             txn = txn_;
             if result.affected_rows() != 1 {
@@ -604,6 +591,6 @@ pub(crate) async fn insert_bookmarks(
     conn: &Connection,
     rows: &[(&RepositoryId, &BookmarkName, &ChangesetId, &BookmarkKind)],
 ) -> Result<()> {
-    InsertBookmarks::query(conn, rows).compat().await?;
+    InsertBookmarks::query(conn, rows).await?;
     Ok(())
 }

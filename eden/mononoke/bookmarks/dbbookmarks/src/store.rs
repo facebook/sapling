@@ -7,19 +7,19 @@
 
 #![deny(warnings)]
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Result};
 use bookmarks::{
     Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, BookmarkTransaction,
     BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness,
     RawBundleReplayData,
 };
+use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures::compat::Future01CompatExt;
-use futures::future::{self, BoxFuture, Future, FutureExt, TryFutureExt};
+use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
 use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
-use sql01::queries;
+use sql::queries;
 use sql_ext::SqlConnections;
 use stats::prelude::*;
 
@@ -252,20 +252,6 @@ impl SqlBookmarks {
     }
 }
 
-fn query_to_stream<F>(query: F) -> BoxStream<'static, Result<(Bookmark, ChangesetId)>>
-where
-    F: Future<Output = Result<Vec<(BookmarkName, BookmarkKind, ChangesetId)>>> + Send + 'static,
-{
-    query
-        .map_ok(move |rows| stream::iter(rows.into_iter().map(Ok)))
-        .try_flatten_stream()
-        .map_ok(|row| {
-            let (name, kind, changeset_id) = row;
-            (Bookmark::new(name, kind), changeset_id)
-        })
-        .boxed()
-}
-
 impl Bookmarks for SqlBookmarks {
     fn list(
         &self,
@@ -281,79 +267,83 @@ impl Bookmarks for SqlBookmarks {
                 STATS::list_maybe_stale.add_value(1);
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsReplica);
-                &self.connections.read_connection
+                self.connections.read_connection.clone()
             }
             Freshness::MostRecent => {
                 STATS::list.add_value(1);
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsMaster);
-                &self.connections.read_master_connection
+                self.connections.read_master_connection.clone()
             }
         };
 
-        if prefix.is_empty() {
-            match pagination {
-                BookmarkPagination::FromStart => {
-                    // Sorting is only useful for pagination. If the query returns all bookmark
-                    // names, then skip the sorting.
-                    if limit == std::u64::MAX {
-                        query_to_stream(
-                            SelectAllUnordered::query(&conn, &self.repo_id, &limit, kinds).compat(),
-                        )
-                    } else {
-                        query_to_stream(
-                            SelectAll::query(&conn, &self.repo_id, &limit, kinds).compat(),
-                        )
+        cloned!(pagination, prefix, self.repo_id);
+        let kinds: Vec<BookmarkKind> = kinds.to_vec();
+
+        async move {
+            let rows = if prefix.is_empty() {
+                match pagination {
+                    BookmarkPagination::FromStart => {
+                        // Sorting is only useful for pagination. If the query returns all bookmark
+                        // names, then skip the sorting.
+                        if limit == std::u64::MAX {
+                            SelectAllUnordered::query(&conn, &repo_id, &limit, &kinds).await?
+                        } else {
+                            SelectAll::query(&conn, &repo_id, &limit, &kinds).await?
+                        }
+                    }
+                    BookmarkPagination::After(after) => {
+                        SelectAllAfter::query(&conn, &repo_id, &after, &limit, &kinds).await?
                     }
                 }
-                BookmarkPagination::After(ref after) => query_to_stream(
-                    SelectAllAfter::query(&conn, &self.repo_id, after, &limit, kinds).compat(),
-                ),
-            }
-        } else {
-            let prefix_like_pattern = prefix.to_escaped_sql_like_pattern();
-            match pagination {
-                BookmarkPagination::FromStart => {
-                    if limit == std::u64::MAX {
-                        query_to_stream(
+            } else {
+                let prefix_like_pattern = prefix.to_escaped_sql_like_pattern();
+                match pagination {
+                    BookmarkPagination::FromStart => {
+                        if limit == std::u64::MAX {
                             SelectByPrefixUnordered::query(
                                 &conn,
-                                &self.repo_id,
+                                &repo_id,
                                 &prefix_like_pattern,
                                 &"\\",
                                 &limit,
-                                kinds,
+                                &kinds,
                             )
-                            .compat(),
-                        )
-                    } else {
-                        query_to_stream(
+                            .await?
+                        } else {
                             SelectByPrefix::query(
                                 &conn,
-                                &self.repo_id,
+                                &repo_id,
                                 &prefix_like_pattern,
                                 &"\\",
                                 &limit,
-                                kinds,
+                                &kinds,
                             )
-                            .compat(),
+                            .await?
+                        }
+                    }
+                    BookmarkPagination::After(after) => {
+                        SelectByPrefixAfter::query(
+                            &conn,
+                            &repo_id,
+                            &prefix_like_pattern,
+                            &"\\",
+                            &after,
+                            &limit,
+                            &kinds,
                         )
+                        .await?
                     }
                 }
-                BookmarkPagination::After(ref after) => query_to_stream(
-                    SelectByPrefixAfter::query(
-                        &conn,
-                        &self.repo_id,
-                        &prefix_like_pattern,
-                        &"\\",
-                        after,
-                        &limit,
-                        kinds,
-                    )
-                    .compat(),
-                ),
-            }
+            };
+
+            Ok(stream::iter(rows.into_iter().map(|row| {
+                let (name, kind, changeset_id) = row;
+                Ok((Bookmark::new(name, kind), changeset_id))
+            })))
         }
+        .try_flatten_stream()
+        .boxed()
     }
 
     fn get(
@@ -364,13 +354,12 @@ impl Bookmarks for SqlBookmarks {
         STATS::get_bookmark.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
-        SelectBookmark::query(
-            &self.connections.read_master_connection,
-            &self.repo_id,
-            &name,
-        )
-        .compat()
-        .map_ok(|rows| rows.into_iter().next().map(|row| row.0))
+        let conn = self.connections.read_master_connection.clone();
+        cloned!(self.repo_id, name);
+        async move {
+            let rows = SelectBookmark::query(&conn, &repo_id, &name).await?;
+            Ok(rows.into_iter().next().map(|row| row.0))
+        }
         .boxed()
     }
 
@@ -393,34 +382,29 @@ impl BookmarkUpdateLog for SqlBookmarks {
         freshness: Freshness,
     ) -> BoxStream<'static, Result<(u64, Option<ChangesetId>, BookmarkUpdateReason, Timestamp)>>
     {
-        let connection = if freshness == Freshness::MostRecent {
+        let conn = if freshness == Freshness::MostRecent {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            &self.connections.read_master_connection
+            self.connections.read_master_connection.clone()
         } else {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsReplica);
-            &self.connections.read_connection
+            self.connections.read_connection.clone()
         };
+        let repo_id = self.repo_id;
 
-        match offset {
-            Some(offset) => SelectBookmarkLogsWithOffset::query(
-                &connection,
-                &self.repo_id,
-                &name,
-                &max_rec,
-                &offset,
-            )
-            .compat()
-            .map_ok(|rows| stream::iter(rows.into_iter().map(Ok)))
-            .try_flatten_stream()
-            .boxed(),
-            None => SelectBookmarkLogs::query(&connection, &self.repo_id, &name, &max_rec)
-                .compat()
-                .map_ok(|rows| stream::iter(rows.into_iter().map(Ok)))
-                .try_flatten_stream()
-                .boxed(),
+        async move {
+            let rows = match offset {
+                Some(offset) => {
+                    SelectBookmarkLogsWithOffset::query(&conn, &repo_id, &name, &max_rec, &offset)
+                        .await?
+                }
+                None => SelectBookmarkLogs::query(&conn, &repo_id, &name, &max_rec).await?,
+            };
+            Ok(stream::iter(rows.into_iter().map(Ok)))
         }
+        .try_flatten_stream()
+        .boxed()
     }
 
     fn list_bookmark_log_entries_ts_in_range(
@@ -435,16 +419,16 @@ impl BookmarkUpdateLog for SqlBookmarks {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
 
-        SelectBookmarkLogsWithTsInRange::query(
-            &self.connections.read_connection,
-            &self.repo_id,
-            &name,
-            &max_rec,
-            &min_ts,
-            &max_ts,
-        )
-        .compat()
-        .map_ok(|rows| stream::iter(rows.into_iter().map(Ok)))
+        let conn = self.connections.read_connection.clone();
+        let repo_id = self.repo_id;
+
+        async move {
+            let rows = SelectBookmarkLogsWithTsInRange::query(
+                &conn, &repo_id, &name, &max_rec, &min_ts, &max_ts,
+            )
+            .await?;
+            Ok(stream::iter(rows.into_iter().map(Ok)))
+        }
         .try_flatten_stream()
         .boxed()
     }
@@ -457,40 +441,32 @@ impl BookmarkUpdateLog for SqlBookmarks {
     ) -> BoxFuture<'static, Result<u64>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let query = match maybe_exclude_reason {
-            Some(ref r) => CountFurtherBookmarkLogEntriesWithoutReason::query(
-                &self.connections.read_connection,
-                &id,
-                &self.repo_id,
-                &r,
-            )
-            .compat()
-            .boxed(),
-            None => CountFurtherBookmarkLogEntries::query(
-                &self.connections.read_connection,
-                &id,
-                &self.repo_id,
-            )
-            .compat()
-            .boxed(),
-        };
+        let conn = self.connections.read_connection.clone();
+        let repo_id = self.repo_id;
 
-        query
-            .and_then(move |entries| {
-                let entry = entries.into_iter().next();
-                match entry {
-                    Some(count) => future::ok(count.0),
-                    None => {
-                        let extra = match maybe_exclude_reason {
-                            Some(..) => "without reason",
-                            None => "",
-                        };
-                        let msg = format!("Failed to query further bookmark log entries{}", extra);
-                        future::err(Error::msg(msg))
-                    }
+        async move {
+            let entries = match maybe_exclude_reason {
+                Some(ref r) => {
+                    CountFurtherBookmarkLogEntriesWithoutReason::query(&conn, &id, &repo_id, &r)
+                        .await?
                 }
-            })
-            .boxed()
+                None => CountFurtherBookmarkLogEntries::query(&conn, &id, &repo_id).await?,
+            };
+            match entries.into_iter().next() {
+                Some(count) => Ok(count.0),
+                None => {
+                    let extra = match maybe_exclude_reason {
+                        Some(..) => "without reason",
+                        None => "",
+                    };
+                    Err(anyhow!(
+                        "Failed to query further bookmark log entries{}",
+                        extra
+                    ))
+                }
+            }
+        }
+        .boxed()
     }
 
     fn count_further_bookmark_log_entries_by_reason(
@@ -500,13 +476,13 @@ impl BookmarkUpdateLog for SqlBookmarks {
     ) -> BoxFuture<'static, Result<Vec<(BookmarkUpdateReason, u64)>>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        CountFurtherBookmarkLogEntriesByReason::query(
-            &self.connections.read_connection,
-            &id,
-            &self.repo_id,
-        )
-        .compat()
-        .map_ok(|entries| entries.into_iter().collect())
+        let conn = self.connections.read_connection.clone();
+        let repo_id = self.repo_id;
+        async move {
+            let entries =
+                CountFurtherBookmarkLogEntriesByReason::query(&conn, &id, &repo_id).await?;
+            Ok(entries.into_iter().collect())
+        }
         .boxed()
     }
 
@@ -518,14 +494,13 @@ impl BookmarkUpdateLog for SqlBookmarks {
     ) -> BoxFuture<'static, Result<Option<u64>>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        SkipOverBookmarkLogEntriesWithReason::query(
-            &self.connections.read_connection,
-            &id,
-            &self.repo_id,
-            &reason,
-        )
-        .compat()
-        .map_ok(|entries| entries.first().map(|entry| entry.0))
+        let conn = self.connections.read_connection.clone();
+        cloned!(self.repo_id, reason);
+        async move {
+            let entries =
+                SkipOverBookmarkLogEntriesWithReason::query(&conn, &id, &repo_id, &reason).await?;
+            Ok(entries.first().map(|entry| entry.0))
+        }
         .boxed()
     }
 
@@ -537,14 +512,12 @@ impl BookmarkUpdateLog for SqlBookmarks {
     ) -> BoxStream<'static, Result<BookmarkUpdateLogEntry>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        ReadNextBookmarkLogEntries::query(
-            &self.connections.read_connection,
-            &id,
-            &self.repo_id,
-            &limit,
-        )
-        .compat()
-        .map_ok(|entries| {
+        let conn = self.connections.read_connection.clone();
+        let repo_id = self.repo_id;
+
+        async move {
+            let entries = ReadNextBookmarkLogEntries::query(&conn, &id, &repo_id, &limit).await?;
+
             let homogenous_entries: Vec<_> = match entries.iter().nth(0).cloned() {
                 Some(first_entry) => {
                     // Note: types are explicit here to protect us from query behavior change
@@ -563,32 +536,34 @@ impl BookmarkUpdateLog for SqlBookmarks {
                 }
                 None => entries.into_iter().collect(),
             };
-            stream::iter(homogenous_entries.into_iter().map(Ok)).and_then(|entry| async move {
-                let (
-                    id,
-                    repo_id,
-                    name,
-                    to_cs_id,
-                    from_cs_id,
-                    reason,
-                    timestamp,
-                    bundle_handle,
-                    commit_timestamps_json,
-                ) = entry;
-                let bundle_replay_data =
-                    RawBundleReplayData::maybe_new(bundle_handle, commit_timestamps_json)?;
-                Ok(BookmarkUpdateLogEntry {
-                    id,
-                    repo_id,
-                    bookmark_name: name,
-                    to_changeset_id: to_cs_id,
-                    from_changeset_id: from_cs_id,
-                    reason,
-                    timestamp,
-                    bundle_replay_data,
-                })
-            })
-        })
+            Ok(
+                stream::iter(homogenous_entries.into_iter().map(Ok)).and_then(|entry| async move {
+                    let (
+                        id,
+                        repo_id,
+                        name,
+                        to_cs_id,
+                        from_cs_id,
+                        reason,
+                        timestamp,
+                        bundle_handle,
+                        commit_timestamps_json,
+                    ) = entry;
+                    let bundle_replay_data =
+                        RawBundleReplayData::maybe_new(bundle_handle, commit_timestamps_json)?;
+                    Ok(BookmarkUpdateLogEntry {
+                        id,
+                        repo_id,
+                        bookmark_name: name,
+                        to_changeset_id: to_cs_id,
+                        from_changeset_id: from_cs_id,
+                        reason,
+                        timestamp,
+                        bundle_replay_data,
+                    })
+                }),
+            )
+        }
         .try_flatten_stream()
         .boxed()
     }
@@ -603,16 +578,20 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let connection = if freshness == Freshness::MostRecent {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            &self.connections.read_master_connection
+            self.connections.read_master_connection.clone()
         } else {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsReplica);
-            &self.connections.read_connection
+            self.connections.read_connection.clone()
         };
 
-        ReadNextBookmarkLogEntries::query(&connection, &id, &self.repo_id, &limit)
-            .compat()
-            .map_ok(|entries| {
+        let repo_id = self.repo_id;
+
+        async move {
+            let entries =
+                ReadNextBookmarkLogEntries::query(&connection, &id, &repo_id, &limit).await?;
+
+            Ok(
                 stream::iter(entries.into_iter().map(Ok)).and_then(|entry| async move {
                     let (
                         id,
@@ -637,10 +616,11 @@ impl BookmarkUpdateLog for SqlBookmarks {
                         timestamp,
                         bundle_replay_data,
                     })
-                })
-            })
-            .try_flatten_stream()
-            .boxed()
+                }),
+            )
+        }
+        .try_flatten_stream()
+        .boxed()
     }
 
     fn get_largest_log_id(
@@ -651,27 +631,22 @@ impl BookmarkUpdateLog for SqlBookmarks {
         let connection = if freshness == Freshness::MostRecent {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsMaster);
-            &self.connections.read_master_connection
+            self.connections.read_master_connection.clone()
         } else {
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlReadsReplica);
-            &self.connections.read_connection
+            self.connections.read_connection.clone()
         };
+        let repo_id = self.repo_id;
 
-        let query = GetLargestLogId::query(&connection, &self.repo_id)
-            .compat()
-            .boxed();
-        query
-            .and_then(move |entries| {
-                let entry = entries.into_iter().next();
-                match entry {
-                    Some(count) => future::ok(count.0),
-                    None => {
-                        let msg = format!("Failed to query largest log id");
-                        future::err(Error::msg(msg))
-                    }
-                }
-            })
-            .boxed()
+        async move {
+            let entries = GetLargestLogId::query(&connection, &repo_id).await?;
+            let entry = entries.into_iter().next();
+            match entry {
+                Some(count) => Ok(count.0),
+                None => Err(anyhow!("Failed to query largest log id")),
+            }
+        }
+        .boxed()
     }
 }
