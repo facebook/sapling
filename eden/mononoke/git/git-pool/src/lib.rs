@@ -10,7 +10,6 @@ use anyhow::{anyhow, Error};
 use git2::{Error as Git2Error, Repository};
 use r2d2::{ManageConnection, Pool};
 use std::path::PathBuf;
-use tokio::task;
 
 #[derive(Debug, Clone)]
 pub struct GitPool {
@@ -33,7 +32,7 @@ impl GitPool {
     {
         let pool = self.pool.clone();
 
-        let ret = task::spawn_blocking(move || {
+        let ret = tokio_shim::task::spawn_blocking(move || {
             let result_repo = pool.get()?;
             let repo = match &*result_repo {
                 Ok(repo) => repo,
