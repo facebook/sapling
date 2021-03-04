@@ -43,7 +43,9 @@ command = registrar.command(cmdtable)
             "c",
             "cleanup",
             None,
-            _("clean up obsolete commits (commits that have a newer version)"),
+            _(
+                "clean up commits with newer versions, and non-essential remote bookmarks"
+            ),
         ),
         ("B", "bookmark", [], _("hide commits only reachable from a bookmark")),
     ],
@@ -76,9 +78,12 @@ def hide(ui, repo, *revs, **opts):
 
     --cleanup skips obsolete commits with non-obsolete descendants.
     """
+    removednames = []
     if opts.get("cleanup") and len(opts.get("rev") + list(revs)) != 0:
         raise error.Abort(_("--rev and --cleanup are incompatible"))
     elif opts.get("cleanup"):
+        # cleanup remote bookmarks
+        removednames = bookmarksmod.cleanupremotenames(repo)
         # hides all the draft, obsolete commits that
         # don't have non-obsolete descendants
         revs = ["obsolete() - (draft() & ::(draft() & not obsolete()))"]
@@ -112,6 +117,8 @@ def hide(ui, repo, *revs, **opts):
                 return 0
 
         if not revs:
+            if removednames:
+                return 0
             raise error.Abort(_("nothing to hide"))
 
         hidectxs = [repo[r] for r in revs]

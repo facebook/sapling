@@ -5,6 +5,7 @@
 
   $ clone server client1
   $ clone server client2
+  $ clone server client3
 
 Push 3 branches to the server.
 
@@ -46,5 +47,18 @@ selectivepull default:
   │
   │ o  B remote/master public
   ├─╯
+  o  A  public
+  
+'hide --cleanup' does the same thing:
+
+  $ cd $TESTTMP/client3
+  $ hg pull -B other -B master -B another -q
+  $ enable amend
+  $ hg hide --cleanup
+  removed 2 non-essential remote bookmarks: remote/another, remote/other
+
+  $ hg log -T '{desc} {remotenames} {phase}' -Gr 'all()'
+  o  B remote/master public
+  │
   o  A  public
   
