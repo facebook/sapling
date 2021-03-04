@@ -206,11 +206,12 @@ def rewritepullrevs(repo, revs):
 def _pullremotebookmarks(repo, x):
     # Pull remote names like "remote/foo" automatically.
     pattern = repo.ui.config("remotenames", "autopullpattern")
+    hoist = repo.ui.config("remotenames", "hoist")
     if pattern and "/" in x:
         matchfn = _cachedstringmatcher(pattern)
         if matchfn(x):
             remotename, name = bookmarks.splitremotename(x)
-            if remotename in {"default", "remote"}:
+            if remotename == hoist:
                 # XXX: remotename should be the source, but is ignored here.
                 # This is because "remote/scratch/x" might require special
                 # remote name (ex.  "infinitepushbookmark", not

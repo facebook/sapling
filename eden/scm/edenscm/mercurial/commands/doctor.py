@@ -452,11 +452,7 @@ def checktoomanynames(repo, source="default"):
     threshold = ui.configint("doctor", "check-too-many-names-threshold")
     namenodes = bookmod.decoderemotenames(repo.svfs.read("remotenames"))
     count = len(namenodes)
-    # Exclude accessed bookmarks because the accessed bookmarks might also be
-    # "too many".
-    selected = set(
-        bookmod.selectivepullbookmarknames(repo, source, includeaccessed=False)
-    )
+    selected = set(bookmod.selectivepullbookmarknames(repo, source))
     threshold += len(selected)
     if count < threshold:
         return

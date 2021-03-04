@@ -75,7 +75,7 @@ def _getbookmarks(repo):
 
 
 def _getprotectedremotebookmarks(repo):
-    return bookmarks.selectivepullinitbookmarknames(repo)
+    return bookmarks.selectivepullinitbookmarkfullnames(repo)
 
 
 def _getremotebookmarks(repo):
@@ -95,14 +95,7 @@ def _getremotebookmarks(repo):
 
 def _iscleanrepo(repo):
     """Check if there are any local changes relevant for commit cloud in the repo"""
-    return (
-        not _getheads(repo)
-        and not _getbookmarks(repo)
-        and {
-            bookmarks.splitremotename(remotename)[1]
-            for remotename in _getremotebookmarks(repo).keys()
-        }.issubset(_getprotectedremotebookmarks(repo))
-    )
+    return not _getheads(repo) and not _getbookmarks(repo)
 
 
 def _getsnapshots(repo, lastsyncstate):
@@ -759,9 +752,7 @@ def _updateremotebookmarks(repo, tr, updates):
     # be deleted if this is the default remote
     for remotename, node in pycompat.iteritems(updates):
         remote, name = bookmarks.splitremotename(remotename)
-        if node == nodemod.nullhex and (
-            name in protectednames and remote in {"default", "remote"}
-        ):
+        if node == nodemod.nullhex and remotename in protectednames:
             newremotebookmarks[remotename] = oldremotebookmarks.get(
                 remotename, nodemod.nullhex
             )

@@ -1357,11 +1357,19 @@ def mainbookmark(repo):
 
 
 def selectivepullinitbookmarknames(repo):
-    """Returns set of initial remote bookmarks"""
+    """Returns set of initial remote bookmarks names"""
     return set(repo.ui.configlist("remotenames", "selectivepulldefault"))
 
 
-def selectivepullbookmarknames(repo, remote=None, includeaccessed=True):
+def selectivepullinitbookmarkfullnames(repo):
+    """Returns set of initial remote bookmarks full names"""
+    return {
+        "%s/%s" % (repo.ui.config("remotenames", "hoist"), name)
+        for name in selectivepullinitbookmarknames(repo)
+    }
+
+
+def selectivepullbookmarknames(repo, remote=None):
     """Returns the bookmark names that should be pulled during a pull."""
     initbooks = set(repo.ui.configlist("remotenames", "selectivepulldefault"))
     if remote is not None:
@@ -1384,12 +1392,14 @@ def cleanupremotenames(repo):
     if metalog is None:
         raise error.Abort(_("metalog is required"))
     referrednodes = repo.dageval(lambda: ancestors(draft()))
-    essentialnames = selectivepullinitbookmarknames(repo)
+
+    essentialnames = selectivepullinitbookmarkfullnames(repo)
+
     namenodes = decoderemotenames(metalog["remotenames"])
     newnamenodes = {
         fullname: node
         for fullname, node in namenodes.items()
-        if splitremotename(fullname)[-1] in essentialnames or node in referrednodes
+        if fullname in essentialnames or node in referrednodes
     }
     removednames = sorted(set(namenodes) - set(newnamenodes))
     if removednames:

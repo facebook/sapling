@@ -619,3 +619,4 @@ coreconfigitem(
     "autopullpattern",
     default=r"re:^(?:default|remote)/[A-Za-z0-9._/-]+$",
 )
+configitem("remotenames", "hoist", default="default")
