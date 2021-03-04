@@ -214,8 +214,10 @@ chashmap = { git = "https://gitlab.redox-os.org/ahornby/chashmap", rev = "901ace
 const-random = { git = "https://github.com/fbsource/const-random", rev = "374c5b46427fe2ffbf6acbd9c1687e0f1a809f95" }
 cursive_buffered_backend = { git = "https://github.com/chengxiong-ruan/cursive_buffered_backend", branch = "upgrade_cursive_core_from_v0.4.1" }
 enumset = { git = "https://github.com/danobi/enumset", rev = "4c01c583c27a725948fededbfb3461c572a669a4" }
-gotham = { git = "https://github.com/krallin/gotham.git", rev = "59f7f3fe8958837cc4343c67ee5c2c1f11ce65ab" }
-gotham_derive = { git = "https://github.com/krallin/gotham.git", rev = "59f7f3fe8958837cc4343c67ee5c2c1f11ce65ab" }
+gotham = { git = "https://github.com/krallin/gotham.git", rev = "6c1612c7189893f31c6c3fa2dda11c0b6d83e1ac" }
+gotham-02 = { package = "gotham", git = "https://github.com/krallin/gotham-02.git", rev = "1eb3b976c31e7e4334b188f3abfa5cc2e5cae033" }
+gotham_derive = { git = "https://github.com/krallin/gotham.git", rev = "6c1612c7189893f31c6c3fa2dda11c0b6d83e1ac" }
+gotham_derive-02 = { package = "gotham_derive", git = "https://github.com/krallin/gotham-02.git", rev = "1eb3b976c31e7e4334b188f3abfa5cc2e5cae033" }
 hyper = { package = "hyper", git = "https://github.com/krallin/hyper.git", rev = "8850630d2fbb637cfdeaea802526e2d968ec0b71" }
 hyper-02 = { package = "hyper", version = "0.13.10", git = "https://github.com/krallin/hyper-02.git", rev = "9c9453c5ae3e92de4ba30edd81bb45371b8fa8d6" }
 lru-disk-cache = { git = "https://github.com/mozilla/sccache", rev = "033ebaae69beeb0ac04e8c35d6ff1103487bd9a3" }
