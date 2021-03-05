@@ -13,7 +13,7 @@ from .hg_extension_test_base import EdenHgTestCase
 class HisteditCommand:
     """Utility to facilitate running `hg histedit` from an integration test."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._actions = []
 
     def pick(self, commit_hash: str) -> None:
