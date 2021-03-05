@@ -39,11 +39,14 @@ pub enum HttpError {
     #[error("Bad request")]
     BadRequest(#[source] Error),
 
-    #[error("Method not acceptable")]
-    NotAcceptable,
+    #[error("Forbidden")]
+    Forbidden,
 
     #[error("Not found")]
     NotFound,
+
+    #[error("Method not allowed")]
+    MethodNotAllowed,
 
     #[error("Internal server error")]
     InternalServerError(#[source] Error),
@@ -57,15 +60,17 @@ impl HttpError {
     pub fn http_response(&self) -> http::Result<Response<Body>> {
         let status = match self {
             Self::BadRequest(..) => http::StatusCode::BAD_REQUEST,
-            Self::NotAcceptable => http::StatusCode::NOT_ACCEPTABLE,
+            Self::Forbidden => http::StatusCode::FORBIDDEN,
             Self::NotFound => http::StatusCode::NOT_FOUND,
+            Self::MethodNotAllowed => http::StatusCode::METHOD_NOT_ALLOWED,
             Self::InternalServerError(..) => http::StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         let body = match self {
             Self::BadRequest(ref e) => Body::from(format!("{:#}", e)),
-            Self::NotAcceptable => Body::empty(),
+            Self::Forbidden => Body::empty(),
             Self::NotFound => Body::empty(),
+            Self::MethodNotAllowed => Body::empty(),
             Self::InternalServerError(ref e) => Body::from(format!("{:#}", e)),
         };
 
@@ -229,7 +234,11 @@ where
         path: &str,
     ) -> Result<Response<Body>, HttpError> {
         if method != Method::POST {
-            return Err(HttpError::NotAcceptable);
+            return Err(HttpError::MethodNotAllowed);
+        }
+
+        if !self.acceptor().enable_http_control_api {
+            return Err(HttpError::Forbidden);
         }
 
         let ok = Response::builder()

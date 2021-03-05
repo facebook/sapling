@@ -63,7 +63,7 @@ pub async fn handle(
         return upload(body).await;
     }
 
-    Err(HttpError::NotAcceptable)
+    Err(HttpError::MethodNotAllowed)
 }
 
 fn download(headers: &HeaderMap<HeaderValue>) -> Result<Response<Body>, HttpError> {

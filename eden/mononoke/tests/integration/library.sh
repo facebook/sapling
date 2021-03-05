@@ -590,9 +590,14 @@ EOF
 scuba_local_path_censored="$SCUBA_CENSORED_LOGGING_PATH"
 CONFIG
   fi
+
+  if [[ -z "$DISABLE_HTTP_CONTROL_API" ]]; then
   cat >> common/common.toml <<CONFIG
 enable_http_control_api=true
+CONFIG
+  fi
 
+  cat >> common/common.toml <<CONFIG
 [[whitelist_entry]]
 identity_type = "$ALLOWED_IDENTITY_TYPE"
 identity_data = "${OVERRIDE_ALLOWED_IDDATA:-$ALLOWED_IDENTITY_DATA}"
