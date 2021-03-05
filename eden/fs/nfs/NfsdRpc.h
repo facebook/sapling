@@ -569,6 +569,59 @@ EDEN_XDR_SERDE_DECL(LINK3resfail, file_attributes, linkdir_wcc);
 
 struct LINK3res : public detail::Nfsstat3Variant<LINK3resok, LINK3resfail> {};
 
+// READDIRPLUS Procedure:
+
+struct READDIRPLUS3args {
+  nfs_fh3 dir;
+  uint64_t cookie;
+  uint64_t cookieverf;
+  uint32_t dircount;
+  uint32_t maxcount;
+};
+EDEN_XDR_SERDE_DECL(
+    READDIRPLUS3args,
+    dir,
+    cookie,
+    cookieverf,
+    dircount,
+    maxcount);
+
+struct entryplus3 {
+  uint64_t fileid;
+  std::string name;
+  uint64_t cookie;
+  post_op_attr name_attributes;
+  post_op_fh3 name_handle;
+};
+EDEN_XDR_SERDE_DECL(
+    entryplus3,
+    fileid,
+    name,
+    cookie,
+    name_attributes,
+    name_handle);
+
+struct dirlistplus3 {
+  XdrList<entryplus3> entries;
+  bool eof;
+};
+EDEN_XDR_SERDE_DECL(dirlistplus3, entries, eof);
+
+struct READDIRPLUS3resok {
+  post_op_attr dir_attributes;
+  uint64_t cookieverf;
+  dirlistplus3 reply;
+};
+EDEN_XDR_SERDE_DECL(READDIRPLUS3resok, dir_attributes, cookieverf, reply);
+
+struct READDIRPLUS3resfail {
+  post_op_attr dir_attributes;
+};
+EDEN_XDR_SERDE_DECL(READDIRPLUS3resfail, dir_attributes);
+
+struct READDIRPLUS3res
+    : public detail::Nfsstat3Variant<READDIRPLUS3resok, READDIRPLUS3resfail> {};
+
 // FSSTAT Procedure:
 
 struct FSSTAT3args {

@@ -63,6 +63,22 @@ EDEN_XDR_SERDE_IMPL(REMOVE3resfail, dir_wcc);
 EDEN_XDR_SERDE_IMPL(LINK3args, file, link);
 EDEN_XDR_SERDE_IMPL(LINK3resok, file_attributes, linkdir_wcc);
 EDEN_XDR_SERDE_IMPL(LINK3resfail, file_attributes, linkdir_wcc);
+EDEN_XDR_SERDE_IMPL(
+    READDIRPLUS3args,
+    dir,
+    cookie,
+    cookieverf,
+    dircount,
+    maxcount);
+EDEN_XDR_SERDE_IMPL(
+    entryplus3,
+    fileid,
+    name,
+    cookie,
+    name_attributes,
+    name_handle);
+EDEN_XDR_SERDE_IMPL(dirlistplus3, entries, eof);
+EDEN_XDR_SERDE_IMPL(READDIRPLUS3resok, dir_attributes, cookieverf, reply);
 EDEN_XDR_SERDE_IMPL(FSSTAT3args, fsroot);
 EDEN_XDR_SERDE_IMPL(
     FSSTAT3resok,
