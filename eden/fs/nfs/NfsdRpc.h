@@ -377,6 +377,30 @@ EDEN_XDR_SERDE_DECL(READLINK3resfail, symlink_attributes);
 struct READLINK3res
     : public detail::Nfsstat3Variant<READLINK3resok, READLINK3resfail> {};
 
+// READ Procedure
+
+struct READ3args {
+  nfs_fh3 file;
+  uint64_t offset;
+  uint32_t count;
+};
+EDEN_XDR_SERDE_DECL(READ3args, file, offset, count);
+
+struct READ3resok {
+  post_op_attr file_attributes;
+  uint32_t count;
+  bool eof;
+  std::unique_ptr<folly::IOBuf> data;
+};
+EDEN_XDR_SERDE_DECL(READ3resok, file_attributes, count, eof, data);
+
+struct READ3resfail {
+  post_op_attr file_attributes;
+};
+EDEN_XDR_SERDE_DECL(READ3resfail, file_attributes);
+
+struct READ3res : public detail::Nfsstat3Variant<READ3resok, READ3resfail> {};
+
 // WRITE Procedure:
 
 using writeverf3 = uint64_t;
