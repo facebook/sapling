@@ -186,7 +186,8 @@ class FuseDispatcher {
    */
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> unlink(
       InodeNumber parent,
-      PathComponentPiece name);
+      PathComponentPiece name,
+      ObjectFetchContext& context);
 
   /**
    * Remove a directory
@@ -196,7 +197,8 @@ class FuseDispatcher {
    */
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> rmdir(
       InodeNumber parent,
-      PathComponentPiece name);
+      PathComponentPiece name,
+      ObjectFetchContext& context);
 
   /**
    * Create a symbolic link

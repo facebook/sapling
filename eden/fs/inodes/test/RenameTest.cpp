@@ -390,8 +390,10 @@ TEST_F(RenameTest, renameIntoUnlinkedDir) {
 
   // Now unlink the destination directory
   auto destDirParent = mount_->getTreeInode(destDirPath.dirname());
-  auto rmdirFuture =
-      destDirParent->rmdir(destDirPath.basename(), InvalidationRequired::No);
+  auto rmdirFuture = destDirParent->rmdir(
+      destDirPath.basename(),
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   ASSERT_TRUE(rmdirFuture.isReady());
   EXPECT_FALSE(rmdirFuture.hasException());
   std::move(rmdirFuture).get();

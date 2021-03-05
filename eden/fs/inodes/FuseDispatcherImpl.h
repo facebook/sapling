@@ -49,10 +49,14 @@ class FuseDispatcherImpl : public FuseDispatcher {
       dev_t rdev) override;
   folly::Future<fuse_entry_out>
   mkdir(InodeNumber parent, PathComponentPiece name, mode_t mode) override;
-  folly::Future<folly::Unit> unlink(InodeNumber parent, PathComponentPiece name)
-      override;
-  folly::Future<folly::Unit> rmdir(InodeNumber parent, PathComponentPiece name)
-      override;
+  folly::Future<folly::Unit> unlink(
+      InodeNumber parent,
+      PathComponentPiece name,
+      ObjectFetchContext& context) override;
+  folly::Future<folly::Unit> rmdir(
+      InodeNumber parent,
+      PathComponentPiece name,
+      ObjectFetchContext& context) override;
   folly::Future<fuse_entry_out> symlink(
       InodeNumber parent,
       PathComponentPiece name,

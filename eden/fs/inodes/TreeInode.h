@@ -176,10 +176,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   mkdir(PathComponentPiece name, mode_t mode, InvalidationRequired invalidate);
   FOLLY_NODISCARD folly::Future<folly::Unit> unlink(
       PathComponentPiece name,
-      InvalidationRequired invalidate);
+      InvalidationRequired invalidate,
+      ObjectFetchContext& context);
   FOLLY_NODISCARD folly::Future<folly::Unit> rmdir(
       PathComponentPiece name,
-      InvalidationRequired invalidate);
+      InvalidationRequired invalidate,
+      ObjectFetchContext& context);
 
   /**
    * Create a filesystem node.

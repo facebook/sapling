@@ -1116,10 +1116,9 @@ TreeInodePtr TreeInode::mkdir(
 
 folly::Future<folly::Unit> TreeInode::unlink(
     PathComponentPiece name,
-    InvalidationRequired invalidate) {
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("TreeInode::unlink");
-  return getOrLoadChild(name, *context)
+    InvalidationRequired invalidate,
+    ObjectFetchContext& context) {
+  return getOrLoadChild(name, context)
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{name},
                   invalidate](const InodePtr& child) mutable {
@@ -1130,10 +1129,9 @@ folly::Future<folly::Unit> TreeInode::unlink(
 
 folly::Future<folly::Unit> TreeInode::rmdir(
     PathComponentPiece name,
-    InvalidationRequired invalidate) {
-  static auto context =
-      ObjectFetchContext::getNullContextWithCauseDetail("TreeInode::rmdir");
-  return getOrLoadChild(name, *context)
+    InvalidationRequired invalidate,
+    ObjectFetchContext& context) {
+  return getOrLoadChild(name, context)
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{name},
                   invalidate](const InodePtr& child) mutable {

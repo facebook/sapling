@@ -349,7 +349,8 @@ Future<Unit> ensureDotEdenSymlink(
                 InvalidationRequired::Yes);
             return folly::unit;
           case Action::UnlinkThenSymlink:
-            return directory->unlink(symlinkName, InvalidationRequired::Yes)
+            return directory
+                ->unlink(symlinkName, InvalidationRequired::Yes, *context)
                 .thenValueInline([=](Unit&&) {
                   directory->symlink(
                       symlinkName,

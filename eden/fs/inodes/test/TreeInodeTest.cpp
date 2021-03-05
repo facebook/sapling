@@ -121,7 +121,12 @@ TEST(TreeInode, updateAndReaddir) {
   EXPECT_EQ(L"file3", result[2].name);
   EXPECT_EQ(L"newfile.txt", result[3].name);
 
-  somedir->unlink("file2"_pc, InvalidationRequired::No).get(0ms);
+  somedir
+      ->unlink(
+          "file2"_pc,
+          InvalidationRequired::No,
+          ObjectFetchContext::getNullContext())
+      .get(0ms);
   result = somedir->readdir();
   ASSERT_EQ(3, result.size());
   EXPECT_EQ(L"file1", result[0].name);
@@ -310,7 +315,11 @@ void runConcurrentModificationAndReaddirIteration(
                 randomName(), "symlink-target", InvalidationRequired::No);
             break;
           case 1: { // unlink
-            root->unlink(pickName(), InvalidationRequired::No).get(0ms);
+            root->unlink(
+                    pickName(),
+                    InvalidationRequired::No,
+                    ObjectFetchContext::getNullContext())
+                .get(0ms);
             break;
           }
           case 2: { // rename

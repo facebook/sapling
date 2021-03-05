@@ -107,15 +107,13 @@ FuseDispatcher::mkdir(InodeNumber, PathComponentPiece, mode_t) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> FuseDispatcher::unlink(
-    InodeNumber,
-    PathComponentPiece) {
+folly::Future<folly::Unit>
+FuseDispatcher::unlink(InodeNumber, PathComponentPiece, ObjectFetchContext&) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<folly::Unit> FuseDispatcher::rmdir(
-    InodeNumber,
-    PathComponentPiece) {
+folly::Future<folly::Unit>
+FuseDispatcher::rmdir(InodeNumber, PathComponentPiece, ObjectFetchContext&) {
   FUSELL_NOT_IMPL();
 }
 

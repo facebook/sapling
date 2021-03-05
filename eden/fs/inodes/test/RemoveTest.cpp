@@ -37,8 +37,10 @@ class UnlinkTest : public ::testing::Test {
 
 TEST_F(UnlinkTest, enoent) {
   auto dir = mount_.getTreeInode("dir");
-  auto unlinkFuture =
-      dir->unlink("notpresent.txt"_pc, InvalidationRequired::No);
+  auto unlinkFuture = dir->unlink(
+      "notpresent.txt"_pc,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   ASSERT_TRUE(unlinkFuture.isReady());
   EXPECT_THROW_ERRNO(std::move(unlinkFuture).get(), ENOENT);
 }
@@ -48,7 +50,10 @@ TEST_F(UnlinkTest, notLoaded) {
   auto childPath = "a.txt"_pc;
 
   // Remove the child when it has not been loaded yet.
-  auto unlinkFuture = dir->unlink(childPath, InvalidationRequired::No);
+  auto unlinkFuture = dir->unlink(
+      childPath,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   ASSERT_TRUE(unlinkFuture.isReady());
   std::move(unlinkFuture).get();
 
@@ -61,7 +66,10 @@ TEST_F(UnlinkTest, inodeAssigned) {
 
   // Assign an inode number to the child without loading it.
   dir->getChildInodeNumber(childPath);
-  auto unlinkFuture = dir->unlink(childPath, InvalidationRequired::No);
+  auto unlinkFuture = dir->unlink(
+      childPath,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   ASSERT_TRUE(unlinkFuture.isReady());
   std::move(unlinkFuture).get();
 
@@ -75,7 +83,10 @@ TEST_F(UnlinkTest, loaded) {
   // Load the child before removing it
   auto file = mount_.getFileInode("dir/a.txt");
   EXPECT_EQ(file->getNodeId(), dir->getChildInodeNumber(childPath));
-  auto unlinkFuture = dir->unlink(childPath, InvalidationRequired::No);
+  auto unlinkFuture = dir->unlink(
+      childPath,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   ASSERT_TRUE(unlinkFuture.isReady());
   std::move(unlinkFuture).get();
 
@@ -99,7 +110,10 @@ TEST_F(UnlinkTest, modified) {
   mount_.overwriteFile("dir/a.txt", newContents);
 
   // Now remove the child
-  auto unlinkFuture = dir->unlink(childPath, InvalidationRequired::No);
+  auto unlinkFuture = dir->unlink(
+      childPath,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   ASSERT_TRUE(unlinkFuture.isReady());
   std::move(unlinkFuture).get();
 
@@ -119,7 +133,10 @@ TEST_F(UnlinkTest, created) {
   auto file = mount_.getFileInode("dir/new.txt");
 
   // Now remove the child
-  auto unlinkFuture = dir->unlink(childPath, InvalidationRequired::No);
+  auto unlinkFuture = dir->unlink(
+      childPath,
+      InvalidationRequired::No,
+      ObjectFetchContext::getNullContext());
   ASSERT_TRUE(unlinkFuture.isReady());
   std::move(unlinkFuture).get();
 

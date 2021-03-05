@@ -546,7 +546,12 @@ void TestMount::deleteFile(folly::StringPiece path) {
   removeFileWithAbsolutePath(absolutePath);
 #endif
 
-  treeInode->unlink(relativePath.basename(), InvalidationRequired::No).get();
+  treeInode
+      ->unlink(
+          relativePath.basename(),
+          InvalidationRequired::No,
+          ObjectFetchContext::getNullContext())
+      .get();
 }
 
 void TestMount::rmdir(folly::StringPiece path) {
@@ -558,7 +563,12 @@ void TestMount::rmdir(folly::StringPiece path) {
   removeRecursively(absolutePath);
 #endif
 
-  treeInode->rmdir(relativePath.basename(), InvalidationRequired::No).get();
+  treeInode
+      ->rmdir(
+          relativePath.basename(),
+          InvalidationRequired::No,
+          ObjectFetchContext::getNullContext())
+      .get();
 }
 
 #ifndef _WIN32

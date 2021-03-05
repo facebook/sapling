@@ -323,21 +323,23 @@ folly::Future<fuse_entry_out> FuseDispatcherImpl::mkdir(
 
 folly::Future<folly::Unit> FuseDispatcherImpl::unlink(
     InodeNumber parent,
-    PathComponentPiece name) {
+    PathComponentPiece name,
+    ObjectFetchContext& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [childName = PathComponent{name}](const TreeInodePtr& inode) {
+      [&context, childName = PathComponent{name}](const TreeInodePtr& inode) {
         // No need to flush the kernel cache because FUSE will do that for us.
-        return inode->unlink(childName, InvalidationRequired::No);
+        return inode->unlink(childName, InvalidationRequired::No, context);
       });
 }
 
 folly::Future<folly::Unit> FuseDispatcherImpl::rmdir(
     InodeNumber parent,
-    PathComponentPiece name) {
+    PathComponentPiece name,
+    ObjectFetchContext& context) {
   return inodeMap_->lookupTreeInode(parent).thenValue(
-      [childName = PathComponent{name}](const TreeInodePtr& inode) {
+      [&context, childName = PathComponent{name}](const TreeInodePtr& inode) {
         // No need to flush the kernel cache because FUSE will do that for us.
-        return inode->rmdir(childName, InvalidationRequired::No);
+        return inode->rmdir(childName, InvalidationRequired::No, context);
       });
 }
 

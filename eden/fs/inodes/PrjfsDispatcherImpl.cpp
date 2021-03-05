@@ -272,13 +272,14 @@ folly::Future<folly::Unit> removeFile(
     bool isDirectory,
     ObjectFetchContext& context) {
   return mount.getInode(path.dirname(), context)
-      .thenValue([=](const InodePtr inode) {
+      .thenValue([path, isDirectory, &context](const InodePtr inode) {
         auto treeInodePtr = inode.asTreePtr();
         if (isDirectory) {
-          return treeInodePtr->rmdir(path.basename(), InvalidationRequired::No);
+          return treeInodePtr->rmdir(
+              path.basename(), InvalidationRequired::No, context);
         } else {
           return treeInodePtr->unlink(
-              path.basename(), InvalidationRequired::No);
+              path.basename(), InvalidationRequired::No, context);
         }
       });
 }

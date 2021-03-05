@@ -1957,9 +1957,8 @@ folly::Future<folly::Unit> FuseChannel::fuseUnlink(
   XLOG(DBG7) << "FUSE_UNLINK " << name;
 
   InodeNumber parent{header.nodeid};
-  return dispatcher_->unlink(parent, name).thenValue([&request](auto&&) {
-    request.replyError(0);
-  });
+  return dispatcher_->unlink(parent, name, request)
+      .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRmdir(
@@ -1971,9 +1970,8 @@ folly::Future<folly::Unit> FuseChannel::fuseRmdir(
 
   XLOG(DBG7) << "FUSE_RMDIR " << name;
   InodeNumber parent{header.nodeid};
-  return dispatcher_->rmdir(parent, name).thenValue([&request](auto&&) {
-    request.replyError(0);
-  });
+  return dispatcher_->rmdir(parent, name, request)
+      .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRename(
