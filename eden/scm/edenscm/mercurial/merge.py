@@ -2264,7 +2264,11 @@ def update(
 
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
 
-        if repo.ui.configbool("experimental", "nativecheckout"):
+        # If we're doing the initial checkout from null, let's use the new fancier
+        # nativecheckout, since it has more efficient fetch mechanics.
+        if repo.ui.configbool("experimental", "nativecheckout") or (
+            repo.ui.configbool("clone", "nativecheckout") and repo["."].node() == nullid
+        ):
             if branchmerge:
                 fallbackcheckout = "branchmerge is not supported: %s" % branchmerge
             elif ancestor is not None:
