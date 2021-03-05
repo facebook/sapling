@@ -65,6 +65,26 @@ folly::Future<std::string> NfsDispatcherImpl::readlink(
       });
 }
 
+folly::Future<NfsDispatcher::ReadRes> NfsDispatcherImpl::read(
+    InodeNumber ino,
+    size_t size,
+    off_t offset,
+    ObjectFetchContext& context) {
+  return inodeMap_->lookupFileInode(ino).thenValue(
+      [&context, size, offset](const FileInodePtr& inode) {
+        return inode->read(size, offset, context)
+            .thenValue([size](std::unique_ptr<folly::IOBuf>&& data) {
+              // TODO(xavierd): Detect an empty file when a empty read is
+              // performed. This forces the client to issue 2 reads: one to
+              // read the file, and the second to validate it is at the end of
+              // the file. If we could detect an EOF without the second read we
+              // can half the number of READ RPC.
+              auto isEof = size != 0 && data->empty();
+              return ReadRes{std::move(data), isEof};
+            });
+      });
+}
+
 folly::Future<NfsDispatcher::WriteRes> NfsDispatcherImpl::write(
     InodeNumber ino,
     std::unique_ptr<folly::IOBuf> data,

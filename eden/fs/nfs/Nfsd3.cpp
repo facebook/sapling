@@ -468,11 +468,49 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::readlink(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::read(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<READ3args>::deserialize(deser);
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("read");
+
+  return dispatcher_->read(args.file.ino, args.count, args.offset, *context)
+      .thenTry([this, ser = std::move(ser), ino = args.file.ino](
+                   folly::Try<NfsDispatcher::ReadRes> tryRead) mutable {
+        return dispatcher_->getattr(ino, *context)
+            .thenTry([ser = std::move(ser), tryRead = std::move(tryRead)](
+                         folly::Try<struct stat> tryStat) mutable {
+              if (tryRead.hasException()) {
+                READ3res res{
+                    {{exceptionToNfsError(tryRead.exception()),
+                      READ3resfail{statToPostOpAttr(std::move(tryStat))}}}};
+                XdrTrait<READ3res>::serialize(ser, res);
+              } else {
+                auto read = std::move(tryRead).value();
+                auto length = read.data->computeChainDataLength();
+
+                // Make sure that we haven't read more than what we can encode.
+                XDCHECK_LE(
+                    length, size_t{std::numeric_limits<uint32_t>::max()});
+
+                READ3res res{
+                    {{nfsstat3::NFS3_OK,
+                      READ3resok{
+                          /*file_attributes*/ statToPostOpAttr(
+                              std::move(tryStat)),
+                          /*count*/ folly::to_narrow(length),
+                          /*eof*/ read.isEof,
+                          /*data*/ std::move(read.data),
+                      }}}};
+                XdrTrait<READ3res>::serialize(ser, res);
+              }
+              return folly::unit;
+            });
+      });
 }
 
 /**

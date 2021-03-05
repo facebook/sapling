@@ -71,6 +71,25 @@ class NfsDispatcher {
       ObjectFetchContext& context) = 0;
 
   /**
+   * Return value of the read method.
+   */
+  struct ReadRes {
+    /** Data successfully read */
+    std::unique_ptr<folly::IOBuf> data;
+    /** Has the read reached the end of file */
+    bool isEof;
+  };
+
+  /**
+   * Read data from the file referenced by the InodeNumber ino.
+   */
+  virtual folly::Future<ReadRes> read(
+      InodeNumber ino,
+      size_t size,
+      off_t offset,
+      ObjectFetchContext& context) = 0;
+
+  /**
    * Return value of the write method.
    */
   struct WriteRes {
