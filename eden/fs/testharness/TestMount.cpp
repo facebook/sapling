@@ -466,10 +466,9 @@ void TestMount::overwriteFile(
   auto newContents = readFile(path);
   EXPECT_EQ(newContents, contents);
 #else
-  fuse_setattr_in attr;
-  attr.valid = FATTR_SIZE;
-  attr.size = 0;
-  (void)file->setattr(attr).get(0ms);
+  DesiredMetadata desired;
+  desired.size = 0;
+  (void)file->setattr(desired).get(0ms);
 
   off_t offset = 0;
   file->write(contents, offset).get(0ms);
@@ -575,9 +574,8 @@ void TestMount::rmdir(folly::StringPiece path) {
 void TestMount::chmod(folly::StringPiece path, mode_t permissions) {
   auto inode = getInode(RelativePathPiece{path});
 
-  fuse_setattr_in desiredAttr = {};
+  DesiredMetadata desiredAttr;
   desiredAttr.mode = permissions;
-  desiredAttr.valid = FATTR_MODE;
   inode->setattr(desiredAttr).get();
 }
 #endif

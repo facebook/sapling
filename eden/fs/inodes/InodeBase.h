@@ -133,7 +133,8 @@ class InodeBase {
 
 #ifndef _WIN32
   // See Dispatcher::setattr
-  virtual folly::Future<struct stat> setattr(const fuse_setattr_in& attr) = 0;
+  virtual folly::Future<struct stat> setattr(
+      const DesiredMetadata& desired) = 0;
 
   FOLLY_NODISCARD folly::Future<folly::Unit>
   setxattr(folly::StringPiece name, folly::StringPiece value, int flags);

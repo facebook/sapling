@@ -3540,7 +3540,7 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
       });
 }
 
-folly::Future<struct stat> TreeInode::setattr(const fuse_setattr_in& attr) {
+folly::Future<struct stat> TreeInode::setattr(const DesiredMetadata& desired) {
   materialize();
   struct stat result(getMount()->initStatData());
 
@@ -3554,7 +3554,7 @@ folly::Future<struct stat> TreeInode::setattr(const fuse_setattr_in& attr) {
   auto contents = contents_.wlock();
   auto metadata = getMount()->getInodeMetadataTable()->modifyOrThrow(
       getNodeId(),
-      [&](auto& metadata) { metadata.updateFromAttr(getClock(), attr); });
+      [&](auto& metadata) { metadata.updateFromDesired(getClock(), desired); });
   metadata.applyToStat(result);
 
   // Update Journal

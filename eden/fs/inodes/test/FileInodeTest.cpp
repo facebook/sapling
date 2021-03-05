@@ -87,7 +87,7 @@ struct stat getFileAttr(const FileInodePtr& inode) {
 
 struct stat setFileAttr(
     const FileInodePtr& inode,
-    const fuse_setattr_in& desired) {
+    const DesiredMetadata& desired) {
   auto attrFuture = inode->setattr(desired);
   if (!attrFuture.isReady()) {
     ADD_FAILURE() << "setattr() future is not ready";
@@ -199,8 +199,8 @@ TEST_F(FileInodeTest, getattrFromOverlay) {
 
 void testSetattrTruncateAll(TestMount& mount) {
   auto inode = mount.getFileInode("dir/a.txt");
-  fuse_setattr_in desired = {};
-  desired.valid = FATTR_SIZE;
+  DesiredMetadata desired;
+  desired.size = 0;
   auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
@@ -227,9 +227,8 @@ TEST_F(FileInodeTest, setattrTruncateAllMaterialized) {
 
 TEST_F(FileInodeTest, setattrTruncatePartial) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  fuse_setattr_in desired = {};
+  DesiredMetadata desired;
   desired.size = 4;
-  desired.valid = FATTR_SIZE;
   auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
@@ -241,9 +240,8 @@ TEST_F(FileInodeTest, setattrTruncatePartial) {
 
 TEST_F(FileInodeTest, setattrBiggerSize) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  fuse_setattr_in desired = {};
+  DesiredMetadata desired;
   desired.size = 30;
-  desired.valid = FATTR_SIZE;
   auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
@@ -259,11 +257,10 @@ TEST_F(FileInodeTest, setattrBiggerSize) {
 
 TEST_F(FileInodeTest, setattrPermissions) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  fuse_setattr_in desired = {};
+  DesiredMetadata desired;
 
   for (int n = 0; n <= 0777; ++n) {
     desired.mode = n;
-    desired.valid = FATTR_MODE;
     auto attr = setFileAttr(inode, desired);
 
     BASIC_ATTR_XCHECKS(inode, attr);
@@ -275,11 +272,10 @@ TEST_F(FileInodeTest, setattrPermissions) {
 
 TEST_F(FileInodeTest, setattrFileType) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  fuse_setattr_in desired = {};
+  DesiredMetadata desired;
 
   // File type bits in the mode should be ignored.
   desired.mode = S_IFLNK | 0755;
-  desired.valid = FATTR_MODE;
   auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
@@ -291,12 +287,14 @@ TEST_F(FileInodeTest, setattrFileType) {
 
 TEST_F(FileInodeTest, setattrAtime) {
   auto inode = mount_.getFileInode("dir/a.txt");
-  fuse_setattr_in desired = {};
-  desired.valid = FATTR_ATIME;
+  DesiredMetadata desired;
 
   // Set the atime to a specific value
-  desired.atime = 1234;
-  desired.atimensec = 5678;
+  timespec atime;
+  atime.tv_sec = 1234;
+  atime.tv_nsec = 5678;
+  desired.atime = atime;
+
   auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
@@ -307,9 +305,8 @@ TEST_F(FileInodeTest, setattrAtime) {
   mount_.getClock().advance(10min);
 
   // Ask to set the atime to the current time
-  desired.atime = 8765;
-  desired.atimensec = 4321;
-  desired.valid = FATTR_ATIME_NOW;
+  desired.atime = mount_.getClock().getRealtime();
+
   attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
@@ -320,12 +317,14 @@ TEST_F(FileInodeTest, setattrAtime) {
 
 void testSetattrMtime(TestMount& mount) {
   auto inode = mount.getFileInode("dir/a.txt");
-  fuse_setattr_in desired = {};
+  DesiredMetadata desired;
 
   // Set the mtime to a specific value
-  desired.mtime = 1234;
-  desired.mtimensec = 5678;
-  desired.valid = FATTR_MTIME;
+  timespec mtime;
+  mtime.tv_sec = 1234;
+  mtime.tv_nsec = 5678;
+  desired.mtime = mtime;
+
   auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
@@ -336,9 +335,8 @@ void testSetattrMtime(TestMount& mount) {
   // Ask to set the mtime to the current time
   mount.getClock().advance(1234min);
   auto start = mount.getClock().getTimePoint();
-  desired.mtime = 8765;
-  desired.mtimensec = 4321;
-  desired.valid = FATTR_MTIME_NOW;
+  desired.mtime = mount.getClock().getRealtime();
+
   attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
@@ -388,10 +386,9 @@ TEST_F(FileInodeTest, truncatingMaterializesParent) {
   EXPECT_EQ(false, isInodeMaterialized(grandparent));
   EXPECT_EQ(false, isInodeMaterialized(parent));
 
-  fuse_setattr_in attr;
-  attr.valid = FATTR_SIZE;
-  attr.size = 0;
-  (void)inode->setattr(attr).get(0ms);
+  DesiredMetadata desired;
+  desired.size = 0;
+  (void)inode->setattr(desired).get(0ms);
 
   EXPECT_EQ(true, isInodeMaterialized(grandparent));
   EXPECT_EQ(true, isInodeMaterialized(parent));
@@ -414,10 +411,9 @@ TEST(FileInode, truncatingDuringLoad) {
 
   {
     // Synchronously truncate the file while the load is in progress.
-    fuse_setattr_in attr;
-    attr.valid = FATTR_SIZE;
-    attr.size = 0;
-    (void)inode->setattr(attr).get(0ms);
+    DesiredMetadata desired;
+    desired.size = 0;
+    (void)inode->setattr(desired).get(0ms);
     // Deallocate the handle here, closing the open file.
   }
 
@@ -493,10 +489,9 @@ TEST(FileInode, truncateDuringLoad) {
   // Truncate the file while the initial read is in progress. This should
   // immediately truncate the file even without needing to wait for the data
   // from the object store.
-  fuse_setattr_in attr;
-  attr.valid = FATTR_SIZE;
-  attr.size = 0;
-  (void)inode->setattr(attr).get(0ms);
+  DesiredMetadata desired;
+  desired.size = 0;
+  (void)inode->setattr(desired).get(0ms);
 
   // The read should complete now too.
   ASSERT_TRUE(dataFuture.isReady());

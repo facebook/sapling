@@ -426,7 +426,7 @@ FileInode::FileInode(
       state_(folly::in_place) {}
 
 #ifndef _WIN32
-folly::Future<struct stat> FileInode::setattr(const fuse_setattr_in& attr) {
+folly::Future<struct stat> FileInode::setattr(const DesiredMetadata& desired) {
   // If this file is inside of .eden it cannot be reparented, so getParentRacy()
   // is okay.
   auto parent = getParentRacy();
@@ -435,27 +435,27 @@ folly::Future<struct stat> FileInode::setattr(const fuse_setattr_in& attr) {
         InodeError(EPERM, inodePtrFromThis()));
   }
 
-  auto setAttrs = [self = inodePtrFromThis(), attr](LockedState&& state) {
+  auto setAttrs = [self = inodePtrFromThis(), desired](LockedState&& state) {
     auto ino = self->getNodeId();
     auto result = self->getMount()->initStatData();
 
     XDCHECK_EQ(State::MATERIALIZED_IN_OVERLAY, state->tag)
         << "Must have a file in the overlay at this point";
 
-    // Set the size of the file when FATTR_SIZE is set
-    if (attr.valid & FATTR_SIZE) {
+    // Set the size of the file when desired.size is set
+    if (desired.size.has_value()) {
       // Throws upon error.
-      self->getOverlayFileAccess(state)->truncate(*self, attr.size);
+      self->getOverlayFileAccess(state)->truncate(*self, desired.size.value());
     }
 
     auto metadata = self->getMount()->getInodeMetadataTable()->modifyOrThrow(
         ino, [&](auto& metadata) {
-          metadata.updateFromAttr(self->getClock(), attr);
+          metadata.updateFromDesired(self->getClock(), desired);
         });
 
     // We need to call fstat function here to get the size of the overlay
     // file. We might update size in the result while truncating the file
-    // when FATTR_SIZE flag is set but when the flag is not set we
+    // when desired.size flag is set but when the flag is not set we
     // have to return the correct size of the file even if some size is sent
     // in attr.st.st_size.
     off_t size = self->getOverlayFileAccess(state)->getFileSize(*self);
@@ -473,7 +473,7 @@ folly::Future<struct stat> FileInode::setattr(const fuse_setattr_in& attr) {
   // Minor optimization: if we know that the file is being completely truncated
   // as part of this operation, there's no need to fetch the underlying data,
   // so use truncateAndRun() rather than runWhileMaterialized()
-  bool truncate = (attr.valid & FATTR_SIZE) && attr.size == 0;
+  bool truncate = desired.size.has_value() && desired.size.value() == 0;
   auto state = LockedState{this};
   if (truncate) {
     return truncateAndRun(std::move(state), setAttrs);

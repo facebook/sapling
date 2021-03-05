@@ -17,6 +17,7 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
+#include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/SystemError.h"
 
 using namespace folly;
@@ -159,7 +160,42 @@ folly::Future<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
   }
 
   return inodeMap_->lookupInode(ino)
-      .thenValue([attr](const InodePtr& inode) { return inode->setattr(attr); })
+      .thenValue([this, attr](const InodePtr& inode) {
+        auto fuseTimeToTimespec = [](uint64_t time, uint64_t ntime) {
+          timespec spec;
+          spec.tv_sec = time;
+          spec.tv_nsec = ntime;
+          return spec;
+        };
+
+        auto now = mount_->getClock().getRealtime();
+
+        DesiredMetadata desired;
+        if (attr.valid & FATTR_SIZE) {
+          desired.size = attr.size;
+        }
+        if (attr.valid & FATTR_MODE) {
+          desired.mode = attr.mode;
+        }
+        if (attr.valid & FATTR_UID) {
+          desired.uid = attr.uid;
+        }
+        if (attr.valid & FATTR_GID) {
+          desired.gid = attr.gid;
+        }
+        if (attr.valid & FATTR_ATIME) {
+          desired.atime = fuseTimeToTimespec(attr.atime, attr.atimensec);
+        } else if (attr.valid & FATTR_ATIME_NOW) {
+          desired.atime = now;
+        }
+        if (attr.valid & FATTR_MTIME) {
+          desired.mtime = fuseTimeToTimespec(attr.mtime, attr.mtimensec);
+        } else if (attr.valid & FATTR_MTIME_NOW) {
+          desired.mtime = now;
+        }
+
+        return inode->setattr(desired);
+      })
       .thenValue([](struct stat&& stat) {
         return FuseDispatcher::Attr{std::move(stat)};
       });

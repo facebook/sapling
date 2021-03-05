@@ -8,13 +8,28 @@
 #pragma once
 
 #include <sys/stat.h>
+#include <optional>
 #include "eden/fs/inodes/InodeTimestamps.h"
 
-struct fuse_setattr_in;
 struct stat;
 
 namespace facebook {
 namespace eden {
+
+/**
+ * Set of metadata to update during an InodeBase::setattr call.
+ *
+ * Any non-optional field will be reflected into the corresponding
+ * InodeMetadata object.
+ */
+struct DesiredMetadata {
+  std::optional<size_t> size;
+  std::optional<mode_t> mode;
+  std::optional<uid_t> uid;
+  std::optional<gid_t> gid;
+  std::optional<timespec> atime;
+  std::optional<timespec> mtime;
+};
 
 /**
  * Fixed-size structure of per-inode bits that should be persisted across runs.
@@ -42,7 +57,7 @@ struct InodeMetadata {
   gid_t gid{0};
   InodeTimestamps timestamps;
 
-  void updateFromAttr(const Clock& clock, const fuse_setattr_in& attr);
+  void updateFromDesired(const Clock& clock, const DesiredMetadata& attr);
 
   void applyToStat(struct stat& st) const;
 
@@ -51,5 +66,6 @@ struct InodeMetadata {
   // dev_t rdev;
   // creation time
 };
+
 } // namespace eden
 } // namespace facebook

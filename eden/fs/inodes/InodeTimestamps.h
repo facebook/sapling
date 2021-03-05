@@ -12,13 +12,13 @@
 #include <stdint.h>
 #include <time.h>
 
-struct fuse_setattr_in;
 struct stat;
 
 namespace facebook {
 namespace eden {
 
 class Clock;
+struct DesiredMetadata;
 
 /**
  * For space efficiency, store timestamps in a single 64-bit value as
@@ -149,11 +149,11 @@ struct InodeTimestamps {
 #ifndef _WIN32
   /**
    * Helper that assigns all three timestamps from the flags and parameters in
-   * a fuse_setattr_in struct.
+   * a DesiredMetadata struct.
    *
    * Always sets ctime to the current time as given by the clock.
    */
-  void setattrTimes(const Clock& clock, const fuse_setattr_in& attr);
+  void setattrTimes(const Clock& clock, const DesiredMetadata& attr);
 
   /**
    * Updates st_atime, st_mtime, and st_ctime of the given stat struct.

@@ -9,11 +9,8 @@
 
 #include <folly/Conv.h>
 #include <sys/stat.h>
+#include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/utils/Clock.h"
-
-#ifndef _WIN32
-#include "eden/fs/fuse/FuseTypes.h"
-#endif
 
 namespace facebook {
 namespace eden {
@@ -121,27 +118,17 @@ timespec EdenTimestamp::toTimespec() const noexcept {
 #ifndef _WIN32
 void InodeTimestamps::setattrTimes(
     const Clock& clock,
-    const fuse_setattr_in& attr) {
+    const DesiredMetadata& attr) {
   const auto now = clock.getRealtime();
 
   // Set atime for TreeInode.
-  if (attr.valid & FATTR_ATIME) {
-    timespec attr_atime;
-    attr_atime.tv_sec = attr.atime;
-    attr_atime.tv_nsec = attr.atimensec;
-    atime = attr_atime;
-  } else if (attr.valid & FATTR_ATIME_NOW) {
-    atime = now;
+  if (attr.atime.has_value()) {
+    atime = attr.atime.value();
   }
 
   // Set mtime for TreeInode.
-  if (attr.valid & FATTR_MTIME) {
-    timespec attr_mtime;
-    attr_mtime.tv_sec = attr.mtime;
-    attr_mtime.tv_nsec = attr.mtimensec;
-    mtime = attr_mtime;
-  } else if (attr.valid & FATTR_MTIME_NOW) {
-    mtime = now;
+  if (attr.mtime.has_value()) {
+    mtime = attr.mtime.value();
   }
 
   // we do not allow users to set ctime using setattr. ctime should be changed

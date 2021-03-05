@@ -13,20 +13,20 @@
 namespace facebook {
 namespace eden {
 
-void InodeMetadata::updateFromAttr(
+void InodeMetadata::updateFromDesired(
     const Clock& clock,
-    const fuse_setattr_in& attr) {
-  if (attr.valid & FATTR_MODE) {
+    const DesiredMetadata& attr) {
+  if (attr.mode.has_value()) {
     // Make sure we preserve the file type bits, and only update
     // permissions.
-    mode = (mode & S_IFMT) | (07777 & attr.mode);
+    mode = (mode & S_IFMT) | (07777 & attr.mode.value());
   }
 
-  if (attr.valid & FATTR_UID) {
-    uid = attr.uid;
+  if (attr.uid.has_value()) {
+    uid = attr.uid.value();
   }
-  if (attr.valid & FATTR_GID) {
-    gid = attr.gid;
+  if (attr.gid.has_value()) {
+    gid = attr.gid.value();
   }
 
   timestamps.setattrTimes(clock, attr);
