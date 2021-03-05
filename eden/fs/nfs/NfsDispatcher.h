@@ -152,6 +152,26 @@ class NfsDispatcher {
       mode_t mode,
       ObjectFetchContext& context) = 0;
 
+  /**
+   * Return value of the unlink method.
+   */
+  struct UnlinkRes {
+    /** Attributes of the directory prior to removing the file */
+    std::optional<struct stat> preDirStat;
+    /** Attributes of the directory after removing the file */
+    std::optional<struct stat> postDirStat;
+  };
+
+  /**
+   * Remove the file/directory name from the directory referenced by the
+   * InodeNumber dir.
+   *
+   * For the pre and post dir stat, refer to the documentation of the create
+   * method above.
+   */
+  virtual folly::Future<UnlinkRes>
+  unlink(InodeNumber dir, PathComponent name, ObjectFetchContext& context) = 0;
+
   virtual folly::Future<struct statfs> statfs(
       InodeNumber dir,
       ObjectFetchContext& context) = 0;

@@ -124,6 +124,21 @@ folly::Future<NfsDispatcher::MkdirRes> NfsDispatcherImpl::mkdir(
       });
 }
 
+folly::Future<NfsDispatcher::UnlinkRes> NfsDispatcherImpl::unlink(
+    InodeNumber dir,
+    PathComponent name,
+    ObjectFetchContext& context) {
+  return inodeMap_->lookupTreeInode(dir).thenValue(
+      [&context, name = std::move(name)](const TreeInodePtr& inode) {
+        return inode->unlink(name, InvalidationRequired::No, context)
+            .thenValue([](auto&&) {
+              // TODO(xavierd): Modify unlink to obtain the pre and post stat
+              // of the directory.
+              return NfsDispatcher::UnlinkRes{std::nullopt, std::nullopt};
+            });
+      });
+}
+
 folly::Future<struct statfs> NfsDispatcherImpl::statfs(
     InodeNumber /*dir*/,
     ObjectFetchContext& /*context*/) {

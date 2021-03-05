@@ -715,11 +715,54 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::mknod(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::remove(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<REMOVE3args>::deserialize(deser);
+
+  // Don't allow removing the special directories.
+  if (args.object.name == "." || args.object.name == "..") {
+    REMOVE3res res{{{nfsstat3::NFS3ERR_ACCES, REMOVE3resfail{}}}};
+    XdrTrait<REMOVE3res>::serialize(ser, res);
+    return folly::unit;
+  }
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("remove");
+
+  // TODO(xavierd): What if args.object.name is a directory? This will fail
+  // with NFS3ERR_ISDIR, but the spec is vague regarding what needs to happen
+  // here, "REMOVE can be used to remove directories, subject to restrictions
+  // imposed by either the client or server interfaces"
+
+  return dispatcher_
+      ->unlink(args.object.dir.ino, PathComponent(args.object.name), *context)
+      .thenTry([ser = std::move(ser)](
+                   folly::Try<NfsDispatcher::UnlinkRes> try_) mutable {
+        if (try_.hasException()) {
+          REMOVE3res res{
+              {{exceptionToNfsError(try_.exception()), REMOVE3resfail{}}}};
+          XdrTrait<REMOVE3res>::serialize(ser, res);
+        } else {
+          auto unlinkRes = std::move(try_).value();
+
+          REMOVE3res res{
+              {{nfsstat3::NFS3_OK,
+                {REMOVE3resok{{wcc_data{
+                    /*before*/ unlinkRes.preDirStat.has_value()
+                        ? statToPreOpAttr(unlinkRes.preDirStat.value())
+                        : pre_op_attr{},
+                    /*after*/ unlinkRes.postDirStat.has_value()
+                        ? post_op_attr{statToFattr3(
+                              unlinkRes.postDirStat.value())}
+                        : post_op_attr{},
+                }}}}}}};
+          XdrTrait<REMOVE3res>::serialize(ser, res);
+        }
+        return folly::unit;
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::rmdir(
