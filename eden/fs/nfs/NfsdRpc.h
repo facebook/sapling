@@ -305,6 +305,30 @@ EDEN_XDR_SERDE_DECL(GETATTR3resok, obj_attributes);
 
 struct GETATTR3res : public detail::Nfsstat3Variant<GETATTR3resok> {};
 
+// SETATTR Procedure:
+
+struct sattrguard3 : public XdrOptionalVariant<nfstime3> {};
+
+struct SETATTR3args {
+  nfs_fh3 object;
+  sattr3 new_attributes;
+  sattrguard3 guard;
+};
+EDEN_XDR_SERDE_DECL(SETATTR3args, object, new_attributes, guard);
+
+struct SETATTR3resok {
+  wcc_data obj_wcc;
+};
+EDEN_XDR_SERDE_DECL(SETATTR3resok, obj_wcc);
+
+struct SETATTR3resfail {
+  wcc_data obj_wcc;
+};
+EDEN_XDR_SERDE_DECL(SETATTR3resfail, obj_wcc);
+
+struct SETATTR3res
+    : public detail::Nfsstat3Variant<SETATTR3resok, SETATTR3resfail> {};
+
 // LOOKUP Procedure:
 
 struct LOOKUP3args {

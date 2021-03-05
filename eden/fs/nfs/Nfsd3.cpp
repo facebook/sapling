@@ -980,9 +980,30 @@ std::string formatGetattr(folly::io::Cursor deser) {
   return fmt::format(FMT_STRING("ino={}"), args.object.ino);
 }
 
-std::string formatSetattr(folly::io::Cursor /*deser*/) {
-  // TODO(xavierd): Fill this in.
-  return "";
+std::string formatSattr3(const sattr3& attr) {
+  auto formatOpt = [](auto&& val, const char* fmtString = "{}") {
+    using T = std::decay_t<decltype(val)>;
+    if (val.tag) {
+      return fmt::format(fmtString, std::get<typename T::TrueVariant>(val.v));
+    }
+    return std::string();
+  };
+
+  // TODO(xavierd): format the times too?
+  return fmt::format(
+      FMT_STRING("mode={}, uid={}, gid={}, size={}"),
+      formatOpt(attr.mode, "{:#o}"),
+      formatOpt(attr.uid),
+      formatOpt(attr.gid),
+      formatOpt(attr.size));
+}
+
+std::string formatSetattr(folly::io::Cursor deser) {
+  auto args = XdrTrait<SETATTR3args>::deserialize(deser);
+  return fmt::format(
+      FMT_STRING("ino={}, attr=({})"),
+      args.object.ino,
+      formatSattr3(args.new_attributes));
 }
 
 std::string formatLookup(folly::io::Cursor deser) {
@@ -1044,16 +1065,24 @@ std::string formatCreate(folly::io::Cursor deser) {
     }
   };
   return fmt::format(
-      FMT_STRING("dir={}, name={}, mode={}"),
+      FMT_STRING("dir={}, name={}, mode={}{}"),
       args.where.dir.ino,
       args.where.name,
-      formatMode(args.how.tag));
+      formatMode(args.how.tag),
+      args.how.tag != createmode3::EXCLUSIVE
+          ? fmt::format(
+                FMT_STRING(" attr=({})"),
+                formatSattr3(std::get<sattr3>(args.how.v)))
+          : "");
 }
 
 std::string formatMkdir(folly::io::Cursor deser) {
   auto args = XdrTrait<MKDIR3args>::deserialize(deser);
   return fmt::format(
-      FMT_STRING("dir={}, name={}"), args.where.dir.ino, args.where.name);
+      FMT_STRING("dir={}, name={}, attr=({})"),
+      args.where.dir.ino,
+      args.where.name,
+      formatSattr3(args.attributes));
 }
 
 std::string formatSymlink(folly::io::Cursor /*deser*/) {
