@@ -324,11 +324,11 @@ class IncrementalChangesetExporter(object):
             if len(tree):
                 return
 
-            # The parent tree is empty. Se, we can delete it.
-            del self._dirs[parent]
-
             if parent == "":
                 return
+
+            # The parent tree is empty. Se, we can delete it.
+            del self._dirs[parent]
 
             basename = os.path.basename(parent)
             parent = os.path.dirname(parent)
