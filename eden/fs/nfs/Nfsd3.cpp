@@ -1085,9 +1085,14 @@ std::string formatMkdir(folly::io::Cursor deser) {
       formatSattr3(args.attributes));
 }
 
-std::string formatSymlink(folly::io::Cursor /*deser*/) {
-  // TODO(xavierd): Fill this in.
-  return "";
+std::string formatSymlink(folly::io::Cursor deser) {
+  auto args = XdrTrait<SYMLINK3args>::deserialize(deser);
+  return fmt::format(
+      FMT_STRING("dir={}, name={}, symlink={}, attr=({})"),
+      args.where.dir.ino,
+      args.where.name,
+      args.symlink.symlink_data,
+      formatSattr3(args.symlink.symlink_attributes));
 }
 
 std::string formatMknod(folly::io::Cursor /*deser*/) {

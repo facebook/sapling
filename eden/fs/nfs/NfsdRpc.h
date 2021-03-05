@@ -527,6 +527,35 @@ EDEN_XDR_SERDE_DECL(MKDIR3resfail, dir_wcc);
 struct MKDIR3res : public detail::Nfsstat3Variant<MKDIR3resok, MKDIR3resfail> {
 };
 
+// SYMLINK Procedure:
+
+struct symlinkdata3 {
+  sattr3 symlink_attributes;
+  std::string symlink_data;
+};
+EDEN_XDR_SERDE_DECL(symlinkdata3, symlink_attributes, symlink_data);
+
+struct SYMLINK3args {
+  diropargs3 where;
+  symlinkdata3 symlink;
+};
+EDEN_XDR_SERDE_DECL(SYMLINK3args, where, symlink);
+
+struct SYMLINK3resok {
+  post_op_fh3 obj;
+  post_op_attr obj_attributes;
+  wcc_data dir_wcc;
+};
+EDEN_XDR_SERDE_DECL(SYMLINK3resok, obj, obj_attributes, dir_wcc);
+
+struct SYMLINK3resfail {
+  wcc_data dir_wcc;
+};
+EDEN_XDR_SERDE_DECL(SYMLINK3resfail, dir_wcc);
+
+struct SYMLINK3res
+    : public detail::Nfsstat3Variant<SYMLINK3resok, SYMLINK3resfail> {};
+
 // REMOVE Procedure:
 
 struct REMOVE3args {
