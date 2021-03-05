@@ -47,6 +47,16 @@ import testing repo to mononoke
 start SCS server
   $ start_and_wait_for_scs_server
 
+wait for warm bookmark cache to populate all the bookmarks
+  $ for attempt in 1 2 3
+  > do
+  >   if [[ "$(scsc list-bookmarks -R repo | wc -l)" == "11" ]]
+  >   then
+  >     break
+  >   fi
+  >   sleep 1
+  > done
+
 list bookmarks
 
   $ scsc list-bookmarks -R repo
