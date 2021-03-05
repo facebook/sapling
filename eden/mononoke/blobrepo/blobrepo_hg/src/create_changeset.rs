@@ -267,6 +267,17 @@ impl CreateChangeset {
         let changeset_complete_fut = async move {
             let ((hg_cs, bonsai_cs), _) = future::try_join(changeset, parents_complete).await?;
 
+            // update changeset mapping
+            let completion_record = ChangesetInsert {
+                repo_id: repo.get_repoid(),
+                cs_id: bonsai_cs.get_changeset_id(),
+                parents: bonsai_cs.parents().into_iter().collect(),
+            };
+            complete_changesets
+                .add(ctx.clone(), completion_record)
+                .await
+                .context("While inserting into changeset table")?;
+
             // update bonsai mapping
             let bcs_id = bonsai_cs.get_changeset_id();
             let bonsai_hg_entry = BonsaiHgMappingEntry {
@@ -278,17 +289,6 @@ impl CreateChangeset {
                 .add(&ctx, bonsai_hg_entry)
                 .await
                 .context("While inserting mapping")?;
-
-            // update changeset mapping
-            let completion_record = ChangesetInsert {
-                repo_id: repo.get_repoid(),
-                cs_id: bonsai_cs.get_changeset_id(),
-                parents: bonsai_cs.parents().into_iter().collect(),
-            };
-            complete_changesets
-                .add(ctx.clone(), completion_record)
-                .await
-                .context("While inserting into changeset table")?;
 
             Ok::<_, Error>((bonsai_cs, hg_cs))
         }
