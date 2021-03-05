@@ -158,8 +158,11 @@ folly::Future<FuseDispatcher::Attr> FuseDispatcherImpl::setattr(
     folly::throwSystemErrorExplicit(EPERM, "Extra mode bits are disallowed");
   }
 
-  return inodeMap_->lookupInode(ino).thenValue(
-      [attr](const InodePtr& inode) { return inode->setattr(attr); });
+  return inodeMap_->lookupInode(ino)
+      .thenValue([attr](const InodePtr& inode) { return inode->setattr(attr); })
+      .thenValue([](struct stat&& stat) {
+        return FuseDispatcher::Attr{std::move(stat)};
+      });
 }
 
 void FuseDispatcherImpl::forget(InodeNumber ino, unsigned long nlookup) {

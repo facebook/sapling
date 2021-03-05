@@ -513,12 +513,12 @@ TEST(EdenMount, testCanModifyPermissionsOnFilesAndDirs) {
   attr.mode = modebits; // setattr ignores format flags
 
   auto treeResult = treeInode->setattr(attr).get(0ms);
-  EXPECT_EQ(treeInode->getNodeId().get(), treeResult.st.st_ino);
-  EXPECT_EQ(S_IFDIR | modebits, treeResult.st.st_mode);
+  EXPECT_EQ(treeInode->getNodeId().get(), treeResult.st_ino);
+  EXPECT_EQ(S_IFDIR | modebits, treeResult.st_mode);
 
   auto fileResult = fileInode->setattr(attr).get(0ms);
-  EXPECT_EQ(fileInode->getNodeId().get(), fileResult.st.st_ino);
-  EXPECT_EQ(S_IFREG | modebits, fileResult.st.st_mode);
+  EXPECT_EQ(fileInode->getNodeId().get(), fileResult.st_ino);
+  EXPECT_EQ(S_IFREG | modebits, fileResult.st_mode);
 }
 
 TEST(EdenMount, testCanChownFilesAndDirs) {
@@ -536,14 +536,14 @@ TEST(EdenMount, testCanChownFilesAndDirs) {
   attr.gid = 27;
 
   auto treeResult = treeInode->setattr(attr).get(0ms);
-  EXPECT_EQ(treeInode->getNodeId().get(), treeResult.st.st_ino);
-  EXPECT_EQ(attr.uid, treeResult.st.st_uid);
-  EXPECT_EQ(attr.gid, treeResult.st.st_gid);
+  EXPECT_EQ(treeInode->getNodeId().get(), treeResult.st_ino);
+  EXPECT_EQ(attr.uid, treeResult.st_uid);
+  EXPECT_EQ(attr.gid, treeResult.st_gid);
 
   auto fileResult = fileInode->setattr(attr).get(0ms);
-  EXPECT_EQ(fileInode->getNodeId().get(), fileResult.st.st_ino);
-  EXPECT_EQ(attr.uid, fileResult.st.st_uid);
-  EXPECT_EQ(attr.gid, fileResult.st.st_gid);
+  EXPECT_EQ(fileInode->getNodeId().get(), fileResult.st_ino);
+  EXPECT_EQ(attr.uid, fileResult.st_uid);
+  EXPECT_EQ(attr.gid, fileResult.st_gid);
 }
 
 TEST(EdenMount, ensureDirectoryExists) {

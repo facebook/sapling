@@ -426,19 +426,18 @@ FileInode::FileInode(
       state_(folly::in_place) {}
 
 #ifndef _WIN32
-folly::Future<FuseDispatcher::Attr> FileInode::setattr(
-    const fuse_setattr_in& attr) {
+folly::Future<struct stat> FileInode::setattr(const fuse_setattr_in& attr) {
   // If this file is inside of .eden it cannot be reparented, so getParentRacy()
   // is okay.
   auto parent = getParentRacy();
   if (parent && parent->getNodeId() == getMount()->getDotEdenInodeNumber()) {
-    return folly::makeFuture<FuseDispatcher::Attr>(
+    return folly::makeFuture<struct stat>(
         InodeError(EPERM, inodePtrFromThis()));
   }
 
   auto setAttrs = [self = inodePtrFromThis(), attr](LockedState&& state) {
     auto ino = self->getNodeId();
-    auto result = FuseDispatcher::Attr{self->getMount()->initStatData()};
+    auto result = self->getMount()->initStatData();
 
     XDCHECK_EQ(State::MATERIALIZED_IN_OVERLAY, state->tag)
         << "Must have a file in the overlay at this point";
@@ -460,11 +459,11 @@ folly::Future<FuseDispatcher::Attr> FileInode::setattr(
     // have to return the correct size of the file even if some size is sent
     // in attr.st.st_size.
     off_t size = self->getOverlayFileAccess(state)->getFileSize(*self);
-    result.st.st_ino = ino.get();
-    result.st.st_size = size;
-    metadata.applyToStat(result.st);
-    result.st.st_nlink = 1;
-    updateBlockCount(result.st);
+    result.st_ino = ino.get();
+    result.st_size = size;
+    metadata.applyToStat(result);
+    result.st_nlink = 1;
+    updateBlockCount(result);
 
     // Update the Journal
     self->updateJournal();

@@ -3540,10 +3540,9 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
       });
 }
 
-folly::Future<FuseDispatcher::Attr> TreeInode::setattr(
-    const fuse_setattr_in& attr) {
+folly::Future<struct stat> TreeInode::setattr(const fuse_setattr_in& attr) {
   materialize();
-  FuseDispatcher::Attr result(getMount()->initStatData());
+  struct stat result(getMount()->initStatData());
 
   // We do not have size field for directories and currently TreeInode does not
   // have any field like FileInode::state_::mode to set the mode. May be in the
@@ -3551,12 +3550,12 @@ folly::Future<FuseDispatcher::Attr> TreeInode::setattr(
   // now we are simply setting the mode to (S_IFDIR | 0755).
 
   // Set InodeNumber, timeStamps, mode in the result.
-  result.st.st_ino = getNodeId().get();
+  result.st_ino = getNodeId().get();
   auto contents = contents_.wlock();
   auto metadata = getMount()->getInodeMetadataTable()->modifyOrThrow(
       getNodeId(),
       [&](auto& metadata) { metadata.updateFromAttr(getClock(), attr); });
-  metadata.applyToStat(result.st);
+  metadata.applyToStat(result);
 
   // Update Journal
   updateJournal();

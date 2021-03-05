@@ -148,8 +148,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       const InodeTimestamps& initialTimestamps);
 
 #ifndef _WIN32
-  folly::Future<FuseDispatcher::Attr> setattr(
-      const fuse_setattr_in& attr) override;
+  folly::Future<struct stat> setattr(const fuse_setattr_in& attr) override;
 
   /// Throws InodeError EINVAL if inode is not a symbolic node.
   folly::Future<std::string> readlink(

@@ -72,10 +72,8 @@ bool operator==(const timespec& ts, std::chrono::system_clock::time_point tp) {
 
 namespace {
 
-FuseDispatcher::Attr getFileAttr(const FileInodePtr& inode) {
-  auto attrFuture =
-      inode->stat(ObjectFetchContext::getNullContext())
-          .thenValue([](struct stat st) { return FuseDispatcher::Attr{st}; });
+struct stat getFileAttr(const FileInodePtr& inode) {
+  auto attrFuture = inode->stat(ObjectFetchContext::getNullContext());
   // We unfortunately can't use an ASSERT_* check here, since it tries
   // to return from the function normally, rather than throwing.
   if (!attrFuture.isReady()) {
@@ -87,7 +85,7 @@ FuseDispatcher::Attr getFileAttr(const FileInodePtr& inode) {
   return std::move(attrFuture).get();
 }
 
-FuseDispatcher::Attr setFileAttr(
+struct stat setFileAttr(
     const FileInodePtr& inode,
     const fuse_setattr_in& desired) {
   auto attrFuture = inode->setattr(desired);
@@ -101,18 +99,16 @@ FuseDispatcher::Attr setFileAttr(
 /**
  * Helper function used by BASIC_ATTR_XCHECKS()
  */
-void basicAttrChecks(
-    const FileInodePtr& inode,
-    const FuseDispatcher::Attr& attr) {
-  EXPECT_EQ(inode->getNodeId().getRawValue(), attr.st.st_ino);
-  EXPECT_EQ(1, attr.st.st_nlink);
-  EXPECT_EQ(inode->getMount()->getOwner().uid, attr.st.st_uid);
-  EXPECT_EQ(inode->getMount()->getOwner().gid, attr.st.st_gid);
-  EXPECT_EQ(0, attr.st.st_rdev);
-  EXPECT_GT(attr.st.st_atime, 0);
-  EXPECT_GT(attr.st.st_mtime, 0);
-  EXPECT_GT(attr.st.st_ctime, 0);
-  EXPECT_GT(attr.st.st_blksize, 0);
+void basicAttrChecks(const FileInodePtr& inode, const struct stat& attr) {
+  EXPECT_EQ(inode->getNodeId().getRawValue(), attr.st_ino);
+  EXPECT_EQ(1, attr.st_nlink);
+  EXPECT_EQ(inode->getMount()->getOwner().uid, attr.st_uid);
+  EXPECT_EQ(inode->getMount()->getOwner().gid, attr.st_gid);
+  EXPECT_EQ(0, attr.st_rdev);
+  EXPECT_GT(attr.st_atime, 0);
+  EXPECT_GT(attr.st_mtime, 0);
+  EXPECT_GT(attr.st_ctime, 0);
+  EXPECT_GT(attr.st_blksize, 0);
 
   // Note that st_blocks always refers to 512B blocks, and is not related to
   // the block size reported in st_blksize.
@@ -120,11 +116,11 @@ void basicAttrChecks(
   // Eden doesn't really store data in blocks internally, and instead simply
   // computes the value in st_blocks based on st_size.  This is mainly so that
   // applications like "du" will report mostly sane results.
-  if (attr.st.st_size == 0) {
-    EXPECT_EQ(0, attr.st.st_blocks);
+  if (attr.st_size == 0) {
+    EXPECT_EQ(0, attr.st_blocks);
   } else {
-    EXPECT_GE(512 * attr.st.st_blocks, attr.st.st_size);
-    EXPECT_LT(512 * (attr.st.st_blocks - 1), attr.st.st_size);
+    EXPECT_GE(512 * attr.st_blocks, attr.st_size);
+    EXPECT_LT(512 * (attr.st_blocks - 1), attr.st_size);
   }
 }
 
@@ -180,9 +176,9 @@ TEST_F(FileInodeTest, getattrFromBlob) {
   auto attr = getFileAttr(inode);
 
   BASIC_ATTR_XCHECKS(inode, attr);
-  EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
-  EXPECT_EQ(15, attr.st.st_size);
-  EXPECT_EQ(1, attr.st.st_blocks);
+  EXPECT_EQ((S_IFREG | 0644), attr.st_mode);
+  EXPECT_EQ(15, attr.st_size);
+  EXPECT_EQ(1, attr.st_blocks);
 }
 
 TEST_F(FileInodeTest, getattrFromOverlay) {
@@ -193,12 +189,12 @@ TEST_F(FileInodeTest, getattrFromOverlay) {
 
   auto attr = getFileAttr(inode);
   BASIC_ATTR_XCHECKS(inode, attr);
-  EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
-  EXPECT_EQ(12, attr.st.st_size);
-  EXPECT_EQ(1, attr.st.st_blocks);
-  EXPECT_EQ(stAtimepoint(attr.st), start);
-  EXPECT_EQ(stMtimepoint(attr.st), start);
-  EXPECT_EQ(stCtimepoint(attr.st), start);
+  EXPECT_EQ((S_IFREG | 0644), attr.st_mode);
+  EXPECT_EQ(12, attr.st_size);
+  EXPECT_EQ(1, attr.st_blocks);
+  EXPECT_EQ(stAtimepoint(attr), start);
+  EXPECT_EQ(stMtimepoint(attr), start);
+  EXPECT_EQ(stCtimepoint(attr), start);
 }
 
 void testSetattrTruncateAll(TestMount& mount) {
@@ -208,9 +204,9 @@ void testSetattrTruncateAll(TestMount& mount) {
   auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
-  EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
-  EXPECT_EQ(0, attr.st.st_size);
-  EXPECT_EQ(0, attr.st.st_blocks);
+  EXPECT_EQ((S_IFREG | 0644), attr.st_mode);
+  EXPECT_EQ(0, attr.st_size);
+  EXPECT_EQ(0, attr.st_blocks);
 
   EXPECT_FILE_INODE(inode, "", 0644);
 }
@@ -237,8 +233,8 @@ TEST_F(FileInodeTest, setattrTruncatePartial) {
   auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
-  EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
-  EXPECT_EQ(4, attr.st.st_size);
+  EXPECT_EQ((S_IFREG | 0644), attr.st_mode);
+  EXPECT_EQ(4, attr.st_size);
 
   EXPECT_FILE_INODE(inode, "This", 0644);
 }
@@ -251,8 +247,8 @@ TEST_F(FileInodeTest, setattrBiggerSize) {
   auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
-  EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
-  EXPECT_EQ(30, attr.st.st_size);
+  EXPECT_EQ((S_IFREG | 0644), attr.st_mode);
+  EXPECT_EQ(30, attr.st_size);
 
   StringPiece expectedContents(
       "This is a.txt.\n"
@@ -271,8 +267,8 @@ TEST_F(FileInodeTest, setattrPermissions) {
     auto attr = setFileAttr(inode, desired);
 
     BASIC_ATTR_XCHECKS(inode, attr);
-    EXPECT_EQ((S_IFREG | n), attr.st.st_mode);
-    EXPECT_EQ(15, attr.st.st_size);
+    EXPECT_EQ((S_IFREG | n), attr.st_mode);
+    EXPECT_EQ(15, attr.st_size);
     EXPECT_FILE_INODE(inode, "This is a.txt.\n", n);
   }
 }
@@ -287,9 +283,9 @@ TEST_F(FileInodeTest, setattrFileType) {
   auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
-  EXPECT_EQ((S_IFREG | 0755), attr.st.st_mode)
+  EXPECT_EQ((S_IFREG | 0755), attr.st_mode)
       << "File type bits in the mode should be ignored by setattr()";
-  EXPECT_EQ(15, attr.st.st_size);
+  EXPECT_EQ(15, attr.st_size);
   EXPECT_FILE_INODE(inode, "This is a.txt.\n", 0755);
 }
 
@@ -304,9 +300,9 @@ TEST_F(FileInodeTest, setattrAtime) {
   auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
-  EXPECT_EQ(1234, attr.st.st_atime);
-  EXPECT_EQ(1234, stAtime(attr.st).tv_sec);
-  EXPECT_EQ(5678, stAtime(attr.st).tv_nsec);
+  EXPECT_EQ(1234, attr.st_atime);
+  EXPECT_EQ(1234, stAtime(attr).tv_sec);
+  EXPECT_EQ(5678, stAtime(attr).tv_nsec);
 
   mount_.getClock().advance(10min);
 
@@ -319,7 +315,7 @@ TEST_F(FileInodeTest, setattrAtime) {
   BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ(
       mount_.getClock().getTimePoint(),
-      folly::to<FakeClock::time_point>(stAtime(attr.st)));
+      folly::to<FakeClock::time_point>(stAtime(attr)));
 }
 
 void testSetattrMtime(TestMount& mount) {
@@ -333,9 +329,9 @@ void testSetattrMtime(TestMount& mount) {
   auto attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
-  EXPECT_EQ(1234, attr.st.st_mtime);
-  EXPECT_EQ(1234, stMtime(attr.st).tv_sec);
-  EXPECT_EQ(5678, stMtime(attr.st).tv_nsec);
+  EXPECT_EQ(1234, attr.st_mtime);
+  EXPECT_EQ(1234, stMtime(attr).tv_sec);
+  EXPECT_EQ(5678, stMtime(attr).tv_nsec);
 
   // Ask to set the mtime to the current time
   mount.getClock().advance(1234min);
@@ -346,7 +342,7 @@ void testSetattrMtime(TestMount& mount) {
   attr = setFileAttr(inode, desired);
 
   BASIC_ATTR_XCHECKS(inode, attr);
-  EXPECT_EQ(start, folly::to<FakeClock::time_point>(stMtime(attr.st)));
+  EXPECT_EQ(start, folly::to<FakeClock::time_point>(stMtime(attr)));
 }
 
 TEST_F(FileInodeTest, setattrMtime) {
