@@ -5,15 +5,15 @@ edition = "2018"
 
 [features]
 default = []
-python2 = ["cpython/python27-sys", "cpython-ext/python2"]
-python3 = ["cpython/python3-sys", "cpython-ext/python3"]
+python2 = ["cpython/python27-sys", "cpython_ext/python2"]
+python3 = ["cpython/python3-sys", "cpython_ext/python3"]
 
 [dependencies]
 anyhow = "1.0.20"
 pyrevisionstore = { path = "../pyrevisionstore" }
 crossbeam = "0.7"
 revisionstore = { path = "../../../../lib/revisionstore" }
-cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
 minibytes = { path = "../../../../lib/minibytes" }
 types = { path = "../../../../lib/types" }

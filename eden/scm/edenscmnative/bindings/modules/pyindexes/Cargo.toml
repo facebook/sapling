@@ -9,7 +9,7 @@ python2 = []
 python3 = []
 
 [dependencies]
-cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 revlogindex = { path = "../../../../lib/revlogindex" }
 anyhow = "1.0.20"
 thiserror = "1.0.5"
