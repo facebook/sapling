@@ -971,66 +971,223 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::commit(
   return folly::unit;
 }
 
+std::string formatNull(folly::io::Cursor /*deser*/) {
+  return "";
+}
+
+std::string formatGetattr(folly::io::Cursor deser) {
+  auto args = XdrTrait<GETATTR3args>::deserialize(deser);
+  return fmt::format(FMT_STRING("ino={}"), args.object.ino);
+}
+
+std::string formatSetattr(folly::io::Cursor /*deser*/) {
+  // TODO(xavierd): Fill this in.
+  return "";
+}
+
+std::string formatLookup(folly::io::Cursor deser) {
+  auto args = XdrTrait<LOOKUP3args>::deserialize(deser);
+  return fmt::format(
+      FMT_STRING("dir={}, name={}"), args.what.dir.ino, args.what.name);
+}
+
+std::string formatAccess(folly::io::Cursor deser) {
+  auto args = XdrTrait<ACCESS3args>::deserialize(deser);
+  return fmt::format(
+      FMT_STRING("ino={}, access={:#x}"), args.object.ino, args.access);
+}
+
+std::string formatReadlink(folly::io::Cursor deser) {
+  auto args = XdrTrait<READLINK3args>::deserialize(deser);
+  return fmt::format(FMT_STRING("ino={}"), args.symlink.ino);
+}
+
+std::string formatRead(folly::io::Cursor deser) {
+  auto args = XdrTrait<READ3args>::deserialize(deser);
+  return fmt::format(
+      FMT_STRING("ino={}, size={}, offset={}"),
+      args.file.ino,
+      args.count,
+      args.offset);
+}
+
+std::string formatWrite(folly::io::Cursor deser) {
+  auto args = XdrTrait<WRITE3args>::deserialize(deser);
+  auto formatStable = [](stable_how stable) {
+    switch (stable) {
+      case stable_how::UNSTABLE:
+        return "UNSTABLE";
+      case stable_how::DATA_SYNC:
+        return "DATA_SYNC";
+      case stable_how::FILE_SYNC:
+        return "FILE_SYNC";
+    }
+  };
+  return fmt::format(
+      FMT_STRING("ino={}, size={}, offset={}, stable={}"),
+      args.file.ino,
+      args.count,
+      args.offset,
+      formatStable(args.stable));
+}
+
+std::string formatCreate(folly::io::Cursor deser) {
+  auto args = XdrTrait<CREATE3args>::deserialize(deser);
+  auto formatMode = [](createmode3 createmode) {
+    switch (createmode) {
+      case createmode3::UNCHECKED:
+        return "UNCHECKED";
+      case createmode3::GUARDED:
+        return "GUARDED";
+      case createmode3::EXCLUSIVE:
+        return "EXCLUSIVE";
+    }
+  };
+  return fmt::format(
+      FMT_STRING("dir={}, name={}, mode={}"),
+      args.where.dir.ino,
+      args.where.name,
+      formatMode(args.how.tag));
+}
+
+std::string formatMkdir(folly::io::Cursor deser) {
+  auto args = XdrTrait<MKDIR3args>::deserialize(deser);
+  return fmt::format(
+      FMT_STRING("dir={}, name={}"), args.where.dir.ino, args.where.name);
+}
+
+std::string formatSymlink(folly::io::Cursor /*deser*/) {
+  // TODO(xavierd): Fill this in.
+  return "";
+}
+
+std::string formatMknod(folly::io::Cursor /*deser*/) {
+  // TODO(xavierd): Fill this in.
+  return "";
+}
+
+std::string formatRemove(folly::io::Cursor deser) {
+  auto args = XdrTrait<REMOVE3args>::deserialize(deser);
+  return fmt::format(
+      FMT_STRING("dir={}, name={}"), args.object.dir.ino, args.object.name);
+}
+
+std::string formatRmdir(folly::io::Cursor /*deser*/) {
+  // TODO(xavierd): Fill this in.
+  return "";
+}
+
+std::string formatRename(folly::io::Cursor /*deser*/) {
+  // TODO(xavierd): Fill this in.
+  return "";
+}
+
+std::string formatLink(folly::io::Cursor deser) {
+  auto args = XdrTrait<LINK3args>::deserialize(deser);
+  return fmt::format(
+      FMT_STRING("ino={}, dir={}, name={}"),
+      args.file.ino,
+      args.link.dir.ino,
+      args.link.name);
+}
+
+std::string formatReaddir(folly::io::Cursor /*deser*/) {
+  // TODO(xavierd): Fill this in.
+  return "";
+}
+
+std::string formatReaddirplus(folly::io::Cursor /*deser*/) {
+  // TODO(xavierd): Fill this in.
+  return "";
+}
+
+std::string formatFsstat(folly::io::Cursor deser) {
+  auto args = XdrTrait<FSSTAT3args>::deserialize(deser);
+  return fmt::format(FMT_STRING("ino={}"), args.fsroot.ino);
+}
+
+std::string formatFsinfo(folly::io::Cursor deser) {
+  auto args = XdrTrait<FSINFO3args>::deserialize(deser);
+  return fmt::format(FMT_STRING("ino={}"), args.fsroot.ino);
+}
+
+std::string formatPathconf(folly::io::Cursor deser) {
+  auto args = XdrTrait<PATHCONF3args>::deserialize(deser);
+  return fmt::format(FMT_STRING("ino={}"), args.object.ino);
+}
+
+std::string formatCommit(folly::io::Cursor /*deser*/) {
+  // TODO(xavierd): Fill this in.
+  return "";
+}
+
 using Handler = folly::Future<folly::Unit> (Nfsd3ServerProcessor::*)(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid);
 
+/**
+ * Format the passed in arguments. The Cursor must be passed as a copy to avoid
+ * disrupting the actual handler.
+ */
+using FormatArgs = std::string (*)(folly::io::Cursor deser);
+
 struct HandlerEntry {
   constexpr HandlerEntry() = default;
-  constexpr HandlerEntry(folly::StringPiece n, Handler h)
-      : name(n), handler(h) {}
+  constexpr HandlerEntry(folly::StringPiece n, Handler h, FormatArgs format)
+      : name(n), handler(h), formatArgs(format) {}
 
   folly::StringPiece name;
   Handler handler = nullptr;
+  FormatArgs formatArgs = nullptr;
 };
 
 constexpr auto kNfs3dHandlers = [] {
   std::array<HandlerEntry, 22> handlers;
   handlers[folly::to_underlying(nfsv3Procs::null)] = {
-      "NULL", &Nfsd3ServerProcessor::null};
+      "NULL", &Nfsd3ServerProcessor::null, formatNull};
   handlers[folly::to_underlying(nfsv3Procs::getattr)] = {
-      "GETATTR", &Nfsd3ServerProcessor::getattr};
+      "GETATTR", &Nfsd3ServerProcessor::getattr, formatGetattr};
   handlers[folly::to_underlying(nfsv3Procs::setattr)] = {
-      "SETATTR", &Nfsd3ServerProcessor::setattr};
+      "SETATTR", &Nfsd3ServerProcessor::setattr, formatSetattr};
   handlers[folly::to_underlying(nfsv3Procs::lookup)] = {
-      "LOOKUP", &Nfsd3ServerProcessor::lookup};
+      "LOOKUP", &Nfsd3ServerProcessor::lookup, formatLookup};
   handlers[folly::to_underlying(nfsv3Procs::access)] = {
-      "ACCESS", &Nfsd3ServerProcessor::access};
+      "ACCESS", &Nfsd3ServerProcessor::access, formatAccess};
   handlers[folly::to_underlying(nfsv3Procs::readlink)] = {
-      "READLINK", &Nfsd3ServerProcessor::readlink};
+      "READLINK", &Nfsd3ServerProcessor::readlink, formatReadlink};
   handlers[folly::to_underlying(nfsv3Procs::read)] = {
-      "READ", &Nfsd3ServerProcessor::read};
+      "READ", &Nfsd3ServerProcessor::read, formatRead};
   handlers[folly::to_underlying(nfsv3Procs::write)] = {
-      "WRITE", &Nfsd3ServerProcessor::write};
+      "WRITE", &Nfsd3ServerProcessor::write, formatWrite};
   handlers[folly::to_underlying(nfsv3Procs::create)] = {
-      "CREATE", &Nfsd3ServerProcessor::create};
+      "CREATE", &Nfsd3ServerProcessor::create, formatCreate};
   handlers[folly::to_underlying(nfsv3Procs::mkdir)] = {
-      "MKDIR", &Nfsd3ServerProcessor::mkdir};
+      "MKDIR", &Nfsd3ServerProcessor::mkdir, formatMkdir};
   handlers[folly::to_underlying(nfsv3Procs::symlink)] = {
-      "SYMLINK", &Nfsd3ServerProcessor::symlink};
+      "SYMLINK", &Nfsd3ServerProcessor::symlink, formatSymlink};
   handlers[folly::to_underlying(nfsv3Procs::mknod)] = {
-      "MKNOD", &Nfsd3ServerProcessor::mknod};
+      "MKNOD", &Nfsd3ServerProcessor::mknod, formatMknod};
   handlers[folly::to_underlying(nfsv3Procs::remove)] = {
-      "REMOVE", &Nfsd3ServerProcessor::remove};
+      "REMOVE", &Nfsd3ServerProcessor::remove, formatRemove};
   handlers[folly::to_underlying(nfsv3Procs::rmdir)] = {
-      "RMDIR", &Nfsd3ServerProcessor::rmdir};
+      "RMDIR", &Nfsd3ServerProcessor::rmdir, formatRmdir};
   handlers[folly::to_underlying(nfsv3Procs::rename)] = {
-      "RENAME", &Nfsd3ServerProcessor::rename};
+      "RENAME", &Nfsd3ServerProcessor::rename, formatRename};
   handlers[folly::to_underlying(nfsv3Procs::link)] = {
-      "LINK", &Nfsd3ServerProcessor::link};
+      "LINK", &Nfsd3ServerProcessor::link, formatLink};
   handlers[folly::to_underlying(nfsv3Procs::readdir)] = {
-      "READDIR", &Nfsd3ServerProcessor::readdir};
+      "READDIR", &Nfsd3ServerProcessor::readdir, formatReaddir};
   handlers[folly::to_underlying(nfsv3Procs::readdirplus)] = {
-      "READDIRPLUS", &Nfsd3ServerProcessor::readdirplus};
+      "READDIRPLUS", &Nfsd3ServerProcessor::readdirplus, formatReaddirplus};
   handlers[folly::to_underlying(nfsv3Procs::fsstat)] = {
-      "FSSTAT", &Nfsd3ServerProcessor::fsstat};
+      "FSSTAT", &Nfsd3ServerProcessor::fsstat, formatFsstat};
   handlers[folly::to_underlying(nfsv3Procs::fsinfo)] = {
-      "FSINFO", &Nfsd3ServerProcessor::fsinfo};
+      "FSINFO", &Nfsd3ServerProcessor::fsinfo, formatFsinfo};
   handlers[folly::to_underlying(nfsv3Procs::pathconf)] = {
-      "PATHCONF", &Nfsd3ServerProcessor::pathconf};
+      "PATHCONF", &Nfsd3ServerProcessor::pathconf, formatPathconf};
   handlers[folly::to_underlying(nfsv3Procs::commit)] = {
-      "COMMIT", &Nfsd3ServerProcessor::commit};
+      "COMMIT", &Nfsd3ServerProcessor::commit, formatCommit};
 
   return handlers;
 }();
@@ -1061,8 +1218,12 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
   }
 
   auto handlerEntry = kNfs3dHandlers[procNumber];
-  // TODO(xavierd): log the arguments too.
-  FB_LOGF(*straceLogger_, DBG7, "{}()", handlerEntry.name);
+  FB_LOGF(
+      *straceLogger_,
+      DBG7,
+      "{}({})",
+      handlerEntry.name,
+      handlerEntry.formatArgs(deser));
   return (this->*handlerEntry.handler)(std::move(deser), std::move(ser), xid);
 }
 } // namespace
