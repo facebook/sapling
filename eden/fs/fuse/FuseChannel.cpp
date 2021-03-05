@@ -1547,12 +1547,32 @@ void FuseChannel::processSession() {
     // "security.capability". Until we discover a way to tell the kernel that
     // they will always return nothing in an Eden mount, short-circuit that path
     // as efficiently and as early as possible.
+    //
+    // On some systems, the kernel also frequently requests
+    // POSIX ACL xattrs, so fast track those too, if only to make strace
+    // logs easier to follow.
     if (header->opcode == FUSE_GETXATTR) {
       const auto getxattr =
           reinterpret_cast<const fuse_getxattr_in*>(arg.data());
-      const auto nameStr = reinterpret_cast<const char*>(getxattr + 1);
-      if (strcmp("security.capability", nameStr) == 0) {
-        replyError(*header, ENODATA);
+
+      // Evaluate strlen before the comparison loop below.
+      const StringPiece namePiece{reinterpret_cast<const char*>(getxattr + 1)};
+      static constexpr StringPiece kFastTracks[] = {
+          "security.capability",
+          "system.posix_acl_access",
+          "system.posix_acl_default"};
+
+      // Unclear whether one strlen and matching compares is better than
+      // strcmps, but it's probably in the noise.
+      bool matched = false;
+      for (auto fastTrack : kFastTracks) {
+        if (namePiece == fastTrack) {
+          replyError(*header, ENODATA);
+          matched = true;
+          break;
+        }
+      }
+      if (matched) {
         continue;
       }
     }
