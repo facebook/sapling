@@ -136,6 +136,30 @@ TEST(XdrSerialize, iobuf) {
   roundtrip(std::move(buf), 3 * sizeof(uint32_t) + bufLen + 2 /*padding*/);
 }
 
+struct ListElement {
+  uint32_t value;
+};
+EDEN_XDR_SERDE_DECL(ListElement, value);
+EDEN_XDR_SERDE_IMPL(ListElement, value);
+
+struct ListHead {
+  XdrList<ListElement> elements;
+};
+EDEN_XDR_SERDE_DECL(ListHead, elements);
+EDEN_XDR_SERDE_IMPL(ListHead, elements);
+
+TEST(XdrSerialize, list) {
+  std::vector<ListElement> elements;
+  elements.emplace_back(ListElement{1});
+  elements.emplace_back(ListElement{2});
+  elements.emplace_back(ListElement{3});
+  elements.emplace_back(ListElement{4});
+
+  ListHead head{{std::move(elements)}};
+
+  roundtrip(head, 4 * (sizeof(uint32_t) + sizeof(uint32_t)) + sizeof(uint32_t));
+}
+
 } // namespace facebook::eden
 
 #endif

@@ -433,6 +433,79 @@ struct XdrTrait<
   }
 };
 
+/**
+ * Common implementation for recursive data structures. XDR calls them
+ * optional-data and denotes them with *, but they are almost always used to
+ * build lists.
+ *
+ * The following XDR definition:
+ *
+ *     struct entry3 {
+ *        fileid3      fileid;
+ *        filename3    name;
+ *        cookie3      cookie;
+ *        entry3       *nextentry;
+ *     };
+ *
+ *     struct dirlist3 {
+ *        entry3       *entries;
+ *        bool         eof;
+ *     };
+ *
+ * Can be written as:
+ *
+ *     struct entry3 {
+ *        fileid3      fileid;
+ *        filename3    name;
+ *        cookie3      cookie;
+ *     };
+ *
+ *     struct dirlist3 {
+ *        XdrList<entry3> entries;
+ *        bool eof;
+ *     };
+ */
+template <typename T>
+struct XdrList {
+  std::vector<T> list;
+};
+
+/**
+ * In spirit, an XdrList can be seen as a std::vector<XdrOptionalVariant<T>>
+ * and is serialized and deserialized as such, with the last element being an
+ * empty XdrOptionalVariant.
+ */
+template <typename T>
+struct XdrTrait<XdrList<T>> {
+  static void serialize(
+      folly::io::QueueAppender& appender,
+      const XdrList<T>& value) {
+    for (const auto& element : value.list) {
+      XdrTrait<bool>::serialize(appender, true);
+      XdrTrait<T>::serialize(appender, element);
+    }
+    // Terminate the list with an empty element.
+    XdrTrait<bool>::serialize(appender, false);
+  }
+
+  static XdrList<T> deserialize(folly::io::Cursor& cursor) {
+    XdrList<T> res;
+    while (true) {
+      auto hasNext = XdrTrait<bool>::deserialize(cursor);
+      if (!hasNext) {
+        // This was the last element.
+        return res;
+      }
+      res.list.push_back(XdrTrait<T>::deserialize(cursor));
+    }
+  }
+};
+
+template <typename T>
+bool operator==(const XdrList<T>& a, const XdrList<T>& b) {
+  return a.list == b.list;
+}
+
 } // namespace facebook::eden
 
 #endif
