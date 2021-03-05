@@ -527,15 +527,12 @@ impl BookmarkLogEntryBatch {
         if self.to_cs_id != entry.from_changeset_id {
             return Ok(Err(entry));
         }
-        
+
         self.push(entry);
         Ok(Ok(()))
     }
 
-    fn push(
-      &mut self,
-      entry: BookmarkUpdateLogEntry,
-    ) {
+    fn push(&mut self, entry: BookmarkUpdateLogEntry) {
         self.to_cs_id = entry.to_changeset_id;
         self.entries.push(entry);
     }
