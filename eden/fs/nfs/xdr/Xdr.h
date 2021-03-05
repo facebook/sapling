@@ -9,8 +9,74 @@
 
 #ifndef _WIN32
 
+#include <folly/Preprocessor.h>
 #include <folly/io/Cursor.h>
 #include <variant>
+
+// https://tools.ietf.org/html/rfc4506
+
+// This is a macro that is used to emit the implementation of XDR serialization,
+// deserialization and operator== for a type.
+//
+// The parameters the type name followed by the list of field names.
+// The field names must be listed in the same order as the RPC/XDR
+// definition for the type requires.  It is good practice to have that
+// order match the order of the fields in the struct.
+//
+// Example: in the header file:
+//
+// struct Foo {
+//    int bar;
+//    int baz;
+// };
+// EDEN_XDR_SERDE_DECL(Foo);
+//
+// Then in the cpp file:
+//
+// EDEN_XDR_SERDE_IMPL(Foo, bar, baz);
+
+// This macro declares the XDR serializer and deserializer functions
+// for a given type.
+// See EDEN_XDR_SERDE_IMPL above for an example.
+#define EDEN_XDR_SERDE_DECL(STRUCT, ...)                   \
+  bool operator==(const STRUCT& a, const STRUCT& b);       \
+  template <>                                              \
+  struct XdrTrait<STRUCT> {                                \
+    static void serialize(                                 \
+        folly::io::QueueAppender& appender,                \
+        const STRUCT& a) {                                 \
+      FOLLY_PP_FOR_EACH(EDEN_XDR_SER, __VA_ARGS__)         \
+    }                                                      \
+    static STRUCT deserialize(folly::io::Cursor& cursor) { \
+      STRUCT ret;                                          \
+      FOLLY_PP_FOR_EACH(EDEN_XDR_DE, __VA_ARGS__)          \
+      return ret;                                          \
+    }                                                      \
+  }
+
+#define EDEN_XDR_SERDE_IMPL(STRUCT, ...)                  \
+  bool operator==(const STRUCT& a, const STRUCT& b) {     \
+    return FOLLY_PP_FOR_EACH(EDEN_XDR_EQ, __VA_ARGS__) 1; \
+  }
+
+// Implementation details for the macros above:
+
+// This is a helper called by FOLLY_PP_FOR_EACH. It emits a call to
+// the serializer for a given field name
+#define EDEN_XDR_SER(name) \
+  XdrTrait<decltype(a.name)>::serialize(appender, a.name);
+
+// This is a helper called by FOLLY_PP_FOR_EACH. It emits a call to
+// the de-serializer for a given field name.
+#define EDEN_XDR_DE(name) \
+  ret.name = XdrTrait<decltype(ret.name)>::deserialize(cursor);
+
+// This is a helper called by FOLLY_PP_FOR_EACH. It emits a comparison
+// between a.name and b.name, followed by &&.  It is intended
+// to be used in a sequence and have a literal 1 following that sequence.
+// It is used to generator the == operator for a type.
+// It is present primarily for testing purposes.
+#define EDEN_XDR_EQ(name) a.name == b.name&&
 
 namespace facebook::eden {
 

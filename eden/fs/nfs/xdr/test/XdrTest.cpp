@@ -33,35 +33,12 @@ TEST(XdrSerialize, integers) {
   roundtrip(fixedNumbers, 3 * sizeof(uint32_t));
 }
 
-// This block shows how to implement XDR serialization for a struct
-namespace {
 struct MySerializableStruct {
   int32_t number;
   std::string str;
-
-  // This is present just for EXPECT_EQ and isn't required
-  // for serialization purposes
-  bool operator==(const MySerializableStruct& other) const {
-    return number == other.number && str == other.str;
-  }
 };
-} // namespace
-
-template <>
-struct XdrTrait<MySerializableStruct> {
-  static void serialize(
-      folly::io::QueueAppender& appender,
-      const MySerializableStruct& value) {
-    XdrTrait<int32_t>::serialize(appender, value.number);
-    XdrTrait<std::string>::serialize(appender, value.str);
-  }
-
-  static MySerializableStruct deserialize(folly::io::Cursor& cursor) {
-    auto number = XdrTrait<int32_t>::deserialize(cursor);
-    auto str = XdrTrait<std::string>::deserialize(cursor);
-    return {number, std::move(str)};
-  }
-};
+EDEN_XDR_SERDE_DECL(MySerializableStruct, number, str);
+EDEN_XDR_SERDE_IMPL(MySerializableStruct, number, str);
 
 TEST(XdrSerialize, structs) {
   MySerializableStruct s{123, "hello world"};
@@ -130,6 +107,8 @@ struct IOBufStruct {
   }
 };
 
+// We can't use EDEN_XDR_SERDE_DECL as it generates code that compares
+// unique_ptr and not their contents.
 template <>
 struct XdrTrait<IOBufStruct> {
   static void serialize(
