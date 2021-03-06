@@ -12,9 +12,8 @@ use pathmatcher::{Matcher, XorMatcher};
 use revisionstore::{HgIdDataStore, RemoteDataStore, StoreKey, StoreResult};
 use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 use types::{HgId, Key, RepoPath, RepoPathBuf};
-use vfs::{UpdateFlag, VFS};
+use vfs::{AsyncVfsWriter, UpdateFlag, VFS};
 
 const PREFETCH_CHUNK_SIZE: usize = 1000;
 const VFS_BATCH_SIZE: usize = 100;
@@ -147,13 +146,14 @@ impl CheckoutPlan {
         vfs: &VFS,
         f: F,
     ) -> Result<CheckoutStats> {
-        let stats_arc = Arc::new(CheckoutStats::default());
-        let stats = &stats_arc;
+        let async_vfs = &AsyncVfsWriter::spawn_new(vfs.clone(), 16);
+        let stats = CheckoutStats::default();
+        let stats_ref = &stats;
         const PARALLEL_CHECKOUT: usize = 16;
 
-        let remove_files = stream::iter(self.remove.iter())
+        let remove_files = stream::iter(self.remove.clone().into_iter())
             .chunks(VFS_BATCH_SIZE)
-            .map(|paths| Self::remove_files(vfs, stats, paths));
+            .map(|paths| Self::remove_files(async_vfs, stats_ref, paths));
         let remove_files = remove_files.buffer_unordered(PARALLEL_CHECKOUT);
 
         Self::process_work_stream(remove_files).await?;
@@ -184,13 +184,14 @@ impl CheckoutPlan {
             .chunks(VFS_BATCH_SIZE)
             .map(|actions| async move {
                 let actions: Result<Vec<_>, _> = actions.into_iter().collect();
-                Self::write_files(vfs, stats, actions?).await
+                Self::write_files(async_vfs, stats_ref, actions?).await
             });
 
         let update_content = update_content.buffer_unordered(PARALLEL_CHECKOUT);
 
-        let update_meta = stream::iter(self.update_meta.iter())
-            .map(|action| Self::set_exec_on_file(vfs, stats, &action.path, action.set_x_flag));
+        let update_meta = stream::iter(self.update_meta.iter()).map(|action| {
+            Self::set_exec_on_file(async_vfs, stats_ref, &action.path, action.set_x_flag)
+        });
         let update_meta = update_meta.buffer_unordered(PARALLEL_CHECKOUT);
 
         let update_content = Self::process_work_stream(update_content);
@@ -198,9 +199,7 @@ impl CheckoutPlan {
 
         try_join!(update_content, update_meta)?;
 
-        Ok(Arc::try_unwrap(stats_arc)
-            .ok()
-            .expect("Failed to unwrap stats - lingering workers?"))
+        Ok(stats)
     }
 
     pub async fn apply_data_store<DS: HgIdDataStore>(
@@ -262,62 +261,36 @@ impl CheckoutPlan {
     // Since we do multiple fs calls inside, it is beneficial to 'pack'
     // all of them into single spawn_blocking.
     async fn write_files(
-        vfs: &VFS,
-        stats: &Arc<CheckoutStats>,
+        async_vfs: &AsyncVfsWriter,
+        stats: &CheckoutStats,
         actions: Vec<(RepoPathBuf, Vec<u8>, Option<UpdateFlag>)>,
     ) -> Result<()> {
-        let vfs = vfs.clone(); // vfs auditor cache is shared
-        let stats = Arc::clone(stats);
-        tokio::runtime::Handle::current()
-            .spawn_blocking(move || -> Result<()> {
-                for (path, data, flag) in actions {
-                    let repo_path = path.as_repo_path();
-                    let w = vfs.write(repo_path, &data, flag)?;
-                    stats.updated.fetch_add(1, Ordering::Relaxed);
-                    stats.written_bytes.fetch_add(w, Ordering::Relaxed);
-                }
-                Ok(())
-            })
-            .await??;
+        let count = actions.len();
+        let w = async_vfs.write_batch(actions).await?;
+        stats.updated.fetch_add(count, Ordering::Relaxed);
+        stats.written_bytes.fetch_add(w, Ordering::Relaxed);
         Ok(())
     }
 
     async fn remove_files(
-        vfs: &VFS,
-        stats: &Arc<CheckoutStats>,
-        paths: Vec<&RepoPathBuf>,
+        async_vfs: &AsyncVfsWriter,
+        stats: &CheckoutStats,
+        paths: Vec<RepoPathBuf>,
     ) -> Result<()> {
-        let paths: Vec<RepoPathBuf> = paths.into_iter().map(Clone::clone).collect();
-        let vfs = vfs.clone(); // vfs auditor cache is shared
-        let stats = Arc::clone(stats);
-        tokio::runtime::Handle::current()
-            .spawn_blocking(move || -> Result<()> {
-                for path in paths {
-                    vfs.remove(path.as_repo_path())?;
-                    stats.removed.fetch_add(1, Ordering::Relaxed);
-                }
-                Ok(())
-            })
-            .await??;
+        let count = paths.len();
+        async_vfs.remove_batch(paths).await?;
+        stats.removed.fetch_add(count, Ordering::Relaxed);
         Ok(())
     }
 
     async fn set_exec_on_file(
-        vfs: &VFS,
-        stats: &Arc<CheckoutStats>,
+        async_vfs: &AsyncVfsWriter,
+        stats: &CheckoutStats,
         path: &RepoPath,
         flag: bool,
     ) -> Result<()> {
-        let vfs = vfs.clone(); // vfs auditor cache is shared
-        let stats = Arc::clone(stats);
-        let path = path.to_owned();
-        tokio::runtime::Handle::current()
-            .spawn_blocking(move || -> Result<()> {
-                vfs.set_executable(path.as_repo_path(), flag)?;
-                stats.meta_updated.fetch_add(1, Ordering::Relaxed);
-                Ok(())
-            })
-            .await??;
+        async_vfs.set_executable(path.to_owned(), flag).await?;
+        stats.meta_updated.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
 
