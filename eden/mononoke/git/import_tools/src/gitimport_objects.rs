@@ -13,7 +13,7 @@ use blobrepo::BlobRepo;
 use blobstore::LoadableError;
 use bytes::Bytes;
 use context::CoreContext;
-use git2::{ObjectType, Oid, Repository, Revwalk};
+use git2::{ObjectType, Oid, Repository, Revwalk, Time};
 use git_pool::GitPool;
 use git_types::mode;
 use manifest::{Entry, Manifest, StoreLoadable};
@@ -343,10 +343,9 @@ impl ExtractedCommit {
             let parents = commit.parents().map(|p| p.id()).collect();
 
             let time = commit.author().when();
-            let author_date = DateTime::from_timestamp(time.seconds(), time.offset_minutes() * 60)?;
+            let author_date = convert_time_to_datetime(&time)?;
             let time = commit.committer().when();
-            let committer_date =
-                DateTime::from_timestamp(time.seconds(), time.offset_minutes() * 60)?;
+            let committer_date = convert_time_to_datetime(&time)?;
 
             Result::<_, Error>::Ok(ExtractedCommit {
                 metadata: CommitMetadata {
@@ -364,4 +363,8 @@ impl ExtractedCommit {
         })
         .await
     }
+}
+
+fn convert_time_to_datetime(time: &Time) -> Result<DateTime, Error> {
+    DateTime::from_timestamp(time.seconds(), -1 * time.offset_minutes() * 60)
 }
