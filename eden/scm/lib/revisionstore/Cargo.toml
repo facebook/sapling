@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 async-runtime = { path = "../async-runtime" }
-async-trait = "0.1.29"
+async-trait = "0.1.45"
 auth = { path = "../auth" }
 bincode = "1.2"
 byteorder = "1.3"

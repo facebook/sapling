@@ -7,7 +7,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-async-trait = "0.1.29"
+async-trait = "0.1.45"
 auto_impl = "0.4"
 blobrepo_errors = { version = "0.1.0", path = "../blobrepo/errors" }
 changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" }

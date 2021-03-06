@@ -7,9 +7,12 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0"
 chashmap = "2.2"
+crossbeam = "0.7"
 fsinfo = { path = "../fsinfo" }
 libc = "0.2.86"
+minibytes = { path = "../minibytes" }
 once_cell = "1.4"
+tokio = { version = "1", features = ["full", "test-util"] }
 types = { path = "../types" }
 util = { path = "../util" }
 

@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-async-trait = "0.1.29"
+async-trait = "0.1.45"
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 pin-project = "0.4"
 

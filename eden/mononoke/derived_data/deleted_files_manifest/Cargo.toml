@@ -11,7 +11,7 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0"
 async-stream = "0.3"
-async-trait = "0.1.29"
+async-trait = "0.1.45"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bounded_traversal = { version = "0.1.0", path = "../../common/bounded_traversal" }

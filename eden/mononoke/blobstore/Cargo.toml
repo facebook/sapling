@@ -13,7 +13,7 @@ path = "test/main.rs"
 abomonation = "0.7"
 abomonation_derive = "0.5"
 anyhow = "1.0"
-async-trait = "0.1.29"
+async-trait = "0.1.45"
 auto_impl = "0.4"
 bytes = { version = "0.5", features = ["serde"] }
 context = { version = "0.1.0", path = "../server/context" }

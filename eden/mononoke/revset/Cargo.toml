@@ -23,7 +23,7 @@ uniqueheap = { version = "0.1.0", path = "../common/uniqueheap" }
 
 [dev-dependencies]
 ascii = "1.0"
-async-trait = "0.1.29"
+async-trait = "0.1.45"
 async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }

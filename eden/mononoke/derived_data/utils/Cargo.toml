@@ -10,7 +10,7 @@ path = "lib.rs"
 
 [dependencies]
 anyhow = "1.0"
-async-trait = "0.1.29"
+async-trait = "0.1.45"
 blame = { version = "0.1.0", path = "../blame" }
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }

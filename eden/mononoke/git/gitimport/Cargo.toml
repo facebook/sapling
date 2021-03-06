@@ -7,7 +7,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-async-trait = "0.1.29"
+async-trait = "0.1.45"
 blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }
 bonsai_hg_mapping = { version = "0.1.0", path = "../../bonsai_hg_mapping" }

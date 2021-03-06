@@ -7,7 +7,7 @@ license = "GPLv2+"
 
 [dependencies]
 anyhow = "1.0"
-async-trait = "0.1.29"
+async-trait = "0.1.45"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
 blobstore = { version = "0.1.0", path = "../blobstore" }

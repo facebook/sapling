@@ -11,7 +11,7 @@ path = "lib.rs"
 [dependencies]
 anyhow = "1.0"
 async-stream = "0.3"
-async-trait = "0.1.29"
+async-trait = "0.1.45"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 blobstore = { version = "0.1.0", path = "../../blobstore" }

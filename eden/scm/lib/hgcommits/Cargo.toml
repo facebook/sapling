@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-async-trait = "0.1.29"
+async-trait = "0.1.45"
 dag = { path = "../dag", features = ["for-tests", "indexedlog-backend"] }
 edenapi = { path = "../edenapi" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
