@@ -493,6 +493,14 @@ class EdenConfig : private ConfigSettingManager {
    * Controls whether Mountd will register itself against rpcbind.
    */
   ConfigSetting<bool> registerMountd{"nfs:register-mountd", false, this};
+
+  /**
+   * Kill switch for the prefetch profiles feature.
+   */
+  ConfigSetting<bool> enablePrefetchProfiles{
+      "prefetch-profiles:prefetching-enabled",
+      false,
+      this};
 };
 } // namespace eden
 } // namespace facebook

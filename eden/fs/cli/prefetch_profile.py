@@ -155,8 +155,8 @@ def prefetch_profiles(
         if not silent:
             print(
                 "Skipping Prefetch Profiles fetch due to global kill switch. "
-                "This means prefetch-profiles.allow-prefetching is set in the "
-                "eden configs."
+                "This means prefetch-profiles.prefetching-enabled is not set in "
+                "the eden configs."
             )
         return None
 
