@@ -90,7 +90,7 @@ impl VFS {
     /// be created.
     ///
     /// This is a slow operation, and should not be called before attempting to create `path`.
-    pub fn clear_conflicts(&self, path: &RepoPath) -> Result<()> {
+    fn clear_conflicts(&self, path: &RepoPath) -> Result<()> {
         let filepath = self.inner.auditor.audit(path)?;
         let mut path = filepath.as_path();
         if let Ok(metadata) = symlink_metadata(path) {
