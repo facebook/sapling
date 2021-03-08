@@ -1362,7 +1362,7 @@ def decodepayloadchunks(ui, fh):
         if chunksize >= 0:
             s = read(chunksize)
             if len(s) < chunksize:
-                raise error.NetworkError(chunksize, len(s))
+                raise error.NetworkError.fewerbytesthanexpected(chunksize, len(s))
 
             yield s
         elif chunksize == flaginterrupt:
@@ -1374,7 +1374,7 @@ def decodepayloadchunks(ui, fh):
 
         s = read(headersize)
         if len(s) < headersize:
-            raise error.NetworkError(headersize, len(s))
+            raise error.NetworkError.fewerbytesthanexpected(headersize, len(s))
 
         chunksize = unpack(s)[0]
 

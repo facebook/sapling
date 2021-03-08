@@ -602,10 +602,14 @@ class RetryFileMerge(Exception):
 class NetworkError(Abort):
     """Raised when failing to read from a network stream."""
 
-    def __init__(self, expected, read):
+    def __init__(self, msg):
+        super(NetworkError, self).__init__(msg)
+
+    @staticmethod
+    def fewerbytesthanexpected(expected, read):
         from .i18n import _
 
-        super(NetworkError, self).__init__(
+        return NetworkError(
             _("stream ended unexpectedly (got %d bytes, expected %d)")
             % (read, expected)
         )

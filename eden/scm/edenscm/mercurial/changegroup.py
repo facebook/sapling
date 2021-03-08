@@ -63,7 +63,7 @@ def readexactly(stream, n):
     """read n bytes from stream.read and abort if less was available"""
     s = stream.read(n)
     if len(s) < n:
-        raise error.NetworkError(n, len(s))
+        raise error.NetworkError.fewerbytesthanexpected(n, len(s))
     return s
 
 
