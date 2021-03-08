@@ -42,7 +42,7 @@ Cleanup: another is kept because of draft E, master is kept because it is
 selectivepull default:
 
   $ hg debugcleanremotenames
-  removed 1 non-essential remote bookmarks: remote/other
+  removed 2 non-essential remote bookmarks: remote/other, remote/release
 
   $ hg log -T '{desc} {remotenames} {phase}' -Gr 'all()'
   o  E  draft
@@ -53,7 +53,7 @@ selectivepull default:
   ├─╯
   o  A  public
   │
-  o  Z remote/release public
+  o  Z  public
   
 'hide --cleanup' does the same thing:
 

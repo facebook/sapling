@@ -1391,11 +1391,13 @@ def cleanupremotenames(repo):
     metalog = repo.metalog()
     if metalog is None:
         raise error.Abort(_("metalog is required"))
-    referrednodes = repo.dageval(lambda: ancestors(draft()))
 
     essentialnames = selectivepullinitbookmarkfullnames(repo)
-
     namenodes = decoderemotenames(metalog["remotenames"])
+    essentialpublicheads = [namenodes[n] for n in essentialnames if n in namenodes]
+
+    # referred by draft branches
+    referrednodes = repo.dageval(lambda: only(draft(), essentialpublicheads))
     newnamenodes = {
         fullname: node
         for fullname, node in namenodes.items()
