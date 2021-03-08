@@ -45,7 +45,6 @@ from .pycompat import decodeutf8, encodeutf8
 NETSTRING_SEPARATOR = b":"
 NETSTRING_ENDING = b","
 
-
 # Matches IoStream in Mononoke
 class IoStream(Enum):
     STDIN = 0
@@ -193,6 +192,7 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._host = u.host
         self._port = u.port or 443
         self._path = u.path
+        self._sockettimeout = ui.configwith(float, "mononokepeer", "sockettimeout")
 
         authdata = httpconnection.readauthforuri(self._ui, path, self._user)
         if not authdata:
@@ -238,7 +238,9 @@ class mononokepeer(stdiopeer.stdiopeer):
         self._cleanup()
 
         try:
-            self.sock = socket.create_connection((self._host, self._port))
+            self.sock = socket.create_connection(
+                (self._host, self._port), self._sockettimeout
+            )
         except IOError as ex:
             self._connectionerror(ex)
 

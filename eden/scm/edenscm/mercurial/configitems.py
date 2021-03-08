@@ -392,6 +392,7 @@ coreconfigitem(
 )
 coreconfigitem("merge-tools", r".*\.symlink$", default=False, generic=True, priority=-1)
 coreconfigitem("metalog", "track-config", default=True)
+coreconfigitem("mononokepeer", "sockettimeout", default=15.0)
 coreconfigitem("mutation", "date", default=None)
 coreconfigitem("mutation", "enabled", default=True)
 coreconfigitem("mutation", "proxy-obsstore", default=True)
