@@ -335,9 +335,6 @@ class RequirementError(RepoError):
 class NetworkError(Abort):
     """Raised when failing to read from a network stream."""
 
-    def __init__(self, msg):
-        super(NetworkError, self).__init__(msg)
-
     @staticmethod
     def fewerbytesthanexpected(expected, read):
         from .i18n import _
