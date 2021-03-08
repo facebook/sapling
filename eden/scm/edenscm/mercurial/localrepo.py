@@ -3088,8 +3088,10 @@ def _openchangelog(repo):
         repo.ui.log("changelog_info", changelog_backend="git")
         return changelog2.changelog.opengitsegments(repo, repo.ui.uiconfig())
     if "lazytextchangelog" in repo.storerequirements:
+        repo.ui.log("changelog_info", changelog_backend="lazytext")
         return changelog2.changelog.openlazytext(repo)
     if "hybridchangelog" in repo.storerequirements:
+        repo.ui.log("changelog_info", changelog_backend="hybrid")
         return changelog2.changelog.openhybrid(repo)
     if "doublewritechangelog" in repo.storerequirements:
         if repo.ui.configbool("experimental", "lazy-commit-data"):
