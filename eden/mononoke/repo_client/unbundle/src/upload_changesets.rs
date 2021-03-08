@@ -112,11 +112,21 @@ impl NewBlobs {
             }
         };
 
-        Ok(Self {
-            root_manifest,
-            sub_entries: entries
+        let buffer_size = tunables::tunables().get_repo_client_concurrent_blob_uploads();
+        let s = if buffer_size <= 0 {
+            entries
                 .into_iter()
                 .collect::<FuturesUnordered<_>>()
+                .left_stream()
+        } else {
+            stream::iter(entries)
+                .buffer_unordered(buffer_size as usize)
+                .right_stream()
+        };
+
+        Ok(Self {
+            root_manifest,
+            sub_entries: s
                 .map_err(move |err| {
                     err.context(format!(
                         "While walking dependencies of Root Manifest with id {:?}",
