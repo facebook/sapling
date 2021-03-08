@@ -9,13 +9,14 @@ Invalid syntax: no value
   > novaluekey
   > EOF
   $ hg showconfig
-  hg: parse error: "$TESTTMP/.hg/hgrc":
+  hg: parse errors: "$TESTTMP/.hg/hgrc":
    --> 1:11
     |
   1 | novaluekey\xe2\x90\x8a (esc)
     |           ^---
     |
     = expected equal_sign
+  
   [255]
 
 Invalid syntax: no key
@@ -24,13 +25,14 @@ Invalid syntax: no key
   > =nokeyvalue
   > EOF
   $ hg showconfig
-  hg: parse error: "$TESTTMP/.hg/hgrc":
+  hg: parse errors: "$TESTTMP/.hg/hgrc":
    --> 1:1
     |
   1 | =nokeyvalue\xe2\x90\x8a (esc)
     | ^---
     |
     = expected EOI, new_line, config_name, left_bracket, comment_line, or directive
+  
   [255]
 
 Test hint about invalid syntax from leading white space
@@ -39,13 +41,14 @@ Test hint about invalid syntax from leading white space
   >  key=value
   > EOF
   $ hg showconfig
-  hg: parse error: "$TESTTMP/.hg/hgrc":
+  hg: parse errors: "$TESTTMP/.hg/hgrc":
    --> 1:2
     |
   1 |  key=value\xe2\x90\x8a (esc)
     |  ^---
     |
     = expected EOI or new_line
+  
   [255]
 
   $ cat > .hg/hgrc << EOF
@@ -53,13 +56,14 @@ Test hint about invalid syntax from leading white space
   > key=value
   > EOF
   $ hg showconfig
-  hg: parse error: "$TESTTMP/.hg/hgrc":
+  hg: parse errors: "$TESTTMP/.hg/hgrc":
    --> 1:2
     |
   1 |  [section]\xe2\x90\x8a (esc)
     |  ^---
     |
     = expected EOI or new_line
+  
   [255]
 
 Reset hgrc

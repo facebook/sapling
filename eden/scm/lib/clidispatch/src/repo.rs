@@ -7,7 +7,7 @@
 
 use crate::errors;
 use anyhow::Result;
-use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
+use configparser::config::ConfigSet;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -107,29 +107,27 @@ impl Repo {
     {
         let path = path.into();
         assert!(path.is_absolute());
-        let mut config = configparser::hg::load::<String, String>(None, None)?;
-        let mut errors = config.load_hgrc(path.join(".hg/hgrc"), "repository");
-        if let Some(error) = errors.pop() {
-            Err(error.into())
-        } else {
-            let shared_path = read_sharedpath(&path)?;
-            let dot_hg_path = path.join(".hg");
-            let shared_dot_hg_path = shared_path.join(".hg");
-            let store_path = shared_dot_hg_path.join("store");
-            let repo_name = config
-                .get("remotefilelog", "reponame")
-                .map(|v| v.to_string());
-            Ok(Repo {
-                path,
-                config,
-                bundle_path: None,
-                shared_path,
-                store_path,
-                dot_hg_path,
-                shared_dot_hg_path,
-                repo_name,
-            })
-        }
+
+        let shared_path = read_sharedpath(&path)?;
+        let dot_hg_path = path.join(".hg");
+        let shared_dot_hg_path = shared_path.join(".hg");
+        let store_path = shared_dot_hg_path.join("store");
+
+        let config = configparser::hg::load::<String, String>(Some(&dot_hg_path), None)?;
+        let repo_name = config
+            .get("remotefilelog", "reponame")
+            .map(|v| v.to_string());
+
+        Ok(Repo {
+            path,
+            config,
+            bundle_path: None,
+            shared_path,
+            store_path,
+            dot_hg_path,
+            shared_dot_hg_path,
+            repo_name,
+        })
     }
 
     /// Return the store path.

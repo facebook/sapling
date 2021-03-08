@@ -80,13 +80,7 @@ However, we can't prevent it from loading extensions and configs:
   $ mkdir -p badrepo/.hg
   $ echo 'invalid-syntax' > badrepo/.hg/hgrc
   $ hg log -b -Rbadrepo default
-  hg: parse error: "$TESTTMP/a/badrepo/.hg/hgrc":
-   --> 1:15
-    |
-  1 | invalid-syntax\xe2\x90\x8a (esc)
-    |               ^---
-    |
-    = expected equal_sign
+  abort: unable to read repo config to get repo name
   [255]
 
 (XXX: Rust io::Error does not contain path information)
