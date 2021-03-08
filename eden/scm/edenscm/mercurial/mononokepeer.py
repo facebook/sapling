@@ -74,13 +74,20 @@ class mononokepipe(object):
     def _read_segment(self):
         r = b""
         while not r.endswith(NETSTRING_SEPARATOR):
-            buf = self._pipe.read(1)
+            try:
+                buf = self._pipe.read(1)
+            except Exception as e:
+                raise error.NetworkError(e.message)
             if not buf:
                 raise error.NetworkError("unexpected EOL, expected netstring digit")
             r += buf
 
         segmentlength = int(r[:-1])
-        r = self._pipe.read(segmentlength + 1)
+
+        try:
+            r = self._pipe.read(segmentlength + 1)
+        except Exception as e:
+            raise error.NetworkError(e.message)
         if len(r) != segmentlength + 1:
             raise error.NetworkError(
                 "unexpected read length, expected length {}, got length {}: '{}'".format(
