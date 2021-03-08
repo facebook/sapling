@@ -77,13 +77,13 @@ class mononokepipe(object):
         while not r.endswith(NETSTRING_SEPARATOR):
             buf = self._pipe.read(1)
             if not buf:
-                raise error.Abort("unexpected EOL, expected netstring digit")
+                raise error.NetworkError("unexpected EOL, expected netstring digit")
             r += buf
 
         segmentlength = int(r[:-1])
         r = self._pipe.read(segmentlength + 1)
         if len(r) != segmentlength + 1:
-            raise error.Abort(
+            raise error.NetworkError(
                 "unexpected read length, expected length {}, got length {}: '{}'".format(
                     segmentlength + 1, len(r), r
                 )
@@ -93,7 +93,7 @@ class mononokepipe(object):
         (stdtype,) = unpack("b", stdtype_raw)
 
         if ending != NETSTRING_ENDING:
-            raise error.Abort(
+            raise error.NetworkError(
                 "'%s' is not expected netencoding ending segment '%s'"
                 % (r[segmentlength], NETSTRING_ENDING)
             )

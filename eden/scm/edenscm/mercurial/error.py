@@ -332,7 +332,23 @@ class RequirementError(RepoError):
     """Exception raised if .hg/requires has an unknown entry."""
 
 
-class BadResponseError(RepoError):
+class NetworkError(Abort):
+    """Raised when failing to read from a network stream."""
+
+    def __init__(self, msg):
+        super(NetworkError, self).__init__(msg)
+
+    @staticmethod
+    def fewerbytesthanexpected(expected, read):
+        from .i18n import _
+
+        return NetworkError(
+            _("stream ended unexpectedly (got %d bytes, expected %d)")
+            % (read, expected)
+        )
+
+
+class BadResponseError(NetworkError):
     """Exception raised on a network error."""
 
 
@@ -596,22 +612,6 @@ class RetryFileMerge(Exception):
 
         super(RetryFileMerge, self).__init__(
             "ProgrammingError: RetryFileMerge should be handled"
-        )
-
-
-class NetworkError(Abort):
-    """Raised when failing to read from a network stream."""
-
-    def __init__(self, msg):
-        super(NetworkError, self).__init__(msg)
-
-    @staticmethod
-    def fewerbytesthanexpected(expected, read):
-        from .i18n import _
-
-        return NetworkError(
-            _("stream ended unexpectedly (got %d bytes, expected %d)")
-            % (read, expected)
         )
 
 
