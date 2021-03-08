@@ -93,7 +93,7 @@ Test less relevant branches:
   checking internal storage
   checking commit references
 
-Changing the authoer, F branch becomes "less relevant". G is okay as it has
+Changing the author, F branch becomes "less relevant". G is okay as it has
 local modifications.
 
   $ HGUSER='Foo <f@o.o>' hg doctor

@@ -16,8 +16,11 @@ Push 3 branches to the server.
   > B C D
   >  \|/
   >   A
+  >   |
+  >   Z
   > EOS
 
+  $ hg push -r $Z --to release --create -q
   $ hg push -r $B --to master --create -q
   $ hg push -r $C --to other --create -q
   $ hg push -r $D --to another --create -q
@@ -25,7 +28,7 @@ Push 3 branches to the server.
 Fetch all remote names:
 
   $ cd $TESTTMP/client2
-  $ hg pull -B other -B master -B another -q
+  $ hg pull -B other -B master -B another -B release -q
 
 Commit (draft) on "another":
 
@@ -49,28 +52,34 @@ selectivepull default:
   │ o  B remote/master public
   ├─╯
   o  A  public
+  │
+  o  Z remote/release public
   
 'hide --cleanup' does the same thing:
 
   $ cd $TESTTMP/client3
-  $ hg pull -B other -B master -B another -q
+  $ hg pull -B other -B master -B another -B release -q
   $ enable amend
   $ hg hide --cleanup
-  removed 2 non-essential remote bookmarks: remote/another, remote/other
+  removed 3 non-essential remote bookmarks: remote/another, remote/other, remote/release
 
   $ hg log -T '{desc} {remotenames} {phase}' -Gr 'all()'
   o  B remote/master public
   │
   o  A  public
+  │
+  o  Z  public
   
 Auto cleanup triggered by remotenames.autocleanupthreshold:
 
   $ cd $TESTTMP/client4
-  $ hg pull -B other -B master -B another -q
+  $ hg pull -B other -B master -B another -B release -q
   $ hg log -T '{desc} {remotenames} {phase}' -Gr 'all()' --config remotenames.autocleanupthreshold=1
   attempt to clean up remote bookmarks since they exceed threshold 1
-  removed 2 non-essential remote bookmarks: remote/another, remote/other
+  removed 3 non-essential remote bookmarks: remote/another, remote/other, remote/release
   o  B remote/master public
   │
   o  A  public
+  │
+  o  Z  public
   
