@@ -79,3 +79,15 @@ create new commit in repo2 and check that push fails
   remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
+
+  $ killandwait $MONONOKE_PID
+  $ cd "$TESTTMP"
+  $ rm -rf "$TESTTMP/mononoke-config"
+  $ ALLOW_CHANGE_XREPO_MAPPING_EXTRA=true setup_common_config
+  $ mononoke
+  $ wait_for_mononoke
+  $ cd "$TESTTMP/repo2"
+  $ hgmn push ssh://user@dummy/repo -r . --to master_bookmark --config extensions.remotenames=
+  pushing rev 9c40727be57c to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  updating bookmark master_bookmark

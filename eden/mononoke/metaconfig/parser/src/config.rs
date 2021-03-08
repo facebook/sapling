@@ -767,6 +767,7 @@ mod test {
             forbid_p2_root_rebases = false
             casefolding_check = false
             emit_obsmarkers = false
+            allow_change_xrepo_mapping_extra = true
 
             [lfs]
             threshold = 1000
@@ -968,6 +969,7 @@ mod test {
                     commit_scribe_category: None,
                     globalrevs_publishing_bookmark: None,
                     populate_git_mapping: false,
+                    allow_change_xrepo_mapping_extra: true,
                 },
                 lfs: LfsParams {
                     threshold: Some(1000),

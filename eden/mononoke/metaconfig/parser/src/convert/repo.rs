@@ -233,6 +233,9 @@ impl Convert for RawPushrebaseParams {
             populate_git_mapping: self
                 .populate_git_mapping
                 .unwrap_or(default.populate_git_mapping),
+            allow_change_xrepo_mapping_extra: self
+                .allow_change_xrepo_mapping_extra
+                .unwrap_or(false),
         })
     }
 }

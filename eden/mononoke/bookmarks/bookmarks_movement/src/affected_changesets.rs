@@ -248,6 +248,7 @@ impl AffectedChangesets {
             bookmark,
             kind,
             additional_changesets,
+            pushrebase_params,
         )
         .await?;
 
@@ -302,8 +303,9 @@ impl AffectedChangesets {
         bookmark: &BookmarkName,
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
+        pushrebase_params: &PushrebaseParams,
     ) -> Result<(), BookmarkMovementError> {
-        if kind == BookmarkKind::Public {
+        if kind == BookmarkKind::Public && !pushrebase_params.allow_change_xrepo_mapping_extra {
             self.load_additional_changesets(
                 ctx,
                 repo,

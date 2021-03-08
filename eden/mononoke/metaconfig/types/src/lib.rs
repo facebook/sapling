@@ -597,6 +597,12 @@ pub struct PushrebaseParams {
     pub globalrevs_publishing_bookmark: Option<BookmarkName>,
     /// Whether Git Mapping should be populated from extras (affects also blobimport)
     pub populate_git_mapping: bool,
+    /// For the case when one repo is linked to another (a.k.a. megarepo)
+    /// there's a special commit extra that allows changing the mapping
+    /// used to rewrite a commit from one repo to another.
+    /// Normally pushes of a commit like this are not allowed unless
+    /// this option is set to false.
+    pub allow_change_xrepo_mapping_extra: bool,
 }
 
 impl Default for PushrebaseParams {
@@ -608,6 +614,7 @@ impl Default for PushrebaseParams {
             commit_scribe_category: None,
             globalrevs_publishing_bookmark: None,
             populate_git_mapping: false,
+            allow_change_xrepo_mapping_extra: false,
         }
     }
 }

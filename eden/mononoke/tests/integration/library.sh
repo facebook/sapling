@@ -942,6 +942,12 @@ populate_git_mapping=true
 CONFIG
 fi
 
+if [[ -n "${ALLOW_CHANGE_XREPO_MAPPING_EXTRA:-}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+allow_change_xrepo_mapping_extra=true
+CONFIG
+fi
+
   cat >> "repos/$reponame/server.toml" <<CONFIG
 
 [hook_manager_params]
