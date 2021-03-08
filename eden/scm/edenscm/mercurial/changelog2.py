@@ -640,6 +640,8 @@ class nodemap(object):
 
 
 def migrateto(repo, name):
+    if "hgsql" in repo.requirements:
+        raise error.Abort(_("cannot migrate hgsql repo"))
     if "lazytextchangelog" in repo.storerequirements and name != "lazytext":
         raise error.Abort(_("cannot migrate away from lazytext backend"))
     if name == "revlog":

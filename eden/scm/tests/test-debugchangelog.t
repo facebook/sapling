@@ -175,3 +175,10 @@ The revlog backend does not need segmented data.
     │
     o  D
   
+Cannot migrate hgsql repos
+
+  $ echo hgsql >> .hg/requires
+
+(filters out hgsql mysql import errors)
+  $ hg debugchangelog --migrate revlog --config extensions.hgsql= --config hgsql.bypass=1 2>&1 | grep migrate
+  abort: cannot migrate hgsql repo
