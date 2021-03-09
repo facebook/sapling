@@ -31,6 +31,7 @@ def _parse_os_kernel_version(version: str) -> Tuple[int, ...]:
             *parsed_kernel_version,
             *[0] * (4 - len(parsed_kernel_version)),
         )
+    # pyre-fixme[7]: Expected `Tuple[int, ...]` but got `Tuple[object, ...]`.
     return parsed_kernel_version
 
 
