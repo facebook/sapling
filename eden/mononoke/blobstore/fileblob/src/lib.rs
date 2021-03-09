@@ -110,7 +110,10 @@ impl BlobstorePutOps for Fileblob {
                 match tempfile.persist_noclobber(&p) {
                     Ok(_) => OverwriteStatus::New,
                     // Key already existed
-                    Err(PersistError { file: f, error: _ }) if f.path() == temp_path => {
+                    Err(PersistError { file: f, error: e })
+                        if f.path() == temp_path
+                            && e.kind() == std::io::ErrorKind::AlreadyExists =>
+                    {
                         if put_behaviour.should_overwrite() {
                             f.persist(&p)?;
                             OverwriteStatus::Overwrote
@@ -229,5 +232,30 @@ impl BlobstoreKeySource for Fileblob {
             }
             _ => Err(format_err!("Fileblob does not support token, only ranges")),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use fbinit::FacebookInit;
+
+    #[fbinit::test]
+    async fn test_persist_error(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+
+        let blob = Fileblob {
+            base: PathBuf::from("/mononoke/fileblob/test/path/should/not/exist"),
+            put_behaviour: PutBehaviour::IfAbsent,
+        };
+
+        let ret = blob
+            .put(&ctx, "key".into(), BlobstoreBytes::from_bytes("value"))
+            .await;
+
+        assert!(ret.is_err());
+
+        Ok(())
     }
 }
