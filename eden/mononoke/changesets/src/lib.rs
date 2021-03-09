@@ -233,29 +233,58 @@ queries! {
     }
 
     read SelectAllChangesetsIdsInRange(repo_id: RepositoryId, min_id: u64, max_id: u64) -> (ChangesetId) {
-        "SELECT cs_id
-         FROM changesets
-         WHERE repo_id = {repo_id}
-           AND id BETWEEN {min_id} AND {max_id}
-         ORDER BY id"
+        mysql(
+            "SELECT cs_id
+            FROM changesets FORCE INDEX(repo_id_id)
+            WHERE repo_id = {repo_id}
+            AND id BETWEEN {min_id} AND {max_id}
+            ORDER BY id"
+        )
+        sqlite(
+            "SELECT cs_id
+            FROM changesets
+            WHERE repo_id = {repo_id}
+            AND id BETWEEN {min_id} AND {max_id}
+            ORDER BY id"
+        )
     }
 
     read SelectAllChangesetsIdsInRangeLimitAsc(repo_id: RepositoryId, min_id: u64, max_id: u64, limit: u64) -> (ChangesetId, u64) {
-        "SELECT cs_id, id
-         FROM changesets
-         WHERE repo_id = {repo_id}
-           AND id BETWEEN {min_id} AND {max_id}
-         ORDER BY id
-         LIMIT {limit}"
+        mysql(
+            "SELECT cs_id, id
+            FROM changesets FORCE INDEX(repo_id_id)
+            WHERE repo_id = {repo_id}
+            AND id BETWEEN {min_id} AND {max_id}
+            ORDER BY id
+            LIMIT {limit}"
+        )
+        sqlite(
+            "SELECT cs_id, id
+            FROM changesets
+            WHERE repo_id = {repo_id}
+            AND id BETWEEN {min_id} AND {max_id}
+            ORDER BY id
+            LIMIT {limit}"
+        )
     }
 
     read SelectAllChangesetsIdsInRangeLimitDesc(repo_id: RepositoryId, min_id: u64, max_id: u64, limit: u64) -> (ChangesetId, u64) {
-        "SELECT cs_id, id
-         FROM changesets
-         WHERE repo_id = {repo_id}
-           AND id BETWEEN {min_id} AND {max_id}
-         ORDER BY id DESC
-         LIMIT {limit}"
+        mysql(
+            "SELECT cs_id, id
+            FROM changesets FORCE INDEX(repo_id_id)
+            WHERE repo_id = {repo_id}
+              AND id BETWEEN {min_id} AND {max_id}
+            ORDER BY id DESC
+            LIMIT {limit}"
+        )
+        sqlite(
+            "SELECT cs_id, id
+            FROM changesets
+            WHERE repo_id = {repo_id}
+              AND id BETWEEN {min_id} AND {max_id}
+            ORDER BY id DESC
+            LIMIT {limit}"
+        )
     }
 
     read SelectChangesetsIdsBounds(repo_id: RepositoryId) -> (u64, u64) {
