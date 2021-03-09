@@ -22,6 +22,7 @@ mod debug;
 mod gc;
 mod pid;
 mod status;
+mod top;
 mod uptime;
 
 #[cfg(unix)]
@@ -80,6 +81,7 @@ pub enum TopLevelSubcommand {
     Gc(crate::gc::GcCmd),
     Config(crate::config::ConfigCmd),
     Debug(crate::debug::DebugCmd),
+    Top(crate::top::TopCmd),
 }
 
 #[async_trait]
@@ -93,6 +95,7 @@ impl Subcommand for TopLevelSubcommand {
             Gc(cmd) => cmd,
             Config(cmd) => cmd,
             Debug(cmd) => cmd,
+            Top(cmd) => cmd,
         };
         sc.run(instance).await
     }
