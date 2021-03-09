@@ -56,5 +56,5 @@ Pull from Mononoke, make sure it fails
   $ hgmn pull
   pulling from ssh://user@dummy/repo
   remote: Authorization failed: Unauthorized access, permission denied
-  abort: no suitable response from remote hg!
+  abort: no suitable response from remote hg* (glob)
   [255]
