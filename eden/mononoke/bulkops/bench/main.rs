@@ -12,7 +12,7 @@ use std::time::Duration;
 use clap::Arg;
 use criterion::{BenchmarkId, Criterion, Throughput};
 use futures::{
-    future,
+    future::{self, TryFutureExt},
     stream::{Stream, StreamExt, TryStreamExt},
 };
 use tokio::runtime::Runtime;
@@ -135,6 +135,25 @@ fn main(fb: fbinit::FacebookInit) {
 
     // Tests are run from here
     let (repo, fetcher) = setup(&mut runtime);
+
+    bench_stream(
+        &mut criterion,
+        &ctx,
+        &mut runtime,
+        format!(
+            "{}{}",
+            repo, ":PublicChangesetBulkFetch::fetch_best_newest_first_mid"
+        ),
+        &fetcher,
+        |ctx, fetcher| {
+            async move {
+                let (lower, upper) = fetcher.get_repo_bounds().await?;
+                let mid = (upper - lower) / 2;
+                Ok(fetcher.fetch_ids(ctx, Direction::NewestFirst, Some((lower, mid))))
+            }
+            .try_flatten_stream()
+        },
+    );
 
     bench_stream(
         &mut criterion,
