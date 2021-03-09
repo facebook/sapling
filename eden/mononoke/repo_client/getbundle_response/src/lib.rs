@@ -351,6 +351,13 @@ async fn find_commits_to_send(
         }
     };
 
+    let nodes_to_send: Vec<_> = partial_result
+        .partial
+        .into_iter()
+        .chain(nodes_to_send.into_iter())
+        .rev()
+        .collect();
+
     ctx.session()
         .bump_load(Metric::EgressCommits, nodes_to_send.len() as f64);
     ctx.perf_counters().add_to_counter(
@@ -358,12 +365,10 @@ async fn find_commits_to_send(
         nodes_to_send.len() as i64,
     );
 
-    Ok(partial_result
-        .partial
-        .into_iter()
-        .chain(nodes_to_send.into_iter())
-        .rev()
-        .collect())
+    ctx.scuba()
+        .clone()
+        .log_with_msg("Found commits to send to the client", None);
+    Ok(nodes_to_send)
 }
 
 fn find_and_log_high_low_gen_nums(
@@ -632,12 +637,16 @@ async fn find_new_draft_commits_and_derive_filenodes_for_public_roots(
     let (draft, public_heads) =
         find_new_draft_commits_and_public_roots(ctx, repo, common, heads, phases).await?;
 
+    ctx.scuba().clone().log_with_msg("Deriving filenodes", None);
     // Ensure filenodes are derived for all of the public heads.
     stream::iter(public_heads)
         .map(|bcs_id| FilenodesOnlyPublic::derive(ctx, repo, bcs_id))
         .buffered(100)
         .try_for_each(|_derive| async { Ok(()) })
         .await?;
+    ctx.scuba()
+        .clone()
+        .log_with_msg("Derived all filenodes", None);
 
     Ok(draft)
 }
