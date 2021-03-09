@@ -19,6 +19,7 @@ use futures::{
     compat::Future01CompatExt,
     future::{self, BoxFuture, FutureExt},
 };
+use futures_watchdog::WatchdogExt;
 use logblob::LogBlob;
 use metaconfig_types::{
     BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, MultiplexedStoreType,
@@ -285,6 +286,7 @@ fn make_blobstore_put_ops<'a>(
                 blobstore_options,
                 config_store,
             )
+            .watched(logger)
             .await
             .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
 
@@ -311,6 +313,7 @@ fn make_blobstore_put_ops<'a>(
                     logger,
                     config_store,
                 )
+                .watched(logger)
                 .await?
             }
             Disabled => {
@@ -340,6 +343,7 @@ fn make_blobstore_put_ops<'a>(
                     logger,
                     config_store,
                 )
+                .watched(logger)
                 .await?;
 
                 Arc::new(LogBlob::new(store, scuba, scuba_sample_rate)) as Arc<dyn BlobstorePutOps>
@@ -357,6 +361,7 @@ fn make_blobstore_put_ops<'a>(
                         blobstore_options.put_behaviour,
                     )
                     .compat()
+                    .watched(logger)
                     .await?
                 }
                 #[cfg(not(fbcode_build))]
@@ -382,6 +387,7 @@ fn make_blobstore_put_ops<'a>(
                         blobstore_options.put_behaviour,
                     )
                     .compat()
+                    .watched(logger)
                     .await?
                 }
                 #[cfg(not(fbcode_build))]
@@ -400,6 +406,7 @@ fn make_blobstore_put_ops<'a>(
                     logger,
                     config_store,
                 )
+                .watched(logger)
                 .await?;
 
                 Arc::new(PackBlob::new(store, blobstore_options.pack_options.clone()))
@@ -422,6 +429,7 @@ fn make_blobstore_put_ops<'a>(
                         blobstore_options.put_behaviour,
                         logger,
                     )
+                    .watched(logger)
                     .await
                     .context(ErrorKind::StateOpen)
                     .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?
@@ -441,8 +449,11 @@ fn make_blobstore_put_ops<'a>(
         };
 
         let store = if blobstore_options.throttle_options.has_throttle() {
-            Arc::new(ThrottledBlob::new(store, blobstore_options.throttle_options).await)
-                as Arc<dyn BlobstorePutOps>
+            Arc::new(
+                ThrottledBlob::new(store, blobstore_options.throttle_options)
+                    .watched(logger)
+                    .await,
+            ) as Arc<dyn BlobstorePutOps>
         } else {
             store
         };
@@ -512,6 +523,7 @@ async fn make_blobstore_multiplexed<'a>(
                     logger,
                     config_store,
                 )
+                .watched(logger)
                 .await?;
 
                 Ok((blobstoreid, store_type, store))
@@ -524,7 +536,8 @@ async fn make_blobstore_multiplexed<'a>(
         &queue_db,
         mysql_options,
         readonly_storage.0,
-    );
+    )
+    .watched(logger);
 
     let (components, queue) = future::try_join(components, queue).await?;
 
