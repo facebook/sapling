@@ -26,6 +26,7 @@ use futures::future::Future;
 use futures::stream::{BoxStream, Stream, StreamExt};
 use once_cell::sync::Lazy;
 use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
+use tokio::task::JoinHandle;
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
     let nproc = num_cpus::get();
@@ -36,6 +37,15 @@ static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
         .expect("failed to initialize the async runtime")
 });
 pub static STREAM_BUFFER_SIZE: usize = 128;
+
+/// Spawn a task using the runtime.
+pub fn spawn<T>(task: T) -> JoinHandle<T::Output>
+where
+    T: Future + Send + 'static,
+    T::Output: Send + 'static,
+{
+    RUNTIME.spawn(task)
+}
 
 /// Blocks the current thread while waiting for the computation defined by the Future `f` to
 /// complete.
