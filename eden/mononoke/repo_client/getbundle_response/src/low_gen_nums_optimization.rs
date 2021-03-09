@@ -374,46 +374,27 @@ fn split_heads_excludes(ctx: &CoreContext, params: Params, threshold: u64) -> Op
     };
 
     let mut low_gens_params = vec![];
-    // TODO(stash): remove it after rollout
-    if tunables().get_getbundle_only_single_low_gen_num_head() {
-        let max_low_gen_num = match low_gen_heads.iter().max_by_key(|entry| entry.1) {
-            Some(max_low_gen_num) => max_low_gen_num.1,
-            None => {
-                return None;
-            }
-        };
+    // We shouldn't normally have too many heads with low generation number
+    // If we do have a lot of them, then something weird is going on, and it's
+    // better to exit quickly.
+    let low_gen_heads_num: u64 = low_gen_heads.len().try_into().unwrap();
+    if low_gen_heads_num > LOW_GEN_HEADS_LIMIT {
+        ctx.scuba()
+            .clone()
+            .log_with_msg("Too many heads with low generating number", None);
+        return None;
+    }
 
-        let low_gen_excludes: Vec<_> = excludes
+    for head in low_gen_heads {
+        let low_gen_excludes = excludes
+            .clone()
             .into_iter()
-            .filter(|entry| entry.1 <= max_low_gen_num)
+            .filter(|entry| entry.1 <= head.1)
             .collect();
         low_gens_params.push(Params {
-            heads: low_gen_heads,
+            heads: vec![head],
             excludes: low_gen_excludes,
         });
-    } else {
-        // We shouldn't normally have too many heads with low generation number
-        // If we do have a lot of them, then something weird is going on, and it's
-        // better to exit quickly.
-        let low_gen_heads_num: u64 = low_gen_heads.len().try_into().unwrap();
-        if low_gen_heads_num > LOW_GEN_HEADS_LIMIT {
-            ctx.scuba()
-                .clone()
-                .log_with_msg("Too many heads with low generating number", None);
-            return None;
-        }
-
-        for head in low_gen_heads {
-            let low_gen_excludes = excludes
-                .clone()
-                .into_iter()
-                .filter(|entry| entry.1 <= head.1)
-                .collect();
-            low_gens_params.push(Params {
-                heads: vec![head],
-                excludes: low_gen_excludes,
-            });
-        }
     }
 
     Some(SplitParams {

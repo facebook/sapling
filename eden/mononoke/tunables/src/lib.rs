@@ -100,7 +100,6 @@ pub struct MononokeTunables {
     getbundle_high_low_gen_num_difference_threshold: AtomicI64,
     getbundle_low_gen_optimization_max_traversal_limit: AtomicI64,
     getbundle_partial_getbundle_traversal_limit: AtomicI64,
-    getbundle_only_single_low_gen_num_head: AtomicBool,
     repo_client_bookmarks_timeout_secs: AtomicI64,
     repo_client_clone_timeout_secs: AtomicI64,
     repo_client_default_timeout_secs: AtomicI64,
