@@ -18,7 +18,18 @@ import time
 import typing
 import uuid
 from pathlib import Path
-from typing import IO, Any, Dict, List, Mapping, Optional, Set, Tuple, Type, Union, cast
+from typing import (
+    KeysView,
+    IO,
+    Any,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 import facebook.eden.ttypes as eden_ttypes
 import toml
@@ -41,7 +52,7 @@ except ImportError:
     pass
 
 
-log = logging.getLogger(__name__)
+log: logging.Logger = logging.getLogger(__name__)
 
 # On Linux we import fcntl for flock. The Windows LockFileEx is not semantically
 # same as flock. We will need to make some changes for LockFileEx to work.
@@ -83,7 +94,7 @@ DEFAULT_REVISION = {  # supported repo name -> default bookmark
     "hg": "first(present(master) + .)",
 }
 
-SUPPORTED_REPOS = DEFAULT_REVISION.keys()
+SUPPORTED_REPOS: KeysView[str] = DEFAULT_REVISION.keys()
 
 REPO_FOR_EXTENSION = {".git": "git", ".hg": "hg"}
 
@@ -381,14 +392,20 @@ class EdenInstance:
         """Return the paths of the set mount points stored in config.json"""
         return [str(path) for path in self._get_directory_map().keys()]
 
-    async def get_thrift_client(self, timeout=None) -> "client.EdenClient":
+    async def get_thrift_client(
+        self, timeout: Optional[float] = None
+    ) -> "client.EdenClient":
         return client.create_thrift_client(
-            eden_dir=str(self._config_dir), timeout=timeout
+            eden_dir=str(self._config_dir),
+            timeout=timeout,
         )
 
-    def get_thrift_client_legacy(self, timeout=None) -> legacy.EdenClient:
+    def get_thrift_client_legacy(
+        self, timeout: Optional[float] = None
+    ) -> legacy.EdenClient:
         return legacy.create_thrift_client(
-            eden_dir=str(self._config_dir), timeout=timeout
+            eden_dir=str(self._config_dir),
+            timeout=timeout,
         )
 
     def get_checkout_info(self, path: Union[Path, str]) -> collections.OrderedDict:
