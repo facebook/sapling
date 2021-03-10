@@ -114,6 +114,12 @@ where
         // Each loop get new ctx and thus session id so we can distinguish runs
         let ctx = CoreContext::new_with_logger(fb, repo_params.logger.clone());
         let session_text = ctx.session().metadata().session_id().to_string();
+        if !job_params.quiet {
+            info!(
+                repo_params.logger,
+                "Starting walk with session id {}", &session_text
+            )
+        }
         repo_params.scuba_builder.add("session", session_text);
 
         let mut checkpoint = if let Some(checkpoints) = tail_params.checkpoints.as_ref() {
