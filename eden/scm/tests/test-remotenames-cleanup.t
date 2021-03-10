@@ -50,14 +50,12 @@ selectivepull default:
   $ hg log -T '{desc} {remotenames} {phase}' -Gr 'all()'
   o  E  draft
   │
-  │ o  H  draft
-  │ │
-  o │  D remote/another public
-  │ │
-  │ │ o  B remote/master public
-  ├───╯
-  o │  A  public
+  o  D remote/another public
+  │
+  │ o  B remote/master public
   ├─╯
+  o  A  public
+  │
   o  Z  public
   
 'hide --cleanup' does the same thing:

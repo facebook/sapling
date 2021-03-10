@@ -26,6 +26,7 @@ from . import (
     scmutil,
     txnutil,
     util,
+    visibility,
 )
 from .i18n import _
 from .node import bin, hex, nullid, short, wdirid
@@ -1410,6 +1411,12 @@ def cleanupremotenames(repo):
     }
     removednames = sorted(set(namenodes) - set(newnamenodes))
     if removednames:
+        # Also update visibleheads so we don't end up with massive draft
+        # commits.
+        removednodes = set(namenodes.values()) - set(newnamenodes.values())
+        metalog["visibleheads"] = visibility.encodeheads(
+            [h for h in referredheads if h not in removednodes]
+        )
         metalog["remotenames"] = encoderemotenames(newnamenodes)
         metalog.commit("cleanupremotenames")
         threshold = 10
