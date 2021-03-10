@@ -55,7 +55,6 @@ pub struct SegmentedChangelogBuilder {
     bookmarks: Option<Arc<dyn Bookmarks>>,
     bookmark_name: Option<BookmarkName>,
     cache_handlers: Option<CacheHandlers>,
-    with_in_memory_write_idmap: bool,
     update_to_bookmark_period: Option<Duration>,
     reload_dag_period: Option<Duration>,
 }
@@ -77,7 +76,6 @@ impl SqlConstruct for SegmentedChangelogBuilder {
             bookmarks: None,
             bookmark_name: None,
             cache_handlers: None,
-            with_in_memory_write_idmap: false,
             update_to_bookmark_period: None,
             reload_dag_period: None,
         }
@@ -101,7 +99,6 @@ impl SegmentedChangelogBuilder {
             sc_version_store,
             iddag_save_store,
             idmap_factory,
-            self.with_in_memory_write_idmap,
         ))
     }
 
@@ -123,7 +120,6 @@ impl SegmentedChangelogBuilder {
         ctx: &CoreContext,
     ) -> Result<OnDemandUpdateSegmentedChangelog> {
         let changeset_fetcher = self.changeset_fetcher()?;
-        self.with_in_memory_write_idmap = true;
         let manager = self.build_manager()?;
         let (_, owned) = manager.load(ctx).await?;
         Ok(OnDemandUpdateSegmentedChangelog::from_owned(
@@ -177,7 +173,9 @@ impl SegmentedChangelogBuilder {
             self.idmap_version(),
             idmap_version_store,
             self.changeset_bulk_fetch()?,
-            self.build_manager()?,
+            self.build_segmented_changelog_version_store()?,
+            self.build_iddag_save_store()?,
+            self.build_idmap_factory()?,
         );
         Ok(seeder)
     }
@@ -188,7 +186,9 @@ impl SegmentedChangelogBuilder {
             self.changeset_fetcher()?,
             self.bookmarks()?,
             self.bookmark_name()?,
-            self.build_manager()?,
+            self.build_segmented_changelog_version_store()?,
+            self.build_iddag_save_store()?,
+            self.build_idmap_factory()?,
         );
         Ok(tailer)
     }

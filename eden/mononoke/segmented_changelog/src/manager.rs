@@ -12,21 +12,19 @@ use std::time::Duration;
 use anyhow::{format_err, Context, Result};
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
-use slog::{debug, info};
 use tokio::sync::Notify;
 use tokio::time::Instant;
 
-use dag::{InProcessIdDag, Location};
+use dag::Location;
 use futures_ext::future::{spawn_controlled, ControlledHandle};
 
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{IdMap, IdMapFactory};
-use crate::logging::log_new_segmented_changelog_version;
+use crate::idmap::IdMapFactory;
 use crate::owned::OwnedSegmentedChangelog;
-use crate::types::{IdMapVersion, SegmentedChangelogVersion};
+use crate::types::SegmentedChangelogVersion;
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::{segmented_changelog_delegate, CloneData, SegmentedChangelog, StreamCloneData};
 
@@ -35,7 +33,6 @@ pub struct SegmentedChangelogManager {
     sc_version_store: SegmentedChangelogVersionStore,
     iddag_save_store: IdDagSaveStore,
     idmap_factory: IdMapFactory,
-    with_in_memory_write_idmap: bool,
 }
 
 impl SegmentedChangelogManager {
@@ -44,49 +41,13 @@ impl SegmentedChangelogManager {
         sc_version_store: SegmentedChangelogVersionStore,
         iddag_save_store: IdDagSaveStore,
         idmap_factory: IdMapFactory,
-        with_in_memory_write_idmap: bool,
     ) -> Self {
         Self {
             repo_id,
             sc_version_store,
             iddag_save_store,
             idmap_factory,
-            with_in_memory_write_idmap,
         }
-    }
-
-    pub async fn save(
-        &self,
-        ctx: &CoreContext,
-        iddag: &InProcessIdDag,
-        idmap_version: IdMapVersion,
-    ) -> Result<SegmentedChangelogVersion> {
-        // Save the IdDag
-        let iddag_version = self
-            .iddag_save_store
-            .save(&ctx, &iddag)
-            .await
-            .with_context(|| format!("repo {}: error saving iddag", self.repo_id))?;
-        // Update SegmentedChangelogVersion
-        let sc_version = SegmentedChangelogVersion::new(iddag_version, idmap_version);
-        self.sc_version_store
-            .set(&ctx, sc_version)
-            .await
-            .with_context(|| {
-                format!(
-                    "repo {}: error updating segmented changelog version store",
-                    self.repo_id
-                )
-            })?;
-        log_new_segmented_changelog_version(ctx, self.repo_id, sc_version);
-        info!(
-            ctx.logger(),
-            "repo {}: segmented changelog version saved, idmap_version: {}, iddag_version: {}",
-            self.repo_id,
-            idmap_version,
-            iddag_version,
-        );
-        Ok(sc_version)
     }
 
     pub async fn load(
@@ -114,8 +75,8 @@ impl SegmentedChangelogManager {
             .load(&ctx, sc_version.iddag_version)
             .await
             .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
-        let idmap = self.new_idmap(ctx, sc_version.idmap_version);
-        debug!(
+        let idmap = self.idmap_factory.for_server(ctx, sc_version.idmap_version);
+        slog::debug!(
             ctx.logger(),
             "segmented changelog dag successfully loaded - repo_id: {}, idmap_version: {}, \
             iddag_version: {} ",
@@ -125,14 +86,6 @@ impl SegmentedChangelogManager {
         );
         let owned = OwnedSegmentedChangelog::new(iddag, idmap);
         Ok((sc_version, owned))
-    }
-
-    pub fn new_idmap(&self, ctx: &CoreContext, idmap_version: IdMapVersion) -> Arc<dyn IdMap> {
-        if self.with_in_memory_write_idmap {
-            self.idmap_factory.for_server(ctx, idmap_version)
-        } else {
-            self.idmap_factory.for_writer(ctx, idmap_version)
-        }
     }
 }
 

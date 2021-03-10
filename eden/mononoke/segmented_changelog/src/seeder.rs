@@ -19,11 +19,13 @@ use changesets::ChangesetEntry;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
+use crate::iddag::IdDagSaveStore;
+use crate::idmap::IdMapFactory;
 use crate::idmap::SqlIdMapVersionStore;
-use crate::manager::SegmentedChangelogManager;
 use crate::owned::OwnedSegmentedChangelog;
-use crate::types::IdMapVersion;
+use crate::types::{IdMapVersion, SegmentedChangelogVersion};
 use crate::update::StartState;
+use crate::version_store::SegmentedChangelogVersionStore;
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.seeder";
@@ -34,7 +36,9 @@ pub struct SegmentedChangelogSeeder {
     idmap_version: IdMapVersion,
     idmap_version_store: SqlIdMapVersionStore,
     changeset_bulk_fetch: Arc<PublicChangesetBulkFetch>,
-    manager: SegmentedChangelogManager,
+    sc_version_store: SegmentedChangelogVersionStore,
+    iddag_save_store: IdDagSaveStore,
+    idmap_factory: IdMapFactory,
 }
 
 impl SegmentedChangelogSeeder {
@@ -42,13 +46,17 @@ impl SegmentedChangelogSeeder {
         idmap_version: IdMapVersion,
         idmap_version_store: SqlIdMapVersionStore,
         changeset_bulk_fetch: Arc<PublicChangesetBulkFetch>,
-        manager: SegmentedChangelogManager,
+        sc_version_store: SegmentedChangelogVersionStore,
+        iddag_save_store: IdDagSaveStore,
+        idmap_factory: IdMapFactory,
     ) -> Self {
         Self {
             idmap_version,
             idmap_version_store,
             changeset_bulk_fetch,
-            manager,
+            sc_version_store,
+            iddag_save_store,
+            idmap_factory,
         }
     }
     pub async fn run(&self, ctx: &CoreContext, head: ChangesetId) -> Result<()> {
@@ -64,10 +72,18 @@ impl SegmentedChangelogSeeder {
             ctx.logger(),
             "finished building dag, head '{}' has assigned vertex '{}'", head, last_vertex
         );
-        self.manager
-            .save(ctx, &owned.iddag, self.idmap_version)
+        // Save the IdDag
+        let iddag_version = self
+            .iddag_save_store
+            .save(&ctx, &owned.iddag)
             .await
-            .context("failed to save dag")?;
+            .context("error saving iddag")?;
+        // Update SegmentedChangelogVersion
+        let sc_version = SegmentedChangelogVersion::new(iddag_version, self.idmap_version);
+        self.sc_version_store
+            .set(&ctx, sc_version)
+            .await
+            .context("error updating segmented changelog version store")?;
         // Update IdMapVersion
         self.idmap_version_store
             .set(&ctx, self.idmap_version)
@@ -103,7 +119,7 @@ impl SegmentedChangelogSeeder {
         }
 
         let low_vertex = dag::Group::MASTER.min_id();
-        let idmap = self.manager.new_idmap(ctx, self.idmap_version);
+        let idmap = self.idmap_factory.for_writer(ctx, self.idmap_version);
         let mut owned = OwnedSegmentedChangelog::new(InProcessIdDag::new_in_process(), idmap);
         let last_vertex = crate::update::build(
             ctx,

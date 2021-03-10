@@ -14,6 +14,7 @@ use stats::prelude::*;
 use context::{CoreContext, PerfCounterType};
 use mononoke_types::RepositoryId;
 
+use crate::logging::log_new_segmented_changelog_version;
 use crate::types::{IdDagVersion, IdMapVersion, SegmentedChangelogVersion};
 
 define_stats! {
@@ -52,6 +53,7 @@ impl SegmentedChangelogVersionStore {
         )
         .await
         .context("inserting segmented changelog version")?;
+        log_new_segmented_changelog_version(ctx, self.repo_id, version);
         Ok(())
     }
 

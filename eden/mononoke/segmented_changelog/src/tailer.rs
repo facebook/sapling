@@ -20,9 +20,12 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 
-use crate::manager::SegmentedChangelogManager;
+use crate::iddag::IdDagSaveStore;
+use crate::idmap::IdMapFactory;
 use crate::owned::OwnedSegmentedChangelog;
+use crate::types::SegmentedChangelogVersion;
 use crate::update::build_incremental;
+use crate::version_store::SegmentedChangelogVersionStore;
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.update";
@@ -45,7 +48,9 @@ pub struct SegmentedChangelogTailer {
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     bookmarks: Arc<dyn Bookmarks>,
     bookmark_name: BookmarkName,
-    manager: SegmentedChangelogManager,
+    sc_version_store: SegmentedChangelogVersionStore,
+    iddag_save_store: IdDagSaveStore,
+    idmap_factory: IdMapFactory,
 }
 
 impl SegmentedChangelogTailer {
@@ -54,14 +59,18 @@ impl SegmentedChangelogTailer {
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
         bookmarks: Arc<dyn Bookmarks>,
         bookmark_name: BookmarkName,
-        manager: SegmentedChangelogManager,
+        sc_version_store: SegmentedChangelogVersionStore,
+        iddag_save_store: IdDagSaveStore,
+        idmap_factory: IdMapFactory,
     ) -> Self {
         Self {
             repo_id,
             changeset_fetcher,
             bookmarks,
             bookmark_name,
-            manager,
+            sc_version_store,
+            iddag_save_store,
+            idmap_factory,
         }
     }
 
@@ -107,11 +116,37 @@ impl SegmentedChangelogTailer {
             "repo {}: starting incremental update to segmented changelog", self.repo_id,
         );
 
-        let (sc_version, mut owned) = self
-            .manager
-            .load(&ctx)
+        let sc_version = self
+            .sc_version_store
+            .get(&ctx)
             .await
-            .context("failed to load base segmented changelog")?;
+            .with_context(|| {
+                format!(
+                    "repo {}: error loading segmented changelog version",
+                    self.repo_id
+                )
+            })?
+            .ok_or_else(|| {
+                format_err!(
+                    "repo {}: segmented changelog metadata not found, maybe repo is not seeded",
+                    self.repo_id
+                )
+            })?;
+        let iddag = self
+            .iddag_save_store
+            .load(&ctx, sc_version.iddag_version)
+            .await
+            .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
+        let idmap = self.idmap_factory.for_writer(ctx, sc_version.idmap_version);
+        let mut owned = OwnedSegmentedChangelog::new(iddag, idmap);
+        debug!(
+            ctx.logger(),
+            "segmented changelog dag successfully loaded - repo_id: {}, idmap_version: {}, \
+            iddag_version: {} ",
+            self.repo_id,
+            sc_version.idmap_version,
+            sc_version.iddag_version,
+        );
 
         let head = self
             .bookmarks
@@ -153,11 +188,24 @@ impl SegmentedChangelogTailer {
         new_iddag.build_segments_volatile(head_vertex, &get_parents)?;
         info!(ctx.logger(), "repo {}: IdDag rebuilt", self.repo_id);
 
-        // Save Segmented Changelog
-        self.manager
-            .save(&ctx, &new_iddag, sc_version.idmap_version)
+        // Save the IdDag
+        let iddag_version = self
+            .iddag_save_store
+            .save(&ctx, &new_iddag)
             .await
-            .context("failed to save updated segmented changelog")?;
+            .with_context(|| format!("repo {}: error saving iddag", self.repo_id))?;
+
+        // Update SegmentedChangelogVersion
+        let sc_version = SegmentedChangelogVersion::new(iddag_version, sc_version.idmap_version);
+        self.sc_version_store
+            .set(&ctx, sc_version)
+            .await
+            .with_context(|| {
+                format!(
+                    "repo {}: error updating segmented changelog version store",
+                    self.repo_id
+                )
+            })?;
 
         info!(
             ctx.logger(),

@@ -45,6 +45,13 @@ pub fn log_new_segmented_changelog_version(
     repo_id: RepositoryId,
     sc_version: SegmentedChangelogVersion,
 ) {
+    slog::info!(
+        ctx.logger(),
+        "repo {}: segmented changelog version saved, idmap_version: {}, iddag_version: {}",
+        repo_id,
+        sc_version.idmap_version,
+        sc_version.iddag_version,
+    );
     MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
         .add_common_server_data()
         .add("type", "segmented_changelog")
