@@ -249,14 +249,14 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
 
 def _eoltype(data):
     "Guess the EOL type of a file"
-    if "\0" in data:  # binary
+    if b"\0" in data:  # binary
         return None
-    if "\r\n" in data:  # Windows
-        return "\r\n"
-    if "\r" in data:  # Old Mac
-        return "\r"
-    if "\n" in data:  # UNIX
-        return "\n"
+    if b"\r\n" in data:  # Windows
+        return b"\r\n"
+    if b"\r" in data:  # Old Mac
+        return b"\r"
+    if b"\n" in data:  # UNIX
+        return b"\n"
     return None  # unknown
 
 
