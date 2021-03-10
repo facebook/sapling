@@ -56,19 +56,7 @@ where
     F::Output: Send,
     F: Future + Send + 'static,
 {
-    let (tx, rx) = std::sync::mpsc::channel();
-    async fn send<F>(f: F, tx: std::sync::mpsc::Sender<F::Output>)
-    where
-        F: Future + Send,
-        F::Output: Send,
-    {
-        let value = f.await;
-        // not blocking because the channel is unbounded
-        tx.send(value).unwrap();
-    }
-    RUNTIME.spawn(send(f, tx));
-    // block
-    rx.recv().expect("future panicked in block_on_future")
+    block_on_exclusive(f)
 }
 
 /// Blocks the current thread while waiting for the computation defined by the Future `f`.
@@ -324,39 +312,5 @@ mod tests {
         assert_eq!(stream.next().await, Some(20));
         assert_eq!(stream.next().await, None);
         assert_eq!(stream.next().await, None);
-    }
-
-    #[tokio::test]
-    async fn test_nested_blocking_iter_to_stream() {
-        let iter = nested_blocking_iter(3);
-        let mut stream = iter_to_stream(iter);
-        for _ in 0..6 {
-            assert_eq!(stream.next().await, Some(0));
-        }
-        assert_eq!(stream.next().await, None);
-        assert_eq!(stream.next().await, None);
-    }
-
-    #[tokio::test]
-    async fn test_nested_blocking_stream_iter() {
-        let iter = nested_blocking_iter(3);
-        let mut stream = futures::stream::iter(iter);
-        // No panic because `block_on_future` does not call `block_on` from
-        // `tokio` directly.
-        for _ in 0..6 {
-            assert_eq!(stream.next().await, Some(0));
-        }
-        assert_eq!(stream.next().await, None);
-        assert_eq!(stream.next().await, None);
-    }
-
-    fn nested_blocking_iter(level: usize) -> Box<dyn Iterator<Item = u8> + Send + 'static> {
-        if level == 0 {
-            Box::new(std::iter::once(0))
-        } else {
-            let iter = (0..level)
-                .flat_map(move |_| block_on_future(async move { nested_blocking_iter(level - 1) }));
-            Box::new(iter)
-        }
     }
 }
