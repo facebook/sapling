@@ -42,7 +42,7 @@ impl AsyncLimiter {
                 future::ready(())
             });
 
-        tokio::spawn(worker.boxed());
+        tokio_shim::task::spawn(worker.boxed());
 
         Self { dispatch, cancel }
     }
