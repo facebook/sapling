@@ -15,6 +15,8 @@ use async_trait::async_trait;
 use tokio::sync::Notify;
 use tokio::time::Instant;
 
+use bookmarks::{BookmarkName, Bookmarks};
+use changeset_fetcher::ChangesetFetcher;
 use dag::Location;
 use futures_ext::future::{spawn_controlled, ControlledHandle};
 
@@ -23,6 +25,7 @@ use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::IdMapFactory;
+use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::{segmented_changelog_delegate, CloneData, SegmentedChangelog, StreamCloneData};
@@ -32,6 +35,10 @@ pub struct SegmentedChangelogManager {
     sc_version_store: SegmentedChangelogVersionStore,
     iddag_save_store: IdDagSaveStore,
     idmap_factory: IdMapFactory,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    bookmarks: Arc<dyn Bookmarks>,
+    bookmark_name: BookmarkName,
+    update_to_master_bookmark_period: Option<Duration>,
 }
 
 impl SegmentedChangelogManager {
@@ -40,16 +47,53 @@ impl SegmentedChangelogManager {
         sc_version_store: SegmentedChangelogVersionStore,
         iddag_save_store: IdDagSaveStore,
         idmap_factory: IdMapFactory,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        bookmarks: Arc<dyn Bookmarks>,
+        bookmark_name: BookmarkName,
+        update_to_master_bookmark_period: Option<Duration>,
     ) -> Self {
         Self {
             repo_id,
             sc_version_store,
             iddag_save_store,
             idmap_factory,
+            changeset_fetcher,
+            bookmarks,
+            bookmark_name,
+            update_to_master_bookmark_period,
         }
     }
 
-    pub async fn load(&self, ctx: &CoreContext) -> Result<OwnedSegmentedChangelog> {
+    pub async fn load(&self, ctx: &CoreContext) -> Result<Arc<dyn SegmentedChangelog>> {
+        let on_demand = self.load_ondemand_update(ctx).await?;
+        let asc: Arc<dyn SegmentedChangelog> = match self.update_to_master_bookmark_period {
+            None => on_demand,
+            Some(period) => Arc::new(on_demand.with_periodic_update_to_bookmark(
+                ctx,
+                self.bookmarks.clone(),
+                self.bookmark_name.clone(),
+                period,
+            )),
+        };
+        Ok(asc)
+    }
+
+    async fn load_ondemand_update(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<Arc<OnDemandUpdateSegmentedChangelog>> {
+        let owned = self.load_owned(ctx).await.with_context(|| {
+            format!("repo {}: failed to load segmented changelog", self.repo_id)
+        })?;
+        Ok(Arc::new(OnDemandUpdateSegmentedChangelog::new(
+            owned.iddag,
+            owned.idmap,
+            Arc::clone(&self.changeset_fetcher),
+        )))
+    }
+
+    // public for builder only
+    pub async fn load_owned(&self, ctx: &CoreContext) -> Result<OwnedSegmentedChangelog> {
         let sc_version = self
             .sc_version_store
             .get(&ctx)
@@ -86,7 +130,9 @@ impl SegmentedChangelogManager {
 }
 
 segmented_changelog_delegate!(SegmentedChangelogManager, |&self, ctx: &CoreContext| {
-    self.load(&ctx).await.with_context(|| {
+    // using load_owned for backwards compatibility until we deprecate upload algorithm
+    // we would then remove this implementation for SegmentedChangelog
+    self.load_owned(&ctx).await.with_context(|| {
         format!(
             "repo {}: error loading segmented changelog from save",
             self.repo_id
@@ -95,7 +141,7 @@ segmented_changelog_delegate!(SegmentedChangelogManager, |&self, ctx: &CoreConte
 });
 
 pub struct PeriodicReloadSegmentedChangelog {
-    sc: Arc<ArcSwap<OwnedSegmentedChangelog>>,
+    sc: Arc<ArcSwap<OnDemandUpdateSegmentedChangelog>>,
     _handle: ControlledHandle,
     #[allow(dead_code)] // useful for testing
     update_notify: Arc<Notify>,
@@ -108,8 +154,7 @@ impl PeriodicReloadSegmentedChangelog {
         manager: SegmentedChangelogManager,
         period: Duration,
     ) -> Result<Self> {
-        let sc = manager.load(&ctx).await?;
-        let sc = Arc::new(ArcSwap::from_pointee(sc));
+        let sc = Arc::new(ArcSwap::new(manager.load_ondemand_update(ctx).await?));
         let update_notify = Arc::new(Notify::new());
         let _handle = spawn_controlled({
             let ctx = ctx.clone();
@@ -120,12 +165,12 @@ impl PeriodicReloadSegmentedChangelog {
                 let mut interval = tokio::time::interval_at(start, period);
                 loop {
                     interval.tick().await;
-                    match manager.load(&ctx).await {
-                        Ok(sc) => my_sc.store(Arc::new(sc)),
+                    match manager.load_ondemand_update(&ctx).await {
+                        Ok(sc) => my_sc.store(sc),
                         Err(err) => {
                             slog::error!(
                                 ctx.logger(),
-                                "failed to load segmented changelog dag: {:?}",
+                                "failed to load segmented changelog: {:?}",
                                 err
                             );
                         }

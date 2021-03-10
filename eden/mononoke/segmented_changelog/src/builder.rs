@@ -90,15 +90,15 @@ impl SegmentedChangelogBuilder {
     }
 
     pub fn build_manager(mut self) -> Result<SegmentedChangelogManager> {
-        let repo_id = self.repo_id()?;
-        let sc_version_store = self.build_segmented_changelog_version_store()?;
-        let iddag_save_store = self.build_iddag_save_store()?;
-        let idmap_factory = self.build_idmap_factory()?;
         Ok(SegmentedChangelogManager::new(
-            repo_id,
-            sc_version_store,
-            iddag_save_store,
-            idmap_factory,
+            self.repo_id()?,
+            self.build_segmented_changelog_version_store()?,
+            self.build_iddag_save_store()?,
+            self.build_idmap_factory()?,
+            self.changeset_fetcher()?,
+            self.bookmarks()?,
+            self.bookmark_name()?,
+            self.update_to_bookmark_period.take(),
         ))
     }
 
@@ -109,8 +109,9 @@ impl SegmentedChangelogBuilder {
     pub fn build_on_demand_update(mut self) -> Result<OnDemandUpdateSegmentedChangelog> {
         let owned = self.new_owned()?;
         let changeset_fetcher = self.changeset_fetcher()?;
-        Ok(OnDemandUpdateSegmentedChangelog::from_owned(
-            owned,
+        Ok(OnDemandUpdateSegmentedChangelog::new(
+            owned.iddag,
+            owned.idmap,
             changeset_fetcher,
         ))
     }
@@ -121,9 +122,10 @@ impl SegmentedChangelogBuilder {
     ) -> Result<OnDemandUpdateSegmentedChangelog> {
         let changeset_fetcher = self.changeset_fetcher()?;
         let manager = self.build_manager()?;
-        let owned = manager.load(ctx).await?;
-        Ok(OnDemandUpdateSegmentedChangelog::from_owned(
-            owned,
+        let owned = manager.load_owned(ctx).await?;
+        Ok(OnDemandUpdateSegmentedChangelog::new(
+            owned.iddag,
+            owned.idmap,
             changeset_fetcher,
         ))
     }
