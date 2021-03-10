@@ -62,6 +62,7 @@ use strum_macros::{AsRefStr, EnumString, EnumVariantNames};
 pub struct RepoSubcommandParams {
     pub progress_state: ProgressStateMutex<ProgressStateCountByType<StepStats, ProgressSummary>>,
     pub tail_params: TailParams,
+    pub lfs_threshold: Option<u64>,
 }
 
 // These don't vary per repo
@@ -1524,6 +1525,7 @@ async fn setup_repo<'a>(
         RepoSubcommandParams {
             progress_state,
             tail_params,
+            lfs_threshold: resolved.config.lfs.threshold,
         },
         RepoWalkParams {
             repo: repo.await?,

@@ -124,6 +124,7 @@ define_type_enum! {
 enum CheckType {
     ChangesetPhaseIsPublic,
     HgLinkNodePopulated,
+    FileContentIsLfs,
 }
 }
 
@@ -132,12 +133,14 @@ impl CheckType {
         match self {
             CheckType::ChangesetPhaseIsPublic => "bonsai_phase_is_public",
             CheckType::HgLinkNodePopulated => "hg_link_node_populated",
+            CheckType::FileContentIsLfs => "file_content_is_lfs",
         }
     }
     pub fn node_type(&self) -> NodeType {
         match self {
             CheckType::ChangesetPhaseIsPublic => NodeType::PhaseMapping,
             CheckType::HgLinkNodePopulated => NodeType::HgFileNode,
+            CheckType::FileContentIsLfs => NodeType::FileContentMetadata,
         }
     }
 }
@@ -164,6 +167,7 @@ struct ValidatingVisitor {
     repo_stats_key: String,
     inner: WalkState,
     checks_by_node_type: HashMap<NodeType, HashSet<CheckType>>,
+    lfs_threshold: Option<u64>,
 }
 
 impl ValidatingVisitor {
@@ -174,6 +178,7 @@ impl ValidatingVisitor {
         include_checks: HashSet<CheckType>,
         always_emit_edge_types: HashSet<EdgeType>,
         enable_derive: bool,
+        lfs_threshold: Option<u64>,
     ) -> Self {
         Self {
             repo_stats_key,
@@ -189,6 +194,7 @@ impl ValidatingVisitor {
                 .into_iter()
                 .map(|(key, group)| (key, HashSet::from_iter(group)))
                 .collect(),
+            lfs_threshold,
         }
     }
 }
@@ -277,7 +283,8 @@ fn check_linknode_populated(
         let via = route.and_then(|r| {
             for n in r.via.iter().rev() {
                 match n {
-                    Node::HgChangeset(_via_hg_cs_id) => return Some(n.clone()),
+                    Node::HgChangeset(_) => return Some(n.clone()),
+                    Node::Changeset(_) => return Some(n.clone()),
                     _ => {}
                 }
             }
@@ -288,6 +295,48 @@ fn check_linknode_populated(
             via,
             None,
         ))
+    }
+}
+
+fn check_file_content_is_lfs(
+    resolved: &OutgoingEdge,
+    node_data: Option<&NodeData>,
+    route: Option<&ValidateRoute>,
+    lfs_threshold: u64,
+) -> CheckStatus {
+    match (&resolved.target, &node_data) {
+        (
+            Node::FileContentMetadata(_content_id),
+            Some(NodeData::FileContentMetadata(Some(content_meta))),
+        ) => {
+            if content_meta.total_size < lfs_threshold {
+                // not interesting to log
+                CheckStatus::Pass(None)
+            } else {
+                let via = route.and_then(|r| {
+                    for n in r.via.iter().rev() {
+                        match &n {
+                            Node::HgChangeset(_via_hg_cs_id) => return Some(n.clone()),
+                            Node::HgBonsaiMapping(_via_hg_cs_id) => return Some(n.clone()),
+                            _ => {}
+                        }
+                    }
+                    None
+                });
+                let info = Some(ValidateInfo::new(
+                    route.map(|r| r.src_node.clone()),
+                    via,
+                    resolved.path.clone(),
+                ));
+                CheckStatus::Pass(info)
+            }
+        }
+        // Unexpected node type
+        _ => CheckStatus::Fail(ValidateInfo::new(
+            route.map(|r| r.src_node.clone()),
+            None,
+            None,
+        )),
     }
 }
 
@@ -417,6 +466,19 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
                         CheckType::HgLinkNodePopulated => {
                             num_edges += outgoing.len() as u64;
                             check_linknode_populated(&outgoing, route.as_ref())
+                        }
+                        CheckType::FileContentIsLfs => {
+                            num_edges += outgoing.len() as u64;
+                            if let Some(lfs_threshold) = self.lfs_threshold {
+                                check_file_content_is_lfs(
+                                    &resolved,
+                                    node_data.as_ref(),
+                                    route.as_ref(),
+                                    lfs_threshold,
+                                )
+                            } else {
+                                CheckStatus::Pass(None)
+                            }
                         }
                     };
                     match &status {
@@ -817,6 +879,16 @@ async fn run_one(
     let always_emit_edge_types =
         HashSet::from_iter(vec![EdgeType::HgFileNodeToLinkedHgChangeset].into_iter());
 
+    let mut required_node_data_types = hashset![NodeType::PhaseMapping];
+    let mut keep_edge_paths = false;
+    if command
+        .include_check_types
+        .contains(&CheckType::FileContentIsLfs)
+    {
+        required_node_data_types.insert(NodeType::FileContentMetadata);
+        keep_edge_paths = true;
+    }
+
     let stateful_visitor = ValidatingVisitor::new(
         repo_params.repo.name().clone(),
         repo_params.include_node_types.clone(),
@@ -824,12 +896,13 @@ async fn run_one(
         command.include_check_types,
         always_emit_edge_types.clone(),
         job_params.enable_derive,
+        sub_params.lfs_threshold,
     );
 
     let type_params = RepoWalkTypeParams {
-        required_node_data_types: hashset![NodeType::PhaseMapping],
+        required_node_data_types,
         always_emit_edge_types,
-        keep_edge_paths: false,
+        keep_edge_paths,
     };
 
     walk_exact_tail(
