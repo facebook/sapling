@@ -21,12 +21,12 @@ use futures::stream::BoxStream;
 use mononoke_types::ChangesetId;
 
 mod builder;
-mod dag;
 mod iddag;
 mod idmap;
 mod logging;
 mod manager;
 mod on_demand;
+mod owned;
 mod read_only;
 mod seeder;
 mod sql_types;

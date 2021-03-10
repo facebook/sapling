@@ -22,12 +22,12 @@ use futures_ext::future::{spawn_controlled, ControlledHandle};
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
-use crate::dag::Dag;
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::{
     CacheHandlers, CachedIdMap, ConcurrentMemIdMap, IdMap, OverlayIdMap, SqlIdMapFactory,
 };
 use crate::logging::log_new_segmented_changelog_version;
+use crate::owned::OwnedSegmentedChangelog;
 use crate::types::{IdMapVersion, SegmentedChangelogVersion};
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::{segmented_changelog_delegate, CloneData, SegmentedChangelog, StreamCloneData};
@@ -60,7 +60,7 @@ impl SegmentedChangelogManager {
         }
     }
 
-    pub async fn save_dag(
+    pub async fn save(
         &self,
         ctx: &CoreContext,
         iddag: &InProcessIdDag,
@@ -94,7 +94,10 @@ impl SegmentedChangelogManager {
         Ok(sc_version)
     }
 
-    pub async fn load_dag(&self, ctx: &CoreContext) -> Result<(SegmentedChangelogVersion, Dag)> {
+    pub async fn load(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<(SegmentedChangelogVersion, OwnedSegmentedChangelog)> {
         let sc_version = self
             .sc_version_store
             .get(&ctx)
@@ -125,8 +128,8 @@ impl SegmentedChangelogManager {
             sc_version.idmap_version,
             sc_version.iddag_version,
         );
-        let dag = Dag::new(iddag, idmap);
-        Ok((sc_version, dag))
+        let owned = OwnedSegmentedChangelog::new(iddag, idmap);
+        Ok((sc_version, owned))
     }
 
     pub fn new_idmap(&self, idmap_version: IdMapVersion) -> Arc<dyn IdMap> {
@@ -150,7 +153,7 @@ impl SegmentedChangelogManager {
 }
 
 segmented_changelog_delegate!(SegmentedChangelogManager, |&self, ctx: &CoreContext| {
-    self.load_dag(&ctx)
+    self.load(&ctx)
         .await
         .with_context(|| {
             format!(
@@ -162,7 +165,7 @@ segmented_changelog_delegate!(SegmentedChangelogManager, |&self, ctx: &CoreConte
 });
 
 pub struct PeriodicReloadDag {
-    dag: Arc<ArcSwap<Dag>>,
+    dag: Arc<ArcSwap<OwnedSegmentedChangelog>>,
     _handle: ControlledHandle,
     #[allow(dead_code)] // useful for testing
     update_notify: Arc<Notify>,
@@ -175,7 +178,7 @@ impl PeriodicReloadDag {
         manager: SegmentedChangelogManager,
         period: Duration,
     ) -> Result<Self> {
-        let (_, dag) = manager.load_dag(&ctx).await?;
+        let (_, dag) = manager.load(&ctx).await?;
         let dag = Arc::new(ArcSwap::from_pointee(dag));
         let update_notify = Arc::new(Notify::new());
         let _handle = spawn_controlled({
@@ -187,7 +190,7 @@ impl PeriodicReloadDag {
                 let mut interval = tokio::time::interval_at(start, period);
                 loop {
                     interval.tick().await;
-                    match manager.load_dag(&ctx).await {
+                    match manager.load(&ctx).await {
                         Ok((_, dag)) => my_dag.store(Arc::new(dag)),
                         Err(err) => {
                             slog::error!(

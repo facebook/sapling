@@ -20,8 +20,8 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
-use crate::dag::Dag;
 use crate::idmap::{IdMap, MemIdMap};
+use crate::owned::OwnedSegmentedChangelog;
 
 define_stats! {
     build: timeseries(Sum),
@@ -213,17 +213,17 @@ pub fn update_iddag(
 // expected in `StartState` whenever we are not starting from scratch.
 pub async fn build_incremental(
     ctx: &CoreContext,
-    dag: &mut Dag,
+    sc: &mut OwnedSegmentedChangelog,
     changeset_fetcher: &dyn ChangesetFetcher,
     head: ChangesetId,
 ) -> Result<Vertex> {
     let (head_vertex, maybe_iddag_update) =
-        prepare_incremental_iddag_update(ctx, &dag.iddag, &dag.idmap, changeset_fetcher, head)
+        prepare_incremental_iddag_update(ctx, &sc.iddag, &sc.idmap, changeset_fetcher, head)
             .await
             .context("error preparing an incremental update for iddag")?;
 
     if let Some((start_state, mem_idmap)) = maybe_iddag_update {
-        update_iddag(ctx, &mut dag.iddag, &start_state, &mem_idmap, head_vertex)?;
+        update_iddag(ctx, &mut sc.iddag, &start_state, &mem_idmap, head_vertex)?;
     }
 
     Ok(head_vertex)

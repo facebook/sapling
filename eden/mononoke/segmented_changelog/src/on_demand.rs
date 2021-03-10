@@ -26,8 +26,8 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
-use crate::dag::Dag;
 use crate::idmap::IdMap;
+use crate::owned::OwnedSegmentedChangelog;
 use crate::read_only::ReadOnlySegmentedChangelog;
 use crate::update::{prepare_incremental_iddag_update, update_iddag};
 use crate::{segmented_changelog_delegate, SegmentedChangelog, StreamCloneData};
@@ -60,8 +60,11 @@ impl OnDemandUpdateDag {
         }
     }
 
-    pub fn from_dag(dag: Dag, changeset_fetcher: Arc<dyn ChangesetFetcher>) -> Self {
-        Self::new(dag.iddag, dag.idmap, changeset_fetcher)
+    pub fn from_owned(
+        owned: OwnedSegmentedChangelog,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    ) -> Self {
+        Self::new(owned.iddag, owned.idmap, changeset_fetcher)
     }
 
     pub fn with_periodic_update_to_bookmark(

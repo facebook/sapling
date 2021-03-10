@@ -15,7 +15,6 @@ use blobstore::{Blobstore, BlobstoreBytes};
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 
-use crate::dag::Dag;
 use crate::logging::log_new_iddag_version;
 use crate::types::IdDagVersion;
 
@@ -48,8 +47,8 @@ impl IdDagSaveStore {
             None => return Ok(None),
             Some(b) => b,
         };
-        let dag: InProcessIdDag = mincode::deserialize(&bytes.into_raw_bytes())?;
-        Ok(Some(dag))
+        let iddag: InProcessIdDag = mincode::deserialize(&bytes.into_raw_bytes())?;
+        Ok(Some(iddag))
     }
 
     pub async fn load<'a>(
@@ -83,14 +82,6 @@ impl IdDagSaveStore {
             .context("saving iddag in blobstore")?;
         log_new_iddag_version(&ctx, self.repo_id, iddag_version);
         Ok(iddag_version)
-    }
-
-    pub async fn save_from_dag<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        dag: &Dag,
-    ) -> Result<IdDagVersion> {
-        self.save(ctx, &dag.iddag).await
     }
 
     fn key(&self, iddag_version: IdDagVersion) -> String {

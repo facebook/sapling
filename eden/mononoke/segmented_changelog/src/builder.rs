@@ -22,7 +22,6 @@ use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 use sql_ext::SqlConnections;
 
-use crate::dag::Dag;
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::{
     CacheHandlers, CachedIdMap, ConcurrentMemIdMap, IdMap, SqlIdMap, SqlIdMapFactory,
@@ -30,6 +29,7 @@ use crate::idmap::{
 };
 use crate::manager::{PeriodicReloadDag, SegmentedChangelogManager};
 use crate::on_demand::{OnDemandUpdateDag, PeriodicUpdateDag};
+use crate::owned::OwnedSegmentedChangelog;
 use crate::seeder::SegmentedChangelogSeeder;
 use crate::tailer::SegmentedChangelogTailer;
 use crate::types::IdMapVersion;
@@ -43,7 +43,6 @@ use crate::DisabledSegmentedChangelog;
 /// Enabled = false -> DisabledSegmentedChangelog
 /// Enabled = true
 ///   update_algorithm = 'ondemand' -> OnDemandUpdateDag
-///   update_algorithm != 'ondemand' -> Dag
 #[derive(Default, Clone)]
 pub struct SegmentedChangelogBuilder {
     connections: Option<SqlConnections>,
@@ -112,9 +111,9 @@ impl SegmentedChangelogBuilder {
     }
 
     pub fn build_on_demand_update(mut self) -> Result<OnDemandUpdateDag> {
-        let dag = self.build_dag()?;
+        let owned = self.new_owned()?;
         let changeset_fetcher = self.changeset_fetcher()?;
-        Ok(OnDemandUpdateDag::from_dag(dag, changeset_fetcher))
+        Ok(OnDemandUpdateDag::from_owned(owned, changeset_fetcher))
     }
 
     pub async fn build_on_demand_update_start_from_save(
@@ -124,16 +123,16 @@ impl SegmentedChangelogBuilder {
         let changeset_fetcher = self.changeset_fetcher()?;
         self.with_in_memory_write_idmap = true;
         let manager = self.build_manager()?;
-        let (_, dag) = manager.load_dag(ctx).await?;
-        Ok(OnDemandUpdateDag::from_dag(dag, changeset_fetcher))
+        let (_, owned) = manager.load(ctx).await?;
+        Ok(OnDemandUpdateDag::from_owned(owned, changeset_fetcher))
     }
 
     pub fn build_periodic_update(mut self, ctx: &CoreContext) -> Result<PeriodicUpdateDag> {
-        let dag = self.build_dag()?;
+        let owned = self.new_owned()?;
         let changeset_fetcher = self.changeset_fetcher()?;
         let dag = PeriodicUpdateDag::for_bookmark(
             ctx,
-            Arc::new(OnDemandUpdateDag::from_dag(dag, changeset_fetcher)),
+            Arc::new(OnDemandUpdateDag::from_owned(owned, changeset_fetcher)),
             self.bookmarks()?,
             self.bookmark_name()?,
             self.update_to_bookmark_period()?,
@@ -267,10 +266,10 @@ impl SegmentedChangelogBuilder {
             .with_changeset_bulk_fetch(Arc::new(bulk_fetch))
     }
 
-    pub(crate) fn build_dag(&mut self) -> Result<Dag> {
+    pub(crate) fn new_owned(&mut self) -> Result<OwnedSegmentedChangelog> {
         let iddag = InProcessIdDag::new_in_process();
         let idmap: Arc<dyn IdMap> = Arc::new(ConcurrentMemIdMap::new());
-        Ok(Dag::new(iddag, idmap))
+        Ok(OwnedSegmentedChangelog::new(iddag, idmap))
     }
 
     #[allow(dead_code)]

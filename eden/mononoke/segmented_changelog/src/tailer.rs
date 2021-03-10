@@ -20,8 +20,8 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 
-use crate::dag::Dag;
 use crate::manager::SegmentedChangelogManager;
+use crate::owned::OwnedSegmentedChangelog;
 use crate::update::build_incremental;
 
 define_stats! {
@@ -101,17 +101,17 @@ impl SegmentedChangelogTailer {
         }
     }
 
-    pub async fn once(&self, ctx: &CoreContext) -> Result<(Dag, Vertex)> {
+    pub async fn once(&self, ctx: &CoreContext) -> Result<(OwnedSegmentedChangelog, Vertex)> {
         info!(
             ctx.logger(),
             "repo {}: starting incremental update to segmented changelog", self.repo_id,
         );
 
-        let (sc_version, mut dag) = self
+        let (sc_version, mut owned) = self
             .manager
-            .load_dag(&ctx)
+            .load(&ctx)
             .await
-            .context("failed to load base dag")?;
+            .context("failed to load base segmented changelog")?;
 
         let head = self
             .bookmarks
@@ -123,22 +123,23 @@ impl SegmentedChangelogTailer {
             ctx.logger(),
             "repo {}: bookmark {} resolved to {}", self.repo_id, self.bookmark_name, head
         );
-        let old_master_vertex = dag
+        let old_master_vertex = owned
             .iddag
             .next_free_id(0, Group::MASTER)
             .context("fetching next free id")?;
 
         // This updates the IdMap common storage and also updates the dag we loaded.
-        let head_vertex = build_incremental(&ctx, &mut dag, &self.changeset_fetcher, head)
+        let head_vertex = build_incremental(&ctx, &mut owned, &self.changeset_fetcher, head)
             .await
-            .context("when incrementally building dag")?;
+            .context("error incrementally building segmented changelog")?;
 
         if old_master_vertex > head_vertex {
             info!(
                 ctx.logger(),
-                "repo {}: dag already up to date, skipping update to iddag", self.repo_id
+                "repo {}: segmented changelog already up to date, skipping update to iddag",
+                self.repo_id
             );
-            return Ok((dag, head_vertex));
+            return Ok((owned, head_vertex));
         } else {
             info!(
                 ctx.logger(),
@@ -146,24 +147,24 @@ impl SegmentedChangelogTailer {
             );
         }
 
-        // Let's rebuild the dag to keep segment fragmentation low
+        // Let's rebuild the iddag to keep segment fragmentation low
         let mut new_iddag = InProcessIdDag::new_in_process();
-        let get_parents = |id| dag.iddag.parent_ids(id);
+        let get_parents = |id| owned.iddag.parent_ids(id);
         new_iddag.build_segments_volatile(head_vertex, &get_parents)?;
         info!(ctx.logger(), "repo {}: IdDag rebuilt", self.repo_id);
 
-        // Save the Dag
+        // Save Segmented Changelog
         self.manager
-            .save_dag(&ctx, &new_iddag, sc_version.idmap_version)
+            .save(&ctx, &new_iddag, sc_version.idmap_version)
             .await
-            .context("failed to save updated dag")?;
+            .context("failed to save updated segmented changelog")?;
 
         info!(
             ctx.logger(),
             "repo {}: successful incremental update to segmented changelog", self.repo_id,
         );
 
-        let new_dag = Dag::new(new_iddag, dag.idmap);
-        Ok((new_dag, head_vertex))
+        let new_owned = OwnedSegmentedChangelog::new(new_iddag, owned.idmap);
+        Ok((new_owned, head_vertex))
     }
 }

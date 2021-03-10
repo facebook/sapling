@@ -19,9 +19,9 @@ use changesets::ChangesetEntry;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
-use crate::dag::Dag;
 use crate::idmap::SqlIdMapVersionStore;
 use crate::manager::SegmentedChangelogManager;
+use crate::owned::OwnedSegmentedChangelog;
 use crate::types::IdMapVersion;
 use crate::update::StartState;
 
@@ -56,8 +56,8 @@ impl SegmentedChangelogSeeder {
             ctx.logger(),
             "seeding segmented changelog using idmap version: {}", self.idmap_version
         );
-        let (dag, last_vertex) = self
-            .build_dag_from_scratch(&ctx, head)
+        let (owned, last_vertex) = self
+            .build_from_scratch(&ctx, head)
             .await
             .context("building dag from scratch")?;
         info!(
@@ -65,7 +65,7 @@ impl SegmentedChangelogSeeder {
             "finished building dag, head '{}' has assigned vertex '{}'", head, last_vertex
         );
         self.manager
-            .save_dag(ctx, &dag.iddag, self.idmap_version)
+            .save(ctx, &owned.iddag, self.idmap_version)
             .await
             .context("failed to save dag")?;
         // Update IdMapVersion
@@ -80,11 +80,11 @@ impl SegmentedChangelogSeeder {
         Ok(())
     }
 
-    pub async fn build_dag_from_scratch(
+    pub async fn build_from_scratch(
         &self,
         ctx: &CoreContext,
         head: ChangesetId,
-    ) -> Result<(Dag, Vertex)> {
+    ) -> Result<(OwnedSegmentedChangelog, Vertex)> {
         STATS::build_all_graph.add_value(1);
 
         let changeset_entries: Vec<ChangesetEntry> = self
@@ -104,16 +104,16 @@ impl SegmentedChangelogSeeder {
 
         let low_vertex = dag::Group::MASTER.min_id();
         let idmap = self.manager.new_idmap(self.idmap_version);
-        let mut dag = Dag::new(InProcessIdDag::new_in_process(), idmap);
+        let mut owned = OwnedSegmentedChangelog::new(InProcessIdDag::new_in_process(), idmap);
         let last_vertex = crate::update::build(
             ctx,
-            &mut dag.iddag,
-            &dag.idmap,
+            &mut owned.iddag,
+            &owned.idmap,
             &start_state,
             head,
             low_vertex,
         )
         .await?;
-        Ok((dag, last_vertex))
+        Ok((owned, last_vertex))
     }
 }

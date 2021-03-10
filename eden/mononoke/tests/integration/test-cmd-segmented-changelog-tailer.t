@@ -74,5 +74,5 @@ Run Segmented Changelog Tailer. Nothing to do.
   * repo 0: SegmentedChangelogTailer initialized (glob)
   * repo 0: starting incremental update to segmented changelog (glob)
   * repo 0: bookmark master_bookmark resolved to * (glob)
-  * repo 0: dag already up to date, skipping update to iddag (glob)
+  * repo 0: segmented changelog already up to date, skipping update to iddag (glob)
   * repo 0: SegmentedChangelogTailer is done (glob)
