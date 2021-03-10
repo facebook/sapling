@@ -50,6 +50,12 @@ def stoptracking(repo):
 FORMAT_VERSION = "v1"
 
 
+def encodeheads(heads):
+    return encodeutf8(
+        "%s\n%s" % (FORMAT_VERSION, "".join("%s\n" % node.hex(h) for h in heads))
+    )
+
+
 class visibleheads(object):
     """tracks visible non-public heads in the repostory
 
@@ -93,9 +99,7 @@ class visibleheads(object):
         return self._changecount
 
     def _write(self, fp):
-        fp.write(encodeutf8("%s\n" % FORMAT_VERSION))
-        for h in self.heads:
-            fp.write(encodeutf8("%s\n" % (node.hex(h),)))
+        fp.write(encodeheads(self.heads))
         self.dirty = False
         self._logheads("wrote", visibility_newheadcount=len(self.heads))
 
