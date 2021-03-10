@@ -27,6 +27,7 @@ mod idmap;
 mod logging;
 mod manager;
 mod on_demand;
+mod read_only;
 mod seeder;
 mod sql_types;
 mod tailer;

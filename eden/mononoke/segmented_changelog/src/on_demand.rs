@@ -26,8 +26,9 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
-use crate::dag::{Dag, ReadDag};
+use crate::dag::Dag;
 use crate::idmap::IdMap;
+use crate::read_only::ReadOnlySegmentedChangelog;
 use crate::update::{prepare_incremental_iddag_update, update_iddag};
 use crate::{segmented_changelog_delegate, SegmentedChangelog, StreamCloneData};
 
@@ -185,7 +186,7 @@ impl SegmentedChangelog for OnDemandUpdateDag {
             .await
             .context("error while getting an up to date dag")?;
         let iddag = self.iddag.read().await;
-        let read_dag = ReadDag::new(&iddag, self.idmap.clone());
+        let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
         read_dag
             .location_to_many_changeset_ids(ctx, location, count)
             .await
@@ -202,7 +203,7 @@ impl SegmentedChangelog for OnDemandUpdateDag {
             .await
             .context("error while getting an up to date dag")?;
         let iddag = self.iddag.read().await;
-        let read_dag = ReadDag::new(&iddag, self.idmap.clone());
+        let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
         read_dag
             .many_changeset_ids_to_locations(ctx, client_head, cs_ids)
             .await
@@ -210,7 +211,7 @@ impl SegmentedChangelog for OnDemandUpdateDag {
 
     async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
         let iddag = self.iddag.read().await;
-        let read_dag = ReadDag::new(&iddag, self.idmap.clone());
+        let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
         read_dag.clone_data(ctx).await
     }
 
@@ -219,7 +220,7 @@ impl SegmentedChangelog for OnDemandUpdateDag {
         ctx: &CoreContext,
     ) -> Result<StreamCloneData<ChangesetId>> {
         let iddag = self.iddag.read().await;
-        let read_dag = ReadDag::new(&iddag, self.idmap.clone());
+        let read_dag = ReadOnlySegmentedChangelog::new(&iddag, self.idmap.clone());
         read_dag.full_idmap_clone_data(ctx).await
     }
 }
