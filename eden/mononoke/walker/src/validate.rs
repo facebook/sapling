@@ -249,7 +249,7 @@ fn check_bonsai_phase_is_public(
             let via = route.and_then(|r| {
                 for n in r.via.iter().rev() {
                     match n {
-                        Node::HgChangeset(_via_hg_cs_id) => return Some(n.clone()),
+                        Node::HgChangeset(_) => return Some(n.clone()),
                         Node::Changeset(k) => {
                             // Check for most recent non-identical changesethg
                             if &k.inner != non_public_cs_id {
@@ -324,8 +324,8 @@ fn check_file_content_is_lfs(
                 let via = route.and_then(|r| {
                     for n in r.via.iter().rev() {
                         match &n {
-                            Node::HgChangeset(_via_hg_cs_id) => return Some(n.clone()),
-                            Node::HgBonsaiMapping(_via_hg_cs_id) => return Some(n.clone()),
+                            Node::HgChangeset(_) => return Some(n.clone()),
+                            Node::HgBonsaiMapping(_) => return Some(n.clone()),
                             _ => {}
                         }
                     }
@@ -388,7 +388,9 @@ impl ValidateRoute {
 
         // Only track changesets for the via information
         match node {
-            Node::HgChangeset(_) | Node::Changeset(_) => next_via.push(node.clone()),
+            Node::HgChangeset(_) | Node::HgBonsaiMapping(_) | Node::Changeset(_) => {
+                next_via.push(node.clone())
+            }
             _ => {}
         };
         Self {
