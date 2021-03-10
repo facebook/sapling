@@ -1310,6 +1310,8 @@ class DebugCmd(Subcmd):
         # its subcommands in our debug_cmd.commands list.
         if sys.platform != "win32":
             from . import debug_posix  # noqa: F401
+        else:
+            from . import debug_windows  # noqa: F401
 
         subcmd_add_list: List[Type[Subcmd]] = []
         # Save the parser so we can use it to print help in run() if we are
