@@ -724,8 +724,14 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             args::get_repo_id_from_value(config_store, &matches, ARG_DARKSTORM_BACKUP_REPO_ID)?;
         let backup_repo =
             args::open_repo_by_id(ctx.fb, &ctx.logger(), &matches, backup_repo_id).await?;
+
+        scuba_sample.add("repo", backup_repo.get_repoid().id());
+        scuba_sample.add("reponame", backup_repo.name().clone());
+
         Some(backup_repo)
     } else {
+        scuba_sample.add("repo", repo_id.id());
+        scuba_sample.add("reponame", repo_name.clone());
         None
     };
 
@@ -865,8 +871,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         single_bundle_timeout_ms,
         verify_server_bookmark_on_failure,
     )?;
-    scuba_sample.add("repo", repo_id.id());
-    scuba_sample.add("reponame", repo_name.clone());
 
     let myrouter_ready_fut = async {
         if let MysqlConnectionType::Myrouter(_) = mysql_options.connection_type {
