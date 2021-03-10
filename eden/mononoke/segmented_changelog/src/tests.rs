@@ -30,7 +30,7 @@ use tests_utils::resolve_cs_id;
 use crate::builder::SegmentedChangelogBuilder;
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::CacheHandlers;
-use crate::on_demand::OnDemandUpdateDag;
+use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::types::IdDagVersion;
 use crate::SegmentedChangelog;
@@ -425,9 +425,10 @@ async fn test_build_calls_together(fb: FacebookInit) -> Result<()> {
     let known_cs =
         resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
     setup_phases(&ctx, &blobrepo, known_cs).await?;
-    let on_demand_update_dag = OnDemandUpdateDag::from_owned(sc, blobrepo.get_changeset_fetcher());
+    let on_demand_update_sc =
+        OnDemandUpdateSegmentedChangelog::from_owned(sc, blobrepo.get_changeset_fetcher());
     let distance: u64 = 3;
-    let answer = on_demand_update_dag
+    let answer = on_demand_update_sc
         .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
         .await?;
     let expected_cs =

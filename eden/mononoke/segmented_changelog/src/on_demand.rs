@@ -39,14 +39,14 @@ define_stats! {
     missing_notification_handle: timeseries(Sum),
 }
 
-pub struct OnDemandUpdateDag {
+pub struct OnDemandUpdateSegmentedChangelog {
     iddag: Arc<RwLock<InProcessIdDag>>,
     idmap: Arc<dyn IdMap>,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     ongoing_update: Arc<Mutex<Option<TryShared<BoxFuture<'static, Result<()>>>>>>,
 }
 
-impl OnDemandUpdateDag {
+impl OnDemandUpdateSegmentedChangelog {
     pub fn new(
         iddag: InProcessIdDag,
         idmap: Arc<dyn IdMap>,
@@ -175,7 +175,7 @@ async fn the_actual_update(
 }
 
 #[async_trait]
-impl SegmentedChangelog for OnDemandUpdateDag {
+impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
     async fn location_to_many_changeset_ids(
         &self,
         ctx: &CoreContext,
@@ -229,7 +229,7 @@ impl SegmentedChangelog for OnDemandUpdateDag {
 }
 
 pub struct PeriodicUpdateDag {
-    on_demand_update_dag: Arc<OnDemandUpdateDag>,
+    on_demand_update_sc: Arc<OnDemandUpdateSegmentedChangelog>,
     _handle: ControlledHandle,
     #[allow(dead_code)] // useful for testing
     notify: Arc<Notify>,
@@ -238,7 +238,7 @@ pub struct PeriodicUpdateDag {
 impl PeriodicUpdateDag {
     pub fn for_bookmark(
         ctx: &CoreContext,
-        on_demand_update_dag: Arc<OnDemandUpdateDag>,
+        on_demand_update_sc: Arc<OnDemandUpdateSegmentedChangelog>,
         bookmarks: Arc<dyn Bookmarks>,
         bookmark_name: BookmarkName,
         period: Duration,
@@ -246,7 +246,7 @@ impl PeriodicUpdateDag {
         let notify = Arc::new(Notify::new());
         let _handle = spawn_controlled({
             let ctx = ctx.clone();
-            let my_dag = Arc::clone(&on_demand_update_dag);
+            let my_dag = Arc::clone(&on_demand_update_sc);
             let notify = Arc::clone(&notify);
             async move {
                 let mut interval = tokio::time::interval(period);
@@ -266,7 +266,7 @@ impl PeriodicUpdateDag {
             }
         });
         Self {
-            on_demand_update_dag,
+            on_demand_update_sc,
             _handle,
             notify,
         }
@@ -280,7 +280,7 @@ impl PeriodicUpdateDag {
 
 async fn update_dag_from_bookmark(
     ctx: &CoreContext,
-    on_demand_update_dag: &OnDemandUpdateDag,
+    on_demand_update_sc: &OnDemandUpdateSegmentedChangelog,
     bookmarks: &dyn Bookmarks,
     bookmark_name: &BookmarkName,
 ) -> Result<()> {
@@ -294,10 +294,10 @@ async fn update_dag_from_bookmark(
             )
         })?
         .ok_or_else(|| format_err!("'{}' bookmark could not be found", bookmark_name))?;
-    on_demand_update_dag.try_update(&ctx, bookmark_cs).await?;
+    on_demand_update_sc.try_update(&ctx, bookmark_cs).await?;
     Ok(())
 }
 
 segmented_changelog_delegate!(PeriodicUpdateDag, |&self, ctx: &CoreContext| {
-    &self.on_demand_update_dag
+    &self.on_demand_update_sc
 });
