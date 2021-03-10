@@ -27,6 +27,7 @@ from . import (
     extensions,
     filemerge,
     i18n,
+    json,
     match as matchmod,
     mutation,
     obsutil,
@@ -2117,6 +2118,23 @@ def _logupdatedistance(ui, repo, node, branchmerge):
         pass
 
 
+def querywatchmanrecrawls(repo):
+    try:
+        path = repo.root
+        x, x, x, p = util.popen4("watchman debug-status")
+        stdout, stderr = p.communicate()
+        data = json.loads(stdout)
+        for root in data["roots"]:
+            if root["path"] == path:
+                count = root["recrawl_info"]["count"]
+                if root["recrawl_info"]["should-recrawl"] is True:
+                    count += 1
+                return count
+        return 0
+    except Exception:
+        return 0
+
+
 @perftrace.tracefunc("Update")
 @util.timefunction("mergeupdate", 0, "ui")
 def update(
@@ -2250,6 +2268,8 @@ def update(
     _logupdatedistance(repo.ui, repo, node, branchmerge)
 
     with repo.wlock():
+        prerecrawls = querywatchmanrecrawls(repo)
+
         if wc is None:
             wc = repo[None]
         pl = wc.parents()
@@ -2355,6 +2375,10 @@ def update(
 
                 if not partial:
                     repo.hook("update", parent1=xp1, parent2=xp2, error=stats[3])
+                postrecrawls = querywatchmanrecrawls(repo)
+                repo.ui.log(
+                    "watchman-recrawls", watchman_recrawls=postrecrawls - prerecrawls
+                )
                 return stats
 
         if pas[0] is None:
@@ -2559,6 +2583,8 @@ def update(
 
     # Log the number of files updated.
     repo.ui.log("update_size", update_filecount=sum(stats))
+    postrecrawls = querywatchmanrecrawls(repo)
+    repo.ui.log("watchman-recrawls", watchman_recrawls=postrecrawls - prerecrawls)
 
     return stats
 
