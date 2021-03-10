@@ -27,7 +27,7 @@ use crate::idmap::{
     CacheHandlers, CachedIdMap, ConcurrentMemIdMap, IdMap, SqlIdMap, SqlIdMapFactory,
     SqlIdMapVersionStore,
 };
-use crate::manager::{PeriodicReloadDag, SegmentedChangelogManager};
+use crate::manager::{PeriodicReloadSegmentedChangelog, SegmentedChangelogManager};
 use crate::on_demand::{OnDemandUpdateSegmentedChangelog, PeriodicUpdateSegmentedChangelog};
 use crate::owned::OwnedSegmentedChangelog;
 use crate::seeder::SegmentedChangelogSeeder;
@@ -152,10 +152,13 @@ impl SegmentedChangelogBuilder {
         Ok(dag)
     }
 
-    pub async fn build_periodic_reload(mut self, ctx: &CoreContext) -> Result<PeriodicReloadDag> {
+    pub async fn build_periodic_reload(
+        mut self,
+        ctx: &CoreContext,
+    ) -> Result<PeriodicReloadSegmentedChangelog> {
         let reload_dag_period = self.reload_dag_period()?;
         let manager = self.build_manager()?;
-        PeriodicReloadDag::start(ctx, manager, reload_dag_period).await
+        PeriodicReloadSegmentedChangelog::start(ctx, manager, reload_dag_period).await
     }
 
     pub async fn build_seeder(mut self, ctx: &CoreContext) -> Result<SegmentedChangelogSeeder> {

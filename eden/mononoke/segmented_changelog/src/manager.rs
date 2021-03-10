@@ -164,26 +164,26 @@ segmented_changelog_delegate!(SegmentedChangelogManager, |&self, ctx: &CoreConte
         .1
 });
 
-pub struct PeriodicReloadDag {
-    dag: Arc<ArcSwap<OwnedSegmentedChangelog>>,
+pub struct PeriodicReloadSegmentedChangelog {
+    sc: Arc<ArcSwap<OwnedSegmentedChangelog>>,
     _handle: ControlledHandle,
     #[allow(dead_code)] // useful for testing
     update_notify: Arc<Notify>,
 }
 
-impl PeriodicReloadDag {
+impl PeriodicReloadSegmentedChangelog {
     #[allow(dead_code)]
     pub async fn start(
         ctx: &CoreContext,
         manager: SegmentedChangelogManager,
         period: Duration,
     ) -> Result<Self> {
-        let (_, dag) = manager.load(&ctx).await?;
-        let dag = Arc::new(ArcSwap::from_pointee(dag));
+        let (_, sc) = manager.load(&ctx).await?;
+        let sc = Arc::new(ArcSwap::from_pointee(sc));
         let update_notify = Arc::new(Notify::new());
         let _handle = spawn_controlled({
             let ctx = ctx.clone();
-            let my_dag = Arc::clone(&dag);
+            let my_sc = Arc::clone(&sc);
             let my_notify = Arc::clone(&update_notify);
             async move {
                 let start = Instant::now() + period;
@@ -191,7 +191,7 @@ impl PeriodicReloadDag {
                 loop {
                     interval.tick().await;
                     match manager.load(&ctx).await {
-                        Ok((_, dag)) => my_dag.store(Arc::new(dag)),
+                        Ok((_, sc)) => my_sc.store(Arc::new(sc)),
                         Err(err) => {
                             slog::error!(
                                 ctx.logger(),
@@ -205,7 +205,7 @@ impl PeriodicReloadDag {
             }
         });
         Ok(Self {
-            dag,
+            sc,
             _handle,
             update_notify,
         })
@@ -217,6 +217,7 @@ impl PeriodicReloadDag {
     }
 }
 
-segmented_changelog_delegate!(PeriodicReloadDag, |&self, ctx: &CoreContext| {
-    self.dag.load()
-});
+segmented_changelog_delegate!(PeriodicReloadSegmentedChangelog, |
+    &self,
+    ctx: &CoreContext,
+| { self.sc.load() });
