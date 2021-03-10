@@ -24,7 +24,6 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::IdMapFactory;
 use crate::owned::OwnedSegmentedChangelog;
-use crate::types::SegmentedChangelogVersion;
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::{segmented_changelog_delegate, CloneData, SegmentedChangelog, StreamCloneData};
 
@@ -50,10 +49,7 @@ impl SegmentedChangelogManager {
         }
     }
 
-    pub async fn load(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<(SegmentedChangelogVersion, OwnedSegmentedChangelog)> {
+    pub async fn load(&self, ctx: &CoreContext) -> Result<OwnedSegmentedChangelog> {
         let sc_version = self
             .sc_version_store
             .get(&ctx)
@@ -85,20 +81,17 @@ impl SegmentedChangelogManager {
             sc_version.iddag_version,
         );
         let owned = OwnedSegmentedChangelog::new(iddag, idmap);
-        Ok((sc_version, owned))
+        Ok(owned)
     }
 }
 
 segmented_changelog_delegate!(SegmentedChangelogManager, |&self, ctx: &CoreContext| {
-    self.load(&ctx)
-        .await
-        .with_context(|| {
-            format!(
-                "repo {}: error loading segmented changelog from save",
-                self.repo_id
-            )
-        })?
-        .1
+    self.load(&ctx).await.with_context(|| {
+        format!(
+            "repo {}: error loading segmented changelog from save",
+            self.repo_id
+        )
+    })?
 });
 
 pub struct PeriodicReloadSegmentedChangelog {
@@ -115,7 +108,7 @@ impl PeriodicReloadSegmentedChangelog {
         manager: SegmentedChangelogManager,
         period: Duration,
     ) -> Result<Self> {
-        let (_, sc) = manager.load(&ctx).await?;
+        let sc = manager.load(&ctx).await?;
         let sc = Arc::new(ArcSwap::from_pointee(sc));
         let update_notify = Arc::new(Notify::new());
         let _handle = spawn_controlled({
@@ -128,7 +121,7 @@ impl PeriodicReloadSegmentedChangelog {
                 loop {
                     interval.tick().await;
                     match manager.load(&ctx).await {
-                        Ok((_, sc)) => my_sc.store(Arc::new(sc)),
+                        Ok(sc) => my_sc.store(Arc::new(sc)),
                         Err(err) => {
                             slog::error!(
                                 ctx.logger(),

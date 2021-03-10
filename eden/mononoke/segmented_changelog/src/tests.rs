@@ -724,12 +724,12 @@ async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
     let seeder = builder.clone().build_seeder(&ctx).await?;
     let _ = seeder.run(&ctx, start_cs_id).await?;
     let manager = builder.clone().build_manager()?;
-    let (_, sc) = manager.load(&ctx).await?;
+    let sc = manager.load(&ctx).await?;
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
 
     let tailer = builder.clone().build_tailer()?;
     let _ = tailer.once(&ctx).await?;
-    let (_, sc) = manager.load(&ctx).await?;
+    let sc = manager.load(&ctx).await?;
     let master = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
     assert_eq!(sc.head(&ctx).await?, master);
 

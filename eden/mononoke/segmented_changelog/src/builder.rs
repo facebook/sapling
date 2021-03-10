@@ -121,7 +121,7 @@ impl SegmentedChangelogBuilder {
     ) -> Result<OnDemandUpdateSegmentedChangelog> {
         let changeset_fetcher = self.changeset_fetcher()?;
         let manager = self.build_manager()?;
-        let (_, owned) = manager.load(ctx).await?;
+        let owned = manager.load(ctx).await?;
         Ok(OnDemandUpdateSegmentedChangelog::from_owned(
             owned,
             changeset_fetcher,
