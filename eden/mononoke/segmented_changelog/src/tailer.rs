@@ -107,7 +107,7 @@ impl SegmentedChangelogTailer {
             "repo {}: starting incremental update to segmented changelog", self.repo_id,
         );
 
-        let (bundle, mut dag) = self
+        let (sc_version, mut dag) = self
             .manager
             .load_dag(&ctx)
             .await
@@ -154,7 +154,7 @@ impl SegmentedChangelogTailer {
 
         // Save the Dag
         self.manager
-            .save_dag(&ctx, &new_iddag, bundle.idmap_version)
+            .save_dag(&ctx, &new_iddag, sc_version.idmap_version)
             .await
             .context("failed to save updated dag")?;
 

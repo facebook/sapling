@@ -14,23 +14,23 @@ use stats::prelude::*;
 use context::{CoreContext, PerfCounterType};
 use mononoke_types::RepositoryId;
 
-use crate::types::{DagBundle, IdDagVersion, IdMapVersion};
+use crate::types::{IdDagVersion, IdMapVersion, SegmentedChangelogVersion};
 
 define_stats! {
-    prefix = "mononoke.segmented_changelog.bundle";
+    prefix = "mononoke.segmented_changelog.sql_version_store";
     set: timeseries(Sum),
     get: timeseries(Sum),
 }
 
-/// Specifies the versions for the latest Dag bundle. The bundle contains IdDag and IdMap versions.
-/// The IdDag version can be loaded directly from the blobstore and the IdMap version ties the
-/// IdDag back to the bonsai changesets.
-pub struct SqlBundleStore {
+/// Specifies the versions for the latest SegmentedChangelogVersion. The version contains IdDag and
+/// IdMap versions.  The IdDag version can be loaded directly from the blobstore and the IdMap
+/// version ties the IdDag back to the bonsai changesets.
+pub struct SegmentedChangelogVersionStore {
     connections: SqlConnections,
     repo_id: RepositoryId,
 }
 
-impl SqlBundleStore {
+impl SegmentedChangelogVersionStore {
     pub fn new(connections: SqlConnections, repo_id: RepositoryId) -> Self {
         Self {
             connections,
@@ -38,43 +38,47 @@ impl SqlBundleStore {
         }
     }
 
-    pub async fn set(&self, ctx: &CoreContext, bundle: DagBundle) -> Result<()> {
+    pub async fn set(&self, ctx: &CoreContext, version: SegmentedChangelogVersion) -> Result<()> {
         STATS::set.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        InsertBundle::query(
+        Insertversion::query(
             &self.connections.write_connection,
-            &[(&self.repo_id, &bundle.iddag_version, &bundle.idmap_version)],
+            &[(
+                &self.repo_id,
+                &version.iddag_version,
+                &version.idmap_version,
+            )],
         )
         .await
-        .context("inserting segmented changelog bundle")?;
+        .context("inserting segmented changelog version")?;
         Ok(())
     }
 
-    pub async fn get(&self, ctx: &CoreContext) -> Result<Option<DagBundle>> {
+    pub async fn get(&self, ctx: &CoreContext) -> Result<Option<SegmentedChangelogVersion>> {
         STATS::get.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let rows = SelectBundle::query(&self.connections.read_connection, &self.repo_id).await?;
+        let rows = Selectversion::query(&self.connections.read_connection, &self.repo_id).await?;
         Ok(rows.into_iter().next().map(|r| r.into()))
     }
 }
 
 queries! {
-    write InsertBundle(
+    write Insertversion(
         values: (repo_id: RepositoryId, iddag_version: IdDagVersion, idmap_version: IdMapVersion)
     ) {
         none,
         "
-        REPLACE INTO segmented_changelog_bundle (repo_id, iddag_version, idmap_version)
+        REPLACE INTO segmented_changelog_version (repo_id, iddag_version, idmap_version)
         VALUES {values}
         "
     }
 
-    read SelectBundle(repo_id: RepositoryId) -> (IdDagVersion, IdMapVersion) {
+    read Selectversion(repo_id: RepositoryId) -> (IdDagVersion, IdMapVersion) {
         "
         SELECT iddag_version, idmap_version
-        FROM segmented_changelog_bundle
+        FROM segmented_changelog_version
         WHERE repo_id = {repo_id}
         "
     }
@@ -98,21 +102,27 @@ mod tests {
             builder
                 .clone()
                 .with_repo_id(RepositoryId::new(id))
-                .build_sql_bundle_store()
+                .build_segmented_changelog_version_store()
         };
         let version_repo1 = build_version(1)?;
         let version_repo2 = build_version(2)?;
 
         assert_eq!(version_repo1.get(&ctx).await?, None);
         assert_eq!(version_repo2.get(&ctx).await?, None);
-        let bundle11 = DagBundle::new(IdDagVersion::from_serialized_bytes(b"1"), IdMapVersion(1));
-        let bundle23 = DagBundle::new(IdDagVersion::from_serialized_bytes(b"2"), IdMapVersion(3));
-        version_repo1.set(&ctx, bundle11).await?;
-        assert_eq!(version_repo1.get(&ctx).await?, Some(bundle11));
+        let version11 = SegmentedChangelogVersion::new(
+            IdDagVersion::from_serialized_bytes(b"1"),
+            IdMapVersion(1),
+        );
+        let version23 = SegmentedChangelogVersion::new(
+            IdDagVersion::from_serialized_bytes(b"2"),
+            IdMapVersion(3),
+        );
+        version_repo1.set(&ctx, version11).await?;
+        assert_eq!(version_repo1.get(&ctx).await?, Some(version11));
         assert_eq!(version_repo2.get(&ctx).await?, None);
-        version_repo2.set(&ctx, bundle23).await?;
-        assert_eq!(version_repo1.get(&ctx).await?, Some(bundle11));
-        assert_eq!(version_repo2.get(&ctx).await?, Some(bundle23));
+        version_repo2.set(&ctx, version23).await?;
+        assert_eq!(version_repo1.get(&ctx).await?, Some(version11));
+        assert_eq!(version_repo2.get(&ctx).await?, Some(version23));
 
         Ok(())
     }

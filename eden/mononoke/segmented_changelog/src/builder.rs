@@ -22,7 +22,6 @@ use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 use sql_ext::SqlConnections;
 
-use crate::bundle::SqlBundleStore;
 use crate::dag::Dag;
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::{
@@ -34,6 +33,7 @@ use crate::on_demand::{OnDemandUpdateDag, PeriodicUpdateDag};
 use crate::seeder::SegmentedChangelogSeeder;
 use crate::tailer::SegmentedChangelogTailer;
 use crate::types::IdMapVersion;
+use crate::version_store::SegmentedChangelogVersionStore;
 use crate::DisabledSegmentedChangelog;
 
 /// SegmentedChangelog instatiation helper.
@@ -94,12 +94,12 @@ impl SegmentedChangelogBuilder {
 
     pub fn build_manager(mut self) -> Result<SegmentedChangelogManager> {
         let repo_id = self.repo_id()?;
-        let bundle_store = self.build_sql_bundle_store()?;
+        let sc_version_store = self.build_segmented_changelog_version_store()?;
         let iddag_save_store = self.build_iddag_save_store()?;
         let idmap_factory = self.build_sql_idmap_factory()?;
         Ok(SegmentedChangelogManager::new(
             repo_id,
-            bundle_store,
+            sc_version_store,
             iddag_save_store,
             idmap_factory,
             self.cache_handlers.take(),
@@ -318,10 +318,12 @@ impl SegmentedChangelogBuilder {
         Ok(SqlIdMapVersionStore::new(connections, repo_id))
     }
 
-    pub(crate) fn build_sql_bundle_store(&self) -> Result<SqlBundleStore> {
+    pub(crate) fn build_segmented_changelog_version_store(
+        &self,
+    ) -> Result<SegmentedChangelogVersionStore> {
         let connections = self.connections_clone()?;
         let repo_id = self.repo_id()?;
-        Ok(SqlBundleStore::new(connections, repo_id))
+        Ok(SegmentedChangelogVersionStore::new(connections, repo_id))
     }
 
     pub(crate) fn build_iddag_save_store(&mut self) -> Result<IdDagSaveStore> {

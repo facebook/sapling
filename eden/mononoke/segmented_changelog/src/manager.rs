@@ -22,19 +22,19 @@ use futures_ext::future::{spawn_controlled, ControlledHandle};
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
-use crate::bundle::SqlBundleStore;
 use crate::dag::Dag;
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::{
     CacheHandlers, CachedIdMap, ConcurrentMemIdMap, IdMap, OverlayIdMap, SqlIdMapFactory,
 };
-use crate::logging::log_new_bundle;
-use crate::types::{DagBundle, IdMapVersion};
+use crate::logging::log_new_segmented_changelog_version;
+use crate::types::{IdMapVersion, SegmentedChangelogVersion};
+use crate::version_store::SegmentedChangelogVersionStore;
 use crate::{CloneData, SegmentedChangelog, StreamCloneData};
 
 pub struct SegmentedChangelogManager {
     repo_id: RepositoryId,
-    bundle_store: SqlBundleStore,
+    sc_version_store: SegmentedChangelogVersionStore,
     iddag_save_store: IdDagSaveStore,
     idmap_factory: SqlIdMapFactory,
     cache_handlers: Option<CacheHandlers>,
@@ -44,7 +44,7 @@ pub struct SegmentedChangelogManager {
 impl SegmentedChangelogManager {
     pub fn new(
         repo_id: RepositoryId,
-        bundle_store: SqlBundleStore,
+        sc_version_store: SegmentedChangelogVersionStore,
         iddag_save_store: IdDagSaveStore,
         idmap_factory: SqlIdMapFactory,
         cache_handlers: Option<CacheHandlers>,
@@ -52,7 +52,7 @@ impl SegmentedChangelogManager {
     ) -> Self {
         Self {
             repo_id,
-            bundle_store,
+            sc_version_store,
             iddag_save_store,
             idmap_factory,
             cache_handlers,
@@ -65,38 +65,43 @@ impl SegmentedChangelogManager {
         ctx: &CoreContext,
         iddag: &InProcessIdDag,
         idmap_version: IdMapVersion,
-    ) -> Result<DagBundle> {
+    ) -> Result<SegmentedChangelogVersion> {
         // Save the IdDag
         let iddag_version = self
             .iddag_save_store
             .save(&ctx, &iddag)
             .await
             .with_context(|| format!("repo {}: error saving iddag", self.repo_id))?;
-        // Update BundleStore
-        let bundle = DagBundle::new(iddag_version, idmap_version);
-        self.bundle_store
-            .set(&ctx, bundle)
+        // Update SegmentedChangelogVersion
+        let sc_version = SegmentedChangelogVersion::new(iddag_version, idmap_version);
+        self.sc_version_store
+            .set(&ctx, sc_version)
             .await
-            .with_context(|| format!("repo {}: error updating bundle store", self.repo_id))?;
-        log_new_bundle(ctx, self.repo_id, bundle);
+            .with_context(|| {
+                format!(
+                    "repo {}: error updating segmented changelog version store",
+                    self.repo_id
+                )
+            })?;
+        log_new_segmented_changelog_version(ctx, self.repo_id, sc_version);
         info!(
             ctx.logger(),
-            "repo {}: segmented changelog dag bundle saved, idmap_version: {}, iddag_version: {}",
+            "repo {}: segmented changelog version saved, idmap_version: {}, iddag_version: {}",
             self.repo_id,
             idmap_version,
             iddag_version,
         );
-        Ok(bundle)
+        Ok(sc_version)
     }
 
-    pub async fn load_dag(&self, ctx: &CoreContext) -> Result<(DagBundle, Dag)> {
-        let bundle = self
-            .bundle_store
+    pub async fn load_dag(&self, ctx: &CoreContext) -> Result<(SegmentedChangelogVersion, Dag)> {
+        let sc_version = self
+            .sc_version_store
             .get(&ctx)
             .await
             .with_context(|| {
                 format!(
-                    "repo {}: error loading segmented changelog bundle data",
+                    "repo {}: error loading segmented changelog version",
                     self.repo_id
                 )
             })?
@@ -108,20 +113,20 @@ impl SegmentedChangelogManager {
             })?;
         let iddag = self
             .iddag_save_store
-            .load(&ctx, bundle.iddag_version)
+            .load(&ctx, sc_version.iddag_version)
             .await
             .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
-        let idmap = self.new_idmap(bundle.idmap_version);
+        let idmap = self.new_idmap(sc_version.idmap_version);
         debug!(
             ctx.logger(),
             "segmented changelog dag successfully loaded - repo_id: {}, idmap_version: {}, \
             iddag_version: {} ",
             self.repo_id,
-            bundle.idmap_version,
-            bundle.iddag_version,
+            sc_version.idmap_version,
+            sc_version.iddag_version,
         );
         let dag = Dag::new(iddag, idmap);
-        Ok((bundle, dag))
+        Ok((sc_version, dag))
     }
 
     pub fn new_idmap(&self, idmap_version: IdMapVersion) -> Arc<dyn IdMap> {

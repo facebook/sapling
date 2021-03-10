@@ -21,7 +21,6 @@ use futures::stream::BoxStream;
 use mononoke_types::ChangesetId;
 
 mod builder;
-mod bundle;
 mod dag;
 mod iddag;
 mod idmap;
@@ -33,6 +32,7 @@ mod sql_types;
 mod tailer;
 mod types;
 mod update;
+mod version_store;
 
 #[cfg(test)]
 mod tests;

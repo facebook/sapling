@@ -26,8 +26,9 @@ define_stats! {
 /// Describes the latest IdMap version for an given repository.
 /// The seeder process has the job of constructing a new IdMap version. The seeder process will
 /// insert entries for a new version and in the end it will set a new entry for a given repository.
-/// Serving processes will use bundles under normal circumstances. Tailing processes will read the
-/// latest version for a repository to incrementally build (tailers may or may not use bundles).
+/// Serving processes will use the SegmentedChangelogVersion under normal circumstances. Tailing
+/// processes will read the latest version for a repository to incrementally build (tailers may or
+/// may not use bundles).
 pub struct SqlIdMapVersionStore {
     connections: SqlConnections,
     repo_id: RepositoryId,

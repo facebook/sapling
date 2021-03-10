@@ -40,12 +40,12 @@ impl fmt::Display for IdDagVersion {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct DagBundle {
+pub struct SegmentedChangelogVersion {
     pub iddag_version: IdDagVersion,
     pub idmap_version: IdMapVersion,
 }
 
-impl DagBundle {
+impl SegmentedChangelogVersion {
     pub fn new(iddag_version: IdDagVersion, idmap_version: IdMapVersion) -> Self {
         Self {
             iddag_version,
@@ -54,8 +54,8 @@ impl DagBundle {
     }
 }
 
-impl From<(IdDagVersion, IdMapVersion)> for DagBundle {
+impl From<(IdDagVersion, IdMapVersion)> for SegmentedChangelogVersion {
     fn from(t: (IdDagVersion, IdMapVersion)) -> Self {
-        DagBundle::new(t.0, t.1)
+        SegmentedChangelogVersion::new(t.0, t.1)
     }
 }

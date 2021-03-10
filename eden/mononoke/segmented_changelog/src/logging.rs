@@ -10,7 +10,7 @@ use scuba_ext::MononokeScubaSampleBuilder;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 
-use crate::types::{DagBundle, IdDagVersion, IdMapVersion};
+use crate::types::{IdDagVersion, IdMapVersion, SegmentedChangelogVersion};
 
 const SCUBA_TABLE: &str = "segmented_changelog_version";
 
@@ -40,12 +40,16 @@ pub fn log_new_iddag_version(
         .log(); // note that logging may fail
 }
 
-pub fn log_new_bundle(ctx: &CoreContext, repo_id: RepositoryId, bundle: DagBundle) {
+pub fn log_new_segmented_changelog_version(
+    ctx: &CoreContext,
+    repo_id: RepositoryId,
+    sc_version: SegmentedChangelogVersion,
+) {
     MononokeScubaSampleBuilder::new(ctx.fb, SCUBA_TABLE)
         .add_common_server_data()
-        .add("type", "bundle")
+        .add("type", "segmented_changelog")
         .add("repo_id", repo_id.id())
-        .add("idmap_version", bundle.idmap_version.0)
-        .add("iddag_version", format!("{}", bundle.iddag_version.0))
+        .add("idmap_version", sc_version.idmap_version.0)
+        .add("iddag_version", format!("{}", sc_version.iddag_version.0))
         .log(); // note that logging may fail
 }
