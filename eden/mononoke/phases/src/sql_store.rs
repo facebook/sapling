@@ -239,10 +239,18 @@ queries! {
         repo_id: RepositoryId,
         >list cs_ids: ChangesetId
     ) -> (ChangesetId, Phase) {
-        "SELECT cs_id, phase
-         FROM phases
-         WHERE repo_id = {repo_id}
-           AND cs_id IN {cs_ids}"
+        mysql(
+            "SELECT cs_id, phase
+            FROM phases FORCE INDEX(PRIMARY)
+            WHERE repo_id = {repo_id}
+              AND cs_id IN {cs_ids}"
+        )
+        sqlite(
+            "SELECT cs_id, phase
+            FROM phases
+            WHERE repo_id = {repo_id}
+              AND cs_id IN {cs_ids}"
+        )
     }
 
     read SelectAllPublic(repo_id: RepositoryId) -> (ChangesetId, ) {
