@@ -1876,6 +1876,7 @@ where
                 via.as_ref().and_then(|v| v.source_node()),
                 via.as_ref().and_then(|v| v.via_node()),
                 &walk_item.target,
+                walk_item.path.as_ref(),
                 &mut scuba,
             );
             scuba

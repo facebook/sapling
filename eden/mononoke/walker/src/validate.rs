@@ -12,7 +12,7 @@
 //  3. Add a new validation method
 //  4. Add the method to the match/case in ValidatingVisitor::visit()
 
-use crate::graph::{EdgeType, Node, NodeData, NodeType};
+use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
 use crate::log;
 use crate::progress::{
     progress_stream, report_state, sort_by_string, ProgressOptions, ProgressRecorder,
@@ -96,13 +96,20 @@ struct ValidateInfo {
     source_node: Option<Node>,
     // What the check thinks is an interesting node on the route to here (e.g. the affected changeset)
     via_node: Option<Node>,
+    // if the walk has extra path tracking enabled, this is the resolved path of the resolved node
+    resolved_path: Option<WrappedPath>,
 }
 
 impl ValidateInfo {
-    fn new(source_node: Option<Node>, via_node: Option<Node>) -> Self {
+    fn new(
+        source_node: Option<Node>,
+        via_node: Option<Node>,
+        resolved_path: Option<WrappedPath>,
+    ) -> Self {
         Self {
             source_node,
             via_node,
+            resolved_path,
         }
     }
 }
@@ -243,9 +250,17 @@ fn check_bonsai_phase_is_public(
                 }
                 return None;
             });
-            CheckStatus::Fail(ValidateInfo::new(route.map(|r| r.src_node.clone()), via))
+            CheckStatus::Fail(ValidateInfo::new(
+                route.map(|r| r.src_node.clone()),
+                via,
+                None,
+            ))
         }
-        _ => CheckStatus::Fail(ValidateInfo::new(route.map(|r| r.src_node.clone()), None)),
+        _ => CheckStatus::Fail(ValidateInfo::new(
+            route.map(|r| r.src_node.clone()),
+            None,
+            None,
+        )),
     }
 }
 
@@ -268,7 +283,11 @@ fn check_linknode_populated(
             }
             return None;
         });
-        CheckStatus::Fail(ValidateInfo::new(route.map(|r| r.src_node.clone()), via))
+        CheckStatus::Fail(ValidateInfo::new(
+            route.map(|r| r.src_node.clone()),
+            via,
+            None,
+        ))
     }
 }
 
@@ -570,6 +589,7 @@ impl ValidateProgressState {
 
 fn scuba_log_node(
     n: &Node,
+    n_path: Option<&WrappedPath>,
     scuba: &mut MononokeScubaSampleBuilder,
     type_key: &'static str,
     key_key: &'static str,
@@ -580,21 +600,47 @@ fn scuba_log_node(
         .add(key_key, n.stats_key());
     if let Some(path) = n.stats_path() {
         scuba.add(path_key, MPath::display_opt(path.as_ref()).to_string());
+    } else {
+        if let Some(path) = n_path {
+            scuba.add(path_key, MPath::display_opt(path.as_ref()).to_string());
+        }
     }
 }
 
 pub fn add_node_to_scuba(
     source_node: Option<&Node>,
     via_node: Option<&Node>,
-    n: &Node,
+    resolved_node: &Node,
+    resolved_path: Option<&WrappedPath>,
     scuba: &mut MononokeScubaSampleBuilder,
 ) {
-    scuba_log_node(n, scuba, NODE_TYPE, NODE_KEY, NODE_PATH);
+    scuba_log_node(
+        resolved_node,
+        resolved_path,
+        scuba,
+        NODE_TYPE,
+        NODE_KEY,
+        NODE_PATH,
+    );
     if let Some(src_node) = source_node {
-        scuba_log_node(src_node, scuba, SRC_NODE_TYPE, SRC_NODE_KEY, SRC_NODE_PATH);
+        scuba_log_node(
+            src_node,
+            None,
+            scuba,
+            SRC_NODE_TYPE,
+            SRC_NODE_KEY,
+            SRC_NODE_PATH,
+        );
     }
     if let Some(via_node) = via_node {
-        scuba_log_node(via_node, scuba, VIA_NODE_TYPE, VIA_NODE_KEY, VIA_NODE_PATH);
+        scuba_log_node(
+            via_node,
+            None,
+            scuba,
+            VIA_NODE_TYPE,
+            VIA_NODE_KEY,
+            VIA_NODE_PATH,
+        );
     }
 }
 
@@ -603,7 +649,7 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
         self.scuba_builder = s;
     }
 
-    fn record_step(&mut self, n: &Node, checkdata: Option<&CheckData>) {
+    fn record_step(&mut self, resolved_node: &Node, checkdata: Option<&CheckData>) {
         self.checked_nodes += 1;
         let mut had_pass = false;
         let mut had_fail = false;
@@ -639,7 +685,8 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
                     add_node_to_scuba(
                         validate_info.source_node.as_ref(),
                         validate_info.via_node.as_ref(),
-                        n,
+                        resolved_node,
+                        validate_info.resolved_path.as_ref(),
                         &mut scuba,
                     );
                     scuba
