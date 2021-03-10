@@ -73,8 +73,8 @@ impl OnDemandUpdateSegmentedChangelog {
         bookmarks: Arc<dyn Bookmarks>,
         bookmark_name: BookmarkName,
         period: Duration,
-    ) -> PeriodicUpdateDag {
-        PeriodicUpdateDag::for_bookmark(ctx, self, bookmarks, bookmark_name, period)
+    ) -> PeriodicUpdateSegmentedChangelog {
+        PeriodicUpdateSegmentedChangelog::for_bookmark(ctx, self, bookmarks, bookmark_name, period)
     }
 
     // Updating the Dag has 3 phases:
@@ -228,14 +228,14 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
     }
 }
 
-pub struct PeriodicUpdateDag {
+pub struct PeriodicUpdateSegmentedChangelog {
     on_demand_update_sc: Arc<OnDemandUpdateSegmentedChangelog>,
     _handle: ControlledHandle,
     #[allow(dead_code)] // useful for testing
     notify: Arc<Notify>,
 }
 
-impl PeriodicUpdateDag {
+impl PeriodicUpdateSegmentedChangelog {
     pub fn for_bookmark(
         ctx: &CoreContext,
         on_demand_update_sc: Arc<OnDemandUpdateSegmentedChangelog>,
@@ -298,6 +298,9 @@ async fn update_dag_from_bookmark(
     Ok(())
 }
 
-segmented_changelog_delegate!(PeriodicUpdateDag, |&self, ctx: &CoreContext| {
+segmented_changelog_delegate!(PeriodicUpdateSegmentedChangelog, |
+    &self,
+    ctx: &CoreContext,
+| {
     &self.on_demand_update_sc
 });

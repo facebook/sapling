@@ -191,6 +191,10 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
 
 #[macro_export]
 macro_rules! segmented_changelog_delegate {
+    ($type:ident, |&$self:ident, $ctx:ident: &CoreContext,| $delegate:block) => {
+        // the difference in the pattern is the extra comma after Context
+        segmented_changelog_delegate!($type, |&$self, $ctx: &CoreContext| $delegate);
+    };
     ($type:ident, |&$self:ident, $ctx:ident: &CoreContext| $delegate:block) => {
         #[async_trait]
         impl SegmentedChangelog for $type {

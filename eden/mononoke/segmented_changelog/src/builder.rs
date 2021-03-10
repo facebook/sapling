@@ -28,7 +28,7 @@ use crate::idmap::{
     SqlIdMapVersionStore,
 };
 use crate::manager::{PeriodicReloadDag, SegmentedChangelogManager};
-use crate::on_demand::{OnDemandUpdateSegmentedChangelog, PeriodicUpdateDag};
+use crate::on_demand::{OnDemandUpdateSegmentedChangelog, PeriodicUpdateSegmentedChangelog};
 use crate::owned::OwnedSegmentedChangelog;
 use crate::seeder::SegmentedChangelogSeeder;
 use crate::tailer::SegmentedChangelogTailer;
@@ -133,10 +133,13 @@ impl SegmentedChangelogBuilder {
         ))
     }
 
-    pub fn build_periodic_update(mut self, ctx: &CoreContext) -> Result<PeriodicUpdateDag> {
+    pub fn build_periodic_update(
+        mut self,
+        ctx: &CoreContext,
+    ) -> Result<PeriodicUpdateSegmentedChangelog> {
         let owned = self.new_owned()?;
         let changeset_fetcher = self.changeset_fetcher()?;
-        let dag = PeriodicUpdateDag::for_bookmark(
+        let dag = PeriodicUpdateSegmentedChangelog::for_bookmark(
             ctx,
             Arc::new(OnDemandUpdateSegmentedChangelog::from_owned(
                 owned,
