@@ -21,6 +21,8 @@ pub fn run(_opts: NoOpts, _io: &IO, repo: Repo) -> Result<u8> {
         "segments/**/*",
         "mutation/**/*",
         "metalog/**/*",
+        "allheads/**/*",
+        "lfs/**/*",
     ];
     fsyncglob::fsync_glob(store_path, &patterns, None);
 
