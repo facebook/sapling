@@ -7,6 +7,7 @@
   $ clone server client2
   $ clone server client3
   $ clone server client4
+  $ clone server client5
 
 Push 3 branches to the server.
 
@@ -77,6 +78,41 @@ Auto cleanup triggered by remotenames.autocleanupthreshold:
   $ hg log -T '{desc} {remotenames} {phase}' -Gr 'all()' --config remotenames.autocleanupthreshold=1
   attempt to clean up remote bookmarks since they exceed threshold 1
   removed 3 non-essential remote bookmarks: remote/another, remote/other, remote/release
+  o  B remote/master public
+  │
+  o  A  public
+  │
+  o  Z  public
+  
+Resethead command to reset all heads (including draft heads):
+
+  $ cd $TESTTMP
+  $ cd client5
+  $ hg pull -B other -B master -B another -B release -q
+  $ drawdag << 'EOS'
+  > E
+  > |
+  > desc(D)
+  > EOS
+
+  $ hg log -T '{desc} {remotenames} {phase}' -Gr 'all()'
+  o  E  draft
+  │
+  o  D remote/another public
+  │
+  │ o  C remote/other public
+  ├─╯
+  │ o  B remote/master public
+  ├─╯
+  o  A  public
+  │
+  o  Z remote/release public
+  
+  $ hg debugresetheads
+
+Notice that only the "master" head is left:
+
+  $ hg log -T '{desc} {remotenames} {phase}' -Gr 'all()'
   o  B remote/master public
   │
   o  A  public

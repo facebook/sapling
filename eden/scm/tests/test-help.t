@@ -1055,6 +1055,8 @@ Test list of internal help commands
    debugrebuildfncache
                  rebuild the fncache file
    debugrename   dump rename information
+   debugresetheads
+                 reset heads of repo so it looks like after a fresh clone
    debugrevlog   show data and statistics about a revlog
    debugrevspec  parse and apply a revision specification
    debugrunshell

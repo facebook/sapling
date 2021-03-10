@@ -157,6 +157,7 @@ Show debug commands if there are no other candidates
   debugrebuilddirstate
   debugrebuildfncache
   debugrename
+  debugresetheads
   debugrevlog
   debugrevspec
   debugrunshell
@@ -447,6 +448,7 @@ Show all commands + options
   debugrebuilddirstate: rev, minimal
   debugrebuildfncache: 
   debugrename: rev
+  debugresetheads: 
   debugrevlog: changelog, manifest, dir, dump
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
   debugrunshell: cmd

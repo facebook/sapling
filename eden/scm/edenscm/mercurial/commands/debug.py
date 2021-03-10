@@ -3603,6 +3603,34 @@ def debugreadauthforuri(ui, _repo, uri, user=None):
         ui.warn(_("no match found\n"))
 
 
+@command("debugresetheads")
+def debugresetheads(ui, repo):
+    """reset heads of repo so it looks like after a fresh clone
+
+    Removes all draft heads and non-essential public heads.
+    This is usually used by automation to clean up draft commits.
+    """
+    metalog = repo.metalog()
+    if metalog is None:
+        raise error.Abort(_("metalog is required"))
+
+    # Only keep essential remote bookmarks
+    essentialnames = bookmarks.selectivepullinitbookmarkfullnames(repo)
+    namenodes = bookmarks.decoderemotenames(metalog["remotenames"])
+    newnamenodes = {
+        fullname: node
+        for fullname, node in namenodes.items()
+        if fullname in essentialnames
+    }
+    if not newnamenodes:
+        raise error.Abort(_("no head left"))
+    metalog["remotenames"] = bookmarks.encoderemotenames(newnamenodes)
+
+    # Remove all draft heads
+    metalog["visibleheads"] = visibility.encodeheads([])
+    metalog.commit("debugresetheads")
+
+
 @command("debugthrowrustexception", [], "")
 def debugthrowrustexception(ui, _repo):
     """cause an error to be returned from rust and propagated to python"""
