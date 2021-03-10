@@ -10,7 +10,7 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 manifest = { path = "../manifest", features = ["for-tests"] }
 pathmatcher = { path = "../pathmatcher" }
 revisionstore = { path = "../revisionstore" }
-tokio = { version = "1", features = ["full", "test-util"] }
+tokio = { version = "1.3", features = ["full", "test-util"] }
 types = { path = "../types" }
 vfs = { path = "../vfs" }
 

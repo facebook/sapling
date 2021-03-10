@@ -17,4 +17,4 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../../../mononoke_types" }
 segmented_changelog = { version = "0.1.0", path = "../.." }
-tokio = { version = "1", features = ["full", "test-util"] }
+tokio = { version = "1.3", features = ["full", "test-util"] }
