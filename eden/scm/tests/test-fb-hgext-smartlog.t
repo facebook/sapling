@@ -319,6 +319,21 @@ Add other draft stacks
   │
   ~
 
+Limit by threshold
+
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.max-commit-threshold=2
+  smartlog: too many (6) commits, not rendering all of them
+  (consider running 'hg doctor' to hide unrelated commits)
+  @  401cd6213b51  b
+  ╷
+  ╷ o  a60fccdcd9e9  a
+  ╭─╯
+  ╷ o  2dc09a01254d  r3
+  ╭─╯
+  o  66f7d451a68b master r1
+  │
+  ~
+
 Recent arg select days correctly
   $ echo 1 >> b
   $ myday=`hg debugsh -c 'import time; ui.write(str(int(time.time()) - 24 * 3600 * 20))'`

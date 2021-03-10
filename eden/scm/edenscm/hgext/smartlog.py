@@ -74,6 +74,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("smartlog", "collapse-obsolete", default=True)
+configitem("smartlog", "max-commit-threshold", default=1000)
 
 
 def uisetup(ui):
@@ -369,6 +370,21 @@ def smartlognodes(repo, headnodes, masternodes):
 
     # Include the ancestor of above commits to make the graph connected.
     nodes = repo.dageval(lambda: gcaall(public() & nodes) | nodes)
+
+    # Protection to avoid running into "very slow" cases. This does not
+    # usually happen. But wrong visibleheads might trigger it (ex. large
+    # draft() size). Note this is tested before "collapse-obsolete", because
+    # "collapse-obsolete" can be very slow if there are too many nodes.
+    limit = repo.ui.configint("smartlog", "max-commit-threshold")
+    if len(nodes) > limit:
+        repo.ui.warn(
+            _("smartlog: too many (%d) commits, not rendering all of them\n")
+            % (len(nodes),)
+        )
+        repo.ui.warn(
+            _("(consider running '@prog@ doctor' to hide unrelated commits)\n")
+        )
+        nodes = nodes.take(limit)
 
     # Collapse long obsoleted stack - only keep their heads and roots.
     # This is incompatible with automation (namely, nuclide-core) yet.
