@@ -2609,6 +2609,10 @@ class memctx(committablectx):
             date = ctx.date()
         if extra is None:
             extra = ctx.extra()
+        if mutinfo is None:
+            mutinfo = getattr(ctx, "mutinfo", lambda: None)()
+        if loginfo is None:
+            loginfo = getattr(ctx, "loginfo", lambda: None)()
 
         def filectxfn(_repo, _ctx, path, ctx=ctx):
             if path in ctx:

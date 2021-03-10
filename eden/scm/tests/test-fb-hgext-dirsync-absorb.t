@@ -226,6 +226,12 @@ Only changes the 1st commit:
   @@ -0,0 +1,1 @@
   +A2
   
+
+  $ hg debugmutation -r .
+   *  7e2ee81dd3761942df016136210e6e29dbcc4ee5 absorb by test at 1970-01-01T00:00:00 from:
+      01a6dd29992748f163688f53a168a05ffaf6251d absorb by test at 1970-01-01T00:00:00 from:
+      381099a6b6660a3545bf879fc8c22c2f7b79b405
+  
 Changes the 1st commit but restores at the top:
 
   $ newrepo
