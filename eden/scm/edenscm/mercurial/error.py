@@ -345,7 +345,7 @@ class NetworkError(Abort):
         )
 
 
-class BadResponseError(NetworkError):
+class BadResponseError(NetworkError, RepoError):
     """Exception raised on a network error."""
 
 
