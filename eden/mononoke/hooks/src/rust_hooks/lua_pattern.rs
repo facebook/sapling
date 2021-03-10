@@ -153,6 +153,11 @@ impl LuaPattern {
     pub fn is_match(&self, s: &str) -> bool {
         self.regex.is_match(s)
     }
+
+    #[allow(dead_code)]
+    pub fn get_regex(&self) -> &Regex {
+        &self.regex
+    }
 }
 
 impl TryFrom<&str> for LuaPattern {
