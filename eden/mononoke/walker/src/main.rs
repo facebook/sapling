@@ -48,6 +48,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = setup::setup_toplevel_app(app_name, cachelib_defaults.clone()).get_matches();
     let logger = args::init_logging(fb, &matches)?;
     args::init_config_store(fb, &logger, &matches)?;
+    args::init_tunables(fb, &matches, logger.clone())?;
 
     let sub_matches = &matches.subcommand();
     let future = match sub_matches {
