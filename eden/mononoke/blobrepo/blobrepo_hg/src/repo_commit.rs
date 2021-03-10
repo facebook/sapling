@@ -22,7 +22,7 @@ use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use ::manifest::{find_intersection_of_diffs, Diff, Entry, Manifest, ManifestOps};
+use ::manifest::{find_intersection_of_diffs, Entry};
 pub use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::{Blobstore, ErrorKind as BlobstoreError, Loadable};
 use context::CoreContext;
@@ -32,7 +32,7 @@ use mercurial_types::{
         HgChangesetContent,
     },
     nodehash::{HgFileNodeId, HgManifestId},
-    HgChangesetId, HgNodeHash, HgParents, MPath, MPathElement, RepoPath, NULL_HASH,
+    HgChangesetId, HgNodeHash, HgParents, MPath, RepoPath, NULL_HASH,
 };
 use mononoke_types::{self, BonsaiChangeset, ChangesetId, MononokeId};
 
@@ -529,157 +529,4 @@ pub fn make_new_changeset(
 ) -> Result<HgBlobChangeset> {
     let changeset = HgChangesetContent::new_from_parts(parents, root_hash, cs_metadata, files);
     HgBlobChangeset::new(changeset)
-}
-
-/// Checks if new commit (or to be precise, its manifest) introduces any new case conflicts. It
-/// does so in three stages:
-///
-/// - First, if there is no parent, we only check the manifest being added for conflicts.
-/// - Second, we build a tree of lower cased paths, then visit the parent's manifest for branches
-/// that overlap with this tree, and collect all the paths that do.
-/// - Third, we check if there are any case conflicts in the union of the files added by this
-/// change and all those paths we found in step 2 (minus those paths that were removed).
-///
-/// Note that this assumes there are no path conflicts in the parent_root_mf, if any is provided.
-/// If there are path conflicts there, this function may report those path conflicts if any file
-/// that is touched in one of the directories (case insensitively) with conflicts.
-pub async fn check_case_conflicts(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    child_root_mf: HgManifestId,
-    parent_root_mf: Option<HgManifestId>,
-) -> Result<(), Error> {
-    let parent_root_mf = match parent_root_mf {
-        Some(parent_root_mf) => parent_root_mf,
-        None => {
-            // We don't have a parent, just check for internal case conflicts here.
-            let paths = child_root_mf
-                .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-                .map_ok(|(path, _)| path)
-                .try_collect::<Vec<_>>()
-                .await
-                .with_context(|| "Error loading manifest")?;
-
-            if let Some(conflict) = mononoke_types::check_case_conflicts(&paths) {
-                return Err(ErrorKind::InternalCaseConflict(conflict.0, conflict.1).into());
-            }
-
-            return Ok(());
-        }
-    };
-
-    let mut added = Vec::new();
-    let mut deleted = HashSet::new();
-
-    let mut diff = parent_root_mf.diff(ctx.clone(), repo.get_blobstore(), child_root_mf);
-    while let Some(diff) = diff
-        .try_next()
-        .await
-        .with_context(|| "Error loading diff")?
-    {
-        match diff {
-            Diff::Added(Some(path), _) => {
-                added.push(path);
-            }
-            Diff::Removed(Some(path), _) => {
-                deleted.insert(path);
-            }
-            _ => {}
-        };
-    }
-
-    // Check if there any conflicts internal to the change being landed. Past this point, the
-    // conflicts we'll report are external (i.e. they are dependent on the parent commit).
-    if let Some(conflict) = mononoke_types::check_case_conflicts(added.iter()) {
-        return Err(ErrorKind::InternalCaseConflict(conflict.0, conflict.1).into());
-    }
-
-    fn lowercase_mpath(e: &MPath) -> Option<Vec<String>> {
-        e.into_iter().map(MPathElement::to_lowercase_utf8).collect()
-    }
-
-    let mut path_tree_builder = PathTreeBuilder::default();
-
-    for path in added.iter() {
-        let path = match lowercase_mpath(&path) {
-            Some(path) => path,
-            None => continue, // We ignore non-UTF8 paths
-        };
-        path_tree_builder.insert(path);
-    }
-
-    let path_tree = Arc::new(path_tree_builder.freeze());
-
-    let candidates = bounded_traversal::bounded_traversal_stream(
-        256,
-        Some((parent_root_mf, path_tree, None)),
-        |(mf_id, path_tree, path)| async move {
-            let mf = mf_id.load(ctx, repo.blobstore()).await?;
-            let mut output = vec![];
-            let mut recurse = vec![];
-
-            for (name, entry) in mf.list() {
-                let lowered_el = match name.to_lowercase_utf8() {
-                    Some(lowered_el) => lowered_el,
-                    None => continue,
-                };
-
-                if let Some(subtree) = path_tree.as_ref().subentries.get(&lowered_el) {
-                    let path = MPath::join_opt_element(path.as_ref(), &name);
-
-                    if let Entry::Tree(sub_mf_id) = entry {
-                        recurse.push((sub_mf_id, subtree.clone(), Some(path.clone())));
-                    }
-
-                    output.push(path);
-                };
-            }
-
-            Result::<_, Error>::Ok((output, recurse))
-        },
-    )
-    .map_ok(|entries| stream::iter(entries.into_iter().map(Result::<_, Error>::Ok)))
-    .try_flatten()
-    .try_collect::<Vec<_>>()
-    .await
-    .with_context(|| "Error scanning for conflicting paths")?;
-
-    let files = added
-        .iter()
-        .chain(candidates.iter().filter(|c| !deleted.contains(c)));
-
-    if let Some((child, parent)) = mononoke_types::check_case_conflicts(files) {
-        return Err(ErrorKind::ExternalCaseConflict(child, parent).into());
-    }
-
-    Ok(())
-}
-
-#[derive(Default)]
-struct PathTreeBuilder {
-    pub subentries: HashMap<String, Self>,
-}
-
-impl PathTreeBuilder {
-    pub fn insert(&mut self, path: Vec<String>) {
-        path.into_iter().fold(self, |node, element| {
-            node.subentries
-                .entry(element)
-                .or_insert_with(Default::default)
-        });
-    }
-
-    pub fn freeze(self) -> PathTree {
-        let subentries = self
-            .subentries
-            .into_iter()
-            .map(|(el, t)| (el, Arc::new(t.freeze())))
-            .collect();
-
-        PathTree { subentries }
-    }
-}
-
-struct PathTree {
-    pub subentries: HashMap<String, Arc<Self>>,
 }

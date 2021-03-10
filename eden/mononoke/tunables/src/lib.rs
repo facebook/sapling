@@ -115,9 +115,6 @@ pub struct MononokeTunables {
     // this threshold will be logged to scuba
     blobstore_read_size_logging_threshold: AtomicI64,
     hash_validation_percentage: AtomicI64,
-    // When case conflict checks are made
-    check_case_conflicts_on_bookmark_movement: AtomicBool,
-    skip_case_conflict_check_on_changeset_upload: AtomicBool,
     // Filter out commits that we already have in infinitepush. Shouldn't be needed if we have a
     // client exchanging commits with us, but when processing bundled uploads (i.e. commit cloud
     // filling), it might help a lot.

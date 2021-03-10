@@ -15,7 +15,6 @@ use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
 use context::{CoreContext, SessionClass};
 use core::fmt::Debug;
-use derived_data::BonsaiDerivable;
 use futures::{
     compat::Stream01CompatExt,
     future::{self, try_join_all},
@@ -34,7 +33,6 @@ use mercurial_types::HgChangesetId;
 use metaconfig_types::{PushrebaseFlags, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase::HgReplayData;
-use skeleton_manifest::RootSkeletonManifestId;
 use slog::{debug, trace};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
@@ -1225,21 +1223,6 @@ impl<'r> Bundle2Resolver<'r> {
         // To avoid it we commit changesets in relatively small chunks.
         let chunk_size = 100;
 
-        // Work out whether we are going to check case conflicts on upload.
-        let check_case_conflicts_on_upload = if self.pushrebase_flags.casefolding_check {
-            let has_skeleton_manifests = self
-                .repo
-                .get_derived_data_config()
-                .is_enabled(RootSkeletonManifestId::NAME);
-            let skip_on_upload = tunables().get_skip_case_conflict_check_on_changeset_upload();
-            // If casefolding checks are enabled we need to check on upload if
-            // skeleton manifests are disabled for this repo, or if skipping
-            // on upload is disabled in general.
-            !has_skeleton_manifests || !skip_on_upload
-        } else {
-            false
-        };
-
         let mut bonsais = UploadedBonsais::new();
         let mut hg_cs_ids = UploadedHgChangesetIds::new();
         for chunk in changesets.chunks(chunk_size) {
@@ -1254,7 +1237,6 @@ impl<'r> Bundle2Resolver<'r> {
                     uploaded_changesets,
                     &filelogs,
                     &manifests,
-                    check_case_conflicts_on_upload,
                 )
                 .await
                 .with_context(err_context)?;

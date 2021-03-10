@@ -50,7 +50,6 @@ pub struct CreateChangeset {
     pub root_manifest: BoxFuture<'static, Result<Option<(HgManifestId, RepoPath)>>>,
     pub sub_entries: BoxStream<'static, Result<(Entry<HgManifestId, HgFileNodeId>, RepoPath)>>,
     pub cs_metadata: ChangesetMetadata,
-    pub must_check_case_conflicts: bool,
     pub create_bonsai_changeset_hook: Option<
         Arc<
             dyn Fn(
@@ -112,7 +111,6 @@ impl CreateChangeset {
         let parents_data = handle_parents(scuba_logger.clone(), self.p1, self.p2)
             .map_err(|err| err.context("While waiting for parents to upload data"));
 
-        let must_check_case_conflicts = self.must_check_case_conflicts.clone();
         let create_bonsai_changeset_object = match self.create_bonsai_changeset_hook {
             Some(hook) => Arc::clone(&hook),
             None => Arc::new(
@@ -147,34 +145,23 @@ impl CreateChangeset {
             async move {
                 let (root_mf_id, (parents, parent_manifest_hashes, bonsai_parents)) =
                     future::try_join(upload_entries, parents_data).await?;
-                let files = async {
-                    if let Some(expected_files) = expected_files {
-                        STATS::create_changeset_expected_cf.add_value(1);
-                        // We are trusting the callee to provide a list of changed files, used
-                        // by the import job
-                        Ok(expected_files)
-                    } else {
-                        STATS::create_changeset_compute_cf.add_value(1);
-                        compute_changed_files(
-                            ctx.clone(),
-                            repo.clone(),
-                            root_mf_id,
-                            parent_manifest_hashes.get(0).cloned(),
-                            parent_manifest_hashes.get(1).cloned(),
-                        )
-                        .await
-                    }
+                let files = if let Some(expected_files) = expected_files {
+                    STATS::create_changeset_expected_cf.add_value(1);
+                    // We are trusting the callee to provide a list of changed files, used
+                    // by the import job
+                    expected_files
+                } else {
+                    STATS::create_changeset_compute_cf.add_value(1);
+                    compute_changed_files(
+                        ctx.clone(),
+                        repo.clone(),
+                        root_mf_id,
+                        parent_manifest_hashes.get(0).cloned(),
+                        parent_manifest_hashes.get(1).cloned(),
+                    )
+                    .await?
                 };
 
-                let p1_mf = parent_manifest_hashes.get(0).cloned();
-                let check_case_conflicts = async {
-                    if must_check_case_conflicts {
-                        check_case_conflicts(&ctx, &repo, root_mf_id, p1_mf).await?;
-                    }
-                    Ok::<_, Error>(())
-                };
-
-                let (files, ()) = future::try_join(files, check_case_conflicts).await?;
                 STATS::create_changeset_cf_count.add_value(files.len() as i64);
                 let hg_cs = make_new_changeset(parents, root_mf_id, cs_metadata, files)?;
                 let bonsai_cs = create_bonsai_changeset_object(

@@ -178,7 +178,6 @@ pub fn create_changeset_no_parents(
             .collect::<FuturesUnordered<_>>()
             .boxed(),
         cs_metadata,
-        must_check_case_conflicts: true,
         create_bonsai_changeset_hook: None,
     };
     create_changeset.create(
@@ -214,7 +213,6 @@ pub fn create_changeset_one_parent(
             .collect::<FuturesUnordered<_>>()
             .boxed(),
         cs_metadata,
-        must_check_case_conflicts: true,
         create_bonsai_changeset_hook: None,
     };
     create_changeset.create(

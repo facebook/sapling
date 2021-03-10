@@ -507,8 +507,6 @@ impl UploadChangesets {
                     root_manifest: rootmf.compat().boxed(),
                     sub_entries: entries.compat().boxed(),
                     cs_metadata,
-                    // Repositories can contain case conflicts - we still need to import them
-                    must_check_case_conflicts: false,
                     create_bonsai_changeset_hook: Some(create_and_verify_bonsai.clone()),
                 };
                 let cshandle =

@@ -20,8 +20,6 @@ setup configuration
   $ cat > ${MONONOKE_TUNABLES_PATH} <<EOF
   > {
   >   "killswitches": {
-  >     "check_case_conflicts_on_bookmark_movement": true,
-  >     "skip_case_conflict_check_on_changeset_upload": true,
   >     "run_hooks_on_additional_changesets": true
   >   }
   > }

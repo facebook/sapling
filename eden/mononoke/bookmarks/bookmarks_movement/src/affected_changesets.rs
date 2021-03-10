@@ -17,7 +17,7 @@ use bytes::Bytes;
 use chrono::Utc;
 use context::CoreContext;
 use cross_repo_sync::CHANGE_XREPO_MAPPING_EXTRA;
-use derived_data::{BonsaiDerivable, BonsaiDerived};
+use derived_data::BonsaiDerived;
 use futures::compat::Stream01CompatExt;
 use futures::future::{self, try_join};
 use futures::stream::{self, StreamExt, TryStreamExt};
@@ -352,13 +352,7 @@ impl AffectedChangesets {
         kind: BookmarkKind,
         additional_changesets: AdditionalChangesets,
     ) -> Result<(), BookmarkMovementError> {
-        if kind == BookmarkKind::Public
-            && pushrebase_params.flags.casefolding_check
-            && tunables().get_check_case_conflicts_on_bookmark_movement()
-            && repo
-                .get_derived_data_config()
-                .is_enabled(RootSkeletonManifestId::NAME)
-        {
+        if kind == BookmarkKind::Public && pushrebase_params.flags.casefolding_check {
             self.load_additional_changesets(
                 ctx,
                 repo,

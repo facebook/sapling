@@ -275,7 +275,6 @@ pub(crate) async fn upload_changeset(
     mut uploaded_changesets: UploadedChangesets,
     filelogs: &Filelogs,
     manifests: &Manifests,
-    must_check_case_conflicts: bool,
 ) -> Result<UploadedChangesets, Error> {
     let NewBlobs {
         root_manifest,
@@ -303,7 +302,6 @@ pub(crate) async fn upload_changeset(
         sub_entries,
         // XXX pass content blobs to CreateChangeset here
         cs_metadata,
-        must_check_case_conflicts,
         create_bonsai_changeset_hook: None,
     };
     let scheduled_uploading = create_changeset.create(ctx, &repo, scuba_logger);
