@@ -91,14 +91,14 @@ pub const DEFAULT_CHECK_TYPES: &[CheckType] = &[
 ];
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-struct FailureInfo {
+struct ValidateInfo {
     // Where we stepped from, useful for immediate reproductions with --walk-root
     source_node: Option<Node>,
     // What the check thinks is an interesting node on the route to here (e.g. the affected changeset)
     via_node: Option<Node>,
 }
 
-impl FailureInfo {
+impl ValidateInfo {
     fn new(source_node: Option<Node>, via_node: Option<Node>) -> Self {
         Self {
             source_node,
@@ -109,8 +109,8 @@ impl FailureInfo {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 enum CheckStatus {
-    Fail(FailureInfo),
-    Pass,
+    Fail(ValidateInfo),
+    Pass(Option<ValidateInfo>),
 }
 
 define_type_enum! {
@@ -225,7 +225,7 @@ fn check_bonsai_phase_is_public(
 ) -> CheckStatus {
     match (&node, &node_data) {
         (Node::PhaseMapping(_cs_id), Some(NodeData::PhaseMapping(Some(Phase::Public)))) => {
-            CheckStatus::Pass
+            CheckStatus::Pass(None)
         }
         (Node::PhaseMapping(non_public_cs_id), Some(NodeData::PhaseMapping(_phase))) => {
             let via = route.and_then(|r| {
@@ -243,9 +243,9 @@ fn check_bonsai_phase_is_public(
                 }
                 return None;
             });
-            CheckStatus::Fail(FailureInfo::new(route.map(|r| r.src_node.clone()), via))
+            CheckStatus::Fail(ValidateInfo::new(route.map(|r| r.src_node.clone()), via))
         }
-        _ => CheckStatus::Fail(FailureInfo::new(route.map(|r| r.src_node.clone()), None)),
+        _ => CheckStatus::Fail(ValidateInfo::new(route.map(|r| r.src_node.clone()), None)),
     }
 }
 
@@ -257,7 +257,7 @@ fn check_linknode_populated(
         .iter()
         .any(|e| e.label == EdgeType::HgFileNodeToLinkedHgChangeset)
     {
-        CheckStatus::Pass
+        CheckStatus::Pass(None)
     } else {
         let via = route.and_then(|r| {
             for n in r.via.iter().rev() {
@@ -268,7 +268,7 @@ fn check_linknode_populated(
             }
             return None;
         });
-        CheckStatus::Fail(FailureInfo::new(route.map(|r| r.src_node.clone()), via))
+        CheckStatus::Fail(ValidateInfo::new(route.map(|r| r.src_node.clone()), via))
     }
 }
 
@@ -400,10 +400,9 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
                             check_linknode_populated(&outgoing, route.as_ref())
                         }
                     };
-                    if status == CheckStatus::Pass {
-                        pass += 1;
-                    } else {
-                        fail += 1;
+                    match &status {
+                        CheckStatus::Pass(_) => pass += 1,
+                        CheckStatus::Fail(_) => fail += 1,
                     }
                     Some(CheckOutput::new(*check, status))
                 })
@@ -621,31 +620,33 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
             for c in &checkdata.checked {
                 let k = c.check;
                 let stats = self.stats_by_type.entry(k).or_insert(CheckStats::default());
-                match &c.status {
-                    CheckStatus::Pass => {
+                let (validate_info, check_fail) = match &c.status {
+                    CheckStatus::Pass(validate_info) => {
                         stats.pass += 1;
                         STATS::walker_validate
                             .add_value(1, (self.repo_stats_key.clone(), k.stats_key(), PASS));
+                        (validate_info.into(), 0)
                     }
-                    CheckStatus::Fail(failure_info) => {
+                    CheckStatus::Fail(validate_info) => {
                         STATS::walker_validate
                             .add_value(1, (self.repo_stats_key.clone(), k.stats_key(), FAIL));
                         stats.fail += 1;
-                        // For failures log immediately
-                        let mut scuba = self.scuba_builder.clone();
-                        add_node_to_scuba(
-                            failure_info.source_node.as_ref(),
-                            failure_info.via_node.as_ref(),
-                            n,
-                            &mut scuba,
-                        );
-                        scuba
-                            .add(CHECK_TYPE, k.stats_key())
-                            .add(
-                                CHECK_FAIL,
-                                if c.status == CheckStatus::Pass { 0 } else { 1 },
-                            )
-                            .log();
+                        (Some(validate_info), 1)
+                    }
+                };
+                if let Some(validate_info) = validate_info {
+                    let mut scuba = self.scuba_builder.clone();
+                    add_node_to_scuba(
+                        validate_info.source_node.as_ref(),
+                        validate_info.via_node.as_ref(),
+                        n,
+                        &mut scuba,
+                    );
+                    scuba
+                        .add(CHECK_TYPE, k.stats_key())
+                        .add(CHECK_FAIL, check_fail)
+                        .log();
+                    if check_fail > 0 {
                         for json in scuba.get_sample().to_json() {
                             warn!(self.logger, "Validation failed: {}", json)
                         }
