@@ -1396,8 +1396,13 @@ def cleanupremotenames(repo):
     namenodes = decoderemotenames(metalog["remotenames"])
     essentialpublicheads = [namenodes[n] for n in essentialnames if n in namenodes]
 
-    # referred by draft branches
-    referrednodes = repo.dageval(lambda: only(draft(), essentialpublicheads))
+    # referred by draft visible heads that are not remotenames themselves
+    # i.e. if draft heads match the remotenames then they are still cleaned up.
+    # remotenames with visible draft children will stay.
+    referredheads = repo.changelog._visibleheads.heads
+    referrednodes = repo.dageval(
+        lambda: only(parents(referredheads), essentialpublicheads)
+    )
     newnamenodes = {
         fullname: node
         for fullname, node in namenodes.items()

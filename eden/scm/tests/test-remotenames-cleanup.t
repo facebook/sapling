@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ configure modern
+  $ setconfig 'infinitepush.branchpattern=re:(^hack/.*)'
   $ newserver server
 
   $ clone server client1
@@ -16,8 +17,8 @@ Push 3 branches to the server.
   $ drawdag << 'EOS'
   > B C D
   >  \|/
-  >   A
-  >   |
+  >   A H
+  >   |/
   >   Z
   > EOS
 
@@ -25,11 +26,12 @@ Push 3 branches to the server.
   $ hg push -r $B --to master --create -q
   $ hg push -r $C --to other --create -q
   $ hg push -r $D --to another --create -q
+  $ hg push -r $H --to hack/foo --create -q
 
 Fetch all remote names:
 
   $ cd $TESTTMP/client2
-  $ hg pull -B other -B master -B another -B release -q
+  $ hg pull -B other -B master -B another -B release -B hack/foo -q
 
 Commit (draft) on "another":
 
@@ -43,17 +45,19 @@ Cleanup: another is kept because of draft E, master is kept because it is
 selectivepull default:
 
   $ hg debugcleanremotenames
-  removed 2 non-essential remote bookmarks: remote/other, remote/release
+  removed 3 non-essential remote bookmarks: remote/hack/foo, remote/other, remote/release
 
   $ hg log -T '{desc} {remotenames} {phase}' -Gr 'all()'
   o  E  draft
   │
-  o  D remote/another public
-  │
-  │ o  B remote/master public
+  │ o  H  draft
+  │ │
+  o │  D remote/another public
+  │ │
+  │ │ o  B remote/master public
+  ├───╯
+  o │  A  public
   ├─╯
-  o  A  public
-  │
   o  Z  public
   
 'hide --cleanup' does the same thing:
