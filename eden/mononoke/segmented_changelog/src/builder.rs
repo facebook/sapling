@@ -401,9 +401,11 @@ impl SegmentedChangelogBuilder {
     }
 
     fn bookmark_name(&mut self) -> Result<BookmarkName> {
-        self.bookmark_name.take().ok_or_else(|| {
-            format_err!("SegmentedChangelog cannot be built without BookmarkName being specified.")
-        })
+        if let Some(name) = &self.bookmark_name {
+            Ok(name.clone())
+        } else {
+            BookmarkName::new("master")
+        }
     }
 
     fn update_to_bookmark_period(&mut self) -> Result<Duration> {
