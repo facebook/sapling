@@ -22,7 +22,7 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::IdMap;
-use crate::{SegmentedChangelog, StreamCloneData};
+use crate::{segmented_changelog_delegate, SegmentedChangelog, StreamCloneData};
 
 const IDMAP_CHANGESET_FETCH_BATCH: usize = 500;
 
@@ -220,54 +220,6 @@ impl<'a> ReadDag<'a> {
     }
 }
 
-#[async_trait]
-pub trait SegmentedChangelogDelegate {
-    async fn segmented_changelog_delegate<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-    ) -> Result<ReadDag<'a>>;
-}
-
-#[async_trait]
-impl<T: SegmentedChangelogDelegate + Sync + Send> SegmentedChangelog for T {
-    async fn location_to_many_changeset_ids(
-        &self,
-        ctx: &CoreContext,
-        location: Location<ChangesetId>,
-        count: u64,
-    ) -> Result<Vec<ChangesetId>> {
-        let delegate = self.segmented_changelog_delegate(ctx).await?;
-        delegate
-            .location_to_many_changeset_ids(ctx, location, count)
-            .await
-    }
-
-    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
-        let delegate = self.segmented_changelog_delegate(ctx).await?;
-        delegate.clone_data(ctx).await
-    }
-
-    async fn full_idmap_clone_data(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<StreamCloneData<ChangesetId>> {
-        let delegate = self.segmented_changelog_delegate(ctx).await?;
-        delegate.full_idmap_clone_data(ctx).await
-    }
-
-    async fn many_changeset_ids_to_locations(
-        &self,
-        ctx: &CoreContext,
-        client_head: ChangesetId,
-        cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
-        let delegate = self.segmented_changelog_delegate(ctx).await?;
-        delegate
-            .many_changeset_ids_to_locations(ctx, client_head, cs_ids)
-            .await
-    }
-}
-
 // Note. The equivalent graph in the scm/lib/dag crate is `NameDag`.
 pub struct Dag {
     pub(crate) iddag: InProcessIdDag,
@@ -280,12 +232,6 @@ impl Dag {
     }
 }
 
-#[async_trait]
-impl SegmentedChangelogDelegate for Dag {
-    async fn segmented_changelog_delegate<'a>(
-        &'a self,
-        _ctx: &'a CoreContext,
-    ) -> Result<ReadDag<'a>> {
-        Ok(ReadDag::new(&self.iddag, self.idmap.clone()))
-    }
-}
+segmented_changelog_delegate!(Dag, |&self, ctx: &CoreContext| {
+    ReadDag::new(&self.iddag, self.idmap.clone())
+});

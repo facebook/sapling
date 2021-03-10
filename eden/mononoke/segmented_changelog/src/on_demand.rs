@@ -29,7 +29,7 @@ use mononoke_types::ChangesetId;
 use crate::dag::{Dag, ReadDag};
 use crate::idmap::IdMap;
 use crate::update::{prepare_incremental_iddag_update, update_iddag};
-use crate::{SegmentedChangelog, StreamCloneData};
+use crate::{segmented_changelog_delegate, SegmentedChangelog, StreamCloneData};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.ondemand";
@@ -294,38 +294,6 @@ async fn update_dag_from_bookmark(
     Ok(())
 }
 
-#[async_trait]
-impl SegmentedChangelog for PeriodicUpdateDag {
-    async fn location_to_many_changeset_ids(
-        &self,
-        ctx: &CoreContext,
-        location: Location<ChangesetId>,
-        count: u64,
-    ) -> Result<Vec<ChangesetId>> {
-        self.on_demand_update_dag
-            .location_to_many_changeset_ids(ctx, location, count)
-            .await
-    }
-
-    async fn many_changeset_ids_to_locations(
-        &self,
-        ctx: &CoreContext,
-        client_head: ChangesetId,
-        cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
-        self.on_demand_update_dag
-            .many_changeset_ids_to_locations(ctx, client_head, cs_ids)
-            .await
-    }
-
-    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
-        self.on_demand_update_dag.clone_data(ctx).await
-    }
-
-    async fn full_idmap_clone_data(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<StreamCloneData<ChangesetId>> {
-        self.on_demand_update_dag.full_idmap_clone_data(ctx).await
-    }
-}
+segmented_changelog_delegate!(PeriodicUpdateDag, |&self, ctx: &CoreContext| {
+    &self.on_demand_update_dag
+});

@@ -187,3 +187,48 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
         ))
     }
 }
+
+#[macro_export]
+macro_rules! segmented_changelog_delegate {
+    ($type:ident, |&$self:ident, $ctx:ident: &CoreContext| $delegate:block) => {
+        #[async_trait]
+        impl SegmentedChangelog for $type {
+            async fn location_to_many_changeset_ids(
+                &$self,
+                $ctx: &CoreContext,
+                location: Location<ChangesetId>,
+                count: u64,
+            ) -> Result<Vec<ChangesetId>> {
+                let delegate = $delegate;
+                delegate
+                    .location_to_many_changeset_ids($ctx, location, count)
+                    .await
+            }
+
+            async fn clone_data(&$self, $ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+                let delegate = $delegate;
+                delegate.clone_data($ctx).await
+            }
+
+            async fn full_idmap_clone_data(
+                &$self,
+                $ctx: &CoreContext,
+            ) -> Result<StreamCloneData<ChangesetId>> {
+                let delegate = $delegate;
+                delegate.full_idmap_clone_data($ctx).await
+            }
+
+            async fn many_changeset_ids_to_locations(
+                &$self,
+                $ctx: &CoreContext,
+                client_head: ChangesetId,
+                cs_ids: Vec<ChangesetId>,
+            ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
+                let delegate = $delegate;
+                delegate
+                    .many_changeset_ids_to_locations($ctx, client_head, cs_ids)
+                    .await
+            }
+        }
+    };
+}

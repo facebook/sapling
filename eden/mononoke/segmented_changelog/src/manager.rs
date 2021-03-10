@@ -30,7 +30,7 @@ use crate::idmap::{
 use crate::logging::log_new_segmented_changelog_version;
 use crate::types::{IdMapVersion, SegmentedChangelogVersion};
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{CloneData, SegmentedChangelog, StreamCloneData};
+use crate::{segmented_changelog_delegate, CloneData, SegmentedChangelog, StreamCloneData};
 
 pub struct SegmentedChangelogManager {
     repo_id: RepositoryId,
@@ -149,61 +149,17 @@ impl SegmentedChangelogManager {
     }
 }
 
-#[async_trait]
-impl SegmentedChangelog for SegmentedChangelogManager {
-    async fn location_to_many_changeset_ids(
-        &self,
-        ctx: &CoreContext,
-        location: Location<ChangesetId>,
-        count: u64,
-    ) -> Result<Vec<ChangesetId>> {
-        let (_, dag) = self.load_dag(&ctx).await.with_context(|| {
+segmented_changelog_delegate!(SegmentedChangelogManager, |&self, ctx: &CoreContext| {
+    self.load_dag(&ctx)
+        .await
+        .with_context(|| {
             format!(
                 "repo {}: error loading segmented changelog from save",
                 self.repo_id
             )
-        })?;
-        dag.location_to_many_changeset_ids(ctx, location, count)
-            .await
-    }
-
-    async fn many_changeset_ids_to_locations(
-        &self,
-        ctx: &CoreContext,
-        client_head: ChangesetId,
-        cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
-        let (_, dag) = self.load_dag(&ctx).await.with_context(|| {
-            format!(
-                "repo {}: error loading segmented changelog from save",
-                self.repo_id
-            )
-        })?;
-        dag.many_changeset_ids_to_locations(ctx, client_head, cs_ids)
-            .await
-    }
-
-    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
-        let (_, dag) = self.load_dag(&ctx).await.with_context(|| {
-            format!(
-                "repo {}: error loading segmented changelog from save",
-                self.repo_id
-            )
-        })?;
-        dag.clone_data(ctx).await
-    }
-
-    async fn full_idmap_clone_data(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<StreamCloneData<ChangesetId>> {
-        let (_, dag) = self
-            .load_dag(&ctx)
-            .await
-            .context("error loading segmented changelog from save")?;
-        dag.full_idmap_clone_data(ctx).await
-    }
-}
+        })?
+        .1
+});
 
 pub struct PeriodicReloadDag {
     dag: Arc<ArcSwap<Dag>>,
@@ -258,40 +214,6 @@ impl PeriodicReloadDag {
     }
 }
 
-#[async_trait]
-impl SegmentedChangelog for PeriodicReloadDag {
-    async fn location_to_many_changeset_ids(
-        &self,
-        ctx: &CoreContext,
-        location: Location<ChangesetId>,
-        count: u64,
-    ) -> Result<Vec<ChangesetId>> {
-        self.dag
-            .load()
-            .location_to_many_changeset_ids(ctx, location, count)
-            .await
-    }
-
-    async fn many_changeset_ids_to_locations(
-        &self,
-        ctx: &CoreContext,
-        client_head: ChangesetId,
-        cs_ids: Vec<ChangesetId>,
-    ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
-        self.dag
-            .load()
-            .many_changeset_ids_to_locations(ctx, client_head, cs_ids)
-            .await
-    }
-
-    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
-        self.dag.load().clone_data(ctx).await
-    }
-
-    async fn full_idmap_clone_data(
-        &self,
-        ctx: &CoreContext,
-    ) -> Result<StreamCloneData<ChangesetId>> {
-        self.dag.load().full_idmap_clone_data(ctx).await
-    }
-}
+segmented_changelog_delegate!(PeriodicReloadDag, |&self, ctx: &CoreContext| {
+    self.dag.load()
+});
