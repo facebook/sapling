@@ -25,7 +25,6 @@ use crate::owned::OwnedSegmentedChangelog;
 
 define_stats! {
     build: timeseries(Sum),
-    build_incremental: timeseries(Sum),
 }
 
 pub async fn build<'a>(
