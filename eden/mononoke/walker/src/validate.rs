@@ -68,6 +68,7 @@ pub const NODE_PATH: &str = "node_path";
 pub const EDGE_TYPE: &str = "edge_type";
 pub const CHECK_TYPE: &str = "check_type";
 pub const CHECK_FAIL: &str = "check_fail";
+pub const CHECK_SIZE: &str = "check_size";
 pub const WALK_TYPE: &str = "walk_type";
 pub const REPO: &str = "repo";
 pub const ERROR_MSG: &str = "error_msg";
@@ -98,6 +99,8 @@ struct ValidateInfo {
     via_node: Option<Node>,
     // if the walk has extra path tracking enabled, this is the resolved path of the resolved node
     resolved_path: Option<WrappedPath>,
+    // if the check wants to report a size
+    check_size: Option<u64>,
 }
 
 impl ValidateInfo {
@@ -105,11 +108,13 @@ impl ValidateInfo {
         source_node: Option<Node>,
         via_node: Option<Node>,
         resolved_path: Option<WrappedPath>,
+        check_size: Option<u64>,
     ) -> Self {
         Self {
             source_node,
             via_node,
             resolved_path,
+            check_size,
         }
     }
 }
@@ -260,10 +265,12 @@ fn check_bonsai_phase_is_public(
                 route.map(|r| r.src_node.clone()),
                 via,
                 None,
+                None,
             ))
         }
         _ => CheckStatus::Fail(ValidateInfo::new(
             route.map(|r| r.src_node.clone()),
+            None,
             None,
             None,
         )),
@@ -293,6 +300,7 @@ fn check_linknode_populated(
         CheckStatus::Fail(ValidateInfo::new(
             route.map(|r| r.src_node.clone()),
             via,
+            None,
             None,
         ))
     }
@@ -327,6 +335,7 @@ fn check_file_content_is_lfs(
                     route.map(|r| r.src_node.clone()),
                     via,
                     resolved.path.clone(),
+                    Some(content_meta.total_size),
                 ));
                 CheckStatus::Pass(info)
             }
@@ -334,6 +343,7 @@ fn check_file_content_is_lfs(
         // Unexpected node type
         _ => CheckStatus::Fail(ValidateInfo::new(
             route.map(|r| r.src_node.clone()),
+            None,
             None,
             None,
         )),
@@ -751,6 +761,11 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
                         validate_info.resolved_path.as_ref(),
                         &mut scuba,
                     );
+
+                    if let Some(check_size) = validate_info.check_size {
+                        scuba.add(CHECK_SIZE, check_size);
+                    }
+
                     scuba
                         .add(CHECK_TYPE, k.stats_key())
                         .add(CHECK_FAIL, check_fail)

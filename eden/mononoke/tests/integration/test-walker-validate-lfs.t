@@ -26,10 +26,10 @@ validate with LFS enabled, shallow
 Check scuba data is logged for lfs and that it contains useful hg changeset and path in via_node_key and node_path.  As its shallow walk expect all via_node_key to be the same
   $ wc -l < scuba-validate-shallow.json
   3
-  $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .node_path, .node_type, .repo, .src_node_type, .via_node_key, .via_node_type, .walk_type, .error_msg ] | @csv' < scuba-validate-shallow.json | sort
-  0,"file_content_is_lfs","content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","B","FileContentMetadata","repo","HgFileEnvelope","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","HgChangeset","validate",
-  0,"file_content_is_lfs","content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","C","FileContentMetadata","repo","HgFileEnvelope","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","HgChangeset","validate",
-  0,"file_content_is_lfs","content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","A","FileContentMetadata","repo","HgFileEnvelope","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","HgChangeset","validate",
+  $ jq -r '.int * .normal | [ .check_fail, .check_type, .check_size, .node_key, .node_path, .node_type, .repo, .src_node_type, .via_node_key, .via_node_type, .walk_type, .error_msg ] | @csv' < scuba-validate-shallow.json | sort
+  0,"file_content_is_lfs",1,"content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","B","FileContentMetadata","repo","HgFileEnvelope","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","HgChangeset","validate",
+  0,"file_content_is_lfs",1,"content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","C","FileContentMetadata","repo","HgFileEnvelope","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","HgChangeset","validate",
+  0,"file_content_is_lfs",1,"content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","A","FileContentMetadata","repo","HgFileEnvelope","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","HgChangeset","validate",
 
 Make a commit for a file in a subdir path
   $ cd repo-hg
