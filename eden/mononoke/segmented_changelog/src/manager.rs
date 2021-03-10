@@ -23,9 +23,7 @@ use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{
-    CacheHandlers, CachedIdMap, ConcurrentMemIdMap, IdMap, OverlayIdMap, SqlIdMapFactory,
-};
+use crate::idmap::{IdMap, IdMapFactory};
 use crate::logging::log_new_segmented_changelog_version;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::types::{IdMapVersion, SegmentedChangelogVersion};
@@ -36,8 +34,7 @@ pub struct SegmentedChangelogManager {
     repo_id: RepositoryId,
     sc_version_store: SegmentedChangelogVersionStore,
     iddag_save_store: IdDagSaveStore,
-    idmap_factory: SqlIdMapFactory,
-    cache_handlers: Option<CacheHandlers>,
+    idmap_factory: IdMapFactory,
     with_in_memory_write_idmap: bool,
 }
 
@@ -46,8 +43,7 @@ impl SegmentedChangelogManager {
         repo_id: RepositoryId,
         sc_version_store: SegmentedChangelogVersionStore,
         iddag_save_store: IdDagSaveStore,
-        idmap_factory: SqlIdMapFactory,
-        cache_handlers: Option<CacheHandlers>,
+        idmap_factory: IdMapFactory,
         with_in_memory_write_idmap: bool,
     ) -> Self {
         Self {
@@ -55,7 +51,6 @@ impl SegmentedChangelogManager {
             sc_version_store,
             iddag_save_store,
             idmap_factory,
-            cache_handlers,
             with_in_memory_write_idmap,
         }
     }
@@ -119,7 +114,7 @@ impl SegmentedChangelogManager {
             .load(&ctx, sc_version.iddag_version)
             .await
             .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
-        let idmap = self.new_idmap(sc_version.idmap_version);
+        let idmap = self.new_idmap(ctx, sc_version.idmap_version);
         debug!(
             ctx.logger(),
             "segmented changelog dag successfully loaded - repo_id: {}, idmap_version: {}, \
@@ -132,23 +127,12 @@ impl SegmentedChangelogManager {
         Ok((sc_version, owned))
     }
 
-    pub fn new_idmap(&self, idmap_version: IdMapVersion) -> Arc<dyn IdMap> {
-        let mut idmap: Arc<dyn IdMap> = Arc::new(self.idmap_factory.sql_idmap(idmap_version));
-        if let Some(cache_handlers) = &self.cache_handlers {
-            idmap = Arc::new(CachedIdMap::new(
-                idmap,
-                cache_handlers.clone(),
-                self.repo_id,
-                idmap_version,
-            ));
-        }
+    pub fn new_idmap(&self, ctx: &CoreContext, idmap_version: IdMapVersion) -> Arc<dyn IdMap> {
         if self.with_in_memory_write_idmap {
-            idmap = Arc::new(OverlayIdMap::new(
-                Arc::new(ConcurrentMemIdMap::new()),
-                idmap,
-            ));
+            self.idmap_factory.for_server(ctx, idmap_version)
+        } else {
+            self.idmap_factory.for_writer(ctx, idmap_version)
         }
-        idmap
     }
 }
 

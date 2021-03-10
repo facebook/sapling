@@ -12,7 +12,7 @@ mod version;
 
 pub use self::cache::{CacheHandlers, CachedIdMap};
 pub use self::mem::{ConcurrentMemIdMap, MemIdMap};
-pub use self::sql::{SqlIdMap, SqlIdMapFactory};
+pub use self::sql::SqlIdMap;
 pub use self::version::SqlIdMapVersionStore;
 
 use std::collections::HashMap;
@@ -22,9 +22,13 @@ use anyhow::{format_err, Result};
 use async_trait::async_trait;
 
 use dag::Id as Vertex;
+use sql_ext::replication::ReplicaLagMonitor;
+use sql_ext::SqlConnections;
 
 use context::CoreContext;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
+
+use crate::types::IdMapVersion;
 
 #[async_trait]
 pub trait IdMap: Send + Sync {
@@ -181,6 +185,70 @@ impl IdMap for OverlayIdMap {
             Some(x) => Ok(Some(x)),
             None => self.b.get_last_entry(ctx).await,
         }
+    }
+}
+
+// The builder for the standard IdMap
+// Our layers are: SqlIdMap, CachedIdMap, OverlayIdMap
+#[derive(Clone)]
+pub struct IdMapFactory {
+    connections: SqlConnections,
+    replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
+    repo_id: RepositoryId,
+    cache_handlers: Option<CacheHandlers>,
+}
+
+impl IdMapFactory {
+    pub fn new(
+        connections: SqlConnections,
+        replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
+        repo_id: RepositoryId,
+    ) -> Self {
+        Self {
+            connections,
+            replica_lag_monitor,
+            repo_id,
+            cache_handlers: None,
+        }
+    }
+
+    // Writes go to the SQL table.
+    pub fn for_writer(&self, ctx: &CoreContext, version: IdMapVersion) -> Arc<dyn IdMap> {
+        let sql_idmap = SqlIdMap::new(
+            self.connections.clone(),
+            self.replica_lag_monitor.clone(),
+            self.repo_id,
+            version,
+        );
+        slog::debug!(
+            ctx.logger(),
+            "segmented changelog idmap loaded - version: {}",
+            version
+        );
+        let mut idmap: Arc<dyn IdMap> = Arc::new(sql_idmap);
+        if let Some(cache_handlers) = &self.cache_handlers {
+            idmap = Arc::new(CachedIdMap::new(
+                idmap,
+                cache_handlers.clone(),
+                self.repo_id,
+                version,
+            ));
+        }
+        idmap
+    }
+
+    // Servers have an overlay idmap which means that all their updates to the idmap stay confined
+    // to the Dag that performed the updates.
+    pub fn for_server(&self, ctx: &CoreContext, version: IdMapVersion) -> Arc<dyn IdMap> {
+        Arc::new(OverlayIdMap::new(
+            Arc::new(ConcurrentMemIdMap::new()),
+            self.for_writer(ctx, version),
+        ))
+    }
+
+    pub fn with_cache_handlers(mut self, cache_handlers: CacheHandlers) -> Self {
+        self.cache_handlers = Some(cache_handlers);
+        self
     }
 }
 

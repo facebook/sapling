@@ -24,7 +24,7 @@ use sql_ext::SqlConnections;
 
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::{
-    CacheHandlers, CachedIdMap, ConcurrentMemIdMap, IdMap, SqlIdMap, SqlIdMapFactory,
+    CacheHandlers, CachedIdMap, ConcurrentMemIdMap, IdMap, IdMapFactory, SqlIdMap,
     SqlIdMapVersionStore,
 };
 use crate::manager::{PeriodicReloadSegmentedChangelog, SegmentedChangelogManager};
@@ -95,13 +95,12 @@ impl SegmentedChangelogBuilder {
         let repo_id = self.repo_id()?;
         let sc_version_store = self.build_segmented_changelog_version_store()?;
         let iddag_save_store = self.build_iddag_save_store()?;
-        let idmap_factory = self.build_sql_idmap_factory()?;
+        let idmap_factory = self.build_idmap_factory()?;
         Ok(SegmentedChangelogManager::new(
             repo_id,
             sc_version_store,
             iddag_save_store,
             idmap_factory,
-            self.cache_handlers.take(),
             self.with_in_memory_write_idmap,
         ))
     }
@@ -315,15 +314,15 @@ impl SegmentedChangelogBuilder {
         ))
     }
 
-    pub(crate) fn build_sql_idmap_factory(&mut self) -> Result<SqlIdMapFactory> {
+    pub(crate) fn build_idmap_factory(&mut self) -> Result<IdMapFactory> {
         let connections = self.connections_clone()?;
         let replica_lag_monitor = self.replica_lag_monitor();
         let repo_id = self.repo_id()?;
-        Ok(SqlIdMapFactory::new(
-            connections,
-            replica_lag_monitor,
-            repo_id,
-        ))
+        let mut idmap_factory = IdMapFactory::new(connections, replica_lag_monitor, repo_id);
+        if let Some(cache_handlers) = self.cache_handlers.take() {
+            idmap_factory = idmap_factory.with_cache_handlers(cache_handlers);
+        }
+        Ok(idmap_factory)
     }
 
     pub(crate) fn build_sql_idmap_version_store(&self) -> Result<SqlIdMapVersionStore> {
