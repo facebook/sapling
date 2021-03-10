@@ -28,7 +28,7 @@ use crate::update::build_incremental;
 use crate::version_store::SegmentedChangelogVersionStore;
 
 define_stats! {
-    prefix = "mononoke.segmented_changelog.update";
+    prefix = "mononoke.segmented_changelog.tailer.update";
     count: timeseries(Sum),
     failure: timeseries(Sum),
     success: timeseries(Sum),
