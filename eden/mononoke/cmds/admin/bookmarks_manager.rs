@@ -192,7 +192,7 @@ async fn handle_get(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
             println!("{}", output);
             Ok(())
         }
-        _ => panic!("Unknown changeset-type supplied"),
+        _ => Err(format_err!("Unknown changeset-type supplied")),
     }
 }
 
@@ -204,10 +204,13 @@ async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
     let output_limit_as_string = args.value_of(ARG_LIMIT).unwrap_or("25");
     let max_rec = match output_limit_as_string.parse::<u32>() {
         Ok(n) => n,
-        Err(e) => panic!(
-            "Bad limit value supplied: \"{}\" - {}",
-            output_limit_as_string, e
-        ),
+        Err(e) => {
+            return Err(format_err!(
+                "Bad limit value supplied: \"{}\" - {}",
+                output_limit_as_string,
+                e
+            ));
+        }
     };
 
     let filter_by_ts_range = args.is_present(ARG_START_TIME) || args.is_present(ARG_END_TIME);
@@ -306,7 +309,7 @@ async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
                 .try_for_each(|_| async { Ok(()) })
                 .await
         }
-        _ => panic!("Unknown changeset-type supplied"),
+        _ => Err(format_err!("Unknown changeset-type supplied")),
     }
 }
 
@@ -329,7 +332,7 @@ async fn handle_list(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) ->
                 })
                 .await
         }
-        kind => panic!("Invalid kind {:?}", kind),
+        kind => Err(format_err!("Invalid kind {:?}", kind)),
     }
 }
 

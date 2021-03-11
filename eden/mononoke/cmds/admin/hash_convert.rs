@@ -9,6 +9,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use std::str::FromStr;
 
+use anyhow::anyhow;
 use blobrepo_hg::BlobRepoHg;
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
@@ -77,7 +78,7 @@ pub async fn subcommand_hash_convert<'a>(
                 println!("{}", bonsai);
             }
             None => {
-                panic!("no matching mononoke id found");
+                return Err(anyhow!("no matching mononoke id found").into());
             }
         }
         Ok(())
