@@ -77,8 +77,13 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         ));
         Arc::new(new_cachelib_blobstore(
             delayed,
-            Arc::new(cachelib::get_pool("blobstore-blobs").ok_or(Error::msg("no cache pool"))?),
-            Arc::new(cachelib::get_pool("blobstore-presence").ok_or(Error::msg("no cache pool"))?),
+            Arc::new(
+                cachelib::get_pool("blobstore-blobs").ok_or_else(|| Error::msg("no cache pool"))?,
+            ),
+            Arc::new(
+                cachelib::get_pool("blobstore-presence")
+                    .ok_or_else(|| Error::msg("no cache pool"))?,
+            ),
             CachelibBlobstoreOptions::default(),
         ))
     };
@@ -86,7 +91,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
     let filenodes = {
         let pool = cachelib::get_volatile_pool("filenodes")
             .unwrap()
-            .ok_or(Error::msg("no cache pool"))?;
+            .ok_or_else(|| Error::msg("no cache pool"))?;
 
         let mut builder = NewFilenodesBuilder::with_sqlite_in_memory()?;
         builder.enable_caching(fb, pool.clone(), pool, "filenodes", "");
@@ -111,7 +116,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
             changesets,
             cachelib::get_volatile_pool("changesets")
                 .unwrap()
-                .ok_or(Error::msg("no cache pool"))?,
+                .ok_or_else(|| Error::msg("no cache pool"))?,
         ))
     };
 
@@ -128,7 +133,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
             mapping,
             cachelib::get_volatile_pool("bonsai_hg_mapping")
                 .unwrap()
-                .ok_or(Error::msg("no cache pool"))?,
+                .ok_or_else(|| Error::msg("no cache pool"))?,
         ))
     };
 

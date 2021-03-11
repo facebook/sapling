@@ -11,7 +11,6 @@
 #![deny(warnings)]
 
 use anyhow::{bail, format_err, Error, Result};
-use benchmark_lib::{new_benchmark_repo, GenManifest};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use clap::Arg;
@@ -28,6 +27,7 @@ use futures_stats::futures03::TimedFutureExt;
 use mononoke_types::ChangesetId;
 use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
+use simulated_repo::{new_benchmark_repo, GenManifest};
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 use unodes::RootUnodeManifestId;
@@ -173,7 +173,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let seed = matches
         .value_of(ARG_SEED)
         .and_then(|s| s.parse::<u64>().ok())
-        .unwrap_or_else(|| rand::random());
+        .unwrap_or_else(rand::random);
 
     let stack_size: usize = matches
         .value_of(ARG_STACK_SIZE)

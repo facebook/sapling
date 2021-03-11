@@ -168,7 +168,6 @@ impl_bonsai_derived_mapping!(RootFastlogMapping, BlobstoreExistsMapping, RootFas
 mod tests {
     use super::*;
     use crate::fastlog_impl::{fetch_fastlog_batch_by_unode_id, fetch_flattened};
-    use benchmark_lib::{GenManifest, GenSettings};
     use blobrepo::save_bonsai_changesets;
     use blobrepo_hg::BlobRepoHg;
     use bookmarks::BookmarkName;
@@ -192,6 +191,7 @@ mod tests {
     use rand::SeedableRng;
     use rand_xorshift::XorShiftRng;
     use revset::AncestorsNodeStream;
+    use simulated_repo::{GenManifest, GenSettings};
     use std::collections::{BTreeMap, HashSet, VecDeque};
     use std::str::FromStr;
 

@@ -239,7 +239,7 @@ toml = { git = "https://github.com/jsgf/toml-rs", branch = "dotted-table-0.5.7" 
 members = [
   ".",
   "alpn",
-  "benchmark",
+  "benchmarks/simulated_repo",
   "blobimport_lib",
   "blobimport_lib/consts",
   "blobrepo",

@@ -940,10 +940,10 @@ async fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
 #[cfg(fbcode_build)]
 #[fbinit::test]
 async fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> {
-    use benchmark_lib::{new_benchmark_repo, DelaySettings, GenManifest};
     use rand::SeedableRng;
     use rand_distr::Normal;
     use rand_xorshift::XorShiftRng;
+    use simulated_repo::{new_benchmark_repo, DelaySettings, GenManifest};
 
     let ctx = CoreContext::test_mock(fb);
     let delay_settings = DelaySettings {

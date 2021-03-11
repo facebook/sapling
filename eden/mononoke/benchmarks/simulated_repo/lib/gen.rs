@@ -17,7 +17,7 @@ use mononoke_types::{
 };
 use rand::{seq::SliceRandom, Rng};
 use rand_distr::{Binomial, Uniform};
-use std::{collections::BTreeMap, convert::TryFrom, iter::FromIterator};
+use std::{collections::BTreeMap, convert::TryFrom};
 
 #[derive(Clone, Copy)]
 pub struct GenSettings {
@@ -163,25 +163,23 @@ impl GenManifest {
             let dirname = if rng.gen_bool(settings.p_dir_create) {
                 gen_filename(rng)
             } else {
-                let dirs = Vec::from_iter(self.dirs.keys());
+                let dirs = self.dirs.keys().collect::<Vec<_>>();
                 dirs.choose(rng)
-                    .map(|&d| d.clone())
-                    .unwrap_or_else(|| gen_filename(rng))
+                    .map_or_else(|| gen_filename(rng), |&d| d.clone())
             };
             prefix.push(dirname.clone());
             self.dirs
                 .entry(dirname)
-                .or_insert_with(|| Self::new())
+                .or_insert_with(Self::new)
                 .gen_change(rng, settings, prefix)
         } else {
             let (filename, new) = if rng.gen_bool(settings.p_file_create) {
                 (gen_filename(rng), true)
             } else {
-                let files = Vec::from_iter(self.files.keys());
+                let files = self.files.keys().collect::<Vec<_>>();
                 files
                     .choose(rng)
-                    .map(|&k| (k.clone(), false))
-                    .unwrap_or_else(|| (gen_filename(rng), true))
+                    .map_or_else(|| (gen_filename(rng), true), |&k| (k.clone(), false))
             };
             prefix.push(filename.clone());
             let data = if !new && rng.gen_bool(settings.p_file_delete) {

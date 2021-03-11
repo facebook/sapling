@@ -35,7 +35,6 @@ type_map = { version = "0.1.0", path = "../common/type_map" }
 ascii = "1.0"
 assert_matches = "1.5"
 async-trait = "0.1.45"
-benchmark_lib = { version = "0.1.0", path = "../benchmark" }
 blobrepo_errors = { version = "0.1.0", path = "errors" }
 blobrepo_factory = { version = "0.1.0", path = "factory" }
 blobrepo_hg = { version = "0.1.0", path = "blobrepo_hg" }
@@ -55,4 +54,5 @@ rand = { version = "0.7", features = ["small_rng"] }
 rand_distr = "0.2"
 rand_xorshift = "0.2"
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
+simulated_repo = { version = "0.1.0", path = "../benchmarks/simulated_repo" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }

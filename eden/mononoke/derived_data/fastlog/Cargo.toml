@@ -32,7 +32,6 @@ tokio = { version = "0.2.25", features = ["full", "test-util"] }
 unodes = { version = "0.1.0", path = "../unodes" }
 
 [dev-dependencies]
-benchmark_lib = { version = "0.1.0", path = "../../benchmark" }
 blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
@@ -46,4 +45,5 @@ pretty_assertions = "0.6"
 rand = { version = "0.7", features = ["small_rng"] }
 rand_xorshift = "0.2"
 revset = { version = "0.1.0", path = "../../revset" }
+simulated_repo = { version = "0.1.0", path = "../../benchmarks/simulated_repo" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
