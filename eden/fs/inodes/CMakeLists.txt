@@ -21,6 +21,8 @@ list(
   INODES_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/RequestContext.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/InodeNumber.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/InodeMetadata.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/InodeTimestamps.cpp
 )
 
 add_library(
@@ -43,6 +45,8 @@ target_link_libraries(
   eden_inodes
   PUBLIC
     eden_config
+    eden_inodes_inodenumber
+    eden_inode_metadata
     eden_journal
     eden_model_git
     eden_nfs_dispatcher
@@ -87,6 +91,21 @@ target_link_libraries(
     eden_notifications
     eden_store
     eden_telemetry
+    eden_utils
+    Folly::folly
+)
+
+add_library(
+  eden_inode_metadata STATIC
+    InodeMetadata.cpp InodeTimestamps.cpp InodeMetadata.h InodeTimestamps.h
+)
+
+target_link_libraries(
+  eden_inode_metadata
+  PUBLIC
+    eden_utils
+  PRIVATE
+    eden_fuse
     eden_utils
     Folly::folly
 )

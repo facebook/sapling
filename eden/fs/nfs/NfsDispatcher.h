@@ -17,6 +17,7 @@
 #include <sys/vfs.h>
 #endif
 
+#include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -29,10 +30,12 @@ class Future;
 namespace facebook::eden {
 
 class EdenStats;
+class Clock;
 
 class NfsDispatcher {
  public:
-  explicit NfsDispatcher(EdenStats* stats) : stats_(stats) {}
+  explicit NfsDispatcher(EdenStats* stats, const Clock& clock)
+      : stats_(stats), clock_(clock) {}
 
   virtual ~NfsDispatcher() {}
 
@@ -40,11 +43,36 @@ class NfsDispatcher {
     return stats_;
   }
 
+  const Clock& getClock() const {
+    return clock_;
+  }
+
   /**
    * Get file attribute for the passed in InodeNumber.
    */
   virtual folly::Future<struct stat> getattr(
       InodeNumber ino,
+      ObjectFetchContext& context) = 0;
+
+  /**
+   * Return value of the setattr method.
+   */
+  struct SetattrRes {
+    /** Attributes of the file prior to changing its attributes */
+    std::optional<struct stat> preStat;
+    /** Attributes of the file after changing its attributes */
+    std::optional<struct stat> postStat;
+  };
+
+  /**
+   * Change the attributes of the file referenced by the InodeNumber ino.
+   *
+   * See comment on the create method for the meaning of the returned pre and
+   * post stat.
+   */
+  virtual folly::Future<SetattrRes> setattr(
+      InodeNumber ino,
+      DesiredMetadata desired,
       ObjectFetchContext& context) = 0;
 
   /**
@@ -197,6 +225,7 @@ class NfsDispatcher {
 
  private:
   EdenStats* stats_{nullptr};
+  const Clock& clock_;
 };
 
 } // namespace facebook::eden

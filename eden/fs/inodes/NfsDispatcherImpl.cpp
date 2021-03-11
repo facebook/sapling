@@ -19,7 +19,7 @@
 namespace facebook::eden {
 
 NfsDispatcherImpl::NfsDispatcherImpl(EdenMount* mount)
-    : NfsDispatcher(mount->getStats()),
+    : NfsDispatcher(mount->getStats(), mount->getClock()),
       mount_(mount),
       inodeMap_(mount_->getInodeMap()) {}
 
@@ -28,6 +28,20 @@ folly::Future<struct stat> NfsDispatcherImpl::getattr(
     ObjectFetchContext& context) {
   return inodeMap_->lookupInode(ino).thenValue(
       [&context](const InodePtr& inode) { return inode->stat(context); });
+}
+
+folly::Future<NfsDispatcher::SetattrRes> NfsDispatcherImpl::setattr(
+    InodeNumber ino,
+    DesiredMetadata desired,
+    ObjectFetchContext& /*context*/) {
+  return inodeMap_->lookupInode(ino)
+      .thenValue([desired = std::move(desired)](const InodePtr& inode) {
+        // TODO(xavierd): Modify setattr to obtain pre stat of the file.
+        return inode->setattr(desired);
+      })
+      .thenValue([](struct stat st) {
+        return NfsDispatcher::SetattrRes{std::nullopt, st};
+      });
 }
 
 folly::Future<InodeNumber> NfsDispatcherImpl::getParent(

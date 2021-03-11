@@ -12,6 +12,7 @@
 #include <folly/Utility.h>
 #include <folly/futures/Future.h>
 #include "eden/fs/nfs/NfsdRpc.h"
+#include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/SystemError.h"
 
 namespace facebook::eden {
@@ -207,6 +208,16 @@ nfstime3 timespecToNfsTime(const struct timespec& time) {
       folly::to_narrow(folly::to_unsigned(time.tv_nsec))};
 }
 
+/**
+ * Convert a NFS time to a POSIX timespec.
+ */
+struct timespec nfsTimeToTimespec(const nfstime3& time) {
+  timespec spec;
+  spec.tv_sec = time.seconds;
+  spec.tv_nsec = time.nseconds;
+  return spec;
+}
+
 fattr3 statToFattr3(const struct stat& stat) {
   return fattr3{
       /*type*/ modeToFtype3(stat.st_mode),
@@ -283,11 +294,82 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::setattr(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<SETATTR3args>::deserialize(deser);
+
+  if (args.guard.tag) {
+    // TODO(xavierd): we probably need to support this.
+    XLOG(WARN) << "Guarded setattr aren't supported.";
+    SETATTR3res res{{{nfsstat3::NFS3ERR_INVAL, SETATTR3resfail{}}}};
+    XdrTrait<SETATTR3res>::serialize(ser, res);
+    return folly::unit;
+  }
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("setattr");
+
+  auto size = args.new_attributes.size.tag
+      ? std::optional(std::get<uint64_t>(args.new_attributes.size.v))
+      : std::nullopt;
+  auto mode = args.new_attributes.mode.tag
+      ? std::optional(std::get<uint32_t>(args.new_attributes.mode.v))
+      : std::nullopt;
+  auto uid = args.new_attributes.uid.tag
+      ? std::optional(std::get<uint32_t>(args.new_attributes.uid.v))
+      : std::nullopt;
+  auto gid = args.new_attributes.gid.tag
+      ? std::optional(std::get<uint32_t>(args.new_attributes.gid.v))
+      : std::nullopt;
+
+  auto makeTimespec = [this](auto& time) -> std::optional<struct timespec> {
+    switch (time.tag) {
+      case time_how::SET_TO_CLIENT_TIME:
+        return std::optional(nfsTimeToTimespec(std::get<nfstime3>(time.v)));
+      case time_how::SET_TO_SERVER_TIME:
+        return std::optional(dispatcher_->getClock().getRealtime());
+      default:
+        return std::nullopt;
+    }
+  };
+
+  DesiredMetadata desired{
+      /*size*/ size,
+      /*mode*/ mode,
+      /*uid*/ uid,
+      /*gid*/ gid,
+      /*atime*/ makeTimespec(args.new_attributes.atime),
+      /*mtime*/ makeTimespec(args.new_attributes.mtime),
+  };
+
+  return dispatcher_->setattr(args.object.ino, std::move(desired), *context)
+      .thenTry([ser = std::move(ser)](
+                   folly::Try<NfsDispatcher::SetattrRes>&& try_) mutable {
+        if (try_.hasException()) {
+          SETATTR3res res{
+              {{exceptionToNfsError(try_.exception()), SETATTR3resfail{}}}};
+          XdrTrait<SETATTR3res>::serialize(ser, res);
+        } else {
+          auto setattrRes = std::move(try_).value();
+
+          SETATTR3res res{
+              {{nfsstat3::NFS3_OK,
+                SETATTR3resok{wcc_data{
+                    /*before*/ setattrRes.preStat.has_value()
+                        ? statToPreOpAttr(setattrRes.preStat.value())
+                        : pre_op_attr{},
+                    /*after*/ setattrRes.postStat.has_value()
+                        ? post_op_attr{statToFattr3(
+                              setattrRes.postStat.value())}
+                        : post_op_attr{}}}}}};
+          XdrTrait<SETATTR3res>::serialize(ser, res);
+        }
+
+        return folly::unit;
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
@@ -1001,9 +1083,10 @@ std::string formatSattr3(const sattr3& attr) {
 std::string formatSetattr(folly::io::Cursor deser) {
   auto args = XdrTrait<SETATTR3args>::deserialize(deser);
   return fmt::format(
-      FMT_STRING("ino={}, attr=({})"),
+      FMT_STRING("ino={}, attr=({}) guarded={}"),
       args.object.ino,
-      formatSattr3(args.new_attributes));
+      formatSattr3(args.new_attributes),
+      args.guard.tag);
 }
 
 std::string formatLookup(folly::io::Cursor deser) {

@@ -79,7 +79,9 @@ target_link_libraries(
   eden_nfs_dispatcher
   PUBLIC
     eden_inodes_inodenumber
+    eden_inode_metadata
     eden_store
+    eden_utils
 )
 
 add_subdirectory(portmap)

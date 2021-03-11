@@ -23,6 +23,11 @@ class NfsDispatcherImpl : public NfsDispatcher {
       InodeNumber ino,
       ObjectFetchContext& context) override;
 
+  folly::Future<NfsDispatcher::SetattrRes> setattr(
+      InodeNumber ino,
+      DesiredMetadata desired,
+      ObjectFetchContext& context) override;
+
   folly::Future<InodeNumber> getParent(
       InodeNumber ino,
       ObjectFetchContext& context) override;
