@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeMap;
-
 use anyhow::{bail, Context, Result};
 use fbthrift::compact_protocol;
 use sorted_vector_map::SortedVectorMap;
@@ -188,14 +186,14 @@ impl BlobstoreValue for FileUnode {
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct ManifestUnode {
     parents: Vec<ManifestUnodeId>,
-    subentries: BTreeMap<MPathElement, UnodeEntry>,
+    subentries: SortedVectorMap<MPathElement, UnodeEntry>,
     linknode: ChangesetId,
 }
 
 impl ManifestUnode {
     pub fn new(
         parents: Vec<ManifestUnodeId>,
-        subentries: BTreeMap<MPathElement, UnodeEntry>,
+        subentries: SortedVectorMap<MPathElement, UnodeEntry>,
         linknode: ChangesetId,
     ) -> Self {
         Self {
@@ -213,7 +211,7 @@ impl ManifestUnode {
         self.subentries.iter()
     }
 
-    pub fn subentries(&self) -> &BTreeMap<MPathElement, UnodeEntry> {
+    pub fn subentries(&self) -> &SortedVectorMap<MPathElement, UnodeEntry> {
         &self.subentries
     }
 

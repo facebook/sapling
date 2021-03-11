@@ -25,7 +25,7 @@ use mononoke_types::{
     ManifestUnodeId, MononokeId,
 };
 use repo_blobstore::RepoBlobstore;
-use std::collections::BTreeMap;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::ErrorKind;
 
@@ -119,7 +119,7 @@ async fn create_unode_manifest(
     tree_info: TreeInfo<ManifestUnodeId, FileUnodeId, ()>,
     unode_version: UnodeVersion,
 ) -> Result<((), ManifestUnodeId), Error> {
-    let mut subentries = BTreeMap::new();
+    let mut subentries = SortedVectorMap::new();
     for (basename, (_context, entry)) in tree_info.subentries {
         match entry {
             Entry::Tree(mf_unode) => {
@@ -318,7 +318,7 @@ async fn reuse_manifest_parent(
     ctx: &CoreContext,
     blobstore: &RepoBlobstore,
     parents: &Vec<ManifestUnodeId>,
-    subentries: &BTreeMap<MPathElement, UnodeEntry>,
+    subentries: &SortedVectorMap<MPathElement, UnodeEntry>,
 ) -> Result<Option<ManifestUnodeId>, Error> {
     let parents = new_future::try_join_all(
         parents
@@ -398,7 +398,7 @@ mod tests {
         BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileContents,
         RepoPath,
     };
-    use std::collections::{HashSet, VecDeque};
+    use std::collections::{BTreeMap, HashSet, VecDeque};
     use tests_utils::{resolve_cs_id, CreateCommitContext};
 
     #[fbinit::test]
