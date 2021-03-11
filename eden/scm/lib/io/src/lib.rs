@@ -33,6 +33,10 @@ pub struct IOOutput(Weak<Mutex<Inner>>);
 #[derive(Clone)]
 pub struct IOError(Weak<Mutex<Inner>>);
 
+/// Provides a way to set progress, without requiring the `&IO` reference.
+#[derive(Clone)]
+pub struct IOProgress(Weak<Mutex<Inner>>);
+
 struct Inner {
     input: Box<dyn Read>,
     output: Box<dyn Write>,
@@ -141,6 +145,18 @@ impl io::Write for IOOutput {
     }
 }
 
+impl IOProgress {
+    /// Set progress to the given text.
+    pub fn set(&self, text: &str) -> io::Result<()> {
+        let inner = match Weak::upgrade(&self.0) {
+            Some(inner) => inner,
+            None => return Ok(()),
+        };
+        let mut inner = inner.lock();
+        inner.set_progress(text)
+    }
+}
+
 impl IO {
     pub fn with_input<R>(&self, f: impl FnOnce(&dyn Read) -> R) -> R {
         f(self.inner.lock().input.as_ref())
@@ -170,6 +186,11 @@ impl IO {
     /// If this IO is dropped, the IOError stream will be redirected to null.
     pub fn output(&self) -> IOOutput {
         IOOutput(Arc::downgrade(&self.inner))
+    }
+
+    /// Returns a clonable value that provides a way to set progress text.
+    pub fn progress(&self) -> IOProgress {
+        IOProgress(Arc::downgrade(&self.inner))
     }
 
     pub fn new<IS, OS, ES>(input: IS, output: OS, error: Option<ES>) -> Self
