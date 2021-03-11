@@ -19,6 +19,7 @@ derived_data_thrift = { version = "0.1.0", path = "if" }
 fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 unicode-segmentation = "1.6.0"
 
 [dev-dependencies]

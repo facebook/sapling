@@ -5,17 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use std::convert::{TryFrom, TryInto};
+
 use anyhow::{format_err, Context, Error, Result};
 use blobstore::BlobstoreGetData;
-use fbthrift::compact_protocol;
-use std::collections::BTreeMap;
-use std::convert::{TryFrom, TryInto};
-use unicode_segmentation::UnicodeSegmentation;
-
 use derived_data_thrift as thrift;
+use fbthrift::compact_protocol;
 use mononoke_types::{
     errors::ErrorKind, BlobstoreBytes, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime,
 };
+use sorted_vector_map::SortedVectorMap;
+use unicode_segmentation::UnicodeSegmentation;
 
 /// Changeset Info is a derived data structure that represents a Bonsai changeset's
 /// metadata.
@@ -61,7 +61,7 @@ pub struct ChangesetInfo {
     committer: Option<String>,
     committer_date: Option<DateTime>,
     message: ChangesetMessage,
-    extra: BTreeMap<String, Vec<u8>>,
+    extra: SortedVectorMap<String, Vec<u8>>,
 }
 
 /// At some point we may like to store large commit messages as separate blobs
@@ -114,7 +114,7 @@ impl ChangesetInfo {
             committer,
             committer_date,
             message: ChangesetMessage::Message(message),
-            extra,
+            extra: extra.into_iter().collect(),
         }
     }
 
@@ -185,7 +185,7 @@ impl ChangesetInfo {
                     None => None,
                 },
                 message: ChangesetMessage::from_thrift(tc.message)?,
-                extra: tc.extra.into_iter().collect(),
+                extra: tc.extra,
             })
         };
 
@@ -207,7 +207,7 @@ impl ChangesetInfo {
             committer: self.committer,
             committer_date: self.committer_date.map(|dt| dt.into_thrift()),
             message: self.message.into_thrift(),
-            extra: self.extra.into_iter().collect(),
+            extra: self.extra,
         }
     }
 
