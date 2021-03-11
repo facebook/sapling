@@ -824,6 +824,8 @@ pub enum BlobConfig {
         region_name: String,
         /// S3 host:port to connect to
         endpoint: String,
+        /// Limit the number of concurrent operations to S3 blobstore.
+        num_concurrent_operations: Option<usize>,
     },
 }
 

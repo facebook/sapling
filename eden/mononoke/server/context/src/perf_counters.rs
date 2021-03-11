@@ -101,6 +101,7 @@ define_perf_counters! {
         ManifoldBlobConflicts,
         S3BlobRetries,
         S3BlobSumDelay,
+        S3AccessWait,
     }
 }
 
@@ -188,7 +189,8 @@ impl PerfCounterType {
             | ManifoldBlobRetries
             | ManifoldBlobConflicts
             | S3BlobRetries
-            | S3BlobSumDelay => PerfCounterTypeUpdateFunc::Add,
+            | S3BlobSumDelay
+            | S3AccessWait => PerfCounterTypeUpdateFunc::Add,
             BlobGetsMaxLatency
             | BlobPresenceChecksMaxLatency
             | BlobPutsMaxLatency

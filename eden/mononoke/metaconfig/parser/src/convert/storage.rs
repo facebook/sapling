@@ -121,6 +121,10 @@ impl Convert for RawBlobstoreConfig {
                 keychain_group: raw.keychain_group,
                 region_name: raw.region_name,
                 endpoint: raw.endpoint,
+                num_concurrent_operations: raw
+                    .num_concurrent_operations
+                    .map(|x| x.try_into())
+                    .transpose()?,
             },
             RawBlobstoreConfig::UnknownField(f) => {
                 return Err(anyhow!("unsupported blobstore configuration ({})", f));

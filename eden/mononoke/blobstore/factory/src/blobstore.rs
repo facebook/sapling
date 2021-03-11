@@ -417,6 +417,7 @@ fn make_blobstore_put_ops<'a>(
                 keychain_group,
                 region_name,
                 endpoint,
+                num_concurrent_operations,
             } => {
                 #[cfg(fbcode_build)]
                 {
@@ -428,6 +429,7 @@ fn make_blobstore_put_ops<'a>(
                         endpoint,
                         blobstore_options.put_behaviour,
                         logger,
+                        num_concurrent_operations,
                     )
                     .watched(logger)
                     .await
@@ -436,7 +438,13 @@ fn make_blobstore_put_ops<'a>(
                 }
                 #[cfg(not(fbcode_build))]
                 {
-                    let _ = (bucket, keychain_group, region_name, endpoint);
+                    let _ = (
+                        bucket,
+                        keychain_group,
+                        region_name,
+                        endpoint,
+                        num_concurrent_operations,
+                    );
                     unimplemented!("This is implemented only for fbcode_build")
                 }
             }
