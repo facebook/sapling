@@ -7,7 +7,7 @@
 
 use crate::{CrossRepoPushSource, FileContentManager, FileHook, HookExecution, HookRejectionInfo};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use context::CoreContext;
 use metaconfig_types::HookConfig;
@@ -41,14 +41,12 @@ impl<'a> NoWindowsFilenamesBuilder<'a> {
                 .map(Regex::new)
                 .transpose()
                 .context("Failed to create allowed_paths regex")?,
-            bad_windows_path_element: Regex::new(r"^(?i)(((com|lpt)\d$)|(con|prn|aux|nul))($|\.)")?,
         })
     }
 }
 
 pub struct NoWindowsFilenames {
     allowed_paths: Option<Regex>,
-    bad_windows_path_element: Regex,
 }
 
 /// Hook to disallow bad Windows filenames from being pushed.
@@ -57,10 +55,32 @@ pub struct NoWindowsFilenames {
 ///  "CON, PRN, AUX, NUL, COM1, COM2, COM3, COM4, COM5, COM6, COM7, COM8, COM9, LPT1, LPT2, LPT3,
 ///  LPT4, LPT5, LPT6, LPT7, LPT8, and LPT9. Also avoid these names followed immediately by an
 ///  extension; for example, NUL.txt is not recommended. For more information, see Namespaces."
+///
+///  In addition the following characters are invalid: <>:"/\|?* and the chars 0-31
+///
+///  The filename shouldn't end with space or period. Windows shell and UX don't support such files.
+///
+///  More info: https://docs.microsoft.com/en-gb/windows/win32/fileio/naming-a-file
 impl NoWindowsFilenames {
     pub fn builder<'a>() -> NoWindowsFilenamesBuilder<'a> {
         NoWindowsFilenamesBuilder::default()
     }
+}
+
+const BAD_WINDOWS_PATH_ELEMENT_REGEX: &str =
+    r#"(^(?i)((((com|lpt)\d)|con|prn|aux|nul))($|\.))|<|>|:|"|/|\\|\||\?|\*|[\x00-\x1F]|(\.| )$"#;
+
+fn check_path_for_bad_elements(path: &MPath) -> Result<HookExecution, Error> {
+    let bad_windows_path_element = Regex::new(BAD_WINDOWS_PATH_ELEMENT_REGEX)?;
+    for element in path {
+        if bad_windows_path_element.is_match(element.as_ref()) {
+            return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                "Illegal windows filename",
+                format!("ABORT: Illegal windows filename: {}", element),
+            )));
+        }
+    }
+    Ok(HookExecution::Accepted)
 }
 
 #[async_trait]
@@ -89,15 +109,49 @@ impl FileHook for NoWindowsFilenames {
             }
         }
 
-        for element in path {
-            if self.bad_windows_path_element.is_match(element.as_ref()) {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-                    "Illegal windows filename",
-                    format!("ABORT: Illegal windows filename: {}", element),
-                )));
-            }
-        }
+        Ok(check_path_for_bad_elements(path)?)
+    }
+}
 
-        Ok(HookExecution::Accepted)
+/// This test is only testing the `check_path_for_bad_elements`, the rest of the
+/// hook is only tested through integration tests.
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn check_path(path: &str) -> bool {
+        match check_path_for_bad_elements(&MPath::new(&path).unwrap()).unwrap() {
+            HookExecution::Accepted => true,
+            HookExecution::Rejected(_) => false,
+        }
+    }
+
+    #[test]
+    fn test_good_paths() {
+        assert!(check_path("dir/some_filename.exe"));
+        assert!(check_path(
+            "very_very_very_very_very_very_very_very_very_very_very_very_very_very_very_very_long_filename"
+        ));
+        assert!(check_path("aaa/LPT2137"));
+        assert!(check_path("COM"));
+        assert!(check_path("spaces are allowed!"));
+        assert!(check_path("x/y/z/file_with_tildle~_in_the_name"));
+    }
+
+    #[test]
+    fn invalid_chars() {
+        assert!(!check_path("x/y/z/file_with_backslash\\_in_the_name"));
+        assert!(!check_path("x/y/dir_with_pipe|in_the_name/file"));
+        assert!(!check_path("x/y/dir_with_less_than<in_the_name/file"));
+    }
+
+    #[test]
+    fn invalid_names() {
+        assert!(!check_path("aaa/COm1"));
+        assert!(!check_path("aaa/lPt3"));
+        assert!(!check_path("x/CON/file"));
+        assert!(!check_path("x/y/AUX"));
+        assert!(!check_path("NUL.txt"));
+        assert!(!check_path("COM1.txt"));
     }
 }
