@@ -144,6 +144,14 @@ If set to true then it will fallback on the vanilla algorithms for detecting
 the state of the working copy. Note that no fallback results in transforming
 failures from watchman (or timeouts) in hard failures for the current
 operation. (default = true)
+
+::
+
+    [fsmonitor]
+    watchman-query-lock = (boolean)
+
+If set to true then take a lock when running watchman queries to avoid
+overloading watchman.
 """
 
 # Platforms Supported
@@ -231,6 +239,7 @@ configitem("fsmonitor", "fallback-on-watchman-exception", default=True)
 configitem("fsmonitor", "tcp", default=False)
 configitem("fsmonitor", "tcp-host", default="::1")
 configitem("fsmonitor", "tcp-port", default=12300)
+configitem("fsmonitor", "watchman-query-lock", default=False)
 
 # This extension is incompatible with the following incompatible extensions
 # and will disable itself when encountering one of these:
@@ -371,7 +380,22 @@ def _walk(self, match, event, span):
     Whenever listignored is False and the Watchman client is available, use
     Watchman combined with saved state to possibly return only a subset of
     files."""
+    if self._ui.configbool("fsmonitor", "watchman-query-lock"):
+        lock = self._repo._lock(
+            self._repo.localvfs,
+            "watchman-query-lock",
+            True,  # Wait for the lock
+            None,
+            None,
+            _("watchman-query %s") % self._repo.origroot,
+        )
+    else:
+        lock = util.nullcontextmanager()
+    with lock:
+        return _innerwalk(self, match, event, span)
 
+
+def _innerwalk(self, match, event, span):
     state = self._fsmonitorstate
     clock, ignorehash, notefiles = state.get()
     if not clock:
