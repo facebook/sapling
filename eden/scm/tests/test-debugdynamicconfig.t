@@ -190,8 +190,6 @@ Verify we load and verify dynamicconfigs during clone
   > bar=True
   > EOF
   $ hg clone ssh://user@dummy/server client2 --configfile $TESTTMP/good_hgrc --config configs.testdynamicconfigsubset=good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True
-  Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
-  Config mismatch: foo.bar has 'None' (dynamic) vs 'True' (file)
   no changes found
   Hook ran!
   updating to branch default
@@ -210,10 +208,13 @@ Verify unicode characters in configs can be logged to our sampling extension
   > [foo]
   > bar = Å
   > EOF
-  $ hg -R client2 log -q -r . --configfile $TESTTMP/good_hgrc --config configs.validatedynamicconfig=True --config configs.mismatchsampling=1 --config extensions.sampling= --config sampling.filepath=$TESTTMP/sampling.log --config sampling.key.config_mismatch=mismatches --config configs.testdynamicconfigsubset=good_hgrc
+  $ cp client2/.hg/hgrc client2/.hg/hgrc.bak
+  $ echo "%include $TESTTMP/good_hgrc" >> client2/.hg/hgrc
+  $ hg -R client2 log -q -r . --config configs.validatedynamicconfig=True --config configs.mismatchsampling=1 --config extensions.sampling= --config sampling.filepath=$TESTTMP/sampling.log --config sampling.key.config_mismatch=mismatches --config configs.testdynamicconfigsubset=good_hgrc
   000000000000
   $ cat $TESTTMP/sampling.log
   {"category": "mismatches", "data": {"actual": null, "config": "foo.bar", "expected": "\\u00c5", "metrics_type": "config_mismatch", "msg": "Config mismatch: foo.bar has 'None' (dynamic) vs '\\u00c5' (file)\\n", "repo": "reponame-default"}}\x00{"category": "mismatches", "data": {"actual": null, "config": "foo.bar", "expected": "\\u00c5", "metrics_type": "config_mismatch", "msg": "Config mismatch: foo.bar has 'None' (dynamic) vs '\\u00c5' (file)\\n", "repo": "reponame-default"}}\x00 (no-eol) (esc)
+  $ mv client2/.hg/hgrc.bak client2/.hg/hgrc
 
 Verify hgrc.dynamic is updated even if the original command is outside the repo
   $ echo "[junk_on_the_end]" >> client2/.hg/hgrc.dynamic

@@ -615,22 +615,11 @@ def _runcatch(req):
             debugtrace = {"pdb": pdb.set_trace}
             debugmortem = {"pdb": pdb.post_mortem}
 
-            # --config takes prescendence over --configfile, so process
-            # --configfile first --config second.
-            for configfile in req.earlyoptions["configfile"]:
-                req.ui.readconfig(configfile)
-
             # read --config before doing anything else
             # (e.g. to change trust settings for reading .hg/hgrc)
-            cfgs = _parseconfig(req.ui, req.earlyoptions["config"])
-
+            _parseconfig(req.ui, req.earlyoptions)
             if req.repo:
-                for configfile in req.earlyoptions["configfile"]:
-                    req.repo.ui.readconfig(configfile)
-                # copy configs that were passed on the cmdline (--config) to
-                # the repo ui
-                for sec, name, val in cfgs:
-                    req.repo.ui.setconfig(sec, name, val, source="--config")
+                _parseconfig(req.repo.ui, req.earlyoptions)
 
             # developer config: ui.debugger
             debugger = ui.config("ui", "debugger")
@@ -888,25 +877,31 @@ def _parse(ui, args):
     return (cmd, cmd and entry[0] or None, args, options, cmdoptions, aliases)
 
 
-def _parseconfig(ui, config):
+def _parseconfig(ui, earlyoptions):
     """parse the --config options from the command line"""
-    configs = []
 
-    for cfg in config:
+    # --config takes prescendence over --configfile, so process
+    # --configfile first then --config second.
+    for configfile in earlyoptions["configfile"]:
+        tempconfig = uiconfig.uiconfig()
+        tempconfig.readconfig(configfile)
+        # Set the configfile values one-by-one so they get put in the internal
+        # _pinnedconfigs list and don't get overwritten in the future.
+        for section, name, value in tempconfig.walkconfig():
+            ui.setconfig(section, name, value, configfile)
+
+    for cfg in earlyoptions["config"]:
         try:
             name, value = [cfgelem.strip() for cfgelem in cfg.split("=", 1)]
             section, name = name.split(".", 1)
             if not section or not name:
                 raise IndexError
             ui.setconfig(section, name, value, "--config")
-            configs.append((section, name, value))
         except (IndexError, ValueError):
             raise error.Abort(
                 _("malformed --config option: %r " "(use --config section.name=value)")
                 % cfg
             )
-
-    return configs
 
 
 def _earlyparseopts(ui, args):
