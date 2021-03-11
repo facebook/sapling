@@ -183,13 +183,14 @@ impl Bytes {
 
     /// Convert to `Vec<u8>`, in a zero-copy way if possible.
     pub fn into_vec(mut self) -> Vec<u8> {
-        match self.downcast_mut() {
-            None => self.as_slice().to_vec(),
-            Some(ref mut owner) => {
+        let len = self.len();
+        match self.downcast_mut::<Vec<u8>>() {
+            Some(ref mut owner) if owner.len() == len => {
                 let mut result: Vec<u8> = Vec::new();
                 std::mem::swap(&mut result, owner);
                 result
             }
+            Some(_) | None => self.as_slice().to_vec(),
         }
     }
 }

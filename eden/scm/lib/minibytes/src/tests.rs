@@ -91,4 +91,9 @@ fn test_into_vec() {
     let v = b.into_vec(); // not zero-copy because refcount > 1
     let ptr3 = &v[0] as *const u8;
     assert_ne!(ptr1, ptr3);
+
+    let b = Bytes::from(v);
+    let c = b.slice(1..3);
+    drop(b);
+    assert_eq!(c.into_vec(), b"bc");
 }
