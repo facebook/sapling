@@ -428,6 +428,64 @@ def _picklabels(defaults, overrides):
     return result
 
 
+def _mergediff(m3, name_a, name_b, name_base):
+    lines = []
+    conflicts = False
+    for group in m3.merge_groups():
+        if group[0] == "conflict":
+            base_lines, a_lines, b_lines = group[1:]
+            basetext = b"".join(base_lines)
+            bblocks = list(
+                mdiff.allblocks(
+                    basetext,
+                    b"".join(b_lines),
+                    lines1=base_lines,
+                    lines2=b_lines,
+                )
+            )
+            ablocks = list(
+                mdiff.allblocks(
+                    basetext,
+                    b"".join(a_lines),
+                    lines1=base_lines,
+                    lines2=b_lines,
+                )
+            )
+
+            def matchinglines(blocks):
+                return sum(block[1] - block[0] for block, kind in blocks if kind == "=")
+
+            def difflines(blocks, lines1, lines2):
+                for block, kind in blocks:
+                    if kind == "=":
+                        for line in lines1[block[0] : block[1]]:
+                            yield b" " + line
+                    else:
+                        for line in lines1[block[0] : block[1]]:
+                            yield b"-" + line
+                        for line in lines2[block[2] : block[3]]:
+                            yield b"+" + line
+
+            lines.append(b"<<<<<<<\n")
+            if matchinglines(ablocks) < matchinglines(bblocks):
+                lines.append(b"======= %s\n" % name_a)
+                lines.extend(a_lines)
+                lines.append(b"------- %s\n" % name_base)
+                lines.append(b"+++++++ %s\n" % name_b)
+                lines.extend(difflines(bblocks, base_lines, b_lines))
+            else:
+                lines.append(b"------- %s\n" % name_base)
+                lines.append(b"+++++++ %s\n" % name_a)
+                lines.extend(difflines(ablocks, base_lines, a_lines))
+                lines.append(b"======= %s\n" % name_b)
+                lines.extend(b_lines)
+            lines.append(b">>>>>>>\n")
+            conflicts = True
+        else:
+            lines.extend(group[1])
+    return lines, conflicts
+
+
 def simplemerge(ui, localctx, basectx, otherctx, **opts):
     """Performs the simplemerge algorithm.
 
@@ -471,7 +529,11 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         extrakwargs["name_base"] = name_base
         extrakwargs["minimize"] = False
 
-    lines = list(m3.merge_lines(name_a=name_a, name_b=name_b, **extrakwargs))
+    if mode == "mergediff":
+        lines, conflicts = _mergediff(m3, name_a, name_b, name_base)
+    else:
+        lines = list(m3.merge_lines(name_a=name_a, name_b=name_b, **extrakwargs))
+        conflicts = m3.conflicts
     mergedtext = b"".join(lines)
     if opts.get("print"):
         ui.fout.write(mergedtext)
@@ -481,5 +543,5 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         flags = getattr(localctx, "workingflags", localctx.flags)()
         localctx.write(mergedtext, flags)
 
-    if m3.conflicts and not mode == "union":
-        return m3.conflictscount
+    if conflicts and not mode == "union":
+        return getattr(m3, "conflictscount", 1)
