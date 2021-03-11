@@ -579,7 +579,7 @@ void PrivHelperServer::nfsMount(
   // Since each mount point will have its own NFS server, we need to manually
   // specify it.
   auto mountOpts = fmt::format(
-      "addr=127.0.0.1,vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},noresvport",
+      "addr=127.0.0.1,vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},noresvport,nolock",
       nfsdPort,
       mountdPort);
 
