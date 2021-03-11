@@ -219,6 +219,32 @@ class NfsDispatcher {
   virtual folly::Future<UnlinkRes>
   unlink(InodeNumber dir, PathComponent name, ObjectFetchContext& context) = 0;
 
+  struct RenameRes {
+    /** Attributes of the from directory prior to renaming the file. */
+    std::optional<struct stat> fromPreDirStat;
+    /** Attributes of the from directory after renaming the file. */
+    std::optional<struct stat> fromPostDirStat;
+    /** Attributes of the to directory prior to renaming the file. */
+    std::optional<struct stat> toPreDirStat;
+    /** Attributes of the to directory after renaming the file. */
+    std::optional<struct stat> toPostDirStat;
+  };
+
+  /**
+   * Rename a file/directory from the directory referenced by fromIno to the
+   * directory referenced by toIno. The file/directory fromName will be renamed
+   * onto toName.
+   *
+   * Fro the pre and post dir stat, refer to the documentation of the create
+   * method above.
+   */
+  virtual folly::Future<RenameRes> rename(
+      InodeNumber fromIno,
+      PathComponent fromName,
+      InodeNumber toIno,
+      PathComponent toName,
+      ObjectFetchContext& context) = 0;
+
   virtual folly::Future<struct statfs> statfs(
       InodeNumber dir,
       ObjectFetchContext& context) = 0;

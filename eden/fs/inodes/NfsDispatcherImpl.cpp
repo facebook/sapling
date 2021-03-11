@@ -173,6 +173,33 @@ folly::Future<NfsDispatcher::UnlinkRes> NfsDispatcherImpl::unlink(
       });
 }
 
+folly::Future<NfsDispatcher::RenameRes> NfsDispatcherImpl::rename(
+    InodeNumber fromIno,
+    PathComponent fromName,
+    InodeNumber toIno,
+    PathComponent toName,
+    ObjectFetchContext& /*context*/) {
+  auto fromDir = inodeMap_->lookupTreeInode(fromIno);
+  return inodeMap_->lookupTreeInode(toIno)
+      .thenValue(
+          [fromDir = std::move(fromDir),
+           fromName = std::move(fromName),
+           toName = std::move(toName)](TreeInodePtr&& toDirInode) mutable {
+            return std::move(fromDir).thenValue(
+                [fromName = std::move(fromName),
+                 toName = std::move(toName),
+                 toDirInode =
+                     std::move(toDirInode)](const TreeInodePtr& fromDirInode) {
+                  return fromDirInode->rename(
+                      fromName, toDirInode, toName, InvalidationRequired::No);
+                });
+          })
+      .thenValue([](auto&&) {
+        // TODO(xavierd): collect pre and post dir stats.
+        return NfsDispatcher::RenameRes{};
+      });
+}
+
 folly::Future<struct statfs> NfsDispatcherImpl::statfs(
     InodeNumber /*dir*/,
     ObjectFetchContext& /*context*/) {

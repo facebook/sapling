@@ -70,6 +70,13 @@ class NfsDispatcherImpl : public NfsDispatcher {
       PathComponent name,
       ObjectFetchContext& context) override;
 
+  folly::Future<NfsDispatcher::RenameRes> rename(
+      InodeNumber fromIno,
+      PathComponent fromName,
+      InodeNumber toIno,
+      PathComponent toName,
+      ObjectFetchContext& context) override;
+
   folly::Future<struct statfs> statfs(
       InodeNumber ino,
       ObjectFetchContext& context) override;

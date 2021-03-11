@@ -879,11 +879,60 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::rmdir(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::rename(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<RENAME3args>::deserialize(deser);
+
+  if (args.from.name == "." || args.from.name == ".." || args.to.name == "." ||
+      args.to.name == "..") {
+    RENAME3res res{{{nfsstat3::NFS3ERR_INVAL, RENAME3resfail{}}}};
+    XdrTrait<RENAME3res>::serialize(ser, res);
+    return folly::unit;
+  }
+
+  // Do nothing if the source and destination are the exact same file.
+  if (args.from == args.to) {
+    RENAME3res res{{{nfsstat3::NFS3_OK, RENAME3resok{}}}};
+    XdrTrait<RENAME3res>::serialize(ser, res);
+    return folly::unit;
+  }
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("rename");
+
+  return dispatcher_
+      ->rename(
+          args.from.dir.ino,
+          PathComponent{args.from.name},
+          args.to.dir.ino,
+          PathComponent{args.to.name},
+          *context)
+      .thenTry([ser = std::move(ser)](
+                   folly::Try<NfsDispatcher::RenameRes> try_) mutable {
+        if (try_.hasException()) {
+          RENAME3res res{
+              {{exceptionToNfsError(try_.exception()), RENAME3resfail{}}}};
+          XdrTrait<RENAME3res>::serialize(ser, res);
+        } else {
+          auto renameRes = std::move(try_).value();
+
+          RENAME3res res{
+              {{nfsstat3::NFS3_OK,
+                RENAME3resok{
+                    /*fromdir_wcc*/ statToWccData(
+                        renameRes.fromPreDirStat, renameRes.fromPostDirStat),
+                    /*todir_wcc*/
+                    statToWccData(
+                        renameRes.toPreDirStat, renameRes.toPostDirStat),
+                }}}};
+          XdrTrait<RENAME3res>::serialize(ser, res);
+        }
+
+        return folly::unit;
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::link(
