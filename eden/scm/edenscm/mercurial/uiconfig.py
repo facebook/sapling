@@ -122,22 +122,24 @@ class uiconfig(object):
         try:
             # repopath should be the non-shared .hg directory
             dothgpath = os.path.join(repopath, ".hg") if repopath else None
-            rcfg = configparser.config.load(dothgpath)
+            rcfg, issues = configparser.config.load(dothgpath)
         except Exception as ex:
             raise error.ParseError(str(ex))
 
         u._rcfg = localrcfg(rcfg)
         ui._uiconfig = u
         if repopath is not None:
-            validatedynamicconfig(ui)
+            reportissues(ui, issues)
 
         root = os.path.expanduser("~")
         u.fixconfig(root=repopath or root)
 
     def reload(self, ui, repopath):
         # The actual config expects the non-shared .hg directory.
-        self._rcfg.reload(os.path.join(repopath, ".hg"), list(self._pinnedconfigs))
-        validatedynamicconfig(ui)
+        issues = self._rcfg.reload(
+            os.path.join(repopath, ".hg"), list(self._pinnedconfigs)
+        )
+        reportissues(ui, issues)
 
         # fixconfig expects the non-shard repo root, without the .hg.
         self.fixconfig(root=repopath)
@@ -592,49 +594,7 @@ def logages(ui, configpath, cachepath):
     return mtime
 
 
-def validatedynamicconfig(ui):
-    if not ui.configbool("configs", "validatedynamicconfig"):
-        return
-
-    # As we migrate rc files into the dynamic configs, we want to verify that
-    # the dynamic config produces the exact same settings as each rc file.
-    # 'ensuresourcesupersets' will ensures that 1) the configs set by a given rc
-    # file match exactly what the dynamic config produces, and 2) dynamic
-    # configs do not produce any values that do not come from an rc file.
-    #
-    # The combination of these two checks ensures the dynamic configs match the
-    # rc files eactly. If any config does not match, the dynamic config value is
-    # removed, leaving us with the correct config value from the rc file.  The
-    # mismatch is returned here for logging.
-    #
-    # Once all configs are migrated, we can delete the rc files and remove this
-    # validation.
-    try:
-        from . import fb
-
-        originalrcs = fb.ported_hgrcs
-    except ImportError:
-        originalrcs = []
-
-    testrcs = ui.configlist("configs", "testdynamicconfigsubset")
-    if testrcs:
-        originalrcs.extend(testrcs)
-
-    allowedlocations = ui.configlist("configs", "allowedlocations")
-    if not allowedlocations:
-        allowedlocations = None
-
-    allowedconfigs = []
-    for sectionkey in ui.configlist("configs", "allowedconfigs", []):
-        section, key = sectionkey.split(".", 1)
-        allowedconfigs.append((section, key))
-    if not allowedconfigs:
-        allowedconfigs = None
-
-    issues = ui._uiconfig._rcfg.ensure_location_supersets(
-        "hgrc.dynamic", originalrcs, allowedlocations, allowedconfigs
-    )
-
+def reportissues(ui, issues):
     for section, key, dynamic_value, file_value in issues:
         msg = _("Config mismatch: %s.%s has '%s' (dynamic) vs '%s' (file)\n") % (
             section,
@@ -662,9 +622,10 @@ def applydynamicconfig(ui, reponame, sharedpath):
     pinned = sorted(ui._uiconfig._pinnedconfigs)
     values = [ui.config(s, n) for (s, n) in pinned]
 
-    configparser.applydynamicconfig(ui._uiconfig._rcfg._rcfg, reponame, sharedpath)
-
-    validatedynamicconfig(ui)
+    issues = configparser.applydynamicconfig(
+        ui._uiconfig._rcfg._rcfg, reponame, sharedpath
+    )
+    reportissues(ui, issues)
 
     for (section, name), value in zip(pinned, values):
         ui.setconfig(section, name, value)

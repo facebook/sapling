@@ -13,6 +13,7 @@ use std::env;
 use std::fs::{self, read_to_string};
 use std::hash::Hash;
 use std::io::{Error as IOError, ErrorKind};
+use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime};
@@ -23,7 +24,7 @@ use minibytes::Text;
 use tempfile::tempfile_in;
 use util::{path::expand_path, run_background};
 
-use crate::config::{ConfigSet, Options};
+use crate::config::{ConfigSet, Options, SupersetVerification};
 use crate::dynamicconfig::Generator;
 use crate::error::{Error, Errors};
 
@@ -56,7 +57,7 @@ pub trait ConfigSetHgExt {
         &mut self,
         repo_path: Option<&Path>,
         readonly_items: Option<Vec<(S, N)>>,
-    ) -> Result<()>;
+    ) -> Result<SupersetVerification>;
 
     /// Load system config files if `$HGRCPATH` is not set.
     /// Return errors parsing files.
@@ -77,6 +78,8 @@ pub trait ConfigSetHgExt {
     /// Load a specified config file. Respect HGPLAIN environment variables.
     /// Return errors parsing files.
     fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error>;
+
+    fn validate_dynamic(&mut self) -> Result<SupersetVerification>;
 }
 
 pub fn load<S: Into<Text>, N: Into<Text>>(
@@ -217,7 +220,7 @@ impl ConfigSetHgExt for ConfigSet {
         &mut self,
         repo_path: Option<&Path>,
         readonly_items: Option<Vec<(S, N)>>,
-    ) -> Result<()> {
+    ) -> Result<SupersetVerification> {
         let mut errors = vec![];
 
         let mut opts = Options::new();
@@ -242,7 +245,8 @@ impl ConfigSetHgExt for ConfigSet {
         if !errors.is_empty() {
             return Err(Errors(errors).into());
         }
-        Ok(())
+
+        self.validate_dynamic()
     }
 
     fn load_system(&mut self, opts: Options) -> Vec<Error> {
@@ -418,6 +422,30 @@ impl ConfigSetHgExt for ConfigSet {
     fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error> {
         let opts = Options::new().source(source).process_hgplain();
         self.load_path(path, &opts)
+    }
+
+    fn validate_dynamic(&mut self) -> Result<SupersetVerification> {
+        let superset_location: String = "hgrc.dynamic".to_string();
+        let subset_locations: Vec<String> =
+            self.get_or("configs", "validationsubset", || vec![])?;
+        let allowed_locations: Option<Vec<String>> =
+            self.get_opt::<Vec<String>>("configs", "allowedlocations")?;
+        let allowed_configs: Option<Vec<String>> =
+            self.get_opt::<Vec<String>>("configs", "allowedconfigs")?;
+
+        Ok(self.ensure_location_supersets(
+            superset_location,
+            subset_locations,
+            allowed_locations
+                .as_ref()
+                .map(|v| HashSet::from_iter(v.iter().map(|s| s.as_str()))),
+            allowed_configs.as_ref().map(|v| {
+                HashSet::from_iter(v.iter().map(|s| {
+                    let split: Vec<&str> = s.splitn(2, ".").into_iter().collect();
+                    (split[0], split[1])
+                }))
+            }),
+        ))
     }
 }
 
