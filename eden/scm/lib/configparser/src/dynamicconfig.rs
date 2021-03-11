@@ -12,10 +12,7 @@ use std::fs;
 use std::hash::{Hash, Hasher};
 use std::ops::Range;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 
-#[cfg(not(feature = "fb"))]
-use anyhow::Error;
 use anyhow::{anyhow, bail, Result};
 use hostname;
 use minibytes::Text;
@@ -32,14 +29,17 @@ use crate::fb::Repo;
 #[cfg(not(feature = "fb"))]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Repo {
+    NoRepo,
     Unknown,
 }
 
 #[cfg(not(feature = "fb"))]
-impl FromStr for Repo {
-    type Err = Error;
-    fn from_str(_name: &str) -> Result<Repo> {
-        Ok(Repo::Unknown)
+impl Repo {
+    pub fn from_str(name: Option<&str>) -> Repo {
+        match name {
+            Some(name) => Repo::Unknown,
+            None => Repo::NoRepo,
+        }
     }
 }
 
@@ -138,7 +138,7 @@ pub struct Generator {
 
 impl Generator {
     pub fn new(repo_name: String, repo_path: PathBuf, user_name: String) -> Result<Self> {
-        let repo = Repo::from_str(&repo_name)?;
+        let repo = Repo::from_str(Some(&repo_name));
 
         let mut tiers: HashSet<String> = if Path::new("/etc/smc.tiers").exists() {
             fs::read_to_string("/etc/smc.tiers")?
