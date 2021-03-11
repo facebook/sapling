@@ -240,6 +240,7 @@ impl IO {
             // \x0c (\f) is defined by streampager.
             let data = format!("{}\x0c", data);
             progress.write_all(data.as_bytes())?;
+            progress.flush()?;
         } else {
             let clear_progress_str = inner.clear_progress_str();
             if let Some(ref mut error) = inner.error {
@@ -248,6 +249,7 @@ impl IO {
                 // Write the progress clear sequences within one syscall if possible, to reduce flash.
                 let message = format!("{}{}", clear_progress_str, data);
                 error.write_all(message.as_bytes())?;
+                error.flush()?;
                 if data.is_empty() {
                     inner.progress_lines = 0;
                 } else {
