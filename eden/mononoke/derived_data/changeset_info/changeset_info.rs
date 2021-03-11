@@ -185,7 +185,7 @@ impl ChangesetInfo {
                     None => None,
                 },
                 message: ChangesetMessage::from_thrift(tc.message)?,
-                extra: tc.extra,
+                extra: tc.extra.into_iter().collect(),
             })
         };
 
@@ -207,7 +207,7 @@ impl ChangesetInfo {
             committer: self.committer,
             committer_date: self.committer_date.map(|dt| dt.into_thrift()),
             message: self.message.into_thrift(),
-            extra: self.extra,
+            extra: self.extra.into_iter().collect(),
         }
     }
 

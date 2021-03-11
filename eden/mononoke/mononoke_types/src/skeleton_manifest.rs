@@ -301,7 +301,7 @@ impl SkeletonManifest {
     }
 
     pub(crate) fn into_thrift(self) -> thrift::SkeletonManifest {
-        let subentries: BTreeMap<_, _> = self
+        let subentries: SortedVectorMap<_, _> = self
             .subentries
             .into_iter()
             .map(|(basename, fsnode_entry)| (basename.into_thrift(), fsnode_entry.into_thrift()))

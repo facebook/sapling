@@ -23,7 +23,7 @@ struct ChangesetInfo {
   5: optional string committer,
   6: optional mononoke_types_thrift.DateTime committer_date,
   7: ChangesetMessage message,
-  8: map<string, binary> extra,
+  8: map<string, binary> (rust.type = "sorted_vector_map::SortedVectorMap") extra,
 }
 
 // Commit message is represented by a separate union of formats for the future

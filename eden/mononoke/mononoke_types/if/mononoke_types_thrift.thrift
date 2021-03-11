@@ -91,7 +91,7 @@ union RepoPath {
 // end up rejecting whatever comes later.
 
 // Other notes:
-// * This uses sorted (B-tree) sets and maps to ensure deterministic
+// * This uses sorted sets and maps to ensure deterministic
 //   serialization.
 // * Added and modified files are both part of file_changes.
 // * file_changes is at the end of the struct so that a deserializer that just
@@ -117,8 +117,8 @@ struct BonsaiChangeset {
   4: optional string committer,
   5: optional DateTime committer_date,
   6: string message,
-  7: map<string, binary> extra,
-  8: map<MPath, FileChangeOpt> file_changes,
+  7: map<string, binary> (rust.type = "sorted_vector_map::SortedVectorMap") extra,
+  8: map<MPath, FileChangeOpt> (rust.type = "sorted_vector_map::SortedVectorMap") file_changes,
 }
 
 // DateTime fields do not have a reasonable default value! They must
@@ -224,13 +224,13 @@ union UnodeEntry {
 
 struct ManifestUnode {
   1: list<ManifestUnodeId> parents,
-  2: map<MPathElement, UnodeEntry> subentries,
+  2: map<MPathElement, UnodeEntry> (rust.type = "sorted_vector_map::SortedVectorMap") subentries,
   3: ChangesetId linknode,
 }
 
 struct DeletedManifest {
   1: optional ChangesetId linknode,
-  2: map<MPathElement, DeletedManifestId> subentries,
+  2: map<MPathElement, DeletedManifestId> (rust.type = "sorted_vector_map::SortedVectorMap") subentries,
 }
 
 struct FsnodeFile {
@@ -274,7 +274,7 @@ union FsnodeEntry {
 // files and manifests, and the number of files and sub-directories within
 // directories.
 struct Fsnode {
-  1: map<MPathElement, FsnodeEntry> subentries,
+  1: map<MPathElement, FsnodeEntry> (rust.type = "sorted_vector_map::SortedVectorMap") subentries,
   2: FsnodeSummary summary,
 }
 
@@ -311,7 +311,7 @@ struct SkeletonManifestEntry {
 // represented by a single skeleton manifest.  Skeleton manifest identities
 // change when files are added or removed.
 struct SkeletonManifest {
-  1: map<MPathElement, SkeletonManifestEntry> subentries,
+  1: map<MPathElement, SkeletonManifestEntry> (rust.type = "sorted_vector_map::SortedVectorMap") subentries,
   2: SkeletonManifestSummary summary,
 }
 

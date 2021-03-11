@@ -5,7 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+
 use anyhow::{bail, Context, Result};
+use fbthrift::compact_protocol;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::blob::{Blob, BlobstoreValue, FileUnodeBlob, ManifestUnodeBlob};
 use crate::errors::ErrorKind;
@@ -16,9 +20,6 @@ use crate::typed_hash::{
     ChangesetId, ContentId, FileUnodeId, FileUnodeIdContext, ManifestUnodeId,
     ManifestUnodeIdContext,
 };
-
-use fbthrift::compact_protocol;
-use std::collections::BTreeMap;
 
 /// Unode is a filenode with fixed linknodes. They are designed to find file or directory history
 /// quickly which can be used to answer "log" or "blame" requests.
@@ -259,7 +260,7 @@ impl ManifestUnode {
     pub(crate) fn into_thrift(self) -> thrift::ManifestUnode {
         let parents: Vec<_> = self.parents.into_iter().map(|p| p.into_thrift()).collect();
 
-        let subentries: BTreeMap<_, _> = self
+        let subentries: SortedVectorMap<_, _> = self
             .subentries
             .into_iter()
             .map(|(basename, unode_entry)| (basename.into_thrift(), unode_entry.into_thrift()))

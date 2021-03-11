@@ -5,16 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeMap;
+
 use anyhow::{Context, Result};
+use fbthrift::compact_protocol;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::blob::{Blob, BlobstoreValue, DeletedManifestBlob};
 use crate::errors::ErrorKind;
 use crate::path::MPathElement;
 use crate::thrift;
 use crate::typed_hash::{ChangesetId, DeletedManifestContext, DeletedManifestId};
-
-use fbthrift::compact_protocol;
-use std::collections::BTreeMap;
 
 /// Deleted Files Manifest is a data structure that tracks deleted files and commits where they
 /// were deleted. This manifest was designed in addition to Unodes to make following file history
@@ -144,7 +145,7 @@ impl DeletedManifest {
     }
 
     pub(crate) fn into_thrift(self) -> thrift::DeletedManifest {
-        let subentries: BTreeMap<_, _> = self
+        let subentries: SortedVectorMap<_, _> = self
             .subentries
             .into_iter()
             .map(|(basename, entry)| (basename.into_thrift(), entry.into_thrift()))

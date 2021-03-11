@@ -53,7 +53,7 @@ impl BonsaiChangesetMut {
             committer: tc.committer,
             committer_date: tc.committer_date.map(DateTime::from_thrift).transpose()?,
             message: tc.message,
-            extra: tc.extra,
+            extra: tc.extra.into_iter().collect(),
             file_changes: tc
                 .file_changes
                 .into_iter()
@@ -79,7 +79,7 @@ impl BonsaiChangesetMut {
             committer: self.committer,
             committer_date: self.committer_date.map(DateTime::into_thrift),
             message: self.message,
-            extra: self.extra,
+            extra: self.extra.into_iter().collect(),
             file_changes: self
                 .file_changes
                 .into_iter()

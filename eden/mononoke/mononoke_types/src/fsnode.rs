@@ -6,6 +6,8 @@
  */
 
 use anyhow::{bail, Context, Result};
+use fbthrift::compact_protocol;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::blob::{Blob, BlobstoreValue, FsnodeBlob};
 use crate::errors::ErrorKind;
@@ -14,10 +16,6 @@ use crate::hash::{Sha1, Sha256};
 use crate::path::MPathElement;
 use crate::thrift;
 use crate::typed_hash::{ContentId, FsnodeId, FsnodeIdContext};
-
-use fbthrift::compact_protocol;
-use sorted_vector_map::SortedVectorMap;
-use std::collections::BTreeMap;
 
 /// An fsnode is a manifest node containing summary information about the
 /// files in the manifest that is useful in the implementation of
@@ -103,7 +101,7 @@ impl Fsnode {
     }
 
     pub(crate) fn into_thrift(self) -> thrift::Fsnode {
-        let subentries: BTreeMap<_, _> = self
+        let subentries: SortedVectorMap<_, _> = self
             .subentries
             .into_iter()
             .map(|(basename, fsnode_entry)| (basename.into_thrift(), fsnode_entry.into_thrift()))
