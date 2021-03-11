@@ -263,6 +263,22 @@ pre_op_attr statToPreOpAttr(struct stat& stat) {
   }};
 }
 
+/**
+ * Convert the struct stat returned from the NfsDispatcher into a wcc_data
+ * useable by NFS.
+ */
+wcc_data statToWccData(
+    std::optional<struct stat>& preStat,
+    std::optional<struct stat>& postStat) {
+  return wcc_data{
+      /*before*/ preStat.has_value() ? statToPreOpAttr(preStat.value())
+                                     : pre_op_attr{},
+      /*after*/ postStat.has_value()
+          ? post_op_attr{statToFattr3(postStat.value())}
+          : post_op_attr{},
+  };
+}
+
 folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
     folly::io::Cursor deser,
     folly::io::QueueAppender ser,
@@ -357,14 +373,8 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::setattr(
 
           SETATTR3res res{
               {{nfsstat3::NFS3_OK,
-                SETATTR3resok{wcc_data{
-                    /*before*/ setattrRes.preStat.has_value()
-                        ? statToPreOpAttr(setattrRes.preStat.value())
-                        : pre_op_attr{},
-                    /*after*/ setattrRes.postStat.has_value()
-                        ? post_op_attr{statToFattr3(
-                              setattrRes.postStat.value())}
-                        : post_op_attr{}}}}}};
+                SETATTR3resok{
+                    statToWccData(setattrRes.preStat, setattrRes.postStat)}}}};
           XdrTrait<SETATTR3res>::serialize(ser, res);
         }
 
@@ -642,14 +652,8 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::write(
           WRITE3res res{
               {{nfsstat3::NFS3_OK,
                 WRITE3resok{
-                    wcc_data{
-                        /*before*/ writeRes.preStat.has_value()
-                            ? statToPreOpAttr(writeRes.preStat.value())
-                            : pre_op_attr{},
-                        /*after*/ writeRes.postStat.has_value()
-                            ? post_op_attr{statToFattr3(
-                                  writeRes.postStat.value())}
-                            : post_op_attr{}},
+                    /*file_wcc*/ statToWccData(
+                        writeRes.preStat, writeRes.postStat),
                     /*count*/ folly::to_narrow(writeRes.written),
                     // TODO(xavierd): the following is a total lie and we
                     // should call inode->fdatasync() in the case where
@@ -743,15 +747,9 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::create(
                     /*obj*/ post_op_fh3{nfs_fh3{createRes.ino}},
                     /*obj_attributes*/
                     post_op_attr{statToFattr3(createRes.stat)},
-                    wcc_data{
-                        /*before*/ createRes.preDirStat.has_value()
-                            ? statToPreOpAttr(createRes.preDirStat.value())
-                            : pre_op_attr{},
-                        /*after*/ createRes.postDirStat.has_value()
-                            ? post_op_attr{statToFattr3(
-                                  createRes.postDirStat.value())}
-                            : post_op_attr{},
-                    }}}}};
+                    /*dir_wcc*/
+                    statToWccData(createRes.preDirStat, createRes.postDirStat),
+                }}}};
           XdrTrait<CREATE3res>::serialize(ser, res);
         }
         return folly::unit;
@@ -803,15 +801,9 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::mkdir(
                     /*obj*/ post_op_fh3{nfs_fh3{mkdirRes.ino}},
                     /*obj_attributes*/
                     post_op_attr{statToFattr3(mkdirRes.stat)},
-                    wcc_data{
-                        /*before*/ mkdirRes.preDirStat.has_value()
-                            ? statToPreOpAttr(mkdirRes.preDirStat.value())
-                            : pre_op_attr{},
-                        /*after*/ mkdirRes.postDirStat.has_value()
-                            ? post_op_attr{statToFattr3(
-                                  mkdirRes.postDirStat.value())}
-                            : post_op_attr{},
-                    }}}}};
+                    /*dir_wcc*/
+                    statToWccData(mkdirRes.preDirStat, mkdirRes.postDirStat),
+                }}}};
           XdrTrait<MKDIR3res>::serialize(ser, res);
         }
         return folly::unit;
@@ -870,15 +862,8 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::remove(
 
           REMOVE3res res{
               {{nfsstat3::NFS3_OK,
-                {REMOVE3resok{{wcc_data{
-                    /*before*/ unlinkRes.preDirStat.has_value()
-                        ? statToPreOpAttr(unlinkRes.preDirStat.value())
-                        : pre_op_attr{},
-                    /*after*/ unlinkRes.postDirStat.has_value()
-                        ? post_op_attr{statToFattr3(
-                              unlinkRes.postDirStat.value())}
-                        : post_op_attr{},
-                }}}}}}};
+                REMOVE3resok{/*dir_wcc*/ statToWccData(
+                    unlinkRes.preDirStat, unlinkRes.postDirStat)}}}};
           XdrTrait<REMOVE3res>::serialize(ser, res);
         }
         return folly::unit;
