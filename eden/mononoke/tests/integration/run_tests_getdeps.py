@@ -181,7 +181,6 @@ def get_test_groups():
     if platform == "darwin":
         test_groups[TestGroup.BROKEN].update(
             {
-                "test-pushrebase-block-casefolding.t",  # MacOS is case insensitive
                 "test-pushrebase-block-public-casefolding.t",  # MacOS is case insensitive
             }
         )
