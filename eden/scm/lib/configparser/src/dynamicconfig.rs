@@ -122,7 +122,7 @@ impl Domain {
 }
 
 pub struct Generator {
-    repo_path: PathBuf,
+    config_dir: PathBuf,
     tiers: HashSet<String>,
     repo: Repo,
     group: HgGroup,
@@ -137,7 +137,7 @@ pub struct Generator {
 }
 
 impl Generator {
-    pub fn new(repo_name: String, repo_path: PathBuf, user_name: String) -> Result<Self> {
+    pub fn new(repo_name: String, config_dir: PathBuf, user_name: String) -> Result<Self> {
         let repo = Repo::from_str(Some(&repo_name));
 
         let mut tiers: HashSet<String> = if Path::new("/etc/smc.tiers").exists() {
@@ -186,7 +186,7 @@ impl Generator {
         let pass_all_shards = std::env::var("HG_TEST_PASS_ALL_SHARDS").is_ok();
 
         Ok(Generator {
-            repo_path,
+            config_dir,
             tiers,
             repo,
             group,
@@ -202,8 +202,8 @@ impl Generator {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn repo_path(&self) -> &Path {
-        self.repo_path.as_ref()
+    pub(crate) fn config_dir(&self) -> &Path {
+        self.config_dir.as_ref()
     }
 
     #[allow(dead_code)]

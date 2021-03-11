@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime};
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use filetime::{set_file_mtime, FileTime};
 use minibytes::Text;
 use tempfile::tempfile_in;
@@ -292,7 +292,7 @@ impl ConfigSetHgExt for ConfigSet {
         let mut errors = Vec::new();
 
         // Compute path
-        let dynamic_path = get_shared_path(repo_path)?.join("hgrc.dynamic");
+        let dynamic_path = get_config_dir(Some(repo_path))?.join("hgrc.dynamic");
 
         // Check version
         let content = read_to_string(&dynamic_path).ok();
@@ -510,15 +510,22 @@ impl ConfigSet {
     }
 }
 
-fn get_shared_path(repo_path: &Path) -> Result<PathBuf> {
-    let shared_path = repo_path.join("sharedpath");
-    Ok(if shared_path.exists() {
-        let raw = read_to_string(shared_path)?;
-        let trimmed = raw.trim_end_matches("\n");
-        // sharedpath can be relative, so join it with repo_path.
-        repo_path.join(trimmed)
-    } else {
-        repo_path.to_path_buf()
+fn get_config_dir(repo_path: Option<&Path>) -> Result<PathBuf> {
+    Ok(match repo_path {
+        Some(repo_path) => {
+            let shared_path = repo_path.join("sharedpath");
+            if shared_path.exists() {
+                let raw = read_to_string(shared_path)?;
+                let trimmed = raw.trim_end_matches("\n");
+                // sharedpath can be relative, so join it with repo_path.
+                repo_path.join(trimmed)
+            } else {
+                repo_path.to_path_buf()
+            }
+        }
+        None => dirs::cache_dir()
+            .ok_or_else(|| anyhow!("unable to find cache_dir for Mercurial configuration"))?
+            .join("edenscm"),
     })
 }
 
@@ -529,21 +536,24 @@ pub fn generate_dynamicconfig(
     user_name: String,
 ) -> Result<()> {
     // Resolve sharedpath
-    let repo_path = get_shared_path(repo_path)?;
+    let config_dir = get_config_dir(Some(repo_path))?;
+    if !config_dir.exists() {
+        fs::create_dir(&config_dir)?;
+    }
 
     // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
     // the config.
-    if tempfile_in(&repo_path).is_err() {
+    if tempfile_in(&config_dir).is_err() {
         return Err(IOError::new(
             ErrorKind::PermissionDenied,
-            format!("no write access to {:?}", repo_path),
+            format!("no write access to {:?}", config_dir),
         )
         .into());
     }
 
-    let hgrc_path = repo_path.join("hgrc.dynamic");
+    let hgrc_path = config_dir.join("hgrc.dynamic");
 
-    let config = Generator::new(repo_name, repo_path, user_name)?.execute(canary)?;
+    let config = Generator::new(repo_name, config_dir, user_name)?.execute(canary)?;
 
     #[cfg(feature = "fb")]
     let version = ::version::VERSION;
