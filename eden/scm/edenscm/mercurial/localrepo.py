@@ -432,15 +432,22 @@ class localrepository(object):
         # This list it to be filled by extension during repo setup
         self._phasedefaults = []
 
-        reponame = self.ui.config("remotefilelog", "reponame", "")
-        # If the repo already exists, load the existing configs
-        if self.localvfs.isdir():
-            self.ui.reloadconfigs(self.root)
+        # Create the initial directory if it doesn't already exist.
+        created = False
+        if not self.localvfs.isdir():
+            if create:
+                created = True
+                # Create initial directory. Just enough to allow basic config
+                # loading.
+                if not self.wvfs.exists():
+                    self.wvfs.makedirs()
+                self.localvfs.makedir(notindexed=True)
+            else:
+                raise errormod.RepoError(_("repository %s not found") % path)
         elif create:
-            # If we're in the process of creating the repo, load the dynamic configs in
-            # memory only. They will be written to disk later once the localvfs
-            # is created.
-            uiconfig.applydynamicconfig(self.ui, reponame, self.path)
+            raise errormod.RepoError(_("repository %s already exists") % path)
+
+        self.ui.reloadconfigs(self.root)
 
         self._loadextensions()
 
@@ -459,31 +466,19 @@ class localrepository(object):
             if engine.revlogheader():
                 self.supported.add("exp-compression-%s" % name)
 
-        created = False
-        if not self.localvfs.isdir():
-            if create:
-                created = True
-                self.requirements = newreporequirements(self)
-                if "store" in self.requirements:
-                    self.storerequirements = newrepostorerequirements(self)
+        if created:
+            self.requirements = newreporequirements(self)
+            if "store" in self.requirements:
+                self.storerequirements = newrepostorerequirements(self)
 
-                if not self.wvfs.exists():
-                    self.wvfs.makedirs()
-                self.localvfs.makedir(notindexed=True)
+                self.localvfs.mkdir("store")
 
-                if "store" in self.requirements:
-                    self.localvfs.mkdir("store")
-
-                    # create an invalid changelog
-                    self.localvfs.append(
-                        "00changelog.i",
-                        b"\0\0\0\1"
-                        b" dummy changelog to prevent using the old repo layout",
-                    )
-            else:
-                raise errormod.RepoError(_("repository %s not found") % path)
-        elif create:
-            raise errormod.RepoError(_("repository %s already exists") % path)
+                # create an invalid changelog
+                self.localvfs.append(
+                    "00changelog.i",
+                    b"\0\0\0\1"
+                    b" dummy changelog to prevent using the old repo layout",
+                )
         else:
             try:
                 self.requirements = scmutil.readrequires(self.localvfs, self.supported)
