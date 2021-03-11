@@ -173,8 +173,8 @@ mod test {
     #[test]
     fn bad_thrift() {
         let mut thrift_ce = thrift::HgChangesetEnvelope {
-            node_id: thrift::HgNodeHash(thrift::Sha1(vec![1; 20])),
-            p1: Some(thrift::HgNodeHash(thrift::Sha1(vec![2; 20]))),
+            node_id: thrift::HgNodeHash(thrift::Sha1(vec![1; 20].into())),
+            p1: Some(thrift::HgNodeHash(thrift::Sha1(vec![2; 20].into()))),
             p2: None,
             // contents must be present
             contents: None,
@@ -184,7 +184,7 @@ mod test {
             .expect_err("unexpected OK -- missing contents");
 
         thrift_ce.contents = Some(b"abc".to_vec());
-        thrift_ce.node_id = thrift::HgNodeHash(thrift::Sha1(vec![1; 19]));
+        thrift_ce.node_id = thrift::HgNodeHash(thrift::Sha1(vec![1; 19].into()));
 
         HgChangesetEnvelope::from_thrift(thrift_ce)
             .expect_err("unexpected OK -- wrong hash length");

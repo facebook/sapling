@@ -184,10 +184,10 @@ mod test {
     #[test]
     fn bad_thrift() {
         let mut thrift_me = thrift::HgManifestEnvelope {
-            node_id: thrift::HgNodeHash(thrift::Sha1(vec![1; 20])),
-            p1: Some(thrift::HgNodeHash(thrift::Sha1(vec![2; 20]))),
+            node_id: thrift::HgNodeHash(thrift::Sha1(vec![1; 20].into())),
+            p1: Some(thrift::HgNodeHash(thrift::Sha1(vec![2; 20].into()))),
             p2: None,
-            computed_node_id: thrift::HgNodeHash(thrift::Sha1(vec![1; 20])),
+            computed_node_id: thrift::HgNodeHash(thrift::Sha1(vec![1; 20].into())),
             // contents must be present
             contents: None,
         };
@@ -196,7 +196,7 @@ mod test {
             .expect_err("unexpected OK -- missing contents");
 
         thrift_me.contents = Some(b"abc".to_vec());
-        thrift_me.node_id = thrift::HgNodeHash(thrift::Sha1(vec![1; 19]));
+        thrift_me.node_id = thrift::HgNodeHash(thrift::Sha1(vec![1; 19].into()));
 
         HgManifestEnvelope::from_thrift(thrift_me).expect_err("unexpected OK -- wrong hash length");
     }

@@ -209,7 +209,7 @@ impl MPathElement {
         Self::verify(&element.0).with_context(|| {
             ErrorKind::InvalidThrift("MPathElement".into(), "invalid path element".into())
         })?;
-        Ok(MPathElement(SmallVec::from(element.0)))
+        Ok(MPathElement(element.0))
     }
 
     fn verify(p: &[u8]) -> Result<()> {
@@ -271,7 +271,7 @@ impl MPathElement {
 
     #[inline]
     pub fn into_thrift(self) -> thrift::MPathElement {
-        thrift::MPathElement(self.0.into_vec())
+        thrift::MPathElement(self.0)
     }
 
     /// Returns true if this path element is valid UTF-8.
@@ -895,12 +895,12 @@ impl Arbitrary for MPathElement {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let size = cmp::max(g.size(), 1);
         let size = cmp::min(size, MPATH_ELEMENT_MAX_LENGTH);
-        let mut element = Vec::with_capacity(size);
+        let mut element = SmallVec::with_capacity(size);
         for _ in 0..size {
             let c = COMPONENT_CHARS[..].choose(g).unwrap();
             element.push(*c);
         }
-        MPathElement(SmallVec::from(element))
+        MPathElement(element)
     }
 }
 
@@ -1285,8 +1285,8 @@ mod test {
                 return TestResult::discard();
             }
 
-            let joined = elements.iter().map(|elem| elem.as_ref().to_vec())
-                .collect::<Vec<Vec<u8>>>()
+            let joined = elements.iter().map(|elem| elem.0.clone())
+                .collect::<Vec<_>>()
                 .join(&b'/');
             let expected_len = joined.len();
             let path = MPath::new(joined).unwrap();
@@ -1445,10 +1445,10 @@ mod test {
 
     #[test]
     fn bad_path_thrift() {
-        let bad_thrift = thrift::MPath(vec![thrift::MPathElement(b"abc\0".to_vec())]);
+        let bad_thrift = thrift::MPath(vec![thrift::MPathElement(b"abc\0".to_vec().into())]);
         MPath::from_thrift(bad_thrift).expect_err("unexpected OK - embedded null");
 
-        let bad_thrift = thrift::MPath(vec![thrift::MPathElement(b"def/ghi".to_vec())]);
+        let bad_thrift = thrift::MPath(vec![thrift::MPathElement(b"def/ghi".to_vec().into())]);
         MPath::from_thrift(bad_thrift).expect_err("unexpected OK - embedded slash");
     }
 

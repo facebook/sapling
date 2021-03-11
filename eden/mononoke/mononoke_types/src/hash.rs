@@ -78,8 +78,6 @@ impl Blake2 {
 
     #[inline]
     pub fn from_thrift(b: thrift::Blake2) -> Result<Self> {
-        // Currently this doesn't require consuming b, but hopefully with T26959816 this
-        // code will be able to convert a SmallVec directly into an array.
         if b.0.len() != BLAKE2_HASH_LENGTH_BYTES {
             bail!(ErrorKind::InvalidThrift(
                 "Blake2".into(),
@@ -116,9 +114,7 @@ impl Blake2 {
     }
 
     pub fn into_thrift(self) -> thrift::Blake2 {
-        // This doesn't need to consume self today, but once T26959816 is implemented it
-        // should be possible to do that without copying.
-        thrift::Blake2(self.0.to_vec())
+        thrift::Blake2(self.0.into())
     }
 
     // Stable hash prefix for selection when sampling with modulus
@@ -367,7 +363,7 @@ macro_rules! impl_hash {
             }
 
             pub fn into_thrift(self) -> thrift::$type {
-                thrift::$type(self.0.to_vec())
+                thrift::$type(self.0.into())
             }
 
             pub fn into_inner(self) -> [u8; $size] {
@@ -485,7 +481,7 @@ impl RichGitSha1 {
     }
 
     pub fn into_thrift(self) -> thrift::GitSha1 {
-        thrift::GitSha1(self.sha1.0.to_vec())
+        thrift::GitSha1(self.sha1.0.into())
     }
 }
 
@@ -642,11 +638,11 @@ mod test {
 
     #[test]
     fn parse_thrift() {
-        let null_thrift = thrift::Blake2(vec![0; BLAKE2_HASH_LENGTH_BYTES]);
+        let null_thrift = thrift::Blake2(vec![0; BLAKE2_HASH_LENGTH_BYTES].into());
         assert_eq!(NULL, Blake2::from_thrift(null_thrift.clone()).unwrap());
         assert_eq!(NULL.into_thrift(), null_thrift);
 
-        let nil_thrift = thrift::Blake2(NILHASH.0.to_vec());
+        let nil_thrift = thrift::Blake2(NILHASH.0.into());
         assert_eq!(NILHASH, Blake2::from_thrift(nil_thrift.clone()).unwrap());
         assert_eq!(NILHASH.into_thrift(), nil_thrift);
     }
@@ -678,9 +674,11 @@ mod test {
 
     #[test]
     fn parse_thrift_bad() {
-        Blake2::from_thrift(thrift::Blake2(vec![])).expect_err("unexpected OK - zero len");
-        Blake2::from_thrift(thrift::Blake2(vec![0; 31])).expect_err("unexpected OK - too short");
-        Blake2::from_thrift(thrift::Blake2(vec![0; 33])).expect_err("unexpected Ok - too long");
+        Blake2::from_thrift(thrift::Blake2(vec![].into())).expect_err("unexpected OK - zero len");
+        Blake2::from_thrift(thrift::Blake2(vec![0; 31].into()))
+            .expect_err("unexpected OK - too short");
+        Blake2::from_thrift(thrift::Blake2(vec![0; 33].into()))
+            .expect_err("unexpected Ok - too long");
     }
 
     quickcheck! {

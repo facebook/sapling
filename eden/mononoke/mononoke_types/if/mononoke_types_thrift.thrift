@@ -31,8 +31,7 @@ namespace py3 eden.mononoke.mononoke_types
 // Rust representation it would also cause a heap allocation.
 // Going with representation 2, with the hope that this will be able to use
 // SmallVecs soon.
-// TODO (T26959816): add support to represent these as SmallVecs.
-typedef binary Blake2 (rust.newtype)
+typedef binary Blake2 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
 
 // Allow the hash type to change in the future.
 union IdType {
@@ -57,16 +56,16 @@ typedef IdType BlameId (rust.newtype)
 // mercurial_types defines Sha1, and it's most convenient to stick this in here.
 // This can be moved away in the future if necessary. Could also be used for
 // raw content sha1 (should this be separated?)
-typedef binary Sha1 (rust.newtype)
+typedef binary Sha1 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 20]>")
 
 // Other content alias types
-typedef binary Sha256 (rust.newtype)
-typedef binary GitSha1 (rust.newtype)
+typedef binary Sha256 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
+typedef binary GitSha1 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 20]>")
 
 // A path in a repo is stored as a list of elements. This is so that the sort
 // order of paths is the same as that of a tree traversal, so that deltas on
 // manifests can be applied in a streaming way.
-typedef binary MPathElement (rust.newtype)
+typedef binary MPathElement (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 24]>")
 typedef list<MPathElement> MPath (rust.newtype)
 
 union RepoPath {

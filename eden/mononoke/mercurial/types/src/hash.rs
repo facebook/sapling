@@ -50,8 +50,6 @@ impl Sha1 {
     }
 
     pub fn from_thrift(h: thrift::Sha1) -> Result<Self> {
-        // Currently this doesn't require consuming b, but hopefully with T26959816 this
-        // code will be able to convert a SmallVec directly into an array.
         if h.0.len() != SHA1_HASH_LENGTH_BYTES {
             bail!(ErrorKind::InvalidThrift(
                 "Sha1".into(),
@@ -99,9 +97,7 @@ impl Sha1 {
     }
 
     pub fn into_thrift(self) -> thrift::Sha1 {
-        // This doesn't need to consume self today, but once T26959816 is implemented it
-        // should be possible to do that without copying.
-        thrift::Sha1(self.0.to_vec())
+        thrift::Sha1(self.0.into())
     }
 }
 
@@ -408,20 +404,20 @@ mod test {
 
     #[test]
     fn parse_thrift() {
-        let null_thrift = thrift::Sha1(vec![0; SHA1_HASH_LENGTH_BYTES]);
+        let null_thrift = thrift::Sha1(vec![0; SHA1_HASH_LENGTH_BYTES].into());
         assert_eq!(NULL, Sha1::from_thrift(null_thrift.clone()).unwrap());
         assert_eq!(NULL.into_thrift(), null_thrift);
 
-        let nil_thrift = thrift::Sha1(NILHASH.0.to_vec());
+        let nil_thrift = thrift::Sha1(NILHASH.0.into());
         assert_eq!(NILHASH, Sha1::from_thrift(nil_thrift.clone()).unwrap());
         assert_eq!(NILHASH.into_thrift(), nil_thrift);
     }
 
     #[test]
     fn parse_thrift_bad() {
-        Sha1::from_thrift(thrift::Sha1(vec![])).expect_err("unexpected OK - zero len");
-        Sha1::from_thrift(thrift::Sha1(vec![0; 19])).expect_err("unexpected OK - too short");
-        Sha1::from_thrift(thrift::Sha1(vec![0; 21])).expect_err("unexpected OK - too long");
+        Sha1::from_thrift(thrift::Sha1(vec![].into())).expect_err("unexpected OK - zero len");
+        Sha1::from_thrift(thrift::Sha1(vec![0; 19].into())).expect_err("unexpected OK - too short");
+        Sha1::from_thrift(thrift::Sha1(vec![0; 21].into())).expect_err("unexpected OK - too long");
     }
 
     quickcheck! {

@@ -212,8 +212,8 @@ mod test {
     #[test]
     fn bad_thrift() {
         let mut thrift_fe = thrift::HgFileEnvelope {
-            node_id: thrift::HgNodeHash(thrift::Sha1(vec![1; 20])),
-            p1: Some(thrift::HgNodeHash(thrift::Sha1(vec![2; 20]))),
+            node_id: thrift::HgNodeHash(thrift::Sha1(vec![1; 20].into())),
+            p1: Some(thrift::HgNodeHash(thrift::Sha1(vec![2; 20].into()))),
             p2: None,
             // a content ID must be present
             content_id: None,
@@ -225,7 +225,7 @@ mod test {
             .expect_err("unexpected OK -- missing content ID");
 
         thrift_fe.content_id = Some(thrift::ContentId(thrift::IdType::Blake2(thrift::Blake2(
-            vec![3; 32],
+            vec![3; 32].into(),
         ))));
         thrift_fe.metadata = None;
 
