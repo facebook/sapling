@@ -576,6 +576,29 @@ EDEN_XDR_SERDE_DECL(REMOVE3resfail, dir_wcc);
 struct REMOVE3res
     : public detail::Nfsstat3Variant<REMOVE3resok, REMOVE3resfail> {};
 
+// RENAME Procedure:
+
+struct RENAME3args {
+  diropargs3 from;
+  diropargs3 to;
+};
+EDEN_XDR_SERDE_DECL(RENAME3args, from, to);
+
+struct RENAME3resok {
+  wcc_data fromdir_wcc;
+  wcc_data todir_wcc;
+};
+EDEN_XDR_SERDE_DECL(RENAME3resok, fromdir_wcc, todir_wcc);
+
+struct RENAME3resfail {
+  wcc_data fromdir_wcc;
+  wcc_data todir_wcc;
+};
+EDEN_XDR_SERDE_DECL(RENAME3resfail, fromdir_wcc, todir_wcc);
+
+struct RENAME3res
+    : public detail::Nfsstat3Variant<RENAME3resok, RENAME3resfail> {};
+
 // LINK Procedure:
 
 struct LINK3args {

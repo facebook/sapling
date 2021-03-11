@@ -1194,9 +1194,14 @@ std::string formatRmdir(folly::io::Cursor /*deser*/) {
   return "";
 }
 
-std::string formatRename(folly::io::Cursor /*deser*/) {
-  // TODO(xavierd): Fill this in.
-  return "";
+std::string formatRename(folly::io::Cursor deser) {
+  auto args = XdrTrait<RENAME3args>::deserialize(deser);
+  return fmt::format(
+      FMT_STRING("fromDir={}, fromName={}, toDir={}, toName={}"),
+      args.from.dir.ino,
+      args.from.name,
+      args.to.dir.ino,
+      args.to.name);
 }
 
 std::string formatLink(folly::io::Cursor deser) {
