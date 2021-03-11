@@ -364,7 +364,7 @@ impl SegmentedChangelogBuilder {
     }
 
     fn changeset_fetcher(&mut self) -> Result<Arc<dyn ChangesetFetcher>> {
-        self.changeset_fetcher.take().ok_or_else(|| {
+        self.changeset_fetcher.clone().ok_or_else(|| {
             format_err!(
                 "SegmentedChangelog cannot be built without ChangesetFetcher being specified."
             )
