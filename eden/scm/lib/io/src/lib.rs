@@ -236,28 +236,7 @@ impl IO {
 
     pub fn set_progress(&self, data: &str) -> io::Result<()> {
         let mut inner = self.inner.lock();
-        if let Some(ref mut progress) = inner.progress {
-            // \x0c (\f) is defined by streampager.
-            let data = format!("{}\x0c", data);
-            progress.write_all(data.as_bytes())?;
-            progress.flush()?;
-        } else {
-            let clear_progress_str = inner.clear_progress_str();
-            if let Some(ref mut error) = inner.error {
-                // Write progress to stderr.
-                let data = data.trim_end();
-                // Write the progress clear sequences within one syscall if possible, to reduce flash.
-                let message = format!("{}{}", clear_progress_str, data);
-                error.write_all(message.as_bytes())?;
-                error.flush()?;
-                if data.is_empty() {
-                    inner.progress_lines = 0;
-                } else {
-                    inner.progress_lines = data.chars().filter(|&c| c == '\n').count() + 1;
-                }
-            }
-        }
-        Ok(())
+        inner.set_progress(data)
     }
 
     pub fn flush(&self) -> io::Result<()> {
@@ -395,6 +374,32 @@ impl Inner {
                 error.write_all(s.as_bytes())?;
             }
             self.progress_lines = 0;
+        }
+        Ok(())
+    }
+
+    fn set_progress(&mut self, data: &str) -> io::Result<()> {
+        let inner = self;
+        if let Some(ref mut progress) = inner.progress {
+            // \x0c (\f) is defined by streampager.
+            let data = format!("{}\x0c", data);
+            progress.write_all(data.as_bytes())?;
+            progress.flush()?;
+        } else {
+            let clear_progress_str = inner.clear_progress_str();
+            if let Some(ref mut error) = inner.error {
+                // Write progress to stderr.
+                let data = data.trim_end();
+                // Write the progress clear sequences within one syscall if possible, to reduce flash.
+                let message = format!("{}{}", clear_progress_str, data);
+                error.write_all(message.as_bytes())?;
+                error.flush()?;
+                if data.is_empty() {
+                    inner.progress_lines = 0;
+                } else {
+                    inner.progress_lines = data.chars().filter(|&c| c == '\n').count() + 1;
+                }
+            }
         }
         Ok(())
     }
