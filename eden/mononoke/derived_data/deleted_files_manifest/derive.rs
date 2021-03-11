@@ -24,6 +24,7 @@ use mononoke_types::{
     MononokeId,
 };
 use repo_blobstore::RepoBlobstore;
+use sorted_vector_map::SortedVectorMap;
 use std::sync::Arc;
 use std::{collections::BTreeMap, collections::HashSet, iter::FromIterator};
 use tokio::sync::Mutex;
@@ -108,7 +109,7 @@ pub(crate) async fn derive_deleted_files_manifest(
                 move |(path, manifest_change), subentries_iter| {
                     cloned!(ctx, repo, cs_id, sender, created);
                     async move {
-                        let mut subentries = BTreeMap::new();
+                        let mut subentries = SortedVectorMap::new();
                         for entry in subentries_iter {
                             match entry {
                                 Some((Some(path), mf_id)) => {
@@ -149,7 +150,7 @@ pub(crate) async fn derive_deleted_files_manifest(
                     ctx.clone(),
                     repo.get_blobstore(),
                     None,
-                    BTreeMap::new(),
+                    Default::default(),
                     sender.clone(),
                     created.clone(),
                 )
@@ -395,7 +396,7 @@ async fn create_manifest(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
     linknode: Option<ChangesetId>,
-    subentries: BTreeMap<MPathElement, DeletedManifestId>,
+    subentries: SortedVectorMap<MPathElement, DeletedManifestId>,
     sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
     created: Arc<Mutex<HashSet<String>>>,
 ) -> Result<DeletedManifestId, Error> {
@@ -422,7 +423,7 @@ async fn do_derive_create(
     repo: BlobRepo,
     cs_id: ChangesetId,
     change: DeletedManifestChange,
-    subentries: BTreeMap<MPathElement, DeletedManifestId>,
+    subentries: SortedVectorMap<MPathElement, DeletedManifestId>,
     sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
     created: Arc<Mutex<HashSet<String>>>,
 ) -> Result<Option<DeletedManifestId>, Error> {

@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeMap;
-
 use anyhow::{Context, Result};
 use fbthrift::compact_protocol;
 use sorted_vector_map::SortedVectorMap;
@@ -89,13 +87,13 @@ use crate::typed_hash::{ChangesetId, DeletedManifestContext, DeletedManifestId};
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct DeletedManifest {
     linknode: Option<ChangesetId>,
-    subentries: BTreeMap<MPathElement, DeletedManifestId>,
+    subentries: SortedVectorMap<MPathElement, DeletedManifestId>,
 }
 
 impl DeletedManifest {
     pub fn new(
         linknode: Option<ChangesetId>,
-        subentries: BTreeMap<MPathElement, DeletedManifestId>,
+        subentries: SortedVectorMap<MPathElement, DeletedManifestId>,
     ) -> Self {
         Self {
             linknode,
