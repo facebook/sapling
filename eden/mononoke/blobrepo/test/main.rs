@@ -555,7 +555,7 @@ fn make_bonsai_changeset(
         committer: None,
         committer_date: None,
         message: "[mononoke] awesome message".to_owned(),
-        extra: BTreeMap::new(),
+        extra: Default::default(),
         file_changes: changes
             .into_iter()
             .map(|(path, change)| (MPath::new(path).unwrap(), change))

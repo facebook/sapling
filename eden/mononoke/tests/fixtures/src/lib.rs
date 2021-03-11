@@ -22,6 +22,7 @@ use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileType, RepositoryId,
 };
+use sorted_vector_map::SortedVectorMap;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
@@ -29,8 +30,8 @@ pub async fn store_files(
     ctx: &CoreContext,
     files: BTreeMap<&str, Option<&str>>,
     repo: &BlobRepo,
-) -> BTreeMap<MPath, Option<FileChange>> {
-    let mut res = btreemap! {};
+) -> SortedVectorMap<MPath, Option<FileChange>> {
+    let mut res = BTreeMap::new();
 
     for (path, content) in files {
         let path = MPath::new(path).unwrap();
@@ -56,7 +57,7 @@ pub async fn store_files(
             }
         }
     }
-    res
+    res.into()
 }
 
 async fn create_bonsai_changeset_from_test_data(
@@ -100,7 +101,7 @@ async fn create_bonsai_changeset_from_test_data(
         committer: None,
         committer_date: None,
         message: commit_metadata.get("message").unwrap().to_string(),
-        extra: btreemap! {},
+        extra: Default::default(),
         file_changes,
     }
     .freeze()
@@ -1584,8 +1585,8 @@ pub fn create_bonsai_changeset(parents: Vec<ChangesetId>) -> BonsaiChangeset {
         committer: None,
         committer_date: None,
         message: "message".to_string(),
-        extra: btreemap! {},
-        file_changes: btreemap! {},
+        extra: Default::default(),
+        file_changes: Default::default(),
     }
     .freeze()
     .unwrap()
@@ -1602,8 +1603,8 @@ pub fn create_bonsai_changeset_with_author(
         committer: None,
         committer_date: None,
         message: "message".to_string(),
-        extra: btreemap! {},
-        file_changes: btreemap! {},
+        extra: Default::default(),
+        file_changes: Default::default(),
     }
     .freeze()
     .unwrap()
@@ -1611,7 +1612,7 @@ pub fn create_bonsai_changeset_with_author(
 
 pub fn create_bonsai_changeset_with_files(
     parents: Vec<ChangesetId>,
-    file_changes: BTreeMap<MPath, Option<FileChange>>,
+    file_changes: impl Into<SortedVectorMap<MPath, Option<FileChange>>>,
 ) -> BonsaiChangeset {
     BonsaiChangesetMut {
         parents,
@@ -1620,8 +1621,8 @@ pub fn create_bonsai_changeset_with_files(
         committer: None,
         committer_date: None,
         message: "message".to_string(),
-        extra: btreemap! {},
-        file_changes,
+        extra: Default::default(),
+        file_changes: file_changes.into(),
     }
     .freeze()
     .unwrap()

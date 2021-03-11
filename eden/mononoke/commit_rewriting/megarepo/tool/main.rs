@@ -42,7 +42,6 @@ use slog::{info, warn};
 #[cfg(fbcode_build)]
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor, WaitForReplicationConfig};
-use std::collections::BTreeMap;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 use synced_commit_mapping::{
@@ -377,7 +376,7 @@ async fn run_bonsai_merge<'a>(
     let cs_args = cs_args_from_matches(sub_m).compat().await?;
 
     let merge_cs_id =
-        create_and_save_bonsai(&ctx, &repo, vec![p1, p2], BTreeMap::new(), cs_args).await?;
+        create_and_save_bonsai(&ctx, &repo, vec![p1, p2], Default::default(), cs_args).await?;
 
     println!("{}", merge_cs_id);
 

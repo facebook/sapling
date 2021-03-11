@@ -37,7 +37,8 @@ use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
 use reachabilityindex::LeastCommonAncestorsHint;
 use scuba_ext::MononokeScubaSampleBuilder;
 use slog::{debug, info};
-use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use sorted_vector_map::SortedVectorMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt;
 use std::sync::Arc;
 use std::time::Instant;
@@ -123,11 +124,11 @@ async fn get_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
 }
 
 /// Take an iterator of file changes, which may contain implicit deletes
-/// and produce a `BTreeMap` suitable to be used in the `BonsaiChangeset`,
+/// and produce a `SortedVectorMap` suitable to be used in the `BonsaiChangeset`,
 /// without any implicit deletes.
 fn minimize_file_change_set<FC, I: IntoIterator<Item = (MPath, Option<FC>)>>(
     file_changes: I,
-) -> BTreeMap<MPath, Option<FC>> {
+) -> SortedVectorMap<MPath, Option<FC>> {
     let (adds, removes): (Vec<_>, Vec<_>) =
         file_changes.into_iter().partition(|(_, fc)| fc.is_some());
     let adds: HashMap<MPath, Option<FC>> = adds.into_iter().collect();
@@ -141,7 +142,7 @@ fn minimize_file_change_set<FC, I: IntoIterator<Item = (MPath, Option<FC>)>>(
     let filtered_removes = removes
         .into_iter()
         .filter(|(ref mpath, _)| !prefix_path_was_added(mpath.clone()));
-    let mut result: BTreeMap<_, _> = filtered_removes.collect();
+    let mut result: SortedVectorMap<_, _> = filtered_removes.collect();
     result.extend(adds.into_iter());
     result
 }
@@ -211,7 +212,7 @@ pub async fn rewrite_commit<'a>(
         )
         .await?;
 
-        let path_rewritten_changes: Result<BTreeMap<_, _>, _> = cs
+        let path_rewritten_changes: Result<SortedVectorMap<_, _>, _> = cs
             .file_changes
             .into_iter()
             .filter_map(|(path, change)| {
@@ -1877,6 +1878,7 @@ mod tests {
     use super::*;
     use fbinit::FacebookInit;
     use maplit::btreemap;
+    use std::collections::BTreeMap;
 
     fn path(p: &str) -> MPath {
         MPath::new(p).unwrap()
@@ -1885,7 +1887,7 @@ mod tests {
     fn verify_minimized(changes: Vec<(&str, Option<()>)>, expected: BTreeMap<&str, Option<()>>) {
         let changes: Vec<_> = changes.into_iter().map(|(p, c)| (path(p), c)).collect();
         let minimized = minimize_file_change_set(changes);
-        let expected: BTreeMap<MPath, Option<()>> =
+        let expected: SortedVectorMap<MPath, Option<()>> =
             expected.into_iter().map(|(p, c)| (path(p), c)).collect();
         assert_eq!(expected, minimized);
     }

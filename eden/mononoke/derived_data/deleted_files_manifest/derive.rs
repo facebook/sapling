@@ -467,6 +467,7 @@ mod tests {
     use futures::{pin_mut, stream::iter, Stream, TryStreamExt};
     use maplit::btreemap;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, MPath};
+    use sorted_vector_map::SortedVectorMap;
     use tests_utils::CreateCommitContext;
 
     #[fbinit::test]
@@ -1014,7 +1015,7 @@ mod tests {
     async fn create_bonsai_changeset(
         fb: FacebookInit,
         repo: BlobRepo,
-        file_changes: BTreeMap<MPath, Option<FileChange>>,
+        file_changes: SortedVectorMap<MPath, Option<FileChange>>,
         parents: Vec<ChangesetId>,
     ) -> BonsaiChangeset {
         let bcs = BonsaiChangesetMut {
@@ -1024,7 +1025,7 @@ mod tests {
             committer: None,
             committer_date: None,
             message: "message".to_string(),
-            extra: btreemap! {},
+            extra: Default::default(),
             file_changes,
         }
         .freeze()

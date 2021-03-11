@@ -42,7 +42,7 @@ use pushrebase::do_pushrebase_bonsai;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use slog::info;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
@@ -551,8 +551,8 @@ async fn merge_imported_commit(
         committer: Some(author.to_string()),
         committer_date: Some(datetime),
         message: message.to_string(),
-        extra: BTreeMap::new(),
-        file_changes: BTreeMap::new(),
+        extra: Default::default(),
+        file_changes: Default::default(),
     }
     .freeze()?;
 

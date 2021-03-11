@@ -47,6 +47,7 @@ use mononoke_types::{
 use pushrebase::PushrebaseError;
 use reachabilityindex::LeastCommonAncestorsHint;
 use skiplist::SkiplistIndex;
+use sorted_vector_map::{sorted_vector_map, SortedVectorMap};
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
 use synced_commit_mapping::{
@@ -126,7 +127,7 @@ async fn create_initial_commit_with_contents<'a>(
         }
     }))
     .await;
-    let file_changes: BTreeMap<_, _> = file_changes.into_iter().collect();
+    let file_changes: SortedVectorMap<_, _> = file_changes.into_iter().collect();
 
     let bcs = BonsaiChangesetMut {
         parents: vec![],
@@ -135,7 +136,7 @@ async fn create_initial_commit_with_contents<'a>(
         committer: None,
         committer_date: None,
         message: "Initial commit to get going".to_string(),
-        extra: btreemap! {},
+        extra: Default::default(),
         file_changes,
     }
     .freeze()
@@ -168,8 +169,8 @@ async fn create_empty_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         committer: None,
         committer_date: None,
         message: "Change master_file".to_string(),
-        extra: btreemap! {},
-        file_changes: btreemap! {},
+        extra: Default::default(),
+        file_changes: sorted_vector_map! {},
     }
     .freeze()
     .unwrap();
@@ -451,8 +452,8 @@ async fn create_commit_from_parent_and_changes<'a>(
         committer: None,
         committer_date: None,
         message: "ababagalamaga".to_string(),
-        extra: btreemap! {},
-        file_changes: proper_changes,
+        extra: Default::default(),
+        file_changes: proper_changes.into(),
     }
     .freeze()
     .unwrap();
@@ -488,8 +489,8 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
         committer: None,
         committer_date: None,
         message: "Change master_file".to_string(),
-        extra: btreemap! {},
-        file_changes: btreemap! {mpath("master_file") => Some(file_change)},
+        extra: Default::default(),
+        file_changes: sorted_vector_map! {mpath("master_file") => Some(file_change)},
     }
     .freeze()
     .unwrap();
@@ -662,8 +663,8 @@ async fn megarepo_copy_file(
         committer: None,
         committer_date: None,
         message: "Change 1".to_string(),
-        extra: btreemap! {},
-        file_changes: btreemap! {mpath("linear/new_file") => Some(file_change)},
+        extra: Default::default(),
+        file_changes: sorted_vector_map! {mpath("linear/new_file") => Some(file_change)},
     }
     .freeze()
     .unwrap();
@@ -1048,8 +1049,8 @@ async fn update_linear_1_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId 
         committer: None,
         committer_date: None,
         message: "Change linear/1".to_string(),
-        extra: btreemap! {},
-        file_changes: btreemap! {mpath("linear/1") => Some(file_change)},
+        extra: Default::default(),
+        file_changes: sorted_vector_map! {mpath("linear/1") => Some(file_change)},
     }
     .freeze()
     .unwrap();
@@ -2113,8 +2114,8 @@ async fn create_merge(
         committer: None,
         committer_date: None,
         message: "Never gonna give you up".to_string(),
-        extra: btreemap! {},
-        file_changes: btreemap! {},
+        extra: Default::default(),
+        file_changes: Default::default(),
     }
     .freeze()
     .unwrap();

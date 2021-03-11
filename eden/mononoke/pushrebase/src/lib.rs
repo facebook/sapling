@@ -75,7 +75,7 @@ use mononoke_types::{
 use revset::RangeNodeStream;
 use slog::info;
 use std::cmp::{max, Ordering};
-use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::FromIterator;
 use std::sync::Arc;
 use thiserror::Error;
@@ -977,32 +977,26 @@ async fn rebase_changeset(
 
     // Copy information in bonsai changeset contains a commit parent. So parent changes, then
     // copy information for all copied/moved files needs to be updated
-    let mut file_changes: BTreeMap<_, _> = bcs
-        .file_changes
-        .into_iter()
-        .map(|(path, file_change_opt)| {
-            (
-                path,
-                file_change_opt.map(|file_change| {
-                    FileChange::new(
-                        file_change.content_id().clone(),
-                        file_change.file_type(),
-                        file_change.size(),
-                        file_change.copy_from().map(|(path, cs)| {
-                            (
-                                path.clone(),
-                                remapping.get(cs).map(|(cs, _)| cs).cloned().unwrap_or(*cs),
-                            )
-                        }),
+    let mut file_changes = bcs.file_changes;
+    for file_change_opt in file_changes.values_mut() {
+        *file_change_opt = file_change_opt.take().map(|file_change| {
+            FileChange::new(
+                file_change.content_id().clone(),
+                file_change.file_type(),
+                file_change.size(),
+                file_change.copy_from().map(|(path, cs)| {
+                    (
+                        path.clone(),
+                        remapping.get(cs).map(|(cs, _)| cs).cloned().unwrap_or(*cs),
                     )
                 }),
             )
-        })
-        .collect();
+        });
+    }
 
     let new_file_paths: HashSet<_> =
         HashSet::from_iter(new_file_changes.iter().map(|(path, _)| path));
-    for (path, _) in &file_changes {
+    for path in file_changes.keys() {
         if new_file_paths.contains(path) {
             return Err(PushrebaseInternalError::NewFileChangesConflict(orig_cs_id).into());
         }

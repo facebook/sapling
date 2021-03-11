@@ -11,6 +11,7 @@ use anyhow::{bail, Context, Error, Result};
 use fbthrift::compact_protocol;
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::blob::{Blob, BlobstoreValue, ChangesetBlob};
 use crate::datetime::DateTime;
@@ -32,8 +33,8 @@ pub struct BonsaiChangesetMut {
     // max(author date, max(committer date of parents) + epsilon)
     pub committer_date: Option<DateTime>,
     pub message: String,
-    pub extra: BTreeMap<String, Vec<u8>>,
-    pub file_changes: BTreeMap<MPath, Option<FileChange>>,
+    pub extra: SortedVectorMap<String, Vec<u8>>,
+    pub file_changes: SortedVectorMap<MPath, Option<FileChange>>,
 }
 
 impl BonsaiChangesetMut {
@@ -53,7 +54,7 @@ impl BonsaiChangesetMut {
             committer: tc.committer,
             committer_date: tc.committer_date.map(DateTime::from_thrift).transpose()?,
             message: tc.message,
-            extra: tc.extra.into_iter().collect(),
+            extra: tc.extra,
             file_changes: tc
                 .file_changes
                 .into_iter()
@@ -79,7 +80,7 @@ impl BonsaiChangesetMut {
             committer: self.committer,
             committer_date: self.committer_date.map(DateTime::into_thrift),
             message: self.message,
-            extra: self.extra.into_iter().collect(),
+            extra: self.extra,
             file_changes: self
                 .file_changes
                 .into_iter()
@@ -185,7 +186,7 @@ impl BonsaiChangeset {
             .map(|(path, fc_opt)| (path, fc_opt.as_ref()))
     }
 
-    pub fn file_changes_map(&self) -> &BTreeMap<MPath, Option<FileChange>> {
+    pub fn file_changes_map(&self) -> &SortedVectorMap<MPath, Option<FileChange>> {
         &self.inner.file_changes
     }
 
@@ -291,13 +292,13 @@ impl Arbitrary for BonsaiChangeset {
         } else {
             BonsaiChangesetMut {
                 parents,
-                file_changes,
+                file_changes: file_changes.into(),
                 author: String::arbitrary(g),
                 author_date: DateTime::arbitrary(g),
                 committer: Option::<String>::arbitrary(g),
                 committer_date: Option::<DateTime>::arbitrary(g),
                 message: String::arbitrary(g),
-                extra: BTreeMap::arbitrary(g),
+                extra: SortedVectorMap::arbitrary(g),
             }
             .freeze()
             .expect("generated bonsai changeset must be valid")
@@ -336,8 +337,8 @@ mod test {
     use crate::file_change::FileType;
     use crate::hash::Blake2;
     use crate::typed_hash::ContentId;
-    use maplit::btreemap;
     use quickcheck::quickcheck;
+    use sorted_vector_map::sorted_vector_map;
     use std::str::FromStr;
 
     quickcheck! {
@@ -365,8 +366,8 @@ mod test {
             committer: Some("bar".into()),
             committer_date: Some(DateTime::from_timestamp(1500000000, -36800).unwrap()),
             message: "Commit message".into(),
-            extra: BTreeMap::new(),
-            file_changes: btreemap![
+            extra: SortedVectorMap::new(),
+            file_changes: sorted_vector_map![
                 MPath::new("a/b").unwrap() => Some(FileChange::new(
                     ContentId::from_byte_array([1; 32]),
                     FileType::Regular,

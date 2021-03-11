@@ -27,8 +27,7 @@ use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, stream, try_join, TryFutureExt};
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
-use maplit::hashset;
-use maplit::{btreemap, hashmap};
+use maplit::{btreemap, hashmap, hashset};
 use metaconfig_types::{CommitSyncConfig, RepoConfig};
 use metaconfig_types::{CommitSyncConfigVersion, DefaultSmallToLargeCommitSyncPathAction};
 use mononoke_types::{
@@ -38,6 +37,7 @@ use mutable_counters::MutableCounters;
 use mutable_counters::SqlMutableCounters;
 use pushrebase::{do_pushrebase_bonsai, FAILUPUSHREBASE_EXTRA};
 use slog::{info, warn, Logger};
+use sorted_vector_map::sorted_vector_map;
 use std::sync::Arc;
 use std::{collections::BTreeMap, convert::TryInto};
 use synced_commit_mapping::{
@@ -707,7 +707,7 @@ async fn create_commit_for_mapping_change(
         small_repo.name(),
     );
 
-    let mut extras = btreemap! {
+    let mut extras = sorted_vector_map! {
         FAILUPUSHREBASE_EXTRA.to_string() => b"1".to_vec(),
     };
     if options.add_mapping_change_extra {
@@ -737,7 +737,7 @@ async fn create_commit_for_mapping_change(
         committer_date: None,
         message: commit_msg,
         extra: extras,
-        file_changes,
+        file_changes: file_changes.into(),
     }
     .freeze()?;
 

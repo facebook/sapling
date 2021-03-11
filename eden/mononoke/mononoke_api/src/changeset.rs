@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::convert::TryInto;
 use std::fmt;
 use std::future::Future;
@@ -28,6 +28,7 @@ use mercurial_types::Globalrev;
 pub use mononoke_types::Generation;
 use mononoke_types::{BonsaiChangeset, FileChange, MPath, MPathElement, Svnrev};
 use reachabilityindex::ReachabilityIndex;
+use sorted_vector_map::SortedVectorMap;
 use unodes::RootUnodeManifestId;
 
 use crate::changeset_path::ChangesetPathContext;
@@ -322,7 +323,9 @@ impl ChangesetContext {
     }
 
     /// File changes associated with the commit.
-    pub async fn file_changes(&self) -> Result<BTreeMap<MPath, Option<FileChange>>, MononokeError> {
+    pub async fn file_changes(
+        &self,
+    ) -> Result<SortedVectorMap<MPath, Option<FileChange>>, MononokeError> {
         let bonsai = self.bonsai_changeset().await?;
         let bonsai = bonsai.into_mut();
         Ok(bonsai.file_changes)

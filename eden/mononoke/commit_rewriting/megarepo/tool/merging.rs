@@ -18,7 +18,7 @@ use manifest::ManifestOps;
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::ChangesetId;
 use slog::info;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 use std::iter::FromIterator;
 
 use megarepolib::common::{create_save_and_generate_hg_changeset, ChangesetArgs};
@@ -116,7 +116,7 @@ pub fn perform_merge(
                     &ctx,
                     &repo,
                     vec![first_bcs_id, second_bcs_id],
-                    BTreeMap::new(),
+                    Default::default(),
                     resulting_changeset_args,
                 )
                 .await

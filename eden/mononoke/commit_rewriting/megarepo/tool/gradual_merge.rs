@@ -27,7 +27,7 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use revset::RangeNodeStream;
 use skiplist::SkiplistIndex;
 use slog::info;
-use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 pub struct GradualMergeParams {
     pub pre_deletion_commit: ChangesetId,
@@ -309,7 +309,7 @@ async fn push_merge_commit(
         &ctx,
         &repo,
         vec![bookmark_value, cs_id_to_merge],
-        BTreeMap::new(),
+        Default::default(),
         merge_changeset_args,
     )
     .await?;

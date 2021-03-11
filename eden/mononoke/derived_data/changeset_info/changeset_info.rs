@@ -114,7 +114,7 @@ impl ChangesetInfo {
             committer,
             committer_date,
             message: ChangesetMessage::Message(message),
-            extra: extra.into_iter().collect(),
+            extra,
         }
     }
 
@@ -258,7 +258,7 @@ mod test {
     use super::*;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, MPath};
 
-    use maplit::btreemap;
+    use sorted_vector_map::sorted_vector_map;
 
     #[fbinit::test]
     fn changeset_info_title_test() {
@@ -303,8 +303,8 @@ mod test {
             committer: None,
             committer_date: None,
             message: message.to_string(),
-            extra: btreemap! {},
-            file_changes: btreemap! { MPath::new("file").unwrap() => None },
+            extra: Default::default(),
+            file_changes: sorted_vector_map! { MPath::new("file").unwrap() => None },
         }
         .freeze()
         .unwrap()

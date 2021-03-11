@@ -22,6 +22,7 @@ use manifest::PathTree;
 use mononoke_types::{
     BonsaiChangesetMut, ChangesetId, DateTime as MononokeDateTime, FileChange, MPath,
 };
+use sorted_vector_map::SortedVectorMap;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
@@ -402,7 +403,7 @@ impl RepoWriteContext {
                     }
                 })
                 .collect::<FuturesUnordered<_>>()
-                .try_collect::<BTreeMap<MPath, Option<FileChange>>>()
+                .try_collect::<SortedVectorMap<MPath, Option<FileChange>>>()
                 .timed()
                 .await;
             let mut scuba = self.ctx().scuba().clone();
@@ -423,6 +424,7 @@ impl RepoWriteContext {
 
         let author_date = MononokeDateTime::new(author_date);
         let committer_date = committer_date.map(MononokeDateTime::new);
+        let extra = extra.into();
 
         // Create the new Bonsai Changeset. The `freeze` method validates
         // that the bonsai changeset is internally consistent.

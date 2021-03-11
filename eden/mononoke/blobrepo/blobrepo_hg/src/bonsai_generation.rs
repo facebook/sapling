@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 
 use anyhow::{Context, Error, Result};
 use cloned::cloned;
@@ -22,6 +22,7 @@ use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MononokeId,
 };
 use repo_blobstore::RepoBlobstore;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::errors::*;
 use crate::BlobRepo;
@@ -43,13 +44,17 @@ pub async fn create_bonsai_changeset_object(
     )
     .await?;
 
-    let mut extra = BTreeMap::new();
-    for (key, value) in cs.extra() {
-        // Hg changesets can have non-utf8 extras, but we don't allow them in Bonsai
-        // In that case convert them lossy.
-        let key = String::from_utf8(key.clone())?.to_string();
-        extra.insert(key, value.clone());
-    }
+    let extra = cs
+        .extra()
+        .iter()
+        .map(|(key, value)| {
+            // Extra keys must be valid UTF-8.   Mercurial supports arbitrary
+            // bytes, but that is not supported in Mononoke.  Extra values can
+            // be arbitrary bytes.
+            let key = String::from_utf8(key.clone())?;
+            Ok((key, value.clone()))
+        })
+        .collect::<Result<SortedVectorMap<_, _>, Error>>()?;
 
     let author = String::from_utf8(cs.user().to_vec())
         .with_context(|| format!("While converting author name {:?}", cs.user()))?;
@@ -101,7 +106,7 @@ async fn find_file_changes(
     parent_manifests: Vec<HgManifestId>,
     repo: &BlobRepo,
     bonsai_parents: Vec<ChangesetId>,
-) -> Result<BTreeMap<MPath, Option<FileChange>>, Error> {
+) -> Result<SortedVectorMap<MPath, Option<FileChange>>, Error> {
     find_bonsai_diff(ctx, repo, cs, parent_manifests.iter().cloned().collect())
         .context("While finding bonsai diff")?
         .map_ok(|diff| {
@@ -152,7 +157,7 @@ async fn find_file_changes(
             }
         })
         .try_buffer_unordered(100) // TODO(stash): magic number?
-        .try_collect::<BTreeMap<_, _>>()
+        .try_collect::<SortedVectorMap<_, _>>()
         .await
 }
 

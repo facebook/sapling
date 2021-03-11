@@ -19,6 +19,7 @@ use mononoke_types::{
 };
 use serde_derive::Deserialize;
 use slog::Logger;
+use sorted_vector_map::SortedVectorMap;
 use std::collections::BTreeMap;
 
 use crate::error::SubcommandError;
@@ -116,7 +117,7 @@ impl DeserializableBonsaiChangeset {
             .map::<Result<_, Error>, _>(|(path, changes)| {
                 Ok((MPath::new(path.as_bytes())?, changes))
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<SortedVectorMap<_, _>, _>>()?;
         Ok(BonsaiChangesetMut {
             parents: self.parents,
             author: self.author,
@@ -124,8 +125,8 @@ impl DeserializableBonsaiChangeset {
             committer: self.committer,
             committer_date: self.committer_date,
             message: self.message,
-            extra: self.extra,
-            file_changes: files.into_iter().collect(),
+            extra: self.extra.into(),
+            file_changes: files,
         })
     }
 }

@@ -202,7 +202,7 @@ where
             ctx,
             repo,
             vec![parent_bcs_id],
-            file_changes,
+            file_changes.into(),
             resulting_changeset_args(StackPosition(idx)),
         )
         .await?;
@@ -226,9 +226,9 @@ mod test {
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs};
     use futures::FutureExt;
-    use maplit::btreemap;
     use mercurial_types::HgChangesetId;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime};
+    use sorted_vector_map::sorted_vector_map;
     use std::str::FromStr;
     use std::sync::Arc;
     use tests_utils::resolve_cs_id;
@@ -336,7 +336,7 @@ mod test {
                 file_changes,
             } = newcs.into_mut();
             assert_eq!(parents, vec![bcs_id]);
-            assert_eq!(file_changes, btreemap! {});
+            assert_eq!(file_changes, Default::default());
         });
     }
 
@@ -362,7 +362,7 @@ mod test {
             assert_eq!(parents, vec![bcs_id]);
             assert_eq!(
                 file_changes,
-                btreemap! {
+                sorted_vector_map! {
                     MPath::new("dir1/file_1_in_dir1").unwrap() => None
                 }
             );

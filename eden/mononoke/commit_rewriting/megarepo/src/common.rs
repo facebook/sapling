@@ -13,7 +13,7 @@ use context::CoreContext;
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange};
 use slog::info;
-use std::collections::BTreeMap;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::chunking::Chunker;
 
@@ -36,7 +36,7 @@ pub async fn create_save_and_generate_hg_changeset(
     ctx: &CoreContext,
     repo: &BlobRepo,
     parents: Vec<ChangesetId>,
-    file_changes: BTreeMap<MPath, Option<FileChange>>,
+    file_changes: SortedVectorMap<MPath, Option<FileChange>>,
     changeset_args: ChangesetArgs,
 ) -> Result<HgChangesetId, Error> {
     let bcs_id = create_and_save_bonsai(ctx, repo, parents, file_changes, changeset_args).await?;
@@ -47,7 +47,7 @@ pub async fn create_and_save_bonsai(
     ctx: &CoreContext,
     repo: &BlobRepo,
     parents: Vec<ChangesetId>,
-    file_changes: BTreeMap<MPath, Option<FileChange>>,
+    file_changes: SortedVectorMap<MPath, Option<FileChange>>,
     changeset_args: ChangesetArgs,
 ) -> Result<ChangesetId, Error> {
     let ChangesetArgs {
@@ -127,7 +127,7 @@ async fn create_bookmark(
 
 fn create_bonsai_changeset_only(
     parents: Vec<ChangesetId>,
-    file_changes: BTreeMap<MPath, Option<FileChange>>,
+    file_changes: SortedVectorMap<MPath, Option<FileChange>>,
     author: String,
     message: String,
     datetime: DateTime,
@@ -139,7 +139,7 @@ fn create_bonsai_changeset_only(
         committer: Some(author),
         committer_date: Some(datetime),
         message,
-        extra: BTreeMap::new(),
+        extra: Default::default(),
         file_changes,
     }
     .freeze()
@@ -167,7 +167,7 @@ pub async fn delete_files_in_chunks<'a>(
         }
 
         let changeset_args = delete_commits_changeset_args_factory(StackPosition(i));
-        let file_changes: BTreeMap<MPath, _> =
+        let file_changes: SortedVectorMap<MPath, _> =
             mpath_chunk.into_iter().map(|mp| (mp, None)).collect();
         info!(
             ctx.logger(),

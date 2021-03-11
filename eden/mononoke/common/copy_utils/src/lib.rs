@@ -21,6 +21,7 @@ use mononoke_types::{
 };
 use regex::Regex;
 use slog::{debug, info};
+use sorted_vector_map::SortedVectorMap;
 use std::{collections::BTreeMap, num::NonZeroU64};
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -187,7 +188,7 @@ async fn create_changesets(
         }
 
         info!(ctx.logger(), "creating csid with {} file changes", fc.len());
-        let bcs = create_bonsai_changeset(vec![parent], fc, author.clone(), msg.clone())?;
+        let bcs = create_bonsai_changeset(vec![parent], fc.into(), author.clone(), msg.clone())?;
 
         let cs_id = bcs.get_changeset_id();
         changesets.push(bcs);
@@ -292,7 +293,7 @@ async fn list_directory(
 
 fn create_bonsai_changeset(
     parents: Vec<ChangesetId>,
-    file_changes: BTreeMap<MPath, Option<FileChange>>,
+    file_changes: SortedVectorMap<MPath, Option<FileChange>>,
     author: String,
     message: String,
 ) -> Result<BonsaiChangeset, Error> {
@@ -303,7 +304,7 @@ fn create_bonsai_changeset(
         committer: None,
         committer_date: None,
         message,
-        extra: BTreeMap::new(),
+        extra: Default::default(),
         file_changes,
     }
     .freeze()

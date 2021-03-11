@@ -33,8 +33,9 @@ use mononoke_types::{
 use mononoke_types_mocks::contentid::{ONES_CTID, THREES_CTID, TWOS_CTID};
 use regex::Regex;
 use scuba_ext::MononokeScubaSampleBuilder;
+use sorted_vector_map::sorted_vector_map;
 use std::collections::hash_map::Entry;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use tests_utils::{bookmark, create_commit, store_files, CreateCommitContext};
 
 #[derive(Clone, Debug)]
@@ -1409,8 +1410,8 @@ fn default_changeset() -> BonsaiChangeset {
         committer: None,
         committer_date: None,
         message: "This is a commit message".to_string(),
-        extra: BTreeMap::new(),
-        file_changes: btreemap!{
+        extra: Default::default(),
+        file_changes: sorted_vector_map!{
             to_mpath("dir1/subdir1/subsubdir1/file_1") => Some(FileChange::new(ONES_CTID, FileType::Symlink, 15, None)),
             to_mpath("dir1/subdir1/subsubdir2/file_1") => Some(FileChange::new(TWOS_CTID, FileType::Regular, 17, None)),
             to_mpath("dir1/subdir1/subsubdir2/file_2") => Some(FileChange::new(THREES_CTID, FileType::Regular, 2, None)),

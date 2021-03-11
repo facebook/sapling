@@ -873,8 +873,8 @@ mod tests {
             committer: None,
             committer_date: None,
             message: message.to_string(),
-            extra: btreemap! {},
-            file_changes,
+            extra: Default::default(),
+            file_changes: file_changes.into(),
         }
         .freeze()
         .unwrap();

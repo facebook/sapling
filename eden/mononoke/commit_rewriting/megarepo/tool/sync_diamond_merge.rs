@@ -38,7 +38,8 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::fetch_skiplist_index;
 use slog::{info, warn};
-use std::collections::{BTreeMap, HashMap};
+use sorted_vector_map::SortedVectorMap;
+use std::collections::HashMap;
 use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
@@ -284,7 +285,7 @@ async fn generate_additional_file_changes(
     large_to_small: &CommitSyncer<SqlSyncedCommitMapping>,
     onto_value: ChangesetId,
     version: &CommitSyncConfigVersion,
-) -> Result<BTreeMap<MPath, Option<FileChange>>, Error> {
+) -> Result<SortedVectorMap<MPath, Option<FileChange>>, Error> {
     let bonsai_diff = find_bonsai_diff(ctx.clone(), &large_repo, root, onto_value)
         .collect()
         .compat()
@@ -309,7 +310,7 @@ async fn generate_additional_file_changes(
     }
 
     additional_file_changes
-        .try_collect::<BTreeMap<_, _>>()
+        .try_collect::<SortedVectorMap<_, _>>()
         .await
 }
 

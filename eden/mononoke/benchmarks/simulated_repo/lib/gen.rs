@@ -132,8 +132,8 @@ impl GenManifest {
                     committer: None,
                     committer_date: None,
                     message: "message".to_string(),
-                    extra: BTreeMap::new(),
-                    file_changes,
+                    extra: Default::default(),
+                    file_changes: file_changes.into(),
                 }
                 .freeze()
                 .expect("generated bonsai failed to freeze");

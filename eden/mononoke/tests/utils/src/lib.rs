@@ -266,8 +266,8 @@ impl<'a> CreateCommitContext<'a> {
             committer: None,
             committer_date: None,
             message: self.message.unwrap_or_else(|| String::from("message")),
-            extra: self.extra,
-            file_changes: btreemap! {},
+            extra: self.extra.into(),
+            file_changes: Default::default(),
         };
 
         for (path, file_change) in files {
@@ -607,8 +607,8 @@ pub async fn create_commit(
         committer: None,
         committer_date: None,
         message: "message".to_string(),
-        extra: btreemap! {},
-        file_changes,
+        extra: Default::default(),
+        file_changes: file_changes.into(),
     }
     .freeze()
     .unwrap();
@@ -634,8 +634,8 @@ pub async fn create_commit_with_date(
         committer: None,
         committer_date: None,
         message: "message".to_string(),
-        extra: btreemap! {},
-        file_changes,
+        extra: Default::default(),
+        file_changes: file_changes.into(),
     }
     .freeze()
     .unwrap();

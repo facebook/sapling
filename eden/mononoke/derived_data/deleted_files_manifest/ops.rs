@@ -399,7 +399,7 @@ mod tests {
     use mononoke_types::{
         BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, MPath,
     };
-    use std::collections::BTreeMap;
+    use sorted_vector_map::SortedVectorMap;
 
     #[fbinit::test]
     async fn test_find_entries(fb: FacebookInit) {
@@ -587,7 +587,7 @@ mod tests {
     async fn create_bonsai_changeset(
         fb: FacebookInit,
         repo: BlobRepo,
-        file_changes: BTreeMap<MPath, Option<FileChange>>,
+        file_changes: impl Into<SortedVectorMap<MPath, Option<FileChange>>>,
         parents: Vec<ChangesetId>,
     ) -> BonsaiChangeset {
         let bcs = BonsaiChangesetMut {
@@ -597,8 +597,8 @@ mod tests {
             committer: None,
             committer_date: None,
             message: "message".to_string(),
-            extra: btreemap! {},
-            file_changes,
+            extra: Default::default(),
+            file_changes: file_changes.into(),
         }
         .freeze()
         .unwrap();

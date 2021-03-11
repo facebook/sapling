@@ -36,6 +36,7 @@ use mononoke_types::{
     hash, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentMetadata, FileChange, MPath,
 };
 use slog::{debug, info};
+use sorted_vector_map::SortedVectorMap;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
 use std::path::Path;
@@ -102,7 +103,7 @@ async fn find_file_changes<S, B: Blobstore + Clone + 'static>(
     blobstore: &B,
     pool: GitPool,
     changes: S,
-) -> Result<BTreeMap<MPath, Option<FileChange>>, Error>
+) -> Result<SortedVectorMap<MPath, Option<FileChange>>, Error>
 where
     S: Stream<Item = Result<BonsaiDiffFileChange<GitLeaf>, Error>>,
 {
@@ -301,7 +302,7 @@ async fn import_bonsai_changeset(
     repo: &BlobRepo,
     metadata: CommitMetadata,
     parents: Vec<ChangesetId>,
-    file_changes: BTreeMap<MPath, Option<FileChange>>,
+    file_changes: SortedVectorMap<MPath, Option<FileChange>>,
     prefs: &GitimportPreferences,
 ) -> Result<BonsaiChangeset, Error> {
     let CommitMetadata {
@@ -314,7 +315,7 @@ async fn import_bonsai_changeset(
         ..
     } = metadata;
 
-    let mut extra = BTreeMap::new();
+    let mut extra = SortedVectorMap::new();
     if prefs.hggit_compatibility {
         extra.insert(
             HGGIT_COMMIT_ID_EXTRA.to_string(),
@@ -440,7 +441,7 @@ pub async fn import_tree_as_single_bonsai_changeset(
             }
         })
         .try_buffer_unordered(100)
-        .try_collect::<BTreeMap<_, _>>()
+        .try_collect::<SortedVectorMap<_, _>>()
         .await?;
 
     let bcs = import_bonsai_changeset(
