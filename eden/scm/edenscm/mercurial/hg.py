@@ -460,26 +460,58 @@ def clone(
     if not dest:
         raise error.Abort(_("empty destination path is not valid"))
 
+    destcreated = False
     destvfs = vfsmod.vfs(dest, expandpath=True)
     if destvfs.lexists():
         if not destvfs.isdir():
             raise error.Abort(_("destination '%s' already exists") % dest)
         elif destvfs.listdir():
             raise error.Abort(_("destination '%s' is not empty") % dest)
+    else:
+        destcreated = True
 
-    reponame = ui.config("remotefilelog", "reponame", "")
-    repo_ui = ui.copy()
-    uiconfig.applydynamicconfig(repo_ui, reponame, dest)
+    # Create the destination repo before we even open the connection to the
+    # source, so we can use any repo-specific configuration for the connection.
+    try:
+        destpeer = peer(ui, peeropts, dest, create=True)
+    except OSError as inst:
+        if inst.errno == errno.EEXIST:
+            cleandir = None
+            raise error.Abort(_("destination '%s' already exists") % dest)
+        raise
+    destrepo = destpeer.local()
 
+    # Get the source url, so we can write it into the dest hgrc
     if isinstance(source, str):
         origsource = ui.expandpath(source)
-        source, mayberevs = parseurl(origsource)
-        if len(mayberevs) == 1:
-            rev = rev or mayberevs[0]
-        srcpeer = peer(repo_ui, peeropts, source)
     else:
         srcpeer = source.peer()  # in case we were called with a localrepo
-        origsource = source = srcpeer.url()
+        origsource = source = source.peer().url()
+
+    abspath = origsource
+    if islocal(origsource):
+        abspath = os.path.abspath(util.urllocalpath(origsource))
+
+    if destrepo:
+        _writehgrc(destrepo, abspath)
+
+    # Construct the srcpeer after the destpeer, so we can use the destrepo.ui
+    # configs.
+    try:
+        if isinstance(source, str):
+            source, mayberevs = parseurl(origsource)
+            if len(mayberevs) == 1:
+                rev = rev or mayberevs[0]
+            srcpeer = peer(destrepo.ui if destrepo else ui, peeropts, source)
+    except Exception:
+        if destcreated:
+            # Clean up the entire repo directory we made.
+            shutil.rmtree(dest, True)
+        else:
+            # Clean up just the .hg directory we made.
+            shutil.rmtree(os.path.join(dest, ".hg"), True)
+        raise
+
     branch = (None, [])
     rev, checkout = addbranchrevs(srcpeer, srcpeer, branch, rev)
 
@@ -488,10 +520,6 @@ def clone(
     srclock = destlock = destlockw = cleandir = None
     srcrepo = srcpeer.local()
     try:
-        abspath = origsource
-        if islocal(origsource):
-            abspath = os.path.abspath(util.urllocalpath(origsource))
-
         if islocal(dest):
             cleandir = dest
 
@@ -526,7 +554,6 @@ def clone(
                 cleandir = hgdir
             try:
                 destpath = hgdir
-                util.makedir(destpath, notindexed=True)
             except OSError as inst:
                 if inst.errno == errno.EEXIST:
                     cleandir = None
@@ -550,24 +577,10 @@ def clone(
             # we need to re-init the repo after manually copying the data
             # into it
             destpeer = peer(srcrepo, peeropts, dest)
-            local = destpeer.local()
-            if local:
-                _writehgrc(local, abspath)
+            destrepo = destpeer.local()
             srcrepo.hook("outgoing", source="clone", node=node.hex(node.nullid))
         else:
             clonecodepath = "legacy-pull"
-            try:
-                destpeer = peer(srcrepo or ui, peeropts, dest, create=True)
-                # only pass ui when no srcrepo
-            except OSError as inst:
-                if inst.errno == errno.EEXIST:
-                    cleandir = None
-                    raise error.Abort(_("destination '%s' already exists") % dest)
-                raise
-            local = destpeer.local()
-            # Write [paths]. Code path below might use it.
-            if local:
-                _writehgrc(local, abspath)
 
             revs = None
             if rev:
@@ -584,7 +597,7 @@ def clone(
             # Can we use the new code path (stream clone + shallow + no
             # update + selective pull)?
             if (
-                local
+                destrepo
                 and not pull
                 and not update
                 and not rev
@@ -594,8 +607,8 @@ def clone(
                 and ui.configbool("remotenames", "selectivepull")
             ):
                 clonecodepath = "modern"
-                clonemod.shallowclone(srcpeer.url(), local)
-            elif local:
+                clonemod.shallowclone(srcpeer.url(), destrepo)
+            elif destrepo:
                 if ui.configbool("experimental", "new-clone-path"):
                     ui.log(
                         "features",
@@ -603,7 +616,7 @@ def clone(
                         feature="legacy-clone",
                         traceback=util.smarttraceback(),
                     )
-                with local.wlock(), local.lock(), local.transaction("clone"):
+                with destrepo.wlock(), destrepo.lock(), destrepo.transaction("clone"):
                     if not stream:
                         if pull:
                             stream = False
@@ -621,9 +634,9 @@ def clone(
                     opargs = {}
                     if shallow:
                         opargs["extras"] = {"shallow": True}
-                    with local.ui.configoverride(overrides, "clone"):
+                    with destrepo.ui.configoverride(overrides, "clone"):
                         exchange.pull(
-                            local,
+                            destrepo,
                             srcpeer,
                             revs,
                             streamclonerequested=stream,
@@ -638,7 +651,6 @@ def clone(
 
         cleandir = None
 
-        destrepo = destpeer.local()
         if destrepo:
             with destrepo.wlock(), destrepo.lock(), destrepo.transaction("clone"):
                 if destrepo.ui.configbool("format", "use-zstore-commit-data"):

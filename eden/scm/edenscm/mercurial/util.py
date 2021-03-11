@@ -1337,7 +1337,8 @@ def copyfiles(src, dst, hardlink=None, num=0, progress=None):
             hardlink = os.stat(src).st_dev == os.stat(os.path.dirname(dst)).st_dev
             if progress:
                 progress._topic = _("linking") if hardlink else _("copying")
-        os.mkdir(dst)
+        if not os.path.exists(dst):
+            os.mkdir(dst)
         for name, kind in listdir(src):
             srcname = os.path.join(src, name)
             dstname = os.path.join(dst, name)
