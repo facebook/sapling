@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-use anyhow::format_err;
+use anyhow::{format_err, Context};
 use async_trait::async_trait;
 use futures::prelude::*;
 use itertools::Itertools;
@@ -430,7 +430,10 @@ impl EdenApi for Client {
 
         let url = self.url(paths::FULL_IDMAP_CLONE_DATA, Some(&repo))?;
         let req = self.configure(Request::post(url))?;
-        let async_response = req.send_async().await?;
+        let async_response = req
+            .send_async()
+            .await
+            .context("error receiving async response")?;
         let response_bytes = async_response
             .body
             .try_fold(Vec::new(), |mut acc, v| {
@@ -441,7 +444,8 @@ impl EdenApi for Client {
                 acc.extend(v);
                 future::ok(acc)
             })
-            .await?;
+            .await
+            .context("error receiving bytes from server")?;
 
         let mut deserializer = Deserializer::from_slice(&response_bytes);
         let wire_clone_data =
