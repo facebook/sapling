@@ -359,6 +359,39 @@ def smartlogrevset(repo, subset, x):
     return subset & revs
 
 
+@revsetpredicate("draftbranch([set])")
+def draftbranchrevset(repo, subset, x):
+    """``draftbranch(set)``
+    The draft branches containing the given changesets.
+    """
+    args = revset.getargs(x, 1, 1, _("draftbranch expects one argument"))
+    revs = revset.getset(repo, subset, args[0])
+    return subset & repo.revs("(draft() & ::%ld)::", revs)
+
+
+@revsetpredicate("mutrelated([set])")
+def mutrelatedrevset(repo, subset, x):
+    """``mutrelated([set])``
+    Changesets that are related via mutations.
+    """
+    args = revset.getargs(x, 1, 1, _("mutrelated expects one argument"))
+    revs = revset.getset(repo, subset, args[0])
+    return subset & repo.revs("predecessors(%ld):: + successors(%ld)::", revs, revs)
+
+
+@revsetpredicate("focusedbranch([set])")
+def focusedbranchrevset(repo, subset, x):
+    """``focusedbranch([set])``
+    The focused branches of the given changesets, being the draft
+    stack and any draft changesets that are related via mutations.
+    """
+    args = revset.getargs(x, 1, 1, _("focusedbranch expects one argument"))
+    revs = revset.getset(repo, subset, args[0])
+    return subset & repo.revs(
+        "draft() & mutrelated(draftbranch(%ld)) + %ld", revs, revs
+    )
+
+
 def smartlognodes(repo, headnodes, masternodes):
     """Calculate nodes based on new DAG abstraction.
     This function does not use revs or revsets.
