@@ -1243,7 +1243,7 @@ def system(cmd, environ=None, cwd=None, out=None):
         pass
     cmd = quotecommand(cmd)
     env = shellenviron(environ)
-    if out is None or out.isatty():
+    if out is None or isatty(out):
         # If out is a tty (most likely stdout), then do not use subprocess.PIPE.
         rc = subprocess.call(cmd, shell=True, close_fds=closefds, env=env, cwd=cwd)
     else:
