@@ -1030,6 +1030,7 @@ mod test {
                         },
                         unode_version: UnodeVersion::V2,
                         blame_filesize_limit: Some(101),
+                        hg_set_committer_extra: false,
                     },
                     backfilling: DerivedDataTypesConfig::default(),
                     scuba_table: None,

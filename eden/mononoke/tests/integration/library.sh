@@ -1016,6 +1016,12 @@ types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "f
 CONFIG
 fi
 
+if [[ -n "${HG_SET_COMMITTER_EXTRA}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+hg_set_committer_extra = true
+CONFIG
+fi
+
 if [[ -n "${SEGMENTED_CHANGELOG_ENABLE:-}" ]] || \
    [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE:-}" ]] || \
    [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE_START_SAVE:-}" ]] || \
@@ -1864,6 +1870,17 @@ function git() {
   GIT_COMMITTER_DATE="$date" \
   GIT_COMMITTER_NAME="$name" \
   GIT_COMMITTER_EMAIL="$email" \
+  GIT_AUTHOR_DATE="$date" \
+  GIT_AUTHOR_NAME="$name" \
+  GIT_AUTHOR_EMAIL="$email" \
+  command git "$@"
+}
+
+function git_set_only_author() {
+  local date name email
+  date="01/01/0000 00:00 +0000"
+  name="mononoke"
+  email="mononoke@mononoke"
   GIT_AUTHOR_DATE="$date" \
   GIT_AUTHOR_NAME="$name" \
   GIT_AUTHOR_EMAIL="$email" \

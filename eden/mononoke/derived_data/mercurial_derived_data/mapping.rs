@@ -22,20 +22,25 @@ use derived_data::{
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct MappedHgChangesetId(pub HgChangesetId);
 
+#[derive(Debug, Clone)]
+pub struct HgChangesetDeriveOptions {
+    pub set_committer_field: bool,
+}
+
 #[async_trait]
 impl BonsaiDerivable for MappedHgChangesetId {
     const NAME: &'static str = "hgchangesets";
 
-    type Options = ();
+    type Options = HgChangesetDeriveOptions;
 
     async fn derive_from_parents_impl(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-        _options: &Self::Options,
+        options: &Self::Options,
     ) -> Result<Self, Error> {
-        crate::derive_hg_changeset::derive_from_parents(ctx, repo, bonsai, parents).await
+        crate::derive_hg_changeset::derive_from_parents(ctx, repo, bonsai, parents, options).await
     }
 }
 
@@ -43,13 +48,19 @@ impl BonsaiDerivable for MappedHgChangesetId {
 pub struct HgChangesetIdMapping {
     repo_id: RepositoryId,
     mapping: Arc<dyn BonsaiHgMapping>,
+    options: HgChangesetDeriveOptions,
 }
 
 impl HgChangesetIdMapping {
-    pub fn new(repo: &BlobRepo, _config: &DerivedDataTypesConfig) -> Result<Self, DeriveError> {
+    pub fn new(repo: &BlobRepo, config: &DerivedDataTypesConfig) -> Result<Self, DeriveError> {
+        let options = HgChangesetDeriveOptions {
+            set_committer_field: config.hg_set_committer_extra,
+        };
+
         Ok(Self {
             repo_id: repo.get_repoid(),
             mapping: repo.attribute_expected::<dyn BonsaiHgMapping>().clone(),
+            options,
         })
     }
 }
@@ -87,7 +98,9 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
         Ok(())
     }
 
-    fn options(&self) {}
+    fn options(&self) -> HgChangesetDeriveOptions {
+        self.options.clone()
+    }
 }
 
 #[async_trait]

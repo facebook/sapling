@@ -10,7 +10,7 @@ use crate::{
     nodehash::{HgChangesetId, HgManifestId},
     HgBlobNode, HgChangesetEnvelopeMut, HgNodeHash, HgParents, MPath,
 };
-use anyhow::Result;
+use anyhow::{bail, Error, Result};
 use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
@@ -44,6 +44,31 @@ impl ChangesetMetadata {
         }
 
         self.extra.insert(STEP_PARENTS_METADATA_KEY.into(), meta);
+    }
+
+    pub fn record_committer(
+        &mut self,
+        committer: &str,
+        committer_time: &DateTime,
+    ) -> Result<(), Error> {
+        let committer_key = "committer".as_bytes();
+        if self.extra.contains_key(committer_key) {
+            bail!("commiter extra is already set, can't insert another one!");
+        }
+
+
+        // Use the same format as hggit extension - https://fburl.com/diffusion/3ckf76fd
+        let value = format!(
+            "{} {} {}",
+            committer,
+            committer_time.timestamp_secs(),
+            committer_time.tz_offset_secs()
+        );
+
+        self.extra
+            .insert(committer_key.to_vec(), value.as_bytes().to_vec());
+
+        Ok(())
     }
 }
 

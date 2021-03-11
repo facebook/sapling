@@ -390,6 +390,7 @@ impl Convert for RawDerivedDataTypesConfig {
             types,
             unode_version,
             blame_filesize_limit,
+            hg_set_committer_extra: self.hg_set_committer_extra.unwrap_or(false),
         })
     }
 }

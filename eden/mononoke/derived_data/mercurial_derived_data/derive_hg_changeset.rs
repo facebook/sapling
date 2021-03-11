@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use crate::{derive_hg_manifest::derive_hg_manifest, mapping::MappedHgChangesetId};
-use anyhow::Error;
+use crate::{
+    derive_hg_manifest::derive_hg_manifest,
+    mapping::{HgChangesetDeriveOptions, MappedHgChangesetId},
+};
+use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
 use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::{Blobstore, Loadable};
@@ -261,6 +264,7 @@ pub(crate) async fn derive_from_parents(
     repo: BlobRepo,
     bonsai: BonsaiChangeset,
     parents: Vec<MappedHgChangesetId>,
+    options: &HgChangesetDeriveOptions,
 ) -> Result<MappedHgChangesetId, Error> {
     let parents = {
         borrowed!(ctx, repo);
@@ -271,7 +275,7 @@ pub(crate) async fn derive_from_parents(
         )
         .await?
     };
-    let hg_cs_id = generate_hg_changeset(repo, ctx, bonsai, parents).await?;
+    let hg_cs_id = generate_hg_changeset(repo, ctx, bonsai, parents, options).await?;
     Ok(MappedHgChangesetId(hg_cs_id))
 }
 
@@ -280,6 +284,7 @@ async fn generate_hg_changeset(
     ctx: CoreContext,
     bcs: BonsaiChangeset,
     parents: Vec<HgBlobChangeset>,
+    options: &HgChangesetDeriveOptions,
 ) -> Result<HgChangesetId, Error> {
     let start_timestamp = Instant::now();
     let parent_manifests = parents.iter().map(|p| p.manifestid()).collect();
@@ -322,6 +327,20 @@ async fn generate_hg_changeset(
         message: bcs.message().to_string(),
     };
     metadata.record_step_parents(step_parents.map(|blob| blob.get_changeset_id()));
+    if options.set_committer_field {
+        match (bcs.committer(), bcs.committer_date()) {
+            (Some(committer), Some(date)) => {
+                // Do not record committer if it's the same as author
+                if committer != bcs.author() || date != bcs.author_date() {
+                    metadata.record_committer(committer, date)?;
+                }
+            }
+            (None, None) => {}
+            _ => {
+                bail!("invalid committer/committer date in bonsai changeset");
+            }
+        };
+    }
 
     let content = HgChangesetContent::new_from_parts(hg_parents, manifest_id, metadata, files);
     let cs = HgBlobChangeset::new(content)?;

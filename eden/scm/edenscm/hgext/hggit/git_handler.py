@@ -1,3 +1,8 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
 import collections
 import itertools
 import os
@@ -51,7 +56,7 @@ RE_GIT_PROGRESS = re.compile("\((\d+)/(\d+)\)")
 
 RE_AUTHOR_FILE = re.compile("\s*=\s*")
 
-CALLBACK_BUFFER = ""
+CALLBACK_BUFFER = b""
 
 
 class GitProgress(object):
@@ -1217,16 +1222,16 @@ class GitHandler(object):
             # dulwich (perhaps git?) wraps remote output at a fixed width but
             # signifies the end of transmission with a double new line
             global CALLBACK_BUFFER
-            if remote_info and not remote_info.endswith("\n\n"):
+            if remote_info and not remote_info.endswith(b"\n\n"):
                 CALLBACK_BUFFER += remote_info
                 return
 
             remote_info = CALLBACK_BUFFER + remote_info
-            CALLBACK_BUFFER = ""
+            CALLBACK_BUFFER = b""
             if not remote_info:
-                remote_info = "\n"
+                remote_info = b"\n"
 
-            for line in remote_info[:-1].split("\n"):
+            for line in remote_info[:-1].split(b"\n"):
                 self.ui.status_err(_("remote: %s\n") % line)
 
         try:
