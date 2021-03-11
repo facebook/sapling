@@ -42,7 +42,7 @@ struct Inner {
     supports_executables: bool,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum UpdateFlag {
     Symlink,
     Executable,
@@ -244,8 +244,9 @@ impl VFS {
                 self.clear_conflicts(path).with_context(|| {
                     format!("Can't clear conflicts after handling error \"{:?}\"", e)
                 })?;
-                self.write_inner(path, data, flag)
-                    .with_context(|| format!("Can't write after handling error \"{:?}\"", e))
+                self.write_inner(path, data, flag).with_context(|| {
+                    format!("Can't write '{:?}' after handling error \"{:?}\"", path, e)
+                })
             }
         }
     }

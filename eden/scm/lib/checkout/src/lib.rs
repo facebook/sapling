@@ -29,6 +29,7 @@ pub struct CheckoutPlan {
 }
 
 /// Update content and (possibly) metadata on the file
+#[derive(Debug)]
 struct UpdateContentAction {
     /// Path to file.
     path: RepoPathBuf,
@@ -39,6 +40,7 @@ struct UpdateContentAction {
 }
 
 /// Only update metadata on the file, do not update content
+#[derive(Debug)]
 struct UpdateMetaAction {
     /// Path to file.
     path: RepoPathBuf,

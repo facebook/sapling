@@ -23,6 +23,7 @@ struct WorkItem {
     res: oneshot::Sender<Result<usize>>,
     action: Action,
 }
+#[derive(Debug)]
 enum Action {
     Write(RepoPathBuf, Bytes, Option<UpdateFlag>),
     Remove(RepoPathBuf),
