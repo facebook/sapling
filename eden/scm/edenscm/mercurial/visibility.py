@@ -13,7 +13,7 @@ import bindings
 from edenscm.mercurial import error, node, util
 from edenscm.mercurial.i18n import _
 
-from .pycompat import encodeutf8
+from .pycompat import encodeutf8, decodeutf8
 
 
 def _convertfromobsolete(repo):
@@ -56,6 +56,13 @@ def encodeheads(heads):
     )
 
 
+def decodeheads(data):
+    lines = decodeutf8(data).splitlines()
+    if lines and lines[0].strip() != FORMAT_VERSION:
+        raise error.Abort("invalid visibleheads file format %r" % lines[0])
+    return [node.bin(head.strip()) for head in lines[1:]]
+
+
 class visibleheads(object):
     """tracks visible non-public heads in the repostory
 
@@ -76,10 +83,7 @@ class visibleheads(object):
         self.vfs = vfs
         self._invisiblerevs = None
         try:
-            lines = self.vfs.readutf8("visibleheads").splitlines()
-            if lines and lines[0].strip() != FORMAT_VERSION:
-                raise error.Abort("invalid visibleheads file format %r" % lines[0])
-            self.heads = [node.bin(head.strip()) for head in lines[1:]]
+            self.heads = decodeheads(self.vfs.tryread("visibleheads"))
             self.dirty = False
             self._logheads("read", visibility_headcount=len(self.heads))
         except IOError as err:
