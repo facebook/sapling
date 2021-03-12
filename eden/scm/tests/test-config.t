@@ -9,7 +9,7 @@ Invalid syntax: no value
   > novaluekey
   > EOF
   $ hg showconfig
-  hg: parse errors: "$TESTTMP/.hg/hgrc":
+  hg: parse errors: "$TESTTMP*hgrc": (glob)
    --> 1:11
     |
   1 | novaluekey\xe2\x90\x8a (esc)
@@ -25,7 +25,7 @@ Invalid syntax: no key
   > =nokeyvalue
   > EOF
   $ hg showconfig
-  hg: parse errors: "$TESTTMP/.hg/hgrc":
+  hg: parse errors: "$TESTTMP*hgrc": (glob)
    --> 1:1
     |
   1 | =nokeyvalue\xe2\x90\x8a (esc)
@@ -41,7 +41,7 @@ Test hint about invalid syntax from leading white space
   >  key=value
   > EOF
   $ hg showconfig
-  hg: parse errors: "$TESTTMP/.hg/hgrc":
+  hg: parse errors: "$TESTTMP*hgrc": (glob)
    --> 1:2
     |
   1 |  key=value\xe2\x90\x8a (esc)
@@ -56,7 +56,7 @@ Test hint about invalid syntax from leading white space
   > key=value
   > EOF
   $ hg showconfig
-  hg: parse errors: "$TESTTMP/.hg/hgrc":
+  hg: parse errors: "$TESTTMP*hgrc": (glob)
    --> 1:2
     |
   1 |  [section]\xe2\x90\x8a (esc)
