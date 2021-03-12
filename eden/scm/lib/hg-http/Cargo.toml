@@ -5,5 +5,8 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+async-runtime = { path = "../async-runtime" }
 hg-metrics = { path = "../hg-metrics" }
 http-client = { path = "../http-client" }
+once_cell = "1.4"
+progress-model = { path = "../progress/model" }
