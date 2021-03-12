@@ -62,6 +62,7 @@ const ARG_GIT_COMMIT: &str = "git-commit";
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let app = args::MononokeAppBuilder::new("Mononoke Git Importer")
         .with_repo_required(RepoRequirement::ExactlyOne)
+        .with_fb303_args()
         .build()
         .arg(
             Arg::with_name(ARG_DERIVE_TREES)
