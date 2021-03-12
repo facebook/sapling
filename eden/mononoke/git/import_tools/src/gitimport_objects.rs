@@ -50,7 +50,6 @@ async fn load_git_tree(oid: Oid, pool: &GitPool) -> Result<GitManifest, Error> {
         let elements = tree
             .iter()
             .map(|entry| {
-                let oid = entry.id();
                 let filemode = entry.filemode();
                 let name = MPathElement::new(entry.name_bytes().into())?;
 
@@ -58,15 +57,35 @@ async fn load_git_tree(oid: Oid, pool: &GitPool) -> Result<GitManifest, Error> {
                     Some(ObjectType::Blob) => {
                         let ft = convert_git_filemode(filemode)?;
 
-                        (name, Entry::Leaf((ft, GitLeaf(oid))))
+                        Some((name, Entry::Leaf((ft, GitLeaf(entry.id())))))
                     }
-                    Some(ObjectType::Tree) => (name, Entry::Tree(GitTree(oid))),
+                    Some(ObjectType::Tree) => Some((name, Entry::Tree(GitTree(entry.id())))),
+
+                    // git-sub-modules are represented as ObjectType::Commit inside the tree.
+                    // For now we do not support git-sub-modules but we still need to import
+                    // repositories that has sub-modules in them (just not synchronized), so
+                    // ignoring any sub-module for now.
+                    Some(ObjectType::Commit) => None,
+
                     k => {
-                        return Err(format_err!("Invalid kind: {:?}", k));
+                        return Err(format_err!(
+                            "Invalid kind: {:?} id:{} name:{} parent:{}",
+                            k,
+                            entry.id(),
+                            name,
+                            oid
+                        )
+                        .context("load_git_tree"));
                     }
                 };
 
                 Ok(r)
+            })
+            .filter(|entry| if let Ok(None) = entry { false } else { true })
+            .map(|entry| match entry {
+                Ok(Some(v)) => Ok(v),
+                Err(v) => Err(v),
+                _ => Err(format_err!("Should have been filtered out")),
             })
             .collect::<Result<HashMap<_, _>, Error>>()?;
 
