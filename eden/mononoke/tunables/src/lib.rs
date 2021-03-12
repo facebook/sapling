@@ -135,6 +135,9 @@ pub struct MononokeTunables {
 
     // Disable putting hydrating manifests in .hg
     disable_hydrating_manifests_in_dot_hg: AtomicBool,
+
+    // Enable storing prepushrebase changeset id in bonsai changeset extra
+    enable_storing_prepushrebase_cs_id_in_extra: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
