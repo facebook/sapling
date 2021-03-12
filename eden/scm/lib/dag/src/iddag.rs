@@ -422,7 +422,13 @@ impl<Store: IdDagStore> IdDag<Store> {
                 }
 
                 // Build the graph from the first head. `low_idx` is the
-                // index of `segments`.
+                // index of `segments` (level - 1).
+
+                // find_segment scans low level segments (segments[low_idx..]),
+                // merges them on the fly, and returns a high-level segment:
+                // (new_idx, low, high, parents, has_root).
+                // new_idx + 1 is the next low_idx that should be passed to find_segment
+                // to calculate the next high-level segment.
                 let find_segment = |low_idx: usize| -> Result<_> {
                     let segment_low = segments[low_idx].span()?.low;
                     let mut heads = BTreeSet::new();
@@ -430,13 +436,26 @@ impl<Store: IdDagStore> IdDag<Store> {
                     let mut candidate = None;
                     let mut has_root = false;
                     for i in low_idx..segments.len().min(low_idx + size) {
-                        let head = segments[i].head()?;
+                        // [--------------------------] level (to build)
+                        // [------] [------] [--------] level - 1 (lower level)
+                        // ^        ^
+                        // |        segments[i].low
+                        // segment_low
+                        let span = segments[i].span()?;
+                        let head = span.high;
                         if !has_root && segments[i].has_root()? {
                             has_root = true;
                         }
                         heads.insert(head);
                         let direct_parents = get_parents(head)?;
                         for p in &direct_parents {
+                            if *p >= span.low {
+                                return bug(format!(
+                                    "invalid lv{} segment: {:?} (parent >= low)",
+                                    level - 1,
+                                    &segments[i]
+                                ));
+                            }
                             if *p < segment_low {
                                 // No need to remove p from heads, since it cannot be a head.
                                 parents.insert(*p);

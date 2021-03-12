@@ -145,6 +145,7 @@ impl Segment {
         parents: &[Id],
     ) -> Self {
         debug_assert!(high >= low);
+        debug_assert!(parents.iter().all(|&p| p < low));
         let mut buf = Vec::with_capacity(1 + 8 + (parents.len() + 2) * 4);
         buf.write_u8(flags.bits()).unwrap();
         buf.write_u8(level).unwrap();
@@ -238,9 +239,9 @@ mod tests {
                 SegmentFlags::empty()
             };
             let high = low + delta;
+            let parents: Vec<Id> = parents.into_iter().filter(|&p| p < low).map(Id).collect();
             let low = Id(low);
             let high = Id(high);
-            let parents: Vec<Id> = parents.into_iter().map(Id).collect();
             let node = Segment::new(flags, level, low, high, &parents);
             node.flags().unwrap() == flags
                 && node.level().unwrap() == level
