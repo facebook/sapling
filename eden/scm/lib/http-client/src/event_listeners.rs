@@ -101,6 +101,14 @@ gen_event_listeners! {
     }
 }
 
+gen_event_listeners! {
+    /// Events for request creation (both independent requests and requests via `HttpClient`)
+    RequestCreationEventListeners {
+        /// A request is created.
+        new_request(req: &mut RequestContext),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::atomic::AtomicUsize;

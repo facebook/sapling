@@ -16,11 +16,14 @@ use curl::{
     self,
     easy::{Easy2, HttpVersion, List},
 };
+use once_cell::sync::Lazy;
+use parking_lot::RwLock;
 use serde::Serialize;
 use url::Url;
 
 use crate::{
     errors::HttpClientError,
+    event_listeners::RequestCreationEventListeners,
     event_listeners::RequestEventListeners,
     handler::{Buffered, HandlerExt, Streaming},
     receiver::{ChannelReceiver, Receiver},
@@ -86,6 +89,9 @@ pub struct Request {
     http_version: HttpVersion,
     min_transfer_speed: Option<MinTransferSpeed>,
 }
+
+static REQUEST_CREATION_LISTENERS: Lazy<RwLock<RequestCreationEventListeners>> =
+    Lazy::new(Default::default);
 
 impl RequestContext {
     /// Create a [`RequestContext`].
@@ -302,9 +308,12 @@ impl Request {
     /// Turn this `Request` into a `curl::Easy2` handle using
     /// the given `Handler` to process the response.
     pub(crate) fn into_handle<H: HandlerExt>(
-        self,
+        mut self,
         create_handler: impl FnOnce(RequestContext) -> H,
     ) -> Result<Easy2<H>, HttpClientError> {
+        REQUEST_CREATION_LISTENERS
+            .read()
+            .trigger_new_request(&mut self.ctx);
         let body_size = self.ctx.body.as_ref().map(|body| body.len() as u64);
         let url = self.ctx.url.clone();
         let handler = create_handler(self.ctx);
@@ -378,6 +387,11 @@ impl Request {
 
         Ok(easy)
     }
+
+    /// Register a callback function that is called on new requests.
+    pub fn on_new_request(f: impl Fn(&mut RequestContext) + Send + Sync + 'static) {
+        REQUEST_CREATION_LISTENERS.write().on_new_request(f);
+    }
 }
 
 impl TryFrom<Request> for Easy2<Buffered> {
@@ -418,6 +432,9 @@ impl<R: Receiver> TryFrom<StreamRequest<R>> for Easy2<Streaming<R>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::sync::atomic::Ordering::Acquire;
+    use std::sync::Arc;
 
     use anyhow::Result;
     use futures::TryStreamExt;
@@ -655,5 +672,29 @@ mod tests {
 
         let req2 = RequestContext::dummy();
         assert_ne!(req.id(), req2.id());
+    }
+
+    #[test]
+    fn test_request_callback() -> Result<()> {
+        let called = Arc::new(AtomicUsize::new(0));
+        Request::on_new_request({
+            let called = called.clone();
+            move |req| {
+                // The callback can receive requests in other tests.
+                // So we need to check the request is sent by this test.
+                if req.url().path() == "/test_callback" {
+                    called.fetch_add(1, AcqRel);
+                }
+            }
+        });
+
+        let mock = mock("HEAD", "/test_callback").with_status(200).create();
+        let url = Url::parse(&mockito::server_url())?.join("test_callback")?;
+        let _res = Request::head(url).send()?;
+
+        mock.assert();
+        assert_eq!(called.load(Acquire), 1);
+
+        Ok(())
     }
 }
