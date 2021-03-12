@@ -9,7 +9,9 @@ use anyhow::{bail, format_err, Result};
 use futures::{stream, try_join, Stream, StreamExt};
 use manifest::{DiffEntry, DiffType, FileMetadata, FileType, Manifest};
 use pathmatcher::{Matcher, XorMatcher};
-use revisionstore::{HgIdDataStore, RemoteDataStore, StoreKey, StoreResult};
+use revisionstore::{
+    datastore::strip_metadata, HgIdDataStore, RemoteDataStore, StoreKey, StoreResult,
+};
 use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use types::{HgId, Key, RepoPath, RepoPathBuf};
@@ -177,6 +179,10 @@ impl CheckoutPlan {
                     StoreResult::Found(data) => data,
                     StoreResult::NotFound(key) => bail!("Key {:?} not found in data store", key),
                 };
+                // two lines below is a short term fix until we switch to EdenFs store that does stripping for us
+                let (data, _) = strip_metadata(&data.into())?;
+                // workaround for bug in Bytes::into_vec that does not respect Bytes slicing
+                let data: Vec<_> = (&data[..]).into();
                 let path = action.path.clone();
                 let flag = type_to_flag(&action.file_type);
                 Ok((path, data, flag))
