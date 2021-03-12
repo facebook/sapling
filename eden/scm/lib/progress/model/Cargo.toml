@@ -5,6 +5,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+arc-swap = "1.1"
 parking_lot = "0.10.2"
 paste = "1.0"
 tokio = { version = "1", features = ["full", "test-util"] }
