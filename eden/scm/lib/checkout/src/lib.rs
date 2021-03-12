@@ -187,8 +187,7 @@ impl CheckoutPlan {
                 };
                 // two lines below is a short term fix until we switch to EdenFs store that does stripping for us
                 let (data, _) = strip_metadata(&data.into())?;
-                // workaround for bug in Bytes::into_vec that does not respect Bytes slicing
-                let data: Vec<_> = (&data[..]).into();
+                let data: Vec<_> = data.into_vec();
                 let path = action.path.clone();
                 let flag = type_to_flag(&action.file_type);
                 Ok((path, data, flag))
