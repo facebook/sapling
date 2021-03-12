@@ -18,6 +18,9 @@ pub struct Checkpoint {
     pub upper_bound: u64,
     pub create_timestamp: Timestamp,
     pub update_timestamp: Timestamp,
+    pub update_run_number: u64,
+    pub update_chunk_number: u64,
+    pub last_finish_timestamp: Option<Timestamp>,
 }
 
 impl Checkpoint {
@@ -93,6 +96,16 @@ impl CheckpointsByName {
             .update(repo_id, &self.checkpoint_name, checkpoint)
             .await
     }
+
+    pub async fn finish(
+        &self,
+        repo_id: RepositoryId,
+        checkpoint: &Checkpoint,
+    ) -> Result<(), Error> {
+        self.sql_checkpoints
+            .finish(repo_id, &self.checkpoint_name, checkpoint)
+            .await
+    }
 }
 
 impl fmt::Debug for CheckpointsByName {
@@ -135,6 +148,9 @@ impl SqlCheckpoints {
             upper_bound: row.1,
             create_timestamp: row.2,
             update_timestamp: row.3,
+            update_run_number: row.4,
+            update_chunk_number: row.5,
+            last_finish_timestamp: row.6,
         }))
     }
 
@@ -154,6 +170,8 @@ impl SqlCheckpoints {
                 &checkpoint.upper_bound,
                 &checkpoint.create_timestamp,
                 &checkpoint.update_timestamp,
+                &checkpoint.update_run_number,
+                &checkpoint.update_chunk_number,
             )],
         )
         .await?;
@@ -175,6 +193,29 @@ impl SqlCheckpoints {
             &checkpoint.upper_bound,
             &checkpoint.create_timestamp,
             &checkpoint.update_timestamp,
+            &checkpoint.update_run_number,
+            &checkpoint.update_chunk_number,
+        )
+        .await?;
+        Ok(())
+    }
+
+    pub async fn finish(
+        &self,
+        repo_id: RepositoryId,
+        // Query macro wants &String rather than &str
+        checkpoint_name: &String,
+        checkpoint: &Checkpoint,
+    ) -> Result<(), Error> {
+        FinishCheckpoint::query(
+            &self.connections.write_connection,
+            &repo_id,
+            checkpoint_name,
+            &checkpoint.lower_bound,
+            &checkpoint.upper_bound,
+            &checkpoint.update_timestamp,
+            &checkpoint.update_run_number,
+            &checkpoint.update_chunk_number,
         )
         .await?;
         Ok(())
@@ -187,8 +228,8 @@ queries! {
     read SelectCheckpoint(
         repo_id: RepositoryId,
         checkpoint_name: &str,
-    ) -> (u64, u64, Timestamp, Timestamp) {
-        "SELECT lower_bound, upper_bound, create_timestamp, update_timestamp
+    ) -> (u64, u64, Timestamp, Timestamp, u64, u64, Option<Timestamp>) {
+        "SELECT lower_bound, upper_bound, create_timestamp, update_timestamp, update_run_number, update_chunk_number, last_finish_timestamp
         FROM walker_checkpoints WHERE repo_id={repo_id} AND checkpoint_name={checkpoint_name}"
     }
 
@@ -200,11 +241,13 @@ queries! {
             upper_bound: u64,
             create_timestamp: Timestamp,
             update_timestamp: Timestamp,
+            update_run_number: u64,
+            update_chunk_number: u64,
         ),
     ) {
         none,
         "INSERT INTO walker_checkpoints
-         (repo_id, checkpoint_name, lower_bound, upper_bound, create_timestamp, update_timestamp)
+         (repo_id, checkpoint_name, lower_bound, upper_bound, create_timestamp, update_timestamp, update_run_number, update_chunk_number)
          VALUES {values}"
     }
 
@@ -215,10 +258,27 @@ queries! {
         upper_bound: u64,
         create_timestamp: Timestamp,
         update_timestamp: Timestamp,
+        update_run_number: u64,
+        update_chunk_number: u64,
     ) {
         none,
         "UPDATE walker_checkpoints
-        SET lower_bound={lower_bound}, upper_bound={upper_bound}, create_timestamp={create_timestamp}, update_timestamp={update_timestamp}
+        SET lower_bound={lower_bound}, upper_bound={upper_bound}, create_timestamp={create_timestamp}, update_timestamp={update_timestamp}, update_run_number={update_run_number}, update_chunk_number={update_chunk_number}
+        WHERE repo_id={repo_id} AND checkpoint_name={checkpoint_name}"
+    }
+
+    write FinishCheckpoint(
+        repo_id: RepositoryId,
+        checkpoint_name: String,
+        lower_bound: u64,
+        upper_bound: u64,
+        last_finish_timestamp: Timestamp,
+        last_finish_run_number: u64,
+        last_finish_chunk_number: u64,
+    ) {
+        none,
+        "UPDATE walker_checkpoints
+        SET lower_bound={lower_bound}, upper_bound={upper_bound}, last_finish_timestamp={last_finish_timestamp}, last_finish_run_number={last_finish_run_number}, last_finish_chunk_number={last_finish_chunk_number}
         WHERE repo_id={repo_id} AND checkpoint_name={checkpoint_name}"
     }
 }
@@ -246,6 +306,9 @@ mod tests {
             upper_bound,
             create_timestamp: now,
             update_timestamp: now,
+            update_run_number: 1,
+            update_chunk_number: 1,
+            last_finish_timestamp: None,
         };
         checkpoints.insert(repo_id, &initial).await?;
 
@@ -264,6 +327,14 @@ mod tests {
         let roundtripped2 = checkpoints.load(repo_id).await?;
         assert_ne!(Some(&initial), roundtripped2.as_ref());
         assert_eq!(Some(&updated), roundtripped2.as_ref());
+
+        // Finish
+        checkpoints.finish(repo_id, &updated).await?;
+        let roundtripped3 = checkpoints.load(repo_id).await?;
+        assert_eq!(
+            roundtripped2.map(|o| o.update_timestamp),
+            roundtripped3.and_then(|o| o.last_finish_timestamp),
+        );
 
         Ok(())
     }

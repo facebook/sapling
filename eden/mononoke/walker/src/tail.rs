@@ -180,8 +180,11 @@ where
                 let age_secs = checkpoint.create_timestamp.since_seconds();
                 if age_secs >= 0 && Duration::from_secs(age_secs as u64) > tail_params.state_max_age
                 {
-                    info!(repo_params.logger, #log::CHUNKING, "Checkpoint is too old at {}s, running from repo bounds", age_secs);
-                    // Reset checkpoints create_timestamp as we're starting again
+                    info!(repo_params.logger, #log::CHUNKING, "Checkpoint run {} chunk {} is too old at {}s, running from repo bounds",
+                        checkpoint.update_run_number, checkpoint.update_chunk_number, age_secs);
+                    // Increment checkpoints run, reset chunk and create_timestamp as we're starting again
+                    checkpoint.update_run_number += 1;
+                    checkpoint.update_chunk_number = 0;
                     checkpoint.create_timestamp = Timestamp::now();
                     (true, None, None, Some((lower, upper)))
                 } else {
@@ -194,7 +197,8 @@ where
                         (Some(_), None) => false,
                         _ => true,
                     };
-                    info!(repo_params.logger, #log::CHUNKING, "Continuing from checkpoint with catchup {:?} and main {:?} bounds", catchup_bounds, main_bounds);
+                    info!(repo_params.logger, #log::CHUNKING, "Continuing from checkpoint run {} chunk {} with catchup {:?} and main {:?} bounds",
+                        checkpoint.update_run_number, checkpoint.update_chunk_number, catchup_bounds, main_bounds);
                     (
                         contiguous_bounds,
                         Some(checkpoint.lower_bound),
@@ -231,6 +235,9 @@ where
         };
 
         let mut chunk_num: u64 = 0;
+        if let Some(checkpoint) = checkpoint.as_ref() {
+            chunk_num = checkpoint.update_chunk_number;
+        }
 
         futures::pin_mut!(chunk_stream);
         while let Some(chunk_members) = chunk_stream.try_next().await? {
@@ -300,7 +307,7 @@ where
                                 if let Some(checkpoint) = &mut checkpoint {
                                     checkpoint.lower_bound = new_best;
                                     checkpoint.upper_bound = *repo_high_bound;
-                                    checkpoint.update_timestamp = now;
+                                    checkpoint.update_chunk_number = chunk_num;
                                     info!(logger, #log::CHUNKING, "Chunk {} updating checkpoint to ({}, {})", chunk_num, new_best, repo_high_bound);
                                     checkpoints.update(repo_id, checkpoint).await?;
                                 } else {
@@ -309,6 +316,9 @@ where
                                         upper_bound: *repo_high_bound,
                                         create_timestamp: now,
                                         update_timestamp: now,
+                                        update_run_number: 1,
+                                        update_chunk_number: chunk_num,
+                                        last_finish_timestamp: None,
                                     };
                                     info!(logger, #log::CHUNKING, "Chunk {} inserting checkpoint ({}, {})", chunk_num, new_best, repo_high_bound);
                                     checkpoints.insert(repo_id, &new_cp).await?;
@@ -330,6 +340,11 @@ where
                 // If lower bound overridden then not contiguous to repo start. Overriding upper bound should not result in deferred.
                 && tail_params.repo_lower_bound_override.is_none(),
         )?;
+
+        match (tail_params.checkpoints.as_ref(), checkpoint.as_ref()) {
+            (Some(checkpoints), Some(cp)) => checkpoints.finish(repo_id, cp).await?,
+            _ => {}
+        }
 
         if let Some((chunk_size, _heads_fetcher)) = &chunk_params {
             info!(

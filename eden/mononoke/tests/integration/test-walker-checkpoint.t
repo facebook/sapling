@@ -58,8 +58,8 @@ test restoring from checkpoint, scrub should have no chunks to do as checkpoint 
   $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Found checkpoint with bounds: (1, 4)
   Repo bounds: (1, 4)
-  Continuing from checkpoint with catchup None and main None bounds
-  Completed in 0 chunks of size 2
+  Continuing from checkpoint run 1 chunk 2 with catchup None and main None bounds
+  Completed in 2 chunks of size 2
 
 run to a new checkpoint name, with checkpoint sampling set so that last chunk not included in checkpoint
   $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=2 --checkpoint-name=bonsai_deep2 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
@@ -80,11 +80,11 @@ run again, should have no catchup, but main bounds will continue from checkpoint
   $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=2 --checkpoint-name=bonsai_deep2 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Found checkpoint with bounds: (2, 4)
   Repo bounds: (1, 4)
-  Continuing from checkpoint with catchup None and main Some((1, 2)) bounds
-  Starting chunk 1 with bounds (1, 2)
+  Continuing from checkpoint run 1 chunk 2 with catchup None and main Some((1, 2)) bounds
+  Starting chunk 3 with bounds (1, 2)
   Seen,Loaded: 2,2
   Deferred: 0
-  Completed in 1 chunks of size 1
+  Completed in 3 chunks of size 1
 
 additional commit
   $ cd repo-hg
@@ -96,11 +96,11 @@ run again, should catchup with new data since checkpoint and nothing to do in ma
   $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=2 --checkpoint-name=bonsai_deep --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Found checkpoint with bounds: (1, 4)
   Repo bounds: (1, 5)
-  Continuing from checkpoint with catchup Some((4, 5)) and main None bounds
-  Starting chunk 1 with bounds (4, 5)
+  Continuing from checkpoint run 1 chunk 2 with catchup Some((4, 5)) and main None bounds
+  Starting chunk 3 with bounds (4, 5)
   Seen,Loaded: 2,2
   Deferred: 0
-  Completed in 1 chunks of size 2
+  Completed in 3 chunks of size 2
 
 setup for both a catchup due to a new commit, plus continuation from a checkpoint.  First create the partial checkpoint by setting sample rate
   $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
@@ -130,22 +130,22 @@ finally, should have a run with both catchup and main bounds
   $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Found checkpoint with bounds: (2, 5)
   Repo bounds: (1, 6)
-  Continuing from checkpoint with catchup Some((5, 6)) and main Some((1, 2)) bounds
-  Starting chunk 1 with bounds (5, 6)
+  Continuing from checkpoint run 1 chunk 3 with catchup Some((5, 6)) and main Some((1, 2)) bounds
+  Starting chunk 4 with bounds (5, 6)
   Seen,Loaded: 2,2
   Deferred: 1
-  Starting chunk 2 with bounds (1, 2)
+  Starting chunk 5 with bounds (1, 2)
   Seen,Loaded: 2,2
   Deferred: 1
   Deferred edge counts by type were: ChangesetToBonsaiParent:1
-  Completed in 2 chunks of size 1
+  Completed in 5 chunks of size 1
 
 Check that the checkpoint low bound is not used if its too old
   $ sleep 2
   $ mononoke_walker -L sizing -L graph scrub -q -p Changeset --chunk-size=5 --state-max-age=1 --checkpoint-sample-rate=3 --checkpoint-name=bonsai_deep3 --checkpoint-path=test_sqlite -I deep -i bonsai -i FileContent 2>&1 | strip_glog
   Found checkpoint with bounds: (2, 5)
   Repo bounds: (1, 6)
-  Checkpoint is too old at *s, running from repo bounds (glob)
+  Checkpoint run 1 chunk 3 is too old at *s, running from repo bounds (glob)
   Starting chunk 1 with bounds (1, 6)
   Seen,Loaded: 10,10
   Deferred: 0
