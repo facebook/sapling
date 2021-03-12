@@ -777,7 +777,7 @@ impl MononokeAppBuilder {
                 .takes_value(true)
                 .possible_values(BOOL_VALUES)
                 .required(false)
-                .default_value(bool_as_str(false))
+                .default_value(bool_as_str(true))
                 .help("Whether to allow Manifold blobstore to use the C++ client"),
         )
         .arg(
