@@ -72,6 +72,12 @@ struct Fsck {
   }
 };
 
+struct MissingProxyHash {
+  static constexpr const char* type = "missing_proxy_hash";
+
+  void populate(DynamicEvent&) const {}
+};
+
 struct FetchHeavy {
   static constexpr const char* type = "fetch_heavy";
 

@@ -16,6 +16,7 @@
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
 
 // TODO(T80017182) enable these tests in TSAN mode.
@@ -73,6 +74,7 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
         stats,
         std::move(backingStore),
         std::shared_ptr<ReloadableConfig>(),
+        std::make_shared<NullStructuredLogger>(),
         std::make_unique<BackingStoreLogger>(),
         1);
   }

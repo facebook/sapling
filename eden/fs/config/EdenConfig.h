@@ -321,6 +321,15 @@ class EdenConfig : private ConfigSettingManager {
       this};
 
   /**
+   * The minimum duration between logging occurrences of failed HgProxyHash
+   * loads.
+   */
+  ConfigSetting<std::chrono::nanoseconds> missingHgProxyHashLogInterval{
+      "store:missing-hgproxyhash-log-interval",
+      std::chrono::minutes{10},
+      this};
+
+  /**
    * The maximum time duration allowed for a fuse request. If a request exceeds
    * this amount of time, an ETIMEDOUT error will be returned to the kernel to
    * avoid blocking forever.

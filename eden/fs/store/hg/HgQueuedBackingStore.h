@@ -31,6 +31,7 @@ class HgBackingStore;
 class LocalStore;
 class EdenStats;
 class HgImportRequest;
+class StructuredLogger;
 
 constexpr uint8_t kNumberHgQueueWorker = 8;
 
@@ -102,6 +103,7 @@ class HgQueuedBackingStore : public BackingStore {
       std::shared_ptr<EdenStats> stats,
       std::unique_ptr<HgBackingStore> backingStore,
       std::shared_ptr<ReloadableConfig> config,
+      std::shared_ptr<StructuredLogger> structuredLogger,
       std::unique_ptr<BackingStoreLogger> logger,
       uint8_t numberThreads = kNumberHgQueueWorker);
 
@@ -168,6 +170,8 @@ class HgQueuedBackingStore : public BackingStore {
    * The worker runloop function.
    */
   void processRequest();
+
+  void logMissingProxyHash();
 
   /**
    * Logs a backing store fetch to scuba if the path being fetched is
@@ -236,10 +240,17 @@ class HgQueuedBackingStore : public BackingStore {
    */
   std::vector<std::thread> threads_;
 
+  std::shared_ptr<StructuredLogger> structuredLogger_;
+
   /**
    * Logger for backing store imports
    */
   std::unique_ptr<BackingStoreLogger> logger_;
+
+  // The last time we logged a missing proxy hash so the minimum interval is
+  // limited to EdenConfig::missingHgProxyHashLogInterval.
+  folly::Synchronized<std::chrono::steady_clock::time_point>
+      lastMissingProxyHashLog_;
 
   // Track metrics for queued imports
   mutable RequestMetricsScope::LockedRequestWatchList pendingImportBlobWatches_;

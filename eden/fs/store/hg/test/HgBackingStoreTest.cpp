@@ -105,6 +105,7 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
           stats,
           MetadataImporter::getMetadataImporterFactory<TestMetadataImporter>()),
       nullptr,
+      std::make_shared<NullStructuredLogger>(),
       nullptr)};
   std::shared_ptr<ObjectStore> objectStore{ObjectStore::create(
       localStore,

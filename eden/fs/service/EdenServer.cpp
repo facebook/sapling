@@ -1630,6 +1630,7 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
         getSharedStats(),
         std::move(store),
         reloadableConfig,
+        serverState_->getStructuredLogger(),
         std::make_unique<BackingStoreLogger>(
             serverState_->getStructuredLogger(),
             serverState_->getProcessNameCache()));

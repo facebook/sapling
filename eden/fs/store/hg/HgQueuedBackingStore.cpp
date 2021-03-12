@@ -29,6 +29,7 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/IDGen.h"
@@ -69,12 +70,14 @@ HgQueuedBackingStore::HgQueuedBackingStore(
     std::shared_ptr<EdenStats> stats,
     std::unique_ptr<HgBackingStore> backingStore,
     std::shared_ptr<ReloadableConfig> config,
+    std::shared_ptr<StructuredLogger> structuredLogger,
     std::unique_ptr<BackingStoreLogger> logger,
     uint8_t numberThreads)
     : localStore_(std::move(localStore)),
       stats_(std::move(stats)),
       config_(std::move(config)),
       backingStore_(std::move(backingStore)),
+      structuredLogger_{std::move(structuredLogger)},
       logger_(std::move(logger)),
       traceBus_{TraceBus<HgImportTraceEvent>::create("hg", kTraceBusCapacity)} {
   threads_.reserve(numberThreads);
@@ -220,7 +223,13 @@ void HgQueuedBackingStore::processRequest() {
 folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
     const Hash& id,
     ObjectFetchContext& context) {
-  auto proxyHash = HgProxyHash::load(localStore_.get(), id, "getTree");
+  HgProxyHash proxyHash;
+  try {
+    proxyHash = HgProxyHash::load(localStore_.get(), id, "getTree");
+  } catch (const std::exception&) {
+    logMissingProxyHash();
+    throw;
+  }
 
   // TODO: Merge checkTreeImportInProgress and enqueue into one call that
   // acquires the lock, and then atomically either schedules work or
@@ -269,7 +278,13 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
 folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
     const Hash& id,
     ObjectFetchContext& context) {
-  auto proxyHash = HgProxyHash::load(localStore_.get(), id, "getBlob");
+  HgProxyHash proxyHash;
+  try {
+    proxyHash = HgProxyHash::load(localStore_.get(), id, "getBlob");
+  } catch (const std::exception&) {
+    logMissingProxyHash();
+    throw;
+  }
 
   auto path = proxyHash.path();
   logBackingStoreFetch(
@@ -347,7 +362,14 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
     });
   }
 
-  auto proxyHashes = HgProxyHash::getBatch(localStore_.get(), ids).get();
+  std::vector<HgProxyHash> proxyHashes;
+  try {
+    // TODO: Use .thenTry instead of .get()
+    proxyHashes = HgProxyHash::getBatch(localStore_.get(), ids).get();
+  } catch (const std::exception&) {
+    logMissingProxyHash();
+    throw;
+  }
 
   // TODO: deduplicate prefetches
 
@@ -364,6 +386,25 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
   queue_.enqueue(std::move(request));
 
   return std::move(future);
+}
+
+void HgQueuedBackingStore::logMissingProxyHash() {
+  auto now = std::chrono::steady_clock::now();
+
+  bool shouldLog = false;
+  {
+    auto last = lastMissingProxyHashLog_.wlock();
+    if (now >= *last +
+            config_->getEdenConfig()
+                ->missingHgProxyHashLogInterval.getValue()) {
+      shouldLog = true;
+      *last = now;
+    }
+  }
+
+  if (shouldLog) {
+    structuredLogger_->logEvent(MissingProxyHash{});
+  }
 }
 
 void HgQueuedBackingStore::logBackingStoreFetch(
