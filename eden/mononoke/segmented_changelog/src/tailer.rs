@@ -18,7 +18,7 @@ use stats::prelude::*;
 use bookmarks::{BookmarkName, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::IdMapFactory;
@@ -94,23 +94,38 @@ impl SegmentedChangelogTailer {
                 (self.repo_id.id(),),
             );
 
-            if let Err(err) = update_result {
-                STATS::failure.add_value(1);
-                STATS::failure_per_repo.add_value(1, (self.repo_id.id(),));
-                error!(
-                    ctx.logger(),
-                    "repo {}: failed to incrementally update segmented changelog: {:?}",
-                    self.repo_id,
-                    err
-                );
-            } else {
-                STATS::success.add_value(1);
-                STATS::success_per_repo.add_value(1, (self.repo_id.id(),));
-            }
+            let mut scuba = ctx.scuba().clone();
+            scuba.add_future_stats(&stats);
+            scuba.add("repo_id", self.repo_id.id());
+            scuba.add("success", update_result.is_ok());
+
+            let msg = match update_result {
+                Ok((_, _, head_cs)) => {
+                    STATS::success.add_value(1);
+                    STATS::success_per_repo.add_value(1, (self.repo_id.id(),));
+                    scuba.add("changeset_id", format!("{}", head_cs));
+                    None
+                }
+                Err(err) => {
+                    STATS::failure.add_value(1);
+                    STATS::failure_per_repo.add_value(1, (self.repo_id.id(),));
+                    error!(
+                        ctx.logger(),
+                        "repo {}: failed to incrementally update segmented changelog: {:?}",
+                        self.repo_id,
+                        err
+                    );
+                    Some(format!("{:?}", err))
+                }
+            };
+            scuba.log_with_msg("segmented_changelog_tailer_update", msg);
         }
     }
 
-    pub async fn once(&self, ctx: &CoreContext) -> Result<(OwnedSegmentedChangelog, Vertex)> {
+    pub async fn once(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<(OwnedSegmentedChangelog, Vertex, ChangesetId)> {
         info!(
             ctx.logger(),
             "repo {}: starting incremental update to segmented changelog", self.repo_id,
@@ -174,7 +189,7 @@ impl SegmentedChangelogTailer {
                 "repo {}: segmented changelog already up to date, skipping update to iddag",
                 self.repo_id
             );
-            return Ok((owned, head_vertex));
+            return Ok((owned, head_vertex, head));
         } else {
             info!(
                 ctx.logger(),
@@ -213,6 +228,6 @@ impl SegmentedChangelogTailer {
         );
 
         let new_owned = OwnedSegmentedChangelog::new(new_iddag, owned.idmap);
-        Ok((new_owned, head_vertex))
+        Ok((new_owned, head_vertex, head))
     }
 }

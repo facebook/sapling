@@ -215,6 +215,12 @@ impl OnDemandUpdateSegmentedChangelog {
                     stats.completion_time.as_millis() as i64,
                     (self.repo_id.id(),),
                 );
+                let mut scuba = ctx.scuba().clone();
+                scuba.add_future_stats(&stats);
+                scuba.add("repo_id", self.repo_id.id());
+                scuba.add("changeset_id", format!("{}", cs_id));
+                scuba.add("tries", tries);
+                scuba.log_with_msg("segmented_changelog_need_update", None);
             }
             _ => {}
         }
@@ -256,6 +262,13 @@ async fn the_actual_update(
         actual_update::STATS::failure.add_value(1);
         actual_update::STATS::failure_per_repo.add_value(1, (repo_id.id(),));
     }
+    let mut scuba = ctx.scuba().clone();
+    scuba.add_future_stats(&stats);
+    scuba.add("repo_id", repo_id.id());
+    scuba.add("changeset_id", format!("{}", head));
+    scuba.add("success", ret.is_ok());
+    let msg = ret.as_ref().err().map(|err| format!("{:?}", err));
+    scuba.log_with_msg("segmented_changelog_update", msg);
     ret
 }
 
