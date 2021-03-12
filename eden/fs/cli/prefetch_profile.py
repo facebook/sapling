@@ -522,6 +522,35 @@ class FetchProfileCmd(Subcmd):
         return 0
 
 
+@prefetch_profile_cmd(
+    "disable",
+    "Disables prefetch profiles locally",
+)
+class DisableProfileCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--checkout",
+            help="The checkout for which prefetching should be disabled",
+            default=None,
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        checkout = args.checkout
+
+        instance, _checkout, _rel_path = require_checkout(args, checkout)
+        config = instance.read_local_config()
+        prefetch_profiles_section = {}
+        if config.has_section("prefetch-profiles"):
+            prefetch_profiles_section.update(
+                config.get_section_str_to_any("prefetch-profiles")
+            )
+        prefetch_profiles_section["prefetching-enabled"] = False
+        config["prefetch-profiles"] = prefetch_profiles_section
+        instance.write_local_config(config)
+
+        return 0
+
+
 class PrefetchProfileCmd(Subcmd):
     NAME = "prefetch-profile"
     HELP = (

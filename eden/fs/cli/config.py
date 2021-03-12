@@ -215,6 +215,25 @@ class EdenInstance:
     def user_config_path(self) -> Path:
         return self._user_config_path
 
+    def read_configs(self, paths: List[Path]) -> configutil.EdenConfigParser:
+        """
+        reads all files specified in paths and parses the configs,
+        skips any files which are not found
+        """
+        parser = configutil.EdenConfigParser(
+            interpolation=configinterpolator.EdenConfigInterpolator(
+                self._config_variables
+            )
+        )
+        for path in paths:
+            try:
+                toml_cfg = load_toml_config(path)
+            except FileNotFoundError:
+                # Ignore missing config files. Eg. user_config_path is optional
+                continue
+            parser.read_dict(toml_cfg)
+        return parser
+
     def _loadConfig(self) -> configutil.EdenConfigParser:
         """to facilitate templatizing a centrally deployed config, we
         allow a limited set of env vars to be expanded.
@@ -223,19 +242,7 @@ class EdenInstance:
         These are coupled with the equivalent code in
         eden/fs/config/CheckoutConfig.cpp and must be kept in sync.
         """
-        parser = configutil.EdenConfigParser(
-            interpolation=configinterpolator.EdenConfigInterpolator(
-                self._config_variables
-            )
-        )
-        for path in self.get_rc_files():
-            try:
-                toml_cfg = load_toml_config(path)
-            except FileNotFoundError:
-                # Ignore missing config files. Eg. user_config_path is optional
-                continue
-            parser.read_dict(toml_cfg)
-        return parser
+        return self.read_configs(self.get_rc_files())
 
     @property
     def _config_variables(self) -> Dict[str, str]:
@@ -852,6 +859,18 @@ Do you want to run `eden mount %s` instead?"""
 
         else:
             out.write(b"%dd:%02dh:%02dm:%02ds\n" % (days, hours, minutes, seconds))
+
+    def read_local_config(self) -> configutil.EdenConfigParser:
+        return self.read_configs([self.user_config_path])
+
+    def write_local_config(self, config: configutil.EdenConfigParser) -> None:
+        """
+        Writes TOML config to the local config path.
+        NOTE: this method will write an empty file if the config is empty
+        """
+        write_file_atomically(
+            self.user_config_path, toml.dumps(config.to_raw_dict()).encode()
+        )
 
 
 class EdenCheckout:
