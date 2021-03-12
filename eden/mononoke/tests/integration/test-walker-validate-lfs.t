@@ -60,3 +60,26 @@ Check scuba data is logged for lfs and that it contains useful hg changeset and 
   0,"file_content_is_lfs","content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","C","FileContentMetadata","repo","Changeset","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","HgBonsaiMapping","validate",
   0,"file_content_is_lfs","content.blake2.e164fd53a3714f754d5f5763688bea02d99123436e51e9ed9c85ad04fdc52222","foo/bar","FileContentMetadata","repo","Changeset","hgchangeset.sha1.d9a770e9f783614a05c7c060830b08e65ce7d774","HgBonsaiMapping","validate",
   0,"file_content_is_lfs","content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","A","FileContentMetadata","repo","Changeset","hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0","HgBonsaiMapping","validate",
+
+
+validate with LFS enabled, deep with simpler query.  Should have same output but touch less nodes to get there.
+  $ mononoke_walker validate --include-check-type=FileContentIsLfs --scuba-log-file scuba-validate-deep2.json -I deep -I BonsaiHgMappingToHgBonsaiMapping -X BonsaiHgMappingToHgChangeset -X ChangesetToBonsaiParent -X ChangesetToBonsaiHgMapping -i bonsai -i FileContent -i FileContentMetadata -i HgBonsaiMapping -i BonsaiHgMapping -q -p BonsaiHgMapping 2>&1 | strip_glog
+  Walking edge types [BonsaiHgMappingToHgBonsaiMapping, ChangesetToFileContent, FileContentToFileContentMetadata, HgBonsaiMappingToChangeset]
+  Walking node types [BonsaiHgMapping, Changeset, FileContent, FileContentMetadata, HgBonsaiMapping]
+  Performing check types [FileContentIsLfs]
+  Repo bounds: (1, 5)
+  Starting chunk 1 with bounds (1, 5)
+  Seen,Loaded: * (glob)
+  Walked* (glob)
+  Nodes,Pass,Fail:20,4,0; EdgesChecked:4; CheckType:Pass,Fail Total:4,0 FileContentIsLfs:4,0
+  Deferred: 0
+  Completed in 1 chunks of size 100000
+
+Check scuba data is logged for lfs and that it contains useful hg changeset and path in via_node_key and node_path
+  $ wc -l < scuba-validate-deep2.json
+  4
+  $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .node_path, .node_type, .repo, .src_node_type, .via_node_key, .via_node_type, .walk_type, .error_msg ] | @csv' < scuba-validate-deep2.json | sort
+  0,"file_content_is_lfs","content.blake2.55662471e2a28db8257939b2f9a2d24e65b46a758bac12914a58f17dcde6905f","B","FileContentMetadata","repo","Changeset","hgchangeset.sha1.112478962961147124edd43549aedd1a335e44bf","HgBonsaiMapping","validate",
+  0,"file_content_is_lfs","content.blake2.896ad5879a5df0403bfc93fc96507ad9c93b31b11f3d0fa05445da7918241e5d","C","FileContentMetadata","repo","Changeset","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b","HgBonsaiMapping","validate",
+  0,"file_content_is_lfs","content.blake2.e164fd53a3714f754d5f5763688bea02d99123436e51e9ed9c85ad04fdc52222","foo/bar","FileContentMetadata","repo","Changeset","hgchangeset.sha1.d9a770e9f783614a05c7c060830b08e65ce7d774","HgBonsaiMapping","validate",
+  0,"file_content_is_lfs","content.blake2.eb56488e97bb4cf5eb17f05357b80108a4a71f6c3bab52dfcaec07161d105ec9","A","FileContentMetadata","repo","Changeset","hgchangeset.sha1.426bada5c67598ca65036d57d9e4b64b0c1ce7a0","HgBonsaiMapping","validate",

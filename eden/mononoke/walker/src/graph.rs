@@ -338,7 +338,7 @@ create_graph!(
             UnodeMapping
         ]
     ),
-    (BonsaiHgMapping, ChangesetKey<ChangesetId>, [HgChangeset]),
+    (BonsaiHgMapping, ChangesetKey<ChangesetId>, [HgBonsaiMapping, HgChangeset]),
     (PhaseMapping, ChangesetId, []),
     (
         PublishedBookmarks,

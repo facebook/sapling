@@ -651,6 +651,14 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
         Some(hg_cs_id) => {
             let hg_cs_id = hg_cs_id.0;
             let mut edges = vec![];
+            // This seems like a nonsense edge, but its a way to establish HgChangesetId on the way to Bonsai Changeset
+            // which is useful in LFS validation.  The edge is disabled by default.
+            checker.add_edge(&mut edges, EdgeType::BonsaiHgMappingToHgBonsaiMapping, || {
+                Node::HgBonsaiMapping(ChangesetKey {
+                    inner: hg_cs_id,
+                    filenode_known_derived,
+                })
+            });
             checker.add_edge(&mut edges, EdgeType::BonsaiHgMappingToHgChangeset, || {
                 Node::HgChangeset(ChangesetKey {
                     inner: hg_cs_id,
