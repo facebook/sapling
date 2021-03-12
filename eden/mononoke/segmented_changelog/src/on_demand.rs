@@ -19,6 +19,7 @@ use tokio::sync::{Notify, RwLock};
 use cloned::cloned;
 use dag::{self, CloneData, InProcessIdDag, Location};
 use futures_ext::future::{spawn_controlled, ControlledHandle, FbTryFutureExt, TryShared};
+use futures_stats::TimedFutureExt;
 use stats::prelude::*;
 
 use bookmarks::{BookmarkName, Bookmarks};
@@ -38,8 +39,51 @@ define_stats! {
     missing_notification_handle: timeseries(Sum),
 }
 
+mod need_update {
+    use stats::prelude::*;
+    // The stats that are not per repo could be described as redundant. In situations where we are
+    // debugging however it's nice to have the aggregation ready available to diagnose instances or
+    // regions.
+    define_stats! {
+        prefix = "mononke.segmented_changelog.need_update";
+        count: timeseries(Sum),
+        tries:
+            histogram(1, 0, 30, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+        duration_ms:
+            histogram(1000, 0, 60_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+        count_per_repo: dynamic_timeseries("{}.count", (repo_id: i32); Sum),
+        tries_per_repo: dynamic_histogram(
+            "{}.tries", (repo_id: i32);
+            1, 0, 30, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99
+        ),
+        duration_ms_per_repo: dynamic_histogram(
+            "{}.duration_ms", (repo_id: i32);
+            1000, 0, 60_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99
+        ),
+    }
+}
+
+mod actual_update {
+    use stats::prelude::*;
+    define_stats! {
+        prefix = "mononke.segmented_changelog.update";
+        count: timeseries(Sum),
+        failure: timeseries(Sum),
+        success: timeseries(Sum),
+        duration_ms:
+            histogram(1000, 0, 60_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+        count_per_repo: dynamic_timeseries("{}.count", (repo_id: i32); Sum),
+        failure_per_repo: dynamic_timeseries("{}.failure", (repo_id: i32); Sum),
+        success_per_repo: dynamic_timeseries("{}.success", (repo_id: i32); Sum),
+        duration_ms_per_repo: dynamic_histogram(
+            "{}.duration_ms", (repo_id: i32);
+            1000, 0, 60_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99
+        ),
+    }
+}
+
 pub struct OnDemandUpdateSegmentedChangelog {
-    _repo_id: RepositoryId,
+    repo_id: RepositoryId,
     iddag: Arc<RwLock<InProcessIdDag>>,
     idmap: Arc<dyn IdMap>,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
@@ -48,13 +92,13 @@ pub struct OnDemandUpdateSegmentedChangelog {
 
 impl OnDemandUpdateSegmentedChangelog {
     pub fn new(
-        _repo_id: RepositoryId,
+        repo_id: RepositoryId,
         iddag: InProcessIdDag,
         idmap: Arc<dyn IdMap>,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
     ) -> Self {
         Self {
-            _repo_id,
+            repo_id,
             iddag: Arc::new(RwLock::new(iddag)),
             idmap,
             changeset_fetcher,
@@ -106,11 +150,18 @@ impl OnDemandUpdateSegmentedChangelog {
             if let Some(fut) = &*ongoing_update {
                 fut.clone().map(|_| Ok(false)).boxed()
             } else {
-                cloned!(ctx, self.iddag, self.idmap, self.changeset_fetcher);
+                cloned!(
+                    ctx,
+                    self.repo_id,
+                    self.iddag,
+                    self.idmap,
+                    self.changeset_fetcher
+                );
                 let task_ongoing_update = self.ongoing_update.clone();
                 let update_task = async move {
                     let result =
-                        the_actual_update(ctx, iddag, idmap, changeset_fetcher, head).await;
+                        the_actual_update(ctx, repo_id, iddag, idmap, changeset_fetcher, head)
+                            .await;
                     let mut ongoing_update = task_ongoing_update.lock();
                     *ongoing_update = None;
                     result
@@ -127,46 +178,85 @@ impl OnDemandUpdateSegmentedChangelog {
     }
 
     async fn build_up_to_cs(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<()> {
-        loop {
-            if let Some(vertex) = self
-                .idmap
-                .find_vertex(ctx, cs_id)
-                .await
-                .context("fetching vertex for csid")?
-            {
-                // Note. This will result in two read locks being acquired for functions that call
-                // into build_up. It would be nice to get to one lock being acquired. I tried but
-                // had some issues with lifetimes :).
-                let iddag = self.iddag.read().await;
-                if iddag.contains_id(vertex)? {
-                    return Ok(());
+        let update_loop = async {
+            loop {
+                let mut tries: i64 = 0;
+                if let Some(vertex) = self
+                    .idmap
+                    .find_vertex(ctx, cs_id)
+                    .await
+                    .context("fetching vertex for csid")?
+                {
+                    // Note. This will result in two read locks being acquired for functions that call
+                    // into build_up. It would be nice to get to one lock being acquired. I tried but
+                    // had some issues with lifetimes :).
+                    let iddag = self.iddag.read().await;
+                    if iddag.contains_id(vertex)? {
+                        return Ok(tries);
+                    }
+                }
+                tries += 1;
+                if self.try_update(ctx, cs_id).await? {
+                    return Ok(tries);
                 }
             }
-            if self.try_update(ctx, cs_id).await? {
-                return Ok(());
+        };
+        let (stats, ret) = update_loop.timed().await;
+        match ret {
+            Ok(tries) if tries > 0 => {
+                need_update::STATS::count.add_value(1);
+                need_update::STATS::count_per_repo.add_value(1, (self.repo_id.id(),));
+
+                need_update::STATS::tries.add_value(tries);
+                need_update::STATS::tries_per_repo.add_value(tries, (self.repo_id.id(),));
+
+                need_update::STATS::duration_ms.add_value(stats.completion_time.as_millis() as i64);
+                need_update::STATS::duration_ms_per_repo.add_value(
+                    stats.completion_time.as_millis() as i64,
+                    (self.repo_id.id(),),
+                );
             }
+            _ => {}
         }
+        ret.map(|_| ())
     }
 }
 
 async fn the_actual_update(
     ctx: CoreContext,
+    repo_id: RepositoryId,
     iddag: Arc<RwLock<InProcessIdDag>>,
     idmap: Arc<dyn IdMap>,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     head: ChangesetId,
 ) -> Result<()> {
-    let (head_vertex, idmap_update_state) = {
-        let iddag = iddag.read().await;
-        prepare_incremental_iddag_update(&ctx, &iddag, &idmap, &changeset_fetcher, head)
-            .await
-            .context("error preparing an incremental update for iddag")?
+    let monitored = async {
+        let (head_vertex, idmap_update_state) = {
+            let iddag = iddag.read().await;
+            prepare_incremental_iddag_update(&ctx, &iddag, &idmap, &changeset_fetcher, head)
+                .await
+                .context("error preparing an incremental update for iddag")?
+        };
+        if let Some((start_state, mem_idmap)) = idmap_update_state {
+            let mut iddag = iddag.write().await;
+            update_iddag(&ctx, &mut iddag, &start_state, &mem_idmap, head_vertex)?;
+        }
+        Ok(())
     };
-    if let Some((start_state, mem_idmap)) = idmap_update_state {
-        let mut iddag = iddag.write().await;
-        update_iddag(&ctx, &mut iddag, &start_state, &mem_idmap, head_vertex)?;
+    actual_update::STATS::count.add_value(1);
+    actual_update::STATS::count_per_repo.add_value(1, (repo_id.id(),));
+    let (stats, ret) = monitored.timed().await;
+    actual_update::STATS::duration_ms.add_value(stats.completion_time.as_millis() as i64);
+    actual_update::STATS::duration_ms_per_repo
+        .add_value(stats.completion_time.as_millis() as i64, (repo_id.id(),));
+    if ret.is_ok() {
+        actual_update::STATS::success.add_value(1);
+        actual_update::STATS::success_per_repo.add_value(1, (repo_id.id(),));
+    } else {
+        actual_update::STATS::failure.add_value(1);
+        actual_update::STATS::failure_per_repo.add_value(1, (repo_id.id(),));
     }
-    Ok(())
+    ret
 }
 
 #[async_trait]
