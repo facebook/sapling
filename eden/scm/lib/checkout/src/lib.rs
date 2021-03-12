@@ -12,6 +12,7 @@ use pathmatcher::{Matcher, XorMatcher};
 use revisionstore::{
     datastore::strip_metadata, HgIdDataStore, RemoteDataStore, StoreKey, StoreResult,
 };
+use std::collections::HashSet;
 use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use types::{HgId, Key, RepoPath, RepoPathBuf};
@@ -112,13 +113,18 @@ impl CheckoutPlan {
         retain_paths(&mut self.update_content, new_matcher)?;
         retain_paths(&mut self.update_meta, new_matcher)?;
 
+        let updated_content: HashSet<_> =
+            self.update_content.iter().map(|a| a.path.clone()).collect();
+
         // Second - handle files in a new manifest, that were affected by sparse profile change
         let xor_matcher = XorMatcher::new(old_matcher, new_matcher);
         for file in new_manifest.files(&xor_matcher) {
             let file = file?;
             if new_matcher.matches_file(&file.path)? {
-                self.update_content
-                    .push(UpdateContentAction::new(file.path, file.meta));
+                if !updated_content.contains(&file.path) {
+                    self.update_content
+                        .push(UpdateContentAction::new(file.path, file.meta));
+                }
             } else {
                 // by definition of xor matcher this means old_matcher.matches_file==true
                 self.remove.push(file.path);
@@ -479,6 +485,17 @@ mod test {
             path: rp("b"),
             set_x_flag: true,
         });
+        let plan = plan.with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
+        assert_eq!(
+            "rm b\nup c=>0300000000000000000000000000000000000000\n",
+            &plan.to_string()
+        );
+
+        let mut plan = CheckoutPlan::empty();
+        plan.update_content.push(UpdateContentAction::new(
+            rp("c"),
+            FileMetadata::regular(hgid(3)),
+        ));
         let plan = plan.with_sparse_profile_change(&ab_profile, &ac_profile, &manifest)?;
         assert_eq!(
             "rm b\nup c=>0300000000000000000000000000000000000000\n",
