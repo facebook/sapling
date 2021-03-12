@@ -2057,6 +2057,13 @@ function commitcloud_forwardfiller_iteration() {
     --debug "$@"
 }
 
+function streaming_clone() {
+  GLOG_minloglevel=5 "$MONONOKE_STREAMING_CLONE" "${COMMON_ARGS[@]}" \
+    --repo-id "$REPOID" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
+
 function repo_import() {
   log="$TESTTMP/repo_import.out"
 

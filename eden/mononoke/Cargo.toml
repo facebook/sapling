@@ -412,6 +412,7 @@ members = [
   "server/repo_listener",
   "server/session_id",
   "sshrelay",
+  "streaming_clone",
   "tests/fixtures",
   "tests/utils",
   "tests/write_stub_log_entry",

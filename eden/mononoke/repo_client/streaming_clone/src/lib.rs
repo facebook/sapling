@@ -18,7 +18,7 @@ use sql_ext::SqlConnections;
 use thiserror::Error;
 
 use blobstore::Blobstore;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
 use mononoke_types::RepositoryId;
 
 #[derive(Debug, Error)]
@@ -50,14 +50,35 @@ impl RevlogStreamingChunks {
 #[derive(Clone)]
 pub struct SqlStreamingChunksFetcher {
     read_connection: Connection,
+    write_connection: Connection,
 }
 
 queries! {
+    read CountChunks(repo_id: RepositoryId) -> (u64) {
+        "SELECT count(*)
+         FROM streaming_changelog_chunks
+         WHERE repo_id = {repo_id}"
+    }
     read SelectChunks(repo_id: RepositoryId) -> (Vec<u8>, i32, Vec<u8>, i32) {
         "SELECT idx_blob_name, idx_size, data_blob_name, data_size
          FROM streaming_changelog_chunks
          WHERE repo_id = {repo_id}
          ORDER BY chunk_num ASC"
+    }
+
+    write InsertChunks(
+        values: (
+            repo_id: RepositoryId,
+            chunk_num: u32,
+            idx_blob_name: &str,
+            idx_size: u32,
+            data_blob_name: &str,
+            data_size: u32,
+        )
+    ) {
+        none,
+        "INSERT INTO streaming_changelog_chunks \
+            VALUES {values}"
     }
 }
 
@@ -79,6 +100,7 @@ impl SqlConstruct for SqlStreamingChunksFetcher {
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {
             read_connection: connections.read_connection,
+            write_connection: connections.write_connection,
         }
     }
 }
@@ -111,12 +133,26 @@ fn fetch_blob(
 }
 
 impl SqlStreamingChunksFetcher {
+    pub async fn count_chunks(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<u64, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
+        let res = CountChunks::query(&self.read_connection, &repo_id).await?;
+        Ok(res.get(0).map_or(0, |x| x.0))
+    }
+
     pub async fn fetch_changelog(
         &self,
         ctx: CoreContext,
         repo_id: RepositoryId,
         blobstore: impl Blobstore + Clone + 'static,
     ) -> Result<RevlogStreamingChunks, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let rows = SelectChunks::query(&self.read_connection, &repo_id).await?;
 
         let res = rows.into_iter().fold(
@@ -143,5 +179,24 @@ impl SqlStreamingChunksFetcher {
         );
 
         Ok(res)
+    }
+
+    pub async fn insert_chunks(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        chunks: Vec<(u32, &str, u32, &str, u32)>,
+    ) -> Result<(), Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
+
+        let ref_chunks: Vec<_> = chunks
+            .iter()
+            .map(|row| (&repo_id, &row.0, &row.1, &row.2, &row.3, &row.4))
+            .collect();
+
+        InsertChunks::query(&self.write_connection, &ref_chunks[..]).await?;
+
+        Ok(())
     }
 }

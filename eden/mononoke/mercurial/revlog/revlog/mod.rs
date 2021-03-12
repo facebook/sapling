@@ -190,6 +190,10 @@ impl Revlog {
         Ok(revlog)
     }
 
+    pub fn index_entry_size(&self) -> usize {
+        self.inner.fixed_entry_size()
+    }
+
     /// Return `true` if the `Revlog` has the data it requires - ie, the data is either inlined,
     /// or a data file has been provided.
     pub fn have_data(&self) -> bool {
