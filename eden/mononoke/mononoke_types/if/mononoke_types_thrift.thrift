@@ -17,20 +17,6 @@
 
 namespace py3 eden.mononoke.mononoke_types
 
-// Thrift doesn't have fixed-length arrays, so a 256-bit hash can be
-// represented in one of two ways:
-// 1. as four i64s
-// 2. as just a newtype around a `binary`
-//
-// Representation 1 is very appealing as it provides a 1:1 map between Rust's
-// data structures and Thrift's. But it means that the full hash is not
-// available as a single contiguous block in memory. That makes some
-// zero-copy optimizations hard.
-// Representation 2 does have the benefit of the hash being available as a
-// contiguous block, but it requires runtime length checks. With the default
-// Rust representation it would also cause a heap allocation.
-// Going with representation 2, with the hope that this will be able to use
-// SmallVecs soon.
 typedef binary Blake2 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
 
 // Allow the hash type to change in the future.
