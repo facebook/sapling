@@ -11,8 +11,10 @@
 //! - Separate from rendering.
 //! - Lock-free (nice to have).
 
+mod cache_stats;
 mod io_sample;
 mod time_series;
 
+pub use cache_stats::CacheStats;
 pub use io_sample::IoSample;
 pub use time_series::IoTimeSeries;
