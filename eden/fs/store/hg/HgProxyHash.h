@@ -16,33 +16,43 @@
 namespace folly {
 template <typename T>
 class Future;
-class IOBuf;
 } // namespace folly
 
 namespace facebook {
 namespace eden {
 
 /**
- * HgProxyHash manages mercurial (path, revHash) data in the LocalStore.
+ * HgProxyHash is a derived index allowing us to map EdenFS's fixed-size hashes
+ * onto Mercurial's (revHash, path) pairs.
  *
- * Mercurial doesn't really have a blob hash the same way eden and git do.
- * Instead, mercurial file revision hashes are always relative to a specific
- * path.  To use the data in eden, we need to create a blob hash that we can
+ * Mercurial doesn't really have a blob hash the same way EdenFS and Git do.
+ * Instead, Mercurial file revision hashes are always relative to a specific
+ * path.  To use the data in EdenFS, we need to create a blob hash that we can
  * use instead.
  *
  * To do so, we hash the (path, revHash) tuple, and use this hash as the
- * blob hash in eden.  We store the eden_blob_hash --> (path, hgRevHash)
+ * blob hash in EdenFS.  We store the eden_blob_hash --> (path, hgRevHash)
  * mapping in the LocalStore.  The HgProxyHash class helps store and
  * retrieve these mappings.
  */
 class HgProxyHash {
  public:
-  HgProxyHash() : value_{} {}
+  /**
+   * An uninitialized hash that contains a kZeroHash and an empty path.
+   */
+  HgProxyHash() = default;
 
   /**
-   * Load HgProxyHash data for the given eden blob hash from the LocalStore.
+   * Construct a proxy hash with encoded data. Throws an exception if the string
+   * does not contain a valid HgProxyHash encoding.
+   *
+   * edenObjectId is only used in error messages to correlate the proxy hash
+   * with Eden's object ID.
    */
-  HgProxyHash(LocalStore* store, Hash edenBlobHash, folly::StringPiece context);
+  HgProxyHash(const Hash& edenObjectId, std::string value)
+      : value_{std::move(value)} {
+    validate(edenObjectId);
+  }
 
   /**
    * Create a ProxyHash given the specified values.
@@ -62,15 +72,15 @@ class HgProxyHash {
     return *this;
   }
 
-  RelativePathPiece path() const;
+  RelativePathPiece path() const noexcept;
 
-  Hash revHash() const;
+  Hash revHash() const noexcept;
 
   /**
    * Returns the SHA-1 of the canonical serialization of this ProxyHash, which
    * is used as the object ID throughout EdenFS.
    */
-  Hash sha1() const;
+  Hash sha1() const noexcept;
 
   bool operator==(const HgProxyHash&) const;
   bool operator<(const HgProxyHash&) const;
@@ -82,6 +92,12 @@ class HgProxyHash {
   static folly::Future<std::vector<HgProxyHash>> getBatch(
       LocalStore* store,
       const std::vector<Hash>& blobHashes);
+
+  /**
+   * Load HgProxyHash data for the given eden blob hash from the LocalStore.
+   */
+  static HgProxyHash
+  load(LocalStore* store, const Hash& edenObjectId, folly::StringPiece context);
 
   /**
    * Store HgProxyHash data in the LocalStore.
@@ -103,7 +119,7 @@ class HgProxyHash {
    * the caller is responsible for passing the pair to the HgProxyHash::store()
    * method below at the appropriate time.
    */
-  static std::pair<Hash, folly::IOBuf> prepareToStore(
+  static std::pair<Hash, std::string> prepareToStore(
       RelativePathPiece path,
       Hash hgRevHash);
 
@@ -112,7 +128,7 @@ class HgProxyHash {
    * Stores the data computed by prepareToStore().
    */
   static void store(
-      const std::pair<Hash, folly::IOBuf>& computedPair,
+      const std::pair<Hash, std::string>& computedPair,
       LocalStore::WriteBatch* writeBatch);
 
  private:
@@ -125,7 +141,7 @@ class HgProxyHash {
    * Serialize the (path, hgRevHash) data into a buffer that will be stored in
    * the LocalStore.
    */
-  static folly::IOBuf serialize(RelativePathPiece path, Hash hgRevHash);
+  static std::string serialize(RelativePathPiece path, const Hash& hgRevHash);
 
   /**
    * Validate data found in value_.

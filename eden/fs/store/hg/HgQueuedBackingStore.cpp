@@ -220,7 +220,7 @@ void HgQueuedBackingStore::processRequest() {
 folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
     const Hash& id,
     ObjectFetchContext& context) {
-  auto proxyHash = HgProxyHash{localStore_.get(), id, "getTree"};
+  auto proxyHash = HgProxyHash::load(localStore_.get(), id, "getTree");
 
   // TODO: Merge checkTreeImportInProgress and enqueue into one call that
   // acquires the lock, and then atomically either schedules work or
@@ -269,7 +269,7 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
 folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
     const Hash& id,
     ObjectFetchContext& context) {
-  auto proxyHash = HgProxyHash{localStore_.get(), id, "getBlob"};
+  auto proxyHash = HgProxyHash::load(localStore_.get(), id, "getBlob");
 
   auto path = proxyHash.path();
   logBackingStoreFetch(

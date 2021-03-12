@@ -8,8 +8,6 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 
 #include <folly/futures/Future.h>
-#include <folly/io/Cursor.h>
-#include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/store/LocalStore.h"
@@ -17,41 +15,22 @@
 
 using folly::ByteRange;
 using folly::Endian;
-using folly::IOBuf;
 using folly::StringPiece;
-using folly::io::Appender;
 using std::string;
 
 namespace facebook {
 namespace eden {
 
-HgProxyHash::HgProxyHash(
-    LocalStore* store,
-    Hash edenBlobHash,
-    StringPiece context) {
-  // Read the path name and file rev hash
-  auto infoResult = store->get(KeySpace::HgProxyHashFamily, edenBlobHash);
-  if (!infoResult.isValid()) {
-    XLOG(ERR) << "received unknown mercurial proxy hash "
-              << edenBlobHash.toString() << " in " << context;
-    // Fall through and let infoResult.extractValue() throw
-  }
-
-  value_ = infoResult.extractValue();
-  validate(edenBlobHash);
-}
-
 HgProxyHash::HgProxyHash(RelativePathPiece path, const Hash& hgRevHash) {
   auto [hash, buf] = prepareToStore(path, hgRevHash);
-  buf.coalesce();
-  value_ = std::string{buf.data(), buf.data() + buf.length()};
+  value_ = std::move(buf);
 }
 
 folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
     LocalStore* store,
     const std::vector<Hash>& blobHashes) {
   auto hashCopies = std::make_shared<std::vector<Hash>>(blobHashes);
-  std::vector<folly::ByteRange> byteRanges;
+  std::vector<ByteRange> byteRanges;
   for (auto& hash : *hashCopies) {
     byteRanges.push_back(hash.getBytes());
   }
@@ -68,6 +47,21 @@ folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
       });
 }
 
+HgProxyHash HgProxyHash::load(
+    LocalStore* store,
+    const Hash& edenObjectId,
+    StringPiece context) {
+  // Read the path name and file rev hash
+  auto infoResult = store->get(KeySpace::HgProxyHashFamily, edenObjectId);
+  if (!infoResult.isValid()) {
+    XLOG(ERR) << "received unknown mercurial proxy hash "
+              << edenObjectId.toString() << " in " << context;
+    // Fall through and let infoResult.extractValue() throw
+  }
+
+  return HgProxyHash{edenObjectId, infoResult.extractValue()};
+}
+
 Hash HgProxyHash::store(
     RelativePathPiece path,
     Hash hgRevHash,
@@ -77,28 +71,25 @@ Hash HgProxyHash::store(
   return computedPair.first;
 }
 
-std::pair<Hash, IOBuf> HgProxyHash::prepareToStore(
+std::pair<Hash, std::string> HgProxyHash::prepareToStore(
     RelativePathPiece path,
     Hash hgRevHash) {
   // Serialize the (path, hgRevHash) tuple into a buffer.
   auto buf = serialize(path, hgRevHash);
 
   // Compute the hash of the serialized buffer
-  ByteRange serializedInfo = buf.coalesce();
-  auto edenBlobHash = Hash::sha1(serializedInfo);
+  auto edenBlobHash = Hash::sha1(buf);
 
   return std::make_pair(edenBlobHash, std::move(buf));
 }
 
 void HgProxyHash::store(
-    const std::pair<Hash, IOBuf>& computedPair,
+    const std::pair<Hash, std::string>& computedPair,
     LocalStore::WriteBatch* writeBatch) {
   writeBatch->put(
       KeySpace::HgProxyHashFamily,
       computedPair.first,
-      // Note that this depends on prepareToStore() having called
-      // buf.coalesce()!
-      ByteRange(computedPair.second.data(), computedPair.second.length()));
+      ByteRange{StringPiece{computedPair.second}});
 }
 
 HgProxyHash::HgProxyHash(
@@ -115,21 +106,27 @@ HgProxyHash::HgProxyHash(
   validate(edenBlobHash);
 }
 
-IOBuf HgProxyHash::serialize(RelativePathPiece path, Hash hgRevHash) {
+std::string HgProxyHash::serialize(
+    RelativePathPiece path,
+    const Hash& hgRevHash) {
   // We serialize the data as <hash_bytes><path_length><path>
   //
   // The path_length is stored as a big-endian uint32_t.
-  auto pathStr = path.stringPiece();
-  IOBuf buf(IOBuf::CREATE, Hash::RAW_SIZE + sizeof(uint32_t) + pathStr.size());
-  Appender appender(&buf, 0);
-  appender.push(hgRevHash.getBytes());
-  appender.writeBE<uint32_t>(pathStr.size());
-  appender.push(pathStr);
+  size_t pathLength = path.value().size();
+  XCHECK(pathLength <= std::numeric_limits<uint32_t>::max())
+      << "path too large";
 
+  std::string buf;
+  buf.reserve(sizeof(hgRevHash) + 4 + pathLength);
+  auto hashBytes = hgRevHash.getBytes();
+  buf.append(reinterpret_cast<const char*>(hashBytes.data()), hashBytes.size());
+  const uint32_t size = folly::Endian::big(static_cast<uint32_t>(pathLength));
+  buf.append(reinterpret_cast<const char*>(&size), sizeof(size));
+  buf.append(path.value().begin(), path.value().end());
   return buf;
 }
 
-RelativePathPiece HgProxyHash::path() const {
+RelativePathPiece HgProxyHash::path() const noexcept {
   if (value_.empty()) {
     return RelativePathPiece{};
   } else {
@@ -140,7 +137,7 @@ RelativePathPiece HgProxyHash::path() const {
   }
 }
 
-Hash HgProxyHash::revHash() const {
+Hash HgProxyHash::revHash() const noexcept {
   if (value_.empty()) {
     return kZeroHash;
   } else {
@@ -149,9 +146,16 @@ Hash HgProxyHash::revHash() const {
   }
 }
 
-Hash HgProxyHash::sha1() const {
-  auto [hash, buf] = prepareToStore(path(), revHash());
-  return hash;
+Hash HgProxyHash::sha1() const noexcept {
+  if (value_.empty()) {
+    // The SHA-1 of an empty HgProxyHash, (kZeroHash, "").
+    // The correctness of this value is asserted in tests.
+    constexpr Hash emptyProxyHash{
+        folly::StringPiece{"d3399b7262fb56cb9ed053d68db9291c410839c4"}};
+    return emptyProxyHash;
+  } else {
+    return Hash::sha1(value_);
+  }
 }
 
 bool HgProxyHash::operator==(const HgProxyHash& otherHash) const {

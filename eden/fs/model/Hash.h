@@ -50,7 +50,14 @@ class Hash : boost::totally_ordered<Hash> {
   static Hash sha1(const folly::IOBuf& buf);
 
   /**
-   * Compute the SHA1 hash of a ByteRange
+   * Compute the SHA1 hash of a std::string.
+   */
+  static Hash sha1(const std::string& str) {
+    return sha1(folly::ByteRange{folly::StringPiece{str}});
+  }
+
+  /**
+   * Compute the SHA1 hash of a ByteRange.
    */
   static Hash sha1(folly::ByteRange data);
 

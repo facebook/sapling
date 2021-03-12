@@ -35,8 +35,8 @@ TEST(HgProxyHashTest, testCopyMove) {
 
     write->flush();
   }
-  auto orig1 = HgProxyHash{store.get(), hash1, "test"};
-  auto orig2 = HgProxyHash{store.get(), hash2, "test"};
+  auto orig1 = HgProxyHash::load(store.get(), hash1, "test");
+  auto orig2 = HgProxyHash::load(store.get(), hash2, "test");
   auto second = orig1;
 
   EXPECT_EQ(orig1.path(), second.path());
@@ -62,4 +62,20 @@ TEST(HgProxyHashTest, testCopyMove) {
   EXPECT_EQ(
       orig1.revHash(),
       Hash{folly::StringPiece{"0000000000000000000000000000000000000000"}});
+}
+
+TEST(HgProxyHashTest, test_moved_from_and_empty_hash_compare_the_same) {
+  HgProxyHash from{
+      RelativePathPiece{"this is a long enough string to push past SSO"},
+      kEmptySha1};
+  HgProxyHash{std::move(from)};
+
+  EXPECT_EQ(HgProxyHash{}.path(), from.path());
+  EXPECT_EQ(HgProxyHash{}.revHash(), from.revHash());
+  EXPECT_EQ(HgProxyHash{}.sha1(), from.sha1());
+
+  HgProxyHash zero{RelativePathPiece{}, kZeroHash};
+  EXPECT_EQ(HgProxyHash{}.path(), zero.path());
+  EXPECT_EQ(HgProxyHash{}.revHash(), zero.revHash());
+  EXPECT_EQ(HgProxyHash{}.sha1(), zero.sha1());
 }
