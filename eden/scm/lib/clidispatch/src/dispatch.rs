@@ -144,132 +144,176 @@ pub fn parse_global_opts(args: &[String]) -> Result<HgGlobalOpts> {
     early_result.try_into()
 }
 
-pub fn dispatch(command_table: &CommandTable, args: &[String], io: &IO) -> Result<u8> {
-    let version_args = vec!["version".to_string()];
-    let mut args = &args[..];
-    if args.get(0).map(|s| s.as_ref()) == Some("--version") {
-        args = &version_args[..];
-    }
+pub struct Dispatcher {
+    args: Vec<String>,
+    early_result: ParseOutput,
+    global_opts: HgGlobalOpts,
+    optional_repo: OptionalRepo,
+}
 
-    let mut early_result = early_parse(&args)?;
-    let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
-    if global_opts.version {
-        args = &version_args[..];
-        early_result = early_parse(&args)?;
-    }
+fn version_args() -> Vec<String> {
+    vec!["version".to_string()]
+}
 
-    if !global_opts.cwd.is_empty() {
-        env::set_current_dir(global_opts.cwd)?;
-    }
-
-    // Load repo and configuration.
-    let mut optional_repo =
-        OptionalRepo::from_repository_path_and_cwd(&global_opts.repository, &env::current_dir()?)?;
-    override_config(
-        optional_repo.config_mut(),
-        &global_opts.configfile,
-        &global_opts.config,
-    )?;
-    let config = optional_repo.config();
-
-    initialize_indexedlog(&config)?;
-
-    // Prepare alias handling.
-    let alias_lookup = |name: &str| {
-        // [alias] can have "<name>:doc" entries that are not commands. Skip them.
-        if name.contains(":") {
-            return None;
+impl Dispatcher {
+    /// Load configs. Prepare to run a command.
+    pub fn from_args(mut args: Vec<String>) -> Result<Self> {
+        if args.get(0).map(|s| s.as_ref()) == Some("--version") {
+            args = version_args();
         }
 
-        match (config.get("alias", name), config.get("defaults", name)) {
-            (None, None) => None,
-            (Some(v), None) => Some(v.to_string()),
-            (None, Some(v)) => Some(format!("{} {}", name, v.as_ref())),
-            (Some(a), Some(d)) => {
-                // XXX: This makes defaults override alias if there are conflicted
-                // flags. The desired behavior is to make alias override defaults.
-                // However, [defaults] is deprecated and is likely only used
-                // by tests. So this might be fine.
-                Some(format!("{} {}", a.as_ref(), d.as_ref()))
+        let mut early_result = early_parse(&args)?;
+        let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
+        if global_opts.version {
+            args = version_args();
+            early_result = early_parse(&args)?;
+        }
+
+        let cwd = if global_opts.cwd.is_empty() {
+            Path::new(".")
+        } else {
+            Path::new(&global_opts.cwd)
+        };
+        let cwd = util::path::absolute(cwd)?;
+
+        // Load repo and configuration.
+        let mut optional_repo =
+            OptionalRepo::from_repository_path_and_cwd(&global_opts.repository, &cwd)?;
+        override_config(
+            optional_repo.config_mut(),
+            &global_opts.configfile,
+            &global_opts.config,
+        )?;
+
+        Ok(Self {
+            args,
+            early_result,
+            global_opts,
+            optional_repo,
+        })
+    }
+
+    /// Get a reference to the parsed tests.
+    pub fn config(&self) -> &ConfigSet {
+        self.optional_repo.config()
+    }
+
+    /// Run a command. Return exit code if the command completes.
+    pub fn run_command(self, command_table: &CommandTable, io: &IO) -> Result<u8> {
+        let args = &self.args;
+        let early_result = &self.early_result;
+        let optional_repo = self.optional_repo;
+        let config = optional_repo.config();
+        let global_opts = self.global_opts;
+
+        if !global_opts.cwd.is_empty() {
+            env::set_current_dir(global_opts.cwd)?;
+        }
+
+        initialize_indexedlog(&config)?;
+
+        // Prepare alias handling.
+        let alias_lookup = |name: &str| {
+            // [alias] can have "<name>:doc" entries that are not commands. Skip them.
+            if name.contains(":") {
+                return None;
             }
-        }
-    };
 
-    let early_args = early_result.args();
-    let first_arg = early_args
-        .get(0)
-        .ok_or_else(|| errors::UnknownCommand(String::new()))?;
-
-    let first_arg_index = early_result.first_arg_index();
-
-    // This should hold true since `first_arg` is not empty (tested above).
-    // Therefore positional args is non-empty and first_arg_index should be
-    // an index in args.
-    debug_assert!(first_arg_index < args.len());
-    debug_assert_eq!(&args[first_arg_index], first_arg);
-
-    // The difference between args, expanded and new_args is:
-    // - args are unchanged arguments provided by the user.
-    //   args can have global flags before command name.
-    //   for example, ["hg", "--traceback", "log", "-Gvr", "master"]
-    //                                      ^^^^^ first_arg_index, "log" is "command_name"
-    // - expanded: includes alias expansion result
-    //   no global flags before command name.
-    //   for example, with alias "log = log -f", ["log", "-Gvr", "master"]
-    //   will be expanded to ["log", "-f", "-Gvr", "master"].
-    // - new_args: final args to parse, like expanded with global flags.
-    //   ["hg", "--traceback", "log", "-f", "-Gvr", "master"].
-
-    let command_name = first_arg.to_string();
-    let (expanded, _first_arg_index) = expand_aliases(alias_lookup, &args[first_arg_index..])?;
-    let (command_name, command_arg_len) =
-        find_command_name(|name| command_table.get(name).is_some(), &expanded)
-            .ok_or_else(|| errors::UnknownCommand(command_name))?;
-    tracing::info!(
-        name = "log:command-row",
-        command = AsRef::<str>::as_ref(&command_name)
-    );
-
-    let mut new_args = Vec::with_capacity(args.len());
-    new_args.extend_from_slice(&args[..first_arg_index]);
-    new_args.push(command_name.clone());
-    new_args.extend_from_slice(&expanded[command_arg_len..]);
-
-    let full_args = new_args;
-
-    let def = command_table.get(&command_name).unwrap();
-    let parsed = parse(&def, &full_args)?;
-
-    let global_opts: HgGlobalOpts = parsed.clone().try_into()?;
-    last_chance_to_abort(&global_opts)?;
-
-    initialize_blackbox(&optional_repo)?;
-
-    if global_opts.pager == "always" {
-        io.start_pager(optional_repo.config())?;
-    }
-
-    let handler = def.func();
-    match handler {
-        CommandFunc::Repo(f) => {
-            match optional_repo {
-                OptionalRepo::Some(repo) => f(parsed, io, repo),
-                OptionalRepo::None(_config) => {
-                    // FIXME: Try to "infer repo" here.
-                    Err(errors::RepoRequired(
-                        env::current_dir()
-                            .ok()
-                            .map(|p| p.to_string_lossy().to_string())
-                            .unwrap_or_default(),
-                    )
-                    .into())
+            match (config.get("alias", name), config.get("defaults", name)) {
+                (None, None) => None,
+                (Some(v), None) => Some(v.to_string()),
+                (None, Some(v)) => Some(format!("{} {}", name, v.as_ref())),
+                (Some(a), Some(d)) => {
+                    // XXX: This makes defaults override alias if there are conflicted
+                    // flags. The desired behavior is to make alias override defaults.
+                    // However, [defaults] is deprecated and is likely only used
+                    // by tests. So this might be fine.
+                    Some(format!("{} {}", a.as_ref(), d.as_ref()))
                 }
             }
+        };
+
+        let early_args = early_result.args();
+        let first_arg = early_args
+            .get(0)
+            .ok_or_else(|| errors::UnknownCommand(String::new()))?;
+
+        let first_arg_index = early_result.first_arg_index();
+
+        // This should hold true since `first_arg` is not empty (tested above).
+        // Therefore positional args is non-empty and first_arg_index should be
+        // an index in args.
+        debug_assert!(first_arg_index < args.len());
+        debug_assert_eq!(&args[first_arg_index], first_arg);
+
+        // The difference between args, expanded and new_args is:
+        // - args are unchanged arguments provided by the user.
+        //   args can have global flags before command name.
+        //   for example, ["hg", "--traceback", "log", "-Gvr", "master"]
+        //                                      ^^^^^ first_arg_index, "log" is "command_name"
+        // - expanded: includes alias expansion result
+        //   no global flags before command name.
+        //   for example, with alias "log = log -f", ["log", "-Gvr", "master"]
+        //   will be expanded to ["log", "-f", "-Gvr", "master"].
+        // - new_args: final args to parse, like expanded with global flags.
+        //   ["hg", "--traceback", "log", "-f", "-Gvr", "master"].
+
+        let command_name = first_arg.to_string();
+        let (expanded, _first_arg_index) = expand_aliases(alias_lookup, &args[first_arg_index..])?;
+        let (command_name, command_arg_len) =
+            find_command_name(|name| command_table.get(name).is_some(), &expanded)
+                .ok_or_else(|| errors::UnknownCommand(command_name))?;
+        tracing::info!(
+            name = "log:command-row",
+            command = AsRef::<str>::as_ref(&command_name)
+        );
+
+        let mut new_args = Vec::with_capacity(args.len());
+        new_args.extend_from_slice(&args[..first_arg_index]);
+        new_args.push(command_name.clone());
+        new_args.extend_from_slice(&expanded[command_arg_len..]);
+
+        let full_args = new_args;
+
+        let def = command_table.get(&command_name).unwrap();
+        let parsed = parse(&def, &full_args)?;
+
+        let global_opts: HgGlobalOpts = parsed.clone().try_into()?;
+        last_chance_to_abort(&global_opts)?;
+
+        initialize_blackbox(&optional_repo)?;
+
+        if global_opts.pager == "always" {
+            io.start_pager(optional_repo.config())?;
         }
-        CommandFunc::OptionalRepo(f) => match optional_repo {
-            OptionalRepo::Some(repo) => f(parsed, io, Some(repo)),
-            OptionalRepo::None(_config) => f(parsed, io, None),
-        },
-        CommandFunc::NoRepo(f) => f(parsed, io, optional_repo.take_config()),
+
+        let handler = def.func();
+        match handler {
+            CommandFunc::Repo(f) => {
+                match optional_repo {
+                    OptionalRepo::Some(repo) => f(parsed, io, repo),
+                    OptionalRepo::None(_config) => {
+                        // FIXME: Try to "infer repo" here.
+                        Err(errors::RepoRequired(
+                            env::current_dir()
+                                .ok()
+                                .map(|p| p.to_string_lossy().to_string())
+                                .unwrap_or_default(),
+                        )
+                        .into())
+                    }
+                }
+            }
+            CommandFunc::OptionalRepo(f) => match optional_repo {
+                OptionalRepo::Some(repo) => f(parsed, io, Some(repo)),
+                OptionalRepo::None(_config) => f(parsed, io, None),
+            },
+            CommandFunc::NoRepo(f) => f(parsed, io, optional_repo.take_config()),
+        }
     }
+}
+
+pub fn dispatch(command_table: &CommandTable, args: &[String], io: &IO) -> Result<u8> {
+    let dispatcher = Dispatcher::from_args(args.to_vec())?;
+    dispatcher.run_command(command_table, io)
 }

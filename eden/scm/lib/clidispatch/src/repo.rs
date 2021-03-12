@@ -59,7 +59,14 @@ impl OptionalRepo {
             return Self::from_cwd(cwd);
         }
 
-        if let Ok(path) = util::path::absolute(repository_path) {
+        let cwd = cwd.as_ref();
+        let full_repository_path =
+            if repository_path == Path::new(".") || repository_path == Path::new("") {
+                cwd.to_path_buf()
+            } else {
+                cwd.join(repository_path)
+            };
+        if let Ok(path) = util::path::absolute(&full_repository_path) {
             if path.join(".hg").is_dir() {
                 // `path` is a directory with `.hg`.
                 let repo = Repo::from_raw_path(path)?;
@@ -72,7 +79,7 @@ impl OptionalRepo {
                 }
             }
         }
-        Err(errors::RepoNotFound(repository_path.to_string_lossy().to_string()).into())
+        Err(errors::RepoNotFound(repository_path.display().to_string()).into())
     }
 
     pub fn config_mut(&mut self) -> &mut ConfigSet {
@@ -82,7 +89,7 @@ impl OptionalRepo {
         }
     }
 
-    pub fn config(&mut self) -> &ConfigSet {
+    pub fn config(&self) -> &ConfigSet {
         match self {
             OptionalRepo::Some(ref repo) => &repo.config,
             OptionalRepo::None(ref config) => config,

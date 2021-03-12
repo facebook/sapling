@@ -20,8 +20,8 @@ fn test_simple_render() {
         r#"
        Files  110 (9% miss)
        Trees  110 (9% miss)
-         Net  [   ▁▂▂▃▃▄▅▅▆▆▇█]  ⬇ 67KB/s  154 requests
-        Disk  [   ▁▂▂▃▃▄▅▅▆▆▇█]  ⬆ 4050B/s
+         Net  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ⬇ 67KB/s  154 requests
+        Disk  [ ▁▁▂▂▃▃▄▄▅▅▆▆▇█]  ⬆ 4050B/s
        Files  [=======>       ]  5KB/10KB
        Trees  [     <=>       ]  5KB
      Commits  [=======>       ]  5KB/10KB
