@@ -841,7 +841,9 @@ impl RepoContext {
         bookmark: impl AsRef<str>,
         freshness: BookmarkFreshness,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
-        let bookmark = BookmarkName::new(bookmark.as_ref())?;
+        // a non ascii bookmark name is an invalid request
+        let bookmark = BookmarkName::new(bookmark.as_ref())
+            .map_err(|e| MononokeError::InvalidRequest(e.to_string()))?;
 
         let mut cs_id = match freshness {
             BookmarkFreshness::MaybeStale => self.warm_bookmarks_cache().get(&bookmark),

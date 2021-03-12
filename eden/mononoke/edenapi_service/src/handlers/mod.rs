@@ -26,6 +26,7 @@ use gotham_ext::response::build_response;
 use crate::context::ServerContext;
 use crate::middleware::RequestContext;
 
+mod bookmarks;
 mod clone;
 mod commit;
 mod complete_trees;
@@ -47,6 +48,7 @@ pub enum EdenApiMethod {
     CommitRevlogData,
     Clone,
     FullIdMapClone,
+    Bookmarks,
 }
 
 impl fmt::Display for EdenApiMethod {
@@ -61,6 +63,7 @@ impl fmt::Display for EdenApiMethod {
             Self::CommitRevlogData => "commit_revlog_data",
             Self::Clone => "clone",
             Self::FullIdMapClone => "full_idmap_clone",
+            Self::Bookmarks => "bookmarks",
         };
         write!(f, "{}", name)
     }
@@ -125,6 +128,7 @@ define_handler!(commit_hash_to_location_handler, commit::hash_to_location);
 define_handler!(commit_revlog_data_handler, commit::revlog_data);
 define_handler!(clone_handler, clone::clone_data);
 define_handler!(full_idmap_clone_handler, clone::full_idmap_clone_data);
+define_handler!(bookmarks_handler, bookmarks::bookmarks);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -177,5 +181,9 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/full_idmap_clone")
             .with_path_extractor::<clone::CloneParams>()
             .to(full_idmap_clone_handler);
+        route
+            .get("/:repo/bookmarks/:bookmark")
+            .with_path_extractor::<bookmarks::BookmarksParams>()
+            .to(bookmarks_handler);
     })
 }

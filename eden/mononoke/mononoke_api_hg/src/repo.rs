@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use anyhow::{self, format_err, Context};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
+use bookmarks::Freshness;
 use bytes::Bytes;
 use context::CoreContext;
 use futures::compat::Stream01CompatExt;
@@ -315,6 +316,18 @@ impl HgRepoContext {
             idmap_stream: hg_idmap_stream,
         };
         Ok(hg_clone_data)
+    }
+
+    /// resolve a bookmark name to an Hg Changeset
+    pub async fn resolve_bookmark(
+        &self,
+        bookmark: impl AsRef<str>,
+        freshness: Freshness,
+    ) -> Result<Option<HgChangesetId>, MononokeError> {
+        match self.repo.resolve_bookmark(bookmark, freshness).await? {
+            Some(c) => c.hg_id().await,
+            None => Ok(None),
+        }
     }
 }
 

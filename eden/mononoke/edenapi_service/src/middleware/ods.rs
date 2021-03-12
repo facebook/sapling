@@ -29,6 +29,7 @@ define_stats! {
     commit_revlog_data_duration: dynamic_histogram("{}.commit_revlog_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     clone_duration: dynamic_histogram("{}.clone_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     full_idmap_clone_duration: dynamic_histogram("{}.full_idmap_clone_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    bookmarks_duration: dynamic_histogram("{}.full_idmap_clone_data_ms", (repo: String); 10, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
@@ -66,6 +67,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
                 CommitRevlogData => STATS::commit_revlog_data_duration.add_value(dur_ms, (repo,)),
                 Clone => STATS::clone_duration.add_value(dur_ms, (repo,)),
                 FullIdMapClone => STATS::full_idmap_clone_duration.add_value(dur_ms, (repo,)),
+                Bookmarks => STATS::bookmarks_duration.add_value(dur_ms, (repo,)),
             }
         }
 
