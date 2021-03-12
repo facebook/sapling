@@ -15,6 +15,8 @@ import subprocess
 import sys
 import unittest
 
+import libfb.py.parutil as parutil
+
 
 try:
     # Used by :run_tests binary target
@@ -28,32 +30,14 @@ try:
             "//eden/scm:hgpython-py3", pathutils.BuildRuleTypes.SH_BINARY
         )
     else:
-        hgpath = pathutils.get_build_rule_output_path(
-            "//eden/scm:hg", pathutils.BuildRuleTypes.SH_BINARY
-        )
-        pythonbinpath = pathutils.get_build_rule_output_path(
-            "//eden/scm:hgpython", pathutils.BuildRuleTypes.SH_BINARY
-        )
-    watchman = pathutils.get_build_rule_output_path(
-        "//watchman:watchman", pathutils.BuildRuleTypes.CXX_BINARY
-    )
-    mononoke_server = pathutils.get_build_rule_output_path(
-        "//eden/mononoke:mononoke", pathutils.BuildRuleTypes.RUST_BINARY
-    )
-    mononoke_hgcli = pathutils.get_build_rule_output_path(
-        "//eden/mononoke/hgcli:hgcli", pathutils.BuildRuleTypes.RUST_BINARY
-    )
-    edenapi_server = pathutils.get_build_rule_output_path(
-        "//eden/mononoke/edenapi_server:edenapi_server",
-        pathutils.BuildRuleTypes.RUST_BINARY,
-    )
-    dummyssh = pathutils.get_build_rule_output_path(
-        "//eden/scm/tests:dummyssh3", pathutils.BuildRuleTypes.PYTHON_BINARY
-    )
-    get_free_socket = pathutils.get_build_rule_output_path(
-        "//eden/mononoke/tests/integration:get_free_socket",
-        pathutils.BuildRuleTypes.PYTHON_BINARY,
-    )
+        hgpath = parutil.get_file_path("hg.sh", pkg=__package__)
+        pythonbinpath = parutil.get_file_path("hgpython.sh", pkg=__package__)
+    watchman = parutil.get_file_path("watchman", pkg=__package__)
+    mononoke_server = parutil.get_file_path("mononoke", pkg=__package__)
+    mononoke_hgcli = parutil.get_file_path("hgcli", pkg=__package__)
+    edenapi_server = parutil.get_file_path("edenapi_server", pkg=__package__)
+    dummyssh = parutil.get_file_path("dummyssh3.par", pkg=__package__)
+    get_free_socket = parutil.get_file_path("get_free_socket.par", pkg=__package__)
 except ImportError:
     # Used by :hg_run_tests and :hg_watchman_run_tests unittest target
     hgpath = os.environ.get("HGTEST_HG")
