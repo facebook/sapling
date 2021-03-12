@@ -851,6 +851,7 @@ class fetchbuilddeps(Command):
             "thrift",
             "../../thrift/lib/py",
             excludes=[
+                "thrift/async_common.py",
                 "thrift/util/async_common.py",
                 "thrift/util/asyncio.py",
                 "thrift/util/converter.py",
