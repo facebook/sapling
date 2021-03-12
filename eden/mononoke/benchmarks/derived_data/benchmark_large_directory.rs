@@ -22,6 +22,7 @@ use derived_data::{BonsaiDerivable, BonsaiDerived};
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures_stats::TimedFutureExt;
+use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::ChangesetId;
 use rand::distributions::{Alphanumeric, Uniform};
 use rand::{thread_rng, Rng};
@@ -125,6 +126,11 @@ async fn modify_large_directory(
 
 async fn derive(ctx: &CoreContext, repo: &BlobRepo, data: &str, csid: ChangesetId) -> String {
     match data {
+        MappedHgChangesetId::NAME => MappedHgChangesetId::derive(&ctx, &repo, csid)
+            .await
+            .unwrap()
+            .0
+            .to_string(),
         RootSkeletonManifestId::NAME => RootSkeletonManifestId::derive(&ctx, &repo, csid)
             .await
             .unwrap()
