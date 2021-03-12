@@ -18,7 +18,9 @@ use cpython::*;
 
 pub use rust::PyProgressFactory;
 
+mod model;
 mod python;
+mod render;
 mod rust;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -27,6 +29,17 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
     m.add_class::<python::bar>(py)?;
     m.add_class::<python::spinner>(py)?;
+
+    let model_mod = PyModule::new(py, &format!("{}.model", name))?;
+    model_mod.add_class::<model::ProgressBar>(py)?;
+    model_mod.add_class::<model::CacheStats>(py)?;
+    m.add(py, "model", model_mod)?;
+
+    let render_mod = PyModule::new(py, &format!("{}.model", name))?;
+    use render::{debug, simple};
+    render_mod.add(py, "simple", py_fn!(py, simple()))?;
+    render_mod.add(py, "debug", py_fn!(py, debug()))?;
+    m.add(py, "render", render_mod)?;
 
     Ok(m)
 }
