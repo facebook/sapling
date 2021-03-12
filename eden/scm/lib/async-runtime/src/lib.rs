@@ -24,7 +24,10 @@
 ///! TODO(T74221415): monitoring, signal handling
 use futures::future::Future;
 use futures::stream::{BoxStream, Stream, StreamExt};
+use futures::FutureExt;
+use futures::{pin_mut, select};
 use once_cell::sync::Lazy;
+use std::io::{Error, ErrorKind};
 use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
 use tokio::task::JoinHandle;
 
@@ -207,6 +210,33 @@ pub fn iter_to_stream<I: Send + 'static>(
         item.map(|item| (item, iter))
     });
     Box::pin(stream.fuse())
+}
+/// Blocks on the future from python code, interrupting future execution on Ctrl+C
+/// Wraps future's output with Result that returns error when interrupted
+/// If future already returns Result, use try_block_unless_interrupted
+///
+/// Send on this future only needed to prevent including `py` into this future
+pub fn block_unless_interrupted<F: Future>(f: F) -> Result<F::Output, Error> {
+    block_on_exclusive(unless_interrupted(f))
+}
+
+/// Same as block_unless_interrupted but for futures that returns Result
+pub fn try_block_unless_interrupted<O, E, F: Future<Output = Result<O, E>>>(f: F) -> Result<O, E>
+where
+    E: Send,
+    E: From<Error>,
+{
+    block_on_exclusive(async move { Ok(unless_interrupted(f).await??) })
+}
+
+async fn unless_interrupted<F: Future>(f: F) -> Result<F::Output, Error> {
+    let f = f.fuse();
+    let ctrlc = tokio::signal::ctrl_c().fuse();
+    pin_mut!(f, ctrlc);
+    select! {
+        _ = ctrlc => Err(ErrorKind::Interrupted.into()),
+        res = f => Ok(res),
+    }
 }
 
 #[cfg(test)]
