@@ -24,10 +24,9 @@ use stats::prelude::*;
 use bookmarks::{BookmarkName, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::idmap::IdMap;
-use crate::owned::OwnedSegmentedChangelog;
 use crate::read_only::ReadOnlySegmentedChangelog;
 use crate::update::{prepare_incremental_iddag_update, update_iddag};
 use crate::{segmented_changelog_delegate, SegmentedChangelog, StreamCloneData};
@@ -40,6 +39,7 @@ define_stats! {
 }
 
 pub struct OnDemandUpdateSegmentedChangelog {
+    _repo_id: RepositoryId,
     iddag: Arc<RwLock<InProcessIdDag>>,
     idmap: Arc<dyn IdMap>,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
@@ -48,23 +48,18 @@ pub struct OnDemandUpdateSegmentedChangelog {
 
 impl OnDemandUpdateSegmentedChangelog {
     pub fn new(
+        _repo_id: RepositoryId,
         iddag: InProcessIdDag,
         idmap: Arc<dyn IdMap>,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
     ) -> Self {
         Self {
+            _repo_id,
             iddag: Arc::new(RwLock::new(iddag)),
             idmap,
             changeset_fetcher,
             ongoing_update: Arc::new(Mutex::new(None)),
         }
-    }
-
-    pub fn from_owned(
-        owned: OwnedSegmentedChangelog,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
-    ) -> Self {
-        Self::new(owned.iddag, owned.idmap, changeset_fetcher)
     }
 
     pub fn with_periodic_update_to_bookmark(

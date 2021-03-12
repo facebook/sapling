@@ -108,11 +108,11 @@ impl SegmentedChangelogBuilder {
 
     pub fn build_on_demand_update(mut self) -> Result<OnDemandUpdateSegmentedChangelog> {
         let owned = self.new_owned()?;
-        let changeset_fetcher = self.changeset_fetcher()?;
         Ok(OnDemandUpdateSegmentedChangelog::new(
+            self.repo_id()?,
             owned.iddag,
             owned.idmap,
-            changeset_fetcher,
+            self.changeset_fetcher()?,
         ))
     }
 
@@ -120,10 +120,12 @@ impl SegmentedChangelogBuilder {
         mut self,
         ctx: &CoreContext,
     ) -> Result<OnDemandUpdateSegmentedChangelog> {
+        let repo_id = self.repo_id()?;
         let changeset_fetcher = self.changeset_fetcher()?;
         let manager = self.build_manager()?;
         let owned = manager.load_owned(ctx).await?;
         Ok(OnDemandUpdateSegmentedChangelog::new(
+            repo_id,
             owned.iddag,
             owned.idmap,
             changeset_fetcher,
@@ -135,12 +137,13 @@ impl SegmentedChangelogBuilder {
         ctx: &CoreContext,
     ) -> Result<PeriodicUpdateSegmentedChangelog> {
         let owned = self.new_owned()?;
-        let changeset_fetcher = self.changeset_fetcher()?;
         let dag = PeriodicUpdateSegmentedChangelog::for_bookmark(
             ctx,
-            Arc::new(OnDemandUpdateSegmentedChangelog::from_owned(
-                owned,
-                changeset_fetcher,
+            Arc::new(OnDemandUpdateSegmentedChangelog::new(
+                self.repo_id()?,
+                owned.iddag,
+                owned.idmap,
+                self.changeset_fetcher()?,
             )),
             self.bookmarks()?,
             self.bookmark_name()?,
