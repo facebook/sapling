@@ -12,5 +12,7 @@
 //! - Lock-free (nice to have).
 
 mod io_sample;
+mod time_series;
 
 pub use io_sample::IoSample;
+pub use time_series::IoTimeSeries;

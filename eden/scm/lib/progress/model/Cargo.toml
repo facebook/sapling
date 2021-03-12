@@ -5,4 +5,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+parking_lot = "0.10.2"
+paste = "1.0"
+tokio = { version = "1", features = ["full", "test-util"] }
 tracing = "0.1"
