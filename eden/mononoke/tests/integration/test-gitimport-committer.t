@@ -105,18 +105,7 @@
   $ hg pull --config extensions.hggit= "$TESTTMP/repo-git-clone"
   pulling from $TESTTMP/repo-git-clone
   importing git objects into hg
-  $ hgmn push --config extensions.hggit= -r another_committer "$TESTTMP/repo-git-clone" --debug -f
-  pushing to $TESTTMP/repo-git-clone
-  finding hg commits to export
-  exporting hg objects to git
-  converting revision * (glob)
-  converting revision * (glob)
-  searching for changes
-  1 commits found
-  list of commits:
-  b'a1368bfa4ec1c5478d03385b567ea2a8541ee566'
-  adding objects
-  added 1 commits with 1 trees and 1 blobs
+  $ hgmn push --config extensions.hggit= -r another_committer "$TESTTMP/repo-git-clone" --debug -f &> /dev/null
   $ cd "$TESTTMP/repo-git-clone"
   $ git log another_committer --pretty=fuller
   commit a1368bfa4ec1c5478d03385b567ea2a8541ee566
