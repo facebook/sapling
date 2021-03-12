@@ -43,8 +43,9 @@ struct Inner {
     error: Option<Box<dyn Write>>,
     progress: Option<Box<dyn Write>>,
 
-    // Used to decide how to clear the progress.
+    // Used to decide how to clear the progress (using the error stream).
     progress_lines: usize,
+    progress_conflict_with_output: bool,
 
     pager_handle: Option<JoinHandle<streampager::Result<()>>>,
 }
@@ -130,7 +131,7 @@ impl io::Write for IOOutput {
             None => return Ok(buf.len()),
         };
         let mut inner = inner.lock();
-        inner.clear_progress()?;
+        inner.clear_progress_if_conflict()?;
         inner.output.write(buf)
     }
 
@@ -140,7 +141,7 @@ impl io::Write for IOOutput {
             None => return Ok(()),
         };
         let mut inner = inner.lock();
-        inner.clear_progress()?;
+        inner.clear_progress_if_conflict()?;
         inner.output.flush()
     }
 }
@@ -199,6 +200,11 @@ impl IO {
         OS: Write + 'static,
         ES: Write + 'static,
     {
+        let progress_conflict_with_output = match &error {
+            None => false, // No progress bar.
+            Some(e) => e.is_tty() && output.is_tty(),
+        };
+
         let inner = Inner {
             input: Box::new(input),
             output: Box::new(output),
@@ -206,7 +212,9 @@ impl IO {
             progress: None,
             pager_handle: None,
             progress_lines: 0,
+            progress_conflict_with_output,
         };
+
         Self {
             inner: Arc::new(Mutex::new(inner)),
         }
@@ -223,6 +231,7 @@ impl IO {
         inner.output = Box::new(io::stdout());
         inner.error = Some(Box::new(io::stderr()));
         inner.progress = None;
+        inner.progress_lines = 0;
 
         // Wait for the pager (if running).
         let mut handle = None;
@@ -266,6 +275,7 @@ impl IO {
     }
 
     pub fn stdio() -> Self {
+        let progress_conflict_with_output = io::stderr().is_tty() && io::stdout().is_tty();
         let inner = Inner {
             input: Box::new(io::stdin()),
             output: Box::new(io::stdout()),
@@ -273,6 +283,7 @@ impl IO {
             progress: None,
             pager_handle: None,
             progress_lines: 0,
+            progress_conflict_with_output,
         };
         Self {
             inner: Arc::new(Mutex::new(inner)),
@@ -397,6 +408,15 @@ impl Inner {
             self.progress_lines = 0;
         }
         Ok(())
+    }
+
+    /// Clear the progress bar if it conflicts with "stdout" output.
+    fn clear_progress_if_conflict(&mut self) -> io::Result<()> {
+        if self.progress_conflict_with_output && self.progress.is_none() {
+            self.clear_progress()
+        } else {
+            Ok(())
+        }
     }
 
     fn set_progress(&mut self, data: &str) -> io::Result<()> {
