@@ -10,3 +10,7 @@
 //! - Pure data. Minimal state just enough for rendering.
 //! - Separate from rendering.
 //! - Lock-free (nice to have).
+
+mod io_sample;
+
+pub use io_sample::IoSample;
