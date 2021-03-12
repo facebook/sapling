@@ -14,9 +14,11 @@
 mod cache_stats;
 mod io_sample;
 mod progress_bar;
+mod registry;
 mod time_series;
 
 pub use cache_stats::CacheStats;
 pub use io_sample::IoSample;
 pub use progress_bar::ProgressBar;
+pub use registry::Registry;
 pub use time_series::IoTimeSeries;
