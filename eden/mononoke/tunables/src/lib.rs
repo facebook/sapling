@@ -96,7 +96,6 @@ pub struct MononokeTunables {
     scs_error_log_sampling: AtomicBool,
     redacted_logging_sampling_rate: AtomicI64,
     getbundle_use_low_gen_optimization: AtomicBool,
-    getbundle_low_gen_num_threshold: AtomicI64,
     getbundle_high_low_gen_num_difference_threshold: AtomicI64,
     getbundle_low_gen_optimization_max_traversal_limit: AtomicI64,
     getbundle_partial_getbundle_traversal_limit: AtomicI64,

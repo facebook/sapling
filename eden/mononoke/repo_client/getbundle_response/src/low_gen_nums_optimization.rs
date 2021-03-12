@@ -33,20 +33,13 @@ pub(crate) struct LowGenNumChecker {
 impl LowGenNumChecker {
     pub(crate) fn new_from_tunables(highest_gen_num: u64) -> Self {
         let difference = tunables().get_getbundle_high_low_gen_num_difference_threshold();
-        if difference > 0 {
+        let low_gen_num_threshold = if difference > 0 {
             let difference = difference as u64;
-            let low_gen_num_threshold = Some(highest_gen_num.saturating_sub(difference));
-            return Self {
-                low_gen_num_threshold,
-            };
-        }
-
-        let threshold = tunables().get_getbundle_low_gen_num_threshold();
-        let low_gen_num_threshold = if threshold > 0 {
-            Some(threshold as u64)
+            Some(highest_gen_num.saturating_sub(difference))
         } else {
             None
         };
+
         Self {
             low_gen_num_threshold,
         }
