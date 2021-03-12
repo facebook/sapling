@@ -9,9 +9,12 @@ use crate::{commands, HgPython};
 use anyhow::Result;
 use blackbox::serde_json;
 use clidispatch::global_flags::HgGlobalOpts;
+use clidispatch::io::IsTty;
 use clidispatch::io::IO;
 use clidispatch::{dispatch, errors};
+use configparser::config::ConfigSet;
 use parking_lot::Mutex;
+use progress_model::Registry;
 use std::env;
 use std::fs::File;
 use std::io;
@@ -20,6 +23,9 @@ use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::sync::Weak;
+use std::thread;
+use std::time::Duration;
 use std::time::SystemTime;
 use tracing::dispatcher::{self, Dispatch};
 use tracing::Level;
@@ -91,9 +97,16 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
 
     let exit_code = {
         let _guard = span.enter();
-        let table = commands::table();
+        let in_scope = Arc::new(()); // Used to tell progress rendering thread to stop.
 
-        let exit_code = match dispatch::dispatch(&table, &args[1..], io) {
+        let table = commands::table();
+        let exit_code = match {
+            dispatch::Dispatcher::from_args(args[1..].to_vec()).and_then(|dispatcher| {
+                let config = dispatcher.config();
+                let _ = spawn_progress_thread(config, io, Arc::downgrade(&in_scope));
+                dispatcher.run_command(&table, io)
+            })
+        } {
             Ok(ret) => ret as i32,
             Err(err) => {
                 let should_fallback = if err.downcast_ref::<errors::FallbackToPython>().is_some() {
@@ -130,6 +143,11 @@ pub fn run_command(args: Vec<String>, io: &IO) -> i32 {
             }
         };
         span.record("exit_code", &exit_code);
+        drop(in_scope);
+
+        // Clean up progress models.
+        Registry::main().remove_orphan_models();
+
         exit_code
     };
 
@@ -222,6 +240,64 @@ fn setup_tracing(global_opts: &Option<HgGlobalOpts>, io: &IO) -> Result<Arc<Mute
     }
 
     Ok(data)
+}
+
+fn spawn_progress_thread(config: &ConfigSet, io: &IO, in_scope: Weak<()>) -> Result<()> {
+    // See 'hg help config.progress' for the config options.
+    let disabled = config.get_or("progress", "disable", || false)?;
+    if disabled {
+        return Ok(());
+    }
+
+    let assume_tty = config.get_or("progress", "disable", || false)?;
+    if !assume_tty && !io.error().is_tty() {
+        return Ok(());
+    }
+
+    let renderer_name = config.get_or("progress", "renderer", || "classic".to_string())?;
+    let render_function = match renderer_name.as_str() {
+        "rust:simple" => progress_render::simple::render,
+        _ => return Ok(()),
+    };
+
+    let interval = Duration::from_secs_f64(config.get_or("progress", "refresh", || 0.1)?);
+    let mut config = progress_render::RenderingConfig {
+        delay: Duration::from_secs_f64(config.get_or("progress", "delay", || 3.0)?),
+        term_width: term_width(),
+        ..Default::default()
+    };
+
+    let registry = Registry::main();
+    let progress = io.progress();
+    hg_http::enable_progress_reporting();
+
+    // Not fatal if we cannot spawn the progress rendering thread.
+    let thread_name = "rust-progress".to_string();
+    let _ = thread::Builder::new().name(thread_name).spawn(move || {
+        let mut last_text = String::new();
+        let interval = interval.max(Duration::from_millis(50));
+        while Weak::upgrade(&in_scope).is_some() {
+            let mut text = (render_function)(&registry, &config);
+            registry.remove_orphan_progress_bar();
+            if text != last_text {
+                let term_width = term_width();
+                if term_width != config.term_width {
+                    config.term_width = term_width;
+                    text = (render_function)(&registry, &config);
+                }
+                // This might block (so we use a thread, not an async task)
+                let _ = progress.set(&text);
+                last_text = text;
+            }
+            thread::sleep(interval);
+        }
+    });
+
+    Ok(())
+}
+
+fn term_width() -> usize {
+    term_size::dimensions_stderr().map_or(80, |(w, _h)| w)
 }
 
 fn maybe_write_trace(

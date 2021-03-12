@@ -18,6 +18,7 @@ import os
 import threading
 import time
 
+import bindings
 from bindings import threading as rustthreading, tracing
 
 from . import encoding, pycompat, util
@@ -405,7 +406,45 @@ class nullrenderer(baserenderer):
         pass
 
 
-renderers = {"classic": classicrenderer, "fancy": fancyrenderer, "none": nullrenderer}
+class rustmodelupdater(baserenderer):
+    def __init__(self, bar):
+        super(rustmodelupdater, self).__init__(bar)
+        model = bindings.progress.model.ProgressBar(
+            topic=self._bar._topic,
+            total=self._bar._total,
+            unit=self._bar._unit,
+        )
+        self._model = model
+
+    def show(self, now):
+        # Update data model.
+        model = self._model
+        if model is None:
+            return
+        bar = self._bar
+        total = bar._total or 0
+        pos, message = _progvalue(bar.value)
+        pos = pos or 0
+        model.set_total(total)
+        model.set_position(pos)
+        if message:
+            model.set_message(message)
+
+    def _writeprogress(self, msg, flush=False):
+        # The Rust thread will write the progress.
+        pass
+
+    def complete(self):
+        self._model = None
+
+
+renderers = {
+    "classic": classicrenderer,
+    "fancy": fancyrenderer,
+    "none": nullrenderer,
+    # Does not render directly. But updates Rust progress models.
+    "rust:simple": rustmodelupdater,
+}
 
 
 def getrenderer(bar):
