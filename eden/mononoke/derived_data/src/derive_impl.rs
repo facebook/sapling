@@ -217,6 +217,7 @@ pub async fn find_topo_sorted_underived<
                         }
                     }
                 }
+                .boxed()
             }
         })
         .try_filter_map(|x| async { Ok(x) })

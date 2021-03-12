@@ -112,7 +112,7 @@ where
                         }
 
                         Ok::<_, Error>((output, recurse))
-                    }
+                    }.boxed()
                 },
             )
             .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))
@@ -376,6 +376,7 @@ where
                         }
                     }
                 }
+                .boxed()
             },
         )
         .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))

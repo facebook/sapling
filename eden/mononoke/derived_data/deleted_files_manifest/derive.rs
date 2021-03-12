@@ -101,6 +101,7 @@ pub(crate) async fn derive_deleted_files_manifest(
                             do_derive_unfold(&ctx, &repo, changes, parents).await?;
                         Ok(((path_element, mf_change), next_states))
                     }
+                    .boxed()
                 }
             },
             // fold
@@ -137,6 +138,7 @@ pub(crate) async fn derive_deleted_files_manifest(
                         .await?
                         .map(|mf_id| (path, mf_id)))
                     }
+                    .boxed()
                 }
             },
         )
@@ -1075,7 +1077,7 @@ mod tests {
                         .collect::<Vec<_>>();
 
                     Result::<_, Error>::Ok((vec![entry], recurse_subentries))
-                }
+                }.boxed()
             })
             .map_ok(|entries| iter(entries.into_iter().map(Ok)))
             .try_flatten();

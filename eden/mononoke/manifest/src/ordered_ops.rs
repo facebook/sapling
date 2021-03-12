@@ -11,6 +11,7 @@ use anyhow::Error;
 use borrowed::borrowed;
 use bounded_traversal::OrderedTraversal;
 use context::CoreContext;
+use futures::future::FutureExt;
 use futures::pin_mut;
 use futures::stream::{BoxStream, StreamExt};
 use mononoke_types::MPath;
@@ -128,7 +129,7 @@ where
                         }
 
                         Ok::<_, Error>(output)
-                    }
+                    }.boxed()
                 },
             );
 

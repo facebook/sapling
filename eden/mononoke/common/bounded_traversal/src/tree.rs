@@ -11,7 +11,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use either::Either;
-use futures::future::{join, ready, Join, Ready};
+use futures::future::{join, ready, BoxFuture, Join, Ready};
 use futures::ready;
 use futures::stream::{FuturesUnordered, StreamExt};
 
@@ -38,18 +38,20 @@ use super::{common::Either2, Iter};
 /// ## return value `impl Future<Output = Result<Out, Err>>`
 /// Result of running fold operation on the root of the tree.
 ///
-pub fn bounded_traversal<Err, In, Ins, Out, OutCtx, Unfold, UFut, Fold, FFut>(
+pub fn bounded_traversal<'caller, Err, In, Ins, Out, OutCtx, Unfold, Fold>(
     scheduled_max: usize,
     init: In,
     unfold: Unfold,
     fold: Fold,
-) -> impl Future<Output = Result<Out, Err>>
+) -> impl Future<Output = Result<Out, Err>> + 'caller
 where
-    Unfold: FnMut(In) -> UFut,
-    UFut: Future<Output = Result<(OutCtx, Ins), Err>>,
-    Ins: IntoIterator<Item = In>,
-    Fold: FnMut(OutCtx, Iter<Out>) -> FFut,
-    FFut: Future<Output = Result<Out, Err>>,
+    Err: 'caller,
+    Ins: 'caller,
+    Out: 'caller,
+    OutCtx: 'caller,
+    Unfold: FnMut(In) -> BoxFuture<'caller, Result<(OutCtx, Ins), Err>> + 'caller,
+    Ins: IntoIterator<Item = In> + 'caller,
+    Fold: FnMut(OutCtx, Iter<Out>) -> BoxFuture<'caller, Result<Out, Err>> + 'caller,
 {
     BoundedTraversal::new(scheduled_max, init, unfold, fold)
 }

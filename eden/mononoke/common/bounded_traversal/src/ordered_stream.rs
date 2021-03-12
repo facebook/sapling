@@ -12,7 +12,7 @@ use std::num::NonZeroUsize;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use futures::future::{join, ready, Join, Ready};
+use futures::future::{join, ready, BoxFuture, Join, Ready};
 use futures::ready;
 use futures::stream::{FuturesUnordered, Stream, StreamExt};
 use smallvec::SmallVec;
@@ -888,18 +888,19 @@ where
 /// traversed significantly more slowly.
 ///
 /// Returns a stream of all `Out` values in the order of the traversed tree.
-pub fn bounded_traversal_ordered_stream<In, InsInit, Out, Unfold, UFut, Unfolded, TErr>(
+pub fn bounded_traversal_ordered_stream<'caller, In, InsInit, Out, Unfold, Unfolded, TErr>(
     scheduled_max: NonZeroUsize,
     queued_max: NonZeroUsize,
     init: InsInit,
     unfold: Unfold,
-) -> impl Stream<Item = Result<Out, TErr>>
+) -> impl Stream<Item = Result<Out, TErr>> + 'caller
 where
-    Unfold: FnMut(In) -> UFut,
-    UFut: Future<Output = Result<Unfolded, TErr>>,
-    InsInit: IntoIterator<Item = (usize, In)>,
-    Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>>,
-    TErr: From<BoundedTraversalError>,
+    In: 'caller,
+    Out: 'caller,
+    Unfold: FnMut(In) -> BoxFuture<'caller, Result<Unfolded, TErr>> + 'caller,
+    InsInit: IntoIterator<Item = (usize, In)> + 'caller,
+    Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>> + 'caller,
+    TErr: From<BoundedTraversalError> + 'caller,
 {
     BoundedTraversalOrderedStream::new(scheduled_max, queued_max, None, init, unfold)
 }
@@ -918,19 +919,20 @@ where
 ///
 /// See `bounded_traversal_ordered_stream` for documentation of the remaining
 /// parameters.
-pub fn bounded_traversal_limited_ordered_stream<In, InsInit, Out, Unfold, UFut, Unfolded, TErr>(
+pub fn bounded_traversal_limited_ordered_stream<'caller, In, InsInit, Out, Unfold, Unfolded, TErr>(
     scheduled_max: NonZeroUsize,
     queued_max: NonZeroUsize,
     limit: usize,
     init: InsInit,
     unfold: Unfold,
-) -> impl Stream<Item = Result<Out, TErr>>
+) -> impl Stream<Item = Result<Out, TErr>> + 'caller
 where
-    Unfold: FnMut(In) -> UFut,
-    UFut: Future<Output = Result<Unfolded, TErr>>,
-    InsInit: IntoIterator<Item = (usize, In)>,
-    Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>>,
-    TErr: From<BoundedTraversalError>,
+    In: 'caller,
+    Out: 'caller,
+    Unfold: FnMut(In) -> BoxFuture<'caller, Result<Unfolded, TErr>> + 'caller,
+    InsInit: IntoIterator<Item = (usize, In)> + 'caller,
+    Unfolded: IntoIterator<Item = OrderedTraversal<Out, In>> + 'caller,
+    TErr: From<BoundedTraversalError> + 'caller,
 {
     BoundedTraversalOrderedStream::new(scheduled_max, queued_max, Some(limit), init, unfold)
 }

@@ -17,7 +17,8 @@ use bounded_traversal::bounded_traversal_stream;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{future, stream::TryStreamExt};
+use futures::future::{self, FutureExt};
+use futures::stream::TryStreamExt;
 use maplit::btreemap;
 use memblob::Memblob;
 use mononoke_types::{BlobstoreBytes, FileType, MPath, MPathElement};
@@ -200,20 +201,23 @@ impl Loadable for Files {
         bounded_traversal_stream(
             256,
             Some((None, Entry::Tree(self.0))),
-            move |(path, entry)| async move {
-                let content = Loadable::load(&entry, &ctx, blobstore).await?;
-                Ok(match content {
-                    Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
-                    Entry::Tree(tree) => {
-                        let recurse = tree
-                            .list()
-                            .map(|(name, entry)| {
-                                (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
-                            })
-                            .collect();
-                        (None, recurse)
-                    }
-                })
+            move |(path, entry)| {
+                async move {
+                    let content = Loadable::load(&entry, &ctx, blobstore).await?;
+                    Ok(match content {
+                        Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
+                        Entry::Tree(tree) => {
+                            let recurse = tree
+                                .list()
+                                .map(|(name, entry)| {
+                                    (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
+                                })
+                                .collect();
+                            (None, recurse)
+                        }
+                    })
+                }
+                .boxed()
             },
         )
         .try_filter_map(|item| {

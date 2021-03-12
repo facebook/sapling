@@ -11,7 +11,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{
     channel::mpsc,
-    future::{self, TryFutureExt},
+    future::{self, FutureExt, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
 use mononoke_types::{MPath, MPathElement};
@@ -186,7 +186,7 @@ where
             parents: parents.into_iter().map(Entry::Tree).collect(),
         },
         // unfold, all merge logic happens in this unfold function
-        move |merge_node| merge(ctx.clone(), store.clone(), merge_node),
+        move |merge_node| merge(ctx.clone(), store.clone(), merge_node).boxed(),
         // fold, this function only creates entries from merge result and already merged subentries
         {
             let create_tree = Arc::new(create_tree);
@@ -247,6 +247,7 @@ where
                         }
                     }
                 }
+                .boxed()
             }
         },
     )

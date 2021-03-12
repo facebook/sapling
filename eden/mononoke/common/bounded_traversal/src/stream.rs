@@ -6,9 +6,9 @@
  */
 
 use futures::{
-    future::{FutureExt, TryFutureExt},
+    future::{BoxFuture, FutureExt, TryFutureExt},
     ready,
-    stream::{self, FuturesUnordered, StreamExt},
+    stream::{self, BoxStream, FuturesUnordered, StreamExt},
     Stream,
 };
 use std::{
@@ -36,17 +36,18 @@ use std::{
 /// ## return value `impl Stream<Item = Result<Out, UErr>>`
 /// Stream of all `Out` values
 ///
-pub fn bounded_traversal_stream<In, InsInit, Ins, Out, Unfold, UFut, UErr>(
+pub fn bounded_traversal_stream<'caller, In, InsInit, Ins, Out, Unfold, UErr>(
     scheduled_max: usize,
     init: InsInit,
     mut unfold: Unfold,
-) -> impl Stream<Item = Result<Out, UErr>>
+) -> impl Stream<Item = Result<Out, UErr>> + 'caller
 where
-    Unfold: FnMut(In) -> UFut,
-    // TODO UFut could be IntoFuture once https://github.com/rust-lang/rust/pull/65244 is visible
-    UFut: Future<Output = Result<(Out, Ins), UErr>>,
-    InsInit: IntoIterator<Item = In>,
-    Ins: IntoIterator<Item = In>,
+    In: 'caller,
+    Out: 'caller,
+    UErr: 'caller,
+    Unfold: FnMut(In) -> BoxFuture<'caller, Result<(Out, Ins), UErr>> + 'caller,
+    InsInit: IntoIterator<Item = In> + 'caller,
+    Ins: IntoIterator<Item = In> + 'caller,
 {
     let mut unscheduled = VecDeque::from_iter(init);
     let mut scheduled = FuturesUnordered::new();
@@ -166,16 +167,18 @@ where
 ///   - but instead of iterator over children unfold returns a stream over children
 ///   - this stream must be `Unpin`
 ///   - if unscheduled queue is too large it will suspend iteration over children stream
-pub fn bounded_traversal_stream2<In, Ins, Out, Unfold, UFut, UStream, UErr>(
+pub fn bounded_traversal_stream2<'caller, In, Ins, Out, Unfold, UErr>(
     scheduled_max: usize,
     init: Ins,
     mut unfold: Unfold,
-) -> impl Stream<Item = Result<Out, UErr>>
+) -> impl Stream<Item = Result<Out, UErr>> + 'caller
 where
-    Ins: IntoIterator<Item = In>,
-    Unfold: FnMut(In) -> UFut,
-    UFut: Future<Output = Result<(Out, UStream), UErr>>,
-    UStream: Stream<Item = Result<In, UErr>> + Unpin,
+    In: 'caller,
+    Out: 'caller,
+    UErr: 'caller,
+    Ins: IntoIterator<Item = In> + 'caller,
+    Unfold: FnMut(In) -> BoxFuture<'caller, Result<(Out, BoxStream<'caller, Result<In, UErr>>), UErr>>
+        + 'caller,
 {
     enum Op<U, C> {
         Unfold(U),

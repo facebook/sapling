@@ -34,7 +34,7 @@ use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
     compat::Future01CompatExt,
-    future::{self, try_join},
+    future::{self, try_join, FutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
 use futures_stats::TimedFutureExt;
@@ -1012,9 +1012,12 @@ async fn tail_batch_iteration(
         bounded_traversal::bounded_traversal_dag(
             100,
             derive_graph,
-            |node| async move {
-                let deps = node.dependencies.clone();
-                Ok((node, deps))
+            |node| {
+                async move {
+                    let deps = node.dependencies.clone();
+                    Ok((node, deps))
+                }
+                .boxed()
             },
             move |node, _| {
                 cloned!(ctx, repo);
@@ -1046,6 +1049,7 @@ async fn tail_batch_iteration(
                     }
                     Result::<_>::Ok(())
                 }
+                .boxed()
             },
         )
         .await?

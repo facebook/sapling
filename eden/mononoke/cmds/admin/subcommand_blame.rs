@@ -26,7 +26,7 @@ use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
     future::{ready, try_join, try_join_all},
-    Future, StreamExt, TryFutureExt, TryStreamExt,
+    Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
 };
 use manifest::ManifestOps;
 use mononoke_types::{
@@ -323,6 +323,7 @@ async fn subcommand_compute_blame(
                         .collect();
                     Ok(((csid, path, file_unode_id), parents))
                 }
+                .boxed()
             }
         },
         {
@@ -343,6 +344,7 @@ async fn subcommand_compute_blame(
                         }
                     }
                 }
+                .boxed()
             }
         },
     )

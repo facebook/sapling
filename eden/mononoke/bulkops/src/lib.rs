@@ -199,6 +199,7 @@ impl PublicChangesetBulkFetch {
                         let handle = tokio::task::spawn(next);
                         handle.await?
                     }
+                    .boxed()
                 },
             )
             .and_then(move |(mut ids, completed_bounds)| async move {

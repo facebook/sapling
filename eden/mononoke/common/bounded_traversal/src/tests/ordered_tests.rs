@@ -10,7 +10,7 @@ use std::num::NonZeroUsize;
 use std::time::Duration;
 
 use anyhow::Error;
-use futures::future::{Future, FutureExt};
+use futures::future::{BoxFuture, FutureExt};
 use futures::stream::TryStreamExt;
 use pretty_assertions::assert_eq;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
@@ -176,6 +176,7 @@ async fn test_bounded_traversal_ordered_stream() -> Result<(), Error> {
                                     subtree => OrderedTraversal::Recurse(subtree.size(), subtree),
                                 }))
                             }
+                            .boxed()
                         }
                         OrdTree::Leaf(out) => {
                             panic!("unfold called on leaf {}", out)
@@ -275,6 +276,7 @@ async fn test_bounded_traversal_limited_ordered_stream() -> Result<(), Error> {
                                     subtree => OrderedTraversal::Recurse(subtree.size(), subtree),
                                 }))
                             }
+                            .boxed()
                         }
                         OrdTree::Leaf(out) => {
                             panic!("unfold called on leaf {}", out)
@@ -368,6 +370,7 @@ async fn test_bounded_traversal_limited_ordered_stream_partial() -> Result<(), E
                                     },
                                 ))
                             }
+                            .boxed()
                         }
                         OrdTree::Leaf(out) => {
                             panic!("unfold called on leaf {}", out)
@@ -417,20 +420,18 @@ async fn test_bounded_traversal_limited_ordered_stream_partial() -> Result<(), E
 
 fn quickcheck_unfold(
     tree: OrdTree,
-) -> impl Future<Output = Result<impl IntoIterator<Item = OrderedTraversal<usize, OrdTree>>, Error>>
-{
+) -> BoxFuture<'static, Result<impl IntoIterator<Item = OrderedTraversal<usize, OrdTree>>, Error>> {
     match tree {
-        OrdTree::Node(id, children) => {
-            async move {
-                if id % 10 > 0 {
-                    tokio::time::delay_for(Duration::from_micros((id % 10) as u64)).await;
-                }
-                Ok(children.into_iter().map(|child| match child {
-                    OrdTree::Leaf(id) => OrderedTraversal::Output(id),
-                    subtree => OrderedTraversal::Recurse(subtree.size(), subtree),
-                }))
+        OrdTree::Node(id, children) => async move {
+            if id % 10 > 0 {
+                tokio::time::delay_for(Duration::from_micros((id % 10) as u64)).await;
             }
+            Ok(children.into_iter().map(|child| match child {
+                OrdTree::Leaf(id) => OrderedTraversal::Output(id),
+                subtree => OrderedTraversal::Recurse(subtree.size(), subtree),
+            }))
         }
+        .boxed(),
         OrdTree::Leaf(out) => {
             panic!("unfold called on leaf {}", out)
         }

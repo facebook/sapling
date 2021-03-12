@@ -18,7 +18,7 @@ use borrowed::borrowed;
 use bounded_traversal::bounded_traversal;
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::future::{try_join, try_join_all};
+use futures::future::{try_join, try_join_all, FutureExt};
 use futures::stream::{self, StreamExt, TryStreamExt};
 use sorted_vector_map::SortedVectorMap;
 use std::borrow::Cow;
@@ -143,55 +143,62 @@ impl SkeletonManifest {
         bounded_traversal(
             256,
             (None, self, parents),
-            |(path, sk_mf, parents)| async move {
-                if sk_mf.summary.child_case_conflicts {
-                    if let Some((name1, name2)) = sk_mf.first_new_child_case_conflict(&parents) {
-                        let path1 = MPath::join_opt_element(path.as_ref(), name1);
-                        let path2 = MPath::join_opt_element(path.as_ref(), name2);
-                        // Since we only want the first conflict, don't
-                        // recurse to child directories.
-                        return Ok((Some((path1, path2)), Vec::new()));
-                    }
-                }
-
-                if !sk_mf.summary.descendant_case_conflicts {
-                    return Ok((None, Vec::new()));
-                }
-
-                borrowed!(path);
-                let recurse_ids = sk_mf
-                    .recurse_new_descendant_case_conflicts(&parents)
-                    .map(|(name, recurse_id, recurse_parent_ids)| async move {
-                        let recurse_path = MPath::join_opt_element(path.as_ref(), name);
-                        let (recurse_sk_mf, recurse_parents) = try_join(
-                            recurse_id.load(ctx, blobstore),
-                            try_join_all(
-                                recurse_parent_ids
-                                    .into_iter()
-                                    .map(|id| async move { id.load(ctx, blobstore).await }),
-                            ),
-                        )
-                        .await?;
-                        Ok::<_, Error>((Some(recurse_path), recurse_sk_mf, recurse_parents))
-                    })
-                    .collect::<Vec<_>>();
-
-                let recurse = stream::iter(recurse_ids)
-                    .buffered(100)
-                    .try_collect::<Vec<_>>()
-                    .await?;
-
-                Ok((None, recurse))
-            },
-            |maybe_conflict, child_conflicts| async move {
-                Ok(maybe_conflict.or_else(move || {
-                    for conflict in child_conflicts {
-                        if let Some(conflict) = conflict {
-                            return Some(conflict);
+            |(path, sk_mf, parents)| {
+                async move {
+                    if sk_mf.summary.child_case_conflicts {
+                        if let Some((name1, name2)) = sk_mf.first_new_child_case_conflict(&parents)
+                        {
+                            let path1 = MPath::join_opt_element(path.as_ref(), name1);
+                            let path2 = MPath::join_opt_element(path.as_ref(), name2);
+                            // Since we only want the first conflict, don't
+                            // recurse to child directories.
+                            return Ok((Some((path1, path2)), Vec::new()));
                         }
                     }
-                    None
-                }))
+
+                    if !sk_mf.summary.descendant_case_conflicts {
+                        return Ok((None, Vec::new()));
+                    }
+
+                    borrowed!(path);
+                    let recurse_ids = sk_mf
+                        .recurse_new_descendant_case_conflicts(&parents)
+                        .map(|(name, recurse_id, recurse_parent_ids)| async move {
+                            let recurse_path = MPath::join_opt_element(path.as_ref(), name);
+                            let (recurse_sk_mf, recurse_parents) = try_join(
+                                recurse_id.load(ctx, blobstore),
+                                try_join_all(
+                                    recurse_parent_ids
+                                        .into_iter()
+                                        .map(|id| async move { id.load(ctx, blobstore).await }),
+                                ),
+                            )
+                            .await?;
+                            Ok::<_, Error>((Some(recurse_path), recurse_sk_mf, recurse_parents))
+                        })
+                        .collect::<Vec<_>>();
+
+                    let recurse = stream::iter(recurse_ids)
+                        .buffered(100)
+                        .try_collect::<Vec<_>>()
+                        .await?;
+
+                    Ok((None, recurse))
+                }
+                .boxed()
+            },
+            |maybe_conflict, child_conflicts| {
+                async move {
+                    Ok(maybe_conflict.or_else(move || {
+                        for conflict in child_conflicts {
+                            if let Some(conflict) = conflict {
+                                return Some(conflict);
+                            }
+                        }
+                        None
+                    }))
+                }
+                .boxed()
             },
         )
         .await

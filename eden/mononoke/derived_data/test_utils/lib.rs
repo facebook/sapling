@@ -11,6 +11,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bounded_traversal::bounded_traversal_stream;
 use context::CoreContext;
+use futures::future::FutureExt;
 use futures::stream::{self, Stream, TryStreamExt};
 use manifest::{Entry, Manifest};
 use mercurial_types::HgChangesetId;
@@ -36,26 +37,29 @@ pub fn iterate_all_manifest_entries<'a, MfId, LId>(
     entry: Entry<MfId, LId>,
 ) -> impl Stream<Item = Result<(Option<MPath>, Entry<MfId, LId>)>> + 'a
 where
-    MfId: Loadable + Send + Clone + 'a,
+    MfId: Loadable + Send + Sync + Clone + 'a,
     LId: Send + Clone + 'static,
     <MfId as Loadable>::Value: Manifest<TreeId = MfId, LeafId = LId>,
 {
-    bounded_traversal_stream(256, Some((None, entry)), move |(path, entry)| async move {
-        match entry {
-            Entry::Leaf(_) => Ok((vec![(path, entry.clone())], vec![])),
-            Entry::Tree(tree) => {
-                let mf = tree.load(ctx, repo.blobstore()).await?;
-                let recurse = mf
-                    .list()
-                    .map(|(basename, new_entry)| {
-                        let path = MPath::join_opt_element(path.as_ref(), &basename);
-                        (Some(path), new_entry)
-                    })
-                    .collect();
+    bounded_traversal_stream(256, Some((None, entry)), move |(path, entry)| {
+        async move {
+            match entry {
+                Entry::Leaf(_) => Ok((vec![(path, entry.clone())], vec![])),
+                Entry::Tree(tree) => {
+                    let mf = tree.load(ctx, repo.blobstore()).await?;
+                    let recurse = mf
+                        .list()
+                        .map(|(basename, new_entry)| {
+                            let path = MPath::join_opt_element(path.as_ref(), &basename);
+                            (Some(path), new_entry)
+                        })
+                        .collect();
 
-                Ok::<_, Error>((vec![(path, Entry::Tree(tree))], recurse))
+                    Ok::<_, Error>((vec![(path, Entry::Tree(tree))], recurse))
+                }
             }
         }
+        .boxed()
     })
     .map_ok(|entries| stream::iter(entries.into_iter().map(Ok::<_, Error>)))
     .try_flatten()

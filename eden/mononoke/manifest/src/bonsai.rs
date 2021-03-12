@@ -10,7 +10,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{
     future::{self, try_join_all},
-    try_join, Stream, TryFutureExt, TryStreamExt,
+    try_join, FutureExt, Stream, TryFutureExt, TryStreamExt,
 };
 use maplit::{hashmap, hashset};
 use mononoke_types::{FileType, MPath};
@@ -329,7 +329,7 @@ where
     .map_ok(|seed| {
         bounded_traversal::bounded_traversal_stream(256, seed, move |(path, (node, parents))| {
             cloned!(ctx, store);
-            async move { bonsai_diff_unfold(&ctx, &store, path, node, parents).await }
+            async move { bonsai_diff_unfold(&ctx, &store, path, node, parents).await }.boxed()
         })
     })
     .try_flatten_stream()

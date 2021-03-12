@@ -566,9 +566,12 @@ impl DeriveGraph {
         bounded_traversal::bounded_traversal_dag(
             100,
             self.clone(),
-            |node| async move {
-                let deps = node.dependencies.clone();
-                Ok((node, deps))
+            |node| {
+                async move {
+                    let deps = node.dependencies.clone();
+                    Ok((node, deps))
+                }
+                .boxed()
             },
             move |node, _| {
                 cloned!(ctx, repo);
@@ -597,6 +600,7 @@ impl DeriveGraph {
                     }
                     Ok::<_, Error>(())
                 }
+                .boxed()
             },
         )
         .await?
@@ -913,6 +917,7 @@ pub fn find_underived_many(
                     Ok((Some((csid, parents, derivers)), dependencies))
                 }
             }
+            .boxed()
         }
     })
     .try_filter_map(future::ok)

@@ -33,7 +33,6 @@ mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 skeleton_manifest = { version = "0.1.0", path = "../skeleton_manifest" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 topo_sort = { version = "0.1.0", path = "../../common/topo_sort" }
 tunables = { version = "0.1.0", path = "../../tunables" }
 unodes = { version = "0.1.0", path = "../unodes" }

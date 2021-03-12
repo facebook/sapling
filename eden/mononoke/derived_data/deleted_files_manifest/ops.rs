@@ -317,7 +317,7 @@ where
                             }
                         }
                     }
-                }
+                }.boxed()
             },
         )
         .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))
@@ -374,7 +374,7 @@ pub fn list_all_entries<'a>(
                     .collect::<Vec<_>>();
 
                 Result::<_, Error>::Ok((entry, recurse_subentries))
-            }
+            }.boxed()
         })
         .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))
         .try_flatten();

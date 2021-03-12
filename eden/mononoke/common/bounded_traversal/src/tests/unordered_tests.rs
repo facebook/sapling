@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 use anyhow::Error;
 use cloned::cloned;
 use futures::future::FutureExt;
-use futures::stream::{self, Stream, TryStreamExt};
+use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use maplit::hashmap;
 use pretty_assertions::assert_eq;
 use tokio::task::yield_now;
@@ -55,10 +55,12 @@ async fn test_bounded_traversal() -> Result<(), Error> {
             let log = log.clone();
             move |Tree { id, children }| {
                 let log = log.clone();
-                tick.sleep(1).map(move |now| {
-                    log.unfold(id, now);
-                    Ok::<_, Error>((id, children))
-                })
+                tick.sleep(1)
+                    .map(move |now| {
+                        log.unfold(id, now);
+                        Ok::<_, Error>((id, children))
+                    })
+                    .boxed()
             }
         },
         // fold
@@ -67,11 +69,13 @@ async fn test_bounded_traversal() -> Result<(), Error> {
             let log = log.clone();
             move |id, children| {
                 let log = log.clone();
-                tick.sleep(1).map(move |now| {
-                    let value = id.to_string() + &children.collect::<String>();
-                    log.fold(id, now, value.clone());
-                    Ok::<_, Error>(value)
-                })
+                tick.sleep(1)
+                    .map(move |now| {
+                        let value = id.to_string() + &children.collect::<String>();
+                        log.fold(id, now, value.clone());
+                        Ok::<_, Error>(value)
+                    })
+                    .boxed()
             }
         },
     )
@@ -161,10 +165,12 @@ async fn test_bounded_traversal_dag() -> Result<(), Error> {
             move |id| {
                 let log = log.clone();
                 let children = dag.get(&id).cloned().unwrap_or_default();
-                tick.sleep(1).map(move |now| {
-                    log.unfold(id, now);
-                    Ok::<_, Error>((id, children))
-                })
+                tick.sleep(1)
+                    .map(move |now| {
+                        log.unfold(id, now);
+                        Ok::<_, Error>((id, children))
+                    })
+                    .boxed()
             }
         },
         // fold
@@ -173,11 +179,13 @@ async fn test_bounded_traversal_dag() -> Result<(), Error> {
             let log = log.clone();
             move |id, children| {
                 let log = log.clone();
-                tick.sleep(1).map(move |now| {
-                    let value = id.to_string() + &children.collect::<String>();
-                    log.fold(id, now, value.clone());
-                    Ok(value)
-                })
+                tick.sleep(1)
+                    .map(move |now| {
+                        let value = id.to_string() + &children.collect::<String>();
+                        log.fold(id, now, value.clone());
+                        Ok(value)
+                    })
+                    .boxed()
             }
         },
     )
@@ -268,10 +276,12 @@ async fn test_bounded_traversal_dag_with_cycle() -> Result<(), Error> {
             move |id| {
                 let log = log.clone();
                 let children = graph.get(&id).cloned().unwrap_or_default();
-                tick.sleep(1).map(move |now| {
-                    log.unfold(id, now);
-                    Ok::<_, Error>((id, children))
-                })
+                tick.sleep(1)
+                    .map(move |now| {
+                        log.unfold(id, now);
+                        Ok::<_, Error>((id, children))
+                    })
+                    .boxed()
             }
         },
         // fold
@@ -280,11 +290,13 @@ async fn test_bounded_traversal_dag_with_cycle() -> Result<(), Error> {
             let log = log.clone();
             move |id, children| {
                 let log = log.clone();
-                tick.sleep(1).map(move |now| {
-                    let value = id.to_string() + &children.collect::<String>();
-                    log.fold(id, now, value.clone());
-                    Ok(value)
-                })
+                tick.sleep(1)
+                    .map(move |now| {
+                        let value = id.to_string() + &children.collect::<String>();
+                        log.fold(id, now, value.clone());
+                        Ok(value)
+                    })
+                    .boxed()
             }
         },
     )
@@ -475,10 +487,12 @@ async fn test_bounded_traversal_stream_ticks() -> Result<(), Error> {
             cloned!(tick, log);
             move |Tree { id, children }| {
                 cloned!(log);
-                tick.sleep(1).map(move |now| {
-                    log.unfold(id, now);
-                    Ok::<_, Error>((id, children))
-                })
+                tick.sleep(1)
+                    .map(move |now| {
+                        log.unfold(id, now);
+                        Ok::<_, Error>((id, children))
+                    })
+                    .boxed()
             }
         })
     })
@@ -492,10 +506,12 @@ async fn test_bounded_traversal_stream_parents() -> Result<(), Error> {
             cloned!(tick, log);
             move |(Tree { id, children }, parent)| {
                 cloned!(log);
-                tick.sleep(1).map(move |_now| {
-                    log.unfold(id, parent);
-                    Ok::<_, Error>((id, children.into_iter().map(move |i| (i, id))))
-                })
+                tick.sleep(1)
+                    .map(move |_now| {
+                        log.unfold(id, parent);
+                        Ok::<_, Error>((id, children.into_iter().map(move |i| (i, id))))
+                    })
+                    .boxed()
             }
         })
     })
@@ -608,10 +624,12 @@ async fn test_bounded_traversal_stream2() -> Result<(), Error> {
         let log = log.clone();
         move |Tree { id, children }| {
             let log = log.clone();
-            tick.sleep(1).map(move |now| {
-                log.unfold(id, now);
-                Ok::<_, Error>((id, stream::iter(children.into_iter().map(Ok))))
-            })
+            tick.sleep(1)
+                .map(move |now| {
+                    log.unfold(id, now);
+                    Ok::<_, Error>((id, stream::iter(children.into_iter().map(Ok)).boxed()))
+                })
+                .boxed()
         }
     })
     .try_collect::<BTreeSet<usize>>()

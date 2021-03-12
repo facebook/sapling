@@ -8,7 +8,7 @@
 use super::common::{Either2, NodeLocation};
 use super::Iter;
 use either::Either;
-use futures::future::{join, ready, Join, Ready};
+use futures::future::{join, ready, BoxFuture, Join, Ready};
 use futures::ready;
 use futures::stream::{FuturesUnordered, StreamExt};
 
@@ -54,20 +54,20 @@ use std::{
 /// Result of running fold operation on the root of the tree. `None` indiciate that cycle
 /// has been found.
 ///
-pub fn bounded_traversal_dag<Err, In, Ins, Out, OutCtx, Unfold, UFut, Fold, FFut>(
+pub fn bounded_traversal_dag<'caller, Err, In, Ins, Out, OutCtx, Unfold, Fold>(
     scheduled_max: usize,
     init: In,
     unfold: Unfold,
     fold: Fold,
-) -> impl Future<Output = Result<Option<Out>, Err>>
+) -> impl Future<Output = Result<Option<Out>, Err>> + 'caller
 where
-    In: Eq + Hash + Clone,
-    Out: Clone,
-    Unfold: FnMut(In) -> UFut,
-    UFut: Future<Output = Result<(OutCtx, Ins), Err>>,
-    Ins: IntoIterator<Item = In>,
-    Fold: FnMut(OutCtx, Iter<Out>) -> FFut,
-    FFut: Future<Output = Result<Out, Err>>,
+    Err: 'caller,
+    In: Eq + Hash + Clone + 'caller,
+    Out: Clone + 'caller,
+    OutCtx: 'caller,
+    Unfold: FnMut(In) -> BoxFuture<'caller, Result<(OutCtx, Ins), Err>> + 'caller,
+    Ins: IntoIterator<Item = In> + 'caller,
+    Fold: FnMut(OutCtx, Iter<Out>) -> BoxFuture<'caller, Result<Out, Err>> + 'caller,
 {
     BoundedTraversalDAG::new(scheduled_max, init, unfold, fold)
 }
