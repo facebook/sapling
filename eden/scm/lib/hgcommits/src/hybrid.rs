@@ -121,7 +121,7 @@ impl StreamCommitText for HybridCommits {
             zstore,
             reponame,
         };
-        let buffer_size = 5000;
+        let buffer_size = 10000;
         let retry_limit = 0;
         let stream = HybridStream::new(input, resolver, buffer_size, retry_limit);
         let stream = stream.map_ok(|(vertex, raw_text)| ParentlessHgCommit { vertex, raw_text });
