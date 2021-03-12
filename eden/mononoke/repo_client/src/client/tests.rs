@@ -21,6 +21,7 @@ use mononoke_repo::MononokeRepo;
 use mutable_counters::SqlMutableCounters;
 use scuba_ext::MononokeScubaSampleBuilder;
 use sql_construct::SqlConstruct;
+use streaming_clone::SqlStreamingChunksFetcher;
 use tests_utils::CreateCommitContext;
 
 #[test]
@@ -321,11 +322,16 @@ async fn run_and_check_if_lfs(
     let mut repo = Repo::new_test(ctx.clone(), repo.clone()).await?;
     repo.config_mut().lfs = lfs_params;
 
+    let blob_repo = repo.blob_repo().clone();
     let mononoke_repo = MononokeRepo::new_from_parts(
         ctx.fb,
         ctx.logger().clone(),
         Arc::new(repo),
-        Default::default(),
+        SqlStreamingCloneConfig {
+            blobstore: blob_repo.get_blobstore(),
+            fetcher: SqlStreamingChunksFetcher::with_sqlite_in_memory()?,
+            repoid: blob_repo.get_repoid(),
+        },
         Arc::new(SqlMutableCounters::with_sqlite_in_memory()?),
         Default::default(),
     )

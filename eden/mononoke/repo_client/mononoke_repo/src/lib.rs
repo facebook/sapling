@@ -18,7 +18,8 @@ use getbundle_response::SessionLfsParams;
 use hooks::HookManager;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::{
-    BookmarkAttrs, InfinitepushParams, PushParams, PushrebaseParams, RepoReadOnly,
+    BookmarkAttrs, InfinitepushParams, MetadataDatabaseConfig, PushParams, PushrebaseParams,
+    RepoReadOnly,
 };
 use mononoke_api::Repo;
 use mononoke_types::RepositoryId;
@@ -30,7 +31,6 @@ use repo_read_write_status::RepoReadWriteFetcher;
 use reverse_filler_queue::ReverseFillerQueue;
 use reverse_filler_queue::SqlReverseFillerQueue;
 use slog::Logger;
-use sql_construct::facebook::FbSqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use std::fmt::{self, Debug};
@@ -56,7 +56,7 @@ pub struct SqlStreamingCloneConfig {
 pub struct MononokeRepo {
     repo: Arc<Repo>,
     bookmark_attrs: BookmarkAttrs,
-    streaming_clone: Option<SqlStreamingCloneConfig>,
+    streaming_clone: SqlStreamingCloneConfig,
     mutable_counters: Arc<dyn MutableCounters>,
     // Hostnames that always get lfs pointers.
     lfs_rolled_out_hostnames: Arc<RwLock<HashSet<String>>>,
@@ -89,20 +89,15 @@ impl MononokeRepo {
         };
 
         let streaming_clone = async {
-            let ret = if let Some(db_address) = storage_config.metadata.primary_address() {
-                let ret = streaming_clone(
-                    fb,
-                    repo.blob_repo(),
-                    db_address,
-                    mysql_options,
-                    repo.repoid(),
-                    readonly_storage.0,
-                )
-                .await?;
-                Some(ret)
-            } else {
-                None
-            };
+            let ret = streaming_clone(
+                fb,
+                repo.blob_repo(),
+                &storage_config.metadata,
+                mysql_options,
+                repo.repoid(),
+                readonly_storage.0,
+            )
+            .await?;
 
             Result::<_, Error>::Ok(ret)
         };
@@ -154,7 +149,7 @@ impl MononokeRepo {
         fb: FacebookInit,
         logger: Logger,
         repo: Arc<Repo>,
-        streaming_clone: Option<SqlStreamingCloneConfig>,
+        streaming_clone: SqlStreamingCloneConfig,
         mutable_counters: Arc<dyn MutableCounters>,
         maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
     ) -> Result<Self, Error> {
@@ -218,7 +213,7 @@ impl MononokeRepo {
         self.repo.hook_manager().clone()
     }
 
-    pub fn streaming_clone(&self) -> &Option<SqlStreamingCloneConfig> {
+    pub fn streaming_clone(&self) -> &SqlStreamingCloneConfig {
         &self.streaming_clone
     }
 
@@ -306,15 +301,19 @@ impl MononokeRepo {
 async fn streaming_clone(
     fb: FacebookInit,
     blobrepo: &BlobRepo,
-    db_address: String,
+    metadata_db_config: &MetadataDatabaseConfig,
     mysql_options: &MysqlOptions,
     repoid: RepositoryId,
     readonly_storage: bool,
 ) -> Result<SqlStreamingCloneConfig, Error> {
-    let fetcher =
-        SqlStreamingChunksFetcher::with_xdb(fb, db_address, &mysql_options, readonly_storage)
-            .await
-            .context("Failed to open SqlStreamingChunksFetcher")?;
+    let fetcher = SqlStreamingChunksFetcher::with_metadata_database_config(
+        fb,
+        metadata_db_config,
+        mysql_options,
+        readonly_storage,
+    )
+    .await
+    .context("Failed to open SqlStreamingChunksFetcher")?;
 
     Ok(SqlStreamingCloneConfig {
         fetcher,

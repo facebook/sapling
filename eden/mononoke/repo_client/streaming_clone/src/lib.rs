@@ -64,7 +64,17 @@ queries! {
 impl SqlConstruct for SqlStreamingChunksFetcher {
     const LABEL: &'static str = "streaming-chunks";
 
-    const CREATION_QUERY: &'static str = "";
+    const CREATION_QUERY: &'static str = "
+        CREATE TABLE `streaming_changelog_chunks` (
+        `repo_id` int(11) NOT NULL,
+        `chunk_num` int(11) NOT NULL,
+        `idx_blob_name` varbinary(4096) NOT NULL,
+        `idx_size` int(11) NOT NULL,
+        `data_blob_name` varbinary(4096) NOT NULL,
+        `data_size` int(11) NOT NULL,
+        PRIMARY KEY (`repo_id`,`chunk_num`)
+        )
+    ";
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {

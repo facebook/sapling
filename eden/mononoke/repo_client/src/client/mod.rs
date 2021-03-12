@@ -1916,18 +1916,15 @@ impl HgCommands for RepoClient {
             let stream = {
                 cloned!(ctx);
                 async move {
-                    let changelog = match streaming_clone {
-                        None => RevlogStreamingChunks::new(),
-                        Some(SqlStreamingCloneConfig {
-                            blobstore,
-                            fetcher,
-                            repoid,
-                        }) => {
-                            fetcher
-                                .fetch_changelog(ctx.clone(), repoid, blobstore.clone())
-                                .await?
-                        }
-                    };
+                    let SqlStreamingCloneConfig {
+                        blobstore,
+                        fetcher,
+                        repoid,
+                    } = streaming_clone;
+
+                    let changelog = fetcher
+                        .fetch_changelog(ctx.clone(), repoid, blobstore.clone())
+                        .await?;
 
                     let data_blobs = changelog
                         .data_blobs
