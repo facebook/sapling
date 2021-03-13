@@ -485,10 +485,6 @@ class FetchProfileCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
-        if sys.platform == "win32":
-            # TODO(kmancini) prefetch profiles is not supported on windows yet
-            return 0
-
         checkout = args.checkout
 
         instance, checkout, _rel_path = require_checkout(args, checkout)
