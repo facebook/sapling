@@ -176,6 +176,12 @@ impl Debug for Segment {
         }
         let parents = self.parents().unwrap();
         write!(f, "{}-{}{:?}", span.low, span.high, parents,)?;
+        if span.low > span.high {
+            write!(f, " (Invalid Span!!)")?;
+        }
+        if parents.iter().any(|&p| p >= span.low) {
+            write!(f, " (Invalid Parent!!)")?;
+        }
         Ok(())
     }
 }
@@ -271,5 +277,12 @@ mod tests {
 # 50: Parents[1] = 80
 "#
         );
+    }
+
+    #[test]
+    fn test_invalid_fmt() {
+        let bytes = Bytes::from_static(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 1, 10]);
+        let segment = Segment(bytes);
+        assert_eq!(format!("{:?}", segment), "10-10[10] (Invalid Parent!!)");
     }
 }
