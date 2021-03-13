@@ -365,7 +365,7 @@ def destmerge(repo, action="merge", sourceset=None, onheadcheck=True, destspace=
     return repo[node].rev()
 
 
-histeditdefaultrevset = "reverse(only(.) and not public() and not ::merge())"
+histeditdefaultrevset = "reverse(only(.) - public() - ::merge() - null)"
 
 
 def desthistedit(ui, repo):
