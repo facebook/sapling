@@ -15,14 +15,12 @@
 namespace facebook {
 namespace eden {
 struct InodeNumber;
-using LockedDbPtr = folly::Synchronized<sqlite3*>::LockedPtr;
 
 /**
  * Sqlite overlay stores the directory inode and its entries in the sqlite
  * database. This is similar to FsOverlay but doesn't support all the
  * functionality. This is only used on Windows right now.
  */
-
 class SqliteOverlay : public IOverlay {
  public:
   explicit SqliteOverlay(AbsolutePathPiece localDir);
@@ -108,17 +106,23 @@ class SqliteOverlay : public IOverlay {
 #endif
 
  private:
-  std::optional<std::string> load(uint64_t inodeNumber) const;
-  bool hasInode(uint64_t inodeNumber) const;
+  struct StatementCache;
+
+  std::optional<std::string> load(uint64_t inodeNumber);
+  bool hasInode(uint64_t inodeNumber);
   void save(uint64_t inodeNumber, bool isDirectory, folly::ByteRange value);
 
   // APIs to fetch and save the value of next Inode number
   void saveNextInodeNumber(uint64_t inodeNumber);
-  std::optional<uint64_t> readNextInodeNumber(LockedDbPtr& db);
-  void writeNextInodeNumber(LockedDbPtr& db, uint64_t inodeNumber);
+  std::optional<uint64_t> readNextInodeNumber(SqliteDatabase::Connection& db);
+  void writeNextInodeNumber(
+      SqliteDatabase::Connection& db,
+      uint64_t inodeNumber);
 
   // Sqlite db handle
   std::unique_ptr<SqliteDatabase> db_;
+
+  std::unique_ptr<StatementCache> cache_;
 
   // Path to the folder containing DB.
   const AbsolutePath localDir_;

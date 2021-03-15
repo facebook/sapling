@@ -14,6 +14,7 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include <iostream>
 #include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/sqlite/PersistentSqliteStatement.h"
 #include "eden/fs/sqlite/SqliteStatement.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/utils/Bug.h"
@@ -34,6 +35,38 @@ constexpr uint64_t kStartInodeNumber = 100;
 // part of the stop gap solution put in place for recovery from unclean
 // shutdown. More details in the header file.
 constexpr uint64_t kInodeAllocationRange = 100;
+
+struct SqliteOverlay::StatementCache {
+  explicit StatementCache(SqliteDatabase::Connection& db)
+      : hasInode{db, "select 1 from ", kInodeTable, " where inode = ?"},
+        // TODO: we need `or ignore` otherwise we hit primary key violations
+        // when running our integration tests.  This implies that we're
+        // over-fetching and that we have a perf improvement opportunity.
+        insertInode{
+            db,
+            "insert or replace into ",
+            kInodeTable,
+            " values (?,?,?)"},
+        loadInode{db, "select value from ", kInodeTable, " where inode = ?"},
+        deleteInode{db, "delete from ", kInodeTable, " where inode = ?"},
+        writeInodeNumber{
+            db,
+            "insert or replace into ",
+            kConfigTable,
+            " VALUES(?, ?)"},
+        readInodeNumber{
+            db,
+            "select value from ",
+            kConfigTable,
+            " where key = ?"} {}
+
+  PersistentSqliteStatement hasInode;
+  PersistentSqliteStatement insertInode;
+  PersistentSqliteStatement loadInode;
+  PersistentSqliteStatement deleteInode;
+  PersistentSqliteStatement writeInodeNumber;
+  PersistentSqliteStatement readInodeNumber;
+};
 
 SqliteOverlay::SqliteOverlay(AbsolutePathPiece localDir)
     : localDir_{std::move(localDir)} {}
@@ -81,6 +114,8 @@ std::optional<InodeNumber> SqliteOverlay::initOverlay(
       ")")
       .step();
 
+  cache_ = std::make_unique<StatementCache>(db);
+
   // In the following code we read the last know used inode number and allocate
   // a range of inodes by saving the incremented value in db.
   uint64_t nextInodeNumber;
@@ -111,11 +146,10 @@ void SqliteOverlay::updateUsedInodeNumber(uint64_t usedInodeNumber) {
   saveNextInodeNumber(usedInodeNumber + 1);
 }
 
-std::optional<std::string> SqliteOverlay::load(uint64_t inodeNumber) const {
+std::optional<std::string> SqliteOverlay::load(uint64_t inodeNumber) {
   auto db = db_->lock();
 
-  SqliteStatement stmt(
-      db, "select value from ", kInodeTable, " where inode = ?");
+  auto& stmt = cache_->loadInode.get(db);
 
   // Bind the inode; parameters are 1-based
   stmt.bind(1, inodeNumber);
@@ -130,10 +164,10 @@ std::optional<std::string> SqliteOverlay::load(uint64_t inodeNumber) const {
   return std::nullopt;
 }
 
-bool SqliteOverlay::hasInode(uint64_t inodeNumber) const {
+bool SqliteOverlay::hasInode(uint64_t inodeNumber) {
   auto db = db_->lock();
 
-  SqliteStatement stmt(db, "select 1 from ", kInodeTable, " where inode = ?");
+  auto& stmt = cache_->hasInode.get(db);
 
   stmt.bind(1, inodeNumber);
   return stmt.step();
@@ -145,15 +179,7 @@ void SqliteOverlay::save(
     ByteRange value) {
   auto db = db_->lock();
 
-  SqliteStatement stmt(
-      db,
-      // TODO: we need `or ignore` otherwise we hit primary key violations
-      // when running our integration tests.  This implies that we're
-      // over-fetching and that we have a perf improvement opportunity.
-      "insert or replace into ",
-      kInodeTable,
-      " VALUES(?, ?, ?)");
-
+  auto& stmt = cache_->insertInode.get(db);
   const uint32_t dir = isDirectory ? 1 : 0;
 
   stmt.bind(1, inodeNumber);
@@ -188,9 +214,7 @@ std::optional<overlay::OverlayDir> SqliteOverlay::loadOverlayDir(
 
 void SqliteOverlay::removeOverlayData(InodeNumber inodeNumber) {
   auto db = db_->lock();
-
-  SqliteStatement stmt(db, "delete from ", kInodeTable, " where inode = ?");
-
+  auto& stmt = cache_->deleteInode.get(db);
   stmt.bind(1, inodeNumber.get());
   stmt.step();
 }
@@ -212,9 +236,9 @@ void SqliteOverlay::saveNextInodeNumber(uint64_t inodeNumber) {
   }
 }
 
-std::optional<uint64_t> SqliteOverlay::readNextInodeNumber(LockedDbPtr& db) {
-  SqliteStatement stmt(
-      db, "select value from ", kConfigTable, " where key = ?");
+std::optional<uint64_t> SqliteOverlay::readNextInodeNumber(
+    SqliteDatabase::Connection& db) {
+  auto& stmt = cache_->readInodeNumber.get(db);
 
   // Bind the key; parameters are 1-based
   stmt.bind(1, kNextInodeNumber);
@@ -235,15 +259,13 @@ std::optional<uint64_t> SqliteOverlay::readNextInodeNumber(LockedDbPtr& db) {
 }
 
 void SqliteOverlay::writeNextInodeNumber(
-    LockedDbPtr& db,
+    SqliteDatabase::Connection& db,
     uint64_t inodeNumber) {
   folly::StringPiece ino{ByteRange(
       reinterpret_cast<const uint8_t*>(&inodeNumber),
       reinterpret_cast<const uint8_t*>(&inodeNumber + 1))};
 
-  SqliteStatement stmt(
-      db, "insert or replace into ", kConfigTable, " VALUES(?, ?)");
-
+  auto& stmt = cache_->writeInodeNumber.get(db);
   stmt.bind(1, kNextInodeNumber);
   stmt.bind(2, ino);
   stmt.step();
