@@ -25,9 +25,9 @@ impl AsRef<str> for EdenApiScubaKey {
     fn as_ref(&self) -> &'static str {
         match self {
             Self::Repo => "repo",
-            Self::Method => "method",
-            Self::User => "user",
-            Self::HandlerError => "handler_error",
+            Self::Method => "edenapi_method",
+            Self::User => "edenapi_user",
+            Self::HandlerError => "edenapi_error",
         }
     }
 }
