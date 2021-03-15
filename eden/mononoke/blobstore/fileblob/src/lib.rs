@@ -94,7 +94,7 @@ impl BlobstorePutOps for Fileblob {
         let p = self.path(&key);
         // block_in_place on tempfile would be ideal here, but it interacts
         // badly with tokio_compat
-        let tempfile = NamedTempFile::new()?;
+        let tempfile = NamedTempFile::new_in(&self.base)?;
         let new_file = tempfile.as_file().try_clone()?;
         let mut tokio_file = File::from_std(new_file);
         tokio_file.write_all(value.as_bytes().as_ref()).await?;
