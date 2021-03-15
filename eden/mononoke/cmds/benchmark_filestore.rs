@@ -55,6 +55,7 @@ const ARG_DELAY: &str = "delay";
 const ARG_RANDOMIZE: &str = "randomize";
 const ARG_READ_QPS: &str = "read-qps";
 const ARG_WRITE_QPS: &str = "write-qps";
+const ARG_READ_COUNT: &str = "read-count";
 
 fn log_perf<I, E: Debug>(stats: FutureStats, res: &Result<I, E>, len: u64) {
     match res {
@@ -111,6 +112,8 @@ async fn run_benchmark_filestore<'a>(
 
     let concurrency: usize = matches.value_of(ARG_CONCURRENCY).unwrap().parse()?;
 
+    let read_count: usize = matches.value_of(ARG_READ_COUNT).unwrap().parse()?;
+
     let delay: Option<Duration> = matches
         .value_of(ARG_DELAY)
         .map(|seconds| -> Result<Duration, Error> {
@@ -166,8 +169,9 @@ async fn run_benchmark_filestore<'a>(
 
     eprintln!("Write committed: {:?}", metadata.content_id.blobstore_key());
 
-    read(&blob, ctx, &metadata).await?;
-    read(&blob, ctx, &metadata).await?;
+    for _c in 0..read_count {
+        read(&blob, ctx, &metadata).await?;
+    }
 
     Ok(())
 }
@@ -409,6 +413,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .long(ARG_WRITE_QPS)
                 .takes_value(true)
                 .required(false),
+        )
+        .arg(
+            Arg::with_name(ARG_READ_COUNT)
+                .long(ARG_READ_COUNT)
+                .takes_value(true)
+                .default_value("2")
+                .required(true),
         )
         .arg(Arg::with_name(ARG_INPUT).takes_value(true).required(true))
         .subcommand(manifold_subcommand)
