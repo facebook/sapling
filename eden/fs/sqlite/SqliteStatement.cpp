@@ -14,8 +14,6 @@ SqliteStatement::SqliteStatement(
     folly::Synchronized<sqlite3*>::LockedPtr& db,
     folly::StringPiece query)
     : db_{*db} {
-  // debug logging to print every statement
-  XLOG(DBG9) << query;
   checkSqliteResult(
       db_,
       sqlite3_prepare_v3(
@@ -28,6 +26,7 @@ SqliteStatement::SqliteStatement(
 }
 
 bool SqliteStatement::step() {
+  XLOG(DBG9) << "Executing: " << sqlite3_sql(stmt_);
   auto result = sqlite3_step(stmt_);
   switch (result) {
     case SQLITE_ROW:

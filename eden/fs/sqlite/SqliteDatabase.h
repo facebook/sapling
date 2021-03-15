@@ -73,8 +73,12 @@ class SqliteDatabase {
   void transaction(const std::function<void(Connection&)>& func);
 
  private:
+  struct StatementCache;
+
   explicit SqliteDatabase(const char* address);
 
   folly::Synchronized<sqlite3*> db_{nullptr};
+
+  std::unique_ptr<StatementCache> cache_;
 };
 } // namespace facebook::eden

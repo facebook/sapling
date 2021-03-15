@@ -8,9 +8,20 @@
 #include "eden/fs/sqlite/SqliteDatabase.h"
 
 #include <folly/logging/xlog.h>
-#include "eden/fs/sqlite/SqliteStatement.h"
+#include "eden/fs/sqlite/PersistentSqliteStatement.h"
 
 namespace facebook::eden {
+struct SqliteDatabase::StatementCache {
+  explicit StatementCache(SqliteDatabase::Connection& db)
+      : beginTransaction{db, "BEGIN"},
+        commitTransaction{db, "COMMIT"},
+        rollbackTransaction{db, "ROLLBACK"} {}
+
+  PersistentSqliteStatement beginTransaction;
+  PersistentSqliteStatement commitTransaction;
+  PersistentSqliteStatement rollbackTransaction;
+};
+
 void checkSqliteResult(sqlite3* db, int result) {
   if (result == SQLITE_OK) {
     return;
@@ -43,10 +54,16 @@ SqliteDatabase::SqliteDatabase(const char* addr) {
     checkSqliteResult(nullptr, result);
   }
   db_ = db;
+  auto conn = lock();
+  cache_ = std::make_unique<StatementCache>(conn);
 }
 
 void SqliteDatabase::close() {
   auto db = db_.wlock();
+  // We must clear the cached statement before closing the database. Otherwise
+  // `sqlite3_close` will fail with `SQLITE_BUSY`. This rule applies to any
+  // statement cache elsewhere too.
+  cache_.reset();
   if (*db) {
     sqlite3_close(*db);
     *db = nullptr;
@@ -64,11 +81,11 @@ SqliteDatabase::Connection SqliteDatabase::lock() {
 void SqliteDatabase::transaction(const std::function<void(Connection&)>& func) {
   auto conn = lock();
   try {
-    SqliteStatement(conn, "BEGIN TRANSACTION").step();
+    cache_->beginTransaction.get(conn).step();
     func(conn);
-    SqliteStatement(conn, "COMMIT").step();
+    cache_->commitTransaction.get(conn).step();
   } catch (const std::exception& ex) {
-    SqliteStatement(conn, "ROLLBACK").step();
+    cache_->rollbackTransaction.get(conn).step();
     XLOG(WARN) << "SQLite transaction failed: " << ex.what();
     throw;
   }
