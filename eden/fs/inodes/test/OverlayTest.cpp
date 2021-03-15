@@ -727,6 +727,8 @@ TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
   EXPECT_EQ(5_ino, overlay->getMaxInodeNumber());
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 INSTANTIATE_TEST_CASE_P(
     Clean,
     RawOverlayTest,
@@ -736,6 +738,7 @@ INSTANTIATE_TEST_CASE_P(
     Unclean,
     RawOverlayTest,
     ::testing::Values(OverlayRestartMode::UNCLEAN));
+#pragma clang diagnostic pop
 
 TEST(OverlayInodePath, defaultInodePathIsEmpty) {
   InodePath path;

@@ -22,9 +22,12 @@ LocalStoreImplResult makeRocksDbLocalStore(FaultInjector* faultInjector) {
   return {std::move(tempDir), std::move(store)};
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 INSTANTIATE_TEST_CASE_P(
     RocksDB,
     LocalStoreTest,
     ::testing::Values(makeRocksDbLocalStore));
+#pragma clang diagnostic pop
 
 } // namespace

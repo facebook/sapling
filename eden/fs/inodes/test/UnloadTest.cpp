@@ -27,7 +27,10 @@ struct UnloadTest : ::testing::Test {
 };
 } // namespace
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 TYPED_TEST_CASE(UnloadTest, InodeUnloaderTypes);
+#pragma clang diagnostic pop
 
 TYPED_TEST(UnloadTest, inodesAreUnloaded) {
   FakeTreeBuilder builder;

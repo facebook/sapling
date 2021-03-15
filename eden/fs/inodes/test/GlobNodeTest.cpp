@@ -272,7 +272,10 @@ const std::pair<enum StartReady, enum Prefetch> combinations[] = {
     {StartReady::Defer, Prefetch::PrefetchBlobs},
 };
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 INSTANTIATE_TEST_CASE_P(Glob, GlobNodeTest, ::testing::ValuesIn(combinations));
+#pragma clang diagnostic pop
 
 TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
   auto mount = TestMount{};

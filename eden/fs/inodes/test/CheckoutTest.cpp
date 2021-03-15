@@ -1136,7 +1136,10 @@ struct CheckoutUnloadTest : ::testing::Test {
 };
 } // namespace
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 TYPED_TEST_CASE(CheckoutUnloadTest, InodeUnloaderTypes);
+#pragma clang diagnostic pop
 
 #ifndef _WIN32
 TYPED_TEST(

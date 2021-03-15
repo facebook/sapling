@@ -204,6 +204,8 @@ TEST_P(LocalStoreTest, testClearKeySpace) {
   EXPECT_TRUE(store_->hasKey(KeySpace::TreeFamily, "tree"_sp));
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 INSTANTIATE_TEST_CASE_P(
     Memory,
     LocalStoreTest,
@@ -213,6 +215,7 @@ INSTANTIATE_TEST_CASE_P(
     Sqlite,
     LocalStoreTest,
     ::testing::Values(makeSqliteLocalStore));
+#pragma clang diagnostic pop
 
 } // namespace
 
