@@ -28,14 +28,14 @@ class StaleMountsCheckTest(DoctorTestBase):
         check_stale_mounts.check_for_stale_mounts(fixer, mount_table=self.mount_table)
         return fixer, out.getvalue()
 
-    def test_does_not_unmount_active_mounts(self):
+    def test_does_not_unmount_active_mounts(self) -> None:
         fixer, out = self.run_check(dry_run=False)
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
-    def test_working_nonactive_mount_is_not_unmounted(self):
+    def test_working_nonactive_mount_is_not_unmounted(self) -> None:
         # Add a working edenfs mount that is not part of our active list
         self.mount_table.add_mount("/mnt/other1")
 
@@ -45,7 +45,7 @@ class StaleMountsCheckTest(DoctorTestBase):
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
-    def test_force_unmounts_if_lazy_fails(self):
+    def test_force_unmounts_if_lazy_fails(self) -> None:
         self.mount_table.add_stale_mount("/mnt/stale1")
         self.mount_table.add_stale_mount("/mnt/stale2")
         self.mount_table.fail_unmount_lazy(b"/mnt/stale1")
@@ -68,7 +68,7 @@ Unmounting 2 stale edenfs mounts...<green>fixed<reset>
         )
         self.assertEqual([b"/mnt/stale1"], self.mount_table.unmount_force_calls)
 
-    def test_dry_run_prints_stale_mounts_and_does_not_unmount(self):
+    def test_dry_run_prints_stale_mounts_and_does_not_unmount(self) -> None:
         self.mount_table.add_stale_mount("/mnt/stale1")
         self.mount_table.add_stale_mount("/mnt/stale2")
 
@@ -88,7 +88,7 @@ Would unmount 2 stale edenfs mounts
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
-    def test_fails_if_unmount_fails(self):
+    def test_fails_if_unmount_fails(self) -> None:
         self.mount_table.add_stale_mount("/mnt/stale1")
         self.mount_table.add_stale_mount("/mnt/stale2")
         self.mount_table.fail_unmount_lazy(b"/mnt/stale1", b"/mnt/stale2")
@@ -116,7 +116,7 @@ Failed to fix problem: Failed to unmount 1 mount point:
             [b"/mnt/stale1", b"/mnt/stale2"], self.mount_table.unmount_force_calls
         )
 
-    def test_ignores_noneden_mounts(self):
+    def test_ignores_noneden_mounts(self) -> None:
         self.mount_table.add_mount("/", device="/dev/sda1", vfstype="ext4")
         fixer, out = self.run_check(dry_run=False)
         self.assertEqual("", out)
@@ -124,7 +124,7 @@ Failed to fix problem: Failed to unmount 1 mount point:
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
-    def test_ignores_errors_other_than_enotconn(self):
+    def test_ignores_errors_other_than_enotconn(self) -> None:
         self.mount_table.fail_access("/mnt/active1", errno.EPERM)
         self.mount_table.fail_access("/mnt/active1/.eden", errno.EPERM)
 
@@ -132,7 +132,7 @@ Failed to fix problem: Failed to unmount 1 mount point:
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    def test_does_not_unmount_if_cannot_stat_stale_mount(self):
+    def test_does_not_unmount_if_cannot_stat_stale_mount(self) -> None:
         self.mount_table.add_mount("/mnt/stale1")
         self.mount_table.fail_access("/mnt/stale1", errno.EACCES)
         self.mount_table.fail_access("/mnt/stale1/.eden", errno.EACCES)
@@ -150,7 +150,7 @@ Failed to fix problem: Failed to unmount 1 mount point:
             "\n".join(logs_assertion.output),
         )
 
-    def test_does_unmount_if_stale_mount_is_unconnected(self):
+    def test_does_unmount_if_stale_mount_is_unconnected(self) -> None:
         self.mount_table.add_stale_mount("/mnt/stale1")
 
         fixer, out = self.run_check(dry_run=False)
@@ -168,7 +168,7 @@ Unmounting 1 stale edenfs mount...<green>fixed<reset>
         self.assertEqual([b"/mnt/stale1"], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
-    def test_does_not_unmount_other_users_mounts(self):
+    def test_does_not_unmount_other_users_mounts(self) -> None:
         self.mount_table.add_mount("/mnt/stale1", uid=os.getuid() + 1)
 
         fixer, out = self.run_check(dry_run=False)
@@ -177,7 +177,7 @@ Unmounting 1 stale edenfs mount...<green>fixed<reset>
         self.assertEqual([], self.mount_table.unmount_lazy_calls)
         self.assertEqual([], self.mount_table.unmount_force_calls)
 
-    def test_does_not_unmount_mounts_with_same_device_as_active_mount(self):
+    def test_does_not_unmount_mounts_with_same_device_as_active_mount(self) -> None:
         active1_dev = self.mount_table.lstat("/mnt/active1").st_dev
         self.mount_table.add_mount("/mnt/stale1", dev=active1_dev)
 
