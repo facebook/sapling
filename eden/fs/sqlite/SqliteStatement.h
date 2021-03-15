@@ -55,6 +55,9 @@ class SqliteStatement {
   SqliteStatement(const SqliteStatement&) = delete;
   SqliteStatement& operator=(const SqliteStatement&) = delete;
 
+  SqliteStatement(SqliteStatement&&) = default;
+  SqliteStatement& operator=(SqliteStatement&&) = default;
+
   /**
    * Make a single step in executing the statement.
    * For queries that return results, returns true if this step yielded a

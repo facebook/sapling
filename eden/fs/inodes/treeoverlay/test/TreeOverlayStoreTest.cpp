@@ -9,6 +9,7 @@
 
 #include <folly/logging/xlog.h>
 #include <gtest/gtest.h>
+#include <memory>
 #include <optional>
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
@@ -104,10 +105,12 @@ TEST_F(TreeOverlayStoreTest, testRecoverInodeEntryNumber) {
 
   overlay_->saveTree(kRootNodeId, dir);
 
+  auto db = overlay_->takeDatabase();
+  overlay_.reset();
+
   // Move sqlite handle from the previous overlay since the sqlite database is
   // created in-memory for testing.
-  auto new_overlay =
-      std::make_unique<TreeOverlayStore>(std::move(overlay_->db_));
+  auto new_overlay = std::make_unique<TreeOverlayStore>(std::move(db));
   new_overlay->loadCounters();
 
   // Existing entry ID (4 items + 1 next) = 5

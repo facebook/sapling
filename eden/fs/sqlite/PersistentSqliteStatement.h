@@ -50,6 +50,13 @@ class PersistentSqliteStatement {
                 std::forward<Arg2>(second),
                 std::forward<Args>(args)...)) {}
 
+  PersistentSqliteStatement(const PersistentSqliteStatement&) = delete;
+  PersistentSqliteStatement& operator=(const PersistentSqliteStatement&) =
+      delete;
+
+  PersistentSqliteStatement(PersistentSqliteStatement&&) = default;
+  PersistentSqliteStatement& operator=(PersistentSqliteStatement&&) = default;
+
   /**
    * Obtain the cached statement for usage. The caller must be holding the
    * database lock in order to use the prepared statement. This function will

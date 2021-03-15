@@ -7,10 +7,12 @@
 
 #include "eden/fs/inodes/treeoverlay/TreeOverlayStore.h"
 
-#include <folly/FixedString.h>
 #include <folly/Range.h>
+#include <array>
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/sqlite/PersistentSqliteStatement.h"
+#include "eden/fs/sqlite/SqliteStatement.h"
 #include "eden/fs/utils/DirType.h"
 
 namespace facebook::eden {
@@ -37,6 +39,86 @@ constexpr size_t kBatchInsertSize = 8;
 
 } // namespace
 
+struct TreeOverlayStore::StatementCache {
+  explicit StatementCache(SqliteDatabase::Connection& db)
+      : deleteParent{db, "DELETE FROM ", kEntryTable, " WHERE parent = ?"},
+        selectTree{
+            db,
+            "SELECT name, dtype, inode, hash FROM ",
+            kEntryTable,
+            " WHERE parent = ? ORDER BY name"},
+        countChildren{
+            db,
+            "SELECT COUNT(*) FROM ",
+            kEntryTable,
+            " WHERE parent = ?"},
+        deleteTree{db, "DELETE FROM ", kEntryTable, " WHERE parent = ?"},
+        hasTree{db, "SELECT 1 FROM ", kEntryTable, " WHERE parent = ?"},
+        insertChild{
+            db,
+            "INSERT INTO ",
+            kEntryTable,
+            " (parent, name, dtype, inode, sequence_id, hash) ",
+            " VALUES (?, ?, ?, ?, ?, ?)"},
+        deleteChild{
+            db,
+            "DELETE FROM ",
+            kEntryTable,
+            " WHERE parent = ? AND name = ?"},
+        hasChild{
+            db,
+            "SELECT COUNT(1) FROM ",
+            kEntryTable,
+            " WHERE `parent` = (SELECT `inode` FROM ",
+            kEntryTable,
+            " WHERE `parent` = ? AND `name` = ?)"},
+        renameChild{
+            db,
+            "UPDATE ",
+            kEntryTable,
+            " SET parent = ?, name = ? WHERE parent = ? AND name = ?"},
+        batchInsert{
+            makeBatchInsert(db, 1),
+            makeBatchInsert(db, 2),
+            makeBatchInsert(db, 3),
+            makeBatchInsert(db, 4),
+            makeBatchInsert(db, 5),
+            makeBatchInsert(db, 6),
+            makeBatchInsert(db, 7),
+            makeBatchInsert(db, 8),
+        } {}
+
+  PersistentSqliteStatement makeBatchInsert(
+      SqliteDatabase::Connection& db,
+      size_t size) {
+    constexpr folly::StringPiece values_fmt = "(?,?,?,?,?,?)";
+    fmt::memory_buffer stmt_buffer;
+    fmt::format_to(
+        stmt_buffer,
+        "INSERT INTO {} (parent, name, dtype, inode, sequence_id, hash) VALUES ",
+        kEntryTable);
+
+    for (size_t i = 0; i < size; i++) {
+      if (i != 0) {
+        fmt::format_to(stmt_buffer, ","); // delimiter
+      }
+      fmt::format_to(stmt_buffer, values_fmt.data());
+    }
+    return PersistentSqliteStatement{db, fmt::to_string(stmt_buffer)};
+  }
+
+  PersistentSqliteStatement deleteParent;
+  PersistentSqliteStatement selectTree;
+  PersistentSqliteStatement countChildren;
+  PersistentSqliteStatement deleteTree;
+  PersistentSqliteStatement hasTree;
+  PersistentSqliteStatement insertChild;
+  PersistentSqliteStatement deleteChild;
+  PersistentSqliteStatement hasChild;
+  PersistentSqliteStatement renameChild;
+  std::array<PersistentSqliteStatement, kBatchInsertSize> batchInsert;
+};
+
 TreeOverlayStore::TreeOverlayStore(AbsolutePathPiece path) {
   ensureDirectoryExists(path);
 
@@ -46,14 +128,20 @@ TreeOverlayStore::TreeOverlayStore(AbsolutePathPiece path) {
 TreeOverlayStore::TreeOverlayStore(std::unique_ptr<SqliteDatabase> db)
     : db_{std::move(db)} {}
 
-TreeOverlayStore::~TreeOverlayStore() {
-  close();
-}
+// We must define the destructor here because of incomplete definition of
+// `StatementCache`
+TreeOverlayStore::~TreeOverlayStore() = default;
 
 void TreeOverlayStore::close() {
+  cache_.reset();
   if (db_) {
     db_->close();
   }
+}
+
+std::unique_ptr<SqliteDatabase> TreeOverlayStore::takeDatabase() {
+  cache_.reset();
+  return std::move(db_);
 }
 
 void TreeOverlayStore::createTableIfNonExisting() {
@@ -113,6 +201,13 @@ void TreeOverlayStore::createTableIfNonExisting() {
 
     SqliteStatement(txn, "PRAGMA user_version = ", kSchemaVersion).step();
   });
+
+  // We must initialize the statement after the tables are created. Otherwise it
+  // will fail as SQLite can't see these tables.
+  {
+    auto conn = db_->lock();
+    cache_ = std::make_unique<StatementCache>(conn);
+  }
 }
 
 InodeNumber TreeOverlayStore::loadCounters() {
@@ -152,48 +247,20 @@ InodeNumber TreeOverlayStore::nextInodeNumber() {
   return InodeNumber{nextInode_.fetch_add(1, std::memory_order_acq_rel)};
 }
 
-namespace {
-SqliteStatement makeBatchInsert(SqliteDatabase::Connection& db, size_t size) {
-  auto insert_template = folly::to<std::string>(
-      "INSERT INTO ",
-      kEntryTable,
-      " (parent, name, dtype, inode, sequence_id, hash) VALUES ");
-  auto values_fmt = folly::makeFixedString("(?,?,?,?,?,?)");
-
-  fmt::memory_buffer stmt_buffer;
-  // The length of final statement is the sum of:
-  // - "INSERT ... VALUES"
-  // - "(?,...,?)" * number of entries
-  // - "," * (number of entries - 1)
-  stmt_buffer.reserve(
-      insert_template.length() + size * values_fmt.length() + (size - 1));
-  fmt::format_to(stmt_buffer, insert_template.c_str());
-
-  for (size_t i = 0; i < size; i++) {
-    if (i != 0) {
-      fmt::format_to(stmt_buffer, ","); // delimiter
-    }
-    fmt::format_to(stmt_buffer, values_fmt.c_str());
-  }
-
-  return SqliteStatement(db, fmt::to_string(stmt_buffer));
-}
-} // namespace
-
 void TreeOverlayStore::saveTree(
     InodeNumber inodeNumber,
     const overlay::OverlayDir& odir) {
   db_->transaction([&](auto& txn) {
     // When `saveTree` gets called, caller is expected to rewrite the tree
     // content. So we need to remove the previously stored version.
-    auto stmt =
-        SqliteStatement(txn, "DELETE FROM ", kEntryTable, " WHERE parent = ?");
+    auto& stmt = cache_->deleteParent.get(txn);
     stmt.bind(1, inodeNumber.get());
     stmt.step();
 
-    // The following section generates the insertion SQLite statements based on
-    // number of entries in `OverlayDir`. This is faster than inserting them
-    // separately. Although we have to dynamically generate statements here.
+    // The following section generates the insertion SQLite statements based
+    // on number of entries in `OverlayDir`. This is faster than inserting
+    // them separately. Although we have to dynamically generate statements
+    // here.
     auto count = odir.entries_ref()->size();
     if (count == 0) {
       return;
@@ -204,7 +271,7 @@ void TreeOverlayStore::saveTree(
     auto entries_iter = odir.entries_ref()->cbegin();
 
     if (batch_count != 0) {
-      auto batch_insert = makeBatchInsert(txn, kBatchInsertSize);
+      auto& batch_insert = cache_->batchInsert[kBatchInsertSize - 1].get(txn);
       for (size_t i = 0; i < batch_count; i++) {
         // One batch
         for (size_t n = 0; n < kBatchInsertSize; n++, entries_iter++) {
@@ -219,7 +286,7 @@ void TreeOverlayStore::saveTree(
     }
 
     if (remaining != 0) {
-      auto insert = makeBatchInsert(txn, remaining);
+      auto& insert = cache_->batchInsert[remaining - 1].get(txn);
       for (size_t n = 0; entries_iter != odir.entries_ref()->cend();
            entries_iter++, n++) {
         auto name = PathComponentPiece{entries_iter->first};
@@ -235,11 +302,7 @@ overlay::OverlayDir TreeOverlayStore::loadTree(InodeNumber inode) {
   overlay::OverlayDir dir;
 
   db_->transaction([&](auto& txn) {
-    auto query = SqliteStatement(
-        txn,
-        "SELECT name, dtype, inode, hash FROM ",
-        kEntryTable,
-        " WHERE parent = ? ORDER BY name");
+    auto& query = cache_->selectTree.get(txn);
     query.bind(1, inode.get());
 
     while (query.step()) {
@@ -258,16 +321,15 @@ overlay::OverlayDir TreeOverlayStore::loadTree(InodeNumber inode) {
 
 void TreeOverlayStore::removeTree(InodeNumber inode) {
   db_->transaction([&](auto& txn) {
-    auto children = SqliteStatement(
-        txn, "SELECT COUNT(*) FROM ", kEntryTable, " WHERE parent = ?");
+    auto& children = cache_->countChildren.get(txn);
     children.bind(1, inode.get());
 
     if (!children.step() || children.columnUint64(0) != 0) {
       throw TreeOverlayNonEmptyError("cannot delete non-empty directory");
     }
 
-    auto deleteInode =
-        SqliteStatement(txn, "DELETE FROM ", kEntryTable, " WHERE parent = ?");
+    auto& deleteInode = cache_->deleteTree.get(txn);
+    deleteInode.reset();
     deleteInode.bind(1, inode.get());
     deleteInode.step();
   });
@@ -275,8 +337,7 @@ void TreeOverlayStore::removeTree(InodeNumber inode) {
 
 bool TreeOverlayStore::hasTree(InodeNumber inode) {
   auto db = db_->lock();
-  auto query =
-      SqliteStatement(db, "SELECT 1 FROM ", kEntryTable, " WHERE parent = ?");
+  auto& query = cache_->hasTree.get(db);
   query.bind(1, inode.get());
   if (query.step()) {
     return query.columnUint64(0) == 1;
@@ -289,14 +350,7 @@ void TreeOverlayStore::addChild(
     PathComponentPiece name,
     overlay::OverlayEntry entry) {
   auto db = db_->lock();
-
-  auto stmt = SqliteStatement(
-      db,
-      "INSERT INTO ",
-      kEntryTable,
-      " (parent, name, dtype, inode, sequence_id, hash) ",
-      " VALUES (?, ?, ?, ?, ?, ?)");
-
+  auto& stmt = cache_->insertChild.get(db);
   insertInodeEntry(stmt, 0, parent, name, entry);
   stmt.step();
 }
@@ -305,9 +359,7 @@ void TreeOverlayStore::removeChild(
     InodeNumber parent,
     PathComponentPiece childName) {
   auto db = db_->lock();
-  auto stmt = SqliteStatement(
-      db, "DELETE FROM ", kEntryTable, " WHERE parent = ? AND name = ?");
-
+  auto& stmt = cache_->deleteChild.get(db);
   stmt.bind(1, parent.get());
   stmt.bind(2, childName.stringPiece());
   stmt.step();
@@ -321,13 +373,7 @@ void TreeOverlayStore::renameChild(
   // When rename also overwrites some file in the destination, we need to make
   // sure this is transactional.
   db_->transaction([&](auto& txn) {
-    auto overwriteEmpty = SqliteStatement(
-        txn,
-        "SELECT COUNT(1) FROM ",
-        kEntryTable,
-        " WHERE `parent` = (SELECT `inode` FROM ",
-        kEntryTable,
-        " WHERE `parent` = ? AND `name` = ?)");
+    auto& overwriteEmpty = cache_->hasChild.get(txn);
     overwriteEmpty.bind(1, dst.get());
     overwriteEmpty.bind(2, dstName.stringPiece());
 
@@ -336,17 +382,12 @@ void TreeOverlayStore::renameChild(
     }
 
     // If all the check passes, we delete the child being overwritten
-    auto deleteStmt = SqliteStatement(
-        txn, "DELETE FROM ", kEntryTable, " WHERE parent = ? AND name = ?");
+    auto& deleteStmt = cache_->deleteChild.get(txn);
     deleteStmt.bind(1, dst.get());
     deleteStmt.bind(2, dstName.stringPiece());
     deleteStmt.step();
 
-    auto stmt = SqliteStatement(
-        txn,
-        "UPDATE ",
-        kEntryTable,
-        " SET parent = ?, name = ? WHERE parent = ? AND name = ?");
+    auto& stmt = cache_->renameChild.get(txn);
     stmt.bind(1, dst.get());
     stmt.bind(2, dstName.stringPiece());
     stmt.bind(3, src.get());

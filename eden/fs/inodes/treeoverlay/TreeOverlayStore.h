@@ -13,7 +13,6 @@
 
 #include <fmt/format.h>
 #include "eden/fs/sqlite/SqliteDatabase.h"
-#include "eden/fs/sqlite/SqliteStatement.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 struct sqlite3;
@@ -122,8 +121,12 @@ class TreeOverlayStore {
       PathComponentPiece srcName,
       PathComponentPiece dstName);
 
+  std::unique_ptr<SqliteDatabase> takeDatabase();
+
  private:
   FRIEND_TEST(TreeOverlayStoreTest, testRecoverInodeEntryNumber);
+
+  struct StatementCache;
 
   /**
    * Private helper function to add a SQLite statement that inserts a row to the
@@ -137,6 +140,8 @@ class TreeOverlayStore {
       const overlay::OverlayEntry& entry);
 
   std::unique_ptr<SqliteDatabase> db_;
+
+  std::unique_ptr<StatementCache> cache_;
 
   std::atomic_uint64_t nextEntryId_{0};
 
