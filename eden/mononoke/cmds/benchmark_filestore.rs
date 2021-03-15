@@ -103,7 +103,7 @@ async fn run_benchmark_filestore<'a>(
     matches: &'a MononokeMatches<'a>,
     blob: Arc<dyn Blobstore>,
 ) -> Result<(), Error> {
-    let input = matches.value_of("input").unwrap().to_string();
+    let input = matches.value_of(ARG_INPUT).unwrap().to_string();
 
     let input_capacity: usize = matches.value_of(ARG_INPUT_CAPACITY).unwrap().parse()?;
 
@@ -321,7 +321,7 @@ async fn get_blob<'a>(
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
-    let manifold_subcommand = SubCommand::with_name("manifold").arg(
+    let manifold_subcommand = SubCommand::with_name(CMD_MANIFOLD).arg(
         Arg::with_name(ARG_MANIFOLD_BUCKET)
             .takes_value(true)
             .required(false),
@@ -341,7 +341,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         )
         .arg(
             Arg::with_name(ARG_MYROUTER_PORT)
-                .long("myrouter-port")
+                .long(ARG_MYROUTER_PORT)
                 .takes_value(true)
                 .required(false),
         )
@@ -357,45 +357,45 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .build()
         .arg(
             Arg::with_name(ARG_INPUT_CAPACITY)
-                .long("input-capacity")
+                .long(ARG_INPUT_CAPACITY)
                 .takes_value(true)
                 .required(false)
                 .default_value("8192"),
         )
         .arg(
             Arg::with_name(ARG_CHUNK_SIZE)
-                .long("chunk-size")
+                .long(ARG_CHUNK_SIZE)
                 .takes_value(true)
                 .required(false)
                 .default_value("1048576"),
         )
         .arg(
             Arg::with_name(ARG_CONCURRENCY)
-                .long("concurrency")
+                .long(ARG_CONCURRENCY)
                 .takes_value(true)
                 .required(false)
                 .default_value("1"),
         )
         .arg(
             Arg::with_name(ARG_MEMCACHE)
-                .long("memcache")
+                .long(ARG_MEMCACHE)
                 .required(false),
         )
         .arg(
             Arg::with_name(ARG_CACHELIB_SIZE)
-                .long("cachelib-size")
+                .long(ARG_CACHELIB_SIZE)
                 .takes_value(true)
                 .required(false),
         )
         .arg(
             Arg::with_name(ARG_DELAY)
-                .long("delay-after-write")
+                .long(ARG_DELAY)
                 .takes_value(true)
                 .required(false),
         )
         .arg(
             Arg::with_name(ARG_RANDOMIZE)
-                .long("randomize")
+                .long(ARG_RANDOMIZE)
                 .required(false),
         )
         .arg(
