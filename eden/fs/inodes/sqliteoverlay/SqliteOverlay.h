@@ -90,6 +90,23 @@ class SqliteOverlay : public IOverlay {
    */
   void updateUsedInodeNumber(uint64_t usedInodeNumber) override;
 
+#ifndef _WIN32
+  folly::File createOverlayFile(
+      InodeNumber inodeNumber,
+      folly::ByteRange contents) override;
+
+  folly::File createOverlayFile(
+      InodeNumber inodeNumber,
+      const folly::IOBuf& contents) override;
+
+  folly::File openFile(InodeNumber inodeNumber, folly::StringPiece headerId)
+      override;
+
+  folly::File openFileNoVerify(InodeNumber inodeNumber) override;
+
+  struct statfs statFs() const override;
+#endif
+
  private:
   std::optional<std::string> load(uint64_t inodeNumber) const;
   bool hasInode(uint64_t inodeNumber) const;

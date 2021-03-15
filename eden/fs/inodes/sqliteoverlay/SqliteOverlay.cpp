@@ -7,6 +7,7 @@
 
 #include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h"
 
+#include <folly/File.h>
 #include <folly/String.h>
 #include <folly/container/Array.h>
 #include <folly/logging/xlog.h>
@@ -15,6 +16,7 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/sqlite/Sqlite.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -246,6 +248,34 @@ void SqliteOverlay::writeNextInodeNumber(
   stmt.bind(2, ino);
   stmt.step();
 }
+
+#ifndef _WIN32
+folly::File SqliteOverlay::createOverlayFile(
+    InodeNumber /*inodeNumber*/,
+    folly::ByteRange /*contents*/) {
+  EDEN_BUG() << "UNIMPLEMENTED";
+}
+
+folly::File SqliteOverlay::createOverlayFile(
+    InodeNumber /*inodeNumber*/,
+    const folly::IOBuf& /*contents*/) {
+  EDEN_BUG() << "UNIMPLEMENTED";
+}
+
+folly::File SqliteOverlay::openFile(
+    InodeNumber /*inodeNumber*/,
+    folly::StringPiece /*headerId*/) {
+  EDEN_BUG() << "UNIMPLEMENTED";
+}
+
+folly::File SqliteOverlay::openFileNoVerify(InodeNumber /*inodeNumber*/) {
+  EDEN_BUG() << "UNIMPLEMENTED";
+}
+
+struct statfs SqliteOverlay::statFs() const {
+  EDEN_BUG() << "UNIMPLEMENTED";
+}
+#endif
 
 } // namespace eden
 } // namespace facebook
