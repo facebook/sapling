@@ -63,7 +63,7 @@ Cleanup old packs during writes when we're over the threshold
   -r--r--r--      80 *.datapack (glob)
   -r--r--r--      80 *.datapack (glob)
   -r--r--r--      80 *.datapack (glob)
-  -r--r--r--     144 *.datapack (glob)
+  -r--r--r--     *.datapack (glob)
   $ hg up -q null
 
   $ clearcache
