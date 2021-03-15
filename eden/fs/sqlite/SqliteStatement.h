@@ -12,7 +12,8 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook::eden {
-/** Represents the sqlite vm that will execute a SQL statement.
+/**
+ * Represents the sqlite vm that will execute a SQL statement.
  * The class can only be created while holding a lock on the SqliteDatabase;
  * this is enforced by the compiler.  However, the statement class
  * doesn't take ownership of the lock (it is perfectly valid for multiple
@@ -22,17 +23,22 @@ namespace facebook::eden {
  */
 class SqliteStatement {
  public:
-  /** Prepare to execute the statement described by the `query` parameter */
+  /**
+   * Prepare to execute the statement described by the `query` parameter
+   */
   SqliteStatement(
       folly::Synchronized<sqlite3*>::LockedPtr& db,
-      folly::StringPiece query);
+      folly::StringPiece sql);
 
-  /** Join together the arguments as a single query string and prepare a
+  /**
+   * Join together the arguments as a single query string and prepare a
    * statement to execute them.
+   *
    * Note: the `first` and `second` parameters are present to avoid a
    * delegation cycle for the otherwise amgiguous case of a single parameter.
    * It is desirable to do this because it saves an extraneous heap allocation
-   * in the cases where the query string is known at compile time. */
+   * in the cases where the query string is known at compile time.
+   */
   template <typename Arg1, typename Arg2, typename... Args>
   SqliteStatement(
       folly::Synchronized<sqlite3*>::LockedPtr& db,
@@ -46,7 +52,11 @@ class SqliteStatement {
                 std::forward<Arg2>(second),
                 std::forward<Args>(args)...)) {}
 
-  /** Make a single step in executing the statement.
+  SqliteStatement(const SqliteStatement&) = delete;
+  SqliteStatement& operator=(const SqliteStatement&) = delete;
+
+  /**
+   * Make a single step in executing the statement.
    * For queries that return results, returns true if this step yielded a
    * data row.  It is then valid to use the `columnXXX` methods to access
    * the column data.
@@ -56,7 +66,8 @@ class SqliteStatement {
    */
   bool step();
 
-  /** Bind a stringy parameter to a prepared statement placeholder.
+  /**
+   * Bind a stringy parameter to a prepared statement placeholder.
    * Parameters are 1-based, with the first parameter having paramNo==1.
    * Throws an exception on error.
    * The bindType specifies a destructor function that sqlite will call
@@ -72,8 +83,10 @@ class SqliteStatement {
       folly::StringPiece blob,
       void (*bindType)(void*) = SQLITE_STATIC);
 
-  /** Identical to the StringPiece variant of `bind` defined above,
-   * but accepts a ByteRange parameter instead */
+  /**
+   * Identical to the StringPiece variant of `bind` defined above,
+   * but accepts a ByteRange parameter instead
+   */
   void bind(
       size_t paramNo,
       folly::ByteRange blob,
@@ -88,7 +101,8 @@ class SqliteStatement {
   /** Reset SqliteStement and its bindings so it can be used again. */
   void reset();
 
-  /** Reference a blob column in the current row returned by the statement.
+  /**
+   * Reference a blob column in the current row returned by the statement.
    * This is only valid to call once `step()` has returned true.  The
    * return value is invalidated by a subsequent `step()` call or by the
    * statement being destroyed.
@@ -101,8 +115,7 @@ class SqliteStatement {
   ~SqliteStatement();
 
  private:
-  /** Small helper to safely narrow size_t to int
-   */
+  /** Small helper to safely narrow size_t to int */
   static inline int unsignedNoToInt(size_t no) {
     XDCHECK(no < std::numeric_limits<int>::max());
     return static_cast<int>(no);

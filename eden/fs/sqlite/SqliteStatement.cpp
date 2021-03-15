@@ -14,12 +14,17 @@ SqliteStatement::SqliteStatement(
     folly::Synchronized<sqlite3*>::LockedPtr& db,
     folly::StringPiece query)
     : db_{*db} {
-  // debug logging to print every statment
+  // debug logging to print every statement
   XLOG(DBG9) << query;
   checkSqliteResult(
       db_,
-      sqlite3_prepare_v2(
-          db_, query.data(), unsignedNoToInt(query.size()), &stmt_, nullptr));
+      sqlite3_prepare_v3(
+          db_,
+          query.data(),
+          unsignedNoToInt(query.size()),
+          SQLITE_PREPARE_PERSISTENT,
+          &stmt_,
+          nullptr));
 }
 
 bool SqliteStatement::step() {
@@ -28,7 +33,7 @@ bool SqliteStatement::step() {
     case SQLITE_ROW:
       return true;
     case SQLITE_DONE:
-      sqlite3_reset(stmt_);
+      reset();
       return false;
     default:
       checkSqliteResult(db_, result);
