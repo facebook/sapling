@@ -5,81 +5,11 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/sqlite/Sqlite.h"
+#include "eden/fs/sqlite/SqliteStatement.h"
 
-#include <folly/logging/xlog.h>
+#include "eden/fs/sqlite/SqliteDatabase.h"
 
-using folly::StringPiece;
-using folly::Synchronized;
-using folly::to;
-using std::string;
-
-namespace facebook {
-namespace eden {
-
-// Given a sqlite result code, if the result was not successful
-// (SQLITE_OK), format an error message and throw an exception.
-void checkSqliteResult(sqlite3* db, int result) {
-  if (result == SQLITE_OK) {
-    return;
-  }
-  // Sometimes the db instance holds more useful context
-  if (db) {
-    auto error = fmt::format(
-        "sqlite error ({}): {} {}",
-        result,
-        sqlite3_errstr(result),
-        sqlite3_errmsg(db));
-    XLOG(DBG6) << error;
-    throw std::runtime_error(error);
-  } else {
-    auto error =
-        fmt::format("sqlite error ({}): {}", result, sqlite3_errstr(result));
-    XLOG(DBG6) << error;
-    // otherwise resort to a simpler number->string mapping
-    throw std::runtime_error(error);
-  }
-}
-
-SqliteDatabase::SqliteDatabase(const char* addr) {
-  sqlite3* db = nullptr;
-  auto result = sqlite3_open(addr, &db);
-  if (result != SQLITE_OK) {
-    sqlite3_close(db);
-    checkSqliteResult(nullptr, result);
-  }
-  db_ = db;
-}
-
-void SqliteDatabase::close() {
-  auto db = db_.wlock();
-  if (*db) {
-    sqlite3_close(*db);
-    *db = nullptr;
-  }
-}
-
-SqliteDatabase::~SqliteDatabase() {
-  close();
-}
-
-Synchronized<sqlite3*>::LockedPtr SqliteDatabase::lock() {
-  return db_.wlock();
-}
-
-void SqliteDatabase::transaction(const std::function<void(Connection&)>& func) {
-  auto conn = lock();
-  try {
-    SqliteStatement(conn, "BEGIN TRANSACTION").step();
-    func(conn);
-    SqliteStatement(conn, "COMMIT").step();
-  } catch (const std::exception& ex) {
-    SqliteStatement(conn, "ROLLBACK").step();
-    XLOG(WARN) << "SQLite transaction failed: " << ex.what();
-    throw;
-  }
-}
-
+namespace facebook::eden {
 SqliteStatement::SqliteStatement(
     folly::Synchronized<sqlite3*>::LockedPtr& db,
     folly::StringPiece query)
@@ -148,19 +78,18 @@ void SqliteStatement::reset() {
   checkSqliteResult(db_, sqlite3_clear_bindings(stmt_));
 }
 
-StringPiece SqliteStatement::columnBlob(size_t colNo) const {
+folly::StringPiece SqliteStatement::columnBlob(size_t colNo) const {
   auto col = unsignedNoToInt(colNo);
-  return StringPiece(
+  return folly::StringPiece(
       reinterpret_cast<const char*>(sqlite3_column_blob(stmt_, col)),
       sqlite3_column_bytes(stmt_, col));
 }
 
 uint64_t SqliteStatement::columnUint64(size_t colNo) const {
-  return sqlite3_column_int64(stmt_, folly::to_signed(colNo));
+  return sqlite3_column_int64(stmt_, unsignedNoToInt(colNo));
 }
 
 SqliteStatement::~SqliteStatement() {
   sqlite3_finalize(stmt_);
 }
-} // namespace eden
-} // namespace facebook
+}; // namespace facebook::eden

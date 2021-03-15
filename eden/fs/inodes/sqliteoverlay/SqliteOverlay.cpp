@@ -14,7 +14,7 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include <iostream>
 #include "eden/fs/inodes/InodeNumber.h"
-#include "eden/fs/sqlite/Sqlite.h"
+#include "eden/fs/sqlite/SqliteStatement.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/PathFuncs.h"

@@ -7,7 +7,7 @@
 
 #pragma once
 #include <folly/Synchronized.h>
-#include "eden/fs/sqlite/Sqlite.h"
+#include "eden/fs/sqlite/SqliteDatabase.h"
 #include "eden/fs/store/LocalStore.h"
 
 namespace facebook {

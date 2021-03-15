@@ -11,7 +11,7 @@
 #include <folly/container/Array.h>
 #include <folly/logging/xlog.h>
 
-#include "eden/fs/sqlite/Sqlite.h"
+#include "eden/fs/sqlite/SqliteStatement.h"
 #include "eden/fs/store/StoreResult.h"
 
 namespace facebook {
