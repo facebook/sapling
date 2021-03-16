@@ -1570,9 +1570,14 @@ class localrepository(object):
                 draftheads = list(repo.dageval(lambda: heads - public()))
                 cl._visibleheads.heads = draftheads
 
-        def flushchangelog(tr):
-            repo = reporef()
+            # Flush changelog before flushing metalog.
+            _flushchangelog(repo)
+
+        def _flushchangelog(repo):
             cl = repo.changelog
+            # Flush changelog. At this time remotenames should be up-to-date.
+            # We need to write out changelog before remotenames so remotenames
+            # do not have dangling pointers.
             if cl.userust("addrevision"):
                 main = bookmarks.mainbookmark(repo)
                 mainnodes = []
@@ -1581,6 +1586,11 @@ class localrepository(object):
                     if node != nullid:
                         mainnodes.append(node)
                 cl.inner.flush(mainnodes)
+
+        def writependingchangelog(tr):
+            repo = reporef()
+            _flushchangelog(repo)
+            return False
 
         def releasefn(tr, success):
             repo = reporef()
@@ -1596,7 +1606,6 @@ class localrepository(object):
                 # dirstate.write or so) isn't invoked while
                 # transaction running
                 repo.dirstate.write(None)
-                flushchangelog(tr)
                 repo._txnreleased = True
             else:
                 # discard all changes (including ones already written
@@ -1646,7 +1655,7 @@ class localrepository(object):
         tr.addfinalize("notransaction", commitnotransaction)
         tr.addabort("notransaction", abortnotransaction)
         tr.addpending("notransaction", writependingnotransaction)
-        tr.addpending("flushchangelog", flushchangelog)
+        tr.addpending("writependingchangelog", writependingchangelog)
 
         # If any writes happened outside the transaction, go ahead and flush
         # them before opening the new transaction.
