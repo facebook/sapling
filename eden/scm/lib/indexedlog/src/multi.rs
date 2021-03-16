@@ -52,9 +52,18 @@ pub struct MultiLog {
 
     /// Logs loaded by MultiLog.
     logs: Vec<log::Log>,
+
+    /// Log used for `MultiMeta`. For data recovery.
+    multimeta_log: log::Log,
 }
 
-#[derive(Default)]
+/// Constant for the reverse index of multimeta log.
+const INDEX_REVERSE_KEY: &[u8] = b"r";
+
+/// The reverse index is the first index. See [`multi_meta_log_open_options`].
+const INDEX_REVERSE: usize = 0;
+
+#[derive(Default, Debug)]
 pub struct MultiMeta {
     metas: BTreeMap<String, Arc<Mutex<LogMetadata>>>,
 }
@@ -81,26 +90,35 @@ impl OpenOptions {
     /// are created on demand.
     pub fn open(&self, path: &Path) -> crate::Result<MultiLog> {
         let result: crate::Result<_> = (|| {
+            // The multimeta log contains the "MultiMeta" metadata about how to load other
+            // logs.
+            let meta_log_path = multi_meta_log_path(&path);
             let meta_path = multi_meta_path(path);
-            let mut multimeta = MultiMeta::default();
-            if let Err(e) = multimeta.read_file(&meta_path) {
-                match e.kind() {
-                    io::ErrorKind::NotFound => {} // not fatal.
-                    _ => return Err(e).context(&meta_path, "when opening MultiLog"),
-                }
-            };
+            let mut multimeta_log = multi_meta_log_open_options().open(&meta_log_path)?;
+            let multimeta_log_is_empty = multimeta_log.iter().next().is_none();
 
-            let locked = if self
-                .name_open_options
-                .iter()
-                .all(|(name, _)| multimeta.metas.contains_key(AsRef::<str>::as_ref(name)))
+            // Read meltimeta from the multimeta log.
+            let mut multimeta = MultiMeta::default();
+            if multimeta_log_is_empty {
+                // Previous versions of MultiLog uses the "multimeta" file. Read it for
+                // compatibility.
+                multimeta.read_file(&meta_path)?;
+            } else {
+                multimeta.read_log(&multimeta_log)?;
+            }
+
+            let locked = if !multimeta_log_is_empty
+                && self
+                    .name_open_options
+                    .iter()
+                    .all(|(name, _)| multimeta.metas.contains_key(AsRef::<str>::as_ref(name)))
             {
-                // All keys exist. No need to write files on disk.
+                // Not using legacy format. All keys exist. No need to write files on disk.
                 None
             } else {
                 // Need to create some Logs and rewrite the multimeta.
                 utils::mkdir_p(path)?;
-                Some(ScopedDirLock::new(path)?)
+                Some(LockGuard(ScopedDirLock::new(path)?))
             };
 
             let mut logs = Vec::with_capacity(self.name_open_options.len());
@@ -122,7 +140,8 @@ impl OpenOptions {
                 logs.push(log);
             }
 
-            if locked.is_some() {
+            if let Some(locked) = locked.as_ref() {
+                multimeta.write_log(&mut multimeta_log, locked)?;
                 multimeta.write_file(&meta_path)?;
             }
 
@@ -130,6 +149,7 @@ impl OpenOptions {
                 path: path.to_path_buf(),
                 logs,
                 multimeta,
+                multimeta_log,
             })
         })();
 
@@ -168,8 +188,13 @@ impl MultiLog {
             return Err(crate::Error::programming(msg));
         }
         let result: crate::Result<_> = (|| {
+            // New MultiLog uses multimeta_log to track MultiMeta.
+            self.multimeta.write_log(&mut self.multimeta_log, lock)?;
+
+            // Legacy MultiLog uses multimeta file to track MultiMeta.
             let meta_path = multi_meta_path(&self.path);
             self.multimeta.write_file(&meta_path)?;
+
             Ok(())
         })();
         result.context("in MultiLog::write_meta")
@@ -181,17 +206,13 @@ impl MultiLog {
     /// public interface.
     fn read_meta(&mut self, lock: &LockGuard) -> crate::Result<()> {
         debug_assert_eq!(lock.0.path(), &self.path);
-        let meta_path = multi_meta_path(&self.path);
-        match self.multimeta.read_file(&meta_path) {
-            Err(err) => {
-                if err.kind() == io::ErrorKind::NotFound {
-                    Ok(())
-                } else {
-                    Err(err).context(&meta_path, "reloading meta")
-                }
-            }
-            Ok(()) => Ok(()),
-        }
+        (|| -> crate::Result<()> {
+            self.multimeta_log.clear_dirty()?;
+            self.multimeta_log.sync()?;
+            self.multimeta.read_log(&self.multimeta_log)?;
+            Ok(())
+        })()
+        .context("reloading multimeta")
     }
 
     /// Detach [`Log`]s from this [`MultiLog`].
@@ -224,6 +245,17 @@ impl MultiLog {
     }
 }
 
+fn multi_meta_log_open_options() -> log::OpenOptions {
+    log::OpenOptions::new()
+        .index("reverse", |_data| -> Vec<_> {
+            // Reverse index so we can find the last entries quickly.
+            vec![log::IndexOutput::Owned(
+                INDEX_REVERSE_KEY.to_vec().into_boxed_slice(),
+            )]
+        })
+        .create(true)
+}
+
 /// Structure proving a lock was taken for [`MultiLog`].
 pub struct LockGuard(ScopedDirLock);
 
@@ -242,6 +274,10 @@ impl ops::IndexMut<usize> for MultiLog {
 
 fn multi_meta_path(dir: &Path) -> PathBuf {
     dir.join("multimeta")
+}
+
+fn multi_meta_log_path(dir: &Path) -> PathBuf {
+    dir.join("multimetalog")
 }
 
 impl MultiMeta {
@@ -292,17 +328,53 @@ impl MultiMeta {
         Ok(())
     }
 
-    /// Update self with metadata from a file.
-    pub fn read_file<P: AsRef<Path>>(&mut self, path: P) -> io::Result<()> {
-        let buf = utils::atomic_read(path.as_ref())?;
-        self.read(&buf[..])
+    /// Update self with metadata from a file (legacy, for backwards compatibility).
+    /// If the file does not exist, self is not updated.
+    fn read_file<P: AsRef<Path>>(&mut self, path: P) -> crate::Result<()> {
+        let path = path.as_ref();
+        match utils::atomic_read(path) {
+            Ok(buf) => self.read(&buf[..]),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(()),
+            Err(e) => Err(e),
+        }
+        .context(path, "when decoding MultiMeta")
     }
 
-    /// Atomically write metadata to a file.
-    pub fn write_file<P: AsRef<Path>>(&self, path: P) -> crate::Result<()> {
+    /// Atomically write metadata to a file (legacy, for backwards compatibility).
+    fn write_file<P: AsRef<Path>>(&self, path: P) -> crate::Result<()> {
         let mut buf = Vec::new();
         self.write(&mut buf).infallible()?;
         utils::atomic_write(path, &buf, false)?;
+        Ok(())
+    }
+
+    /// Update self from a [`log::Log`].
+    fn read_log(&mut self, log: &log::Log) -> crate::Result<()> {
+        if let Some(last_entry) = log.lookup(INDEX_REVERSE, INDEX_REVERSE_KEY)?.next() {
+            let data = last_entry?;
+            self.read(data).context(
+                log.path().as_opt_path().unwrap_or_else(|| Path::new("")),
+                "when decoding MutltiMeta",
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Write metadata to a [`log::Log`] and persist to disk.
+    fn write_log(&self, log: &mut log::Log, _lock: &LockGuard) -> crate::Result<()> {
+        let mut data = Vec::new();
+        self.write(&mut data).infallible()?;
+        // Reload to check if the last entry is already up-to-date.
+        log.clear_dirty()?;
+        log.sync()?;
+        if let Some(Ok(last_data)) = log.lookup(INDEX_REVERSE, INDEX_REVERSE_KEY)?.next() {
+            if last_data == &data {
+                // log does not change. Do not write redundant data.
+                return Ok(());
+            }
+        }
+        log.append(&data)?;
+        log.sync()?;
         Ok(())
     }
 }
@@ -426,13 +498,16 @@ mod tests {
         assert_eq!(index_size(), 36);
 
         // Open another time, index is reused.
-        let mlog = mopts.open(path).unwrap();
+        let mut mlog = mopts.open(path).unwrap();
         assert_eq!(index_size(), 36);
 
         // Force updating epoch to make multimeta and per-log meta incompatible.
+        let lock = LockGuard(ScopedDirLock::new(path).unwrap());
         mlog.multimeta.metas["a"].lock().unwrap().epoch ^= 1;
-        let meta_path = multi_meta_path(&path);
-        mlog.multimeta.write_file(&meta_path).unwrap();
+        mlog.multimeta
+            .write_log(&mut mlog.multimeta_log, &lock)
+            .unwrap();
+        drop(lock);
 
         // The index is rebuilt (appended) at open time because of incompatible meta.
         let _mlog = mopts.open(path).unwrap();
