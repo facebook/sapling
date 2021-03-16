@@ -106,7 +106,23 @@ impl OpenOptions {
                 // compatibility.
                 multimeta.read_file(&meta_path)?;
             } else {
+                // New version uses a Log for the "multimeta" data. It enables "repair()".
                 multimeta.read_log(&multimeta_log)?;
+
+                // For safe migration. Also check the "multimeta" file.
+                // It can contain newer data if written by an older version.
+                let mut maybe_new_multimeta = MultiMeta::default();
+                if maybe_new_multimeta.read_file(&meta_path).is_ok() {
+                    if maybe_new_multimeta.metas.iter().all(|(k, v)| {
+                        v.lock().unwrap().primary_len
+                            >= match multimeta.metas.get(k) {
+                                None => 0,
+                                Some(v) => v.lock().unwrap().primary_len,
+                            }
+                    }) {
+                        multimeta = maybe_new_multimeta;
+                    }
+                }
             }
 
             let locked = if !multimeta_log_is_empty
@@ -627,6 +643,7 @@ mod tests {
         mlog.multimeta
             .write_log(&mut mlog.multimeta_log, &lock)
             .unwrap();
+        mlog.multimeta.write_file(&multi_meta_path(path)).unwrap();
         drop(lock);
 
         // The index is rebuilt (appended) at open time because of incompatible meta.
