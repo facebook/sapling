@@ -8,6 +8,9 @@
 #![allow(non_camel_case_types)]
 
 use cpython::*;
+use cpython_ext::PyPath;
+use cpython_ext::ResultPyErrExt;
+use dag::Repair;
 
 pub mod commits;
 pub mod dagalgo;
@@ -44,10 +47,17 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
         py_fn!(py, describe_bytes(bytes: PyBytes)),
     )?;
 
+    // Repair NameDag storage.
+    m.add(py, "repair", py_fn!(py, repair(path: &PyPath)))?;
+
     Ok(m)
 }
 
 fn describe_bytes(py: Python, bytes: PyBytes) -> PyResult<String> {
     let data = bytes.data(py);
     Ok(dag::describe_indexedlog_entry(data))
+}
+
+fn repair(py: Python, path: &PyPath) -> PyResult<String> {
+    dag::NameDag::repair(path).map_pyerr(py)
 }
