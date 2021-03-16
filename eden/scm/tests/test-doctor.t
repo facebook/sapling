@@ -275,3 +275,26 @@ in the new repo, while keeping changelog unchanged.
   $ hg log -GT '{desc}\n'
   @  A
   
+Test fixing broken segmented changelog (broken mutimeta)
+
+  $ newrepo
+  $ hg debugchangelog --migrate fullsegments
+  $ drawdag << 'EOS'
+  > B
+  > |
+  > A
+  > EOS
+
+  $ rm .hg/store/segments/v1/multimeta .hg/store/segments/v1/multimetalog/meta
+  $ touch .hg/store/segments/v1/multimeta .hg/store/segments/v1/multimetalog/meta
+  $ hg log -r tip 2>/dev/null 1>/dev/null
+  [1]
+
+  $ hg doctor
+  checking internal storage
+  segments/v1: repaired
+  visibleheads: removed 1 heads, added tip
+  checking commit references
+
+  $ hg log -r tip -T '{desc}\n'
+  B

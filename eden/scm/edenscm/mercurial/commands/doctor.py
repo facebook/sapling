@@ -10,6 +10,7 @@ import os
 import typing
 
 from bindings import (
+    dag,
     metalog,
     mutationstore,
     nodemap,
@@ -68,6 +69,9 @@ def doctor(ui, **opts):
     if ui.configbool("mutation", "enabled"):
         repairsvfs(ui, svfs, "mutation", mutationstore.mutationstore)
 
+    if svfs.exists("segments/v1"):
+        repairsvfs(ui, svfs, "segments/v1", dag)
+
     cl = repairchangelog(ui, svfs)
     if cl is None:
         # Lots of fixes depend on changelog.
@@ -120,7 +124,8 @@ def repairsvfs(ui, svfs, name, fixobj):
     """Attempt to repair path in repo.svfs"""
     path = svfs.join(name)
     repair(ui, name, path, fixobj.repair)
-    return fixobj(path)
+    if callable(fixobj):
+        return fixobj(path)
 
 
 def repair(ui, name, path, fixfunc, *args, **kwargs):
