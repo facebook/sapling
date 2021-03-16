@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use fbinit::FacebookInit;
 use futures::try_join;
+use futures_ext::FbFutureExt;
 use futures_stats::{FutureStats, TimedFutureExt};
 use identity::Identity;
 use maplit::hashset;
@@ -49,6 +50,7 @@ define_stats! {
     total_request_success: timeseries(Rate, Sum),
     total_request_internal_failure: timeseries(Rate, Sum),
     total_request_invalid: timeseries(Rate, Sum),
+    total_request_cancelled: timeseries(Rate, Sum),
 
     // permille is used in canaries, because canaries do not allow for tracking formulas
     total_request_internal_failure_permille: timeseries(Average),
@@ -399,6 +401,7 @@ fn log_result<T: AddScubaResponse>(
     STATS::total_request_success.add_value(success);
     STATS::total_request_internal_failure.add_value(internal_failure);
     STATS::total_request_invalid.add_value(invalid_request);
+    STATS::total_request_cancelled.add_value(0);
     STATS::total_request_internal_failure_permille.add_value(internal_failure * 1000);
     STATS::total_request_invalid_permille.add_value(invalid_request * 1000);
 
@@ -413,6 +416,19 @@ fn log_result<T: AddScubaResponse>(
         scuba.add("error", error.as_str());
     }
     scuba.log_with_msg("Request complete", None);
+}
+
+fn log_cancelled(ctx: &CoreContext, stats: &FutureStats) {
+    STATS::total_request_success.add_value(0);
+    STATS::total_request_internal_failure.add_value(0);
+    STATS::total_request_invalid.add_value(0);
+    STATS::total_request_cancelled.add_value(1);
+
+    let mut scuba = ctx.scuba().clone();
+    ctx.perf_counters().insert_perf_counters(&mut scuba);
+    scuba.add_future_stats(stats);
+    scuba.add("status", "CANCELLED");
+    scuba.log_with_msg("Request cancelled", None);
 }
 
 // Define a macro to construct a CoreContext based on the thrift parameters.
@@ -455,6 +471,7 @@ macro_rules! impl_thrift_methods {
                     let (stats, res) = (self.0)
                         .$method_name(ctx.clone(), $( $param_name ),* )
                         .timed()
+                        .on_cancel_with_data(|stats| log_cancelled(&ctx, &stats))
                         .await;
                     log_result(ctx, &stats, &res);
                     let method = stringify!($method_name).to_string();
