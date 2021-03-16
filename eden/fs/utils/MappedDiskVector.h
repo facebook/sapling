@@ -59,7 +59,7 @@ struct RecordTypeRequirements<T, Rest...> {
       std::is_trivially_move_assignable<T>::value,
       "Records will be relocated in memory");
   static_assert(
-      std::is_convertible<typeof(T::VERSION), uint32_t>::value,
+      std::is_convertible<decltype(T::VERSION), uint32_t>::value,
       "Record's VERSION constant must convert to a uint32_t");
   static_assert(T::VERSION >= 0, "Record VERSION cannot be negative");
   static_assert(
