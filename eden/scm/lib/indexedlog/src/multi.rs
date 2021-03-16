@@ -10,8 +10,10 @@
 use crate::errors::{IoResultExt, ResultExt};
 use crate::lock::ScopedDirLock;
 use crate::log::{self, GenericPath, LogMetadata};
+use crate::repair::OpenOptionsRepair;
 use crate::utils;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::io;
 use std::mem;
 use std::ops;
@@ -234,8 +236,9 @@ impl MultiLog {
     /// [`MultiLog::write_meta`]. For more advanced use-cases, call those
     /// functions manually.
     ///
-    /// (This does not seem very useful practically. So it is private.)
-    pub fn sync(&mut self) -> crate::Result<()> {
+    /// This function should not be called if logs were detached.
+    /// This does not seem very useful practically. So it is private.
+    fn sync(&mut self) -> crate::Result<()> {
         let lock = self.lock()?;
         for log in self.logs.iter_mut() {
             log.sync()?;
@@ -272,12 +275,124 @@ impl ops::IndexMut<usize> for MultiLog {
     }
 }
 
+impl OpenOptionsRepair for OpenOptions {
+    fn open_options_repair(&self, path: impl AsRef<Path>) -> crate::Result<String> {
+        let path = path.as_ref();
+        let mut out = String::new();
+        let lock = LockGuard(ScopedDirLock::new(path)?);
+
+        // First, repair the MultiMeta log.
+        let mpath = multi_meta_log_path(path);
+        out += "Repairing MultiMeta Log:\n";
+        out += &indent(&multi_meta_log_open_options().open_options_repair(&mpath)?);
+
+        // Then, repair each logs.
+        let mut name_len: HashMap<&str, u64> = HashMap::new();
+        for (name, opts) in self.name_open_options.iter() {
+            let fspath = path.join(name);
+            if !fspath.exists() {
+                out += &format!("Skipping non-existed Log {}\n", name);
+                continue;
+            }
+            out += &format!("Repairing Log {}\n", name);
+            out += &indent(&opts.open_options_repair(&fspath)?);
+            let log = opts.open(&fspath)?;
+            let len = log.meta.primary_len;
+            out += &format!("Log {} has valid length {} after repair\n", name, len);
+            name_len.insert(*name, len);
+        }
+
+        // Finally, figure out a good "multimeta" from the multimeta log.
+        let mut mlog = multi_meta_log_open_options()
+            .open(&mpath)
+            .context("repair cannot open MultiMeta Log after repairing it")?;
+        let mut selected_meta = None;
+        let mut invalid_count = 0;
+        for entry in mlog.lookup(INDEX_REVERSE, INDEX_REVERSE_KEY)? {
+            // The linked list in the index is in the reversed order.
+            // So the first entry contains the last root id.
+            if let Ok(data) = entry {
+                let mut mmeta = MultiMeta::default();
+                if mmeta.read(data).is_ok() {
+                    // Check if everything is okay.
+                    if mmeta.metas.iter().all(|(name, meta)| {
+                        let len_required = meta.lock().unwrap().primary_len;
+                        let len_provided = name_len.get(name.as_str()).cloned().unwrap_or_default();
+                        len_required <= len_provided
+                    }) {
+                        if invalid_count > 0 {
+                            // Write repair log.
+                            let mmeta_desc = mmeta
+                                .metas
+                                .iter()
+                                .map(|(name, meta)| {
+                                    format!("{}: {}", name, meta.lock().unwrap().primary_len)
+                                })
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            out += &format!(
+                                "Found valid MultiMeta after {} invalid entries: {}\n",
+                                invalid_count, mmeta_desc
+                            );
+                        }
+                        selected_meta = Some(mmeta);
+                        break;
+                    } else {
+                        invalid_count += 1;
+                    }
+                }
+            }
+        }
+
+        if selected_meta.is_none() {
+            // For legacy MultiLog, the MultiMeta is stored in the file.
+            let mut mmeta = MultiMeta::default();
+            if mmeta.read_file(&multi_meta_path(path)).is_ok() {
+                selected_meta = Some(mmeta);
+            }
+        }
+
+        let selected_meta = match selected_meta {
+            None => {
+                return Err(crate::Error::corruption(
+                    &mpath,
+                    "repair cannot find valid MultiMeta",
+                ))
+                .context(|| format!("Repair log:\n{}", indent(&out)));
+            }
+            Some(meta) => meta,
+        };
+
+        if invalid_count > 0 {
+            selected_meta
+                .write_log(&mut mlog, &lock)
+                .context("repair cannot write MultiMeta log")?;
+            selected_meta
+                .write_file(multi_meta_path(path))
+                .context("repair cannot write valid MultiMeta file")?;
+            out += "Write valid MultiMeta\n";
+        } else {
+            out += "MultiMeta is valid\n";
+        }
+
+        Ok(out)
+    }
+}
+
 fn multi_meta_path(dir: &Path) -> PathBuf {
     dir.join("multimeta")
 }
 
 fn multi_meta_log_path(dir: &Path) -> PathBuf {
     dir.join("multimetalog")
+}
+
+/// Indent lines by 2 spaces.
+fn indent(s: &str) -> String {
+    s.lines()
+        .map(|l| format!("  {}\n", l))
+        .collect::<Vec<_>>()
+        .concat()
 }
 
 impl MultiMeta {
@@ -382,14 +497,19 @@ impl MultiMeta {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use log::tests::pwrite;
     use quickcheck::quickcheck;
+
+    fn simple_open_opts() -> OpenOptions {
+        OpenOptions::from_name_opts(vec![
+            ("a", log::OpenOptions::new()),
+            ("b", log::OpenOptions::new()),
+        ])
+    }
 
     /// Create a simple MultiLog containing Log 'a' and 'b' for testing.
     fn simple_multilog(path: &Path) -> MultiLog {
-        let mopts = OpenOptions::from_name_opts(vec![
-            ("a", log::OpenOptions::new()),
-            ("b", log::OpenOptions::new()),
-        ]);
+        let mopts = simple_open_opts();
         mopts.open(path).unwrap()
     }
 
@@ -525,6 +645,84 @@ mod tests {
         let lock2 = mlog2.lock().unwrap();
         assert!(mlog1.write_meta(&lock2).is_err());
         assert!(mlog2.write_meta(&lock1).is_err());
+    }
+
+    #[test]
+    fn test_repair() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path();
+        let opts = simple_open_opts();
+        let mut mlog = opts.open(&path).unwrap();
+        let mut logs = mlog.detach_logs();
+
+        // Create 10 "multimeta"s. Each MultiMeta contains N entires for each log.
+        const N: usize = 12;
+        for i in 0..10u32 {
+            let lock = mlog.lock().unwrap();
+            for _ in 0..N {
+                logs[0].append(i.to_be_bytes()).unwrap();
+                logs[1].append(i.to_be_bytes()).unwrap();
+                logs[0].sync().unwrap();
+            }
+            logs[1].sync().unwrap();
+            mlog.write_meta(&lock).unwrap();
+        }
+
+        let repair = || -> String {
+            let out = opts.open_options_repair(path).unwrap();
+            // Filter out dynamic content.
+            out.lines()
+                .filter(|l| !l.contains("bytes in log") && !l.contains("Backed up"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        };
+
+        // Check that both logs only have a multiple of N entries.
+        let verify = || {
+            let mlog = opts.open(&path).unwrap();
+            assert_eq!(mlog.logs[0].iter().count() % N, 0);
+            assert_eq!(mlog.logs[1].iter().count() % N, 0);
+        };
+
+        // Valid MultiLog.
+        assert_eq!(
+            repair(),
+            r#"Repairing MultiMeta Log:
+  Index "reverse" passed integrity check
+Repairing Log a
+Log a has valid length 1212 after repair
+Repairing Log b
+Log b has valid length 1212 after repair
+MultiMeta is valid"#
+        );
+
+        // Put bad data in the first log. The repair will pick a recent MultiMeta point and
+        // dropping some entries.
+        pwrite(&path.join("a").join("log"), 1000, b"ff");
+        assert_eq!(
+            repair(),
+            r#"Repairing MultiMeta Log:
+  Index "reverse" passed integrity check
+Repairing Log a
+  Reset log size to 992
+Log a has valid length 992 after repair
+Repairing Log b
+Log b has valid length 1212 after repair
+Found valid MultiMeta after 2 invalid entries: a: 972, b: 972
+Write valid MultiMeta"#
+        );
+        verify();
+
+        assert_eq!(
+            repair(),
+            r#"Repairing MultiMeta Log:
+  Index "reverse" passed integrity check
+Repairing Log a
+Log a has valid length 992 after repair
+Repairing Log b
+Log b has valid length 1212 after repair
+MultiMeta is valid"#
+        );
     }
 
     quickcheck! {
