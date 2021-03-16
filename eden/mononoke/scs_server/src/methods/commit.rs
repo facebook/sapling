@@ -21,7 +21,7 @@ use mononoke_api::{
 };
 use source_control as thrift;
 
-use crate::commit_id::{map_commit_identities, map_commit_identity, CommitIdExt};
+use crate::commit_id::{map_commit_identities, map_commit_identity};
 use crate::errors::{self, ServiceErrorResultExt};
 use crate::from_request::{check_range_and_convert, validate_timestamp, FromRequest};
 use crate::history::collect_history;
@@ -127,22 +127,10 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitCommonBaseWithParams,
     ) -> Result<thrift::CommitLookupResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &commit.repo).await?;
-        let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
-        let other_changeset_specifier = ChangesetSpecifier::from_request(&params.other_commit_id)?;
-        let (changeset, other_changeset_id) = try_join!(
-            repo.changeset(changeset_specifier),
-            repo.resolve_specifier(other_changeset_specifier),
-        )?;
-        let changeset = changeset.ok_or_else(|| errors::commit_not_found(commit.description()))?;
-        let other_changeset_id = other_changeset_id.ok_or_else(|| {
-            errors::commit_not_found(format!(
-                "repo={} commit={}",
-                commit.repo.name,
-                params.other_commit_id.to_string()
-            ))
-        })?;
-        let lca = changeset.common_base_with(other_changeset_id).await?;
+        let (_repo, changeset, other_changeset) = self
+            .repo_changeset_pair(ctx, &commit, &params.other_commit_id)
+            .await?;
+        let lca = changeset.common_base_with(other_changeset.id()).await?;
         Ok(thrift::CommitLookupResponse {
             exists: lca.is_some(),
             ids: if let Some(lca) = lca {
@@ -194,14 +182,9 @@ impl SourceControlServiceImpl {
         }
 
         // Resolve the CommitSpecfier into ChangesetContext
-        let other_commit = thrift::CommitSpecifier {
-            repo: commit.repo.clone(),
-            id: params.other_commit_id.clone(),
-        };
-        let ((_repo1, base_commit), (_repo2, other_commit)) = try_join!(
-            self.repo_changeset(ctx.clone(), &commit),
-            self.repo_changeset(ctx.clone(), &other_commit,)
-        )?;
+        let (_repo, base_commit, other_commit) = self
+            .repo_changeset_pair(ctx, &commit, &params.other_commit_id)
+            .await?;
 
         // Resolve the path into ChangesetPathContext
         // To make it more efficient we do a batch request
@@ -346,22 +329,10 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitIsAncestorOfParams,
     ) -> Result<bool, errors::ServiceError> {
-        let repo = self.repo(ctx, &commit.repo).await?;
-        let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
-        let other_changeset_specifier = ChangesetSpecifier::from_request(&params.other_commit_id)?;
-        let (changeset, other_changeset_id) = try_join!(
-            repo.changeset(changeset_specifier),
-            repo.resolve_specifier(other_changeset_specifier),
-        )?;
-        let changeset = changeset.ok_or_else(|| errors::commit_not_found(commit.description()))?;
-        let other_changeset_id = other_changeset_id.ok_or_else(|| {
-            errors::commit_not_found(format!(
-                "repo={} commit={}",
-                commit.repo.name,
-                params.other_commit_id.to_string()
-            ))
-        })?;
-        let is_ancestor_of = changeset.is_ancestor_of(other_changeset_id).await?;
+        let (_repo, changeset, other_changeset) = self
+            .repo_changeset_pair(ctx, &commit, &params.other_commit_id)
+            .await?;
+        let is_ancestor_of = changeset.is_ancestor_of(other_changeset.id()).await?;
         Ok(is_ancestor_of)
     }
 
@@ -372,32 +343,30 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitCompareParams,
     ) -> Result<thrift::CommitCompareResponse, errors::ServiceError> {
-        let (repo, base_changeset) = self.repo_changeset(ctx, &commit).await?;
-
-        let other_changeset_id = match &params.other_commit_id {
-            Some(id) => {
-                let specifier = ChangesetSpecifier::from_request(id)?;
-                repo.resolve_specifier(specifier).await?.ok_or_else(|| {
-                    errors::commit_not_found(format!(
-                        "repo={} commit={}",
-                        commit.repo.name,
-                        id.to_string()
-                    ))
-                })?
+        let (_repo, base_changeset, other_changeset) = match &params.other_commit_id {
+            Some(id) => self.repo_changeset_pair(ctx, &commit, &id).await?,
+            None => {
+                let (repo, base_changeset) = self.repo_changeset(ctx, &commit).await?;
+                let other_changeset_id = base_changeset
+                    .parents()
+                    .await?
+                    .into_iter()
+                    .next()
+                    .ok_or_else(|| {
+                        // TODO: compare with empty manifest in this case
+                        errors::commit_not_found(format!(
+                            "parent commit not found: {}",
+                            commit.description()
+                        ))
+                    })?;
+                let other_changeset = repo
+                    .changeset(ChangesetSpecifier::Bonsai(other_changeset_id))
+                    .await?
+                    .ok_or_else(|| errors::internal_error("other changeset is missing"))?;
+                (repo, base_changeset, other_changeset)
             }
-            None => base_changeset
-                .parents()
-                .await?
-                .into_iter()
-                .next()
-                .ok_or_else(|| {
-                    // TODO: compare with empty manifest in this case
-                    errors::commit_not_found(format!(
-                        "parent commit not found: {}",
-                        commit.description()
-                    ))
-                })?,
         };
+
         let mut diff_items: BTreeSet<_> = params
             .compare_items
             .into_iter()
@@ -423,7 +392,7 @@ impl SourceControlServiceImpl {
         };
         let diff = base_changeset
             .diff(
-                other_changeset_id,
+                other_changeset.id(),
                 !params.skip_copies_renames,
                 paths,
                 diff_items,
@@ -440,10 +409,6 @@ impl SourceControlServiceImpl {
                 CommitComparePath::Tree(entry) => Either::Right(entry),
             });
 
-        let other_changeset = repo
-            .changeset(ChangesetSpecifier::Bonsai(other_changeset_id))
-            .await?
-            .ok_or_else(|| errors::internal_error("other changeset is missing"))?;
         let other_commit_ids =
             map_commit_identity(&other_changeset, &params.identity_schemes).await?;
         Ok(thrift::CommitCompareResponse {

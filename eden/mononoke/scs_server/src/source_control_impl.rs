@@ -11,6 +11,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use fbinit::FacebookInit;
+use futures::try_join;
 use futures_stats::{FutureStats, TimedFutureExt};
 use identity::Identity;
 use maplit::hashset;
@@ -34,7 +35,7 @@ use time_ext::DurationExt;
 use tunables::tunables;
 
 use crate::commit_id::CommitIdExt;
-use crate::errors;
+use crate::errors::{self, ServiceErrorResultExt};
 use crate::from_request::FromRequest;
 use crate::scuba_params::AddScubaParams;
 use crate::scuba_response::AddScubaResponse;
@@ -223,6 +224,46 @@ impl SourceControlServiceImpl {
             .await?
             .ok_or_else(|| errors::commit_not_found(commit.description()))?;
         Ok((repo, changeset))
+    }
+
+    /// Get the repo and pair of changesets specified by a `thrift::CommitSpecifier`
+    /// and `thrift::CommitId` pair.
+    pub(crate) async fn repo_changeset_pair(
+        &self,
+        ctx: CoreContext,
+        commit: &thrift::CommitSpecifier,
+        other_commit: &thrift::CommitId,
+    ) -> Result<(RepoContext, ChangesetContext, ChangesetContext), errors::ServiceError> {
+        let repo = self.repo(ctx, &commit.repo).await?;
+        let changeset_specifier =
+            ChangesetSpecifier::from_request(&commit.id).context("invalid target commit id")?;
+        let other_changeset_specifier = ChangesetSpecifier::from_request(other_commit)
+            .context("invalid or missing other commit id")?;
+        let (changeset, other_changeset) = try_join!(
+            async {
+                Ok::<_, errors::ServiceError>(
+                    repo.changeset(changeset_specifier)
+                        .await
+                        .context("failed to resolve target commit")?
+                        .ok_or_else(|| errors::commit_not_found(commit.description()))?,
+                )
+            },
+            async {
+                Ok::<_, errors::ServiceError>(
+                    repo.changeset(other_changeset_specifier)
+                        .await
+                        .context("failed to resolve other commit")?
+                        .ok_or_else(|| {
+                            errors::commit_not_found(format!(
+                                "repo={} commit={}",
+                                commit.repo.name,
+                                other_commit.to_string()
+                            ))
+                        })?,
+                )
+            },
+        )?;
+        Ok((repo, changeset, other_changeset))
     }
 
     /// Get the changeset id specified by a `thrift::CommitId`.
