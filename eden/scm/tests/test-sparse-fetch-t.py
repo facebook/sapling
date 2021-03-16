@@ -137,4 +137,4 @@ open("z/1", "w").write("2")
 open("z/z", "w").write("2")
 
 # Good: 'status' should avoid downloading y/ or z/.
-eq(collectprefetch("hg status"), ["x", "x/x"])
+eq(sorted(set(collectprefetch("hg status")) - {"x", "x/x"}), [])
