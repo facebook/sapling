@@ -14,6 +14,7 @@ import shlex
 import subprocess
 import sys
 import unittest
+import libfb.py.parutil as parutil
 
 import libfb.py.parutil as parutil
 
@@ -22,16 +23,8 @@ try:
     # Used by :run_tests binary target
     import libfb.py.pathutils as pathutils
 
-    if "-py3" in sys.argv[0]:
-        hgpath = pathutils.get_build_rule_output_path(
-            "//eden/scm:hg-py3", pathutils.BuildRuleTypes.SH_BINARY
-        )
-        pythonbinpath = pathutils.get_build_rule_output_path(
-            "//eden/scm:hgpython-py3", pathutils.BuildRuleTypes.SH_BINARY
-        )
-    else:
-        hgpath = parutil.get_file_path("hg.sh", pkg=__package__)
-        pythonbinpath = parutil.get_file_path("hgpython.sh", pkg=__package__)
+    hgpath = parutil.get_file_path("hg.sh", pkg=__package__)
+    pythonbinpath = parutil.get_file_path("hgpython.sh", pkg=__package__)
     watchman = parutil.get_file_path("watchman", pkg=__package__)
     mononoke_server = parutil.get_file_path("mononoke", pkg=__package__)
     mononoke_hgcli = parutil.get_file_path("hgcli", pkg=__package__)
