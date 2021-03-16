@@ -465,7 +465,7 @@ impl RotateLog {
                     // `self.writable_log()` will be rotated (i.e., becomes immutable).
                     // Make sure indexes are up-to-date so reading it would not require
                     // building missing indexes in-memory.
-                    self.writable_log().finalize_indexes()?;
+                    self.writable_log().finalize_indexes(&lock)?;
                     self.rotate_internal(&lock)?;
                 }
             }

@@ -694,7 +694,7 @@ impl Log {
     ///
     /// This is used internally by [`RotateLog`] to make sure a [`Log`] has
     /// complate indexes before rotating.
-    pub(crate) fn finalize_indexes(&mut self) -> crate::Result<()> {
+    pub(crate) fn finalize_indexes(&mut self, _lock: &ScopedDirLock) -> crate::Result<()> {
         let result: crate::Result<_> = (|| {
             let dir = self.dir.clone();
             if let Some(dir) = dir.as_opt_path() {
@@ -708,9 +708,10 @@ impl Log {
 
                 let meta = Self::load_or_create_meta(&self.dir, false)?;
                 if self.meta != meta {
-                    return Err(crate::Error::programming(
-                        "race detected, callsite responsible for preventing races",
-                    ));
+                    return Err(crate::Error::programming(format!(
+                        "race detected, callsite responsible for preventing races (old meta: {:?}, new meta: {:?})",
+                        &self.meta, &meta
+                    )));
                 }
 
                 // Flush all indexes.
