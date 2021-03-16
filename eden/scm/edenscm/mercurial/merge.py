@@ -2310,6 +2310,10 @@ def update(
                 repo.ui.debug("Not using native checkout: %s\n" % fallbackcheckout)
             else:
                 repo.ui.debug("Using native checkout\n")
+                repo.ui.log(
+                    "nativecheckout",
+                    using_nativecheckout=True,
+                )
 
                 sparsematchers = None
                 sparsematch = getattr(repo, "sparsematch", None)
