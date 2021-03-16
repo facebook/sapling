@@ -15,12 +15,13 @@ use async_trait::async_trait;
 use tokio::sync::Notify;
 use tokio::time::Instant;
 
+use futures_ext::future::{spawn_controlled, ControlledHandle};
+use futures_stats::TimedFutureExt;
+
 use bookmarks::{BookmarkName, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
-use dag::Location;
-use futures_ext::future::{spawn_controlled, ControlledHandle};
-
 use context::CoreContext;
+use dag::Location;
 use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::iddag::IdDagSaveStore;
@@ -65,17 +66,29 @@ impl SegmentedChangelogManager {
     }
 
     pub async fn load(&self, ctx: &CoreContext) -> Result<Arc<dyn SegmentedChangelog>> {
-        let on_demand = self.load_ondemand_update(ctx).await?;
-        let asc: Arc<dyn SegmentedChangelog> = match self.update_to_master_bookmark_period {
-            None => on_demand,
-            Some(period) => Arc::new(on_demand.with_periodic_update_to_bookmark(
-                ctx,
-                self.bookmarks.clone(),
-                self.bookmark_name.clone(),
-                period,
-            )),
+        let monitored = async {
+            let on_demand = self.load_ondemand_update(ctx).await?;
+            let asc: Arc<dyn SegmentedChangelog> = match self.update_to_master_bookmark_period {
+                None => on_demand,
+                Some(period) => Arc::new(on_demand.with_periodic_update_to_bookmark(
+                    ctx,
+                    self.bookmarks.clone(),
+                    self.bookmark_name.clone(),
+                    period,
+                )),
+            };
+            Ok(asc)
         };
-        Ok(asc)
+
+        let (stats, ret) = monitored.timed().await;
+        let mut scuba = ctx.scuba().clone();
+        scuba.add_future_stats(&stats);
+        scuba.add("repo_id", self.repo_id.id());
+        scuba.add("success", ret.is_ok());
+        let msg = ret.as_ref().err().map(|err| format!("{:?}", err));
+        scuba.log_with_msg("segmented_changelog_load", msg);
+
+        ret
     }
 
     async fn load_ondemand_update(
@@ -151,7 +164,6 @@ pub struct PeriodicReloadSegmentedChangelog {
 }
 
 impl PeriodicReloadSegmentedChangelog {
-    #[allow(dead_code)]
     pub async fn start(
         ctx: &CoreContext,
         manager: SegmentedChangelogManager,
