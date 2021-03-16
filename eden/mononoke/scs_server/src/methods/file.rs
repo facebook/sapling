@@ -9,7 +9,7 @@ use context::CoreContext;
 use mononoke_api::{headerless_unified_diff, FileId};
 use source_control as thrift;
 
-use crate::errors;
+use crate::errors::{self, ServiceErrorResultExt};
 use crate::from_request::{check_range_and_convert, FromRequest};
 use crate::into_response::IntoResponse;
 use crate::source_control_impl::SourceControlServiceImpl;
@@ -77,13 +77,16 @@ impl SourceControlServiceImpl {
         let context_lines = params.context as usize;
 
         let (repo, base_file) = self.repo_file(ctx, &file).await?;
-        let base_file = base_file.ok_or_else(|| errors::file_not_found(file.description()))?;
+        let base_file = base_file
+            .ok_or_else(|| errors::file_not_found(file.description()))
+            .context("failed to resolve target file")?;
 
         let other_file_id = FileId::from_request(&params.other_file_id)?;
         let other_file = repo
             .file(other_file_id)
             .await?
-            .ok_or_else(|| errors::file_not_found(other_file_id.to_string()))?;
+            .ok_or_else(|| errors::file_not_found(other_file_id.to_string()))
+            .context("failed to resolve other file")?;
 
         let diff = headerless_unified_diff(&other_file, &base_file, context_lines)
             .await?

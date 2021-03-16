@@ -22,7 +22,7 @@ use mononoke_api::{
 use source_control as thrift;
 
 use crate::commit_id::{map_commit_identities, map_commit_identity, CommitIdExt};
-use crate::errors;
+use crate::errors::{self, ServiceErrorResultExt};
 use crate::from_request::{check_range_and_convert, validate_timestamp, FromRequest};
 use crate::history::collect_history;
 use crate::into_response::{AsyncIntoResponse, AsyncIntoResponseWith, IntoResponse};
@@ -220,7 +220,8 @@ impl SourceControlServiceImpl {
                 Ok((
                     match path_pair.base_path {
                         Some(path) => {
-                            let mpath = MononokePath::try_from(&path)?;
+                            let mpath = MononokePath::try_from(&path)
+                                .context("invalid base commit path")?;
                             base_commit_paths.push(mpath.clone());
                             Some(mpath)
                         }
@@ -228,7 +229,8 @@ impl SourceControlServiceImpl {
                     },
                     match path_pair.other_path {
                         Some(path) => {
-                            let mpath = MononokePath::try_from(&path)?;
+                            let mpath = MononokePath::try_from(&path)
+                                .context("invalid other commit path")?;
                             other_commit_paths.push(mpath.clone());
                             Some(mpath)
                         }

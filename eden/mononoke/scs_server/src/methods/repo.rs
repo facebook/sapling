@@ -28,7 +28,7 @@ use mononoke_types::hash::{Sha1, Sha256};
 use source_control as thrift;
 
 use crate::commit_id::{map_commit_identities, map_commit_identity, CommitIdExt};
-use crate::errors;
+use crate::errors::{self, ServiceErrorResultExt};
 use crate::from_request::{check_range_and_convert, convert_pushvars, FromRequest};
 use crate::into_response::{AsyncIntoResponseWith, IntoResponse};
 use crate::source_control_impl::SourceControlServiceImpl;
@@ -195,7 +195,8 @@ impl SourceControlServiceImpl {
             .map(|parent| {
                 let repo = &repo;
                 async move {
-                    let changeset_specifier = ChangesetSpecifier::from_request(&parent)?;
+                    let changeset_specifier = ChangesetSpecifier::from_request(&parent)
+                        .context("invalid commit id for parent")?;
                     let changeset = repo
                         .changeset(changeset_specifier)
                         .await?
@@ -476,7 +477,8 @@ impl SourceControlServiceImpl {
         let old_changeset_id = match &params.old_target {
             Some(old_target) => Some(
                 repo.changeset(ChangesetSpecifier::from_request(old_target)?)
-                    .await?
+                    .await
+                    .context("failed to resolve old target")?
                     .ok_or_else(|| errors::commit_not_found(old_target.to_string()))?
                     .id(),
             ),
@@ -536,11 +538,13 @@ impl SourceControlServiceImpl {
         borrowed!(params.head, params.base);
         let head = repo
             .changeset(ChangesetSpecifier::from_request(head)?)
-            .await?
+            .await
+            .context("failed to resolve head commit")?
             .ok_or_else(|| errors::commit_not_found(head.to_string()))?;
         let base = repo
             .changeset(ChangesetSpecifier::from_request(base)?)
-            .await?
+            .await
+            .context("failed to resolve base commit")?
             .ok_or_else(|| errors::commit_not_found(base.to_string()))?;
         let pushvars = convert_pushvars(params.pushvars);
 

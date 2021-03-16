@@ -29,6 +29,53 @@ impl From<thrift::InternalError> for ServiceError {
     }
 }
 
+impl ServiceError {
+    pub fn context(self, context: &str) -> Self {
+        match self {
+            Self::Request(thrift::RequestError { kind, reason }) => {
+                let reason = format!("{}: {}", context, reason);
+                Self::Request(thrift::RequestError { kind, reason })
+            }
+            Self::Internal(thrift::InternalError {
+                reason,
+                backtrace,
+                source_chain,
+            }) => {
+                let reason = format!("{}: {}", context, reason);
+                Self::Internal(thrift::InternalError {
+                    reason,
+                    backtrace,
+                    source_chain,
+                })
+            }
+        }
+    }
+}
+
+pub(crate) trait ServiceErrorResultExt<T> {
+    fn context(self, context: &str) -> Result<T, ServiceError>;
+    fn with_context(self, context_fn: impl FnOnce() -> String) -> Result<T, ServiceError>;
+}
+
+impl<T, E> ServiceErrorResultExt<T> for Result<T, E>
+where
+    E: Into<ServiceError>,
+{
+    fn context(self, context: &str) -> Result<T, ServiceError> {
+        match self {
+            Ok(v) => Ok(v),
+            Err(e) => Err(e.into().context(context)),
+        }
+    }
+
+    fn with_context(self, context_fn: impl FnOnce() -> String) -> Result<T, ServiceError> {
+        match self {
+            Ok(v) => Ok(v),
+            Err(e) => Err(e.into().context(context_fn().as_str())),
+        }
+    }
+}
+
 impl From<MononokeError> for ServiceError {
     fn from(e: MononokeError) -> Self {
         match e {
