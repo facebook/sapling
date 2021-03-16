@@ -894,7 +894,7 @@ fn test_rebuild_indexes() {
     assert_eq!(log.lookup(0, b"xyz").unwrap().count(), 0);
 }
 
-fn pwrite(path: &Path, offset: i64, data: &[u8]) {
+pub(crate) fn pwrite(path: &Path, offset: i64, data: &[u8]) {
     let mut file = fs::OpenOptions::new()
         .write(true)
         .read(true)

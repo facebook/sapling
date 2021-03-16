@@ -56,7 +56,7 @@ mod open_options;
 mod path;
 mod repair;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 pub use self::meta::LogMetadata;
 pub use open_options::{
@@ -98,7 +98,7 @@ pub struct Log {
     pub dir: GenericPath,
     disk_buf: Bytes,
     pub(crate) mem_buf: Pin<Box<Vec<u8>>>,
-    meta: LogMetadata,
+    pub(crate) meta: LogMetadata,
     indexes: Vec<Index>,
     // Whether the index and the log is out-of-sync. In which case, index-based reads (lookups)
     // should return errors because it can no longer be trusted.
