@@ -157,7 +157,6 @@ impl Client {
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<T>, EdenApiError> {
         let progress = progress.unwrap_or_else(|| Box::new(|_| ()));
-        let requests = requests.into_iter().collect::<Vec<_>>();
         let n_requests = requests.len();
 
         let (mut responses, stats) = self.client.send_async_with_progress(requests, progress)?;
