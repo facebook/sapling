@@ -73,6 +73,11 @@ pub async fn streaming_clone<'a>(
             let chunks = upload_chunks_blobstore(&ctx, &repo, &chunks, &idx, &data).await?;
 
             info!(ctx.logger(), "inserting into streaming clone database");
+            let chunks = chunks
+                .into_iter()
+                .enumerate()
+                .map(|(chunk_id, (chunk, keys))| (chunk_id, chunk, keys))
+                .collect();
             insert_entries_into_db(&ctx, &repo, &streaming_chunks_fetcher, chunks).await?;
 
             Ok(())
@@ -123,7 +128,7 @@ async fn upload_chunks_blobstore<'a>(
     chunks: &'a [Chunk],
     idx: &'a Path,
     data: &'a Path,
-) -> Result<Vec<(usize, &'a Chunk, BlobstoreKeys)>, Error> {
+) -> Result<Vec<(&'a Chunk, BlobstoreKeys)>, Error> {
     let chunks = stream::iter(chunks.iter().enumerate().map(|(chunk_id, chunk)| {
         borrowed!(ctx, repo, idx, data);
         async move {
@@ -136,7 +141,7 @@ async fn upload_chunks_blobstore<'a>(
                 &data,
             )
             .await?;
-            Result::<_, Error>::Ok((chunk_id, chunk, keys))
+            Result::<_, Error>::Ok((chunk, keys))
         }
     }))
     .buffered(10)
