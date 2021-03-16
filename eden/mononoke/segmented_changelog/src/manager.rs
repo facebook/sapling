@@ -142,7 +142,7 @@ segmented_changelog_delegate!(SegmentedChangelogManager, |&self, ctx: &CoreConte
 });
 
 pub struct PeriodicReloadSegmentedChangelog {
-    sc: Arc<ArcSwap<OnDemandUpdateSegmentedChangelog>>,
+    sc: Arc<ArcSwap<Arc<dyn SegmentedChangelog>>>,
     _handle: ControlledHandle,
     #[allow(dead_code)] // useful for testing
     update_notify: Arc<Notify>,
@@ -155,7 +155,7 @@ impl PeriodicReloadSegmentedChangelog {
         manager: SegmentedChangelogManager,
         period: Duration,
     ) -> Result<Self> {
-        let sc = Arc::new(ArcSwap::new(manager.load_ondemand_update(ctx).await?));
+        let sc = Arc::new(ArcSwap::from_pointee(manager.load(ctx).await?));
         let update_notify = Arc::new(Notify::new());
         let _handle = spawn_controlled({
             let ctx = ctx.clone();
@@ -166,8 +166,8 @@ impl PeriodicReloadSegmentedChangelog {
                 let mut interval = tokio::time::interval_at(start, period);
                 loop {
                     interval.tick().await;
-                    match manager.load_ondemand_update(&ctx).await {
-                        Ok(sc) => my_sc.store(sc),
+                    match manager.load(&ctx).await {
+                        Ok(sc) => my_sc.store(Arc::new(sc)),
                         Err(err) => {
                             slog::error!(
                                 ctx.logger(),
