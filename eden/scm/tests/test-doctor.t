@@ -200,15 +200,17 @@ XXX: The error message should be improved to indicate it is revlog and hg doctor
   A
 
  (dirstate reverted to a previous state: B, C, X, Y, Z become unknown)
+ (X might be unknown too)
   $ hg status -C
   M A2
   A A0
     A
-  A X
+  A X (?)
   R A
   R A1
   ? B
   ? C
+  ? X (?)
   ? Y
   ? Z
 
