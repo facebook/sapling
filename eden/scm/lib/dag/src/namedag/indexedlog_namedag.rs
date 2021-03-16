@@ -15,6 +15,7 @@ use crate::ops::Persist;
 use crate::ops::TryClone;
 use crate::Result;
 use indexedlog::multi;
+use indexedlog::DefaultOpenOptions;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -40,10 +41,7 @@ impl Open for IndexedLogNameDagPath {
 
     fn open(&self) -> Result<Self::OpenTarget> {
         let path = &self.0;
-        let opts = multi::OpenOptions::from_name_opts(vec![
-            ("idmap2", IdMap::log_open_options()),
-            ("iddag", IndexedLogStore::log_open_options()),
-        ]);
+        let opts = NameDag::default_open_options();
         let mut mlog = opts.open(path)?;
         let mut logs = mlog.detach_logs();
         let dag_log = logs.pop().unwrap();
@@ -60,6 +58,15 @@ impl Open for IndexedLogNameDagPath {
             state,
             id: format!("ilog:{}", self.0.display()),
         })
+    }
+}
+
+impl DefaultOpenOptions<multi::OpenOptions> for NameDag {
+    fn default_open_options() -> multi::OpenOptions {
+        multi::OpenOptions::from_name_opts(vec![
+            ("idmap2", IdMap::log_open_options()),
+            ("iddag", IndexedLogStore::log_open_options()),
+        ])
     }
 }
 

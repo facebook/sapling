@@ -70,6 +70,9 @@ pub mod tests;
 pub use errors::DagError as Error;
 pub type Result<T> = std::result::Result<T, Error>;
 
+// Re-export
+#[cfg(feature = "indexedlog-backend")]
+pub use indexedlog::Repair;
 pub use nonblocking;
 
 #[cfg(test)]
