@@ -129,6 +129,15 @@ Push a few new commits and update streaming clone
   added 3 changesets with 0 changes to 0 files
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Check that with last chunk skipping no new batches are uploaded
+  $ streaming_clone update --dot-hg-path "$TESTTMP/repo-streamclone-2/.hg" --skip-last-chunk
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * current sizes in database: index: 192, data: 165 (glob)
+  * about to upload 0 entries (glob)
+  * inserting into streaming clone database (glob)
+  * current max chunk num is Some(2) (glob)
+
   $ streaming_clone update --dot-hg-path "$TESTTMP/repo-streamclone-2/.hg"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * current sizes in database: index: 192, data: 165 (glob)

@@ -11,7 +11,7 @@ use blake2::{Blake2b, Digest};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreBytes};
 use borrowed::borrowed;
-use clap::{Arg, ArgMatches, SubCommand};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -31,6 +31,7 @@ pub const CREATE_SUB_CMD: &str = "create";
 pub const DEFAULT_MAX_DATA_CHUNK_SIZE: u32 = 950 * 1024;
 pub const DOT_HG_PATH_ARG: &str = "dot-hg-path";
 pub const MAX_DATA_CHUNK_SIZE: &str = "max-data-chunk-size";
+pub const SKIP_LAST_CHUNK_ARG: &str = "skip-last-chunk";
 pub const STREAMING_CLONE: &str = "streaming-clone";
 pub const UPDATE_SUB_CMD: &str = "update";
 
@@ -85,7 +86,13 @@ async fn update_streaming_changelog(
     )
     .await?;
 
-    let chunks = split_into_chunks(&revlog, Some(rev_idx_to_skip), max_data_chunk_size)?;
+    let skip_last_chunk = sub_m.is_present(SKIP_LAST_CHUNK_ARG);
+    let chunks = split_into_chunks(
+        &revlog,
+        Some(rev_idx_to_skip),
+        max_data_chunk_size,
+        skip_last_chunk,
+    )?;
 
     info!(ctx.logger(), "about to upload {} entries", chunks.len());
     let chunks = upload_chunks_blobstore(&ctx, &repo, &chunks, &idx, &data).await?;
@@ -147,6 +154,7 @@ fn split_into_chunks(
     revlog: &Revlog,
     skip: Option<usize>,
     max_data_chunk_size: u32,
+    skip_last_chunk: bool,
 ) -> Result<Vec<Chunk>, Error> {
     let index_entry_size: u32 = revlog.index_entry_size().try_into().unwrap();
 
@@ -181,6 +189,10 @@ fn split_into_chunks(
 
     if !current_chunk.is_empty() {
         chunks.push(current_chunk);
+    }
+
+    if skip_last_chunk {
+        chunks.pop();
     }
 
     Ok(chunks)
@@ -388,47 +400,42 @@ impl Chunk {
     }
 }
 
+fn add_common_args<'a, 'b>(sub_cmd: App<'a, 'b>) -> App<'a, 'b> {
+    sub_cmd
+        .arg(
+            Arg::with_name(DOT_HG_PATH_ARG)
+                .long(DOT_HG_PATH_ARG)
+                .takes_value(true)
+                .required(true)
+                .help("path to .hg folder with changelog"),
+        )
+        .arg(
+            Arg::with_name(MAX_DATA_CHUNK_SIZE)
+                .long(MAX_DATA_CHUNK_SIZE)
+                .takes_value(true)
+                .required(false)
+                .help("max size of the data entry that we'll write to the blobstore"),
+        )
+        .arg(
+            Arg::with_name(SKIP_LAST_CHUNK_ARG)
+                .long(SKIP_LAST_CHUNK_ARG)
+                .takes_value(false)
+                .required(false)
+                .help("skip uploading last chunk. "),
+        )
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = args::MononokeAppBuilder::new("Tool to manage streaming clone chunks")
         .with_advanced_args_hidden()
         .build()
-        .subcommand(
-            SubCommand::with_name(CREATE_SUB_CMD)
-                .about("create new streaming clone")
-                .arg(
-                    Arg::with_name(DOT_HG_PATH_ARG)
-                        .long(DOT_HG_PATH_ARG)
-                        .takes_value(true)
-                        .required(true)
-                        .help("path to .hg folder with changelog"),
-                )
-                .arg(
-                    Arg::with_name(MAX_DATA_CHUNK_SIZE)
-                        .long(MAX_DATA_CHUNK_SIZE)
-                        .takes_value(true)
-                        .required(false)
-                        .help("max size of the data entry that we'll write to the blobstore"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(UPDATE_SUB_CMD)
-                .about("update existing streaming changelog")
-                .arg(
-                    Arg::with_name(DOT_HG_PATH_ARG)
-                        .long(DOT_HG_PATH_ARG)
-                        .takes_value(true)
-                        .required(true)
-                        .help("path to .hg folder with changelog"),
-                )
-                .arg(
-                    Arg::with_name(MAX_DATA_CHUNK_SIZE)
-                        .long(MAX_DATA_CHUNK_SIZE)
-                        .takes_value(true)
-                        .required(false)
-                        .help("max size of the data entry that we'll write to the blobstore"),
-                ),
-        )
+        .subcommand(add_common_args(
+            SubCommand::with_name(CREATE_SUB_CMD).about("create new streaming clone"),
+        ))
+        .subcommand(add_common_args(
+            SubCommand::with_name(UPDATE_SUB_CMD).about("update existing streaming changelog"),
+        ))
         .get_matches();
 
     args::init_cachelib(fb, &matches);
