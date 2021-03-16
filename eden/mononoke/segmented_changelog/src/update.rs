@@ -196,10 +196,7 @@ pub fn update_iddag(
     iddag
         .build_segments_volatile(head_vertex, &get_vertex_parents)
         .context("building iddag")?;
-    debug!(
-        ctx.logger(),
-        "successfully finished building building iddag"
-    );
+    debug!(ctx.logger(), "successfully finished updating iddag");
     Ok(())
 }
 

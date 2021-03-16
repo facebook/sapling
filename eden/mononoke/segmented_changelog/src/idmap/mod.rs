@@ -222,7 +222,7 @@ impl IdMapFactory {
         );
         slog::debug!(
             ctx.logger(),
-            "segmented changelog idmap loaded - version: {}",
+            "segmented changelog idmap instantiated - version: {}",
             version
         );
         let mut idmap: Arc<dyn IdMap> = Arc::new(sql_idmap);
