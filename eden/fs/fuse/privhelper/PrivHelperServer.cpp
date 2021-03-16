@@ -573,6 +573,10 @@ void PrivHelperServer::nfsMount(
   // TODO(xavierd): build the NFS mount args found in:
   // https://opensource.apple.com/source/NFS/NFS-150.40.3/mount_nfs/nfs_sys_prot.x.auto.html
   // Or invoke mount_nfs directly.
+  (void)mountPath;
+  (void)mountdPort;
+  (void)nfsdPort;
+  (void)readOnly;
   throw std::runtime_error("NFS is not yet supported on macOS");
 #else
   // Prepare the flags and options to pass to mount(2).
