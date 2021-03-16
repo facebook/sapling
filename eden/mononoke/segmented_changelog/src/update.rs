@@ -261,7 +261,16 @@ pub async fn prepare_incremental_iddag_update<'a>(
             let (cs_id, parents, vertex) = entry?;
             start_state.insert_parents(cs_id, parents.clone());
             if let Some(v) = vertex {
-                start_state.insert_vertex_assignment(cs_id, v);
+                if v < id_map_next_id {
+                    start_state.insert_vertex_assignment(cs_id, v);
+                } else {
+                    return Err(format_err!(
+                        "racing data while updating segmented changelog, \
+                        next_id is {} but found {} assigned",
+                        id_map_next_id,
+                        v
+                    ));
+                }
             }
             let vertex_missing_from_iddag = match vertex {
                 Some(v) => !iddag.contains_id(v)?,

@@ -116,7 +116,9 @@ impl SegmentedChangelogManager {
             .load(&ctx, sc_version.iddag_version)
             .await
             .with_context(|| format!("repo {}: failed to load iddag", self.repo_id))?;
-        let idmap = self.idmap_factory.for_server(ctx, sc_version.idmap_version);
+        let idmap = self
+            .idmap_factory
+            .for_server(ctx, sc_version.idmap_version, &iddag)?;
         slog::debug!(
             ctx.logger(),
             "segmented changelog dag successfully loaded - repo_id: {}, idmap_version: {}, \
