@@ -24,6 +24,7 @@ pyblackbox = { path = "modules/pyblackbox" }
 pybookmarkstore = { path = "modules/pybookmarkstore" }
 pybytes = { path = "modules/pybytes" }
 pycheckout = { path = "modules/pycheckout" }
+pyconflict = { path = "modules/pyconflict" }
 pycliparser = { path = "modules/pycliparser" }
 pyconfigparser = { path = "modules/pyconfigparser" }
 pydag = { path = "modules/pydag" }
