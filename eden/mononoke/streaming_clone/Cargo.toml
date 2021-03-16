@@ -1,5 +1,5 @@
 [package]
-name = "streaming_clone"
+name = "new_streaming_clone"
 version = "0.1.0"
 authors = ["Facebook"]
 edition = "2018"
