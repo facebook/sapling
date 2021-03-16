@@ -15,7 +15,7 @@ use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{future, stream, StreamExt, TryStreamExt};
-use mercurial_revlog::revlog::{Entry, Revlog};
+use mercurial_revlog::revlog::{Entry, RevIdx, Revlog};
 use slog::{info, Logger};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use std::borrow::Borrow;
@@ -85,20 +85,29 @@ fn split_into_chunks(revlog: &Revlog, max_data_chunk_size: u32) -> Result<Vec<Ch
     let index_entry_size: u32 = revlog.index_entry_size().try_into().unwrap();
 
     let mut chunks = vec![];
-    let mut current_chunk = Chunk::new(0, 0);
     let mut iter = (&revlog).into_iter();
-    if let Some((_, entry)) = iter.next() {
-        current_chunk.add_entry(index_entry_size, &entry);
-    }
 
-    for (_idx, entry) in iter {
+    let mut current_chunk = match iter.next() {
+        Some((idx, entry)) => {
+            let idx_start = u64::from(idx.as_u32() * index_entry_size);
+            let data_start = entry.offset;
+            let mut chunk = Chunk::new(idx_start, data_start);
+            chunk.add_entry(idx, index_entry_size, &entry)?;
+            chunk
+        }
+        None => {
+            return Ok(vec![]);
+        }
+    };
+
+    for (idx, entry) in iter {
         if !can_add_entry(&current_chunk, &entry, max_data_chunk_size) {
             let next_chunk = current_chunk.next_chunk();
             chunks.push(current_chunk);
             current_chunk = next_chunk;
         }
 
-        current_chunk.add_entry(index_entry_size, &entry);
+        current_chunk.add_entry(idx, index_entry_size, &entry)?;
     }
 
     if !current_chunk.is_empty() {
@@ -287,9 +296,26 @@ impl Chunk {
         self.idx_len == 0
     }
 
-    fn add_entry(&mut self, index_entry_size: u32, entry: &Entry) {
+    fn add_entry(
+        &mut self,
+        idx: RevIdx,
+        index_entry_size: u32,
+        entry: &Entry,
+    ) -> Result<(), Error> {
         self.idx_len += index_entry_size;
+
+        let expected_offset = self.data_start + u64::from(self.data_len);
+        if expected_offset != entry.offset {
+            return Err(anyhow!(
+                "failed to add entry {}: expected offset {}, actual offset {}",
+                idx.as_u32(),
+                expected_offset,
+                entry.offset
+            ));
+        }
         self.data_len += entry.compressed_len;
+
+        Ok(())
     }
 }
 
