@@ -31,14 +31,14 @@ Create a directory and test some log commands
   $ hg up -q 0
   $ echo "dog" > dir/b
   $ hg commit -Aqm b
-  $ hg log dir -T '{desc}\n'
+  $ hg log dir -T '{desc}\n' 2>&1 | grep -v 'Exception in'
   b
   a
-  $ hg log dir -T '{desc}\n' --all
+  $ hg log dir -T '{desc}\n' --all 2>&1 | grep -v 'Exception in'
   b
   a2
   a
-  $ hg log dir -r 'draft()' -T '{desc}\n'
+  $ hg log dir -r 'draft()' -T '{desc}\n' 2>&1 | grep -v 'Exception in'
   a
   a2
   b
