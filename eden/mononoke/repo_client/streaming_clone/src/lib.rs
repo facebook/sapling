@@ -66,6 +66,12 @@ queries! {
          ORDER BY chunk_num ASC"
     }
 
+    read SelectSizes(repo_id: RepositoryId) -> (Option<u64>, Option<u64>) {
+        "SELECT SUM(idx_size), SUM(data_size)
+         FROM streaming_changelog_chunks
+         WHERE repo_id = {repo_id}"
+    }
+
     write InsertChunks(
         values: (
             repo_id: RepositoryId,
@@ -79,6 +85,12 @@ queries! {
         none,
         "INSERT INTO streaming_changelog_chunks \
             VALUES {values}"
+    }
+
+    read SelectMaxChunkNum(repo_id: RepositoryId) -> (Option<u32>) {
+        "SELECT max(chunk_num)
+         FROM streaming_changelog_chunks
+         WHERE repo_id = {repo_id}"
     }
 }
 
@@ -198,5 +210,36 @@ impl SqlStreamingChunksFetcher {
         InsertChunks::query(&self.write_connection, &ref_chunks[..]).await?;
 
         Ok(())
+    }
+
+    pub async fn select_index_and_data_sizes(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<Option<(u64, u64)>, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
+        let res = SelectSizes::query(&self.read_connection, &repo_id).await?;
+        let (idx, data) = match res.get(0) {
+            Some((Some(idx), Some(data))) => (idx, data),
+            _ => {
+                return Ok(None);
+            }
+        };
+
+        Ok(Some((*idx, *data)))
+    }
+
+    pub async fn select_max_chunk_num(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<Option<u32>, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+
+        let res = SelectMaxChunkNum::query(&self.read_connection, &repo_id).await?;
+        Ok(res.get(0).and_then(|x| x.0))
     }
 }

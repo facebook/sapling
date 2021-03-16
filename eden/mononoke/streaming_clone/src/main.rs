@@ -5,17 +5,19 @@
  * GNU General Public License version 2.
  */
 
+#![deny(warnings)]
 use anyhow::{anyhow, Context, Error};
 use blake2::{Blake2b, Digest};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreBytes};
 use borrowed::borrowed;
-use clap::{Arg, SubCommand};
+use clap::{Arg, ArgMatches, SubCommand};
 use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{future, stream, StreamExt, TryStreamExt};
 use mercurial_revlog::revlog::{Entry, RevIdx, Revlog};
+use mononoke_types::RepositoryId;
 use slog::{info, Logger};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use std::borrow::Borrow;
@@ -30,6 +32,7 @@ pub const DEFAULT_MAX_DATA_CHUNK_SIZE: u32 = 950 * 1024;
 pub const DOT_HG_PATH_ARG: &str = "dot-hg-path";
 pub const MAX_DATA_CHUNK_SIZE: &str = "max-data-chunk-size";
 pub const STREAMING_CLONE: &str = "streaming-clone";
+pub const UPDATE_SUB_CMD: &str = "update";
 
 pub async fn streaming_clone<'a>(
     fb: FacebookInit,
@@ -43,8 +46,6 @@ pub async fn streaming_clone<'a>(
     let streaming_chunks_fetcher = create_streaming_chunks_fetcher(fb, &logger, matches).await?;
     match matches.subcommand() {
         (CREATE_SUB_CMD, Some(sub_m)) => {
-            let max_data_chunk_size: u32 =
-                args::get_and_parse(sub_m, MAX_DATA_CHUNK_SIZE, DEFAULT_MAX_DATA_CHUNK_SIZE);
             // This command works only if there are no streaming chunks at all for a give repo.
             // So exit quickly if database is not empty
             let count = streaming_chunks_fetcher
@@ -56,41 +57,104 @@ pub async fn streaming_clone<'a>(
                 ));
             }
 
-            let p = sub_m
-                .value_of(DOT_HG_PATH_ARG)
-                .ok_or_else(|| anyhow!("{} is not set", DOT_HG_PATH_ARG))?;
-            let mut idx = PathBuf::from(p);
-            idx.push("store");
-            idx.push("00changelog.i");
-            let data = idx.with_extension("d");
-
-            // Iterate through all revlog entries and split them in chunks.
-            // Data for each chunk won't be larger than max_data_chunk_size
-            let revlog = Revlog::from_idx_with_data(idx.clone(), None as Option<String>)?;
-            let chunks = split_into_chunks(&revlog, max_data_chunk_size)?;
-
-            info!(ctx.logger(), "about to upload {} entries", chunks.len());
-            let chunks = upload_chunks_blobstore(&ctx, &repo, &chunks, &idx, &data).await?;
-
-            info!(ctx.logger(), "inserting into streaming clone database");
-            let chunks = chunks
-                .into_iter()
-                .enumerate()
-                .map(|(chunk_id, (chunk, keys))| (chunk_id, chunk, keys))
-                .collect();
-            insert_entries_into_db(&ctx, &repo, &streaming_chunks_fetcher, chunks).await?;
-
-            Ok(())
+            update_streaming_changelog(&ctx, &repo, sub_m, &streaming_chunks_fetcher).await
+        }
+        (UPDATE_SUB_CMD, Some(sub_m)) => {
+            update_streaming_changelog(&ctx, &repo, sub_m, &streaming_chunks_fetcher).await
         }
         _ => Err(anyhow!("unknown subcommand")),
     }
 }
 
-fn split_into_chunks(revlog: &Revlog, max_data_chunk_size: u32) -> Result<Vec<Chunk>, Error> {
+async fn update_streaming_changelog(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    sub_m: &ArgMatches<'_>,
+    streaming_chunks_fetcher: &SqlStreamingChunksFetcher,
+) -> Result<(), Error> {
+    let max_data_chunk_size: u32 =
+        args::get_and_parse(sub_m, MAX_DATA_CHUNK_SIZE, DEFAULT_MAX_DATA_CHUNK_SIZE);
+    let (idx, data) = get_revlog_paths(&sub_m)?;
+
+    let revlog = Revlog::from_idx_with_data(idx.clone(), None as Option<String>)?;
+    let rev_idx_to_skip = find_latest_rev_id_in_streaming_changelog(
+        &ctx,
+        &revlog,
+        repo.get_repoid(),
+        &streaming_chunks_fetcher,
+    )
+    .await?;
+
+    let chunks = split_into_chunks(&revlog, Some(rev_idx_to_skip), max_data_chunk_size)?;
+
+    info!(ctx.logger(), "about to upload {} entries", chunks.len());
+    let chunks = upload_chunks_blobstore(&ctx, &repo, &chunks, &idx, &data).await?;
+
+    info!(ctx.logger(), "inserting into streaming clone database");
+    let start = streaming_chunks_fetcher
+        .select_max_chunk_num(&ctx, repo.get_repoid())
+        .await?;
+    info!(ctx.logger(), "current max chunk num is {:?}", start);
+    let start = start.map_or(0, |start| start + 1);
+    let chunks = chunks
+        .into_iter()
+        .enumerate()
+        .map(|(chunk_id, (chunk, keys))| {
+            let chunk_id: u32 = chunk_id.try_into().unwrap();
+            (chunk_id, (chunk, keys))
+        })
+        .map(|(chunk_id, (chunk, keys))| (start + chunk_id, chunk, keys))
+        .collect();
+    insert_entries_into_db(&ctx, &repo, &streaming_chunks_fetcher, chunks).await?;
+
+    Ok(())
+}
+
+fn get_revlog_paths(sub_m: &ArgMatches<'_>) -> Result<(PathBuf, PathBuf), Error> {
+    let p = sub_m
+        .value_of(DOT_HG_PATH_ARG)
+        .ok_or_else(|| anyhow!("{} is not set", DOT_HG_PATH_ARG))?;
+    let mut idx = PathBuf::from(p);
+    idx.push("store");
+    idx.push("00changelog.i");
+    let data = idx.with_extension("d");
+
+    Ok((idx, data))
+}
+
+async fn find_latest_rev_id_in_streaming_changelog(
+    ctx: &CoreContext,
+    revlog: &Revlog,
+    repo_id: RepositoryId,
+    streaming_chunks_fetcher: &SqlStreamingChunksFetcher,
+) -> Result<usize, Error> {
+    let index_entry_size = revlog.index_entry_size();
+    let (cur_idx_size, cur_data_size) = streaming_chunks_fetcher
+        .select_index_and_data_sizes(&ctx, repo_id)
+        .await?
+        .unwrap_or((0, 0));
+    info!(
+        ctx.logger(),
+        "current sizes in database: index: {}, data: {}", cur_idx_size, cur_data_size
+    );
+    let cur_idx_size: usize = cur_idx_size.try_into().unwrap();
+    let rev_idx_to_skip = cur_idx_size / index_entry_size;
+
+    Ok(rev_idx_to_skip)
+}
+
+fn split_into_chunks(
+    revlog: &Revlog,
+    skip: Option<usize>,
+    max_data_chunk_size: u32,
+) -> Result<Vec<Chunk>, Error> {
     let index_entry_size: u32 = revlog.index_entry_size().try_into().unwrap();
 
     let mut chunks = vec![];
-    let mut iter = (&revlog).into_iter();
+    let mut iter: Box<dyn Iterator<Item = (RevIdx, Entry)>> = Box::new((&revlog).into_iter());
+    if let Some(skip) = skip {
+        iter = Box::new(iter.skip(skip));
+    }
 
     let mut current_chunk = match iter.next() {
         Some((idx, entry)) => {
@@ -155,13 +219,13 @@ async fn insert_entries_into_db(
     ctx: &CoreContext,
     repo: &BlobRepo,
     streaming_chunks_fetcher: &SqlStreamingChunksFetcher,
-    entries: Vec<(usize, &'_ Chunk, BlobstoreKeys)>,
+    entries: Vec<(u32, &'_ Chunk, BlobstoreKeys)>,
 ) -> Result<(), Error> {
     for insert_chunk in entries.chunks(10) {
         let mut rows = vec![];
         for (chunk_id, chunk, keys) in insert_chunk {
             rows.push((
-                (*chunk_id).try_into().unwrap(),
+                *chunk_id,
                 keys.idx.as_str(),
                 chunk.idx_len,
                 keys.data.as_str(),
@@ -332,6 +396,24 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .subcommand(
             SubCommand::with_name(CREATE_SUB_CMD)
                 .about("create new streaming clone")
+                .arg(
+                    Arg::with_name(DOT_HG_PATH_ARG)
+                        .long(DOT_HG_PATH_ARG)
+                        .takes_value(true)
+                        .required(true)
+                        .help("path to .hg folder with changelog"),
+                )
+                .arg(
+                    Arg::with_name(MAX_DATA_CHUNK_SIZE)
+                        .long(MAX_DATA_CHUNK_SIZE)
+                        .takes_value(true)
+                        .required(false)
+                        .help("max size of the data entry that we'll write to the blobstore"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(UPDATE_SUB_CMD)
+                .about("update existing streaming changelog")
                 .arg(
                     Arg::with_name(DOT_HG_PATH_ARG)
                         .long(DOT_HG_PATH_ARG)
