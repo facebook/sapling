@@ -799,8 +799,8 @@ mod test {
             master_bookmark = "test_bookmark"
             tailer_update_period_secs = 0
             skip_dag_load_at_startup = true
-            reload_dag_save_period_secs = 3600
-            update_to_master_bookmark_period_secs = 60
+            reload_dag_save_period_secs = 0
+            update_to_master_bookmark_period_secs = 120
         "#;
         let www_content = r#"
             repoid=1
@@ -1045,8 +1045,8 @@ mod test {
                     master_bookmark: String::from("test_bookmark"),
                     tailer_update_period: None,
                     skip_dag_load_at_startup: true,
-                    reload_dag_save_period: Some(Duration::from_secs(3600)),
-                    update_to_master_bookmark_period: Some(Duration::from_secs(60)),
+                    reload_dag_save_period: None,
+                    update_to_master_bookmark_period: Some(Duration::from_secs(120)),
                 },
                 warm_bookmark_cache_check_blobimport: true,
                 repo_client_knobs: RepoClientKnobs {
@@ -1106,8 +1106,8 @@ mod test {
                     master_bookmark: String::from("master"),
                     tailer_update_period: Some(Duration::from_secs(300)),
                     skip_dag_load_at_startup: false,
-                    reload_dag_save_period: None,
-                    update_to_master_bookmark_period: None,
+                    reload_dag_save_period: Some(Duration::from_secs(3600)),
+                    update_to_master_bookmark_period: Some(Duration::from_secs(60)),
                 },
                 warm_bookmark_cache_check_blobimport: false,
                 repo_client_knobs: RepoClientKnobs::default(),
