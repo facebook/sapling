@@ -40,7 +40,6 @@ pub async fn streaming_clone<'a>(
     logger: Logger,
     matches: &'a MononokeMatches<'a>,
 ) -> Result<(), Error> {
-    args::init_cachelib(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::open_repo(fb, &logger, &matches).await?;
 
@@ -221,6 +220,15 @@ async fn upload_chunks_blobstore<'a>(
         }
     }))
     .buffered(10)
+    .inspect({
+        let mut i = 0;
+        move |_| {
+            i += 1;
+            if i % 100 == 0 {
+                info!(ctx.logger(), "uploaded {}", i);
+            }
+        }
+    })
     .try_collect::<Vec<_>>()
     .await?;
 
@@ -438,9 +446,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         ))
         .get_matches();
 
-    args::init_cachelib(fb, &matches);
-    let logger = args::init_logging(fb, &matches)?;
 
-    let mut runtime = tokio::runtime::Runtime::new()?;
+    let (_, logger, mut runtime) = args::init_mononoke(fb, &matches)?;
     runtime.block_on(streaming_clone(fb, logger, &matches))
 }
