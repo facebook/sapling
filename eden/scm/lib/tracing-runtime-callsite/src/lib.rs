@@ -48,16 +48,17 @@ pub fn create_callsite<K: KindType, F: FnOnce() -> CallsiteInfo>(
     id: CallsiteKey,
     func: F,
 ) -> &'static RuntimeCallsite<K> {
-    let callsites = K::static_map().upgradable_read();
+    let callsites = K::static_map().read();
     if let Some(callsite) = callsites.get(&id) {
         let callsite: &'static RuntimeCallsite<K> = callsite.static_ref();
         return callsite;
     }
+    // func() might call create_callsite! Release the lock to avoid deadlock.
+    drop(callsites);
 
     let info = func();
 
-    // TODO: When parking_lot >= 0.11, change below to callsites.upgrade().
-    let mut callsites = parking_lot::lock_api::RwLockUpgradableReadGuard::upgrade(callsites);
+    let mut callsites = K::static_map().write();
     callsites
         .entry(id)
         .or_insert_with(|| RuntimeCallsite::<K>::new(info))

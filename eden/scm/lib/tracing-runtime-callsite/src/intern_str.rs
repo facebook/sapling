@@ -16,7 +16,6 @@ fn intern(s: &str) -> &'static str {
     if let Some(s) = set.get(s) {
         return s.static_ref();
     }
-    // TODO: When parking_lot >= 0.11, change below to set.upgrade().
     let mut set = parking_lot::lock_api::RwLockUpgradableReadGuard::upgrade(set);
     // TODO: Use get_or_insert_owned once stabilized (https://github.com/rust-lang/rust/issues/60896)
     if !set.contains(s) {
