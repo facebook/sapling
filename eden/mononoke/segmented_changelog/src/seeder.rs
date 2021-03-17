@@ -106,11 +106,20 @@ impl SegmentedChangelogSeeder {
         let changeset_entries: Vec<ChangesetEntry> = self
             .changeset_bulk_fetch
             .fetch(ctx, Direction::OldestFirst)
+            .inspect_ok({
+                let mut count = 1;
+                move |_| {
+                    count += 1;
+                    if count % 100000 == 0 {
+                        info!(ctx.logger(), "{} changesets loaded ", count);
+                    }
+                }
+            })
             .try_collect()
             .await?;
         info!(
             ctx.logger(),
-            "loaded {} changesets",
+            "{} changesets loaded",
             changeset_entries.len()
         );
         let mut start_state = StartState::new();
