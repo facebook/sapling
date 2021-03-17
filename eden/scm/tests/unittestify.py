@@ -14,8 +14,8 @@ import shlex
 import subprocess
 import sys
 import unittest
-import libfb.py.parutil as parutil
 
+import libfb.py.parutil as parutil
 import libfb.py.parutil as parutil
 
 
