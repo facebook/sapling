@@ -19,6 +19,7 @@ thiserror = "1.0"
 types = { path = "../../types" }
 
 [dev-dependencies]
+paste = "1.0"
 quickcheck_macros = "0.8"
 serde_cbor = "0.11"
 

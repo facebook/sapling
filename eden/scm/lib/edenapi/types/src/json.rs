@@ -605,29 +605,27 @@ impl ToJson for CommitLocationToHashRequestBatch {
 mod tests {
     use super::*;
 
+    use paste::paste;
     use quickcheck_macros::quickcheck;
 
-    #[quickcheck]
-    fn test_file_req_roundtrip(req: FileRequest) -> bool {
-        let json = req.to_json();
-        req == FileRequest::from_json(&json).unwrap()
+    macro_rules! json_roundtrip {
+        ($( $request:ty ),*) => {
+            paste! {
+                $(
+                    #[quickcheck]
+                    fn [<$request:snake _roundtrip>](req: $request) -> bool {
+                        let json = req.to_json();
+                        req == $request::from_json(&json).unwrap()
+                    }
+                )*
+            }
+        }
     }
 
-    #[quickcheck]
-    fn test_tree_req_roundtrip(req: TreeRequest) -> bool {
-        let json = req.to_json();
-        req == TreeRequest::from_json(&json).unwrap()
-    }
-
-    #[quickcheck]
-    fn test_history_req_roundtrip(req: HistoryRequest) -> bool {
-        let json = req.to_json();
-        req == HistoryRequest::from_json(&json).unwrap()
-    }
-
-    #[quickcheck]
-    fn test_complete_tree_req_roundtrip(req: CompleteTreeRequest) -> bool {
-        let json = req.to_json();
-        req == CompleteTreeRequest::from_json(&json).unwrap()
-    }
+    json_roundtrip!(
+        FileRequest,
+        HistoryRequest,
+        TreeRequest,
+        CompleteTreeRequest
+    );
 }
