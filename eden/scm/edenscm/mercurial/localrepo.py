@@ -1233,7 +1233,7 @@ class localrepository(object):
             },
         )
 
-    def revs(self, expr, *args):
+    def revs(self, expr, *args, **kwargs):
         """Find revisions matching a revset.
 
         The revset is specified as a string ``expr`` that may contain
@@ -1248,7 +1248,8 @@ class localrepository(object):
         """
         expr = revsetlang.formatspec(expr, *args)
         m = revset.match(None, expr)
-        return m(self)
+        subset = kwargs.get("subset", None)
+        return m(self, subset=subset)
 
     def set(self, expr, *args):
         """Find revisions matching a revset and emit changectx instances.
