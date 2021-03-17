@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
-use blobstore::BlobstoreGetData;
+use crate::pack;
+
+use anyhow::{format_err, Context, Error};
 use bufsize::SizeCounter;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use fbthrift::{
@@ -14,11 +15,8 @@ use fbthrift::{
     serialize::Serialize as ThriftSerialize,
 };
 use mononoke_types::BlobstoreBytes;
-use packblob_thrift::StorageEnvelope;
-use std::{
-    convert::{TryFrom, TryInto},
-    mem::size_of,
-};
+use packblob_thrift::{StorageEnvelope, StorageFormat};
+use std::{convert::TryFrom, mem::size_of};
 
 enum HeaderType {
     PackBlobCompactFormat,
@@ -69,6 +67,21 @@ where
 // new type so can implement conversions
 pub(crate) struct PackEnvelope(pub packblob_thrift::StorageEnvelope);
 
+impl PackEnvelope {
+    pub fn decode(self, key: &str) -> Result<BlobstoreBytes, Error> {
+        let get_data = match self.0.storage {
+            StorageFormat::Single(single) => pack::decode_independent(single)
+                .with_context(|| format!("While decoding independent {:?}", key))?,
+            StorageFormat::Packed(packed) => pack::decode_pack(packed, key)
+                .with_context(|| format!("While decoding pack for {:?}", key))?,
+            StorageFormat::UnknownField(e) => {
+                return Err(format_err!("StorageFormat::UnknownField {:?}", e));
+            }
+        };
+        Ok(get_data)
+    }
+}
+
 impl TryFrom<BlobstoreBytes> for PackEnvelope {
     type Error = Error;
 
@@ -89,20 +102,6 @@ impl Into<BlobstoreBytes> for PackEnvelope {
             &self.0.clone(),
         );
         BlobstoreBytes::from_bytes(data)
-    }
-}
-
-impl TryFrom<BlobstoreGetData> for PackEnvelope {
-    type Error = Error;
-
-    fn try_from(blob: BlobstoreGetData) -> Result<Self, Error> {
-        blob.into_bytes().try_into()
-    }
-}
-
-impl Into<BlobstoreGetData> for PackEnvelope {
-    fn into(self) -> BlobstoreGetData {
-        Into::<BlobstoreBytes>::into(self).into()
     }
 }
 

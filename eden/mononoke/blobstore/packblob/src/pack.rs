@@ -9,34 +9,30 @@ use crate::store;
 
 use anyhow::{format_err, Error};
 use ascii::AsciiString;
-use blobstore::{BlobstoreGetData, BlobstoreMetadata};
 use bytes::Bytes;
 use mononoke_types::{hash::Context as HashContext, repo::REPO_PREFIX_REGEX, BlobstoreBytes};
 use packblob_thrift::{PackedEntry, PackedFormat, PackedValue, SingleValue, ZstdFromDictValue};
 use std::{collections::HashMap, io::Cursor};
 
-pub fn decode_independent(
-    meta: BlobstoreMetadata,
-    v: SingleValue,
-) -> Result<BlobstoreGetData, Error> {
+pub(crate) fn decode_independent(v: SingleValue) -> Result<BlobstoreBytes, Error> {
     match v {
-        SingleValue::Raw(v) => Ok(BlobstoreGetData::new(meta, BlobstoreBytes::from_bytes(v))),
-        SingleValue::Zstd(v) => Ok(zstd::decode_all(Cursor::new(v))
-            .map(|v| BlobstoreGetData::new(meta, BlobstoreBytes::from_bytes(v)))?),
+        SingleValue::Raw(v) => Ok(BlobstoreBytes::from_bytes(v)),
+        SingleValue::Zstd(v) => {
+            Ok(zstd::decode_all(Cursor::new(v)).map(BlobstoreBytes::from_bytes)?)
+        }
         SingleValue::UnknownField(e) => Err(format_err!("SingleValue::UnknownField {:?}", e)),
     }
 }
 
 fn decode_zstd_from_dict(
-    meta: BlobstoreMetadata,
     k: &str,
     v: ZstdFromDictValue,
     dicts: HashMap<String, Bytes>,
-) -> Result<BlobstoreGetData, Error> {
+) -> Result<BlobstoreBytes, Error> {
     match dicts.get(&v.dict_key) {
         Some(dict) => {
             let v = zstdelta::apply(dict, &v.zstd)?;
-            Ok(BlobstoreGetData::new(meta, BlobstoreBytes::from_bytes(v)))
+            Ok(BlobstoreBytes::from_bytes(v))
         }
         None => Err(format_err!(
             "Dictionary {} not found for key {}",
@@ -47,11 +43,7 @@ fn decode_zstd_from_dict(
 }
 
 // Unpack `key` from `packed`
-pub fn decode_pack(
-    pack_meta: BlobstoreMetadata,
-    packed: PackedFormat,
-    key: &str,
-) -> Result<BlobstoreGetData, Error> {
+pub(crate) fn decode_pack(packed: PackedFormat, key: &str) -> Result<BlobstoreBytes, Error> {
     // Strip repo prefix, if any
     let key = match REPO_PREFIX_REGEX.find(key) {
         Some(m) => &key[m.end()..],
@@ -63,7 +55,7 @@ pub fn decode_pack(
     for entry in packed.entries {
         let current_key = entry.key;
         let value = match entry.data {
-            PackedValue::Single(v) => Some(decode_independent(pack_meta.clone(), v)?),
+            PackedValue::Single(v) => Some(decode_independent(v)?),
             v => {
                 remaining_entries.push(PackedEntry {
                     key: current_key.clone(),
@@ -77,7 +69,7 @@ pub fn decode_pack(
                 // short circuit, desired key was not delta compressed
                 return Ok(value);
             }
-            possible_dicts.insert(current_key, value.into_bytes().into_bytes());
+            possible_dicts.insert(current_key, value.into_bytes());
         }
     }
 
@@ -88,7 +80,7 @@ pub fn decode_pack(
                     return Err(format_err!("Unexpected PackedValue::Single on key {}", key));
                 }
                 PackedValue::ZstdFromDict(v) => {
-                    return Ok(decode_zstd_from_dict(pack_meta, key, v, possible_dicts)?);
+                    return Ok(decode_zstd_from_dict(key, v, possible_dicts)?);
                 }
                 PackedValue::UnknownField(e) => {
                     return Err(format_err!("PackedValue::UnknownField {:?}", e));
@@ -156,8 +148,8 @@ mod tests {
         assert!(bytes.len() < bytes_in.len());
 
         // Test the decoder
-        let decoded = decode_independent(BlobstoreMetadata::new(None), SingleValue::Zstd(bytes))?;
-        assert_eq!(decoded.as_bytes().as_bytes(), &Bytes::from(bytes_in));
+        let decoded = decode_independent(SingleValue::Zstd(bytes))?;
+        assert_eq!(decoded.as_bytes(), &Bytes::from(bytes_in));
 
         Ok(())
     }
@@ -183,7 +175,6 @@ mod tests {
 
         // Test the decoder
         let decoded = decode_zstd_from_dict(
-            BlobstoreMetadata::new(None),
             "appkey",
             ZstdFromDictValue {
                 dict_key: base_key,
@@ -191,7 +182,7 @@ mod tests {
             },
             dicts,
         )?;
-        assert_eq!(decoded.as_bytes().as_bytes(), &Bytes::from(next_version));
+        assert_eq!(decoded.as_bytes(), &Bytes::from(next_version));
 
         Ok(())
     }
@@ -244,11 +235,8 @@ mod tests {
 
         // Test reads roundtrip back to the raw form
         for i in 0..20 {
-            let value = decode_pack(BlobstoreMetadata::new(None), packed.clone(), &i.to_string())?;
-            assert_eq!(
-                value.as_bytes().as_bytes(),
-                &Bytes::copy_from_slice(&raw_data[i])
-            );
+            let value = decode_pack(packed.clone(), &i.to_string())?;
+            assert_eq!(value.as_bytes(), &Bytes::copy_from_slice(&raw_data[i]));
         }
 
         Ok(())
@@ -279,11 +267,11 @@ mod tests {
         );
 
         // See if we can get the data back
-        let value1 = decode_pack(BlobstoreMetadata::new(None), packed.clone(), "1")?;
+        let value1 = decode_pack(packed.clone(), "1")?;
         assert_eq!(value1.as_bytes().len(), 1024);
 
         // See if we get error for unknown key
-        let missing = decode_pack(BlobstoreMetadata::new(None), packed, "missing");
+        let missing = decode_pack(packed, "missing");
         assert!(missing.is_err());
 
         Ok(())

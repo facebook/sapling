@@ -8,7 +8,7 @@
 use crate::envelope::PackEnvelope;
 use crate::pack;
 
-use anyhow::{format_err, Context, Result};
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
@@ -87,18 +87,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
 
         let meta = inner_get_data.as_meta().clone();
         let envelope: PackEnvelope = inner_get_data.into_bytes().try_into()?;
-
-        let get_data = match envelope.0.storage {
-            StorageFormat::Single(single) => pack::decode_independent(meta, single)
-                .with_context(|| format!("While decoding independent {:?}", key))?,
-            StorageFormat::Packed(packed) => pack::decode_pack(meta, packed, key)
-                .with_context(|| format!("While decoding pack for {:?}", key))?,
-            StorageFormat::UnknownField(e) => {
-                return Err(format_err!("StorageFormat::UnknownField {:?}", e));
-            }
-        };
-
-        Ok(Some(get_data))
+        Ok(Some(BlobstoreGetData::new(meta, envelope.decode(key)?)))
     }
 
     async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
