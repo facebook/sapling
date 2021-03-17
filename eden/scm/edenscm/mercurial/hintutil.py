@@ -40,9 +40,6 @@ hinttable = {
     "old-version": lambda: _(
         "WARNING! You are running an old version of Mercurial. Please upgrade your installation."
     ),
-    "buck-shelve": lambda: _(
-        "warning: hg shelve is known to cause issue with buck (T53602763). Run `buck kill` to fix it if you have problems."
-    ),
 }
 messages = []
 triggered = set()
