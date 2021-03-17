@@ -55,7 +55,7 @@ pub fn parse_commit_revlog_data_req(json: &Value) -> Result<CommitRevlogDataRequ
     Ok(CommitRevlogDataRequest { hgids })
 }
 
-/// Parse a `LocationToHashRequest` from JSON.
+/// Parse a `CommitLocationToHashRequest` from JSON.
 ///
 /// Example request:
 /// ```json
@@ -110,7 +110,7 @@ pub fn parse_commit_location_to_hash_req(json: &Value) -> Result<CommitLocationT
     Ok(CommitLocationToHashRequestBatch { requests })
 }
 
-/// Parse a `LocationToHashRequest` from JSON.
+/// Parse a `CommitHashToLocationRequest` from JSON.
 ///
 /// Example request:
 /// ```json
@@ -596,7 +596,24 @@ impl ToJson for CommitLocationToHashRequest {
 impl ToJson for CommitLocationToHashRequestBatch {
     fn to_json(&self) -> Value {
         json!({
-            "requests": self.requests,
+            "requests": self.requests.to_json(),
+        })
+    }
+}
+
+impl ToJson for CommitHashToLocationRequestBatch {
+    fn to_json(&self) -> Value {
+        json!({
+            "client_head": self.client_head.to_json(),
+            "hgids": self.hgids.to_json(),
+        })
+    }
+}
+
+impl ToJson for CommitRevlogDataRequest {
+    fn to_json(&self) -> Value {
+        json!({
+            "hgids": self.hgids.to_json(),
         })
     }
 }
@@ -626,6 +643,9 @@ mod tests {
         FileRequest,
         HistoryRequest,
         TreeRequest,
-        CompleteTreeRequest
+        CompleteTreeRequest,
+        CommitLocationToHashRequestBatch,
+        CommitHashToLocationRequestBatch,
+        CommitRevlogDataRequest
     );
 }
