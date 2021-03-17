@@ -537,9 +537,6 @@ pub fn generate_dynamicconfig(
 ) -> Result<()> {
     // Resolve sharedpath
     let config_dir = get_config_dir(Some(repo_path))?;
-    if !config_dir.exists() {
-        fs::create_dir(&config_dir)?;
-    }
 
     // Verify that the filesystem is writable, otherwise exit early since we won't be able to write
     // the config.
