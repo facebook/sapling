@@ -2927,7 +2927,7 @@ def getgraphlogrevs(repo, pats, opts):
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if expr:
         if opts.get("rev"):
-            revs = revs & repo.revs(expr)
+            revs = repo.revs(expr, subset=revs)
         else:
             # revs is likely huge. "x & y" is more efficient if "x" is small.
             # "x & y" respects "x"'s order. Once rewritten to "y & x", the
@@ -2966,7 +2966,7 @@ def getlogrevs(repo, pats, opts):
     expr, filematcher = _makelogrevset(repo, pats, opts, revs)
     if expr:
         if opts.get("rev"):
-            revs = revs & repo.revs(expr)
+            revs = repo.revs(expr, subset=revs)
         else:
             # revs is likely huge. "x & y" is more efficient if "x" is small.
             # "x & y" respects "x"'s order. Once rewritten to "y & x", the
