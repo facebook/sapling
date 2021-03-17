@@ -28,7 +28,6 @@ fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rus
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-maplit = "1.0"
 memcache = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mincode = { version = "0.1.0", path = "../../scm/lib/mincode" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
@@ -44,6 +43,7 @@ tokio = { version = "0.2.25", features = ["full", "test-util"] }
 [dev-dependencies]
 fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
+maplit = "1.0"
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
 phases = { version = "0.1.0", path = "../phases" }
 revset = { version = "0.1.0", path = "../revset" }

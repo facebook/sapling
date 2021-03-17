@@ -10,7 +10,6 @@ use std::collections::{HashMap, HashSet};
 use anyhow::{bail, format_err, Context, Result};
 use futures::stream::{FuturesOrdered, StreamExt};
 use futures::try_join;
-use maplit::hashset;
 use slog::{debug, trace, warn};
 
 use dag::{Id as Vertex, InProcessIdDag};
@@ -105,11 +104,13 @@ pub fn assign_ids(
     }
     let mut todo_stack = vec![Todo::Visit(head)];
     let mut mem_idmap = MemIdMap::new();
-    let mut seen = hashset![head];
 
     while let Some(todo) = todo_stack.pop() {
         match todo {
             Todo::Visit(cs_id) => {
+                if mem_idmap.find_vertex(cs_id).is_some() {
+                    continue;
+                }
                 let parents = match start_state.get_parents_if_not_assigned(cs_id) {
                     None => continue,
                     Some(v) => v,
@@ -118,12 +119,13 @@ pub fn assign_ids(
                 for parent in parents.iter().rev() {
                     // Note: iterating parents in reverse is a small optimization because
                     // in our setup p1 is master.
-                    if seen.insert(*parent) {
-                        todo_stack.push(Todo::Visit(*parent));
-                    }
+                    todo_stack.push(Todo::Visit(*parent));
                 }
             }
             Todo::Assign(cs_id) => {
+                if mem_idmap.find_vertex(cs_id).is_some() {
+                    continue;
+                }
                 let vertex = low_vertex + mem_idmap.len() as u64;
                 mem_idmap.insert(vertex, cs_id);
                 trace!(
