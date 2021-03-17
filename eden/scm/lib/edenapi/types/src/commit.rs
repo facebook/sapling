@@ -119,6 +119,15 @@ pub struct CommitRevlogDataRequest {
     pub hgids: Vec<HgId>,
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for CommitRevlogDataRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        CommitRevlogDataRequest {
+            hgids: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
 /// A mercurial commit entry as it was serialized in the revlog.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
