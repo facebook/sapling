@@ -23,10 +23,9 @@ use futures_stats::{FutureStats, TimedFutureExt};
 use mononoke_types::{ContentMetadata, MononokeId};
 use rand::Rng;
 use std::fmt::Debug;
-use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::time::Duration;
-use throttledblob::{ThrottleOptions, ThrottledBlob};
+use throttledblob::ThrottledBlob;
 use tokio::{fs::File, io::BufReader};
 use tokio_util::codec::{BytesCodec, FramedRead};
 
@@ -47,8 +46,6 @@ const ARG_CACHELIB_SIZE: &str = "cachelib-size";
 const ARG_INPUT: &str = "input";
 const ARG_DELAY: &str = "delay";
 const ARG_RANDOMIZE: &str = "randomize";
-const ARG_READ_QPS: &str = "read-qps";
-const ARG_WRITE_QPS: &str = "write-qps";
 const ARG_READ_COUNT: &str = "read-count";
 
 fn log_perf<I, E: Debug>(stats: FutureStats, res: &Result<I, E>, len: u64) {
@@ -264,27 +261,10 @@ async fn get_blob<'a>(
         None => blob,
     };
 
-    let read_qps: Option<NonZeroU32> = matches
-        .value_of(ARG_READ_QPS)
-        .map(|v| v.parse())
-        .transpose()?;
+    // ThrottledBlob is a noop if no throttling requested
+    let blob = Arc::new(ThrottledBlob::new(blob, blobstore_options.throttle_options).await);
 
-    let write_qps: Option<NonZeroU32> = matches
-        .value_of(ARG_WRITE_QPS)
-        .map(|v| v.parse())
-        .transpose()?;
-
-    let blob = ThrottledBlob::new(
-        blob,
-        ThrottleOptions {
-            read_qps,
-            write_qps,
-            ..ThrottleOptions::default()
-        },
-    )
-    .await;
-
-    Ok(Arc::new(blob))
+    Ok(blob)
 }
 
 #[fbinit::main]
@@ -354,18 +334,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .arg(
             Arg::with_name(ARG_RANDOMIZE)
                 .long(ARG_RANDOMIZE)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_READ_QPS)
-                .long(ARG_READ_QPS)
-                .takes_value(true)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_WRITE_QPS)
-                .long(ARG_WRITE_QPS)
-                .takes_value(true)
                 .required(false),
         )
         .arg(
