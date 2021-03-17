@@ -510,7 +510,6 @@ fn get_path(f: &NamedTempFile) -> Result<String> {
 fn loop_over_log_entries<'a, B>(
     ctx: &'a CoreContext,
     bookmarks: &'a B,
-    repo_id: RepositoryId,
     start_id: i64,
     loop_forever: bool,
     scuba_sample: &'a MononokeScubaSampleBuilder,
@@ -537,12 +536,7 @@ where
                         None => {
                             if loop_forever {
                                 info!(ctx.logger(), "id: {}, no new entries found", current_id);
-                                scuba_sample
-                                    .clone()
-                                    .add("repo", repo_id.id())
-                                    .add("success", 1)
-                                    .add("delay", 0)
-                                    .log();
+                                scuba_sample.clone().add("success", 1).add("delay", 0).log();
 
                                 // First None means that no new entries will be added to the stream,
                                 // Some(current_id) means that bookmarks will be fetched again
@@ -1008,7 +1002,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             let s = loop_over_log_entries(
                 &ctx,
                 &bookmarks,
-                repo_id,
                 start_id,
                 loop_forever,
                 &scuba_sample,
