@@ -8,7 +8,8 @@
 #![deny(warnings)]
 
 use anyhow::{format_err, Error};
-use blobstore::{Blobstore, PutBehaviour, DEFAULT_PUT_BEHAVIOUR};
+use blobstore::Blobstore;
+use blobstore_factory::{make_sql_blobstore_xdb, ReadOnlyStorage};
 use bytes::{Bytes, BytesMut};
 use cacheblob::new_memcache_blobstore_no_lease;
 use cached_config::ConfigStore;
@@ -17,15 +18,10 @@ use cmdlib::args::{self, MononokeMatches};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
-use futures::{
-    compat::Future01CompatExt,
-    stream::{self, StreamExt, TryStreamExt},
-};
+use futures::stream::{self, StreamExt, TryStreamExt};
 use futures_stats::{FutureStats, TimedFutureExt};
 use mononoke_types::{ContentMetadata, MononokeId};
 use rand::Rng;
-use sql_ext::facebook::{MysqlConnectionType, ReadConnectionType};
-use sqlblob::Sqlblob;
 use std::fmt::Debug;
 use std::num::NonZeroU32;
 use std::sync::Arc;
@@ -43,8 +39,6 @@ const CMD_XDB: &str = "xdb";
 const ARG_MANIFOLD_BUCKET: &str = "manifold-bucket";
 const ARG_SHARDMAP: &str = "shardmap";
 const ARG_SHARD_COUNT: &str = "shard-count";
-const ARG_MYROUTER_PORT: &str = "myrouter-port";
-const ARG_USE_MYSQL_CLIENT: &str = "use-mysql-client";
 const ARG_INPUT_CAPACITY: &str = "input-capacity";
 const ARG_CHUNK_SIZE: &str = "chunk-size";
 const ARG_CONCURRENCY: &str = "concurrency";
@@ -180,8 +174,9 @@ async fn get_blob<'a>(
     fb: FacebookInit,
     matches: &'a MononokeMatches<'a>,
     config_store: &ConfigStore,
-    put_behaviour: PutBehaviour,
 ) -> Result<Arc<dyn Blobstore>, Error> {
+    let blobstore_options = args::parse_blobstore_options(matches)?;
+    let readonly_storage = args::parse_readonly_storage(matches);
     let blob: Arc<dyn Blobstore> = match matches.subcommand() {
         (CMD_MANIFOLD, Some(sub)) => {
             #[cfg(fbcode_build)]
@@ -189,13 +184,13 @@ async fn get_blob<'a>(
                 use manifoldblob::{ManifoldBlob, ManifoldClientType};
                 use prefixblob::PrefixBlobstore;
 
-                let manifold_client_type =
-                    if args::parse_blobstore_options(matches)?.manifold_use_cpp_client {
-                        ManifoldClientType::CppThriftHybrid
-                    } else {
-                        ManifoldClientType::ThriftOnly
-                    };
+                let manifold_client_type = if blobstore_options.manifold_use_cpp_client {
+                    ManifoldClientType::CppThriftHybrid
+                } else {
+                    ManifoldClientType::ThriftOnly
+                };
                 let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
+                let put_behaviour = blobstore_options.put_behaviour;
                 let manifold =
                     ManifoldBlob::new(fb, bucket, None, put_behaviour, manifold_client_type)
                         .map_err(|e| -> Error { e })?;
@@ -210,53 +205,22 @@ async fn get_blob<'a>(
         }
         (CMD_MEMORY, Some(_)) => Arc::new(memblob::Memblob::default()),
         (CMD_XDB, Some(sub)) => {
-            let shardmap = sub.value_of(ARG_SHARDMAP).unwrap().to_string();
-            let shard_count = sub.value_of(ARG_SHARD_COUNT).unwrap().parse()?;
+            let shardmap_or_tier = sub.value_of(ARG_SHARDMAP).unwrap().to_string();
+            let shard_count = sub
+                .value_of(ARG_SHARD_COUNT)
+                .map(|v| v.parse())
+                .transpose()?;
             let mysql_options = args::parse_mysql_options(&matches);
-            let blobstore = match mysql_options.connection_type {
-                MysqlConnectionType::Myrouter(port) => {
-                    Sqlblob::with_myrouter(
-                        fb,
-                        shardmap,
-                        port,
-                        ReadConnectionType::Replica,
-                        shard_count,
-                        false,
-                        put_behaviour,
-                        config_store,
-                    )
-                    .compat()
-                    .await?
-                }
-                MysqlConnectionType::Mysql(pool, config) => {
-                    Sqlblob::with_mysql(
-                        fb,
-                        shardmap,
-                        shard_count,
-                        pool,
-                        config,
-                        ReadConnectionType::Replica,
-                        false,
-                        put_behaviour,
-                        config_store,
-                    )
-                    .compat()
-                    .await?
-                }
-                MysqlConnectionType::RawXDB => {
-                    Sqlblob::with_raw_xdb_shardmap(
-                        fb,
-                        shardmap,
-                        ReadConnectionType::Replica,
-                        shard_count,
-                        false,
-                        put_behaviour,
-                        config_store,
-                    )
-                    .compat()
-                    .await?
-                }
-            };
+            let blobstore = make_sql_blobstore_xdb(
+                fb,
+                shardmap_or_tier,
+                shard_count,
+                &mysql_options,
+                readonly_storage,
+                blobstore_options.put_behaviour,
+                config_store,
+            )
+            .await?;
             Arc::new(blobstore)
         }
         _ => unreachable!(),
@@ -340,24 +304,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         )
         .arg(
             Arg::with_name(ARG_SHARD_COUNT)
-                .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name(ARG_MYROUTER_PORT)
-                .long(ARG_MYROUTER_PORT)
+                .long(ARG_SHARD_COUNT)
                 .takes_value(true)
                 .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_USE_MYSQL_CLIENT)
-                .long(ARG_USE_MYSQL_CLIENT)
-                .required(false)
-                .conflicts_with(ARG_MYROUTER_PORT),
         );
 
     let app = args::MononokeAppBuilder::new(NAME)
         .with_all_repos()
+        .with_readonly_storage_default(ReadOnlyStorage(false))
         .build()
         .arg(
             Arg::with_name(ARG_INPUT_CAPACITY)
@@ -434,7 +388,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let mut runtime = tokio::runtime::Runtime::new().map_err(Error::from)?;
 
-    let blob = runtime.block_on(get_blob(fb, &matches, config_store, DEFAULT_PUT_BEHAVIOUR))?;
+    let blob = runtime.block_on(get_blob(fb, &matches, config_store))?;
 
     runtime.block_on(run_benchmark_filestore(&ctx, &matches, blob))?;
 
