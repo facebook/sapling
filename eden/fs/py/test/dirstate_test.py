@@ -11,7 +11,7 @@ import eden.dirstate
 
 
 class DirstateReadTest(unittest.TestCase):
-    def test_read_sample_dirstate_1(self):
+    def test_read_sample_dirstate_1(self) -> None:
         raw_dirstate = (
             b"P\x03\xc2x?z\xf1\xec\xc9\x99+\xc0\xdb\xb6n[}\x92nr\x00\x00\x00"
             b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -29,7 +29,7 @@ class DirstateReadTest(unittest.TestCase):
             self.assertEqual(tuples_dict, {})
             self.assertEqual(copymap, {})
 
-    def test_read_sample_dirstate_2(self):
+    def test_read_sample_dirstate_2(self) -> None:
         raw_dirstate = (
             b"P\x03\xc2x?z\xf1\xec\xc9\x99+\xc0\xdb\xb6n[}\x92nr\x00\x00\x00"
             b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -55,7 +55,7 @@ class DirstateReadTest(unittest.TestCase):
             )
             self.assertEqual(copymap, {})
 
-    def test_read_sample_dirstate_3(self):
+    def test_read_sample_dirstate_3(self) -> None:
         raw_dirstate = (
             b"\xa8umh0M\xfbGO\xc5\xe2\xc4p\xe0\xd2I<\x1a\x9d\x01\x00\x00\x00"
             b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -81,7 +81,7 @@ class DirstateReadTest(unittest.TestCase):
 
 
 class DirstateWriteTest(unittest.TestCase):
-    def test_write_sample_dirstate_1(self):
+    def test_write_sample_dirstate_1(self) -> None:
         expected_raw_dirstate = (
             b"P\x03\xc2x?z\xf1\xec\xc9\x99+\xc0\xdb\xb6n[}\x92nr\x00\x00\x00"
             b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -95,7 +95,7 @@ class DirstateWriteTest(unittest.TestCase):
             eden.dirstate.write(dirstate_file, parents, tuples_dict, copymap)
             self.assertEqual(dirstate_file.getvalue(), expected_raw_dirstate)
 
-    def test_write_sample_dirstate_2(self):
+    def test_write_sample_dirstate_2(self) -> None:
         expected_raw_dirstate = (
             b"P\x03\xc2x?z\xf1\xec\xc9\x99+\xc0\xdb\xb6n[}\x92nr\x00\x00\x00"
             b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -114,7 +114,7 @@ class DirstateWriteTest(unittest.TestCase):
             eden.dirstate.write(dirstate_file, parents, tuples_dict, copymap)
             self.assertEqual(dirstate_file.getvalue(), expected_raw_dirstate)
 
-    def test_write_sample_dirstate_3(self):
+    def test_write_sample_dirstate_3(self) -> None:
         expected_raw_dirstate = (
             b"\xa8umh0M\xfbGO\xc5\xe2\xc4p\xe0\xd2I<\x1a\x9d\x01\x00\x00\x00"
             b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
