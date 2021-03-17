@@ -605,7 +605,6 @@ class unixforkingservice(object):
             if pid == 0:
                 # no waitable child processes
                 return
-            self.ui.debug("worker process exited (pid=%d)\n" % pid)
             self._workerpids.discard(pid)
 
     def _runworker(self, conn):
