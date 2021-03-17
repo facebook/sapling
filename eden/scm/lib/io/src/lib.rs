@@ -43,8 +43,12 @@ struct Inner {
     error: Option<Box<dyn Write>>,
     progress: Option<Box<dyn Write>>,
 
-    // Used to decide how to clear the progress (using the error stream).
-    progress_lines: usize,
+    // Used to decide whether to render progress bars.
+    output_on_new_line: bool,
+    error_on_new_line: bool,
+    // Whether progress is non-empty.
+    progress_has_content: bool,
+    // Whether progress (stderr) and stdout (is likely) sharing output.
     progress_conflict_with_output: bool,
 
     pager_handle: Option<JoinHandle<streampager::Result<()>>>,
@@ -103,6 +107,8 @@ impl io::Write for IOError {
             None => return Ok(buf.len()),
         };
         let mut inner = inner.lock();
+        inner.clear_progress_for_error()?;
+        inner.error_on_new_line = buf.ends_with(b"\n");
         if let Some(error) = inner.error.as_mut() {
             error.write(buf)
         } else {
@@ -131,7 +137,8 @@ impl io::Write for IOOutput {
             None => return Ok(buf.len()),
         };
         let mut inner = inner.lock();
-        inner.clear_progress_if_conflict()?;
+        inner.clear_progress_for_output()?;
+        inner.output_on_new_line = buf.ends_with(b"\n");
         inner.output.write(buf)
     }
 
@@ -141,7 +148,6 @@ impl io::Write for IOOutput {
             None => return Ok(()),
         };
         let mut inner = inner.lock();
-        inner.clear_progress_if_conflict()?;
         inner.output.flush()
     }
 }
@@ -211,8 +217,10 @@ impl IO {
             error: error.map(|e| Box::new(e) as Box<dyn Write>),
             progress: None,
             pager_handle: None,
-            progress_lines: 0,
             progress_conflict_with_output,
+            output_on_new_line: true,
+            error_on_new_line: true,
+            progress_has_content: false,
         };
 
         Self {
@@ -231,7 +239,6 @@ impl IO {
         inner.output = Box::new(io::stdout());
         inner.error = Some(Box::new(io::stderr()));
         inner.progress = None;
-        inner.progress_lines = 0;
 
         // Wait for the pager (if running).
         let mut handle = None;
@@ -247,7 +254,8 @@ impl IO {
     pub fn write(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
         let mut inner = self.inner.lock();
-        inner.clear_progress()?;
+        inner.clear_progress_for_output()?;
+        inner.output_on_new_line = data.ends_with(b"\n");
         inner.output.write_all(data)?;
         Ok(())
     }
@@ -255,7 +263,8 @@ impl IO {
     pub fn write_err(&self, data: impl AsRef<[u8]>) -> io::Result<()> {
         let data = data.as_ref();
         let mut inner = self.inner.lock();
-        inner.clear_progress()?;
+        inner.clear_progress_for_error()?;
+        inner.error_on_new_line = data.ends_with(b"\n");
         if let Some(ref mut error) = inner.error {
             error.write_all(data)?;
         }
@@ -280,8 +289,10 @@ impl IO {
             error: Some(Box::new(io::stderr())),
             progress: None,
             pager_handle: None,
-            progress_lines: 0,
             progress_conflict_with_output,
+            progress_has_content: false,
+            output_on_new_line: true,
+            error_on_new_line: true,
         };
         Self {
             inner: Arc::new(Mutex::new(inner)),
@@ -328,7 +339,7 @@ impl IO {
         if inner.pager_handle.is_some() {
             return Ok(());
         }
-        inner.clear_progress()?;
+        inner.set_progress("")?;
 
         let mut pager =
             Pager::new_using_stdio().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
@@ -386,58 +397,78 @@ impl Inner {
         Ok(())
     }
 
-    /// Calculate the sequences to clear the progress bar.
-    fn clear_progress_str(&self) -> String {
-        // See https://en.wikipedia.org/wiki/ANSI_escape_code
-        match self.progress_lines {
-            0 => String::new(),
-            1 => "\r\x1b[K".to_string(),
-            n => format!("\r\x1b[{}A\x1b[J", n - 1),
-        }
-    }
-
-    /// Clear the progress bar.
-    fn clear_progress(&mut self) -> io::Result<()> {
-        if self.progress_lines > 0 {
-            let s = self.clear_progress_str();
-            if let Some(ref mut error) = self.error {
-                error.write_all(s.as_bytes())?;
+    /// Clear the progress (temporarily) for other output.
+    fn clear_progress_for_error(&mut self) -> io::Result<()> {
+        if self.progress_has_content && self.progress.is_none() {
+            self.progress_has_content = false;
+            if let Some(e) = self.error.as_mut() {
+                e.write_all(ANSI_ERASE_DISPLAY.as_bytes())?;
             }
-            self.progress_lines = 0;
         }
         Ok(())
     }
 
-    /// Clear the progress bar if it conflicts with "stdout" output.
-    fn clear_progress_if_conflict(&mut self) -> io::Result<()> {
+    /// Clear the progress (temporarily) if it ("stderr") conflicts with "stdout" output.
+    fn clear_progress_for_output(&mut self) -> io::Result<()> {
+        // If self.progress is set. Progress writes to streampager, and does not need clear.
         if self.progress_conflict_with_output && self.progress.is_none() {
-            self.clear_progress()
-        } else {
-            Ok(())
+            self.clear_progress_for_error()?;
         }
+        Ok(())
     }
 
     fn set_progress(&mut self, data: &str) -> io::Result<()> {
         let inner = self;
+        let mut data = data.trim_end();
         if let Some(ref mut progress) = inner.progress {
             // \x0c (\f) is defined by streampager.
             let data = format!("{}\x0c", data);
             progress.write_all(data.as_bytes())?;
             progress.flush()?;
         } else {
-            let clear_progress_str = inner.clear_progress_str();
+            if !inner.output_on_new_line || !inner.error_on_new_line {
+                // There is a line that hasn't ended.
+                // Not suitable to render progress bars.
+                data = "";
+            }
+
+            // Fast path: empty progress, unchanged.
+            if data.is_empty() && !inner.progress_has_content {
+                return Ok(());
+            }
+
+
             if let Some(ref mut error) = inner.error {
-                // Write progress to stderr.
-                let data = data.trim_end();
-                // Write the progress clear sequences within one syscall if possible, to reduce flash.
-                let message = format!("{}{}", clear_progress_str, data);
-                error.write_all(message.as_bytes())?;
-                error.flush()?;
-                if data.is_empty() {
-                    inner.progress_lines = 0;
-                } else {
-                    inner.progress_lines = data.chars().filter(|&c| c == '\n').count() + 1;
+                // Flush pending output if it might conflict with progress.
+                if inner.progress_conflict_with_output {
+                    inner.output.flush()?;
                 }
+                let erase = if inner.progress_has_content {
+                    ANSI_ERASE_DISPLAY
+                } else {
+                    ""
+                };
+                // Write progress to stderr.
+                // Move to the left-top corner of the progress output.
+                let move_up = {
+                    let lines = if data.is_empty() {
+                        0
+                    } else {
+                        data.chars().filter(|&c| c == '\n').count() + 1
+                    };
+                    match lines {
+                        0 => "".to_string(),
+                        1 => "\r".to_string(),
+                        n => format!("\r\x1b[{}A", n - 1),
+                    }
+                };
+                // Write the progress clear sequences within one syscall if possible, to reduce flash.
+                let message = format!("{}{}{}", erase, data, move_up);
+                if !message.is_empty() {
+                    error.write_all(message.as_bytes())?;
+                    error.flush()?;
+                }
+                inner.progress_has_content = !data.is_empty();
             }
         }
         Ok(())
@@ -446,7 +477,7 @@ impl Inner {
 
 impl Drop for Inner {
     fn drop(&mut self) {
-        let _ = self.clear_progress();
+        let _ = self.set_progress("");
         let _ = self.flush();
         // Drop the output and error. This sends EOF to pager.
         self.output = Box::new(Vec::new());
@@ -460,3 +491,6 @@ impl Drop for Inner {
         }
     }
 }
+
+// CSI J - Clear from cursor to end of screen.
+const ANSI_ERASE_DISPLAY: &str = "\r\x1b[J";
