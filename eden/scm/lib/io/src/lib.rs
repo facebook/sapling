@@ -258,8 +258,6 @@ impl IO {
         inner.clear_progress()?;
         if let Some(ref mut error) = inner.error {
             error.write_all(data)?;
-        } else {
-            inner.output.write_all(data)?;
         }
         Ok(())
     }
