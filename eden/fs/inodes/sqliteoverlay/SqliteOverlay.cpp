@@ -72,6 +72,7 @@ SqliteOverlay::SqliteOverlay(AbsolutePathPiece localDir)
     : localDir_{std::move(localDir)} {}
 
 SqliteOverlay::~SqliteOverlay() {
+  cache_.reset();
   if (db_) {
     db_->close();
   }
@@ -139,6 +140,7 @@ void SqliteOverlay::close(std::optional<InodeNumber> nextInodeNumber) {
   if (nextInodeNumber.has_value()) {
     saveNextInodeNumber(nextInodeNumber.value().get());
   }
+  cache_.reset();
   db_->close();
 }
 
