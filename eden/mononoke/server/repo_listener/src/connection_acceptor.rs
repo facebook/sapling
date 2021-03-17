@@ -25,6 +25,7 @@ use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::{channel::oneshot, future::Future, select_biased};
 use futures_01_ext::BoxStream;
+use futures_ext::FbFutureExt;
 use futures_old::{stream, sync::mpsc, Stream};
 use futures_util::compat::Stream01CompatExt;
 use futures_util::future::{AbortHandle, FutureExt};
@@ -181,7 +182,7 @@ pub struct AcceptedConnection {
 
 impl PendingConnection {
     /// Spawn a task that is dedicated to this connection. This will block server shutdown, and
-    /// also log on error.
+    /// also log on error or cancellation.
     pub fn spawn_task(
         &self,
         task: impl Future<Output = Result<()>> + Send + 'static,
@@ -192,13 +193,15 @@ impl PendingConnection {
         OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
 
         tokio::task::spawn(async move {
+            let logger = &this.acceptor.logger;
             let res = task
+                .on_cancel(|| warn!(logger, "connection to {} was cancelled", this.addr))
                 .await
                 .context(label)
                 .with_context(|| format!("Failed to handle connection to {}", this.addr));
 
             if let Err(e) = res {
-                error!(&this.acceptor.logger, "connection_acceptor error: {:#}", e);
+                error!(logger, "connection_acceptor error: {:#}", e);
             }
 
             OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
