@@ -18,6 +18,7 @@ import weakref
 import bindings
 
 from . import error, parser, streams, util
+from .i18n import _
 from .node import nullrev, wdirrev
 from .pycompat import range
 
@@ -995,9 +996,26 @@ class filteredset(abstractsmartset):
     def iterrev(self):
         return self._iterfilter(self._subset)
 
+    def _progressmodel(self):
+        """Return the Rust ProgressBar model.
+
+        Changing the model and a Rust thread (if configured) will render the
+        progress bar.
+        """
+        bar = bindings.progress.model.ProgressBar(
+            _("filtering"), len(self._subset), _("commits")
+        )
+        fields = self._subset.prefetchfields()
+        if fields:
+            bar.set_message(_("(prefetch %s)") % ", ".join(sorted(fields)))
+        return bar
+
     def _iterfilter(self, it):
         cond = self._condition
+        bar = self._progressmodel()
+        inc = bar.increase_position
         for x in it:
+            inc(1)
             if cond(x):
                 yield x
 
@@ -1005,7 +1023,10 @@ class filteredset(abstractsmartset):
         # respect subset's prefetch settings
         ctxstream = self._subset.iterctx()
         cond = self._condition
+        bar = self._progressmodel()
+        inc = bar.increase_position
         for ctx in ctxstream:
+            inc(1)
             if cond(ctx.rev()):
                 yield ctx
 
