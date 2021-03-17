@@ -718,6 +718,7 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     try:
         out = ""
         env = {
+            "HGEDITOR": repo.ui.geteditor(),
             "HG_FILE": fcd.path(),
             "HG_MY_NODE": short(mynode),
             "HG_OTHER_NODE": str(fco.changectx()),

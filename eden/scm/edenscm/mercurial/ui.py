@@ -1457,7 +1457,11 @@ class ui(object):
             editor = "E"
         else:
             editor = "vi"
-        return encoding.environ.get("HGEDITOR") or self.config("ui", "editor", editor)
+        return encoding.environ.get("HGEDITOR") or self.config(
+            "ui",
+            "editor",
+            encoding.environ.get("VISUAL") or encoding.environ.get("EDITOR") or editor,
+        )
 
     def progress(self):
         """deprecated method for displaying progress"""
