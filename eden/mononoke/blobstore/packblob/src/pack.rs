@@ -12,7 +12,7 @@ use ascii::AsciiString;
 use bytes::Bytes;
 use mononoke_types::{hash::Context as HashContext, repo::REPO_PREFIX_REGEX, BlobstoreBytes};
 use packblob_thrift::{PackedEntry, PackedFormat, PackedValue, SingleValue, ZstdFromDictValue};
-use std::{collections::HashMap, io::Cursor};
+use std::{collections::HashMap, io::Cursor, str};
 
 pub(crate) fn decode_independent(v: SingleValue) -> Result<BlobstoreBytes, Error> {
     match v {
@@ -113,7 +113,7 @@ pub fn create_packed(entries: Vec<PackedEntry>) -> Result<PackedFormat, Error> {
         .into_iter()
         .map(|entry| match REPO_PREFIX_REGEX.find(&entry.key) {
             Some(m) => Ok(PackedEntry {
-                key: String::from_utf8(entry.key[m.end()..].as_bytes().to_vec())?,
+                key: entry.key[m.end()..].to_string(),
                 data: entry.data,
             }),
             None => Ok(entry),
