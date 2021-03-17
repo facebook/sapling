@@ -156,22 +156,22 @@ Verify configs.allowedlocations limits config loading to the allowed locations
   > [zz_other_section]
   > other_key=other_bar
   > EOF
-  $ hg config --debug | grep zz
+  $ hg config --debug | grep zz_
   $TESTTMP/shared_copy/.hg/hgrc2:4: zz_other_section.other_key=other_bar
   $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
 
-  $ hg config --debug --config configs.allowedlocations=hgrc1 | grep zz
+  $ hg config --debug --config configs.allowedlocations=hgrc1 | grep zz_
   $TESTTMP/shared_copy/.hg/hgrc1:4: zz_other_section.other_key=other_foo
   $TESTTMP/shared_copy/.hg/hgrc1:2: zz_section.key=foo
 
-  $ hg config --debug --config configs.allowedlocations=hgrc2 | grep zz
+  $ hg config --debug --config configs.allowedlocations=hgrc2 | grep zz_
   $TESTTMP/shared_copy/.hg/hgrc2:4: zz_other_section.other_key=other_bar
   $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
 
-  $ hg config --debug --config configs.allowedlocations=hgrc3 | grep zz
+  $ hg config --debug --config configs.allowedlocations=hgrc3 | grep zz_
   [1]
 
-  $ hg config --debug --config configs.allowedlocations=hgrc3 --config configs.allowedconfigs=zz_section.key | grep zz
+  $ hg config --debug --config configs.allowedlocations=hgrc3 --config configs.allowedconfigs=zz_section.key | grep zz_
   --config: configs.allowedconfigs=zz_section.key
   $TESTTMP/shared_copy/.hg/hgrc2:2: zz_section.key=bar
 
