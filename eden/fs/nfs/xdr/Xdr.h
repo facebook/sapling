@@ -38,20 +38,23 @@
 // This macro declares the XDR serializer and deserializer functions
 // for a given type.
 // See EDEN_XDR_SERDE_IMPL above for an example.
-#define EDEN_XDR_SERDE_DECL(STRUCT, ...)                   \
-  bool operator==(const STRUCT& a, const STRUCT& b);       \
-  template <>                                              \
-  struct XdrTrait<STRUCT> {                                \
-    static void serialize(                                 \
-        folly::io::QueueAppender& appender,                \
-        const STRUCT& a) {                                 \
-      FOLLY_PP_FOR_EACH(EDEN_XDR_SER, __VA_ARGS__)         \
-    }                                                      \
-    static STRUCT deserialize(folly::io::Cursor& cursor) { \
-      STRUCT ret;                                          \
-      FOLLY_PP_FOR_EACH(EDEN_XDR_DE, __VA_ARGS__)          \
-      return ret;                                          \
-    }                                                      \
+#define EDEN_XDR_SERDE_DECL(STRUCT, ...)                      \
+  bool operator==(const STRUCT& a, const STRUCT& b);          \
+  template <>                                                 \
+  struct XdrTrait<STRUCT> {                                   \
+    static void serialize(                                    \
+        folly::io::QueueAppender& appender,                   \
+        const STRUCT& a) {                                    \
+      FOLLY_PP_FOR_EACH(EDEN_XDR_SER, __VA_ARGS__)            \
+    }                                                         \
+    static STRUCT deserialize(folly::io::Cursor& cursor) {    \
+      STRUCT ret;                                             \
+      FOLLY_PP_FOR_EACH(EDEN_XDR_DE, __VA_ARGS__)             \
+      return ret;                                             \
+    }                                                         \
+    static constexpr size_t serializedSize(const STRUCT& a) { \
+      return FOLLY_PP_FOR_EACH(EDEN_XDR_SIZE, __VA_ARGS__) 0; \
+    }                                                         \
   }
 
 #define EDEN_XDR_SERDE_IMPL(STRUCT, ...)                  \
@@ -71,6 +74,10 @@
 #define EDEN_XDR_DE(name) \
   ret.name = XdrTrait<decltype(ret.name)>::deserialize(cursor);
 
+// This is a helper called by FOLLY_PP_FOR_EACH. It computes the serialized
+// size of the given field.
+#define EDEN_XDR_SIZE(name) XdrTrait<decltype(a.name)>::serializedSize(a.name) +
+
 // This is a helper called by FOLLY_PP_FOR_EACH. It emits a comparison
 // between a.name and b.name, followed by &&.  It is intended
 // to be used in a sequence and have a literal 1 following that sequence.
@@ -87,6 +94,11 @@ namespace facebook::eden {
  *
  * `static void serialize(folly::io::QueueAppender& appender, const T& value)`
  * `static T deserialize(folly::io::Cursor& cursor)`
+ *
+ * Additionally, a 3rd method can be added to compute the size of the
+ * serialized struct:
+ *
+ * `static size_t serializedSize(const T& value)`
  *
  * The encoding follows:
  * https://tools.ietf.org/html/rfc4506
@@ -118,6 +130,10 @@ struct XdrTrait<T, typename std::enable_if_t<detail::IsXdrIntegral<T>::value>> {
   static T deserialize(folly::io::Cursor& cursor) {
     return cursor.readBE<T>();
   }
+
+  static constexpr size_t serializedSize(const T&) {
+    return sizeof(T);
+  }
 };
 
 /**
@@ -132,6 +148,10 @@ struct XdrTrait<bool> {
   static bool deserialize(folly::io::Cursor& cursor) {
     return XdrTrait<int32_t>::deserialize(cursor) ? true : false;
   }
+
+  static constexpr size_t serializedSize(const bool) {
+    return sizeof(int32_t);
+  }
 };
 
 /**
@@ -140,11 +160,16 @@ struct XdrTrait<bool> {
 template <typename T>
 struct XdrTrait<T, typename std::enable_if_t<std::is_enum_v<T>>> {
   static void serialize(folly::io::QueueAppender& appender, const T& value) {
+    static_assert(sizeof(T) <= 4, "enum must fit in int32");
     XdrTrait<int32_t>::serialize(appender, static_cast<int32_t>(value));
   }
 
   static T deserialize(folly::io::Cursor& cursor) {
     return static_cast<T>(XdrTrait<int32_t>::deserialize(cursor));
+  }
+
+  static constexpr size_t serializedSize(const T&) {
+    return sizeof(int32_t);
   }
 };
 
@@ -154,7 +179,7 @@ namespace detail {
  * XDR arrays are 4-bytes aligned, make sure we write and skip these when
  * serializing/deserializing data.
  */
-inline size_t roundUp(size_t value) {
+inline constexpr size_t roundUp(size_t value) {
   return (value + 3) & ~3;
 }
 
@@ -209,6 +234,10 @@ struct XdrTrait<std::array<uint8_t, N>> {
     detail::skipPadding(cursor, N);
     return ret;
   }
+
+  static constexpr size_t serializedSize(const std::array<uint8_t, N>&) {
+    return N;
+  }
 };
 
 template <typename T, size_t N>
@@ -227,6 +256,14 @@ struct XdrTrait<
     std::array<T, N> ret;
     for (auto& item : ret) {
       item = XdrTrait<T>::deserialize(cursor);
+    }
+    return ret;
+  }
+
+  static constexpr size_t serializedSize(const std::array<T, N>& value) {
+    size_t ret = 0;
+    for (const auto& item : value) {
+      ret += XdrTrait<T>::serializedSize(item);
     }
     return ret;
   }
@@ -251,6 +288,11 @@ struct XdrTrait<std::vector<uint8_t>> {
     detail::skipPadding(cursor, len);
     return ret;
   }
+
+  static constexpr size_t serializedSize(const std::vector<uint8_t>& value) {
+    return XdrTrait<uint32_t>::serializedSize(0) +
+        detail::roundUp(value.size());
+  }
 };
 
 /**
@@ -273,6 +315,12 @@ struct XdrTrait<std::unique_ptr<folly::IOBuf>> {
     cursor.clone(ret, len);
     detail::skipPadding(cursor, len);
     return ret;
+  }
+
+  static constexpr size_t serializedSize(
+      const std::unique_ptr<folly::IOBuf>& buf) {
+    auto len = buf->computeChainDataLength();
+    return XdrTrait<uint32_t>::serializedSize(0) + detail::roundUp(len);
   }
 };
 
@@ -298,6 +346,14 @@ struct XdrTrait<
     }
     return ret;
   }
+
+  static constexpr size_t serializedSize(const std::vector<T>& value) {
+    size_t ret = XdrTrait<uint32_t>::serializedSize(0);
+    for (const auto& item : value) {
+      ret += XdrTrait<T>::serializedSize(item);
+    }
+    return ret;
+  }
 };
 
 /**
@@ -317,6 +373,11 @@ struct XdrTrait<std::string> {
     auto ret = cursor.readFixedString(len);
     detail::skipPadding(cursor, len);
     return ret;
+  }
+
+  static constexpr size_t serializedSize(const std::string& value) {
+    return XdrTrait<uint32_t>::serializedSize(0) +
+        detail::roundUp(value.size());
   }
 };
 
@@ -363,6 +424,21 @@ struct XdrTrait<XdrVariant<Enum, Vars...>> {
           }
         },
         value.v);
+  }
+
+  static constexpr size_t serializedSize(
+      const XdrVariant<Enum, Vars...>& value) {
+    return XdrTrait<Enum>::serializedSize(value.tag) +
+        std::visit(
+               [](auto&& arg) {
+                 using ArgType = std::decay_t<decltype(arg)>;
+                 if constexpr (std::is_same_v<ArgType, std::monostate>) {
+                   return size_t{0};
+                 } else {
+                   return XdrTrait<ArgType>::serializedSize(arg);
+                 }
+               },
+               value.v);
   }
 };
 
@@ -498,6 +574,16 @@ struct XdrTrait<XdrList<T>> {
       }
       res.list.push_back(XdrTrait<T>::deserialize(cursor));
     }
+  }
+
+  static constexpr size_t serializedSize(const XdrList<T>& value) {
+    size_t ret = 0;
+    for (const auto& element : value.list) {
+      ret += XdrTrait<bool>::serializedSize(true);
+      ret += XdrTrait<T>::serializedSize(element);
+    }
+    ret += XdrTrait<bool>::serializedSize(false);
+    return ret;
   }
 };
 

@@ -178,6 +178,11 @@ struct XdrTrait<nfs_fh3> {
     XCHECK_EQ(size, sizeof(nfs_fh3));
     return {InodeNumber{XdrTrait<uint64_t>::deserialize(cursor)}};
   }
+
+  static constexpr size_t serializedSize(const nfs_fh3&) {
+    return XdrTrait<uint32_t>::serializedSize(0) +
+        XdrTrait<uint64_t>::serializedSize(0);
+  }
 };
 
 inline bool operator==(const nfs_fh3& a, const nfs_fh3& b) {

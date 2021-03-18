@@ -43,7 +43,8 @@ T de(std::unique_ptr<IOBuf> buf) {
 // encoded size and deserialized back to something that compares
 // equal to the original value
 template <typename T>
-void roundtrip(T value, size_t encodedSize) {
+void roundtrip(T value) {
+  auto encodedSize = XdrTrait<T>::serializedSize(value);
   auto encoded = ser(value);
   EXPECT_EQ(encoded->coalesce().size(), encodedSize);
   auto decoded = de<T>(std::move(encoded));

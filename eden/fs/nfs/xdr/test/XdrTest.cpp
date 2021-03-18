@@ -15,22 +15,22 @@
 namespace facebook::eden {
 
 TEST(XdrSerialize, integers) {
-  roundtrip(true, sizeof(int32_t));
-  roundtrip(false, sizeof(int32_t));
-  roundtrip(uint32_t(123), sizeof(int32_t));
-  roundtrip(uint64_t(123123), sizeof(int64_t));
-  roundtrip(float(2.5), sizeof(float));
-  roundtrip(double(32.5), sizeof(double));
-  roundtrip(std::string("hello"), detail::roundUp(5) + sizeof(uint32_t));
+  roundtrip(true);
+  roundtrip(false);
+  roundtrip(uint32_t(123));
+  roundtrip(uint64_t(123123));
+  roundtrip(float(2.5));
+  roundtrip(double(32.5));
+  roundtrip(std::string("hello"));
 
   std::vector<uint32_t> numbers{1, 2, 3};
-  roundtrip(numbers, 4 * sizeof(uint32_t));
+  roundtrip(numbers);
 
   std::vector<uint8_t> u8Numbers{1, 2, 3};
-  roundtrip(u8Numbers, sizeof(uint32_t) + detail::roundUp(3));
+  roundtrip(u8Numbers);
 
   auto fixedNumbers = folly::make_array<uint32_t>(3, 2, 1);
-  roundtrip(fixedNumbers, 3 * sizeof(uint32_t));
+  roundtrip(fixedNumbers);
 }
 
 struct MySerializableStruct {
@@ -42,8 +42,7 @@ EDEN_XDR_SERDE_IMPL(MySerializableStruct, number, str);
 
 TEST(XdrSerialize, structs) {
   MySerializableStruct s{123, "hello world"};
-  roundtrip(
-      s, sizeof(s.number) + sizeof(uint32_t) + detail::roundUp(s.str.size()));
+  roundtrip(s);
 }
 
 struct MyVariant : XdrVariant<bool, uint32_t> {};
@@ -62,10 +61,10 @@ struct XdrTrait<MyVariant> : public XdrTrait<MyVariant::Base> {
 
 TEST(XdrSerialize, variant) {
   MyVariant var1{{true, 42u}};
-  roundtrip(var1, 2 * sizeof(uint32_t));
+  roundtrip(var1);
 
   MyVariant var2;
-  roundtrip(var2, sizeof(uint32_t));
+  roundtrip(var2);
 }
 
 struct OptionalVariant : public XdrOptionalVariant<uint32_t> {};
@@ -80,20 +79,20 @@ struct OptionalEnumVariant
 
 TEST(XdrSerialize, optionalVariant) {
   OptionalVariant var1{{42}};
-  roundtrip(var1, 2 * sizeof(uint32_t));
+  roundtrip(var1);
 
   OptionalVariant var2;
-  roundtrip(var2, sizeof(uint32_t));
+  roundtrip(var2);
 
   OptionalEnumVariant opt1{42u};
   EXPECT_EQ(opt1.tag, TestEnum::BAR);
   EXPECT_EQ(std::get<uint32_t>(opt1.v), 42u);
-  roundtrip(opt1, 2 * sizeof(uint32_t));
+  roundtrip(opt1);
 
   OptionalEnumVariant opt2;
   EXPECT_EQ(opt2.tag, TestEnum::FOO);
   EXPECT_EQ(std::get<std::monostate>(opt2.v), std::monostate{});
-  roundtrip(opt2, sizeof(uint32_t));
+  roundtrip(opt2);
 }
 
 struct IOBufStruct {
@@ -126,14 +125,18 @@ struct XdrTrait<IOBufStruct> {
     ret.after = XdrTrait<uint32_t>::deserialize(cursor);
     return ret;
   }
+
+  static constexpr size_t serializedSize(const IOBufStruct& value) {
+    return 2 * XdrTrait<uint32_t>::serializedSize(0) +
+        XdrTrait<std::unique_ptr<folly::IOBuf>>::serializedSize(value.buf);
+  }
 };
 
 TEST(XdrSerialize, iobuf) {
   struct IOBufStruct buf {
     42, folly::IOBuf::copyBuffer("This is a test"), 10
   };
-  auto bufLen = buf.buf->computeChainDataLength();
-  roundtrip(std::move(buf), 3 * sizeof(uint32_t) + bufLen + 2 /*padding*/);
+  roundtrip(std::move(buf));
 }
 
 struct ListElement {
@@ -157,7 +160,7 @@ TEST(XdrSerialize, list) {
 
   ListHead head{{std::move(elements)}};
 
-  roundtrip(head, 4 * (sizeof(uint32_t) + sizeof(uint32_t)) + sizeof(uint32_t));
+  roundtrip(head);
 }
 
 } // namespace facebook::eden
