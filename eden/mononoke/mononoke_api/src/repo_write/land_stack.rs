@@ -38,7 +38,8 @@ impl RepoWriteContext {
         self.check_method_permitted("land_stack")?;
 
         let bookmark = BookmarkName::new(bookmark)?;
-        let bookmark_attrs = BookmarkAttrs::new(self.config().bookmarks.clone());
+        let bookmark_attrs =
+            BookmarkAttrs::new(self.ctx().fb, self.config().bookmarks.clone()).await?;
 
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = self.skiplist_index().clone();
 

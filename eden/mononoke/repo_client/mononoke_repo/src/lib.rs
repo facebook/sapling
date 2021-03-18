@@ -173,7 +173,7 @@ impl MononokeRepo {
         }
 
         // TODO: Update Metaconfig so we just have this in config:
-        let bookmark_attrs = BookmarkAttrs::new(repo.config().bookmarks.clone());
+        let bookmark_attrs = BookmarkAttrs::new(fb, repo.config().bookmarks.clone()).await?;
 
         Ok(Self {
             repo,

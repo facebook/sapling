@@ -34,7 +34,8 @@ impl RepoWriteContext {
         self.check_method_permitted("move_bookmark")?;
 
         let bookmark = BookmarkName::new(bookmark)?;
-        let bookmark_attrs = BookmarkAttrs::new(self.config().bookmarks.clone());
+        let bookmark_attrs =
+            BookmarkAttrs::new(self.ctx().fb, self.config().bookmarks.clone()).await?;
 
         // We need to find out where the bookmark currently points to in order
         // to move it.  Make sure to bypass any out-of-date caches.

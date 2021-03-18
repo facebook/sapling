@@ -122,7 +122,7 @@ impl AffectedChangesets {
 
         let mut exclude_bookmarks: HashSet<_> = bookmark_attrs
             .select(bookmark)
-            .map(|params| params.hooks_skip_ancestors_of.iter())
+            .map(|attr| attr.params().hooks_skip_ancestors_of.iter())
             .flatten()
             .cloned()
             .collect();

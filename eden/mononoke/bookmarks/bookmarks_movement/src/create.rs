@@ -129,7 +129,8 @@ impl<'op> CreateBookmarkOp<'op> {
             .check_kind(infinitepush_params, self.bookmark)?;
 
         self.auth
-            .check_authorized(ctx, bookmark_attrs, self.bookmark, kind)?;
+            .check_authorized(ctx, bookmark_attrs, self.bookmark, kind)
+            .await?;
 
         self.affected_changesets
             .check_restrictions(

@@ -26,7 +26,9 @@ use std::{
 
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
+use fbinit::FacebookInit;
 use mononoke_types::{BonsaiChangeset, MPath, PrefixTrie, RepositoryId};
+use permission_checker::{BoxMembershipChecker, MembershipCheckerBuilder};
 use regex::Regex;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
@@ -36,6 +38,7 @@ use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
+use sshrelay::Metadata;
 
 /// A Regex that can be compared against other Regexes.
 ///
@@ -362,42 +365,80 @@ impl From<Regex> for BookmarkOrRegex {
     }
 }
 
+/// Attributes for a single bookmark
+pub struct SingleBookmarkAttr {
+    params: BookmarkParams,
+    membership: Option<BoxMembershipChecker>,
+}
+
+impl SingleBookmarkAttr {
+    fn new(params: BookmarkParams, membership: Option<BoxMembershipChecker>) -> Self {
+        Self { params, membership }
+    }
+
+    /// Bookmark parameters from config
+    pub fn params(&self) -> &BookmarkParams {
+        &self.params
+    }
+
+    /// Membership checker
+    pub fn membership(&self) -> &Option<BoxMembershipChecker> {
+        &self.membership
+    }
+}
+
 /// Collection of all bookmark attribtes
 #[derive(Clone)]
 pub struct BookmarkAttrs {
-    bookmark_params: Arc<Vec<BookmarkParams>>,
+    bookmark_attrs: Arc<Vec<SingleBookmarkAttr>>,
 }
 
 impl BookmarkAttrs {
     /// create bookmark attributes from bookmark params vector
-    pub fn new(bookmark_params: impl Into<Arc<Vec<BookmarkParams>>>) -> Self {
-        Self {
-            bookmark_params: bookmark_params.into(),
+    pub async fn new(
+        fb: FacebookInit,
+        bookmark_params: impl IntoIterator<Item = BookmarkParams>,
+    ) -> Result<Self, Error> {
+        let mut v = vec![];
+        for params in bookmark_params {
+            let membership_checker = match params.allowed_hipster_group {
+                Some(ref hipster_group) => {
+                    Some(MembershipCheckerBuilder::for_group(fb, &hipster_group).await?)
+                }
+                None => None,
+            };
+
+            v.push(SingleBookmarkAttr::new(params, membership_checker));
         }
+
+        Ok(Self {
+            bookmark_attrs: Arc::new(v),
+        })
     }
 
     /// select bookmark params matching provided bookmark
     pub fn select<'a>(
         &'a self,
         bookmark: &'a BookmarkName,
-    ) -> impl Iterator<Item = &'a BookmarkParams> {
-        self.bookmark_params
+    ) -> impl Iterator<Item = &'a SingleBookmarkAttr> {
+        self.bookmark_attrs
             .iter()
-            .filter(move |params| params.bookmark.matches(bookmark))
+            .filter(move |attr| attr.params().bookmark.matches(bookmark))
     }
 
     /// check if provided bookmark is fast-forward only
     pub fn is_fast_forward_only(&self, bookmark: &BookmarkName) -> bool {
-        self.select(bookmark).any(|params| params.only_fast_forward)
+        self.select(bookmark)
+            .any(|attr| attr.params().only_fast_forward)
     }
 
     /// Check if a bookmark config overrides whether date should be rewritten during pushrebase.
     /// Return None if there are no bookmark config overriding rewrite_dates.
     pub fn should_rewrite_dates(&self, bookmark: &BookmarkName) -> Option<bool> {
-        for params in self.select(bookmark) {
+        for attr in self.select(bookmark) {
             // NOTE: If there are multiple patterns matching the bookmark, the first match
             // overrides others. It might not be the most desired behavior, though.
-            if let Some(rewrite_dates) = params.rewrite_dates {
+            if let Some(rewrite_dates) = attr.params().rewrite_dates {
                 return Some(rewrite_dates);
             }
         }
@@ -405,15 +446,42 @@ impl BookmarkAttrs {
     }
 
     /// check if provided unix name is allowed to move specified bookmark
-    pub fn is_allowed_user(&self, user: &Option<String>, bookmark: &BookmarkName) -> bool {
+    pub async fn is_allowed_user(
+        &self,
+        user: &Option<String>,
+        metadata: &Metadata,
+        bookmark: &BookmarkName,
+    ) -> Result<bool, Error> {
         match user {
-            None => true,
+            None => Ok(true),
             Some(user) => {
                 // NOTE: `Iterator::all` combinator returns `true` if selected set is empty
                 //       which is consistent with what we want
-                self.select(bookmark)
-                    .flat_map(|params| &params.allowed_users)
-                    .all(|re| re.is_match(user))
+                for attr in self.select(bookmark) {
+                    let maybe_allowed_users = attr
+                        .params()
+                        .allowed_users
+                        .as_ref()
+                        .map(|re| re.is_match(user));
+
+                    let maybe_member = if let Some(membership) = &attr.membership {
+                        Some(membership.is_member(&metadata.identities()).await?)
+                    } else {
+                        None
+                    };
+
+                    // Check if either is user is allowed to access it
+                    // or that they are a member of hipster group.
+                    let allowed = match (maybe_allowed_users, maybe_member) {
+                        (Some(x), Some(y)) => x || y,
+                        (Some(x), None) | (None, Some(x)) => x,
+                        (None, None) => true,
+                    };
+                    if !allowed {
+                        return Ok(false);
+                    }
+                }
+                Ok(true)
             }
         }
     }
@@ -421,7 +489,7 @@ impl BookmarkAttrs {
     /// Check if a bookmark is only updatable by an external sync process.
     pub fn is_only_external_sync_allowed(&self, bookmark: &BookmarkName) -> bool {
         self.select(bookmark)
-            .any(|params| params.allow_only_external_sync.unwrap_or(false))
+            .any(|attr| attr.params().allow_only_external_sync.unwrap_or(false))
     }
 }
 
@@ -436,8 +504,12 @@ pub struct BookmarkParams {
     pub only_fast_forward: bool,
     /// Whether to rewrite dates for pushrebased commits or not
     pub rewrite_dates: Option<bool>,
-    /// Only users matching this pattern will be allowed to move this bookmark
+    /// Only users matching this pattern or hipster group will be allowed to
+    /// move this bookmark
     pub allowed_users: Option<ComparableRegex>,
+    /// Only users matching this pattern or hipster group will be allowed to
+    /// move this bookmark
+    pub allowed_hipster_group: Option<String>,
     /// Only the external sync job is allowed to modify this bookmark
     pub allow_only_external_sync: Option<bool>,
     /// Skip hooks for changesets that are already ancestors of these

@@ -110,7 +110,8 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             .check_kind(infinitepush_params, self.bookmark)?;
 
         self.auth
-            .check_authorized(ctx, bookmark_attrs, self.bookmark, kind)?;
+            .check_authorized(ctx, bookmark_attrs, self.bookmark, kind)
+            .await?;
 
         if pushrebase_params.block_merges {
             let any_merges = self

@@ -28,7 +28,7 @@ pub(crate) enum BookmarkMoveAuthorization<'params> {
 }
 
 impl<'params> BookmarkMoveAuthorization<'params> {
-    pub(crate) fn check_authorized(
+    pub(crate) async fn check_authorized(
         &'params self,
         ctx: &CoreContext,
         bookmark_attrs: &BookmarkAttrs,
@@ -53,7 +53,10 @@ impl<'params> BookmarkMoveAuthorization<'params> {
                 let user = ctx.metadata().unix_name().unwrap_or("svcscm");
 
                 // TODO: clean up `is_allowed_user` to avoid this clone.
-                if !bookmark_attrs.is_allowed_user(&Some(user.to_string()), bookmark) {
+                if !bookmark_attrs
+                    .is_allowed_user(&Some(user.to_string()), ctx.metadata(), bookmark)
+                    .await?
+                {
                     return Err(BookmarkMovementError::PermissionDeniedUser {
                         user: user.to_string(),
                         bookmark: bookmark.clone(),
