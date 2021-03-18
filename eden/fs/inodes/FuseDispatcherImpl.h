@@ -93,9 +93,9 @@ class FuseDispatcherImpl : public FuseDispatcher {
   folly::Future<folly::Unit> fsync(InodeNumber ino, bool datasync) override;
   folly::Future<folly::Unit> fsyncdir(InodeNumber ino, bool datasync) override;
 
-  folly::Future<DirList> readdir(
+  folly::Future<FuseDirList> readdir(
       InodeNumber ino,
-      DirList&& dirList,
+      FuseDirList&& dirList,
       off_t offset,
       uint64_t fh,
       ObjectFetchContext& context) override;

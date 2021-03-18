@@ -312,16 +312,16 @@ folly::Future<std::string> FuseDispatcherImpl::readlink(
       });
 }
 
-folly::Future<DirList> FuseDispatcherImpl::readdir(
+folly::Future<FuseDirList> FuseDispatcherImpl::readdir(
     InodeNumber ino,
-    DirList&& dirList,
+    FuseDirList&& dirList,
     off_t offset,
     uint64_t /*fh*/,
     ObjectFetchContext& context) {
   return inodeMap_->lookupTreeInode(ino).thenValue(
       [dirList = std::move(dirList), offset, &context](
           TreeInodePtr inode) mutable {
-        return inode->readdir(std::move(dirList), offset, context);
+        return inode->fuseReaddir(std::move(dirList), offset, context);
       });
 }
 

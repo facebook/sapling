@@ -17,10 +17,10 @@ using folly::StringPiece;
 namespace facebook {
 namespace eden {
 
-DirList::DirList(size_t maxSize)
+FuseDirList::FuseDirList(size_t maxSize)
     : buf_(new char[maxSize]), end_(buf_.get() + maxSize), cur_(buf_.get()) {}
 
-bool DirList::add(StringPiece name, ino_t inode, dtype_t type, off_t off) {
+bool FuseDirList::add(StringPiece name, ino_t inode, dtype_t type, off_t off) {
   const size_t avail = end_ - cur_;
   const auto entLength = FUSE_NAME_OFFSET + name.size();
   const auto fullSize = FUSE_DIRENT_ALIGN(entLength);
@@ -44,12 +44,12 @@ bool DirList::add(StringPiece name, ino_t inode, dtype_t type, off_t off) {
   return true;
 }
 
-StringPiece DirList::getBuf() const {
+StringPiece FuseDirList::getBuf() const {
   return StringPiece(buf_.get(), cur_ - buf_.get());
 }
 
-std::vector<DirList::ExtractedEntry> DirList::extract() const {
-  std::vector<DirList::ExtractedEntry> result;
+std::vector<FuseDirList::ExtractedEntry> FuseDirList::extract() const {
+  std::vector<FuseDirList::ExtractedEntry> result;
 
   char* p = buf_.get();
   while (p != cur_) {

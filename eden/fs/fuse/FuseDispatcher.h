@@ -29,7 +29,7 @@ namespace facebook::eden {
     folly::throwSystemErrorExplicit(ENOSYS, __PRETTY_FUNCTION__);       \
   } while (0)
 
-class DirList;
+class FuseDirList;
 class EdenStats;
 
 class FuseDispatcher {
@@ -359,14 +359,14 @@ class FuseDispatcher {
   /**
    * Read directory.
    *
-   * Send a DirList filled using DirList::add().
-   * Send an empty DirList on end of stream.
+   * Send a FuseDirList filled using FuseDirList::add().
+   * Send an empty FuseDirList on end of stream.
    *
    * The fh parameter contains opendir's result.
    */
-  virtual folly::Future<DirList> readdir(
+  virtual folly::Future<FuseDirList> readdir(
       InodeNumber ino,
-      DirList&& dirList,
+      FuseDirList&& dirList,
       off_t offset,
       uint64_t fh,
       ObjectFetchContext& context);

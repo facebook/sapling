@@ -21,7 +21,7 @@ namespace eden {
 class CheckoutAction;
 class CheckoutContext;
 class DiffContext;
-class DirList;
+class FuseDirList;
 class EdenMount;
 class GitIgnoreStack;
 class DiffCallback;
@@ -146,7 +146,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       InvalidationRequired invalidate);
 
 #ifndef _WIN32
-  DirList readdir(DirList&& list, off_t off, ObjectFetchContext& context);
+  FuseDirList
+  fuseReaddir(FuseDirList&& list, off_t off, ObjectFetchContext& context);
 #else
   /**
    * The following readdir() is for responding to Projected FS's directory

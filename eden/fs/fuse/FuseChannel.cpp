@@ -2222,8 +2222,8 @@ folly::Future<folly::Unit> FuseChannel::fuseReadDir(
   XLOG(DBG7) << "FUSE_READDIR";
   auto ino = InodeNumber{header.nodeid};
   return dispatcher_
-      ->readdir(ino, DirList{read->size}, read->offset, read->fh, request)
-      .thenValue([&request](DirList&& list) {
+      ->readdir(ino, FuseDirList{read->size}, read->offset, read->fh, request)
+      .thenValue([&request](FuseDirList&& list) {
         const auto buf = list.getBuf();
         request.sendReply(StringPiece{buf});
       });

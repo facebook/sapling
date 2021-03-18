@@ -1791,8 +1791,10 @@ void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
 }
 
 #ifndef _WIN32
-DirList
-TreeInode::readdir(DirList&& list, off_t off, ObjectFetchContext& context) {
+FuseDirList TreeInode::fuseReaddir(
+    FuseDirList&& list,
+    off_t off,
+    ObjectFetchContext& context) {
   /*
    * Implementing readdir correctly in the presence of concurrent modifications
    * to the directory is nontrivial. This function will be called multiple
@@ -1884,7 +1886,7 @@ TreeInode::readdir(DirList&& list, off_t off, ObjectFetchContext& context) {
   }
   std::make_heap(indices.begin(), indices.end(), std::greater<>{});
 
-  // The provided DirList has limited space. Add entries until no more fit.
+  // The provided FuseDirList has limited space. Add entries until no more fit.
   while (indices.size()) {
     std::pop_heap(indices.begin(), indices.end(), std::greater<>{});
     auto& [name, entry] = entries.begin()[indices.back().second];

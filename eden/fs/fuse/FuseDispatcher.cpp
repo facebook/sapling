@@ -191,9 +191,9 @@ folly::Future<folly::Unit> FuseDispatcher::fsyncdir(InodeNumber, bool) {
   FUSELL_NOT_IMPL();
 }
 
-folly::Future<DirList> FuseDispatcher::readdir(
+folly::Future<FuseDirList> FuseDispatcher::readdir(
     InodeNumber,
-    DirList&&,
+    FuseDirList&&,
     off_t,
     uint64_t,
     ObjectFetchContext&) {

@@ -17,7 +17,7 @@ namespace eden {
 /**
  * Helper for populating directory listings.
  */
-class DirList {
+class FuseDirList {
   std::unique_ptr<char[]> buf_;
   char* end_;
   char* cur_;
@@ -30,12 +30,12 @@ class DirList {
     off_t offset;
   };
 
-  explicit DirList(size_t maxSize);
+  explicit FuseDirList(size_t maxSize);
 
-  DirList(const DirList&) = delete;
-  DirList& operator=(const DirList&) = delete;
-  DirList(DirList&&) = default;
-  DirList& operator=(DirList&&) = default;
+  FuseDirList(const FuseDirList&) = delete;
+  FuseDirList& operator=(const FuseDirList&) = delete;
+  FuseDirList(FuseDirList&&) = default;
+  FuseDirList& operator=(FuseDirList&&) = default;
 
   /**
    * Add a new dirent to the list.

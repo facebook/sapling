@@ -146,7 +146,7 @@ TEST(TreeInode, updateAndReaddir) {
 
 #else
 
-TEST(TreeInode, readdirReturnsSelfAndParentBeforeEntries) {
+TEST(TreeInode, fuseReaddirReturnsSelfAndParentBeforeEntries) {
   // libfuse's documentation says returning . and .. is optional, but the FUSE
   // kernel module does not synthesize them, so not returning . and .. would be
   // a visible behavior change relative to a native filesystem.
@@ -156,7 +156,8 @@ TEST(TreeInode, readdirReturnsSelfAndParentBeforeEntries) {
 
   auto root = mount.getEdenMount()->getRootInode();
   auto result =
-      root->readdir(DirList{4096}, 0, ObjectFetchContext::getNullContext())
+      root->fuseReaddir(
+              FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
           .extract();
 
   ASSERT_EQ(4, result.size());
@@ -166,8 +167,8 @@ TEST(TreeInode, readdirReturnsSelfAndParentBeforeEntries) {
   EXPECT_EQ(".eden", result[3].name);
 }
 
-TEST(TreeInode, readdirOffsetsAreNonzero) {
-  // readdir's offset parameter means "start here". 0 means start from the
+TEST(TreeInode, fuseReaddirOffsetsAreNonzero) {
+  // fuseReaddir's offset parameter means "start here". 0 means start from the
   // beginning. To start after a particular entry, the offset given must be that
   // entry's offset. Therefore, no entries should have offset 0.
   FakeTreeBuilder builder;
@@ -176,7 +177,8 @@ TEST(TreeInode, readdirOffsetsAreNonzero) {
 
   auto root = mount.getEdenMount()->getRootInode();
   auto result =
-      root->readdir(DirList{4096}, 0, ObjectFetchContext::getNullContext())
+      root->fuseReaddir(
+              FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
           .extract();
   ASSERT_EQ(4, result.size());
   for (auto& entry : result) {
@@ -184,7 +186,7 @@ TEST(TreeInode, readdirOffsetsAreNonzero) {
   }
 }
 
-TEST(TreeInode, readdirRespectsOffset) {
+TEST(TreeInode, fuseReaddirRespectsOffset) {
   FakeTreeBuilder builder;
   builder.setFiles({{"file", ""}});
   TestMount mount{builder};
@@ -192,7 +194,8 @@ TEST(TreeInode, readdirRespectsOffset) {
   auto root = mount.getEdenMount()->getRootInode();
 
   const auto resultA =
-      root->readdir(DirList{4096}, 0, ObjectFetchContext::getNullContext())
+      root->fuseReaddir(
+              FuseDirList{4096}, 0, ObjectFetchContext::getNullContext())
           .extract();
   ASSERT_EQ(4, resultA.size());
   EXPECT_EQ(".", resultA[0].name);
@@ -200,8 +203,8 @@ TEST(TreeInode, readdirRespectsOffset) {
   EXPECT_EQ("file", resultA[2].name);
   EXPECT_EQ(".eden", resultA[3].name);
 
-  const auto resultB = root->readdir(
-                               DirList{4096},
+  const auto resultB = root->fuseReaddir(
+                               FuseDirList{4096},
                                resultA[0].offset,
                                ObjectFetchContext::getNullContext())
                            .extract();
@@ -210,8 +213,8 @@ TEST(TreeInode, readdirRespectsOffset) {
   EXPECT_EQ("file", resultB[1].name);
   EXPECT_EQ(".eden", resultB[2].name);
 
-  const auto resultC = root->readdir(
-                               DirList{4096},
+  const auto resultC = root->fuseReaddir(
+                               FuseDirList{4096},
                                resultB[0].offset,
                                ObjectFetchContext::getNullContext())
                            .extract();
@@ -219,31 +222,32 @@ TEST(TreeInode, readdirRespectsOffset) {
   EXPECT_EQ("file", resultC[0].name);
   EXPECT_EQ(".eden", resultC[1].name);
 
-  const auto resultD = root->readdir(
-                               DirList{4096},
+  const auto resultD = root->fuseReaddir(
+                               FuseDirList{4096},
                                resultC[0].offset,
                                ObjectFetchContext::getNullContext())
                            .extract();
   ASSERT_EQ(1, resultD.size());
   EXPECT_EQ(".eden", resultD[0].name);
 
-  const auto resultE = root->readdir(
-                               DirList{4096},
+  const auto resultE = root->fuseReaddir(
+                               FuseDirList{4096},
                                resultD[0].offset,
                                ObjectFetchContext::getNullContext())
                            .extract();
   EXPECT_EQ(0, resultE.size());
 }
 
-TEST(TreeInode, readdirIgnoresWildOffsets) {
+TEST(TreeInode, fuseReaddirIgnoresWildOffsets) {
   TestMount mount{FakeTreeBuilder{}};
 
   auto root = mount.getEdenMount()->getRootInode();
 
-  auto result =
-      root->readdir(
-              DirList{4096}, 0xfaceb00c, ObjectFetchContext::getNullContext())
-          .extract();
+  auto result = root->fuseReaddir(
+                        FuseDirList{4096},
+                        0xfaceb00c,
+                        ObjectFetchContext::getNullContext())
+                    .extract();
   EXPECT_EQ(0, result.size());
 }
 
@@ -294,8 +298,8 @@ void runConcurrentModificationAndReaddirIteration(
   std::unordered_map<std::string, unsigned> seen;
 
   for (;;) {
-    auto result = root->readdir(
-                          DirList{kDirListBufferSize},
+    auto result = root->fuseReaddir(
+                          FuseDirList{kDirListBufferSize},
                           lastOffset,
                           ObjectFetchContext::getNullContext())
                       .extract();
@@ -336,13 +340,13 @@ void runConcurrentModificationAndReaddirIteration(
 
   // Verify all unmodified files were read.
   for (auto& name : names) {
-    // If modified, it is not guaranteed to be returned by readdir.
+    // If modified, it is not guaranteed to be returned by fuseReaddir.
     if (modified.count(name)) {
       continue;
     }
 
     EXPECT_EQ(1, seen[name])
-        << "unmodified entries should be returned by readdir exactly once, but "
+        << "unmodified entries should be returned by fuseReaddir exactly once, but "
         << name << " wasn't";
   }
 }
