@@ -6,6 +6,7 @@
  */
 
 use std::marker::PhantomData;
+use std::num::NonZeroU64;
 use std::panic::RefUnwindSafe;
 
 use gotham::state::{request_id, FromState, State};
@@ -311,6 +312,13 @@ impl ScubaMiddlewareState {
         let mut scuba = state.try_borrow_mut::<Self>();
         if let Some(ref mut scuba) = scuba {
             scuba.add(key, value);
+        }
+    }
+
+    pub fn try_set_sampling_rate(state: &mut State, rate: NonZeroU64) {
+        let mut scuba = state.try_borrow_mut::<Self>();
+        if let Some(ref mut scuba) = scuba {
+            scuba.0.sampled_unless_verbose(rate);
         }
     }
 

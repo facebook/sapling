@@ -27,6 +27,7 @@ mime = "0.3.14"
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mononoke_api_hg = { version = "0.1.0", path = "../mononoke_api_hg" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
+nonzero_ext = "0.2"
 once_cell = "1.4"
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 serde = { version = "=1.0.118", features = ["derive", "rc"] }

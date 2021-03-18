@@ -15,7 +15,9 @@ use edenapi_types::{
     wire::{ToWire, WireTreeRequest},
     EdenApiServerError, FileMetadata, TreeChildEntry, TreeEntry, TreeRequest,
 };
-use gotham_ext::{error::HttpError, response::TryIntoResponse};
+use gotham_ext::{
+    error::HttpError, middleware::scuba::ScubaMiddlewareState, response::TryIntoResponse,
+};
 use load_limiter::Metric;
 use manifest::Entry;
 use mercurial_types::{FileType, HgFileNodeId, HgManifestId, HgNodeHash};
@@ -49,6 +51,11 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
     let repo = get_repo(&sctx, &rctx, &params.repo, Metric::EgressTotalManifests).await?;
     let request = parse_wire_request::<WireTreeRequest>(state).await?;
+
+    // Sample trivial requests
+    if request.keys.len() == 1 && !request.attributes.child_metadata {
+        ScubaMiddlewareState::try_set_sampling_rate(state, nonzero_ext::nonzero!(100_u64));
+    }
 
     Ok(cbor_stream(
         rctx,
