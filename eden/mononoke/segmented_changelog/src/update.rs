@@ -36,12 +36,7 @@ pub async fn build<'a>(
 ) -> Result<Vertex> {
     STATS::build.add_value(1);
 
-    let mem_idmap = assign_ids(ctx, &start_state, head, low_vertex);
-
-    let head_vertex = mem_idmap
-        .find_vertex(head)
-        .or_else(|| start_state.assignments.find_vertex(head))
-        .ok_or_else(|| format_err!("error building IdMap; failed to assign head {}", head))?;
+    let (mem_idmap, head_vertex) = assign_ids(ctx, &start_state, head, low_vertex)?;
 
     update_idmap(ctx, idmap, &mem_idmap).await?;
 
@@ -97,7 +92,7 @@ pub fn assign_ids(
     start_state: &StartState,
     head: ChangesetId,
     low_vertex: Vertex,
-) -> MemIdMap {
+) -> Result<(MemIdMap, Vertex)> {
     enum Todo {
         Visit(ChangesetId),
         Assign(ChangesetId),
@@ -137,7 +132,11 @@ pub fn assign_ids(
             }
         }
     }
-    mem_idmap
+    let head_vertex = mem_idmap
+        .find_vertex(head)
+        .or_else(|| start_state.assignments.find_vertex(head))
+        .ok_or_else(|| format_err!("error assigning ids; failed to assign head {}", head))?;
+    Ok((mem_idmap, head_vertex))
 }
 
 pub async fn update_idmap<'a>(
@@ -303,12 +302,7 @@ pub async fn prepare_incremental_iddag_update<'a>(
         }
     }
 
-    let mem_idmap = assign_ids(ctx, &start_state, head, id_map_next_id);
-
-    let head_vertex = mem_idmap
-        .find_vertex(head)
-        .or_else(|| start_state.assignments.find_vertex(head))
-        .ok_or_else(|| format_err!("error building IdMap; failed to assign head {}", head))?;
+    let (mem_idmap, head_vertex) = assign_ids(ctx, &start_state, head, id_map_next_id)?;
 
     update_idmap(ctx, idmap, &mem_idmap).await?;
 
