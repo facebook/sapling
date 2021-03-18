@@ -129,13 +129,47 @@ where
         .await
 }
 
-pub async fn gitimport(
+pub trait GitimportAccumulator: Sized {
+    fn new() -> Self;
+    fn len(&self) -> usize;
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    fn insert(&mut self, oid: Oid, cs_id: ChangesetId, bonsai: BonsaiChangeset);
+    fn get(&self, oid: &Oid) -> Option<ChangesetId>;
+}
+
+struct BufferingGitimportAccumulator {
+    inner: LinkedHashMap<Oid, (ChangesetId, BonsaiChangeset)>,
+}
+
+impl GitimportAccumulator for BufferingGitimportAccumulator {
+    fn new() -> Self {
+        Self {
+            inner: LinkedHashMap::new(),
+        }
+    }
+
+    fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    fn insert(&mut self, oid: Oid, cs_id: ChangesetId, bonsai: BonsaiChangeset) {
+        self.inner.insert(oid, (cs_id, bonsai));
+    }
+
+    fn get(&self, oid: &Oid) -> Option<ChangesetId> {
+        self.inner.get(oid).map(|p| p.0)
+    }
+}
+
+pub async fn gitimport_acc<Acc: GitimportAccumulator>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     path: &Path,
     target: &dyn GitimportTarget,
-    prefs: GitimportPreferences,
-) -> Result<LinkedHashMap<Oid, (ChangesetId, BonsaiChangeset)>, Error> {
+    prefs: &GitimportPreferences,
+) -> Result<Acc, Error> {
     let repo_name = if let Some(name) = &prefs.gitrepo_name {
         String::from(name)
     } else {
@@ -162,15 +196,14 @@ pub async fn gitimport(
     let nb_commits_to_import = target.get_nb_commits(&walk_repo)?;
     if 0 == nb_commits_to_import {
         info!(ctx.logger(), "Nothing to import for repo {}.", repo_name);
-        return Ok(LinkedHashMap::new());
+        return Ok(Acc::new());
     }
 
     // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
 
     // TODO: Make concurrency configurable below.
 
-    let prefs = &prefs;
-    let import_map: LinkedHashMap<Oid, (ChangesetId, BonsaiChangeset)> = stream::iter(walk)
+    let ret = stream::iter(walk)
         .map(|oid| async move {
             let oid = oid.with_context(|| "While walking commits")?;
 
@@ -199,51 +232,65 @@ pub async fn gitimport(
             Ok((metadata, file_changes))
         })
         .buffered(20)
-        .try_fold(
-            LinkedHashMap::<Oid, (ChangesetId, BonsaiChangeset)>::new(),
-            {
-                move |mut import_map, (metadata, file_changes)| async move {
-                    let oid = metadata.oid;
-                    let parents = metadata
-                        .parents
-                        .iter()
-                        .map(|p| {
-                            roots
-                                .get(&p)
-                                .copied()
-                                .or_else(|| import_map.get(&p).map(|p| p.0))
-                                .ok_or_else(|| format_err!("Commit was not imported: {}", p))
-                        })
-                        .collect::<Result<Vec<_>, _>>()
-                        .with_context(|| format_err!("While looking for parents of {}", oid))?;
+        .try_fold(Acc::new(), {
+            move |mut acc, (metadata, file_changes)| async move {
+                let oid = metadata.oid;
+                let parents = metadata
+                    .parents
+                    .iter()
+                    .map(|p| {
+                        roots
+                            .get(&p)
+                            .copied()
+                            .or_else(|| acc.get(p))
+                            .ok_or_else(|| format_err!("Commit was not imported: {}", p))
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+                    .with_context(|| format_err!("While looking for parents of {}", oid))?;
 
-                    let bcs =
-                        import_bonsai_changeset(ctx, repo, metadata, parents, file_changes, &prefs)
-                            .await?;
+                let bcs =
+                    import_bonsai_changeset(ctx, repo, metadata, parents, file_changes, &prefs)
+                        .await?;
 
-                    let bcs_id = bcs.get_changeset_id();
+                let bcs_id = bcs.get_changeset_id();
 
-                    import_map.insert(oid, (bcs_id, bcs));
+                acc.insert(oid, bcs_id, bcs);
 
-                    info!(
-                        ctx.logger(),
-                        "GitRepo:{} commit {} of {} - Oid:{} => Bid:{}",
-                        repo_name_ref,
-                        import_map.len(),
-                        nb_commits_to_import,
-                        oid_to_sha1(&oid)?.to_brief(),
-                        bcs_id.to_brief()
-                    );
+                info!(
+                    ctx.logger(),
+                    "GitRepo:{} commit {} of {} - Oid:{} => Bid:{}",
+                    repo_name_ref,
+                    acc.len(),
+                    nb_commits_to_import,
+                    oid_to_sha1(&oid)?.to_brief(),
+                    bcs_id.to_brief()
+                );
 
-                    Result::<_, Error>::Ok(import_map)
-                }
-            },
-        )
+                Result::<_, Error>::Ok(acc)
+            }
+        })
         .await?;
 
+    Ok(ret)
+}
+
+pub async fn gitimport(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    path: &Path,
+    target: &dyn GitimportTarget,
+    prefs: GitimportPreferences,
+) -> Result<LinkedHashMap<Oid, (ChangesetId, BonsaiChangeset)>, Error> {
+    let import_map =
+        gitimport_acc::<BufferingGitimportAccumulator>(ctx, repo, path, target, &prefs)
+            .await?
+            .inner;
+
     if prefs.derive_trees {
+        let git_repo = Repository::open(&path)?;
+
         for (id, (bcs_id, _bcs)) in import_map.iter() {
-            let commit = walk_repo.find_commit(*id)?;
+            let commit = git_repo.find_commit(*id)?;
             let tree_id = commit.tree()?.id();
 
             let derived_tree = TreeHandle::derive(&ctx, &repo, *bcs_id).await?;
