@@ -132,10 +132,40 @@ pub fn assign_ids(
             }
         }
     }
+
     let head_vertex = mem_idmap
         .find_vertex(head)
         .or_else(|| start_state.assignments.find_vertex(head))
         .ok_or_else(|| format_err!("error assigning ids; failed to assign head {}", head))?;
+
+    let cs_to_v = |cs| {
+        mem_idmap
+            .find_vertex(cs)
+            .or_else(|| start_state.assignments.find_vertex(cs))
+            .ok_or_else(|| {
+                format_err!(
+                    "error assingning ids; failed to find assignment for changeset {}",
+                    cs
+                )
+            })
+    };
+    for (v, cs) in mem_idmap.iter() {
+        if let Some(parents) = start_state.parents.get(&cs) {
+            for p in parents {
+                let pv = cs_to_v(*p)?;
+                if pv >= v {
+                    return Err(format_err!(
+                        "error assigning ids; parent >= vertex: {} >= {} ({} >= {})",
+                        pv,
+                        v,
+                        p,
+                        cs
+                    ));
+                }
+            }
+        }
+    }
+
     Ok((mem_idmap, head_vertex))
 }
 
