@@ -247,9 +247,7 @@ class chgcmdserver(commandserver.server):
         # get forwarded to chg client
         uimod.ui = self.ui.__class__
         try:
-            ret = commands.run(
-                [pycompat.sysargv[0]] + args, self.ui.fin, self.ui.fout, self.ui.ferr
-            )
+            ret = commands.run([pycompat.sysargv[0]] + args)
             self.cresult.write(struct.pack(">i", int(ret & 255)))
         finally:
             uimod.ui = origui

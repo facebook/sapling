@@ -12,7 +12,7 @@ use crate::python::{
 };
 use clidispatch::io::IO;
 use cpython::*;
-use cpython_ext::{format_py_error, wrap_pyio, Bytes, Str, WrappedIO};
+use cpython_ext::{format_py_error, wrap_pyio, Bytes, ResultPyErrExt, Str, WrappedIO};
 use encoding::osstring_to_local_cstring;
 use std::env;
 use std::ffi::{CString, OsString};
@@ -209,18 +209,23 @@ fn write_to_py_object(py: Python, writer: &dyn clidispatch::io::Write) -> PyObje
 }
 
 fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
+    // Called by chg or "-t.py" tests.
     fn run_py(
-        _py: Python,
+        py: Python,
         args: Vec<String>,
-        fin: PyObject,
-        fout: PyObject,
+        fin: Option<PyObject>,
+        fout: Option<PyObject>,
         ferr: Option<PyObject>,
     ) -> PyResult<i32> {
-        let fin = wrap_pyio(fin);
-        let fout = wrap_pyio(fout);
-        let ferr = ferr.map(wrap_pyio);
-
-        let io = IO::new(fin, fout, ferr);
+        let io = if let (Some(fin), Some(fout), Some(ferr)) = (fin, fout, ferr) {
+            let fin = wrap_pyio(fin);
+            let fout = wrap_pyio(fout);
+            let ferr = wrap_pyio(ferr);
+            IO::new(fin, fout, Some(ferr))
+        } else {
+            // Reuse the main IO.
+            IO::main().map_pyerr(py)?
+        };
         Ok(crate::run_command(args, &io))
     }
 
@@ -243,9 +248,9 @@ fn init_bindings_commands(py: Python, package: &str) -> PyResult<PyModule> {
             py,
             run_py(
                 args: Vec<String>,
-                fin: PyObject,
-                fout: PyObject,
-                ferr: Option<PyObject> = None
+                fin: Option<PyObject> = None,
+                fout: Option<PyObject> = None,
+                ferr: Option<PyObject> = None,
             )
         ),
     )?;
