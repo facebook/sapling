@@ -70,12 +70,9 @@ impl SegmentedChangelogManager {
             let on_demand = self.load_ondemand_update(ctx).await?;
             let asc: Arc<dyn SegmentedChangelog> = match self.update_to_master_bookmark_period {
                 None => on_demand,
-                Some(period) => Arc::new(on_demand.with_periodic_update_to_bookmark(
-                    ctx,
-                    self.bookmarks.clone(),
-                    self.bookmark_name.clone(),
-                    period,
-                )),
+                Some(period) => {
+                    Arc::new(on_demand.with_periodic_update_to_master_bookmark(ctx, period))
+                }
             };
             Ok(asc)
         };
@@ -103,6 +100,8 @@ impl SegmentedChangelogManager {
             owned.iddag,
             owned.idmap,
             Arc::clone(&self.changeset_fetcher),
+            Arc::clone(&self.bookmarks),
+            self.bookmark_name.clone(),
         )))
     }
 

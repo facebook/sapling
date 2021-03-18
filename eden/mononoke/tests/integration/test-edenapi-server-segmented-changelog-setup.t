@@ -32,6 +32,7 @@ Populate test repo
   >   |
   >   A
   > EOS
+  $ hg bookmark -r "$H" "master_bookmark"
   $ hg log -G -T '{node} {desc}\n' -r "all()"
   o  06383dd46c9bcbca9300252b4b6cddad88f8af21 H
   │
@@ -50,8 +51,6 @@ Populate test repo
   o  426bada5c67598ca65036d57d9e4b64b0c1ce7a0 A
   
 
-
-
 Blobimport test repo.
   $ cd ..
   $ blobimport repo-hg/.hg repo
@@ -65,6 +64,7 @@ Start up EdenAPI server.
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
   > [segmented_changelog_config]
   > enabled=true
+  > master_bookmark="master_bookmark"
   > CONFIG
 
   $ mononoke

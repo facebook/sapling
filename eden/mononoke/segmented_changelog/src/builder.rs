@@ -66,6 +66,12 @@ pub async fn new_server_segmented_changelog(
     if !config.enabled {
         return Ok(Arc::new(DisabledSegmentedChangelog::new()));
     }
+    let bookmarks_name = BookmarkName::new(&config.master_bookmark).with_context(|| {
+        format!(
+            "failed to interpret {} as bookmark for repo {}",
+            config.master_bookmark, repo_id
+        )
+    })?;
     if config.skip_dag_load_at_startup {
         // This is a special case. We build Segmented Changelog using an in process iddag and idmap
         // and update then on demand.
@@ -76,6 +82,8 @@ pub async fn new_server_segmented_changelog(
             InProcessIdDag::new_in_process(),
             Arc::new(ConcurrentMemIdMap::new()),
             changeset_fetcher,
+            bookmarks,
+            bookmarks_name,
         )));
     }
     let mut idmap_factory = IdMapFactory::new(
@@ -88,12 +96,6 @@ pub async fn new_server_segmented_changelog(
     }
     let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
     let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore);
-    let bookmarks_name = BookmarkName::new(&config.master_bookmark).with_context(|| {
-        format!(
-            "failed to interpret {} as bookmark for repo {}",
-            config.master_bookmark, repo_id
-        )
-    })?;
     let manager = SegmentedChangelogManager::new(
         repo_id,
         sc_version_store,
@@ -165,6 +167,8 @@ impl SegmentedChangelogBuilder {
             owned.iddag,
             owned.idmap,
             self.changeset_fetcher()?,
+            self.bookmarks()?,
+            self.bookmark_name()?,
         ))
     }
 
@@ -174,6 +178,8 @@ impl SegmentedChangelogBuilder {
     ) -> Result<OnDemandUpdateSegmentedChangelog> {
         let repo_id = self.repo_id()?;
         let changeset_fetcher = self.changeset_fetcher()?;
+        let bookmarks = self.bookmarks()?;
+        let bookmark_name = self.bookmark_name()?;
         let manager = self.build_manager()?;
         let owned = manager.load_owned(ctx).await?;
         Ok(OnDemandUpdateSegmentedChangelog::new(
@@ -181,6 +187,8 @@ impl SegmentedChangelogBuilder {
             owned.iddag,
             owned.idmap,
             changeset_fetcher,
+            bookmarks,
+            bookmark_name,
         ))
     }
 
@@ -189,16 +197,16 @@ impl SegmentedChangelogBuilder {
         ctx: &CoreContext,
     ) -> Result<PeriodicUpdateSegmentedChangelog> {
         let owned = self.new_owned()?;
-        let dag = PeriodicUpdateSegmentedChangelog::for_bookmark(
+        let dag = PeriodicUpdateSegmentedChangelog::new(
             ctx,
             Arc::new(OnDemandUpdateSegmentedChangelog::new(
                 self.repo_id()?,
                 owned.iddag,
                 owned.idmap,
                 self.changeset_fetcher()?,
+                self.bookmarks()?,
+                self.bookmark_name()?,
             )),
-            self.bookmarks()?,
-            self.bookmark_name()?,
             self.update_to_bookmark_period()?,
         );
         Ok(dag)

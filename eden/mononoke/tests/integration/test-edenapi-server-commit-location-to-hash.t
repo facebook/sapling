@@ -36,6 +36,7 @@ Populate test repo
   $ echo "third file" > test3.txt
   $ hg commit -Aqm "add test3.txt"
   $ COMMIT_M1=$(hg log -r . -T '{node}')
+  $ hg bookmark "master_bookmark"
   $ hg log -G -T '{node} {desc}\n' -r "all()"
   @  b5bc5249412595662f15a1aca5ae50fec4a93628 add test3.txt
   │

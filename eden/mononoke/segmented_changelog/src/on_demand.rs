@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{format_err, Context, Result};
+use anyhow::{bail, format_err, Context, Result};
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::{FutureExt, TryFutureExt};
@@ -17,7 +17,7 @@ use parking_lot::Mutex;
 use tokio::sync::{Notify, RwLock};
 
 use cloned::cloned;
-use dag::{self, CloneData, InProcessIdDag, Location};
+use dag::{self, CloneData, Group, InProcessIdDag, Location};
 use futures_ext::future::{spawn_controlled, ControlledHandle, FbTryFutureExt, TryShared};
 use futures_stats::TimedFutureExt;
 use stats::prelude::*;
@@ -87,6 +87,8 @@ pub struct OnDemandUpdateSegmentedChangelog {
     iddag: Arc<RwLock<InProcessIdDag>>,
     idmap: Arc<dyn IdMap>,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    bookmarks: Arc<dyn Bookmarks>,
+    master_bookmark: BookmarkName,
     ongoing_update: Arc<Mutex<Option<TryShared<BoxFuture<'static, Result<()>>>>>>,
 }
 
@@ -96,24 +98,26 @@ impl OnDemandUpdateSegmentedChangelog {
         iddag: InProcessIdDag,
         idmap: Arc<dyn IdMap>,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        bookmarks: Arc<dyn Bookmarks>,
+        master_bookmark: BookmarkName,
     ) -> Self {
         Self {
             repo_id,
             iddag: Arc::new(RwLock::new(iddag)),
             idmap,
             changeset_fetcher,
+            bookmarks,
+            master_bookmark,
             ongoing_update: Arc::new(Mutex::new(None)),
         }
     }
 
-    pub fn with_periodic_update_to_bookmark(
+    pub fn with_periodic_update_to_master_bookmark(
         self: Arc<Self>,
         ctx: &CoreContext,
-        bookmarks: Arc<dyn Bookmarks>,
-        bookmark_name: BookmarkName,
         period: Duration,
     ) -> PeriodicUpdateSegmentedChangelog {
-        PeriodicUpdateSegmentedChangelog::for_bookmark(ctx, self, bookmarks, bookmark_name, period)
+        PeriodicUpdateSegmentedChangelog::new(ctx, self, period)
     }
 
     // Updating the Dag has 3 phases:
@@ -177,26 +181,26 @@ impl OnDemandUpdateSegmentedChangelog {
         Ok(to_wait.await?)
     }
 
-    async fn build_up_to_cs(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<()> {
+    // This functions will take a parameter, Group. It generalizes between updating the dag without
+    // concerning itself with the group that the cs goes in. The functions that call into it have
+    // the resposibility of deciding the Group.
+    async fn build_up_to_cs(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+        group: Group,
+    ) -> Result<()> {
+        if group != Group::MASTER {
+            bail!("building the NON_MASTER group is not implemented for SegmentedChangelog");
+        }
         let update_loop = async {
+            let mut tries: i64 = 0;
             loop {
-                let mut tries: i64 = 0;
-                if let Some(vertex) = self
-                    .idmap
-                    .find_vertex(ctx, cs_id)
-                    .await
-                    .context("fetching vertex for csid")?
-                {
-                    // Note. This will result in two read locks being acquired for functions that call
-                    // into build_up. It would be nice to get to one lock being acquired. I tried but
-                    // had some issues with lifetimes :).
-                    let iddag = self.iddag.read().await;
-                    if iddag.contains_id(vertex)? {
-                        return Ok(tries);
-                    }
-                }
                 tries += 1;
                 if self.try_update(ctx, cs_id).await? {
+                    return Ok(tries);
+                }
+                if self.is_cs_assigned(ctx, cs_id).await? {
                     return Ok(tries);
                 }
             }
@@ -225,6 +229,62 @@ impl OnDemandUpdateSegmentedChangelog {
             _ => {}
         }
         ret.map(|_| ())
+    }
+
+    async fn build_up_to_bookmark(&self, ctx: &CoreContext) -> Result<()> {
+        let bookmark_cs = self
+            .bookmarks
+            .get(ctx.clone(), &self.master_bookmark)
+            .await
+            .with_context(|| {
+                format!(
+                    "error while fetching changeset for bookmark {}",
+                    self.master_bookmark
+                )
+            })?
+            .ok_or_else(|| format_err!("'{}' bookmark could not be found", self.master_bookmark))?;
+        self.build_up_to_cs(&ctx, bookmark_cs, Group::MASTER).await
+    }
+
+    async fn build_up_to_head(&self, ctx: &CoreContext, head: ChangesetId) -> Result<()> {
+        if !self.is_cs_assigned(ctx, head).await? {
+            self.build_up_to_bookmark(ctx).await?;
+            // The IdDag has two groups, the MASTER group and the NON_MASTER group. The MASTER
+            // group is reserved for the ancestors of the master bookmark. The MASTER group should
+            // contain the ancestors of master. The NON_MASTER group can contain all other
+            // changesets. When we don't know whether head is an ancestor of master, we need to
+            // update to master first then we might assign head to the NonMaster group if we need
+            // to. At the moment we only handle updating the MASTER group.
+            // Note for the future. We should pay attention to potential races between a changeset
+            // being used and the bookmark being updated.
+            if !self.is_cs_assigned(ctx, head).await? {
+                bail!(
+                    "repo {}: failed to assign cs {}, not an ancestor of bookmark {}",
+                    self.repo_id,
+                    head,
+                    self.master_bookmark
+                );
+            }
+        }
+        Ok(())
+    }
+
+    async fn is_cs_assigned(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<bool> {
+        if let Some(vertex) = self
+            .idmap
+            .find_vertex(ctx, cs_id)
+            .await
+            .context("fetching vertex for csid")?
+        {
+            // Note. This will result in two read locks being acquired for functions that call
+            // into build_up. It would be nice to get to one lock being acquired. I tried but
+            // had some issues with lifetimes :).
+            let iddag = self.iddag.read().await;
+            if iddag.contains_id(vertex)? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 }
 
@@ -283,7 +343,7 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         STATS::location_to_changeset_id.add_value(1);
         // Location descendant may not be the ideal entry to build up to, it could be a good idea
         // to have client_head here too.
-        self.build_up_to_cs(ctx, location.descendant)
+        self.build_up_to_head(ctx, location.descendant)
             .await
             .context("error while getting an up to date dag")?;
         let iddag = self.iddag.read().await;
@@ -300,7 +360,7 @@ impl SegmentedChangelog for OnDemandUpdateSegmentedChangelog {
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>> {
         STATS::changeset_id_to_location.add_value(1);
-        self.build_up_to_cs(ctx, client_head)
+        self.build_up_to_head(ctx, client_head)
             .await
             .context("error while getting an up to date dag")?;
         let iddag = self.iddag.read().await;
@@ -334,11 +394,9 @@ pub struct PeriodicUpdateSegmentedChangelog {
 }
 
 impl PeriodicUpdateSegmentedChangelog {
-    pub fn for_bookmark(
+    pub fn new(
         ctx: &CoreContext,
         on_demand_update_sc: Arc<OnDemandUpdateSegmentedChangelog>,
-        bookmarks: Arc<dyn Bookmarks>,
-        bookmark_name: BookmarkName,
         period: Duration,
     ) -> Self {
         let notify = Arc::new(Notify::new());
@@ -350,9 +408,7 @@ impl PeriodicUpdateSegmentedChangelog {
                 let mut interval = tokio::time::interval(period);
                 loop {
                     let _ = interval.tick().await;
-                    if let Err(err) =
-                        update_dag_from_bookmark(&ctx, &my_dag, &*bookmarks, &bookmark_name).await
-                    {
+                    if let Err(err) = my_dag.build_up_to_bookmark(&ctx).await {
                         slog::error!(
                             ctx.logger(),
                             "failed to update segmented changelog dag: {:?}",
@@ -374,26 +430,6 @@ impl PeriodicUpdateSegmentedChangelog {
     pub async fn wait_for_update(&self) {
         self.notify.notified().await;
     }
-}
-
-async fn update_dag_from_bookmark(
-    ctx: &CoreContext,
-    on_demand_update_sc: &OnDemandUpdateSegmentedChangelog,
-    bookmarks: &dyn Bookmarks,
-    bookmark_name: &BookmarkName,
-) -> Result<()> {
-    let bookmark_cs = bookmarks
-        .get(ctx.clone(), bookmark_name)
-        .await
-        .with_context(|| {
-            format!(
-                "error while fetching changeset for bookmark {}",
-                bookmark_name
-            )
-        })?
-        .ok_or_else(|| format_err!("'{}' bookmark could not be found", bookmark_name))?;
-    on_demand_update_sc.try_update(&ctx, bookmark_cs).await?;
-    Ok(())
 }
 
 segmented_changelog_delegate!(PeriodicUpdateSegmentedChangelog, |
