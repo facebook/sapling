@@ -1022,31 +1022,13 @@ hg_set_committer_extra = true
 CONFIG
 fi
 
-if [[ -n "${SEGMENTED_CHANGELOG_ENABLE:-}" ]] || \
-   [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE:-}" ]] || \
-   [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE_START_SAVE:-}" ]] || \
-   [[ -n "${SEGMENTED_CHANGELOG_ALWAYS_DOWNLOAD_SAVE:-}" ]];
-then
+if [[ -n "${SEGMENTED_CHANGELOG_ENABLE:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [segmented_changelog_config]
 enabled=true
 master_bookmark="master_bookmark"
+skip_dag_load_at_startup=true
 CONFIG
-  if [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE:-}" ]]; then
-    cat >> "repos/$reponame/server.toml" <<CONFIG
-update_algorithm="ondemand"
-CONFIG
-  fi
-  if [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE_START_SAVE:-}" ]]; then
-    cat >> "repos/$reponame/server.toml" <<CONFIG
-update_algorithm="ondemand_start_from_save"
-CONFIG
-  fi
-  if [[ -n "${SEGMENTED_CHANGELOG_ALWAYS_DOWNLOAD_SAVE:-}" ]]; then
-    cat >> "repos/$reponame/server.toml" <<CONFIG
-update_algorithm="always_download_save"
-CONFIG
-  fi
 fi
 }
 

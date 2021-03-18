@@ -40,7 +40,9 @@ mod tests;
 
 pub use ::dag::{CloneData, FlatSegment, Id as Vertex, Location, PreparedFlatSegments};
 
-pub use crate::builder::SegmentedChangelogBuilder;
+pub use crate::builder::{
+    new_server_segmented_changelog, SegmentedChangelogBuilder, SegmentedChangelogSqlConnections,
+};
 
 // public for benchmarking
 pub use crate::idmap::{ConcurrentMemIdMap, IdMap};

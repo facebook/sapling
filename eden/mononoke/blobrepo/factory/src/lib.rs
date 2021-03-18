@@ -58,7 +58,8 @@ use redactedblobstore::{RedactedMetadata, SqlRedactedContentStore};
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::{
-    DisabledSegmentedChangelog, SegmentedChangelog, SegmentedChangelogBuilder,
+    new_server_segmented_changelog, DisabledSegmentedChangelog, SegmentedChangelog,
+    SegmentedChangelogSqlConnections,
 };
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::Logger;
@@ -592,9 +593,9 @@ async fn new_development<'a>(
             .context(ErrorKind::StateOpen(StateOpenError::Phases))
     };
 
-    let segmented_changelog_builder = async {
+    let segmented_changelog_sql_connections = async {
         sql_factory
-            .open::<SegmentedChangelogBuilder>()
+            .open::<SegmentedChangelogSqlConnections>()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::SegmentedChangelog))
     };
@@ -609,7 +610,7 @@ async fn new_development<'a>(
         bonsai_hg_mapping,
         hg_mutation_store,
         phases_factory,
-        segmented_changelog_builder,
+        segmented_changelog_sql_connections,
     ) = try_join!(
         bookmarks,
         filenodes_builder,
@@ -620,36 +621,28 @@ async fn new_development<'a>(
         bonsai_hg_mapping,
         hg_mutation_store,
         phases_factory,
-        segmented_changelog_builder,
+        segmented_changelog_sql_connections,
     )?;
 
     let censored_scuba_builder = get_censored_scuba_builder(fb, censored_scuba_params)?;
     let changesets = Arc::new(changesets);
-    let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
+    let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+        Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
     let repo_blobstore_args =
         RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, censored_scuba_builder);
-    let segmented_changelog_builder = segmented_changelog_builder
-        .with_repo_id(repoid)
-        .with_changeset_fetcher(changeset_fetcher.clone())
-        .with_blobstore(Arc::new(repo_blobstore_args.repo_blobstore_clone()))
-        .with_bookmarks(Arc::clone(&bookmarks));
-    let segmented_changelog: Arc<dyn SegmentedChangelog> = if !segmented_changelog_config.enabled {
-        Arc::new(segmented_changelog_builder.build_disabled())
-    } else {
-        if segmented_changelog_config.is_update_ondemand_start_from_save() {
-            let ctx = CoreContext::new_with_logger(fb, logger.clone());
-            let dag = segmented_changelog_builder
-                .build_on_demand_update_start_from_save(&ctx)
-                .await?;
-            Arc::new(dag)
-        } else if segmented_changelog_config.is_update_ondemand() {
-            Arc::new(segmented_changelog_builder.build_on_demand_update()?)
-        } else if segmented_changelog_config.is_update_always_download_save() {
-            Arc::new(segmented_changelog_builder.build_manager()?)
-        } else {
-            Arc::new(segmented_changelog_builder.build_disabled())
-        }
-    };
+    let segmented_changelog: Arc<dyn SegmentedChangelog> = new_server_segmented_changelog(
+        fb,
+        &CoreContext::new_with_logger(fb, logger.clone()),
+        repoid,
+        segmented_changelog_config,
+        segmented_changelog_sql_connections,
+        Arc::clone(&changeset_fetcher),
+        Arc::clone(&bookmarks),
+        Arc::new(repo_blobstore_args.repo_blobstore_clone()),
+        None,
+    )
+    .await
+    .context("error building segmented changelog")?;
 
     Ok(blobrepo_new(
         bookmarks,
@@ -728,9 +721,9 @@ async fn new_production<'a>(
         blobstore
     };
 
-    let segmented_changelog_builder = async {
+    let segmented_changelog_sql_connections = async {
         sql_factory
-            .open::<SegmentedChangelogBuilder>()
+            .open::<SegmentedChangelogSqlConnections>()
             .await
             .context(ErrorKind::StateOpen(StateOpenError::SegmentedChangelog))
     };
@@ -745,7 +738,7 @@ async fn new_production<'a>(
         bonsai_svnrev_mapping,
         bonsai_hg_mapping,
         hg_mutation_store,
-        segmented_changelog_builder,
+        segmented_changelog_sql_connections,
     ) = try_join!(
         filenodes_builder,
         phases_factory,
@@ -756,7 +749,7 @@ async fn new_production<'a>(
         bonsai_svnrev_mapping,
         bonsai_hg_mapping,
         hg_mutation_store,
-        segmented_changelog_builder,
+        segmented_changelog_sql_connections,
     )?;
 
     filenodes_builder.enable_caching(
@@ -783,7 +776,8 @@ async fn new_production<'a>(
         Arc::new(changesets),
         changesets_cache_pool,
     ));
-    let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
+    let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+        Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
 
     let bonsai_globalrev_mapping = CachingBonsaiGlobalrevMapping::new(
         fb,
@@ -807,29 +801,19 @@ async fn new_production<'a>(
     let censored_scuba_builder = get_censored_scuba_builder(fb, censored_scuba_params)?;
     let repo_blobstore_args =
         RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, censored_scuba_builder);
-    let segmented_changelog: Arc<dyn SegmentedChangelog> = if !segmented_changelog_config.enabled {
-        Arc::new(segmented_changelog_builder.build_disabled())
-    } else {
-        let segmented_changelog_builder = segmented_changelog_builder
-            .with_repo_id(repoid)
-            .with_changeset_fetcher(changeset_fetcher.clone())
-            .with_blobstore(Arc::new(repo_blobstore_args.repo_blobstore_clone()))
-            .with_bookmarks(Arc::clone(&bookmarks))
-            .with_caching(fb, get_volatile_pool("segmented_changelog")?);
-        if segmented_changelog_config.is_update_ondemand_start_from_save() {
-            let ctx = CoreContext::new_with_logger(fb, logger.clone());
-            let dag = segmented_changelog_builder
-                .build_on_demand_update_start_from_save(&ctx)
-                .await?;
-            Arc::new(dag)
-        } else if segmented_changelog_config.is_update_ondemand() {
-            Arc::new(segmented_changelog_builder.build_on_demand_update()?)
-        } else if segmented_changelog_config.is_update_always_download_save() {
-            Arc::new(segmented_changelog_builder.build_manager()?)
-        } else {
-            Arc::new(segmented_changelog_builder.build_disabled())
-        }
-    };
+    let segmented_changelog: Arc<dyn SegmentedChangelog> = new_server_segmented_changelog(
+        fb,
+        &CoreContext::new_with_logger(fb, logger.clone()),
+        repoid,
+        segmented_changelog_config,
+        segmented_changelog_sql_connections,
+        Arc::clone(&changeset_fetcher),
+        Arc::clone(&bookmarks),
+        Arc::new(repo_blobstore_args.repo_blobstore_clone()),
+        Some(get_volatile_pool("segmented_changelog")?),
+    )
+    .await
+    .context("error building segmented changelog")?;
 
     Ok(blobrepo_new(
         bookmarks,

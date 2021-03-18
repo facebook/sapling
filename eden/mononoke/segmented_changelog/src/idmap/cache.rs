@@ -287,7 +287,7 @@ mod tests {
     use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
     use sql_construct::SqlConstruct;
 
-    use crate::builder::SegmentedChangelogBuilder;
+    use crate::builder::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
 
     #[fbinit::test]
     async fn test_no_key_colisions(fb: FacebookInit) -> Result<()> {
@@ -298,7 +298,8 @@ mod tests {
             CachelibHandler::create_mock(),
             MemcacheHandler::create_mock(),
         );
-        let mut builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+        let mut builder = SegmentedChangelogBuilder::new()
+            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
             .with_repo_id(RepositoryId::new(1))
             .with_cache_handlers(cache_handlers.clone());
         let idmap1 = builder.clone().build_idmap()?;

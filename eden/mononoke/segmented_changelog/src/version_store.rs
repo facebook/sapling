@@ -94,12 +94,13 @@ mod tests {
 
     use sql_construct::SqlConstruct;
 
-    use crate::builder::SegmentedChangelogBuilder;
+    use crate::builder::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
 
     #[fbinit::test]
     async fn test_more_than_one_repo(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?;
+        let builder = SegmentedChangelogBuilder::new()
+            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?);
         let build_version = |id| {
             builder
                 .clone()

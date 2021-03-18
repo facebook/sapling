@@ -22,7 +22,7 @@ use cmdlib::{
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::MetadataDatabaseConfig;
-use segmented_changelog::SegmentedChangelogBuilder;
+use segmented_changelog::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 
@@ -105,16 +105,18 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     .await
     .context("constructing metadata sql factory")?;
 
-    let mut segmented_changelog_builder = sql_factory
-        .open::<SegmentedChangelogBuilder>()
+    let segmented_changelog_sql_connections = sql_factory
+        .open::<SegmentedChangelogSqlConnections>()
         .await
-        .context("constructing segmented changelog builder")?;
+        .context("error opening segmented changelog sql connections")?;
 
+    let mut segmented_changelog_builder = SegmentedChangelogBuilder::new();
     if let Some(idmap_version) = idmap_version_arg {
         segmented_changelog_builder = segmented_changelog_builder.with_idmap_version(idmap_version);
     }
 
     let segmented_changelog_seeder = segmented_changelog_builder
+        .with_sql_connections(segmented_changelog_sql_connections)
         .with_blobrepo(&repo)
         .with_replica_lag_monitor(replica_lag_monitor)
         .build_seeder(&ctx)

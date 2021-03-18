@@ -27,7 +27,7 @@ use revset::AncestorsNodeStream;
 use sql_construct::SqlConstruct;
 use tests_utils::resolve_cs_id;
 
-use crate::builder::SegmentedChangelogBuilder;
+use crate::builder::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::CacheHandlers;
 use crate::owned::OwnedSegmentedChangelog;
@@ -90,7 +90,8 @@ pub async fn new_build_all_from_blobrepo(
     blobrepo: &BlobRepo,
     head: ChangesetId,
 ) -> Result<OwnedSegmentedChangelog> {
-    let seeder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+    let seeder = SegmentedChangelogBuilder::new()
+        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
         .with_blobrepo(blobrepo)
         .build_seeder(ctx)
         .await?;
@@ -369,7 +370,8 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
     {
         // linear
         let blobrepo = linear::getrepo(fb).await;
-        let sc = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+        let sc = SegmentedChangelogBuilder::new()
+            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
             .with_blobrepo(&blobrepo)
             .build_on_demand_update()?;
 
@@ -386,7 +388,8 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
     {
         // merge_uneven
         let blobrepo = merge_uneven::getrepo(fb).await;
-        let sc = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+        let sc = SegmentedChangelogBuilder::new()
+            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
             .with_blobrepo(&blobrepo)
             .build_on_demand_update()?;
 
@@ -413,7 +416,9 @@ async fn test_build_calls_together(fb: FacebookInit) -> Result<()> {
         resolve_cs_id(&ctx, &blobrepo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
     setup_phases(&ctx, &blobrepo, known_cs).await?;
 
-    let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?.with_blobrepo(&blobrepo);
+    let builder = SegmentedChangelogBuilder::new()
+        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
+        .with_blobrepo(&blobrepo);
     let seeder = builder.clone().build_seeder(&ctx).await?;
     let (sc, _) = seeder.build_from_scratch(&ctx, known_cs).await?;
 
@@ -490,7 +495,8 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
     // commit 5
     let cs5 = resolve_cs_id(&ctx, &blobrepo, "cb15ca4a43a59acff5388cea9648c162afde8372").await?;
 
-    let sc = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+    let sc = SegmentedChangelogBuilder::new()
+        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
         .with_blobrepo(&blobrepo)
         .build_on_demand_update()?;
 
@@ -502,7 +508,8 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
     .await?;
     assert_eq!(answer, vec![cs5, cs5, cs5]);
 
-    let sc = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+    let sc = SegmentedChangelogBuilder::new()
+        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
         .with_blobrepo(&blobrepo)
         .build_on_demand_update()?;
 
@@ -538,7 +545,9 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
 
     setup_phases(&ctx, &blobrepo, master_cs).await?;
 
-    let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?.with_blobrepo(&blobrepo);
+    let builder = SegmentedChangelogBuilder::new()
+        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
+        .with_blobrepo(&blobrepo);
     let seeder = builder.clone().build_seeder(&ctx).await?;
     let (sc, _) = seeder.build_from_scratch(&ctx, master_cs).await?;
 
@@ -629,7 +638,8 @@ async fn test_caching(fb: FacebookInit) -> Result<()> {
     // It's easier to reason about cache hits and sets when the dag is already built
     let head = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
     setup_phases(&ctx, &blobrepo, head).await?;
-    let seeder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+    let seeder = SegmentedChangelogBuilder::new()
+        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
         .with_blobrepo(&blobrepo)
         .with_cache_handlers(cache_handlers)
         .build_seeder(&ctx)
@@ -687,7 +697,8 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
 
     tokio::time::pause();
 
-    let sc = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+    let sc = SegmentedChangelogBuilder::new()
+        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
         .with_blobrepo(&blobrepo)
         .with_update_to_bookmark_period(Duration::from_secs(10))
         .with_bookmark_name(bookmark_name.clone())
@@ -714,7 +725,8 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
 async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
-    let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+    let builder = SegmentedChangelogBuilder::new()
+        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
         .with_blobrepo(&blobrepo)
         .with_bookmark_name(BookmarkName::new("master").unwrap());
 
@@ -742,7 +754,8 @@ async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
 async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
-    let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+    let builder = SegmentedChangelogBuilder::new()
+        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
         .with_blobrepo(&blobrepo)
         .with_bookmark_name(BookmarkName::new("master").unwrap())
         .with_reload_dag_period(Duration::from_secs(10));

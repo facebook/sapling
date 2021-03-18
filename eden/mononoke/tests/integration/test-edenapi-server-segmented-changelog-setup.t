@@ -51,6 +51,7 @@ Populate test repo
   
 
 
+
 Blobimport test repo.
   $ cd ..
   $ blobimport repo-hg/.hg repo
@@ -64,7 +65,6 @@ Start up EdenAPI server.
   $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
   > [segmented_changelog_config]
   > enabled=true
-  > update_algorithm="ondemand_start_from_save"
   > CONFIG
 
   $ mononoke

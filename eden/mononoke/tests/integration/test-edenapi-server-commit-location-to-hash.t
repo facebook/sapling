@@ -51,14 +51,14 @@ Populate test repo
   
 
 
-
 Blobimport test repo.
   $ cd ..
   $ blobimport repo-hg/.hg repo
 
 Start up EdenAPI server.
-  $ SEGMENTED_CHANGELOG_ENABLE=1 SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE=1 setup_mononoke_config
-  $ start_edenapi_server
+  $ SEGMENTED_CHANGELOG_ENABLE=1 setup_mononoke_config
+  $ mononoke
+  $ wait_for_mononoke
 
 Create and send file data request.
   $ edenapi_make_req commit-location-to-hash > req.cbor <<EOF
@@ -112,8 +112,7 @@ Create and send file data request.
       ],
   }
 
-
-  $ sslcurl -s "$EDENAPI_URI/repo/commit/location_to_hash" --data-binary @req.cbor > res.cbor
+  $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/commit/location_to_hash" --data-binary @req.cbor > res.cbor
 
 Check files in response.
   $ edenapi_read_res commit-location-to-hash res.cbor

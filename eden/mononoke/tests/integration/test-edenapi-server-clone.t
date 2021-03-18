@@ -7,16 +7,22 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 Set up local hgrc and Mononoke config.
-  $ SEGMENTED_CHANGELOG_ALWAYS_DOWNLOAD_SAVE=1 quiet default_setup_blobimport
+  $ quiet default_setup_blobimport
   $ setup_configerator_configs
 
 Build up segmented changelog
   $ quiet segmented_changelog_seeder --head=master_bookmark
 
-Start up EdenAPI server.
-  $ start_edenapi_server
+Enable Segmented Changelog
+  $ cat >> "$TESTTMP/mononoke-config/repos/repo/server.toml" <<CONFIG
+  > [segmented_changelog_config]
+  > enabled=true
+  > CONFIG
 
-  $ sslcurl -s "$EDENAPI_URI/repo/clone" -X POST > res.cbor
+  $ mononoke
+  $ wait_for_mononoke
+
+  $ sslcurl -s "https://localhost:$MONONOKE_SOCKET/edenapi/repo/clone" -X POST > res.cbor
 
 Check files in response.
   $ edenapi_read_res clone res.cbor

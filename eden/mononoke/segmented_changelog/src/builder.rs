@@ -17,6 +17,7 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use dag::InProcessIdDag;
 use fbinit::FacebookInit;
+use metaconfig_types::SegmentedChangelogConfig;
 use mononoke_types::RepositoryId;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
@@ -34,7 +35,83 @@ use crate::seeder::SegmentedChangelogSeeder;
 use crate::tailer::SegmentedChangelogTailer;
 use crate::types::IdMapVersion;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::DisabledSegmentedChangelog;
+use crate::{DisabledSegmentedChangelog, SegmentedChangelog};
+
+#[derive(Clone)]
+pub struct SegmentedChangelogSqlConnections(SqlConnections);
+
+impl SqlConstruct for SegmentedChangelogSqlConnections {
+    const LABEL: &'static str = "segmented_changelog";
+
+    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-segmented-changelog.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
+        Self(connections)
+    }
+}
+
+impl SqlConstructFromMetadataDatabaseConfig for SegmentedChangelogSqlConnections {}
+
+pub async fn new_server_segmented_changelog(
+    fb: FacebookInit,
+    ctx: &CoreContext,
+    repo_id: RepositoryId,
+    config: SegmentedChangelogConfig,
+    connections: SegmentedChangelogSqlConnections,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    bookmarks: Arc<dyn Bookmarks>,
+    blobstore: Arc<dyn Blobstore>,
+    cache_pool: Option<cachelib::VolatileLruCachePool>,
+) -> Result<Arc<dyn SegmentedChangelog>> {
+    if !config.enabled {
+        return Ok(Arc::new(DisabledSegmentedChangelog::new()));
+    }
+    if config.skip_dag_load_at_startup {
+        // This is a special case. We build Segmented Changelog using an in process iddag and idmap
+        // and update then on demand.
+        // All other configuration is ignored, for example there won't be periodic updates
+        // following a bookmark.
+        return Ok(Arc::new(OnDemandUpdateSegmentedChangelog::new(
+            repo_id,
+            InProcessIdDag::new_in_process(),
+            Arc::new(ConcurrentMemIdMap::new()),
+            changeset_fetcher,
+        )));
+    }
+    let mut idmap_factory = IdMapFactory::new(
+        connections.0.clone(),
+        Arc::new(NoReplicaLagMonitor()),
+        repo_id,
+    );
+    if let Some(pool) = cache_pool {
+        idmap_factory = idmap_factory.with_cache_handlers(CacheHandlers::prod(fb, pool));
+    }
+    let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
+    let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore);
+    let bookmarks_name = BookmarkName::new(&config.master_bookmark).with_context(|| {
+        format!(
+            "failed to interpret {} as bookmark for repo {}",
+            config.master_bookmark, repo_id
+        )
+    })?;
+    let manager = SegmentedChangelogManager::new(
+        repo_id,
+        sc_version_store,
+        iddag_save_store,
+        idmap_factory,
+        changeset_fetcher,
+        bookmarks,
+        bookmarks_name,
+        config.update_to_master_bookmark_period,
+    );
+    let sc = match config.reload_dag_save_period {
+        None => manager.load(ctx).await?,
+        Some(reload_period) => {
+            Arc::new(PeriodicReloadSegmentedChangelog::start(ctx, manager, reload_period).await?)
+        }
+    };
+    Ok(sc)
+}
 
 /// SegmentedChangelog instatiation helper.
 /// It works together with SegmentedChangelogConfig and BlobRepoFactory to produce a
@@ -45,7 +122,7 @@ use crate::DisabledSegmentedChangelog;
 ///   update_algorithm = 'ondemand' -> OnDemandUpdateSegmentedChangelog
 #[derive(Default, Clone)]
 pub struct SegmentedChangelogBuilder {
-    connections: Option<SqlConnections>,
+    connections: Option<SegmentedChangelogSqlConnections>,
     repo_id: Option<RepositoryId>,
     idmap_version: Option<IdMapVersion>,
     replica_lag_monitor: Option<Arc<dyn ReplicaLagMonitor>>,
@@ -58,31 +135,6 @@ pub struct SegmentedChangelogBuilder {
     update_to_bookmark_period: Option<Duration>,
     reload_dag_period: Option<Duration>,
 }
-
-impl SqlConstruct for SegmentedChangelogBuilder {
-    const LABEL: &'static str = "segmented_changelog";
-
-    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-segmented-changelog.sql");
-
-    fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self {
-            connections: Some(connections),
-            repo_id: None,
-            idmap_version: None,
-            replica_lag_monitor: None,
-            changeset_fetcher: None,
-            changeset_bulk_fetch: None,
-            blobstore: None,
-            bookmarks: None,
-            bookmark_name: None,
-            cache_handlers: None,
-            update_to_bookmark_period: None,
-            reload_dag_period: None,
-        }
-    }
-}
-
-impl SqlConstructFromMetadataDatabaseConfig for SegmentedChangelogBuilder {}
 
 impl SegmentedChangelogBuilder {
     pub fn new() -> Self {
@@ -198,7 +250,7 @@ impl SegmentedChangelogBuilder {
         Ok(tailer)
     }
 
-    pub fn with_sql_connections(mut self, connections: SqlConnections) -> Self {
+    pub fn with_sql_connections(mut self, connections: SegmentedChangelogSqlConnections) -> Self {
         self.connections = Some(connections);
         self
     }
@@ -388,7 +440,7 @@ impl SegmentedChangelogBuilder {
                 "SegmentedChangelog cannot be built without SqlConnections being specified."
             )
         })?;
-        Ok(connections.clone())
+        Ok(connections.0.clone())
     }
 
     fn blobstore(&mut self) -> Result<Arc<dyn Blobstore>> {

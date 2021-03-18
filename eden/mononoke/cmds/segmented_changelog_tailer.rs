@@ -24,7 +24,7 @@ use cmdlib::{
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::MetadataDatabaseConfig;
-use segmented_changelog::SegmentedChangelogBuilder;
+use segmented_changelog::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 
@@ -130,11 +130,14 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         .await
         .with_context(|| format!("repo {}: constructing metadata sql factory", repo_id))?;
 
-        let segmented_changelog_builder = sql_factory
-            .open::<SegmentedChangelogBuilder>()
+        let segmented_changelog_sql_connections = sql_factory
+            .open::<SegmentedChangelogSqlConnections>()
             .await
             .with_context(|| {
-                format!("repo {}: constructing segmented changelog builder", repo_id)
+                format!(
+                    "repo {}: error constructing segmented changelog sql connections",
+                    repo_id
+                )
             })?;
 
         // This is a bit weird from the dependency point of view but I think that it is best. The
@@ -142,7 +145,8 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         // way.  On the other hand reconstructing the dependencies for SegmentedChangelog without
         // BlobRepo is probably prone to more problems from the maintenance perspective.
         let blobrepo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), repo_id, matches).await?;
-        let segmented_changelog_tailer = segmented_changelog_builder
+        let segmented_changelog_tailer = SegmentedChangelogBuilder::new()
+            .with_sql_connections(segmented_changelog_sql_connections)
             .with_blobrepo(&blobrepo)
             .with_replica_lag_monitor(replica_lag_monitor)
             .with_bookmark_name(track_bookmark.clone())

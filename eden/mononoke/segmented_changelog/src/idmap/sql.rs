@@ -360,11 +360,13 @@ mod tests {
     };
     use sql_construct::SqlConstruct;
 
-    use crate::builder::SegmentedChangelogBuilder;
+    use crate::builder::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
 
     fn new_sql_idmap() -> Result<SqlIdMap> {
         let repo_id = RepositoryId::new(0);
-        let mut builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?.with_repo_id(repo_id);
+        let mut builder = SegmentedChangelogBuilder::new()
+            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
+            .with_repo_id(repo_id);
         builder.build_sql_idmap()
     }
 
@@ -492,7 +494,7 @@ mod tests {
     async fn test_find_many_changeset_ids_leader_fallback(fb: FacebookInit) -> Result<()> {
         fn conn() -> Result<Connection> {
             let con = SqliteConnection::open_in_memory()?;
-            con.execute_batch(SegmentedChangelogBuilder::CREATION_QUERY)?;
+            con.execute_batch(SegmentedChangelogSqlConnections::CREATION_QUERY)?;
             Ok(Connection::with_sqlite(con))
         }
 
@@ -507,8 +509,9 @@ mod tests {
             read_master_connection: leader,
         };
 
+        let sc_sql_connections = SegmentedChangelogSqlConnections::from_sql_connections(conns);
         let idmap = SegmentedChangelogBuilder::new()
-            .with_sql_connections(conns)
+            .with_sql_connections(sc_sql_connections)
             .with_repo_id(RepositoryId::new(0))
             .build_sql_idmap()?;
 
@@ -568,7 +571,8 @@ mod tests {
     #[fbinit::test]
     async fn test_many_repo_id_many_versions(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?;
+        let builder = SegmentedChangelogBuilder::new()
+            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?);
 
         let idmap11 = builder
             .clone()
