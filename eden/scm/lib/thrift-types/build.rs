@@ -90,6 +90,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1"
 async-trait = "0.1"
+const-cstr = "0.3.0"
 fbthrift = {{ package = "fbthrift_eden_oss", path = "../../third-party/rust/fbthrift" }}
 futures = "0.3"
 serde = {{ version = "1", features = ["derive"] }}

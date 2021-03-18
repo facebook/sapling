@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+const-cstr = "0.3.0"
 eden = { path = "eden" }
 eden_config = { path = "eden_config" }
 fb303 = { path = "fb303" }
