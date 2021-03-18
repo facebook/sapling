@@ -133,9 +133,9 @@ impl SegmentedChangelogSeeder {
 
         let (mem_idmap, head_vertex) = update::assign_ids(ctx, &start_state, head, low_vertex)?;
 
-        update::update_idmap(ctx, &idmap, &mem_idmap).await?;
 
         update::update_iddag(ctx, &mut iddag, &start_state, &mem_idmap, head_vertex)?;
+        update::update_idmap(ctx, &idmap, &mem_idmap).await?;
 
         let owned = OwnedSegmentedChangelog::new(iddag, idmap);
         Ok((owned, head_vertex))
