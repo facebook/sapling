@@ -582,8 +582,9 @@ void PrivHelperServer::nfsMount(
   // Prepare the flags and options to pass to mount(2).
   // Since each mount point will have its own NFS server, we need to manually
   // specify it.
+  // TODO(xavierd): remove nordirplus as this will likely improve performance.
   auto mountOpts = fmt::format(
-      "addr=127.0.0.1,vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},noresvport,nolock",
+      "addr=127.0.0.1,vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},noresvport,nolock,nordirplus",
       nfsdPort,
       mountdPort);
 
