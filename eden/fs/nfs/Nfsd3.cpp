@@ -1001,12 +1001,81 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::link(
       });
 }
 
+/**
+ * Verify that the passed in cookie verifier is valid.
+ *
+ * The verifier allows the server to know whether the directory was modified
+ * across readdir calls, and to restart if this is the case.
+ *
+ * TODO(xavierd): For now, this only checks that the verifier is 0, in the
+ * future, we may want to compare it against a global counter that is
+ * incremented for each update operations. The assumption being that: "The
+ * client should be careful to avoid holding directory entry cookies across
+ * operations that modify the directory contents, such as REMOVE and CREATE.",
+ * thus we only need to protect against concurrent update and readdir
+ * operations since there is only one client per mount.
+ */
+bool isReaddirCookieverfValid(uint64_t verf) {
+  return verf == 0;
+}
+
+/**
+ * Return the current global cookie.
+ *
+ * See the documentation above for the meaning of the cookie verifier.
+ */
+uint64_t getReaddirCookieverf() {
+  return 0;
+}
+
 folly::Future<folly::Unit> Nfsd3ServerProcessor::readdir(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<READDIR3args>::deserialize(deser);
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("readdir");
+
+  if (!isReaddirCookieverfValid(args.cookieverf)) {
+    READDIR3res res{{{nfsstat3::NFS3ERR_BAD_COOKIE, READDIR3resfail{}}}};
+    XdrTrait<READDIR3res>::serialize(ser, res);
+    return folly::unit;
+  }
+
+  return dispatcher_->readdir(args.dir.ino, args.cookie, args.count, *context)
+      .thenTry([this, ino = args.dir.ino, ser = std::move(ser)](
+                   folly::Try<NfsDispatcher::ReaddirRes> try_) mutable {
+        return dispatcher_->getattr(ino, *context)
+            .thenTry([ser = std::move(ser), try_ = std::move(try_)](
+                         folly::Try<struct stat> tryStat) mutable {
+              if (try_.hasException()) {
+                READDIR3res res{
+                    {{exceptionToNfsError(try_.exception()),
+                      READDIR3resfail{statToPostOpAttr(std::move(tryStat))}}}};
+                XdrTrait<READDIR3res>::serialize(ser, res);
+              } else {
+                auto readdirRes = std::move(try_).value();
+
+                READDIR3res res{
+                    {{nfsstat3::NFS3_OK,
+                      READDIR3resok{
+                          /*dir_attributes*/ statToPostOpAttr(
+                              std::move(tryStat)),
+                          /*cookieverf*/ getReaddirCookieverf(),
+                          /*reply*/
+                          dirlist3{
+                              /*entries*/ std::move(readdirRes)
+                                  .entries.extractList(),
+                              /*eof*/ readdirRes.isEof,
+                          }}}}};
+                XdrTrait<READDIR3res>::serialize(ser, res);
+              }
+              return folly::unit;
+            });
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::readdirplus(

@@ -80,8 +80,21 @@ target_link_libraries(
   PUBLIC
     eden_inodes_inodenumber
     eden_inode_metadata
+    eden_nfs_dirlist
     eden_store
     eden_utils
+)
+
+add_library(
+  eden_nfs_dirlist STATIC
+    "DirList.cpp" "DirList.h"
+)
+
+target_link_libraries(
+  eden_nfs_dirlist
+  PUBLIC
+    eden_nfs_nfsd_rpc
+    eden_inodes_inodenumber
 )
 
 add_subdirectory(portmap)

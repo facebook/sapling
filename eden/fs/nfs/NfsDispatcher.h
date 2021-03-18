@@ -19,6 +19,7 @@
 
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/nfs/DirList.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -273,6 +274,31 @@ class NfsDispatcher {
       PathComponent fromName,
       InodeNumber toIno,
       PathComponent toName,
+      ObjectFetchContext& context) = 0;
+
+  /**
+   * Return value of the readdir method.
+   */
+  struct ReaddirRes {
+    /** List of directory entries */
+    NfsDirList entries;
+    /** Has the readdir reached the end of the directory */
+    bool isEof;
+  };
+
+  /**
+   * Read the content of the directory referenced by the InodeNumber dir. A
+   * maximum of count bytes will be added to the returned NfsDirList.
+   *
+   * For very large directories, it is possible that more than count bytes are
+   * necessary to return all the directory entries. In this case, a subsequent
+   * readdir call will be made by the NFS client to restart the enumeration at
+   * offset. The first readdir will have an offset of 0.
+   */
+  virtual folly::Future<ReaddirRes> readdir(
+      InodeNumber dir,
+      off_t offset,
+      uint32_t count,
       ObjectFetchContext& context) = 0;
 
   virtual folly::Future<struct statfs> statfs(

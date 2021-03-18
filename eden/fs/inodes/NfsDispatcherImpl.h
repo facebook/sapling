@@ -83,6 +83,12 @@ class NfsDispatcherImpl : public NfsDispatcher {
       PathComponent toName,
       ObjectFetchContext& context) override;
 
+  folly::Future<NfsDispatcher::ReaddirRes> readdir(
+      InodeNumber dir,
+      off_t offset,
+      uint32_t count,
+      ObjectFetchContext& context) override;
+
   folly::Future<struct statfs> statfs(
       InodeNumber ino,
       ObjectFetchContext& context) override;

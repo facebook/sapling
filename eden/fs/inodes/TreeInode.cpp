@@ -1791,10 +1791,8 @@ void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
 }
 
 #ifndef _WIN32
-FuseDirList TreeInode::fuseReaddir(
-    FuseDirList&& list,
-    off_t off,
-    ObjectFetchContext& context) {
+template <typename Fn>
+bool TreeInode::readdirImpl(off_t off, ObjectFetchContext& context, Fn add) {
   /*
    * Implementing readdir correctly in the presence of concurrent modifications
    * to the directory is nontrivial. This function will be called multiple
@@ -1851,9 +1849,9 @@ FuseDirList TreeInode::fuseReaddir(
   //   2: start after ..
   //   2+N: start after inode N
 
-  if (off <= 0) {
-    if (!list.add(".", getNodeId().get(), dtype_t::Dir, 1)) {
-      return std::move(list);
+  if (off == 0) {
+    if (!add(".", DirEntry{dtype_to_mode(dtype_t::Dir), getNodeId()}, 1)) {
+      return false;
     }
   }
   if (off <= 1) {
@@ -1864,8 +1862,8 @@ FuseDirList TreeInode::fuseReaddir(
     // For the root of the mount point, just add its own inode ID as its parent.
     // FUSE seems to overwrite the parent inode number on the root dir anyway.
     auto parentNodeId = parent ? parent->getNodeId() : getNodeId();
-    if (!list.add("..", parentNodeId.get(), dtype_t::Dir, 2)) {
-      return std::move(list);
+    if (!add("..", DirEntry{dtype_to_mode(dtype_t::Dir), parentNodeId}, 2)) {
+      return false;
     }
   }
 
@@ -1892,16 +1890,42 @@ FuseDirList TreeInode::fuseReaddir(
     auto& [name, entry] = entries.begin()[indices.back().second];
     indices.pop_back();
 
-    if (!list.add(
-            name.stringPiece(),
-            entry.getInodeNumber().get(),
-            entry.getDtype(),
-            entry.getInodeNumber().get() + 2)) {
+    if (!add(name.stringPiece(), entry, entry.getInodeNumber().get() + 2)) {
       break;
     }
   }
 
+  return indices.size() == 0;
+}
+
+FuseDirList TreeInode::fuseReaddir(
+    FuseDirList&& list,
+    off_t off,
+    ObjectFetchContext& context) {
+  readdirImpl(
+      off,
+      context,
+      [&list](StringPiece name, const DirEntry& entry, uint64_t offset) {
+        return list.add(
+            name, entry.getInodeNumber().get(), entry.getDtype(), offset);
+      });
+
   return std::move(list);
+}
+
+std::tuple<NfsDirList, bool> TreeInode::nfsReaddir(
+    NfsDirList&& list,
+    off_t off,
+    ObjectFetchContext& context) {
+  updateAtime();
+  bool isEof = readdirImpl(
+      off,
+      context,
+      [&list](StringPiece name, const DirEntry& entry, uint64_t offset) {
+        return list.add(name, entry.getInodeNumber(), offset);
+      });
+
+  return {std::move(list), isEof};
 }
 
 #else

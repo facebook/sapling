@@ -486,7 +486,7 @@ struct XdrOptionalVariant : public XdrVariant<UnionTypeT, TrueVariantT> {
   static constexpr UnionType TestValue = TestValueV;
 
   XdrOptionalVariant() = default;
-  /* implicit */ XdrOptionalVariant(TrueVariant&& set)
+  /* implicit */ constexpr XdrOptionalVariant(TrueVariant&& set)
       : XdrVariant<UnionType, TrueVariantT>{TestValue, std::move(set)} {}
 };
 

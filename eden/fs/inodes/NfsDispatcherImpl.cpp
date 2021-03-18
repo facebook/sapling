@@ -223,6 +223,19 @@ folly::Future<NfsDispatcher::RenameRes> NfsDispatcherImpl::rename(
       });
 }
 
+folly::Future<NfsDispatcher::ReaddirRes> NfsDispatcherImpl::readdir(
+    InodeNumber dir,
+    off_t offset,
+    uint32_t count,
+    ObjectFetchContext& context) {
+  return inodeMap_->lookupTreeInode(dir).thenValue(
+      [&context, offset, count](const TreeInodePtr& inode) {
+        auto [dirList, isEof] =
+            inode->nfsReaddir(NfsDirList{count}, offset, context);
+        return ReaddirRes{std::move(dirList), isEof};
+      });
+}
+
 folly::Future<struct statfs> NfsDispatcherImpl::statfs(
     InodeNumber /*dir*/,
     ObjectFetchContext& /*context*/) {

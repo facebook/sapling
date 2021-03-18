@@ -22,6 +22,7 @@ class CheckoutAction;
 class CheckoutContext;
 class DiffContext;
 class FuseDirList;
+class NfsDirList;
 class EdenMount;
 class GitIgnoreStack;
 class DiffCallback;
@@ -148,6 +149,16 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 #ifndef _WIN32
   FuseDirList
   fuseReaddir(FuseDirList&& list, off_t off, ObjectFetchContext& context);
+
+  /**
+   * Populate the list with as many directory entries as possible starting from
+   * the inode start.
+   *
+   * Return the filled directory list as well as a boolean indicating if the
+   * listing is complete.
+   */
+  std::tuple<NfsDirList, bool>
+  nfsReaddir(NfsDirList&& list, off_t off, ObjectFetchContext& context);
 #else
   /**
    * The following readdir() is for responding to Projected FS's directory
@@ -495,6 +506,15 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   TreeInodePtr inodePtrFromThis() {
     return TreeInodePtr::newPtrFromExisting(this);
   }
+
+  /**
+   * Helper function to implement both fuseReaddir and nfsReaddir.
+   *
+   * Returns a boolean that indicates if readdir finished reading the entire
+   * directory.
+   */
+  template <typename Fn>
+  bool readdirImpl(off_t offset, ObjectFetchContext& context, Fn add);
 
   /**
    * createImpl() is a helper function for creating new children inodes.
