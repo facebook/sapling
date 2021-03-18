@@ -496,7 +496,8 @@ fn warn_expensive_getbundle(ctx: &CoreContext) {
         ctx.logger(),
         "your repository is out of date and pulling new commits might take a long time. \
         Please consider recloning your repository since it might be much faster. \
-        See instructions in https://fburl.com/wiki/brz1ysn7"
+        Try the `--reclone` option on `fbclone` and see more instructions in \
+        https://fburl.com/wiki/brz1ysn7."
         ; o!("remote" => "true")
     );
 }
