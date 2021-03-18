@@ -1,5 +1,6 @@
 #chg-compatible
 
+  $ configure dummyssh
   $ hg init repo
   $ cd repo
 
@@ -44,3 +45,28 @@ Order relative to --config
 Attribution works
   $ hg config --configfile $TESTTMP/simple.rc mysection --debug
   $TESTTMP/simple.rc: mysection.myname=myvalue
+
+Cloning adds --configfile values to .hg/hgrc
+  $ cd ..
+  $ hg clone ssh://user@dummy/repo repo2 --configfile $TESTTMP/simple.rc --configfile $TESTTMP/other.rc
+  no changes found
+  updating to branch default
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat repo2/.hg/hgrc
+  # example repository config (see 'hg help config' for more info)
+  [paths]
+  default = ssh://user@dummy/repo
+  
+  # path aliases to other clones of this repo in URLs or filesystem paths
+  # (see 'hg help config.paths' for more info)
+  #
+  # default:pushurl = ssh://jdoe@example.net/hg/jdoes-fork
+  # my-fork         = ssh://jdoe@example.net/hg/jdoes-fork
+  # my-clone        = /home/jdoe/jdoes-clone
+  
+  [ui]
+  # name and email (local to this repository, optional), e.g.
+  # username = Jane Doe <jdoe@example.com>
+  
+  %include $TESTTMP/simple.rc
+  %include $TESTTMP/other.rc

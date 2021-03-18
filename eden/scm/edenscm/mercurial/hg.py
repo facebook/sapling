@@ -493,7 +493,7 @@ def clone(
         abspath = os.path.abspath(util.urllocalpath(origsource))
 
     if destrepo:
-        _writehgrc(destrepo, abspath)
+        _writehgrc(destrepo, abspath, ui.configlist("_configs", "configfiles"))
 
     # Construct the srcpeer after the destpeer, so we can use the destrepo.ui
     # configs.
@@ -715,7 +715,7 @@ def clone(
     return srcpeer, destpeer
 
 
-def _writehgrc(repo, abspath):
+def _writehgrc(repo, abspath, configfiles):
     with repo.wlock(), repo.lock():
         template = uimod.samplehgrcs["cloned"]
         with repo.localvfs("hgrc", "wb") as fp:
@@ -723,6 +723,14 @@ def _writehgrc(repo, abspath):
             u.passwd = None
             defaulturl = str(u)
             fp.write(pycompat.encodeutf8(util.tonativeeol(template % defaulturl)))
+
+            if configfiles:
+                fp.write(pycompat.encodeutf8(util.tonativeeol("\n")))
+                for file in configfiles:
+                    fp.write(
+                        pycompat.encodeutf8(util.tonativeeol("%%include %s\n" % file))
+                    )
+
         repo.ui.setconfig("paths", "default", defaulturl, "clone")
 
 

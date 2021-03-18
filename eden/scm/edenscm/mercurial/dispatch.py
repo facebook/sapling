@@ -880,9 +880,12 @@ def _parse(ui, args):
 def _parseconfig(ui, earlyoptions):
     """parse the --config options from the command line"""
 
+    configfiles = ui.configlist("_configs", "configfiles", [])
+
     # --config takes prescendence over --configfile, so process
     # --configfile first then --config second.
     for configfile in earlyoptions["configfile"]:
+        configfiles.append(configfile)
         tempconfig = uiconfig.uiconfig()
         tempconfig.readconfig(configfile)
         # Set the configfile values one-by-one so they get put in the internal
@@ -902,6 +905,9 @@ def _parseconfig(ui, earlyoptions):
                 _("malformed --config option: %r " "(use --config section.name=value)")
                 % cfg
             )
+
+    if configfiles:
+        ui.setconfig("_configs", "configfiles", configfiles)
 
 
 def _earlyparseopts(ui, args):
