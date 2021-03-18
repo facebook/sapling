@@ -36,7 +36,10 @@ typedef struct {
 extern PyTypeObject dirstateTupleType;
 #define dirstate_tuple_check(op) (Py_TYPE(op) == &dirstateTupleType)
 
+#ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+
 /* VC9 doesn't include bool and lacks stdbool.h based on my searching */
 #if defined(_MSC_VER) || __STDC_VERSION__ < 199901L
 #define true 1
