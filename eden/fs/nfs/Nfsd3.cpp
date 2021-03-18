@@ -1290,9 +1290,14 @@ std::string formatLink(folly::io::Cursor deser) {
       args.link.name);
 }
 
-std::string formatReaddir(folly::io::Cursor /*deser*/) {
-  // TODO(xavierd): Fill this in.
-  return "";
+std::string formatReaddir(folly::io::Cursor deser) {
+  auto args = XdrTrait<READDIR3args>::deserialize(deser);
+  return fmt::format(
+      FMT_STRING("dir={}, cookie={}, cookieverf={}, count={}"),
+      args.dir.ino,
+      args.cookie,
+      args.cookieverf,
+      args.count);
 }
 
 std::string formatReaddirplus(folly::io::Cursor deser) {

@@ -70,6 +70,11 @@ EDEN_XDR_SERDE_IMPL(RENAME3resfail, fromdir_wcc, todir_wcc);
 EDEN_XDR_SERDE_IMPL(LINK3args, file, link);
 EDEN_XDR_SERDE_IMPL(LINK3resok, file_attributes, linkdir_wcc);
 EDEN_XDR_SERDE_IMPL(LINK3resfail, file_attributes, linkdir_wcc);
+EDEN_XDR_SERDE_IMPL(READDIR3args, dir, cookie, cookieverf, count);
+EDEN_XDR_SERDE_IMPL(entry3, fileid, name, cookie);
+EDEN_XDR_SERDE_IMPL(dirlist3, entries, eof);
+EDEN_XDR_SERDE_IMPL(READDIR3resok, dir_attributes, cookieverf, reply);
+EDEN_XDR_SERDE_IMPL(READDIR3resfail, dir_attributes);
 EDEN_XDR_SERDE_IMPL(
     READDIRPLUS3args,
     dir,
