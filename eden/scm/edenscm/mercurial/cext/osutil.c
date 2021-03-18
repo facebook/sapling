@@ -580,10 +580,10 @@ int attrkind(attrbuf_entry* entry) {
 #define LISTDIR_BATCH_SIZE 50
 
 static PyObject* _listdir_batch(
-    char* path,
+    const char* path,
     int pathlen,
     int keepstat,
-    char* skip,
+    const char* skip,
     bool* fallback) {
   PyObject *list, *elem, *stat = NULL, *ret = NULL;
   int kind, err;
