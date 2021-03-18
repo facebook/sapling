@@ -50,6 +50,15 @@ where
     RUNTIME.spawn(task)
 }
 
+/// Run the provided function on an executor dedicated to blocking operations.
+pub fn spawn_blocking<F, R>(func: F) -> JoinHandle<R>
+where
+    F: FnOnce() -> R + Send + 'static,
+    R: Send + 'static,
+{
+    RUNTIME.spawn_blocking(func)
+}
+
 /// Blocks the current thread while waiting for the computation defined by the Future `f` to
 /// complete.
 ///
