@@ -51,6 +51,9 @@ struct Inner {
     // Whether progress (stderr) and stdout (is likely) sharing output.
     progress_conflict_with_output: bool,
 
+    // Whether progress output is disabled.
+    progress_disabled: bool,
+
     pager_handle: Option<JoinHandle<streampager::Result<()>>>,
 }
 
@@ -221,6 +224,7 @@ impl IO {
             output_on_new_line: true,
             error_on_new_line: true,
             progress_has_content: false,
+            progress_disabled: false,
         };
 
         Self {
@@ -291,6 +295,7 @@ impl IO {
             pager_handle: None,
             progress_conflict_with_output,
             progress_has_content: false,
+            progress_disabled: false,
             output_on_new_line: true,
             error_on_new_line: true,
         };
@@ -386,6 +391,13 @@ impl IO {
 
         Ok(())
     }
+
+    /// Disable progress rendering completely.
+    pub fn disable_progress(&self) -> io::Result<()> {
+        let mut inner = self.inner.lock();
+        inner.progress_disabled = true;
+        inner.set_progress("")
+    }
 }
 
 impl Inner {
@@ -420,6 +432,9 @@ impl Inner {
     fn set_progress(&mut self, data: &str) -> io::Result<()> {
         let inner = self;
         let mut data = data.trim_end();
+        if inner.progress_disabled {
+            data = "";
+        }
         if let Some(ref mut progress) = inner.progress {
             // \x0c (\f) is defined by streampager.
             let data = format!("{}\x0c", data);

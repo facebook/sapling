@@ -87,6 +87,13 @@ py_class!(class IO |py| {
         io.flush().map_pyerr(py)?;
         Ok(PyNone)
     }
+
+    /// Disable progress output.
+    def disable_progress(&self) -> PyResult<PyNone> {
+        let io = RustIO::main().map_pyerr(py)?;
+        io.disable_progress().map_pyerr(py)?;
+        Ok(PyNone)
+    }
 });
 
 impl IO {
