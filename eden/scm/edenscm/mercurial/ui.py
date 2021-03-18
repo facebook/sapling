@@ -913,6 +913,7 @@ class ui(object):
 
         try:
             with self.timeblockedsection("pager"):
+                util.mainio.disable_progress()
                 pager = subprocess.Popen(
                     command,
                     shell=shell,
