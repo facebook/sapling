@@ -180,14 +180,14 @@ pub fn update_iddag(
         })?;
         let mut response = Vec::with_capacity(parents.len());
         for parent in parents {
-            let vertex = match mem_idmap.find_vertex(*parent) {
+            let pv = match mem_idmap.find_vertex(*parent) {
                 None => start_state
                     .assignments
                     .get_vertex(*parent)
                     .map_err(dag::errors::BackendError::Other)?,
                 Some(v) => v,
             };
-            response.push(vertex);
+            response.push(pv);
         }
         Ok(response)
     };
