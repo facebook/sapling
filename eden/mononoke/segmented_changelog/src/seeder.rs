@@ -84,11 +84,6 @@ impl SegmentedChangelogSeeder {
             .set(&ctx, sc_version)
             .await
             .context("error updating segmented changelog version store")?;
-        // Update IdMapVersion
-        self.idmap_version_store
-            .set(&ctx, self.idmap_version)
-            .await
-            .context("updating idmap version")?;
         info!(
             ctx.logger(),
             "successfully finished seeding segmented changelog",
@@ -135,6 +130,13 @@ impl SegmentedChangelogSeeder {
 
 
         update::update_iddag(ctx, &mut iddag, &start_state, &mem_idmap, head_vertex)?;
+
+        // Update IdMapVersion
+        self.idmap_version_store
+            .set(&ctx, self.idmap_version)
+            .await
+            .context("updating idmap version")?;
+
         update::update_idmap(ctx, &idmap, &mem_idmap).await?;
 
         let owned = OwnedSegmentedChangelog::new(iddag, idmap);
