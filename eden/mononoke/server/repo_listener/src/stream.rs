@@ -70,6 +70,7 @@ where
         let res = match res {
             Ok(r) => Ok(r),
             Err(e) if e.kind() == ErrorKind::NotConnected => Ok(()),
+            Err(e) if e.kind() == ErrorKind::BrokenPipe => Ok(()),
             Err(e) => Err(e),
         };
         Poll::Ready(res)
