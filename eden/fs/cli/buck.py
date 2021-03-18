@@ -12,6 +12,7 @@ import sys
 from typing import List
 
 from . import proc_utils
+from .util import get_environment_suitable_for_subprocess
 
 
 def find_buck_projects_in_repo(path: str) -> List[str]:
@@ -57,19 +58,11 @@ def run_buck_command(buck_command: List[str], path: str) -> subprocess.Completed
         with open(os.path.join(path, ".buckversion"), "r") as f:
             buckversion = f.read().strip()
 
-    env = os.environ.copy()
+    env = get_environment_suitable_for_subprocess()
 
     # Buck's version selection is currently having problems on macOS
     if sys.platform != "darwin":
         env["BUCKVERSION"] = buckversion
-
-    # Clean out par related environment so that we don't cause problems
-    # for our child process
-    for k in os.environ.keys():
-        if k in ("DYLD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES", "PAR_LAUNCH_TIMESTAMP"):
-            del env[k]
-        elif k.startswith("FB_PAR") or k.startswith("PYTHON"):
-            del env[k]
 
     return subprocess.run(
         buck_command,

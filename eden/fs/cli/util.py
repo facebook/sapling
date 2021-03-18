@@ -653,3 +653,20 @@ def get_eden_cli_cmd(argv=sys.argv) -> List[str]:
     # be safe to do on all platforms, so for sake of uniformity, do it
     # everywhere.
     return [sys.executable] + argv[:1]
+
+
+# some processes like hg and arc are sensitive about their environments, we
+# clear variables that might make problems for their dynamic linking.
+# note buck is even more sensitive see buck.run_buck_command
+def get_environment_suitable_for_subprocess():
+    env = os.environ.copy()
+
+    # Clean out par related environment so that we don't cause problems
+    # for our child process
+    for k in os.environ.keys():
+        if k in ("DYLD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES", "PAR_LAUNCH_TIMESTAMP"):
+            del env[k]
+        elif k.startswith("FB_PAR") or k.startswith("PYTHON"):
+            del env[k]
+
+    return env

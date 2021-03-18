@@ -56,7 +56,7 @@ from .cmd_util import get_eden_instance, require_checkout
 from .config import EdenCheckout, EdenInstance
 from .stats_print import format_size
 from .subcmd import Subcmd
-from .util import ShutdownError, print_stderr
+from .util import ShutdownError, print_stderr, get_environment_suitable_for_subprocess
 
 
 if sys.platform != "win32":
@@ -241,7 +241,9 @@ from the backing repo directory!
 
         if sys.platform != "win32":
             hgcache_path = subprocess.check_output(
-                ["hg", "config", "remotefilelog.cachepath"], encoding="UTF-8"
+                ["hg", "config", "remotefilelog.cachepath"],
+                encoding="UTF-8",
+                env=get_environment_suitable_for_subprocess(),
             ).rstrip()
 
             command = f"`rm -rf {hgcache_path}/*`"

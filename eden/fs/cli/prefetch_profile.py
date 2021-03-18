@@ -18,7 +18,7 @@ from . import subcmd as subcmd_mod, tabulate
 from .cmd_util import get_eden_instance, require_checkout
 from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
-from .util import get_eden_cli_cmd
+from .util import get_eden_cli_cmd, get_environment_suitable_for_subprocess
 
 
 prefetch_profile_cmd = subcmd_mod.Decorator()
@@ -78,6 +78,7 @@ def make_prefetch_request(
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            env=get_environment_suitable_for_subprocess(),
         )
 
         if bookmarks_result.returncode:
@@ -101,6 +102,7 @@ def make_prefetch_request(
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            env=get_environment_suitable_for_subprocess(),
         )
 
         if commits_result.returncode:
