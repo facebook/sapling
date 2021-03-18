@@ -65,6 +65,12 @@ class NfsDispatcherImpl : public NfsDispatcher {
       mode_t mode,
       ObjectFetchContext& context) override;
 
+  folly::Future<NfsDispatcher::SymlinkRes> symlink(
+      InodeNumber dir,
+      PathComponent name,
+      std::string data,
+      ObjectFetchContext& context) override;
+
   folly::Future<NfsDispatcher::UnlinkRes> unlink(
       InodeNumber dir,
       PathComponent name,

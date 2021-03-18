@@ -200,6 +200,36 @@ class NfsDispatcher {
       ObjectFetchContext& context) = 0;
 
   /**
+   * Return value of the symlink method.
+   */
+  struct SymlinkRes {
+    /** InodeNumber of the created symlink */
+    InodeNumber ino;
+    /** Attributes of the created symlink */
+    struct stat stat;
+
+    /** Attributes of the directory prior to creating the symlink */
+    std::optional<struct stat> preDirStat;
+    /** Attributes of the directory after creating the symlink */
+    std::optional<struct stat> postDirStat;
+  };
+
+  /**
+   * Add a symlink in the directory referenced by the InodeNumber dir. The
+   * symlink will have the name passed in, and will store data. From EdenFS
+   * perspective the data is an opaque value that will be interpreted by the
+   * client.
+   *
+   * For the pre and post dir stat, refer to the documentation of the create
+   * method above.
+   */
+  virtual folly::Future<SymlinkRes> symlink(
+      InodeNumber dir,
+      PathComponent name,
+      std::string data,
+      ObjectFetchContext& context) = 0;
+
+  /**
    * Return value of the unlink method.
    */
   struct UnlinkRes {

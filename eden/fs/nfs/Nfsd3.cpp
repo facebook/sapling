@@ -811,11 +811,54 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::mkdir(
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::symlink(
-    folly::io::Cursor /*deser*/,
+    folly::io::Cursor deser,
     folly::io::QueueAppender ser,
     uint32_t xid) {
-  serializeReply(ser, accept_stat::PROC_UNAVAIL, xid);
-  return folly::unit;
+  serializeReply(ser, accept_stat::SUCCESS, xid);
+
+  auto args = XdrTrait<SYMLINK3args>::deserialize(deser);
+
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("symlink");
+
+  // Don't allow creating a symlink named . or ..
+  if (args.where.name == "." || args.where.name == "..") {
+    SYMLINK3res res{{{nfsstat3::NFS3ERR_INVAL, SYMLINK3resfail{}}}};
+    XdrTrait<SYMLINK3res>::serialize(ser, res);
+    return folly::unit;
+  }
+
+  // TODO(xavierd): set the attributes of the symlink with symlink_attr
+
+  return dispatcher_
+      ->symlink(
+          args.where.dir.ino,
+          PathComponent{args.where.name},
+          std::move(args.symlink.symlink_data),
+          *context)
+      .thenTry([ser = std::move(ser)](
+                   folly::Try<NfsDispatcher::SymlinkRes> try_) mutable {
+        if (try_.hasException()) {
+          SYMLINK3res res{
+              {{exceptionToNfsError(try_.exception()), SYMLINK3resfail{}}}};
+          XdrTrait<SYMLINK3res>::serialize(ser, res);
+        } else {
+          auto symlinkRes = std::move(try_).value();
+
+          SYMLINK3res res{
+              {{nfsstat3::NFS3_OK,
+                SYMLINK3resok{
+                    /*obj*/ post_op_fh3{nfs_fh3{symlinkRes.ino}},
+                    /*obj_attributes*/
+                    post_op_attr{statToFattr3(symlinkRes.stat)},
+                    /*dir_wcc*/
+                    statToWccData(
+                        symlinkRes.preDirStat, symlinkRes.postDirStat),
+                }}}};
+          XdrTrait<SYMLINK3res>::serialize(ser, res);
+        }
+        return folly::unit;
+      });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::mknod(
