@@ -327,3 +327,46 @@ async fn get_parents_and_vertex(
     )?;
     Ok((cs_id, parents, vertex))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fbinit::FacebookInit;
+
+    use mononoke_types_mocks::changesetid::{FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID};
+
+    #[fbinit::test]
+    async fn test_assign_ids(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+
+        let mut start_state = StartState::new();
+        start_state.insert_parents(ONES_CSID, vec![]);
+        start_state.insert_parents(TWOS_CSID, vec![ONES_CSID]);
+        start_state.insert_parents(THREES_CSID, vec![ONES_CSID, TWOS_CSID]);
+        start_state.insert_parents(FOURS_CSID, vec![TWOS_CSID, THREES_CSID]);
+
+        let (mem_idmap, head_vertex) = assign_ids(&ctx, &start_state, FOURS_CSID, Vertex(1))?;
+        assert_eq!(head_vertex, Vertex(4));
+        assert_eq!(mem_idmap.get_vertex(ONES_CSID)?, Vertex(1));
+        assert_eq!(mem_idmap.get_vertex(TWOS_CSID)?, Vertex(2));
+        assert_eq!(mem_idmap.get_vertex(THREES_CSID)?, Vertex(3));
+        assert_eq!(mem_idmap.get_vertex(FOURS_CSID)?, Vertex(4));
+
+        // Vary parent order because that has an impact on the order nodes are assigned
+        let mut start_state = StartState::new();
+        start_state.insert_parents(ONES_CSID, vec![]);
+        start_state.insert_parents(TWOS_CSID, vec![ONES_CSID]);
+        start_state.insert_parents(THREES_CSID, vec![TWOS_CSID, ONES_CSID]);
+        start_state.insert_parents(FOURS_CSID, vec![THREES_CSID, TWOS_CSID]);
+
+        let (mem_idmap, head_vertex) = assign_ids(&ctx, &start_state, FOURS_CSID, Vertex(1))?;
+        assert_eq!(head_vertex, Vertex(4));
+        assert_eq!(mem_idmap.get_vertex(ONES_CSID)?, Vertex(1));
+        assert_eq!(mem_idmap.get_vertex(TWOS_CSID)?, Vertex(2));
+        assert_eq!(mem_idmap.get_vertex(THREES_CSID)?, Vertex(3));
+        assert_eq!(mem_idmap.get_vertex(FOURS_CSID)?, Vertex(4));
+
+        Ok(())
+    }
+}
