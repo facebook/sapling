@@ -64,14 +64,10 @@ impl SegmentedChangelogSeeder {
             ctx.logger(),
             "seeding segmented changelog using idmap version: {}", self.idmap_version
         );
-        let (owned, last_vertex) = self
+        let (owned, _) = self
             .build_from_scratch(&ctx, head)
             .await
             .context("building dag from scratch")?;
-        info!(
-            ctx.logger(),
-            "finished building dag, head '{}' has assigned vertex '{}'", head, last_vertex
-        );
         // Save the IdDag
         let iddag_version = self
             .iddag_save_store
@@ -127,17 +123,20 @@ impl SegmentedChangelogSeeder {
         let mut iddag = InProcessIdDag::new_in_process();
 
         let (mem_idmap, head_vertex) = update::assign_ids(ctx, &start_state, head, low_vertex)?;
-
+        info!(ctx.logger(), "dag ids assigned");
 
         update::update_iddag(ctx, &mut iddag, &start_state, &mem_idmap, head_vertex)?;
+        info!(ctx.logger(), "iddag constructed");
 
         // Update IdMapVersion
         self.idmap_version_store
             .set(&ctx, self.idmap_version)
             .await
             .context("updating idmap version")?;
+        info!(ctx.logger(), "idmap version bumped");
 
         update::update_idmap(ctx, &idmap, &mem_idmap).await?;
+        info!(ctx.logger(), "idmap written");
 
         let owned = OwnedSegmentedChangelog::new(iddag, idmap);
         Ok((owned, head_vertex))
