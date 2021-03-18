@@ -280,8 +280,10 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   } catch (const std::exception& ex) {
     auto startTimeInSeconds =
         std::chrono::duration<double>{daemonStart.elapsed()}.count();
-    server->getServerState()->getStructuredLogger()->logEvent(
-        DaemonStart{startTimeInSeconds, FLAGS_takeover, false /*success*/});
+    if (server) {
+      server->getServerState()->getStructuredLogger()->logEvent(
+          DaemonStart{startTimeInSeconds, FLAGS_takeover, false /*success*/});
+    }
     startupLogger->exitUnsuccessfully(
         kExitCodeError, "error starting edenfs: ", folly::exceptionStr(ex));
   }
