@@ -13,7 +13,6 @@ use futures::try_join;
 use slog::{debug, trace, warn};
 
 use dag::{Id as Vertex, InProcessIdDag};
-use stats::prelude::*;
 
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
@@ -21,29 +20,6 @@ use mononoke_types::ChangesetId;
 
 use crate::idmap::{IdMap, MemIdMap};
 use crate::owned::OwnedSegmentedChangelog;
-
-define_stats! {
-    build: timeseries(Sum),
-}
-
-pub async fn build<'a>(
-    ctx: &'a CoreContext,
-    iddag: &'a mut InProcessIdDag,
-    idmap: &'a dyn IdMap,
-    start_state: &'a StartState,
-    head: ChangesetId,
-    low_vertex: Vertex,
-) -> Result<Vertex> {
-    STATS::build.add_value(1);
-
-    let (mem_idmap, head_vertex) = assign_ids(ctx, &start_state, head, low_vertex)?;
-
-    update_idmap(ctx, idmap, &mem_idmap).await?;
-
-    update_iddag(ctx, iddag, start_state, &mem_idmap, head_vertex)?;
-
-    Ok(head_vertex)
-}
 
 // TODO(sfilip): use a dedicated parents structure which specializes the case where
 // we have 0, 1 and 2 parents, 3+ is a 4th variant backed by Vec.

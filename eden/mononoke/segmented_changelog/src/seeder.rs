@@ -24,7 +24,7 @@ use crate::idmap::IdMapFactory;
 use crate::idmap::SqlIdMapVersionStore;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::types::{IdMapVersion, SegmentedChangelogVersion};
-use crate::update::StartState;
+use crate::update::{self, StartState};
 use crate::version_store::SegmentedChangelogVersionStore;
 
 define_stats! {
@@ -129,16 +129,15 @@ impl SegmentedChangelogSeeder {
 
         let low_vertex = dag::Group::MASTER.min_id();
         let idmap = self.idmap_factory.for_writer(ctx, self.idmap_version);
-        let mut owned = OwnedSegmentedChangelog::new(InProcessIdDag::new_in_process(), idmap);
-        let last_vertex = crate::update::build(
-            ctx,
-            &mut owned.iddag,
-            &owned.idmap,
-            &start_state,
-            head,
-            low_vertex,
-        )
-        .await?;
-        Ok((owned, last_vertex))
+        let mut iddag = InProcessIdDag::new_in_process();
+
+        let (mem_idmap, head_vertex) = update::assign_ids(ctx, &start_state, head, low_vertex)?;
+
+        update::update_idmap(ctx, &idmap, &mem_idmap).await?;
+
+        update::update_iddag(ctx, &mut iddag, &start_state, &mem_idmap, head_vertex)?;
+
+        let owned = OwnedSegmentedChangelog::new(iddag, idmap);
+        Ok((owned, head_vertex))
     }
 }
