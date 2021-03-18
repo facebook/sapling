@@ -101,7 +101,16 @@ async fn test_add_conflict(fb: FacebookInit) -> Result<(), Error> {
     ];
 
     let res = mapping.bulk_add(&ctx, &entries).await;
-    assert_matches!(res, Err(AddGitMappingErrorKind::Conflict(_)));
+    assert_matches!(
+        res,
+        Err(AddGitMappingErrorKind::Conflict(
+            Some(BonsaiGitMappingEntry {
+                bcs_id: bonsai::ONES_CSID,
+                git_sha1: ONES_GIT_SHA1,
+            }),
+            _
+        ))
+    );
 
     let result = mapping
         .get_git_sha1_from_bonsai(&ctx, bonsai::TWOS_CSID)
@@ -230,7 +239,16 @@ async fn test_add_with_transaction(fb: FacebookInit) -> Result<(), Error> {
         }
     }
     .await;
-    assert_matches!(res, Err(AddGitMappingErrorKind::Conflict(_)));
+    assert_matches!(
+        res,
+        Err(AddGitMappingErrorKind::Conflict(
+            Some(BonsaiGitMappingEntry {
+                bcs_id: bonsai::TWOS_CSID,
+                git_sha1: TWOS_GIT_SHA1,
+            }),
+            _
+        ))
+    );
 
     assert_eq!(
         Some(TWOS_GIT_SHA1),

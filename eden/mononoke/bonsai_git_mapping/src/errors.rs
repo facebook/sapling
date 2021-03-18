@@ -11,8 +11,10 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum AddGitMappingErrorKind {
-    #[error("Conflict detected while inserting git mappings (tried inserting: {0:?})")]
-    Conflict(Vec<BonsaiGitMappingEntry>),
+    #[error(
+        "Conflicting mapping {0:?} detected while inserting git mappings (tried inserting: {1:?})"
+    )]
+    Conflict(Option<BonsaiGitMappingEntry>, Vec<BonsaiGitMappingEntry>),
     #[error("Internal error occurred while inserting git mapping")]
     InternalError(#[source] anyhow::Error),
 }

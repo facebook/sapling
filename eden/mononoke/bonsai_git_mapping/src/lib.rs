@@ -258,33 +258,59 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
 
         let transaction = if res.affected_rows() != rows.len() as u64 {
             // Let's see if there are any conflicting entries in DB.
-            let git_shas = entries
-                .iter()
-                .map(
-                    |
-                        BonsaiGitMappingEntry {
-                            git_sha1,
-                            bcs_id: _,
-                        },
-                    | git_sha1.clone(),
+            let git_shas = entries.iter().map(|x| x.git_sha1).collect::<Vec<_>>();
+            let (transaction, git2bonsai_mapping_from_db) =
+                SelectMappingByGitSha1::query_with_transaction(
+                    transaction,
+                    &self.repo_id,
+                    &git_shas[..],
                 )
-                .collect::<Vec<_>>();
+                .await?;
+            let git2bonsai_mapping_from_db: BTreeMap<_, _> =
+                git2bonsai_mapping_from_db.into_iter().collect();
 
-            let (transaction, mapping_from_db) = SelectMappingByGitSha1::query_with_transaction(
-                transaction,
-                &self.repo_id,
-                &git_shas[..],
-            )
-            .await?;
-
-            let mapping_from_db: BTreeMap<_, _> = mapping_from_db.into_iter().collect();
+            let bcs_ids = entries.iter().map(|x| x.bcs_id).collect::<Vec<_>>();
+            let (transaction, bonsai2git_mapping_from_db) =
+                SelectMappingByBonsai::query_with_transaction(
+                    transaction,
+                    &self.repo_id,
+                    &bcs_ids[..],
+                )
+                .await?;
+            let bonsai2git_mapping_from_db: BTreeMap<_, _> = bonsai2git_mapping_from_db
+                .into_iter()
+                .map(|(a, b)| (b, a))
+                .collect();
 
             for entry in entries.iter() {
-                match mapping_from_db.get(&entry.git_sha1) {
-                    Some(bcs_id) if bcs_id == &entry.bcs_id => {} // We've tried to insert a duplicate, proceed.
+                match (
+                    git2bonsai_mapping_from_db.get(&entry.git_sha1),
+                    bonsai2git_mapping_from_db.get(&entry.bcs_id),
+                ) {
+                    (Some(bcs_id), _) if bcs_id == &entry.bcs_id => {} // We've tried to insert a duplicate, proceed.
+                    (Some(bcs_id), None) => {
+                        // Conflict git_sha1 already mapped to a different bcs_id.
+                        return Err(AddGitMappingErrorKind::Conflict(
+                            Some(BonsaiGitMappingEntry {
+                                git_sha1: entry.git_sha1,
+                                bcs_id: *bcs_id,
+                            }),
+                            vec![entry.clone()],
+                        ));
+                    }
+                    (None, Some(git_sha1)) => {
+                        // Conflict bcs_id already mapped to a different git_sha1.
+                        return Err(AddGitMappingErrorKind::Conflict(
+                            Some(BonsaiGitMappingEntry {
+                                git_sha1: *git_sha1,
+                                bcs_id: entry.bcs_id,
+                            }),
+                            vec![entry.clone()],
+                        ));
+                    }
                     _ => {
-                        return Err(AddGitMappingErrorKind::Conflict(vec![entry.clone()].into()));
-                    } // A real conflict!
+                        return Err(AddGitMappingErrorKind::Conflict(None, vec![entry.clone()]));
+                    }
                 }
             }
 
