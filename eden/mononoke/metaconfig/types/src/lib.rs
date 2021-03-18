@@ -746,6 +746,28 @@ pub enum MultiplexedStoreType {
     WriteMostly,
 }
 
+/// What format should data be in either Raw or a compressed form with compression options like level
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize, Hash)]
+pub enum PackFormat {
+    /// Uncompressed data is written by put
+    Raw,
+    /// Data will be compressed and written in compressed form if its smaller than Raw
+    ZstdIndividual(i32),
+}
+
+impl Default for PackFormat {
+    fn default() -> Self {
+        PackFormat::Raw
+    }
+}
+
+/// Configuration for packblob
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Deserialize, Hash)]
+pub struct PackConfig {
+    /// What format should put write in, either Raw or a compressed form.
+    pub put_format: PackFormat,
+}
+
 /// Configuration for a blobstore
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum BlobConfig {
@@ -813,6 +835,8 @@ pub enum BlobConfig {
     Pack {
         /// The config for the blobstore that is wrapped.
         blobconfig: Box<BlobConfig>,
+        /// Optional configuration for setting things like default compression levels
+        pack_config: Option<PackConfig>,
     },
     /// Store in a S3 compatible storage
     S3 {

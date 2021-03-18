@@ -44,7 +44,7 @@ use blobstore_factory::{
     ScrubAction, ThrottleOptions, DEFAULT_PUT_BEHAVIOUR,
 };
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
-use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig};
+use metaconfig_types::{BlobConfig, CommonConfig, PackFormat, Redaction, RepoConfig};
 use mononoke_types::RepositoryId;
 use observability::{DynamicLevelDrain, ObservabilityContext};
 use slog_ext::make_tag_filter_drain;
@@ -94,7 +94,8 @@ const WRITE_BURST_BYTES_ARG: &str = "blobstore-write-burst-bytes-s";
 const BLOBSTORE_BYTES_MIN_THROTTLE_ARG: &str = "blobstore-bytes-min-throttle";
 const READ_CHAOS_ARG: &str = "blobstore-read-chaos-rate";
 const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
-const WRITE_ZSTD_ARG: &str = "blobstore-write-zstd-level";
+const WRITE_ZSTD_ARG: &str = "blobstore-write-zstd";
+const WRITE_ZSTD_LEVEL_ARG: &str = "blobstore-write-zstd-level";
 const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
 const MANIFOLD_USE_CPP_CLIENT_ARG: &str = "manifold-use-cpp-client";
 const CACHELIB_ATTEMPT_ZSTD_ARG: &str = "blobstore-cachelib-attempt-zstd";
@@ -762,7 +763,16 @@ impl MononokeAppBuilder {
                 .long(WRITE_ZSTD_ARG)
                 .takes_value(true)
                 .required(false)
-                .help("Set the zstd compression level to be used on writes via the packed blobstore (if configured).  Default is None."),
+                .possible_values(BOOL_VALUES)
+                .help("Allows one to override config to enable/disable zstd compression on write via packblob"),
+        )
+        .arg(
+            Arg::with_name(WRITE_ZSTD_LEVEL_ARG)
+                .long(WRITE_ZSTD_LEVEL_ARG)
+                .takes_value(true)
+                .required(false)
+                .requires(WRITE_ZSTD_ARG)
+                .help("Override the zstd compression leve used for writes via packblob."),
         )
         .arg(
             Arg::with_name(MANIFOLD_API_KEY_ARG)
@@ -1816,11 +1826,40 @@ pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOpt
         .context("Provided manifold-use-cpp-client is not bool")?
         .ok_or_else(|| format_err!("A default is set, should never be None"))?;
 
-    let write_zstd_level: Option<i32> = matches
+    let write_zstd: Option<bool> = matches
         .value_of(WRITE_ZSTD_ARG)
         .map(|v| v.parse())
         .transpose()
+        .context("Provided value is not bool")?;
+
+    let write_zstd_level: Option<i32> = matches
+        .value_of(WRITE_ZSTD_LEVEL_ARG)
+        .map(|v| v.parse())
+        .transpose()
         .context("Provided Zstd compression level is not i32")?;
+
+    let put_format_override = match (write_zstd, write_zstd_level) {
+        (Some(false), Some(level)) => bail!(
+            "Doesn't make sense to pass --{}=false with --{}={}",
+            WRITE_ZSTD_ARG,
+            WRITE_ZSTD_LEVEL_ARG,
+            level
+        ),
+        (Some(false), None) => Some(PackFormat::Raw),
+        (Some(true), None) => bail!(
+            "When enabling --{} must also pass --{}",
+            WRITE_ZSTD_ARG,
+            WRITE_ZSTD_LEVEL_ARG
+        ),
+        (Some(true), Some(v)) => Some(PackFormat::ZstdIndividual(v)),
+        (None, Some(level)) => bail!(
+            "--{}={} requires --{}",
+            WRITE_ZSTD_LEVEL_ARG,
+            level,
+            WRITE_ZSTD_ARG,
+        ),
+        (None, None) => None,
+    };
 
     let attempt_zstd: bool = matches
         .value_of(CACHELIB_ATTEMPT_ZSTD_ARG)
@@ -1848,7 +1887,7 @@ pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOpt
         },
         manifold_api_key,
         manifold_use_cpp_client,
-        PackOptions::new(write_zstd_level),
+        PackOptions::new(put_format_override),
         CachelibBlobstoreOptions::new_lazy(Some(attempt_zstd)),
         blobstore_put_behaviour,
     );

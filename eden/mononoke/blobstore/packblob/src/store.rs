@@ -16,20 +16,23 @@ use blobstore::{
 use bytes::Bytes;
 use context::CoreContext;
 use futures::stream::{FuturesUnordered, TryStreamExt};
+use metaconfig_types::PackFormat;
 use mononoke_types::BlobstoreBytes;
 use packblob_thrift::{PackedEntry, SingleValue, StorageEnvelope, StorageFormat};
 use std::{convert::TryInto, io::Cursor};
 
 #[derive(Clone, Debug, Default)]
 pub struct PackOptions {
-    // If Some, this is used as zstd compression level on put.
-    // Some(0) means use zstd default level.
-    put_compress_level: Option<i32>,
+    // None - user didn't specify
+    // Some(xxx) - user wants to override config
+    pub override_put_format: Option<PackFormat>,
 }
 
 impl PackOptions {
-    pub fn new(put_compress_level: Option<i32>) -> Self {
-        Self { put_compress_level }
+    pub fn new(override_put_format: Option<PackFormat>) -> Self {
+        Self {
+            override_put_format,
+        }
     }
 }
 
@@ -37,7 +40,7 @@ impl PackOptions {
 #[derive(Debug)]
 pub struct PackBlob<T> {
     inner: T,
-    options: PackOptions,
+    put_format: PackFormat,
 }
 
 impl<T: std::fmt::Display> std::fmt::Display for PackBlob<T> {
@@ -47,8 +50,8 @@ impl<T: std::fmt::Display> std::fmt::Display for PackBlob<T> {
 }
 
 impl<T> PackBlob<T> {
-    pub fn new(inner: T, options: PackOptions) -> Self {
-        Self { inner, options }
+    pub fn new(inner: T, put_format: PackFormat) -> Self {
+        Self { inner, put_format }
     }
 }
 
@@ -119,11 +122,10 @@ impl<T: BlobstorePutOps> PackBlob<T> {
 
         let value = value.into_bytes();
 
-        let single = if let Some(zstd_level) = self.options.put_compress_level {
-            compress_if_worthwhile(value, zstd_level)
-        } else {
-            Ok(SingleValue::Raw(value))
-        }?;
+        let single = match self.put_format {
+            PackFormat::ZstdIndividual(zstd_level) => compress_if_worthwhile(value, zstd_level)?,
+            PackFormat::Raw => SingleValue::Raw(value),
+        };
 
         // Wrap in thrift encoding
         let envelope: PackEnvelope = PackEnvelope(StorageEnvelope {
@@ -220,7 +222,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
         let inner_blobstore = Arc::new(Memblob::default());
-        let packblob = PackBlob::new(inner_blobstore.clone(), PackOptions::default());
+        let packblob = PackBlob::new(inner_blobstore.clone(), PackFormat::Raw);
 
         let outer_key = "repo0000.randomkey";
         let value = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"appleveldata"));
@@ -233,7 +235,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
         let innerblob = Arc::new(Memblob::default());
-        let packblob = PackBlob::new(innerblob.clone(), PackOptions::new(Some(0)));
+        let packblob = PackBlob::new(innerblob.clone(), PackFormat::ZstdIndividual(0));
 
         let bytes_in = Bytes::from(vec![7u8; 65535]);
         let value = BlobstoreBytes::from_bytes(bytes_in.clone());
@@ -252,7 +254,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
         let innerblob = Arc::new(Memblob::default());
-        let packblob = PackBlob::new(innerblob.clone(), PackOptions::new(Some(0)));
+        let packblob = PackBlob::new(innerblob.clone(), PackFormat::ZstdIndividual(0));
 
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
         let mut bytes_in = vec![7u8; 65535];
@@ -325,7 +327,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         borrowed!(ctx);
         let inner_blobstore = Memblob::default();
-        let packblob = PackBlob::new(inner_blobstore.clone(), PackOptions::default());
+        let packblob = PackBlob::new(inner_blobstore.clone(), PackFormat::Raw);
 
         // put_packed, this will apply the thrift envelope and save to the inner store
         let inner_key = packblob

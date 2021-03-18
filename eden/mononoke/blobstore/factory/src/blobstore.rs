@@ -416,7 +416,10 @@ fn make_blobstore_put_ops<'a>(
                     unimplemented!("This is implemented only for fbcode_build")
                 }
             }
-            Pack { blobconfig } => {
+            Pack {
+                blobconfig,
+                pack_config,
+            } => {
                 let store = make_blobstore_put_ops(
                     fb,
                     *blobconfig,
@@ -429,8 +432,15 @@ fn make_blobstore_put_ops<'a>(
                 .watched(logger)
                 .await?;
 
-                Arc::new(PackBlob::new(store, blobstore_options.pack_options.clone()))
-                    as Arc<dyn BlobstorePutOps>
+                // Take the user specified option if provided, otherwise use the config
+                let put_format =
+                    if let Some(put_format) = blobstore_options.pack_options.override_put_format {
+                        put_format
+                    } else {
+                        pack_config.map(|c| c.put_format).unwrap_or_default()
+                    };
+
+                Arc::new(PackBlob::new(store, put_format)) as Arc<dyn BlobstorePutOps>
             }
             S3 {
                 bucket,

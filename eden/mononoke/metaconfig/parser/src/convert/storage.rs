@@ -10,18 +10,18 @@ use std::num::{NonZeroU64, NonZeroUsize};
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use metaconfig_types::{
     BlobConfig, BlobstoreId, DatabaseConfig, FilestoreParams, LocalDatabaseConfig,
-    MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, RemoteDatabaseConfig,
-    RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig,
-    StorageConfig,
+    MetadataDatabaseConfig, MultiplexId, MultiplexedStoreType, PackConfig, PackFormat,
+    RemoteDatabaseConfig, RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig,
+    ShardedRemoteDatabaseConfig, StorageConfig,
 };
 use nonzero_ext::nonzero;
 use repos::{
-    RawBlobstoreConfig, RawDbConfig, RawDbLocal, RawDbRemote, RawDbShardableRemote,
-    RawDbShardedRemote, RawFilestoreParams, RawMetadataConfig, RawMultiplexedStoreType,
-    RawStorageConfig,
+    RawBlobstoreConfig, RawBlobstorePackConfig, RawBlobstorePackFormat, RawDbConfig, RawDbLocal,
+    RawDbRemote, RawDbShardableRemote, RawDbShardedRemote, RawFilestoreParams, RawMetadataConfig,
+    RawMultiplexedStoreType, RawStorageConfig,
 };
 
 use crate::convert::Convert;
@@ -115,6 +115,7 @@ impl Convert for RawBlobstoreConfig {
             },
             RawBlobstoreConfig::pack(raw) => BlobConfig::Pack {
                 blobconfig: Box::new(raw.blobstore.convert()?),
+                pack_config: raw.pack_config.map(|c| c.convert()).transpose()?,
             },
             RawBlobstoreConfig::s3(raw) => BlobConfig::S3 {
                 bucket: raw.bucket,
@@ -144,6 +145,21 @@ fn parse_scuba_sample_rate(sample_rate: Option<i64>) -> Result<NonZeroU64> {
         .unwrap_or(nonzero!(100_u64));
 
     Ok(rate)
+}
+
+impl Convert for RawBlobstorePackConfig {
+    type Output = PackConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        let put_format = match self.put_format {
+            RawBlobstorePackFormat::Raw(_) => PackFormat::Raw,
+            RawBlobstorePackFormat::ZstdIndividual(zstd) => {
+                PackFormat::ZstdIndividual(zstd.compression_level)
+            }
+            RawBlobstorePackFormat::UnknownField(f) => bail!("Unsupported PackFormat {}", f),
+        };
+        Ok(PackConfig { put_format })
+    }
 }
 
 impl Convert for RawDbLocal {
