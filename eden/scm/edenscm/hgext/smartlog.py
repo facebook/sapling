@@ -396,7 +396,9 @@ def smartlognodes(repo, headnodes, masternodes):
     """Calculate nodes based on new DAG abstraction.
     This function does not use revs or revsets.
     """
-    draftnodes = repo.dageval(lambda: ancestors(headnodes) & draft())
+    # Use "- public()" so if the user specifies secret commits in headnodes
+    # it will work as expected.
+    draftnodes = repo.dageval(lambda: ancestors(headnodes) - public())
     nodes = repo.dageval(
         lambda: parents(draftnodes) | draftnodes | headnodes | masternodes
     )

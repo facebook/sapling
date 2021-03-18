@@ -1,6 +1,9 @@
 #chg-compatible
 
-  $ enable rebase smartlog
+  $ configure modern
+  $ setconfig format.use-segmented-changelog=1
+  $ enable smartlog rebase
+  $ disable commitcloud
 
   $ newrepo
   $ drawdag << 'EOS'
@@ -126,6 +129,40 @@ The "." is always shown using the default command:
   │ x  F
   │ ╷
   │ @  D
+  │ │
+  │ x  C
+  │ │
+  │ o  B
+  ├─╯
+  o  A
+  
+"-r" with obsoleted stack.
+
+  $ hg hide -q 'desc(G)'
+  $ hg up -q 'desc(Z)'
+  $ hg sl -T '{desc}' -r 'desc(F) - (desc(Z)::)'
+  @  Z
+  │
+  │ o  F
+  │ │
+  │ o  E
+  │ │
+  │ o  D
+  │ │
+  │ o  C
+  │ │
+  │ o  B
+  ├─╯
+  o  A
+  
+  $ hg sl -T '{desc}' -r 'desc(F) - (desc(Z)::)' --config smartlog.collapse-obsolete=false
+  @  Z
+  │
+  │ x  F
+  │ │
+  │ x  E
+  │ │
+  │ x  D
   │ │
   │ x  C
   │ │
