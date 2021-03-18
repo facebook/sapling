@@ -468,6 +468,8 @@ constexpr auto kFuseHandlers = [] {
   handlers[FUSE_RENAME2] = {"FUSE_RENAME2", Write};
   handlers[FUSE_LSEEK] = {"FUSE_LSEEK"};
   handlers[FUSE_COPY_FILE_RANGE] = {"FUSE_COPY_FILE_RANGE", Write};
+  handlers[FUSE_SETUPMAPPING] = {"FUSE_SETUPMAPPING", Read};
+  handlers[FUSE_REMOVEMAPPING] = {"FUSE_REMOVEMAPPING", Read};
 #endif
 #ifdef __APPLE__
   handlers[FUSE_SETVOLNAME] = {"FUSE_SETVOLNAME", Write};
@@ -512,7 +514,10 @@ constexpr std::pair<uint32_t, const char*> kCapsLabels[] = {
     {FUSE_PARALLEL_DIROPS, "PARALLEL_DIROPS"},
     {FUSE_HANDLE_KILLPRIV, "HANDLE_KILLPRIV"},
     {FUSE_POSIX_ACL, "POSIX_ACL"},
+    {FUSE_ABORT_ERROR, "ABORT_ERROR"},
+    {FUSE_MAX_PAGES, "MAX_PAGES"},
     {FUSE_CACHE_SYMLINKS, "CACHE_SYMLINKS"},
+    {FUSE_EXPLICIT_INVAL_DATA, "EXPLICIT_INVAL_DATA"},
 #endif
 #ifdef __APPLE__
     {FUSE_ALLOCATE, "ALLOCATE"},
