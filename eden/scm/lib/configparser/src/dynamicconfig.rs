@@ -177,11 +177,12 @@ impl Generator {
 
         let platform = get_platform();
 
-        let domain = if Path::new("/etc/fbwhoami").exists() {
-            Domain::Prod
-        } else {
-            Domain::Corp
-        };
+        let domain =
+            if Path::new("/etc/fbwhoami").exists() || Path::new("C:\\etc\\fbwhoami").exists() {
+                Domain::Prod
+            } else {
+                Domain::Corp
+            };
 
         let pass_all_shards = std::env::var("HG_TEST_PASS_ALL_SHARDS").is_ok();
 
