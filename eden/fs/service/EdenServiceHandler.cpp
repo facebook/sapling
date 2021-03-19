@@ -518,7 +518,7 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
   return edenMount->getInode(relativePath, fetchContext)
       .thenValue([&fetchContext](const InodePtr& inode) {
         auto fileInode = inode.asFilePtr();
-        if (!S_ISREG(fileInode->getMode())) {
+        if (fileInode->getType() != dtype_t::Regular) {
           // We intentionally want to refuse to compute the SHA1 of symlinks
           return makeFuture<Hash>(
               InodeError(EINVAL, fileInode, "file is a symlink"));
