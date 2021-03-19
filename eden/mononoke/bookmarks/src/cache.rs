@@ -17,6 +17,7 @@ use context::CoreContext;
 use futures::future::{self, BoxFuture, FutureExt, TryFutureExt};
 use futures::stream::{self, BoxStream, StreamExt, TryStreamExt};
 use mononoke_types::{ChangesetId, RepositoryId};
+use shared_error::anyhow::{IntoSharedError, SharedError};
 use stats::prelude::*;
 
 use crate::log::{BookmarkUpdateReason, BundleReplay};
@@ -35,7 +36,7 @@ type CacheData = BTreeMap<BookmarkName, (BookmarkKind, ChangesetId)>;
 struct Cache {
     expires: Instant,
     freshness: Freshness,
-    current: future::Shared<BoxFuture<'static, Arc<Result<CacheData>>>>,
+    current: future::Shared<BoxFuture<'static, Arc<Result<CacheData, SharedError>>>>,
 }
 
 impl Cache {
@@ -65,7 +66,8 @@ impl Cache {
                             Ok(map)
                         },
                     )
-                    .await,
+                    .await
+                    .shared_error(),
             )
         }
         .boxed()
@@ -220,7 +222,7 @@ impl CachedBookmarks {
                             .collect();
                         Ok(stream::iter(result))
                     }
-                    Err(err) => Err(Error::msg(err.to_string())),
+                    Err(err) => Err(Error::from(err.clone())),
                 }
             })
             .try_flatten_stream()
