@@ -448,42 +448,37 @@ impl BookmarkAttrs {
     /// check if provided unix name is allowed to move specified bookmark
     pub async fn is_allowed_user(
         &self,
-        user: &Option<String>,
+        user: &str,
         metadata: &Metadata,
         bookmark: &BookmarkName,
     ) -> Result<bool, Error> {
-        match user {
-            None => Ok(true),
-            Some(user) => {
-                // NOTE: `Iterator::all` combinator returns `true` if selected set is empty
-                //       which is consistent with what we want
-                for attr in self.select(bookmark) {
-                    let maybe_allowed_users = attr
-                        .params()
-                        .allowed_users
-                        .as_ref()
-                        .map(|re| re.is_match(user));
+        // NOTE: `Iterator::all` combinator returns `true` if selected set is empty
+        //       which is consistent with what we want
+        for attr in self.select(bookmark) {
+            let maybe_allowed_users = attr
+                .params()
+                .allowed_users
+                .as_ref()
+                .map(|re| re.is_match(user));
 
-                    let maybe_member = if let Some(membership) = &attr.membership {
-                        Some(membership.is_member(&metadata.identities()).await?)
-                    } else {
-                        None
-                    };
+            let maybe_member = if let Some(membership) = &attr.membership {
+                Some(membership.is_member(&metadata.identities()).await?)
+            } else {
+                None
+            };
 
-                    // Check if either is user is allowed to access it
-                    // or that they are a member of hipster group.
-                    let allowed = match (maybe_allowed_users, maybe_member) {
-                        (Some(x), Some(y)) => x || y,
-                        (Some(x), None) | (None, Some(x)) => x,
-                        (None, None) => true,
-                    };
-                    if !allowed {
-                        return Ok(false);
-                    }
-                }
-                Ok(true)
+            // Check if either is user is allowed to access it
+            // or that they are a member of hipster group.
+            let allowed = match (maybe_allowed_users, maybe_member) {
+                (Some(x), Some(y)) => x || y,
+                (Some(x), None) | (None, Some(x)) => x,
+                (None, None) => true,
+            };
+            if !allowed {
+                return Ok(false);
             }
         }
+        Ok(true)
     }
 
     /// Check if a bookmark is only updatable by an external sync process.

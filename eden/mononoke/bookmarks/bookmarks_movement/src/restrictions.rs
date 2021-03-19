@@ -54,7 +54,7 @@ impl<'params> BookmarkMoveAuthorization<'params> {
 
                 // TODO: clean up `is_allowed_user` to avoid this clone.
                 if !bookmark_attrs
-                    .is_allowed_user(&Some(user.to_string()), ctx.metadata(), bookmark)
+                    .is_allowed_user(&user, ctx.metadata(), bookmark)
                     .await?
                 {
                     return Err(BookmarkMovementError::PermissionDeniedUser {
