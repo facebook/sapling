@@ -1338,51 +1338,6 @@ folly::Future<Unit> EdenServiceHandler::future_chown(
 #endif // !_WIN32
 }
 
-void EdenServiceHandler::getManifestEntry(
-    ManifestEntry& out,
-    std::unique_ptr<std::string> mountPoint,
-    std::unique_ptr<std::string> relativePath) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, *relativePath);
-  auto mount = server_->getMount(*mountPoint);
-  auto filename = RelativePathPiece{*relativePath};
-  auto mode = isInManifestAsFile(mount.get(), filename);
-  if (mode.has_value()) {
-    *out.mode_ref() = mode.value();
-  } else {
-    NoValueForKeyError error;
-    error.key_ref() = *relativePath;
-    throw error;
-  }
-}
-
-// TODO(mbolin): Make this a method of ObjectStore and make it Future-based.
-std::optional<mode_t> EdenServiceHandler::isInManifestAsFile(
-    const EdenMount* mount,
-    const RelativePathPiece filename) {
-  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-      "EdenServiceHandler::isInManifestAsFile");
-  auto tree = mount->getRootTree().get();
-  auto parentDirectory = filename.dirname();
-  auto objectStore = mount->getObjectStore();
-  for (auto piece : parentDirectory.components()) {
-    auto entry = tree->getEntryPtr(piece);
-    if (entry != nullptr && entry->isTree()) {
-      tree = objectStore->getTree(entry->getHash(), *context).get();
-    } else {
-      return std::nullopt;
-    }
-  }
-
-  if (tree != nullptr) {
-    auto entry = tree->getEntryPtr(filename.basename());
-    if (entry != nullptr && !entry->isTree()) {
-      return modeFromTreeEntryType(entry->getType());
-    }
-  }
-
-  return std::nullopt;
-}
-
 void EdenServiceHandler::async_tm_getScmStatusV2(
     unique_ptr<apache::thrift::HandlerCallback<unique_ptr<GetScmStatusResult>>>
         callback,

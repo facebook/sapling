@@ -103,7 +103,6 @@ if sys.platform == "win32":
         "hg.debug_clear_local_caches_test.DebugClearLocalCachesTestTreeOnly": True,
         "hg.debug_get_parents.DebugGetParentsTestTreeOnly": True,
         "hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly": True,
-        "hg.debug_hg_get_dirstate_tuple_test.DebugHgGetDirstateTupleTestTreeOnly": True,
         "hg.diff_test.DiffTestTreeOnly": True,
         "hg.fold_test.FoldTestTreeOnly": True,
         "hg.grep_test.GrepTestTreeOnly": [

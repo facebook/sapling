@@ -63,7 +63,6 @@ GetScmStatusParams = eden_ttypes.GetScmStatusParams
 CheckoutMode = eden_ttypes.CheckoutMode
 ConflictType = eden_ttypes.ConflictType
 FileInformationOrError = eden_ttypes.FileInformationOrError
-ManifestEntry = eden_ttypes.ManifestEntry
 NoValueForKeyError = eden_ttypes.NoValueForKeyError
 EdenError = eden_ttypes.EdenError
 

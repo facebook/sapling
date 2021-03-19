@@ -129,11 +129,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   apache::thrift::ServerStream<HgEvent> traceHgEvents(
       std::unique_ptr<std::string> mountPoint) override;
 
-  void getManifestEntry(
-      ManifestEntry& out,
-      std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> relativePath) override;
-
   void async_tm_getScmStatusV2(
       std::unique_ptr<apache::thrift::HandlerCallback<
           std::unique_ptr<GetScmStatusResult>>> callback,
@@ -264,14 +259,6 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       folly::StringPiece mountPoint,
       folly::StringPiece path,
       ObjectFetchContext& fetchContext) noexcept;
-
-  /**
-   * If `filename` exists in the manifest as a file (not a directory), returns
-   * the mode of the file as recorded in the manifest.
-   */
-  std::optional<mode_t> isInManifestAsFile(
-      const EdenMount* mount,
-      const RelativePathPiece filename);
 
   const std::vector<std::string> originalCommandLine_;
   EdenServer* const server_;

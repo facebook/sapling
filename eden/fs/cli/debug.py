@@ -454,36 +454,6 @@ class HgDirstateCmd(Subcmd):
         return 0
 
 
-@debug_cmd("hg_get_dirstate_tuple", "Dirstate status for file")
-class HgGetDirstateTupleCmd(Subcmd):
-    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            "path", help="The path to the file whose status should be queried."
-        )
-
-    def run(self, args: argparse.Namespace) -> int:
-        instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
-        _parents, dirstate_tuples, _copymap = _get_dirstate_data(checkout)
-        dirstate_tuple = dirstate_tuples.get(str(rel_path))
-        out = ui_mod.get_output()
-        if dirstate_tuple:
-            _print_hg_nonnormal_file(rel_path, dirstate_tuple, out)
-        else:
-            instance = cmd_util.get_eden_instance(args)
-            with instance.get_thrift_client_legacy() as client:
-                try:
-                    entry = client.getManifestEntry(
-                        bytes(checkout.path), bytes(rel_path)
-                    )
-                    dirstate_tuple = ("n", entry.mode, 0)
-                    _print_hg_nonnormal_file(rel_path, dirstate_tuple, out)
-                except NoValueForKeyError:
-                    print(f"No tuple for {rel_path}", file=sys.stderr)
-                    return 1
-
-        return 0
-
-
 def _print_hg_nonnormal_file(
     rel_path: Path, dirstate_tuple: Tuple[str, Any, int], out: ui_mod.Output
 ) -> None:
