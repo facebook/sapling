@@ -17,8 +17,7 @@ use bonsai_globalrev_mapping::{
 };
 use bonsai_hg_mapping::{BonsaiHgMapping, CachingBonsaiHgMapping, SqlBonsaiHgMapping};
 use bonsai_svnrev_mapping::{
-    BonsaiSvnrevMapping, CachingBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping,
-    SqlBonsaiSvnrevMapping,
+    CachingBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
 };
 use bookmarks::{BookmarkUpdateLog, Bookmarks, CachedBookmarks};
 use cacheblob::{
@@ -891,7 +890,7 @@ pub fn blobrepo_new(
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
-    bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping<Arc<dyn BonsaiSvnrevMapping>>,
+    bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
     bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
     hg_mutation_store: Arc<dyn HgMutationStore>,
     derived_data_lease: Arc<dyn LeaseOps>,

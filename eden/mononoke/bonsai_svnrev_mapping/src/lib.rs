@@ -10,6 +10,8 @@
 mod caching;
 mod sql;
 
+use std::sync::Arc;
+
 use abomonation_derive::Abomonation;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -141,16 +143,16 @@ pub trait BonsaiSvnrevMapping: Send + Sync {
 }
 
 #[derive(Clone)]
-pub struct RepoBonsaiSvnrevMapping<T: Sized> {
-    inner: T,
+pub struct RepoBonsaiSvnrevMapping {
+    inner: Arc<dyn BonsaiSvnrevMapping + Send + Sync + 'static>,
     repo_id: RepositoryId,
 }
 
-impl<T> RepoBonsaiSvnrevMapping<T>
-where
-    T: BonsaiSvnrevMapping + Clone + Sync + Send + 'static,
-{
-    pub fn new(repo_id: RepositoryId, inner: T) -> RepoBonsaiSvnrevMapping<T> {
+impl RepoBonsaiSvnrevMapping {
+    pub fn new(
+        repo_id: RepositoryId,
+        inner: Arc<dyn BonsaiSvnrevMapping + Send + Sync + 'static>,
+    ) -> RepoBonsaiSvnrevMapping {
         RepoBonsaiSvnrevMapping { inner, repo_id }
     }
 

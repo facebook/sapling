@@ -9,7 +9,7 @@ use anyhow::{format_err, Error};
 use blobstore::Blobstore;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, BonsaisOrGlobalrevs};
-use bonsai_svnrev_mapping::{BonsaiSvnrevMapping, RepoBonsaiSvnrevMapping};
+use bonsai_svnrev_mapping::RepoBonsaiSvnrevMapping;
 use bookmarks::{
     self, Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix,
     BookmarkTransaction, BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason,
@@ -59,7 +59,7 @@ pub struct BlobRepoInner {
     pub changesets: Arc<dyn Changesets>,
     pub bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     pub bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
-    pub bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping<Arc<dyn BonsaiSvnrevMapping>>,
+    pub bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
     pub repoid: RepositoryId,
     pub derived_data_lease: Arc<dyn LeaseOps>,
     pub filestore_config: FilestoreConfig,
@@ -99,7 +99,7 @@ impl BlobRepo {
         changesets: Arc<dyn Changesets>,
         bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
-        bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping<Arc<dyn BonsaiSvnrevMapping>>,
+        bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
         derived_data_lease: Arc<dyn LeaseOps>,
         filestore_config: FilestoreConfig,
         phases_factory: SqlPhasesFactory,
@@ -239,7 +239,7 @@ impl BlobRepo {
         &self.inner.bonsai_globalrev_mapping
     }
 
-    pub fn bonsai_svnrev_mapping(&self) -> &RepoBonsaiSvnrevMapping<Arc<dyn BonsaiSvnrevMapping>> {
+    pub fn bonsai_svnrev_mapping(&self) -> &RepoBonsaiSvnrevMapping {
         &self.inner.bonsai_svnrev_mapping
     }
 
