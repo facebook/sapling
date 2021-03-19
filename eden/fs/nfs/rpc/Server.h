@@ -85,9 +85,15 @@ class RpcServer {
   folly::EventBase* evb_;
   RpcAcceptCallback::UniquePtr acceptCb_;
   folly::AsyncServerSocket::UniquePtr serverSocket_;
-  PortmapClient portMap_;
-  std::vector<PortmapMapping> mappedPorts_;
   std::shared_ptr<RpcServerProcessor> proc_;
+
+  struct PortmapState {
+    PortmapState() = default;
+
+    PortmapClient portMap;
+    std::vector<PortmapMapping> mappedPorts;
+  };
+  folly::Synchronized<std::optional<PortmapState>> portMapState_;
 };
 
 } // namespace facebook::eden

@@ -311,8 +311,12 @@ RpcServer::RpcServer(
 }
 
 RpcServer::~RpcServer() {
-  for (const auto& mapping : mappedPorts_) {
-    portMap_.unsetMapping(mapping);
+  auto lock = portMapState_.wlock();
+  if (lock->has_value()) {
+    auto& state = lock->value();
+    for (const auto& mapping : state.mappedPorts) {
+      state.portMap.unsetMapping(mapping);
+    }
   }
 }
 
@@ -336,6 +340,13 @@ std::pair<std::string, std::string> getNetIdAndAddr(const SocketAddress& addr) {
 } // namespace
 
 void RpcServer::registerService(uint32_t progNumber, uint32_t progVersion) {
+  auto lock = portMapState_.wlock();
+  if (!lock->has_value()) {
+    // The rpcbind client was never initialized, do it now.
+    lock->emplace();
+  }
+  auto& state = lock->value();
+
   // Enumerate the addresses (in practice, just the loopback) and use the
   // port number we got from the kernel to register the mapping for
   // this program/version pair with rpcbind/portmap.
@@ -343,8 +354,8 @@ void RpcServer::registerService(uint32_t progNumber, uint32_t progVersion) {
   for (auto& addr : addrs) {
     auto [netid, addrStr] = getNetIdAndAddr(addr);
     PortmapMapping mapping{progNumber, progVersion, netid, addrStr, "edenfs"};
-    portMap_.setMapping(mapping);
-    mappedPorts_.push_back(mapping);
+    state.portMap.setMapping(mapping);
+    state.mappedPorts.push_back(std::move(mapping));
   }
 }
 
