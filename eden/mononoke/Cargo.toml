@@ -314,6 +314,7 @@ members = [
   "common/dedupmap",
   "common/futures_watchdog",
   "common/iterhelpers",
+  "common/rendezvous",
   "common/rust/caching_ext",
   "common/rust/slog_ext",
   "common/rust/sql_ext",
