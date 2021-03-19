@@ -341,12 +341,6 @@ folly::File mountOSXFuse(
   // access to !owner.  Do not send access(2) calls to userspace.
   args.altflags |= FUSE_MOPT_ALLOW_OTHER | FUSE_MOPT_DEFAULT_PERMISSIONS;
 
-  // SIP causes a number of getxattr requests for properties named
-  // com.apple.rootless to be generated as part of stat(2)ing files.
-  // setting NO_APPLEXATTR makes the kext handle those attribute gets
-  // by returning an error, and avoids sending the request to userspace.
-  args.altflags |= FUSE_MOPT_NO_APPLEXATTR;
-
   int mountFlags = MNT_NOSUID;
   if (readOnly) {
     mountFlags |= MNT_RDONLY;
