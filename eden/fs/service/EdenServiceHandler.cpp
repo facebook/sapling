@@ -736,7 +736,12 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
   };
 
   auto context = std::make_shared<Context>();
-  context->argHandle = edenMount->getFuseChannel()->traceDetailedArguments();
+  auto* channel = edenMount->getFuseChannel();
+  if (channel) {
+    context->argHandle = channel->traceDetailedArguments();
+  } else {
+    EDEN_BUG() << "tracing isn't supported yet for NFS";
+  }
 
   auto [serverStream, publisher] =
       apache::thrift::ServerStream<FsEvent>::createPublisher([context] {
@@ -767,47 +772,46 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
     apache::thrift::ServerStreamPublisher<FsEvent> publisher;
   };
 
-  context->subHandle =
-      edenMount->getFuseChannel()->getTraceBus().subscribeFunction(
-          folly::to<std::string>("strace-", edenMount->getPath().basename()),
-          [owner = PublisherOwner{std::move(publisher)},
-           serverState = server_->getServerState(),
-           eventCategoryMask](const FuseTraceEvent& event) {
-            if (isEventMasked(eventCategoryMask, event)) {
-              return;
+  context->subHandle = channel->getTraceBus().subscribeFunction(
+      folly::to<std::string>("strace-", edenMount->getPath().basename()),
+      [owner = PublisherOwner{std::move(publisher)},
+       serverState = server_->getServerState(),
+       eventCategoryMask](const FuseTraceEvent& event) {
+        if (isEventMasked(eventCategoryMask, event)) {
+          return;
+        }
+
+        FsEvent te;
+        auto times = thriftTraceEventTimes(event);
+        te.times_ref() = times;
+
+        // Legacy timestamp fields.
+        te.timestamp_ref() = *times.timestamp_ref();
+        te.monotonic_time_ns_ref() = *times.monotonic_time_ns_ref();
+
+        te.fuseRequest_ref() = populateFuseCall(
+            event.getUnique(),
+            event.getRequest(),
+            *serverState->getProcessNameCache());
+
+        switch (event.getType()) {
+          case FuseTraceEvent::START:
+            te.type_ref() = FsEventType::START;
+            if (auto& arguments = event.getArguments()) {
+              te.arguments_ref() = *arguments;
             }
+            break;
+          case FuseTraceEvent::FINISH:
+            te.type_ref() = FsEventType::FINISH;
+            te.result_ref().from_optional(event.getResponseCode());
+            break;
+        }
 
-            FsEvent te;
-            auto times = thriftTraceEventTimes(event);
-            te.times_ref() = times;
+        te.requestInfo_ref() = thriftRequestInfo(
+            event.getRequest().pid, *serverState->getProcessNameCache());
 
-            // Legacy timestamp fields.
-            te.timestamp_ref() = *times.timestamp_ref();
-            te.monotonic_time_ns_ref() = *times.monotonic_time_ns_ref();
-
-            te.fuseRequest_ref() = populateFuseCall(
-                event.getUnique(),
-                event.getRequest(),
-                *serverState->getProcessNameCache());
-
-            switch (event.getType()) {
-              case FuseTraceEvent::START:
-                te.type_ref() = FsEventType::START;
-                if (auto& arguments = event.getArguments()) {
-                  te.arguments_ref() = *arguments;
-                }
-                break;
-              case FuseTraceEvent::FINISH:
-                te.type_ref() = FsEventType::FINISH;
-                te.result_ref().from_optional(event.getResponseCode());
-                break;
-            }
-
-            te.requestInfo_ref() = thriftRequestInfo(
-                event.getRequest().pid, *serverState->getProcessNameCache());
-
-            owner.publisher.next(te);
-          });
+        owner.publisher.next(te);
+      });
 
   return std::move(serverStream);
 }
@@ -1730,13 +1734,14 @@ void EdenServiceHandler::debugOutstandingFuseCalls(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG2);
 
   auto edenMount = server_->getMount(*mountPoint);
-  auto* fuseChannel = edenMount->getFuseChannel();
 
-  for (const auto& call : fuseChannel->getOutstandingRequests()) {
-    outstandingCalls.push_back(populateFuseCall(
-        call.unique,
-        call.request,
-        *server_->getServerState()->getProcessNameCache()));
+  if (auto* fuseChannel = edenMount->getFuseChannel()) {
+    for (const auto& call : fuseChannel->getOutstandingRequests()) {
+      outstandingCalls.push_back(populateFuseCall(
+          call.unique,
+          call.request,
+          *server_->getServerState()->getProcessNameCache()));
+    }
   }
 #else
   NOT_IMPLEMENTED();
@@ -1926,6 +1931,9 @@ Future<Unit> EdenServiceHandler::future_invalidateKernelInodeCache(
   auto edenMount = server_->getMount(*mountPoint);
   InodePtr inode = inodeFromUserPath(*edenMount, *path);
   auto* fuseChannel = edenMount->getFuseChannel();
+  if (!fuseChannel) {
+    EDEN_BUG() << "Invalidating the inode cache isn't supported on NFS";
+  }
 
   // Invalidate cached pages and attributes
   fuseChannel->invalidateInode(inode->getNodeId(), 0, 0);

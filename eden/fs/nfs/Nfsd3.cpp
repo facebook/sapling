@@ -1512,7 +1512,7 @@ Nfsd3::Nfsd3(
     folly::EventBase* evb,
     std::unique_ptr<NfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
-    std::shared_ptr<ProcessNameCache> /*processNameCache*/,
+    std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration /*requestTimeout*/,
     Notifications* /*notifications*/,
     bool caseSensitive)
@@ -1521,7 +1521,8 @@ Nfsd3::Nfsd3(
               std::move(dispatcher),
               straceLogger,
               caseSensitive),
-          evb) {
+          evb),
+      processAccessLog_(std::move(processNameCache)) {
   if (registerWithRpcbind) {
     server_.registerService(kNfsdProgNumber, kNfsd3ProgVersion);
   }

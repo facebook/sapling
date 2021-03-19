@@ -278,13 +278,7 @@ class EdenMount {
   Nfsd3* FOLLY_NULLABLE getNfsdChannel() const;
 #endif
 
-  ProcessAccessLog& getProcessAccessLog() const {
-#ifdef _WIN32
-    return getPrjfsChannel()->getProcessAccessLog();
-#else
-    return getFuseChannel()->getProcessAccessLog();
-#endif
-  }
+  ProcessAccessLog& getProcessAccessLog() const;
 
   /**
    * Return the path to the mount point.

@@ -549,7 +549,14 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover(
       try {
         info.takeoverPromise.emplace();
         auto future = info.takeoverPromise->getFuture();
-        info.edenMount->getFuseChannel()->takeoverStop();
+
+        if (auto* channel = info.edenMount->getFuseChannel()) {
+          channel->takeoverStop();
+        } else {
+          return EDEN_BUG_FUTURE(TakeoverData)
+              << "Takeover isn't (yet) supported for non-FUSE mounts.";
+        }
+
         futures.emplace_back(std::move(future).thenValue(
             [self = this,
              edenMount = info.edenMount](TakeoverData::MountInfo takeover)
@@ -1203,28 +1210,34 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
         return stats ? stats->maxFilesAccumulated : 0;
       });
 #ifndef _WIN32
-  for (auto metric : RequestMetricsScope::requestMetrics) {
-    counters->registerCallback(
-        getCounterNameForFuseRequests(
-            RequestMetricsScope::RequestStage::LIVE, metric, edenMount.get()),
-        [edenMount, metric] {
-          return edenMount->getFuseChannel()->getRequestMetric(metric);
-        });
+  if (auto* channel = edenMount->getFuseChannel()) {
+    for (auto metric : RequestMetricsScope::requestMetrics) {
+      counters->registerCallback(
+          getCounterNameForFuseRequests(
+              RequestMetricsScope::RequestStage::LIVE, metric, edenMount.get()),
+          [edenMount, metric, channel] {
+            return channel->getRequestMetric(metric);
+          });
+    }
+  } else if (edenMount->getNfsdChannel()) {
+    // TODO(xavierd): Add requestMetrics for NFS.
   }
 #endif
 #ifdef __linux__
-  counters->registerCallback(
-      getCounterNameForFuseRequests(
-          RequestMetricsScope::RequestStage::PENDING,
-          RequestMetricsScope::RequestMetric::COUNT,
-          edenMount.get()),
-      [edenMount] {
-        try {
-          return getNumberPendingFuseRequests(edenMount.get());
-        } catch (const std::exception&) {
-          return size_t{0};
-        }
-      });
+  if (edenMount->getFuseChannel()) {
+    counters->registerCallback(
+        getCounterNameForFuseRequests(
+            RequestMetricsScope::RequestStage::PENDING,
+            RequestMetricsScope::RequestMetric::COUNT,
+            edenMount.get()),
+        [edenMount] {
+          try {
+            return getNumberPendingFuseRequests(edenMount.get());
+          } catch (const std::exception&) {
+            return size_t{0};
+          }
+        });
+  }
 #endif // __linux__
 }
 
@@ -1245,16 +1258,22 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MAX_FILES_ACCUMULATED));
 #ifndef _WIN32
-  for (auto metric : RequestMetricsScope::requestMetrics) {
-    counters->unregisterCallback(getCounterNameForFuseRequests(
-        RequestMetricsScope::RequestStage::LIVE, metric, edenMount));
+  if (edenMount->getFuseChannel()) {
+    for (auto metric : RequestMetricsScope::requestMetrics) {
+      counters->unregisterCallback(getCounterNameForFuseRequests(
+          RequestMetricsScope::RequestStage::LIVE, metric, edenMount));
+    }
+  } else if (edenMount->getNfsdChannel()) {
+    // TODO(xavierd): Unregister NFS metrics
   }
 #endif
 #ifdef __linux__
-  counters->unregisterCallback(getCounterNameForFuseRequests(
-      RequestMetricsScope::RequestStage::PENDING,
-      RequestMetricsScope::RequestMetric::COUNT,
-      edenMount));
+  if (edenMount->getFuseChannel()) {
+    counters->unregisterCallback(getCounterNameForFuseRequests(
+        RequestMetricsScope::RequestStage::PENDING,
+        RequestMetricsScope::RequestMetric::COUNT,
+        edenMount));
+  }
 #endif // __linux__
 }
 
@@ -1368,6 +1387,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                     std::move(result).exception());
               }
 
+              registerStats(edenMount);
+
               // Now that we've started the workers, arrange to call
               // mountFinished once the pool is torn down.
               auto finishFuture =
@@ -1378,6 +1399,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
                         if (takeover.hasValue()) {
                           optTakeover = std::move(takeover.value());
                         }
+                        unregisterStats(edenMount.get());
                         mountFinished(edenMount.get(), std::move(optTakeover));
                       });
 
@@ -1458,7 +1480,6 @@ void EdenServer::mountFinished(
   const auto mountPath =
       normalizeMountPoint(edenMount->getPath().stringPiece());
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
-  unregisterStats(edenMount);
 
   // Save the unmount and takover Promises
   folly::SharedPromise<Unit> unmountPromise;

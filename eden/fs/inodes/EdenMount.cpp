@@ -687,12 +687,28 @@ Nfsd3* FOLLY_NULLABLE EdenMount::getNfsdChannel() const {
   }
   return nullptr;
 }
-
 #else
 PrjfsChannel* FOLLY_NULLABLE EdenMount::getPrjfsChannel() const {
   return channel_.get();
 }
 #endif
+
+ProcessAccessLog& EdenMount::getProcessAccessLog() const {
+#ifdef _WIN32
+  return getPrjfsChannel()->getProcessAccessLog();
+#else
+  return std::visit(
+      [](auto&& channel) -> ProcessAccessLog& {
+        using T = std::decay_t<decltype(channel)>;
+        if constexpr (!std::is_same_v<T, std::monostate>) {
+          return channel->getProcessAccessLog();
+        } else {
+          EDEN_BUG() << "EdenMount::channel_ is not constructed.";
+        }
+      },
+      channel_);
+#endif
+}
 
 const AbsolutePath& EdenMount::getPath() const {
   return config_->getMountPath();

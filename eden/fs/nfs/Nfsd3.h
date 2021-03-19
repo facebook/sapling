@@ -14,6 +14,7 @@
 
 #include "eden/fs/nfs/NfsDispatcher.h"
 #include "eden/fs/nfs/rpc/Server.h"
+#include "eden/fs/utils/ProcessAccessLog.h"
 
 namespace facebook::eden {
 
@@ -64,6 +65,10 @@ class Nfsd3 {
    */
   folly::SemiFuture<StopData> getStopFuture();
 
+  ProcessAccessLog& getProcessAccessLog() {
+    return processAccessLog_;
+  }
+
   Nfsd3(const Nfsd3&) = delete;
   Nfsd3(Nfsd3&&) = delete;
   Nfsd3& operator=(const Nfsd3&) = delete;
@@ -71,6 +76,7 @@ class Nfsd3 {
 
  private:
   RpcServer server_;
+  ProcessAccessLog processAccessLog_;
   folly::Promise<StopData> stopPromise_;
 };
 
