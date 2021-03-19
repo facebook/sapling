@@ -9,7 +9,6 @@
 
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use std::collections::HashSet;
 
 use sql::Connection;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
@@ -18,11 +17,13 @@ use sql_ext::SqlConnections;
 use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
 use context::{CoreContext, PerfCounterType};
+use fbinit::FacebookInit;
 use futures::future;
 use mercurial_types::{
     HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgNodeHash,
 };
 use mononoke_types::{ChangesetId, RepositoryId};
+use rendezvous::{MultiRendezVous, RendezVousStats, TunablesMultiRendezVousController};
 use sql::queries;
 use stats::prelude::*;
 
@@ -156,10 +157,33 @@ pub trait BonsaiHgMapping: Send + Sync {
 }
 
 #[derive(Clone)]
+struct RendezVousConnection {
+    bonsai: MultiRendezVous<RepositoryId, ChangesetId, HgChangesetId>,
+    hg: MultiRendezVous<RepositoryId, HgChangesetId, ChangesetId>,
+    conn: Connection,
+}
+
+impl RendezVousConnection {
+    fn new(conn: Connection, name: &str) -> Self {
+        Self {
+            conn,
+            bonsai: MultiRendezVous::new(
+                TunablesMultiRendezVousController,
+                RendezVousStats::new(format!("bonsai_hg_mapping.bonsai.{}", name,)),
+            ),
+            hg: MultiRendezVous::new(
+                TunablesMultiRendezVousController,
+                RendezVousStats::new(format!("bonsai_hg_mapping.hg.{}", name,)),
+            ),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct SqlBonsaiHgMapping {
     write_connection: Connection,
-    read_connection: Connection,
-    read_master_connection: Connection,
+    read_connection: RendezVousConnection,
+    read_master_connection: RendezVousConnection,
 }
 
 queries! {
@@ -210,8 +234,11 @@ impl SqlConstruct for SqlBonsaiHgMapping {
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {
             write_connection: connections.write_connection,
-            read_connection: connections.read_connection,
-            read_master_connection: connections.read_master_connection,
+            read_connection: RendezVousConnection::new(connections.read_connection, "reader"),
+            read_master_connection: RendezVousConnection::new(
+                connections.read_master_connection,
+                "read_master",
+            ),
         }
     }
 }
@@ -227,9 +254,10 @@ impl SqlBonsaiHgMapping {
         } = entry.clone();
 
         let hg_ids = &[hg_cs_id];
-        let by_hg = SelectMappingByHg::query(&self.read_master_connection, &repo_id, hg_ids);
+        let by_hg = SelectMappingByHg::query(&self.read_master_connection.conn, &repo_id, hg_ids);
         let bcs_ids = &[bcs_id];
-        let by_bcs = SelectMappingByBonsai::query(&self.read_master_connection, &repo_id, bcs_ids);
+        let by_bcs =
+            SelectMappingByBonsai::query(&self.read_master_connection.conn, &repo_id, bcs_ids);
 
         let (by_hg_rows, by_bcs_rows) = future::try_join(by_hg, by_bcs).await?;
 
@@ -282,9 +310,9 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         STATS::gets.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let mut mappings = select_mapping(&self.read_connection, repo_id, &ids).await?;
+        let (mut mappings, left_to_fetch) =
+            select_mapping(ctx.fb, &self.read_connection, repo_id, ids).await?;
 
-        let left_to_fetch = filter_fetched_ids(ids, &mappings[..]);
         if left_to_fetch.is_empty() {
             return Ok(mappings);
         }
@@ -292,8 +320,8 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         STATS::gets_master.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsMaster);
-        let mut master_mappings =
-            select_mapping(&self.read_master_connection, repo_id, &left_to_fetch).await?;
+        let (mut master_mappings, _) =
+            select_mapping(ctx.fb, &self.read_master_connection, repo_id, left_to_fetch).await?;
 
         mappings.append(&mut master_mappings);
         Ok(mappings)
@@ -310,14 +338,19 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         let resolved_cs =
-            fetch_many_hg_by_prefix(&self.read_connection, repo_id, &cs_prefix, limit).await?;
+            fetch_many_hg_by_prefix(&self.read_connection.conn, repo_id, &cs_prefix, limit).await?;
 
         match resolved_cs {
             HgChangesetIdsResolvedFromPrefix::NoMatch => {
                 ctx.perf_counters()
                     .increment_counter(PerfCounterType::SqlReadsMaster);
-                fetch_many_hg_by_prefix(&self.read_master_connection, repo_id, &cs_prefix, limit)
-                    .await
+                fetch_many_hg_by_prefix(
+                    &self.read_master_connection.conn,
+                    repo_id,
+                    &cs_prefix,
+                    limit,
+                )
+                .await
             }
             _ => Ok(resolved_cs),
         }
@@ -354,70 +387,90 @@ async fn fetch_many_hg_by_prefix(
     Ok(res)
 }
 
-fn filter_fetched_ids(
-    cs: BonsaiOrHgChangesetIds,
-    mappings: &[BonsaiHgMappingEntry],
-) -> BonsaiOrHgChangesetIds {
-    match cs {
-        BonsaiOrHgChangesetIds::Bonsai(cs_ids) => {
-            let bcs_fetched: HashSet<_> = mappings.iter().map(|m| &m.bcs_id).collect();
-
-            BonsaiOrHgChangesetIds::Bonsai(
-                cs_ids
-                    .iter()
-                    .filter_map(|cs| {
-                        if !bcs_fetched.contains(cs) {
-                            Some(*cs)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect(),
-            )
-        }
-        BonsaiOrHgChangesetIds::Hg(cs_ids) => {
-            let hg_fetched: HashSet<_> = mappings.iter().map(|m| &m.hg_cs_id).collect();
-
-            BonsaiOrHgChangesetIds::Hg(
-                cs_ids
-                    .iter()
-                    .filter_map(|cs| {
-                        if !hg_fetched.contains(cs) {
-                            Some(*cs)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect(),
-            )
-        }
-    }
-}
-
 async fn select_mapping(
-    connection: &Connection,
+    fb: FacebookInit,
+    connection: &RendezVousConnection,
     repo_id: RepositoryId,
-    cs_id: &BonsaiOrHgChangesetIds,
-) -> Result<Vec<BonsaiHgMappingEntry>, Error> {
-    if cs_id.is_empty() {
-        return Ok(vec![]);
+    cs_ids: BonsaiOrHgChangesetIds,
+) -> Result<(Vec<BonsaiHgMappingEntry>, BonsaiOrHgChangesetIds), Error> {
+    if cs_ids.is_empty() {
+        return Ok((vec![], cs_ids));
     }
 
-    let rows = match cs_id {
+    let (found, missing): (Vec<_>, _) = match cs_ids {
         BonsaiOrHgChangesetIds::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..]).await?
+            let ret = connection
+                .bonsai
+                .get(repo_id)
+                .dispatch(fb, bcs_ids.into_iter().collect(), || {
+                    let conn = connection.conn.clone();
+                    move |bcs_ids| async move {
+                        let bcs_ids = bcs_ids.into_iter().collect::<Vec<_>>();
+
+                        Ok(SelectMappingByBonsai::query(&conn, &repo_id, &bcs_ids[..])
+                            .await?
+                            .into_iter()
+                            .map(|(hg_cs_id, bcs_id)| (bcs_id, hg_cs_id))
+                            .collect())
+                    }
+                })
+                .await?;
+
+            let mut not_found = vec![];
+            let found = ret
+                .into_iter()
+                .filter_map(|(bcs_id, hg_cs_id)| match hg_cs_id {
+                    Some(hg_cs_id) => Some((hg_cs_id, bcs_id)),
+                    None => {
+                        not_found.push(bcs_id);
+                        None
+                    }
+                })
+                .collect();
+
+            (found, BonsaiOrHgChangesetIds::Bonsai(not_found))
         }
         BonsaiOrHgChangesetIds::Hg(hg_cs_ids) => {
-            SelectMappingByHg::query(&connection, &repo_id, &hg_cs_ids[..]).await?
+            let ret = connection
+                .hg
+                .get(repo_id)
+                .dispatch(fb, hg_cs_ids.into_iter().collect(), || {
+                    let conn = connection.conn.clone();
+                    move |hg_cs_ids| async move {
+                        let hg_cs_ids = hg_cs_ids.into_iter().collect::<Vec<_>>();
+                        Ok(SelectMappingByHg::query(&conn, &repo_id, &hg_cs_ids[..])
+                            .await?
+                            .into_iter()
+                            .collect())
+                    }
+                })
+                .await?;
+
+            let mut not_found = vec![];
+            let found = ret
+                .into_iter()
+                .filter_map(|(hg_cs_id, bcs_id)| match bcs_id {
+                    Some(bcs_id) => Some((hg_cs_id, bcs_id)),
+                    None => {
+                        not_found.push(hg_cs_id);
+                        None
+                    }
+                })
+                .collect();
+
+            (found, BonsaiOrHgChangesetIds::Hg(not_found))
         }
     };
 
-    Ok(rows
-        .into_iter()
-        .map(move |(hg_cs_id, bcs_id)| BonsaiHgMappingEntry {
-            repo_id,
-            hg_cs_id,
-            bcs_id,
-        })
-        .collect())
+    Ok((
+        found
+            .into_iter()
+            .map(move |(hg_cs_id, bcs_id)| BonsaiHgMappingEntry {
+                repo_id,
+                hg_cs_id,
+                bcs_id,
+            })
+            .collect(),
+        missing,
+    ))
 }
