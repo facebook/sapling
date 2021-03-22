@@ -207,12 +207,12 @@ def cloudjoin(ui, repo, **opts):
             )
             return 1
 
+        serv = service.get(ui, tokenmod.TokenLocator(ui).token)
+        reponame = ccutil.getreponame(repo)
         # check that the workspace exists if the destination workspace
         # doesn't equal to the default workspace for the current user
         if not create and workspace != workspace.defaultworkspace(ui):
-            if not service.get(ui, tokenmod.TokenLocator(ui).token).getworkspaces(
-                ccutil.getreponame(repo), workspacename
-            ):
+            if not serv.getworkspaces(reponame, workspacename):
                 raise error.Abort(
                     _(
                         "this repository can not be switched to the '%s' workspace\n"
@@ -222,9 +222,23 @@ def cloudjoin(ui, repo, **opts):
                 )
 
         if switch:
-            # sync all the current commits and bookmarks before switching
+            # sync all the current commits and bookmarks before switching workspace
             if not opts.get("force"):
-                cloudsync(ui, repo, **opts)
+                try:
+                    cloudsync(ui, repo, **opts)
+                except ccerror.BadRequestError:
+                    # the sync error can happen if the current workspace is missing on the server
+                    # if it has been renamed or removed
+                    if not serv.getworkspaces(reponame, currentworkspace):
+                        raise error.Abort(
+                            _(
+                                "the current workspace '%s' has been renamed or removed, please use '--force' option to skip the sync step\n"
+                                "note: using --force will discard the local view of commits but you can add commits back with `hg unhide`\n"
+                            )
+                            % currentworkspace
+                        )
+                    else:
+                        raise
             ui.status(
                 _(
                     "now this repository will be switched from the '%s' to the '%s' workspace\n"
