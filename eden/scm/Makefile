@@ -21,7 +21,7 @@ PYTHON := python
 else
 PYTHON := python2
 endif
-PYTHON3 := python3.6
+PYTHON3 := python3
 
 $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
@@ -142,7 +142,7 @@ install-getdeps: getdepsbuild
 test-getdeps: install-getdeps
 	# Run one test to check the binary is minimally good as will be used later in Mononoke getdeps tests
 	# Running all the tests requires a bit of filtering to run the good set (or deleting flaky ones)
-	cd tests && $(PYTHON3) run-tests.py -j1 --with-hg="$(PREFIX)/bin/$(HGNAME)" test-status.t
+	cd tests && $(PYTHON3) run-tests.py -j1 --with-hg="$(PREFIX)/bin/$(HGNAME)" test-status.t test-convert.t
 
 check: tests
 

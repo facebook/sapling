@@ -21,10 +21,10 @@ jobs:
         toolchain: 1.50.0
         default: true
         profile: minimal
-    - name: Install Python 2.7
+    - name: Install Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: '2.7'
+        python-version: 3.8
     - name: Install curl-openssl
       run: |
         brew install curl-openssl
@@ -80,10 +80,6 @@ jobs:
         --no-tests
         --src-dir=.
         mononoke
-    - name: Install Python 3.7
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.7'
     - name: Check space
       run: df -h
     - name: Build mononoke_integration dependencies
