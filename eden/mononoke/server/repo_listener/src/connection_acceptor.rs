@@ -54,6 +54,7 @@ use crate::repo_handlers::RepoHandler;
 use crate::request_handler::{create_conn_logger, request_handler};
 use crate::security_checker::ConnectionsSecurityChecker;
 use crate::stream::QuietShutdownStream;
+use qps::Qps;
 
 define_stats! {
     prefix = "mononoke.connection_acceptor";
@@ -99,6 +100,7 @@ pub async fn connection_acceptor(
     edenapi: EdenApi,
     will_exit: Arc<AtomicBool>,
     config_store: &ConfigStore,
+    cslb_config: Option<String>,
 ) -> Result<()> {
     let enable_http_control_api = common_config.enable_http_control_api;
 
@@ -109,10 +111,17 @@ pub async fn connection_acceptor(
         .await
         .with_context(|| format!("could not bind mononoke on '{}'", sockname))?;
 
+    let mut terminate_process = terminate_process.fuse();
+
+    let qps = match cslb_config {
+        Some(config) => {
+            Some(Qps::new(fb, config, config_store).with_context(|| "Failed to initialize QPS")?)
+        }
+        None => None,
+    };
+
     // Now that we are listening and ready to accept connections, report that we are alive.
     service.set_ready();
-
-    let mut terminate_process = terminate_process.fuse();
 
     let acceptor = Arc::new(Acceptor {
         fb,
@@ -127,6 +136,7 @@ pub async fn connection_acceptor(
         server_hostname: get_hostname().unwrap_or_else(|_| "unknown_hostname".to_string()),
         will_exit,
         config_store: config_store.clone(),
+        qps,
     });
 
     loop {
@@ -163,6 +173,7 @@ pub struct Acceptor {
     pub server_hostname: String,
     pub will_exit: Arc<AtomicBool>,
     pub config_store: ConfigStore,
+    pub qps: Option<Qps>,
 }
 
 /// Details for a socket we've just opened.

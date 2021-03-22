@@ -31,7 +31,7 @@ const ARG_CERT: &str = "cert";
 const ARG_PRIVATE_KEY: &str = "private-key";
 const ARG_CA_PEM: &str = "ca-pem";
 const ARG_TICKET_SEEDS: &str = "ssl-ticket-seeds";
-const ARG_TOP_LEVEL_TIER: &str = "top-level-tier";
+const ARG_CSLB_CONFIG: &str = "cslb-config";
 
 fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
     let app = args::MononokeAppBuilder::new("mononoke server")
@@ -84,11 +84,11 @@ fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
                 .help("path to a file with encryption keys for SSL tickets'"),
         )
         .arg(
-            Arg::with_name(ARG_TOP_LEVEL_TIER)
-                .long(ARG_TOP_LEVEL_TIER)
+            Arg::with_name(ARG_CSLB_CONFIG)
+                .long(ARG_CSLB_CONFIG)
                 .takes_value(true)
                 .required(false)
-                .help("Top level Mononoke tier"),
+                .help("top level Mononoke tier where CSLB publishes routing table"),
         );
 
     let app = args::add_mcrouter_args(app);
@@ -105,6 +105,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let config_store = cmdlib::args::init_config_store(fb, &root_log, &matches)?;
     let observability_context = cmdlib::args::init_observability_context(fb, &matches, &root_log)?;
 
+    let cslb_config = matches.value_of(ARG_CSLB_CONFIG).map(|s| s.to_string());
     info!(root_log, "Starting up");
 
     let config = args::load_repo_configs(config_store, &matches)?;
@@ -190,6 +191,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 scribe,
                 &scuba,
                 will_exit,
+                cslb_config,
             )
             .await
         }

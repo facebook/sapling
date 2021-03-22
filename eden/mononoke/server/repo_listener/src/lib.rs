@@ -57,6 +57,7 @@ pub async fn create_repo_listeners<'a>(
     scribe: Scribe,
     scuba: &'a MononokeScubaSampleBuilder,
     will_exit: Arc<AtomicBool>,
+    cslb_config: Option<String>,
 ) -> Result<()> {
     let load_limiter = {
         let handle = config_store
@@ -114,6 +115,7 @@ pub async fn create_repo_listeners<'a>(
         edenapi,
         will_exit,
         config_store,
+        cslb_config,
     )
     .await
 }

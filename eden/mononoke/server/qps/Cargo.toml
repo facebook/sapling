@@ -1,0 +1,14 @@
+[package]
+name = "qps"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "GPLv2+"
+
+[dependencies]
+anyhow = "1.0"
+cached_config = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbthrift = { version = "0.0.1+unstable", git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+qps_config = { version = "0.1.0", path = "../../../../configerator/structs/scm/mononoke/qps" }
+serde = { version = "=1.0.118", features = ["derive", "rc"] }

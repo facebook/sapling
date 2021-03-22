@@ -46,6 +46,7 @@ openssl = "0.10"
 percent-encoding = "2.1"
 permission_checker = { version = "0.1.0", path = "../../permission_checker" }
 pin-project = "0.4"
+qps = { version = "0.1.0", path = "../qps" }
 repo_client = { version = "0.1.0", path = "../../repo_client" }
 scribe_ext = { version = "0.1.0", path = "../../common/scribe_ext" }
 scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }

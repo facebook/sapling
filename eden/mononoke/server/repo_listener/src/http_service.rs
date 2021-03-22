@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use futures::future::{BoxFuture, FutureExt};
 use gotham_ext::socket_data::TlsSocketData;
 use http::{HeaderMap, HeaderValue, Method, Request, Response, Uri};
 use hyper::{service::Service, Body};
 use sha1::{Digest, Sha1};
-use slog::{debug, error, Logger};
+use slog::{debug, error, trace, Logger};
 use sshrelay::Metadata;
 use std::io::Cursor;
 use std::marker::PhantomData;
@@ -26,10 +26,13 @@ use crate::connection_acceptor::{
     self, AcceptedConnection, Acceptor, ChannelConn, FramedConn, MononokeStream,
 };
 
+use qps::Qps;
+
 const HEADER_CLIENT_DEBUG: &str = "x-client-debug";
 const HEADER_WEBSOCKET_KEY: &str = "sec-websocket-key";
 const HEADER_WEBSOCKET_ACCEPT: &str = "sec-websocket-accept";
 const HEADER_MONONOKE_HOST: &str = "x-mononoke-host";
+const HEADER_REVPROXY_REGION: &str = "x-fb-revproxy-region";
 
 // See https://tools.ietf.org/html/rfc6455#section-1.3
 const WEBSOCKET_MAGIC_KEY: &str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -101,6 +104,20 @@ impl<S> Clone for MononokeHttpService<S> {
     }
 }
 
+fn bump_qps(headers: &HeaderMap, qps: &Option<Qps>) -> Result<()> {
+    let qps = match qps {
+        Some(qps) => qps,
+        None => return Ok(()),
+    };
+    match headers.get(HEADER_REVPROXY_REGION) {
+        Some(proxy_region) => {
+            qps.bump(proxy_region.to_str()?)?;
+            Ok(())
+        }
+        None => Err(anyhow!("No {:?} header.", HEADER_REVPROXY_REGION,)),
+    }
+}
+
 impl<S> MononokeHttpService<S>
 where
     S: MononokeStream,
@@ -110,6 +127,26 @@ where
         req: http::request::Parts,
         body: Body,
     ) -> Result<Response<Body>, HttpError> {
+        if req.method == Method::GET && (req.uri.path() == "/" || req.uri.path() == "/health_check")
+        {
+            let res = if self.acceptor().will_exit.load(Ordering::Relaxed) {
+                "EXITING"
+            } else {
+                "I_AM_ALIVE"
+            };
+
+            let res = Response::builder()
+                .status(http::StatusCode::OK)
+                .body(res.into())
+                .map_err(HttpError::internal)?;
+
+            return Ok(res);
+        }
+
+        if let Err(e) = bump_qps(&req.headers, &self.conn.pending.acceptor.qps) {
+            trace!(self.logger(), "Failed to bump QPS: {:?}", e);
+        }
+
         let upgrade = req
             .headers
             .get(http::header::UPGRADE)
@@ -136,22 +173,6 @@ where
 
         if let Some(path) = req.uri.path().strip_prefix("/control") {
             return self.handle_control_request(req.method, path).await;
-        }
-
-        if req.method == Method::GET && (req.uri.path() == "/" || req.uri.path() == "/health_check")
-        {
-            let res = if self.acceptor().will_exit.load(Ordering::Relaxed) {
-                "EXITING"
-            } else {
-                "I_AM_ALIVE"
-            };
-
-            let res = Response::builder()
-                .status(http::StatusCode::OK)
-                .body(res.into())
-                .map_err(HttpError::internal)?;
-
-            return Ok(res);
         }
 
         let edenapi_path_and_query = req
