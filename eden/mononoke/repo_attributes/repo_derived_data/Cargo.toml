@@ -1,0 +1,11 @@
+[package]
+name = "repo_derived_data"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "GPLv2+"
+
+[dependencies]
+cacheblob = { version = "0.1.0", path = "../../blobstore/cacheblob" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }

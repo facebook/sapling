@@ -35,6 +35,7 @@ use mononoke_types::{
 };
 use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
+use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
 use segmented_changelog_types::SegmentedChangelog;
 use stats::prelude::*;
@@ -65,10 +66,8 @@ pub struct BlobRepoInner {
     pub bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
     pub bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
     pub repoid: RepositoryId,
-    pub derived_data_lease: Arc<dyn LeaseOps>,
     pub filestore_config: FilestoreConfig,
     pub phases_factory: SqlPhasesFactory,
-    pub derived_data_config: DerivedDataConfig,
     pub reponame: String,
     pub bookmarks: Arc<dyn Bookmarks>,
     pub bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
@@ -78,6 +77,7 @@ pub struct BlobRepoInner {
     pub hg_mutation_store: Arc<dyn HgMutationStore>,
     pub segmented_changelog: Arc<dyn SegmentedChangelog>,
     pub repo_identity: Arc<RepoIdentity>,
+    pub repo_derived_data: Arc<RepoDerivedData>,
 }
 
 #[derive(Clone)]
@@ -112,7 +112,10 @@ impl BlobRepo {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
 
         let repo_identity = Arc::new(RepoIdentity::new(repoid, reponame.clone()));
-
+        let repo_derived_data = Arc::new(RepoDerivedData::new(
+            derived_data_config,
+            derived_data_lease,
+        ));
         let inner = BlobRepoInner {
             blobstore,
             changesets,
@@ -120,10 +123,8 @@ impl BlobRepo {
             bonsai_globalrev_mapping,
             bonsai_svnrev_mapping,
             repoid,
-            derived_data_lease,
             filestore_config,
             phases_factory,
-            derived_data_config,
             reponame,
             bookmarks,
             bookmark_update_log,
@@ -133,6 +134,7 @@ impl BlobRepo {
             hg_mutation_store,
             segmented_changelog,
             repo_identity,
+            repo_derived_data,
         };
         BlobRepo {
             inner: Arc::new(inner),
@@ -414,11 +416,11 @@ impl BlobRepo {
     }
 
     pub fn get_derived_data_config(&self) -> &DerivedDataConfig {
-        &self.inner.derived_data_config
+        &self.inner.repo_derived_data.config()
     }
 
     pub fn get_derived_data_lease_ops(&self) -> Arc<dyn LeaseOps> {
-        self.inner.derived_data_lease.clone()
+        self.inner.repo_derived_data.lease().clone()
     }
 
     /// To be used by `DangerousOverride` only

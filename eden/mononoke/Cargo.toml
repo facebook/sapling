@@ -390,6 +390,7 @@ members = [
   "reachabilityindex/skiplist",
   "reachabilityindex/test-helpers",
   "regenerate_hg_filenodes",
+  "repo_attributes/repo_derived_data",
   "repo_attributes/repo_identity",
   "repo_client",
   "repo_client/getbundle_response",

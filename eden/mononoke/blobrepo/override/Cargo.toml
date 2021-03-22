@@ -17,3 +17,4 @@ filenodes = { version = "0.1.0", path = "../../filenodes" }
 filestore = { version = "0.1.0", path = "../../filestore" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 repo_blobstore = { version = "0.1.0", path = "../repo_blobstore" }
+repo_derived_data = { version = "0.1.0", path = "../../repo_attributes/repo_derived_data" }
