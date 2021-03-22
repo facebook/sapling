@@ -10,8 +10,8 @@
 
 # This is the mercurial setup script.
 #
-# 'python setup.py install', or
-# 'python setup.py --help' for more options
+# 'python3 setup3.py install', or
+# 'python3 setup3.py --help' for more options
 
 # isort:skip_file
 import os
@@ -29,7 +29,6 @@ import errno
 import glob
 import hashlib
 import imp
-import py_compile
 import re
 import shutil
 import socket
@@ -75,27 +74,6 @@ ensureenv()
 # rust-cpython uses this to collect Python information
 os.environ["PYTHON_SYS_EXECUTABLE"] = sys.executable
 
-import platform
-
-if sys.version_info[0] >= 3:
-    printf = eval("print")
-    libdir_escape = "unicode_escape"
-
-    def sysstr(s):
-        return s.decode("latin-1")
-
-
-else:
-    libdir_escape = "string_escape"
-
-    def printf(*args, **kwargs):
-        f = kwargs.get("file", sys.stdout)
-        end = kwargs.get("end", "\n")
-        f.write(b" ".join(args) + end)
-
-    def sysstr(s):
-        return s
-
 
 def filter(f, it):
     return list(__builtins__.filter(f, it))
@@ -119,7 +97,7 @@ from distutils.core import Command, Extension
 from distutils.core import setup
 from distutils.dir_util import copy_tree
 from distutils.dist import Distribution
-from distutils.errors import CCompilerError, DistutilsError, DistutilsExecError
+from distutils.errors import CCompilerError, DistutilsExecError
 from distutils.spawn import spawn, find_executable
 from distutils.sysconfig import get_config_var
 from distutils.version import StrictVersion
@@ -292,9 +270,9 @@ class hgcommand(object):
         returncode, out, err = runcmd(cmd, self.env)
         err = filterhgerr(err)
         if err or returncode != 0:
-            printf("stderr from '%s':" % (" ".join(cmd)), file=sys.stderr)
-            printf(err, file=sys.stderr)
-            return ""
+            print("stderr from '%s':" % (" ".join(cmd)), file=sys.stderr)
+            print(err, file=sys.stderr)
+            return b""
         return out
 
 
@@ -385,7 +363,7 @@ hg = findhg()
 def hgtemplate(template, cast=None):
     if not hg:
         return None
-    result = sysstr(hg.run(["log", "-r.", "-T", template]))
+    result = hg.run(["log", "-r.", "-T", template]).decode("utf-8")
     if result and cast:
         result = cast(result)
     return result
@@ -624,7 +602,7 @@ class asset(object):
             raise RuntimeError("don't know how to extract %s" % self.name)
 
     def __hash__(self):
-        return hash((self.name, self.url, self.version))
+        return hash((self.name.encode("utf-8"), self.url, self.version))
 
     def _isready(self):
         try:
@@ -744,7 +722,7 @@ class thriftasset(asset):
         for thriftdest in sorted(self.sourcemap.values()):
             thriftfile = pjoin(thriftdir, thriftdest)
             if os.path.exists(thriftfile):
-                with open(thriftfile) as f:
+                with open(thriftfile, "rb") as f:
                     hasher.update(f.read())
         return int(hasher.hexdigest(), 16)
 
@@ -1304,7 +1282,7 @@ class hginstallscripts(install_scripts):
                 )
                 continue
 
-            data = data.replace(b"@LIBDIR@", libdir.encode(libdir_escape))
+            data = data.replace(b"@LIBDIR@", libdir.encode("unicode_escape"))
             with open(outfile, "wb") as fp:
                 fp.write(data)
 
@@ -1710,8 +1688,7 @@ if sys.platform == "darwin" and os.path.exists("/usr/bin/xcodebuild"):
     version = runcmd(["/usr/bin/xcodebuild", "-version"], {})[1].splitlines()
     if version:
         version = version[0]
-        if sys.version_info[0] == 3:
-            version = version.decode("utf-8")
+        version = version.decode("utf-8")
         xcode4 = version.startswith("Xcode") and StrictVersion(
             version.split()[1]
         ) >= StrictVersion("4.0")
