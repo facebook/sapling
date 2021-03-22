@@ -35,6 +35,7 @@ use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, R
 use pushrebase::HgReplayData;
 use slog::{debug, trace};
 use std::collections::{HashMap, HashSet};
+use std::convert::TryInto;
 use std::fmt::Display;
 use std::sync::{Arc, Mutex};
 use topo_sort::sort_topological;
@@ -996,6 +997,18 @@ impl<'r> Bundle2Resolver<'r> {
                     convert_to_revlog_changesets(changesets)
                         .try_collect()
                         .await?;
+
+                let commit_limit = tunables().get_unbundle_limit_num_of_commits_in_push();
+                if commit_limit > 0 {
+                    let commit_limit: usize = commit_limit.try_into().unwrap();
+                    if changesets.len() > commit_limit {
+                        bail!(
+                            "Trying to push too many commits! Limit is {}, tried to push {}",
+                            commit_limit,
+                            changesets.len()
+                        );
+                    }
+                }
 
                 let changesets = if is_infinitepush
                     && tunables().get_filter_pre_existing_commits_on_infinitepush()

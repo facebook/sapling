@@ -143,6 +143,8 @@ pub struct MononokeTunables {
     rendezvous_dispatch_delay_ms: AtomicI64,
     rendezvous_dispatch_min_threshold: AtomicI64,
     rendezvous_dispatch_max_threshold: AtomicI64,
+
+    unbundle_limit_num_of_commits_in_push: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
