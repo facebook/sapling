@@ -24,6 +24,9 @@
   $ VALIDID1=39b3d83f9a69a9ba4ebb111461071a0af0027357
   $ VALIDID2=8dd6476bd09d9c7776355dc454dafe38efaec5da
   $ count=10
+  $ git() {
+  >   command git -c init.defaultBranch=master "$@"
+  > }
   $ commit()
   > {
   >     GIT_AUTHOR_DATE="2007-01-01 00:00:$count +0000"

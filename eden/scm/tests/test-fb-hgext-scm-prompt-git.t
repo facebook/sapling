@@ -7,6 +7,9 @@ Initialize scm prompt
   >   "$@"
   >   _scm_prompt "(%s)\n"
   > }
+  $ git() {
+  >   command git -c init.defaultBranch=master "$@"
+  > }
 
   $ quietcmd() {
   >   "$@" &> /dev/null
@@ -56,7 +59,7 @@ Test rebase
   $ cmd git commit -qm "ba"
   (work)
   $ quietcmd git rebase master
-  (eef45076|REBASE|work)
+  (eef45076|REBASE*|work) (glob)
   $ cmd git rebase --abort
   (work)
   $ quietcmd git rebase --merge master
