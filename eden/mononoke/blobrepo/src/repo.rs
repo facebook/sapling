@@ -35,6 +35,7 @@ use mononoke_types::{
 };
 use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
+use repo_identity::RepoIdentity;
 use segmented_changelog_types::SegmentedChangelog;
 use stats::prelude::*;
 use std::{
@@ -76,6 +77,7 @@ pub struct BlobRepoInner {
     pub filenodes: Arc<dyn Filenodes>,
     pub hg_mutation_store: Arc<dyn HgMutationStore>,
     pub segmented_changelog: Arc<dyn SegmentedChangelog>,
+    pub repo_identity: Arc<RepoIdentity>,
 }
 
 #[derive(Clone)]
@@ -109,6 +111,8 @@ impl BlobRepo {
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
 
+        let repo_identity = Arc::new(RepoIdentity::new(repoid, reponame.clone()));
+
         let inner = BlobRepoInner {
             blobstore,
             changesets,
@@ -128,6 +132,7 @@ impl BlobRepo {
             filenodes,
             hg_mutation_store,
             segmented_changelog,
+            repo_identity,
         };
         BlobRepo {
             inner: Arc::new(inner),
