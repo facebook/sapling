@@ -122,6 +122,20 @@ Move to the second client
   run `hg cloud sl -w <workspace name>` to view the commits
   run `hg cloud switch -w <workspace name>` to switch to a different workspace
 
+  $ hg cloud status
+  Workspace: w2 (renamed or removed) (run `hg cloud list` and switch to a different one)
+  Raw Workspace Name: user/test/w2
+  Automatic Sync (on local changes): OFF
+  Automatic Sync via 'Scm Daemon' (on remote changes): OFF
+  Last Sync Version: 1
+  Last Sync Heads: 1 (0 omitted)
+  Last Sync Bookmarks: 0 (0 omitted)
+  Last Sync Remote Bookmarks: 1
+  Last Sync Snapshots: 0
+  Last Sync Time: * (glob)
+  Last Sync Status: Exception:
+  'get_references' failed, the workspace has been renamed or client has an invalid state
+
   $ hg cloud switch -w w4 --force
   commitcloud: now this repository will be switched from the 'user/test/w2' to the 'user/test/w4' workspace
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved

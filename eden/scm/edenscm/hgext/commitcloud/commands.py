@@ -1647,10 +1647,21 @@ def cloudstatus(ui, repo, **opts):
 
     userworkspaceprefix = workspace.userworkspaceprefix(ui)
     if workspacename.startswith(userworkspaceprefix):
-        ui.write(
-            _("Workspace: %s\n")
-            % ui.label(workspacename[len(userworkspaceprefix) :], "bold")
-        )
+        # check it with the server
+        if not service.get(ui, tokenmod.TokenLocator(ui).token).getworkspaces(
+            ccutil.getreponame(repo), workspacename
+        ):
+            ui.write(
+                _(
+                    "Workspace: %s (renamed or removed) (run `hg cloud list` and switch to a different one)\n"
+                )
+                % ui.label(workspacename[len(userworkspaceprefix) :], "bold")
+            )
+        else:
+            ui.write(
+                _("Workspace: %s\n")
+                % ui.label(workspacename[len(userworkspaceprefix) :], "bold")
+            )
 
     ui.write(_("Raw Workspace Name: %s\n") % workspacename)
 
