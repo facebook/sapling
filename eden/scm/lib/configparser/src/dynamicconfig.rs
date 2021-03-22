@@ -37,7 +37,7 @@ pub enum Repo {
 impl Repo {
     pub fn from_str(name: Option<&str>) -> Repo {
         match name {
-            Some(name) => Repo::Unknown,
+            Some(_name) => Repo::Unknown,
             None => Repo::NoRepo,
         }
     }

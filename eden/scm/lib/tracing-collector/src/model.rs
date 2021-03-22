@@ -305,7 +305,7 @@ thread_local! {
             extern "C" {
                 fn pthread_threadid_np(
                     thread: libc::pthread_t,
-                    thread_id: *mut libc::uint64_t,
+                    thread_id: *mut u64,
                 ) -> libc::c_int;
             }
             let mut thread_id = 0;
