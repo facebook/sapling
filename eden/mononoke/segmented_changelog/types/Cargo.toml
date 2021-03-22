@@ -1,0 +1,18 @@
+[package]
+name = "segmented_changelog_types"
+version = "0.1.0"
+authors = ["Facebook"]
+edition = "2018"
+license = "GPLv2+"
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+anyhow = "1.0"
+async-trait = "0.1.45"
+auto_impl = "0.4"
+context = { version = "0.1.0", path = "../../server/context" }
+dag = { version = "0.1.0", path = "../../../scm/lib/dag", features = ["for-tests"] }
+futures = { version = "0.3.13", features = ["async-await", "compat"] }
+mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }

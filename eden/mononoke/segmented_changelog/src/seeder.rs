@@ -11,7 +11,6 @@ use anyhow::{Context, Result};
 use futures::stream::TryStreamExt;
 use slog::info;
 
-use dag::{self, Id as Vertex, InProcessIdDag};
 use stats::prelude::*;
 
 use bulkops::{Direction, PublicChangesetBulkFetch};
@@ -26,6 +25,7 @@ use crate::owned::OwnedSegmentedChangelog;
 use crate::types::{IdMapVersion, SegmentedChangelogVersion};
 use crate::update::{self, StartState};
 use crate::version_store::SegmentedChangelogVersionStore;
+use crate::{Group, InProcessIdDag, Vertex};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.seeder";
@@ -118,7 +118,7 @@ impl SegmentedChangelogSeeder {
             start_state.insert_parents(cs_entry.cs_id, cs_entry.parents);
         }
 
-        let low_vertex = dag::Group::MASTER.min_id();
+        let low_vertex = Group::MASTER.min_id();
         let idmap = self.idmap_factory.for_writer(ctx, self.idmap_version);
         let mut iddag = InProcessIdDag::new_in_process();
 

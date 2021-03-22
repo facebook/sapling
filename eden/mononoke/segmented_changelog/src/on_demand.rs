@@ -17,7 +17,6 @@ use parking_lot::Mutex;
 use tokio::sync::{Notify, RwLock};
 
 use cloned::cloned;
-use dag::{self, CloneData, Group, InProcessIdDag, Location};
 use futures_ext::future::{spawn_controlled, ControlledHandle, FbTryFutureExt, TryShared};
 use futures_stats::TimedFutureExt;
 use stats::prelude::*;
@@ -31,6 +30,7 @@ use crate::idmap::IdMap;
 use crate::read_only::ReadOnlySegmentedChangelog;
 use crate::update::{prepare_incremental_iddag_update, update_iddag};
 use crate::{segmented_changelog_delegate, SegmentedChangelog, StreamCloneData};
+use crate::{CloneData, Group, InProcessIdDag, Location};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.ondemand";

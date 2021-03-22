@@ -11,14 +11,13 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 
-use dag::{self, CloneData, InProcessIdDag, Location};
-
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::IdMap;
 use crate::read_only::ReadOnlySegmentedChangelog;
 use crate::{segmented_changelog_delegate, SegmentedChangelog, StreamCloneData};
+use crate::{CloneData, InProcessIdDag, Location};
 
 // We call it owned because the iddag is owned.
 pub struct OwnedSegmentedChangelog {

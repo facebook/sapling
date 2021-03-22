@@ -16,7 +16,6 @@ use sql_ext::{
     SqlConnections,
 };
 
-use dag::Id as Vertex;
 use stats::prelude::*;
 
 use context::{CoreContext, PerfCounterType};
@@ -24,6 +23,7 @@ use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::idmap::IdMap;
 use crate::types::IdMapVersion;
+use crate::Vertex;
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.idmap";

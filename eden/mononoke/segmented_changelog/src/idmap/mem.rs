@@ -10,12 +10,11 @@ use std::collections::HashMap;
 use anyhow::{format_err, Result};
 use parking_lot::RwLock;
 
-use dag::Id as Vertex;
-
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::IdMap;
+use crate::Vertex;
 
 #[derive(Debug)]
 pub struct MemIdMap {

@@ -24,10 +24,9 @@ use futures::future::{self, TryFutureExt};
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
 
-use dag::Id as Vertex;
-
 use crate::idmap::IdMap;
 use crate::types::IdMapVersion;
+use crate::Vertex;
 
 #[derive(Clone)]
 pub struct CachedIdMap {

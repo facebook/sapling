@@ -13,15 +13,13 @@ use async_trait::async_trait;
 use futures::prelude::*;
 
 use cloned::cloned;
-use dag::{
-    self, CloneData, FirstAncestorConstraint, Group, Id as Vertex, InProcessIdDag, Location,
-};
 use stats::prelude::*;
 
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::IdMap;
+use crate::{CloneData, FirstAncestorConstraint, Group, InProcessIdDag, Location, Vertex};
 use crate::{SegmentedChangelog, StreamCloneData};
 
 const IDMAP_CHANGESET_FETCH_BATCH: usize = 500;

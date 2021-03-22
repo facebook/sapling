@@ -21,7 +21,6 @@ use std::sync::Arc;
 use anyhow::{bail, format_err, Context, Result};
 use async_trait::async_trait;
 
-use dag::{Group, Id as Vertex, InProcessIdDag};
 use sql_ext::replication::ReplicaLagMonitor;
 use sql_ext::SqlConnections;
 
@@ -29,6 +28,7 @@ use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::types::IdMapVersion;
+use crate::{Group, InProcessIdDag, Vertex};
 
 #[async_trait]
 pub trait IdMap: Send + Sync {

@@ -19,7 +19,6 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use caching_ext::{CachelibHandler, MemcacheHandler};
 use context::CoreContext;
-use dag::{InProcessIdDag, Location};
 use fixtures::{linear, merge_even, merge_uneven, set_bookmark, unshared_merge_even};
 use mononoke_types::ChangesetId;
 use phases::mark_reachable_as_public;
@@ -33,6 +32,7 @@ use crate::idmap::CacheHandlers;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::types::IdDagVersion;
 use crate::SegmentedChangelog;
+use crate::{InProcessIdDag, Location};
 
 #[async_trait::async_trait]
 trait SegmentedChangelogExt {

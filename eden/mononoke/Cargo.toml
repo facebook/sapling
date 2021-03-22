@@ -406,6 +406,7 @@ members = [
   "revset/revset-test-helper",
   "segmented_changelog",
   "segmented_changelog/bench/concurrent_idmap",
+  "segmented_changelog/types",
   "server",
   "server/context",
   "server/monitoring",

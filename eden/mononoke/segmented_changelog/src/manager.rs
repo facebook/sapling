@@ -21,7 +21,6 @@ use futures_stats::TimedFutureExt;
 use bookmarks::{BookmarkName, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use dag::Location;
 use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::iddag::IdDagSaveStore;
@@ -29,6 +28,7 @@ use crate::idmap::IdMapFactory;
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::version_store::SegmentedChangelogVersionStore;
+use crate::Location;
 use crate::{segmented_changelog_delegate, CloneData, SegmentedChangelog, StreamCloneData};
 
 pub struct SegmentedChangelogManager {

@@ -9,14 +9,13 @@ use std::sync::Arc;
 
 use anyhow::{format_err, Context, Result};
 
-use dag::InProcessIdDag;
-
 use blobstore::{Blobstore, BlobstoreBytes};
 use context::CoreContext;
 use mononoke_types::RepositoryId;
 
 use crate::logging::log_new_iddag_version;
 use crate::types::IdDagVersion;
+use crate::InProcessIdDag;
 
 pub struct IdDagSaveStore {
     repo_id: RepositoryId,

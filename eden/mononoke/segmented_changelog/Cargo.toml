@@ -11,7 +11,6 @@ abomonation_derive = "0.5"
 anyhow = "1.0"
 arc-swap = "1.1"
 async-trait = "0.1.45"
-auto_impl = "0.4"
 blobrepo = { version = "0.1.0", path = "../blobrepo" }
 blobstore = { version = "0.1.0", path = "../blobstore" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
@@ -23,7 +22,6 @@ changeset_fetcher = { version = "0.1.0", path = "../blobrepo/changeset_fetcher" 
 changesets = { version = "0.1.0", path = "../changesets" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 context = { version = "0.1.0", path = "../server/context" }
-dag = { version = "0.1.0", path = "../../scm/lib/dag", features = ["for-tests"] }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_ext = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -34,6 +32,7 @@ mincode = { version = "0.1.0", path = "../../scm/lib/mincode" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 parking_lot = "0.10.2"
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
+segmented_changelog_types = { version = "0.1.0", path = "types" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }

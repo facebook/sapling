@@ -15,7 +15,6 @@ use bookmarks::{BookmarkName, Bookmarks};
 use bulkops::PublicChangesetBulkFetch;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use dag::InProcessIdDag;
 use fbinit::FacebookInit;
 use metaconfig_types::SegmentedChangelogConfig;
 use mononoke_types::RepositoryId;
@@ -35,7 +34,7 @@ use crate::seeder::SegmentedChangelogSeeder;
 use crate::tailer::SegmentedChangelogTailer;
 use crate::types::IdMapVersion;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{DisabledSegmentedChangelog, SegmentedChangelog};
+use crate::{DisabledSegmentedChangelog, InProcessIdDag, SegmentedChangelog};
 
 #[derive(Clone)]
 pub struct SegmentedChangelogSqlConnections(SqlConnections);
@@ -340,7 +339,7 @@ impl SegmentedChangelogBuilder {
         let bulk_fetch = PublicChangesetBulkFetch::new(repo_id, changesets, phases);
         self.with_repo_id(repo_id)
             .with_changeset_fetcher(repo.get_changeset_fetcher())
-            .with_bookmarks(repo.bookmarks())
+            .with_bookmarks(repo.bookmarks().clone())
             .with_blobstore(Arc::new(repo.get_blobstore()))
             .with_changeset_bulk_fetch(Arc::new(bulk_fetch))
     }

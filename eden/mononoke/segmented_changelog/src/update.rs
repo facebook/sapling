@@ -12,14 +12,13 @@ use futures::stream::{FuturesOrdered, StreamExt};
 use futures::try_join;
 use slog::{debug, trace, warn};
 
-use dag::{Id as Vertex, InProcessIdDag};
-
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 use crate::idmap::{IdMap, MemIdMap};
 use crate::owned::OwnedSegmentedChangelog;
+use crate::{dag, InProcessIdDag, Vertex};
 
 // TODO(sfilip): use a dedicated parents structure which specializes the case where
 // we have 0, 1 and 2 parents, 3+ is a 4th variant backed by Vec.

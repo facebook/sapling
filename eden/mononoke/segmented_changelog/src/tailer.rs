@@ -12,7 +12,6 @@ use anyhow::{format_err, Context, Result};
 use futures_stats::TimedFutureExt;
 use slog::{debug, error, info};
 
-use dag::{Group, Id as Vertex, InProcessIdDag};
 use stats::prelude::*;
 
 use bookmarks::{BookmarkName, Bookmarks};
@@ -26,6 +25,7 @@ use crate::owned::OwnedSegmentedChangelog;
 use crate::types::SegmentedChangelogVersion;
 use crate::update::build_incremental;
 use crate::version_store::SegmentedChangelogVersionStore;
+use crate::{Group, InProcessIdDag, Vertex};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.tailer.update";
