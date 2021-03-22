@@ -11,4 +11,4 @@ configparser = { path = "../configparser" }
 once_cell = "1.4"
 parking_lot = "0.10.2"
 pipe = "0.2"
-streampager = { version = "0.9.3", default-features = false }
+streampager = { version = "0.9.4", default-features = false }
