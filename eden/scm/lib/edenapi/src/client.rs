@@ -6,6 +6,8 @@
  */
 
 use std::collections::HashMap;
+use std::fmt::Debug;
+use std::fs::{create_dir_all, File};
 use std::iter::FromIterator;
 
 use anyhow::{format_err, Context};
@@ -19,6 +21,7 @@ use url::Url;
 
 use auth::check_certs;
 use edenapi_types::{
+    json::ToJson,
     wire::{
         WireCloneData, WireCommitHashToLocationResponse, WireCommitLocationToHashResponse,
         WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry, WireToApiConversionError,
@@ -218,6 +221,36 @@ impl Client {
             stats,
         })
     }
+
+    /// Log the request to the configured log directory as JSON.
+    fn log_request<R: ToJson + Debug>(&self, req: &R, label: &str) {
+        tracing::trace!("Sending request: {:?}", req);
+
+        let log_dir = match &self.config.log_dir {
+            Some(path) => path.clone(),
+            None => return,
+        };
+
+        let json = req.to_json();
+        let timestamp = chrono::Local::now().format("%y%m%d_%H%M%S_%f");
+        let name = format!("{}_{}.json", &timestamp, label);
+        let path = log_dir.join(&name);
+
+        let _ = async_runtime::spawn_blocking(move || {
+            if let Err(e) = || -> anyhow::Result<()> {
+                create_dir_all(&log_dir)?;
+                let file = File::create(&path)?;
+
+                // Log as prettified JSON so that requests are easy for humans
+                // to edit when debugging issues. Should not be a problem for
+                // normal usage since logging is disabled by default.
+                serde_json::to_writer_pretty(file, &json)?;
+                Ok(())
+            }() {
+                tracing::warn!("Failed to log request: {:?}", &e);
+            }
+        });
+    }
 }
 
 #[async_trait]
@@ -255,7 +288,9 @@ impl EdenApi for Client {
 
         let url = self.url(paths::FILES, Some(&repo))?;
         let requests = self.prepare(&url, keys, self.config.max_files, |keys| {
-            FileRequest { keys }.to_wire()
+            let req = FileRequest { keys };
+            self.log_request(&req, "files");
+            req.to_wire()
         })?;
 
         Ok(self.fetch::<WireFileEntry>(requests, progress).await?)
@@ -280,7 +315,9 @@ impl EdenApi for Client {
 
         let url = self.url(paths::HISTORY, Some(&repo))?;
         let requests = self.prepare(&url, keys, self.config.max_history, |keys| {
-            HistoryRequest { keys, length }.to_wire()
+            let req = HistoryRequest { keys, length };
+            self.log_request(&req, "history");
+            req.to_wire()
         })?;
 
         let Fetch {
@@ -323,11 +360,12 @@ impl EdenApi for Client {
 
         let url = self.url(paths::TREES, Some(&repo))?;
         let requests = self.prepare(&url, keys, self.config.max_trees, |keys| {
-            TreeRequest {
+            let req = TreeRequest {
                 keys,
                 attributes: attributes.clone().unwrap_or_default(),
-            }
-            .to_wire()
+            };
+            self.log_request(&req, "trees");
+            req.to_wire()
         })?;
 
         Ok(self.fetch::<WireTreeEntry>(requests, progress).await?)
@@ -358,12 +396,13 @@ impl EdenApi for Client {
             mfnodes,
             basemfnodes,
             depth,
-        }
-        .to_wire();
+        };
+        self.log_request(&tree_req, "complete_trees");
+        let wire_tree_req = tree_req.to_wire();
 
         let req = self
             .configure(Request::post(url))?
-            .cbor(&tree_req)
+            .cbor(&wire_tree_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
         Ok(self.fetch::<WireTreeEntry>(vec![req], progress).await?)
@@ -383,6 +422,8 @@ impl EdenApi for Client {
 
         let url = self.url(paths::COMMIT_REVLOG_DATA, Some(&repo))?;
         let commit_revlog_data_req = CommitRevlogDataRequest { hgids };
+
+        self.log_request(&commit_revlog_data_req, "commit_revlog_data");
 
         let req = self
             .configure(Request::post(url))?
@@ -489,7 +530,11 @@ impl EdenApi for Client {
             &url,
             requests,
             self.config.max_location_to_hash,
-            |requests| CommitLocationToHashRequestBatch { requests }.to_wire(),
+            |requests| {
+                let batch = CommitLocationToHashRequestBatch { requests };
+                self.log_request(&batch, "commit_location_to_hash");
+                batch.to_wire()
+            },
         )?;
 
         Ok(self
@@ -520,11 +565,12 @@ impl EdenApi for Client {
         let url = self.url(paths::COMMIT_HASH_TO_LOCATION, Some(&repo))?;
 
         let formatted = self.prepare(&url, hgids, self.config.max_location_to_hash, |hgids| {
-            CommitHashToLocationRequestBatch {
+            let batch = CommitHashToLocationRequestBatch {
                 client_head: repo_master,
                 hgids,
-            }
-            .to_wire()
+            };
+            self.log_request(&batch, "commit_hash_to_location");
+            batch.to_wire()
         })?;
 
         Ok(self

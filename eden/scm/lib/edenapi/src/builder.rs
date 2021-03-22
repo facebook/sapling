@@ -38,6 +38,7 @@ pub struct Builder {
     correlator: Option<String>,
     http_version: Option<HttpVersion>,
     validate_certs: bool,
+    log_dir: Option<PathBuf>,
 }
 
 impl Builder {
@@ -119,6 +120,9 @@ impl Builder {
             }
         });
 
+        let log_dir = config
+            .get_opt::<PathBuf>("edenapi", "logdir")
+            .map_err(|e| ConfigError::Malformed("edenapi.logdir".into(), e))?;
         Ok(Self {
             server_url: Some(server_url),
             cert,
@@ -134,6 +138,7 @@ impl Builder {
             correlator: None,
             http_version,
             validate_certs,
+            log_dir,
         })
     }
 
@@ -243,6 +248,15 @@ impl Builder {
         self.validate_certs = validate_certs;
         self
     }
+
+    /// If specified, the client will write a JSON version of every request
+    /// it sends to the specified directory. This is primarily useful for
+    /// debugging. The JSON requests can be sent with the `edenapi_cli`, or
+    /// converted to CBOR with the `make_req` tool and sent with `curl`.
+    pub fn log_dir(mut self, dir: impl AsRef<Path>) -> Self {
+        self.log_dir = Some(dir.as_ref().into());
+        self
+    }
 }
 
 /// Configuration for a `Client`. Essentially has the same fields as a
@@ -264,6 +278,7 @@ pub(crate) struct Config {
     pub(crate) correlator: Option<String>,
     pub(crate) http_version: Option<HttpVersion>,
     pub(crate) validate_certs: bool,
+    pub(crate) log_dir: Option<PathBuf>,
 }
 
 impl TryFrom<Builder> for Config {
@@ -285,6 +300,7 @@ impl TryFrom<Builder> for Config {
             correlator,
             http_version,
             validate_certs,
+            log_dir,
         } = builder;
 
         // Check for missing required fields.
@@ -317,6 +333,7 @@ impl TryFrom<Builder> for Config {
             correlator,
             http_version,
             validate_certs,
+            log_dir,
         })
     }
 }

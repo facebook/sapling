@@ -14,6 +14,7 @@ async-runtime = { path = "../async-runtime" }
 async-trait = "0.1.45"
 atty = "0.2"
 auth = { path = "../auth" }
+chrono = { version = "0.4", features = ["serde"] }
 configparser = { path = "../configparser" }
 dirs = "2.0"
 edenapi_types = { path = "types" }
