@@ -112,29 +112,31 @@ Move to the second client
   commitcloud: synchronizing 'server' with 'user/test/w2'
   abort: 'get_references' failed, the workspace has been renamed or client has an invalid state
   [255]
-
-  $ hg cloud leave
-  commitcloud: this repository is now disconnected from the 'user/test/w2' workspace
   $ hg cloud list
   commitcloud: searching workspaces for the 'server' repo
   the following commitcloud workspaces are available:
           default
           w3
           w4
+          w2 (connected) (renamed or removed)
   run `hg cloud sl -w <workspace name>` to view the commits
   run `hg cloud switch -w <workspace name>` to switch to a different workspace
-  $ hg cloud join -w w4
+
+  $ hg cloud switch -w w4 --force
+  commitcloud: now this repository will be switched from the 'user/test/w2' to the 'user/test/w4' workspace
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  working directory now at d20a80d4def3
   commitcloud: this repository is now connected to the 'user/test/w4' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/w4'
   commitcloud: commits synchronized
   finished in * (glob)
 
   $ showgraph
-  @  B (W2): draft
+  o  B (W2): draft
   │
   o  A (W2): draft
   │
-  o  base: public  remote/master
+  @  base: public  remote/master
   
 
   $ hg cloud rename --rehost -d testhost

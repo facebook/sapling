@@ -948,22 +948,39 @@ def cloudlistworspaces(ui, repo, **opts):
         ui.label(_("the following commitcloud workspaces are available:\n"), "bold")
     )
 
+    anyconnected = False
     for winfo in active if activeonly else active + archived:
         fullname, shortname = (winfo.name, winfo.name[len(workspacenameprefix) :])
         isconnected = " (connected)" if fullname == currentworkspace else ""
         if isconnected:
             shortname = ui.label(shortname, "bold")
+            anyconnected = True
         if not winfo.archived:
             ui.write(_("        %s%s\n") % (shortname, isconnected))
         else:
             ui.write(_("        %s%s (archived)\n") % (shortname, isconnected))
 
+    currentmayberenamed = (
+        not user
+        and not anyconnected
+        and currentworkspace
+        and currentworkspace.startswith(workspacenameprefix)
+    )
+    # current workspace is missing on the server
+    if currentmayberenamed:
+        ui.write(
+            _("        %s (connected) (renamed or removed)\n")
+            % ui.label(currentworkspace[len(workspacenameprefix) :], "bold")
+        )
+
     ui.status(_("run `hg cloud sl -w <workspace name>` to view the commits\n"))
+
     ui.status(
         _(
             "run `hg cloud switch -w <workspace name>` to switch to a different workspace\n"
         )
     )
+
     if activeonly and archived:
         ui.status(
             _("run `hg cloud list --all` to list all workspaces, including deleted\n")
