@@ -10,7 +10,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes};
+use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult};
 use futures::{
     compat::Future01CompatExt,
     future::{self, try_join},
@@ -173,7 +173,7 @@ async fn prefetch_history(
     limit: Option<u64>,
 ) -> Result<FilenodeRangeResult<HashMap<HgFileNodeId, FilenodeInfo>>, Error> {
     let filenodes_res = repo
-        .attribute_expected::<dyn Filenodes>()
+        .filenodes()
         .get_all_filenodes_maybe_stale(ctx, &RepoPath::FilePath(path), repo.get_repoid(), limit)
         .compat()
         .await?;
@@ -298,7 +298,7 @@ async fn get_maybe_missing_filenode(
     node: HgFileNodeId,
 ) -> Result<FilenodeInfo, Error> {
     let filenode_res = repo
-        .attribute_expected::<dyn Filenodes>()
+        .filenodes()
         .get_filenode(ctx.clone(), path, node, repo.get_repoid())
         .compat()
         .await?;

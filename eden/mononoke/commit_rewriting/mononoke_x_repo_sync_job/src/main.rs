@@ -21,7 +21,7 @@
 use anyhow::{format_err, Error, Result};
 use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkName, BookmarkUpdateLog, Freshness};
+use bookmarks::{BookmarkName, Freshness};
 use cached_config::ConfigStore;
 use clap::ArgMatches;
 use cmdlib::{
@@ -221,7 +221,7 @@ async fn tail<
 ) -> Result<bool, Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo_id = commit_syncer.get_target_repo_id();
-    let bookmark_update_log = source_repo.attribute_expected::<dyn BookmarkUpdateLog>();
+    let bookmark_update_log = source_repo.bookmark_update_log();
     let counter = format_counter(&commit_syncer);
 
     let maybe_start_id = mutable_counters
@@ -341,8 +341,7 @@ where
 
                     match maybe_counter {
                         Some(counter) => {
-                            let bookmark_update_log =
-                                repo.attribute_expected::<dyn BookmarkUpdateLog>();
+                            let bookmark_update_log = repo.bookmark_update_log();
                             debug!(ctx.logger(), "repo {}, counter {}", repo_id, counter);
                             bookmark_update_log
                                 .count_further_bookmark_log_entries(

@@ -14,7 +14,7 @@
 /// produced correct results
 use anyhow::{format_err, Context, Error, Result};
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkUpdateLog, BookmarkUpdateLogEntry, Freshness};
+use bookmarks::{BookmarkUpdateLogEntry, Freshness};
 use cmdlib::{
     args::{self, MononokeClapApp, MononokeMatches},
     helpers::block_execute,
@@ -93,9 +93,7 @@ async fn run_in_tailing_mode<T: MutableCounters>(
         ctx.clone(),
         start_id,
         blobrepo.get_repoid(),
-        blobrepo
-            .attribute_expected::<dyn BookmarkUpdateLog>()
-            .clone(),
+        blobrepo.bookmark_update_log().clone(),
         scuba_sample,
     );
 
@@ -124,7 +122,7 @@ async fn run_in_once_mode(
     validation_helpers: ValidationHelpers,
     entry_id: u64,
 ) -> Result<(), Error> {
-    let bookmark_update_log = blobrepo.attribute_expected::<dyn BookmarkUpdateLog>();
+    let bookmark_update_log = blobrepo.bookmark_update_log();
     let entries: Vec<Result<(BookmarkUpdateLogEntry, QueueSize), Error>> = bookmark_update_log
         .read_next_bookmark_log_entries(
             ctx.clone(),

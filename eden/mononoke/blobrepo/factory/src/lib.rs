@@ -67,7 +67,6 @@ use sql_construct::SqlConstruct;
 use sql_ext::{facebook::MysqlOptions, SqlConnections};
 use std::num::NonZeroUsize;
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use type_map::TypeMap;
 use unodes::RootUnodeManifestId;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 
@@ -900,17 +899,6 @@ pub fn blobrepo_new(
     derived_data_config: DerivedDataConfig,
     reponame: String,
 ) -> BlobRepo {
-    let attributes = {
-        let mut attributes = TypeMap::new();
-        attributes.insert::<dyn Bookmarks>(bookmarks);
-        attributes.insert::<dyn BookmarkUpdateLog>(bookmark_update_log);
-        attributes.insert::<dyn BonsaiHgMapping>(bonsai_hg_mapping);
-        attributes.insert::<dyn Filenodes>(filenodes);
-        attributes.insert::<dyn HgMutationStore>(hg_mutation_store);
-        attributes.insert::<dyn ChangesetFetcher>(changeset_fetcher);
-        attributes.insert::<dyn SegmentedChangelog>(segmented_changelog);
-        Arc::new(attributes)
-    };
     BlobRepo::new_dangerous(
         blobstore_args,
         changesets,
@@ -922,7 +910,13 @@ pub fn blobrepo_new(
         phases_factory,
         derived_data_config,
         reponame,
-        attributes,
+        bookmarks,
+        bookmark_update_log,
+        bonsai_hg_mapping,
+        changeset_fetcher,
+        filenodes,
+        hg_mutation_store,
+        segmented_changelog,
     )
 }
 

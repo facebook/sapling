@@ -156,15 +156,15 @@ define_stats! {
 #[async_trait]
 impl BlobRepoHg for BlobRepo {
     fn get_bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping> {
-        self.attribute_expected::<dyn BonsaiHgMapping>()
+        self.bonsai_hg_mapping()
     }
 
     fn get_filenodes(&self) -> &Arc<dyn Filenodes> {
-        self.attribute_expected::<dyn Filenodes>()
+        self.filenodes()
     }
 
     fn hg_mutation_store(&self) -> &Arc<dyn HgMutationStore> {
-        self.attribute_expected::<dyn HgMutationStore>()
+        self.hg_mutation_store()
     }
 
     async fn get_bonsai_from_hg(

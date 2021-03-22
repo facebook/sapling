@@ -10,7 +10,7 @@ use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Loadable;
 use bookmark_renaming::get_small_to_large_renamer;
-use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
+use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
 use cached_config::ConfigStore;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::{
@@ -250,7 +250,7 @@ async fn run_pushredirection_subcommand<'a>(
             let small_repo = commit_syncer.get_small_repo();
             let large_repo = commit_syncer.get_large_repo();
             let largest_id = large_repo
-                .attribute_expected::<dyn BookmarkUpdateLog>()
+                .bookmark_update_log()
                 .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
                 .await?
                 .ok_or_else(|| anyhow!("No bookmarks update log entries for large repo"))?;

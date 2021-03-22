@@ -10,7 +10,7 @@
 use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
-use bookmarks::{BookmarkUpdateLog, Freshness};
+use bookmarks::Freshness;
 use context::CoreContext;
 use futures::{compat::Future01CompatExt, stream::TryStreamExt, Future};
 use mononoke_types::RawBundle2Id;
@@ -214,7 +214,7 @@ where
 {
     let repo_id = repo.get_repoid();
     let largest_id = match repo
-        .attribute_expected::<dyn BookmarkUpdateLog>()
+        .bookmark_update_log()
         .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
         .await?
     {

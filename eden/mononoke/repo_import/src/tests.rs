@@ -149,7 +149,7 @@ mod tests {
         .await?;
         // Check the bookmark moves created BookmarkLogUpdate entries
         let entries = blob_repo
-            .bookmarks_log()
+            .bookmark_update_log()
             .list_bookmark_log_entries(
                 ctx.clone(),
                 BookmarkName::new("repo_import_test_repo")?,
@@ -218,7 +218,7 @@ mod tests {
         .await?;
         // Check the bookmark moves created BookmarkLogUpdate entries
         let entries = blob_repo
-            .bookmarks_log()
+            .bookmark_update_log()
             .list_bookmark_log_entries(
                 ctx.clone(),
                 BookmarkName::new("repo_import_test_repo")?,

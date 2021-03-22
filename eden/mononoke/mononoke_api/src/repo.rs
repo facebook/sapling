@@ -19,7 +19,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobstore_factory::make_metadata_sql_factory;
 pub use bookmarks::Freshness as BookmarkFreshness;
-use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Bookmarks};
+use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix};
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use cross_repo_sync::{
@@ -1040,7 +1040,7 @@ impl RepoContext {
             let blob_repo = self.blob_repo();
             let cache = self.warm_bookmarks_cache();
             let bookmarks = blob_repo
-                .attribute_expected::<dyn Bookmarks>()
+                .bookmarks()
                 .list(
                     self.ctx.clone(),
                     BookmarkFreshness::MaybeStale,
@@ -1404,15 +1404,8 @@ impl RepoContext {
         count: u64,
     ) -> Result<Vec<ChangesetId>, MononokeError> {
         let blob_repo = self.blob_repo();
-        let segmented_changelog =
-            blob_repo
-                .attribute::<dyn SegmentedChangelog>()
-                .ok_or_else(|| {
-                    MononokeError::InvalidRequest(String::from(
-                        "Segmented Changelog is not enabled for this repo",
-                    ))
-                })?;
-        let ancestor = segmented_changelog
+        let ancestor = blob_repo
+            .segmented_changelog()
             .location_to_many_changeset_ids(&self.ctx, location, count)
             .await
             .map_err(MononokeError::from)?;
@@ -1428,15 +1421,8 @@ impl RepoContext {
         cs_ids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Location<ChangesetId>>, MononokeError> {
         let blob_repo = self.blob_repo();
-        let segmented_changelog =
-            blob_repo
-                .attribute::<dyn SegmentedChangelog>()
-                .ok_or_else(|| {
-                    MononokeError::InvalidRequest(String::from(
-                        "Segmented Changelog is not enabled for this repo",
-                    ))
-                })?;
-        let result = segmented_changelog
+        let result = blob_repo
+            .segmented_changelog()
             .many_changeset_ids_to_locations(&self.ctx, client_head, cs_ids)
             .await
             .map_err(MononokeError::from)?;
@@ -1447,15 +1433,8 @@ impl RepoContext {
         &self,
     ) -> Result<CloneData<ChangesetId>, MononokeError> {
         let blob_repo = self.blob_repo();
-        let segmented_changelog =
-            blob_repo
-                .attribute::<dyn SegmentedChangelog>()
-                .ok_or_else(|| {
-                    MononokeError::InvalidRequest(String::from(
-                        "Segmented Changelog is not enabled for this repo",
-                    ))
-                })?;
-        let clone_data = segmented_changelog
+        let clone_data = blob_repo
+            .segmented_changelog()
             .clone_data(&self.ctx)
             .await
             .map_err(MononokeError::from)?;
@@ -1466,15 +1445,8 @@ impl RepoContext {
         &self,
     ) -> Result<StreamCloneData<ChangesetId>, MononokeError> {
         let blob_repo = self.blob_repo();
-        let segmented_changelog =
-            blob_repo
-                .attribute::<dyn SegmentedChangelog>()
-                .ok_or_else(|| {
-                    MononokeError::InvalidRequest(String::from(
-                        "Segmented Changelog is not enabled for this repo",
-                    ))
-                })?;
-        let clone_data = segmented_changelog
+        let clone_data = blob_repo
+            .segmented_changelog()
             .full_idmap_clone_data(&self.ctx)
             .await
             .map_err(MononokeError::from)?;

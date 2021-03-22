@@ -12,7 +12,7 @@ use blobstore::Blobstore;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::{BookmarkUpdateLog, Bookmarks};
 use cacheblob::LeaseOps;
-use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
+use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::Changesets;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
@@ -80,11 +80,9 @@ impl DangerousOverride<Arc<dyn Bookmarks>> for BlobRepoInner {
     where
         F: FnOnce(Arc<dyn Bookmarks>) -> Arc<dyn Bookmarks>,
     {
-        let bookmarks = modify(self.attribute_expected::<dyn Bookmarks>().clone());
-        let mut attributes = self.attributes.as_ref().clone();
-        attributes.insert::<dyn Bookmarks>(bookmarks);
+        let bookmarks = modify(self.bookmarks.clone());
         Self {
-            attributes: Arc::new(attributes),
+            bookmarks,
             ..self.clone()
         }
     }
@@ -95,11 +93,9 @@ impl DangerousOverride<Arc<dyn BookmarkUpdateLog>> for BlobRepoInner {
     where
         F: FnOnce(Arc<dyn BookmarkUpdateLog>) -> Arc<dyn BookmarkUpdateLog>,
     {
-        let bookmarks = modify(self.attribute_expected::<dyn BookmarkUpdateLog>().clone());
-        let mut attributes = self.attributes.as_ref().clone();
-        attributes.insert::<dyn BookmarkUpdateLog>(bookmarks);
+        let bookmark_update_log = modify(self.bookmark_update_log.clone());
         Self {
-            attributes: Arc::new(attributes),
+            bookmark_update_log,
             ..self.clone()
         }
     }
@@ -111,14 +107,12 @@ impl DangerousOverride<Arc<dyn Changesets>> for BlobRepoInner {
         F: FnOnce(Arc<dyn Changesets>) -> Arc<dyn Changesets>,
     {
         let changesets = modify(self.changesets.clone());
-        let changesets_fetcher =
+        let changeset_fetcher =
             Arc::new(SimpleChangesetFetcher::new(changesets.clone(), self.repoid));
-        let mut attributes = self.attributes.as_ref().clone();
-        attributes.insert::<dyn ChangesetFetcher>(changesets_fetcher);
 
         Self {
             changesets,
-            attributes: Arc::new(attributes),
+            changeset_fetcher,
             ..self.clone()
         }
     }
@@ -129,14 +123,9 @@ impl DangerousOverride<Arc<dyn Filenodes>> for BlobRepoInner {
     where
         F: FnOnce(Arc<dyn Filenodes>) -> Arc<dyn Filenodes>,
     {
-        let filenodes = match self.attributes.get::<dyn Filenodes>() {
-            Some(attr) => modify(attr.clone()),
-            None => panic!("BlboRepo initalized incorrectly and does not have Filenodes attribute"),
-        };
-        let mut attrs = self.attributes.as_ref().clone();
-        attrs.insert::<dyn Filenodes>(filenodes);
+        let filenodes = modify(self.filenodes.clone());
         Self {
-            attributes: Arc::new(attrs),
+            filenodes,
             ..self.clone()
         }
     }
@@ -147,16 +136,9 @@ impl DangerousOverride<Arc<dyn BonsaiHgMapping>> for BlobRepoInner {
     where
         F: FnOnce(Arc<dyn BonsaiHgMapping>) -> Arc<dyn BonsaiHgMapping>,
     {
-        let bonsai_hg_mapping = match self.attributes.get::<dyn BonsaiHgMapping>() {
-            Some(attr) => modify(attr.clone()),
-            None => panic!(
-                "BlboRepo initalized incorrectly and does not have BonsaiHgMapping attribute",
-            ),
-        };
-        let mut attrs = self.attributes.as_ref().clone();
-        attrs.insert::<dyn BonsaiHgMapping>(bonsai_hg_mapping);
+        let bonsai_hg_mapping = modify(self.bonsai_hg_mapping.clone());
         Self {
-            attributes: Arc::new(attrs),
+            bonsai_hg_mapping,
             ..self.clone()
         }
     }

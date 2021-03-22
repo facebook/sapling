@@ -229,15 +229,16 @@ async fn handle_log(args: &ArgMatches<'_>, ctx: CoreContext, repo: BlobRepo) -> 
             return Err(format_err!("Start time should be earlier than end time"));
         }
         let current_timestamp_ns = Timestamp::now().timestamp_nanos();
-        repo.bookmarks_log().list_bookmark_log_entries_ts_in_range(
-            ctx.clone(),
-            bookmark.clone(),
-            max_rec,
-            Timestamp::from_timestamp_nanos(current_timestamp_ns - min_ts_diff_ns),
-            Timestamp::from_timestamp_nanos(current_timestamp_ns - max_ts_diff_ns),
-        )
+        repo.bookmark_update_log()
+            .list_bookmark_log_entries_ts_in_range(
+                ctx.clone(),
+                bookmark.clone(),
+                max_rec,
+                Timestamp::from_timestamp_nanos(current_timestamp_ns - min_ts_diff_ns),
+                Timestamp::from_timestamp_nanos(current_timestamp_ns - max_ts_diff_ns),
+            )
     } else {
-        repo.bookmarks_log().list_bookmark_log_entries(
+        repo.bookmark_update_log().list_bookmark_log_entries(
             ctx.clone(),
             bookmark.clone(),
             max_rec,

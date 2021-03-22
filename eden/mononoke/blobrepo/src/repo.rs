@@ -9,6 +9,7 @@ use anyhow::{format_err, Error};
 use blobstore::Blobstore;
 use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, BonsaisOrGlobalrevs};
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bonsai_svnrev_mapping::RepoBonsaiSvnrevMapping;
 use bookmarks::{
     self, Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix,
@@ -20,25 +21,27 @@ use changeset_fetcher::ChangesetFetcher;
 use changesets::{ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
+use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use futures::{
     future::{try_join, BoxFuture},
     stream::FuturesUnordered,
     FutureExt, Stream, TryStreamExt,
 };
+use mercurial_mutation::HgMutationStore;
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, ChangesetId, Generation, Globalrev, MononokeId, RepositoryId,
 };
 use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
+use segmented_changelog_types::SegmentedChangelog;
 use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
 };
 use topo_sort::sort_topological;
-use type_map::TypeMap;
 
 define_stats! {
     prefix = "mononoke.blobrepo";
@@ -66,27 +69,18 @@ pub struct BlobRepoInner {
     pub phases_factory: SqlPhasesFactory,
     pub derived_data_config: DerivedDataConfig,
     pub reponame: String,
-    pub attributes: Arc<TypeMap>,
+    pub bookmarks: Arc<dyn Bookmarks>,
+    pub bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
+    pub bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+    pub changeset_fetcher: Arc<dyn ChangesetFetcher>,
+    pub filenodes: Arc<dyn Filenodes>,
+    pub hg_mutation_store: Arc<dyn HgMutationStore>,
+    pub segmented_changelog: Arc<dyn SegmentedChangelog>,
 }
 
 #[derive(Clone)]
 pub struct BlobRepo {
     inner: Arc<BlobRepoInner>,
-}
-
-impl BlobRepoInner {
-    pub fn attribute<T: ?Sized + Send + Sync + 'static>(&self) -> Option<&Arc<T>> {
-        self.attributes.get::<T>()
-    }
-
-    pub fn attribute_expected<T: ?Sized + Send + Sync + 'static>(&self) -> &Arc<T> {
-        self.attributes.get::<T>().unwrap_or_else(|| {
-            panic!(
-                "BlobRepo initialized incorrectly and does not have {} attribute",
-                std::any::type_name::<T>()
-            )
-        })
-    }
 }
 
 impl BlobRepo {
@@ -105,7 +99,13 @@ impl BlobRepo {
         phases_factory: SqlPhasesFactory,
         derived_data_config: DerivedDataConfig,
         reponame: String,
-        attributes: Arc<TypeMap>,
+        bookmarks: Arc<dyn Bookmarks>,
+        bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
+        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
+        changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        filenodes: Arc<dyn Filenodes>,
+        hg_mutation_store: Arc<dyn HgMutationStore>,
+        segmented_changelog: Arc<dyn SegmentedChangelog>,
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
 
@@ -121,7 +121,13 @@ impl BlobRepo {
             phases_factory,
             derived_data_config,
             reponame,
-            attributes,
+            bookmarks,
+            bookmark_update_log,
+            bonsai_hg_mapping,
+            changeset_fetcher,
+            filenodes,
+            hg_mutation_store,
+            segmented_changelog,
         };
         BlobRepo {
             inner: Arc::new(inner),
@@ -129,13 +135,38 @@ impl BlobRepo {
     }
 
     #[inline]
-    pub fn attribute<T: ?Sized + Send + Sync + 'static>(&self) -> Option<&Arc<T>> {
-        self.inner.attribute::<T>()
+    pub fn bookmarks(&self) -> &Arc<dyn Bookmarks> {
+        &self.inner.bookmarks
     }
 
     #[inline]
-    pub fn attribute_expected<T: ?Sized + Send + Sync + 'static>(&self) -> &Arc<T> {
-        self.inner.attribute_expected::<T>()
+    pub fn bookmark_update_log(&self) -> &Arc<dyn BookmarkUpdateLog> {
+        &self.inner.bookmark_update_log
+    }
+
+    #[inline]
+    pub fn bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping> {
+        &self.inner.bonsai_hg_mapping
+    }
+
+    #[inline]
+    pub fn changeset_fetcher(&self) -> &Arc<dyn ChangesetFetcher> {
+        &self.inner.changeset_fetcher
+    }
+
+    #[inline]
+    pub fn filenodes(&self) -> &Arc<dyn Filenodes> {
+        &self.inner.filenodes
+    }
+
+    #[inline]
+    pub fn hg_mutation_store(&self) -> &Arc<dyn HgMutationStore> {
+        &self.inner.hg_mutation_store
+    }
+
+    #[inline]
+    pub fn segmented_changelog(&self) -> &Arc<dyn SegmentedChangelog> {
+        &self.inner.segmented_changelog
     }
 
     /// Get Bonsai changesets for Mercurial heads, which we approximate as Publishing Bonsai
@@ -145,7 +176,7 @@ impl BlobRepo {
         ctx: CoreContext,
     ) -> impl Stream<Item = Result<ChangesetId, Error>> {
         STATS::get_bonsai_heads_maybe_stale.add_value(1);
-        self.attribute_expected::<dyn Bookmarks>()
+        self.bookmarks()
             .list(
                 ctx,
                 Freshness::MaybeStale,
@@ -163,7 +194,7 @@ impl BlobRepo {
         ctx: CoreContext,
     ) -> impl Stream<Item = Result<(Bookmark, ChangesetId), Error>> {
         STATS::get_bonsai_publishing_bookmarks_maybe_stale.add_value(1);
-        self.attribute_expected::<dyn Bookmarks>().list(
+        self.bookmarks().list(
             ctx,
             Freshness::MaybeStale,
             &BookmarkPrefix::empty(),
@@ -181,7 +212,7 @@ impl BlobRepo {
         max: u64,
     ) -> impl Stream<Item = Result<(Bookmark, ChangesetId), Error>> {
         STATS::get_bookmarks_by_prefix_maybe_stale.add_value(1);
-        self.attribute_expected::<dyn Bookmarks>().list(
+        self.bookmarks().list(
             ctx,
             Freshness::MaybeStale,
             prefix,
@@ -228,7 +259,7 @@ impl BlobRepo {
         name: &BookmarkName,
     ) -> BoxFuture<'static, Result<Option<ChangesetId>, Error>> {
         STATS::get_bookmark.add_value(1);
-        self.attribute_expected::<dyn Bookmarks>().get(ctx, name)
+        self.bookmarks().get(ctx, name)
     }
 
     pub fn bonsai_git_mapping(&self) -> &Arc<dyn BonsaiGitMapping> {
@@ -292,7 +323,7 @@ impl BlobRepo {
         limit: u64,
         freshness: Freshness,
     ) -> impl Stream<Item = Result<BookmarkUpdateLogEntry, Error>> {
-        self.attribute_expected::<dyn BookmarkUpdateLog>()
+        self.bookmark_update_log()
             .read_next_bookmark_log_entries(ctx, id, limit, freshness)
     }
 
@@ -302,15 +333,14 @@ impl BlobRepo {
         id: u64,
         exclude_reason: Option<BookmarkUpdateReason>,
     ) -> Result<u64, Error> {
-        self.attribute_expected::<dyn BookmarkUpdateLog>()
+        self.bookmark_update_log()
             .count_further_bookmark_log_entries(ctx, id, exclude_reason)
             .await
     }
 
     pub fn update_bookmark_transaction(&self, ctx: CoreContext) -> Box<dyn BookmarkTransaction> {
         STATS::update_bookmark_transaction.add_value(1);
-        self.attribute_expected::<dyn Bookmarks>()
-            .create_transaction(ctx)
+        self.bookmarks().create_transaction(ctx)
     }
 
     // Returns the generation number of a changeset
@@ -330,7 +360,7 @@ impl BlobRepo {
     }
 
     pub fn get_changeset_fetcher(&self) -> Arc<dyn ChangesetFetcher> {
-        self.attribute_expected::<dyn ChangesetFetcher>().clone()
+        self.changeset_fetcher().clone()
     }
 
     pub fn blobstore(&self) -> &RepoBlobstore {
@@ -368,14 +398,6 @@ impl BlobRepo {
                 .try_collect()
                 .boxed()
         })
-    }
-
-    pub fn bookmarks(&self) -> Arc<dyn Bookmarks> {
-        self.attribute_expected::<dyn Bookmarks>().clone()
-    }
-
-    pub fn bookmarks_log(&self) -> Arc<dyn BookmarkUpdateLog> {
-        self.attribute_expected::<dyn BookmarkUpdateLog>().clone()
     }
 
     pub fn get_phases_factory(&self) -> &SqlPhasesFactory {

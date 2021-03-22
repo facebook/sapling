@@ -59,7 +59,7 @@ impl HgChangesetIdMapping {
 
         Ok(Self {
             repo_id: repo.get_repoid(),
-            mapping: repo.attribute_expected::<dyn BonsaiHgMapping>().clone(),
+            mapping: repo.bonsai_hg_mapping().clone(),
             options,
         })
     }

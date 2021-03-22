@@ -455,10 +455,8 @@ pub async fn open_backsyncer_dbs(
 
     Ok(TargetRepoDbs {
         connections,
-        bookmarks: blobrepo.bookmarks(),
-        bookmark_update_log: blobrepo
-            .attribute_expected::<dyn BookmarkUpdateLog>()
-            .clone(),
+        bookmarks: blobrepo.bookmarks().clone(),
+        bookmark_update_log: blobrepo.bookmark_update_log().clone(),
         counters,
     })
 }

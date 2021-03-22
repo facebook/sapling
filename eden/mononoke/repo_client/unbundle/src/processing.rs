@@ -12,7 +12,6 @@ use crate::{
 };
 use anyhow::{anyhow, Context, Error, Result};
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplay};
 use bookmarks_movement::{
     log_commits_to_scribe, BookmarkMovementError, BookmarkUpdatePolicy, BookmarkUpdateTargets,
