@@ -31,6 +31,7 @@ const ARG_CERT: &str = "cert";
 const ARG_PRIVATE_KEY: &str = "private-key";
 const ARG_CA_PEM: &str = "ca-pem";
 const ARG_TICKET_SEEDS: &str = "ssl-ticket-seeds";
+const ARG_TOP_LEVEL_TIER: &str = "top-level-tier";
 
 fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
     let app = args::MononokeAppBuilder::new("mononoke server")
@@ -81,6 +82,13 @@ fn setup_app<'a, 'b>() -> args::MononokeClapApp<'a, 'b> {
                 .long(ARG_TICKET_SEEDS)
                 .takes_value(true)
                 .help("path to a file with encryption keys for SSL tickets'"),
+        )
+        .arg(
+            Arg::with_name(ARG_TOP_LEVEL_TIER)
+                .long(ARG_TOP_LEVEL_TIER)
+                .takes_value(true)
+                .required(false)
+                .help("Top level Mononoke tier"),
         );
 
     let app = args::add_mcrouter_args(app);
