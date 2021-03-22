@@ -525,17 +525,8 @@ class FetchProfileCmd(Subcmd):
     "Disables prefetch profiles locally",
 )
 class DisableProfileCmd(Subcmd):
-    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            "--checkout",
-            help="The checkout for which prefetching should be disabled",
-            default=None,
-        )
-
     def run(self, args: argparse.Namespace) -> int:
-        checkout = args.checkout
-
-        instance, _checkout, _rel_path = require_checkout(args, checkout)
+        instance = get_eden_instance(args)
         config = instance.read_local_config()
         prefetch_profiles_section = {}
         if config.has_section("prefetch-profiles"):
@@ -543,6 +534,26 @@ class DisableProfileCmd(Subcmd):
                 config.get_section_str_to_any("prefetch-profiles")
             )
         prefetch_profiles_section["prefetching-enabled"] = False
+        config["prefetch-profiles"] = prefetch_profiles_section
+        instance.write_local_config(config)
+
+        return 0
+
+
+@prefetch_profile_cmd(
+    "enable",
+    "Enables prefetch profiles locally",
+)
+class EnableProfileCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        instance = get_eden_instance(args)
+        config = instance.read_local_config()
+        prefetch_profiles_section = {}
+        if config.has_section("prefetch-profiles"):
+            prefetch_profiles_section.update(
+                config.get_section_str_to_any("prefetch-profiles")
+            )
+        prefetch_profiles_section["prefetching-enabled"] = True
         config["prefetch-profiles"] = prefetch_profiles_section
         instance.write_local_config(config)
 
