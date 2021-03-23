@@ -272,6 +272,9 @@ def makeitemsdoc(ui, topic, doc, marker, items, dedent=False):
     entries = []
     seen = set()
     for name in sorted(items):
+        # Hide private functions like "_all()".
+        if name.startswith("_"):
+            continue
         if items[name] in seen:
             continue
         seen.add(items[name])
