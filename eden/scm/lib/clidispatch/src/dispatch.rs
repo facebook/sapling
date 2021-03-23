@@ -312,8 +312,3 @@ impl Dispatcher {
         }
     }
 }
-
-pub fn dispatch(command_table: &CommandTable, args: &[String], io: &IO) -> Result<u8> {
-    let dispatcher = Dispatcher::from_args(args.to_vec())?;
-    dispatcher.run_command(command_table, io)
-}
