@@ -5,8 +5,7 @@ Load commonly used test logic
 # Set up the git repo
 
   $ cd "$TESTTMP"
-  $ git init gitrepo
-  Initialized empty Git repository in $TESTTMP/gitrepo/.git/
+  $ git init -q gitrepo
   $ cd gitrepo
   $ echo commit1 > commit1
   $ git add .

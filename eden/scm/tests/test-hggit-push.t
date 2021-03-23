@@ -1,8 +1,7 @@
 Load commonly used test logic
   $ . "$TESTDIR/hggit/testutil"
 
-  $ git init gitrepo
-  Initialized empty Git repository in $TESTTMP/gitrepo/.git/
+  $ git init -q gitrepo
   $ cd gitrepo
   $ echo alpha > alpha
   $ git add alpha

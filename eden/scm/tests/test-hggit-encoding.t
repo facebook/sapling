@@ -4,8 +4,7 @@
 Load commonly used test logic
   $ . "$TESTDIR/hggit/testutil"
 
-  $ git init gitrepo
-  Initialized empty Git repository in $TESTTMP/gitrepo/.git/
+  $ git init -q gitrepo
   $ cd gitrepo
 
 utf-8 encoded commit message
@@ -24,8 +23,7 @@ The warning message changed in Git 1.8.0
   variable i18n.commitencoding to the encoding your project uses.
 
   $ cd ..
-  $ git init --bare gitrepo2
-  Initialized empty Git repository in $TESTTMP/gitrepo2/
+  $ git init -q --bare gitrepo2
 
   $ hg clone gitrepo hgrepo | grep -v '^updating'
   importing git objects into hg

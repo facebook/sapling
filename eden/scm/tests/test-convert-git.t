@@ -617,8 +617,7 @@ test converting certain branches
 
   $ mkdir git-testrevs
   $ cd git-testrevs
-  $ git init
-  Initialized empty Git repository in $TESTTMP/git-testrevs/.git/
+  $ git init -q
   $ echo a >> a ; git add a > /dev/null; git commit -m 'first' > /dev/null
   $ echo a >> a ; git add a > /dev/null; git commit -m 'master commit' > /dev/null
   $ git checkout -b goodbranch 'HEAD^'
@@ -808,8 +807,7 @@ skip submodules in the conversion
   .gitmodules-renamed
 
 convert using a different remote prefix
-  $ git init git-repo7
-  Initialized empty Git repository in $TESTTMP/git-repo7/.git/
+  $ git init -q git-repo7
   $ cd git-repo7
 TODO: it'd be nice to use (?) lines instead of grep -v to handle the
 git output variance, but that doesn't currently work in the middle of
@@ -883,8 +881,7 @@ damage git repository by renaming a tree object
 
 test for escaping the repo name (CVE-2016-3069)
 
-  $ git init '`echo pwned >COMMAND-INJECTION`'
-  Initialized empty Git repository in $TESTTMP/`echo pwned >COMMAND-INJECTION`/.git/
+  $ git init -q '`echo pwned >COMMAND-INJECTION`'
   $ cd '`echo pwned >COMMAND-INJECTION`'
   $ git commit -q --allow-empty -m 'empty'
   $ cd ..
@@ -900,8 +897,7 @@ test for escaping the repo name (CVE-2016-3069)
 
 test for safely passing paths to git (CVE-2016-3105)
 
-  $ git init 'ext::sh -c echo% pwned% >GIT-EXT-COMMAND-INJECTION% #'
-  Initialized empty Git repository in $TESTTMP/ext::sh -c echo% pwned% >GIT-EXT-COMMAND-INJECTION% #/.git/
+  $ git init -q 'ext::sh -c echo% pwned% >GIT-EXT-COMMAND-INJECTION% #'
   $ cd 'ext::sh -c echo% pwned% >GIT-EXT-COMMAND-INJECTION% #'
   $ git commit -q --allow-empty -m 'empty'
   $ cd ..
@@ -919,7 +915,7 @@ test for safely passing paths to git (CVE-2016-3105)
 
 Conversion of extra commit metadata to extras works
 
-  $ git init gitextras >/dev/null 2>/dev/null
+  $ git init -q gitextras >/dev/null 2>/dev/null
   $ cd gitextras
   $ touch foo
   $ git add foo

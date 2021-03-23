@@ -35,8 +35,7 @@ Outside of a repo, should have no output
   $ _scm_prompt
 
 Set up repo
-  $ git init repo
-  Initialized empty Git repository in $TESTTMP/repo/.git/
+  $ git init -q repo
   $ cd repo
   $ _scm_prompt "%s\n"
   master

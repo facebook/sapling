@@ -12,8 +12,7 @@
 # Setup git repsitory
   $ mkdir "$GIT_REPO"
   $ cd "$GIT_REPO"
-  $ git init
-  Initialized empty Git repository in $TESTTMP/repo-git/.git/
+  $ git init -q
   $ git commit --allow-empty -m "root commit"
   [master (root-commit) d53a2ef] root commit
   $ git branch root

@@ -4,8 +4,7 @@
   $ shorttraceback
   $ enable lz4revlog
 
-  $ git init a-git
-  Initialized empty Git repository in $TESTTMP/a-git/.git/
+  $ git init -q a-git
   $ cd a-git
 
 Make "a" compressable

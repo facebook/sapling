@@ -3,8 +3,7 @@ inconsistencies. Since hg-git is ostensibly correct, we artificially create
 inconsistencies by placing different Mercurial and Git repos in the right spots.
 
   $ . "$TESTDIR/hggit/testutil"
-  $ git init gitrepo
-  Initialized empty Git repository in $TESTTMP/gitrepo/.git/
+  $ git init -q gitrepo
   $ cd gitrepo
   $ echo normalf > normalf
   $ echo missingf > missingf

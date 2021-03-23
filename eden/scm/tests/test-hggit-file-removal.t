@@ -1,8 +1,7 @@
 Load commonly used test logic
   $ . "$TESTDIR/hggit/testutil"
 
-  $ git init gitrepo
-  Initialized empty Git repository in $TESTTMP/gitrepo/.git/
+  $ git init -q gitrepo
   $ cd gitrepo
   $ echo alpha > alpha
   $ git add alpha
@@ -95,8 +94,7 @@ final manifest in git is just beta
       add alpha
 
   $ cd ..
-  $ git init --bare gitrepo2
-  Initialized empty Git repository in $TESTTMP/gitrepo2/
+  $ git init -q --bare gitrepo2
 
   $ hg clone gitrepo hgrepo | grep -v '^updating'
   importing git objects into hg

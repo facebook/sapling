@@ -42,8 +42,7 @@ resolve using second parent
 
   $ cd ..
 
-  $ git init --bare gitrepo
-  Initialized empty Git repository in $TESTTMP/gitrepo/
+  $ git init -q --bare gitrepo
 
   $ cd hgrepo1
   $ hg bookmark -r tip master

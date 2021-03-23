@@ -1,8 +1,7 @@
 Load commonly used test logic
   $ . "$TESTDIR/hggit/testutil"
 
-  $ git init gitrepo
-  Initialized empty Git repository in $TESTTMP/gitrepo/.git/
+  $ git init -q gitrepo
   $ cd gitrepo
   $ echo alpha > alpha
   $ git add alpha
@@ -69,8 +68,7 @@ Make sure that a deleted .hgsubstate does not confuse hg-git
   $ hg --cwd hgrepo-c status
 
 clone empty repo
-  $ git init empty
-  Initialized empty Git repository in $TESTTMP/empty/.git/
+  $ git init -q empty
   $ hg clone empty emptyhg
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
