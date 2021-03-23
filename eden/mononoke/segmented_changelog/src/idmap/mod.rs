@@ -235,7 +235,21 @@ impl IdMap for OverlayIdMap {
     async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(Vertex, ChangesetId)>> {
         match self.mem.get_last_entry(ctx).await? {
             Some(x) => Ok(Some(x)),
-            None => self.shared.get_last_entry(ctx).await,
+            None if self.cutoff > Vertex(0) => {
+                let vertex = self.cutoff - 1;
+                let cs_id = self
+                    .shared
+                    .find_changeset_id(ctx, vertex)
+                    .await?
+                    .with_context(|| {
+                        format!(
+                            "could not find shared entry for vertex {} (overlay cutoff = {})",
+                            vertex, self.cutoff
+                        )
+                    })?;
+                Ok(Some((vertex, cs_id)))
+            }
+            None => Ok(None),
         }
     }
 }
@@ -320,7 +334,7 @@ mod tests {
     };
 
     #[fbinit::test]
-    async fn test_overlay_idmap(fb: FacebookInit) -> Result<()> {
+    async fn test_overlay_idmap_find(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
 
         let shared: Arc<dyn IdMap> = Arc::new(ConcurrentMemIdMap::new());
@@ -373,6 +387,64 @@ mod tests {
                 .await?,
             hashmap![Vertex(3) => THREES_CSID]
         );
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_overlay_idmap_last_entry(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+
+        let shared: Arc<dyn IdMap> = Arc::new(ConcurrentMemIdMap::new());
+
+        shared
+            .insert_many(&ctx, vec![(Vertex(0), AS_CSID), (Vertex(1), ONES_CSID)])
+            .await?;
+
+        {
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(0));
+            assert_eq!(overlay.get_last_entry(&ctx).await?, None);
+        }
+
+        {
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(1));
+            assert_eq!(
+                overlay.get_last_entry(&ctx).await?,
+                Some((Vertex(0), AS_CSID))
+            );
+        }
+
+        {
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(1));
+            overlay.insert(&ctx, Vertex(1), THREES_CSID).await?;
+            assert_eq!(
+                overlay.get_last_entry(&ctx).await?,
+                Some((Vertex(1), THREES_CSID)),
+            );
+        }
+
+        {
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(2));
+            assert_eq!(
+                overlay.get_last_entry(&ctx).await?,
+                Some((Vertex(1), ONES_CSID)),
+            );
+        }
+
+        {
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(2));
+            overlay.insert(&ctx, Vertex(2), TWOS_CSID).await?;
+            assert_eq!(
+                overlay.get_last_entry(&ctx).await?,
+                Some((Vertex(2), TWOS_CSID)),
+            );
+        }
+
+        {
+            let overlay = OverlayIdMap::new(Arc::clone(&shared), Vertex(3));
+            assert!(overlay.get_last_entry(&ctx).await.is_err());
+        }
+
 
         Ok(())
     }
