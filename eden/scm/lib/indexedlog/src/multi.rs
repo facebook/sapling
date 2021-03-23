@@ -119,21 +119,7 @@ impl OpenOptions {
             } else {
                 // New version uses a Log for the "multimeta" data. It enables "repair()".
                 multimeta.read_log(&multimeta_log)?;
-
-                // For safe migration. Also check the "multimeta" file.
-                // It can contain newer data if written by an older version.
-                let mut maybe_new_multimeta = MultiMeta::default();
-                if maybe_new_multimeta.read_file(&meta_path).is_ok() {
-                    if maybe_new_multimeta.metas.iter().all(|(k, v)| {
-                        v.lock().unwrap().primary_len
-                            >= match multimeta.metas.get(k) {
-                                None => 0,
-                                Some(v) => v.lock().unwrap().primary_len,
-                            }
-                    }) {
-                        multimeta = maybe_new_multimeta;
-                    }
-                }
+                apply_legacy_meta_if_it_is_newer(&meta_path, &mut multimeta);
             }
 
             let locked = if !multimeta_log_is_empty
@@ -248,6 +234,7 @@ impl MultiLog {
                 self.multimeta_log.clear_dirty()?;
                 self.multimeta_log.sync()?;
                 self.multimeta.read_log(&self.multimeta_log)?;
+                apply_legacy_meta_if_it_is_newer(&meta_path, &mut self.multimeta);
             }
             Ok(())
         })()
@@ -282,6 +269,32 @@ impl MultiLog {
         }
         self.write_meta(&lock)?;
         Ok(())
+    }
+}
+
+fn apply_legacy_meta_if_it_is_newer(meta_path: &Path, multimeta: &mut MultiMeta) {
+    // For safe migration. Also check the "multimeta" file.
+    // It can contain newer data if written by an older version.
+    let mut maybe_new_multimeta = MultiMeta::default();
+    if maybe_new_multimeta.read_file(meta_path).is_ok() {
+        if maybe_new_multimeta.metas.iter().all(|(k, v)| {
+            v.lock().unwrap().primary_len
+                >= match multimeta.metas.get(k) {
+                    None => 0,
+                    Some(v) => v.lock().unwrap().primary_len,
+                }
+        }) {
+            // Only update "primary_len" and "indexes" metadata in place.
+            // The "epoch" might contain changes that need to be preserved.
+            for (k, v) in multimeta.metas.iter() {
+                let mut current = v.lock().unwrap();
+                if let Some(newer) = maybe_new_multimeta.metas.remove(k) {
+                    let newer = newer.lock().unwrap();
+                    current.primary_len = newer.primary_len;
+                    current.indexes = newer.indexes.clone();
+                }
+            }
+        }
     }
 }
 
@@ -572,7 +585,7 @@ mod tests {
         let mut mlog = simple_multilog(path);
 
         // This is not a proper use of Log::sync, since
-        // it's not protected by a lock. But it demostrates
+        // it's not protected by a lock. But it demonstrates
         // the properties.
         mlog[0].append(b"2").unwrap();
         mlog[0].sync().unwrap();
@@ -799,7 +812,7 @@ MultiMeta is valid"#
         let mlog = simple_open_opts().open(&path).unwrap();
         assert_eq!(
             mlog.logs[0].iter().map(|e| e.unwrap()).collect::<Vec<_>>(),
-            [[0, 0], /* [0, 1], (BUG) */ [1, 0], [1, 1]],
+            [[0, 0], [0, 1], [1, 0], [1, 1]],
         );
     }
 
