@@ -352,7 +352,8 @@ async fn fetch_timestamps(
         stream::iter(hg_cs_ids.into_iter().map(Result::<_, Error>::Ok))
             .map(move |res| async move {
                 let hg_cs_id = res?;
-                async move { hg_cs_id.load(ctx, repo.blobstore()).await }
+                hg_cs_id
+                    .load(ctx, repo.blobstore())
                     .err_into()
                     .map_ok(move |hg_blob_cs| (hg_cs_id, hg_blob_cs.time().clone().into()))
                     .await
