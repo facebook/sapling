@@ -66,6 +66,8 @@ const SQLITE_SHARD_NUM: NonZeroUsize = nonzero!(2_usize);
 const SINGLE_SHARD_NUM: NonZeroUsize = nonzero!(1_usize);
 const GC_GENERATION_PATH: &str = "scm/mononoke/xdb_gc/default";
 
+const SQLBLOB_LABEL: &str = "blobstore";
+
 // Test setup data
 const UPDATE_FREQUENCY: Duration = Duration::from_millis(1);
 const INITIAL_VERSION: u64 = 0;
@@ -117,7 +119,7 @@ impl Sqlblob {
                     port,
                     read_con_type,
                     PoolSizeConfig::for_sharded_connection(),
-                    "blobstore".into(),
+                    SQLBLOB_LABEL.into(),
                     readonly,
                 ))
                 .into_future()
@@ -153,7 +155,7 @@ impl Sqlblob {
                     port,
                     read_con_type,
                     PoolSizeConfig::for_sharded_connection(),
-                    "blobstore".into(),
+                    SQLBLOB_LABEL.into(),
                     readonly,
                 ))
                 .into_future()
@@ -186,6 +188,7 @@ impl Sqlblob {
             fb,
             global_connection_pool,
             pool_config,
+            SQLBLOB_LABEL.into(),
             shardmap.clone(),
             0..shard_count,
             read_con_type,
@@ -254,6 +257,7 @@ impl Sqlblob {
                     fb,
                     global_connection_pool.clone(),
                     pool_config,
+                    SQLBLOB_LABEL.into(),
                     db_address.clone(),
                     read_con_type,
                     readonly,
