@@ -26,6 +26,11 @@ use vlqencoding::{VLQDecode, VLQEncode};
 pub struct OpenOptions {
     /// Name (subdir) of the Log and its OpenOptions.
     name_open_options: Vec<(&'static str, log::OpenOptions)>,
+
+    /// Whether to use legacy MultiMeta source.
+    /// true: use "multimeta" file; false: use "multimeta_log" Log.
+    /// For testing purpose only.
+    leacy_multimeta_source: bool,
 }
 
 /// A [`MultiLog`] contains multiple [`Log`]s with a centric metadata file.
@@ -57,6 +62,11 @@ pub struct MultiLog {
 
     /// Log used for `MultiMeta`. For data recovery.
     multimeta_log: log::Log,
+
+    /// Whether to use legacy MultiMeta source.
+    /// true: use "multimeta" file; false: use "multimeta_log" Log.
+    /// For testing purpose only.
+    leacy_multimeta_source: bool,
 }
 
 /// Constant for the reverse index of multimeta log.
@@ -83,6 +93,7 @@ impl OpenOptions {
         }
         Self {
             name_open_options: name_opts,
+            leacy_multimeta_source: false,
         }
     }
 
@@ -101,7 +112,7 @@ impl OpenOptions {
 
             // Read meltimeta from the multimeta log.
             let mut multimeta = MultiMeta::default();
-            if multimeta_log_is_empty {
+            if multimeta_log_is_empty || self.leacy_multimeta_source {
                 // Previous versions of MultiLog uses the "multimeta" file. Read it for
                 // compatibility.
                 multimeta.read_file(&meta_path)?;
@@ -159,7 +170,9 @@ impl OpenOptions {
             }
 
             if let Some(locked) = locked.as_ref() {
-                multimeta.write_log(&mut multimeta_log, locked)?;
+                if !self.leacy_multimeta_source {
+                    multimeta.write_log(&mut multimeta_log, locked)?;
+                }
                 multimeta.write_file(&meta_path)?;
             }
 
@@ -168,6 +181,7 @@ impl OpenOptions {
                 logs,
                 multimeta,
                 multimeta_log,
+                leacy_multimeta_source: self.leacy_multimeta_source,
             })
         })();
 
@@ -206,8 +220,10 @@ impl MultiLog {
             return Err(crate::Error::programming(msg));
         }
         let result: crate::Result<_> = (|| {
-            // New MultiLog uses multimeta_log to track MultiMeta.
-            self.multimeta.write_log(&mut self.multimeta_log, lock)?;
+            if !self.leacy_multimeta_source {
+                // New MultiLog uses multimeta_log to track MultiMeta.
+                self.multimeta.write_log(&mut self.multimeta_log, lock)?;
+            }
 
             // Legacy MultiLog uses multimeta file to track MultiMeta.
             let meta_path = multi_meta_path(&self.path);
@@ -225,9 +241,14 @@ impl MultiLog {
     fn read_meta(&mut self, lock: &LockGuard) -> crate::Result<()> {
         debug_assert_eq!(lock.0.path(), &self.path);
         (|| -> crate::Result<()> {
-            self.multimeta_log.clear_dirty()?;
-            self.multimeta_log.sync()?;
-            self.multimeta.read_log(&self.multimeta_log)?;
+            let meta_path = multi_meta_path(&self.path);
+            if self.leacy_multimeta_source {
+                self.multimeta.read_file(&meta_path)?;
+            } else {
+                self.multimeta_log.clear_dirty()?;
+                self.multimeta_log.sync()?;
+                self.multimeta.read_log(&self.multimeta_log)?;
+            }
             Ok(())
         })()
         .context("reloading multimeta")
@@ -597,6 +618,7 @@ mod tests {
         logs[0].sync().unwrap();
         logs[1].sync().unwrap();
         mlog.write_meta(&lock).unwrap();
+        drop(lock);
 
         let mlog2 = simple_multilog(path);
         assert_eq!(mlog2[0].iter().count(), 1);
@@ -739,6 +761,45 @@ Log a has valid length 992 after repair
 Repairing Log b
 Log b has valid length 1212 after repair
 MultiMeta is valid"#
+        );
+    }
+
+    #[test]
+    fn test_mixed_old_new_read_writes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path();
+
+        let mut mlog_new = simple_open_opts().open(&path).unwrap();
+        let mut logs_new = mlog_new.detach_logs();
+
+        let mut mlog_old = {
+            let mut opts = simple_open_opts();
+            opts.leacy_multimeta_source = true;
+            opts.open(&path).unwrap()
+        };
+        let mut logs_old = mlog_old.detach_logs();
+
+        // Mixed writes from old and new mlogs.
+        const N: usize = 2;
+        for i in 0..N {
+            for (mlog, logs, j) in [
+                (&mut mlog_new, &mut logs_new, 0u8),
+                (&mut mlog_old, &mut logs_old, 1u8),
+            ]
+            .iter_mut()
+            {
+                let lock = mlog.lock().unwrap();
+                logs[0].append(&[i as u8, *j]).unwrap();
+                logs[0].sync().unwrap();
+                mlog.write_meta(&lock).unwrap();
+            }
+        }
+
+        // Reading the log. It should contain N * 2 entries.
+        let mlog = simple_open_opts().open(&path).unwrap();
+        assert_eq!(
+            mlog.logs[0].iter().map(|e| e.unwrap()).collect::<Vec<_>>(),
+            [[0, 0], /* [0, 1], (BUG) */ [1, 0], [1, 1]],
         );
     }
 
