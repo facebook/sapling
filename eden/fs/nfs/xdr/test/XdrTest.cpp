@@ -126,7 +126,7 @@ struct XdrTrait<IOBufStruct> {
     return ret;
   }
 
-  static constexpr size_t serializedSize(const IOBufStruct& value) {
+  static size_t serializedSize(const IOBufStruct& value) {
     return 2 * XdrTrait<uint32_t>::serializedSize(0) +
         XdrTrait<std::unique_ptr<folly::IOBuf>>::serializedSize(value.buf);
   }

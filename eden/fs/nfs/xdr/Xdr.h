@@ -52,7 +52,7 @@
       FOLLY_PP_FOR_EACH(EDEN_XDR_DE, __VA_ARGS__)             \
       return ret;                                             \
     }                                                         \
-    static constexpr size_t serializedSize(const STRUCT& a) { \
+    static size_t serializedSize(const STRUCT& a) {           \
       return FOLLY_PP_FOR_EACH(EDEN_XDR_SIZE, __VA_ARGS__) 0; \
     }                                                         \
   }
@@ -260,7 +260,7 @@ struct XdrTrait<
     return ret;
   }
 
-  static constexpr size_t serializedSize(const std::array<T, N>& value) {
+  static size_t serializedSize(const std::array<T, N>& value) {
     size_t ret = 0;
     for (const auto& item : value) {
       ret += XdrTrait<T>::serializedSize(item);
@@ -289,7 +289,7 @@ struct XdrTrait<std::vector<uint8_t>> {
     return ret;
   }
 
-  static constexpr size_t serializedSize(const std::vector<uint8_t>& value) {
+  static size_t serializedSize(const std::vector<uint8_t>& value) {
     return XdrTrait<uint32_t>::serializedSize(0) +
         detail::roundUp(value.size());
   }
@@ -317,8 +317,7 @@ struct XdrTrait<std::unique_ptr<folly::IOBuf>> {
     return ret;
   }
 
-  static constexpr size_t serializedSize(
-      const std::unique_ptr<folly::IOBuf>& buf) {
+  static size_t serializedSize(const std::unique_ptr<folly::IOBuf>& buf) {
     auto len = buf->computeChainDataLength();
     return XdrTrait<uint32_t>::serializedSize(0) + detail::roundUp(len);
   }
@@ -347,7 +346,7 @@ struct XdrTrait<
     return ret;
   }
 
-  static constexpr size_t serializedSize(const std::vector<T>& value) {
+  static size_t serializedSize(const std::vector<T>& value) {
     size_t ret = XdrTrait<uint32_t>::serializedSize(0);
     for (const auto& item : value) {
       ret += XdrTrait<T>::serializedSize(item);
@@ -375,7 +374,7 @@ struct XdrTrait<std::string> {
     return ret;
   }
 
-  static constexpr size_t serializedSize(const std::string& value) {
+  static size_t serializedSize(const std::string& value) {
     return XdrTrait<uint32_t>::serializedSize(0) +
         detail::roundUp(value.size());
   }
@@ -426,8 +425,7 @@ struct XdrTrait<XdrVariant<Enum, Vars...>> {
         value.v);
   }
 
-  static constexpr size_t serializedSize(
-      const XdrVariant<Enum, Vars...>& value) {
+  static size_t serializedSize(const XdrVariant<Enum, Vars...>& value) {
     return XdrTrait<Enum>::serializedSize(value.tag) +
         std::visit(
                [](auto&& arg) {
@@ -576,7 +574,7 @@ struct XdrTrait<XdrList<T>> {
     }
   }
 
-  static constexpr size_t serializedSize(const XdrList<T>& value) {
+  static size_t serializedSize(const XdrList<T>& value) {
     size_t ret = 0;
     for (const auto& element : value.list) {
       ret += XdrTrait<bool>::serializedSize(true);

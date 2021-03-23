@@ -14,15 +14,12 @@ namespace facebook::eden {
 namespace {
 
 /**
- * Overhead of READDIR3resok before adding any entries:
- * - A filled post_op_attr
- * - The cookieverf,
- * - The eof boolean and the end of the list marker.
+ * Hardcoded static overhead of READDIR3resok before adding any entries.
+ * Ideally we should make XdrTrait<T>::serializedSize a constexpr, but some
+ * compiler (gcc) don't seem to be able to then compile the code. Thus, this
+ * value is hardcoded here and verified in the DirListTest.
  */
-constexpr size_t kInitialOverhead =
-    XdrTrait<post_op_attr>::serializedSize(post_op_attr{fattr3{}}) +
-    XdrTrait<uint64_t>::serializedSize(0) +
-    2 * XdrTrait<bool>::serializedSize(false);
+constexpr size_t kInitialOverhead = 104u;
 
 /**
  * NFS is weird, it specifies the maximum amount of entries to be returned by
