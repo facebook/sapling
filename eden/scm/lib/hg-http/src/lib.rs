@@ -5,20 +5,22 @@
  * GNU General Public License version 2.
  */
 
-///! The hg-http crate provides common utilities for dealing setting up and
-///! managing http requests for the hg application. This crate specifies how
-///! a topic should be treated. Topics may include monitoring, request setup,
-///! paths, error handling, etc.
-use hg_metrics::increment_counter;
-use http_client::Request;
-use http_client::{HttpClient, Stats};
+//! The hg-http crate provides common utilities for dealing setting up and
+//! managing http requests for the hg application. This crate specifies how
+//! a topic should be treated. Topics may include monitoring, request setup,
+//! paths, error handling, etc.
+
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering::Relaxed;
+
 use once_cell::sync::Lazy;
+
+use hg_metrics::increment_counter;
+use http_client::{HttpClient, Request, Stats};
 use progress_model::IoSample;
 use progress_model::IoTimeSeries;
 use progress_model::ProgressBar;
 use progress_model::Registry;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::Relaxed;
 
 #[derive(Default)]
 struct Total {
