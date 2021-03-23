@@ -18,11 +18,13 @@ use thiserror::Error;
 pub use self::{
     edenapi::EdenApiAdapter,
     fallback::{Fallback, FallbackCache},
+    inmemory::{HashMapStore, KeyedValue},
     legacy::LegacyDatastore,
 };
 
 pub mod edenapi;
 pub mod fallback;
+pub mod inmemory;
 pub mod legacy;
 
 /// A pinned, boxed stream of keys to fetch.

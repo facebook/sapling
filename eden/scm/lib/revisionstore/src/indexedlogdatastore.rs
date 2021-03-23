@@ -30,8 +30,8 @@ use crate::{
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::{ExtStoredPolicy, LocalStore},
     newstore::{
-        FetchError, FetchStream, KeyStream, ReadStore, WriteError, WriteResults, WriteStore,
-        WriteStream,
+        FetchError, FetchStream, KeyStream, KeyedValue, ReadStore, WriteError, WriteResults,
+        WriteStore, WriteStream,
     },
     repack::ToKeys,
     sliceext::SliceExt,
@@ -249,6 +249,14 @@ impl IndexedLogHgIdDataStore {
                 IndexedLogHgIdDataStore::open_options(config)?.repair_shared(path)
             }
         }
+    }
+}
+
+impl KeyedValue for Entry {
+    type Key = Key;
+
+    fn key(&self) -> Self::Key {
+        self.key.clone()
     }
 }
 
