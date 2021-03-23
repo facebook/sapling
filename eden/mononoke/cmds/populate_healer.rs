@@ -22,7 +22,7 @@ use blobstore_sync_queue::{
 use cmdlib::args;
 use context::CoreContext;
 use fileblob::Fileblob;
-use manifoldblob::{ManifoldBlob, ManifoldClientType};
+use manifoldblob::ManifoldBlob;
 use metaconfig_types::{
     BlobConfig, BlobstoreId, MetadataDatabaseConfig, MultiplexId, RemoteDatabaseConfig,
     RemoteMetadataDatabaseConfig, StorageConfig,
@@ -56,7 +56,6 @@ struct Config {
     dry_run: bool,
     started_at: Instant,
     readonly_storage: bool,
-    manifold_client_type: ManifoldClientType,
 }
 
 /// State used to resume iteration in case of restart
@@ -230,11 +229,6 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
 
     let connection_type = args::parse_mysql_options(&matches).connection_type;
     let readonly_storage = args::parse_readonly_storage(&matches);
-    let manifold_client_type = if args::parse_blobstore_options(&matches)?.manifold_use_cpp_client {
-        ManifoldClientType::CppThriftHybrid
-    } else {
-        ManifoldClientType::ThriftOnly
-    };
     Ok(Config {
         repo_id,
         db_address: db_address.clone(),
@@ -250,7 +244,6 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         dry_run: matches.is_present("dry-run"),
         started_at: Instant::now(),
         readonly_storage: readonly_storage.0,
-        manifold_client_type,
     })
 }
 
@@ -384,20 +377,11 @@ async fn populate_healer_queue(
 fn make_key_source(
     fb: FacebookInit,
     args: &BlobConfig,
-    manifold_client_type: ManifoldClientType,
 ) -> Result<Arc<dyn BlobstoreKeySource>, Error> {
     match args {
         BlobConfig::Manifold { bucket, .. } => {
-            let res = Arc::new(
-                ManifoldBlob::new(
-                    fb,
-                    bucket.clone(),
-                    None,
-                    DEFAULT_PUT_BEHAVIOUR,
-                    manifold_client_type,
-                )?
-                .into_inner(),
-            );
+            let res =
+                Arc::new(ManifoldBlob::new(fb, &bucket, None, DEFAULT_PUT_BEHAVIOUR)?.into_inner());
             Ok(res)
         }
         BlobConfig::Files { path } => {
@@ -410,7 +394,7 @@ fn make_key_source(
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let config = Arc::new(parse_args(fb)?);
-    let blobstore = make_key_source(fb, &config.blobstore_args, config.manifold_client_type);
+    let blobstore = make_key_source(fb, &config.blobstore_args);
     match blobstore {
         Ok(blobstore) => {
             let queue: Arc<dyn BlobstoreSyncQueue> = match config.connection_type.clone() {

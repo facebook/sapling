@@ -97,7 +97,6 @@ const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
 const WRITE_ZSTD_ARG: &str = "blobstore-write-zstd";
 const WRITE_ZSTD_LEVEL_ARG: &str = "blobstore-write-zstd-level";
 const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
-const MANIFOLD_USE_CPP_CLIENT_ARG: &str = "manifold-use-cpp-client";
 const CACHELIB_ATTEMPT_ZSTD_ARG: &str = "blobstore-cachelib-attempt-zstd";
 const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
 const BLOBSTORE_SCRUB_ACTION_ARG: &str = "blobstore-scrub-action";
@@ -780,15 +779,6 @@ impl MononokeAppBuilder {
                 .takes_value(true)
                 .required(false)
                 .help("Manifold API key"),
-        )
-        .arg(
-            Arg::with_name(MANIFOLD_USE_CPP_CLIENT_ARG)
-                .long(MANIFOLD_USE_CPP_CLIENT_ARG)
-                .takes_value(true)
-                .possible_values(BOOL_VALUES)
-                .required(false)
-                .default_value(bool_as_str(true))
-                .help("Whether to allow Manifold blobstore to use the C++ client"),
         )
         .arg(
             Arg::with_name(CACHELIB_ATTEMPT_ZSTD_ARG)
@@ -1819,13 +1809,6 @@ pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOpt
         .value_of(MANIFOLD_API_KEY_ARG)
         .map(|api_key| api_key.to_string());
 
-    let manifold_use_cpp_client: bool = matches
-        .value_of(MANIFOLD_USE_CPP_CLIENT_ARG)
-        .map(|v| v.parse())
-        .transpose()
-        .context("Provided manifold-use-cpp-client is not bool")?
-        .ok_or_else(|| format_err!("A default is set, should never be None"))?;
-
     let write_zstd: Option<bool> = matches
         .value_of(WRITE_ZSTD_ARG)
         .map(|v| v.parse())
@@ -1886,7 +1869,6 @@ pub fn parse_blobstore_options(matches: &MononokeMatches) -> Result<BlobstoreOpt
             bytes_min_count,
         },
         manifold_api_key,
-        manifold_use_cpp_client,
         PackOptions::new(put_format_override),
         CachelibBlobstoreOptions::new_lazy(Some(attempt_zstd)),
         blobstore_put_behaviour,
