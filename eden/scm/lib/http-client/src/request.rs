@@ -131,6 +131,11 @@ impl RequestContext {
         self
     }
 
+    /// Set the data to be uploaded in the request body.
+    pub fn set_body<B: Into<Vec<u8>>>(&mut self, data: B) {
+        self.body = Some(data.into());
+    }
+
     /// Provide a way to register event callbacks.
     pub fn event_listeners(&mut self) -> &mut RequestEventListeners {
         &mut self.event_listeners
@@ -186,42 +191,81 @@ impl Request {
 
     /// Set the data to be uploaded in the request body.
     pub fn body<B: Into<Vec<u8>>>(mut self, data: B) -> Self {
-        self.ctx = self.ctx.body(data);
+        self.set_body(data);
+        self
+    }
+
+    /// Set the data to be uploaded in the request body.
+    pub fn set_body<B: Into<Vec<u8>>>(&mut self, data: B) -> &mut Self {
+        self.ctx.set_body(data);
         self
     }
 
     /// Set the http version for this request. Defaults to HTTP/2.
-    pub fn http_version(self, http_version: HttpVersion) -> Self {
-        Self {
-            http_version,
-            ..self
-        }
+    pub fn http_version(mut self, version: HttpVersion) -> Self {
+        self.set_http_version(version);
+        self
+    }
+
+    /// Set the http version for this request. Defaults to HTTP/2.
+    pub fn set_http_version(&mut self, version: HttpVersion) -> &mut Self {
+        self.http_version = version;
+        self
     }
 
     /// Set transfer speed options for this request.
-    pub fn min_transfer_speed(self, min_transfer_speed: MinTransferSpeed) -> Self {
-        Self {
-            min_transfer_speed: Some(min_transfer_speed),
-            ..self
-        }
+    pub fn min_transfer_speed(mut self, min_transfer_speed: MinTransferSpeed) -> Self {
+        self.set_min_transfer_speed(min_transfer_speed);
+        self
+    }
+
+    /// Set transfer speed options for this request.
+    pub fn set_min_transfer_speed(&mut self, min_transfer_speed: MinTransferSpeed) -> &mut Self {
+        self.min_transfer_speed = Some(min_transfer_speed);
+        self
     }
 
     /// Serialize the given value as JSON and use it as the request body.
-    pub fn json<S: Serialize>(self, value: &S) -> Result<Self, serde_json::Error> {
-        Ok(self
-            .header("Content-Type", "application/json")
-            .body(serde_json::to_vec(value)?))
+    pub fn json<S: Serialize>(mut self, value: &S) -> Result<Self, serde_json::Error> {
+        self.set_json_body(value)?;
+        Ok(self)
+    }
+
+    /// Serialize the given value as JSON and use it as the request body.
+    pub fn set_json_body<S: Serialize>(
+        &mut self,
+        value: &S,
+    ) -> Result<&mut Self, serde_json::Error> {
+        self.set_header("Content-Type", "application/json")
+            .set_body(serde_json::to_vec(value)?);
+        Ok(self)
     }
 
     /// Serialize the given value as CBOR and use it as the request body.
-    pub fn cbor<S: Serialize>(self, value: &S) -> Result<Self, serde_cbor::Error> {
-        Ok(self
-            .header("Content-Type", "application/cbor")
-            .body(serde_cbor::to_vec(value)?))
+    pub fn cbor<S: Serialize>(mut self, value: &S) -> Result<Self, serde_cbor::Error> {
+        self.set_cbor_body(value)?;
+        Ok(self)
+    }
+
+
+    /// Serialize the given value as CBOR and use it as the request body.
+    pub fn set_cbor_body<S: Serialize>(
+        &mut self,
+        value: &S,
+    ) -> Result<&mut Self, serde_cbor::Error> {
+        self.set_header("Content-Type", "application/cbor")
+            .set_body(serde_cbor::to_vec(value)?);
+        Ok(self)
     }
 
     /// Set a request header.
     pub fn header(mut self, name: impl ToString, value: impl ToString) -> Self {
+        self.set_header(name, value);
+        self
+    }
+
+    /// Set a request header.
+    pub fn set_header(&mut self, name: impl ToString, value: impl ToString) -> &mut Self {
         self.headers.push((name.to_string(), value.to_string()));
         self
     }
@@ -233,11 +277,21 @@ impl Request {
     /// must also provide the corresponding private key; this can either be
     /// concatenated to the certificate in the PEM file (in which case it will
     /// be used automatically), or specified separately via the `key` method.
-    pub fn cert(self, cert: impl AsRef<Path>) -> Self {
-        Self {
-            cert: Some(cert.as_ref().into()),
-            ..self
-        }
+    pub fn cert(mut self, cert: impl AsRef<Path>) -> Self {
+        self.set_cert(cert);
+        self
+    }
+
+    /// Specify a client certificate for TLS mutual authentiation.
+    ///
+    /// This should be a path to a base64-encoded PEM file containing the
+    /// client's X.509 certificate. When using a client certificate, the client
+    /// must also provide the corresponding private key; this can either be
+    /// concatenated to the certificate in the PEM file (in which case it will
+    /// be used automatically), or specified separately via the `key` method.
+    pub fn set_cert(&mut self, cert: impl AsRef<Path>) -> &mut Self {
+        self.cert = Some(cert.as_ref().into());
+        self
     }
 
     /// Specify a client private key for TLS mutual authentiation.
@@ -245,29 +299,47 @@ impl Request {
     /// This method can be used to specify the path to the client's private
     /// key if this key was not included in the certificate file specified via
     /// the `cert` method.
-    pub fn key(self, key: impl AsRef<Path>) -> Self {
-        Self {
-            key: Some(key.as_ref().into()),
-            ..self
-        }
+    pub fn key(mut self, key: impl AsRef<Path>) -> Self {
+        self.set_key(key);
+        self
+    }
+
+    /// Specify a client private key for TLS mutual authentiation.
+    ///
+    /// This method can be used to specify the path to the client's private
+    /// key if this key was not included in the certificate file specified via
+    /// the `cert` method.
+    pub fn set_key(&mut self, key: impl AsRef<Path>) -> &mut Self {
+        self.key = Some(key.as_ref().into());
+        self
     }
 
     /// Specify a CA certificate bundle to be used to verify the
     /// server's certificate. If not specified, the client will
     /// use the system default CA certificate bundle.
-    pub fn cainfo(self, cainfo: impl AsRef<Path>) -> Self {
-        Self {
-            cainfo: Some(cainfo.as_ref().into()),
-            ..self
-        }
+    pub fn cainfo(mut self, cainfo: impl AsRef<Path>) -> Self {
+        self.set_cainfo(cainfo);
+        self
+    }
+
+    /// Specify a CA certificate bundle to be used to verify the
+    /// server's certificate. If not specified, the client will
+    /// use the system default CA certificate bundle.
+    pub fn set_cainfo(&mut self, cainfo: impl AsRef<Path>) -> &mut Self {
+        self.cainfo = Some(cainfo.as_ref().into());
+        self
     }
 
     /// Set the maximum time this request is allowed to take.
-    pub fn timeout(self, timeout: Duration) -> Self {
-        Self {
-            timeout: Some(timeout),
-            ..self
-        }
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.set_timeout(timeout);
+        self
+    }
+
+    /// Set the maximum time this request is allowed to take.
+    pub fn set_timeout(&mut self, timeout: Duration) -> &mut Self {
+        self.timeout = Some(timeout);
+        self
     }
 
     /// Execute the request, blocking until completion.

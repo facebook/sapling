@@ -89,31 +89,31 @@ impl Client {
             if self.config.validate_certs {
                 check_certs(cert)?;
             }
-            req = req.cert(cert);
+            req.set_cert(cert);
         }
 
         if let Some(ref key) = self.config.key {
-            req = req.key(key);
+            req.set_key(key);
         }
 
         if let Some(ref ca) = self.config.ca_bundle {
-            req = req.cainfo(ca);
+            req.set_cainfo(ca);
         }
 
         for (k, v) in &self.config.headers {
-            req = req.header(k, v);
+            req.set_header(k, v);
         }
 
         if let Some(ref correlator) = self.config.correlator {
-            req = req.header("X-Client-Correlator", correlator);
+            req.set_header("X-Client-Correlator", correlator);
         }
 
         if let Some(timeout) = self.config.timeout {
-            req = req.timeout(timeout);
+            req.set_timeout(timeout);
         }
 
         if let Some(http_version) = self.config.http_version {
-            req = req.http_version(http_version);
+            req.set_http_version(http_version);
         }
 
         Ok(req)

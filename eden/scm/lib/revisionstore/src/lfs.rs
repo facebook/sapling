@@ -980,26 +980,26 @@ impl LfsRemoteInner {
                 .http_version(http_options.http_version);
 
             if let Some(ref correlator) = http_options.correlator {
-                req = req.header("X-Client-Correlator", correlator.clone());
+                req.set_header("X-Client-Correlator", correlator.clone());
             }
 
             if http_options.accept_zstd {
-                req = req.header("Accept-Encoding", "zstd");
+                req.set_header("Accept-Encoding", "zstd");
             }
 
             if let Some(mts) = http_options.min_transfer_speed {
-                req = req.min_transfer_speed(mts);
+                req.set_min_transfer_speed(mts);
             }
 
             if let Some(auth) = &http_options.auth {
                 if let Some(cert) = &auth.cert {
-                    req = req.cert(cert);
+                    req.set_cert(cert);
                 }
                 if let Some(key) = &auth.key {
-                    req = req.key(key);
+                    req.set_key(key);
                 }
                 if let Some(ca) = &auth.cacerts {
-                    req = req.cainfo(ca);
+                    req.set_cainfo(ca);
                 }
             }
 
