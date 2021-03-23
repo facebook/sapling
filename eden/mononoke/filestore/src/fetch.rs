@@ -48,12 +48,36 @@ impl Range {
             end: start.saturating_add(size),
         })
     }
+
+    pub fn range_inclusive(start: u64, end: u64) -> Result<Self, Error> {
+        if start > end {
+            return Err(anyhow::anyhow!("Invalid range bounds: {}-{}", start, end));
+        }
+
+        let end = end + 1;
+
+        Ok(Self(RangeInner::Span { start, end }))
+    }
 }
 
 #[derive(Debug, Copy, Clone)]
 enum RangeInner {
     All,
     Span { start: u64, end: u64 },
+}
+
+impl RangeInner {
+    /// Returns how many byts stream_file_bytes will return when this range is applied to a file of
+    /// size file_size.
+    fn real_size(&self, file_size: u64) -> u64 {
+        match self {
+            RangeInner::All => file_size,
+            RangeInner::Span { start, end } => {
+                let end = std::cmp::min(*end, file_size);
+                end.saturating_sub(*start)
+            }
+        }
+    }
 }
 
 pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
@@ -202,7 +226,44 @@ pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
         let file_size = file_contents.size();
         (
             stream_file_bytes(blobstore, ctx, file_contents, range),
-            file_size,
+            range.0.real_size(file_size),
         )
     }))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_real_size() {
+        assert_eq!(RangeInner::All.real_size(5), 5);
+
+        // Bytes 0 to 9 in a 5 bytes file
+        assert_eq!(RangeInner::Span { start: 0, end: 10 }.real_size(5), 5);
+
+        // Bytes 0 to 4 in a 5 bytes file
+        assert_eq!(RangeInner::Span { start: 0, end: 5 }.real_size(5), 5);
+
+        // Bytes 0 to 3 in a 5 bytes file
+        assert_eq!(RangeInner::Span { start: 0, end: 4 }.real_size(5), 4);
+
+        // Bytes 1 to 3 in a 5 bytes file
+        assert_eq!(RangeInner::Span { start: 1, end: 4 }.real_size(5), 3);
+
+        // Bytes 3 to 3 in a 5 bytes file
+        assert_eq!(RangeInner::Span { start: 3, end: 4 }.real_size(5), 1);
+
+        // Bytes 10 to 10 in a 5 bytes file
+        assert_eq!(RangeInner::Span { start: 10, end: 11 }.real_size(5), 0);
+
+        // Bytes 10 to 14 in a 5 bytes file
+        assert_eq!(RangeInner::Span { start: 10, end: 15 }.real_size(5), 0);
+
+        // Nothing
+        assert_eq!(RangeInner::Span { start: 10, end: 10 }.real_size(5), 0);
+
+        // Nothing
+        assert_eq!(RangeInner::Span { start: 0, end: 0 }.real_size(5), 0);
+    }
 }
