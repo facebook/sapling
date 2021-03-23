@@ -25,6 +25,6 @@ serde_bytes = "0.11"
 serde_cbor = "0.11"
 
 [features]
-default = ["python2"]
+default = ["python3"]
 python2 = ["cpython/python27-sys", "python27-sys"]
 python3 = ["cpython/python3-sys", "python3-sys"]

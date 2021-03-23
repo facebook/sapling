@@ -46,7 +46,7 @@ version = { path = "../version" }
 zstd = "=0.5.3+zstd.1.4.5"
 
 [features]
-default = ["python2"]
+default = ["python3"]
 fb = ["configparser/fb", "version/generated"]
 python2 = ["bindings/python2", "cpython/python27-sys", "cpython_ext/python2", "python27-sys", "pytracing/python2"]
 python3 = ["bindings/python3", "cpython/python3-sys", "cpython_ext/python3", "python3-sys", "pytracing/python3"]
