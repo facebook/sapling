@@ -475,7 +475,7 @@ class engine(object):
 
     @contextlib.contextmanager
     def _lockclear(self):
-        with self.lock():
+        with self.lock(), _suspendrustprogressbar():
             bar = self._currentbar()
             if bar is not None:
                 bar._enginerenderer.clear()
@@ -519,7 +519,7 @@ class engine(object):
                 self._recalculatedisplay(time.time())
                 if not self._bars:
                     global suspend
-                    suspend = util.nullcontextmanager
+                    suspend = _suspendrustprogressbar
                 # Do not redraw when unregistering a nested bar
                 if len(self._bars) < 1:
                     self._cond.notify_all()
@@ -635,7 +635,16 @@ def getengine():
     return _engine
 
 
-suspend = util.nullcontextmanager
+@contextlib.contextmanager
+def _suspendrustprogressbar():
+    util.mainio.disable_progress(True)
+    try:
+        yield
+    finally:
+        util.mainio.disable_progress(False)
+
+
+suspend = _suspendrustprogressbar
 
 
 def _progvalue(value):

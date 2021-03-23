@@ -393,10 +393,13 @@ impl IO {
     }
 
     /// Disable progress rendering completely.
-    pub fn disable_progress(&self) -> io::Result<()> {
+    pub fn disable_progress(&self, disabled: bool) -> io::Result<()> {
         let mut inner = self.inner.lock();
-        inner.progress_disabled = true;
-        inner.set_progress("")
+        inner.progress_disabled = disabled;
+        if disabled {
+            inner.set_progress("")?;
+        }
+        Ok(())
     }
 }
 
