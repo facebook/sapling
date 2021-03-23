@@ -31,14 +31,20 @@ pub type KeyStream<K> = BoxStream<'static, K>;
 /// A pinned, boxed stream of (fallible) fetched values
 pub type FetchStream<K, V> = BoxStream<'static, Result<V, FetchError<K>>>;
 
-/// A boxed, object-safe ReadStore trait object for a given key and value type.
+/// A ReadStore trait object for a given key and value type.
 pub type BoxedReadStore<K, V> = Arc<dyn ReadStore<K, V>>;
 
+/// A pinned, boxed stream of values to write.
 pub type WriteStream<V> = BoxStream<'static, V>;
 
-pub type WriteResults<K> = BoxStream<'static, Result<K, (Option<K>, Error)>>;
+/// A pinned, boxed stream of (fallible) write results.
+pub type WriteResults<K> = BoxStream<'static, Result<K, WriteError<K>>>;
 
+/// A WriteStore trait object for a given key and value type.
 pub type BoxedWriteStore<K, V> = Arc<dyn WriteStore<K, V>>;
+
+/// A trait object for stores which support both reading and writing.
+pub type BoxedRWStore<K, V> = Arc<dyn ReadWriteStore<K, V>>;
 
 #[derive(Debug, Error)]
 pub enum FetchError<K: fmt::Debug + fmt::Display> {
@@ -86,6 +92,47 @@ where
     Box::pin(stream::once(future::ready(Err(FetchError::from(e)))))
 }
 
+// TODO(meyer): We'll likely want to make it WriteError::KeyValueError(K, V, Error) eventually so we can have write fallbacks.
+#[derive(Debug, Error)]
+pub enum WriteError<K: fmt::Debug + fmt::Display> {
+    /// Write failed with an error
+    #[error("failed to write key '{0}': {1}")]
+    KeyedError(K, Error),
+
+    /// Write failure not specific to a particular key
+    #[error(transparent)]
+    Other(#[from] Error),
+}
+
+impl<K> WriteError<K>
+where
+    K: fmt::Debug + fmt::Display,
+{
+    pub fn with_key(key: K, err: impl Into<Error>) -> Self {
+        WriteError::KeyedError(key, err.into())
+    }
+
+    pub fn from(err: impl Into<Error>) -> Self {
+        WriteError::Other(err.into())
+    }
+}
+
+/// A typed, key-value store which supports both reading and writing.
+pub trait ReadWriteStore<
+    K: fmt::Display + fmt::Debug + Send + Sync + 'static,
+    V: Send + Sync + 'static,
+>: ReadStore<K, V> + WriteStore<K, V>
+{
+}
+
+impl<T, K, V> ReadWriteStore<K, V> for T
+where
+    K: fmt::Display + fmt::Debug + Send + Sync + 'static,
+    V: Send + Sync + 'static,
+    T: ReadStore<K, V> + WriteStore<K, V>,
+{
+}
+
 // TODO: Add attributes support
 /// A typed, async key-value storage API
 #[async_trait]
@@ -99,7 +146,7 @@ pub trait ReadStore<K: fmt::Display + fmt::Debug + Send + Sync + 'static, V: Sen
 // TODO: Add attributes support
 /// A typed, async key-value storage API
 #[async_trait]
-pub trait WriteStore<K: Send + Sync + 'static, V: Send + Sync + 'static>:
+pub trait WriteStore<K: fmt::Display + fmt::Debug + Send + Sync + 'static, V: Send + Sync + 'static>:
     Send + Sync + 'static
 {
     async fn write_stream(self: Arc<Self>, values: WriteStream<V>) -> WriteResults<K>;

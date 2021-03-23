@@ -22,7 +22,8 @@ use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, StoreResult},
     indexedlogdatastore::Entry,
     newstore::{
-        FetchError, FetchStream, KeyStream, ReadStore, WriteResults, WriteStore, WriteStream,
+        FetchError, FetchStream, KeyStream, ReadStore, WriteError, WriteResults, WriteStore,
+        WriteStream,
     },
     types::StoreKey,
 };
@@ -80,7 +81,7 @@ where
                 let content = match value.content() {
                     Ok(c) => c,
                     Err(e) => {
-                        return Err((Some(key), e));
+                        return Err(WriteError::with_key(key, e));
                     }
                 };
                 let delta = Delta {
@@ -90,14 +91,14 @@ where
                 };
                 match self_.0.add(&delta, value.metadata()) {
                     Ok(()) => Ok(key),
-                    Err(e) => Err((Some(key), e)),
+                    Err(e) => Err(WriteError::with_key(key, e)),
                 }
             })
             .map(move |spawn_res| {
                 match spawn_res {
                     Ok(Ok(entry)) => Ok(entry),
                     Ok(Err(e)) => Err(e),
-                    Err(e) => Err((Some(key), e.into())),
+                    Err(e) => Err(WriteError::with_key(key, e)),
                 }
             })
         }))

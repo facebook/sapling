@@ -30,7 +30,8 @@ use crate::{
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::{ExtStoredPolicy, LocalStore},
     newstore::{
-        FetchError, FetchStream, KeyStream, ReadStore, WriteResults, WriteStore, WriteStream,
+        FetchError, FetchStream, KeyStream, ReadStore, WriteError, WriteResults, WriteStore,
+        WriteStream,
     },
     repack::ToKeys,
     sliceext::SliceExt,
@@ -307,14 +308,14 @@ impl WriteStore<Key, Entry> for IndexedLogHgIdDataStore {
                 let key = value.key.clone();
                 match value.write_to_log(&mut inner.log) {
                     Ok(()) => Ok(key),
-                    Err(e) => Err((Some(key), e)),
+                    Err(e) => Err(WriteError::with_key(key, e)),
                 }
             })
             .map(move |spawn_res| {
                 match spawn_res {
                     Ok(Ok(entry)) => Ok(entry),
                     Ok(Err(e)) => Err(e),
-                    Err(e) => Err((Some(key), e.into())),
+                    Err(e) => Err(WriteError::with_key(key, e)),
                 }
             })
         }))
