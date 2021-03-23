@@ -20,8 +20,9 @@ use crate::newstore::{
 };
 
 /// A combinator which queries a preferred store, then falls back to a fallback store
-/// if a key is not found in the preferred store.
-pub struct FallbackStore<K, VP, VF> {
+/// if a key is not found in the preferred store. Keys fetched from the fallback will
+/// be written to the write_store if available.
+pub struct FallbackCache<K, VP, VF, VW> {
     /// The preferred store, which will always be queried. Usually a local store.
     pub preferred: BoxedReadStore<K, VP>,
 
@@ -29,25 +30,27 @@ pub struct FallbackStore<K, VP, VF> {
     /// primary store.
     pub fallback: BoxedReadStore<K, VF>,
 
-    // TODO(meyer): Should we make a `BoxedRwStore` that explicitly does both?
     /// A `WriteStore` to which values read from the fallback store are written. Generally
     /// this will be the same as the preferred store.
-    pub write_store: BoxedWriteStore<K, VP>,
-
-    /// If `write` is true, values read from the fallback store will be written to `write_store`
-    pub write: bool,
+    pub write_store: Option<BoxedWriteStore<K, VW>>,
 }
 
 const CHANNEL_BUFFER: usize = 200;
 
 #[async_trait]
-impl<K, VP, VF> ReadStore<K, VP> for FallbackStore<K, VP, VF>
+impl<K, VP, VF, VW, VO> ReadStore<K, VO> for FallbackCache<K, VP, VF, VW>
 where
     K: fmt::Display + fmt::Debug + Send + Sync + Clone + Unpin + 'static,
-    VF: Send + Sync + 'static,
-    VP: Send + Sync + Clone + From<VF> + 'static,
+    // Preferred Value Type
+    VP: Send + Sync + Clone + 'static,
+    // Fallback Value Type
+    VF: Send + Sync + Clone + 'static,
+    // Write Value Type (must support conversion from fallback)
+    VW: Send + Sync + Clone + From<VF> + 'static,
+    // Output Value Type (must support conversion from preferred & fallback)
+    VO: Send + Sync + Clone + From<VF> + From<VP> + 'static,
 {
-    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, VP> {
+    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, VO> {
         // TODO(meyer): Write a custom Stream implementation to try to avoid use of channels
         let (sender, receiver) = channel(CHANNEL_BUFFER);
 
@@ -61,7 +64,8 @@ where
                     async move {
                         use FetchError::*;
                         match res {
-                            Ok(v) => Some(Ok(v)),
+                            // Convert preferred values into output values
+                            Ok(v) => Some(Ok(v.into())),
                             // TODO(meyer): Looks like we aren't up to date with futures crate, missing "feed" method, which is probably better here.
                             // I think this might serialize the fallback stream as-written.
                             Err(NotFound(k)) => match sender.send(k.clone()).await {
@@ -74,42 +78,107 @@ where
                     }
                 });
 
-        let (write_sender, write_receiver) = channel(CHANNEL_BUFFER);
+        let fallback_stream = self.fallback.clone().fetch_stream(Box::pin(receiver)).await;
 
-        let write_fallbacks = self.write;
+        if let Some(ref write_store) = self.write_store {
+            let (write_sender, write_receiver) = channel(CHANNEL_BUFFER);
+
+            let fallback_stream = fallback_stream.and_then(move |v: VF| {
+                let mut write_sender = write_sender.clone();
+                async move {
+                    // Convert fallback values to write values
+                    if let Err(e) = write_sender.send(v.clone().into()).await {
+                        // TODO(meyer): Eventually add better tracing support to these traits. Each combinator should have a span, etc.
+                        // TODO(meyer): Update tracing? Looks like we don't have access to the most recent version of the macro syntax.
+                        error!({ error = %e }, "error writing fallback value to channel");
+                    }
+                    // Convert fallback values to output values
+                    Ok(v.into())
+                }
+            });
+
+            // TODO(meyer): This whole "fake filter map" approach to driving the write stream forward seems bad.
+            let write_results_null = write_store
+                .clone()
+                .write_stream(Box::pin(write_receiver))
+                .await
+                // TODO(meyer): Don't swallow all write errors here.
+                .filter_map(|_res| futures::future::ready(None));
+
+            // TODO(meyer): Implement `select_all_drop` if we continue with this approach
+            Box::pin(select_drop(
+                preferred_stream,
+                select_drop(fallback_stream, write_results_null),
+            ))
+        } else {
+            // Convert fallback values to output values
+            Box::pin(select_drop(
+                preferred_stream,
+                fallback_stream.map_ok(|v| v.into()),
+            ))
+        }
+    }
+}
+
+/// A combinator which queries a preferred store, then falls back to a fallback store
+/// if a key is not found in the preferred store. Unlike `FallbackCache`, this type
+/// does not support writing. It is provided for cases where writing is not desired, and
+/// requiring a conversion to the write value type is nonsensical.
+pub struct Fallback<K, VP, VF> {
+    /// The preferred store, which will always be queried. Usually a local store.
+    pub preferred: BoxedReadStore<K, VP>,
+
+    /// The fallback store, which will be queried if the value is not found in the
+    /// primary store.
+    pub fallback: BoxedReadStore<K, VF>,
+}
+
+#[async_trait]
+impl<K, VP, VF, VO> ReadStore<K, VO> for Fallback<K, VP, VF>
+where
+    K: fmt::Display + fmt::Debug + Send + Sync + Clone + Unpin + 'static,
+    // Preferred Value Type
+    VP: Send + Sync + Clone + 'static,
+    // Fallback Value Type
+    VF: Send + Sync + Clone + 'static,
+    // Output Value Type (must support conversion from preferred & fallback)
+    VO: Send + Sync + Clone + From<VF> + From<VP> + 'static,
+{
+    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, VO> {
+        // TODO(meyer): Write a custom Stream implementation to try to avoid use of channels
+        let (sender, receiver) = channel(CHANNEL_BUFFER);
+
+        let preferred_stream =
+            self.preferred
+                .clone()
+                .fetch_stream(keys)
+                .await
+                .filter_map(move |res| {
+                    let mut sender = sender.clone();
+                    async move {
+                        use FetchError::*;
+                        match res {
+                            // Convert preferred values into output values
+                            Ok(v) => Some(Ok(v.into())),
+                            // TODO(meyer): Looks like we aren't up to date with futures crate, missing "feed" method, which is probably better here.
+                            // I think this might serialize the fallback stream as-written.
+                            Err(NotFound(k)) => match sender.send(k.clone()).await {
+                                Ok(()) => None,
+                                Err(e) => Some(Err(FetchError::with_key(k, e))),
+                            },
+                            // TODO(meyer): Should we also fall back on KeyedError, but also log an error?
+                            Err(e) => Some(Err(e)),
+                        }
+                    }
+                });
+
         let fallback_stream = self
             .fallback
             .clone()
             .fetch_stream(Box::pin(receiver))
             .await
-            .map_ok(|v| v.into())
-            .and_then(move |v: VP| {
-                let mut write_sender = write_sender.clone();
-                async move {
-                    if write_fallbacks {
-                        if let Err(e) = write_sender.send(v.clone()).await {
-                            // TODO(meyer): Eventually add better tracing support to these traits. Each combinator should have a span, etc.
-                            // TODO(meyer): Update tracing? Looks like we don't have access to the most recent version of the macro syntax.
-                            error!({ error = %e }, "error writing fallback value to channel");
-                        }
-                    }
-                    Ok(v)
-                }
-            });
+            .map_ok(|v| v.into());
 
-        // TODO(meyer): This whole "fake filter map" approach to driving the write stream forward seems bad.
-        let write_results_null = self
-            .write_store
-            .clone()
-            .write_stream(Box::pin(write_receiver))
-            .await
-            // TODO(meyer): Don't swallow all write errors here.
-            .filter_map(|_res| futures::future::ready(None));
-
-        // TODO(meyer): Implement `select_all_drop` if we continue with this approach
-        Box::pin(select_drop(
-            preferred_stream,
-            select_drop(fallback_stream, write_results_null),
-        ))
+        Box::pin(select_drop(preferred_stream, fallback_stream))
     }
 }

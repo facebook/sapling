@@ -424,7 +424,7 @@ mod tests {
     use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
     use types::testutil::*;
 
-    use crate::newstore::fallback::FallbackStore;
+    use crate::newstore::fallback::Fallback;
 
     #[test]
     fn test_empty() {
@@ -747,14 +747,12 @@ mod tests {
         let log1 = Arc::new(log1);
         let log2 = Arc::new(log2);
 
-        let fallback = Arc::new(FallbackStore {
-            preferred: log1.clone(),
+        let fallback = Arc::new(Fallback {
+            preferred: log1,
             fallback: log2,
-            write_store: log1,
-            write: false,
         });
 
-        let mut fetched: Vec<_> = block_on_stream(block_on(
+        let mut fetched: Vec<Result<Entry, _>> = block_on_stream(block_on(
             fallback.fetch_stream(Box::pin(stream::iter(vec![key("a", "1"), key("b", "2")]))),
         ))
         .collect();

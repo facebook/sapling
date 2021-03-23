@@ -15,10 +15,8 @@ use clidispatch::errors;
 use edenapi::Builder;
 use edenapi_types::{FileEntry, TreeEntry};
 use revisionstore::{
-    indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
-    newstore::{
-        edenapi::EdenApiAdapter, fallback::FallbackStore, BoxedReadStore, KeyStream, ReadStore,
-    },
+    indexedlogdatastore::{Entry, IndexedLogDataStoreType, IndexedLogHgIdDataStore},
+    newstore::{edenapi::EdenApiAdapter, fallback::FallbackCache, BoxedReadStore, KeyStream},
     ExtStoredPolicy,
 };
 use types::{HgId, Key, RepoPathBuf};
@@ -73,20 +71,18 @@ pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
     });
 
     // Fallback store combinator (trees)
-    let tree_fallback = Arc::new(FallbackStore {
+    let tree_fallback = Arc::new(FallbackCache {
         preferred: tree_indexedstore.clone(),
         fallback: edenapi.clone() as BoxedReadStore<Key, TreeEntry>,
-        write_store: tree_indexedstore,
-        write: true,
-    });
+        write_store: Some(tree_indexedstore),
+    }) as BoxedReadStore<Key, Entry>;
 
     // Fallback store combinator (files)
-    let file_fallback = Arc::new(FallbackStore {
+    let file_fallback = Arc::new(FallbackCache {
         preferred: file_indexedstore.clone(),
         fallback: edenapi as BoxedReadStore<Key, FileEntry>,
-        write_store: file_indexedstore,
-        write: true,
-    });
+        write_store: Some(file_indexedstore),
+    }) as BoxedReadStore<Key, Entry>;
 
     // Test trees
     let tree_keystrings = [
