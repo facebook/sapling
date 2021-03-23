@@ -157,8 +157,7 @@ impl FileContext {
             self.repo().blob_repo().blobstore(),
             self.ctx(),
             &self.fetch_key,
-            start,
-            size,
+            filestore::Range::sized(start, size),
         )
         .await;
 

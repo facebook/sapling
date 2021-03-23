@@ -569,11 +569,15 @@ async fn filestore_get_range(fb: FacebookInit) -> Result<()> {
     .await?;
 
     let res = async {
-        let stream =
-            filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(content_id), 7, 5)
-                .await?
-                .ok_or_else(|| Error::msg("Object does not exist"))?
-                .0;
+        let stream = filestore::fetch_range_with_size(
+            &blob,
+            ctx,
+            &FetchKey::Canonical(content_id),
+            filestore::Range::sized(7, 5),
+        )
+        .await?
+        .ok_or_else(|| Error::msg("Object does not exist"))?
+        .0;
 
         let bytes = stream
             .try_fold(BytesMut::new(), |mut buff, chunk| async move {
@@ -620,11 +624,15 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     .await?;
 
     let res = async {
-        let stream =
-            filestore::fetch_range_with_size(blob, ctx, &FetchKey::Canonical(full_id), 4, 6)
-                .await?
-                .ok_or_else(|| Error::msg("Object does not exist"))?
-                .0;
+        let stream = filestore::fetch_range_with_size(
+            blob,
+            ctx,
+            &FetchKey::Canonical(full_id),
+            filestore::Range::sized(4, 6),
+        )
+        .await?
+        .ok_or_else(|| Error::msg("Object does not exist"))?
+        .0;
 
         let bytes = stream
             .try_fold(BytesMut::new(), |mut buff, chunk| async move {

@@ -36,6 +36,7 @@ mod prepare;
 mod rechunk;
 mod streamhash;
 
+pub use fetch::Range;
 pub use fetch_key::{Alias, AliasBlob, FetchKey};
 pub use rechunk::{force_rechunk, rechunk};
 
@@ -238,7 +239,7 @@ pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
 
     match content_id {
         Some(content_id) => {
-            fetch::fetch_with_size(blobstore, ctx, content_id, fetch::Range::All).await
+            fetch::fetch_with_size(blobstore, ctx, content_id, fetch::Range::all()).await
         }
         None => Ok(None),
     }
@@ -253,8 +254,7 @@ pub async fn fetch_range_with_size<'a, B: Blobstore>(
     blobstore: &'a B,
     ctx: &'a CoreContext,
     key: &FetchKey,
-    start: u64,
-    size: u64,
+    range: Range,
 ) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + 'a, u64)>, Error> {
     let content_id = key
         .load(ctx, blobstore)
@@ -266,18 +266,7 @@ pub async fn fetch_range_with_size<'a, B: Blobstore>(
         })?;
 
     match content_id {
-        Some(content_id) => {
-            fetch::fetch_with_size(
-                blobstore,
-                ctx,
-                content_id,
-                fetch::Range::Span {
-                    start,
-                    end: start.saturating_add(size),
-                },
-            )
-            .await
-        }
+        Some(content_id) => fetch::fetch_with_size(blobstore, ctx, content_id, range).await,
         None => Ok(None),
     }
 }
@@ -358,10 +347,9 @@ pub async fn fetch_range<'a, B: Blobstore>(
     blobstore: &'a B,
     ctx: &'a CoreContext,
     key: &FetchKey,
-    start: u64,
-    size: u64,
+    range: Range,
 ) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + 'a>, Error> {
-    let res = fetch_range_with_size(blobstore, ctx, key, start, size).await?;
+    let res = fetch_range_with_size(blobstore, ctx, key, range).await?;
     Ok(res.map(|(stream, _len)| stream))
 }
 

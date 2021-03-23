@@ -34,8 +34,24 @@ pub enum ErrorKind {
     ChunkNotFound(ContentChunkId),
 }
 
-#[derive(Debug)]
-pub enum Range {
+#[derive(Debug, Copy, Clone)]
+pub struct Range(RangeInner);
+
+impl Range {
+    pub fn all() -> Self {
+        Self(RangeInner::All)
+    }
+
+    pub fn sized(start: u64, size: u64) -> Self {
+        Self(RangeInner::Span {
+            start,
+            end: start.saturating_add(size),
+        })
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+enum RangeInner {
     All,
     Span { start: u64, end: u64 },
 }
@@ -46,12 +62,14 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
     file_contents: FileContents,
     range: Range,
 ) -> impl Stream<Item = Result<Bytes, Error>> + 'a {
+    let range = range.0;
+
     match file_contents {
         FileContents::Bytes(bytes) => {
             // File is just a single chunk of bytes. Return the correct
             // slice, based on the requested range.
             let bytes = match range {
-                Range::Span {
+                RangeInner::Span {
                     start: range_start,
                     end: range_end,
                 } => {
@@ -60,7 +78,7 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
                     let slice_end = min(range_end, len);
                     bytes.slice((slice_start as usize)..(slice_end as usize))
                 }
-                Range::All => bytes,
+                RangeInner::All => bytes,
             };
             stream::once(future::ready(Ok(bytes))).left_stream()
         }
@@ -82,7 +100,7 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
             let buffer_size = buffer_size.try_into().unwrap();
 
             let chunk_iter = match range {
-                Range::Span {
+                RangeInner::Span {
                     start: range_start,
                     end: range_end,
                 } => {
@@ -111,10 +129,10 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
                             let slice_start = max(chunk_start, range_start);
                             let slice_end = min(chunk_end, range_end);
                             if (slice_start, slice_end) == (chunk_start, chunk_end) {
-                                (Range::All, chunk)
+                                (RangeInner::All, chunk)
                             } else {
                                 (
-                                    Range::Span {
+                                    RangeInner::Span {
                                         start: slice_start - chunk_start,
                                         end: slice_end - chunk_start,
                                     },
@@ -124,8 +142,8 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
                         });
                     Either::Left(iter)
                 }
-                Range::All => {
-                    let iter = chunks.into_iter().map(|chunk| (Range::All, chunk));
+                RangeInner::All => {
+                    let iter = chunks.into_iter().map(|chunk| (RangeInner::All, chunk));
                     Either::Right(iter)
                 }
             };
@@ -149,8 +167,10 @@ pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
                         .map(ContentChunk::into_bytes)?;
 
                     let bytes = match chunk_range {
-                        Range::Span { start, end } => bytes.slice((start as usize)..(end as usize)),
-                        Range::All => bytes,
+                        RangeInner::Span { start, end } => {
+                            bytes.slice((start as usize)..(end as usize))
+                        }
+                        RangeInner::All => bytes,
                     };
 
                     Ok(bytes)
