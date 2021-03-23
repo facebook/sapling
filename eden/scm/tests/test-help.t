@@ -1044,6 +1044,8 @@ Test list of internal help commands
    debugpull     test repo.pull interface
    debugpushkey  access the pushkey key/value protocol
    debugpvec     (no help text available)
+   debugpynewstore
+                 test file fetching using new storage API
    debugpython   run python interpreter
    debugreadauthforuri
                  (no help text available)

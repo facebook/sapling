@@ -141,7 +141,6 @@ mod repack;
 mod sliceext;
 mod types;
 mod unionstore;
-mod util;
 
 pub mod datapack;
 pub mod datastore;
@@ -160,6 +159,7 @@ pub mod packstore;
 pub mod packwriter;
 pub mod uniondatastore;
 pub mod unionhistorystore;
+pub mod util;
 
 pub use crate::contentstore::{ContentStore, ContentStoreBuilder};
 pub use crate::datapack::{DataEntry, DataPack, DataPackVersion};

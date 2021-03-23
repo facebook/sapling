@@ -15,6 +15,12 @@ use futures::{
 };
 use thiserror::Error;
 
+pub use self::{
+    edenapi::EdenApiAdapter,
+    fallback::{Fallback, FallbackCache},
+    legacy::LegacyDatastore,
+};
+
 pub mod edenapi;
 pub mod fallback;
 pub mod legacy;

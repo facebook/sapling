@@ -258,6 +258,7 @@ class fileserverclient(object):
             contentstore = repo.fileslog.contentstore
             metadatastore = repo.fileslog.metadatastore
         else:
+            # TODO(meyer): Convert this to support newstore.
             contentstore, metadatastore = repo.fileslog.makesharedonlyruststore(repo)
 
         if fetchdata:

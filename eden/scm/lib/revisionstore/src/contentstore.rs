@@ -255,6 +255,7 @@ pub struct ContentStoreBuilder<'a> {
     suffix: Option<PathBuf>,
     memcachestore: Option<Arc<MemcacheStore>>,
     correlator: Option<String>,
+    shared_indexedlog: Option<Arc<IndexedLogHgIdDataStore>>,
 }
 
 impl<'a> ContentStoreBuilder<'a> {
@@ -267,6 +268,7 @@ impl<'a> ContentStoreBuilder<'a> {
             memcachestore: None,
             suffix: None,
             correlator: None,
+            shared_indexedlog: None,
         }
     }
 
@@ -302,6 +304,11 @@ impl<'a> ContentStoreBuilder<'a> {
 
     pub fn correlator(mut self, correlator: Option<impl ToString>) -> Self {
         self.correlator = correlator.map(|s| s.to_string());
+        self
+    }
+
+    pub fn shared_indexedlog(mut self, indexedlog: Arc<IndexedLogHgIdDataStore>) -> Self {
+        self.shared_indexedlog = Some(indexedlog);
         self
     }
 
@@ -349,12 +356,16 @@ impl<'a> ContentStoreBuilder<'a> {
             max_bytes,
             extstored_policy,
         )?);
-        let shared_indexedlogdatastore = Arc::new(IndexedLogHgIdDataStore::new(
-            get_indexedlogdatastore_path(&cache_path)?,
-            extstored_policy,
-            self.config,
-            IndexedLogDataStoreType::Shared,
-        )?);
+        let shared_indexedlogdatastore = if let Some(shared_indexedlog) = self.shared_indexedlog {
+            shared_indexedlog
+        } else {
+            Arc::new(IndexedLogHgIdDataStore::new(
+                get_indexedlogdatastore_path(&cache_path)?,
+                extstored_policy,
+                self.config,
+                IndexedLogDataStoreType::Shared,
+            )?)
+        };
 
         // The shared stores should precede the local one since we expect both the number of blobs,
         // and the number of requests satisfied by the shared cache to be significantly higher than
@@ -537,7 +548,7 @@ impl<'a> ContentStoreBuilder<'a> {
 
 /// Reads the configs and deletes the hgcache if a hgcache-purge.$KEY=$DATE value hasn't already
 /// been processed.
-fn check_cache_buster(config: &ConfigSet, store_path: &Path) {
+pub fn check_cache_buster(config: &ConfigSet, store_path: &Path) {
     for key in config.keys("hgcache-purge").into_iter() {
         if let Some(cutoff) = config
             .get("hgcache-purge", &key)

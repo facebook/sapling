@@ -18,6 +18,7 @@ use types::Key;
 use crate::{
     datastore::{HgIdMutableDeltaStore, RemoteDataStore},
     historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
+    newstore::EdenApiAdapter,
     remotestore::HgIdRemoteStore,
     types::StoreKey,
 };
@@ -45,6 +46,15 @@ pub struct EdenApiRemoteStore<T> {
     repo: String,
     progress: Arc<dyn ProgressFactory>,
     _phantom: PhantomData<T>,
+}
+
+impl<T> EdenApiRemoteStore<T> {
+    pub fn get_newstore_adapter(&self) -> EdenApiAdapter<Arc<dyn EdenApi>> {
+        EdenApiAdapter {
+            client: self.client.clone(),
+            repo: self.repo.clone(),
+        }
+    }
 }
 
 impl<T: EdenApiStoreKind> EdenApiRemoteStore<T> {

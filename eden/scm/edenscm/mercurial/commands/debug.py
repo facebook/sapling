@@ -86,7 +86,6 @@ from ..node import bin, hex, nullhex, nullid, nullrev, short
 from ..pycompat import decodeutf8, range
 from .cmdtable import command
 
-
 release = lockmod.release
 
 
@@ -3647,3 +3646,9 @@ def debugthrowrustbail(ui, _repo):
 def debugthrowexception(ui, _repo):
     """cause an intentional exception to be raised in the command"""
     raise error.IntentionalError("intentional failure in debugthrowexception")
+
+
+@command("debugpynewstore", [], "")
+def debugpynewstore(ui, repo):
+    """test file fetching using new storage API"""
+    ui.write(_x(repo.fileslog.newfilestore.test_newstore()))

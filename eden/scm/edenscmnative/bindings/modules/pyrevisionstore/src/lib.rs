@@ -13,22 +13,28 @@ use std::{
     convert::TryInto,
     fs::read_dir,
     path::{Path, PathBuf},
+    str::FromStr,
     sync::Arc,
 };
 
 use anyhow::{format_err, Error};
 use cpython::*;
+use futures::stream;
 use parking_lot::RwLock;
 
+use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
 use configparser::config::ConfigSet;
 use cpython_ext::{
     ExtractInner, ExtractInnerRef, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str,
 };
+use edenapi_types::FileEntry;
 use progress::null::NullProgressFactory;
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
 use revisionstore::{
-    repack, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
+    indexedlogdatastore::Entry,
+    newstore::{BoxedReadStore, Fallback, FallbackCache, KeyStream, LegacyDatastore},
+    repack, util, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
     DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore,
     HgIdHistoryStore, HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack,
     HistoryPackStore, HistoryPackVersion, IndexedLogDataStoreType, IndexedLogHgIdDataStore,
@@ -36,7 +42,7 @@ use revisionstore::{
     MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableHistoryPack, RemoteDataStore,
     RemoteHistoryStore, RepackKind, RepackLocation, StoreKey, StoreResult,
 };
-use types::{Key, NodeInfo};
+use types::{HgId, Key, NodeInfo, RepoPathBuf};
 
 use crate::{
     datastorepyext::{
@@ -74,6 +80,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<contentstore>(py)?;
     m.add_class::<metadatastore>(py)?;
     m.add_class::<memcachestore>(py)?;
+    m.add_class::<newfilestore>(py)?;
     m.add(
         py,
         "repack",
@@ -1123,5 +1130,147 @@ impl ExtractInnerRef for memcachestore {
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.memcache(py)
+    }
+}
+
+// TODO(meyer): Make this a `BoxedRwStore` (and introduce such a concept). Will need to implement write
+// for FallbackStore.
+/// Construct a file ReadStore using the provided config, optionally falling back
+/// to the provided legacy HgIdDataStore.
+fn make_newfilestore<'a>(
+    path: Option<&'a Path>,
+    config: &'a ConfigSet,
+    remote: Arc<PyHgIdRemoteStore>,
+    memcache: Option<Arc<MemcacheStore>>,
+    edenapi_filestore: Option<Arc<EdenApiFileStore>>,
+    suffix: Option<String>,
+    correlator: Option<String>,
+) -> Result<(BoxedReadStore<Key, Entry>, Arc<ContentStore>)> {
+    // Construct ContentStore
+    let mut builder = ContentStoreBuilder::new(&config).correlator(correlator);
+
+    // Extract EdenApiAdapter for NewStore construction later on
+    let mut edenapi_adapter = None;
+    builder = if let Some(edenapi) = edenapi_filestore {
+        edenapi_adapter = Some(edenapi.get_newstore_adapter());
+        builder.remotestore(edenapi)
+    } else {
+        builder.remotestore(remote)
+    };
+
+    builder = if let Some(path) = path {
+        builder.local_path(path)
+    } else {
+        builder.no_local_store()
+    };
+
+    builder = if let Some(memcache) = memcache {
+        builder.memcachestore(memcache)
+    } else {
+        builder
+    };
+
+
+    let suffix = suffix.map(|s| s.into());
+    builder = if let Some(suffix) = suffix.clone() {
+        builder.suffix(suffix)
+    } else {
+        builder
+    };
+
+    let cache_path = &util::get_cache_path(config, &suffix)?;
+    // TODO(meyer): Do check_cache_buster even for newstore-only (happens as part of ContentStore construction)
+    // revisionstore::contentstore::check_cache_buster(config, &cache_path);
+
+    let enable_lfs = config.get_or_default::<bool>("remotefilelog", "lfs")?;
+    let extstored_policy = if enable_lfs {
+        if config.get_or_default::<bool>("remotefilelog", "useextstored")? {
+            ExtStoredPolicy::Use
+        } else {
+            ExtStoredPolicy::Ignore
+        }
+    } else {
+        ExtStoredPolicy::Use
+    };
+
+    let file_indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
+        util::get_indexedlogdatastore_path(&cache_path)?,
+        extstored_policy,
+        config,
+        IndexedLogDataStoreType::Shared,
+    )?);
+
+    builder = builder.shared_indexedlog(file_indexedlog.clone());
+
+    let contentstore = Arc::new(builder.build()?);
+
+    let legacy_adapter = Arc::new(LegacyDatastore(contentstore.clone()));
+    let legacy_fallback = if let Some(edenapi_adapter) = edenapi_adapter {
+        Arc::new(Fallback {
+            preferred: Arc::new(edenapi_adapter) as BoxedReadStore<Key, FileEntry>,
+            fallback: legacy_adapter as BoxedReadStore<Key, Entry>,
+        })
+    } else {
+        legacy_adapter as BoxedReadStore<Key, Entry>
+    };
+
+    let newstore = Arc::new(FallbackCache {
+        preferred: file_indexedlog.clone(),
+        fallback: legacy_fallback as BoxedReadStore<Key, Entry>,
+        write_store: Some(file_indexedlog),
+    });
+
+
+    Ok((newstore, contentstore))
+}
+
+py_class!(pub class newfilestore |py| {
+    data store: BoxedReadStore<Key, Entry>;
+    data contentstore: Arc<ContentStore>;
+
+    def __new__(_cls,
+        path: Option<PyPathBuf>,
+        config: config,
+        remote: pyremotestore,
+        memcache: Option<memcachestore>,
+        edenapi: Option<edenapifilestore> = None,
+        suffix: Option<String> = None,
+        correlator: Option<String> = None
+    ) -> PyResult<newfilestore> {
+        // Extract Rust Values
+        let path = path.as_ref().map(|v| v.as_path());
+        let config = config.get_cfg(py);
+        let remote = remote.extract_inner(py);
+        let memcache = memcache.map(|v| v.extract_inner(py));
+        let edenapi = edenapi.map(|v| v.extract_inner(py));
+
+        let (newstore, contentstore) = make_newfilestore(path, &config, remote, memcache, edenapi, suffix, correlator).map_pyerr(py)?;
+
+        newfilestore::create_instance(py, newstore, contentstore)
+    }
+
+    def get_contentstore(&self) -> PyResult<contentstore> {
+        contentstore::create_instance(py, self.contentstore(py).clone())
+    }
+
+    def test_newstore(&self) -> PyResult<String> {
+        let key = Key::new(
+            RepoPathBuf::from_string("fbcode/eden/scm/lib/revisionstore/Cargo.toml".to_owned()).expect("failed to convert path to RepoPathBuf"),
+            HgId::from_str("4b3d9118300087262fbf6a791b437aa7b46f0c99").expect("failed to parse HgId"),
+        );
+        let store = self.store(py).clone();
+        let mut fetched: Vec<_> = block_on_stream(block_on( store.fetch_stream(Box::pin(stream::iter(vec![key])) as KeyStream<Key>))).collect();
+        let fetched = fetched[0].as_mut().expect("failed to fetch file");
+        let content = fetched.content().expect("failed to extract Entry content");
+        let content = std::str::from_utf8(&content).expect("failed to convert to convert to string");
+        Ok(content.to_string())
+    }
+});
+
+impl ExtractInnerRef for newfilestore {
+    type Inner = BoxedReadStore<Key, Entry>;
+
+    fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
+        self.store(py)
     }
 }

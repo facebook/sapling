@@ -151,6 +151,7 @@ Show debug commands if there are no other candidates
   debugpull
   debugpushkey
   debugpvec
+  debugpynewstore
   debugpython
   debugreadauthforuri
   debugrebuildchangelog
@@ -442,6 +443,7 @@ Show all commands + options
   debugpull: bookmark, rev
   debugpushkey: 
   debugpvec: 
+  debugpynewstore: 
   debugpython: 
   debugreadauthforuri: user
   debugrebuildchangelog: 
