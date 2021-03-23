@@ -226,11 +226,12 @@ Try other kinds of dirstate corruptions:
   $ hg status
   M A2
   A A0
-  A X
+  A X (?)
   R A
   R A1
   ? B
   ? C
+  ? X (?)
   ? Y
   ? Z
 
