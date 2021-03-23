@@ -21,9 +21,10 @@ use anyhow::{format_err, Error};
 use cpython::*;
 use futures::stream;
 use parking_lot::RwLock;
+use tracing::error;
 
 use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
-use configparser::config::ConfigSet;
+use configparser::{config::ConfigSet, convert::ByteCount};
 use cpython_ext::{
     ExtractInner, ExtractInnerRef, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str,
 };
@@ -33,7 +34,10 @@ use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
 use revisionstore::{
     indexedlogdatastore::Entry,
-    newstore::{BoxedReadStore, Fallback, FallbackCache, KeyStream, LegacyDatastore},
+    newstore::{
+        BoxedReadStore, BoxedWriteStore, Fallback, FallbackCache, FilterMapStore, KeyStream,
+        LegacyDatastore,
+    },
     repack, util, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
     DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore,
     HgIdHistoryStore, HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack,
@@ -1193,6 +1197,12 @@ fn make_newfilestore<'a>(
         ExtStoredPolicy::Use
     };
 
+    let lfs_threshold = if enable_lfs {
+        config.get_opt::<ByteCount>("lfs", "threshold")?
+    } else {
+        None
+    };
+
     let file_indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
         util::get_indexedlogdatastore_path(&cache_path)?,
         extstored_policy,
@@ -1214,10 +1224,40 @@ fn make_newfilestore<'a>(
         legacy_adapter as BoxedReadStore<Key, Entry>
     };
 
+    let filtered_file_indexedlog = if let Some(lfs_threshold) = lfs_threshold {
+        Arc::new(FilterMapStore {
+            // See [`revisionstore::lfs::LfsMultiplexer`]'s `HgIdMutableDeltaStore` implementation, which this is based on
+            filter_map: move |mut entry: Entry| {
+                if entry.metadata().is_lfs() {
+                    None
+                } else {
+                    match entry.content() {
+                        Ok(content) => {
+                            if content.len() > lfs_threshold.value() as usize {
+                                None
+                            } else {
+                                Some(entry)
+                            }
+                        }
+                        Err(e) => {
+                            // TODO(meyer): This is safe, but is it correct? Should we make the filter_map fn fallible instead?
+                            // If we failed to read `content`, reject the write.
+                            error!({ error = %e }, "error reading entry content for LFS threshold check");
+                            None
+                        }
+                    }
+                }
+            },
+            write_store: file_indexedlog.clone(),
+        }) as BoxedWriteStore<Key, Entry>
+    } else {
+        file_indexedlog.clone() as BoxedWriteStore<Key, Entry>
+    };
+
     let newstore = Arc::new(FallbackCache {
-        preferred: file_indexedlog.clone(),
+        preferred: file_indexedlog,
         fallback: legacy_fallback as BoxedReadStore<Key, Entry>,
-        write_store: Some(file_indexedlog),
+        write_store: Some(filtered_file_indexedlog),
     });
 
 

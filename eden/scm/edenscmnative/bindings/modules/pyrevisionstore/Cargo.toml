@@ -9,7 +9,6 @@ async-runtime = { path = "../../../../lib/async-runtime" }
 configparser = { path = "../../../../lib/configparser" }
 cpython_ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
-edenapi = { path = "../../../../lib/edenapi" }
 edenapi_types = { path = "../../../../lib/edenapi/types" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 parking_lot = "0.10"
@@ -17,4 +16,5 @@ progress = { path = "../../../../lib/progress" }
 pyprogress = { path = "../pyprogress" }
 pyconfigparser = { path = "../pyconfigparser" }
 revisionstore = { path = "../../../../lib/revisionstore" }
+tracing = "0.1"
 types = { path = "../../../../lib/types" }

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::{fmt, sync::Arc};
+use std::{cmp::PartialEq, fmt, sync::Arc};
 
 use anyhow::Error;
 use async_trait::async_trait;
@@ -18,12 +18,14 @@ use thiserror::Error;
 pub use self::{
     edenapi::EdenApiAdapter,
     fallback::{Fallback, FallbackCache},
+    filter_map::FilterMapStore,
     inmemory::{HashMapStore, KeyedValue},
     legacy::LegacyDatastore,
 };
 
 pub mod edenapi;
 pub mod fallback;
+pub mod filter_map;
 pub mod inmemory;
 pub mod legacy;
 
@@ -81,6 +83,19 @@ where
 
     pub fn from(err: impl Into<Error>) -> Self {
         FetchError::Other(err.into())
+    }
+}
+
+impl<K> PartialEq for FetchError<K>
+where
+    K: PartialEq + fmt::Debug + fmt::Display,
+{
+    fn eq(&self, other: &Self) -> bool {
+        use FetchError::*;
+        match (self, other) {
+            (NotFound(k1), NotFound(k2)) => k1 == k2,
+            _ => false,
+        }
     }
 }
 
