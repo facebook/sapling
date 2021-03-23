@@ -250,20 +250,20 @@ pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
 ///
 /// Requests for data beyond the end of the file will return only the part of
 /// the file that overlaps with the requested range, if any.
-pub async fn fetch_range_with_size<'a, B: Blobstore>(
-    blobstore: &'a B,
-    ctx: &'a CoreContext,
+pub async fn fetch_range_with_size<'a, B: Blobstore + Clone + 'a>(
+    blobstore: B,
+    ctx: impl Borrow<CoreContext> + Clone + Send + Sync + 'a,
     key: &FetchKey,
     range: Range,
 ) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + 'a, u64)>, Error> {
-    let content_id = key
-        .load(ctx, blobstore)
-        .await
-        .map(Some)
-        .or_else(|err| match err {
-            LoadableError::Error(err) => Err(err),
-            LoadableError::Missing(_) => Ok(None),
-        })?;
+    let content_id =
+        key.load(ctx.borrow(), &blobstore)
+            .await
+            .map(Some)
+            .or_else(|err| match err {
+                LoadableError::Error(err) => Err(err),
+                LoadableError::Missing(_) => Ok(None),
+            })?;
 
     match content_id {
         Some(content_id) => fetch::fetch_with_size(blobstore, ctx, content_id, range).await,

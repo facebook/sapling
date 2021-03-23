@@ -113,11 +113,16 @@ where
 pub struct StreamBody<S> {
     stream: S,
     mime: Mime,
+    pub partial: bool,
 }
 
 impl<S> StreamBody<S> {
     pub fn new(stream: S, mime: Mime) -> Self {
-        Self { stream, mime }
+        Self {
+            stream,
+            mime,
+            partial: false,
+        }
     }
 }
 
@@ -126,7 +131,17 @@ where
     S: Stream<Item = Bytes> + ContentMeta + Send + 'static,
 {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
-        let Self { stream, mime } = self;
+        let Self {
+            stream,
+            mime,
+            partial,
+        } = self;
+
+        let status = if partial {
+            StatusCode::PARTIAL_CONTENT
+        } else {
+            StatusCode::OK
+        };
 
         let mime_header: HeaderValue = mime.as_ref().parse()?;
 
@@ -136,7 +151,7 @@ where
         let res = Response::builder()
             .header(CONTENT_TYPE, mime_header)
             .header(CONTENT_ENCODING, content_encoding)
-            .status(StatusCode::OK);
+            .status(status);
 
         let (res, meta) = match content_encoding {
             ContentEncoding::Compressed(compression) => {

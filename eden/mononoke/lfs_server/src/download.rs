@@ -7,14 +7,14 @@
 
 use std::str::FromStr;
 
-use anyhow::Context;
+use anyhow::{Context, Error};
 use futures::stream::{StreamExt, TryStreamExt};
-use gotham::state::State;
+use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 use slog::error;
 
-use filestore::{self, Alias, FetchKey};
+use filestore::{self, Alias, FetchKey, Range};
 use gotham_ext::{
     content::{CompressedContentStream, ContentEncoding, ContentStream},
     error::HttpError,
@@ -22,6 +22,7 @@ use gotham_ext::{
     response::{StreamBody, TryIntoResponse},
     stream_ext::GothamTryStreamExt,
 };
+use http::header::{HeaderMap, RANGE};
 use mononoke_types::{hash::Sha256, ContentId};
 use redactedblobstore::has_redaction_root_cause;
 use stats::prelude::*;
@@ -51,22 +52,59 @@ pub struct DownloadParamsSha256 {
     oid: String,
 }
 
+fn parse_range(header: &str) -> Result<Range, Error> {
+    static RE: once_cell::sync::Lazy<regex::Regex> =
+        once_cell::sync::Lazy::new(|| regex::Regex::new(r"bytes=(\d+)-(\d+)").unwrap());
+
+    let caps = RE
+        .captures(header)
+        .with_context(|| format!("Unsupported range: {}", header))?;
+
+    let range = Range::range_inclusive(
+        caps[1]
+            .parse()
+            .with_context(|| format!("Invalid range start: {}", &caps[1]))?,
+        caps[2]
+            .parse()
+            .with_context(|| format!("Invalid range end: {}", &caps[2]))?,
+    )?;
+
+    Ok(range)
+}
+
+fn extract_range(state: &State) -> Result<Option<Range>, Error> {
+    let header = match HeaderMap::try_borrow_from(state).and_then(|h| h.get(RANGE)) {
+        Some(h) => h,
+        None => return Ok(None),
+    };
+
+    let header = std::str::from_utf8(header.as_bytes()).context("Invalid range")?;
+
+    Ok(Some(parse_range(header)?))
+}
+
 async fn fetch_by_key(
     ctx: RepositoryRequestContext,
     key: FetchKey,
     content_encoding: ContentEncoding,
+    range: Option<Range>,
     scuba: &mut Option<&mut ScubaMiddlewareState>,
 ) -> Result<impl TryIntoResponse, HttpError> {
     // Query a stream out of the Filestore
-    let fetched = filestore::fetch_with_size(ctx.repo.get_blobstore(), ctx.ctx.clone(), &key)
-        .await
-        .map_err(|e| {
-            if has_redaction_root_cause(&e) {
-                HttpError::e410(e)
-            } else {
-                HttpError::e500(e.context(ErrorKind::FilestoreReadFailure))
-            }
-        })?;
+    let fetched = filestore::fetch_range_with_size(
+        ctx.repo.get_blobstore(),
+        ctx.ctx.clone(),
+        &key,
+        range.unwrap_or_else(Range::all),
+    )
+    .await
+    .map_err(|e| {
+        if has_redaction_root_cause(&e) {
+            HttpError::e410(e)
+        } else {
+            HttpError::e500(e.context(ErrorKind::FilestoreReadFailure))
+        }
+    })?;
 
     // Return a 404 if the stream doesn't exist.
     let (stream, size) = fetched
@@ -100,7 +138,11 @@ async fn fetch_by_key(
         error!(&logger, "Error during streaming response: {:?}", &e);
     });
 
-    Ok(StreamBody::new(stream, mime::APPLICATION_OCTET_STREAM))
+    let mut body = StreamBody::new(stream, mime::APPLICATION_OCTET_STREAM);
+    if range.is_some() {
+        body.partial = true;
+    }
+    Ok(body)
 }
 
 pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
@@ -113,6 +155,8 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
         .context(ErrorKind::InvalidContentId)
         .map_err(HttpError::e400)?;
 
+    let range = extract_range(state).map_err(HttpError::e400)?;
+
     let key = FetchKey::Canonical(content_id);
     let content_encoding = ContentEncoding::from_state(&state);
 
@@ -120,7 +164,7 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
         .await?;
 
     let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
-    fetch_by_key(ctx, key, content_encoding, &mut scuba).await
+    fetch_by_key(ctx, key, content_encoding, range, &mut scuba).await
 }
 
 pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
@@ -130,6 +174,8 @@ pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, 
         .context(ErrorKind::InvalidOid)
         .map_err(HttpError::e400)?;
 
+    let range = extract_range(state).map_err(HttpError::e400)?;
+
     let key = FetchKey::Aliased(Alias::Sha256(oid));
     let content_encoding = ContentEncoding::from_state(&state);
 
@@ -138,7 +184,7 @@ pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, 
             .await?;
 
     let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
-    fetch_by_key(ctx, key, content_encoding, &mut scuba).await
+    fetch_by_key(ctx, key, content_encoding, range, &mut scuba).await
 }
 
 #[cfg(test)]
@@ -174,12 +220,20 @@ mod test {
 
         let key = FetchKey::Canonical(content_id);
 
-        let err = fetch_by_key(ctx, key, ContentEncoding::Identity, &mut None)
+        let err = fetch_by_key(ctx, key, ContentEncoding::Identity, None, &mut None)
             .await
             .map(|_| ())
             .unwrap_err();
         assert_eq!(err.status_code, StatusCode::GONE);
         assert!(err.error.to_string().contains(reason));
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_range() -> Result<(), Error> {
+        // NOTE: This range is inclusive, so here we want bytes 1, 2, 3, 5 (a 5-byte range starting
+        // at byte 1).
+        assert_eq!(parse_range("bytes=1-5")?, Range::sized(1, 5));
         Ok(())
     }
 }

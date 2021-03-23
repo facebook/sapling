@@ -34,7 +34,7 @@ pub enum ErrorKind {
     ChunkNotFound(ContentChunkId),
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Range(RangeInner);
 
 impl Range {
@@ -60,7 +60,7 @@ impl Range {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum RangeInner {
     All,
     Span { start: u64, end: u64 },
