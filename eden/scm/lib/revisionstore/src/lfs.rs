@@ -24,7 +24,10 @@ use std::{
 };
 
 use anyhow::{bail, ensure, format_err, Context, Result};
-use futures::stream::{iter, StreamExt, TryStreamExt};
+use futures::{
+    future::FutureExt,
+    stream::{iter, StreamExt, TryStreamExt},
+};
 use http::status::StatusCode;
 use minibytes::Bytes;
 use parking_lot::{Mutex, RwLock};
@@ -90,11 +93,7 @@ enum LfsBlobsStore {
 
 struct HttpLfsRemote {
     url: Url,
-    auth: Option<AuthGroup>,
-    user_agent: String,
     concurrent_fetches: usize,
-    backoff_times: Vec<f32>,
-    request_timeout: Duration,
     client: HttpClient,
     http_options: HttpOptions,
 }
@@ -104,6 +103,10 @@ struct HttpOptions {
     http_version: HttpVersion,
     min_transfer_speed: Option<MinTransferSpeed>,
     correlator: Option<String>,
+    user_agent: String,
+    auth: Option<AuthGroup>,
+    backoff_times: Vec<f32>,
+    request_timeout: Duration,
 }
 
 enum LfsRemoteInner {
@@ -957,16 +960,12 @@ impl LfsRemoteInner {
 
     async fn send_with_retry(
         client: &HttpClient,
-        auth: Option<&AuthGroup>,
         method: Method,
         url: Url,
-        user_agent: &str,
-        backoff_times: Vec<f32>,
-        request_timeout: Duration,
         add_extra: impl Fn(Request) -> Request,
         http_options: &HttpOptions,
     ) -> Result<Option<Bytes>> {
-        let mut backoff = backoff_times.into_iter();
+        let mut backoff = http_options.backoff_times.iter().copied();
         let mut rng = thread_rng();
         let mut attempt = 0;
 
@@ -976,7 +975,7 @@ impl LfsRemoteInner {
             let mut req = Request::new(url.clone(), method)
                 .header("Accept", "application/vnd.git-lfs+json")
                 .header("Content-Type", "application/vnd.git-lfs+json")
-                .header("User-Agent", &user_agent)
+                .header("User-Agent", &http_options.user_agent)
                 .header("X-Attempt", attempt.to_string())
                 .http_version(http_options.http_version);
 
@@ -992,7 +991,7 @@ impl LfsRemoteInner {
                 req = req.min_transfer_speed(mts);
             }
 
-            if let Some(auth) = &auth {
+            if let Some(auth) = &http_options.auth {
                 if let Some(cert) = &auth.cert {
                     req = req.cert(cert);
                 }
@@ -1005,6 +1004,8 @@ impl LfsRemoteInner {
             }
 
             let res = async {
+                let request_timeout = http_options.request_timeout;
+
                 let req = add_extra(req);
 
                 let (mut stream, _) = client.send_async(vec![req])?;
@@ -1136,12 +1137,8 @@ impl LfsRemoteInner {
         let response_fut = async move {
             LfsRemoteInner::send_with_retry(
                 &http.client,
-                http.auth.as_ref(),
                 Method::Post,
                 http.url.join("objects/batch")?,
-                &http.user_agent,
-                http.backoff_times.clone(),
-                http.request_timeout,
                 move |builder| builder.body(batch_json.clone()),
                 &http.http_options,
             )
@@ -1157,47 +1154,24 @@ impl LfsRemoteInner {
         Ok(Some(serde_json::from_slice(response.as_ref())?))
     }
 
-    async fn process_action(
+    async fn process_upload(
         client: &HttpClient,
-        auth: Option<&AuthGroup>,
-        user_agent: &str,
-        backoff_times: Vec<f32>,
-        request_timeout: Duration,
-        op: Operation,
         action: ObjectAction,
         oid: Sha256,
         read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + 'static,
-        write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + 'static,
         http_options: &HttpOptions,
     ) -> Result<()> {
-        let body = if op == Operation::Upload {
-            spawn_blocking(move || read_from_store(oid)).await??
-        } else {
-            None
-        };
-
-        let method = match op {
-            Operation::Download => Method::Get,
-            Operation::Upload => Method::Put,
-        };
+        let body = spawn_blocking(move || read_from_store(oid)).await??;
 
         let url = Url::from_str(&action.href.to_string())?;
-        let data = LfsRemoteInner::send_with_retry(
+        LfsRemoteInner::send_with_retry(
             client,
-            auth,
-            method,
+            Method::Put,
             url,
-            user_agent,
-            backoff_times,
-            request_timeout,
-            move |mut builder| {
-                if let Some(header) = action.header.as_ref() {
-                    for (key, val) in header {
-                        builder = builder.header(key, val)
-                    }
-                }
+            move |builder| {
+                let builder = add_action_headers_to_request(builder, &action);
 
-                if let Some(body) = body.clone() {
+                if let Some(body) = body.as_ref() {
                     builder.body(Vec::from(body.as_ref()))
                 } else {
                     builder.header("Content-Length", 0)
@@ -1205,28 +1179,49 @@ impl LfsRemoteInner {
             },
             http_options,
         )
+        .await?;
+
+        Ok(())
+    }
+
+    async fn process_download(
+        client: &HttpClient,
+        action: ObjectAction,
+        oid: Sha256,
+        write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + 'static,
+        http_options: &HttpOptions,
+    ) -> Result<()> {
+        let url = Url::from_str(&action.href.to_string())?;
+        let data = LfsRemoteInner::send_with_retry(
+            client,
+            Method::Get,
+            url,
+            move |builder| {
+                let builder = add_action_headers_to_request(builder, &action);
+
+                builder
+            },
+            http_options,
+        )
         .await;
 
-        if op == Operation::Download {
-            let data = match data {
-                Ok(data) => data,
-                Err(err) => match err.downcast_ref::<FetchError>() {
-                    None => return Err(err),
-                    Some(fetch_error) => match fetch_error.error {
-                        TransferError::HttpStatus(http::StatusCode::GONE) => {
-                            Some(Bytes::from_static(redacted::REDACTED_CONTENT))
-                        }
-                        _ => return Err(err),
-                    },
+        let data = match data {
+            Ok(data) => data,
+            Err(err) => match err.downcast_ref::<FetchError>() {
+                None => return Err(err),
+                Some(fetch_error) => match fetch_error.error {
+                    TransferError::HttpStatus(http::StatusCode::GONE) => {
+                        Some(Bytes::from_static(redacted::REDACTED_CONTENT))
+                    }
+                    _ => return Err(err),
                 },
-            };
+            },
+        };
 
-            if let Some(data) = data {
-                spawn_blocking(move || write_to_store(oid, data)).await??
-            }
-        } else {
-            let _ = data?;
+        if let Some(data) = data {
+            spawn_blocking(move || write_to_store(oid, data)).await??
         }
+
         Ok(())
     }
 
@@ -1262,25 +1257,26 @@ impl LfsRemoteInner {
             };
 
             for (op, action) in actions.drain() {
-                let backoff_times = http.backoff_times.clone();
-                let request_timeout = http.request_timeout.clone();
-
                 let oid = Sha256::from(oid.0);
-                let read_from_store = read_from_store.clone();
-                let write_to_store = write_to_store.clone();
-                let fut = LfsRemoteInner::process_action(
-                    &http.client,
-                    http.auth.as_ref(),
-                    &http.user_agent,
-                    backoff_times,
-                    request_timeout,
-                    op,
-                    action,
-                    oid,
-                    read_from_store,
-                    write_to_store,
-                    &http.http_options,
-                );
+
+                let fut = match op {
+                    Operation::Upload => LfsRemoteInner::process_upload(
+                        &http.client,
+                        action,
+                        oid,
+                        read_from_store.clone(),
+                        &http.http_options,
+                    )
+                    .left_future(),
+                    Operation::Download => LfsRemoteInner::process_download(
+                        &http.client,
+                        action,
+                        oid,
+                        write_to_store.clone(),
+                        &http.http_options,
+                    )
+                    .right_future(),
+                };
 
                 futures.push(Ok(fut));
             }
@@ -1396,17 +1392,17 @@ impl LfsRemote {
                 move_after_upload,
                 remote: LfsRemoteInner::Http(HttpLfsRemote {
                     url,
-                    auth,
-                    user_agent,
                     concurrent_fetches,
-                    backoff_times,
-                    request_timeout,
                     client,
                     http_options: HttpOptions {
                         accept_zstd,
                         http_version,
                         min_transfer_speed,
                         correlator,
+                        user_agent,
+                        backoff_times,
+                        request_timeout,
+                        auth,
                     },
                 }),
             })
@@ -1754,6 +1750,18 @@ fn should_retry_http_error(error: &HttpClientError) -> bool {
         }
         _ => false,
     }
+}
+
+fn add_action_headers_to_request(builder: Request, action: &ObjectAction) -> Request {
+    let mut builder = builder;
+
+    if let Some(header) = action.header.as_ref() {
+        for (key, val) in header {
+            builder = builder.header(key, val)
+        }
+    }
+
+    builder
 }
 
 #[cfg(test)]
