@@ -23,7 +23,7 @@ use futures::stream;
 use parking_lot::RwLock;
 use tracing::error;
 
-use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
+use async_runtime::stream_to_iter as block_on_stream;
 use configparser::{config::ConfigSet, convert::ByteCount};
 use cpython_ext::{
     ExtractInner, ExtractInnerRef, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str,
@@ -1299,7 +1299,7 @@ py_class!(pub class newfilestore |py| {
             HgId::from_str("4b3d9118300087262fbf6a791b437aa7b46f0c99").expect("failed to parse HgId"),
         );
         let store = self.store(py).clone();
-        let mut fetched: Vec<_> = block_on_stream(block_on( store.fetch_stream(Box::pin(stream::iter(vec![key])) as KeyStream<Key>))).collect();
+        let mut fetched: Vec<_> = block_on_stream( store.fetch_stream(Box::pin(stream::iter(vec![key])) as KeyStream<Key>)).collect();
         let fetched = fetched[0].as_mut().expect("failed to fetch file");
         let content = fetched.content().expect("failed to extract Entry content");
         let content = std::str::from_utf8(&content).expect("failed to convert to convert to string");

@@ -8,7 +8,6 @@
 use std::fmt;
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use futures::StreamExt;
 
 use crate::newstore::{BoxedWriteStore, WriteResults, WriteStore, WriteStream};
@@ -22,21 +21,19 @@ pub struct FilterMapStore<K, V, F> {
     pub write_store: BoxedWriteStore<K, V>,
 }
 
-#[async_trait]
 impl<K, V, F> WriteStore<K, V> for FilterMapStore<K, V, F>
 where
     K: fmt::Display + fmt::Debug + Send + Sync + 'static,
     V: Send + Sync + 'static,
     F: Fn(V) -> Option<V> + Send + Sync + 'static,
 {
-    async fn write_stream(self: Arc<Self>, values: WriteStream<V>) -> WriteResults<K> {
+    fn write_stream(self: Arc<Self>, values: WriteStream<V>) -> WriteResults<K> {
         self.write_store
             .clone()
             .write_stream(Box::pin(values.filter_map(move |value| {
                 let self_ = self.clone();
                 async move { (self_.filter_map)(value) }
             })))
-            .await
     }
 }
 #[cfg(test)]
@@ -46,7 +43,7 @@ mod tests {
     use futures::stream;
     use minibytes::Bytes;
 
-    use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
+    use async_runtime::stream_to_iter as block_on_stream;
     use types::testutil::*;
 
     use crate::{
@@ -95,10 +92,8 @@ mod tests {
         });
 
         // Write test data
-        let written: Vec<_> = block_on_stream(block_on(
-            filtermapstore.write_stream(Box::pin(stream::iter(entries))),
-        ))
-        .collect();
+        let written: Vec<_> =
+            block_on_stream(filtermapstore.write_stream(Box::pin(stream::iter(entries)))).collect();
 
         assert_eq!(
             written
@@ -109,9 +104,9 @@ mod tests {
         );
 
         // Read what was written
-        let fetched: Vec<_> = block_on_stream(block_on(
+        let fetched: Vec<_> = block_on_stream(
             teststore.fetch_stream(Box::pin(stream::iter(vec![entry_key, entry_key2.clone()]))),
-        ))
+        )
         .collect();
 
         let exepcted = vec![Ok(entry_mod), Err(FetchError::not_found(entry_key2))];

@@ -8,7 +8,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use async_trait::async_trait;
 use futures::StreamExt;
 use futures_batch::ChunksTimeoutStreamExt;
 
@@ -36,12 +35,11 @@ pub struct EdenApiAdapter<C> {
     pub repo: String,
 }
 
-#[async_trait]
 impl<C> ReadStore<Key, TreeEntry> for EdenApiAdapter<C>
 where
     C: EdenApi,
 {
-    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Key, TreeEntry> {
+    fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Key, TreeEntry> {
         Box::pin(
             keys.chunks_timeout(BATCH_SIZE, BATCH_TIMEOUT)
                 .then(move |keys| {
@@ -68,12 +66,11 @@ where
     }
 }
 
-#[async_trait]
 impl<C> ReadStore<Key, FileEntry> for EdenApiAdapter<C>
 where
     C: EdenApi,
 {
-    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Key, FileEntry> {
+    fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Key, FileEntry> {
         Box::pin(
             keys.chunks_timeout(BATCH_SIZE, BATCH_TIMEOUT)
                 .then(move |keys| {

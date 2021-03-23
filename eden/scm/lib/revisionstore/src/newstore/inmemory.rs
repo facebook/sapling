@@ -7,7 +7,6 @@
 
 use std::{collections::HashMap, fmt, hash::Hash, sync::Arc};
 
-use async_trait::async_trait;
 use futures::{lock::Mutex, StreamExt};
 
 use crate::newstore::{
@@ -37,13 +36,12 @@ pub trait KeyedValue {
     fn key(&self) -> Self::Key;
 }
 
-#[async_trait]
 impl<K, V> ReadStore<K, V> for HashMapStore<K, V>
 where
     K: fmt::Display + fmt::Debug + std::cmp::Eq + Hash + Send + Sync + 'static,
     V: Clone + Send + Sync + 'static,
 {
-    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, V> {
+    fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, V> {
         Box::pin(keys.then(move |key| {
             let self_ = self.clone();
             async move {
@@ -59,13 +57,12 @@ where
     }
 }
 
-#[async_trait]
 impl<K, V> WriteStore<K, V> for HashMapStore<K, V>
 where
     K: Clone + fmt::Display + fmt::Debug + std::cmp::Eq + Hash + Send + Sync + 'static,
     V: KeyedValue<Key = K> + Send + Sync + 'static,
 {
-    async fn write_stream(self: Arc<Self>, values: WriteStream<V>) -> WriteResults<K> {
+    fn write_stream(self: Arc<Self>, values: WriteStream<V>) -> WriteResults<K> {
         Box::pin(values.then(move |value| {
             let self_ = self.clone();
             async move {
@@ -84,7 +81,7 @@ mod tests {
     use futures::stream;
     use minibytes::Bytes;
 
-    use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
+    use async_runtime::stream_to_iter as block_on_stream;
     use types::testutil::*;
 
     use crate::{
@@ -104,11 +101,11 @@ mod tests {
         let teststore = Arc::new(HashMapStore::new());
 
         // Write test data
-        let written: Vec<_> = block_on_stream(block_on(
+        let written: Vec<_> = block_on_stream(
             teststore
                 .clone()
                 .write_stream(Box::pin(stream::iter(entries.clone()))),
-        ))
+        )
         .collect();
 
         assert_eq!(
@@ -120,10 +117,9 @@ mod tests {
         );
 
         // Read, also using legacy wrapper
-        let fetched: Vec<_> = block_on_stream(block_on(
-            teststore.fetch_stream(Box::pin(stream::iter(vec![entry_key]))),
-        ))
-        .collect();
+        let fetched: Vec<_> =
+            block_on_stream(teststore.fetch_stream(Box::pin(stream::iter(vec![entry_key]))))
+                .collect();
 
         assert_eq!(
             fetched

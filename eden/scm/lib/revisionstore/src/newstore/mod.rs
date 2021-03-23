@@ -8,7 +8,6 @@
 use std::{cmp::PartialEq, fmt, sync::Arc};
 
 use anyhow::Error;
-use async_trait::async_trait;
 use futures::{
     future,
     stream::{self, BoxStream},
@@ -152,19 +151,17 @@ where
 
 // TODO: Add attributes support
 /// A typed, async key-value storage API
-#[async_trait]
 pub trait ReadStore<K: fmt::Display + fmt::Debug + Send + Sync + 'static, V: Send + Sync + 'static>:
     Send + Sync + 'static
 {
     /// Map a stream of keys to a stream of values by fetching from the underlying store
-    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, V>;
+    fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, V>;
 }
 
 // TODO: Add attributes support
 /// A typed, async key-value storage API
-#[async_trait]
 pub trait WriteStore<K: fmt::Display + fmt::Debug + Send + Sync + 'static, V: Send + Sync + 'static>:
     Send + Sync + 'static
 {
-    async fn write_stream(self: Arc<Self>, values: WriteStream<V>) -> WriteResults<K>;
+    fn write_stream(self: Arc<Self>, values: WriteStream<V>) -> WriteResults<K>;
 }

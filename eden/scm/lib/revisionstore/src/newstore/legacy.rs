@@ -12,7 +12,6 @@
 
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use futures::{FutureExt, StreamExt};
 use tokio::task::spawn_blocking;
 
@@ -30,12 +29,11 @@ use crate::{
 
 pub struct LegacyDatastore<T>(pub T);
 
-#[async_trait]
 impl<T> ReadStore<Key, Entry> for LegacyDatastore<T>
 where
     T: HgIdDataStore + 'static,
 {
-    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Key, Entry> {
+    fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Key, Entry> {
         Box::pin(keys.then(move |key| {
             let self_ = self.clone();
             let key_ = key.clone();
@@ -67,12 +65,11 @@ where
     }
 }
 
-#[async_trait]
 impl<T> WriteStore<Key, Entry> for LegacyDatastore<T>
 where
     T: HgIdMutableDeltaStore + 'static,
 {
-    async fn write_stream(self: Arc<Self>, values: WriteStream<Entry>) -> WriteResults<Key> {
+    fn write_stream(self: Arc<Self>, values: WriteStream<Entry>) -> WriteResults<Key> {
         Box::pin(values.then(move |mut value| {
             let self_ = self.clone();
             let key = value.key().clone();
@@ -113,7 +110,7 @@ mod tests {
     use minibytes::Bytes;
     use tempfile::TempDir;
 
-    use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
+    use async_runtime::stream_to_iter as block_on_stream;
     use configparser::config::ConfigSet;
     use types::testutil::*;
 
@@ -156,10 +153,8 @@ mod tests {
 
         let entries = vec![entry];
 
-        let fetched: Vec<_> = block_on_stream(block_on(
-            log.fetch_stream(Box::pin(stream::iter(vec![entry_key]))),
-        ))
-        .collect();
+        let fetched: Vec<_> =
+            block_on_stream(log.fetch_stream(Box::pin(stream::iter(vec![entry_key])))).collect();
 
         assert_eq!(
             fetched
@@ -193,10 +188,10 @@ mod tests {
         let entries = vec![entry];
 
         // Write test data
-        let written: Vec<_> = block_on_stream(block_on(
+        let written: Vec<_> = block_on_stream(
             log.clone()
                 .write_stream(Box::pin(stream::iter(entries.clone()))),
-        ))
+        )
         .collect();
 
         assert_eq!(
@@ -211,10 +206,8 @@ mod tests {
         log.0.flush().unwrap();
 
         // Read, also using legacy wrapper
-        let fetched: Vec<_> = block_on_stream(block_on(
-            log.fetch_stream(Box::pin(stream::iter(vec![entry_key]))),
-        ))
-        .collect();
+        let fetched: Vec<_> =
+            block_on_stream(log.fetch_stream(Box::pin(stream::iter(vec![entry_key])))).collect();
 
         assert_eq!(
             fetched

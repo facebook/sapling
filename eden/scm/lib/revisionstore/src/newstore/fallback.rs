@@ -9,7 +9,6 @@ use std::convert::From;
 use std::fmt;
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use futures::{channel::mpsc::channel, SinkExt, StreamExt, TryStreamExt};
 use tracing::error;
 
@@ -37,7 +36,6 @@ pub struct FallbackCache<K, VP, VF, VW> {
 
 const CHANNEL_BUFFER: usize = 200;
 
-#[async_trait]
 impl<K, VP, VF, VW, VO> ReadStore<K, VO> for FallbackCache<K, VP, VF, VW>
 where
     K: fmt::Display + fmt::Debug + Send + Sync + Clone + Unpin + 'static,
@@ -50,35 +48,34 @@ where
     // Output Value Type (must support conversion from preferred & fallback)
     VO: Send + Sync + Clone + From<VF> + From<VP> + 'static,
 {
-    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, VO> {
+    fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, VO> {
         // TODO(meyer): Write a custom Stream implementation to try to avoid use of channels
         let (sender, receiver) = channel(CHANNEL_BUFFER);
 
-        let preferred_stream =
-            self.preferred
-                .clone()
-                .fetch_stream(keys)
-                .await
-                .filter_map(move |res| {
-                    let mut sender = sender.clone();
-                    async move {
-                        use FetchError::*;
-                        match res {
-                            // Convert preferred values into output values
-                            Ok(v) => Some(Ok(v.into())),
-                            // TODO(meyer): Looks like we aren't up to date with futures crate, missing "feed" method, which is probably better here.
-                            // I think this might serialize the fallback stream as-written.
-                            Err(NotFound(k)) => match sender.send(k.clone()).await {
-                                Ok(()) => None,
-                                Err(e) => Some(Err(FetchError::with_key(k, e))),
-                            },
-                            // TODO(meyer): Should we also fall back on KeyedError, but also log an error?
-                            Err(e) => Some(Err(e)),
-                        }
+        let preferred_stream = self
+            .preferred
+            .clone()
+            .fetch_stream(keys)
+            .filter_map(move |res| {
+                let mut sender = sender.clone();
+                async move {
+                    use FetchError::*;
+                    match res {
+                        // Convert preferred values into output values
+                        Ok(v) => Some(Ok(v.into())),
+                        // TODO(meyer): Looks like we aren't up to date with futures crate, missing "feed" method, which is probably better here.
+                        // I think this might serialize the fallback stream as-written.
+                        Err(NotFound(k)) => match sender.send(k.clone()).await {
+                            Ok(()) => None,
+                            Err(e) => Some(Err(FetchError::with_key(k, e))),
+                        },
+                        // TODO(meyer): Should we also fall back on KeyedError, but also log an error?
+                        Err(e) => Some(Err(e)),
                     }
-                });
+                }
+            });
 
-        let fallback_stream = self.fallback.clone().fetch_stream(Box::pin(receiver)).await;
+        let fallback_stream = self.fallback.clone().fetch_stream(Box::pin(receiver));
 
         if let Some(ref write_store) = self.write_store {
             let (write_sender, write_receiver) = channel(CHANNEL_BUFFER);
@@ -101,7 +98,6 @@ where
             let write_results_null = write_store
                 .clone()
                 .write_stream(Box::pin(write_receiver))
-                .await
                 // TODO(meyer): Don't swallow all write errors here.
                 .filter_map(|_res| futures::future::ready(None));
 
@@ -133,7 +129,6 @@ pub struct Fallback<K, VP, VF> {
     pub fallback: BoxedReadStore<K, VF>,
 }
 
-#[async_trait]
 impl<K, VP, VF, VO> ReadStore<K, VO> for Fallback<K, VP, VF>
 where
     K: fmt::Display + fmt::Debug + Send + Sync + Clone + Unpin + 'static,
@@ -144,39 +139,37 @@ where
     // Output Value Type (must support conversion from preferred & fallback)
     VO: Send + Sync + Clone + From<VF> + From<VP> + 'static,
 {
-    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, VO> {
+    fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, VO> {
         // TODO(meyer): Write a custom Stream implementation to try to avoid use of channels
         let (sender, receiver) = channel(CHANNEL_BUFFER);
 
-        let preferred_stream =
-            self.preferred
-                .clone()
-                .fetch_stream(keys)
-                .await
-                .filter_map(move |res| {
-                    let mut sender = sender.clone();
-                    async move {
-                        use FetchError::*;
-                        match res {
-                            // Convert preferred values into output values
-                            Ok(v) => Some(Ok(v.into())),
-                            // TODO(meyer): Looks like we aren't up to date with futures crate, missing "feed" method, which is probably better here.
-                            // I think this might serialize the fallback stream as-written.
-                            Err(NotFound(k)) => match sender.send(k.clone()).await {
-                                Ok(()) => None,
-                                Err(e) => Some(Err(FetchError::with_key(k, e))),
-                            },
-                            // TODO(meyer): Should we also fall back on KeyedError, but also log an error?
-                            Err(e) => Some(Err(e)),
-                        }
+        let preferred_stream = self
+            .preferred
+            .clone()
+            .fetch_stream(keys)
+            .filter_map(move |res| {
+                let mut sender = sender.clone();
+                async move {
+                    use FetchError::*;
+                    match res {
+                        // Convert preferred values into output values
+                        Ok(v) => Some(Ok(v.into())),
+                        // TODO(meyer): Looks like we aren't up to date with futures crate, missing "feed" method, which is probably better here.
+                        // I think this might serialize the fallback stream as-written.
+                        Err(NotFound(k)) => match sender.send(k.clone()).await {
+                            Ok(()) => None,
+                            Err(e) => Some(Err(FetchError::with_key(k, e))),
+                        },
+                        // TODO(meyer): Should we also fall back on KeyedError, but also log an error?
+                        Err(e) => Some(Err(e)),
                     }
-                });
+                }
+            });
 
         let fallback_stream = self
             .fallback
             .clone()
             .fetch_stream(Box::pin(receiver))
-            .await
             .map_ok(|v| v.into());
 
         Box::pin(select_drop(preferred_stream, fallback_stream))

@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use futures::stream;
 
-use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
+use async_runtime::stream_to_iter as block_on_stream;
 use clidispatch::errors;
 use edenapi::Builder;
 use edenapi_types::{FileEntry, TreeEntry};
@@ -105,9 +105,9 @@ pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
         ));
     }
 
-    let fetched_trees = block_on_stream(block_on(
+    let fetched_trees = block_on_stream(
         tree_fallback.fetch_stream(Box::pin(stream::iter(tree_keys)) as KeyStream<Key>),
-    ));
+    );
 
     for item in fetched_trees {
         let msg = format!(
@@ -147,9 +147,9 @@ pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
         ));
     }
 
-    let fetched_files = block_on_stream(block_on(
+    let fetched_files = block_on_stream(
         file_fallback.fetch_stream(Box::pin(stream::iter(file_keys)) as KeyStream<Key>),
-    ));
+    );
 
     for item in fetched_files {
         let msg = format!(

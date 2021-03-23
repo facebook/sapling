@@ -12,7 +12,6 @@ use std::{
 };
 
 use anyhow::{bail, ensure, Result};
-use async_trait::async_trait;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use futures::{FutureExt, StreamExt};
 use minibytes::Bytes;
@@ -280,9 +279,8 @@ impl std::convert::From<FileEntry> for Entry {
     }
 }
 
-#[async_trait]
 impl ReadStore<Key, Entry> for IndexedLogHgIdDataStore {
-    async fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Key, Entry> {
+    fn fetch_stream(self: Arc<Self>, keys: KeyStream<Key>) -> FetchStream<Key, Entry> {
         Box::pin(keys.then(move |key| {
             let self_ = self.clone();
             let key_ = key.clone();
@@ -305,9 +303,8 @@ impl ReadStore<Key, Entry> for IndexedLogHgIdDataStore {
     }
 }
 
-#[async_trait]
 impl WriteStore<Key, Entry> for IndexedLogHgIdDataStore {
-    async fn write_stream(self: Arc<Self>, values: WriteStream<Entry>) -> WriteResults<Key> {
+    fn write_stream(self: Arc<Self>, values: WriteStream<Entry>) -> WriteResults<Key> {
         Box::pin(values.then(move |value| {
             let self_ = self.clone();
             let key = value.key.clone();
@@ -430,7 +427,7 @@ mod tests {
     use minibytes::Bytes;
     use tempfile::TempDir;
 
-    use async_runtime::{block_on_future as block_on, stream_to_iter as block_on_stream};
+    use async_runtime::stream_to_iter as block_on_stream;
     use types::testutil::*;
 
     use crate::newstore::fallback::Fallback;
@@ -699,10 +696,9 @@ mod tests {
 
         let log = Arc::new(log);
 
-        let mut fetched: Vec<_> = block_on_stream(block_on(
-            log.fetch_stream(Box::pin(stream::iter(vec![key("a", "1")]))),
-        ))
-        .collect();
+        let mut fetched: Vec<_> =
+            block_on_stream(log.fetch_stream(Box::pin(stream::iter(vec![key("a", "1")]))))
+                .collect();
 
         assert_eq!(fetched.len(), 1);
         assert_eq!(
@@ -761,9 +757,9 @@ mod tests {
             fallback: log2,
         });
 
-        let mut fetched: Vec<Result<Entry, _>> = block_on_stream(block_on(
+        let mut fetched: Vec<Result<Entry, _>> = block_on_stream(
             fallback.fetch_stream(Box::pin(stream::iter(vec![key("a", "1"), key("b", "2")]))),
-        ))
+        )
         .collect();
 
         assert_eq!(fetched.len(), 2);
@@ -809,10 +805,10 @@ mod tests {
 
         let entries = vec![entry];
 
-        let written: Vec<_> = block_on_stream(block_on(
+        let written: Vec<_> = block_on_stream(
             log.clone()
                 .write_stream(Box::pin(stream::iter(entries.clone()))),
-        ))
+        )
         .collect();
 
         assert_eq!(
@@ -826,10 +822,8 @@ mod tests {
         // TODO(meyer): Add "flush" support to WriteStore trait
         log.flush().unwrap();
 
-        let fetched: Vec<_> = block_on_stream(block_on(
-            log.fetch_stream(Box::pin(stream::iter(vec![entry_key]))),
-        ))
-        .collect();
+        let fetched: Vec<_> =
+            block_on_stream(log.fetch_stream(Box::pin(stream::iter(vec![entry_key])))).collect();
 
         assert_eq!(
             fetched
