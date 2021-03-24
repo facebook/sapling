@@ -16,10 +16,11 @@ use derived_data::{
 };
 use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 use futures::{compat::Future01CompatExt, stream, StreamExt, TryFutureExt, TryStreamExt};
-use itertools::{Either, Itertools};
 use mercurial_types::{HgChangesetId, HgFileNodeId, NULL_HASH};
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepoPath};
 use std::{collections::HashMap, convert::TryFrom};
+
+use crate::derive::{add_filenodes, derive_filenodes, derive_filenodes_in_batch};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreparedRootFilenode {
@@ -106,63 +107,46 @@ impl BonsaiDerivable for FilenodesOnlyPublic {
         _parents: Vec<Self>,
         _options: &Self::Options,
     ) -> Result<Self, Error> {
-        let filenodes =
-            crate::derive::generate_all_filenodes(&ctx, &repo, bonsai.get_changeset_id()).await?;
-
-        if filenodes.is_empty() {
-            // This commit didn't create any new filenodes, and it's root manifest is the
-            // same as one of the parents (that can happen if this commit is empty).
-            // In that case we don't need to insert a root filenode - it will be inserted
-            // when parent is derived.
-            Ok(FilenodesOnlyPublic::Present {
-                root_filenode: None,
-            })
-        } else {
-            let (roots, non_roots): (Vec<_>, Vec<_>) =
-                filenodes.into_iter().partition_map(classify_filenode);
-            let mut roots = roots.into_iter();
-
-            match (roots.next(), roots.next()) {
-                (Some(root_filenode), None) => {
-                    let filenodes = repo.get_filenodes();
-                    let repo_id = repo.get_repoid();
-                    let filenode_res = filenodes
-                        .add_filenodes(ctx.clone(), non_roots, repo_id)
-                        .compat()
-                        .await?;
-
-                    match filenode_res {
-                        FilenodeResult::Present(()) => Ok(FilenodesOnlyPublic::Present {
-                            root_filenode: Some(root_filenode),
-                        }),
-                        FilenodeResult::Disabled => Ok(FilenodesOnlyPublic::Disabled),
-                    }
-                }
-                _ => Err(format_err!("expected exactly one root, found {:?}", roots)),
-            }
-        }
+        derive_filenodes(&ctx, &repo, bonsai.get_changeset_id()).await
     }
-}
 
-fn classify_filenode(filenode: PreparedFilenode) -> Either<PreparedRootFilenode, PreparedFilenode> {
-    if filenode.path == RepoPath::RootPath {
-        let FilenodeInfo {
-            filenode,
-            p1,
-            p2,
-            copyfrom,
-            linknode,
-        } = filenode.info;
-
-        Either::Left(PreparedRootFilenode {
-            filenode,
-            p1,
-            p2,
-            copyfrom,
-            linknode,
-        })
-    } else {
-        Either::Right(filenode)
+    async fn batch_derive_impl<BatchMapping>(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csids: Vec<ChangesetId>,
+        mapping: &BatchMapping,
+        _gap_size: Option<usize>,
+    ) -> Result<HashMap<ChangesetId, Self>, Error>
+    where
+        BatchMapping: BonsaiDerivedMapping<Value = Self> + Send + Sync + Clone + 'static,
+    {
+        let prepared = derive_filenodes_in_batch(ctx, repo, csids).await?;
+        let mut res = HashMap::with_capacity(prepared.len());
+        for (cs_id, public_filenode, non_roots) in prepared.into_iter() {
+            let filenode = match public_filenode {
+                FilenodesOnlyPublic::Present { root_filenode } => match root_filenode {
+                    Some(filenode) => {
+                        let filenodes_res = add_filenodes(ctx, repo, non_roots).await?;
+                        match filenodes_res {
+                            FilenodeResult::Disabled => FilenodesOnlyPublic::Disabled,
+                            FilenodeResult::Present(()) => FilenodesOnlyPublic::Present {
+                                root_filenode: Some(filenode),
+                            },
+                        }
+                    }
+                    None => FilenodesOnlyPublic::Present {
+                        root_filenode: None,
+                    },
+                },
+                FilenodesOnlyPublic::Disabled => FilenodesOnlyPublic::Disabled,
+            };
+            res.insert(cs_id, filenode.clone());
+            if let FilenodesOnlyPublic::Disabled = filenode {
+                continue;
+            }
+            mapping.put(ctx.clone(), cs_id.clone(), filenode).await?;
+        }
+        Ok(res)
     }
 }
 
