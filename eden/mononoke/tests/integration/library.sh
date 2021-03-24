@@ -1141,7 +1141,7 @@ function manual_scrub {
 }
 
 function s_client {
-    /usr/local/fbcode/platform007/bin/openssl s_client \
+    /usr/local/fbcode/platform009/bin/openssl s_client \
         -connect "$(mononoke_address)" \
         -CAfile "${TEST_CERTDIR}/root-ca.crt" \
         -cert "${TEST_CERTDIR}/localhost.crt" \
