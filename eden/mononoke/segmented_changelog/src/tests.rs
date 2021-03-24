@@ -14,6 +14,7 @@ use futures::compat::Stream01CompatExt;
 use futures::future::try_join_all;
 use futures::stream::TryStreamExt;
 use futures::StreamExt;
+use once_cell::sync::Lazy;
 
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
@@ -29,10 +30,11 @@ use tests_utils::resolve_cs_id;
 
 use crate::builder::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::CacheHandlers;
+use crate::idmap::{CacheHandlers, IdMap, SqlIdMap};
+use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::tailer::SegmentedChangelogTailer;
-use crate::types::IdDagVersion;
+use crate::types::{IdDagVersion, IdMapVersion};
 use crate::SegmentedChangelog;
 use crate::{InProcessIdDag, Location};
 
@@ -55,6 +57,8 @@ where
         Ok(cs_id)
     }
 }
+
+static BOOKMARK_NAME: Lazy<BookmarkName> = Lazy::new(|| BookmarkName::new("master").unwrap());
 
 fn new_tailer(
     blobrepo: &BlobRepo,
@@ -516,38 +520,49 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
 
 #[fbinit::test]
 async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<()> {
-    // In this test we first build a dag from scratch and then we reuse the idmap in an ondemand
-    // dag that starts off with an empty iddag.
+    // In this test we first build an demand update segmented changelog with an empty idmap and
+    // then we reuse the idmap with another on demand update segmented changelog that starts off
+    // with an empty iddag.
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
-
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+    let idmap: Arc<dyn IdMap> = Arc::new(SqlIdMap::new(
+        conns.0.clone(),
+        Arc::new(NoReplicaLagMonitor()),
+        blobrepo.get_repoid(),
+        IdMapVersion(0),
+    ));
+    let new_sc = || {
+        OnDemandUpdateSegmentedChangelog::new(
+            blobrepo.get_repoid(),
+            InProcessIdDag::new_in_process(),
+            Arc::clone(&idmap),
+            blobrepo.get_changeset_fetcher(),
+            Arc::clone(blobrepo.bookmarks()),
+            BOOKMARK_NAME.clone(),
+        )
+    };
     let master_cs =
         resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
 
-    setup_phases(&ctx, &blobrepo, master_cs).await?;
-
-    let builder = SegmentedChangelogBuilder::new()
-        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
-        .with_blobrepo(&blobrepo);
-    let seeder = builder.clone().build_seeder(&ctx).await?;
-    let (sc, _) = seeder.build_from_scratch(&ctx, master_cs).await?;
+    let initial = new_sc();
 
     let cs7 = resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
     let distance: u64 = 4;
-    let answer = sc
+    let answer = initial
         .location_to_changeset_id(&ctx, Location::new(master_cs, distance))
         .await?;
     assert_eq!(answer, cs7);
 
-    let ondemand = builder.build_on_demand_update()?;
+    let second = new_sc();
 
     let cs3 = resolve_cs_id(&ctx, &blobrepo, "607314ef579bd2407752361ba1b0c1729d08b281").await?;
-    let answer = ondemand
+    let answer = second
         .location_to_changeset_id(&ctx, Location::new(cs7, distance))
         .await?;
     assert_eq!(answer, cs3);
 
-    let answer = ondemand
+    let answer = second
         .location_to_changeset_id(&ctx, Location::new(master_cs, distance))
         .await?;
     assert_eq!(answer, cs7);

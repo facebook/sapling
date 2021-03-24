@@ -45,6 +45,7 @@ fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperim
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 maplit = "1.0"
 mononoke_types-mocks = { version = "0.1.0", path = "../mononoke_types/mocks" }
+once_cell = "1.4"
 phases = { version = "0.1.0", path = "../phases" }
 revset = { version = "0.1.0", path = "../revset" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }
