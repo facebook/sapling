@@ -3648,7 +3648,7 @@ def debugthrowexception(ui, _repo):
     raise error.IntentionalError("intentional failure in debugthrowexception")
 
 
-@command("debugpynewstore", [], "")
-def debugpynewstore(ui, repo):
+@command("debugpyscmstore", [], "")
+def debugpyscmstore(ui, repo):
     """test file fetching using new storage API"""
-    ui.write(_x(repo.fileslog.newfilestore.test_newstore()))
+    ui.write(_x(repo.fileslog.filescmstore.test_scmstore()))

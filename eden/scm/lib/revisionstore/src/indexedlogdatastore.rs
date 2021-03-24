@@ -28,11 +28,11 @@ use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::{ExtStoredPolicy, LocalStore},
-    newstore::{
+    repack::ToKeys,
+    scmstore::{
         FetchError, FetchStream, KeyStream, KeyedValue, ReadStore, WriteError, WriteResults,
         WriteStore, WriteStream,
     },
-    repack::ToKeys,
     sliceext::SliceExt,
     types::StoreKey,
 };
@@ -438,7 +438,7 @@ mod tests {
     use async_runtime::stream_to_iter as block_on_stream;
     use types::testutil::*;
 
-    use crate::newstore::{Fallback, FetchError};
+    use crate::scmstore::{Fallback, FetchError};
 
     #[test]
     fn test_empty() {
@@ -681,7 +681,7 @@ mod tests {
     }
 
     #[test]
-    fn test_newstore_read() {
+    fn test_scmstore_read() {
         let tempdir = TempDir::new().unwrap();
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
@@ -722,7 +722,7 @@ mod tests {
     }
 
     #[test]
-    fn test_newstore_fallback() {
+    fn test_scmstore_fallback() {
         let tempdir = TempDir::new().unwrap();
         let log1 = IndexedLogHgIdDataStore::new(
             &tempdir,
@@ -794,7 +794,7 @@ mod tests {
     }
 
     #[test]
-    fn test_newstore_write_read() {
+    fn test_scmstore_write_read() {
         let tempdir = TempDir::new().unwrap();
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
@@ -843,7 +843,7 @@ mod tests {
     }
 
     #[test]
-    fn test_newstore_extstore_use() {
+    fn test_scmstore_extstore_use() {
         let tempdir = TempDir::new().unwrap();
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,
@@ -899,7 +899,7 @@ mod tests {
     }
 
     #[test]
-    fn test_newstore_extstore_ignore() {
+    fn test_scmstore_extstore_ignore() {
         let tempdir = TempDir::new().unwrap();
         let log = IndexedLogHgIdDataStore::new(
             &tempdir,

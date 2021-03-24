@@ -17,7 +17,7 @@ use types::Key;
 
 use crate::{
     localstore::ExtStoredPolicy,
-    newstore::{fetch_error, FetchError, FetchStream, KeyStream, ReadStore},
+    scmstore::{fetch_error, FetchError, FetchStream, KeyStream, ReadStore},
 };
 
 // TODO(meyer): These should be configurable
@@ -127,7 +127,7 @@ mod tests {
         datastore::Metadata,
         edenapi::{EdenApiRemoteStore, File},
         localstore::ExtStoredPolicy,
-        newstore::FetchError,
+        scmstore::FetchError,
         testutil::*,
     };
 
@@ -161,7 +161,7 @@ mod tests {
             .into_arc();
         let remote_files = EdenApiRemoteStore::<File>::new("repo", client, None);
 
-        let files_adapter = Arc::new(remote_files.get_newstore_adapter(ExtStoredPolicy::Use));
+        let files_adapter = Arc::new(remote_files.get_scmstore_adapter(ExtStoredPolicy::Use));
 
         let fetched: Vec<_> =
             block_on_stream(files_adapter.fetch_stream(Box::pin(stream::iter(vec![
@@ -221,7 +221,7 @@ mod tests {
             .into_arc();
         let remote_files = EdenApiRemoteStore::<File>::new("repo", client, None);
 
-        let files_adapter = Arc::new(remote_files.get_newstore_adapter(ExtStoredPolicy::Ignore));
+        let files_adapter = Arc::new(remote_files.get_scmstore_adapter(ExtStoredPolicy::Ignore));
 
         let fetched: Vec<_> =
             block_on_stream(files_adapter.fetch_stream(Box::pin(stream::iter(vec![

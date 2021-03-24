@@ -9,7 +9,7 @@ use std::{collections::HashMap, fmt, hash::Hash, sync::Arc};
 
 use futures::{lock::Mutex, StreamExt};
 
-use crate::newstore::{
+use crate::scmstore::{
     FetchError, FetchStream, KeyStream, ReadStore, WriteResults, WriteStore, WriteStream,
 };
 
@@ -87,7 +87,7 @@ mod tests {
     use crate::{
         datastore::Metadata,
         indexedlogdatastore::Entry,
-        newstore::{ReadStore, WriteStore},
+        scmstore::{ReadStore, WriteStore},
     };
 
     #[test]

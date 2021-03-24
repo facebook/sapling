@@ -34,11 +34,12 @@ use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
 use revisionstore::{
     indexedlogdatastore::Entry,
-    newstore::{
+    repack,
+    scmstore::{
         BoxedReadStore, BoxedWriteStore, Fallback, FallbackCache, FilterMapStore, KeyStream,
         LegacyDatastore, StoreFile,
     },
-    repack, util, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
+    util, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
     DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore,
     HgIdHistoryStore, HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack,
     HistoryPackStore, HistoryPackVersion, IndexedLogDataStoreType, IndexedLogHgIdDataStore,
@@ -84,7 +85,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<contentstore>(py)?;
     m.add_class::<metadatastore>(py)?;
     m.add_class::<memcachestore>(py)?;
-    m.add_class::<newfilestore>(py)?;
+    m.add_class::<filescmstore>(py)?;
     m.add(
         py,
         "repack",
@@ -1141,7 +1142,7 @@ impl ExtractInnerRef for memcachestore {
 // for FallbackStore.
 /// Construct a file ReadStore using the provided config, optionally falling back
 /// to the provided legacy HgIdDataStore.
-fn make_newfilestore<'a>(
+fn make_filescmstore<'a>(
     path: Option<&'a Path>,
     config: &'a ConfigSet,
     remote: Arc<PyHgIdRemoteStore>,
@@ -1174,7 +1175,7 @@ fn make_newfilestore<'a>(
     };
 
     let cache_path = &util::get_cache_path(config, &suffix)?;
-    // TODO(meyer): Do check_cache_buster even for newstore-only (happens as part of ContentStore construction)
+    // TODO(meyer): Do check_cache_buster even for scmstore-only (happens as part of ContentStore construction)
     // revisionstore::contentstore::check_cache_buster(config, &cache_path);
 
     let enable_lfs = config.get_or_default::<bool>("remotefilelog", "lfs")?;
@@ -1194,10 +1195,10 @@ fn make_newfilestore<'a>(
         None
     };
 
-    // Extract EdenApiAdapter for NewStore construction later on
+    // Extract EdenApiAdapter for scmstore construction later on
     let mut edenapi_adapter = None;
     builder = if let Some(edenapi) = edenapi_filestore {
-        edenapi_adapter = Some(edenapi.get_newstore_adapter(extstored_policy));
+        edenapi_adapter = Some(edenapi.get_scmstore_adapter(extstored_policy));
         builder.remotestore(edenapi)
     } else {
         builder.remotestore(remote)
@@ -1254,17 +1255,17 @@ fn make_newfilestore<'a>(
         file_indexedlog.clone() as BoxedWriteStore<Key, Entry>
     };
 
-    let newstore = Arc::new(FallbackCache {
+    let scmstore = Arc::new(FallbackCache {
         preferred: file_indexedlog,
         fallback: legacy_fallback as BoxedReadStore<Key, Entry>,
         write_store: Some(filtered_file_indexedlog),
     });
 
 
-    Ok((newstore, contentstore))
+    Ok((scmstore, contentstore))
 }
 
-py_class!(pub class newfilestore |py| {
+py_class!(pub class filescmstore |py| {
     data store: BoxedReadStore<Key, StoreFile>;
     data contentstore: Arc<ContentStore>;
 
@@ -1276,7 +1277,7 @@ py_class!(pub class newfilestore |py| {
         edenapi: Option<edenapifilestore> = None,
         suffix: Option<String> = None,
         correlator: Option<String> = None
-    ) -> PyResult<newfilestore> {
+    ) -> PyResult<filescmstore> {
         // Extract Rust Values
         let path = path.as_ref().map(|v| v.as_path());
         let config = config.get_cfg(py);
@@ -1284,16 +1285,16 @@ py_class!(pub class newfilestore |py| {
         let memcache = memcache.map(|v| v.extract_inner(py));
         let edenapi = edenapi.map(|v| v.extract_inner(py));
 
-        let (newstore, contentstore) = make_newfilestore(path, &config, remote, memcache, edenapi, suffix, correlator).map_pyerr(py)?;
+        let (scmstore, contentstore) = make_filescmstore(path, &config, remote, memcache, edenapi, suffix, correlator).map_pyerr(py)?;
 
-        newfilestore::create_instance(py, newstore, contentstore)
+        filescmstore::create_instance(py, scmstore, contentstore)
     }
 
     def get_contentstore(&self) -> PyResult<contentstore> {
         contentstore::create_instance(py, self.contentstore(py).clone())
     }
 
-    def test_newstore(&self) -> PyResult<String> {
+    def test_scmstore(&self) -> PyResult<String> {
         let key = Key::new(
             RepoPathBuf::from_string("fbcode/eden/scm/lib/revisionstore/Cargo.toml".to_owned()).expect("failed to convert path to RepoPathBuf"),
             HgId::from_str("4b3d9118300087262fbf6a791b437aa7b46f0c99").expect("failed to parse HgId"),
@@ -1307,7 +1308,7 @@ py_class!(pub class newfilestore |py| {
     }
 });
 
-impl ExtractInnerRef for newfilestore {
+impl ExtractInnerRef for filescmstore {
     type Inner = BoxedReadStore<Key, StoreFile>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {

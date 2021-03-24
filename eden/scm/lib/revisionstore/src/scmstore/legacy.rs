@@ -20,7 +20,7 @@ use types::Key;
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, StoreResult},
     indexedlogdatastore::Entry,
-    newstore::{
+    scmstore::{
         FetchError, FetchStream, KeyStream, ReadStore, WriteError, WriteResults, WriteStore,
         WriteStream,
     },
@@ -118,7 +118,7 @@ mod tests {
         datastore::{Delta, HgIdMutableDeltaStore, Metadata},
         indexedlogdatastore::{IndexedLogDataStoreType, IndexedLogHgIdDataStore},
         localstore::ExtStoredPolicy,
-        newstore::ReadStore,
+        scmstore::ReadStore,
     };
 
     #[test]

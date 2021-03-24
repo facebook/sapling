@@ -15,7 +15,7 @@ use tracing::error;
 
 use streams::select_drop;
 
-use crate::newstore::{
+use crate::scmstore::{
     BoxedReadStore, BoxedWriteStore, FetchError, FetchStream, KeyStream, ReadStore,
 };
 

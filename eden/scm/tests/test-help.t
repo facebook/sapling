@@ -1024,8 +1024,6 @@ Test list of internal help commands
                  convert obsolescence markers to mutation records
    debugnamecomplete
                  complete "names" - tags, open branch names, bookmark names
-   debugnewstore
-                 test newstore storage api
    debugobsolete
                  create arbitrary obsolete marker
    debugoptADV   (no help text available)
@@ -1044,7 +1042,7 @@ Test list of internal help commands
    debugpull     test repo.pull interface
    debugpushkey  access the pushkey key/value protocol
    debugpvec     (no help text available)
-   debugpynewstore
+   debugpyscmstore
                  test file fetching using new storage API
    debugpython   run python interpreter
    debugreadauthforuri
@@ -1063,6 +1061,8 @@ Test list of internal help commands
    debugrevspec  parse and apply a revision specification
    debugrunshell
                  run a shell command
+   debugscmstore
+                 test scmstore storage api
    debugsegmentclone
                  clone a repository using segmented changelog
    debugsendunbundle

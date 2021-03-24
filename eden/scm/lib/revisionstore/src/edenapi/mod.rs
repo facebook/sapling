@@ -19,8 +19,8 @@ use crate::{
     datastore::{HgIdMutableDeltaStore, RemoteDataStore},
     historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
     localstore::ExtStoredPolicy,
-    newstore::EdenApiAdapter,
     remotestore::HgIdRemoteStore,
+    scmstore::EdenApiAdapter,
     types::StoreKey,
 };
 
@@ -50,7 +50,7 @@ pub struct EdenApiRemoteStore<T> {
 }
 
 impl<T> EdenApiRemoteStore<T> {
-    pub fn get_newstore_adapter(
+    pub fn get_scmstore_adapter(
         &self,
         extstored_policy: ExtStoredPolicy,
     ) -> EdenApiAdapter<Arc<dyn EdenApi>> {

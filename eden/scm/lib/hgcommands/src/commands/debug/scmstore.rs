@@ -16,7 +16,7 @@ use edenapi::Builder;
 use edenapi_types::{FileEntry, TreeEntry};
 use revisionstore::{
     indexedlogdatastore::{Entry, IndexedLogDataStoreType, IndexedLogHgIdDataStore},
-    newstore::{edenapi::EdenApiAdapter, fallback::FallbackCache, BoxedReadStore, KeyStream},
+    scmstore::{edenapi::EdenApiAdapter, fallback::FallbackCache, BoxedReadStore, KeyStream},
     ExtStoredPolicy,
 };
 use types::{HgId, Key, RepoPathBuf};
@@ -170,9 +170,9 @@ pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
 }
 
 pub fn name() -> &'static str {
-    "debugnewstore"
+    "debugscmstore"
 }
 
 pub fn doc() -> &'static str {
-    "test newstore storage api"
+    "test scmstore storage api"
 }

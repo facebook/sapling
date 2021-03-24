@@ -141,7 +141,6 @@ Show debug commands if there are no other candidates
   debugmutation
   debugmutationfromobsmarkers
   debugnamecomplete
-  debugnewstore
   debugobsolete
   debugpathcomplete
   debugpickmergetool
@@ -151,7 +150,7 @@ Show debug commands if there are no other candidates
   debugpull
   debugpushkey
   debugpvec
-  debugpynewstore
+  debugpyscmstore
   debugpython
   debugreadauthforuri
   debugrebuildchangelog
@@ -162,6 +161,7 @@ Show debug commands if there are no other candidates
   debugrevlog
   debugrevspec
   debugrunshell
+  debugscmstore
   debugsegmentclone
   debugsendunbundle
   debugsetparents
@@ -433,7 +433,6 @@ Show all commands + options
   debugmutation: rev, successors, time-range
   debugmutationfromobsmarkers: 
   debugnamecomplete: 
-  debugnewstore: 
   debugobsolete: flags, record-parents, rev, exclusive, index, delete, date, user, template
   debugpathcomplete: full, normal, added, removed
   debugpickmergetool: rev, changedelete, include, exclude, tool
@@ -443,7 +442,7 @@ Show all commands + options
   debugpull: bookmark, rev
   debugpushkey: 
   debugpvec: 
-  debugpynewstore: 
+  debugpyscmstore: 
   debugpython: 
   debugreadauthforuri: user
   debugrebuildchangelog: 
@@ -454,6 +453,7 @@ Show all commands + options
   debugrevlog: changelog, manifest, dir, dump
   debugrevspec: optimize, show-revs, show-set, show-stage, no-optimized, verify-optimized
   debugrunshell: cmd
+  debugscmstore: 
   debugsegmentclone: 
   debugsendunbundle: 
   debugsetparents: 

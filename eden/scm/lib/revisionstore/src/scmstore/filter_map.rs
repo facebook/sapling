@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use futures::StreamExt;
 
-use crate::newstore::{BoxedWriteStore, WriteResults, WriteStore, WriteStream};
+use crate::scmstore::{BoxedWriteStore, WriteResults, WriteStore, WriteStream};
 
 /// A minimal "filter_map" store, which filters writes to the associated `write_store`,
 pub struct FilterMapStore<K, V, F> {
@@ -49,7 +49,7 @@ mod tests {
     use crate::{
         datastore::Metadata,
         indexedlogdatastore::Entry,
-        newstore::{FetchError, HashMapStore, ReadStore, WriteStore},
+        scmstore::{FetchError, HashMapStore, ReadStore, WriteStore},
     };
 
     #[test]

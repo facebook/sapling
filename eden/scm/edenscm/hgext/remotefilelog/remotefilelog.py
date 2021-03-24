@@ -580,7 +580,7 @@ class remotefileslog(filelog.fileslog):
 
         mask = os.umask(0o002)
         try:
-            self.newfilestore = revisionstore.newfilestore(
+            self.filescmstore = revisionstore.filescmstore(
                 repo.svfs.vfs.base,
                 repo.ui._rcfg._rcfg,
                 remotestore,
@@ -588,7 +588,7 @@ class remotefileslog(filelog.fileslog):
                 edenapistore,
                 correlator=correlator,
             )
-            self.contentstore = self.newfilestore.get_contentstore()
+            self.contentstore = self.filescmstore.get_contentstore()
             self.metadatastore = revisionstore.metadatastore(
                 repo.svfs.vfs.base,
                 repo.ui._rcfg._rcfg,
