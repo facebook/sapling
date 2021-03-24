@@ -190,7 +190,7 @@ impl LocalStore for FakeRemoteHistoryStore {
 
 #[derive(Default)]
 pub struct FakeEdenApi {
-    files: HashMap<Key, Bytes>,
+    files: HashMap<Key, (Bytes, Option<u64>)>,
     trees: HashMap<Key, Bytes>,
     history: HashMap<Key, NodeInfo>,
 }
@@ -200,7 +200,20 @@ impl FakeEdenApi {
         Default::default()
     }
 
-    pub fn files(self, files: HashMap<Key, Bytes>) -> Self {
+    pub fn files(self, files: impl IntoIterator<Item = (Key, Bytes)>) -> Self {
+        Self {
+            files: files
+                .into_iter()
+                .map(|(key, bytes)| (key, (bytes, None)))
+                .collect(),
+            ..self
+        }
+    }
+
+    /// See revisionstore::types::datastore::Metadata for how to construct these flags.
+    ///
+    /// Hint: None, or Some(Metadata::LFS_FLAG) are all you'll ever need.
+    pub fn files_with_flags(self, files: HashMap<Key, (Bytes, Option<u64>)>) -> Self {
         Self { files, ..self }
     }
 
@@ -217,16 +230,16 @@ impl FakeEdenApi {
     }
 
     fn get_files(
-        map: &HashMap<Key, Bytes>,
+        map: &HashMap<Key, (Bytes, Option<u64>)>,
         keys: Vec<Key>,
     ) -> Result<Fetch<FileEntry>, EdenApiError> {
         let entries = keys
             .into_iter()
             .filter_map(|key| {
-                let data = map.get(&key)?.clone();
+                let (data, flags) = map.get(&key)?.clone();
                 let parents = Parents::default();
                 let metadata = Metadata {
-                    flags: None,
+                    flags,
                     size: Some(data.len() as u64),
                 };
                 let data = data.to_vec().into();

@@ -15,7 +15,10 @@ use edenapi::EdenApi;
 use edenapi_types::{FileEntry, TreeAttributes, TreeEntry};
 use types::Key;
 
-use crate::newstore::{fetch_error, FetchError, FetchStream, KeyStream, ReadStore};
+use crate::{
+    localstore::ExtStoredPolicy,
+    newstore::{fetch_error, FetchError, FetchStream, KeyStream, ReadStore},
+};
 
 // TODO(meyer): These should be configurable
 // EdenApi's API is batch-based and async, and it will split a large batch into multiple requests to send in parallel
@@ -33,6 +36,7 @@ const BATCH_TIMEOUT: Duration = Duration::from_millis(100);
 pub struct EdenApiAdapter<C> {
     pub client: C,
     pub repo: String,
+    pub extstored_policy: ExtStoredPolicy,
 }
 
 impl<C> ReadStore<Key, TreeEntry> for EdenApiAdapter<C>
@@ -80,14 +84,169 @@ where
                             .client
                             .files(self_.repo.clone(), keys, None)
                             .await
-                            .map_or_else(fetch_error, |s| {
-                                // TODO: Add per-item errors to EdenApi `files`
-                                Box::pin(s.entries.map(|v| v.map_err(FetchError::from)))
-                                    as FetchStream<Key, FileEntry>
+                            .map_or_else(fetch_error, {
+                                let self_ = self_.clone();
+                                move |fetch| {
+                                    // TODO: Add per-item errors to EdenApi `files`
+                                    Box::pin(fetch.entries.map(move |res| {
+                                        res.map_err(FetchError::from).and_then(|entry| {
+                                            if self_.extstored_policy == ExtStoredPolicy::Ignore
+                                                && entry.metadata().is_lfs()
+                                            {
+                                                Err(FetchError::not_found(entry.key().clone()))
+                                            } else {
+                                                Ok(entry)
+                                            }
+                                        })
+                                    }))
+                                        as
+                                        FetchStream<Key, FileEntry>
+                                }
                             })
                     }
                 })
                 .flatten(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::collections::HashMap;
+
+    use futures::stream;
+    use maplit::hashmap;
+
+    use async_runtime::stream_to_iter as block_on_stream;
+    use minibytes::Bytes;
+    use types::{testutil::*, Parents};
+
+    use crate::{
+        datastore::Metadata,
+        edenapi::{EdenApiRemoteStore, File},
+        localstore::ExtStoredPolicy,
+        newstore::FetchError,
+        testutil::*,
+    };
+
+    #[test]
+    fn test_files_extstore_use() -> Result<(), ()> {
+        // Set up mocked EdenAPI file and tree stores.
+        let lfs_metadata = Metadata {
+            size: Some(4),
+            flags: Some(Metadata::LFS_FLAG),
+        };
+        let nonlfs_metadata = Metadata {
+            size: Some(4),
+            flags: None,
+        };
+
+        let lfs_key = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+        let nonlfs_key = key("b", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+
+        let lfs_bytes = Bytes::from("1234");
+        let nonlfs_bytes = Bytes::from("2345");
+
+        let files = hashmap! {
+            lfs_key.clone() => (lfs_bytes.clone(), lfs_metadata.flags),
+            nonlfs_key.clone() => (nonlfs_bytes.clone(), nonlfs_metadata.flags)
+        };
+        let trees = HashMap::new();
+
+        let client = FakeEdenApi::new()
+            .files_with_flags(files)
+            .trees(trees)
+            .into_arc();
+        let remote_files = EdenApiRemoteStore::<File>::new("repo", client, None);
+
+        let files_adapter = Arc::new(remote_files.get_newstore_adapter(ExtStoredPolicy::Use));
+
+        let fetched: Vec<_> =
+            block_on_stream(files_adapter.fetch_stream(Box::pin(stream::iter(vec![
+                lfs_key.clone(),
+                nonlfs_key.clone(),
+            ]))))
+            .collect();
+
+        let lfs_entry = FileEntry::new(
+            lfs_key,
+            lfs_bytes.to_vec().into(),
+            Parents::default(),
+            lfs_metadata,
+        );
+        let nonlfs_entry = FileEntry::new(
+            nonlfs_key,
+            nonlfs_bytes.to_vec().into(),
+            Parents::default(),
+            nonlfs_metadata,
+        );
+
+        let exepcted = vec![Ok(lfs_entry), Ok(nonlfs_entry)];
+
+        assert_eq!(fetched.into_iter().collect::<Vec<_>>(), exepcted);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_files_extstore_ignore() -> Result<(), ()> {
+        // Set up mocked EdenAPI file and tree stores.
+        let lfs_metadata = Metadata {
+            size: Some(4),
+            flags: Some(Metadata::LFS_FLAG),
+        };
+        let nonlfs_metadata = Metadata {
+            size: Some(4),
+            flags: None,
+        };
+
+        let lfs_key = key("a", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+        let nonlfs_key = key("b", "def6f29d7b61f9cb70b2f14f79cd5c43c38e21b2");
+
+        let lfs_bytes = Bytes::from("1234");
+        let nonlfs_bytes = Bytes::from("2345");
+
+        let files = hashmap! {
+            lfs_key.clone() => (lfs_bytes.clone(), lfs_metadata.flags),
+            nonlfs_key.clone() => (nonlfs_bytes.clone(), nonlfs_metadata.flags)
+        };
+
+        let trees = HashMap::new();
+
+        let client = FakeEdenApi::new()
+            .files_with_flags(files)
+            .trees(trees)
+            .into_arc();
+        let remote_files = EdenApiRemoteStore::<File>::new("repo", client, None);
+
+        let files_adapter = Arc::new(remote_files.get_newstore_adapter(ExtStoredPolicy::Ignore));
+
+        let fetched: Vec<_> =
+            block_on_stream(files_adapter.fetch_stream(Box::pin(stream::iter(vec![
+                lfs_key.clone(),
+                nonlfs_key.clone(),
+            ]))))
+            .collect();
+
+        let _lfs_entry = FileEntry::new(
+            lfs_key.clone(),
+            lfs_bytes.to_vec().into(),
+            Parents::default(),
+            lfs_metadata,
+        );
+        let nonlfs_entry = FileEntry::new(
+            nonlfs_key,
+            nonlfs_bytes.to_vec().into(),
+            Parents::default(),
+            nonlfs_metadata,
+        );
+
+        let exepcted = vec![Err(FetchError::not_found(lfs_key)), Ok(nonlfs_entry)];
+
+        assert_eq!(fetched.into_iter().collect::<Vec<_>>(), exepcted);
+
+        Ok(())
     }
 }

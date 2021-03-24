@@ -68,6 +68,7 @@ pub fn run(_opts: NoOpts, io: &IO, repo: Repo) -> Result<u8> {
     let edenapi = Arc::new(EdenApiAdapter {
         client: Builder::from_config(config)?.build()?,
         repo: reponame,
+        extstored_policy: ExtStoredPolicy::Ignore,
     });
 
     // Fallback store combinator (trees)

@@ -288,7 +288,15 @@ impl ReadStore<Key, Entry> for IndexedLogHgIdDataStore {
                 let inner = self_.inner.read();
                 match Entry::from_log(&key, &inner.log) {
                     Ok(None) => Err(FetchError::not_found(key.clone())),
-                    Ok(Some(entry)) => Ok(entry),
+                    Ok(Some(entry)) => {
+                        if self_.extstored_policy == ExtStoredPolicy::Ignore
+                            && entry.metadata().is_lfs()
+                        {
+                            Err(FetchError::not_found(key.clone()))
+                        } else {
+                            Ok(entry)
+                        }
+                    }
                     Err(e) => Err(FetchError::with_key(key.clone(), e)),
                 }
             })
@@ -430,7 +438,7 @@ mod tests {
     use async_runtime::stream_to_iter as block_on_stream;
     use types::testutil::*;
 
-    use crate::newstore::fallback::Fallback;
+    use crate::newstore::{Fallback, FetchError};
 
     #[test]
     fn test_empty() {
@@ -832,5 +840,111 @@ mod tests {
                 .collect::<Vec<_>>(),
             entries
         );
+    }
+
+    #[test]
+    fn test_newstore_extstore_use() {
+        let tempdir = TempDir::new().unwrap();
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Use,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
+
+        let lfs_key = key("a", "1");
+        let nonlfs_key = key("b", "2");
+        let content = Bytes::from(&[1, 2, 3, 4][..]);
+        let lfs_metadata = Metadata {
+            size: None,
+            flags: Some(Metadata::LFS_FLAG),
+        };
+        let nonlfs_metadata = Metadata {
+            size: None,
+            flags: None,
+        };
+        let lfs_entry = Entry::new(lfs_key.clone(), content.clone(), lfs_metadata);
+        let nonlfs_entry = Entry::new(nonlfs_key.clone(), content, nonlfs_metadata);
+
+        let log = Arc::new(log);
+
+        let entries = vec![lfs_entry, nonlfs_entry];
+
+        let written: Vec<_> = block_on_stream(
+            log.clone()
+                .write_stream(Box::pin(stream::iter(entries.clone()))),
+        )
+        .collect();
+
+        assert_eq!(
+            written
+                .into_iter()
+                .map(|r| r.expect("failed to write to test write store"))
+                .collect::<Vec<_>>(),
+            vec![lfs_key.clone(), nonlfs_key.clone()]
+        );
+
+        let fetched: Vec<_> =
+            block_on_stream(log.fetch_stream(Box::pin(stream::iter(vec![lfs_key, nonlfs_key]))))
+                .collect();
+
+        assert_eq!(
+            fetched
+                .into_iter()
+                .map(|r| r.expect("failed to fetch from test read store"))
+                .collect::<Vec<_>>(),
+            entries
+        );
+    }
+
+    #[test]
+    fn test_newstore_extstore_ignore() {
+        let tempdir = TempDir::new().unwrap();
+        let log = IndexedLogHgIdDataStore::new(
+            &tempdir,
+            ExtStoredPolicy::Ignore,
+            &ConfigSet::new(),
+            IndexedLogDataStoreType::Shared,
+        )
+        .unwrap();
+
+        let lfs_key = key("a", "1");
+        let nonlfs_key = key("b", "2");
+        let content = Bytes::from(&[1, 2, 3, 4][..]);
+        let lfs_metadata = Metadata {
+            size: None,
+            flags: Some(Metadata::LFS_FLAG),
+        };
+        let nonlfs_metadata = Metadata {
+            size: None,
+            flags: None,
+        };
+        let lfs_entry = Entry::new(lfs_key.clone(), content.clone(), lfs_metadata);
+        let nonlfs_entry = Entry::new(nonlfs_key.clone(), content, nonlfs_metadata);
+
+        let log = Arc::new(log);
+
+        let entries = vec![lfs_entry, nonlfs_entry.clone()];
+
+        let written: Vec<_> =
+            block_on_stream(log.clone().write_stream(Box::pin(stream::iter(entries)))).collect();
+
+        assert_eq!(
+            written
+                .into_iter()
+                .map(|r| r.expect("failed to write to test write store"))
+                .collect::<Vec<_>>(),
+            vec![lfs_key.clone(), nonlfs_key.clone()]
+        );
+
+        let fetched: Vec<_> = block_on_stream(
+            log.fetch_stream(Box::pin(stream::iter(vec![lfs_key.clone(), nonlfs_key]))),
+        )
+        .collect();
+
+        let exepcted = vec![Err(FetchError::not_found(lfs_key)), Ok(nonlfs_entry)];
+
+        assert_eq!(fetched.into_iter().collect::<Vec<_>>(), exepcted);
     }
 }

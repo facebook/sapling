@@ -1153,15 +1153,6 @@ fn make_newfilestore<'a>(
     // Construct ContentStore
     let mut builder = ContentStoreBuilder::new(&config).correlator(correlator);
 
-    // Extract EdenApiAdapter for NewStore construction later on
-    let mut edenapi_adapter = None;
-    builder = if let Some(edenapi) = edenapi_filestore {
-        edenapi_adapter = Some(edenapi.get_newstore_adapter());
-        builder.remotestore(edenapi)
-    } else {
-        builder.remotestore(remote)
-    };
-
     builder = if let Some(path) = path {
         builder.local_path(path)
     } else {
@@ -1201,6 +1192,15 @@ fn make_newfilestore<'a>(
         config.get_opt::<ByteCount>("lfs", "threshold")?
     } else {
         None
+    };
+
+    // Extract EdenApiAdapter for NewStore construction later on
+    let mut edenapi_adapter = None;
+    builder = if let Some(edenapi) = edenapi_filestore {
+        edenapi_adapter = Some(edenapi.get_newstore_adapter(extstored_policy));
+        builder.remotestore(edenapi)
+    } else {
+        builder.remotestore(remote)
     };
 
     let file_indexedlog = Arc::new(IndexedLogHgIdDataStore::new(
