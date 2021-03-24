@@ -242,7 +242,7 @@ fattr3 statToFattr3(const struct stat& stat) {
   };
 }
 
-post_op_attr statToPostOpAttr(folly::Try<struct stat>&& stat) {
+post_op_attr statToPostOpAttr(const folly::Try<struct stat>& stat) {
   if (stat.hasException()) {
     return post_op_attr{};
   } else {
@@ -250,7 +250,7 @@ post_op_attr statToPostOpAttr(folly::Try<struct stat>&& stat) {
   }
 }
 
-pre_op_attr statToPreOpAttr(struct stat& stat) {
+pre_op_attr statToPreOpAttr(const struct stat& stat) {
   return pre_op_attr{wcc_attr{
       /*size*/ folly::to_unsigned(stat.st_size),
 #ifdef __linux__
@@ -268,8 +268,8 @@ pre_op_attr statToPreOpAttr(struct stat& stat) {
  * useable by NFS.
  */
 wcc_data statToWccData(
-    std::optional<struct stat>& preStat,
-    std::optional<struct stat>& postStat) {
+    const std::optional<struct stat>& preStat,
+    const std::optional<struct stat>& postStat) {
   return wcc_data{
       /*before*/ preStat.has_value() ? statToPreOpAttr(preStat.value())
                                      : pre_op_attr{},
@@ -292,21 +292,22 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::getattr(
       ObjectFetchContext::getNullContextWithCauseDetail("getattr");
 
   return dispatcher_->getattr(args.object.ino, *context)
-      .thenTry([ser = std::move(ser)](folly::Try<struct stat>&& try_) mutable {
-        if (try_.hasException()) {
-          GETATTR3res res{
-              {{exceptionToNfsError(try_.exception()), std::monostate{}}}};
-          XdrTrait<GETATTR3res>::serialize(ser, res);
-        } else {
-          auto stat = std::move(try_).value();
+      .thenTry(
+          [ser = std::move(ser)](const folly::Try<struct stat>& try_) mutable {
+            if (try_.hasException()) {
+              GETATTR3res res{
+                  {{exceptionToNfsError(try_.exception()), std::monostate{}}}};
+              XdrTrait<GETATTR3res>::serialize(ser, res);
+            } else {
+              const auto& stat = try_.value();
 
-          GETATTR3res res{
-              {{nfsstat3::NFS3_OK, GETATTR3resok{statToFattr3(stat)}}}};
-          XdrTrait<GETATTR3res>::serialize(ser, res);
-        }
+              GETATTR3res res{
+                  {{nfsstat3::NFS3_OK, GETATTR3resok{statToFattr3(stat)}}}};
+              XdrTrait<GETATTR3res>::serialize(ser, res);
+            }
 
-        return folly::unit;
-      });
+            return folly::unit;
+          });
 }
 
 folly::Future<folly::Unit> Nfsd3ServerProcessor::setattr(
@@ -361,7 +362,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::setattr(
       /*mtime*/ makeTimespec(args.new_attributes.mtime),
   };
 
-  return dispatcher_->setattr(args.object.ino, std::move(desired), *context)
+  return dispatcher_->setattr(args.object.ino, desired, *context)
       .thenTry([ser = std::move(ser)](
                    folly::Try<NfsDispatcher::SetattrRes>&& try_) mutable {
         if (try_.hasException()) {
@@ -369,7 +370,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::setattr(
               {{exceptionToNfsError(try_.exception()), SETATTR3resfail{}}}};
           XdrTrait<SETATTR3res>::serialize(ser, res);
         } else {
-          auto setattrRes = std::move(try_).value();
+          const auto& setattrRes = try_.value();
 
           SETATTR3res res{
               {{nfsstat3::NFS3_OK,
@@ -404,8 +405,8 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
     // The filename is too long, let's try to get the attributes of the
     // directory and fail.
     return std::move(dirAttrFut)
-        .thenTry([ser =
-                      std::move(ser)](folly::Try<struct stat>&& try_) mutable {
+        .thenTry([ser = std::move(ser)](
+                     const folly::Try<struct stat>& try_) mutable {
           if (try_.hasException()) {
             LOOKUP3res res{
                 {{nfsstat3::NFS3ERR_NAMETOOLONG,
@@ -450,14 +451,14 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
                        lookupTry) mutable {
         return std::move(dirAttrFut)
             .thenTry([ser = std::move(ser), lookupTry = std::move(lookupTry)](
-                         folly::Try<struct stat>&& dirStat) mutable {
+                         const folly::Try<struct stat>& dirStat) mutable {
               if (lookupTry.hasException()) {
                 LOOKUP3res res{
                     {{exceptionToNfsError(lookupTry.exception()),
-                      LOOKUP3resfail{statToPostOpAttr(std::move(dirStat))}}}};
+                      LOOKUP3resfail{statToPostOpAttr(dirStat)}}}};
                 XdrTrait<LOOKUP3res>::serialize(ser, res);
               } else {
-                auto& [ino, stat] = lookupTry.value();
+                const auto& [ino, stat] = lookupTry.value();
                 LOOKUP3res res{
                     {{nfsstat3::NFS3_OK,
                       LOOKUP3resok{
@@ -465,7 +466,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::lookup(
                           /*obj_attributes*/
                           post_op_attr{statToFattr3(stat)},
                           /*dir_attributes*/
-                          statToPostOpAttr(std::move(dirStat)),
+                          statToPostOpAttr(dirStat),
                       }}}};
                 XdrTrait<LOOKUP3res>::serialize(ser, res);
               }
@@ -503,7 +504,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::access(
                 ACCESS3resfail{post_op_attr{}}}}};
           XdrTrait<ACCESS3res>::serialize(ser, res);
         } else {
-          auto stat = std::move(try_).value();
+          const auto& stat = try_.value();
 
           ACCESS3res res{
               {{nfsstat3::NFS3_OK,
@@ -535,20 +536,19 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::readlink(
                    folly::Try<std::string> tryReadlink) mutable {
         return std::move(getattr).thenTry(
             [ser = std::move(ser), tryReadlink = std::move(tryReadlink)](
-                folly::Try<struct stat> tryAttr) mutable {
+                const folly::Try<struct stat>& tryAttr) mutable {
               if (tryReadlink.hasException()) {
                 READLINK3res res{
                     {{exceptionToNfsError(tryReadlink.exception()),
-                      READLINK3resfail{statToPostOpAttr(std::move(tryAttr))}}}};
+                      READLINK3resfail{statToPostOpAttr(tryAttr)}}}};
                 XdrTrait<READLINK3res>::serialize(ser, res);
               } else {
-                auto link = std::move(tryReadlink).value();
+                auto&& link = std::move(tryReadlink).value();
 
                 READLINK3res res{
                     {{nfsstat3::NFS3_OK,
                       READLINK3resok{
-                          /*symlink_attributes*/ statToPostOpAttr(
-                              std::move(tryAttr)),
+                          /*symlink_attributes*/ statToPostOpAttr(tryAttr),
                           /*data*/ std::move(link),
                       }}}};
                 XdrTrait<READLINK3res>::serialize(ser, res);
@@ -575,14 +575,14 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::read(
                    folly::Try<NfsDispatcher::ReadRes> tryRead) mutable {
         return dispatcher_->getattr(ino, *context)
             .thenTry([ser = std::move(ser), tryRead = std::move(tryRead)](
-                         folly::Try<struct stat> tryStat) mutable {
+                         const folly::Try<struct stat>& tryStat) mutable {
               if (tryRead.hasException()) {
                 READ3res res{
                     {{exceptionToNfsError(tryRead.exception()),
-                      READ3resfail{statToPostOpAttr(std::move(tryStat))}}}};
+                      READ3resfail{statToPostOpAttr(tryStat)}}}};
                 XdrTrait<READ3res>::serialize(ser, res);
               } else {
-                auto read = std::move(tryRead).value();
+                auto& read = tryRead.value();
                 auto length = read.data->computeChainDataLength();
 
                 // Make sure that we haven't read more than what we can encode.
@@ -592,8 +592,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::read(
                 READ3res res{
                     {{nfsstat3::NFS3_OK,
                       READ3resok{
-                          /*file_attributes*/ statToPostOpAttr(
-                              std::move(tryStat)),
+                          /*file_attributes*/ statToPostOpAttr(tryStat),
                           /*count*/ folly::to_narrow(length),
                           /*eof*/ read.isEof,
                           /*data*/ std::move(read.data),
@@ -641,7 +640,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::write(
               {{exceptionToNfsError(writeTry.exception()), WRITE3resfail{}}}};
           XdrTrait<WRITE3res>::serialize(ser, res);
         } else {
-          auto writeRes = std::move(writeTry).value();
+          const auto& writeRes = writeTry.value();
 
           // NFS is limited to writing a maximum of 4GB (2^32) of data
           // per write call, so despite write returning a size_t, it
@@ -739,7 +738,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::create(
             XdrTrait<CREATE3res>::serialize(ser, res);
           }
         } else {
-          auto createRes = std::move(try_).value();
+          const auto& createRes = try_.value();
 
           CREATE3res res{
               {{nfsstat3::NFS3_OK,
@@ -793,7 +792,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::mkdir(
               {{exceptionToNfsError(try_.exception()), MKDIR3resfail{}}}};
           XdrTrait<MKDIR3res>::serialize(ser, res);
         } else {
-          auto mkdirRes = std::move(try_).value();
+          const auto& mkdirRes = try_.value();
 
           MKDIR3res res{
               {{nfsstat3::NFS3_OK,
@@ -843,7 +842,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::symlink(
               {{exceptionToNfsError(try_.exception()), SYMLINK3resfail{}}}};
           XdrTrait<SYMLINK3res>::serialize(ser, res);
         } else {
-          auto symlinkRes = std::move(try_).value();
+          const auto& symlinkRes = try_.value();
 
           SYMLINK3res res{
               {{nfsstat3::NFS3_OK,
@@ -901,7 +900,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::remove(
               {{exceptionToNfsError(try_.exception()), REMOVE3resfail{}}}};
           XdrTrait<REMOVE3res>::serialize(ser, res);
         } else {
-          auto unlinkRes = std::move(try_).value();
+          const auto& unlinkRes = try_.value();
 
           REMOVE3res res{
               {{nfsstat3::NFS3_OK,
@@ -960,7 +959,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::rename(
               {{exceptionToNfsError(try_.exception()), RENAME3resfail{}}}};
           XdrTrait<RENAME3res>::serialize(ser, res);
         } else {
-          auto renameRes = std::move(try_).value();
+          const auto& renameRes = try_.value();
 
           RENAME3res res{
               {{nfsstat3::NFS3_OK,
@@ -992,13 +991,14 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::link(
   // EdenFS doesn't support hardlinks, let's just collect the attributes for
   // the file and fail.
   return dispatcher_->getattr(args.file.ino, *context)
-      .thenTry([ser = std::move(ser)](folly::Try<struct stat> try_) mutable {
-        LINK3res res{
-            {{nfsstat3::NFS3ERR_NOTSUPP,
-              LINK3resfail{statToPostOpAttr(std::move(try_)), wcc_data{}}}}};
-        XdrTrait<LINK3res>::serialize(ser, res);
-        return folly::unit;
-      });
+      .thenTry(
+          [ser = std::move(ser)](const folly::Try<struct stat>& try_) mutable {
+            LINK3res res{
+                {{nfsstat3::NFS3ERR_NOTSUPP,
+                  LINK3resfail{statToPostOpAttr(try_), wcc_data{}}}}};
+            XdrTrait<LINK3res>::serialize(ser, res);
+            return folly::unit;
+          });
 }
 
 /**
@@ -1050,25 +1050,23 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::readdir(
                    folly::Try<NfsDispatcher::ReaddirRes> try_) mutable {
         return dispatcher_->getattr(ino, *context)
             .thenTry([ser = std::move(ser), try_ = std::move(try_)](
-                         folly::Try<struct stat> tryStat) mutable {
+                         const folly::Try<struct stat>& tryStat) mutable {
               if (try_.hasException()) {
                 READDIR3res res{
                     {{exceptionToNfsError(try_.exception()),
-                      READDIR3resfail{statToPostOpAttr(std::move(tryStat))}}}};
+                      READDIR3resfail{statToPostOpAttr(tryStat)}}}};
                 XdrTrait<READDIR3res>::serialize(ser, res);
               } else {
-                auto readdirRes = std::move(try_).value();
+                auto& readdirRes = try_.value();
 
                 READDIR3res res{
                     {{nfsstat3::NFS3_OK,
                       READDIR3resok{
-                          /*dir_attributes*/ statToPostOpAttr(
-                              std::move(tryStat)),
+                          /*dir_attributes*/ statToPostOpAttr(tryStat),
                           /*cookieverf*/ getReaddirCookieverf(),
                           /*reply*/
                           dirlist3{
-                              /*entries*/ std::move(readdirRes)
-                                  .entries.extractList(),
+                              /*entries*/ readdirRes.entries.extractList(),
                               /*eof*/ readdirRes.isEof,
                           }}}}};
                 XdrTrait<READDIR3res>::serialize(ser, res);
@@ -1102,20 +1100,19 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::fsstat(
                    folly::Try<struct statfs> statFsTry) mutable {
         return dispatcher_->getattr(ino, *context)
             .thenTry([ser = std::move(ser), statFsTry = std::move(statFsTry)](
-                         folly::Try<struct stat> statTry) mutable {
+                         const folly::Try<struct stat>& statTry) mutable {
               if (statFsTry.hasException()) {
                 FSSTAT3res res{
                     {{exceptionToNfsError(statFsTry.exception()),
-                      FSSTAT3resfail{statToPostOpAttr(std::move(statTry))}}}};
+                      FSSTAT3resfail{statToPostOpAttr(statTry)}}}};
                 XdrTrait<FSSTAT3res>::serialize(ser, res);
               } else {
-                auto statfs = std::move(statFsTry).value();
+                auto& statfs = statFsTry.value();
 
                 FSSTAT3res res{
                     {{nfsstat3::NFS3_OK,
                       FSSTAT3resok{
-                          /*obj_attributes*/ statToPostOpAttr(
-                              std::move(statTry)),
+                          /*obj_attributes*/ statToPostOpAttr(statTry),
                           /*tbytes*/ statfs.f_blocks * statfs.f_bsize,
                           /*fbytes*/ statfs.f_bfree * statfs.f_bsize,
                           /*abytes*/ statfs.f_bavail * statfs.f_bavail,
