@@ -31,13 +31,12 @@ use crate::manager::{PeriodicReloadSegmentedChangelog, SegmentedChangelogManager
 use crate::on_demand::{OnDemandUpdateSegmentedChangelog, PeriodicUpdateSegmentedChangelog};
 use crate::owned::OwnedSegmentedChangelog;
 use crate::seeder::SegmentedChangelogSeeder;
-use crate::tailer::SegmentedChangelogTailer;
 use crate::types::IdMapVersion;
 use crate::version_store::SegmentedChangelogVersionStore;
 use crate::{DisabledSegmentedChangelog, InProcessIdDag, SegmentedChangelog};
 
 #[derive(Clone)]
-pub struct SegmentedChangelogSqlConnections(SqlConnections);
+pub struct SegmentedChangelogSqlConnections(pub SqlConnections);
 
 impl SqlConstruct for SegmentedChangelogSqlConnections {
     const LABEL: &'static str = "segmented_changelog";
@@ -242,19 +241,6 @@ impl SegmentedChangelogBuilder {
             self.build_idmap_factory()?,
         );
         Ok(seeder)
-    }
-
-    pub fn build_tailer(mut self) -> Result<SegmentedChangelogTailer> {
-        let tailer = SegmentedChangelogTailer::new(
-            self.repo_id()?,
-            self.changeset_fetcher()?,
-            self.bookmarks()?,
-            self.bookmark_name()?,
-            self.build_segmented_changelog_version_store()?,
-            self.build_iddag_save_store()?,
-            self.build_idmap_factory()?,
-        );
-        Ok(tailer)
     }
 
     pub fn with_sql_connections(mut self, connections: SegmentedChangelogSqlConnections) -> Self {

@@ -9,23 +9,27 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{format_err, Context, Result};
+use fbinit::FacebookInit;
 use futures_stats::TimedFutureExt;
 use slog::{debug, error, info};
+use sql_ext::replication::ReplicaLagMonitor;
 
 use stats::prelude::*;
 
+use blobstore::Blobstore;
 use bookmarks::{BookmarkName, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::iddag::IdDagSaveStore;
+use crate::idmap::CacheHandlers;
 use crate::idmap::IdMapFactory;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::types::SegmentedChangelogVersion;
 use crate::update::build_incremental;
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{Group, InProcessIdDag, Vertex};
+use crate::{Group, InProcessIdDag, SegmentedChangelogSqlConnections, Vertex};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.tailer.update";
@@ -56,13 +60,21 @@ pub struct SegmentedChangelogTailer {
 impl SegmentedChangelogTailer {
     pub fn new(
         repo_id: RepositoryId,
+        connections: SegmentedChangelogSqlConnections,
+        replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
+        blobstore: Arc<dyn Blobstore>,
         bookmarks: Arc<dyn Bookmarks>,
         bookmark_name: BookmarkName,
-        sc_version_store: SegmentedChangelogVersionStore,
-        iddag_save_store: IdDagSaveStore,
-        idmap_factory: IdMapFactory,
+        caching: Option<(FacebookInit, cachelib::VolatileLruCachePool)>,
     ) -> Self {
+        let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
+        let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore);
+        let mut idmap_factory = IdMapFactory::new(connections.0, replica_lag_monitor, repo_id);
+        if let Some((fb, pool)) = caching {
+            let cache_handlers = CacheHandlers::prod(fb, pool);
+            idmap_factory = idmap_factory.with_cache_handlers(cache_handlers);
+        }
         Self {
             repo_id,
             changeset_fetcher,

@@ -24,12 +24,14 @@ use mononoke_types::ChangesetId;
 use phases::mark_reachable_as_public;
 use revset::AncestorsNodeStream;
 use sql_construct::SqlConstruct;
+use sql_ext::replication::NoReplicaLagMonitor;
 use tests_utils::resolve_cs_id;
 
 use crate::builder::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::CacheHandlers;
 use crate::owned::OwnedSegmentedChangelog;
+use crate::tailer::SegmentedChangelogTailer;
 use crate::types::IdDagVersion;
 use crate::SegmentedChangelog;
 use crate::{InProcessIdDag, Location};
@@ -52,6 +54,23 @@ where
             .ok_or_else(|| format_err!("error with clone data, missing idmap entry for head_id"))?;
         Ok(cs_id)
     }
+}
+
+fn new_tailer(
+    blobrepo: &BlobRepo,
+    connections: &SegmentedChangelogSqlConnections,
+    bookmark: &BookmarkName,
+) -> SegmentedChangelogTailer {
+    SegmentedChangelogTailer::new(
+        blobrepo.get_repoid(),
+        connections.clone(),
+        Arc::new(NoReplicaLagMonitor()),
+        blobrepo.get_changeset_fetcher(),
+        Arc::new(blobrepo.get_blobstore()),
+        Arc::clone(blobrepo.bookmarks()),
+        bookmark.clone(),
+        None,
+    )
 }
 
 async fn validate_build_idmap(
@@ -725,10 +744,12 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
 async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+    let bookmark_name = BookmarkName::new("master")?;
     let builder = SegmentedChangelogBuilder::new()
-        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
+        .with_sql_connections(conns.clone())
         .with_blobrepo(&blobrepo)
-        .with_bookmark_name(BookmarkName::new("master").unwrap());
+        .with_bookmark_name(bookmark_name.clone());
 
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281"; // commit 4
     let start_cs_id = resolve_cs_id(&ctx, &blobrepo, start_hg_id).await?;
@@ -741,7 +762,7 @@ async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
     let sc = manager.load(&ctx).await?;
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
 
-    let tailer = builder.clone().build_tailer()?;
+    let tailer = new_tailer(&blobrepo, &conns, &bookmark_name);
     let _ = tailer.once(&ctx).await?;
     let sc = manager.load(&ctx).await?;
     let master = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
@@ -754,10 +775,12 @@ async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
 async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+    let bookmark_name = BookmarkName::new("master")?;
     let builder = SegmentedChangelogBuilder::new()
-        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
+        .with_sql_connections(conns.clone())
         .with_blobrepo(&blobrepo)
-        .with_bookmark_name(BookmarkName::new("master").unwrap())
+        .with_bookmark_name(bookmark_name.clone())
         .with_reload_dag_period(Duration::from_secs(10));
 
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281"; // commit 4
@@ -772,7 +795,7 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     let sc = builder.clone().build_periodic_reload(&ctx).await?;
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
 
-    let tailer = builder.clone().build_tailer()?;
+    let tailer = new_tailer(&blobrepo, &conns, &bookmark_name);
     let _ = tailer.once(&ctx).await?;
     tokio::time::advance(Duration::from_secs(15)).await;
     sc.wait_for_update().await;

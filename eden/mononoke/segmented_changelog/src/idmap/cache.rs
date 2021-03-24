@@ -65,6 +65,14 @@ impl CacheHandlers {
                 .into(),
         }
     }
+
+    pub fn mock() -> Self {
+        Self {
+            dag_to_cs: CachelibHandler::create_mock(),
+            cs_to_dag: CachelibHandler::create_mock(),
+            memcache: MemcacheHandler::create_mock(),
+        }
+    }
 }
 
 impl CachedIdMap {

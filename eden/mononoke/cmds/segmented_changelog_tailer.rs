@@ -24,7 +24,7 @@ use cmdlib::{
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::MetadataDatabaseConfig;
-use segmented_changelog::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
+use segmented_changelog::{SegmentedChangelogSqlConnections, SegmentedChangelogTailer};
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 
@@ -83,6 +83,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     let mysql_options = args::parse_mysql_options(matches);
     let configs = args::load_repo_configs(config_store, matches)?;
     let readonly_storage = ReadOnlyStorage(false);
+    let caching = cachelib::get_volatile_pool("segmented_changelog")?.map(|pool| (ctx.fb, pool));
 
     let mut tasks = Vec::new();
     for (index, reponame) in reponames.into_iter().enumerate() {
@@ -145,13 +146,16 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         // way.  On the other hand reconstructing the dependencies for SegmentedChangelog without
         // BlobRepo is probably prone to more problems from the maintenance perspective.
         let blobrepo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), repo_id, matches).await?;
-        let segmented_changelog_tailer = SegmentedChangelogBuilder::new()
-            .with_sql_connections(segmented_changelog_sql_connections)
-            .with_blobrepo(&blobrepo)
-            .with_replica_lag_monitor(replica_lag_monitor)
-            .with_bookmark_name(track_bookmark.clone())
-            .build_tailer()
-            .with_context(|| format!("repo {}: building SegmentedChangelogTailer", repo_id))?;
+        let segmented_changelog_tailer = SegmentedChangelogTailer::new(
+            repo_id,
+            segmented_changelog_sql_connections,
+            replica_lag_monitor,
+            blobrepo.get_changeset_fetcher(),
+            Arc::new(blobrepo.get_blobstore()),
+            Arc::clone(blobrepo.bookmarks()),
+            track_bookmark,
+            caching.clone(),
+        );
 
         info!(
             ctx.logger(),
@@ -179,7 +183,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
     }
 
     join_all(tasks).await;
-
 
     Ok(())
 }
