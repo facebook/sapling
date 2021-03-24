@@ -145,6 +145,10 @@ pub struct MononokeTunables {
     rendezvous_dispatch_max_threshold: AtomicI64,
 
     unbundle_limit_num_of_commits_in_push: AtomicI64,
+
+    // Maximium negative caching age of a blob, in milliseconds
+    // Negative means to not use weak consistency at all
+    manifold_weak_consistency_max_age_ms: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
