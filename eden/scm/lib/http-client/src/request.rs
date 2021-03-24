@@ -88,6 +88,8 @@ pub struct Request {
     timeout: Option<Duration>,
     http_version: HttpVersion,
     min_transfer_speed: Option<MinTransferSpeed>,
+    verify_tls_host: bool,
+    verify_tls_cert: bool,
 }
 
 static REQUEST_CREATION_LISTENERS: Lazy<RwLock<RequestCreationEventListeners>> =
@@ -158,6 +160,8 @@ impl Request {
             // if version negotiation with the server fails.
             http_version: HttpVersion::V2,
             min_transfer_speed: None,
+            verify_tls_host: true,
+            verify_tls_cert: true,
         }
     }
 
@@ -342,6 +346,44 @@ impl Request {
         self
     }
 
+    /// Configure whether the client should verify that the server's hostname
+    /// matches either the common name (CN) or a subject alternate name (SAN)
+    /// present in the server's TLS certificate. Disabling this option will make
+    /// the connection insecure. This is primarily useful for testing.
+    pub fn verify_tls_host(mut self, verify: bool) -> Self {
+        self.set_verify_tls_host(verify);
+        self
+    }
+
+    /// Configure whether the client should verify that the server's hostname
+    /// matches either the common name (CN) or a subject alternate name (SAN)
+    /// present in the server's TLS certificate. Disabling this option will make
+    /// the connection insecure. This is primarily useful for testing.
+    pub fn set_verify_tls_host(&mut self, verify: bool) -> &mut Self {
+        self.verify_tls_host = verify;
+        self
+    }
+
+    /// Configure whether the client should verify the authenticity of the
+    /// server's TLS certificate using the CA certificate bundle specified
+    /// via `cainfo` (or the default CA bundle if not set). This option is
+    /// enabled by default; disabling it will make the connection insecure.
+    /// This is primarily useful for testing.
+    pub fn verify_tls_cert(mut self, verify: bool) -> Self {
+        self.set_verify_tls_cert(verify);
+        self
+    }
+
+    /// Configure whether the client should verify the authenticity of the
+    /// server's TLS certificate using the CA certificate bundle specified
+    /// via `cainfo` (or the default CA bundle if not set). This option is
+    /// enabled by default; disabling it will make the connection insecure.
+    /// This is primarily useful for testing.
+    pub fn set_verify_tls_cert(&mut self, verify: bool) -> &mut Self {
+        self.verify_tls_cert = verify;
+        self
+    }
+
     /// Execute the request, blocking until completion.
     ///
     /// This method is intended as a simple way to perform
@@ -420,6 +462,10 @@ impl Request {
             headers.append(&header)?;
         }
         easy.http_headers(headers)?;
+
+        // Configure TLS verification.
+        easy.ssl_verify_host(self.verify_tls_host)?;
+        easy.ssl_verify_peer(self.verify_tls_cert)?;
 
         // Set up client credentials for mTLS.
         if let Some(cert) = self.cert {
