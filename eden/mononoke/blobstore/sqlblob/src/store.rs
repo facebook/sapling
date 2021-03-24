@@ -7,7 +7,7 @@
 
 use std::{collections::HashMap, hash::Hasher, num::NonZeroUsize, sync::Arc};
 
-use anyhow::{format_err, Error};
+use anyhow::{bail, format_err, Error};
 use bytes::BytesMut;
 use cached_config::ConfigHandle;
 use futures::{
@@ -77,6 +77,11 @@ queries! {
             , chunk_count
             , chunking_method
         ) VALUES {values}"
+    }
+
+    write DeleteData(id: &str) {
+        none,
+        "DELETE FROM data WHERE id = {id}"
     }
 
     write UpdateData(id: &str, ctime: i64, chunk_id: &str, chunk_count: u32, chunking_method: ChunkingMethod) {
@@ -237,6 +242,23 @@ impl DataSqlStore {
                 &chunking_method,
             )
             .await?;
+        }
+        Ok(())
+    }
+
+    pub(crate) async fn unlink(&self, key: &str) -> Result<(), Error> {
+        let shard_id = self.shard(key);
+
+        self.delay.delay(shard_id).await;
+
+        // Deleting from data table does not remove the chunks as they are content addressed.  GC checks for orphaned chunks and removes them.
+        let res = DeleteData::query(&self.write_connection[shard_id], &key).await?;
+        if res.affected_rows() != 1 {
+            bail!(
+                "Unexpected row_count {} from sqlblob unlink for {}",
+                res.affected_rows(),
+                key
+            );
         }
         Ok(())
     }

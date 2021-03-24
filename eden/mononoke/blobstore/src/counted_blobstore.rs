@@ -36,6 +36,9 @@ define_stats_struct! {
     link: timeseries(Rate, Sum),
     link_ok: timeseries(Rate, Sum),
     link_err: timeseries(Rate, Sum),
+    unlink: timeseries(Rate, Sum),
+    unlink_ok: timeseries(Rate, Sum),
+    unlink_err: timeseries(Rate, Sum),
 }
 
 #[derive(Debug)]
@@ -176,6 +179,16 @@ impl<T: BlobstoreWithLink> BlobstoreWithLink for CountedBlobstore<T> {
         match res {
             Ok(()) => self.stats.link_ok.add_value(1),
             Err(_) => self.stats.link_err.add_value(1),
+        }
+        res
+    }
+
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        self.stats.unlink.add_value(1);
+        let res = self.blobstore.unlink(ctx, key).await;
+        match res {
+            Ok(()) => self.stats.unlink_ok.add_value(1),
+            Err(_) => self.stats.unlink_err.add_value(1),
         }
         res
     }

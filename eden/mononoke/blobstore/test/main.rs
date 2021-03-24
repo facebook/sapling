@@ -133,6 +133,15 @@ async fn roundtrip_and_link<B: BlobstoreWithLink>(
 
     assert!(newkey_is_present);
 
+    // Try unlink
+    blobstore.unlink(ctx, newkey).await?;
+    let newkey_is_present2 = blobstore.is_present(ctx, newkey).await?;
+    assert!(!newkey_is_present2);
+
+    // Check we get error when unlinking an unknown key
+    let unknown_key = "expected_missing_key";
+    assert!(blobstore.unlink(ctx, &unknown_key).await.is_err());
+
     Ok(())
 }
 

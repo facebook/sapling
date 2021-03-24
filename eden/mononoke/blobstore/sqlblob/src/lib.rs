@@ -698,6 +698,16 @@ impl BlobstoreWithLink for Sqlblob {
             )
             .await
     }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        if !self.data_store.is_present(key).await? {
+            bail!(
+                "Sqlblob::unlink: key {} does not exist in the blobstore",
+                key
+            )
+        };
+        self.data_store.unlink(&key).await
+    }
 }
 
 pub fn set_test_generations(

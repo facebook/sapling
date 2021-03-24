@@ -25,7 +25,7 @@ use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use tempfile::{NamedTempFile, PersistError};
 use tokio::{
-    fs::{hard_link, File},
+    fs::{hard_link, remove_file, File},
     io::{self, AsyncReadExt, AsyncWriteExt},
 };
 
@@ -200,6 +200,11 @@ impl BlobstoreWithLink for Fileblob {
         let src_path = self.path(existing_key);
         let dst_path = self.path(&link_key);
         Ok(hard_link(src_path, dst_path).await?)
+    }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        let path = self.path(key);
+        Ok(remove_file(path).await?)
     }
 }
 

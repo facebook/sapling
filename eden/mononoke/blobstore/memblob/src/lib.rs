@@ -183,6 +183,16 @@ impl BlobstoreWithLink for Memblob {
         let mut inner = state.lock().expect("lock poison");
         inner.link(existing_key, link_key)
     }
+
+    async fn unlink<'a>(&'a self, _ctx: &'a CoreContext, key: &'a str) -> Result<()> {
+        let state = self.state.clone();
+        let mut inner = state.lock().expect("lock poison");
+        if inner.unlink(key).is_some() {
+            Ok(())
+        } else {
+            Err(format_err!("Unknown key {} to Memblob::unlink()", key))
+        }
+    }
 }
 
 impl fmt::Debug for Memblob {

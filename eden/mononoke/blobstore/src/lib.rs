@@ -399,6 +399,10 @@ pub trait BlobstoreWithLink: Blobstore {
         existing_key: &'a str,
         link_key: String,
     ) -> Result<()>;
+
+    /// Similar to unlink(2), this removes a key, resulting in content being removed if its the last key pointing to it.
+    /// An error is returned if the key does not exist
+    async fn unlink<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<()>;
 }
 
 /// BlobstoreKeySource Interface
