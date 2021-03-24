@@ -604,6 +604,7 @@ class remotefileslog(filelog.fileslog):
 
     def commitsharedpacks(self):
         """Persist the dirty data written to the shared packs."""
+        self.filescmstore = None
         self.contentstore = None
         self.metadatastore = None
         self.makeruststore(self.repo)
@@ -623,6 +624,7 @@ class remotefileslog(filelog.fileslog):
         """Used in alternative filelog implementations to throw out pending
         additions."""
         self.logfetches()
+        self.filescmstore = None
         self.contentstore = None
         self.metadatastore = None
         self._memcachestore = None
