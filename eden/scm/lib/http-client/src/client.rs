@@ -93,7 +93,7 @@ impl HttpClient {
         let driver = MultiDriver::new(multi.get(), progress_cb, self.verbose);
 
         for mut request in requests {
-            self.event_listeners.trigger_new_request(&mut request.ctx);
+            self.event_listeners.trigger_new_request(request.ctx_mut());
             let handle: Easy2<Buffered> = request.try_into()?;
             driver.add(handle)?;
         }
@@ -206,7 +206,7 @@ impl HttpClient {
 
         for mut request in requests {
             self.event_listeners
-                .trigger_new_request(&mut request.request.ctx);
+                .trigger_new_request(request.request.ctx_mut());
             let handle: Easy2<Streaming<R>> = request.try_into()?;
             driver.add(handle)?;
         }

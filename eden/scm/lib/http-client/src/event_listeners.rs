@@ -7,9 +7,9 @@
 
 use std::sync::Arc;
 
+use crate::progress::Progress;
+use crate::request::{Request, RequestContext};
 use crate::stats::Stats;
-use crate::Progress;
-use crate::RequestContext;
 
 /// Generate a struct for holding event listeners (callbacks).
 ///
@@ -105,7 +105,7 @@ gen_event_listeners! {
     /// Events for request creation (both independent requests and requests via `HttpClient`)
     RequestCreationEventListeners {
         /// A request is created.
-        new_request(req: &mut RequestContext),
+        new_request(req: &mut Request),
     }
 }
 

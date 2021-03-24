@@ -80,7 +80,7 @@ pub struct RequestId(usize);
 #[cfg_attr(test, derive(Clone))]
 #[derive(Debug)]
 pub struct Request {
-    pub(crate) ctx: RequestContext,
+    ctx: RequestContext,
     headers: Vec<(String, String)>,
     cert: Option<PathBuf>,
     key: Option<PathBuf>,
@@ -171,6 +171,19 @@ impl Request {
     /// in this process.
     pub fn id(&self) -> RequestId {
         self.ctx.id()
+    }
+
+    /// Get a reference to this request's context.
+    ///
+    /// The request context contains most of the information about the request,
+    /// such as URL, method, etc.
+    pub fn ctx(&self) -> &RequestContext {
+        &self.ctx
+    }
+
+    /// Get a mutable reference to this request's context.
+    pub fn ctx_mut(&mut self) -> &mut RequestContext {
+        &mut self.ctx
     }
 
     /// Create a GET request.
@@ -419,15 +432,19 @@ impl Request {
         }
     }
 
-    /// Turn this `Request` into a `curl::Easy2` handle using
-    /// the given `Handler` to process the response.
+    /// Turn this `Request` into a `curl::Easy2` handle using the given
+    /// `Handler` to process the response.
     pub(crate) fn into_handle<H: HandlerExt>(
         mut self,
         create_handler: impl FnOnce(RequestContext) -> H,
     ) -> Result<Easy2<H>, HttpClientError> {
+        // Allow request creation listeners to configure the Request before we
+        // use it, potentially overriding settings explicitly configured via
+        // the methods on Request.
         REQUEST_CREATION_LISTENERS
             .read()
-            .trigger_new_request(&mut self.ctx);
+            .trigger_new_request(&mut self);
+
         let body_size = self.ctx.body.as_ref().map(|body| body.len() as u64);
         let url = self.ctx.url.clone();
         let handler = create_handler(self.ctx);
@@ -507,7 +524,7 @@ impl Request {
     }
 
     /// Register a callback function that is called on new requests.
-    pub fn on_new_request(f: impl Fn(&mut RequestContext) + Send + Sync + 'static) {
+    pub fn on_new_request(f: impl Fn(&mut Self) + Send + Sync + 'static) {
         REQUEST_CREATION_LISTENERS.write().on_new_request(f);
     }
 }
@@ -800,7 +817,7 @@ mod tests {
             move |req| {
                 // The callback can receive requests in other tests.
                 // So we need to check the request is sent by this test.
-                if req.url().path() == "/test_callback" {
+                if req.ctx().url().path() == "/test_callback" {
                     called.fetch_add(1, AcqRel);
                 }
             }

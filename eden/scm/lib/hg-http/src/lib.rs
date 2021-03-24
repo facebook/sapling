@@ -56,7 +56,7 @@ pub fn enable_progress_reporting() {
 static PROGRESS_REPORTING_STATE: Lazy<Box<dyn Drop + Send + Sync>> = Lazy::new(|| {
     Request::on_new_request(move |req| {
         TOTAL.request_count.fetch_add(1, Relaxed);
-        let req_listeners = req.event_listeners();
+        let req_listeners = req.ctx_mut().event_listeners();
         req_listeners.on_download_bytes({
             move |_req, n| {
                 TOTAL.download_bytes.fetch_add(n, Relaxed);
@@ -71,9 +71,9 @@ static PROGRESS_REPORTING_STATE: Lazy<Box<dyn Drop + Send + Sync>> = Lazy::new(|
         // Create a progress bar to the main progress registry.
         // TODO: How to tell whether it is downloading or uploading?
         let bar = ProgressBar::new("Downloading", 0, "bytes");
-        bar.set_message(req.url().to_string());
+        bar.set_message(req.ctx_mut().url().to_string());
 
-        let req_listeners = req.event_listeners();
+        let req_listeners = req.ctx_mut().event_listeners();
         req_listeners.on_content_length({
             let bar = bar.clone();
             move |_req, n| {
