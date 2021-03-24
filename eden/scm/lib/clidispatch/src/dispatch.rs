@@ -193,9 +193,14 @@ impl Dispatcher {
         })
     }
 
-    /// Get a reference to the parsed tests.
+    /// Get a reference to the parsed config.
     pub fn config(&self) -> &ConfigSet {
         self.optional_repo.config()
+    }
+
+    /// Get a reference to the global options.
+    pub fn global_opts(&self) -> &HgGlobalOpts {
+        &self.global_opts
     }
 
     /// Run a command. Return exit code if the command completes.
