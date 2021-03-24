@@ -130,6 +130,10 @@ impl FileEntry {
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }
+
+    pub fn parents(&self) -> &Parents {
+        &self.parents
+    }
 }
 
 #[cfg(any(test, feature = "for-tests"))]

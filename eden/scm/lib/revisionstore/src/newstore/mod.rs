@@ -20,6 +20,7 @@ pub use self::{
     filter_map::FilterMapStore,
     inmemory::{HashMapStore, KeyedValue},
     legacy::LegacyDatastore,
+    types::StoreFile,
 };
 
 pub mod edenapi;
@@ -27,6 +28,7 @@ pub mod fallback;
 pub mod filter_map;
 pub mod inmemory;
 pub mod legacy;
+pub mod types;
 
 /// A pinned, boxed stream of keys to fetch.
 pub type KeyStream<K> = BoxStream<'static, K>;

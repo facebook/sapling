@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::From;
+use std::convert::{From, Into, TryFrom, TryInto};
 use std::fmt;
 use std::sync::Arc;
 
+use anyhow::Error;
 use futures::{channel::mpsc::channel, SinkExt, StreamExt, TryStreamExt};
 use tracing::error;
 
@@ -46,7 +47,11 @@ where
     // Write Value Type (must support conversion from fallback)
     VW: Send + Sync + Clone + From<VF> + 'static,
     // Output Value Type (must support conversion from preferred & fallback)
-    VO: Send + Sync + Clone + From<VF> + From<VP> + 'static,
+    VO: Send + Sync + Clone + TryFrom<VF> + TryFrom<VP> + 'static,
+    // TODO(meyer): For now, we just require the conversion errors to convertible to anyhow::Error
+    // We can probably loosen this later. In particular, we want to associate the key, at least.
+    <VO as TryFrom<VF>>::Error: Into<Error>,
+    <VO as TryFrom<VP>>::Error: Into<Error>,
 {
     fn fetch_stream(self: Arc<Self>, keys: KeyStream<K>) -> FetchStream<K, VO> {
         // TODO(meyer): Write a custom Stream implementation to try to avoid use of channels
@@ -62,7 +67,7 @@ where
                     use FetchError::*;
                     match res {
                         // Convert preferred values into output values
-                        Ok(v) => Some(Ok(v.into())),
+                        Ok(v) => Some(v.try_into().map_err(FetchError::from)),
                         // TODO(meyer): Looks like we aren't up to date with futures crate, missing "feed" method, which is probably better here.
                         // I think this might serialize the fallback stream as-written.
                         Err(NotFound(k)) => match sender.send(k.clone()).await {
@@ -90,7 +95,7 @@ where
                         error!({ error = %e }, "error writing fallback value to channel");
                     }
                     // Convert fallback values to output values
-                    Ok(v.into())
+                    v.try_into().map_err(FetchError::from)
                 }
             });
 
@@ -110,7 +115,7 @@ where
             // Convert fallback values to output values
             Box::pin(select_drop(
                 preferred_stream,
-                fallback_stream.map_ok(|v| v.into()),
+                fallback_stream.map(|r| r.and_then(|v| v.try_into().map_err(FetchError::from))),
             ))
         }
     }

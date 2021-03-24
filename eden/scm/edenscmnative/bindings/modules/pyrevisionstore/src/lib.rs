@@ -36,7 +36,7 @@ use revisionstore::{
     indexedlogdatastore::Entry,
     newstore::{
         BoxedReadStore, BoxedWriteStore, Fallback, FallbackCache, FilterMapStore, KeyStream,
-        LegacyDatastore,
+        LegacyDatastore, StoreFile,
     },
     repack, util, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
     DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore,
@@ -1149,7 +1149,7 @@ fn make_newfilestore<'a>(
     edenapi_filestore: Option<Arc<EdenApiFileStore>>,
     suffix: Option<String>,
     correlator: Option<String>,
-) -> Result<(BoxedReadStore<Key, Entry>, Arc<ContentStore>)> {
+) -> Result<(BoxedReadStore<Key, StoreFile>, Arc<ContentStore>)> {
     // Construct ContentStore
     let mut builder = ContentStoreBuilder::new(&config).correlator(correlator);
 
@@ -1265,7 +1265,7 @@ fn make_newfilestore<'a>(
 }
 
 py_class!(pub class newfilestore |py| {
-    data store: BoxedReadStore<Key, Entry>;
+    data store: BoxedReadStore<Key, StoreFile>;
     data contentstore: Arc<ContentStore>;
 
     def __new__(_cls,
@@ -1308,7 +1308,7 @@ py_class!(pub class newfilestore |py| {
 });
 
 impl ExtractInnerRef for newfilestore {
-    type Inner = BoxedReadStore<Key, Entry>;
+    type Inner = BoxedReadStore<Key, StoreFile>;
 
     fn extract_inner_ref<'a>(&'a self, py: Python<'a>) -> &'a Self::Inner {
         self.store(py)
