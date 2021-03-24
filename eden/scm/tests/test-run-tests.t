@@ -373,34 +373,6 @@ test --xunit support
   # Ran 3 tests, 0 skipped, 2 failed.
   python hash seed: * (glob)
   [1]
-  $ cat xunit.xml
-  <?xml version="1.0" encoding="utf-8"?>
-  <testsuite errors="0" failures="2" name="run-tests" skipped="0" tests="3">
-    <testcase name="test-success.t" time="*"/> (glob)
-    <testcase name="test-failure-unicode.t" time="*"> (glob)
-      <failure message="output changed" type="output-mismatch">
-  <![CDATA[--- test-failure-unicode.t
-  +++ test-failure-unicode.t.err
-  @@ -1,2 +1,2 @@
-     $ echo babar\xce\xb1 (esc)
-  -  l\xce\xb5\xce\xb5t (esc)
-  +  babar\xce\xb1 (esc)
-  ]]>    </failure>
-    </testcase>
-    <testcase name="test-failure.t" time="*"> (glob)
-      <failure message="output changed" type="output-mismatch">
-  <![CDATA[--- test-failure.t
-  +++ test-failure.t.err
-  @@ -1,5 +1,5 @@
-     $ echo babar
-  -  rataxes
-  +  babar
-   This is a noop statement so that
-   this test is still more bytes than success.
-   pad pad pad pad............................................................
-  ]]>    </failure>
-    </testcase>
-  </testsuite>
 
   $ cat .testtimes
   test-failure-unicode.t * (glob)
@@ -433,13 +405,6 @@ test --xunit support
   test-failure-unicode.t
   test-failure.t
   test-success.t
-  $ cat xunit.xml
-  <?xml version="1.0" encoding="utf-8"?>
-  <testsuite errors="0" failures="0" name="run-tests" skipped="0" tests="0">
-    <testcase name="test-failure-unicode.t"/>
-    <testcase name="test-failure.t"/>
-    <testcase name="test-success.t"/>
-  </testsuite>
 
   $ rt --list-tests test-failure* --json --xunit=xunit.xml --outputdir output
   test-failure-unicode.t
@@ -453,12 +418,6 @@ test --xunit support
           "result": "success"
       }
   } (no-eol)
-  $ cat xunit.xml
-  <?xml version="1.0" encoding="utf-8"?>
-  <testsuite errors="0" failures="0" name="run-tests" skipped="0" tests="0">
-    <testcase name="test-failure-unicode.t"/>
-    <testcase name="test-failure.t"/>
-  </testsuite>
 
   $ rm test-failure-unicode.t
 
@@ -1084,15 +1043,6 @@ Skips with xml
     test-skip.t
   
   # Ran 2 tests, 2 skipped, 0 failed.
-  $ cat xunit.xml
-  <?xml version="1.0" encoding="utf-8"?>
-  <testsuite errors="0" failures="0" name="run-tests" skipped="2" tests="2">
-    <testcase name="test-success.t" time="*"/> (glob)
-    <testcase name="test-skip.t">
-      <skipped>
-  <![CDATA[missing feature: nail clipper]]>    </skipped>
-    </testcase>
-  </testsuite>
 
 Missing skips or blacklisted skips don't count as executed:
   $ echo test-failure.t > blacklist
