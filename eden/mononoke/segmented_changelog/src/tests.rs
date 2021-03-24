@@ -427,44 +427,6 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
-async fn test_build_calls_together(fb: FacebookInit) -> Result<()> {
-    let ctx = CoreContext::test_mock(fb);
-    let blobrepo = linear::getrepo(fb).await;
-
-    let known_cs =
-        resolve_cs_id(&ctx, &blobrepo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
-    setup_phases(&ctx, &blobrepo, known_cs).await?;
-
-    let builder = SegmentedChangelogBuilder::new()
-        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
-        .with_blobrepo(&blobrepo);
-    let seeder = builder.clone().build_seeder(&ctx).await?;
-    let (sc, _) = seeder.build_from_scratch(&ctx, known_cs).await?;
-
-    let distance: u64 = 2;
-    let answer = sc
-        .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
-        .await?;
-    let expected_cs =
-        resolve_cs_id(&ctx, &blobrepo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
-    assert_eq!(answer, expected_cs);
-
-    let known_cs =
-        resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
-    setup_phases(&ctx, &blobrepo, known_cs).await?;
-    let on_demand_update_sc = builder.build_on_demand_update()?;
-    let distance: u64 = 3;
-    let answer = on_demand_update_sc
-        .location_to_changeset_id(&ctx, Location::new(known_cs, distance))
-        .await?;
-    let expected_cs =
-        resolve_cs_id(&ctx, &blobrepo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
-    assert_eq!(answer, expected_cs);
-
-    Ok(())
-}
-
-#[fbinit::test]
 async fn test_two_repos(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
