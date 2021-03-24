@@ -208,7 +208,7 @@ async fn insert_filenodes(
         }
     }
 
-    let copydata_rows = copydata_rows
+    let mut copydata_rows = copydata_rows
         .iter()
         .map(
             |&(repo_id, tohash, tonode, is_tree, ref fromhash, fromnode)| {
@@ -216,6 +216,10 @@ async fn insert_filenodes(
             },
         )
         .collect::<Vec<_>>();
+
+    // See above for why we sort.
+    filenode_rows.sort();
+    copydata_rows.sort();
 
     ctx.perf_counters()
         .increment_counter(PerfCounterType::SqlWrites);
