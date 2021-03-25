@@ -604,7 +604,7 @@ mod test {
     #[fbinit::test]
     async fn test_compute_partial_getbundle(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let commit_map = create_from_dag(
             &ctx,
@@ -806,7 +806,7 @@ mod test {
     #[fbinit::test]
     async fn test_low_gen_num_two_heads(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let commit_map = create_from_dag(
             &ctx,
@@ -935,7 +935,7 @@ mod test {
     async fn create_repo(
         ctx: &CoreContext,
     ) -> Result<(BlobRepo, BTreeMap<String, ChangesetId>), Error> {
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let commit_map = create_from_dag(
             ctx,
@@ -953,7 +953,7 @@ mod test {
     async fn create_mergy_repo(
         ctx: &CoreContext,
     ) -> Result<(BlobRepo, BTreeMap<String, ChangesetId>), Error> {
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let commit_map = create_from_dag(
             ctx,

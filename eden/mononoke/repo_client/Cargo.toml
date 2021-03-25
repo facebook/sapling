@@ -59,10 +59,10 @@ unbundle = { version = "0.1.0", path = "unbundle" }
 warm_bookmarks_cache = { version = "0.1.0", path = "../bookmarks/warm_bookmarks_cache" }
 
 [dev-dependencies]
-blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
 fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
 mononoke_api = { version = "0.1.0", path = "../mononoke_api" }
 mutable_counters = { version = "0.1.0", path = "../mutable_counters" }
 sql_construct = { version = "0.1.0", path = "../common/sql_construct" }
+test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }

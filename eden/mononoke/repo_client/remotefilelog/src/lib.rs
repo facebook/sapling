@@ -408,7 +408,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_prepare_blob(fb: FacebookInit) -> Result<(), Error> {
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let blob = roundtrip_blob(fb, &repo, "foo", Some(3)).await?;
         assert_matches!(blob, RemotefilelogBlobKind::Inline(3));
         Ok(())
@@ -416,12 +416,11 @@ mod test {
 
     #[fbinit::test]
     async fn test_prepare_blob_chunked(fb: FacebookInit) -> Result<(), Error> {
-        let repo = blobrepo_factory::new_memblob_empty(None)?.dangerous_override(
-            |mut config: FilestoreConfig| {
-                config.chunk_size = Some(1);
-                config
-            },
-        );
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
+        let repo = repo.dangerous_override(|mut config: FilestoreConfig| {
+            config.chunk_size = Some(1);
+            config
+        });
 
         let blob = roundtrip_blob(fb, &repo, "foo", None).await?;
         assert_matches!(blob, RemotefilelogBlobKind::Inline(3));
@@ -430,7 +429,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_prepare_blob_lfs(fb: FacebookInit) -> Result<(), Error> {
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let blob = roundtrip_blob(fb, &repo, "foo", Some(2)).await?;
         assert_matches!(blob, RemotefilelogBlobKind::Lfs(3));
         Ok(())

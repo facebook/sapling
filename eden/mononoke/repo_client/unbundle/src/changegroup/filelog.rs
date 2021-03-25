@@ -315,7 +315,6 @@ mod tests {
 
     use std::cmp::min;
 
-    use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
     use futures::stream::iter;
     use itertools::{assert_equal, EitherOrBoth, Itertools};
@@ -357,7 +356,7 @@ mod tests {
     {
         let result = convert_to_revlog_filelog(
             ctx,
-            new_memblob_empty(None).unwrap(),
+            test_repo_factory::build_empty().unwrap(),
             iter(inp.into_iter().map(Ok).collect::<Vec<_>>()),
         )
         .try_collect::<Vec<_>>()
@@ -515,7 +514,7 @@ mod tests {
 
         let result = convert_to_revlog_filelog(
             ctx,
-            new_memblob_empty(None).unwrap(),
+            test_repo_factory::build_empty().unwrap(),
             iter(inp.into_iter().map(Ok)),
         )
         .try_collect::<Vec<_>>()

@@ -48,12 +48,12 @@ mod tests {
     use mononoke_types_mocks::changesetid::{ONES_CSID as MON_CSID, TWOS_CSID};
     use movers::{DefaultAction, Mover};
     use mutable_counters::{MutableCounters, SqlMutableCounters};
-    use sql::rusqlite::Connection as SqliteConnection;
     use sql_construct::SqlConstruct;
     use std::collections::HashMap;
     use std::sync::Arc;
     use std::time::Duration;
     use synced_commit_mapping::SqlSyncedCommitMapping;
+    use test_repo_factory::TestRepoFactory;
     use tests_utils::{
         bookmark, drawdag::create_from_dag, list_working_copy_utf8, CreateCommitContext,
     };
@@ -68,11 +68,10 @@ mod tests {
     }
 
     fn create_repo(id: i32) -> Result<BlobRepo> {
-        let (mut repo, _) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
-            SqliteConnection::open_in_memory()?,
-            RepositoryId::new(id),
-        )?;
-        repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
+        let repo: BlobRepo = TestRepoFactory::new()?
+            .with_id(RepositoryId::new(id))
+            .build()?;
+        let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
             derived_data_config
                 .enabled
                 .types
@@ -115,7 +114,7 @@ mod tests {
     #[fbinit::test]
     async fn test_move_bookmark(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
+        let blob_repo = test_repo_factory::build_empty()?;
         let mut recovery_fields = create_mock_recovery_fields();
         let call_sign = Some("FBS".to_string());
         let checker_flags = CheckerFlags {
@@ -177,7 +176,7 @@ mod tests {
     #[fbinit::test]
     async fn test_move_bookmark_with_existing_bookmark(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
+        let blob_repo = test_repo_factory::build_empty()?;
         let mut recovery_fields = create_mock_recovery_fields();
         let checker_flags = CheckerFlags {
             phab_check_disabled: true,
@@ -254,7 +253,7 @@ mod tests {
     #[fbinit::test]
     async fn test_hg_sync_check(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let checker_flags = CheckerFlags {
             phab_check_disabled: true,
             x_repo_check_disabled: true,

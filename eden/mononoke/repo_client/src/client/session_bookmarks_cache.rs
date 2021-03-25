@@ -303,7 +303,7 @@ mod test {
     async fn test_fetch_prefix_no_warm_bookmark_cache(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("1", "1")
