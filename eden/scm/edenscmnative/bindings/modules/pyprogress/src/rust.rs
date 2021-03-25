@@ -209,9 +209,9 @@ impl Drop for PyProgressBar {
         let py = gil.python();
 
         // Exit context manager on drop.
-        let _ = self
-            .bar
+        // Exception is ignored - it is most likely to happen due to interrupt
+        self.bar
             .call_method(py, "__exit__", (PyNone, PyNone, PyNone), None)
-            .expect("Failed to call __exit__ while dropping progress bar");
+            .ok();
     }
 }
