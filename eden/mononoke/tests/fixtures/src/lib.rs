@@ -25,6 +25,7 @@ use mononoke_types::{
 use sorted_vector_map::SortedVectorMap;
 use std::collections::BTreeMap;
 use std::str::FromStr;
+use test_repo_factory::TestRepoFactory;
 
 pub async fn store_files(
     ctx: &CoreContext,
@@ -306,7 +307,7 @@ pub mod linear {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = blobrepo_factory::new_memblob_empty_with_id(None, id).unwrap();
+        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -320,7 +321,7 @@ pub mod branch_even {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = blobrepo_factory::new_memblob_empty_with_id(None, id).unwrap();
+        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -428,7 +429,7 @@ pub mod branch_uneven {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = blobrepo_factory::new_memblob_empty_with_id(None, id).unwrap();
+        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -596,7 +597,7 @@ pub mod branch_wide {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = blobrepo_factory::new_memblob_empty_with_id(None, id).unwrap();
+        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -704,7 +705,7 @@ pub mod merge_even {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = blobrepo_factory::new_memblob_empty_with_id(None, id).unwrap();
+        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -827,7 +828,7 @@ pub mod many_files_dirs {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = blobrepo_factory::new_memblob_empty_with_id(None, id).unwrap();
+        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -924,7 +925,7 @@ pub mod merge_uneven {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = blobrepo_factory::new_memblob_empty_with_id(None, id).unwrap();
+        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -1111,7 +1112,7 @@ pub mod unshared_merge_even {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = blobrepo_factory::new_memblob_empty_with_id(None, id).unwrap();
+        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -1302,7 +1303,7 @@ pub mod unshared_merge_uneven {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = blobrepo_factory::new_memblob_empty_with_id(None, id).unwrap();
+        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }
@@ -1636,7 +1637,7 @@ pub mod many_diamonds {
     }
 
     pub async fn getrepo_with_id(fb: FacebookInit, id: RepositoryId) -> BlobRepo {
-        let blobrepo = blobrepo_factory::new_memblob_empty_with_id(None, id).unwrap();
+        let blobrepo = TestRepoFactory::new().unwrap().with_id(id).build().unwrap();
         initrepo(fb, &blobrepo).await;
         blobrepo
     }

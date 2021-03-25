@@ -8,7 +8,6 @@ license = "GPLv2+"
 [dependencies]
 anyhow = "1.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 borrowed = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -21,6 +20,7 @@ maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 sorted_vector_map = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 
 [dev-dependencies]
 async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
