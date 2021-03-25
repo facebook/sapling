@@ -4886,12 +4886,17 @@ def preregistersighandlers():
 
 
 # see https://ruby-doc.org/core-2.2.0/Enumerable.html#method-i-each_slice
-def eachslice(iterable, n):
+def eachslice(iterable, n, maxtime=None):
+    """If maxtime is not None, return a batch if it exceeds specified seconds"""
+    if maxtime is not None:
+        deadline = timer() + maxtime
     buf = []
     for value in iterable:
         buf.append(value)
-        if len(buf) == n:
+        if len(buf) == n or (maxtime is not None and timer() > deadline):
             yield buf
             buf = []
+            if maxtime is not None:
+                deadline = timer() + maxtime
     if buf:
         yield buf

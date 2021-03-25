@@ -25,7 +25,7 @@ def prefetchtextstream(repo, ctxstream):
 
 
 def _prefetchtextstream(repo, ctxstream):
-    for ctxbatch in util.eachslice(ctxstream, 10000):
+    for ctxbatch in util.eachslice(ctxstream, 10000, maxtime=2):
         # ctxbatch: [ctx]
         nodes = [_rewritenone(c.node()) for c in ctxbatch]
         texts = repo.changelog.inner.getcommitrawtextlist(nodes)
