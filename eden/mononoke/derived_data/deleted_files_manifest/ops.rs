@@ -391,7 +391,6 @@ mod tests {
     use super::*;
     use crate::derive::{derive_deleted_files_manifest, get_changes};
     use blobrepo::{save_bonsai_changesets, BlobRepo};
-    use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
     use fixtures::store_files;
     use manifest::PathOrPrefix;
@@ -404,7 +403,7 @@ mod tests {
     #[fbinit::test]
     async fn test_find_entries(fb: FacebookInit) {
         // Test simple separate files and whole dir deletions
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         // create parent deleted files manifest
@@ -517,7 +516,7 @@ mod tests {
     #[fbinit::test]
     async fn test_list_all_entries(fb: FacebookInit) {
         // Test simple separate files and whole dir deletions
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         // create parent deleted files manifest

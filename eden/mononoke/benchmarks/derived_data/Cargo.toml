@@ -12,7 +12,6 @@ path = "benchmark_large_directory.rs"
 [dependencies]
 anyhow = "1.0"
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 context = { version = "0.1.0", path = "../../server/context" }
 deleted_files_manifest = { version = "0.1.0", path = "../../derived_data/deleted_files_manifest" }
 derived_data = { version = "0.1.0", path = "../../derived_data" }
@@ -24,5 +23,6 @@ mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercuri
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
 rand = { version = "0.7", features = ["small_rng"] }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
+test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }

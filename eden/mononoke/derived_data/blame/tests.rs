@@ -7,6 +7,7 @@
 
 use crate::{fetch_blame, BlameError};
 use anyhow::{anyhow, Error};
+use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
 use borrowed::borrowed;
 use bytes::Bytes;
@@ -141,7 +142,7 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
     //
     async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         borrowed!(ctx, repo);
 
         let c0 = create_commit(
@@ -233,7 +234,7 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = blobrepo_factory::new_memblob_empty(None)?;
+    let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
     borrowed!(ctx, repo);
     let file1 = "file1";
     let content = "content";

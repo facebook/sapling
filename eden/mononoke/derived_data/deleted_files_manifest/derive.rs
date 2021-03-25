@@ -462,7 +462,6 @@ mod tests {
     use super::*;
     use crate::mapping::RootDeletedManifestId;
     use blobrepo::save_bonsai_changesets;
-    use blobrepo_factory::new_memblob_empty;
     use bounded_traversal::bounded_traversal_stream;
     use derived_data_test_utils::bonsai_changeset_from_hg;
     use fbinit::FacebookInit;
@@ -476,7 +475,7 @@ mod tests {
     #[fbinit::test]
     async fn linear_test(fb: FacebookInit) {
         // Test simple separate files and whole dir deletions
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         // create parent deleted files manifest
@@ -744,7 +743,7 @@ mod tests {
         //  | /
         //  A
         //
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let a = CreateCommitContext::new_root(&ctx, &repo)

@@ -164,7 +164,7 @@ async fn main(fb: FacebookInit) -> Result<()> {
     let data = args.next().unwrap_or_else(|| String::from("fsnodes"));
     println!("Deriving: {}", data);
 
-    let repo = blobrepo_factory::new_memblob_empty(None)?;
+    let repo: BlobRepo = test_repo_factory::build_empty()?;
 
     let (mut csid, mut filenames) = make_initial_large_directory(&ctx, &repo, 100_000).await?;
 

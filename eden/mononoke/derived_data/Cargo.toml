@@ -31,7 +31,6 @@ topo_sort = { version = "0.1.0", path = "../common/topo_sort" }
 tunables = { version = "0.1.0", path = "../tunables" }
 
 [dev-dependencies]
-blobrepo_factory = { version = "0.1.0", path = "../blobrepo/factory" }
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
 blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
@@ -44,4 +43,5 @@ lazy_static = "1.0"
 maplit = "1.0"
 mercurial_types = { version = "0.1.0", path = "../mercurial/types" }
 revset = { version = "0.1.0", path = "../revset" }
+test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }

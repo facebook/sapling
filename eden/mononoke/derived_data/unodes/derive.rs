@@ -379,7 +379,6 @@ mod tests {
     use async_trait::async_trait;
     use blobrepo::save_bonsai_changesets;
     use blobrepo::BlobRepo;
-    use blobrepo_factory::new_memblob_empty;
     use blobrepo_hg::BlobRepoHg;
     use blobrepo_override::DangerousOverride;
     use blobstore::Storable;
@@ -580,7 +579,7 @@ mod tests {
 
     async fn diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let merged_files = "dir/file.txt";
         let root_commit = CreateCommitContext::new_root(&ctx, &repo)
             .add_file(merged_files, "a")
@@ -676,7 +675,7 @@ mod tests {
 
     #[fbinit::test]
     async fn test_parent_order(fb: FacebookInit) -> Result<(), Error> {
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let p1_root_unode_id = create_changeset_and_derive_unode(

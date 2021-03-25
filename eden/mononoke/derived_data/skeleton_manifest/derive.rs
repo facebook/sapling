@@ -336,10 +336,10 @@ mod test {
     }
 
     async fn init_repo(ctx: &CoreContext) -> Result<(BlobRepo, BTreeMap<String, ChangesetId>)> {
-        let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let changesets = create_from_dag_with_changes(
             ctx,
-            &blob_repo,
+            &repo,
             r##"
                     J-K
                      /
@@ -363,7 +363,7 @@ mod test {
             },
         )
         .await?;
-        Ok((blob_repo, changesets))
+        Ok((repo, changesets))
     }
 
     fn skeleton_dir<'a>(

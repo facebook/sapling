@@ -27,7 +27,6 @@ thiserror = "1.0"
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 
 [dev-dependencies]
-blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 derived_data_test_utils = { version = "0.1.0", path = "../test_utils" }
@@ -37,4 +36,5 @@ fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 mercurial_types = { version = "0.1.0", path = "../../mercurial/types" }
 pretty_assertions = "0.6"
 revset = { version = "0.1.0", path = "../../revset" }
+test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

@@ -325,7 +325,7 @@ mod tests {
 
     async fn test_generate_filenodes_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let filename = "path";
         let commit = CreateCommitContext::new_root(&ctx, &repo)
             .add_file(filename, "content")
@@ -352,7 +352,7 @@ mod tests {
 
     async fn test_generate_filenodes_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let first_p1 = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("path1", "content")
             .commit()
@@ -381,7 +381,7 @@ mod tests {
 
     async fn test_generate_type_change(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let parent = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("path", "content")
             .commit()
@@ -406,7 +406,7 @@ mod tests {
 
     async fn test_many_parents(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let p1 = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("path1", "content")
             .commit()
@@ -447,7 +447,7 @@ mod tests {
 
     async fn test_derive_empty_commits(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let parent_empty = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
 
         let child_empty = CreateCommitContext::new(&ctx, &repo, vec![parent_empty])
@@ -474,7 +474,7 @@ mod tests {
 
     async fn test_derive_only_empty_commits(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
 
         let parent_empty = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
         let child_empty = CreateCommitContext::new(&ctx, &repo, vec![parent_empty])
@@ -511,7 +511,7 @@ mod tests {
 
     async fn test_derive_disabled_filenodes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let cs = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
         let derived = FilenodesOnlyPublic::derive(&ctx, &repo, cs).await?;
         assert_eq!(derived, FilenodesOnlyPublic::Disabled);

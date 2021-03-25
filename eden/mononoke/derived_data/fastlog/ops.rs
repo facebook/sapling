@@ -583,7 +583,6 @@ async fn prefetch_fastlog_by_changeset(
 mod test {
     use super::*;
     use crate::mapping::RootFastlog;
-    use blobrepo_factory::new_memblob_empty;
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::future::TryFutureExt;
@@ -592,7 +591,7 @@ mod test {
     #[fbinit::test]
     async fn test_list_linear_history(fb: FacebookInit) -> Result<(), Error> {
         // generate couple of hundreds linear file changes and list history
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "1";
@@ -662,7 +661,7 @@ mod test {
         //           A
         //
 
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "1";
@@ -732,7 +731,7 @@ mod test {
         //           o
         //
 
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "1";
@@ -790,7 +789,7 @@ mod test {
         //        |   |
         //        o   o
         //
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "1";
@@ -875,7 +874,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "dir/1";
@@ -963,7 +962,7 @@ mod test {
         //     |
         //     A
         //
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let a = CreateCommitContext::new_root(&ctx, &repo)
@@ -1087,7 +1086,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_across_deletions_linear(fb: FacebookInit) -> Result<(), Error> {
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "dir/1";
@@ -1140,7 +1139,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_list_history_across_deletions_with_merges(fb: FacebookInit) -> Result<(), Error> {
-        let repo = new_memblob_empty(None).unwrap();
+        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "dir/1";
