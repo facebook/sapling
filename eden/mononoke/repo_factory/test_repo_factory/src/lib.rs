@@ -42,6 +42,7 @@ use metaconfig_types::{
     ArcRepoConfig, DerivedDataConfig, DerivedDataTypesConfig, RepoConfig, UnodeVersion,
 };
 use mononoke_types::RepositoryId;
+use mutable_counters::SqlMutableCounters;
 use newfilenodes::NewFilenodesBuilder;
 use phases::{ArcSqlPhasesFactory, SqlPhasesFactory};
 use redactedblobstore::RedactedMetadata;
@@ -120,6 +121,7 @@ impl TestRepoFactory {
     /// Create a new factory for test repositories with an existing Sqlite
     /// connection.
     pub fn with_sqlite_connection(con: SqliteConnection) -> Result<TestRepoFactory> {
+        con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
         con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
         con.execute_batch(SqlChangesets::CREATION_QUERY)?;
         con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;

@@ -9,7 +9,6 @@ use anyhow::{anyhow, Error};
 use assert_matches::assert_matches;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
-use blobrepo_override::DangerousOverride;
 use blobstore::Loadable;
 use bookmark_renaming::BookmarkRenamer;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, Freshness};
@@ -21,7 +20,6 @@ use cross_repo_sync::{
     CandidateSelectionHint, CommitSyncContext, CommitSyncDataProvider, CommitSyncRepos, SyncData,
     CHANGE_XREPO_MAPPING_EXTRA,
 };
-use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use fixtures::linear;
 use futures::{
@@ -39,9 +37,7 @@ use movers::Mover;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::SkiplistIndex;
-use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_construct::SqlConstruct;
-use sql_ext::SqlConnections;
 use std::collections::{BTreeMap, HashMap};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -381,15 +377,20 @@ async fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
 async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     // Initialize source and target repos
     let ctx = CoreContext::test_mock(fb);
+    let mut factory = TestRepoFactory::new()?;
     let source_repo_id = RepositoryId::new(1);
-    let source_repo: BlobRepo = TestRepoFactory::new()?.with_id(source_repo_id).build()?;
-
+    let source_repo: BlobRepo = factory.with_id(source_repo_id).build()?;
     let target_repo_id = RepositoryId::new(2);
-    let target_repo: BlobRepo = TestRepoFactory::new()?.with_id(target_repo_id).build()?;
+    let target_repo: BlobRepo = factory.with_id(target_repo_id).build()?;
 
     // Create commit syncer with two version - current and new
-    let (target_repo, target_repo_dbs) =
-        init_target_repo(&ctx, source_repo_id, &target_repo).await?;
+    let target_repo_dbs = TargetRepoDbs {
+        connections: factory.metadata_db().clone(),
+        bookmarks: target_repo.bookmarks().clone(),
+        bookmark_update_log: target_repo.bookmark_update_log().clone(),
+        counters: SqlMutableCounters::from_sql_connections(factory.metadata_db().clone()),
+    };
+    init_target_repo(&ctx, &target_repo_dbs, source_repo_id, target_repo_id).await?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
 
@@ -987,8 +988,13 @@ async fn init_repos(
     let target_repo_id = RepositoryId::new(2);
     let target_repo: BlobRepo = factory.with_id(target_repo_id).build()?;
 
-    let (target_repo, target_repo_dbs) =
-        init_target_repo(&ctx, source_repo_id, &target_repo).await?;
+    let target_repo_dbs = TargetRepoDbs {
+        connections: factory.metadata_db().clone(),
+        bookmarks: target_repo.bookmarks().clone(),
+        bookmark_update_log: target_repo.bookmark_update_log().clone(),
+        counters: SqlMutableCounters::from_sql_connections(factory.metadata_db().clone()),
+    };
+    init_target_repo(&ctx, &target_repo_dbs, source_repo_id, target_repo_id).await?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
 
@@ -1228,17 +1234,10 @@ async fn init_repos(
 
 async fn init_target_repo(
     ctx: &CoreContext,
+    target_repo_dbs: &TargetRepoDbs,
     source_repo_id: RepositoryId,
-    target_repo: &BlobRepo,
-) -> Result<(BlobRepo, TargetRepoDbs), Error> {
-    let target_repo_id = target_repo.get_repoid();
-    let target_repo_dbs = init_dbs(target_repo_id)?;
-    let bookmarks = target_repo_dbs.bookmarks.clone();
-    let bookmark_update_log = target_repo_dbs.bookmark_update_log.clone();
-    let target_repo = target_repo
-        .dangerous_override(|_| bookmarks)
-        .dangerous_override(|_| bookmark_update_log);
-
+    target_repo_id: RepositoryId,
+) -> Result<(), Error> {
     // Init counters
     target_repo_dbs
         .counters
@@ -1252,7 +1251,7 @@ async fn init_target_repo(
         .compat()
         .await?;
 
-    Ok((target_repo, target_repo_dbs))
+    Ok(())
 }
 
 async fn init_merged_repos(
@@ -1282,13 +1281,12 @@ async fn init_merged_repos(
     for idx in 0..num_repos {
         let repoid = RepositoryId::new(idx as i32);
         let small_repo: BlobRepo = factory.with_id(repoid).build()?;
-        let small_repo_dbs = init_dbs(repoid)?;
-
-        let bookmarks = small_repo_dbs.bookmarks.clone();
-        let bookmark_update_log = small_repo_dbs.bookmark_update_log.clone();
-        let small_repo = small_repo
-            .dangerous_override(|_| bookmarks)
-            .dangerous_override(|_| bookmark_update_log);
+        let small_repo_dbs = TargetRepoDbs {
+            connections: factory.metadata_db().clone(),
+            bookmarks: small_repo.bookmarks().clone(),
+            bookmark_update_log: small_repo.bookmark_update_log().clone(),
+            counters: SqlMutableCounters::from_sql_connections(factory.metadata_db().clone()),
+        };
 
         // Init counters
         small_repo_dbs
@@ -1681,23 +1679,4 @@ async fn move_bookmark(
 
     assert!(txn.commit().await?);
     Ok(())
-}
-
-fn init_dbs(repo_id: RepositoryId) -> Result<TargetRepoDbs, Error> {
-    let con = SqliteConnection::open_in_memory()?;
-    con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
-    con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
-
-    let connections = SqlConnections::new_single(Connection::with_sqlite(con));
-    let bookmarks = Arc::new(
-        SqlBookmarksBuilder::from_sql_connections(connections.clone()).with_repo_id(repo_id),
-    );
-    let counters = SqlMutableCounters::from_sql_connections(connections.clone());
-
-    Ok(TargetRepoDbs {
-        connections,
-        bookmarks: bookmarks.clone(),
-        bookmark_update_log: bookmarks,
-        counters: counters.clone(),
-    })
 }

@@ -34,6 +34,7 @@ mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercuri
 mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
 mononoke_types = { version = "0.1.0", path = "../../mononoke_types" }
+mutable_counters = { version = "0.1.0", path = "../../mutable_counters" }
 newfilenodes = { version = "0.1.0", path = "../../newfilenodes" }
 phases = { version = "0.1.0", path = "../../phases" }
 redactedblobstore = { version = "0.1.0", path = "../../blobstore/redactedblobstore" }
