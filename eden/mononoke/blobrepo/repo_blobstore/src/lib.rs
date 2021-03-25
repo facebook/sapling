@@ -14,7 +14,6 @@ use prefixblob::PrefixBlobstore;
 use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, RedactedMetadata};
 use scuba_ext::MononokeScubaSampleBuilder;
 use std::collections::HashMap;
-use std::ops::Deref;
 use std::sync::Arc;
 
 /// RedactedBlobstore should be part of every blobstore since it is a layer
@@ -33,12 +32,6 @@ type RepoBlobstoreStack<T> = RedactedBlobstore<PrefixBlobstore<T>>;
 #[derive(Clone, Debug)]
 pub struct AbstractRepoBlobstore<T>(RepoBlobstoreStack<T>);
 
-impl<T: std::fmt::Display> std::fmt::Display for AbstractRepoBlobstore<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "AbstractRepoBlobstore<{}>", self.0)
-    }
-}
-
 impl<T: Blobstore + Clone> AbstractRepoBlobstore<T> {
     pub fn as_parts(&self) -> (T, RedactedBlobstoreConfig) {
         let (blobstore, redacted_blobstore_config) = self.0.as_parts();
@@ -47,25 +40,33 @@ impl<T: Blobstore + Clone> AbstractRepoBlobstore<T> {
     }
 }
 
-impl<T> Deref for AbstractRepoBlobstore<T> {
-    type Target = RepoBlobstoreStack<T>;
+#[derive(Clone, Debug)]
+pub struct RepoBlobstore(AbstractRepoBlobstore<Arc<dyn Blobstore>>);
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl RepoBlobstore {
+    pub fn as_parts(&self) -> (Arc<dyn Blobstore>, RedactedBlobstoreConfig) {
+        self.0.as_parts()
+    }
+
+    pub fn boxed(&self) -> Arc<dyn Blobstore> {
+        self.0.0.boxed()
+    }
+}
+
+impl std::fmt::Display for RepoBlobstore {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "RepoBlobstore<{}>", self.0.0)
     }
 }
 
 #[async_trait]
-impl<B> Blobstore for AbstractRepoBlobstore<B>
-where
-    B: Blobstore,
-{
+impl Blobstore for RepoBlobstore {
     async fn get<'a>(
         &'a self,
         ctx: &'a CoreContext,
         key: &'a str,
     ) -> Result<Option<BlobstoreGetData>> {
-        self.0.get(ctx, key).await
+        self.0.0.get(ctx, key).await
     }
     async fn put<'a>(
         &'a self,
@@ -73,14 +74,12 @@ where
         key: String,
         value: BlobstoreBytes,
     ) -> Result<()> {
-        self.0.put(ctx, key, value).await
+        self.0.0.put(ctx, key, value).await
     }
     async fn is_present<'a>(&'a self, ctx: &'a CoreContext, key: &'a str) -> Result<bool> {
-        self.0.is_present(ctx, key).await
+        self.0.0.is_present(ctx, key).await
     }
 }
-
-pub type RepoBlobstore = AbstractRepoBlobstore<Arc<dyn Blobstore>>;
 
 pub struct RepoBlobstoreArgs {
     blobstore: RepoBlobstore,
@@ -107,7 +106,7 @@ impl RepoBlobstoreArgs {
         T: Blobstore + 'static,
         F: FnOnce(Arc<dyn Blobstore>) -> T,
     {
-        let (blobstore, redacted_blobstore_config) = blobstore.as_parts();
+        let (blobstore, redacted_blobstore_config) = blobstore.0.as_parts();
         let new_inner_blobstore = wrapper(blobstore);
         Self::build(new_inner_blobstore, repoid, redacted_blobstore_config)
     }
@@ -129,7 +128,7 @@ impl RepoBlobstoreArgs {
         let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore);
         let blobstore = PrefixBlobstore::new(blobstore, repoid.prefix());
         let blobstore = RedactedBlobstore::new(blobstore, redacted_blobstore_config);
-        let blobstore = AbstractRepoBlobstore(blobstore);
+        let blobstore = RepoBlobstore(AbstractRepoBlobstore(blobstore));
 
         Self { blobstore, repoid }
     }
