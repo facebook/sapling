@@ -201,6 +201,9 @@ impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
         }
         links.try_collect().await?;
 
+        // remove the pack key, so that only the entries links are keeping it live
+        self.inner.unlink(ctx, &pack_key).await?;
+
         Ok(pack_key)
     }
 }
@@ -338,9 +341,9 @@ mod tests {
             )
             .await?;
 
-        // Check the inner key is present (as we haven't unlinked it yet)
+        // Check the inner key is not visible, the pack operation unlinks it
         let is_present = inner_blobstore.is_present(ctx, &inner_key).await?;
-        assert!(is_present);
+        assert!(!is_present);
 
         // Get, should remove the thrift envelope as it is loaded
         let fetched_value = packblob.get(ctx, &input_entries[1].key).await?;
