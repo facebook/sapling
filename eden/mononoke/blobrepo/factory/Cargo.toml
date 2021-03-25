@@ -37,7 +37,6 @@ futures = { version = "0.3.13", features = ["async-await", "compat"] }
 futures_watchdog = { version = "0.1.0", path = "../../common/futures_watchdog" }
 git_types = { version = "0.1.0", path = "../../git/git_types" }
 maplit = "1.0"
-memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 mercurial_derived_data = { version = "0.1.0", path = "../../derived_data/mercurial_derived_data" }
 mercurial_mutation = { version = "0.1.0", path = "../../mercurial/mutation" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }
@@ -51,8 +50,6 @@ scuba_ext = { version = "0.1.0", path = "../../common/scuba_ext" }
 segmented_changelog = { version = "0.1.0", path = "../../segmented_changelog" }
 skeleton_manifest = { version = "0.1.0", path = "../../derived_data/skeleton_manifest" }
 slog = { version = "2.5", features = ["max_level_debug"] }
-sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }

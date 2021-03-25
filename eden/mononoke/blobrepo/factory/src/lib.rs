@@ -42,7 +42,6 @@ use futures::{future, try_join};
 use futures_watchdog::WatchdogExt;
 use git_types::TreeHandle;
 use maplit::hashset;
-use memblob::Memblob;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
@@ -57,14 +56,11 @@ use redactedblobstore::{RedactedMetadata, SqlRedactedContentStore};
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::{
-    new_server_segmented_changelog, ArcSegmentedChangelog, DisabledSegmentedChangelog,
-    SegmentedChangelogSqlConnections,
+    new_server_segmented_changelog, ArcSegmentedChangelog, SegmentedChangelogSqlConnections,
 };
 use skeleton_manifest::RootSkeletonManifestId;
 use slog::Logger;
-use sql::{rusqlite::Connection as SqliteConnection, Connection};
-use sql_construct::SqlConstruct;
-use sql_ext::{facebook::MysqlOptions, SqlConnections};
+use sql_ext::facebook::MysqlOptions;
 use std::num::NonZeroUsize;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use unodes::RootUnodeManifestId;
@@ -267,132 +263,6 @@ pub async fn open_blobrepo_given_datasources<'a>(
     Ok(repo)
 }
 
-/// A helper to build test repositories.
-#[derive(Clone)]
-pub struct TestRepoBuilder {
-    repo_id: RepositoryId,
-    blobstore: Arc<dyn Blobstore>,
-    redacted: Option<HashMap<String, RedactedMetadata>>,
-}
-
-impl TestRepoBuilder {
-    pub fn new() -> Self {
-        Self {
-            repo_id: RepositoryId::new(0),
-            blobstore: Arc::new(Memblob::default()),
-            redacted: None,
-        }
-    }
-
-    pub fn id(mut self, repo_id: RepositoryId) -> Self {
-        self.repo_id = repo_id;
-        self
-    }
-
-    pub fn redacted(mut self, redacted: Option<HashMap<String, RedactedMetadata>>) -> Self {
-        self.redacted = redacted;
-        self
-    }
-
-    pub fn blobstore(mut self, blobstore: Arc<dyn Blobstore>) -> Self {
-        self.blobstore = blobstore;
-        self
-    }
-
-    fn maybe_blobstore(self, maybe_blobstore: Option<Arc<dyn Blobstore>>) -> Self {
-        if let Some(blobstore) = maybe_blobstore {
-            return self.blobstore(blobstore);
-        }
-        self
-    }
-
-    pub fn build(self) -> Result<BlobRepo> {
-        let Self {
-            repo_id,
-            blobstore,
-            redacted,
-        } = self;
-
-        let repo_blobstore_args = RepoBlobstoreArgs::new(
-            blobstore,
-            redacted,
-            repo_id,
-            MononokeScubaSampleBuilder::with_discard(),
-        );
-
-        let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
-
-        let bookmarks =
-            Arc::new(SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(repo_id));
-
-        let changesets = Arc::new(
-            SqlChangesets::with_sqlite_in_memory()
-                .context(ErrorKind::StateOpen(StateOpenError::Changesets))?,
-        );
-        let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repo_id));
-
-        Ok(blobrepo_new(
-            bookmarks.clone(),
-            bookmarks,
-            repo_blobstore_args,
-            Arc::new(
-                NewFilenodesBuilder::with_sqlite_in_memory()
-                    .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?
-                    .build(),
-            ),
-            changesets,
-            changeset_fetcher,
-            Arc::new(
-                SqlBonsaiGitMappingConnection::with_sqlite_in_memory()
-                    .context(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))?
-                    .with_repo_id(repo_id),
-            ),
-            Arc::new(
-                SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()
-                    .context(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))?,
-            ),
-            RepoBonsaiSvnrevMapping::new(
-                repo_id,
-                Arc::new(
-                    SqlBonsaiSvnrevMapping::with_sqlite_in_memory()
-                        .context(ErrorKind::StateOpen(StateOpenError::BonsaiSvnrevMapping))?,
-                ),
-            ),
-            Arc::new(
-                SqlBonsaiHgMapping::with_sqlite_in_memory()
-                    .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
-            ),
-            Arc::new(
-                SqlHgMutationStoreBuilder::with_sqlite_in_memory()
-                    .context(ErrorKind::StateOpen(StateOpenError::HgMutationStore))?
-                    .with_repo_id(repo_id),
-            ),
-            Arc::new(InProcessLease::new()),
-            Arc::new(DisabledSegmentedChangelog::new()),
-            FilestoreConfig::default(),
-            phases_factory,
-            init_all_derived_data(),
-            "testrepo".to_string(),
-        ))
-    }
-}
-
-/// Used by tests
-pub fn new_memblob_empty(blobstore: Option<Arc<dyn Blobstore>>) -> Result<BlobRepo> {
-    TestRepoBuilder::new().maybe_blobstore(blobstore).build()
-}
-
-/// Used by cross-repo syncing tests
-pub fn new_memblob_empty_with_id(
-    blobstore: Option<Arc<dyn Blobstore>>,
-    repo_id: RepositoryId,
-) -> Result<BlobRepo> {
-    TestRepoBuilder::new()
-        .maybe_blobstore(blobstore)
-        .id(repo_id)
-        .build()
-}
-
 pub fn init_all_derived_data() -> DerivedDataConfig {
     DerivedDataConfig {
         scuba_table: None,
@@ -414,89 +284,6 @@ pub fn init_all_derived_data() -> DerivedDataConfig {
         },
         backfilling: DerivedDataTypesConfig::default(),
     }
-}
-
-// Creates all db tables except for filenodes on the same sqlite connection
-pub fn new_memblob_with_sqlite_connection_with_id(
-    con: SqliteConnection,
-    repo_id: RepositoryId,
-) -> Result<(BlobRepo, Connection)> {
-    con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
-    con.execute_batch(SqlChangesets::CREATION_QUERY)?;
-    con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
-    con.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
-    con.execute_batch(SqlBonsaiSvnrevMapping::CREATION_QUERY)?;
-    con.execute_batch(SqlBonsaiHgMapping::CREATION_QUERY)?;
-    con.execute_batch(SqlPhasesFactory::CREATION_QUERY)?;
-    con.execute_batch(SqlHgMutationStoreBuilder::CREATION_QUERY)?;
-    let con = Connection::with_sqlite(con);
-
-    new_memblob_with_connection_with_id(con.clone(), repo_id)
-}
-
-pub fn new_memblob_with_connection_with_id(
-    con: Connection,
-    repo_id: RepositoryId,
-) -> Result<(BlobRepo, Connection)> {
-    let repo_blobstore_args = RepoBlobstoreArgs::new(
-        Arc::new(Memblob::default()),
-        None,
-        repo_id,
-        MononokeScubaSampleBuilder::with_discard(),
-    );
-
-    let sql_connections = SqlConnections::new_single(con.clone());
-
-    let phases_factory = SqlPhasesFactory::from_sql_connections(sql_connections.clone());
-
-    let bookmarks = Arc::new(
-        SqlBookmarksBuilder::from_sql_connections(sql_connections.clone()).with_repo_id(repo_id),
-    );
-    let changesets = Arc::new(SqlChangesets::from_sql_connections(sql_connections.clone()));
-    let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repo_id));
-
-    Ok((
-        blobrepo_new(
-            bookmarks.clone(),
-            bookmarks,
-            repo_blobstore_args,
-            // Filenodes are intentionally created on another connection
-            Arc::new(
-                NewFilenodesBuilder::with_sqlite_in_memory()
-                    .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?
-                    .build(),
-            ),
-            changesets,
-            changeset_fetcher,
-            Arc::new(
-                SqlBonsaiGitMappingConnection::from_sql_connections(sql_connections.clone())
-                    .with_repo_id(repo_id.clone()),
-            ),
-            Arc::new(SqlBonsaiGlobalrevMapping::from_sql_connections(
-                sql_connections.clone(),
-            )),
-            RepoBonsaiSvnrevMapping::new(
-                repo_id,
-                Arc::new(SqlBonsaiSvnrevMapping::from_sql_connections(
-                    sql_connections.clone(),
-                )),
-            ),
-            Arc::new(SqlBonsaiHgMapping::from_sql_connections(
-                sql_connections.clone(),
-            )),
-            Arc::new(
-                SqlHgMutationStoreBuilder::from_sql_connections(sql_connections)
-                    .with_repo_id(repo_id),
-            ),
-            Arc::new(InProcessLease::new()),
-            Arc::new(DisabledSegmentedChangelog::new()),
-            FilestoreConfig::default(),
-            phases_factory,
-            init_all_derived_data(),
-            "testrepo".to_string(),
-        ),
-        con,
-    ))
 }
 
 async fn new_development<'a>(
