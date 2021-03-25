@@ -277,7 +277,6 @@ async fn fetch_root_manifest_id(
 mod tests {
     use super::*;
     use anyhow::{anyhow, Context};
-    use blobrepo_override::DangerousOverride;
     use cloned::cloned;
     use derived_data::{BonsaiDerivable, BonsaiDerived, BonsaiDerivedMapping};
     use fbinit::FacebookInit;
@@ -290,7 +289,11 @@ mod tests {
     use mononoke_types::{FileType, RepositoryId};
     use revset::AncestorsNodeStream;
     use slog::info;
-    use std::{collections::HashMap, sync::Arc};
+    use std::{
+        collections::HashMap,
+        sync::{Arc, Mutex},
+    };
+    use test_repo_factory::TestRepoFactory;
     use tests_utils::resolve_cs_id;
     use tests_utils::CreateCommitContext;
     use tunables::{with_tunables, MononokeTunables};
@@ -560,18 +563,26 @@ mod tests {
     #[fbinit::test]
     async fn derive_parents_before_children(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb).await;
+        let filenodes_cs_id = Arc::new(Mutex::new(None));
+        let mut factory = TestRepoFactory::new()?;
+        let repo = factory
+            .with_filenodes_override({
+                cloned!(filenodes_cs_id);
+                move |inner| {
+                    Arc::new(FilenodesWrapper {
+                        inner,
+                        cs_id: filenodes_cs_id.clone(),
+                    })
+                }
+            })
+            .build()?;
+        linear::initrepo(fb, &repo).await;
         let commit8 =
             resolve_cs_id(&ctx, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await?;
         let commit8 = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), commit8)
             .await?;
-        let repo = repo.dangerous_override(|inner| -> Arc<dyn Filenodes + Send + Sync> {
-            Arc::new(FilenodesWrapper {
-                inner,
-                cs_id: commit8,
-            })
-        });
+        *filenodes_cs_id.lock().unwrap() = Some(commit8);
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
         let mut cs_ids =
             AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
@@ -597,7 +608,7 @@ mod tests {
 
     struct FilenodesWrapper {
         inner: Arc<dyn Filenodes + Send + Sync>,
-        cs_id: HgChangesetId,
+        cs_id: Arc<Mutex<Option<HgChangesetId>>>,
     }
 
     impl Filenodes for FilenodesWrapper {
@@ -608,15 +619,13 @@ mod tests {
             repo_id: RepositoryId,
         ) -> BoxFuture<FilenodeResult<()>, Error> {
             // compare PreparedFilenode::Info::Linknode
-            if info
-                .iter()
-                .any(|filenode| filenode.info.linknode == self.cs_id)
-            {
-                let cs_id = self.cs_id.clone();
-                return async move { Err(anyhow!(format!("filenodes for {} are prohibited", cs_id))) }
-                    .boxed()
-                    .compat()
-                    .boxify();
+            if let Some(cs_id) = *self.cs_id.lock().unwrap() {
+                if info.iter().any(|filenode| filenode.info.linknode == cs_id) {
+                    return async move { Err(anyhow!("filenodes for {} are prohibited", cs_id)) }
+                        .boxed()
+                        .compat()
+                        .boxify();
+                }
             }
             self.inner.add_filenodes(ctx, info, repo_id)
         }

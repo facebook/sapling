@@ -21,7 +21,7 @@ use bonsai_svnrev_mapping::{
     ArcRepoBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
 };
 use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks};
-use cacheblob::InProcessLease;
+use cacheblob::{InProcessLease, LeaseOps};
 use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changeset_info::ChangesetInfo;
 use changesets::{ArcChangesets, SqlChangesets};
@@ -72,6 +72,8 @@ pub struct TestRepoFactory {
     blobstore: Arc<dyn Blobstore>,
     metadata_db: SqlConnections,
     redacted: Option<HashMap<String, RedactedMetadata>>,
+    derived_data_lease: Option<Box<dyn Fn() -> Arc<dyn LeaseOps> + Send + Sync>>,
+    filenodes_override: Option<Box<dyn Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync>>,
 }
 
 fn default_test_repo_config() -> RepoConfig {
@@ -138,6 +140,8 @@ impl TestRepoFactory {
             blobstore: Arc::new(Memblob::default()),
             metadata_db,
             redacted: None,
+            derived_data_lease: None,
+            filenodes_override: None,
         })
     }
 
@@ -167,6 +171,30 @@ impl TestRepoFactory {
     /// Redact content in repos that are built by this factory.
     pub fn redacted(&mut self, redacted: Option<HashMap<String, RedactedMetadata>>) -> &mut Self {
         self.redacted = redacted;
+        self
+    }
+
+    /// Modify the config of the repo.
+    pub fn with_config_override(&mut self, modify: impl FnOnce(&mut RepoConfig)) -> &mut Self {
+        modify(&mut self.config);
+        self
+    }
+
+    /// Override the constructor for the derived data lease.
+    pub fn with_derived_data_lease(
+        &mut self,
+        lease: impl Fn() -> Arc<dyn LeaseOps> + Send + Sync + 'static,
+    ) -> &mut Self {
+        self.derived_data_lease = Some(Box::new(lease));
+        self
+    }
+
+    /// Override filenodes.
+    pub fn with_filenodes_override(
+        &mut self,
+        filenodes_override: impl Fn(ArcFilenodes) -> ArcFilenodes + Send + Sync + 'static,
+    ) -> &mut Self {
+        self.filenodes_override = Some(Box::new(filenodes_override));
         self
     }
 }
@@ -273,9 +301,12 @@ impl TestRepoFactory {
     /// Filenodes do not use the metadata db (each repo has its own filenodes
     /// db in memory).
     pub fn filenodes(&self) -> Result<ArcFilenodes> {
-        Ok(Arc::new(
-            NewFilenodesBuilder::with_sqlite_in_memory()?.build(),
-        ))
+        let mut filenodes: ArcFilenodes =
+            Arc::new(NewFilenodesBuilder::with_sqlite_in_memory()?.build());
+        if let Some(filenodes_override) = &self.filenodes_override {
+            filenodes = filenodes_override(filenodes);
+        }
+        Ok(filenodes)
     }
 
     /// Construct Mercurial Mutation Store using the in-memory metadata
@@ -296,7 +327,10 @@ impl TestRepoFactory {
     /// Construct RepoDerivedData.  Derived data uses an in-process lease for
     /// tests.
     pub fn repo_derived_data(&self, repo_config: &ArcRepoConfig) -> ArcRepoDerivedData {
-        let lease = Arc::new(InProcessLease::new());
+        let lease = self.derived_data_lease.as_ref().map_or_else(
+            || Arc::new(InProcessLease::new()) as Arc<dyn LeaseOps>,
+            |lease| lease(),
+        );
         Arc::new(RepoDerivedData::new(
             repo_config.derived_data_config.clone(),
             lease,

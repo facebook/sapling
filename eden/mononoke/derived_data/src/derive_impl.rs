@@ -540,7 +540,6 @@ mod test {
     use anyhow::{anyhow, Error};
     use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
-    use blobrepo_override::DangerousOverride;
     use bookmarks::BookmarkName;
     use cacheblob::LeaseOps;
     use cloned::cloned;
@@ -555,8 +554,7 @@ mod test {
     use lock_ext::LockExt;
     use maplit::hashmap;
     use mercurial_types::HgChangesetId;
-    use metaconfig_types::DerivedDataConfig;
-    use mononoke_types::BonsaiChangeset;
+    use mononoke_types::{BonsaiChangeset, RepositoryId};
     use revset::AncestorsNodeStream;
     use std::{
         collections::HashMap,
@@ -564,6 +562,7 @@ mod test {
         sync::{Arc, Mutex},
         time::Duration,
     };
+    use test_repo_factory::TestRepoFactory;
     use tests_utils::resolve_cs_id;
     use tunables::{with_tunables, MononokeTunables};
 
@@ -668,14 +667,6 @@ mod test {
     }
 
     async fn derive_for_master(ctx: CoreContext, repo: BlobRepo) {
-        let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
-            derived_data_config
-                .enabled
-                .types
-                .insert(TestGenNum::NAME.to_string());
-            derived_data_config
-        });
-
         let master_book = BookmarkName::new("master").unwrap();
         let bcs_id = repo
             .get_bonsai_bookmark(ctx.clone(), &master_book)
@@ -712,15 +703,19 @@ mod test {
     }
 
     async fn init_linear(fb: FacebookInit) -> BlobRepo {
-        linear::getrepo(fb)
-            .await
-            .dangerous_override(|mut derived_data_config: DerivedDataConfig| {
-                derived_data_config
+        let repo = TestRepoFactory::new()
+            .unwrap()
+            .with_config_override(|repo_config| {
+                repo_config
+                    .derived_data_config
                     .enabled
                     .types
                     .insert(TestGenNum::NAME.to_string());
-                derived_data_config
             })
+            .build()
+            .unwrap();
+        linear::initrepo(fb, &repo).await;
+        repo
     }
 
     #[fbinit::test]
@@ -788,36 +783,54 @@ mod test {
     #[fbinit::test]
     async fn test_derive_for_fixture_repos(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
+        let mut factory = TestRepoFactory::new()?;
+        factory.with_config_override(|repo_config| {
+            repo_config
+                .derived_data_config
+                .enabled
+                .types
+                .insert(TestGenNum::NAME.to_string());
+        });
 
-        let repo = branch_even::getrepo(fb).await;
-        derive_for_master(ctx.clone(), repo.clone()).await;
+        let repo = factory.with_id(RepositoryId::new(1)).build()?;
+        branch_even::initrepo(fb, &repo).await;
+        derive_for_master(ctx.clone(), repo).await;
 
-        let repo = branch_uneven::getrepo(fb).await;
-        derive_for_master(ctx.clone(), repo.clone()).await;
+        let repo = factory.with_id(RepositoryId::new(2)).build()?;
+        branch_uneven::initrepo(fb, &repo).await;
+        derive_for_master(ctx.clone(), repo).await;
 
-        let repo = branch_wide::getrepo(fb).await;
-        derive_for_master(ctx.clone(), repo.clone()).await;
+        let repo = factory.with_id(RepositoryId::new(3)).build()?;
+        branch_wide::initrepo(fb, &repo).await;
+        derive_for_master(ctx.clone(), repo).await;
 
-        let repo = linear::getrepo(fb).await;
-        derive_for_master(ctx.clone(), repo.clone()).await;
+        let repo = factory.with_id(RepositoryId::new(4)).build()?;
+        linear::initrepo(fb, &repo).await;
+        derive_for_master(ctx.clone(), repo).await;
 
-        let repo = many_files_dirs::getrepo(fb).await;
-        derive_for_master(ctx.clone(), repo.clone()).await;
+        let repo = factory.with_id(RepositoryId::new(5)).build()?;
+        many_files_dirs::initrepo(fb, &repo).await;
+        derive_for_master(ctx.clone(), repo).await;
 
-        let repo = merge_even::getrepo(fb).await;
-        derive_for_master(ctx.clone(), repo.clone()).await;
+        let repo = factory.with_id(RepositoryId::new(6)).build()?;
+        merge_even::initrepo(fb, &repo).await;
+        derive_for_master(ctx.clone(), repo).await;
 
-        let repo = merge_uneven::getrepo(fb).await;
-        derive_for_master(ctx.clone(), repo.clone()).await;
+        let repo = factory.with_id(RepositoryId::new(7)).build()?;
+        merge_uneven::initrepo(fb, &repo).await;
+        derive_for_master(ctx.clone(), repo).await;
 
-        let repo = unshared_merge_even::getrepo(fb).await;
-        derive_for_master(ctx.clone(), repo.clone()).await;
+        let repo = factory.with_id(RepositoryId::new(8)).build()?;
+        unshared_merge_even::initrepo(fb, &repo).await;
+        derive_for_master(ctx.clone(), repo).await;
 
-        let repo = unshared_merge_uneven::getrepo(fb).await;
-        derive_for_master(ctx.clone(), repo.clone()).await;
+        let repo = factory.with_id(RepositoryId::new(9)).build()?;
+        unshared_merge_uneven::initrepo(fb, &repo).await;
+        derive_for_master(ctx.clone(), repo).await;
 
-        let repo = many_diamonds::getrepo(fb).await;
-        derive_for_master(ctx.clone(), repo.clone()).await;
+        let repo = factory.with_id(RepositoryId::new(10)).build()?;
+        many_diamonds::initrepo(fb, &repo).await;
+        derive_for_master(ctx.clone(), repo).await;
 
         Ok(())
     }
@@ -826,14 +839,7 @@ mod test {
     async fn test_batch_derive(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let from_batch = {
-            let repo = linear::getrepo(fb).await;
-            let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
-                derived_data_config
-                    .enabled
-                    .types
-                    .insert(TestGenNum::NAME.to_string());
-                derived_data_config
-            });
+            let repo = init_linear(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
 
             let cs_ids =
@@ -853,14 +859,7 @@ mod test {
         };
 
         let sequential = {
-            let repo = linear::getrepo(fb).await;
-            let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
-                derived_data_config
-                    .enabled
-                    .types
-                    .insert(TestGenNum::NAME.to_string());
-                derived_data_config
-            });
+            let repo = init_linear(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
             TestGenNum::derive(&ctx, &repo, master_cs_id).await?
         };
@@ -953,9 +952,18 @@ mod test {
     #[fbinit::test]
     async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = init_linear(fb)
-            .await
-            .dangerous_override(|_| Arc::new(FailingLease) as Arc<dyn LeaseOps>);
+        let repo = TestRepoFactory::new()?
+            .with_config_override(|repo_config| {
+                repo_config
+                    .derived_data_config
+                    .enabled
+                    .types
+                    .insert(TestGenNum::NAME.to_string());
+            })
+            .with_derived_data_lease(|| Arc::new(FailingLease))
+            .build()
+            .unwrap();
+        linear::initrepo(fb, &repo).await;
         let mapping = TestGenNum::default_mapping(&ctx, &repo)?;
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;

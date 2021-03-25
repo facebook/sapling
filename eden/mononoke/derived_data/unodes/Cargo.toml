@@ -28,7 +28,6 @@ thiserror = "1.0"
 
 [dev-dependencies]
 blobrepo_hg = { version = "0.1.0", path = "../../blobrepo/blobrepo_hg" }
-blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 derived_data_filenodes = { version = "0.1.0", path = "../filenodes" }
 derived_data_test_utils = { version = "0.1.0", path = "../test_utils" }

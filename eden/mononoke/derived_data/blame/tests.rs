@@ -8,15 +8,14 @@
 use crate::{fetch_blame, BlameError};
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
-use blobrepo_override::DangerousOverride;
 use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use maplit::{btreemap, hashmap};
-use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{Blame, ChangesetId, MPath};
 use std::collections::HashMap;
+use test_repo_factory::TestRepoFactory;
 use tests_utils::{create_commit, store_files, store_rename, CreateCommitContext};
 
 // File with multiple changes and a merge
@@ -247,10 +246,11 @@ async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Err
     // without problems.
     fetch_blame(ctx, repo, c1, MPath::new(file1)?).await?;
 
-    let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
-        derived_data_config.enabled.blame_filesize_limit = Some(4);
-        derived_data_config
-    });
+    let repo: BlobRepo = TestRepoFactory::new()?
+        .with_config_override(|config| {
+            config.derived_data_config.enabled.blame_filesize_limit = Some(4);
+        })
+        .build()?;
 
     let file2 = "file2";
     let c2 = CreateCommitContext::new_root(ctx, &repo)
@@ -258,7 +258,7 @@ async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Err
         .commit()
         .await?;
 
-    // We decreased the limit, so derivation should fail now
+    // This repo has a decreased limit, so derivation should fail now
     let res = fetch_blame(ctx, &repo, c2, MPath::new(file2)?).await;
 
     match res {

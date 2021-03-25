@@ -380,7 +380,6 @@ mod tests {
     use blobrepo::save_bonsai_changesets;
     use blobrepo::BlobRepo;
     use blobrepo_hg::BlobRepoHg;
-    use blobrepo_override::DangerousOverride;
     use blobstore::Storable;
     use bytes::Bytes;
     use derived_data::BonsaiDerived;
@@ -392,12 +391,12 @@ mod tests {
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::{blobs::HgBlobManifest, HgFileNodeId, HgManifestId};
-    use metaconfig_types::DerivedDataConfig;
     use mononoke_types::{
         BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileContents,
         RepoPath,
     };
     use std::collections::{BTreeMap, HashSet, VecDeque};
+    use test_repo_factory::TestRepoFactory;
     use tests_utils::{resolve_cs_id, CreateCommitContext};
 
     #[fbinit::test]
@@ -579,7 +578,8 @@ mod tests {
 
     async fn diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo: BlobRepo = test_repo_factory::build_empty().unwrap();
+        let mut factory = TestRepoFactory::new()?;
+        let repo: BlobRepo = factory.build()?;
         let merged_files = "dir/file.txt";
         let root_commit = CreateCommitContext::new_root(&ctx, &repo)
             .add_file(merged_files, "a")
@@ -642,10 +642,11 @@ mod tests {
         assert_eq!(p1_unodes, merge_unodes);
 
         // Unodes v1 should create a new one that points to the parent unode
-        let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
-            derived_data_config.enabled.unode_version = UnodeVersion::V1;
-            derived_data_config
-        });
+        let repo: BlobRepo = factory
+            .with_config_override(|config| {
+                config.derived_data_config.enabled.unode_version = UnodeVersion::V1;
+            })
+            .build()?;
         let (p1_unodes, merge_unodes) = find_unodes(ctx.clone(), repo.clone()).await?;
         assert_ne!(p1_unodes, merge_unodes);
 

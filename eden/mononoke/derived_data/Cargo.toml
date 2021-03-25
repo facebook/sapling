@@ -32,7 +32,6 @@ tunables = { version = "0.1.0", path = "../tunables" }
 
 [dev-dependencies]
 blobrepo_hg = { version = "0.1.0", path = "../blobrepo/blobrepo_hg" }
-blobrepo_override = { version = "0.1.0", path = "../blobrepo/override" }
 bookmarks = { version = "0.1.0", path = "../bookmarks" }
 cloned = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
