@@ -1276,7 +1276,7 @@ mod tests {
     use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
     use blobrepo_override::DangerousOverride;
-    use bookmarks::{BookmarkTransactionError, BookmarkUpdateLog, Bookmarks};
+    use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks, BookmarkTransactionError};
     use dbbookmarks::SqlBookmarksBuilder;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
@@ -1464,14 +1464,7 @@ mod tests {
     // sqlite connection
     async fn init_bookmarks_mutable_counters(
         repo_id: RepositoryId,
-    ) -> Result<
-        (
-            Arc<dyn Bookmarks>,
-            Arc<dyn BookmarkUpdateLog>,
-            Arc<SqlMutableCounters>,
-        ),
-        Error,
-    > {
+    ) -> Result<(ArcBookmarks, ArcBookmarkUpdateLog, Arc<SqlMutableCounters>), Error> {
         let con = SqliteConnection::open_in_memory()?;
         con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
         con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
@@ -1486,8 +1479,8 @@ mod tests {
         ));
 
         Ok((
-            bookmarks.clone() as Arc<dyn Bookmarks>,
-            bookmarks as Arc<dyn BookmarkUpdateLog>,
+            bookmarks.clone() as ArcBookmarks,
+            bookmarks as ArcBookmarkUpdateLog,
             mutable_counters,
         ))
     }

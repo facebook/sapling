@@ -37,8 +37,8 @@ mod version_store;
 mod tests;
 
 pub use segmented_changelog_types::{
-    dag, CloneData, FirstAncestorConstraint, FlatSegment, Group, InProcessIdDag, Location,
-    PreparedFlatSegments, SegmentedChangelog, StreamCloneData, Vertex,
+    dag, ArcSegmentedChangelog, CloneData, FirstAncestorConstraint, FlatSegment, Group,
+    InProcessIdDag, Location, PreparedFlatSegments, SegmentedChangelog, StreamCloneData, Vertex,
 };
 
 pub use crate::builder::{

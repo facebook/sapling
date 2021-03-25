@@ -124,6 +124,7 @@ pub struct ChangesetInsert {
 }
 
 /// Interface to storage of changesets that have been completely stored in Mononoke.
+#[facet::facet]
 #[async_trait]
 #[auto_impl(&, Arc)]
 pub trait Changesets: Send + Sync {

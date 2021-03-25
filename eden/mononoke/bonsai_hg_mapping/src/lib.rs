@@ -113,6 +113,7 @@ impl From<Vec<HgChangesetId>> for BonsaiOrHgChangesetIds {
     }
 }
 
+#[facet::facet]
 #[async_trait]
 #[auto_impl(&, Arc, Box)]
 pub trait BonsaiHgMapping: Send + Sync {

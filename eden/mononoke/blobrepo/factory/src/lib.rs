@@ -11,23 +11,23 @@ use blobrepo::BlobRepo;
 use blobrepo_errors::*;
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, make_metadata_sql_factory, MetadataSqlFactory};
-use bonsai_git_mapping::{BonsaiGitMapping, SqlBonsaiGitMappingConnection};
+use bonsai_git_mapping::{ArcBonsaiGitMapping, SqlBonsaiGitMappingConnection};
 use bonsai_globalrev_mapping::{
-    BonsaiGlobalrevMapping, CachingBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
+    ArcBonsaiGlobalrevMapping, CachingBonsaiGlobalrevMapping, SqlBonsaiGlobalrevMapping,
 };
-use bonsai_hg_mapping::{BonsaiHgMapping, CachingBonsaiHgMapping, SqlBonsaiHgMapping};
+use bonsai_hg_mapping::{ArcBonsaiHgMapping, CachingBonsaiHgMapping, SqlBonsaiHgMapping};
 use bonsai_svnrev_mapping::{
     CachingBonsaiSvnrevMapping, RepoBonsaiSvnrevMapping, SqlBonsaiSvnrevMapping,
 };
-use bookmarks::{BookmarkUpdateLog, Bookmarks, CachedBookmarks};
+use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks, CachedBookmarks};
 use cacheblob::{
     new_cachelib_blobstore_no_lease, new_memcache_blobstore, CachelibBlobstoreOptions,
     InProcessLease, LeaseOps, MemcacheOps,
 };
 use cached_config::ConfigStore;
-use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
+use changeset_fetcher::{ArcChangesetFetcher, SimpleChangesetFetcher};
 use changeset_info::ChangesetInfo;
-use changesets::{CachingChangesets, Changesets, SqlChangesets};
+use changesets::{ArcChangesets, CachingChangesets, SqlChangesets};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use deleted_files_manifest::RootDeletedManifestId;
@@ -35,7 +35,7 @@ use derived_data::BonsaiDerivable;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use fastlog::RootFastlog;
 use fbinit::FacebookInit;
-use filenodes::Filenodes;
+use filenodes::ArcFilenodes;
 use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
 use futures::{future, try_join};
@@ -44,7 +44,7 @@ use git_types::TreeHandle;
 use maplit::hashset;
 use memblob::Memblob;
 use mercurial_derived_data::MappedHgChangesetId;
-use mercurial_mutation::{HgMutationStore, SqlHgMutationStoreBuilder};
+use mercurial_mutation::{ArcHgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
     self, CensoredScubaParams, DerivedDataConfig, DerivedDataTypesConfig, Redaction, RepoConfig,
     SegmentedChangelogConfig, StorageConfig, UnodeVersion,
@@ -57,7 +57,7 @@ use redactedblobstore::{RedactedMetadata, SqlRedactedContentStore};
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::MononokeScubaSampleBuilder;
 use segmented_changelog::{
-    new_server_segmented_changelog, DisabledSegmentedChangelog, SegmentedChangelog,
+    new_server_segmented_changelog, ArcSegmentedChangelog, DisabledSegmentedChangelog,
     SegmentedChangelogSqlConnections,
 };
 use skeleton_manifest::RootSkeletonManifestId;
@@ -522,7 +522,7 @@ async fn new_development<'a>(
                 .with_repo_id(repoid),
         );
 
-        let bookmarks: Arc<dyn Bookmarks> = if let Some(ttl) = bookmarks_cache_ttl {
+        let bookmarks: ArcBookmarks = if let Some(ttl) = bookmarks_cache_ttl {
             Arc::new(CachedBookmarks::new(sql_bookmarks.clone(), ttl, repoid))
         } else {
             sql_bookmarks.clone()
@@ -624,18 +624,18 @@ async fn new_development<'a>(
 
     let censored_scuba_builder = get_censored_scuba_builder(fb, censored_scuba_params)?;
     let changesets = Arc::new(changesets);
-    let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+    let changeset_fetcher: ArcChangesetFetcher =
         Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
     let repo_blobstore_args =
         RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, censored_scuba_builder);
-    let segmented_changelog: Arc<dyn SegmentedChangelog> = new_server_segmented_changelog(
+    let segmented_changelog: ArcSegmentedChangelog = new_server_segmented_changelog(
         fb,
         &CoreContext::new_with_logger(fb, logger.clone()),
         repoid,
         segmented_changelog_config,
         segmented_changelog_sql_connections,
-        Arc::clone(&changeset_fetcher),
-        Arc::clone(&bookmarks),
+        changeset_fetcher.clone(),
+        bookmarks.clone(),
         Arc::new(repo_blobstore_args.repo_blobstore_clone()),
         None,
     )
@@ -759,7 +759,7 @@ async fn new_production<'a>(
     );
 
     let bookmarks = Arc::new(bookmarks);
-    let (bookmarks, bookmark_update_log): (Arc<dyn Bookmarks>, Arc<dyn BookmarkUpdateLog>) =
+    let (bookmarks, bookmark_update_log): (ArcBookmarks, ArcBookmarkUpdateLog) =
         if let Some(ttl) = bookmarks_cache_ttl {
             (
                 Arc::new(CachedBookmarks::new(bookmarks.clone(), ttl, repoid)),
@@ -774,7 +774,7 @@ async fn new_production<'a>(
         Arc::new(changesets),
         changesets_cache_pool,
     ));
-    let changeset_fetcher: Arc<dyn ChangesetFetcher> =
+    let changeset_fetcher: ArcChangesetFetcher =
         Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
 
     let bonsai_globalrev_mapping = CachingBonsaiGlobalrevMapping::new(
@@ -799,14 +799,14 @@ async fn new_production<'a>(
     let censored_scuba_builder = get_censored_scuba_builder(fb, censored_scuba_params)?;
     let repo_blobstore_args =
         RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, censored_scuba_builder);
-    let segmented_changelog: Arc<dyn SegmentedChangelog> = new_server_segmented_changelog(
+    let segmented_changelog: ArcSegmentedChangelog = new_server_segmented_changelog(
         fb,
         &CoreContext::new_with_logger(fb, logger.clone()),
         repoid,
         segmented_changelog_config,
         segmented_changelog_sql_connections,
-        Arc::clone(&changeset_fetcher),
-        Arc::clone(&bookmarks),
+        changeset_fetcher.clone(),
+        bookmarks.clone(),
         Arc::new(repo_blobstore_args.repo_blobstore_clone()),
         Some(get_volatile_pool("segmented_changelog")?),
     )
@@ -817,7 +817,7 @@ async fn new_production<'a>(
         bookmarks,
         bookmark_update_log,
         repo_blobstore_args,
-        Arc::new(filenodes_builder.build()) as Arc<dyn Filenodes>,
+        Arc::new(filenodes_builder.build()) as ArcFilenodes,
         changesets,
         changeset_fetcher,
         Arc::new(bonsai_git_mapping),
@@ -881,19 +881,19 @@ pub fn get_cachelib_blobstore<B: Blobstore + 'static>(
 }
 
 pub fn blobrepo_new(
-    bookmarks: Arc<dyn Bookmarks>,
-    bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
+    bookmarks: ArcBookmarks,
+    bookmark_update_log: ArcBookmarkUpdateLog,
     blobstore_args: RepoBlobstoreArgs,
-    filenodes: Arc<dyn Filenodes>,
-    changesets: Arc<dyn Changesets>,
-    changeset_fetcher: Arc<dyn ChangesetFetcher>,
-    bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
-    bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
+    filenodes: ArcFilenodes,
+    changesets: ArcChangesets,
+    changeset_fetcher: ArcChangesetFetcher,
+    bonsai_git_mapping: ArcBonsaiGitMapping,
+    bonsai_globalrev_mapping: ArcBonsaiGlobalrevMapping,
     bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
-    bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
-    hg_mutation_store: Arc<dyn HgMutationStore>,
+    bonsai_hg_mapping: ArcBonsaiHgMapping,
+    hg_mutation_store: ArcHgMutationStore,
     derived_data_lease: Arc<dyn LeaseOps>,
-    segmented_changelog: Arc<dyn SegmentedChangelog>,
+    segmented_changelog: ArcSegmentedChangelog,
     filestore_config: FilestoreConfig,
     phases_factory: SqlPhasesFactory,
     derived_data_config: DerivedDataConfig,

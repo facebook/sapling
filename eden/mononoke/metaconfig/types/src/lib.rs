@@ -121,6 +121,7 @@ pub struct CensoredScubaParams {
 }
 
 /// Configuration of a single repository
+#[facet::facet]
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct RepoConfig {
     /// If false, this repo config is completely ignored.

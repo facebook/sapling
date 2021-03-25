@@ -29,8 +29,8 @@ use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
 use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::{
-    BookmarkTransactionError, BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason,
-    Bookmarks, BundleReplay, Freshness,
+    ArcBookmarkUpdateLog, ArcBookmarks, BookmarkTransactionError, BookmarkUpdateLogEntry,
+    BookmarkUpdateReason, BundleReplay, Freshness,
 };
 use cloned::cloned;
 use context::CoreContext;
@@ -426,8 +426,8 @@ where
 #[derive(Clone)]
 pub struct TargetRepoDbs {
     pub connections: SqlConnections,
-    pub bookmarks: Arc<dyn Bookmarks>,
-    pub bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
+    pub bookmarks: ArcBookmarks,
+    pub bookmark_update_log: ArcBookmarkUpdateLog,
     pub counters: SqlMutableCounters,
 }
 

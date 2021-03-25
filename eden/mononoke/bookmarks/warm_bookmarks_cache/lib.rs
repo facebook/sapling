@@ -815,7 +815,7 @@ mod tests {
     use anyhow::anyhow;
     use blobrepo_override::DangerousOverride;
     use blobstore::Blobstore;
-    use bookmarks::BookmarkUpdateLog;
+    use bookmarks::ArcBookmarkUpdateLog;
     use cloned::cloned;
     use consts::HIGHEST_IMPORTED_GEN_NUM;
     use dbbookmarks::SqlBookmarksBuilder;
@@ -1472,8 +1472,7 @@ mod tests {
 
         let bookmarks_log_override =
             Arc::new(SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(repo.get_repoid()));
-        let repo =
-            repo.dangerous_override(|_| bookmarks_log_override as Arc<dyn BookmarkUpdateLog>);
+        let repo = repo.dangerous_override(|_| bookmarks_log_override as ArcBookmarkUpdateLog);
         single_bookmark_updater(
             &ctx,
             &repo,

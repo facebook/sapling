@@ -27,37 +27,34 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
-use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiOrHgChangesetIds};
+use bonsai_hg_mapping::{ArcBonsaiHgMapping, BonsaiHgMapping, BonsaiOrHgChangesetIds};
 use bookmarks::{
     Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness,
 };
 use cloned::cloned;
 use context::CoreContext;
-use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes};
+use filenodes::{ArcFilenodes, FilenodeInfo, FilenodeRangeResult, FilenodeResult};
 use futures::{
     compat::Future01CompatExt,
     future,
     stream::{self, BoxStream},
     Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
-use mercurial_mutation::HgMutationStore;
+use mercurial_mutation::ArcHgMutationStore;
 use mercurial_types::{HgChangesetId, HgFileNodeId};
 use mononoke_types::{ChangesetId, RepoPath};
 use stats::prelude::*;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::collections::{HashMap, HashSet};
 
 /// `BlobRepoHg` is an extension trait for `BlobRepo` which contains
 /// mercurial specific methods.
 #[async_trait]
 pub trait BlobRepoHg {
-    fn get_bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping>;
+    fn get_bonsai_hg_mapping(&self) -> &ArcBonsaiHgMapping;
 
-    fn get_filenodes(&self) -> &Arc<dyn Filenodes>;
+    fn get_filenodes(&self) -> &ArcFilenodes;
 
-    fn hg_mutation_store(&self) -> &Arc<dyn HgMutationStore>;
+    fn hg_mutation_store(&self) -> &ArcHgMutationStore;
 
     async fn get_bonsai_from_hg(
         &self,
@@ -155,15 +152,15 @@ define_stats! {
 
 #[async_trait]
 impl BlobRepoHg for BlobRepo {
-    fn get_bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping> {
+    fn get_bonsai_hg_mapping(&self) -> &ArcBonsaiHgMapping {
         self.bonsai_hg_mapping()
     }
 
-    fn get_filenodes(&self) -> &Arc<dyn Filenodes> {
+    fn get_filenodes(&self) -> &ArcFilenodes {
         self.filenodes()
     }
 
-    fn hg_mutation_store(&self) -> &Arc<dyn HgMutationStore> {
+    fn hg_mutation_store(&self) -> &ArcHgMutationStore {
         self.hg_mutation_store()
     }
 

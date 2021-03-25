@@ -26,6 +26,7 @@ const MC_SITEVER: u32 = 0;
 
 /// Factory that can be used to produce SqlPhasesStore object
 /// Primarily intended to be used by BlobRepo
+#[facet::facet]
 #[derive(Clone)]
 pub struct SqlPhasesFactory {
     write_connection: Connection,

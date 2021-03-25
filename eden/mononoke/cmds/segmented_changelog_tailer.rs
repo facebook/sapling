@@ -16,7 +16,7 @@ use futures::future::join_all;
 use slog::{error, info};
 
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
-use bookmarks::BookmarkName;
+use bookmarks::{BookmarkName, Bookmarks};
 use cmdlib::{
     args::{self, MononokeMatches},
     helpers,
@@ -152,7 +152,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
             replica_lag_monitor,
             blobrepo.get_changeset_fetcher(),
             Arc::new(blobrepo.get_blobstore()),
-            Arc::clone(blobrepo.bookmarks()),
+            Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
             track_bookmark,
             caching.clone(),
         );

@@ -31,6 +31,7 @@ pub use crate::builder::SqlHgMutationStoreBuilder;
 pub use crate::entry::HgMutationEntry;
 pub use crate::store::SqlHgMutationStore;
 
+#[facet::facet]
 #[async_trait]
 pub trait HgMutationStore: Send + Sync {
     /// Add new entries to the mutation store.

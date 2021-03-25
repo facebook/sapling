@@ -77,6 +77,7 @@ impl From<Vec<Globalrev>> for BonsaisOrGlobalrevs {
     }
 }
 
+#[facet::facet]
 #[async_trait]
 #[auto_impl(&, Arc, Box)]
 pub trait BonsaiGlobalrevMapping: Send + Sync {

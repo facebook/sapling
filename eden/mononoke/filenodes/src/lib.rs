@@ -145,6 +145,7 @@ impl Arbitrary for FilenodeInfo {
     }
 }
 
+#[facet::facet]
 pub trait Filenodes: Send + Sync {
     fn add_filenodes(
         &self,

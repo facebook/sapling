@@ -9,12 +9,12 @@
 
 use blobrepo::{BlobRepo, BlobRepoInner};
 use blobstore::Blobstore;
-use bonsai_hg_mapping::BonsaiHgMapping;
-use bookmarks::{BookmarkUpdateLog, Bookmarks};
+use bonsai_hg_mapping::ArcBonsaiHgMapping;
+use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks};
 use cacheblob::LeaseOps;
 use changeset_fetcher::SimpleChangesetFetcher;
-use changesets::Changesets;
-use filenodes::Filenodes;
+use changesets::ArcChangesets;
+use filenodes::ArcFilenodes;
 use filestore::FilestoreConfig;
 use metaconfig_types::DerivedDataConfig;
 use repo_blobstore::RepoBlobstoreArgs;
@@ -67,23 +67,24 @@ impl DangerousOverride<Arc<dyn Blobstore>> for BlobRepoInner {
         F: FnOnce(Arc<dyn Blobstore>) -> Arc<dyn Blobstore>,
     {
         let (blobstore, repoid) = RepoBlobstoreArgs::new_with_wrapped_inner_blobstore(
-            self.blobstore.clone(),
+            self.repo_blobstore.as_ref().clone(),
             self.repoid,
             modify,
         )
         .into_blobrepo_parts();
+        let repo_blobstore = Arc::new(blobstore);
         Self {
             repoid,
-            blobstore,
+            repo_blobstore,
             ..self.clone()
         }
     }
 }
 
-impl DangerousOverride<Arc<dyn Bookmarks>> for BlobRepoInner {
+impl DangerousOverride<ArcBookmarks> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
-        F: FnOnce(Arc<dyn Bookmarks>) -> Arc<dyn Bookmarks>,
+        F: FnOnce(ArcBookmarks) -> ArcBookmarks,
     {
         let bookmarks = modify(self.bookmarks.clone());
         Self {
@@ -93,10 +94,10 @@ impl DangerousOverride<Arc<dyn Bookmarks>> for BlobRepoInner {
     }
 }
 
-impl DangerousOverride<Arc<dyn BookmarkUpdateLog>> for BlobRepoInner {
+impl DangerousOverride<ArcBookmarkUpdateLog> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
-        F: FnOnce(Arc<dyn BookmarkUpdateLog>) -> Arc<dyn BookmarkUpdateLog>,
+        F: FnOnce(ArcBookmarkUpdateLog) -> ArcBookmarkUpdateLog,
     {
         let bookmark_update_log = modify(self.bookmark_update_log.clone());
         Self {
@@ -106,10 +107,10 @@ impl DangerousOverride<Arc<dyn BookmarkUpdateLog>> for BlobRepoInner {
     }
 }
 
-impl DangerousOverride<Arc<dyn Changesets>> for BlobRepoInner {
+impl DangerousOverride<ArcChangesets> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
-        F: FnOnce(Arc<dyn Changesets>) -> Arc<dyn Changesets>,
+        F: FnOnce(ArcChangesets) -> ArcChangesets,
     {
         let changesets = modify(self.changesets.clone());
         let changeset_fetcher =
@@ -123,10 +124,10 @@ impl DangerousOverride<Arc<dyn Changesets>> for BlobRepoInner {
     }
 }
 
-impl DangerousOverride<Arc<dyn Filenodes>> for BlobRepoInner {
+impl DangerousOverride<ArcFilenodes> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
-        F: FnOnce(Arc<dyn Filenodes>) -> Arc<dyn Filenodes>,
+        F: FnOnce(ArcFilenodes) -> ArcFilenodes,
     {
         let filenodes = modify(self.filenodes.clone());
         Self {
@@ -136,10 +137,10 @@ impl DangerousOverride<Arc<dyn Filenodes>> for BlobRepoInner {
     }
 }
 
-impl DangerousOverride<Arc<dyn BonsaiHgMapping>> for BlobRepoInner {
+impl DangerousOverride<ArcBonsaiHgMapping> for BlobRepoInner {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where
-        F: FnOnce(Arc<dyn BonsaiHgMapping>) -> Arc<dyn BonsaiHgMapping>,
+        F: FnOnce(ArcBonsaiHgMapping) -> ArcBonsaiHgMapping,
     {
         let bonsai_hg_mapping = modify(self.bonsai_hg_mapping.clone());
         Self {
@@ -171,7 +172,7 @@ impl DangerousOverride<FilestoreConfig> for BlobRepoInner {
     where
         F: FnOnce(FilestoreConfig) -> FilestoreConfig,
     {
-        let filestore_config = modify(self.filestore_config.clone());
+        let filestore_config = Arc::new(modify(self.filestore_config.as_ref().clone()));
         Self {
             filestore_config,
             ..self.clone()

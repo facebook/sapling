@@ -61,6 +61,7 @@ mod test;
 /// the same blobstore key structure and the same encoding schemes for existing files.
 /// Extensions (compression, chunking) will change this, but it will still allow backwards
 /// compatibility.
+#[facet::facet]
 #[derive(Debug, Copy, Clone)]
 pub struct FilestoreConfig {
     pub chunk_size: Option<u64>,

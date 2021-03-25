@@ -65,15 +65,19 @@ impl SegmentedChangelogManager {
         }
     }
 
-    pub async fn load(&self, ctx: &CoreContext) -> Result<Arc<dyn SegmentedChangelog>> {
+    pub async fn load(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<Arc<dyn SegmentedChangelog + Send + Sync>> {
         let monitored = async {
             let on_demand = self.load_ondemand_update(ctx).await?;
-            let asc: Arc<dyn SegmentedChangelog> = match self.update_to_master_bookmark_period {
-                None => on_demand,
-                Some(period) => {
-                    Arc::new(on_demand.with_periodic_update_to_master_bookmark(ctx, period))
-                }
-            };
+            let asc: Arc<dyn SegmentedChangelog + Send + Sync> =
+                match self.update_to_master_bookmark_period {
+                    None => on_demand,
+                    Some(period) => {
+                        Arc::new(on_demand.with_periodic_update_to_master_bookmark(ctx, period))
+                    }
+                };
             Ok(asc)
         };
 
@@ -156,7 +160,7 @@ segmented_changelog_delegate!(SegmentedChangelogManager, |&self, ctx: &CoreConte
 });
 
 pub struct PeriodicReloadSegmentedChangelog {
-    sc: Arc<ArcSwap<Arc<dyn SegmentedChangelog>>>,
+    sc: Arc<ArcSwap<Arc<dyn SegmentedChangelog + Send + Sync>>>,
     _handle: ControlledHandle,
     #[allow(dead_code)] // useful for testing
     update_notify: Arc<Notify>,

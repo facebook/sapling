@@ -566,7 +566,7 @@ mod tests {
         let commit8 = repo
             .get_hg_from_bonsai_changeset(ctx.clone(), commit8)
             .await?;
-        let repo = repo.dangerous_override(|inner| -> Arc<dyn Filenodes> {
+        let repo = repo.dangerous_override(|inner| -> Arc<dyn Filenodes + Send + Sync> {
             Arc::new(FilenodesWrapper {
                 inner,
                 cs_id: commit8,
@@ -596,7 +596,7 @@ mod tests {
     }
 
     struct FilenodesWrapper {
-        inner: Arc<dyn Filenodes>,
+        inner: Arc<dyn Filenodes + Send + Sync>,
         cs_id: HgChangesetId,
     }
 

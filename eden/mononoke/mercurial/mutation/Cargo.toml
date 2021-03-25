@@ -13,6 +13,7 @@ path = "test/main.rs"
 anyhow = "1.0"
 async-trait = "0.1.45"
 context = { version = "0.1.0", path = "../../server/context" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3.13", features = ["async-await", "compat"] }
 mercurial_types = { version = "0.1.0", path = "../types" }
 metaconfig_types = { version = "0.1.0", path = "../../metaconfig/types" }

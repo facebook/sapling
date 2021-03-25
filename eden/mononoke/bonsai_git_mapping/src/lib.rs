@@ -83,6 +83,7 @@ impl From<Vec<GitSha1>> for BonsaisOrGitShas {
     }
 }
 
+#[facet::facet]
 #[async_trait]
 pub trait BonsaiGitMapping: Send + Sync {
     async fn bulk_add(

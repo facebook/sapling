@@ -40,6 +40,7 @@ pub struct BookmarkUpdateLogEntry {
     pub bundle_replay_data: Option<RawBundleReplayData>,
 }
 
+#[facet::facet]
 pub trait BookmarkUpdateLog: Send + Sync + 'static {
     /// Read the next up to `limit` entries from Bookmark update log. It either returns
     /// new log entries with id bigger than `id` or empty stream if there are no more

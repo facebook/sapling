@@ -237,6 +237,7 @@ queries! {
     }
 }
 
+#[facet::facet]
 #[derive(Clone)]
 pub struct SqlBookmarks {
     repo_id: RepositoryId,

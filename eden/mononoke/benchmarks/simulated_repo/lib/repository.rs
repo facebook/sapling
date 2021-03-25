@@ -27,7 +27,9 @@ use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use delayblob::DelayedBlobstore;
 use fbinit::FacebookInit;
-use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes, PreparedFilenode};
+use filenodes::{
+    ArcFilenodes, FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes, PreparedFilenode,
+};
 use filestore::FilestoreConfig;
 use futures::future::{FutureExt as _, TryFutureExt as _};
 use futures_ext::{BoxFuture, FutureExt};
@@ -96,7 +98,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         let mut builder = NewFilenodesBuilder::with_sqlite_in_memory()?;
         builder.enable_caching(fb, pool.clone(), pool, "filenodes", "");
 
-        let filenodes: Arc<dyn Filenodes> = Arc::new(DelayedFilenodes::new(
+        let filenodes: ArcFilenodes = Arc::new(DelayedFilenodes::new(
             builder.build(),
             settings.db_get_dist,
             settings.db_put_dist,

@@ -13,9 +13,9 @@ mod mem_writes_changesets;
 use anyhow::Error;
 use blobrepo_override::DangerousOverride;
 use blobstore::Blobstore;
-use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::ArcBonsaiHgMapping;
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
-use changesets::Changesets;
+use changesets::ArcChangesets;
 use clap::{Arg, SubCommand};
 use cmdlib::{
     args::{self, RepoRequirement},
@@ -163,10 +163,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
                     Arc::new(MemWritesBlobstore::new(blobstore))
                 })
-                .dangerous_override(|changesets| -> Arc<dyn Changesets> {
+                .dangerous_override(|changesets| -> ArcChangesets {
                     Arc::new(MemWritesChangesets::new(changesets))
                 })
-                .dangerous_override(|bonsai_hg_mapping| -> Arc<dyn BonsaiHgMapping> {
+                .dangerous_override(|bonsai_hg_mapping| -> ArcBonsaiHgMapping {
                     Arc::new(MemWritesBonsaiHgMapping::new(bonsai_hg_mapping))
                 })
                 .dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>)

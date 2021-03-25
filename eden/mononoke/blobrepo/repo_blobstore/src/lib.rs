@@ -40,6 +40,7 @@ impl<T: Blobstore + Clone> AbstractRepoBlobstore<T> {
     }
 }
 
+#[facet::facet]
 #[derive(Clone, Debug)]
 pub struct RepoBlobstore(AbstractRepoBlobstore<Arc<dyn Blobstore>>);
 

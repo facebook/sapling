@@ -17,7 +17,7 @@ use futures::StreamExt;
 use once_cell::sync::Lazy;
 
 use blobrepo::BlobRepo;
-use bookmarks::BookmarkName;
+use bookmarks::{BookmarkName, Bookmarks};
 use caching_ext::{CachelibHandler, MemcacheHandler};
 use context::CoreContext;
 use fixtures::{linear, merge_even, merge_uneven, set_bookmark, unshared_merge_even};
@@ -71,7 +71,7 @@ fn new_tailer(
         Arc::new(NoReplicaLagMonitor()),
         blobrepo.get_changeset_fetcher(),
         Arc::new(blobrepo.get_blobstore()),
-        Arc::clone(blobrepo.bookmarks()),
+        Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
         bookmark.clone(),
         None,
     )
@@ -538,7 +538,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
             InProcessIdDag::new_in_process(),
             Arc::clone(&idmap),
             blobrepo.get_changeset_fetcher(),
-            Arc::clone(blobrepo.bookmarks()),
+            Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
             BOOKMARK_NAME.clone(),
         )
     };

@@ -10,8 +10,8 @@
 mod changesets;
 mod filenodes;
 
-use ::changesets::Changesets;
-use ::filenodes::Filenodes;
+use ::changesets::ArcChangesets;
+use ::filenodes::ArcFilenodes;
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, PutBehaviour};
@@ -162,10 +162,10 @@ async fn do_main<'a>(
 
                     let repoid = config.repoid;
                     let warmup_repo = repo
-                        .dangerous_override(|inner| -> Arc<dyn Filenodes> {
+                        .dangerous_override(|inner| -> ArcFilenodes {
                             Arc::new(MicrowaveFilenodes::new(repoid, filenodes_sender, inner))
                         })
-                        .dangerous_override(|inner| -> Arc<dyn Changesets> {
+                        .dangerous_override(|inner| -> ArcChangesets {
                             Arc::new(MicrowaveChangesets::new(repoid, changesets_sender, inner))
                         });
 

@@ -7,28 +7,30 @@
 
 use anyhow::{format_err, Error};
 use blobstore::Blobstore;
-use bonsai_git_mapping::BonsaiGitMapping;
-use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, BonsaisOrGlobalrevs};
-use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_git_mapping::{ArcBonsaiGitMapping, BonsaiGitMapping};
+use bonsai_globalrev_mapping::{
+    ArcBonsaiGlobalrevMapping, BonsaiGlobalrevMapping, BonsaisOrGlobalrevs,
+};
+use bonsai_hg_mapping::{ArcBonsaiHgMapping, BonsaiHgMapping};
 use bonsai_svnrev_mapping::RepoBonsaiSvnrevMapping;
 use bookmarks::{
-    self, Bookmark, BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix,
-    BookmarkTransaction, BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason,
-    Bookmarks, Freshness,
+    self, ArcBookmarkUpdateLog, ArcBookmarks, Bookmark, BookmarkKind, BookmarkName,
+    BookmarkPagination, BookmarkPrefix, BookmarkTransaction, BookmarkUpdateLog,
+    BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness,
 };
 use cacheblob::LeaseOps;
-use changeset_fetcher::ChangesetFetcher;
-use changesets::{ChangesetInsert, Changesets};
+use changeset_fetcher::{ArcChangesetFetcher, ChangesetFetcher};
+use changesets::{ArcChangesets, ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
-use filenodes::Filenodes;
+use filenodes::{ArcFilenodes, Filenodes};
 use filestore::FilestoreConfig;
 use futures::{
     future::{try_join, BoxFuture},
     stream::FuturesUnordered,
     FutureExt, Stream, TryStreamExt,
 };
-use mercurial_mutation::HgMutationStore;
+use mercurial_mutation::{ArcHgMutationStore, HgMutationStore};
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{
     BlobstoreValue, BonsaiChangeset, ChangesetId, Generation, Globalrev, MononokeId, RepositoryId,
@@ -37,7 +39,7 @@ use phases::{HeadsFetcher, Phases, SqlPhasesFactory};
 use repo_blobstore::{RepoBlobstore, RepoBlobstoreArgs};
 use repo_derived_data::RepoDerivedData;
 use repo_identity::RepoIdentity;
-use segmented_changelog_types::SegmentedChangelog;
+use segmented_changelog_types::{ArcSegmentedChangelog, SegmentedChangelog};
 use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
@@ -58,30 +60,85 @@ define_stats! {
 }
 
 // NOTE: this structure and its fields are public to enable `DangerousOverride` functionality
+#[facet::container]
 #[derive(Clone)]
 pub struct BlobRepoInner {
-    pub blobstore: RepoBlobstore,
-    pub changesets: Arc<dyn Changesets>,
-    pub bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
-    pub bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
-    pub bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
+    #[facet]
+    pub repo_identity: RepoIdentity,
+
+    #[init(repo_identity.id())]
     pub repoid: RepositoryId,
-    pub filestore_config: FilestoreConfig,
-    pub phases_factory: SqlPhasesFactory,
+
+    #[init(repo_identity.name().to_string())]
     pub reponame: String,
-    pub bookmarks: Arc<dyn Bookmarks>,
-    pub bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
-    pub bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
-    pub changeset_fetcher: Arc<dyn ChangesetFetcher>,
-    pub filenodes: Arc<dyn Filenodes>,
-    pub hg_mutation_store: Arc<dyn HgMutationStore>,
-    pub segmented_changelog: Arc<dyn SegmentedChangelog>,
-    pub repo_identity: Arc<RepoIdentity>,
-    pub repo_derived_data: Arc<RepoDerivedData>,
+
+    #[facet]
+    pub repo_blobstore: RepoBlobstore,
+
+    #[facet]
+    pub changesets: dyn Changesets,
+
+    #[facet]
+    pub changeset_fetcher: dyn ChangesetFetcher,
+
+    #[facet]
+    pub segmented_changelog: dyn SegmentedChangelog,
+
+    #[facet]
+    pub bonsai_hg_mapping: dyn BonsaiHgMapping,
+
+    #[facet]
+    pub bonsai_git_mapping: dyn BonsaiGitMapping,
+
+    #[facet]
+    pub bonsai_globalrev_mapping: dyn BonsaiGlobalrevMapping,
+
+    #[facet]
+    pub repo_bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
+
+    #[facet]
+    pub bookmarks: dyn Bookmarks,
+
+    #[facet]
+    pub bookmark_update_log: dyn BookmarkUpdateLog,
+
+    #[facet]
+    pub sql_phases_factory: SqlPhasesFactory,
+
+    #[facet]
+    pub filestore_config: FilestoreConfig,
+
+    #[facet]
+    pub filenodes: dyn Filenodes,
+
+    #[facet]
+    pub hg_mutation_store: dyn HgMutationStore,
+
+    #[facet]
+    pub repo_derived_data: RepoDerivedData,
 }
 
+#[facet::container]
 #[derive(Clone)]
 pub struct BlobRepo {
+    #[delegate(
+        RepoIdentity,
+        RepoBlobstore,
+        dyn Changesets,
+        dyn ChangesetFetcher,
+        dyn SegmentedChangelog,
+        dyn BonsaiHgMapping,
+        dyn BonsaiGitMapping,
+        dyn BonsaiGlobalrevMapping,
+        RepoBonsaiSvnrevMapping,
+        dyn Bookmarks,
+        dyn BookmarkUpdateLog,
+        SqlPhasesFactory,
+        FilestoreConfig,
+        dyn Filenodes,
+        dyn HgMutationStore,
+        RepoDerivedData,
+    )]
     inner: Arc<BlobRepoInner>,
 }
 
@@ -92,39 +149,43 @@ impl BlobRepo {
     /// argument. Instead use `blobrepo_factory::*` functions.
     pub fn new_dangerous(
         blobstore_args: RepoBlobstoreArgs,
-        changesets: Arc<dyn Changesets>,
-        bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
-        bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
+        changesets: ArcChangesets,
+        bonsai_git_mapping: ArcBonsaiGitMapping,
+        bonsai_globalrev_mapping: ArcBonsaiGlobalrevMapping,
         bonsai_svnrev_mapping: RepoBonsaiSvnrevMapping,
         derived_data_lease: Arc<dyn LeaseOps>,
         filestore_config: FilestoreConfig,
         phases_factory: SqlPhasesFactory,
         derived_data_config: DerivedDataConfig,
         reponame: String,
-        bookmarks: Arc<dyn Bookmarks>,
-        bookmark_update_log: Arc<dyn BookmarkUpdateLog>,
-        bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
-        changeset_fetcher: Arc<dyn ChangesetFetcher>,
-        filenodes: Arc<dyn Filenodes>,
-        hg_mutation_store: Arc<dyn HgMutationStore>,
-        segmented_changelog: Arc<dyn SegmentedChangelog>,
+        bookmarks: ArcBookmarks,
+        bookmark_update_log: ArcBookmarkUpdateLog,
+        bonsai_hg_mapping: ArcBonsaiHgMapping,
+        changeset_fetcher: ArcChangesetFetcher,
+        filenodes: ArcFilenodes,
+        hg_mutation_store: ArcHgMutationStore,
+        segmented_changelog: ArcSegmentedChangelog,
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
 
+        let repo_blobstore = Arc::new(blobstore);
+        let filestore_config = Arc::new(filestore_config);
+        let sql_phases_factory = Arc::new(phases_factory);
+        let repo_bonsai_svnrev_mapping = Arc::new(bonsai_svnrev_mapping);
         let repo_identity = Arc::new(RepoIdentity::new(repoid, reponame.clone()));
         let repo_derived_data = Arc::new(RepoDerivedData::new(
             derived_data_config,
             derived_data_lease,
         ));
         let inner = BlobRepoInner {
-            blobstore,
+            repo_blobstore,
             changesets,
             bonsai_git_mapping,
             bonsai_globalrev_mapping,
-            bonsai_svnrev_mapping,
+            repo_bonsai_svnrev_mapping,
             repoid,
             filestore_config,
-            phases_factory,
+            sql_phases_factory,
             reponame,
             bookmarks,
             bookmark_update_log,
@@ -142,37 +203,37 @@ impl BlobRepo {
     }
 
     #[inline]
-    pub fn bookmarks(&self) -> &Arc<dyn Bookmarks> {
+    pub fn bookmarks(&self) -> &ArcBookmarks {
         &self.inner.bookmarks
     }
 
     #[inline]
-    pub fn bookmark_update_log(&self) -> &Arc<dyn BookmarkUpdateLog> {
+    pub fn bookmark_update_log(&self) -> &ArcBookmarkUpdateLog {
         &self.inner.bookmark_update_log
     }
 
     #[inline]
-    pub fn bonsai_hg_mapping(&self) -> &Arc<dyn BonsaiHgMapping> {
+    pub fn bonsai_hg_mapping(&self) -> &ArcBonsaiHgMapping {
         &self.inner.bonsai_hg_mapping
     }
 
     #[inline]
-    pub fn changeset_fetcher(&self) -> &Arc<dyn ChangesetFetcher> {
+    pub fn changeset_fetcher(&self) -> &ArcChangesetFetcher {
         &self.inner.changeset_fetcher
     }
 
     #[inline]
-    pub fn filenodes(&self) -> &Arc<dyn Filenodes> {
+    pub fn filenodes(&self) -> &ArcFilenodes {
         &self.inner.filenodes
     }
 
     #[inline]
-    pub fn hg_mutation_store(&self) -> &Arc<dyn HgMutationStore> {
+    pub fn hg_mutation_store(&self) -> &ArcHgMutationStore {
         &self.inner.hg_mutation_store
     }
 
     #[inline]
-    pub fn segmented_changelog(&self) -> &Arc<dyn SegmentedChangelog> {
+    pub fn segmented_changelog(&self) -> &ArcSegmentedChangelog {
         &self.inner.segmented_changelog
     }
 
@@ -269,16 +330,16 @@ impl BlobRepo {
         self.bookmarks().get(ctx, name)
     }
 
-    pub fn bonsai_git_mapping(&self) -> &Arc<dyn BonsaiGitMapping> {
+    pub fn bonsai_git_mapping(&self) -> &ArcBonsaiGitMapping {
         &self.inner.bonsai_git_mapping
     }
 
-    pub fn bonsai_globalrev_mapping(&self) -> &Arc<dyn BonsaiGlobalrevMapping> {
+    pub fn bonsai_globalrev_mapping(&self) -> &ArcBonsaiGlobalrevMapping {
         &self.inner.bonsai_globalrev_mapping
     }
 
     pub fn bonsai_svnrev_mapping(&self) -> &RepoBonsaiSvnrevMapping {
-        &self.inner.bonsai_svnrev_mapping
+        self.inner.repo_bonsai_svnrev_mapping.as_ref()
     }
 
     pub async fn get_bonsai_from_globalrev(
@@ -371,15 +432,15 @@ impl BlobRepo {
     }
 
     pub fn blobstore(&self) -> &RepoBlobstore {
-        &self.inner.blobstore
+        &self.inner.repo_blobstore
     }
 
     pub fn get_blobstore(&self) -> RepoBlobstore {
-        self.inner.blobstore.clone()
+        self.inner.repo_blobstore.as_ref().clone()
     }
 
     pub fn filestore_config(&self) -> FilestoreConfig {
-        self.inner.filestore_config
+        *self.inner.filestore_config
     }
 
     pub fn get_repoid(&self) -> RepositoryId {
@@ -387,7 +448,7 @@ impl BlobRepo {
     }
 
     pub fn get_phases(&self) -> Arc<dyn Phases> {
-        self.inner.phases_factory.get_phases(
+        self.inner.sql_phases_factory.get_phases(
             self.get_repoid(),
             self.get_changeset_fetcher(),
             self.get_heads_fetcher(),
@@ -408,7 +469,7 @@ impl BlobRepo {
     }
 
     pub fn get_phases_factory(&self) -> &SqlPhasesFactory {
-        &self.inner.phases_factory
+        self.inner.sql_phases_factory.as_ref()
     }
 
     pub fn get_changesets_object(&self) -> Arc<dyn Changesets> {

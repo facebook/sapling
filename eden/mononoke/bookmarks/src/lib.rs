@@ -24,11 +24,12 @@ pub use bookmarks_types::{
 };
 pub use cache::CachedBookmarks;
 pub use log::{
-    BookmarkUpdateLog, BookmarkUpdateLogEntry, BookmarkUpdateReason, BundleReplay,
-    RawBundleReplayData,
+    ArcBookmarkUpdateLog, BookmarkUpdateLog, BookmarkUpdateLogArc, BookmarkUpdateLogEntry,
+    BookmarkUpdateLogRef, BookmarkUpdateReason, BundleReplay, RawBundleReplayData,
 };
 pub use transaction::{BookmarkTransaction, BookmarkTransactionError, BookmarkTransactionHook};
 
+#[facet::facet]
 pub trait Bookmarks: Send + Sync + 'static {
     /// Get the current value of a bookmark.
     ///

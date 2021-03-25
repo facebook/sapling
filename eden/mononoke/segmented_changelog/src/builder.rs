@@ -60,7 +60,7 @@ pub async fn new_server_segmented_changelog(
     bookmarks: Arc<dyn Bookmarks>,
     blobstore: Arc<dyn Blobstore>,
     cache_pool: Option<cachelib::VolatileLruCachePool>,
-) -> Result<Arc<dyn SegmentedChangelog>> {
+) -> Result<Arc<dyn SegmentedChangelog + Send + Sync>> {
     if !config.enabled {
         return Ok(Arc::new(DisabledSegmentedChangelog::new()));
     }

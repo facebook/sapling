@@ -30,6 +30,7 @@ pub struct StreamCloneData<T> {
     pub idmap_stream: BoxStream<'static, Result<(Vertex, T)>>,
 }
 
+#[facet::facet]
 #[async_trait]
 #[auto_impl(Arc)]
 pub trait SegmentedChangelog: Send + Sync {

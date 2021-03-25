@@ -15,6 +15,7 @@ use std::{any::Any, collections::HashMap, sync::Arc};
 
 /// Trait that knows how to fetch DAG info about commits. Primary user is revsets
 /// Concrete implementation may add more efficient caching logic to make request faster
+#[facet::facet]
 #[async_trait]
 #[auto_impl(&, Arc, Box)]
 pub trait ChangesetFetcher: Send + Sync + 'static {

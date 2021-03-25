@@ -12,6 +12,7 @@ pub mod store;
 pub mod transaction;
 
 pub use crate::builder::SqlBookmarksBuilder;
+pub use crate::store::ArcSqlBookmarks;
 
 #[cfg(test)]
 mod test {

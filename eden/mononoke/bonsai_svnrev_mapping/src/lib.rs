@@ -142,6 +142,7 @@ pub trait BonsaiSvnrevMapping: Send + Sync {
     }
 }
 
+#[facet::facet]
 #[derive(Clone)]
 pub struct RepoBonsaiSvnrevMapping {
     inner: Arc<dyn BonsaiSvnrevMapping + Send + Sync + 'static>,

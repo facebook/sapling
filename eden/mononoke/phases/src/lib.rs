@@ -8,7 +8,9 @@
 mod errors;
 pub use errors::ErrorKind;
 mod factory;
-pub use factory::SqlPhasesFactory;
+pub use factory::{
+    ArcSqlPhasesFactory, SqlPhasesFactory, SqlPhasesFactoryArc, SqlPhasesFactoryRef,
+};
 mod sql_store;
 pub use sql_store::SqlPhasesStore;
 

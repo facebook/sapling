@@ -32,7 +32,6 @@ use slog::{debug, error, info};
 
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::{bulk_import_globalrevs, BonsaiGlobalrevMapping};
 use context::CoreContext;
 use derived_data_utils::derive_data_for_csids;

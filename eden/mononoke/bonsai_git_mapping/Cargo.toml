@@ -14,6 +14,7 @@ anyhow = "1.0"
 ascii = "1.0"
 async-trait = "0.1.45"
 context = { version = "0.1.0", path = "../server/context" }
+facet = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 mononoke_types = { version = "0.1.0", path = "../mononoke_types" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
