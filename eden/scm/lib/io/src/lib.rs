@@ -51,8 +51,8 @@ struct Inner {
     // Whether progress (stderr) and stdout (is likely) sharing output.
     progress_conflict_with_output: bool,
 
-    // Whether progress output is disabled.
-    progress_disabled: bool,
+    // How many (nested) blocks want progress output disabled.
+    progress_disabled: usize,
 
     pager_handle: Option<JoinHandle<streampager::Result<()>>>,
 }
@@ -224,7 +224,7 @@ impl IO {
             output_on_new_line: true,
             error_on_new_line: true,
             progress_has_content: false,
-            progress_disabled: false,
+            progress_disabled: 0,
         };
 
         Self {
@@ -295,7 +295,7 @@ impl IO {
             pager_handle: None,
             progress_conflict_with_output,
             progress_has_content: false,
-            progress_disabled: false,
+            progress_disabled: 0,
             output_on_new_line: true,
             error_on_new_line: true,
         };
@@ -392,12 +392,24 @@ impl IO {
         Ok(())
     }
 
-    /// Disable progress rendering completely.
+    /// Disable progress rendering.
+    /// - `disable_progress(true)` disables progress rendering. It can be nested.
+    /// - `disable_progress(false)` cancels out a `disable_progress(true)`.
+    ///   If all `disable_progress(true)` are canceled out, restore the progress
+    ///   rendering.
     pub fn disable_progress(&self, disabled: bool) -> io::Result<()> {
         let mut inner = self.inner.lock();
-        inner.progress_disabled = disabled;
         if disabled {
+            inner.progress_disabled += 1;
             inner.set_progress("")?;
+        } else {
+            if inner.progress_disabled == 0 {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "disable_progress(false) called without matching disable_progress(true)",
+                ));
+            }
+            inner.progress_disabled -= 1;
         }
         Ok(())
     }
@@ -435,7 +447,7 @@ impl Inner {
     fn set_progress(&mut self, data: &str) -> io::Result<()> {
         let inner = self;
         let mut data = data.trim_end();
-        if inner.progress_disabled {
+        if inner.progress_disabled > 0 {
             data = "";
         }
         if let Some(ref mut progress) = inner.progress {
