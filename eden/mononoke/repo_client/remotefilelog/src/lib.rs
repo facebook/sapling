@@ -353,12 +353,12 @@ mod test {
     use super::*;
     use assert_matches::assert_matches;
     use blobrepo_hg::BlobRepoHg;
-    use blobrepo_override::DangerousOverride;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
-    use filestore::FilestoreConfig;
     use manifest::{Entry, Manifest};
+    use metaconfig_types::FilestoreParams;
     use mononoke_types::MPathElement;
+    use test_repo_factory::TestRepoFactory;
     use tests_utils::CreateCommitContext;
 
     async fn roundtrip_blob(
@@ -416,11 +416,14 @@ mod test {
 
     #[fbinit::test]
     async fn test_prepare_blob_chunked(fb: FacebookInit) -> Result<(), Error> {
-        let repo: BlobRepo = test_repo_factory::build_empty()?;
-        let repo = repo.dangerous_override(|mut config: FilestoreConfig| {
-            config.chunk_size = Some(1);
-            config
-        });
+        let repo: BlobRepo = TestRepoFactory::new()?
+            .with_config_override(|config| {
+                config.filestore = Some(FilestoreParams {
+                    chunk_size: 1,
+                    concurrency: 1,
+                })
+            })
+            .build()?;
 
         let blob = roundtrip_blob(fb, &repo, "foo", None).await?;
         assert_matches!(blob, RemotefilelogBlobKind::Inline(3));
