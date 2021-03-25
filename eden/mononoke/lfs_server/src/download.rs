@@ -192,20 +192,20 @@ mod test {
     use super::*;
 
     use anyhow::Error;
-    use blobrepo_factory::TestRepoBuilder;
     use fbinit::FacebookInit;
     use http::StatusCode;
     use maplit::hashmap;
     use mononoke_types::typed_hash::MononokeId;
     use mononoke_types_mocks::contentid::ONES_CTID;
     use redactedblobstore::RedactedMetadata;
+    use test_repo_factory::TestRepoFactory;
 
     #[fbinit::test]
     async fn test_redacted_fetch(fb: FacebookInit) -> Result<(), Error> {
         let content_id = ONES_CTID;
         let reason = "test reason";
 
-        let repo = TestRepoBuilder::new()
+        let repo = TestRepoFactory::new()?
             .redacted(Some(
                 hashmap! { content_id.blobstore_key() => RedactedMetadata {
                    task: reason.to_string(),

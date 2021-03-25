@@ -469,11 +469,11 @@ impl BaseUri {
 #[cfg(test)]
 mod test {
     use super::*;
-    use blobrepo_factory::TestRepoBuilder;
     use fbinit::FacebookInit;
     use lfs_protocol::Sha256 as LfsSha256;
     use mononoke_types::{hash::Sha256, ContentId};
     use std::str::FromStr;
+    use test_repo_factory::TestRepoFactory;
 
     const ONES_HASH: &str = "1111111111111111111111111111111111111111111111111111111111111111";
     const TWOS_HASH: &str = "2222222222222222222222222222222222222222222222222222222222222222";
@@ -538,7 +538,7 @@ mod test {
         pub fn test_builder(fb: FacebookInit) -> Result<TestContextBuilder, Error> {
             Ok(TestContextBuilder {
                 fb,
-                repo: TestRepoBuilder::new().build()?,
+                repo: TestRepoFactory::new()?.build()?,
                 self_uri: "http://foo.com/".to_string(),
                 upstream_uri: Some("http://bar.com".to_string()),
                 config: ServerConfig::default(),

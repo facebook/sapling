@@ -614,8 +614,7 @@ mod test {
     use super::*;
 
     use async_trait::async_trait;
-    use blobrepo_factory::TestRepoBuilder;
-    use blobrepo_override::DangerousOverride;
+    use blobrepo::BlobRepo;
     use blobstore::{BlobstoreBytes, BlobstoreGetData};
     use bytes::Bytes;
     use context::CoreContext;
@@ -623,6 +622,7 @@ mod test {
     use filestore::{self, StoreRequest};
     use futures::stream;
     use hyper::Uri;
+    use memblob::Memblob;
     use mononoke_types::ContentMetadataId;
     use mononoke_types_mocks::hash::ONES_SHA256;
     use redactedblobstore::RedactedMetadata;
@@ -632,6 +632,7 @@ mod test {
         atomic::{AtomicU64, Ordering},
         Arc,
     };
+    use test_repo_factory::TestRepoFactory;
 
     use lfs_protocol::Sha256 as LfsSha256;
     use pretty_assertions::assert_eq;
@@ -932,9 +933,14 @@ mod test {
 
     #[fbinit::test]
     async fn test_resolve_redacted(fb: FacebookInit) -> Result<(), Error> {
+        // Create a single factory with a blobstore we've created.
+        let mut factory = TestRepoFactory::new()?;
+        let stub_blobstore = Arc::new(Memblob::default());
+        factory.with_blobstore(stub_blobstore.clone());
+
         // First, have the filestore tell us what the hash for this blob would be, so we can create
         // a new repo and redact it.
-        let stub = TestRepoBuilder::new().build()?;
+        let stub: BlobRepo = factory.build()?;
 
         let meta = filestore::store(
             stub.blobstore(),
@@ -945,22 +951,15 @@ mod test {
         )
         .await?;
 
-        // Get the internal blobstore from the stub we just wrote into.
-        let stub_blobstore = stub.blobstore().as_parts().0;
-
-        // Now, create a new blob repo with redaction, then swap the blobstore from the stub repo
-        // into it, which has the data (but now it is redacted)!
-        let builder = TestRepoBuilder::new().redacted(Some(
-            hashmap! { meta.content_id.blobstore_key() => RedactedMetadata {
-               task: "test".to_string(),
-               log_only: false,
-            }},
-        ));
-
-        let repo = builder
-            .clone()
-            .build()?
-            .dangerous_override(|_: Arc<dyn Blobstore>| stub_blobstore.clone());
+        // Now, create a new blob repo with the same blob store, but with some data redacted.
+        let repo = factory
+            .redacted(Some(hashmap! {
+                meta.content_id.blobstore_key() => RedactedMetadata {
+                    task: "test".to_string(),
+                    log_only: false,
+                }
+            }))
+            .build()?;
 
         let ctx = RepositoryRequestContext::test_builder(fb)?
             .repo(repo)
@@ -974,7 +973,7 @@ mod test {
         );
 
         // Now, create another one with the same redaction, but this time pretend the metadata does
-        // not exist. Buidling the key is a bit hacky here, but we have an assertion on the number
+        // not exist. Building the key is a bit hacky here, but we have an assertion on the number
         // of hits later to make sure it works.
 
         let key = format!(
@@ -990,10 +989,7 @@ mod test {
             hits: hits.clone(),
         };
 
-        let repo = builder
-            .clone()
-            .build()?
-            .dangerous_override(|_: Arc<dyn Blobstore>| Arc::new(hide_blobstore));
+        let repo = factory.with_blobstore(Arc::new(hide_blobstore)).build()?;
 
         let ctx = RepositoryRequestContext::test_builder(fb)?
             .repo(repo)
