@@ -206,7 +206,7 @@ mod test {
             sqlite.execute_batch(HgsqlConnection::CREATION_QUERY)?;
             let connection = Connection::with_sqlite(sqlite);
 
-            let repo = blobrepo_factory::new_memblob_empty(None)?;
+            let repo: BlobRepo = test_repo_factory::build_empty()?;
             let hgsql_name = HgsqlGlobalrevsName("foo".to_string());
 
             let e1 = BonsaiGlobalrevMappingEntry {

@@ -186,7 +186,6 @@ async fn find_entries_to_preserve(
 #[cfg(test)]
 mod test {
     use super::*;
-    use blobrepo_factory::TestRepoBuilder;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use tests_utils::CreateCommitContext;
@@ -208,7 +207,7 @@ mod test {
     #[fbinit::test]
     async fn test_fsnode_cleaner(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = TestRepoBuilder::new().build()?;
+        let repo = test_repo_factory::build_empty()?;
 
         let root = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("file", "content")

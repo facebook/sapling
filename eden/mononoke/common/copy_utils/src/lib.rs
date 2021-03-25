@@ -313,17 +313,17 @@ fn create_bonsai_changeset(
 #[cfg(test)]
 mod test {
     use super::*;
-    use blobrepo_factory::{new_memblob_empty, new_memblob_empty_with_id};
     use blobstore::StoreLoadable;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_types::RepositoryId;
+    use test_repo_factory::TestRepoFactory;
     use tests_utils::{list_working_copy_utf8, CreateCommitContext};
 
     #[fbinit::test]
     async fn test_list_directory(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir/a", "a")
             .add_file("dir/b", "b")
@@ -344,7 +344,7 @@ mod test {
     #[fbinit::test]
     async fn test_rsync_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/a", "a")
             .add_file("dir_from/b", "b")
@@ -388,7 +388,7 @@ mod test {
     #[fbinit::test]
     async fn test_rsync_with_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/a", "a")
             .add_file("dir_from/b", "b")
@@ -466,7 +466,7 @@ mod test {
     #[fbinit::test]
     async fn test_rsync_with_excludes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/BUCK", "buck")
             .add_file("dir_from/b", "b")
@@ -517,7 +517,7 @@ mod test {
     #[fbinit::test]
     async fn test_rsync_with_file_size_limit(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/a", "aaaaaaaaaa")
             .add_file("dir_from/b", "b")
@@ -599,7 +599,7 @@ mod test {
         fb: FacebookInit,
     ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/a", "aaaaaaaaaa")
             .add_file("dir_from/b", "b")
@@ -646,7 +646,7 @@ mod test {
     #[fbinit::test]
     async fn test_rsync_with_overwrite(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/a", "aa")
             .add_file("dir_from/b", "b")
@@ -734,7 +734,7 @@ mod test {
     #[fbinit::test]
     async fn test_delete_excessive_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         let cs_id = CreateCommitContext::new_root(&ctx, &repo)
             .add_file("dir_from/a", "a")
             .add_file("dir_to/a", "a")
@@ -771,8 +771,9 @@ mod test {
     #[fbinit::test]
     async fn test_delete_excessive_files_xrepo(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let source_repo = new_memblob_empty_with_id(None, RepositoryId::new(0))?;
-        let target_repo = new_memblob_empty_with_id(None, RepositoryId::new(1))?;
+        let mut factory = TestRepoFactory::new()?;
+        let source_repo = factory.with_id(RepositoryId::new(0)).build()?;
+        let target_repo = factory.with_id(RepositoryId::new(1)).build()?;
 
         let source_cs_id = CreateCommitContext::new_root(&ctx, &source_repo)
             .add_file("dir_from/a", "a")
@@ -813,8 +814,9 @@ mod test {
     #[fbinit::test]
     async fn test_xrepo_rsync_with_overwrite(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let source_repo = new_memblob_empty_with_id(None, RepositoryId::new(0))?;
-        let target_repo = new_memblob_empty_with_id(None, RepositoryId::new(1))?;
+        let mut factory = TestRepoFactory::new()?;
+        let source_repo = factory.with_id(RepositoryId::new(0)).build()?;
+        let target_repo = factory.with_id(RepositoryId::new(1)).build()?;
 
         let source_cs_id = CreateCommitContext::new_root(&ctx, &source_repo)
             .add_file("dir_from/a", "aa")

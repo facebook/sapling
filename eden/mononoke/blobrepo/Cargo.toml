@@ -42,7 +42,6 @@ ascii = "1.0"
 assert_matches = "1.5"
 async-trait = "0.1.45"
 blobrepo_errors = { version = "0.1.0", path = "errors" }
-blobrepo_factory = { version = "0.1.0", path = "factory" }
 blobrepo_hg = { version = "0.1.0", path = "blobrepo_hg" }
 bytes = { version = "0.5", features = ["serde"] }
 cmdlib = { version = "0.1.0", path = "../cmdlib" }
@@ -61,4 +60,5 @@ rand_distr = "0.2"
 rand_xorshift = "0.2"
 scuba_ext = { version = "0.1.0", path = "../common/scuba_ext" }
 simulated_repo = { version = "0.1.0", path = "../benchmarks/simulated_repo" }
+test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }

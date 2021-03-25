@@ -29,7 +29,6 @@ tunables = { version = "0.1.0", path = "../../tunables" }
 [dev-dependencies]
 async_unit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 blobrepo = { version = "0.1.0", path = "../../blobrepo" }
-blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 bookmarks = { version = "0.1.0", path = "../../bookmarks" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -38,4 +37,5 @@ futures-old = { package = "futures", version = "0.1.31" }
 futures_ext = { package = "futures_01_ext", version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 revset = { version = "0.1.0", path = "../../revset" }
 test-helpers = { version = "0.1.0", path = "../test-helpers" }
+test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

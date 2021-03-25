@@ -19,10 +19,8 @@ use scuba_ext::MononokeScubaSampleBuilder;
 
 use ::manifest::Entry;
 use blobrepo::BlobRepo;
-use blobrepo_factory::new_memblob_empty;
 use blobrepo_hg::{ChangesetHandle, CreateChangeset};
 use context::CoreContext;
-use memblob::Memblob;
 use mercurial_types::{
     blobs::{
         ChangesetMetadata, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
@@ -31,11 +29,6 @@ use mercurial_types::{
     HgBlobNode, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath,
 };
 use mononoke_types::DateTime;
-use std::sync::Arc;
-
-pub fn get_empty_repo() -> BlobRepo {
-    new_memblob_empty(Some(Arc::new(Memblob::default()))).expect("cannot create empty repo")
-}
 
 pub fn upload_file_no_parents<B>(
     ctx: CoreContext,
