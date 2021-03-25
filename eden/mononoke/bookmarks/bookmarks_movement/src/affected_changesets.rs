@@ -646,7 +646,6 @@ pub async fn log_commits_to_scribe(
 #[cfg(test)]
 mod test {
     use super::*;
-    use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
     use maplit::hashset;
     use std::collections::HashSet;
@@ -655,7 +654,7 @@ mod test {
     #[fbinit::test]
     async fn test_find_draft_ancestors_simple(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo = test_repo_factory::build_empty()?;
         let mapping = create_from_dag(
             &ctx,
             &repo,
@@ -707,7 +706,7 @@ mod test {
     #[fbinit::test]
     async fn test_find_draft_ancestors_merge(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo = test_repo_factory::build_empty()?;
         let mapping = create_from_dag(
             &ctx,
             &repo,

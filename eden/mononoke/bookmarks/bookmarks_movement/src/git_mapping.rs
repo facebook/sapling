@@ -228,8 +228,7 @@ mod tests {
         FIVES_GIT_SHA1, FOURS_GIT_SHA1, ONES_GIT_SHA1, SIXES_GIT_SHA1, THREES_GIT_SHA1,
         TWOS_GIT_SHA1,
     };
-    use mononoke_types_mocks::repo::REPO_ZERO;
-    use sql::rusqlite::Connection as SqliteConnection;
+    use test_repo_factory::TestRepoFactory;
     use tests_utils::drawdag::{changes, create_from_dag_with_changes};
     use tests_utils::CreateCommitContext;
 
@@ -278,9 +277,7 @@ mod tests {
     #[fbinit::test]
     async fn test_new_mapping_entries(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let connection = SqliteConnection::open_in_memory()?;
-        let (repo, _connection) =
-            blobrepo_factory::new_memblob_with_sqlite_connection_with_id(connection, REPO_ZERO)?;
+        let repo: BlobRepo = TestRepoFactory::new()?.build()?;
         let bookmark = BookmarkName::new("main")?;
         borrowed!(ctx, repo);
 
