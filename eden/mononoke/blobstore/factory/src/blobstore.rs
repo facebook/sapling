@@ -15,10 +15,7 @@ use cached_config::ConfigStore;
 use chaosblob::{ChaosBlobstore, ChaosOptions};
 use fbinit::FacebookInit;
 use fileblob::Fileblob;
-use futures::{
-    compat::Future01CompatExt,
-    future::{self, BoxFuture, FutureExt},
-};
+use futures::future::{self, BoxFuture, FutureExt};
 use futures_watchdog::WatchdogExt;
 use logblob::LogBlob;
 use metaconfig_types::{
@@ -204,7 +201,6 @@ pub async fn make_sql_blobstore_xdb<'a>(
                 put_behaviour,
                 config_store,
             )
-            .compat()
             .await
         }
         (MysqlConnectionType::Myrouter(myrouter_port), Some(shard_num)) => {
@@ -218,7 +214,6 @@ pub async fn make_sql_blobstore_xdb<'a>(
                 put_behaviour,
                 config_store,
             )
-            .compat()
             .await
         }
         (MysqlConnectionType::Mysql(pool, pool_config), None) => {
@@ -232,7 +227,6 @@ pub async fn make_sql_blobstore_xdb<'a>(
                 put_behaviour,
                 config_store,
             )
-            .compat()
             .await
         }
         (MysqlConnectionType::Mysql(pool, pool_config), Some(shard_num)) => {
@@ -247,7 +241,6 @@ pub async fn make_sql_blobstore_xdb<'a>(
                 put_behaviour,
                 config_store,
             )
-            .compat()
             .await
         }
         (MysqlConnectionType::RawXDB, None) => {
@@ -259,7 +252,6 @@ pub async fn make_sql_blobstore_xdb<'a>(
                 put_behaviour,
                 config_store,
             )
-            .compat()
             .await
         }
         (MysqlConnectionType::RawXDB, Some(shard_num)) => {
@@ -272,7 +264,6 @@ pub async fn make_sql_blobstore_xdb<'a>(
                 put_behaviour,
                 config_store,
             )
-            .compat()
             .await
         }
     }
@@ -374,10 +365,7 @@ fn make_blobstore_put_ops<'a>(
                         None,
                         blobstore_options.manifold_api_key.as_deref(),
                         blobstore_options.put_behaviour,
-                    )
-                    .compat()
-                    .watched(logger)
-                    .await?
+                    )?
                 }
                 #[cfg(not(fbcode_build))]
                 {
@@ -399,10 +387,7 @@ fn make_blobstore_put_ops<'a>(
                         Some(ttl),
                         blobstore_options.manifold_api_key.as_deref(),
                         blobstore_options.put_behaviour,
-                    )
-                    .compat()
-                    .watched(logger)
-                    .await?
+                    )?
                 }
                 #[cfg(not(fbcode_build))]
                 {

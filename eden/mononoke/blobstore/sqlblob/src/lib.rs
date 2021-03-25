@@ -32,10 +32,10 @@ use bytes::BytesMut;
 use cached_config::{ConfigHandle, ConfigStore, TestSource};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::stream::{FuturesOrdered, FuturesUnordered, Stream, TryStreamExt};
-use futures_ext::{try_boxfuture, BoxFuture as BoxFuture01, FutureExt as _};
-use futures_old::future::join_all;
-use futures_old::prelude::*;
+use futures::{
+    compat::Future01CompatExt,
+    stream::{FuturesOrdered, FuturesUnordered, Stream, TryStreamExt},
+};
 use mononoke_types::{hash::Context as HashContext, BlobstoreBytes};
 use nonzero_ext::nonzero;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
@@ -51,6 +51,7 @@ use std::{
     collections::HashMap,
     convert::TryInto,
     fmt,
+    future::Future,
     num::NonZeroUsize,
     path::PathBuf,
     sync::Arc,
@@ -92,7 +93,7 @@ fn get_gc_config_handle(config_store: &ConfigStore) -> Result<ConfigHandle<XdbGc
 }
 
 impl Sqlblob {
-    pub fn with_myrouter(
+    pub async fn with_myrouter(
         fb: FacebookInit,
         shardmap: String,
         port: u16,
@@ -101,11 +102,11 @@ impl Sqlblob {
         readonly: bool,
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
-    ) -> BoxFuture01<CountedSqlblob, Error> {
+    ) -> Result<CountedSqlblob, Error> {
         let delay = if readonly {
             BlobDelay::dummy(shard_num)
         } else {
-            try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num))
+            myadmin_delay::sharded(fb, shardmap.clone(), shard_num)?
         };
         Self::with_connection_factory(
             delay,
@@ -113,7 +114,7 @@ impl Sqlblob {
             shard_num,
             put_behaviour,
             move |shard_id| {
-                Ok(create_myrouter_connections(
+                let res = create_myrouter_connections(
                     shardmap.clone(),
                     Some(shard_id),
                     port,
@@ -121,15 +122,15 @@ impl Sqlblob {
                     PoolSizeConfig::for_sharded_connection(),
                     SQLBLOB_LABEL.into(),
                     readonly,
-                ))
-                .into_future()
-                .boxify()
+                );
+                async move { Ok(res) }
             },
             config_store,
         )
+        .await
     }
 
-    pub fn with_myrouter_unsharded(
+    pub async fn with_myrouter_unsharded(
         fb: FacebookInit,
         db_address: String,
         port: u16,
@@ -137,11 +138,11 @@ impl Sqlblob {
         readonly: bool,
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
-    ) -> BoxFuture01<CountedSqlblob, Error> {
+    ) -> Result<CountedSqlblob, Error> {
         let delay = if readonly {
             BlobDelay::dummy(SINGLE_SHARD_NUM)
         } else {
-            try_boxfuture!(myadmin_delay::single(fb, db_address.clone()))
+            myadmin_delay::single(fb, db_address.clone())?
         };
         Self::with_connection_factory(
             delay,
@@ -149,7 +150,7 @@ impl Sqlblob {
             SINGLE_SHARD_NUM,
             put_behaviour,
             move |_shard_id| {
-                Ok(create_myrouter_connections(
+                let res = create_myrouter_connections(
                     db_address.clone(),
                     None,
                     port,
@@ -157,15 +158,15 @@ impl Sqlblob {
                     PoolSizeConfig::for_sharded_connection(),
                     SQLBLOB_LABEL.into(),
                     readonly,
-                ))
-                .into_future()
-                .boxify()
+                );
+                async move { Ok(res) }
             },
             config_store,
         )
+        .await
     }
 
-    pub fn with_mysql(
+    pub async fn with_mysql(
         fb: FacebookInit,
         shardmap: String,
         shard_num: NonZeroUsize,
@@ -175,16 +176,20 @@ impl Sqlblob {
         readonly: bool,
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
-    ) -> BoxFuture01<CountedSqlblob, Error> {
+    ) -> Result<CountedSqlblob, Error> {
         let delay = if readonly {
             BlobDelay::dummy(shard_num)
         } else {
-            try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num))
+            myadmin_delay::sharded(fb, shardmap.clone(), shard_num)?
         };
-        let config_handle = try_boxfuture!(get_gc_config_handle(config_store));
+        let config_handle = get_gc_config_handle(config_store)?;
         let shard_count = shard_num.clone().get();
 
-        create_mysql_connections_sharded(
+        let SqlShardedConnections {
+            read_connections,
+            read_master_connections,
+            write_connections,
+        } = create_mysql_connections_sharded(
             fb,
             global_connection_pool,
             pool_config,
@@ -193,46 +198,35 @@ impl Sqlblob {
             0..shard_count,
             read_con_type,
             readonly,
-        )
-        .map(
-            |
-                SqlShardedConnections {
+        )?;
+
+        let write_connections = Arc::new(write_connections);
+        let read_connections = Arc::new(read_connections);
+        let read_master_connections = Arc::new(read_master_connections);
+        Ok(Self::counted(
+            Self {
+                data_store: Arc::new(DataSqlStore::new(
+                    shard_num,
+                    write_connections.clone(),
+                    read_connections.clone(),
+                    read_master_connections.clone(),
+                    delay.clone(),
+                )),
+                chunk_store: Arc::new(ChunkSqlStore::new(
+                    shard_num,
+                    write_connections,
                     read_connections,
                     read_master_connections,
-                    write_connections,
-                },
-            | {
-                let write_connections = Arc::new(write_connections);
-                let read_connections = Arc::new(read_connections);
-                let read_master_connections = Arc::new(read_master_connections);
-                Self::counted(
-                    Self {
-                        data_store: Arc::new(DataSqlStore::new(
-                            shard_num,
-                            write_connections.clone(),
-                            read_connections.clone(),
-                            read_master_connections.clone(),
-                            delay.clone(),
-                        )),
-                        chunk_store: Arc::new(ChunkSqlStore::new(
-                            shard_num,
-                            write_connections,
-                            read_connections,
-                            read_master_connections,
-                            delay,
-                            config_handle,
-                        )),
-                        put_behaviour,
-                    },
-                    shardmap,
-                )
+                    delay,
+                    config_handle,
+                )),
+                put_behaviour,
             },
-        )
-        .into_future()
-        .boxify()
+            shardmap,
+        ))
     }
 
-    pub fn with_mysql_unsharded(
+    pub async fn with_mysql_unsharded(
         fb: FacebookInit,
         db_address: String,
         global_connection_pool: SharedConnectionPool,
@@ -241,11 +235,11 @@ impl Sqlblob {
         readonly: bool,
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
-    ) -> BoxFuture01<CountedSqlblob, Error> {
+    ) -> Result<CountedSqlblob, Error> {
         let delay = if readonly {
             BlobDelay::dummy(SINGLE_SHARD_NUM)
         } else {
-            try_boxfuture!(myadmin_delay::single(fb, db_address.clone()))
+            myadmin_delay::single(fb, db_address.clone())?
         };
         Self::with_connection_factory(
             delay,
@@ -253,7 +247,7 @@ impl Sqlblob {
             SINGLE_SHARD_NUM,
             put_behaviour,
             move |_shard_id| {
-                create_mysql_connections_unsharded(
+                let res = create_mysql_connections_unsharded(
                     fb,
                     global_connection_pool.clone(),
                     pool_config,
@@ -261,15 +255,15 @@ impl Sqlblob {
                     db_address.clone(),
                     read_con_type,
                     readonly,
-                )
-                .into_future()
-                .boxify()
+                );
+                async { res }
             },
             config_store,
         )
+        .await
     }
 
-    pub fn with_raw_xdb_shardmap(
+    pub async fn with_raw_xdb_shardmap(
         fb: FacebookInit,
         shardmap: String,
         read_con_type: ReadConnectionType,
@@ -277,11 +271,11 @@ impl Sqlblob {
         readonly: bool,
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
-    ) -> BoxFuture01<CountedSqlblob, Error> {
+    ) -> Result<CountedSqlblob, Error> {
         let delay = if readonly {
             BlobDelay::dummy(shard_num)
         } else {
-            try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num))
+            myadmin_delay::sharded(fb, shardmap.clone(), shard_num)?
         };
         Self::with_connection_factory(
             delay,
@@ -295,24 +289,25 @@ impl Sqlblob {
                     read_con_type,
                     readonly,
                 )
-                .boxify()
+                .compat()
             },
             config_store,
         )
+        .await
     }
 
-    pub fn with_raw_xdb_unsharded(
+    pub async fn with_raw_xdb_unsharded(
         fb: FacebookInit,
         db_address: String,
         read_con_type: ReadConnectionType,
         readonly: bool,
         put_behaviour: PutBehaviour,
         config_store: &ConfigStore,
-    ) -> BoxFuture01<CountedSqlblob, Error> {
+    ) -> Result<CountedSqlblob, Error> {
         let delay = if readonly {
             BlobDelay::dummy(SINGLE_SHARD_NUM)
         } else {
-            try_boxfuture!(myadmin_delay::single(fb, db_address.clone()))
+            myadmin_delay::single(fb, db_address.clone())?
         };
         Self::with_connection_factory(
             delay,
@@ -320,68 +315,70 @@ impl Sqlblob {
             SINGLE_SHARD_NUM,
             put_behaviour,
             move |_shard_id| {
-                create_raw_xdb_connections(fb, db_address.clone(), read_con_type, readonly).boxify()
+                create_raw_xdb_connections(fb, db_address.clone(), read_con_type, readonly).compat()
             },
             config_store,
         )
+        .await
     }
 
-    fn with_connection_factory(
+    async fn with_connection_factory<CF, SF>(
         delay: BlobDelay,
         label: String,
         shard_num: NonZeroUsize,
         put_behaviour: PutBehaviour,
-        connection_factory: impl Fn(usize) -> BoxFuture01<SqlConnections, Error>,
+        connection_factory: CF,
         config_store: &ConfigStore,
-    ) -> BoxFuture01<CountedSqlblob, Error> {
+    ) -> Result<CountedSqlblob, Error>
+    where
+        CF: Fn(usize) -> SF,
+        SF: Future<Output = Result<SqlConnections, Error>> + Sized,
+    {
         let shard_count = shard_num.get();
 
-        let config_handle = try_boxfuture!(get_gc_config_handle(config_store));
+        let config_handle = get_gc_config_handle(config_store)?;
 
-        let futs: Vec<_> = (0..shard_count)
+        let futs: FuturesOrdered<_> = (0..shard_count)
             .into_iter()
             .map(|shard| connection_factory(shard))
             .collect();
 
-        join_all(futs)
-            .map(move |shard_connections| {
-                let mut write_connections = Vec::with_capacity(shard_count);
-                let mut read_connections = Vec::with_capacity(shard_count);
-                let mut read_master_connections = Vec::with_capacity(shard_count);
+        let shard_connections = futs.try_collect::<Vec<_>>().await?;
+        let mut write_connections = Vec::with_capacity(shard_count);
+        let mut read_connections = Vec::with_capacity(shard_count);
+        let mut read_master_connections = Vec::with_capacity(shard_count);
 
-                for connections in shard_connections {
-                    write_connections.push(connections.write_connection);
-                    read_connections.push(connections.read_connection);
-                    read_master_connections.push(connections.read_master_connection);
-                }
+        for connections in shard_connections {
+            write_connections.push(connections.write_connection);
+            read_connections.push(connections.read_connection);
+            read_master_connections.push(connections.read_master_connection);
+        }
 
-                let write_connections = Arc::new(write_connections);
-                let read_connections = Arc::new(read_connections);
-                let read_master_connections = Arc::new(read_master_connections);
+        let write_connections = Arc::new(write_connections);
+        let read_connections = Arc::new(read_connections);
+        let read_master_connections = Arc::new(read_master_connections);
 
-                Self::counted(
-                    Self {
-                        data_store: Arc::new(DataSqlStore::new(
-                            shard_num,
-                            write_connections.clone(),
-                            read_connections.clone(),
-                            read_master_connections.clone(),
-                            delay.clone(),
-                        )),
-                        chunk_store: Arc::new(ChunkSqlStore::new(
-                            shard_num,
-                            write_connections,
-                            read_connections,
-                            read_master_connections,
-                            delay,
-                            config_handle,
-                        )),
-                        put_behaviour,
-                    },
-                    label,
-                )
-            })
-            .boxify()
+        Ok(Self::counted(
+            Self {
+                data_store: Arc::new(DataSqlStore::new(
+                    shard_num,
+                    write_connections.clone(),
+                    read_connections.clone(),
+                    read_master_connections.clone(),
+                    delay.clone(),
+                )),
+                chunk_store: Arc::new(ChunkSqlStore::new(
+                    shard_num,
+                    write_connections,
+                    read_connections,
+                    read_master_connections,
+                    delay,
+                    config_handle,
+                )),
+                put_behaviour,
+            },
+            label,
+        ))
     }
 
     pub fn with_sqlite_in_memory(
