@@ -12,7 +12,7 @@ use ascii::AsciiString;
 use blobimport_lib;
 use blobrepo::BlobRepo;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
-use clap::Arg;
+use clap::{Arg, ArgGroup};
 use cmdlib::{
     args::{self, get_scuba_sample_builder, MononokeClapApp, MononokeMatches, RepoRequirement},
     helpers::block_execute,
@@ -44,7 +44,9 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
 const ARG_EXCLUDE_DERIVED_DATA_TYPE: &str = "exclude-derived-data-type";
 const ARG_FIND_ALREADY_IMPORTED_REV_ONLY: &str = "find-already-imported-rev-only";
+const BACKUP_REPO_GROUP: &str = "backup-from-repo";
 const BACKUP_FROM_REPO_ID: &str = "backup-from-repo-id";
+const BACKUP_FROM_REPO_NAME: &str = "backup-from-repo-name";
 
 fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
     args::MononokeAppBuilder::new("revlog to blob importer")
@@ -127,6 +129,16 @@ fn setup_app<'a, 'b>() -> MononokeClapApp<'a, 'b> {
             .long(BACKUP_FROM_REPO_ID)
             .value_name("ID")
             .help("numeric ID of backup source of truth mononoke repository (used only for backup jobs to sync bonsai changesets)"),
+        )
+        .arg(
+            Arg::with_name(BACKUP_FROM_REPO_NAME)
+            .long(BACKUP_FROM_REPO_NAME)
+            .value_name("NAME")
+            .help("Name of backup source of truth mononoke repository (used only for backup jobs to sync bonsai changesets)"),
+        )
+        .group(
+            ArgGroup::with_name(BACKUP_REPO_GROUP)
+                .args(&[BACKUP_FROM_REPO_ID, BACKUP_FROM_REPO_NAME])
         )
 }
 
@@ -333,12 +345,18 @@ async fn run_blobimport<'a>(
     )
     .await?;
 
-    let origin_repo = if matches.is_present(BACKUP_FROM_REPO_ID) {
-        let repo_id = args::get_repo_id_from_value(config_store, matches, BACKUP_FROM_REPO_ID)?;
-        Some(args::open_repo_with_repo_id(fb, &logger, repo_id, matches).await?)
-    } else {
-        None
-    };
+    let origin_repo =
+        if matches.is_present(BACKUP_FROM_REPO_ID) || matches.is_present(BACKUP_FROM_REPO_NAME) {
+            let repo_id = args::get_repo_id_from_value(
+                config_store,
+                matches,
+                BACKUP_FROM_REPO_ID,
+                BACKUP_FROM_REPO_NAME,
+            )?;
+            Some(args::open_repo_with_repo_id(fb, &logger, repo_id, matches).await?)
+        } else {
+            None
+        };
 
     let globalrevs_store = Arc::new(globalrevs_store);
     let synced_commit_mapping = Arc::new(synced_commit_mapping);

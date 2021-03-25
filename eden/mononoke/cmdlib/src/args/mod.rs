@@ -1176,8 +1176,10 @@ pub fn get_repo_id_from_value<'a>(
     config_store: &ConfigStore,
     matches: &'a MononokeMatches<'a>,
     repo_id_arg: &str,
+    repo_name_arg: &str,
 ) -> Result<RepositoryId> {
-    let (repo_id, _) = get_repo_id_and_name_from_values(config_store, matches, "", repo_id_arg)?;
+    let (repo_id, _) =
+        get_repo_id_and_name_from_values(config_store, matches, repo_name_arg, repo_id_arg)?;
     Ok(repo_id)
 }
 

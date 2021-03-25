@@ -23,7 +23,7 @@ use bundle_generator::FilenodeVerifier;
 use bundle_preparer::{maybe_adjust_batch, BundlePreparer};
 use bytes::Bytes;
 use cached_config::ConfigStore;
-use clap::{Arg, SubCommand};
+use clap::{Arg, ArgGroup, SubCommand};
 use cloned::cloned;
 use cmdlib::{
     args::{self, MononokeMatches},
@@ -84,7 +84,9 @@ const ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS: &str = "bookmark-regex-force-genera
 const ARG_BOOKMARK_MOVE_ANY_DIRECTION: &str = "bookmark-move-any-direction";
 const ARG_USE_HG_SERVER_BOOKMARK_VALUE_IF_MISMATCH: &str =
     "use-hg-server-bookmark-value-if-mismatch";
+const ARG_DARKSTORM_BACKUP_REPO_GROUP: &str = "darkstorm-backup-repo";
 const ARG_DARKSTORM_BACKUP_REPO_ID: &str = "darkstorm-backup-repo-id";
+const ARG_DARKSTORM_BACKUP_REPO_NAME: &str = "darkstorm-backup-repo-name";
 const ARG_BYPASS_READONLY: &str = "bypass-readonly";
 const GENERATE_BUNDLES: &str = "generate-bundles";
 const MODE_SYNC_ONCE: &str = "sync-once";
@@ -713,9 +715,15 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
 
     let use_hg_server_bookmark_value_if_mismatch =
         matches.is_present(ARG_USE_HG_SERVER_BOOKMARK_VALUE_IF_MISMATCH);
-    let maybe_darkstorm_backup_repo = if matches.value_of(ARG_DARKSTORM_BACKUP_REPO_ID).is_some() {
-        let backup_repo_id =
-            args::get_repo_id_from_value(config_store, &matches, ARG_DARKSTORM_BACKUP_REPO_ID)?;
+    let maybe_darkstorm_backup_repo = if matches.is_present(ARG_DARKSTORM_BACKUP_REPO_ID)
+        || matches.is_present(ARG_DARKSTORM_BACKUP_REPO_NAME)
+    {
+        let backup_repo_id = args::get_repo_id_from_value(
+            config_store,
+            &matches,
+            ARG_DARKSTORM_BACKUP_REPO_ID,
+            ARG_DARKSTORM_BACKUP_REPO_NAME,
+        )?;
         let backup_repo =
             args::open_repo_by_id(ctx.fb, &ctx.logger(), &matches, backup_repo_id).await?;
 
@@ -1275,6 +1283,18 @@ fn main(fb: FacebookInit) -> Result<()> {
             .required(false)
             .help("Start hg-sync-job for syncing prod repo and darkstorm backup mononoke repo \
             and use darkstorm-backup-repo-id value as a target for sync."),
+        )
+        .arg(
+            Arg::with_name(ARG_DARKSTORM_BACKUP_REPO_NAME)
+            .long(ARG_DARKSTORM_BACKUP_REPO_NAME)
+            .takes_value(true)
+            .required(false)
+            .help("Start hg-sync-job for syncing prod repo and darkstorm backup mononoke repo \
+            and use darkstorm-backup-repo-name as a target for sync."),
+        )
+        .group(
+            ArgGroup::with_name(ARG_DARKSTORM_BACKUP_REPO_GROUP)
+                .args(&[ARG_DARKSTORM_BACKUP_REPO_ID, ARG_DARKSTORM_BACKUP_REPO_NAME])
         )
         .arg(
             Arg::with_name(ARG_BYPASS_READONLY)
