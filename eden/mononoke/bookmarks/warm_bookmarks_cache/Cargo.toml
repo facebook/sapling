@@ -38,14 +38,14 @@ tunables = { version = "0.1.0", path = "../../tunables" }
 unodes = { version = "0.1.0", path = "../../derived_data/unodes" }
 
 [dev-dependencies]
-blobrepo_override = { version = "0.1.0", path = "../../blobrepo/override" }
-blobstore = { version = "0.1.0", path = "../../blobstore" }
-dbbookmarks = { version = "0.1.0", path = "../dbbookmarks" }
 delayblob = { version = "0.1.0", path = "../../blobstore/delayblob" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../../tests/fixtures" }
 maplit = "1.0"
+memblob = { version = "0.1.0", path = "../../blobstore/memblob" }
 rand_distr = "0.2"
+sql = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
+test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }

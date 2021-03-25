@@ -813,12 +813,8 @@ async fn single_bookmark_updater(
 mod tests {
     use super::*;
     use anyhow::anyhow;
-    use blobrepo_override::DangerousOverride;
-    use blobstore::Blobstore;
-    use bookmarks::ArcBookmarkUpdateLog;
     use cloned::cloned;
     use consts::HIGHEST_IMPORTED_GEN_NUM;
-    use dbbookmarks::SqlBookmarksBuilder;
     use delayblob::DelayedBlobstore;
     use derived_data::BonsaiDerived;
     use fbinit::FacebookInit;
@@ -826,8 +822,12 @@ mod tests {
     use futures::future::TryFutureExt;
     use futures_ext::FutureExt;
     use maplit::hashmap;
+    use memblob::Memblob;
+    use mononoke_types::RepositoryId;
     use mutable_counters::SqlMutableCounters;
+    use sql::queries;
     use sql_construct::SqlConstruct;
+    use test_repo_factory::TestRepoFactory;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
     use tokio::time;
 
@@ -859,12 +859,15 @@ mod tests {
 
     #[fbinit::test]
     async fn test_find_derived(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
-        let repo = repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
-            let put_distr = rand_distr::Normal::<f64>::new(0.1, 0.05).unwrap();
-            let get_distr = rand_distr::Normal::<f64>::new(0.05, 0.025).unwrap();
-            Arc::new(DelayedBlobstore::new(blobstore, put_distr, get_distr))
-        });
+        let put_distr = rand_distr::Normal::<f64>::new(0.1, 0.05).unwrap();
+        let get_distr = rand_distr::Normal::<f64>::new(0.05, 0.025).unwrap();
+        let blobstore = Arc::new(DelayedBlobstore::new(
+            Memblob::default(),
+            put_distr,
+            get_distr,
+        ));
+        let repo = TestRepoFactory::new()?.with_blobstore(blobstore).build()?;
+        linear::initrepo(fb, &repo).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mut warmers: Vec<Warmer> = Vec::new();
@@ -1450,9 +1453,18 @@ mod tests {
         Ok(())
     }
 
+    queries! {
+        write ClearBookmarkUpdateLog(repo_id: RepositoryId) {
+            none,
+            "DELETE FROM bookmarks_update_log WHERE repo_id = {repo_id}"
+        }
+    }
+
     #[fbinit::test]
     async fn test_single_bookmarks_no_history(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb).await;
+        let factory = TestRepoFactory::new()?;
+        let repo = factory.build()?;
+        linear::initrepo(fb, &repo).await;
         let ctx = CoreContext::test_mock(fb);
 
         let bookmarks = Arc::new(RwLock::new(HashMap::new()));
@@ -1470,9 +1482,9 @@ mod tests {
             BookmarkKind::PullDefaultPublishing,
         );
 
-        let bookmarks_log_override =
-            Arc::new(SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(repo.get_repoid()));
-        let repo = repo.dangerous_override(|_| bookmarks_log_override as ArcBookmarkUpdateLog);
+        ClearBookmarkUpdateLog::query(&factory.metadata_db().write_connection, &repo.get_repoid())
+            .await?;
+
         single_bookmark_updater(
             &ctx,
             &repo,
