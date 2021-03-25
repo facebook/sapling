@@ -344,7 +344,6 @@ async fn push_merge_commit(
 #[cfg(test)]
 mod test {
     use super::*;
-    use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
     use maplit::hashmap;
     use mononoke_types::{DateTime, MPath};
@@ -601,7 +600,7 @@ mod test {
     async fn create_repo(
         ctx: &CoreContext,
     ) -> Result<(BlobRepo, ChangesetId, Vec<ChangesetId>), Error> {
-        let repo = new_memblob_empty(None)?;
+        let repo = test_repo_factory::build_empty()?;
 
         let dag = create_from_dag(
             &ctx,

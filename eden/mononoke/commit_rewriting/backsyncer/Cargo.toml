@@ -56,5 +56,6 @@ movers = { version = "0.1.0", path = "../movers" }
 pretty_assertions = "0.6"
 revset = { version = "0.1.0", path = "../../revset" }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
+test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 tunables = { version = "0.1.0", path = "../../tunables" }

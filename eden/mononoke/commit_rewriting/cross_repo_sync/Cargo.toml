@@ -48,7 +48,6 @@ tunables = { version = "0.1.0", path = "../../tunables" }
 [dev-dependencies]
 ascii = "1.0"
 assert_matches = "1.5"
-blobrepo_factory = { version = "0.1.0", path = "../../blobrepo/factory" }
 bytes = { version = "0.5", features = ["serde"] }
 cross_repo_sync_test_utils = { version = "0.1.0", path = "test_utils" }
 fbinit = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -59,5 +58,6 @@ revset = { version = "0.1.0", path = "../../revset" }
 skiplist = { version = "0.1.0", path = "../../reachabilityindex/skiplist" }
 sql_construct = { version = "0.1.0", path = "../../common/sql_construct" }
 sql_ext = { version = "0.1.0", path = "../../common/rust/sql_ext" }
+test_repo_factory = { version = "0.1.0", path = "../../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../../tests/utils" }
 tokio = { version = "0.2.25", features = ["full", "test-util"] }

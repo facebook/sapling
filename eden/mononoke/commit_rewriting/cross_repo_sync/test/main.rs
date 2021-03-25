@@ -19,7 +19,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobrepo_factory;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::{Loadable, Storable};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
@@ -49,10 +48,10 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use skiplist::SkiplistIndex;
 use sorted_vector_map::{sorted_vector_map, SortedVectorMap};
 use sql_construct::SqlConstruct;
-use sql_ext::SqlConnections;
 use synced_commit_mapping::{
     SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
 };
+use test_repo_factory::TestRepoFactory;
 use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 use tunables::{with_tunables_async, MononokeTunables};
 
@@ -510,7 +509,9 @@ async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
 #[fbinit::test]
 async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1))?;
+    let megarepo: BlobRepo = TestRepoFactory::new()?
+        .with_id(RepositoryId::new(1))
+        .build()?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
     let linear = linear::getrepo(fb).await;
@@ -566,14 +567,10 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
 fn prepare_repos_and_mapping() -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
     let sqlite_con = SqliteConnection::open_in_memory()?;
     sqlite_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
-    let (megarepo, con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
-        sqlite_con,
-        RepositoryId::new(1),
-    )?;
-
-    let (small_repo, _) =
-        blobrepo_factory::new_memblob_with_connection_with_id(con.clone(), RepositoryId::new(0))?;
-    let mapping = SqlSyncedCommitMapping::from_sql_connections(SqlConnections::new_single(con));
+    let mut factory = TestRepoFactory::with_sqlite_connection(sqlite_con)?;
+    let megarepo = factory.with_id(RepositoryId::new(1)).build()?;
+    let small_repo = factory.with_id(RepositoryId::new(0)).build()?;
+    let mapping = SqlSyncedCommitMapping::from_sql_connections(factory.metadata_db().clone());
     Ok((small_repo, megarepo, mapping))
 }
 
@@ -762,7 +759,9 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let megarepo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1))?;
+    let megarepo: BlobRepo = TestRepoFactory::new()?
+        .with_id(RepositoryId::new(1))
+        .build()?;
     let linear = linear::getrepo(fb).await;
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
 
@@ -2008,8 +2007,9 @@ async fn merge_test_setup(
 > {
     let ctx = CoreContext::test_mock(fb);
     // Set up various structures
-    let large_repo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(0))?;
-    let small_repo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1))?;
+    let mut factory = TestRepoFactory::new()?;
+    let large_repo: BlobRepo = factory.with_id(RepositoryId::new(0)).build()?;
+    let small_repo: BlobRepo = factory.with_id(RepositoryId::new(1)).build()?;
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
     let v1 = CommitSyncConfigVersion("v1".to_string());
     let v2 = CommitSyncConfigVersion("v2".to_string());

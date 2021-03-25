@@ -794,6 +794,7 @@ mod test {
     // To support async tests
     use cross_repo_sync_test_utils::get_live_commit_sync_config;
     use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMappingEntry};
+    use test_repo_factory::TestRepoFactory;
     use tests_utils::{bookmark, CreateCommitContext};
 
     fn identity_mover(v: &MPath) -> Result<Option<MPath>, Error> {
@@ -938,14 +939,14 @@ mod test {
     #[fbinit::test]
     async fn test_verify_working_copy(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let source = blobrepo_factory::new_memblob_empty(None)?;
+        let source = test_repo_factory::build_empty()?;
         let source_cs_id = CreateCommitContext::new_root(&ctx, &source)
             .add_file("prefix/file1", "1")
             .add_file("prefix/file2", "2")
             .commit()
             .await?;
 
-        let target = blobrepo_factory::new_memblob_empty(None)?;
+        let target = test_repo_factory::build_empty()?;
         let target_cs_id = CreateCommitContext::new_root(&ctx, &target)
             .add_file("file1", "1")
             .commit()
@@ -974,7 +975,7 @@ mod test {
     #[fbinit::test]
     async fn test_verify_working_copy_with_prefixes(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let source = blobrepo_factory::new_memblob_empty(None)?;
+        let source = test_repo_factory::build_empty()?;
         let source_cs_id = CreateCommitContext::new_root(&ctx, &source)
             .add_file("prefix/sub/file1", "1")
             .add_file("prefix/sub/file2", "2")
@@ -982,7 +983,7 @@ mod test {
             .commit()
             .await?;
 
-        let target = blobrepo_factory::new_memblob_empty(None)?;
+        let target = test_repo_factory::build_empty()?;
         let target_cs_id = CreateCommitContext::new_root(&ctx, &target)
             .add_file("sub/file1", "1")
             .add_file("sub/file2", "2")
@@ -1028,7 +1029,8 @@ mod test {
     #[fbinit::test]
     async fn test_verify_working_copy_fast_path(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let source = blobrepo_factory::new_memblob_empty(None)?;
+        let mut factory = TestRepoFactory::new()?;
+        let source = factory.with_id(RepositoryId::new(0)).build()?;
         let root_source_cs_id = CreateCommitContext::new_root(&ctx, &source)
             .add_file("prefix/sub/file1", "1")
             .add_file("somefile", "content")
@@ -1043,7 +1045,7 @@ mod test {
             .commit()
             .await?;
 
-        let target = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1))?;
+        let target = factory.with_id(RepositoryId::new(1)).build()?;
         let root_target_cs_id = CreateCommitContext::new_root(&ctx, &target)
             .add_file("sub/file1", "1")
             .commit()

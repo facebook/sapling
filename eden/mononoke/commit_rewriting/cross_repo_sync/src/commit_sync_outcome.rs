@@ -648,6 +648,7 @@ mod tests {
     use sql_construct::SqlConstruct;
     use sql_ext::SqlConnections;
     use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMappingEntry};
+    use test_repo_factory::TestRepoFactory;
     use tests_utils::drawdag::create_from_dag;
 
     const SMALL_REPO_ID: RepositoryId = RepositoryId::new(0);
@@ -741,7 +742,7 @@ mod tests {
     #[fbinit::test]
     async fn test_ancestor_hint_selector(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo = blobrepo_factory::new_memblob_empty_with_id(None, LARGE_REPO_ID)?;
+        let blob_repo: BlobRepo = TestRepoFactory::new()?.with_id(LARGE_REPO_ID).build()?;
         let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
             Target(Arc::new(SkiplistIndex::new()));
         let dag = create_from_dag(
@@ -824,7 +825,7 @@ mod tests {
     #[fbinit::test]
     async fn test_descendant_hint_selector(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
+        let blob_repo: BlobRepo = test_repo_factory::build_empty()?;
         let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
             Target(Arc::new(SkiplistIndex::new()));
         let dag = create_from_dag(
@@ -954,7 +955,7 @@ mod tests {
     #[fbinit::test]
     async fn test_bookmark_hint_selector(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo = blobrepo_factory::new_memblob_empty_with_id(None, LARGE_REPO_ID)?;
+        let blob_repo: BlobRepo = TestRepoFactory::new()?.with_id(LARGE_REPO_ID).build()?;
         let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
             Target(Arc::new(SkiplistIndex::new()));
         let dag = create_from_dag(
@@ -1020,7 +1021,7 @@ mod tests {
     #[fbinit::test]
     async fn test_only_hint(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let blob_repo = blobrepo_factory::new_memblob_empty_with_id(None, LARGE_REPO_ID)?;
+        let blob_repo: BlobRepo = TestRepoFactory::new()?.with_id(LARGE_REPO_ID).build()?;
         let dag = create_from_dag(
             &ctx,
             &blob_repo,

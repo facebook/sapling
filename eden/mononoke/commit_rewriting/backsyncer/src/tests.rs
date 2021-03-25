@@ -8,7 +8,6 @@
 use anyhow::{anyhow, Error};
 use assert_matches::assert_matches;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
-use blobrepo_factory::new_memblob_empty_with_id;
 use blobrepo_hg::BlobRepoHg;
 use blobrepo_override::DangerousOverride;
 use blobstore::Loadable;
@@ -50,6 +49,7 @@ use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
     SyncedCommitMappingEntry,
 };
+use test_repo_factory::TestRepoFactory;
 use tests_utils::{
     bookmark, create_commit, list_working_copy_utf8, store_files, store_rename, CreateCommitContext,
 };
@@ -382,10 +382,10 @@ async fn backsync_change_mapping(fb: FacebookInit) -> Result<(), Error> {
     // Initialize source and target repos
     let ctx = CoreContext::test_mock(fb);
     let source_repo_id = RepositoryId::new(1);
-    let source_repo = new_memblob_empty_with_id(None, source_repo_id)?;
+    let source_repo: BlobRepo = TestRepoFactory::new()?.with_id(source_repo_id).build()?;
 
     let target_repo_id = RepositoryId::new(2);
-    let target_repo = new_memblob_empty_with_id(None, target_repo_id)?;
+    let target_repo: BlobRepo = TestRepoFactory::new()?.with_id(target_repo_id).build()?;
 
     // Create commit syncer with two version - current and new
     let (target_repo, target_repo_dbs) =
@@ -979,12 +979,13 @@ async fn init_repos(
     bookmark_renamer_type: BookmarkRenamerType,
 ) -> Result<(CommitSyncer<SqlSyncedCommitMapping>, TargetRepoDbs), Error> {
     let ctx = CoreContext::test_mock(fb);
+    let mut factory = TestRepoFactory::new()?;
     let source_repo_id = RepositoryId::new(1);
-    let source_repo = new_memblob_empty_with_id(None, source_repo_id)?;
+    let source_repo: BlobRepo = factory.with_id(source_repo_id).build()?;
     linear::initrepo(fb, &source_repo).await;
 
     let target_repo_id = RepositoryId::new(2);
-    let target_repo = new_memblob_empty_with_id(None, target_repo_id)?;
+    let target_repo: BlobRepo = factory.with_id(target_repo_id).build()?;
 
     let (target_repo, target_repo_dbs) =
         init_target_repo(&ctx, source_repo_id, &target_repo).await?;
@@ -1268,8 +1269,9 @@ async fn init_merged_repos(
 > {
     let ctx = CoreContext::test_mock(fb);
 
+    let mut factory = TestRepoFactory::new()?;
     let large_repo_id = RepositoryId::new(num_repos as i32);
-    let large_repo = new_memblob_empty_with_id(None, large_repo_id)?;
+    let large_repo: BlobRepo = factory.with_id(large_repo_id).build()?;
 
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
 
@@ -1279,7 +1281,7 @@ async fn init_merged_repos(
     // Create small repos and one large repo
     for idx in 0..num_repos {
         let repoid = RepositoryId::new(idx as i32);
-        let small_repo = new_memblob_empty_with_id(None, repoid)?;
+        let small_repo: BlobRepo = factory.with_id(repoid).build()?;
         let small_repo_dbs = init_dbs(repoid)?;
 
         let bookmarks = small_repo_dbs.bookmarks.clone();
