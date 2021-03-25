@@ -36,7 +36,7 @@ def showtasks(**args):
 @templatekeyword("singlepublicbase")
 def singlepublicbase(repo, ctx, templ, **args):
     """String. Return the public base commit hash."""
-    base = repo.revs("last(::%d - not public())", ctx.rev())
+    base = repo.revs("max(::%n & public())", ctx.node())
     if len(base):
         return hex(repo[base.first()].node())
     return ""
