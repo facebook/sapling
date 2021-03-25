@@ -68,4 +68,5 @@ assert_matches = "1.5"
 cross_repo_sync_test_utils = { version = "0.1.0", path = "../commit_rewriting/cross_repo_sync/test_utils" }
 fbinit-tokio-02 = { version = "0.1.0", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fixtures = { version = "0.1.0", path = "../tests/fixtures" }
+test_repo_factory = { version = "0.1.0", path = "../repo_factory/test_repo_factory" }
 tests_utils = { version = "0.1.0", path = "../tests/utils" }

@@ -11,7 +11,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Error};
-use blobrepo_factory::new_memblob_empty;
 use blobstore::Loadable;
 use bytes::Bytes;
 use chrono::{FixedOffset, TimeZone};
@@ -902,7 +901,7 @@ async fn resolve_changeset_id_prefix(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = new_memblob_empty(None)?;
+    let blobrepo = test_repo_factory::build_empty()?;
     let root = CreateCommitContext::new_root(&ctx, &blobrepo)
         .add_file("file_to_move", "context1")
         .commit()

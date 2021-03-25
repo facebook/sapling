@@ -15,7 +15,7 @@ use tests_utils::drawdag::{changes, create_from_dag_with_changes};
 use crate::{headerless_unified_diff, ChangesetId, CoreContext, Repo, RepoContext};
 
 async fn init_repo(ctx: &CoreContext) -> Result<(RepoContext, BTreeMap<String, ChangesetId>)> {
-    let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
+    let blob_repo = test_repo_factory::build_empty()?;
     let changesets = create_from_dag_with_changes(
         ctx,
         &blob_repo,
