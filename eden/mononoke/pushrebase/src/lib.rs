@@ -1275,9 +1275,7 @@ mod tests {
     use anyhow::{format_err, Context};
     use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
-    use blobrepo_override::DangerousOverride;
-    use bookmarks::{ArcBookmarkUpdateLog, ArcBookmarks, BookmarkTransactionError};
-    use dbbookmarks::SqlBookmarksBuilder;
+    use bookmarks::BookmarkTransactionError;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
     use futures::{
@@ -1292,11 +1290,12 @@ mod tests {
     use mononoke_types_mocks::hash::AS;
     use mutable_counters::{MutableCounters, SqlMutableCounters};
     use rand::Rng;
-    use sql::{rusqlite::Connection as SqliteConnection, Connection, Transaction};
+    use sql::Transaction;
     use sql_construct::SqlConstruct;
-    use sql_ext::{SqlConnections, TransactionResult};
+    use sql_ext::TransactionResult;
     use std::time::Duration;
     use std::{collections::BTreeMap, str::FromStr};
+    use test_repo_factory::TestRepoFactory;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
     use tunables::{with_tunables_async, MononokeTunables};
 
@@ -1460,31 +1459,6 @@ mod tests {
         })
     }
 
-    // Initializes bookmarks and mutable_counters on the "same db" i.e. on the same
-    // sqlite connection
-    async fn init_bookmarks_mutable_counters(
-        repo_id: RepositoryId,
-    ) -> Result<(ArcBookmarks, ArcBookmarkUpdateLog, Arc<SqlMutableCounters>), Error> {
-        let con = SqliteConnection::open_in_memory()?;
-        con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
-        con.execute_batch(SqlBookmarksBuilder::CREATION_QUERY)?;
-
-        let con = Connection::with_sqlite(con);
-        let bookmarks = Arc::new(
-            SqlBookmarksBuilder::from_sql_connections(SqlConnections::new_single(con.clone()))
-                .with_repo_id(repo_id),
-        );
-        let mutable_counters = Arc::new(SqlMutableCounters::from_sql_connections(
-            SqlConnections::new_single(con),
-        ));
-
-        Ok((
-            bookmarks.clone() as ArcBookmarks,
-            bookmarks as ArcBookmarkUpdateLog,
-            mutable_counters,
-        ))
-    }
-
     #[fbinit::test]
     fn pushrebase_one_commit_transaction_hook(fb: FacebookInit) -> Result<(), Error> {
         #[derive(Copy, Clone)]
@@ -1545,7 +1519,9 @@ mod tests {
         let mut runtime = tokio::runtime::Runtime::new().unwrap();
         runtime.block_on(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = linear::getrepo(fb).await;
+            let factory = TestRepoFactory::new()?;
+            let repo = factory.build()?;
+            linear::initrepo(fb, &repo).await;
             // Bottom commit of the repo
             let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
             let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
@@ -1554,11 +1530,9 @@ mod tests {
                 .await?;
 
             let repoid = repo.get_repoid();
-            let (bookmarks, bookmark_update_log, mutable_counters) =
-                init_bookmarks_mutable_counters(repoid).await?;
-            let repo = repo
-                .dangerous_override(|_| bookmarks)
-                .dangerous_override(|_| bookmark_update_log);
+            let mutable_counters = Arc::new(SqlMutableCounters::from_sql_connections(
+                factory.metadata_db().clone(),
+            ));
 
             let bcs = bcs_id.load(&ctx, repo.blobstore()).await?;
 
