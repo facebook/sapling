@@ -163,6 +163,10 @@ class abstractsmartset(object):
         This can be expensive on smartset that could be lazy otherwise."""
         raise NotImplementedError()
 
+    def fastlen(self):
+        """Returns the length of the set, or None if it cannot be calculated quickly."""
+        return None
+
     def reverse(self):
         """reverse the expected iteration order"""
         raise NotImplementedError()
@@ -406,6 +410,8 @@ class baseset(abstractsmartset):
         else:
             return len(self._set)
 
+    fastlen = __len__
+
     def isascending(self):
         """Returns True if the collection is ascending order, False if not.
 
@@ -643,6 +649,8 @@ class idset(abstractsmartset):
     def __len__(self):
         return len(self._spans)
 
+    fastlen = __len__
+
     def isascending(self):
         """Returns True if the collection is ascending order, False if not.
 
@@ -827,6 +835,8 @@ class nameset(abstractsmartset):
     def __len__(self):
         return len(self._set)
 
+    fastlen = __len__
+
     def isascending(self):
         if self._reversed:
             return bool(self._set.hints().get("desc"))
@@ -1003,7 +1013,7 @@ class filteredset(abstractsmartset):
         progress bar.
         """
         bar = bindings.progress.model.ProgressBar(
-            _("filtering"), len(self._subset), _("commits")
+            _("filtering"), self._subset.fastlen(), _("commits")
         )
         fields = self._subset.prefetchfields()
         if fields:
