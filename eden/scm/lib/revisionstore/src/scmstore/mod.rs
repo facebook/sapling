@@ -20,7 +20,7 @@ pub use self::{
     filter_map::FilterMapStore,
     inmemory::{HashMapStore, KeyedValue},
     legacy::LegacyDatastore,
-    types::StoreFile,
+    types::{StoreFile, StoreTree},
 };
 
 pub mod edenapi;
