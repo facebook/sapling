@@ -149,7 +149,7 @@ impl ChangesetHook for LimitCommitsize {
 mod test {
     use super::*;
     use anyhow::Error;
-    use blobrepo_factory::new_memblob_empty;
+    use blobrepo::BlobRepo;
     use blobstore::Loadable;
     use borrowed::borrowed;
     use fbinit::FacebookInit;
@@ -161,7 +161,7 @@ mod test {
     #[fbinit::test]
     async fn test_limitcommitsize(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         borrowed!(ctx, repo);
 
         let cs_id = CreateCommitContext::new_root(ctx, repo)
@@ -234,7 +234,7 @@ mod test {
     #[fbinit::test]
     async fn test_limitcommitsize_removed_files(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = new_memblob_empty(None)?;
+        let repo: BlobRepo = test_repo_factory::build_empty()?;
         borrowed!(ctx, repo);
 
         let parent_cs_id = CreateCommitContext::new_root(ctx, repo)

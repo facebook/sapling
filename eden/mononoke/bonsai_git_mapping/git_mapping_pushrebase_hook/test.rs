@@ -6,6 +6,7 @@
  */
 
 use anyhow::Error;
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use borrowed::borrowed;
 use context::CoreContext;
@@ -14,7 +15,7 @@ use maplit::hashset;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::hash::*;
 use pushrebase::do_pushrebase_bonsai;
-use sql::rusqlite::Connection as SqliteConnection;
+use test_repo_factory::TestRepoFactory;
 use tests_utils::{bookmark, CreateCommitContext};
 
 use crate::GitMappingPushrebaseHook;
@@ -27,11 +28,9 @@ fn pushrebase_populates_git_mapping(fb: FacebookInit) -> Result<(), Error> {
 
 async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo_id = RepositoryId::new(1);
-    let (repo, _con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
-        SqliteConnection::open_in_memory()?,
-        repo_id.clone(),
-    )?;
+    let repo: BlobRepo = TestRepoFactory::new()?
+        .with_id(RepositoryId::new(1))
+        .build()?;
     borrowed!(ctx, repo);
     let mapping = repo.bonsai_git_mapping().clone();
 

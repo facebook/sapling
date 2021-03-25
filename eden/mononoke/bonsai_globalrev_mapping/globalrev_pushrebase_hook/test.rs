@@ -7,6 +7,7 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
+use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkTransactionError;
 use borrowed::borrowed;
@@ -23,9 +24,9 @@ use pushrebase::{
     RebasedChangesets,
 };
 use rand::Rng;
-use sql::rusqlite::Connection as SqliteConnection;
 use sql::Transaction;
 use std::time::Duration;
+use test_repo_factory::TestRepoFactory;
 use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 
 use crate::GlobalrevPushrebaseHook;
@@ -38,10 +39,9 @@ fn pushrebase_assigns_globalrevs(fb: FacebookInit) -> Result<(), Error> {
 
 async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let (repo, _con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
-        SqliteConnection::open_in_memory()?,
-        RepositoryId::new(1),
-    )?;
+    let repo: BlobRepo = TestRepoFactory::new()?
+        .with_id(RepositoryId::new(1))
+        .build()?;
     let mapping = repo.bonsai_globalrev_mapping().clone();
     borrowed!(ctx, repo);
 
@@ -191,10 +191,9 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
     }
 
     let ctx = CoreContext::test_mock(fb);
-    let (repo, _con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
-        SqliteConnection::open_in_memory()?,
-        RepositoryId::new(1),
-    )?;
+    let repo: BlobRepo = TestRepoFactory::new()?
+        .with_id(RepositoryId::new(1))
+        .build()?;
     let mapping = repo.bonsai_globalrev_mapping().clone();
     borrowed!(ctx, repo);
 
