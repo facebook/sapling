@@ -5,16 +5,20 @@
  * GNU General Public License version 2.
  */
 
+use crate::CommitsInBundle;
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::{stream, StreamExt, TryStreamExt};
 use metaconfig_types::HgsqlGlobalrevsName;
 use mononoke_types::ChangesetId;
 use sql::{queries, Connection};
 use sql_construct::{facebook::FbSqlConstruct, SqlConstruct};
 use sql_ext::{facebook::MysqlOptions, SqlConnections};
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -22,6 +26,12 @@ use std::sync::Arc;
 pub enum GlobalrevSyncer {
     Noop,
     Sql(Arc<SqlGlobalrevSyncer>),
+    Darkstorm(Arc<DarkstormGlobalrevSyncer>),
+}
+
+pub struct DarkstormGlobalrevSyncer {
+    orig_repo: BlobRepo,
+    darkstorm_repo: BlobRepo,
 }
 
 pub struct SqlGlobalrevSyncer {
@@ -82,16 +92,70 @@ impl GlobalrevSyncer {
         Ok(GlobalrevSyncer::Sql(Arc::new(syncer)))
     }
 
+    pub fn darkstorm(orig_repo: &BlobRepo, darkstorm_repo: &BlobRepo) -> Self {
+        Self::Darkstorm(Arc::new(DarkstormGlobalrevSyncer {
+            orig_repo: orig_repo.clone(),
+            darkstorm_repo: darkstorm_repo.clone(),
+        }))
+    }
+
     pub async fn sync(
         &self,
         ctx: &CoreContext,
         bookmark: &BookmarkName,
         bcs_id: ChangesetId,
+        commits: &CommitsInBundle,
     ) -> Result<(), Error> {
         match self {
             Self::Noop => Ok(()),
             Self::Sql(syncer) => syncer.sync(ctx, bookmark, bcs_id).await,
+            Self::Darkstorm(syncer) => syncer.sync(ctx, commits).await,
         }
+    }
+}
+
+impl DarkstormGlobalrevSyncer {
+    pub async fn sync(&self, ctx: &CoreContext, commits: &CommitsInBundle) -> Result<(), Error> {
+        let commits = match commits {
+            CommitsInBundle::Commits(commits) => commits,
+            CommitsInBundle::Unknown => {
+                return Err(format_err!(
+                    "can't use darkstorm globalrev syncer because commits that were \
+                    sent in the bundle are not known"
+                ));
+            }
+        };
+
+        let bcs_id_to_globalrev = stream::iter(commits.iter().map(|bcs_id| async move {
+            let maybe_globalrev = self
+                .orig_repo
+                .get_globalrev_from_bonsai(ctx, *bcs_id)
+                .await?;
+            Result::<_, Error>::Ok((bcs_id, maybe_globalrev))
+        }))
+        .map(Ok)
+        .try_buffer_unordered(100)
+        .try_filter_map(|(bcs_id, maybe_globalrev)| async move {
+            Ok(maybe_globalrev.map(|globalrev| (bcs_id, globalrev)))
+        })
+        .try_collect::<HashMap<_, _>>()
+        .await?;
+
+        let entries = bcs_id_to_globalrev
+            .into_iter()
+            .map(|(bcs_id, globalrev)| BonsaiGlobalrevMappingEntry {
+                repo_id: self.darkstorm_repo.get_repoid(),
+                bcs_id: *bcs_id,
+                globalrev,
+            })
+            .collect::<Vec<_>>();
+
+        self.darkstorm_repo
+            .bonsai_globalrev_mapping()
+            .bulk_import(ctx, &entries[..])
+            .await?;
+
+        Ok(())
     }
 }
 
@@ -180,9 +244,11 @@ mod test {
     use super::*;
     use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
     use mercurial_types_mocks::globalrev::{GLOBALREV_ONE, GLOBALREV_THREE, GLOBALREV_TWO};
+    use mononoke_types::RepositoryId;
     use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
     use mononoke_types_mocks::repo::REPO_ZERO;
     use sql::rusqlite::Connection as SqliteConnection;
+    use test_repo_factory::TestRepoFactory;
 
     queries! {
         write InitGlobalrevCounter(repo: String, rev: u64) {
@@ -289,5 +355,72 @@ mod test {
 
             Ok(())
         })
+    }
+
+    #[fbinit::test]
+    async fn test_sync_darkstorm(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+
+        let orig_repo: BlobRepo = TestRepoFactory::new()?
+            .with_id(RepositoryId::new(0))
+            .build()?;
+        let darkstorm_repo: BlobRepo = TestRepoFactory::new()?
+            .with_id(RepositoryId::new(1))
+            .build()?;
+
+        let e1 = BonsaiGlobalrevMappingEntry {
+            repo_id: REPO_ZERO,
+            bcs_id: ONES_CSID,
+            globalrev: GLOBALREV_ONE,
+        };
+
+        let e2 = BonsaiGlobalrevMappingEntry {
+            repo_id: REPO_ZERO,
+            bcs_id: TWOS_CSID,
+            globalrev: GLOBALREV_TWO,
+        };
+        orig_repo
+            .bonsai_globalrev_mapping()
+            .bulk_import(&ctx, &[e1, e2])
+            .await?;
+
+        let syncer = DarkstormGlobalrevSyncer {
+            orig_repo,
+            darkstorm_repo: darkstorm_repo.clone(),
+        };
+
+        assert!(
+            darkstorm_repo
+                .bonsai_globalrev_mapping()
+                .get_globalrev_from_bonsai(&ctx, darkstorm_repo.get_repoid(), ONES_CSID)
+                .await?
+                .is_none()
+        );
+        assert!(
+            darkstorm_repo
+                .bonsai_globalrev_mapping()
+                .get_globalrev_from_bonsai(&ctx, darkstorm_repo.get_repoid(), TWOS_CSID)
+                .await?
+                .is_none()
+        );
+        syncer
+            .sync(&ctx, &CommitsInBundle::Commits(vec![ONES_CSID, TWOS_CSID]))
+            .await?;
+
+        assert_eq!(
+            Some(GLOBALREV_ONE),
+            darkstorm_repo
+                .bonsai_globalrev_mapping()
+                .get_globalrev_from_bonsai(&ctx, darkstorm_repo.get_repoid(), ONES_CSID)
+                .await?
+        );
+        assert_eq!(
+            Some(GLOBALREV_TWO),
+            darkstorm_repo
+                .bonsai_globalrev_mapping()
+                .get_globalrev_from_bonsai(&ctx, darkstorm_repo.get_repoid(), TWOS_CSID)
+                .await?
+        );
+        Ok(())
     }
 }
