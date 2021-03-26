@@ -11,7 +11,7 @@ use std::time::Duration;
 use anyhow::{format_err, Context, Result};
 use fbinit::FacebookInit;
 use futures::compat::Stream01CompatExt;
-use futures::future::try_join_all;
+use futures::future::{try_join_all, FutureExt};
 use futures::stream::TryStreamExt;
 use futures::StreamExt;
 use once_cell::sync::Lazy;
@@ -33,6 +33,7 @@ use crate::iddag::IdDagSaveStore;
 use crate::idmap::{CacheHandlers, IdMap, IdMapFactory, SqlIdMap};
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
+use crate::periodic_reload::PeriodicReloadSegmentedChangelog;
 use crate::seeder::SegmentedChangelogSeeder;
 use crate::tailer::SegmentedChangelogTailer;
 use crate::types::{IdDagVersion, IdMapVersion, SegmentedChangelogVersion};
@@ -815,13 +816,25 @@ async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
-    let blobrepo = linear::getrepo(fb).await;
+    let blobrepo = Arc::new(linear::getrepo(fb).await);
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
-    let builder = SegmentedChangelogBuilder::new()
-        .with_sql_connections(conns.clone())
-        .with_blobrepo(&blobrepo)
-        .with_bookmark_name(BOOKMARK_NAME.clone())
-        .with_reload_dag_period(Duration::from_secs(10));
+
+    let load_fn = {
+        let ctx = ctx.clone();
+        let conns = conns.clone();
+        let blobrepo = blobrepo.clone();
+        move || {
+            let ctx = ctx.clone();
+            let conns = conns.clone();
+            let blobrepo = blobrepo.clone();
+            async move {
+                let asc: Arc<dyn SegmentedChangelog + Send + Sync> =
+                    Arc::new(load_owned(&ctx, &blobrepo, &conns).await?);
+                Ok(asc)
+            }
+            .boxed()
+        }
+    };
 
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281"; // commit 4
     let start_cs_id = resolve_cs_id(&ctx, &blobrepo, start_hg_id).await?;
@@ -829,7 +842,8 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     seed(&ctx, &blobrepo, &conns, start_cs_id).await?;
 
     tokio::time::pause();
-    let sc = builder.clone().build_periodic_reload(&ctx).await?;
+    let sc =
+        PeriodicReloadSegmentedChangelog::start(&ctx, Duration::from_secs(10), load_fn).await?;
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
 
     let tailer = new_tailer(&blobrepo, &conns);

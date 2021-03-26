@@ -107,9 +107,10 @@ pub async fn new_server_segmented_changelog(
     );
     let sc = match config.reload_dag_save_period {
         None => manager.load(ctx).await?,
-        Some(reload_period) => {
-            Arc::new(PeriodicReloadSegmentedChangelog::start(ctx, manager, reload_period).await?)
-        }
+        Some(reload_period) => Arc::new(
+            PeriodicReloadSegmentedChangelog::start_from_manager(ctx, reload_period, manager)
+                .await?,
+        ),
     };
     Ok(sc)
 }
@@ -217,7 +218,7 @@ impl SegmentedChangelogBuilder {
     ) -> Result<PeriodicReloadSegmentedChangelog> {
         let reload_dag_period = self.reload_dag_period()?;
         let manager = self.build_manager()?;
-        PeriodicReloadSegmentedChangelog::start(ctx, manager, reload_dag_period).await
+        PeriodicReloadSegmentedChangelog::start_from_manager(ctx, reload_dag_period, manager).await
     }
 
     pub fn build_seeder(mut self) -> Result<SegmentedChangelogSeeder> {

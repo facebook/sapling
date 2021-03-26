@@ -12,6 +12,7 @@ use std::time::Duration;
 use anyhow::Result;
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
+use futures::future::{BoxFuture, FutureExt};
 use tokio::sync::Notify;
 use tokio::time::Instant;
 
@@ -33,12 +34,12 @@ pub struct PeriodicReloadSegmentedChangelog {
 }
 
 impl PeriodicReloadSegmentedChangelog {
-    pub async fn start(
-        ctx: &CoreContext,
-        manager: SegmentedChangelogManager,
-        period: Duration,
-    ) -> Result<Self> {
-        let sc = Arc::new(ArcSwap::from_pointee(manager.load(ctx).await?));
+    pub async fn start<F>(ctx: &CoreContext, period: Duration, load_fn: F) -> Result<Self>
+    where
+        F: Fn() -> BoxFuture<'static, Result<Arc<dyn SegmentedChangelog + Send + Sync>>>,
+        F: Send + Sync + 'static,
+    {
+        let sc = Arc::new(ArcSwap::from_pointee(load_fn().await?));
         let update_notify = Arc::new(Notify::new());
         let _handle = spawn_controlled({
             let ctx = ctx.clone();
@@ -49,7 +50,7 @@ impl PeriodicReloadSegmentedChangelog {
                 let mut interval = tokio::time::interval_at(start, period);
                 loop {
                     interval.tick().await;
-                    match manager.load(&ctx).await {
+                    match load_fn().await {
                         Ok(sc) => my_sc.store(Arc::new(sc)),
                         Err(err) => {
                             slog::error!(
@@ -68,6 +69,23 @@ impl PeriodicReloadSegmentedChangelog {
             _handle,
             update_notify,
         })
+    }
+
+    pub async fn start_from_manager(
+        ctx: &CoreContext,
+        period: Duration,
+        manager: SegmentedChangelogManager,
+    ) -> Result<Self> {
+        let load_fn = {
+            let ctx = ctx.clone();
+            let manager = Arc::new(manager);
+            move || {
+                let ctx = ctx.clone();
+                let manager = Arc::clone(&manager);
+                async move { manager.load(&ctx).await }.boxed()
+            }
+        };
+        Self::start(ctx, period, load_fn).await
     }
 
     #[cfg(test)]
