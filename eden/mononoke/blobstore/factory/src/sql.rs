@@ -112,7 +112,6 @@ impl MetadataSqlFactory {
                         self.fb,
                         global_connection_pool.clone(),
                         pool_config.clone(),
-                        label,
                         config.primary.db_address.clone(),
                         self.mysql_options.read_connection_type(),
                         self.readonly.0,
