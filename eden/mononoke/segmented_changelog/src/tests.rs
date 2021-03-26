@@ -8,7 +8,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{format_err, Result};
+use anyhow::{format_err, Context, Result};
 use fbinit::FacebookInit;
 use futures::compat::Stream01CompatExt;
 use futures::future::try_join_all;
@@ -21,7 +21,7 @@ use bookmarks::{BookmarkName, Bookmarks};
 use caching_ext::{CachelibHandler, MemcacheHandler};
 use context::CoreContext;
 use fixtures::{linear, merge_even, merge_uneven, set_bookmark, unshared_merge_even};
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
 use phases::mark_reachable_as_public;
 use revset::AncestorsNodeStream;
 use sql_construct::SqlConstruct;
@@ -30,13 +30,14 @@ use tests_utils::resolve_cs_id;
 
 use crate::builder::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{CacheHandlers, IdMap, SqlIdMap};
+use crate::idmap::{CacheHandlers, IdMap, IdMapFactory, SqlIdMap};
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
+use crate::seeder::SegmentedChangelogSeeder;
 use crate::tailer::SegmentedChangelogTailer;
-use crate::types::{IdDagVersion, IdMapVersion};
-use crate::SegmentedChangelog;
-use crate::{InProcessIdDag, Location};
+use crate::types::{IdDagVersion, IdMapVersion, SegmentedChangelogVersion};
+use crate::version_store::SegmentedChangelogVersionStore;
+use crate::{InProcessIdDag, Location, SegmentedChangelog};
 
 #[async_trait::async_trait]
 trait SegmentedChangelogExt {
@@ -76,14 +77,88 @@ fn new_tailer(
     )
 }
 
+async fn seed(
+    ctx: &CoreContext,
+    blobrepo: &BlobRepo,
+    connections: &SegmentedChangelogSqlConnections,
+    head: ChangesetId,
+) -> Result<()> {
+    // Does it make sense to seed up to the master commit instead of head?
+    // Something to consider. Depends how it's used by tests.
+    let phases = blobrepo.get_phases();
+    let sql_phases = phases.get_sql_phases();
+    mark_reachable_as_public(&ctx, sql_phases, &[head], false).await?;
+
+    let seeder = SegmentedChangelogSeeder::new(
+        blobrepo.get_repoid(),
+        connections.clone(),
+        Arc::new(NoReplicaLagMonitor()),
+        blobrepo.get_changesets_object(),
+        blobrepo.get_phases(),
+        Arc::new(blobrepo.get_blobstore()),
+    );
+    seeder.run(ctx, head).await
+}
+
+async fn load_sc_version(
+    ctx: &CoreContext,
+    repo_id: RepositoryId,
+    connections: &SegmentedChangelogSqlConnections,
+) -> Result<SegmentedChangelogVersion> {
+    let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
+    let sc_version = sc_version_store
+        .get(ctx)
+        .await?
+        .context("failed to load segmented changelog version")?;
+    Ok(sc_version)
+}
+
+async fn load_idmap(
+    ctx: &CoreContext,
+    repo_id: RepositoryId,
+    connections: &SegmentedChangelogSqlConnections,
+) -> Result<Arc<dyn IdMap>> {
+    let sc_version = load_sc_version(ctx, repo_id, connections).await?;
+    let idmap = SqlIdMap::new(
+        connections.0.clone(),
+        Arc::new(NoReplicaLagMonitor()),
+        repo_id,
+        sc_version.idmap_version,
+    );
+    Ok(Arc::new(idmap))
+}
+
+async fn load_iddag(
+    ctx: &CoreContext,
+    blobrepo: &BlobRepo,
+    connections: &SegmentedChangelogSqlConnections,
+) -> Result<InProcessIdDag> {
+    let sc_version = load_sc_version(ctx, blobrepo.get_repoid(), connections).await?;
+    let iddag_save_store =
+        IdDagSaveStore::new(blobrepo.get_repoid(), Arc::new(blobrepo.get_blobstore()));
+    let iddag = iddag_save_store.load(ctx, sc_version.iddag_version).await?;
+    Ok(iddag)
+}
+
+async fn load_owned(
+    ctx: &CoreContext,
+    blobrepo: &BlobRepo,
+    connections: &SegmentedChangelogSqlConnections,
+) -> Result<OwnedSegmentedChangelog> {
+    let iddag = load_iddag(ctx, blobrepo, connections).await?;
+    let idmap = load_idmap(ctx, blobrepo.get_repoid(), connections).await?;
+    Ok(OwnedSegmentedChangelog::new(iddag, idmap))
+}
+
 async fn validate_build_idmap(
     ctx: CoreContext,
     blobrepo: BlobRepo,
     head: &'static str,
 ) -> Result<()> {
     let head = resolve_cs_id(&ctx, &blobrepo, head).await?;
-    setup_phases(&ctx, &blobrepo, head).await?;
-    let sc = new_build_all_from_blobrepo(&ctx, &blobrepo, head).await?;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+    seed(&ctx, &blobrepo, &conns, head).await?;
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
 
     let mut ancestors =
         AncestorsNodeStream::new(ctx.clone(), &blobrepo.get_changeset_fetcher(), head).compat();
@@ -100,39 +175,18 @@ async fn validate_build_idmap(
     }
     Ok(())
 }
-pub async fn setup_phases(ctx: &CoreContext, blobrepo: &BlobRepo, head: ChangesetId) -> Result<()> {
-    let phases = blobrepo.get_phases();
-    let sql_phases = phases.get_sql_phases();
-    mark_reachable_as_public(&ctx, sql_phases, &[head], false).await?;
-    Ok(())
-}
-
-pub async fn new_build_all_from_blobrepo(
-    ctx: &CoreContext,
-    blobrepo: &BlobRepo,
-    head: ChangesetId,
-) -> Result<OwnedSegmentedChangelog> {
-    let seeder = SegmentedChangelogBuilder::new()
-        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
-        .with_blobrepo(blobrepo)
-        .build_seeder()?;
-
-    let (owned, _) = seeder
-        .build_from_scratch(ctx, head, IdMapVersion(0))
-        .await?;
-    Ok(owned)
-}
 
 #[fbinit::test]
 async fn test_iddag_save_store(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
     let repo_id = blobrepo.get_repoid();
 
     let known_cs =
         resolve_cs_id(&ctx, &blobrepo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await?;
-    setup_phases(&ctx, &blobrepo, known_cs).await?;
-    let sc = new_build_all_from_blobrepo(&ctx, &blobrepo, known_cs).await?;
+    seed(&ctx, &blobrepo, &conns, known_cs).await?;
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
 
     let distance: u64 = 2;
     let answer = sc
@@ -194,8 +248,9 @@ async fn validate_location_to_changeset_ids(
 ) -> Result<()> {
     let (distance, count) = distance_count;
     let known_cs_id = resolve_cs_id(&ctx, &blobrepo, known).await?;
-    setup_phases(&ctx, &blobrepo, known_cs_id).await?;
-    let sc = new_build_all_from_blobrepo(&ctx, &blobrepo, known_cs_id).await?;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+    seed(&ctx, &blobrepo, &conns, known_cs_id).await?;
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
 
     let answer = sc
         .location_to_many_changeset_ids(&ctx, Location::new(known_cs_id, distance), count)
@@ -252,10 +307,11 @@ async fn test_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
 async fn test_location_to_changeset_id_invalid_req(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = unshared_merge_even::getrepo(fb).await;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
     let known_cs_id =
         resolve_cs_id(&ctx, &blobrepo, "7fe9947f101acb4acf7d945e69f0d6ce76a81113").await?;
-    setup_phases(&ctx, &blobrepo, known_cs_id).await?;
-    let sc = new_build_all_from_blobrepo(&ctx, &blobrepo, known_cs_id).await?;
+    seed(&ctx, &blobrepo, &conns, known_cs_id).await?;
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
     assert!(
         sc.location_to_many_changeset_ids(&ctx, Location::new(known_cs_id, 1u64), 2u64)
             .await
@@ -292,8 +348,9 @@ async fn validate_changeset_id_to_location(
     expected: Option<Location<&'static str>>,
 ) -> Result<()> {
     let server_master = resolve_cs_id(&ctx, &blobrepo, server_master).await?;
-    setup_phases(&ctx, &blobrepo, server_master).await?;
-    let sc = new_build_all_from_blobrepo(&ctx, &blobrepo, server_master).await?;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+    seed(&ctx, &blobrepo, &conns, server_master).await?;
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
 
     let head_cs = resolve_cs_id(&ctx, &blobrepo, head).await?;
     let cs_id = resolve_cs_id(&ctx, &blobrepo, hg_id).await?;
@@ -369,11 +426,12 @@ async fn test_changeset_id_to_location(fb: FacebookInit) -> Result<()> {
 async fn test_changeset_id_to_location_random_hash(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
     let server_master =
         resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
-    setup_phases(&ctx, &blobrepo, server_master).await?;
-    let sc = new_build_all_from_blobrepo(&ctx, &blobrepo, server_master).await?;
+    seed(&ctx, &blobrepo, &conns, server_master).await?;
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
 
     let head_cs = server_master;
     let random_cs_id = mononoke_types_mocks::changesetid::ONES_CSID;
@@ -433,18 +491,19 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
 #[fbinit::test]
 async fn test_two_repos(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
-    let blobrepo1 = linear::getrepo(fb).await;
+    let blobrepo1 = linear::getrepo_with_id(fb, RepositoryId::new(1)).await;
     let known_cs1 =
         resolve_cs_id(&ctx, &blobrepo1, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
-    setup_phases(&ctx, &blobrepo1, known_cs1).await?;
-    let sc1 = new_build_all_from_blobrepo(&ctx, &blobrepo1, known_cs1).await?;
+    seed(&ctx, &blobrepo1, &conns, known_cs1).await?;
+    let sc1 = load_owned(&ctx, &blobrepo1, &conns).await?;
 
-    let blobrepo2 = merge_even::getrepo(fb).await;
+    let blobrepo2 = merge_even::getrepo_with_id(fb, RepositoryId::new(2)).await;
     let known_cs2 =
         resolve_cs_id(&ctx, &blobrepo2, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await?;
-    setup_phases(&ctx, &blobrepo2, known_cs2).await?;
-    let sc2 = new_build_all_from_blobrepo(&ctx, &blobrepo2, known_cs2).await?;
+    seed(&ctx, &blobrepo2, &conns, known_cs2).await?;
+    let sc2 = load_owned(&ctx, &blobrepo2, &conns).await?;
 
     let distance: u64 = 4;
     let answer = sc1
@@ -542,6 +601,7 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
             BOOKMARK_NAME.clone(),
         )
     };
+
     let master_cs =
         resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
 
@@ -576,10 +636,12 @@ async fn test_clone_data(fb: FacebookInit) -> Result<()> {
     // segmented changelog that starts off with an empty iddag.
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
     let head = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
-    setup_phases(&ctx, &blobrepo, head).await?;
-    let sc = new_build_all_from_blobrepo(&ctx, &blobrepo, head).await?;
+    seed(&ctx, &blobrepo, &conns, head).await?;
+
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
 
     let clone_data = sc.clone_data(&ctx).await?;
 
@@ -604,10 +666,11 @@ async fn test_full_idmap_clone_data(fb: FacebookInit) -> Result<()> {
     // in an ondemand dag that starts off with an empty iddag.
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
     let head = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
-    setup_phases(&ctx, &blobrepo, head).await?;
-    let sc = new_build_all_from_blobrepo(&ctx, &blobrepo, head).await?;
+    seed(&ctx, &blobrepo, &conns, head).await?;
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
 
     let clone_data = sc.full_idmap_clone_data(&ctx).await?;
     let idmap = clone_data.idmap_stream.try_collect::<Vec<_>>().await?;
@@ -621,6 +684,7 @@ async fn test_full_idmap_clone_data(fb: FacebookInit) -> Result<()> {
 async fn test_caching(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
+    let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
     let cs_to_dag_handler = CachelibHandler::create_mock();
     let dag_to_cs_handler = CachelibHandler::create_mock();
@@ -633,15 +697,17 @@ async fn test_caching(fb: FacebookInit) -> Result<()> {
 
     // It's easier to reason about cache hits and sets when the dag is already built
     let head = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
-    setup_phases(&ctx, &blobrepo, head).await?;
-    let seeder = SegmentedChangelogBuilder::new()
-        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
-        .with_blobrepo(&blobrepo)
-        .with_cache_handlers(cache_handlers)
-        .build_seeder()?;
-    let (sc, _) = seeder
-        .build_from_scratch(&ctx, head, IdMapVersion(0))
-        .await?;
+    seed(&ctx, &blobrepo, &conns, head).await?;
+    let iddag = load_iddag(&ctx, &blobrepo, &conns).await?;
+    let sc_version = load_sc_version(&ctx, blobrepo.get_repoid(), &conns).await?;
+    let idmap = IdMapFactory::new(
+        conns.0.clone(),
+        Arc::new(NoReplicaLagMonitor()),
+        blobrepo.get_repoid(),
+    )
+    .with_cache_handlers(cache_handlers)
+    .for_server(&ctx, sc_version.idmap_version, &iddag)?;
+    let sc = OwnedSegmentedChangelog::new(iddag, idmap);
 
     let distance: u64 = 1;
     let _ = sc
@@ -731,10 +797,8 @@ async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281"; // commit 4
     let start_cs_id = resolve_cs_id(&ctx, &blobrepo, start_hg_id).await?;
 
-    setup_phases(&ctx, &blobrepo, start_cs_id).await?;
+    seed(&ctx, &blobrepo, &conns, start_cs_id).await?;
 
-    let seeder = builder.clone().build_seeder()?;
-    let _ = seeder.run(&ctx, start_cs_id).await?;
     let manager = builder.clone().build_manager()?;
     let sc = manager.load(&ctx).await?;
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
@@ -762,10 +826,7 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281"; // commit 4
     let start_cs_id = resolve_cs_id(&ctx, &blobrepo, start_hg_id).await?;
 
-    setup_phases(&ctx, &blobrepo, start_cs_id).await?;
-
-    let seeder = builder.clone().build_seeder()?;
-    let _ = seeder.run(&ctx, start_cs_id).await?;
+    seed(&ctx, &blobrepo, &conns, start_cs_id).await?;
 
     tokio::time::pause();
     let sc = builder.clone().build_periodic_reload(&ctx).await?;

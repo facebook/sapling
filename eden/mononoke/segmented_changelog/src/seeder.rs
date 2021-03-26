@@ -11,12 +11,15 @@ use anyhow::{Context, Result};
 use futures::stream::TryStreamExt;
 use slog::info;
 
+use sql_ext::replication::ReplicaLagMonitor;
 use stats::prelude::*;
 
+use blobstore::Blobstore;
 use bulkops::{Direction, PublicChangesetBulkFetch};
-use changesets::ChangesetEntry;
+use changesets::{ChangesetEntry, Changesets};
 use context::CoreContext;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, RepositoryId};
+use phases::Phases;
 
 use crate::iddag::IdDagSaveStore;
 use crate::idmap::IdMapFactory;
@@ -25,7 +28,7 @@ use crate::owned::OwnedSegmentedChangelog;
 use crate::types::{IdMapVersion, SegmentedChangelogVersion};
 use crate::update::{self, StartState};
 use crate::version_store::SegmentedChangelogVersionStore;
-use crate::{Group, InProcessIdDag, Vertex};
+use crate::{Group, InProcessIdDag, SegmentedChangelogSqlConnections, Vertex};
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.seeder";
@@ -41,6 +44,29 @@ pub struct SegmentedChangelogSeeder {
 }
 
 impl SegmentedChangelogSeeder {
+    pub fn new(
+        repo_id: RepositoryId,
+        connections: SegmentedChangelogSqlConnections,
+        replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
+        changesets: Arc<dyn Changesets>,
+        phases: Arc<dyn Phases>,
+        blobstore: Arc<dyn Blobstore>,
+    ) -> Self {
+        let idmap_version_store = SqlIdMapVersionStore::new(connections.0.clone(), repo_id);
+        let sc_version_store = SegmentedChangelogVersionStore::new(connections.0.clone(), repo_id);
+        let iddag_save_store = IdDagSaveStore::new(repo_id, blobstore);
+        let changeset_bulk_fetch =
+            Arc::new(PublicChangesetBulkFetch::new(repo_id, changesets, phases));
+        let idmap_factory = IdMapFactory::new(connections.0, replica_lag_monitor, repo_id);
+        Self {
+            idmap_version_store,
+            changeset_bulk_fetch,
+            sc_version_store,
+            iddag_save_store,
+            idmap_factory,
+        }
+    }
+
     pub fn new_from_built_dependencies(
         idmap_version_store: SqlIdMapVersionStore,
         changeset_bulk_fetch: Arc<PublicChangesetBulkFetch>,
