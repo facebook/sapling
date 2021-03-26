@@ -94,21 +94,16 @@ mod tests {
 
     use sql_construct::SqlConstruct;
 
-    use crate::builder::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
+    use crate::builder::SegmentedChangelogSqlConnections;
 
     #[fbinit::test]
     async fn test_more_than_one_repo(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let builder = SegmentedChangelogBuilder::new()
-            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?);
-        let build_version = |id| {
-            builder
-                .clone()
-                .with_repo_id(RepositoryId::new(id))
-                .build_segmented_changelog_version_store()
-        };
-        let version_repo1 = build_version(1)?;
-        let version_repo2 = build_version(2)?;
+        let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+        let version_repo1 =
+            SegmentedChangelogVersionStore::new(conns.0.clone(), RepositoryId::new(1));
+        let version_repo2 =
+            SegmentedChangelogVersionStore::new(conns.0.clone(), RepositoryId::new(2));
 
         assert_eq!(version_repo1.get(&ctx).await?, None);
         assert_eq!(version_repo2.get(&ctx).await?, None);
