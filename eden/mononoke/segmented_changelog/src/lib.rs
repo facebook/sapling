@@ -42,9 +42,8 @@ pub use segmented_changelog_types::{
     InProcessIdDag, Location, PreparedFlatSegments, SegmentedChangelog, StreamCloneData, Vertex,
 };
 
-pub use crate::builder::{
-    new_server_segmented_changelog, SegmentedChangelogBuilder, SegmentedChangelogSqlConnections,
-};
+pub use crate::builder::{new_server_segmented_changelog, SegmentedChangelogSqlConnections};
+pub use crate::seeder::SegmentedChangelogSeeder;
 pub use crate::tailer::SegmentedChangelogTailer;
 
 // public for benchmarking

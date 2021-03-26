@@ -23,7 +23,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::MetadataDatabaseConfig;
 use segmented_changelog::types::IdMapVersion;
-use segmented_changelog::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
+use segmented_changelog::{SegmentedChangelogSeeder, SegmentedChangelogSqlConnections};
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 
@@ -111,12 +111,14 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         .await
         .context("error opening segmented changelog sql connections")?;
 
-    let segmented_changelog_seeder = SegmentedChangelogBuilder::new()
-        .with_sql_connections(segmented_changelog_sql_connections)
-        .with_blobrepo(&repo)
-        .with_replica_lag_monitor(replica_lag_monitor)
-        .build_seeder()
-        .context("building SegmentedChangelogSeeder")?;
+    let segmented_changelog_seeder = SegmentedChangelogSeeder::new(
+        repo.get_repoid(),
+        segmented_changelog_sql_connections,
+        replica_lag_monitor,
+        repo.get_changesets_object(),
+        repo.get_phases(),
+        Arc::new(repo.get_blobstore()),
+    );
 
     info!(
         ctx.logger(),
