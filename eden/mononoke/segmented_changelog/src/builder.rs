@@ -27,9 +27,10 @@ use crate::idmap::{
     CacheHandlers, CachedIdMap, ConcurrentMemIdMap, IdMap, IdMapFactory, SqlIdMap,
     SqlIdMapVersionStore,
 };
-use crate::manager::{PeriodicReloadSegmentedChangelog, SegmentedChangelogManager};
+use crate::manager::SegmentedChangelogManager;
 use crate::on_demand::{OnDemandUpdateSegmentedChangelog, PeriodicUpdateSegmentedChangelog};
 use crate::owned::OwnedSegmentedChangelog;
+use crate::periodic_reload::PeriodicReloadSegmentedChangelog;
 use crate::seeder::SegmentedChangelogSeeder;
 use crate::types::IdMapVersion;
 use crate::version_store::SegmentedChangelogVersionStore;
