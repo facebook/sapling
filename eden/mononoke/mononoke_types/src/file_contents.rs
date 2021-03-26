@@ -50,14 +50,13 @@ impl FileContents {
 
     pub(crate) fn into_thrift(self) -> thrift::FileContents {
         match self {
-            // TODO (T26959816) -- allow Thrift to represent binary as Bytes
-            FileContents::Bytes(bytes) => thrift::FileContents::Bytes(bytes.to_vec()),
+            FileContents::Bytes(bytes) => thrift::FileContents::Bytes(bytes),
             FileContents::Chunked(chunked) => thrift::FileContents::Chunked(chunked.into_thrift()),
         }
     }
 
     pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
-        let thrift_tc = compact_protocol::deserialize(encoded_bytes.as_ref())
+        let thrift_tc = compact_protocol::deserialize(encoded_bytes)
             .with_context(|| ErrorKind::BlobDeserializeError("FileContents".into()))?;
         Self::from_thrift(thrift_tc)
     }
@@ -101,7 +100,7 @@ impl BlobstoreValue for FileContents {
     }
 
     fn from_blob(blob: ContentBlob) -> Result<Self> {
-        let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
+        let thrift_tc = compact_protocol::deserialize(blob.data())
             .with_context(|| ErrorKind::BlobDeserializeError("FileContents".into()))?;
         Self::from_thrift(thrift_tc)
     }
@@ -160,7 +159,7 @@ impl ChunkedFileContents {
     }
 
     pub fn from_bytes(blob: Bytes) -> Result<Self> {
-        let thrift_chunked = compact_protocol::deserialize(blob.as_ref())
+        let thrift_chunked = compact_protocol::deserialize(blob)
             .with_context(|| ErrorKind::BlobDeserializeError("ChunkedFileContents".into()))?;
         Self::from_thrift(thrift_chunked)
     }
@@ -225,7 +224,7 @@ impl ContentChunkPointer {
     }
 
     pub fn from_bytes(blob: Bytes) -> Result<Self> {
-        let thrift_chunk = compact_protocol::deserialize(blob.as_ref())
+        let thrift_chunk = compact_protocol::deserialize(blob)
             .with_context(|| ErrorKind::BlobDeserializeError("ContentChunkPointer".into()))?;
         Self::from_thrift(thrift_chunk)
     }

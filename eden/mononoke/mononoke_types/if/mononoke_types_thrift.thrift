@@ -19,6 +19,9 @@ namespace py3 eden.mononoke.mononoke_types
 
 typedef binary Blake2 (rust.newtype, rust.type = "smallvec::SmallVec<[u8; 32]>")
 
+// NB don't call the type bytes as py3 bindings don't like it
+typedef binary (rust.type = "bytes::Bytes") binary_bytes
+
 // Allow the hash type to change in the future.
 union IdType {
   1: Blake2 Blake2,
@@ -133,8 +136,8 @@ struct ChunkedFileContents {
 }
 
 union FileContents {
-   // Plain uncompressed bytes - WYSIWYG.
-  1: binary Bytes,
+  // Plain uncompressed bytes - WYSIWYG.
+  1: binary_bytes Bytes,
   // References to Chunks (stored as FileContents, too).
   2: ChunkedFileContents Chunked,
 }
