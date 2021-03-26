@@ -137,7 +137,12 @@ install-home: build
 	$(PYTHON) setup.py $(PURE) install --home="$(HOME)" --prefix="" --force
 
 install-getdeps: getdepsbuild
-	GETDEPS_BUILD=1 $(PYTHON3) setup3.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
+	GETDEPS_BUILD=1 $(PYTHON3) setup3.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --install-lib="$(PREFIX)/bin" --force
+
+test-getdeps: install-getdeps
+	# Run one test to check the binary is minimally good as will be used later in Mononoke getdeps tests
+	# Running all the tests requires a bit of filtering to run the good set (or deleting flaky ones)
+	cd tests && $(PYTHON3) run-tests.py -j1 --with-hg="$(PREFIX)/bin/$(HGNAME)" test-status.t
 
 check: tests
 
