@@ -29,7 +29,7 @@ mod read_only;
 mod seeder;
 mod sql_types;
 mod tailer;
-mod types;
+pub mod types;
 mod update;
 mod version_store;
 

@@ -33,7 +33,6 @@ define_stats! {
 }
 
 pub struct SegmentedChangelogSeeder {
-    idmap_version: IdMapVersion,
     idmap_version_store: SqlIdMapVersionStore,
     changeset_bulk_fetch: Arc<PublicChangesetBulkFetch>,
     sc_version_store: SegmentedChangelogVersionStore,
@@ -43,7 +42,6 @@ pub struct SegmentedChangelogSeeder {
 
 impl SegmentedChangelogSeeder {
     pub fn new(
-        idmap_version: IdMapVersion,
         idmap_version_store: SqlIdMapVersionStore,
         changeset_bulk_fetch: Arc<PublicChangesetBulkFetch>,
         sc_version_store: SegmentedChangelogVersionStore,
@@ -51,7 +49,6 @@ impl SegmentedChangelogSeeder {
         idmap_factory: IdMapFactory,
     ) -> Self {
         Self {
-            idmap_version,
             idmap_version_store,
             changeset_bulk_fetch,
             sc_version_store,
@@ -59,13 +56,35 @@ impl SegmentedChangelogSeeder {
             idmap_factory,
         }
     }
+
     pub async fn run(&self, ctx: &CoreContext, head: ChangesetId) -> Result<()> {
+        let idmap_version = {
+            let v = match self
+                .idmap_version_store
+                .get(&ctx)
+                .await
+                .context("error fetching idmap version from store")?
+            {
+                Some(v) => v.0 + 1,
+                None => 1,
+            };
+            IdMapVersion(v)
+        };
+        self.run_with_idmap_version(ctx, head, idmap_version).await
+    }
+
+    pub async fn run_with_idmap_version(
+        &self,
+        ctx: &CoreContext,
+        head: ChangesetId,
+        idmap_version: IdMapVersion,
+    ) -> Result<()> {
         info!(
             ctx.logger(),
-            "seeding segmented changelog using idmap version: {}", self.idmap_version
+            "seeding segmented changelog using idmap version: {}", idmap_version
         );
         let (owned, _) = self
-            .build_from_scratch(&ctx, head)
+            .build_from_scratch(&ctx, head, idmap_version)
             .await
             .context("building dag from scratch")?;
         // Save the IdDag
@@ -75,7 +94,7 @@ impl SegmentedChangelogSeeder {
             .await
             .context("error saving iddag")?;
         // Update SegmentedChangelogVersion
-        let sc_version = SegmentedChangelogVersion::new(iddag_version, self.idmap_version);
+        let sc_version = SegmentedChangelogVersion::new(iddag_version, idmap_version);
         self.sc_version_store
             .set(&ctx, sc_version)
             .await
@@ -91,6 +110,7 @@ impl SegmentedChangelogSeeder {
         &self,
         ctx: &CoreContext,
         head: ChangesetId,
+        idmap_version: IdMapVersion,
     ) -> Result<(OwnedSegmentedChangelog, Vertex)> {
         STATS::build_all_graph.add_value(1);
 
@@ -119,7 +139,7 @@ impl SegmentedChangelogSeeder {
         }
 
         let low_vertex = Group::MASTER.min_id();
-        let idmap = self.idmap_factory.for_writer(ctx, self.idmap_version);
+        let idmap = self.idmap_factory.for_writer(ctx, idmap_version);
         let mut iddag = InProcessIdDag::new_in_process();
 
         let (mem_idmap, head_vertex) = update::assign_ids(ctx, &start_state, head, low_vertex)?;
@@ -130,7 +150,7 @@ impl SegmentedChangelogSeeder {
 
         // Update IdMapVersion
         self.idmap_version_store
-            .set(&ctx, self.idmap_version)
+            .set(&ctx, idmap_version)
             .await
             .context("updating idmap version")?;
         info!(ctx.logger(), "idmap version bumped");

@@ -219,22 +219,9 @@ impl SegmentedChangelogBuilder {
         PeriodicReloadSegmentedChangelog::start(ctx, manager, reload_dag_period).await
     }
 
-    pub async fn build_seeder(mut self, ctx: &CoreContext) -> Result<SegmentedChangelogSeeder> {
-        let idmap_version_store = self.build_sql_idmap_version_store()?;
-        if self.idmap_version.is_none() {
-            let version = match idmap_version_store
-                .get(&ctx)
-                .await
-                .context("getting idmap version from store")?
-            {
-                Some(v) => v.0 + 1,
-                None => 1,
-            };
-            self.idmap_version = Some(IdMapVersion(version));
-        }
+    pub fn build_seeder(mut self) -> Result<SegmentedChangelogSeeder> {
         let seeder = SegmentedChangelogSeeder::new(
-            self.idmap_version(),
-            idmap_version_store,
+            self.build_sql_idmap_version_store()?,
             self.changeset_bulk_fetch()?,
             self.build_segmented_changelog_version_store()?,
             self.build_iddag_save_store()?,

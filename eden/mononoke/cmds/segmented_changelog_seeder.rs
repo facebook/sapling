@@ -22,6 +22,7 @@ use cmdlib::{
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::MetadataDatabaseConfig;
+use segmented_changelog::types::IdMapVersion;
 use segmented_changelog::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
@@ -110,17 +111,11 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         .await
         .context("error opening segmented changelog sql connections")?;
 
-    let mut segmented_changelog_builder = SegmentedChangelogBuilder::new();
-    if let Some(idmap_version) = idmap_version_arg {
-        segmented_changelog_builder = segmented_changelog_builder.with_idmap_version(idmap_version);
-    }
-
-    let segmented_changelog_seeder = segmented_changelog_builder
+    let segmented_changelog_seeder = SegmentedChangelogBuilder::new()
         .with_sql_connections(segmented_changelog_sql_connections)
         .with_blobrepo(&repo)
         .with_replica_lag_monitor(replica_lag_monitor)
-        .build_seeder(&ctx)
-        .await
+        .build_seeder()
         .context("building SegmentedChangelogSeeder")?;
 
     info!(
@@ -138,10 +133,17 @@ async fn run<'a>(ctx: CoreContext, matches: &'a MononokeMatches<'a>) -> Result<(
         .with_context(|| format!("resolving head csid for '{}'", head_arg))?;
     info!(ctx.logger(), "using '{}' for head", head);
 
-    segmented_changelog_seeder
-        .run(&ctx, head)
-        .await
-        .context("seeding segmented changelog")?;
+    if let Some(idmap_version) = idmap_version_arg {
+        segmented_changelog_seeder
+            .run_with_idmap_version(&ctx, head, IdMapVersion(idmap_version))
+            .await
+            .context("seeding segmented changelog")?;
+    } else {
+        segmented_changelog_seeder
+            .run(&ctx, head)
+            .await
+            .context("seeding segmented changelog")?;
+    }
 
     info!(
         ctx.logger(),

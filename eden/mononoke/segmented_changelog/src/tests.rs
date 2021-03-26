@@ -116,10 +116,11 @@ pub async fn new_build_all_from_blobrepo(
     let seeder = SegmentedChangelogBuilder::new()
         .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
         .with_blobrepo(blobrepo)
-        .build_seeder(ctx)
-        .await?;
+        .build_seeder()?;
 
-    let (owned, _) = seeder.build_from_scratch(ctx, head).await?;
+    let (owned, _) = seeder
+        .build_from_scratch(ctx, head, IdMapVersion(0))
+        .await?;
     Ok(owned)
 }
 
@@ -638,9 +639,10 @@ async fn test_caching(fb: FacebookInit) -> Result<()> {
         .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
         .with_blobrepo(&blobrepo)
         .with_cache_handlers(cache_handlers)
-        .build_seeder(&ctx)
+        .build_seeder()?;
+    let (sc, _) = seeder
+        .build_from_scratch(&ctx, head, IdMapVersion(0))
         .await?;
-    let (sc, _) = seeder.build_from_scratch(&ctx, head).await?;
 
     let distance: u64 = 1;
     let _ = sc
@@ -733,7 +735,7 @@ async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
 
     setup_phases(&ctx, &blobrepo, start_cs_id).await?;
 
-    let seeder = builder.clone().build_seeder(&ctx).await?;
+    let seeder = builder.clone().build_seeder()?;
     let _ = seeder.run(&ctx, start_cs_id).await?;
     let manager = builder.clone().build_manager()?;
     let sc = manager.load(&ctx).await?;
@@ -765,7 +767,7 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
 
     setup_phases(&ctx, &blobrepo, start_cs_id).await?;
 
-    let seeder = builder.clone().build_seeder(&ctx).await?;
+    let seeder = builder.clone().build_seeder()?;
     let _ = seeder.run(&ctx, start_cs_id).await?;
 
     tokio::time::pause();
