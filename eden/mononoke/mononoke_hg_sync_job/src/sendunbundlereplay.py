@@ -127,11 +127,7 @@ def sendunbundlereplaybatch(ui, **opts):
             if line == "":
                 break
 
-            # The newest sync job sends 5 parameters, but older versions send 4.
-            # We default the last parameter to None for compatibility.
             parts = line.split()
-            if len(parts) == 4:
-                parts.append(None)
             (bfname, tsfname, ontobook, rebasedhead, logfile) = parts
             ontobook = decodeutf8(base64.b64decode(ontobook))
 
@@ -156,47 +152,3 @@ def sendunbundlereplaybatch(ui, **opts):
             counter += 1
 
     return returncode
-
-
-@command(
-    "sendunbundlereplay",
-    [
-        ("", "file", "", _("file to read bundle from"), ""),
-        ("", "path", "", _("hg server remotepath (ssh)"), ""),
-        ("r", "rebasedhead", "", _("expected rebased head hash"), ""),
-        (
-            "",
-            "deleted",
-            False,
-            _("bookmark was deleted, can't be used with `--rebasedhead`"),
-        ),
-        ("b", "ontobook", "", _("expected onto bookmark for pushrebase"), ""),
-    ],
-    _("[OPTION]..."),
-    norepo=True,
-)
-def sendunbundlereplay(ui, **opts):
-    """Send unbundlereplay wireproto command to a given server
-
-    Takes `rebasedhook` and `ontobook` arguments on the commmand
-    line, and commit dates in stdin. The commit date format is:
-    <commithash>=<hg-parseable-date>
-
-    ``sendunbundlereplay.respondlightly`` config option instructs the server
-    to avoid sending large bundle2 parts back.
-    """
-    fname = opts["file"]
-    path = opts["path"]
-    rebasedhead = opts["rebasedhead"]
-    deleted = opts["deleted"]
-    ontobook = opts["ontobook"]
-    if rebasedhead and deleted:
-        raise error.Abort("can't use `--rebasedhead` and `--deleted`")
-
-    if not (rebasedhead or deleted):
-        raise error.Abort("either `--rebasedhead` or `--deleted` should be used")
-
-    commitdates = getcommitdates(ui)
-    stream = getstream(fname)
-    remote = getremote(ui, path)
-    return runreplay(ui, remote, stream, commitdates, rebasedhead, ontobook)
