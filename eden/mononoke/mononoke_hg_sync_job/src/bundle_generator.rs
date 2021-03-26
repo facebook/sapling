@@ -49,7 +49,8 @@ pub fn create_bundle(
     lfs_params: SessionLfsParams,
     filenode_verifier: FilenodeVerifier,
     push_vars: Option<HashMap<String, Bytes>>,
-) -> impl Future<Item = (BytesOld, HashMap<HgChangesetId, Timestamp>), Error = Error> {
+) -> impl Future<Item = (BytesOld, HashMap<HgChangesetId, (ChangesetId, Timestamp)>), Error = Error>
+{
     let commits_to_push = find_commits_to_push(
         ctx.clone(),
         repo.clone(),
@@ -77,7 +78,11 @@ pub fn create_bundle(
                     repo.clone(),
                     bookmark,
                     bookmark_change,
-                    commits_to_push.clone(),
+                    commits_to_push
+                        .clone()
+                        .into_iter()
+                        .map(|(_, hg_cs_id)| hg_cs_id)
+                        .collect(),
                     lfs_params,
                     filenode_verifier,
                     push_vars,
@@ -345,17 +350,17 @@ fn create_bundle_impl(
 async fn fetch_timestamps(
     ctx: CoreContext,
     repo: BlobRepo,
-    hg_cs_ids: impl IntoIterator<Item = HgChangesetId>,
-) -> Result<HashMap<HgChangesetId, Timestamp>, Error> {
+    hg_cs_ids: impl IntoIterator<Item = (ChangesetId, HgChangesetId)>,
+) -> Result<HashMap<HgChangesetId, (ChangesetId, Timestamp)>, Error> {
     async move {
         borrowed!(ctx, repo);
         stream::iter(hg_cs_ids.into_iter().map(Result::<_, Error>::Ok))
             .map(move |res| async move {
-                let hg_cs_id = res?;
+                let (cs_id, hg_cs_id) = res?;
                 hg_cs_id
                     .load(ctx, repo.blobstore())
                     .err_into()
-                    .map_ok(move |hg_blob_cs| (hg_cs_id, hg_blob_cs.time().clone().into()))
+                    .map_ok(move |hg_blob_cs| (hg_cs_id, (cs_id, hg_blob_cs.time().clone().into())))
                     .await
             })
             .buffered(100)
@@ -371,7 +376,7 @@ fn find_commits_to_push(
     lca_hint_index: Arc<dyn LeastCommonAncestorsHint>,
     hg_server_heads: impl IntoIterator<Item = ChangesetId>,
     maybe_to_cs_id: Option<ChangesetId>,
-) -> impl Stream<Item = HgChangesetId, Error = Error> {
+) -> impl Stream<Item = (ChangesetId, HgChangesetId), Error = Error> {
     DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes(
         ctx.clone(),
         &repo.get_changeset_fetcher(),
@@ -381,9 +386,12 @@ fn find_commits_to_push(
     )
     .map(move |bcs_id| {
         cloned!(ctx, repo);
-        async move { repo.get_hg_from_bonsai_changeset(ctx, bcs_id).await }
-            .boxed()
-            .compat()
+        async move {
+            let hg_cs_id = repo.get_hg_from_bonsai_changeset(ctx, bcs_id).await?;
+            Ok((bcs_id, hg_cs_id))
+        }
+        .boxed()
+        .compat()
     })
     .buffered(100)
 }

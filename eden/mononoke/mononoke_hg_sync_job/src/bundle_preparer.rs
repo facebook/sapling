@@ -10,7 +10,7 @@ use crate::errors::{
     ErrorKind::{BookmarkMismatchInBundleCombining, ReplayDataMissing, UnexpectedBookmarkMove},
     PipelineError,
 };
-use crate::{bind_sync_err, BookmarkOverlay, CombinedBookmarkUpdateLogEntry};
+use crate::{bind_sync_err, BookmarkOverlay, CombinedBookmarkUpdateLogEntry, CommitsInBundle};
 use anyhow::{anyhow, Error};
 use blobrepo::{BlobRepo, ChangesetFetcher};
 use blobrepo_hg::BlobRepoHg;
@@ -311,7 +311,7 @@ impl BundlePreparer {
             }
 
             let bookmark_change = BookmarkChange::new(batch.from_cs_id, batch.to_cs_id)?;
-            let bundle_timestamps = retry(
+            let bundle_timestamps_commits = retry(
                 &ctx.logger(),
                 {
                     |_| {
@@ -343,8 +343,8 @@ impl BundlePreparer {
                 }
             };
 
-            let ((bundle_file, timestamps_file), cs_id) =
-                try_join(bundle_timestamps, cs_id).await?;
+            let ((bundle_file, timestamps_file, commits), cs_id) =
+                try_join(bundle_timestamps_commits, cs_id).await?;
 
             info!(
                 ctx.logger(),
@@ -357,6 +357,7 @@ impl BundlePreparer {
                 timestamps_file: Arc::new(timestamps_file),
                 cs_id,
                 bookmark: batch.bookmark_name,
+                commits,
             })
         }
         .boxed()
@@ -370,7 +371,7 @@ impl BundlePreparer {
         bookmark_change: &'a BookmarkChange,
         bookmark_name: &'a BookmarkName,
         push_vars: Option<HashMap<String, Bytes>>,
-    ) -> Result<(NamedTempFile, NamedTempFile), Error> {
+    ) -> Result<(NamedTempFile, NamedTempFile, CommitsInBundle), Error> {
         let blobstore = repo.get_blobstore();
 
         match prepare_type {
@@ -393,16 +394,26 @@ impl BundlePreparer {
                 .compat()
                 .await?;
 
-                try_join(
+                let mut bcs_ids = vec![];
+                for (bcs_id, _) in timestamps.values() {
+                    bcs_ids.push(*bcs_id);
+                }
+
+                let timestamps = timestamps
+                    .into_iter()
+                    .map(|(hg_cs_id, (_, timestamp))| (hg_cs_id, timestamp))
+                    .collect();
+                let (bundle, timestamps) = try_join(
                     save_bytes_to_temp_file(&bytes),
                     save_timestamps_to_file(&timestamps),
                 )
-                .await
+                .await?;
+                Ok((bundle, timestamps, CommitsInBundle::Commits(bcs_ids)))
             }
             PrepareType::UseExisting { bundle_replay_data } => {
                 match BundleReplayData::try_from(bundle_replay_data) {
                     Ok(bundle_replay_data) => {
-                        try_join(
+                        let (bundle, timestamps) = try_join(
                             save_bundle_to_temp_file(
                                 &ctx,
                                 &blobstore,
@@ -410,7 +421,9 @@ impl BundlePreparer {
                             ),
                             save_timestamps_to_file(&bundle_replay_data.timestamps),
                         )
-                        .await
+                        .await?;
+
+                        Ok((bundle, timestamps, CommitsInBundle::Unknown))
                     }
                     Err(e) => Err(e),
                 }

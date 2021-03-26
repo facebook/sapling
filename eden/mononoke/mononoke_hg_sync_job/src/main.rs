@@ -374,6 +374,14 @@ pub struct CombinedBookmarkUpdateLogEntry {
     timestamps_file: Arc<NamedTempFile>,
     cs_id: Option<(ChangesetId, HgChangesetId)>,
     bookmark: BookmarkName,
+    // List of commits in a bundle in case they are known
+    commits: CommitsInBundle,
+}
+
+#[derive(Clone)]
+enum CommitsInBundle {
+    Commits(Vec<ChangesetId>),
+    Unknown,
 }
 
 /// Sends a downloaded bundle to hg
