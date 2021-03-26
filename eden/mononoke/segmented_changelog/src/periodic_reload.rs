@@ -13,8 +13,8 @@ use anyhow::Result;
 use arc_swap::ArcSwap;
 use async_trait::async_trait;
 use futures::future::{BoxFuture, FutureExt};
+use rand::Rng;
 use tokio::sync::Notify;
-use tokio::time::Instant;
 
 use futures_ext::future::{spawn_controlled, ControlledHandle};
 
@@ -46,8 +46,12 @@ impl PeriodicReloadSegmentedChangelog {
             let my_sc = Arc::clone(&sc);
             let my_notify = Arc::clone(&update_notify);
             async move {
-                let start = Instant::now() + period;
-                let mut interval = tokio::time::interval_at(start, period);
+                // jitter is here so not all repos try to reload at the same time
+                // 10% of the period seems good enough
+                let jitter = rand::thread_rng().gen_range(Duration::from_secs(0), period / 10);
+                tokio::time::delay_for(period + jitter).await;
+
+                let mut interval = tokio::time::interval(period);
                 loop {
                     interval.tick().await;
                     match load_fn().await {
