@@ -63,7 +63,6 @@ static BOOKMARK_NAME: Lazy<BookmarkName> = Lazy::new(|| BookmarkName::new("maste
 fn new_tailer(
     blobrepo: &BlobRepo,
     connections: &SegmentedChangelogSqlConnections,
-    bookmark: &BookmarkName,
 ) -> SegmentedChangelogTailer {
     SegmentedChangelogTailer::new(
         blobrepo.get_repoid(),
@@ -72,7 +71,7 @@ fn new_tailer(
         blobrepo.get_changeset_fetcher(),
         Arc::new(blobrepo.get_blobstore()),
         Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
-        bookmark.clone(),
+        BOOKMARK_NAME.clone(),
         None,
     )
 }
@@ -724,11 +723,10 @@ async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
-    let bookmark_name = BookmarkName::new("master")?;
     let builder = SegmentedChangelogBuilder::new()
         .with_sql_connections(conns.clone())
         .with_blobrepo(&blobrepo)
-        .with_bookmark_name(bookmark_name.clone());
+        .with_bookmark_name(BOOKMARK_NAME.clone());
 
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281"; // commit 4
     let start_cs_id = resolve_cs_id(&ctx, &blobrepo, start_hg_id).await?;
@@ -741,7 +739,7 @@ async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
     let sc = manager.load(&ctx).await?;
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
 
-    let tailer = new_tailer(&blobrepo, &conns, &bookmark_name);
+    let tailer = new_tailer(&blobrepo, &conns);
     let _ = tailer.once(&ctx).await?;
     let sc = manager.load(&ctx).await?;
     let master = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
@@ -755,11 +753,10 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
-    let bookmark_name = BookmarkName::new("master")?;
     let builder = SegmentedChangelogBuilder::new()
         .with_sql_connections(conns.clone())
         .with_blobrepo(&blobrepo)
-        .with_bookmark_name(bookmark_name.clone())
+        .with_bookmark_name(BOOKMARK_NAME.clone())
         .with_reload_dag_period(Duration::from_secs(10));
 
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281"; // commit 4
@@ -774,7 +771,7 @@ async fn test_periodic_reload(fb: FacebookInit) -> Result<()> {
     let sc = builder.clone().build_periodic_reload(&ctx).await?;
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
 
-    let tailer = new_tailer(&blobrepo, &conns, &bookmark_name);
+    let tailer = new_tailer(&blobrepo, &conns);
     let _ = tailer.once(&ctx).await?;
     tokio::time::advance(Duration::from_secs(15)).await;
     sc.wait_for_update().await;
