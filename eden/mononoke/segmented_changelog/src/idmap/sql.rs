@@ -359,15 +359,18 @@ mod tests {
         AS_CSID, FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
     };
     use sql_construct::SqlConstruct;
+    use sql_ext::replication::NoReplicaLagMonitor;
 
-    use crate::builder::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
+    use crate::builder::SegmentedChangelogSqlConnections;
 
     fn new_sql_idmap() -> Result<SqlIdMap> {
-        let repo_id = RepositoryId::new(0);
-        let mut builder = SegmentedChangelogBuilder::new()
-            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
-            .with_repo_id(repo_id);
-        builder.build_sql_idmap()
+        let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+        Ok(SqlIdMap::new(
+            conns.0,
+            Arc::new(NoReplicaLagMonitor()),
+            RepositoryId::new(0),
+            IdMapVersion(0),
+        ))
     }
 
     #[fbinit::test]
@@ -509,11 +512,12 @@ mod tests {
             read_master_connection: leader,
         };
 
-        let sc_sql_connections = SegmentedChangelogSqlConnections::from_sql_connections(conns);
-        let idmap = SegmentedChangelogBuilder::new()
-            .with_sql_connections(sc_sql_connections)
-            .with_repo_id(RepositoryId::new(0))
-            .build_sql_idmap()?;
+        let idmap = SqlIdMap::new(
+            conns,
+            Arc::new(NoReplicaLagMonitor()),
+            RepositoryId::new(0),
+            IdMapVersion(0),
+        );
 
         idmap.insert(&ctx, Vertex(0), ONES_CSID).await?;
 
@@ -571,26 +575,26 @@ mod tests {
     #[fbinit::test]
     async fn test_many_repo_id_many_versions(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let builder = SegmentedChangelogBuilder::new()
-            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?);
+        let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
 
-        let idmap11 = builder
-            .clone()
-            .with_repo_id(RepositoryId::new(1))
-            .with_idmap_version(1)
-            .build_sql_idmap()?;
-
-        let idmap12 = builder
-            .clone()
-            .with_repo_id(RepositoryId::new(1))
-            .with_idmap_version(2)
-            .build_sql_idmap()?;
-
-        let idmap21 = builder
-            .clone()
-            .with_repo_id(RepositoryId::new(2))
-            .with_idmap_version(1)
-            .build_sql_idmap()?;
+        let idmap11 = SqlIdMap::new(
+            conns.0.clone(),
+            Arc::new(NoReplicaLagMonitor()),
+            RepositoryId::new(1),
+            IdMapVersion(1),
+        );
+        let idmap12 = SqlIdMap::new(
+            conns.0.clone(),
+            Arc::new(NoReplicaLagMonitor()),
+            RepositoryId::new(1),
+            IdMapVersion(2),
+        );
+        let idmap21 = SqlIdMap::new(
+            conns.0.clone(),
+            Arc::new(NoReplicaLagMonitor()),
+            RepositoryId::new(2),
+            IdMapVersion(1),
+        );
 
         idmap11.insert(&ctx, Vertex(0), AS_CSID).await?;
         idmap12.insert(&ctx, Vertex(0), AS_CSID).await?;
