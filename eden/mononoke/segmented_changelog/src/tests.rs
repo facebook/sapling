@@ -771,16 +771,18 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
         Arc::new(on_demand).with_periodic_update_to_master_bookmark(&ctx, Duration::from_secs(5));
 
     tokio::time::advance(Duration::from_secs(5)).await;
+    // jitter should have passed and the first tick is ready to be scheduled; wait for first update
     sc.wait_for_update().await;
 
     // We assume that clone_data will not update the graph in any form.
-
     assert_eq!(sc.head(&ctx).await?, start_cs);
 
     let new_hg_id = "79a13814c5ce7330173ec04d279bf95ab3f652fb";
     let new_cs = resolve_cs_id(&ctx, &blobrepo, new_hg_id).await?;
     set_bookmark(fb, blobrepo.clone(), new_hg_id, bookmark_name.clone()).await;
-    tokio::time::advance(Duration::from_secs(10)).await;
+
+    tokio::time::advance(Duration::from_secs(5)).await;
+    // second tick is ready to be scheduled
     sc.wait_for_update().await;
     assert_eq!(sc.head(&ctx).await?, new_cs);
 

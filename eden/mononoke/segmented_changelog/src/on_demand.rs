@@ -14,6 +14,7 @@ use async_trait::async_trait;
 use futures::future::BoxFuture;
 use futures::{FutureExt, TryFutureExt};
 use parking_lot::Mutex;
+use rand::Rng;
 use tokio::sync::{Notify, RwLock};
 
 use cloned::cloned;
@@ -405,6 +406,10 @@ impl PeriodicUpdateSegmentedChangelog {
             let my_dag = Arc::clone(&on_demand_update_sc);
             let notify = Arc::clone(&notify);
             async move {
+                // jitter is here so not all repos try to update at the same time
+                let jitter = rand::thread_rng().gen_range(Duration::from_secs(0), period);
+                tokio::time::delay_for(jitter).await;
+
                 let mut interval = tokio::time::interval(period);
                 loop {
                     let _ = interval.tick().await;
