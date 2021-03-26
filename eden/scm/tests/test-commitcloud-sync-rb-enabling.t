@@ -165,7 +165,9 @@ Sync in client1, deleted base bookmark remains deleted
   @  base: public local1
   
 
-Sync in client2 with remote bookmarks sync enabled
+Sync in client2 with remote bookmarks sync enabled.  The base bookmark
+gets revived in the cloud workspace as this client didn't know that it
+had been deleted on the server.
   $ cd $TESTTMP/client2
   $ hg cloud sync -q --config commitcloud.remotebookmarkssync=true
   $ showgraph
@@ -179,7 +181,9 @@ Pull in client 2, base bookmark is now deleted
   $ hg pull
   pulling from ssh://user@dummy/server
   no changes found
-  $ hg cloud sync -q
+
+Sync again, and this time it gets deleted.
+  $ hg cloud sync -q --config commitcloud.remotebookmarkssync=true
   $ showgraph
   o  public2: public  default/master
   │

@@ -486,9 +486,8 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
 
     newremotebookmarks = {}
     if _isremotebookmarkssyncenabled(repo.ui):
-        newremotebookmarks, omittedremotebookmarks = _updateremotebookmarks(
-            repo, tr, remotebookmarkupdates
-        )
+        omittedremotebookmarks = _updateremotebookmarks(repo, tr, remotebookmarkupdates)
+        newremotebookmarks = cloudrefs.remotebookmarks
 
     if snapshot:
         with repo.lock(), repo.transaction("sync-snapshots") as tr:
@@ -763,15 +762,7 @@ def _updateremotebookmarks(repo, tr, updates):
             newremotebookmarks[remotename] = node
     repo._remotenames.applychanges({"bookmarks": newremotebookmarks})
 
-    # Still remove these from the cloud state.  We will add them back in when
-    # uploading changes to the cloud.
-    newcloudremotebookmarks = {
-        name: node
-        for name, node in pycompat.iteritems(updates)
-        if node != nodemod.nullhex
-    }
-
-    return newcloudremotebookmarks, omittedremotebookmarks
+    return omittedremotebookmarks
 
 
 def _forcesyncremotebookmarks(repo, cloudrefs, lastsyncstate, remotepath, tr):
@@ -781,14 +772,12 @@ def _forcesyncremotebookmarks(repo, cloudrefs, lastsyncstate, remotepath, tr):
     )
     if newnodes:
         _pullheadgroups(repo, remotepath, _partitionheads(newnodes))
-    newremotebookmarks, omittedremotebookmarks = _updateremotebookmarks(
-        repo, tr, updates
-    )
+    omittedremotebookmarks = _updateremotebookmarks(repo, tr, updates)
 
     # We have now synced the repo to the cloud version.  Store this.
     lastsyncstate.update(
         tr,
-        newremotebookmarks=newremotebookmarks,
+        newremotebookmarks=cloudremotebookmarks,
         newomittedremotebookmarks=omittedremotebookmarks,
     )
 
