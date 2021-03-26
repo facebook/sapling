@@ -41,11 +41,11 @@ impl ContentChunk {
     }
 
     pub(crate) fn into_thrift(self) -> thrift::ContentChunk {
-        thrift::ContentChunk::Bytes(self.0.to_vec())
+        thrift::ContentChunk::Bytes(self.0)
     }
 
     pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
-        let thrift_tc = compact_protocol::deserialize(encoded_bytes.as_ref())
+        let thrift_tc = compact_protocol::deserialize(encoded_bytes)
             .with_context(|| ErrorKind::BlobDeserializeError("ContentChunk".into()))?;
         Self::from_thrift(thrift_tc)
     }
@@ -76,7 +76,7 @@ impl BlobstoreValue for ContentChunk {
     }
 
     fn from_blob(blob: ContentChunkBlob) -> Result<Self> {
-        let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
+        let thrift_tc = compact_protocol::deserialize(blob.data())
             .with_context(|| ErrorKind::BlobDeserializeError("ContentChunk".into()))?;
         Self::from_thrift(thrift_tc)
     }

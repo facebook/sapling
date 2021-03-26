@@ -143,7 +143,7 @@ union FileContents {
 }
 
 union ContentChunk {
-  1: binary Bytes,
+  1: binary_bytes Bytes,
 }
 
 // Payload of object which is an alias
