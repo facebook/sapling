@@ -28,9 +28,9 @@ use sql_construct::SqlConstruct;
 use sql_ext::replication::NoReplicaLagMonitor;
 use tests_utils::resolve_cs_id;
 
-use crate::builder::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
+use crate::builder::SegmentedChangelogSqlConnections;
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{CacheHandlers, IdMap, IdMapFactory, SqlIdMap};
+use crate::idmap::{CacheHandlers, ConcurrentMemIdMap, IdMap, IdMapFactory, SqlIdMap};
 use crate::on_demand::OnDemandUpdateSegmentedChangelog;
 use crate::owned::OwnedSegmentedChangelog;
 use crate::periodic_reload::PeriodicReloadSegmentedChangelog;
@@ -149,6 +149,18 @@ async fn load_owned(
     let iddag = load_iddag(ctx, blobrepo, connections).await?;
     let idmap = load_idmap(ctx, blobrepo.get_repoid(), connections).await?;
     Ok(OwnedSegmentedChangelog::new(iddag, idmap))
+}
+
+fn new_isolated_on_demand_update(blobrepo: &BlobRepo) -> OnDemandUpdateSegmentedChangelog {
+    // feel free to add bookmark_name as a parameter when the need appears
+    OnDemandUpdateSegmentedChangelog::new(
+        blobrepo.get_repoid(),
+        InProcessIdDag::new_in_process(),
+        Arc::new(ConcurrentMemIdMap::new()),
+        blobrepo.get_changeset_fetcher(),
+        Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
+        BOOKMARK_NAME.clone(),
+    )
 }
 
 async fn validate_build_idmap(
@@ -452,10 +464,7 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
     {
         // linear
         let blobrepo = linear::getrepo(fb).await;
-        let sc = SegmentedChangelogBuilder::new()
-            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
-            .with_blobrepo(&blobrepo)
-            .build_on_demand_update()?;
+        let sc = new_isolated_on_demand_update(&blobrepo);
 
         let known_cs =
             resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
@@ -470,10 +479,7 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
     {
         // merge_uneven
         let blobrepo = merge_uneven::getrepo(fb).await;
-        let sc = SegmentedChangelogBuilder::new()
-            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
-            .with_blobrepo(&blobrepo)
-            .build_on_demand_update()?;
+        let sc = new_isolated_on_demand_update(&blobrepo);
 
         let known_cs =
             resolve_cs_id(&ctx, &blobrepo, "264f01429683b3dd8042cb3979e8bf37007118bc").await?;
@@ -540,11 +546,7 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
     // commit 5
     let cs5 = resolve_cs_id(&ctx, &blobrepo, "cb15ca4a43a59acff5388cea9648c162afde8372").await?;
 
-    let sc = SegmentedChangelogBuilder::new()
-        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
-        .with_blobrepo(&blobrepo)
-        .build_on_demand_update()?;
-
+    let sc = new_isolated_on_demand_update(&blobrepo);
     let answer = try_join_all(vec![
         sc.location_to_changeset_id(&ctx, Location::new(cs10, 5)),
         sc.location_to_changeset_id(&ctx, Location::new(cs6, 1)),
@@ -553,11 +555,7 @@ async fn test_on_demand_update_commit_location_to_changeset_ids(fb: FacebookInit
     .await?;
     assert_eq!(answer, vec![cs5, cs5, cs5]);
 
-    let sc = SegmentedChangelogBuilder::new()
-        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
-        .with_blobrepo(&blobrepo)
-        .build_on_demand_update()?;
-
+    let sc = new_isolated_on_demand_update(&blobrepo);
     let answer = try_join_all(vec![
         sc.changeset_id_to_location(&ctx, cs10, cs5),
         sc.changeset_id_to_location(&ctx, cs6, cs5),
@@ -761,12 +759,16 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
 
     tokio::time::pause();
 
-    let sc = SegmentedChangelogBuilder::new()
-        .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
-        .with_blobrepo(&blobrepo)
-        .with_update_to_bookmark_period(Duration::from_secs(10))
-        .with_bookmark_name(bookmark_name.clone())
-        .build_periodic_update(&ctx)?;
+    let on_demand = OnDemandUpdateSegmentedChangelog::new(
+        blobrepo.get_repoid(),
+        InProcessIdDag::new_in_process(),
+        Arc::new(ConcurrentMemIdMap::new()),
+        blobrepo.get_changeset_fetcher(),
+        Arc::clone(blobrepo.bookmarks()) as Arc<dyn Bookmarks>,
+        bookmark_name.clone(),
+    );
+    let sc =
+        Arc::new(on_demand).with_periodic_update_to_master_bookmark(&ctx, Duration::from_secs(5));
 
     tokio::time::advance(Duration::from_secs(5)).await;
     sc.wait_for_update().await;
@@ -786,27 +788,22 @@ async fn test_periodic_update(fb: FacebookInit) -> Result<()> {
 }
 
 #[fbinit::test]
-async fn test_seeder_tailer_and_manager(fb: FacebookInit) -> Result<()> {
+async fn test_seeder_tailer_and_load(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let blobrepo = linear::getrepo(fb).await;
     let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
-    let builder = SegmentedChangelogBuilder::new()
-        .with_sql_connections(conns.clone())
-        .with_blobrepo(&blobrepo)
-        .with_bookmark_name(BOOKMARK_NAME.clone());
 
     let start_hg_id = "607314ef579bd2407752361ba1b0c1729d08b281"; // commit 4
     let start_cs_id = resolve_cs_id(&ctx, &blobrepo, start_hg_id).await?;
 
     seed(&ctx, &blobrepo, &conns, start_cs_id).await?;
 
-    let manager = builder.clone().build_manager()?;
-    let sc = manager.load(&ctx).await?;
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
     assert_eq!(sc.head(&ctx).await?, start_cs_id);
 
     let tailer = new_tailer(&blobrepo, &conns);
     let _ = tailer.once(&ctx).await?;
-    let sc = manager.load(&ctx).await?;
+    let sc = load_owned(&ctx, &blobrepo, &conns).await?;
     let master = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
     assert_eq!(sc.head(&ctx).await?, master);
 
