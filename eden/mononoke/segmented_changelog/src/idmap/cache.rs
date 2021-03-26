@@ -293,8 +293,10 @@ mod tests {
 
     use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
     use sql_construct::SqlConstruct;
+    use sql_ext::replication::NoReplicaLagMonitor;
 
-    use crate::builder::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
+    use crate::builder::SegmentedChangelogSqlConnections;
+    use crate::idmap::SqlIdMap;
 
     #[fbinit::test]
     async fn test_no_key_colisions(fb: FacebookInit) -> Result<()> {
@@ -305,13 +307,24 @@ mod tests {
             CachelibHandler::create_mock(),
             MemcacheHandler::create_mock(),
         );
-        let mut builder = SegmentedChangelogBuilder::new()
-            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
-            .with_repo_id(RepositoryId::new(1))
-            .with_cache_handlers(cache_handlers.clone());
-        let idmap1 = builder.clone().build_idmap()?;
-        builder = builder.with_repo_id(RepositoryId::new(2));
-        let idmap2 = builder.build_idmap()?;
+        let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+        let new_cached_idmap = |repo_id| {
+            let idmap_version = IdMapVersion(0);
+            let sql_idmap = SqlIdMap::new(
+                conns.0.clone(),
+                Arc::new(NoReplicaLagMonitor()),
+                repo_id,
+                idmap_version,
+            );
+            CachedIdMap::new(
+                Arc::new(sql_idmap),
+                cache_handlers.clone(),
+                repo_id,
+                idmap_version,
+            )
+        };
+        let idmap1 = new_cached_idmap(RepositoryId::new(1));
+        let idmap2 = new_cached_idmap(RepositoryId::new(2));
 
         idmap1.insert(&ctx, Vertex(0), ONES_CSID).await?;
         idmap1.insert(&ctx, Vertex(1), TWOS_CSID).await?;
