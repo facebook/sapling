@@ -93,16 +93,14 @@ mod tests {
 
     use sql_construct::SqlConstruct;
 
-    use crate::builder::{SegmentedChangelogBuilder, SegmentedChangelogSqlConnections};
+    use crate::builder::SegmentedChangelogSqlConnections;
 
     #[fbinit::test]
     async fn test_get_set_get(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
-        let builder = SegmentedChangelogBuilder::new()
-            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?)
-            .with_repo_id(repo_id);
-        let version = builder.build_sql_idmap_version_store()?;
+        let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+        let version = SqlIdMapVersionStore::new(conns.0, repo_id);
 
         assert_eq!(version.get(&ctx).await?, None);
         version.set(&ctx, IdMapVersion(1)).await?;
@@ -116,16 +114,10 @@ mod tests {
     #[fbinit::test]
     async fn test_more_than_one_repo(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let builder = SegmentedChangelogBuilder::new()
-            .with_sql_connections(SegmentedChangelogSqlConnections::with_sqlite_in_memory()?);
-        let build_version = |id| {
-            builder
-                .clone()
-                .with_repo_id(RepositoryId::new(id))
-                .build_sql_idmap_version_store()
-        };
-        let version_repo1 = build_version(1)?;
-        let version_repo2 = build_version(2)?;
+        let conns = SegmentedChangelogSqlConnections::with_sqlite_in_memory()?;
+
+        let version_repo1 = SqlIdMapVersionStore::new(conns.0.clone(), RepositoryId::new(1));
+        let version_repo2 = SqlIdMapVersionStore::new(conns.0.clone(), RepositoryId::new(2));
 
         assert_eq!(version_repo1.get(&ctx).await?, None);
         assert_eq!(version_repo2.get(&ctx).await?, None);
