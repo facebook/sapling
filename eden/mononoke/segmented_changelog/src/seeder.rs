@@ -41,7 +41,7 @@ pub struct SegmentedChangelogSeeder {
 }
 
 impl SegmentedChangelogSeeder {
-    pub fn new(
+    pub fn new_from_built_dependencies(
         idmap_version_store: SqlIdMapVersionStore,
         changeset_bulk_fetch: Arc<PublicChangesetBulkFetch>,
         sc_version_store: SegmentedChangelogVersionStore,

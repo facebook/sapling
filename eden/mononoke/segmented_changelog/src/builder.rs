@@ -220,7 +220,7 @@ impl SegmentedChangelogBuilder {
     }
 
     pub fn build_seeder(mut self) -> Result<SegmentedChangelogSeeder> {
-        let seeder = SegmentedChangelogSeeder::new(
+        let seeder = SegmentedChangelogSeeder::new_from_built_dependencies(
             self.build_sql_idmap_version_store()?,
             self.changeset_bulk_fetch()?,
             self.build_segmented_changelog_version_store()?,
