@@ -57,6 +57,7 @@ use std::{
     sync::Arc,
     time::{Duration, SystemTime},
 };
+use tokio::task::spawn_blocking;
 use xdb_gc_structs::XdbGc;
 
 // Leaving some space for metadata
@@ -187,15 +188,21 @@ impl Sqlblob {
             read_connections,
             read_master_connections,
             write_connections,
-        } = create_mysql_connections_sharded(
-            fb,
-            global_connection_pool,
-            pool_config,
-            shardmap.clone(),
-            0..shard_count,
-            read_con_type,
-            readonly,
-        )?;
+        } = spawn_blocking({
+            let shardmap = shardmap.clone();
+            move || {
+                create_mysql_connections_sharded(
+                    fb,
+                    global_connection_pool,
+                    pool_config,
+                    shardmap,
+                    0..shard_count,
+                    read_con_type,
+                    readonly,
+                )
+            }
+        })
+        .await??;
 
         let write_connections = Arc::new(write_connections);
         let read_connections = Arc::new(read_connections);
