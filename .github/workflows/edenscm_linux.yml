@@ -21,10 +21,10 @@ jobs:
         toolchain: 1.50.0
         default: true
         profile: minimal
-    - name: Install Python 2.7
+    - name: Install Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: '2.7'
+        python-version: 3.8
     - name: Install system deps
       run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive eden_scm
     - name: Fetch fb303-source
