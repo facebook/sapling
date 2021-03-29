@@ -11,6 +11,7 @@
 
 #include <folly/Preprocessor.h>
 #include <folly/io/Cursor.h>
+#include <optional>
 #include <variant>
 
 // https://tools.ietf.org/html/rfc4506
@@ -589,6 +590,40 @@ template <typename T>
 bool operator==(const XdrList<T>& a, const XdrList<T>& b) {
   return a.list == b.list;
 }
+
+/**
+ * Non-recursive optional data is encoded as a boolean followed by the data if
+ * present. For list-like datastructures, prefer using XdrList.
+ */
+template <typename T>
+struct XdrTrait<std::optional<T>> {
+  static void serialize(
+      folly::io::QueueAppender& appender,
+      const std::optional<T>& value) {
+    bool hasValue = value.has_value();
+    XdrTrait<bool>::serialize(appender, hasValue);
+    if (hasValue) {
+      XdrTrait<T>::serialize(appender, *value);
+    }
+  }
+
+  static std::optional<T> deserialize(folly::io::Cursor& cursor) {
+    bool hasValue = XdrTrait<bool>::deserialize(cursor);
+    if (hasValue) {
+      return XdrTrait<T>::deserialize(cursor);
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  static size_t serializedSize(const std::optional<T>& value) {
+    size_t innerSize = 0;
+    if (value.has_value()) {
+      innerSize = XdrTrait<T>::serializedSize(*value);
+    }
+    return XdrTrait<bool>::serializedSize(true) + innerSize;
+  }
+};
 
 } // namespace facebook::eden
 

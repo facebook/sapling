@@ -163,6 +163,14 @@ TEST(XdrSerialize, list) {
   roundtrip(head);
 }
 
+TEST(XdrSerialize, optional) {
+  std::optional<uint32_t> nullOpt{std::nullopt};
+  roundtrip(nullOpt);
+
+  std::optional<uint32_t> answerOpt{42};
+  roundtrip(answerOpt);
+}
+
 } // namespace facebook::eden
 
 #endif
