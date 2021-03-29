@@ -21,7 +21,7 @@ use changesets::{deserialize_cs_entries, serialize_cs_entries, ChangesetEntry};
 use clap::{Arg, SubCommand};
 use cloned::cloned;
 use cmdlib::{
-    args::{self, MononokeMatches},
+    args::{self, MononokeMatches, RepoRequirement},
     helpers,
 };
 use context::CoreContext;
@@ -34,7 +34,7 @@ use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
     compat::Future01CompatExt,
-    future::{self, try_join, FutureExt},
+    future::{self, try_join, try_join_all, FutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
 use futures_stats::TimedFutureExt;
@@ -124,6 +124,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = args::MononokeAppBuilder::new("Utility to work with bonsai derived data")
         .with_advanced_args_hidden()
         .with_fb303_args()
+        .with_repo_required(RepoRequirement::AtLeastOne)
         .build()
         .about("Utility to work with bonsai derived data")
         .subcommand(
@@ -503,9 +504,7 @@ async fn run_subcmd<'a>(
             .await
         }
         (SUBCOMMAND_TAIL, Some(sub_m)) => {
-            let repo = args::open_repo_unredacted(fb, &logger, &matches).await?;
             let config_store = args::init_config_store(fb, logger, matches)?;
-            let (_, config) = args::get_config_by_repoid(config_store, matches, repo.get_repoid())?;
             let use_shared_leases = sub_m.is_present(ARG_USE_SHARED_LEASES);
             let stop_on_idle = sub_m.is_present(ARG_STOP_ON_IDLE);
             let batched = sub_m.is_present(ARG_BATCHED);
@@ -535,19 +534,28 @@ async fn run_subcmd<'a>(
                 .value_of(ARG_GAP_SIZE)
                 .map(str::parse::<usize>)
                 .transpose()?;
-            subcommand_tail(
-                &ctx,
-                repo,
-                config,
-                use_shared_leases,
-                stop_on_idle,
-                batch_size,
-                parallel,
-                gap_size,
-                backfill,
-                slice_size,
-            )
-            .await
+
+            let repos = args::resolve_repos(&config_store, &matches)?;
+
+            let mut tailers = Vec::new();
+            for resolved_repo in repos {
+                let repo = args::open_repo_by_id(fb, &logger, &matches, resolved_repo.id).await?;
+
+                let future = subcommand_tail(
+                    &ctx,
+                    repo,
+                    resolved_repo.config,
+                    use_shared_leases,
+                    stop_on_idle,
+                    batch_size,
+                    parallel,
+                    gap_size,
+                    backfill,
+                    slice_size,
+                );
+                tailers.push(future);
+            }
+            try_join_all(tailers).await.map(|_| ())
         }
         (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
             let out_filename = sub_m

@@ -1959,6 +1959,15 @@ function backfill_derived_data() {
     "$@"
 }
 
+function backfill_derived_data_multiple_repos() {
+  IFS=':' read -r -a ids <<< "${REPOS[*]}"
+  "$MONONOKE_BACKFILL_DERIVED_DATA" \
+    "${COMMON_ARGS[@]}" \
+    "${ids[@]}" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
+
 function hook_tailer() {
   "$MONONOKE_HOOK_TAILER" \
     "${COMMON_ARGS[@]}" \
