@@ -430,6 +430,7 @@ impl Inner {
             self.progress_has_content = false;
             if let Some(e) = self.error.as_mut() {
                 e.write_all(ANSI_ERASE_DISPLAY.as_bytes())?;
+                e.flush()?;
             }
         }
         Ok(())
