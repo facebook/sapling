@@ -704,11 +704,9 @@ async fn hg_to_bonsai_mapping_step<V: VisitOne>(
                 edges,
             ))
         }
-        None => Ok(StepOutput::Done(
-            checker.step_data(NodeType::HgBonsaiMapping, || {
-                NodeData::HgBonsaiMapping(None)
-            }),
-            vec![],
+        None => Err(format_err!(
+            "bonsai not found for hg changeset {}",
+            key.inner
         )),
     }
 }
