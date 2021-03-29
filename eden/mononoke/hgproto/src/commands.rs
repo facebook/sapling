@@ -166,13 +166,14 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     .boxify(),
                 ok(instream).boxify(),
             ),
-            SingleRequest::Unbundle { heads } => self.handle_unbundle(instream, heads, None),
+            SingleRequest::Unbundle { heads } => self.handle_unbundle(instream, heads, None, None),
             SingleRequest::UnbundleReplay {
                 heads,
-                replaydata: _,
+                replaydata,
                 respondlightly,
             } => {
-                let (resp, instream) = self.handle_unbundle(instream, heads, Some(respondlightly));
+                let (resp, instream) =
+                    self.handle_unbundle(instream, heads, Some(respondlightly), Some(replaydata));
                 (resp, instream)
             }
             SingleRequest::Gettreepack(args) => (
@@ -226,6 +227,7 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
         instream: BytesStream<S>,
         heads: Vec<String>,
         respondlightly: Option<bool>,
+        replaydata: Option<String>,
     ) -> (
         BoxStream<SingleResponse, Error>,
         BoxFuture<BytesStream<S>, Error>,
@@ -283,7 +285,13 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
             Either::A(ok(SingleResponse::ReadyForStream)),
             Either::B({
                 hgcmds
-                    .unbundle(heads, bundle2stream, maybe_full_content, respondlightly)
+                    .unbundle(
+                        heads,
+                        bundle2stream,
+                        maybe_full_content,
+                        respondlightly,
+                        replaydata,
+                    )
                     .map(SingleResponse::Unbundle)
             }),
         ]);
@@ -652,6 +660,7 @@ pub trait HgCommands {
         _stream: BoxStream<Bundle2Item<'static>, Error>,
         _maybe_full_content: Option<Arc<Mutex<Bytes>>>,
         _respondlightly: Option<bool>,
+        _replaydata: Option<String>,
     ) -> HgCommandRes<Bytes> {
         unimplemented("unbundle")
     }

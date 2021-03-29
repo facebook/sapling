@@ -18,8 +18,10 @@ use mercurial_types::HgFileNodeId;
 use metaconfig_types::LfsParams;
 use mononoke_api::Repo;
 use mononoke_repo::MononokeRepo;
+use mononoke_types_mocks::changesetid::ONES_CSID;
 use mutable_counters::SqlMutableCounters;
 use scuba_ext::MononokeScubaSampleBuilder;
+use serde_json::json;
 use sql_construct::SqlConstruct;
 use streaming_clone::SqlStreamingChunksFetcher;
 use tests_utils::CreateCommitContext;
@@ -308,6 +310,94 @@ async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
     assert_eq!(
         run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?,
         false
+    );
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_maybe_validate_pushed_bonsais(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo: BlobRepo = test_repo_factory::build_empty()?;
+    let commit = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("largefile", "11111_11111")
+        .commit()
+        .await?;
+
+    let hg_cs_id = repo
+        .get_hg_from_bonsai_changeset(ctx.clone(), commit)
+        .await?;
+
+    // No replay data - ignore
+    maybe_validate_pushed_bonsais(&ctx, &repo, &None).await?;
+
+    // Has replay data, but no hgbonsaimapping - ignore
+    maybe_validate_pushed_bonsais(&ctx, &repo, &Some("{}".to_string())).await?;
+
+    // Has valid replay data - should succeed
+    maybe_validate_pushed_bonsais(
+        &ctx,
+        &repo,
+        &Some(
+            json!({
+                "hgbonsaimapping": {
+                    format!("{}", hg_cs_id): commit,
+                }
+            })
+            .to_string(),
+        ),
+    )
+    .await?;
+
+
+    // Additional fields doesn't change the result
+    maybe_validate_pushed_bonsais(
+        &ctx,
+        &repo,
+        &Some(
+            json!({
+                "hgbonsaimapping": {
+                    format!("{}", hg_cs_id): commit,
+                },
+                "somefield": "somevalue"
+            })
+            .to_string(),
+        ),
+    )
+    .await?;
+
+    // Now invalid bonsai - should fail
+    assert!(
+        maybe_validate_pushed_bonsais(
+            &ctx,
+            &repo,
+            &Some(
+                json!({
+                    "hgbonsaimapping": {
+                        format!("{}", hg_cs_id): ONES_CSID,
+                    },
+                    "somefield": "somevalue"
+                })
+                .to_string(),
+            ),
+        )
+        .await
+        .is_err()
+    );
+
+    // Now invalid hgbonsaimapping field - should fail
+    assert!(
+        maybe_validate_pushed_bonsais(
+            &ctx,
+            &repo,
+            &Some(
+                json!({
+                    "hgbonsaimapping": "somevalue"
+                })
+                .to_string(),
+            ),
+        )
+        .await
+        .is_err()
     );
     Ok(())
 }

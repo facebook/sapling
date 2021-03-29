@@ -12,7 +12,7 @@ use unbundle::{
     PushRedirectorArgs,
 };
 
-use anyhow::{format_err, Error, Result};
+use anyhow::{format_err, Context, Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -59,7 +59,7 @@ use mercurial_types::{
 };
 use metaconfig_types::{RepoClientKnobs, RepoReadOnly};
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
-use mononoke_types::hash::GitSha1;
+use mononoke_types::{hash::GitSha1, ChangesetId};
 use nonzero_ext::nonzero;
 use rand::{self, Rng};
 use regex::Regex;
@@ -68,6 +68,7 @@ use remotefilelog::{
     GetpackBlobInfo,
 };
 use revisionstore_types::Metadata;
+use serde::Deserialize;
 use serde_json::{self, json};
 use slog::{debug, error, info, o};
 use stats::prelude::*;
@@ -1624,6 +1625,7 @@ impl HgCommands for RepoClient {
         stream: BoxStream<Bundle2Item<'static>, Error>,
         maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
         respondlightly: Option<bool>,
+        maybereplaydata: Option<String>,
     ) -> HgCommandRes<BytesOld> {
         let reponame = self.repo.reponame().clone();
         cloned!(
@@ -1678,6 +1680,9 @@ impl HgCommands for RepoClient {
                             Err(e) => Err(e),
                             Ok((action, bypass_readonly)) => {
                                 let unbundle_future = async {
+                                    maybe_validate_pushed_bonsais(&ctx, blobrepo, &maybereplaydata)
+                                        .await?;
+
                                     let response = match client
                                         .maybe_get_pushredirector_for_action(&ctx, &action)?
                                     {
@@ -2611,4 +2616,71 @@ fn generate_lookup_resp_buf(success: bool, message: &[u8]) -> BytesOld {
     buf.put(message);
     buf.put(b'\n');
     buf.freeze()
+}
+
+#[derive(Debug, Deserialize)]
+struct ReplayData {
+    hgbonsaimapping: Option<HashMap<HgChangesetId, ChangesetId>>,
+}
+
+// Client might send us the bonsai commits it expects to see for given hg changesets.
+// This function verifies them.
+async fn maybe_validate_pushed_bonsais(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    maybereplaydata: &Option<String>,
+) -> Result<(), Error> {
+    let parsed: ReplayData = match maybereplaydata {
+        Some(s) => serde_json::from_str(s.as_str()).context("failed to parse replay data")?,
+        None => {
+            return Ok(());
+        }
+    };
+
+    let hgbonsaimapping = match parsed.hgbonsaimapping {
+        Some(hgbonsaimapping) => hgbonsaimapping,
+        None => {
+            return Ok(());
+        }
+    };
+
+    let hgbonsaimapping: Vec<_> = hgbonsaimapping.into_iter().collect();
+    for chunk in hgbonsaimapping.chunks(100) {
+        let hg_cs_ids: Vec<_> = chunk.iter().map(|(hg_cs_id, _)| *hg_cs_id).collect();
+
+        let entries = repo
+            .get_bonsai_hg_mapping()
+            .get(ctx, repo.get_repoid(), hg_cs_ids.into())
+            .await?;
+
+        let actual_entries = entries
+            .into_iter()
+            .map(|entry| (entry.hg_cs_id, entry.bcs_id))
+            .collect::<HashMap<_, _>>();
+
+        for (hg_cs_id, bcs_id) in chunk {
+            match actual_entries.get(&hg_cs_id) {
+                Some(actual_bcs_id) => {
+                    if actual_bcs_id != bcs_id {
+                        return Err(format_err!(
+                            "Hg changeset {} should map to {}, but it actually maps to {} in {}",
+                            hg_cs_id,
+                            bcs_id,
+                            actual_bcs_id,
+                            repo.name(),
+                        ));
+                    }
+                }
+                None => {
+                    return Err(format_err!(
+                        "Hg changeset {} does not exist in {}",
+                        hg_cs_id,
+                        repo.name(),
+                    ));
+                }
+            };
+        }
+    }
+
+    Ok(())
 }
