@@ -42,6 +42,7 @@ def readfromstore(self, text):
     contents of the blobstore should be checked using checkhash.
     """
     p = pointer.deserialize(text)
+
     oid = p.oid()
     store = self.opener.lfslocalblobstore
     if not store.has(oid):

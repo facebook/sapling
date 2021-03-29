@@ -252,7 +252,7 @@ def uisetup(ui):
         except KeyError:
             pass
         if lfsmod:
-            lfsmod.wrapfilelog(remotefilelog.remotefilelog)
+            lfsmod.wrapfilelog(ui, remotefilelog.remotefilelog)
             fileserverclient._lfsmod = lfsmod
 
     extensions.afterloaded("lfs", _lfsloaded)

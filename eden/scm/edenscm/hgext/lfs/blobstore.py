@@ -393,7 +393,7 @@ class _promptremote(object):
     """Prompt user to set lfs.url when accessed."""
 
     def __init__(self, ui, url):
-        pass
+        self.useplaceholders = ui.configbool("experimental", "lfsplaceholders")
 
     def writebatch(self, pointers, fromstore, ui=None):
         self._prompt()
@@ -402,7 +402,8 @@ class _promptremote(object):
         self._prompt()
 
     def _prompt(self):
-        raise error.Abort(_("lfs.url needs to be configured"))
+        if not self.useplaceholders:
+            raise error.Abort(_("lfs.url needs to be configured"))
 
 
 _storemap = {
