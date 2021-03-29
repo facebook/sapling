@@ -89,7 +89,8 @@ class RpcTcpHandler : public folly::DelayedDestruction {
       folly::io::Cursor deser(input.get());
       rpc_msg_call call = XdrTrait<rpc_msg_call>::deserialize(deser);
 
-      auto resultBuf = std::make_unique<folly::IOBufQueue>();
+      auto resultBuf = std::make_unique<folly::IOBufQueue>(
+          folly::IOBufQueue::cacheChainLength());
       folly::io::QueueAppender ser(resultBuf.get(), 1024);
       XdrTrait<uint32_t>::serialize(
           ser, 0); // reserve space for fragment header
@@ -163,11 +164,12 @@ class RpcTcpHandler : public folly::DelayedDestruction {
           if (result.hasException()) {
             // XXX: This should never happen.
           } else {
-            auto resultBuffer = std::move(result).value()->move();
+            auto& iobufQueue = result.value();
+            auto chainLength = iobufQueue->chainLength();
+            auto resultBuffer = iobufQueue->move();
 
             // Fill out the fragment header.
-            auto len = uint32_t(
-                resultBuffer->computeChainDataLength() - sizeof(uint32_t));
+            auto len = uint32_t(chainLength - sizeof(uint32_t));
             auto fragment = (uint32_t*)resultBuffer->writableData();
             *fragment = folly::Endian::big(len | 0x80000000);
 
