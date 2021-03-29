@@ -37,6 +37,8 @@ mod types {
     impl From<ChunkingMethod> for Value {
         fn from(dtype: ChunkingMethod) -> Self {
             match dtype {
+                // When you add here, please add the reverse transform
+                // to impl ConvIr<ChunkingMethod> below
                 ChunkingMethod::ByContentHashBlake2 => Value::UInt(1),
             }
         }
@@ -45,10 +47,22 @@ mod types {
     impl ConvIr<ChunkingMethod> for ChunkingMethod {
         fn new(v: Value) -> FromValueResult<Self> {
             match v {
+                // Note that every value repeats 3 times - integer, unsigned, string - because MySQL can convert to
+                // any of those for a response. We normally see UInt, but we want this to be safe against
+                // surprises
                 Value::Int(1) => Ok(ChunkingMethod::ByContentHashBlake2),
                 Value::UInt(1) => Ok(ChunkingMethod::ByContentHashBlake2),
                 Value::Bytes(ref b) if b == b"1" => Ok(ChunkingMethod::ByContentHashBlake2),
-                v => Err(FromValueError(v)),
+                // If you need to add to this error path, ensure that the type you are adding cannot be converted to an integer
+                // by MySQL
+                v @ Value::NULL
+                | v @ Value::Bytes(..)
+                | v @ Value::Float(..)
+                | v @ Value::Double(..)
+                | v @ Value::Date(..)
+                | v @ Value::Time(..)
+                | v @ Value::Int(..)
+                | v @ Value::UInt(..) => Err(FromValueError(v)),
             }
         }
 
