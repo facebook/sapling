@@ -804,10 +804,8 @@ Future<string> FileInode::readAll(
                           "runWhileDataLoaded() call";
         }
 
-#ifndef _WIN32
         // We want to update atime after the read operation.
         self->updateAtimeLocked(*state);
-#endif // !_WIN32
 
         return result;
       });

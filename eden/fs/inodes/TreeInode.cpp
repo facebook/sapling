@@ -954,8 +954,8 @@ FileInodePtr TreeInode::createImpl(
     entry.setInode(inode.get());
     getInodeMap()->inodeCreated(inode);
 
-#ifndef _WIN32
     updateMtimeAndCtimeLocked(contents->entries, now);
+#ifndef _WIN32
     getMount()->getServerState()->getFaultInjector().check(
         "createInodeSaveOverlay", name.stringPiece());
 #endif
@@ -1102,9 +1102,7 @@ TreeInodePtr TreeInode::mkdir(
     getInodeMap()->inodeCreated(newChild);
 
     // Save our updated overlay data
-#ifndef _WIN32
     updateMtimeAndCtimeLocked(contents->entries, now);
-#endif
     getOverlay()->addChild(
         getNodeId(), *emplaceResult.first, contents->entries);
   }
@@ -1308,9 +1306,7 @@ int TreeInode::tryRemoveChild(
 
     // We want to update mtime and ctime of parent directory after removing the
     // child.
-#ifndef _WIN32
     updateMtimeAndCtimeLocked(contents->entries, getNow());
-#endif
     getOverlay()->removeChild(getNodeId(), name, contents->entries);
   }
   deletedInode.reset();
@@ -1671,12 +1667,10 @@ Future<Unit> TreeInode::doRename(
   locks.srcContents()->erase(srcIter);
 
   auto now = getNow();
-#ifndef _WIN32
   updateMtimeAndCtimeLocked(*locks.srcContents(), now);
   if (destParent.get() != this) {
     destParent->updateMtimeAndCtimeLocked(*locks.destContents(), now);
   }
-#endif
 
   getOverlay()->renameChild(
       getNodeId(),
@@ -3382,6 +3376,11 @@ size_t TreeInode::unloadChildrenUnreferencedByFs() {
       [](InodeBase* child) { return child->getFsRefcount() == 0; });
 }
 
+void TreeInode::updateAtime() {
+  auto lock = contents_.wlock();
+  InodeBaseMetadata::updateAtimeLocked(lock->entries);
+}
+
 #ifndef _WIN32
 size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
   // Unloading children by criteria is a bit of an intricate operation. The
@@ -3475,11 +3474,6 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
 InodeMetadata TreeInode::getMetadata() const {
   auto lock = contents_.rlock();
   return getMetadataLocked(lock->entries);
-}
-
-void TreeInode::updateAtime() {
-  auto lock = contents_.wlock();
-  InodeBaseMetadata::updateAtimeLocked(lock->entries);
 }
 
 InodeMetadata TreeInode::getMetadataLocked(const DirContents&) const {

@@ -358,15 +358,19 @@ ParentInodeInfo InodeBase::getParentInfo() const {
 InodeMetadata InodeBase::getMetadataLocked() const {
   return getMount()->getInodeMetadataTable()->getOrThrow(getNodeId());
 }
+#endif
 
 void InodeBase::updateAtime() {
+#ifndef _WIN32
   // TODO: Is it worth implementing relatime-like logic?
   auto now = getNow();
   getMount()->getInodeMetadataTable()->modifyOrThrow(
       getNodeId(), [&](auto& metadata) { metadata.timestamps.atime = now; });
+#endif
 }
 
 InodeTimestamps InodeBase::updateMtimeAndCtime(timespec now) {
+#ifndef _WIN32
   return getMount()
       ->getInodeMetadataTable()
       ->modifyOrThrow(
@@ -376,8 +380,8 @@ InodeTimestamps InodeBase::updateMtimeAndCtime(timespec now) {
             record.timestamps.mtime = now;
           })
       .timestamps;
-}
 #endif
+}
 
 timespec InodeBase::getNow() const {
   return getClock().getRealtime();

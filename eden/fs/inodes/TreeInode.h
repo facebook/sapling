@@ -488,9 +488,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   static DirContents
   buildDirFromTree(const Tree* tree, Overlay* overlay, bool caseSensitive);
 
-#ifndef _WIN32
   void updateAtime();
-#endif // !_WIN32
 
   void prefetch(ObjectFetchContext& context);
 

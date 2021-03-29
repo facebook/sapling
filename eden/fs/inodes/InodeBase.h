@@ -396,9 +396,10 @@ class InodeBase {
   // The caller (which is always InodeBaseMetadata) must be holding the inode
   // state lock for this type of inode when calling getMetadataLocked().
   InodeMetadata getMetadataLocked() const;
+#endif
+
   void updateAtime();
   InodeTimestamps updateMtimeAndCtime(timespec now);
-#endif
 
   template <typename InodeType>
   friend class InodePtrImpl;
@@ -597,6 +598,7 @@ class InodeBaseMetadata : public InodeBase {
   InodeMetadata getMetadataLocked(const InodeState&) const {
     return InodeBase::getMetadataLocked();
   }
+#endif
 
   /**
    * Helper function to set the atime of this inode. The inode's state lock must
@@ -616,7 +618,6 @@ class InodeBaseMetadata : public InodeBase {
   InodeTimestamps updateMtimeAndCtimeLocked(InodeState&, timespec now) {
     return InodeBase::updateMtimeAndCtime(now);
   }
-#endif
 };
 } // namespace eden
 } // namespace facebook
