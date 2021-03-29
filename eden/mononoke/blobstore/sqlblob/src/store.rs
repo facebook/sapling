@@ -37,7 +37,7 @@ mod types {
     impl From<ChunkingMethod> for Value {
         fn from(dtype: ChunkingMethod) -> Self {
             match dtype {
-                ChunkingMethod::ByContentHashBlake2 => Value::Int(1),
+                ChunkingMethod::ByContentHashBlake2 => Value::UInt(1),
             }
         }
     }
@@ -46,6 +46,7 @@ mod types {
         fn new(v: Value) -> FromValueResult<Self> {
             match v {
                 Value::Int(1) => Ok(ChunkingMethod::ByContentHashBlake2),
+                Value::UInt(1) => Ok(ChunkingMethod::ByContentHashBlake2),
                 Value::Bytes(ref b) if b == b"1" => Ok(ChunkingMethod::ByContentHashBlake2),
                 v => Err(FromValueError(v)),
             }
