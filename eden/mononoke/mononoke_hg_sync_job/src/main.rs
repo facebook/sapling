@@ -380,7 +380,7 @@ pub struct CombinedBookmarkUpdateLogEntry {
 
 #[derive(Clone)]
 pub enum CommitsInBundle {
-    Commits(Vec<ChangesetId>),
+    Commits(Vec<(HgChangesetId, ChangesetId)>),
     Unknown,
 }
 
@@ -409,6 +409,7 @@ async fn try_sync_single_combined_entry(
             combined_entry.cs_id.map(|(_bcs_id, hg_cs_id)| hg_cs_id),
             attempt,
             ctx.logger(),
+            &combined_entry.commits,
         )
         .await?;
 

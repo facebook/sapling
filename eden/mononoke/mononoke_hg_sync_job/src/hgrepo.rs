@@ -5,12 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use crate::CommitsInBundle;
+
 use anyhow::{bail, format_err, Context as _, Error, Result};
 use bookmarks::BookmarkName;
 use futures::future::{self, Future, FutureExt, TryFuture, TryFutureExt};
 use futures_ext::future::{FbFutureExt, FbTryFutureExt};
+use itertools::Itertools;
 use mercurial_types::HgChangesetId;
-use mononoke_hg_sync_job_helper_lib::{lines_after, read_file_contents, wait_till_more_lines};
+use mononoke_hg_sync_job_helper_lib::{
+    lines_after, read_file_contents, wait_till_more_lines, write_to_named_temp_file,
+};
 use pin_project::pin_project;
 use shared_error::anyhow::{IntoSharedError, SharedError};
 use slog::{debug, info, Logger};
@@ -273,6 +278,7 @@ impl HgPeer {
         expected_bookmark_position: Option<HgChangesetId>,
         attempt: usize,
         logger: &Logger,
+        commits_in_bundle: &CommitsInBundle,
     ) -> Result<(), Error> {
         let mut log_file = match NamedTempFile::new() {
             Ok(log_file) => log_file,
@@ -291,9 +297,35 @@ impl HgPeer {
         let onto_bookmark = onto_bookmark.to_string();
         let onto_bookmark = base64::encode(&onto_bookmark);
         let expected_hash = expected_location_string_arg(expected_bookmark_position);
+
+        let hgbonsaimapping = match commits_in_bundle {
+            CommitsInBundle::Commits(hgbonsaimapping) => {
+                let encoded_hg_bonsai_mapping = hgbonsaimapping
+                    .iter()
+                    .map(|(hg_cs_id, bcs_id)| format!("{}={}", hg_cs_id, bcs_id))
+                    .join("\n");
+
+                encoded_hg_bonsai_mapping
+            }
+            CommitsInBundle::Unknown => "".to_string(),
+        };
+
+        let hgbonsaimappingfile = write_to_named_temp_file(hgbonsaimapping).await?;
+        let hgbonsaimappingpath = match hgbonsaimappingfile.path().to_str() {
+            Some(path) => path,
+            None => {
+                return Err(Error::msg("hg bonsai mapping path was not a valid string"));
+            }
+        };
+
         let input_line = format!(
-            "{} {} {} {} {}\n",
-            bundle_path, timestamps_path, onto_bookmark, expected_hash, log_path,
+            "{} {} {} {} {} {}\n",
+            bundle_path,
+            timestamps_path,
+            hgbonsaimappingpath,
+            onto_bookmark,
+            expected_hash,
+            log_path,
         );
         let path = self.reports_file.path().to_path_buf();
         let bundle_timeout_ms = self.baseline_bundle_timeout_ms * 2_u64.pow(attempt as u32 - 1);
@@ -376,6 +408,7 @@ impl HgRepo {
         expected_bookmark_position: Option<HgChangesetId>,
         attempt: usize,
         logger: &Logger,
+        commits_in_bundle: &CommitsInBundle,
     ) -> Result<(), Error> {
         self.renew_peer_if_needed(logger).await?;
 
@@ -389,6 +422,7 @@ impl HgRepo {
                 expected_bookmark_position.clone(),
                 attempt,
                 logger,
+                commits_in_bundle,
             )
             .await;
 

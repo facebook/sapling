@@ -126,7 +126,7 @@ impl DarkstormGlobalrevSyncer {
             }
         };
 
-        let bcs_id_to_globalrev = stream::iter(commits.iter().map(|bcs_id| async move {
+        let bcs_id_to_globalrev = stream::iter(commits.iter().map(|(_, bcs_id)| async move {
             let maybe_globalrev = self
                 .orig_repo
                 .get_globalrev_from_bonsai(ctx, *bcs_id)
@@ -244,6 +244,7 @@ mod test {
     use super::*;
     use bonsai_globalrev_mapping::BonsaiGlobalrevMappingEntry;
     use mercurial_types_mocks::globalrev::{GLOBALREV_ONE, GLOBALREV_THREE, GLOBALREV_TWO};
+    use mercurial_types_mocks::nodehash::{ONES_CSID as ONES_HG_CSID, TWOS_CSID as TWOS_HG_CSID};
     use mononoke_types::RepositoryId;
     use mononoke_types_mocks::changesetid::{ONES_CSID, TWOS_CSID};
     use mononoke_types_mocks::repo::REPO_ZERO;
@@ -404,7 +405,13 @@ mod test {
                 .is_none()
         );
         syncer
-            .sync(&ctx, &CommitsInBundle::Commits(vec![ONES_CSID, TWOS_CSID]))
+            .sync(
+                &ctx,
+                &CommitsInBundle::Commits(vec![
+                    (ONES_HG_CSID, ONES_CSID),
+                    (TWOS_HG_CSID, TWOS_CSID),
+                ]),
+            )
             .await?;
 
         assert_eq!(

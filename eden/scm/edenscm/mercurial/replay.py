@@ -22,18 +22,22 @@ class ReplayData(object):
                       understood by `util.parsedate`.
      - `ontobook` - a bookmark, used for pushrebase
      - `rebasedhead`- an expected hash of the rebased head
+     - `hgbonsaimapping` - mapping from hg changesets to bonsai changesets.
+                           Normally it's used only by mononoke
     """
 
-    def __init__(self, commitdates, rebasedhead, ontobook):
+    def __init__(self, commitdates, rebasedhead, ontobook, hgbonsaimapping):
         self.commitdates = commitdates
         self.rebasedhead = rebasedhead
         self.ontobook = ontobook
+        self.hgbonsaimapping = hgbonsaimapping
 
     def serialize(self):
         res = {
             "commitdates": self.commitdates,
             "rebasedhead": self.rebasedhead,
             "ontobook": self.ontobook,
+            "hgbonsaimapping": self.hgbonsaimapping,
         }
         return json.dumps(res)
 
@@ -43,7 +47,8 @@ class ReplayData(object):
         commitdates = d.get("commitdates", {})
         rebasedhead = d.get("rebasedhead")
         ontobook = d.get("ontobook")
-        return cls(commitdates, rebasedhead, ontobook)
+        hgbonsaimapping = d.get("hgbonsaimapping", {})
+        return cls(commitdates, rebasedhead, ontobook, hgbonsaimapping)
 
     def getcommitdate(self, ui, commithash, commitdate):
         saveddate = self.commitdates.get(commithash)

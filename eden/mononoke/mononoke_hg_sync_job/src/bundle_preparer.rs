@@ -395,8 +395,8 @@ impl BundlePreparer {
                 .await?;
 
                 let mut bcs_ids = vec![];
-                for (bcs_id, _) in timestamps.values() {
-                    bcs_ids.push(*bcs_id);
+                for (hg_cs_id, (bcs_id, _)) in &timestamps {
+                    bcs_ids.push((*hg_cs_id, *bcs_id));
                 }
 
                 let timestamps = timestamps
