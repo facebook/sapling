@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ hg init
+  $ newrepo repo
 
   $ printf "confuse str.splitlines\nembedded\rnewline\n" > a
   $ hg ci -Ama -d '1 0'

@@ -12,6 +12,7 @@
 
 import os
 import posixpath
+import re
 
 from edenscm.mercurial import error, pycompat, util
 from edenscm.mercurial.i18n import _
@@ -135,7 +136,7 @@ class fileindex(object):
 
     def _listbookmarks(self, pattern):
         if pattern.endswith("*"):
-            pattern = "re:^" + pattern[:-1] + ".*"
+            pattern = "re:^" + re.escape(pattern[:-1]) + ".*"
         kind, pat, matcher = util.stringmatcher(pattern)
         prefixlen = len(self._bookmarkmap) + 1
         for dirpath, _dirs, books in self._repo.localvfs.walk(self._bookmarkmap):

@@ -1357,7 +1357,7 @@ class ui(object):
                     )
 
             f = open(name, r"rb")
-            t = decodeutf8(util.fromnativeeol(f.read()))
+            t = util.fromnativeeol(decodeutf8(f.read()))
             f.close()
         finally:
             if rdir is None:

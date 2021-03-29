@@ -1143,7 +1143,11 @@ def _dispatch(req):
                 t = os.times()
                 if t[4] == 0.0:
                     # Windows leaves this as zero, so use time.clock()
-                    t = (t[0], t[1], t[2], t[3], time.clock())
+                    if sys.version_info[0] >= 3:
+                        x = time.perf_counter()
+                    else:
+                        x = time.clock()
+                    t = (t[0], t[1], t[2], t[3], x)
                 return t
 
             s = get_times()

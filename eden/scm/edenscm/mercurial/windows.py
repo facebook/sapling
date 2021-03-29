@@ -134,11 +134,41 @@ class mixedfilemodewrapper(object):
         return self._fp.readlines(*args, **kwargs)
 
 
+class fdproxy(object):
+    """Wraps osutil.posixfile() to override the name attribute to reflect the
+    underlying file name.
+    """
+
+    def __init__(self, name, fp):
+        self.name = name
+        self._fp = fp
+
+    def __enter__(self):
+        self._fp.__enter__()
+        # Return this wrapper for the context manager so that the name is
+        # still available.
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._fp.__exit__(exc_type, exc_value, traceback)
+
+    def __iter__(self):
+        return iter(self._fp)
+
+    def __getattr__(self, name):
+        return getattr(self._fp, name)
+
+
 def posixfile(name, mode="r", buffering=-1):
     # type: (str, str, int) -> IO
     """Open a file with even more POSIX-like semantics"""
     try:
         fp = osutil.posixfile(name, mode, buffering)  # may raise WindowsError
+
+        # PyFile_FromFd() ignores the name, and seems to report fp.name as the
+        # underlying file descriptor.
+        if sys.version_info[0] >= 3:
+            fp = fdproxy(name, fp)
 
         return _fixseek(fp, mode)
     # pyre-fixme[10]: Name `WindowsError` is used but not defined.

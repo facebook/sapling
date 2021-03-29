@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ hg init
+  $ newrepo repo
   $ echo 0 > a
   $ echo 0 > b
   $ hg ci -A -m m

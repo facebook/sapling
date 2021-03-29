@@ -250,6 +250,7 @@ def checkportisavailable(port):
             errno.EADDRINUSE,
             errno.EADDRNOTAVAIL,
             errno.EPROTONOSUPPORT,
+            errno.WSAEACCES,
         ):
             raise
     return False

@@ -148,7 +148,7 @@ def tolf(s, params, ui, **kwargs):
         return s
     if ui.configbool("eol", "fix-trailing-newline") and s and s[-1:] != b"\n":
         s = s + b"\n"
-    return util.tolf(s)
+    return pycompat.encodeutf8(util.tolf(pycompat.decodeutf8(s)))
 
 
 def tocrlf(s, params, ui, **kwargs):
@@ -159,7 +159,7 @@ def tocrlf(s, params, ui, **kwargs):
         return s
     if ui.configbool("eol", "fix-trailing-newline") and s and s[-1:] != b"\n":
         s = s + b"\n"
-    return util.tocrlf(s)
+    return pycompat.encodeutf8(util.tocrlf(pycompat.decodeutf8(s)))
 
 
 def isbinary(s, params, *args, **kwargs):

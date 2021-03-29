@@ -1,7 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
-  $ hg init
+  $ newrepo repo
   $ echo a > a
   $ hg ci -Am0
   adding a

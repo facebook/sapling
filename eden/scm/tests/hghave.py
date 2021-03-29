@@ -402,7 +402,7 @@ def has_jq():
 
 @check("symlink", "symbolic links")
 def has_symlink():
-    if getattr(os, "symlink", None) is None:
+    if os.name == "nt" or getattr(os, "symlink", None) is None:
         return False
     name = tempfile.mktemp(dir=".", prefix=tempprefix)
     try:

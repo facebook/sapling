@@ -1502,7 +1502,12 @@ sh % "printf 'diff --git a/a b/b\\nrename from a\\nrename to b'" | "hg import -"
     [255]"""
 
 # Verify that utf-8 characters in patches can be imported
-open("unicode.txt", "w").write("echo 🍺")
+import sys
+
+if sys.version_info[0] >= 3:
+    open("unicode.txt", "w", encoding="utf-8").write("echo 🍺")
+else:
+    open("unicode.txt", "w").write("echo 🍺")
 sh % "hg commit -Aqm unicode"
 sh % "hg rm unicode.txt"
 sh % "hg commit -qm remove"

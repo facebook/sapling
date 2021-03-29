@@ -9,6 +9,7 @@
 
 from __future__ import absolute_import, print_function
 
+import os
 import sys
 
 
@@ -37,5 +38,10 @@ if len(sys.argv) > 3:
 
 stop = int(sys.argv[-1]) + 1
 
-for i in xrange(start, stop, step):
-    print(i)
+if sys.version_info[0] >= 3:
+    with os.fdopen(sys.stdout.fileno(), "wb") as stdout:
+        for i in xrange(start, stop, step):
+            stdout.write(b"%i\n" % i)
+else:
+    for i in xrange(start, stop, step):
+        print(i)

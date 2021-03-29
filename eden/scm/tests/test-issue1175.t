@@ -3,7 +3,7 @@
   $ disable treemanifest
 https://bz.mercurial-scm.org/1175
 
-  $ hg init
+  $ newrepo repo
   $ touch a
   $ hg ci -Am0
   adding a
