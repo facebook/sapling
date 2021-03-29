@@ -2551,6 +2551,9 @@ Future<Unit> TreeInode::checkout(
                 ctx->addError(
                     location.parent.get(), location.name, success.exception());
               }
+
+              self->updateMtimeAndCtimeLocked(
+                  contents->entries, self->getNow());
             }
 
             // Update our state in the overlay
