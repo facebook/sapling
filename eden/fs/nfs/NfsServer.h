@@ -13,6 +13,10 @@
 #include "eden/fs/nfs/Mountd.h"
 #include "eden/fs/nfs/Nfsd3.h"
 
+namespace folly {
+class Executor;
+}
+
 namespace facebook::eden {
 
 class Notifications;
@@ -24,7 +28,9 @@ class NfsServer {
    * Create a new NFS server.
    *
    * This will handle the lifetime of the various programs involved in the NFS
-   * protocol including mountd and nfsd.
+   * protocol including mountd and nfsd. The requests will be serviced by a
+   * blocking thread pool initialized with numServicingThreads and
+   * maxInflightRequests.
    *
    * One mountd program will be created per NfsServer, while one nfsd program
    * will be created per-mount point, this allows nfsd program to be only aware
@@ -32,8 +38,11 @@ class NfsServer {
    *
    * See Mountd constructor for the meaning of registerMountdWithRpcbind.
    */
-  NfsServer(bool registerMountdWithRpcbind, folly::EventBase* evb)
-      : evb_(evb), mountd_(registerMountdWithRpcbind, evb_) {}
+  NfsServer(
+      bool registerMountdWithRpcbind,
+      folly::EventBase* evb,
+      uint64_t numServicingThreads,
+      uint64_t maxInflightRequests);
 
   /**
    * Return value of registerMount.
@@ -85,6 +94,7 @@ class NfsServer {
 
  private:
   folly::EventBase* evb_;
+  std::shared_ptr<folly::Executor> threadPool_;
   Mountd mountd_;
 };
 

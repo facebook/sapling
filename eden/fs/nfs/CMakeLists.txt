@@ -53,7 +53,6 @@ target_link_libraries(
   PUBLIC
     eden_nfs_dispatcher
     eden_nfs_rpc_server
-    eden_utils
   PRIVATE
     eden_nfs_nfsd_rpc
     Folly::folly
@@ -69,6 +68,8 @@ target_link_libraries(
   PUBLIC
     eden_nfs_mountd
     eden_nfs_nfsd3
+  PRIVATE
+    Folly::folly
 )
 
 add_library(

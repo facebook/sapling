@@ -26,6 +26,8 @@ target_link_libraries(
     eden_nfs_rpc
     eden_nfs_portmap
     Folly::folly
+  PRIVATE
+    eden_utils
 )
 
 add_subdirectory(test)

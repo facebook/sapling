@@ -16,6 +16,10 @@
 #include "eden/fs/nfs/rpc/Server.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
+namespace folly {
+class Executor;
+}
+
 namespace facebook::eden {
 
 class Notifications;
@@ -42,6 +46,7 @@ class Nfsd3 {
   Nfsd3(
       bool registerWithRpcbind,
       folly::EventBase* evb,
+      std::shared_ptr<folly::Executor> threadPool,
       std::unique_ptr<NfsDispatcher> dispatcher,
       const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache,

@@ -15,6 +15,10 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/SystemError.h"
 
+namespace folly {
+class Executor;
+}
+
 namespace facebook::eden {
 
 namespace {
@@ -1507,6 +1511,7 @@ folly::Future<folly::Unit> Nfsd3ServerProcessor::dispatchRpc(
 Nfsd3::Nfsd3(
     bool registerWithRpcbind,
     folly::EventBase* evb,
+    std::shared_ptr<folly::Executor> threadPool,
     std::unique_ptr<NfsDispatcher> dispatcher,
     const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
@@ -1518,7 +1523,8 @@ Nfsd3::Nfsd3(
               std::move(dispatcher),
               straceLogger,
               caseSensitive),
-          evb),
+          evb,
+          std::move(threadPool)),
       processAccessLog_(std::move(processNameCache)) {
   if (registerWithRpcbind) {
     server_.registerService(kNfsdProgNumber, kNfsd3ProgVersion);

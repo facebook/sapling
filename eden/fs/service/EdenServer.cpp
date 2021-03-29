@@ -346,7 +346,9 @@ EdenServer::EdenServer(
           edenConfig->enableNfsServer.getValue()
               ? std::make_shared<NfsServer>(
                     edenConfig->registerMountd.getValue(),
-                    mainEventBase_)
+                    mainEventBase_,
+                    edenConfig->numNfsThreads.getValue(),
+                    edenConfig->maxNfsInflightRequests.getValue())
               :
 #endif
               nullptr,

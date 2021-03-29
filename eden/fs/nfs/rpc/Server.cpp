@@ -82,9 +82,9 @@ class RpcTcpHandler : public folly::DelayedDestruction {
     }
   };
 
-  void dispatchAndReply(std::unique_ptr<folly::IOBuf> input) {
-    DestructorGuard guard(this);
-
+  void dispatchAndReply(
+      std::unique_ptr<folly::IOBuf> input,
+      DestructorGuard guard) {
     folly::makeFutureWith([this, input = std::move(input)]() mutable {
       folly::io::Cursor deser(input.get());
       rpc_msg_call call = XdrTrait<rpc_msg_call>::deserialize(deser);
@@ -182,6 +182,7 @@ class RpcTcpHandler : public folly::DelayedDestruction {
 
   std::shared_ptr<RpcServerProcessor> proc_;
   AsyncSocket::UniquePtr sock_;
+  std::shared_ptr<folly::Executor> threadPool_;
   std::unique_ptr<Reader> reader_;
   Writer writer_;
   folly::IOBufQueue readBuf_;
@@ -189,9 +190,11 @@ class RpcTcpHandler : public folly::DelayedDestruction {
  public:
   RpcTcpHandler(
       std::shared_ptr<RpcServerProcessor> proc,
-      std::unique_ptr<AsyncSocket, ReleasableDestructor>&& socket_)
+      std::unique_ptr<AsyncSocket, ReleasableDestructor>&& socket,
+      std::shared_ptr<folly::Executor> threadPool)
       : proc_(proc),
-        sock_(std::move(socket_)),
+        sock_(std::move(socket)),
+        threadPool_(std::move(threadPool)),
         reader_(std::make_unique<Reader>(this)),
         writer_() {}
 
@@ -225,31 +228,38 @@ class RpcTcpHandler : public folly::DelayedDestruction {
     }
 
     auto buf = readBuf_.split(c.getCurrentPosition());
-    buf->coalesce();
 
-    XLOG(DBG8) << "Received:\n" << folly::hexDump(buf->data(), buf->length());
+    DestructorGuard guard(this);
+    folly::via(
+        threadPool_.get(),
+        [this, buf = std::move(buf), guard = std::move(guard)]() mutable {
+          buf->coalesce();
 
-    // Remove the fragment framing from the buffer
-    // XXX: This is O(N^2) in the number of fragments.
-    auto data = buf->writableData();
-    auto remain = buf->length();
-    size_t totalLength = 0;
-    while (true) {
-      auto fragmentHeader = folly::Endian::big(*(uint32_t*)data);
-      auto len = fragmentHeader & 0x7fffffff;
-      bool isLast = (fragmentHeader & 0x80000000) != 0;
-      memmove(data, data + sizeof(uint32_t), remain - sizeof(uint32_t));
-      totalLength += len;
-      remain -= len + sizeof(uint32_t);
-      data += len;
-      if (isLast) {
-        break;
-      }
-    }
+          XLOG(DBG8) << "Received:\n"
+                     << folly::hexDump(buf->data(), buf->length());
 
-    buf->trimEnd(buf->length() - totalLength);
+          // Remove the fragment framing from the buffer
+          // XXX: This is O(N^2) in the number of fragments.
+          auto data = buf->writableData();
+          auto remain = buf->length();
+          size_t totalLength = 0;
+          while (true) {
+            auto fragmentHeader = folly::Endian::big(*(uint32_t*)data);
+            auto len = fragmentHeader & 0x7fffffff;
+            bool isLast = (fragmentHeader & 0x80000000) != 0;
+            memmove(data, data + sizeof(uint32_t), remain - sizeof(uint32_t));
+            totalLength += len;
+            remain -= len + sizeof(uint32_t);
+            data += len;
+            if (isLast) {
+              break;
+            }
+          }
 
-    dispatchAndReply(std::move(buf));
+          buf->trimEnd(buf->length() - totalLength);
+
+          dispatchAndReply(std::move(buf), std::move(guard));
+        });
   }
 };
 
@@ -263,7 +273,7 @@ void RpcServer::RpcAcceptCallback::connectionAccepted(
   using UniquePtr =
       std::unique_ptr<RpcTcpHandler, folly::DelayedDestruction::Destructor>;
   auto handler = UniquePtr(
-      new RpcTcpHandler(proc_, std::move(socket)),
+      new RpcTcpHandler(proc_, std::move(socket), threadPool_),
       folly::DelayedDestruction::Destructor());
   handler->setup();
 }
@@ -298,9 +308,11 @@ Future<folly::Unit> RpcServerProcessor::dispatchRpc(
 
 RpcServer::RpcServer(
     std::shared_ptr<RpcServerProcessor> proc,
-    folly::EventBase* evb)
+    folly::EventBase* evb,
+    std::shared_ptr<folly::Executor> threadPool)
     : evb_(evb),
-      acceptCb_(new RpcServer::RpcAcceptCallback(proc, evb_)),
+      acceptCb_(
+          new RpcServer::RpcAcceptCallback(proc, evb_, std::move(threadPool))),
       serverSocket_(new AsyncServerSocket(evb_)) {
   // Ask kernel to assign us a port on the loopback interface
   serverSocket_->bind(SocketAddress("127.0.0.1", 0));

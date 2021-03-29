@@ -504,6 +504,20 @@ class EdenConfig : private ConfigSettingManager {
   ConfigSetting<bool> registerMountd{"nfs:register-mountd", false, this};
 
   /**
+   * Number of threads that will service the NFS requests.
+   */
+  ConfigSetting<uint64_t> numNfsThreads{"nfs:num-servicing-threads", 8, this};
+
+  /**
+   * Maximum number of pending NFS requests. If more requests are inflight, the
+   * NFS code will block.
+   */
+  ConfigSetting<uint64_t> maxNfsInflightRequests{
+      "nfs:max-inflight-requests",
+      1000,
+      this};
+
+  /**
    * Kill switch for the prefetch profiles feature.
    */
   ConfigSetting<bool> enablePrefetchProfiles{

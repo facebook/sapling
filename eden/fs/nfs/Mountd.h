@@ -16,6 +16,10 @@
 #include "eden/fs/nfs/rpc/Server.h"
 #include "eden/fs/utils/PathFuncs.h"
 
+namespace folly {
+class Executor;
+}
+
 namespace facebook::eden {
 
 class MountdServerProcessor;
@@ -38,7 +42,10 @@ class Mountd {
    * to manually specify the port on which this server is bound, so registering
    * is not necessary for a properly behaving EdenFS.
    */
-  Mountd(bool registerWithRpcbind, folly::EventBase* evb);
+  Mountd(
+      bool registerWithRpcbind,
+      folly::EventBase* evb,
+      std::shared_ptr<folly::Executor> threadPool);
 
   /**
    * Register a path as the root of a mount point.

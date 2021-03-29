@@ -15,6 +15,10 @@
 #include "eden/fs/nfs/portmap/PortmapClient.h"
 #include "eden/fs/nfs/rpc/Rpc.h"
 
+namespace folly {
+class Executor;
+}
+
 namespace facebook::eden {
 
 class RpcServerProcessor {
@@ -32,7 +36,16 @@ class RpcServerProcessor {
 
 class RpcServer {
  public:
-  RpcServer(std::shared_ptr<RpcServerProcessor> proc, folly::EventBase* evb);
+  /**
+   * Create an RPC server.
+   *
+   * Request will be received on the passed EventBase and dispatched to the
+   * RpcServerProcessor on the passed in threadPool.
+   */
+  RpcServer(
+      std::shared_ptr<RpcServerProcessor> proc,
+      folly::EventBase* evb,
+      std::shared_ptr<folly::Executor> threadPool);
   ~RpcServer();
 
   void registerService(uint32_t progNumber, uint32_t progVersion);
@@ -58,8 +71,12 @@ class RpcServer {
 
     explicit RpcAcceptCallback(
         std::shared_ptr<RpcServerProcessor> proc,
-        folly::EventBase* evb)
-        : evb_(evb), proc_(proc), guard_(this) {}
+        folly::EventBase* evb,
+        std::shared_ptr<folly::Executor> threadPool)
+        : evb_(evb),
+          proc_(proc),
+          threadPool_(std::move(threadPool)),
+          guard_(this) {}
 
    private:
     void connectionAccepted(
@@ -74,6 +91,7 @@ class RpcServer {
 
     folly::EventBase* evb_;
     std::shared_ptr<RpcServerProcessor> proc_;
+    std::shared_ptr<folly::Executor> threadPool_;
 
     /**
      * Hold a guard to ourself to avoid being deleted until the callback is
