@@ -186,8 +186,8 @@ class RpcTcpHandler : public folly::DelayedDestruction {
   AsyncSocket::UniquePtr sock_;
   std::shared_ptr<folly::Executor> threadPool_;
   std::unique_ptr<Reader> reader_;
-  Writer writer_;
-  folly::IOBufQueue readBuf_;
+  Writer writer_{};
+  folly::IOBufQueue readBuf_{folly::IOBufQueue::cacheChainLength()};
 
  public:
   RpcTcpHandler(
@@ -197,8 +197,7 @@ class RpcTcpHandler : public folly::DelayedDestruction {
       : proc_(proc),
         sock_(std::move(socket)),
         threadPool_(std::move(threadPool)),
-        reader_(std::make_unique<Reader>(this)),
-        writer_() {}
+        reader_(std::make_unique<Reader>(this)) {}
 
   void resetReader() {
     reader_.reset();
@@ -209,59 +208,59 @@ class RpcTcpHandler : public folly::DelayedDestruction {
   }
 
   void tryConsumeReadBuffer() noexcept {
-    // Since we are TCP:
-    // Then: decode framing information from start of buffer.
-    // See if a complete frame is available.
-    // If so, decode call_body and dispatch
-
-    folly::io::Cursor c(readBuf_.front());
-    while (true) {
-      auto fragmentHeader = c.readBE<uint32_t>();
-      auto len = fragmentHeader & 0x7fffffff;
-      bool isLast = (fragmentHeader & 0x80000000) != 0;
-      if (!c.canAdvance(len)) {
-        // we don't have a complete request, so try again later
-        return;
+    // Iterate over all the complete fragments and dispatch these to the
+    // threadPool_. Stop when we can no longer read the uin32_t that indicate
+    // the size of the fragment.
+    while (readBuf_.chainLength() >= sizeof(uint32_t)) {
+      folly::io::Cursor c(readBuf_.front());
+      while (true) {
+        auto fragmentHeader = c.readBE<uint32_t>();
+        auto len = fragmentHeader & 0x7fffffff;
+        bool isLast = (fragmentHeader & 0x80000000) != 0;
+        if (!c.canAdvance(len)) {
+          // we don't have a complete request, so try again later
+          return;
+        }
+        c.skip(len);
+        if (isLast) {
+          break;
+        }
       }
-      c.skip(len);
-      if (isLast) {
-        break;
-      }
-    }
 
-    auto buf = readBuf_.split(c.getCurrentPosition());
+      auto buf = readBuf_.split(c.getCurrentPosition());
 
-    DestructorGuard guard(this);
-    folly::via(
-        threadPool_.get(),
-        [this, buf = std::move(buf), guard = std::move(guard)]() mutable {
-          buf->coalesce();
+      DestructorGuard guard(this);
+      folly::via(
+          threadPool_.get(),
+          [this, buf = std::move(buf), guard = std::move(guard)]() mutable {
+            buf->coalesce();
 
-          XLOG(DBG8) << "Received:\n"
-                     << folly::hexDump(buf->data(), buf->length());
+            XLOG(DBG8) << "Received:\n"
+                       << folly::hexDump(buf->data(), buf->length());
 
-          // Remove the fragment framing from the buffer
-          // XXX: This is O(N^2) in the number of fragments.
-          auto data = buf->writableData();
-          auto remain = buf->length();
-          size_t totalLength = 0;
-          while (true) {
-            auto fragmentHeader = folly::Endian::big(*(uint32_t*)data);
-            auto len = fragmentHeader & 0x7fffffff;
-            bool isLast = (fragmentHeader & 0x80000000) != 0;
-            memmove(data, data + sizeof(uint32_t), remain - sizeof(uint32_t));
-            totalLength += len;
-            remain -= len + sizeof(uint32_t);
-            data += len;
-            if (isLast) {
-              break;
+            // Remove the fragment framing from the buffer
+            // XXX: This is O(N^2) in the number of fragments.
+            auto data = buf->writableData();
+            auto remain = buf->length();
+            size_t totalLength = 0;
+            while (true) {
+              auto fragmentHeader = folly::Endian::big(*(uint32_t*)data);
+              auto len = fragmentHeader & 0x7fffffff;
+              bool isLast = (fragmentHeader & 0x80000000) != 0;
+              memmove(data, data + sizeof(uint32_t), remain - sizeof(uint32_t));
+              totalLength += len;
+              remain -= len + sizeof(uint32_t);
+              data += len;
+              if (isLast) {
+                break;
+              }
             }
-          }
 
-          buf->trimEnd(buf->length() - totalLength);
+            buf->trimEnd(buf->length() - totalLength);
 
-          dispatchAndReply(std::move(buf), std::move(guard));
-        });
+            dispatchAndReply(std::move(buf), std::move(guard));
+          });
+    }
   }
 };
 
