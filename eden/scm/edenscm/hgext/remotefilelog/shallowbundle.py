@@ -145,6 +145,9 @@ class shallowcg1packer(changegroup.cg1packer):
                 # If we're sending files, we need to process the manifests
                 filestosend = self.shouldaddfilegroups(source)
                 if filestosend is not NoFiles:
+                    cl = repo.changelog
+                    clparents = cl.parents
+                    clrevision = cl.changelogrevision
                     mflog = repo.manifestlog
                     with progress.bar(repo.ui, _("manifests"), total=len(mfs)) as prog:
                         for mfnode, clnode in pycompat.iteritems(mfs):
@@ -156,7 +159,8 @@ class shallowcg1packer(changegroup.cg1packer):
                                 continue
                             try:
                                 mfctx = mflog[mfnode]
-                                p1node = mfctx.parents[0]
+                                clp1node = clparents(clnode)[0]
+                                p1node = clrevision(clp1node).manifest
                                 p1ctx = mflog[p1node]
                             except LookupError:
                                 if not repo.svfs.treemanifestserver or treeonly(repo):
@@ -164,7 +168,8 @@ class shallowcg1packer(changegroup.cg1packer):
                                 # If we can't find the flat version, look for trees
                                 tmfl = mflog.treemanifestlog
                                 mfctx = tmfl[mfnode]
-                                p1node = tmfl[mfnode].parents[0]
+                                clp1node = clparents(clnode)[0]
+                                p1node = clrevision(clp1node).manifest
                                 p1ctx = tmfl[p1node]
 
                             diff = pycompat.iteritems(p1ctx.read().diff(mfctx.read()))
