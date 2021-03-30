@@ -14,7 +14,7 @@
   > )
 
 Small commit, one file changed
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo file > file
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark

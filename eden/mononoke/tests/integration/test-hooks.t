@@ -63,7 +63,7 @@ Clone the repo
   > remotenames =
   > EOF
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark -q
 
@@ -81,7 +81,7 @@ Delete a file, make sure that file_size_hook is not called on deleted files
   updating bookmark master_bookmark
 
 Send large file
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 'aaaaaaaaaaa' > largefile
   $ hg ci -Aqm 'largefile'
   $ hgmn push -r . --to master_bookmark
@@ -113,7 +113,7 @@ Bypass large file hook
   updating bookmark master_bookmark
 
 Send large file inside a directory
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir dir/
   $ echo 'aaaaaaaaaaa' > dir/largefile
   $ hg ci -Aqm 'dir/largefile'

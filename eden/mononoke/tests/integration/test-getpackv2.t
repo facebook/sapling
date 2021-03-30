@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ setconfig ui.ignorerevnum=false
   $ setconfig remotefilelog.write-hgcache-to-indexedlog=False remotefilelog.write-local-to-indexedlog=False
 
 setup configuration
@@ -60,7 +61,7 @@ Pull from Mononoke
 Make sure that cache is empty
   $ ls $TESTTMP/cachepath/repo/packs/manifests
 
-  $ hgmn prefetch -r 0 -r1 --debug 2>&1 | grep "getpackv2 command"
+  $ hgmn prefetch -r "min(all())" -r1 --debug 2>&1 | grep "getpackv2 command"
   sending getpackv2 command
 
 Make sure that `hg update` succeeds
@@ -79,7 +80,7 @@ Then make sure update succeeds
   $ setconfig remotefilelog.getpackversion=2
   $ hgmn pull -q --config ui.disable-stream-clone=true
   warning: stream clone is disabled
-  $ hgmn prefetch -r 0 -r 3 --debug 2>&1 | grep "getpackv2 command"
+  $ hgmn prefetch -r "min(all())" -r 3 --debug 2>&1 | grep "getpackv2 command"
   sending getpackv2 command
   $ hg up --config paths.default=badpath 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

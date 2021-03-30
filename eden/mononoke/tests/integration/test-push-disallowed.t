@@ -44,7 +44,7 @@ setup the client repo
 
 create new hg commits
   $ cd $TESTTMP/client
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo b > b && hg ci -Am b
   adding b
 

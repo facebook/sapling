@@ -53,7 +53,7 @@ Push a simple commit to Mononoke
   $ hgmn push -r . --to master_bookmark -q
 
 Push two commits to Mononoke, one of them has a force copy
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir dir
   $ cd dir
   $ echo 1 > 1 && echo 2 > 2
@@ -87,7 +87,7 @@ Sync second tricky push
 Push of a merge with a copy
   $ cd $TESTTMP/client-push
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > fromcopyremote
   $ echo 1 > notinfirstparent
   $ hg addremove -q && hg ci -m tomerge

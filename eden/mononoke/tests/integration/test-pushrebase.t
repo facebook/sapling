@@ -6,6 +6,7 @@
 #require slow
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ setconfig ui.ignorerevnum=false
   $ BLOB_TYPE="blob_files" default_setup --scuba-log-file "$TESTTMP/log.json"
   hg repo
   o  C [draft;rev=2;26805aba1e60]
@@ -20,7 +21,7 @@
 
 
 Pushrebase commit 1
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
   pushing rev a0c9c5791058 to destination ssh://user@dummy/repo bookmark master_bookmark
@@ -74,7 +75,7 @@ Check that the filenode for 1 does not point to the draft commit in a new clone
   $ cd ../repo2
 
 Push rebase fails with conflict in the bottom of the stack
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ hgmn push -r . --to master_bookmark
@@ -95,7 +96,7 @@ Push rebase fails with conflict in the bottom of the stack
 
 
 Push rebase fails with conflict in the top of the stack
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
@@ -116,7 +117,7 @@ Push rebase fails with conflict in the top of the stack
 
 
 Push stack
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 3 > 3 && hg add 3 && hg ci -m 3
   $ echo 4 > 4 && hg add 4 && hg ci -m 4
   $ hgmn push -r . --to master_bookmark

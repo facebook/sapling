@@ -12,7 +12,7 @@ Setup repo, and create test repo
   $ SCUBA_LOGGING_PATH="$TESTTMP/scuba.json"
   $ BLOB_TYPE="blob_files" EMIT_OBSMARKERS=1 quiet default_setup --with-dynamic-observability=true --scuba-log-file "$SCUBA_LOGGING_PATH"
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
 
   $ mkdir -p root/a
   $ echo 'a/a' > root/a/a

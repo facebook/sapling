@@ -32,7 +32,7 @@ start mononoke
   $ mononoke
   $ wait_for_mononoke
   $ cd repo-hg
-  $ hg up -q 0
+  $ hg up -q "min(all())"
 
   $ hgmn paths
   default = ssh://user@dummy/repo

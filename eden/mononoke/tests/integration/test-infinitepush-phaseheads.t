@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ setconfig ui.ignorerevnum=false
 
   $ function graphlog() {
   >   hg log -G -T "{node|short} {phase} '{desc}' {bookmarks} {remotebookmarks}" "$@"

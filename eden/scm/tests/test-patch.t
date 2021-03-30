@@ -64,7 +64,7 @@ Prepare source repo and patch:
 
 Clone and apply patch:
 
-  $ hg clone -r 0 c d
+  $ hg clone -r 0 c d --config ui.ignorerevnum=0
   adding changesets
   adding manifests
   adding file changes

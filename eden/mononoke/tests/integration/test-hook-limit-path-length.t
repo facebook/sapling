@@ -32,7 +32,7 @@ Ok file path - should work
 
 File path too long - should fail
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ touch 1234567890
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark
@@ -54,7 +54,7 @@ File path too long - should fail
 
 File path too long (UTF-8 multibyte characters) - should fail
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ touch 12345678€
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark

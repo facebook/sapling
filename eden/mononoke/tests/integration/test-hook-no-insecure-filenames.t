@@ -12,7 +12,7 @@
   > )
 
 Add a .hg(sub|tags|substate) file
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "bad" > .hgtags
   $ hg ci -Aqm failure
   $ hgmn push -r . --to master_bookmark
@@ -33,7 +33,7 @@ Add a .hg(sub|tags|substate) file
   [255]
 
 Add a legitimate file with hg in its name
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "good" > .hgsubstatefoo
   $ hg ci -Aqm good
   $ hgmn push -r . --to master_bookmark
@@ -46,7 +46,7 @@ Add a legitimate file with hg in its name
   updating bookmark master_bookmark
 
 Add a dir with a naughty .Git directory inside
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir -p test/.Git/
   $ echo "bad" > test/.Git/test.py
   $ hg ci -Aqm failure
@@ -68,7 +68,7 @@ Add a dir with a naughty .Git directory inside
   [255]
 
 Add a dir with a naughty .git directory inside
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir -p test/.git/
   $ echo "bad" > test/.git/test.py
   $ hg ci -Aqm failure
@@ -90,7 +90,7 @@ Add a dir with a naughty .git directory inside
   [255]
 
 Add a dir with a naughty .git directory inside that includes a ~1
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir -p test/.Git~1/
   $ echo "bad" > test/.Git~1/test.py
   $ hg ci -Aqm failure
@@ -112,7 +112,7 @@ Add a dir with a naughty .git directory inside that includes a ~1
   [255]
 
 Add a dir with a naughty .git directory inside that includes a ~1234
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir -p test/.Git~1234/test
   $ echo "bad" > test/.Git~1234/test/test.py
   $ hg ci -Aqm failure
@@ -134,7 +134,7 @@ Add a dir with a naughty .git directory inside that includes a ~1234
   [255]
 
 Add a bad dir
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir -p dir1/.Git8B6C~2
   $ echo "bad" > dir1/.Git8B6C~2/file1
   $ hg ci -Aqm failure
@@ -156,7 +156,7 @@ Add a bad dir
   [255]
 
 Add a dir with a naughty .git directory inside that includes 2 ~1
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir -p test~1/.Git~1/test
   $ echo "bad" > test~1/.Git~1/test/test.py
   $ hg ci -Aqm failure
@@ -178,7 +178,7 @@ Add a dir with a naughty .git directory inside that includes 2 ~1
   [255]
 
 Add a legitimate dir with git in its name
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir -p test/git/
   $ echo "good" > test/git/test.py
   $ hg ci -Aqm good
@@ -192,7 +192,7 @@ Add a legitimate dir with git in its name
   updating bookmark master_bookmark
 
 Add a legitimate dir with jgit in its name
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "good" > jgit
   $ hg ci -Aqm good
   $ hgmn push -r . --to master_bookmark
@@ -205,7 +205,7 @@ Add a legitimate dir with jgit in its name
   updating bookmark master_bookmark
 
 Add a legitimate dir with xGit in its name
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir -p test/xGit/
   $ echo "good" > test/xGit/test.py
   $ hg ci -Aqm good
@@ -219,7 +219,7 @@ Add a legitimate dir with xGit in its name
   updating bookmark master_bookmark
 
 Add a file with an ignorable unicode char in it
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ bad=$(printf "\xe2\x80\x8c")
   $ mkdir test
   $ echo "bad" > "test/.git${bad}"
@@ -244,7 +244,7 @@ Add a file with an ignorable unicode char in it
 
 Check that we can delete insecure filenames
 --add a normally prohibited filename with a pushvar
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "bad" > .hgtags
   $ hg ci -Aqm insequre_filename
   $ hgmn push -qr . --to master_bookmark --pushvars TEST_ONLY_ALLOW_INSECURE_FILENAMES=true

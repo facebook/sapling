@@ -624,9 +624,9 @@ def formatspec(expr, *args):
     >>> formatspec(b'%r:: and %lr', b'10 or 11', (b"this()", b"that()"))
     '(10 or 11):: and ((this()) or (that()))'
     >>> formatspec(b'%d:: and not %d::', 10, 20)
-    '10:: and not 20::'
+    "_intlist('10'):: and not _intlist('20')::"
     >>> formatspec(b'%ld or %ld', [], [1])
-    "_list('') or 1"
+    "_list('') or _intlist('1')"
     >>> formatspec(b'keyword(%s)', b'foo\\xe9')
     "keyword('foo\\\\xe9')"
     >>> b = lambda: b'default'
@@ -639,6 +639,12 @@ def formatspec(expr, *args):
 
     def argtype(c, arg):
         if c == "d":
+            # Do not turn an int rev into a string that can confuse
+            # the ui.ignorerevnum setting. Wrap with _intlist.
+            return "_intlist('%d')" % int(arg)
+        elif c == "z":
+            # Used by things like "limit(..., %z)". Integer, but not
+            # a revision number.
             return "%d" % int(arg)
         elif c == "s":
             return _quote(arg)
@@ -654,7 +660,9 @@ def formatspec(expr, *args):
         l = len(s)
         if l == 0:
             return "_list('')"
-        elif l == 1:
+        elif l == 1 and t != "d":
+            # Do not turn an int rev into a string that can confuse
+            # the ui.ignorerevnum setting.
             return argtype(t, s[0])
         elif t == "d":
             return "_intlist('%s')" % "\0".join("%d" % int(a) for a in s)
@@ -679,7 +687,7 @@ def formatspec(expr, *args):
             d = expr[pos]
             if d == "%":
                 ret += d
-            elif d in "dsnbr":
+            elif d in "dzsnbr":
                 ret += argtype(d, args[arg])
                 arg += 1
             elif d == "l":

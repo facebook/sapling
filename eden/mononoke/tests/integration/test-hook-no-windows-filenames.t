@@ -11,7 +11,7 @@
   >   echo 'bypass_pushvar="ALLOW_BAD_WINDOWS_FILENAMES=true"'
   > )
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "ok"  > "com"
   $ hg ci -Aqm success
   $ hgmn push -r . --to master_bookmark
@@ -23,7 +23,7 @@
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "bad" > "COM5"
   $ hg ci -Aqm failure
   warning: filename contains 'COM5', which is reserved on Windows: COM5
@@ -44,7 +44,7 @@
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "bad" > "nul.txt"
   $ hg ci -Aqm failure
   warning: filename contains 'nul', which is reserved on Windows: nul.txt
@@ -65,7 +65,7 @@
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir dir
   $ echo "bad" > dir/CoN.txt
   $ hg ci -Aqm failure
@@ -87,7 +87,7 @@
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir dir
   $ echo "ok" > dir/Icon.txt
   $ hg ci -Aqm success
@@ -100,7 +100,7 @@
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir dir
   $ echo "ok" > dir/Icom5
   $ hg ci -Aqm success
@@ -113,7 +113,7 @@
   added 1 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir con
   $ echo "bad" > con/foo
   $ hg ci -Aqm failure

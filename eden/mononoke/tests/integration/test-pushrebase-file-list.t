@@ -22,7 +22,7 @@ setup configuration
   cloning repo in hg client 'repo2'
 
 Push a directory
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir dir
   $ echo 1 > dir/1
   $ echo 2 > dir/2

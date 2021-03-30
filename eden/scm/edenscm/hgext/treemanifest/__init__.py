@@ -2345,13 +2345,13 @@ def _findrecenttree(repo, startnode, targetmfnodes):
         # Look up and down from the given rev
         ancestors = iter(
             repo.revs(
-                "limit(reverse(ancestors(%n)), %d) & public()",
+                "limit(reverse(ancestors(%n)), %z) & public()",
                 startnode,
                 BASENODESEARCHMAX,
             )
         )
 
-        descendantquery = "limit(descendants(%n), %d) & public()"
+        descendantquery = "limit(descendants(%n), %z) & public()"
         if extensions.enabled().get("remotenames", False):
             descendantquery += " & ::remotenames()"
         descendants = iter(repo.revs(descendantquery, startnode, BASENODESEARCHMAX))

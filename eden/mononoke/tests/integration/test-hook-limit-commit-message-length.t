@@ -32,7 +32,7 @@ Ok commit message - should pass
 
 Commit message too long - should fail
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ touch file2
   $ hg ci -Aqm "$(printf "%s\n%s" "foo" "123456")"
   $ hgmn push -r . --to master_bookmark
@@ -54,7 +54,7 @@ Commit message too long - should fail
 
 Commit message too long (UTF-8 multibyte characters) - should fail
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ touch file3
   $ hg ci -Aqm "$(printf "%s\n%s" "foo" "1234€")"
   $ hgmn push -r . --to master_bookmark

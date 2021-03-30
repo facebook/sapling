@@ -32,7 +32,7 @@ backfill derived data
   * starting batch of 1 from 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec (glob)
   * warmup of 1 changesets complete (glob)
   * 1/1 * (glob)
-  $ hg log -r 0 -T '{node}'
+  $ hg log -r "min(all())" -T '{node}'
   426bada5c67598ca65036d57d9e4b64b0c1ce7a0 (no-eol)
   $ mononoke_admin --log-level ERROR derived-data exists "$DERIVED_DATA_TYPE" 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   Derived: 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec

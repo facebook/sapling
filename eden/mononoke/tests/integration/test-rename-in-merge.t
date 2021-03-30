@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ setconfig ui.ignorerevnum=false
 
 setup configuration
   $ setup_common_config
@@ -35,7 +36,7 @@ Clone the repo
   $ cd ../repo-hg
 
 Create merge commit with rename
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ hg merge 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

@@ -9,7 +9,7 @@
 
 Pushrebase commit
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "foo" > foo
   $ hg commit -Aqm "add foo"
   $ quiet hgmn push -r . --to master_bookmark

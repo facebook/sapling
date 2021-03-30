@@ -66,7 +66,7 @@ Modify same file
   $ hgmn push -r . --to master_bookmark -q
 
 Empty commits
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > 1 && hg -q addremove && hg ci -m empty
   $ hg revert -r ".^" 1 && hg commit --amend
 

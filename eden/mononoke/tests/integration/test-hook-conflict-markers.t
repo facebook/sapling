@@ -19,7 +19,7 @@ Negative testing
   > '>>>>>>>>>>'
   > '====='
   > '===============')
-  $ hg up -q 0
+  $ hg up -q "min(all())"
 
   $ i=0
   $ for input in "${markers_good[@]}"; do
@@ -37,7 +37,7 @@ Negative testing
   updating bookmark master_bookmark
 
 Positive testing
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo '>>>>>>> 123' > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
   pushing rev 17a746afd78e to destination ssh://user@dummy/repo bookmark master_bookmark
@@ -56,7 +56,7 @@ Positive testing
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo '<<<<<<< 123' > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
   pushing rev 948f2ceaf570 to destination ssh://user@dummy/repo bookmark master_bookmark
@@ -77,7 +77,7 @@ Positive testing
 
 Negative testing
 Files with bad markers should be accepted with these suffixes
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ suffixes=('.md' '.markdown' '.rdoc' '.rst')
   $ for suffix in "${suffixes[@]}"; do
   $     echo ">>>>>>> " > "file$suffix"
@@ -95,7 +95,7 @@ Files with bad markers should be accepted with these suffixes
 Negative Testing
 Files with bad markers should be accepted if they are binary.
 File is considered binary if it contains \0
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo -e ">>>>>>> \0" > file
   $ hg ci -Aqm binary
   $ hgmn push -r . --to master_bookmark
@@ -108,7 +108,7 @@ File is considered binary if it contains \0
   updating bookmark master_bookmark
 
 Test bypass
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo -e ">>>>>>> " > largefile
   $ hg ci -Aqm '@ignore-conflict-markers'
   $ hgmn push -r . --to master_bookmark
@@ -121,7 +121,7 @@ Test bypass
   updating bookmark master_bookmark
 
 Test markers not on the first line
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo -e "ololo\nonemore\n\n>>>>>>> " > notfirstline
   $ hg ci -Aqm notfirstline
   $ hgmn push -r . --to master_bookmark

@@ -21,7 +21,7 @@ Check that filenodes exist after blobimport
   $ mononoke_admin filenodes validate master_bookmark &> /dev/null
 
 Pushrebase commit 1
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir dir
   $ echo 1 > dir/1 && hg addremove -q && hg ci -m 1
   $ hgmn push -r . --to master_bookmark -q

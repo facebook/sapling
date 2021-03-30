@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ setconfig ui.ignorerevnum=false
 
 setup configuration
   $ export READ_ONLY_REPO=1
@@ -152,7 +153,7 @@ Make commits from the second client and sync it
 
 On the first client, make a bookmark, then sync - the bookmark and the new commits should be synced
   $ cd ../client1
-  $ hg bookmark -r 0 bookmark1
+  $ hg bookmark -r "min(all())" bookmark1
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
   pulling 58508421158d from ssh://user@dummy/repo

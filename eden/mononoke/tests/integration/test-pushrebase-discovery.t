@@ -72,7 +72,7 @@ Clone the repo
   > pushrebase =
   > remotenames =
   > EOF
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > 1 && hg addremove -q
   $ hg ci -m 'to push'
 
@@ -104,7 +104,7 @@ Let's make a push
   > remotenames =
   > [remotenames]
   > EOF
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 2 > 2 && hg addremove -q
   $ hg ci -m 'to push2'
   $ hgmn push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q
@@ -129,14 +129,14 @@ not move a bookmark
   $
 
 The same procedure, but with commit cloud commit
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo commitcloud > commitcloud && hg addremove -q
   $ hg ci -m commitcloud
   $ hgmn cloud backup -q
 
 Move master again
   $ cd ../repo3
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 3 > 3 && hg addremove -q
   $ hg ci -m 'to push3'
   $ hgmn push -r . --to master_bookmark --pushvar BYPASS_REVIEW=true -q

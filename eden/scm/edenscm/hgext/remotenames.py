@@ -1487,7 +1487,7 @@ def precachedistance(repo):
                 # if we are here then we have one or more bookmarks
                 # and we'll pick the first one for now
                 bmark = repo[revs[0]].bookmarks()[0]
-                distance = len(repo.revs("only(%d, .)" % revs[0]))
+                distance = len(repo.revs("only(%d, .)", revs[0]))
                 cachevfs = shareawarecachevfs(repo)
                 cachevfs.writeutf8("distance.current", "%s %d" % (bmark, distance))
 

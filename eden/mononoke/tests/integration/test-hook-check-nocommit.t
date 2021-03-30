@@ -29,7 +29,7 @@ No @nocommit, should work
 
 Has @nocommit, should fail
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "bar @nocommit" > foo
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark

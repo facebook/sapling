@@ -5084,7 +5084,11 @@ def push(ui, repo, dest=None, **opts):
     other = hg.peer(repo, opts, dest)
 
     if revs:
-        revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
+        clnode = repo.changelog.node
+        if all(isinstance(r, int) for r in revs):
+            revs = [clnode(r) for r in revs]
+        else:
+            revs = [clnode(r) for r in scmutil.revrange(repo, revs)]
         if not revs:
             raise error.Abort(
                 _("specified revisions evaluate to an empty set"),

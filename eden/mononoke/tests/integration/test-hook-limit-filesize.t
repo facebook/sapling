@@ -16,7 +16,7 @@
   > )
 
 Small file
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > 1
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark
@@ -30,7 +30,7 @@ Small file
 
 Large file
   $ LARGE_CONTENT=11111111111
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "$LARGE_CONTENT" > largefile
   $ hg ci -Aqm largefile
   $ hgmn push -r . --to master_bookmark

@@ -438,24 +438,39 @@ class changectx(basectx):
             # are handled above, so only str should be present now.
             assert isinstance(changeid, str)
 
-            try:
-                r = int(changeid)
-                if "%d" % r != changeid:
-                    raise ValueError
-                if r < 0 and r != wdirrev:
-                    if -r > len(repo):
+            # Try to resolve it as a rev number?
+            # - If changeid is an int.
+            # - If HGPLAIN is set (for compatibility).
+            # - Or if ui.ignorerevnum is false (changeid is a str).
+            if (
+                isinstance(changeid, int)
+                or repo.ui.plain()
+                or not repo.ui.configbool("ui", "ignorerevnum")
+            ):
+                try:
+                    r = int(changeid)
+                    if "%d" % r != changeid:
                         raise ValueError
-                    r = repo.revs("first(sort(_all(), -rev), %d)", -r).last()
-                    if r is None:
+                    if r < 0 and r != wdirrev:
+                        if -r > len(repo):
+                            raise ValueError
+                        r = repo.revs("first(sort(_all(), -rev), %z)", -r).last()
+                        if r is None:
+                            raise ValueError
+                    if r < 0 and r != wdirrev:
                         raise ValueError
-                if r < 0 and r != wdirrev:
-                    raise ValueError
-                r = scmutil.revf64decode(r)
-                node = repo.changelog.node(r)
-                self._node = node
-                return
-            except (ValueError, OverflowError, IndexError, TypeError, error.RustError):
-                pass
+                    r = scmutil.revf64decode(r)
+                    node = repo.changelog.node(r)
+                    self._node = node
+                    return
+                except (
+                    ValueError,
+                    OverflowError,
+                    IndexError,
+                    TypeError,
+                    error.RustError,
+                ):
+                    pass
 
             if len(changeid) == 40:
                 try:

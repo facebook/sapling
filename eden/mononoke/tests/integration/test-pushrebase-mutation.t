@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ setconfig ui.ignorerevnum=false
 
 setup configuration
   $ setup_common_config "blob_files"
@@ -35,7 +36,7 @@ clone the repo
   $ enable pushrebase remotenames
 
 create a commit with mutation extras
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg commit -m 1
   $ echo 1a > 1 && hg amend -m 1a --config mutation.enabled=true --config mutation.record=true
   $ hg debugmutation
@@ -63,7 +64,7 @@ pushrebase it directly onto master - it will be rewritten without the mutation e
    *  a05b3505b7d1aac5fd90b09a5f014822647ec205
   
 create another commit on the base commit with mutation extras
-  $ hg up 0
+  $ hg up 'min(all())'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo 2 > 2 && hg add 2 && hg commit -m 2
   $ echo 2a > 2 && hg amend -m 2a --config mutation.enabled=true --config mutation.record=true

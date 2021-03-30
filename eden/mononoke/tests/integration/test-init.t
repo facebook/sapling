@@ -132,7 +132,7 @@ start mononoke
   one two three None None
 
   $ cd repo2
-  $ hg up -q 0
+  $ hg up -q "min(all())"
 Test a pull of one specific revision
   $ hgmn pull -r 3e19bf519e9af6c66edf28380101a92122cbea50 -q
 Pull the rest

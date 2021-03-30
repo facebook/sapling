@@ -19,7 +19,7 @@
   cloning repo in hg client 'repo2'
 
 Push single empty commit
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hg revert -r .^ 1
   $ hg commit --amend
@@ -42,7 +42,7 @@ Push single empty commit
   updating bookmark master_bookmark
 
 Push empty and non-empty commit in a stack
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ hg revert -r .^ 2

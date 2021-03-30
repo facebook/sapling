@@ -74,7 +74,7 @@ Sync a pushrebase bookmark move
 Move bookmark to another position, and make sure hg sync job fails because of
 pushkey erro
   $ cd $TESTTMP/repo-hg
-  $ hg book master_bookmark -r 0 -f
+  $ hg book master_bookmark -r "min(all())" -f
 
   $ cd $TESTTMP
   $ mononoke_hg_sync repo-hg 2 --generate-bundles 2>&1 | grep 'error:pushkey'

@@ -11,7 +11,7 @@
   > )
 
 Attempt to add a filename with spaces in it
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir -p "test"
   $ echo "bad" > "test/foo bar"
   $ hg ci -Aqm success
@@ -33,7 +33,7 @@ Attempt to add a filename with spaces in it
   [255]
 
 Attempt to add a filename with braces in it
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkdir -p "test"
   $ echo "bad" > "test/{foobar}"
   $ hg ci -Aqm success
@@ -55,7 +55,7 @@ Attempt to add a filename with braces in it
   [255]
 
 Attempt to add a filename with a hypen at the start
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "good" > -testfile
   $ hg ci -Aqm good
   $ hgmn push -r . --to master_bookmark
@@ -76,7 +76,7 @@ Attempt to add a filename with a hypen at the start
   [255]
 
 Attempt to add a filename with an apostrophe in it
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "bad" > "test'file"
   $ hg ci -Aqm failure
   $ hgmn push -r . --to master_bookmark

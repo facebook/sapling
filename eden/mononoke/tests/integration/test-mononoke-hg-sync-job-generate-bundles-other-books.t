@@ -56,7 +56,7 @@ Push to Mononoke
   $ BOOK_LOC=$(hg log -r newbook -T '{node}')
 
 Force push
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkcommit forcepush
   $ hgmn push -r . --to newbook --create -q
 

@@ -20,14 +20,14 @@ Set up script to output the raw bundle. This doesn't look at its arguments at al
 Pushrebase commits. foo and bar are independent. qux requires bar to be present
 (so it'll result in a deferred unbundle)
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "foo" > foo
   $ hg commit -Aqm "add foo"
   $ hg log -r . -T '{node}\n'
   4afe8a7fa62cf8320c8c11191d4dfdaaed9fb28b
   $ quiet hgmn push -r . --to master_bookmark
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "bar" > bar
   $ hg commit -Aqm "add bar"
   $ hg log -r . -T '{node}\n'

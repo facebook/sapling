@@ -76,7 +76,7 @@ Sync a pushrebase bookmark move
 
 New bookmark is created
   $ cd $TESTTMP/client-push
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ mkcommit newbook_commit_first
   $ hgmn push -r . --to newbook -q --create
 

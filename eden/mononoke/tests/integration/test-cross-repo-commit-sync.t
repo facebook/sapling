@@ -6,6 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
   $ . "${TEST_FIXTURES}/library-push-redirector.sh"
+  $ setconfig ui.ignorerevnum=false
 
   $ init_two_small_one_large_repo
 

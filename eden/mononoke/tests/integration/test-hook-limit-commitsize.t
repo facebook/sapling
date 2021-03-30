@@ -16,7 +16,7 @@
   > )
 
 Small commit
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ for x in $(seq $BYTE_LIMIT); do echo -n 1 > $x; done
   $ hg ci -Aqm 1
   $ hgmn push -r . --to master_bookmark
@@ -30,7 +30,7 @@ Small commit
 
 Large file
   $ LARGE_CONTENT=$(for _ in $(seq $(( $BYTE_LIMIT + 1 ))); do echo -n 1; done)
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo -n "$LARGE_CONTENT" > largefile
   $ hg ci -Aqm largefile
   $ hgmn push -r . --to master_bookmark
@@ -55,7 +55,7 @@ Large file
   [255]
 
 Large commit
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ for x in $(seq $(( $BYTE_LIMIT + 1))); do echo -n 1 > "${x}_b"; done
   $ hg ci -Aqm largecommit
   $ hgmn push -r . --to master_bookmark

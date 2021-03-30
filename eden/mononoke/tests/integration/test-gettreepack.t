@@ -56,7 +56,7 @@ Pull from Mononoke
 Make sure that cache is empty
   $ ls $TESTTMP/cachepath/repo/packs/manifests
 
-  $ hgmn prefetch -r 0 -r1
+  $ hgmn prefetch -r "min(all())" -r1
   $ hgmn prefetch -r 2
 
 Make sure that new entries were downloaded

@@ -611,6 +611,155 @@ segmentedchangelogcompatiblelist = """
     test-rebase-emptycommit.t
 """
 
+ignorerevnumincompatiblelist = """
+    test-alias.t
+    test-amend-hide-t.py
+    test-amend-rebase-t.py
+    test-amend-restack-t.py
+    test-annotate.t
+    test-automv-t.py
+    test-backwards-remove-t.py
+    test-bisect-t.py
+    test-bookmarks.t
+    test-bookmark-strip-t.py
+    test-bundle2-remote-changegroup.t
+    test-bundle-r.t
+    test-bundle.t
+    test-bundle-vs-outgoing.t
+    test-clone-r.t
+    test-command-template-t.py
+    test-commitcloud-hide.t
+    test-commitcloud-switch-workspace.t
+    test-commit-interactive.t
+    test-confused-revert-t.py
+    test-context-metadata.t
+    test-contrib-perf.t
+    test-convert-datesort-t.py
+    test-convert-filemap.t
+    test-convert-hg-sink.t
+    test-convert-hg-startrev.t
+    test-convert-splicemap.t
+    test-debugbuilddag-t.py
+    test-debugcheckcasecollisions-t.py
+    test-debugindexdot-t.py
+    test-debugmetalog-t.py
+    test-debugrename-t.py
+    test-debugstrip.t
+    test-diff-change.t
+    test-diffdir-t.py
+    test-diff-issue2761-t.py
+    test-diff-only-files-in-revs-t.py
+    test-dirstate-race.t
+    test-empty-group-t.py
+    test-eol-clone.t
+    test-eol-hook.t
+    test-eol-update.t
+    test-export-t.py
+    test-extdata.t
+    test-fb-hgext-copytrace-errormsg-t.py
+    test-fb-hgext-drop.t
+    test-fb-hgext-fastannotate-corrupt.t
+    test-fb-hgext-fastannotate-perfhack.t
+    test-fb-hgext-fastannotate-protocol.t
+    test-fb-hgext-fastannotate-renames-t.py
+    test-fb-hgext-fastannotate.t
+    test-fb-hgext-fastlog.t
+    test-fb-hgext-fbhistedit-rebase-interactive.t
+    test-fb-hgext-morestatus.t
+    test-fb-hgext-phrevset-t.py
+    test-fb-hgext-pushrebase-remotenames.t
+    test-fb-hgext-remotefilelog-prefetch.t
+    test-fb-hgext-remotefilelog-sparse.t
+    test-fb-hgext-remotefilelog-wireproto-t.py
+    test-fb-hgext-reset-remotenames-t.py
+    test-fb-hgext-reset-t.py
+    test-fb-hgext-smartlog-inhibit-t.py
+    test-fb-hgext-smartlog-remotenames-t.py
+    test-fb-hgext-treemanifest-noflat.t
+    test-fb-hgext-treemanifest-prefetch.t
+    test-fb-hgext-treemanifest.t
+    test-fb-hgext-tweakdefaults-ordering-t.py
+    test-fb-hgext-tweakdefaults-pullrebaseremotenames-t.py
+    test-fb-hgext-tweakdefaults-remotenames.t
+    test-fb-hgext-tweakdefaults.t
+    test-fb-hgext-tweakdefaults-update-t.py
+    test-fb-hgext-whereami-t.py
+    test-fileset.t
+    test-generaldelta.t
+    test-git-export.t
+    test-glog-topological-t.py
+    test-glog-t.py
+    test-gpg.t
+    test-graft-t.py
+    test-hggit-bookmark-workflow.t
+    test-hggit-push-r.t
+    test-histedit-commute.t
+    test-histedit-edit.t
+    test-histedit-no-change.t
+    test-import-bypass.t
+    test-import-merge.t
+    test-import-t.py
+    test-import-unknown-t.py
+    test-incoming-outgoing.t
+    test-issue1438-t.py
+    test-issue612-t.py
+    test-issue660-t.py
+    test-linkrevcache-t.py
+    test-locate-t.py
+    test-log-t.py
+    test-manifest-merging-t.py
+    test-manifest-t.py
+    test-merge10-t.py
+    test-merge1.t
+    test-merge4-t.py
+    test-merge5-t.py
+    test-merge9-t.py
+    test-merge-ancestor-mergestate-t.py
+    test-merge-commit.t
+    test-merge-revert2-t.py
+    test-merge-revert-t.py
+    test-merge-tools.t
+    test-mv-cp-st-diff.t
+    test-pager.t
+    test-parse-date.t
+    test-patch.t
+    test-perftweaks-remotenames.t
+    test-pull-pull-corruption.t
+    test-pull-r.t
+    test-pull-update-t.py
+    test-push.t
+    test-rebase-issue-noparam-single-rev-t.py
+    test-rebase-parameters.t
+    test-rebase-pull-t.py
+    test-rebase-scenario-global.t
+    test-remotenames-bookmarks-t.py
+    test-remotenames-pull-rebase.t
+    test-remotenames-push.t
+    test-remotenames-shared-repo-t.py
+    test-remotenames-strip-t.py
+    test-remotenames-tracking.t
+    test-remotenames-update.t
+    test-rename-merge2.t
+    test-revert-t.py
+    test-revert-unknown-t.py
+    test-revnum-deprecate-t.py
+    test-revset2.t
+    test-revset-t.py
+    test-shelve-t.py
+    test-sparse.t
+    test-sparse-verbose-json-t.py
+    test-ssh-clone-r.t
+    test-status-rev.t
+    test-strip-cross.t
+    test-template-revf64.t
+    test-update-empty-t.py
+    test-url-rev.t
+    test-visibility-reset.t
+    test-hgsql-sqlrefill.t
+    test-hgsql-strip.t
+    test-hgsql-treemanifest.t
+"""
+
 
 def setup(testname, hgrcpath):
     # Disable mutation.record to maintain commit hashes.
@@ -628,3 +777,7 @@ def setup(testname, hgrcpath):
     if testname in segmentedchangelogcompatiblelist:
         with open(hgrcpath, "a") as f:
             f.write("\n[format]\nuse-segmented-changelog=True\n")
+    # Support legacy revnum for incompatible tests.
+    if testname in ignorerevnumincompatiblelist:
+        with open(hgrcpath, "a") as f:
+            f.write("\n[ui]\nignorerevnum=False\n")

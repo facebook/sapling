@@ -51,7 +51,7 @@ Clone the repo
   > EOF
 
 Push commits that will be obsoleted
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ log -r "all()"

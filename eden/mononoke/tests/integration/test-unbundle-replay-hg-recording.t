@@ -9,6 +9,7 @@ Clean up state out of Scuba logs
   $ unset SMC_TIERS TW_TASK_ID TW_CANARY_ID TW_JOB_CLUSTER TW_JOB_USER TW_JOB_NAME
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ setconfig ui.ignorerevnum=false
   $ GLOBALREVS_PUBLISHING_BOOKMARK=master_bookmark ENABLE_PRESERVE_BUNDLE2=1 BLOB_TYPE="blob_files" quiet default_setup
 
 Set up script to output the raw bundle. This doesn't look at its arguments at all
@@ -23,7 +24,7 @@ Set up script to output the raw bundle. This doesn't look at its arguments at al
 
 Pushrebase commit
 
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo "foo" > foo
   $ hg commit -Aqm "add foo"
   $ echo "bar" > bar

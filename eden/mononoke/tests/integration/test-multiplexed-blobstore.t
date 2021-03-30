@@ -53,7 +53,7 @@ Clone the repo
   > EOF
 
 Push
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
   $ hgmn push -r . --to master_bookmark
   pushing rev a0c9c5791058 to destination ssh://user@dummy/repo bookmark master_bookmark

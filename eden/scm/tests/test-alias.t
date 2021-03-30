@@ -701,9 +701,6 @@ command provided extension, should be aborted.
   > [alias]
   > rebate = !echo this is rebate $@
   > EOF
-  $ hg reba
-  abort: unknown revision '-1'!
-  [255]
 
   $ hg rebat
   unknown command 'rebat'

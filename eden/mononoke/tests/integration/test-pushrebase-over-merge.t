@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ setconfig ui.ignorerevnum=false
   $ BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
@@ -19,9 +20,9 @@
 
 
 Try to push merge commit
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 1 > 1 && hg add 1 && hg ci -m 1
-  $ hg up -q 0
+  $ hg up -q "min(all())"
   $ echo 2 > 2 && hg add 2 && hg ci -m 2
   $ hg merge -q -r 3 && hg ci -m "merge 1 and 2"
   $ log -r ":"
