@@ -369,17 +369,13 @@ void InodeBase::updateAtime() {
 #endif
 }
 
-InodeTimestamps InodeBase::updateMtimeAndCtime(timespec now) {
+void InodeBase::updateMtimeAndCtime(timespec now) {
 #ifndef _WIN32
-  return getMount()
-      ->getInodeMetadataTable()
-      ->modifyOrThrow(
-          getNodeId(),
-          [&](auto& record) {
-            record.timestamps.ctime = now;
-            record.timestamps.mtime = now;
-          })
-      .timestamps;
+  getMount()->getInodeMetadataTable()->modifyOrThrow(
+      getNodeId(), [&](auto& record) {
+        record.timestamps.ctime = now;
+        record.timestamps.mtime = now;
+      });
 #endif
 }
 

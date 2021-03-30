@@ -399,7 +399,7 @@ class InodeBase {
 #endif
 
   void updateAtime();
-  InodeTimestamps updateMtimeAndCtime(timespec now);
+  void updateMtimeAndCtime(timespec now);
 
   template <typename InodeType>
   friend class InodePtrImpl;
@@ -615,8 +615,8 @@ class InodeBaseMetadata : public InodeBase {
    * Updates this inode's mtime and ctime to the given timestamp. The inode's
    * state lock must be held.
    */
-  InodeTimestamps updateMtimeAndCtimeLocked(InodeState&, timespec now) {
-    return InodeBase::updateMtimeAndCtime(now);
+  void updateMtimeAndCtimeLocked(InodeState&, timespec now) {
+    InodeBase::updateMtimeAndCtime(now);
   }
 };
 } // namespace eden
