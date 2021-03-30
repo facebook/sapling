@@ -168,7 +168,9 @@ from . import (
     util as ccutil,
     workspace,
 )
+from . import debugephemeralcommit
 
+debugephemeralcommit.command  # Suppressing "unused import" lint
 
 cmdtable = cccommands.cmdtable
 
