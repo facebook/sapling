@@ -136,6 +136,9 @@ fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
         indexedlog::utils::SYMLINK_ATOMIC_WRITE.store(use_symlink_atomic_write, SeqCst);
     }
 
+    let fsync: bool = config.get_or_default("storage", "indexedlog-fsync")?;
+    indexedlog::utils::set_global_fsync(fsync);
+
     Ok(())
 }
 
