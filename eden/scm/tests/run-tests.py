@@ -246,14 +246,18 @@ def checkportisavailable(port):
         s.close()
         return True
     except socket.error as exc:
-        if exc.errno not in (
+        if os.name == "nt" and exc.errno == errno.WSAEACCES:
+            return False
+        elif exc.errno in (
             errno.EADDRINUSE,
             errno.EADDRNOTAVAIL,
             errno.EPROTONOSUPPORT,
-            errno.WSAEACCES,
         ):
+            return False
+        else:
             raise
-    return False
+    else:
+        return False
 
 
 closefds = os.name == "posix"
