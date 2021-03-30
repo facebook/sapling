@@ -760,6 +760,8 @@ ignorerevnumincompatiblelist = """
     test-hgsql-treemanifest.t
     test-casecollision-merge.t
     test-casefolding.t
+    test-commitcloud-backup-sql2.t
+    test-convert-p4-filetypes.t
 """
 
 
