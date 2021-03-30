@@ -2613,7 +2613,7 @@ impl Index {
                     .write_all(&buf)
                     .context(&path, "cannot write new data to index")?;
 
-                if self.open_options.fsync {
+                if self.open_options.fsync || utils::get_global_fsync() {
                     lock.as_mut().sync_all().context(&path, "cannot sync")?;
                 }
 

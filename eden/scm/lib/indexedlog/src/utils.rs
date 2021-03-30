@@ -151,6 +151,7 @@ pub fn atomic_write(
 /// Use a plain file. Do not use symlinks.
 pub fn atomic_write_plain(path: &Path, content: &[u8], fsync: bool) -> crate::Result<()> {
     let result: crate::Result<_> = {
+        let fsync = fsync || get_global_fsync();
         let dir = path.parent().expect("path has a parent");
         let mut file =
             tempfile::NamedTempFile::new_in(dir).context(&dir, "cannot create tempfile")?;
@@ -190,6 +191,17 @@ pub fn atomic_write_plain(path: &Path, content: &[u8], fsync: bool) -> crate::Re
         };
         if fsync {
             persisted.sync_all().context(path, "cannot fsync")?;
+
+            // Also sync the directory on Unix.
+            // Windows does not support syncing a directory.
+            #[cfg(unix)]
+            {
+                if let Some(dir) = path.parent() {
+                    if let Ok(opened) = fs::OpenOptions::new().read(true).open(dir) {
+                        let _ = opened.sync_all();
+                    }
+                }
+            }
         }
         Ok(())
     };
@@ -279,8 +291,15 @@ fn atomic_read_symlink(path: &Path) -> io::Result<Vec<u8>> {
     }
 }
 
-/// If set to true, prefer symlinks to normal files for atomic_write.
+/// If set to true, prefer symlinks to normal files for atomic_write. This avoids
+/// states where the metadata file is empty in theory.
+///
+/// Be careful with cases like mixing using ntfs-3g and Windows NTFS on files - they
+/// might use different forms of symlink and are incompatible with this feature.
 pub static SYMLINK_ATOMIC_WRITE: atomic::AtomicBool = atomic::AtomicBool::new(cfg!(test));
+
+/// If set to true, enable fsync for writing.
+static ENFORCE_FSYNC: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 /// Default chmod mode for directories.
 /// u: rwx g:rws o:r-x
@@ -289,6 +308,17 @@ pub static CHMOD_DIR: AtomicI64 = AtomicI64::new(0o2775);
 // XXX: This works around https://github.com/Stebalien/tempfile/pull/61.
 /// Default chmod mode for atomic_write files.
 pub static CHMOD_FILE: AtomicI64 = AtomicI64::new(0o664);
+
+/// Set whether to fsync globally. fsync will be performed if either the local
+/// or global fsync flag is set.
+pub fn set_global_fsync(flag: bool) {
+    ENFORCE_FSYNC.store(flag, atomic::Ordering::Release);
+}
+
+/// Get the fsync flag set by `set_global_fsync`.
+pub fn get_global_fsync() -> bool {
+    ENFORCE_FSYNC.load(atomic::Ordering::Acquire)
+}
 
 /// Similar to `fs::create_dir_all`, but also attempts to chmod
 /// newly created directories on Unix.

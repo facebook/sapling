@@ -560,7 +560,7 @@ impl Log {
                     format!("cannot write data ({} bytes)", self.mem_buf.len())
                 })?;
 
-            if self.open_options.fsync {
+            if self.open_options.fsync || utils::get_global_fsync() {
                 primary_file
                     .sync_all()
                     .context(&primary_path, "cannot fsync")?;
