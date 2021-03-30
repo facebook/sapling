@@ -1160,7 +1160,9 @@ def revset(context, mapping, args):
 
     def query(expr):
         m = revsetmod.match(repo.ui, expr, repo=repo)
-        return m(repo)
+        # support template like: ifcontains(rev, revset('{rev} and age(\'<10m\')'), ...)
+        with repo.ui.configoverride({("ui", "ignorerevnum"): False}):
+            return m(repo)
 
     if len(args) > 1:
         formatargs = [evalfuncarg(context, mapping, a) for a in args[1:]]

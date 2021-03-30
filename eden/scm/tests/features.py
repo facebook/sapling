@@ -758,6 +758,8 @@ ignorerevnumincompatiblelist = """
     test-hgsql-sqlrefill.t
     test-hgsql-strip.t
     test-hgsql-treemanifest.t
+    test-casecollision-merge.t
+    test-casefolding.t
 """
 
 
