@@ -27,11 +27,12 @@ use crate::Id;
 use crate::IdMap;
 use crate::IdSet;
 use crate::Result;
-use nonblocking::non_blocking_result;
+use futures::stream;
+use futures::stream::StreamExt;
+use futures::stream::TryStreamExt;
+use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-
-// TODO: Check the usage of non_blocking_result.
 
 // Request and Response structures -------------------------------------------
 
@@ -103,60 +104,67 @@ impl fmt::Debug for AncestorPath {
 /// - Convert a query to a request (client-side).
 /// - Convert a request to a response (server-side).
 /// - Handle a response from the server (client-side).
+#[async_trait::async_trait]
 pub(crate) trait Process<I, O> {
-    fn process(self, input: I) -> Result<O>;
+    async fn process(self, input: I) -> Result<O>;
 }
 
 // Basic implementation ------------------------------------------------------
 
 // Name -> Id, step 1: Name -> RequestNameToLocation
 // Works on an incomplete IdMap, client-side.
+#[async_trait::async_trait]
 impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<VertexName>, RequestNameToLocation>
     for (&M, &IdDag<DagStore>)
 {
-    fn process(self, names: Vec<VertexName>) -> Result<RequestNameToLocation> {
+    async fn process(self, names: Vec<VertexName>) -> Result<RequestNameToLocation> {
         let map = &self.0;
         let dag = &self.1;
         // Only provides heads in the master group, since it's expected that the
         // non-master group is already locally known.
-        let heads = dag
-            .heads_ancestors(dag.master_group()?)?
-            .iter()
-            .map(|id| non_blocking_result(map.vertex_name(id)))
-            .collect::<Result<Vec<VertexName>>>()?;
+        let heads = stream::iter(dag.heads_ancestors(dag.master_group()?)?.into_iter()).boxed();
+        let heads = heads
+            .then(|id| map.vertex_name(id))
+            .try_collect::<Vec<VertexName>>()
+            .await?;
         Ok(RequestNameToLocation { names, heads })
     }
 }
 
 // Id -> Name, step 1: Id -> RequestLocationToName
 // Works on an incomplete IdMap, client-side.
+#[async_trait::async_trait]
 impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<Id>, RequestLocationToName>
     for (&M, &IdDag<DagStore>)
 {
-    fn process(self, ids: Vec<Id>) -> Result<RequestLocationToName> {
+    async fn process(self, ids: Vec<Id>) -> Result<RequestLocationToName> {
         let map = &self.0;
         let dag = &self.1;
         let heads = dag.heads_ancestors(dag.master_group()?)?;
 
-        let paths = ids
-            .into_iter()
-            .map(|id| {
-                let (x, n) = dag
-                    .to_first_ancestor_nth(
-                        id,
-                        FirstAncestorConstraint::KnownUniversally {
-                            heads: heads.clone(),
-                        },
-                    )?
-                    .ok_or_else(|| id.not_found_error())?;
-                let x = non_blocking_result(map.vertex_name(x))?;
+        let ids = ids.into_iter();
+        let x_ns = ids.map(|id| -> Result<(Id, u64)> {
+            let (x, n) = dag
+                .to_first_ancestor_nth(
+                    id,
+                    FirstAncestorConstraint::KnownUniversally {
+                        heads: heads.clone(),
+                    },
+                )?
+                .ok_or_else(|| id.not_found_error())?;
+            Ok((x, n))
+        });
+        let paths = stream::iter(x_ns)
+            .and_then(|(x, n)| async move {
+                let x = map.vertex_name(x).await?;
                 Ok(AncestorPath {
                     x,
                     n,
                     batch_size: 1,
                 })
             })
-            .collect::<Result<Vec<_>>>()?;
+            .try_collect::<Vec<_>>()
+            .await?;
 
         Ok(RequestLocationToName { paths })
     }
@@ -164,75 +172,103 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<Vec<Id>, RequestLocationToName>
 
 // Name -> Id, step 2: RequestNameToLocation -> ResponseIdNamePair
 // Works on a complete IdMap, server-side.
+#[async_trait::async_trait]
 impl<M: IdConvert, DagStore: IdDagStore> Process<RequestNameToLocation, ResponseIdNamePair>
     for (&M, &IdDag<DagStore>)
 {
-    fn process(self, request: RequestNameToLocation) -> Result<ResponseIdNamePair> {
+    async fn process(self, request: RequestNameToLocation) -> Result<ResponseIdNamePair> {
         let map = &self.0;
         let dag = &self.1;
-        let heads = request
-            .heads
-            .into_iter()
-            .map(|s| non_blocking_result(map.vertex_id(s)))
-            .collect::<Result<Vec<Id>>>()?;
-        let heads = IdSet::from_spans(heads);
-        let path_names = request
-            .names
-            .into_iter()
-            .map(|name| -> Result<_> {
-                let id = non_blocking_result(map.vertex_id(name.clone()))?;
-                let (x, n) = dag
-                    .to_first_ancestor_nth(
-                        id,
-                        FirstAncestorConstraint::KnownUniversally {
-                            heads: heads.clone(),
+
+        let heads: IdSet = {
+            let heads = stream::iter(request.heads.into_iter());
+            let heads = heads
+                .then(|s| map.vertex_id(s))
+                .try_collect::<Vec<Id>>()
+                .await?;
+            IdSet::from_spans(heads)
+        };
+
+        let id_names: Vec<(Id, VertexName)> = {
+            let names = stream::iter(request.names.into_iter());
+            names
+                .then(|name| map.vertex_id(name.clone()).map_ok(|i| (i, name)))
+                .try_collect()
+                .await?
+        };
+
+        let path_names: Vec<(AncestorPath, Vec<VertexName>)> = {
+            let x_n_names: Vec<(Id, u64, VertexName)> = id_names
+                .into_iter()
+                .map(|(id, name)| {
+                    let (x, n) = dag
+                        .to_first_ancestor_nth(
+                            id,
+                            FirstAncestorConstraint::KnownUniversally {
+                                heads: heads.clone(),
+                            },
+                        )?
+                        .ok_or_else(|| {
+                            Error::Programming(format!(
+                                "no x~n path found for {:?} ({})",
+                                &name, id
+                            ))
+                        })?;
+                    Ok((x, n, name))
+                })
+                .collect::<Result<Vec<_>>>()?;
+
+            // Convert x from Id to VertexName.
+            stream::iter(x_n_names)
+                .then(|(x, n, name)| async move {
+                    let x = map.vertex_name(x).await?;
+                    Ok::<_, crate::Error>((
+                        AncestorPath {
+                            x,
+                            n,
+                            batch_size: 1,
                         },
-                    )?
-                    .ok_or_else(|| {
-                        Error::Programming(format!("no path found for name {:?}", &name))
-                    })?;
-                let x = non_blocking_result(map.vertex_name(x))?;
-                Ok((
-                    AncestorPath {
-                        x,
-                        n,
-                        batch_size: 1,
-                    },
-                    vec![name],
-                ))
-            })
-            .collect::<Result<Vec<_>>>()?;
+                        vec![name],
+                    ))
+                })
+                .try_collect()
+                .await?
+        };
+
         Ok(ResponseIdNamePair { path_names })
     }
 }
 
 // Id -> Name, step 2: RequestLocationToName -> ResponseIdNamePair
 // Works on a complete IdMap, server-side.
+#[async_trait::async_trait]
 impl<M: IdConvert, DagStore: IdDagStore> Process<RequestLocationToName, ResponseIdNamePair>
     for (&M, &IdDag<DagStore>)
 {
-    fn process(self, request: RequestLocationToName) -> Result<ResponseIdNamePair> {
+    async fn process(self, request: RequestLocationToName) -> Result<ResponseIdNamePair> {
         let map = &self.0;
         let dag = &self.1;
-        let path_names = request
-            .paths
-            .into_iter()
-            .map(|path| -> Result<_> {
-                let id = non_blocking_result(map.vertex_id(path.x.clone()))?;
-                let mut id = dag.first_ancestor_nth(id, path.n)?;
-                let names = (0..path.batch_size)
-                    .map(|i| -> Result<VertexName> {
-                        if i > 0 {
-                            id = dag.first_ancestor_nth(id, 1)?;
-                        }
-                        let name = non_blocking_result(map.vertex_name(id))?;
-                        Ok(name)
-                    })
-                    .collect::<Result<Vec<VertexName>>>()?;
-                debug_assert_eq!(path.batch_size, names.len() as u64);
-                Ok((path, names))
-            })
-            .collect::<Result<Vec<_>>>()?;
+
+        let path_names: Vec<(AncestorPath, Vec<VertexName>)> =
+            stream::iter(request.paths.into_iter())
+                .then(|path| async {
+                    let id = map.vertex_id(path.x.clone()).await?;
+                    let mut id = dag.first_ancestor_nth(id, path.n)?;
+                    let names: Vec<VertexName> = stream::iter(0..path.batch_size)
+                        .then(|i| async move {
+                            if i > 0 {
+                                id = dag.first_ancestor_nth(id, 1)?;
+                            }
+                            let name = map.vertex_name(id).await?;
+                            Ok::<_, crate::Error>(name)
+                        })
+                        .try_collect()
+                        .await?;
+                    debug_assert_eq!(path.batch_size, names.len() as u64);
+                    Ok::<_, crate::Error>((path, names))
+                })
+                .try_collect()
+                .await?;
         Ok(ResponseIdNamePair { path_names })
     }
 }
@@ -240,10 +276,11 @@ impl<M: IdConvert, DagStore: IdDagStore> Process<RequestLocationToName, Response
 // Name -> Id or Id -> Name, step 3: Apply RequestNameToLocation to a local IdMap.
 // Works on an incomplete IdMap, client-side.
 #[cfg(any(test, feature = "indexedlog-backend"))]
-impl<'a, DagStore: IdDagStore> Process<&ResponseIdNamePair, ()>
+#[async_trait::async_trait]
+impl<'a, DagStore: IdDagStore> Process<ResponseIdNamePair, ()>
     for (&'a mut IdMap, &'a IdDag<DagStore>)
 {
-    fn process(mut self, res: &ResponseIdNamePair) -> Result<()> {
+    async fn process(mut self, res: ResponseIdNamePair) -> Result<()> {
         let map = &mut self.0;
         let dag = &self.1;
         for (path, names) in res.path_names.iter() {

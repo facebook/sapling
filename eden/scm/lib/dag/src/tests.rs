@@ -422,9 +422,8 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
     let ids: Vec<Id> = (b'A'..=b'L')
         .map(|b| built.name_dag.map.find_id_by_name(&[b]).unwrap().unwrap())
         .collect();
-    let request1: RequestLocationToName = (&built.name_dag.map, &built.name_dag.dag)
-        .process(ids)
-        .unwrap();
+    let request1: RequestLocationToName =
+        r((&built.name_dag.map, &built.name_dag.dag).process(ids)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &request1)),
         "RequestLocationToName { paths: [B~1, B~0, D~1, D~0, H~3, H~2, H~1, H~0, J~1, J~0, L~1, L~0] }"
@@ -432,18 +431,15 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
 
     // [name] -> RequestNameToLocation (useful for getting ids from commit hashes).
     let names = (b'A'..=b'L').map(|b| VertexName::copy_from(&[b])).collect();
-    let request2: RequestNameToLocation = (&built.name_dag.map, &built.name_dag.dag)
-        .process(names)
-        .unwrap();
+    let request2: RequestNameToLocation =
+        r((&built.name_dag.map, &built.name_dag.dag).process(names)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &request2)),
         "RequestNameToLocation { names: [A, B, C, D, E, F, G, H, I, J, K, L], heads: [L] }"
     );
 
     // RequestLocationToName -> ResponseIdNamePair
-    let response1 = (&built.name_dag.map, &built.name_dag.dag)
-        .process(request1)
-        .unwrap();
+    let response1 = r((&built.name_dag.map, &built.name_dag.dag).process(request1)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &response1)),
         "ResponseIdNamePair { path_names: [(B~1, [A]), (B~0, [B]), (D~1, [C]), (D~0, [D]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (H~0, [H]), (J~1, [I]), (J~0, [J]), (L~1, [K]), (L~0, [L])] }"
@@ -451,21 +447,15 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
 
     // RequestNameToLocation -> ResponseIdNamePair
     // Only B, D, H, J, L are used since they are "universally known".
-    let response2 = (&built.name_dag.map, &built.name_dag.dag)
-        .process(request2)
-        .unwrap();
+    let response2 = r((&built.name_dag.map, &built.name_dag.dag).process(request2)).unwrap();
     assert_eq!(
         replace(format!("{:?}", &response2)),
         "ResponseIdNamePair { path_names: [(B~1, [A]), (B~0, [B]), (D~1, [C]), (D~0, [D]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (H~0, [H]), (J~1, [I]), (J~0, [J]), (L~1, [K]), (L~0, [L])] }"
     );
 
     // Applying responses to IdMap. Should not cause errors.
-    (&mut built.name_dag.map, &built.name_dag.dag)
-        .process(&response1)
-        .unwrap();
-    (&mut built.name_dag.map, &built.name_dag.dag)
-        .process(&response2)
-        .unwrap();
+    r((&mut built.name_dag.map, &built.name_dag.dag).process(response1.clone())).unwrap();
+    r((&mut built.name_dag.map, &built.name_dag.dag).process(response2.clone())).unwrap();
 
     // Try applying response2 to a sparse IdMap.
     // Prepare the sparse IdMap.
@@ -487,9 +477,7 @@ Lv1: R0-0[] R1-1[] 2-7[0, 1]"#
 "#
     );
     // Apply response2.
-    (&mut sparse_id_map, &built.name_dag.dag)
-        .process(&response2)
-        .unwrap();
+    r((&mut sparse_id_map, &built.name_dag.dag).process(response2)).unwrap();
     assert_eq!(
         format!("{:?}", &sparse_id_map),
         r#"IdMap {
