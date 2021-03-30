@@ -598,10 +598,42 @@ delegate! {
         impl<I: Send + Sync, M: PrefixLookup + Send + Sync, P: Send + Sync, S: Send + Sync> PrefixLookup for AbstractNameDag<I, M, P, S>
     } => self.map
 }
-delegate! {
-    IdConvert {
-        impl<I: Send + Sync, M: IdConvert + Send, P: Send + Sync, S: Send + Sync> IdConvert for AbstractNameDag<I, M, P, S>
-    } => self.map
+
+#[async_trait::async_trait]
+impl<I, M, P, S> IdConvert for AbstractNameDag<I, M, P, S>
+where
+    I: Send + Sync,
+    M: IdConvert + Send,
+    P: Send + Sync,
+    S: Send + Sync,
+{
+    async fn vertex_id(&self, name: VertexName) -> Result<Id> {
+        self.map.vertex_id(name).await
+    }
+
+    async fn vertex_id_with_max_group(
+        &self,
+        name: &VertexName,
+        max_group: Group,
+    ) -> Result<Option<Id>> {
+        self.map.vertex_id_with_max_group(name, max_group).await
+    }
+
+    async fn vertex_name(&self, id: Id) -> Result<VertexName> {
+        self.map.vertex_name(id).await
+    }
+
+    async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
+        self.map.contains_vertex_name(name).await
+    }
+
+    fn map_id(&self) -> &str {
+        self.map.map_id()
+    }
+
+    fn map_version(&self) -> &VerLink {
+        self.map.map_version()
+    }
 }
 
 /// Export non-master DAG as parent_names_func on HashMap.
