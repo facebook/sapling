@@ -149,6 +149,9 @@ if sys.version_info[0] >= 3:
     def inttobyte(value):
         return bytes([value])
 
+    def isint(i):
+        return isinstance(i, int)
+
     def parse_email(fp):
         # Rarely used, so let's lazy load it
         import email.parser
@@ -254,6 +257,9 @@ else:
 
     def inttobyte(value):
         return chr(value)
+
+    def isint(i):
+        return isinstance(i, (int, long))  # noqa
 
     def parse_email(fp):
         import email.parser

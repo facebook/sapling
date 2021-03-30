@@ -49,7 +49,7 @@ from .node import (
     wdirnodes,
     wdirrev,
 )
-from .pycompat import encodeutf8, range
+from .pycompat import encodeutf8, range, isint
 from .thirdparty import attr
 
 
@@ -391,12 +391,10 @@ class changectx(basectx):
         self._repo = repo
 
         try:
-            if isinstance(changeid, int):
+            if isint(changeid):
                 changeid = scmutil.revf64decode(changeid)
                 self._node = repo.changelog.node(changeid)
                 return
-            if sys.version_info[0] < 3 and isinstance(changeid, long):  # noqa
-                changeid = str(changeid)
             if changeid == "null":
                 self._node = nullid
                 return
@@ -439,14 +437,10 @@ class changectx(basectx):
             assert isinstance(changeid, str)
 
             # Try to resolve it as a rev number?
-            # - If changeid is an int.
+            # - If changeid is an int (tested above).
             # - If HGPLAIN is set (for compatibility).
             # - Or if ui.ignorerevnum is false (changeid is a str).
-            if (
-                isinstance(changeid, int)
-                or repo.ui.plain()
-                or not repo.ui.configbool("ui", "ignorerevnum")
-            ):
+            if repo.ui.plain() or not repo.ui.configbool("ui", "ignorerevnum"):
                 try:
                     r = int(changeid)
                     if "%d" % r != changeid:

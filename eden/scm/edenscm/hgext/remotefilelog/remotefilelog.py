@@ -14,6 +14,7 @@ from bindings import revisionstore
 from edenscm.mercurial import ancestor, error, filelog, mdiff, pycompat, revlog, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, nullid
+from edenscm.mercurial.pycompat import isint
 
 from .. import clienttelemetry
 from . import constants, fileserverclient, shallowutil
@@ -201,7 +202,7 @@ class remotefilelog(object):
         return False
 
     def flags(self, node):
-        if isinstance(node, int):
+        if isint(node):
             raise error.ProgrammingError(
                 "remotefilelog does not accept integer rev for flags"
             )
@@ -249,7 +250,7 @@ class remotefilelog(object):
 
     def node(self, rev):
         # This is a hack.
-        if isinstance(rev, int):
+        if isint(rev):
             raise error.ProgrammingError(
                 "remotefilelog does not convert integer rev to node"
             )

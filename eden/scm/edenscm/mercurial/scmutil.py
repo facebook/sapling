@@ -43,7 +43,7 @@ from . import (
 )
 from .i18n import _
 from .node import hex, nullid, short, wdirid, wdirrev
-from .pycompat import basestring, encodeutf8
+from .pycompat import basestring, encodeutf8, isint
 
 
 if pycompat.iswindows:
@@ -548,7 +548,7 @@ def revsingle(repo, revspec, default=".", localalias=None):
         return repo[default]
 
     # Used by amend/common calling rebase.rebase with non-string opts.
-    if isinstance(revspec, (int, type(1 << 63))):
+    if isint(revspec):
         return repo[revspec]
 
     l = revrange(repo, [revspec], localalias=localalias)
@@ -629,7 +629,7 @@ def revrange(repo, specs, localalias=None):
         return specs
     allspecs = []
     for spec in specs:
-        if isinstance(spec, int):
+        if isint(spec):
             spec = revsetlang.formatspec("rev(%d)", spec)
         allspecs.append(spec)
     legacyrevnum = repo.ui.config("devel", "legacy.revnum")

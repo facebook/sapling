@@ -48,6 +48,7 @@ from . import (
 )
 from .i18n import _
 from .node import nullid, nullrev
+from .pycompat import isint
 
 
 class bundlerevlog(revlog.revlog):
@@ -150,7 +151,7 @@ class bundlerevlog(revlog.revlog):
         """return an uncompressed revision of a given node or revision
         number.
         """
-        if isinstance(nodeorrev, int):
+        if isint(nodeorrev):
             rev = nodeorrev
             node = self.node(rev)
         else:
@@ -224,7 +225,7 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
         if self.userust("revision"):
             if nodeorrev in {nullid, nullrev}:
                 return b""
-            if isinstance(nodeorrev, int):
+            if isint(nodeorrev):
                 node = self.node(nodeorrev)
             else:
                 node = nodeorrev
@@ -299,7 +300,7 @@ class bundlemanifest(bundlerevlog, manifest.manifestrevlog):
 
     def baserevision(self, nodeorrev):
         node = nodeorrev
-        if isinstance(node, int):
+        if isint(node):
             node = self.node(node)
 
         if node in self.fulltextcache:

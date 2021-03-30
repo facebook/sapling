@@ -19,7 +19,7 @@ import bindings
 from . import encoding, error, mdiff, revlog, util, visibility
 from .i18n import _
 from .node import bbin, bin, hex, nullid, nullrev, wdirid, wdirrev
-from .pycompat import decodeutf8, encodeutf8, iteritems, range
+from .pycompat import decodeutf8, encodeutf8, iteritems, range, isint
 from .thirdparty import attr
 
 
@@ -624,7 +624,7 @@ class changelog(revlog.revlog):
         if zstore is None:
             return super(changelog, self).revision(nodeorrev, _df=_df, raw=raw)
         else:
-            if isinstance(nodeorrev, int):
+            if isint(nodeorrev):
                 node = self.node(nodeorrev)
             else:
                 node = nodeorrev

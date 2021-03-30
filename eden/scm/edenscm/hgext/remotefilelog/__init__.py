@@ -168,6 +168,7 @@ from edenscm.mercurial.commands import debug as hgdebugcommands
 from edenscm.mercurial.extensions import wrapfunction
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullrev
+from edenscm.mercurial.pycompat import isint
 
 from .. import clienttelemetry
 from . import (
@@ -578,7 +579,7 @@ def onetimeclientsetup(ui):
         cachedelta=None,
         _metatuple=None,
     ):
-        if isinstance(link, int):
+        if isint(link):
             pendingfilecommits.append(
                 (
                     self,

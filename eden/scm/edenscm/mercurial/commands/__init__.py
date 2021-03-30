@@ -70,7 +70,7 @@ from .. import (
 )
 from ..i18n import _
 from ..node import bin, hex, nullid, nullrev, short
-from ..pycompat import range
+from ..pycompat import range, isint
 from . import cmdtable
 
 
@@ -5085,7 +5085,7 @@ def push(ui, repo, dest=None, **opts):
 
     if revs:
         clnode = repo.changelog.node
-        if all(isinstance(r, int) for r in revs):
+        if all(isint(r) for r in revs):
             revs = [clnode(r) for r in revs]
         else:
             revs = [clnode(r) for r in scmutil.revrange(repo, revs)]
