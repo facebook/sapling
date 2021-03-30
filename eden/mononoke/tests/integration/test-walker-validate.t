@@ -33,18 +33,14 @@ validate, check route is logged on unexpected error (forced with chaos blob)
   Execution error: * (glob)
   * (glob)
   Caused by:
-      0: Blobstore error
-      1: Injected failure in get to ChaosBlobstore for key repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
+      Injected failure in get to ChaosBlobstore for key repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
   Error: Execution failed
 
 Check scuba data is logged for error on step and that it contains message and route info
   $ wc -l < scuba-error.json
   1
   $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .node_type, .repo, .src_node_type, .via_node_type, .walk_type, .error_msg ] | @csv' < scuba-error.json
-  1,"step","changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd","Changeset","repo","Bookmark",,"validate","Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false }), path: None }, due to Blobstore error
-  * (glob)
-  Caused by:
-      Injected failure in get to ChaosBlobstore for key repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd, via Some(ValidateRoute { src_node: Bookmark(BookmarkName { bookmark: ""master_bookmark"" }), via: [] })"
+  1,"step","changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd","Changeset","repo","Bookmark",,"validate","Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetKey { inner: ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)), filenode_known_derived: false }), path: None }, due to Other(Injected failure in get to ChaosBlobstore for key repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd), via Some(ValidateRoute { src_node: Bookmark(BookmarkName { bookmark: ""master_bookmark"" }), via: [] })"
 
 Remove all filenodes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where linknode=x'112478962961147124EDD43549AEDD1A335E44BF'";

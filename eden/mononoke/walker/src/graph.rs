@@ -617,6 +617,8 @@ impl fmt::Debug for FileContentData {
 #[derive(Debug)]
 pub enum NodeData {
     ErrorAsData(Node),
+    // Weren't able to find node
+    MissingAsData(Node),
     NotRequired,
     // Bonsai
     Bookmark(ChangesetId),

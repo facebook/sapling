@@ -19,7 +19,7 @@ use auto_impl::auto_impl;
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use blobstore::Loadable;
+use blobstore::{Loadable, LoadableError};
 use bonsai_hg_mapping::BonsaiHgMapping;
 use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness};
 use bounded_traversal::limited_by_key_shardable;
@@ -194,13 +194,30 @@ enum StepOutput {
     Done(NodeData, Vec<OutgoingEdge>),
 }
 
+#[derive(Debug, Error)]
+enum StepError {
+    #[error("{0} is missing")]
+    Missing(String),
+    #[error(transparent)]
+    Other(#[from] Error),
+}
+
+impl From<LoadableError> for StepError {
+    fn from(error: LoadableError) -> Self {
+        match error {
+            LoadableError::Missing(s) => StepError::Missing(s),
+            LoadableError::Error(err) => StepError::Other(err),
+        }
+    }
+}
+
 async fn bookmark_step<V: VisitOne>(
     ctx: CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
     b: BookmarkName,
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let bcs_opt = match published_bookmarks.get(&b) {
         Some(csid) => Some(csid.clone()),
         // Just in case we have non-public bookmarks
@@ -226,14 +243,14 @@ async fn bookmark_step<V: VisitOne>(
                 edges,
             ))
         }
-        None => Err(format_err!("Unknown Bookmark {}", b)),
+        None => Err(StepError::Missing(format!("Unknown Bookmark {}", b))),
     }
 }
 
 async fn published_bookmarks_step<V: VisitOne>(
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
     checker: &Checker<V>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let mut edges = vec![];
     for (_, bcs_id) in published_bookmarks.iter() {
         checker.add_edge(&mut edges, EdgeType::PublishedBookmarksToChangeset, || {
@@ -265,7 +282,7 @@ async fn bonsai_phase_step<V: VisitOne>(
     ctx: &CoreContext,
     checker: &Checker<V>,
     bcs_id: &ChangesetId,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let maybe_phase = if checker.is_public(ctx, bcs_id).await? {
         Some(Phase::Public)
     } else {
@@ -284,7 +301,7 @@ async fn blame_step<V: VisitOne>(
     repo: &BlobRepo,
     checker: &Checker<V>,
     blame_id: BlameId,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let blame = blame_id.load(ctx, repo.blobstore()).await?;
     let mut edges = vec![];
 
@@ -315,7 +332,7 @@ async fn fastlog_batch_step<V: VisitOne>(
     checker: &Checker<V>,
     id: &FastlogBatchId,
     path: Option<&WrappedPath>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let log = id.load(ctx, repo.blobstore()).await?;
     let mut edges = vec![];
     for (cs_id, _offsets) in log.latest() {
@@ -346,7 +363,7 @@ async fn fastlog_dir_step<V: VisitOne>(
     checker: &Checker<V>,
     id: &FastlogKey<ManifestUnodeId>,
     path: Option<&WrappedPath>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let log =
         fetch_fastlog_batch_by_unode_id(ctx, repo.blobstore(), &UnodeManifestEntry::Tree(id.inner))
             .await?;
@@ -382,7 +399,7 @@ async fn fastlog_file_step<V: VisitOne>(
     checker: &Checker<V>,
     id: &FastlogKey<FileUnodeId>,
     path: Option<&WrappedPath>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let log =
         fetch_fastlog_batch_by_unode_id(ctx, repo.blobstore(), &UnodeManifestEntry::Leaf(id.inner))
             .await?;
@@ -417,7 +434,7 @@ async fn bonsai_changeset_info_mapping_step<V: VisitOne>(
     checker: &Checker<V>,
     bcs_id: ChangesetId,
     enable_derive: bool,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     if is_derived::<ChangesetInfo>(ctx, repo, bcs_id, enable_derive).await? {
         let mut edges = vec![];
         checker.add_edge(
@@ -447,7 +464,7 @@ async fn changeset_info_step<V: VisitOne>(
     checker: &Checker<V>,
     bcs_id: ChangesetId,
     enable_derive: bool,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let info = maybe_derived::<ChangesetInfo>(ctx, repo, bcs_id, enable_derive).await?;
 
     if let Some(info) = info {
@@ -478,7 +495,7 @@ async fn bonsai_changeset_step<V: VisitOne>(
     repo: &BlobRepo,
     checker: &Checker<V>,
     key: &ChangesetKey<ChangesetId>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let bcs_id = &key.inner;
 
     // Get the data, and add direct file data for this bonsai changeset
@@ -550,13 +567,20 @@ async fn bonsai_changeset_step<V: VisitOne>(
     ))
 }
 
-fn file_content_step<V: VisitOne>(
+async fn file_content_step<V: VisitOne>(
     ctx: CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
     id: ContentId,
-) -> Result<StepOutput, Error> {
-    let s = filestore::fetch_stream(repo.get_blobstore(), ctx, id).map_ok(FileBytes);
+) -> Result<StepOutput, StepError> {
+    let maybe_s = filestore::fetch(repo.get_blobstore(), ctx, &id.into()).await?;
+    let s = match maybe_s {
+        Some(s) => s.map_ok(FileBytes),
+        None => {
+            return Err(StepError::Missing(format!("missing content for {}", id)));
+        }
+    };
+
     // We don't force file loading here, content may not be needed
     Ok(StepOutput::Done(
         checker.step_data(NodeType::FileContent, || {
@@ -572,7 +596,7 @@ async fn file_content_metadata_step<V: VisitOne>(
     checker: &Checker<V>,
     id: ContentId,
     enable_derive: bool,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let metadata_opt = if enable_derive {
         filestore::get_metadata(repo.blobstore(), ctx, &id.into())
             .await?
@@ -617,7 +641,7 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
     checker: &'a Checker<V>,
     key: ChangesetKey<ChangesetId>,
     enable_derive: bool,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let bcs_id = key.inner;
 
     let mut filenode_known_derived = key.filenode_known_derived;
@@ -625,7 +649,9 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
     if checker.with_filenodes && !filenode_known_derived {
         let derived_filenode = if enable_derive {
             if checker.is_public(ctx, &bcs_id).await? {
-                let _ = FilenodesOnlyPublic::derive(ctx, repo, bcs_id).await?;
+                let _ = FilenodesOnlyPublic::derive(ctx, repo, bcs_id)
+                    .await
+                    .map_err(Error::from)?;
                 Some(true)
             } else {
                 None
@@ -637,7 +663,9 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
         // We only want to walk to Hg step if filenode is present
         filenode_known_derived = match derived_filenode {
             Some(v) => v,
-            None => FilenodesOnlyPublic::is_derived(&ctx, &repo, &bcs_id).await?,
+            None => FilenodesOnlyPublic::is_derived(&ctx, &repo, &bcs_id)
+                .await
+                .map_err(Error::from)?,
         };
     }
 
@@ -686,7 +714,7 @@ async fn hg_to_bonsai_mapping_step<V: VisitOne>(
     repo: &BlobRepo,
     checker: &Checker<V>,
     key: ChangesetKey<HgChangesetId>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let maybe_bcs_id = repo.get_bonsai_from_hg(ctx, key.inner).await?;
     match maybe_bcs_id {
         Some(bcs_id) => {
@@ -704,10 +732,10 @@ async fn hg_to_bonsai_mapping_step<V: VisitOne>(
                 edges,
             ))
         }
-        None => Err(format_err!(
+        None => Err(StepError::Missing(format!(
             "bonsai not found for hg changeset {}",
             key.inner
-        )),
+        ))),
     }
 }
 
@@ -716,11 +744,11 @@ async fn hg_changeset_via_bonsai_step<V: VisitOne>(
     repo: &BlobRepo,
     checker: &Checker<V>,
     key: ChangesetKey<HgChangesetId>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let bcs_id = repo
         .get_bonsai_from_hg(ctx, key.inner)
         .await?
-        .ok_or_else(|| format_err!("Can't have hg without bonsai"))?;
+        .ok_or_else(|| StepError::Missing("Can't have hg without bonsai".to_string()))?;
 
     if !checker.in_chunk(&bcs_id) {
         return Ok(StepOutput::Deferred(bcs_id));
@@ -745,7 +773,7 @@ async fn hg_changeset_step<V: VisitOne>(
     repo: &BlobRepo,
     checker: &Checker<V>,
     key: ChangesetKey<HgChangesetId>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let hgchangeset = key.inner.load(ctx, repo.blobstore()).await?;
     let mut edges = vec![];
     // 1:1 but will then expand a lot, usually
@@ -773,7 +801,7 @@ async fn hg_file_envelope_step<V: VisitOne>(
     checker: &Checker<V>,
     hg_file_node_id: HgFileNodeId,
     path: Option<&WrappedPath>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let envelope = hg_file_node_id.load(ctx, repo.blobstore()).await?;
     let mut edges = vec![];
     checker.add_edge_with_path(
@@ -796,7 +824,7 @@ async fn hg_file_node_step<V: VisitOne>(
     checker: &Checker<V>,
     path: WrappedPath,
     hg_file_node_id: HgFileNodeId,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let repo_path = match &path {
         WrappedPath::Root => RepoPath::RootPath,
         WrappedPath::NonRoot(path) => RepoPath::FilePath(path.mpath().clone()),
@@ -876,7 +904,7 @@ async fn hg_manifest_step<V: VisitOne>(
     checker: &Checker<V>,
     path: WrappedPath,
     hg_manifest_id: HgManifestId,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let hgmanifest = hg_manifest_id.load(ctx, repo.blobstore()).await?;
     let (manifests, filenodes): (Vec<_>, Vec<_>) =
         hgmanifest.list().partition_map(|(name, entry)| {
@@ -923,7 +951,7 @@ async fn alias_content_mapping_step<V: VisitOne>(
     repo: &BlobRepo,
     checker: &Checker<V>,
     alias: Alias,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let content_id = alias.load(ctx, repo.blobstore()).await?;
     let mut edges = vec![];
     checker.add_edge(&mut edges, EdgeType::AliasContentMappingToFileContent, || {
@@ -972,7 +1000,7 @@ async fn bonsai_to_fsnode_mapping_step<V: VisitOne>(
     checker: &Checker<V>,
     bcs_id: ChangesetId,
     enable_derive: bool,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let root_fsnode_id = maybe_derived::<RootFsnodeId>(ctx, repo, bcs_id, enable_derive).await?;
 
     if let Some(root_fsnode_id) = root_fsnode_id {
@@ -1003,11 +1031,8 @@ async fn fsnode_step<V: VisitOne>(
     checker: &Checker<V>,
     fsnode_id: &FsnodeId,
     path: Option<&WrappedPath>,
-) -> Result<StepOutput, Error> {
-    let fsnode = fsnode_id
-        .load(ctx, &repo.get_blobstore())
-        .map_err(Error::from)
-        .await?;
+) -> Result<StepOutput, StepError> {
+    let fsnode = fsnode_id.load(ctx, &repo.get_blobstore()).await?;
 
     let mut content_edges = vec![];
     let mut dir_edges = vec![];
@@ -1057,7 +1082,7 @@ async fn bonsai_to_unode_mapping_step<V: VisitOne>(
     checker: &Checker<V>,
     bcs_id: ChangesetId,
     enable_derive: bool,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let mut root_unode_id =
         maybe_derived::<RootUnodeManifestId>(ctx, repo, bcs_id, enable_derive).await?;
 
@@ -1129,7 +1154,7 @@ async fn unode_file_step<V: VisitOne>(
     checker: &Checker<V>,
     key: &UnodeKey<FileUnodeId>,
     path: Option<&WrappedPath>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let unode_file = key.inner.load(ctx, repo.blobstore()).await?;
     let linked_cs_id = *unode_file.linknode();
     if !checker.in_chunk(&linked_cs_id) {
@@ -1199,7 +1224,7 @@ async fn unode_manifest_step<V: VisitOne>(
     checker: &Checker<V>,
     key: &UnodeKey<ManifestUnodeId>,
     path: Option<&WrappedPath>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let unode_manifest = key.inner.load(ctx, repo.blobstore()).await?;
     let linked_cs_id = *unode_manifest.linknode();
     if !checker.in_chunk(&linked_cs_id) {
@@ -1294,7 +1319,7 @@ async fn deleted_manifest_step<V: VisitOne>(
     checker: &Checker<V>,
     id: &DeletedManifestId,
     path: Option<&WrappedPath>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let deleted_manifest = id.load(ctx, repo.blobstore()).await?;
     let linked_cs_id = *deleted_manifest.linknode();
 
@@ -1339,7 +1364,7 @@ async fn deleted_manifest_mapping_step<V: VisitOne>(
     checker: &Checker<V>,
     bcs_id: ChangesetId,
     enable_derive: bool,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let root_manifest_id =
         maybe_derived::<RootDeletedManifestId>(ctx, repo, bcs_id, enable_derive).await?;
 
@@ -1373,7 +1398,7 @@ async fn skeleton_manifest_step<V: VisitOne>(
     checker: &Checker<V>,
     manifest_id: &SkeletonManifestId,
     path: Option<&WrappedPath>,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let manifest = manifest_id.load(ctx, repo.blobstore()).await?;
     let mut edges = vec![];
 
@@ -1409,7 +1434,7 @@ async fn skeleton_manifest_mapping_step<V: VisitOne>(
     checker: &Checker<V>,
     bcs_id: ChangesetId,
     enable_derive: bool,
-) -> Result<StepOutput, Error> {
+) -> Result<StepOutput, StepError> {
     let root_manifest_id =
         maybe_derived::<RootSkeletonManifestId>(ctx, repo, bcs_id, enable_derive).await?;
 
@@ -1770,7 +1795,9 @@ where
     }
 
     let step_result = match walk_item.target.clone() {
-        Node::Root(_) => Err(format_err!("Not expecting Roots to be generated")),
+        Node::Root(_) => Err(StepError::Other(format_err!(
+            "Not expecting Roots to be generated"
+        ))),
         // Bonsai
         Node::Bookmark(bookmark_name) => {
             bookmark_step(
@@ -1816,7 +1843,7 @@ where
         }
         // Content
         Node::FileContent(content_id) => {
-            file_content_step(ctx.clone(), &repo, &checker, content_id)
+            file_content_step(ctx.clone(), &repo, &checker, content_id).await
         }
         Node::FileContentMetadata(content_id) => {
             file_content_metadata_step(&ctx, &repo, &checker, content_id, enable_derive).await
@@ -1885,9 +1912,15 @@ where
                 walk_item.path.as_ref(),
                 &mut scuba,
             );
+
+            let check_type = match e {
+                StepError::Missing(_) => "missing",
+                StepError::Other(_) => "step",
+            };
+
             scuba
                 .add(EDGE_TYPE, Into::<&'static str>::into(edge_label))
-                .add(CHECK_TYPE, "step")
+                .add(CHECK_TYPE, check_type)
                 .add(CHECK_FAIL, 1)
                 .add(ERROR_MSG, msg.clone())
                 .log();
@@ -1897,10 +1930,16 @@ where
                     || error_as_data_edge_types.contains(&walk_item.label)
                 {
                     warn!(logger, "{}", msg);
-                    Ok(StepOutput::Done(
-                        NodeData::ErrorAsData(walk_item.target.clone()),
-                        vec![],
-                    ))
+                    match e {
+                        StepError::Missing(_s) => Ok(StepOutput::Done(
+                            NodeData::MissingAsData(walk_item.target.clone()),
+                            vec![],
+                        )),
+                        StepError::Other(_e) => Ok(StepOutput::Done(
+                            NodeData::ErrorAsData(walk_item.target.clone()),
+                            vec![],
+                        )),
+                    }
                 } else {
                     Err(e)
                 }

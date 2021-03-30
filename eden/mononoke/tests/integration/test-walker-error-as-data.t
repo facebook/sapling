@@ -39,7 +39,7 @@ Check we get an error due to the missing aliases
   Execution error: Could not step to OutgoingEdge { label: FileContentMetadataToGitSha1Alias, target: AliasContentMapping(AliasKey(GitSha1(GitSha1(96d80cd6c4e7158dbebd0849f4fb7ce513e5828c))))* (glob)
   * (glob)
   Caused by:
-      Blob is missing: alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c
+      alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c is missing
   Error: Execution failed
 
 Check error as data fails if not in readonly-storage mode
@@ -57,7 +57,7 @@ Check scuba data
   $ wc -l < scuba.json
   1
   $ jq -r '.int * .normal | [ .check_fail, .check_type, .edge_type, .node_key, .node_type, .repo, .walk_type ] | @csv' < scuba.json | sort
-  1,"step","FileContentMetadataToGitSha1Alias","alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c","AliasContentMapping","repo","scrub"
+  1,"missing","FileContentMetadataToGitSha1Alias","alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c","AliasContentMapping","repo","scrub"
 
 Check error-as-data-edge-type, should get an error on FileContentMetadataToGitSha1Alias as have not converted its errors to data
   $ mononoke_walker -l loaded scrub -q --error-as-data-node-type AliasContentMapping --error-as-data-edge-type FileContentMetadataToSha1Alias -I deep -b master_bookmark 2>&1 | strip_glog
@@ -65,7 +65,7 @@ Check error-as-data-edge-type, should get an error on FileContentMetadataToGitSh
   Execution error: Could not step to OutgoingEdge { label: FileContentMetadataToGitSha1Alias, target: AliasContentMapping(AliasKey(GitSha1(GitSha1(96d80cd6c4e7158dbebd0849f4fb7ce513e5828c))))* (glob)
   * (glob)
   Caused by:
-      Blob is missing: alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c
+      alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c is missing
   Error: Execution failed
 
 Check error-as-data-edge-type, should get no errors as FileContentMetadataToGitSha1Alias has its errors converted to data

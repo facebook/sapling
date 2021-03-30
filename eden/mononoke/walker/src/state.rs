@@ -43,6 +43,7 @@ use strum_macros::{EnumIter, EnumString, EnumVariantNames};
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct StepStats {
     pub error_count: usize,
+    pub missing_count: usize,
     pub num_expanded_new: usize,
     pub visited_of_type: usize,
 }
@@ -52,6 +53,7 @@ impl Add<StepStats> for StepStats {
     fn add(self, other: Self) -> Self {
         Self {
             error_count: self.error_count + other.error_count,
+            missing_count: self.missing_count + other.missing_count,
             num_expanded_new: self.num_expanded_new + other.num_expanded_new,
             visited_of_type: cmp::max(self.visited_of_type, other.visited_of_type),
         }
@@ -892,13 +894,15 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute> for Wa
         let num_expanded_new = outgoing.len() + queued_roots;
         let node = resolved.target;
 
-        let (error_count, node_data) = match node_data {
-            Some(NodeData::ErrorAsData(_key)) => (1, None),
-            Some(d) => (0, Some(d)),
-            None => (0, None),
+        let (error_count, missing_count, node_data) = match node_data {
+            Some(NodeData::ErrorAsData(_key)) => (1, 0, None),
+            Some(NodeData::MissingAsData(_key)) => (0, 1, None),
+            Some(d) => (0, 0, Some(d)),
+            None => (0, 0, None),
         };
         let stats = StepStats {
             error_count,
+            missing_count,
             num_expanded_new,
             visited_of_type: self.get_visit_count(&node.get_type()),
         };
