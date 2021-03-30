@@ -23,6 +23,7 @@ mod mem_idmap;
 
 #[cfg(any(test, feature = "indexedlog-backend"))]
 pub use indexedlog_idmap::IdMap;
+pub(crate) use mem_idmap::CoreMemIdMap;
 pub use mem_idmap::MemIdMap;
 
 /// Guard to make sure [`IdMap`] on-disk writes are race-free.

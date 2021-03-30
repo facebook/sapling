@@ -20,19 +20,25 @@ use std::sync::atomic::{self, AtomicU64};
 ///
 /// Private. Stored in memory.
 pub struct MemIdMap {
-    id2name: HashMap<Id, VertexName>,
-    name2id: BTreeMap<VertexName, Id>,
+    core: CoreMemIdMap,
     cached_next_free_ids: [AtomicU64; Group::COUNT],
     map_id: String,
     map_version: VerLink,
+}
+
+/// Subset of the `MemIdMap` interface that does not have "next_free_id"
+/// or "version" concept.
+#[derive(Default, Clone)]
+pub(crate) struct CoreMemIdMap {
+    id2name: HashMap<Id, VertexName>,
+    name2id: BTreeMap<VertexName, Id>,
 }
 
 impl MemIdMap {
     /// Create an empty [`MemIdMap`].
     pub fn new() -> Self {
         Self {
-            id2name: Default::default(),
-            name2id: Default::default(),
+            core: Default::default(),
             cached_next_free_ids: Default::default(),
             map_id: format!("mem:{}", next_id()),
             map_version: VerLink::new(),
@@ -43,8 +49,7 @@ impl MemIdMap {
 impl Clone for MemIdMap {
     fn clone(&self) -> Self {
         Self {
-            id2name: self.id2name.clone(),
-            name2id: self.name2id.clone(),
+            core: self.core.clone(),
             map_id: self.map_id.clone(),
             map_version: self.map_version.clone(),
             cached_next_free_ids: [
@@ -55,21 +60,38 @@ impl Clone for MemIdMap {
     }
 }
 
+impl CoreMemIdMap {
+    pub fn lookup_vertex_id(&self, name: &VertexName) -> Option<Id> {
+        self.name2id.get(&name).copied()
+    }
+
+    pub fn lookup_vertex_name(&self, id: Id) -> Option<VertexName> {
+        self.id2name.get(&id).cloned()
+    }
+
+    pub fn has_vertex_name(&self, name: &VertexName) -> bool {
+        self.name2id.contains_key(name)
+    }
+
+    pub fn insert_vertex_id_name(&mut self, id: Id, vertex_name: VertexName) {
+        self.name2id.insert(vertex_name.clone(), id);
+        self.id2name.insert(id, vertex_name);
+    }
+}
+
 #[async_trait::async_trait]
 impl IdConvert for MemIdMap {
     async fn vertex_id(&self, name: VertexName) -> Result<Id> {
-        let id = self
-            .name2id
-            .get(&name)
-            .ok_or_else(|| name.not_found_error())?;
-        Ok(*id)
+        self.core
+            .lookup_vertex_id(&name)
+            .ok_or_else(|| name.not_found_error())
     }
     async fn vertex_id_with_max_group(
         &self,
         name: &VertexName,
         max_group: Group,
     ) -> Result<Option<Id>> {
-        let optional_id = self.name2id.get(name).and_then(|id| {
+        let optional_id = self.core.name2id.get(name).and_then(|id| {
             if id.group() <= max_group {
                 Some(*id)
             } else {
@@ -79,11 +101,12 @@ impl IdConvert for MemIdMap {
         Ok(optional_id)
     }
     async fn vertex_name(&self, id: Id) -> Result<VertexName> {
-        let name = self.id2name.get(&id).ok_or_else(|| id.not_found_error())?;
-        Ok(name.clone())
+        self.core
+            .lookup_vertex_name(id)
+            .ok_or_else(|| id.not_found_error())
     }
     async fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
-        Ok(self.name2id.contains_key(name))
+        Ok(self.core.has_vertex_name(name))
     }
 
     fn map_id(&self) -> &str {
@@ -99,8 +122,7 @@ impl IdConvert for MemIdMap {
 impl IdMapWrite for MemIdMap {
     fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
         let vertex_name = VertexName::copy_from(name);
-        self.name2id.insert(vertex_name.clone(), id);
-        self.id2name.insert(id, vertex_name);
+        self.core.insert_vertex_id_name(id, vertex_name);
         let group = id.group();
         // TODO: use fetch_max once stabilized.
         // (https://github.com/rust-lang/rust/issues/4865)
@@ -150,7 +172,7 @@ impl PrefixLookup for MemIdMap {
     ) -> Result<Vec<VertexName>> {
         let start = VertexName::from_hex(hex_prefix)?;
         let mut result = Vec::new();
-        for (vertex, _) in self.name2id.range(start..) {
+        for (vertex, _) in self.core.name2id.range(start..) {
             if !vertex.to_hex().as_bytes().starts_with(hex_prefix) {
                 break;
             }
