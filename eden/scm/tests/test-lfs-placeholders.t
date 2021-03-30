@@ -1,4 +1,5 @@
 #chg-compatible
+#require no-windows
 
 Test the lfs.placeholders config option
 
