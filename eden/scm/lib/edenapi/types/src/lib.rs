@@ -25,6 +25,7 @@
 
 #![deny(warnings)]
 
+pub mod bookmark;
 pub mod commit;
 pub mod complete_tree;
 pub mod file;
@@ -34,6 +35,7 @@ pub mod metadata;
 pub mod tree;
 pub mod wire;
 
+pub use crate::bookmark::{BookmarkEntry, BookmarkRequest};
 pub use crate::commit::{
     CommitHashToLocationRequestBatch, CommitHashToLocationResponse, CommitLocationToHashRequest,
     CommitLocationToHashRequestBatch, CommitLocationToHashResponse, CommitRevlogData,
