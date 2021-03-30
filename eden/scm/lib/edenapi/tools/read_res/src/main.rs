@@ -25,8 +25,9 @@ use structopt::StructOpt;
 
 use edenapi_types::{
     wire::{
-        ToApi, WireCloneData, WireCommitHashToLocationResponse, WireCommitLocationToHashResponse,
-        WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry, WireTreeEntry,
+        ToApi, WireBookmarkEntry, WireCloneData, WireCommitHashToLocationResponse,
+        WireCommitLocationToHashResponse, WireFileEntry, WireHistoryResponseChunk, WireIdMapEntry,
+        WireTreeEntry,
     },
     CommitRevlogData, FileError, TreeError, WireHistoryEntry,
 };
@@ -43,6 +44,7 @@ enum Args {
     CommitHashToLocation(CommitHashToLocationArgs),
     Clone(CloneArgs),
     FullIdmapClone(CloneArgs),
+    Bookmark(BookmarkArgs),
 }
 
 #[derive(Debug, StructOpt)]
@@ -199,6 +201,17 @@ struct CloneArgs {
     input: Option<PathBuf>,
 }
 
+#[derive(Debug, StructOpt)]
+#[structopt(about = "Read the content of a CBOR bookmark response")]
+struct BookmarkArgs {
+    #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
+    input: Option<PathBuf>,
+    #[structopt(long, short, help = "Output file (stdout used if omitted)")]
+    output: Option<PathBuf>,
+    #[structopt(long, short, help = "Only look at the first N entries")]
+    limit: Option<usize>,
+}
+
 fn main() -> Result<()> {
     match Args::from_args() {
         Args::Tree(args) => cmd_tree(args),
@@ -209,6 +222,7 @@ fn main() -> Result<()> {
         Args::CommitHashToLocation(args) => cmd_commit_hash_to_location(args),
         Args::Clone(args) => cmd_clone(args),
         Args::FullIdmapClone(args) => cmd_full_idmap_clone(args),
+        Args::Bookmark(args) => cmd_bookmark(args),
     }
 }
 
@@ -517,6 +531,18 @@ fn cmd_full_idmap_clone(args: CloneArgs) -> Result<()> {
         })
         .collect::<Result<Vec<_>>>()?;
     println!("idmap: {{\n{}}}", idmap_entries.join(""));
+    Ok(())
+}
+
+fn cmd_bookmark(args: BookmarkArgs) -> Result<()> {
+    let entries: Vec<WireBookmarkEntry> = read_input(args.input, args.limit)?;
+    for entry in entries.into_iter().filter_map(to_api) {
+        print! {"{}: ", entry.bookmark}
+        match entry.hgid {
+            Some(hgid) => println!("{}", hgid.to_string()),
+            None => println!("Bookmark not found"),
+        }
+    }
     Ok(())
 }
 

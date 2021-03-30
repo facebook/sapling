@@ -28,6 +28,7 @@ use serde_json::{json, Map, Value};
 use dag_types::Location;
 use types::{HgId, Key, RepoPathBuf};
 
+use crate::bookmark::BookmarkRequest;
 use crate::commit::{
     CommitHashToLocationRequestBatch, CommitLocationToHashRequest,
     CommitLocationToHashRequestBatch, CommitRevlogDataRequest,
@@ -314,6 +315,23 @@ pub fn parse_complete_tree_req(value: &Value) -> Result<CompleteTreeRequest> {
     })
 }
 
+/// Parse a `BookmarkRequest` from JSON.
+///
+/// Example request:
+/// ```json
+/// {
+///   "bookmarks": [
+///     "bookmark1",
+///     "bookmark2"
+///   ]
+/// }
+/// ```
+pub fn parse_bookmark_req(json: &Value) -> Result<BookmarkRequest> {
+    let json = json.as_object().context("input must be a JSON object")?;
+    let bookmarks = parse_bookmarks(json.get("bookmarks").context("missing field bookmarks")?)?;
+    Ok(BookmarkRequest { bookmarks })
+}
+
 pub fn parse_file_metadata_req(json: &Value) -> Result<FileMetadataRequest> {
     let json = json.as_object().context("input must be a JSON object")?;
 
@@ -399,6 +417,18 @@ fn parse_hashes(value: &Value) -> Result<Vec<HgId>> {
     Ok(hashes)
 }
 
+fn parse_bookmarks(value: &Value) -> Result<Vec<String>> {
+    let array = value
+        .as_array()
+        .context("bookmarks must be a passed as an array")?;
+    let mut bookmarks = Vec::new();
+    for bookmark in array {
+        let bookmark = bookmark.as_str().context("bookmarks must be strings")?;
+        bookmarks.push(String::from(bookmark));
+    }
+    Ok(bookmarks)
+}
+
 fn make_key(path: &str, hash: &str) -> Result<Key> {
     let path = if path.is_empty() {
         RepoPathBuf::new()
@@ -480,6 +510,12 @@ impl FromJson for CommitHashToLocationRequestBatch {
 impl FromJson for CommitRevlogDataRequest {
     fn from_json(json: &Value) -> Result<Self> {
         parse_commit_revlog_data_req(json)
+    }
+}
+
+impl FromJson for BookmarkRequest {
+    fn from_json(json: &Value) -> Result<Self> {
+        parse_bookmark_req(json)
     }
 }
 
@@ -618,6 +654,12 @@ impl ToJson for CommitRevlogDataRequest {
     }
 }
 
+impl ToJson for BookmarkRequest {
+    fn to_json(&self) -> Value {
+        json!({ "bookmarks": self.bookmarks })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -646,6 +688,7 @@ mod tests {
         CompleteTreeRequest,
         CommitLocationToHashRequestBatch,
         CommitHashToLocationRequestBatch,
-        CommitRevlogDataRequest
+        CommitRevlogDataRequest,
+        BookmarkRequest
     );
 }
