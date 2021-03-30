@@ -64,7 +64,7 @@ use quickcheck::Arbitrary;
 use thiserror::Error;
 
 use bytes::Bytes;
-use types::{hgid::HgId, key::Key, parents::Parents, path::RepoPathBuf};
+pub use types::{hgid::HgId, key::Key, parents::Parents, path::RepoPathBuf};
 
 #[derive(Debug, Error)]
 #[error("Invalid hash: {expected} (expected) != {computed} (computed)")]

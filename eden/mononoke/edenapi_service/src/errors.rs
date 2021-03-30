@@ -56,6 +56,8 @@ pub enum ErrorKind {
     TreeFetchFailed(Key),
     #[error("Failed to fetch history for key: {0:?}")]
     HistoryFetchFailed(Key),
+    #[error("Failed to fetch HgId for bookmark: {0:?}")]
+    BookmarkResolutionFailed(String),
     #[error("Complete tree request failed")]
     CompleteTreeRequestFailed,
     #[error("Dag location to hash request failed")]

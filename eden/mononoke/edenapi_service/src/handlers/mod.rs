@@ -182,7 +182,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .with_path_extractor::<clone::CloneParams>()
             .to(full_idmap_clone_handler);
         route
-            .get("/:repo/bookmarks/:bookmark")
+            .post("/:repo/bookmarks")
             .with_path_extractor::<bookmarks::BookmarksParams>()
             .to(bookmarks_handler);
     })
