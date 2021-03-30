@@ -18,6 +18,7 @@ use crate::id::Id;
 use crate::id::VertexName;
 use crate::iddag::IdDag;
 use crate::iddagstore::IdDagStore;
+use crate::idmap::CoreMemIdMap;
 use crate::idmap::IdMapAssignHead;
 use crate::locked::Locked;
 use crate::nameset::hints::Flags;
@@ -86,6 +87,16 @@ where
 
     /// Identity of the dag. Derived from `path`.
     id: String,
+
+    /// Overlay IdMap. Used to store IdMap results resolved using remote
+    /// protocols.
+    overlay_map: Arc<RwLock<CoreMemIdMap>>,
+
+    /// Max ID + 1 in the `overlay_map`. A protection. The `overlay_map` is
+    /// shared (Arc) and its ID should not exceed the existing maximum ID at
+    /// `map` open time. The IDs from 0..overlay_map_next_id are considered
+    /// immutable, but lazy.
+    overlay_map_next_id: Id,
 }
 
 #[async_trait::async_trait]
@@ -275,6 +286,10 @@ where
                     path: self.path.try_clone()?,
                     state: self.state.try_clone()?,
                     id: self.id.clone(),
+                    // If we do deep clone here we can remove `overlay_map_next_id`
+                    // protection. However that could be too expensive.
+                    overlay_map: Arc::clone(&self.overlay_map),
+                    overlay_map_next_id: self.overlay_map_next_id,
                 };
                 let result = Arc::new(cloned);
                 *snapshot = Some(Arc::clone(&result));

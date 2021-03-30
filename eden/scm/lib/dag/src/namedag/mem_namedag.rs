@@ -11,6 +11,7 @@ use crate::iddagstore::InProcessStore;
 use crate::idmap::MemIdMap;
 use crate::ops::Open;
 use crate::ops::Persist;
+use crate::Id;
 use crate::Result;
 use std::sync::atomic::{self, AtomicU64};
 
@@ -42,6 +43,8 @@ impl Open for MemNameDagPath {
             pending_heads: Default::default(),
             state: MemNameDagState,
             id: format!("mem:{}", next_id()),
+            overlay_map: Default::default(),
+            overlay_map_next_id: Id::MIN,
         })
     }
 }

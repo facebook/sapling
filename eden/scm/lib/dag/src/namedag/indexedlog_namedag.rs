@@ -13,6 +13,7 @@ use crate::idmap::IdMap;
 use crate::ops::Open;
 use crate::ops::Persist;
 use crate::ops::TryClone;
+use crate::Group;
 use crate::Result;
 use indexedlog::multi;
 use indexedlog::DefaultOpenOptions;
@@ -49,6 +50,7 @@ impl Open for IndexedLogNameDagPath {
         let map = IdMap::open_from_log(map_log)?;
         let dag = IdDag::open_from_store(IndexedLogStore::open_from_log(dag_log))?;
         let state = NameDagState { mlog: Some(mlog) };
+        let overlay_map_next_id = map.next_free_id(Group::MASTER)?;
         Ok(AbstractNameDag {
             dag,
             map,
@@ -57,6 +59,8 @@ impl Open for IndexedLogNameDagPath {
             pending_heads: Default::default(),
             state,
             id: format!("ilog:{}", self.0.display()),
+            overlay_map: Default::default(),
+            overlay_map_next_id,
         })
     }
 }
