@@ -372,11 +372,13 @@ def draftbranchrevset(repo, subset, x):
 @revsetpredicate("mutrelated([set])")
 def mutrelatedrevset(repo, subset, x):
     """``mutrelated([set])``
-    Changesets that are related via mutations.
+    Draft changesets that are related via mutations.
     """
     args = revset.getargs(x, 1, 1, _("mutrelated expects one argument"))
     revs = revset.getset(repo, subset, args[0])
-    return subset & repo.revs("predecessors(%ld):: + successors(%ld)::", revs, revs)
+    return subset & repo.revs(
+        "descendants((predecessors(%ld) + successors(%ld)) & not public())", revs, revs
+    )
 
 
 @revsetpredicate("focusedbranch([set])")
