@@ -368,22 +368,30 @@ async fn fastlog_dir_step<V: VisitOne>(
         fetch_fastlog_batch_by_unode_id(ctx, repo.blobstore(), &UnodeManifestEntry::Tree(id.inner))
             .await?;
     let mut edges = vec![];
-    if let Some(log) = &log {
-        for (cs_id, _offsets) in log.latest() {
-            checker.add_edge(&mut edges, EdgeType::FastlogDirToChangeset, || {
-                Node::Changeset(ChangesetKey {
-                    inner: *cs_id,
-                    filenode_known_derived: false, /* from log we don't know if hg is fully derived */
-                })
-            });
+    match &log {
+        Some(log) => {
+            for (cs_id, _offsets) in log.latest() {
+                checker.add_edge(&mut edges, EdgeType::FastlogDirToChangeset, || {
+                    Node::Changeset(ChangesetKey {
+                        inner: *cs_id,
+                        filenode_known_derived: false, /* from log we don't know if hg is fully derived */
+                    })
+                });
+            }
+            for id in log.previous_batches() {
+                checker.add_edge_with_path(
+                    &mut edges,
+                    EdgeType::FastlogDirToPreviousBatch,
+                    || Node::FastlogBatch(*id),
+                    || path.cloned(),
+                );
+            }
         }
-        for id in log.previous_batches() {
-            checker.add_edge_with_path(
-                &mut edges,
-                EdgeType::FastlogDirToPreviousBatch,
-                || Node::FastlogBatch(*id),
-                || path.cloned(),
-            );
+        None => {
+            return Err(StepError::Missing(format!(
+                "fastlog dir {} not found",
+                id.inner
+            )));
         }
     }
 
@@ -404,24 +412,33 @@ async fn fastlog_file_step<V: VisitOne>(
         fetch_fastlog_batch_by_unode_id(ctx, repo.blobstore(), &UnodeManifestEntry::Leaf(id.inner))
             .await?;
     let mut edges = vec![];
-    if let Some(log) = &log {
-        for (cs_id, _offsets) in log.latest() {
-            checker.add_edge(&mut edges, EdgeType::FastlogFileToChangeset, || {
-                Node::Changeset(ChangesetKey {
-                    inner: *cs_id,
-                    filenode_known_derived: false, /* from log we don't know if hg is fully derived */
-                })
-            });
+    match &log {
+        Some(log) => {
+            for (cs_id, _offsets) in log.latest() {
+                checker.add_edge(&mut edges, EdgeType::FastlogFileToChangeset, || {
+                    Node::Changeset(ChangesetKey {
+                        inner: *cs_id,
+                        filenode_known_derived: false, /* from log we don't know if hg is fully derived */
+                    })
+                });
+            }
+            for id in log.previous_batches() {
+                checker.add_edge_with_path(
+                    &mut edges,
+                    EdgeType::FastlogFileToPreviousBatch,
+                    || Node::FastlogBatch(*id),
+                    || path.cloned(),
+                );
+            }
         }
-        for id in log.previous_batches() {
-            checker.add_edge_with_path(
-                &mut edges,
-                EdgeType::FastlogFileToPreviousBatch,
-                || Node::FastlogBatch(*id),
-                || path.cloned(),
-            );
+        None => {
+            return Err(StepError::Missing(format!(
+                "fastlog file {} not found",
+                id.inner
+            )));
         }
     }
+
     Ok(StepOutput::Done(
         checker.step_data(NodeType::FastlogFile, || NodeData::FastlogFile(log)),
         edges,
