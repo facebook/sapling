@@ -94,6 +94,20 @@ def hide(ui, repo, *revs, **opts):
         revs = repo.revs("(%ld)::", scmutil.revrange(repo, revs))
 
         bookmarks = set(opts.get("bookmark", ()))
+        remotebooks = dict()
+
+        # allow remote scratch bookmarks
+        if repo.ui.configbool("remotenames", "selectivepull"):
+            rb = repo._remotenames.mark2nodes()
+            for bookmark in bookmarks:
+                if bookmark in rb:
+                    node = rb[bookmark][0]
+                    if repo[node].mutable():
+                        remotebooks[bookmark] = node
+            draftnodes = repo.dageval(lambda: ancestors(remotebooks.values()) & draft())
+            revs += repo.changelog.torevset(draftnodes)
+
+        bookmarks = bookmarks - set(remotebooks.keys())
         if bookmarks:
             revs += bookmarksmod.reachablerevs(repo, bookmarks)
             if not revs:
