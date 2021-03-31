@@ -21,9 +21,9 @@ pub const BONSAI_FETCH: &str = "bonsai-fetch";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(BONSAI_FETCH)
-        .about("fetches content of the file or manifest from blobrepo")
+        .about("fetches bonsai changeset information")
         .args_from_usage(
-            r#"<CHANGESET_ID>    'hg/bonsai id or bookmark to fetch file from'
+            r#"<CHANGESET_ID>    'bonsai id to fetch'
                           --json            'if provided json will be returned'"#,
         )
 }
