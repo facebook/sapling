@@ -32,7 +32,7 @@ serde_cbor = "0.11"
 serde_json = { version = "1.0", features = ["float_roundtrip"] }
 structopt = "0.3.21"
 thiserror = "1.0"
-tokio = { version = "1.3", features = ["full", "test-util"] }
+tokio = { version = "1.4", features = ["full", "test-util"] }
 tracing = "0.1"
 types = { path = "../types" }
 url = "2.1.0"
