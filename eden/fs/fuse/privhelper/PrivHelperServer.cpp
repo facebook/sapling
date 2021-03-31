@@ -578,7 +578,7 @@ void PrivHelperServer::nfsMount(
   // specify it.
   // TODO(xavierd): remove nordirplus as this will likely improve performance.
   auto mountOpts = fmt::format(
-      "addr=127.0.0.1,vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},noresvport,nolock,nordirplus",
+      "addr=127.0.0.1,vers=3,proto=tcp,port={},mountvers=3,mountproto=tcp,mountport={},noresvport,nolock,nordirplus,soft,retrans=0",
       nfsdPort,
       mountdPort);
 
