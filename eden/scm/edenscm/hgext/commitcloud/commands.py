@@ -295,6 +295,8 @@ def cloudjoin(ui, repo, **opts):
                 sync._updateremotebookmarks(repo, tr, bmremove)
                 # erase state if the repo has been connected before to the destination workspace
                 syncstate.SyncState.erasestate(repo, workspacename)
+                # erase the state of the current workspace too
+                syncstate.SyncState.erasestate(repo, currentworkspace)
                 # clear subscription
                 subscription.remove(repo)
                 # clear workspace
