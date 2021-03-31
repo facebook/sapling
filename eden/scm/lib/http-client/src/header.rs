@@ -65,24 +65,27 @@ impl Header {
 
 /// Parse a status line, e.g. "HTTP/1.1 200 OK".
 fn parse_status(line: &str) -> Option<(Version, StatusCode)> {
-    if let Some(captures) = STATUS_REGEX.captures(&line) {
-        let version_str = captures.get(1).map(|m| m.as_str())?;
-        let code_str = captures.get(2).map(|m| m.as_str())?;
+    let captures = STATUS_REGEX.captures(&line)?;
 
-        let version = match version_str {
-            "0.9" => Version::HTTP_09,
-            "1.0" => Version::HTTP_10,
-            "1.1" => Version::HTTP_11,
-            "2" | "2.0" => Version::HTTP_2,
-            "3" | "3.0 " => Version::HTTP_3,
-            _ => return None,
-        };
-        let code = StatusCode::from_u16(code_str.parse().ok()?).ok()?;
+    let version_str = captures.get(1).map(|m| m.as_str())?;
+    let version = parse_version(version_str)?;
 
-        Some((version, code))
-    } else {
-        None
-    }
+    let code_str = captures.get(2).map(|m| m.as_str())?;
+    let code = StatusCode::from_u16(code_str.parse().ok()?).ok()?;
+
+    Some((version, code))
+}
+
+/// Parse an HTTP version number.
+fn parse_version(version: &str) -> Option<Version> {
+    Some(match version {
+        "0.9" => Version::HTTP_09,
+        "1.0" => Version::HTTP_10,
+        "1.1" => Version::HTTP_11,
+        "2" | "2.0" => Version::HTTP_2,
+        "3" | "3.0 " => Version::HTTP_3,
+        _ => return None,
+    })
 }
 
 /// Parse a header name-value pair, e.g. "Content-Length: 42\r\n".
