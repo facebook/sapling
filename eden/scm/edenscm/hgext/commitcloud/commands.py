@@ -527,38 +527,40 @@ def cloudauth(ui, repo, **opts):
             authenticate(ui, repo, tokenlocator)
 
 
+cloudsmartlogopts = [
+    (
+        "d",
+        "date",
+        "",
+        _("show version of the smartlog on date specified"),
+        _("DATE"),
+    ),
+    (
+        "",
+        "workspace-version",
+        "",
+        "show the specified version of the smartlog",
+        _("NUM"),
+    ),
+    (
+        "H",
+        "history",
+        None,
+        "show interactive view for historical versions of smartlog",
+    ),
+    ("", "all", None, "show all history in interactive history view"),
+    (
+        "",
+        "force-original-backend",
+        None,
+        "serve the smartlog from original mercurial backup infrastructure, rather than from the Mononoke backend regardless of the configuration (ADVANCED)",
+    ),
+]
+
+
 @subcmd(
     "smartlog|sl",
-    [
-        (
-            "d",
-            "date",
-            "",
-            _("show version of the smartlog on date specified"),
-            _("DATE"),
-        ),
-        (
-            "",
-            "workspace-version",
-            "",
-            "show the specified version of the smartlog",
-            _("NUM"),
-        ),
-        (
-            "H",
-            "history",
-            None,
-            "show interactive view for historical versions of smartlog",
-        ),
-        ("", "all", None, "show all history in interactive history view"),
-        (
-            "",
-            "force-original-backend",
-            None,
-            "serve the smartlog from original mercurial backup infrastructure, rather than from the Mononoke backend regardless of the configuration (ADVANCED)",
-        ),
-    ]
-    + workspace.workspaceopts,
+    cloudsmartlogopts + workspace.workspaceopts,
 )
 def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     """get smartlog view for the default workspace of the given user
@@ -579,7 +581,9 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
         if ui.configbool("commitcloud", "useoldhistorytui", False):
             interactivehistory.oldshowhistory(ui, repo, reponame, workspacename, **opts)
         else:
-            interactivehistory.showhistory(ui, repo, reponame, workspacename, **opts)
+            interactivehistory.showhistory(
+                ui, repo, reponame, workspacename, template, **opts
+            )
         return
 
     date = opts.get("date")
@@ -637,7 +641,7 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     cmdutil.displaygraph(ui, repo, revdag, displayer, reserved=firstpublic)
 
 
-@subcmd("supersmartlog|ssl", workspace.workspaceopts)
+@subcmd("supersmartlog|ssl", cloudsmartlogopts + workspace.workspaceopts)
 def cloudsupersmartlog(ui, repo, **opts):
     """get super smartlog view for the given workspace"""
     cloudsmartlog(ui, repo, "ssl_cloud", **opts)

@@ -17,7 +17,7 @@ from .. import interactiveui
 from . import service, token as tokenmod, util as ccutil, workspace
 
 
-def showhistory(ui, repo, reponame, workspacename, **opts):
+def showhistory(ui, repo, reponame, workspacename, template, **opts):
     class cloudsl(object):
         def __init__(self, ui, repo, reponame, workspacename, **opts):
             self.ui = ui
@@ -36,7 +36,6 @@ def showhistory(ui, repo, reponame, workspacename, **opts):
                     key=lambda version: version["version_number"],
                 )
 
-            template = "sl_cloud"
             smartlogstyle = ui.config("templatealias", template)
             if smartlogstyle:
                 self.opts["template"] = "{%s}" % smartlogstyle
@@ -209,9 +208,15 @@ def showhistory(ui, repo, reponame, workspacename, **opts):
                 def out(row):
                     contents.extend(row.rstrip().encode().split(b"\n"))
 
-                cmdutil.displaygraph(
-                    self.ui, self.repo, revdag, displayer, reserved=firstpublic, out=out
-                )
+                with progress.spinner(ui, _("loading commit information")):
+                    cmdutil.displaygraph(
+                        self.ui,
+                        self.repo,
+                        revdag,
+                        displayer,
+                        reserved=firstpublic,
+                        out=out,
+                    )
                 self.cache[versionindex] = contents
 
             return contents
